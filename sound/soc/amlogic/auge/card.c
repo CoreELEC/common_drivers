@@ -842,6 +842,9 @@ static int aml_card_hw_params(struct snd_pcm_substream *substream,
 	else if (dai_props->mclk_fs)
 		mclk_fs = dai_props->mclk_fs;
 
+	if (params_rate(params) > 192000)
+		mclk_fs = 128;
+
 	if (mclk_fs) {
 		for_each_rtd_codec_dais(rtd, i, sdai) {
 			ret = snd_soc_dai_set_sysclk(sdai, 0, mclk, SND_SOC_CLOCK_IN);
