@@ -11,7 +11,7 @@
 
 #define CEC_DRIVER_VERSION     "2026/06/08: sc2 s6 s7d enable line check"
 
-#define CEC_DEV_NAME		"cec"
+#define CEC_DEV_NAME		"aocec"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(30)
 /* delay for framework to receive & handle uevent */
