@@ -38,6 +38,7 @@
 #include <linux/pm_wakeirq.h>
 #include <linux/pm.h>
 #include <linux/amlogic/cpu_version.h>
+#include <hdmitx_boot_parameters.h>
 #include <linux/amlogic/pm.h>
 #include <linux/amlogic/aml_mbox.h>
 #include "hdmi_aocec_api.h"
@@ -1149,7 +1150,11 @@ void cec_hw_init(void)
 /* cec hw module init before allocate logical address */
 void cec_pre_init(void)
 {
+	struct hdmitx_boot_param *param = get_hdmitx_boot_params();
+
 	cec_hw_init();
+	cec_config(param->cec_func_config, 1);
+
 	//need restore all logical address
 	if (cec_dev->cec_num > ENABLE_ONE_CEC)
 		cec_restore_logical_addr(CEC_B, cec_dev->cec_info.addr_enable);

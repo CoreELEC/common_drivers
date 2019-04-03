@@ -14,6 +14,7 @@
 static struct hdmitx_boot_param tx_params = {
 	.fraction_refreshrate = 1,
 	.edid_chksum = "invalidcrc",
+	.cec_func_config = 0x7f,
 };
 
 struct hdmitx_boot_param *get_hdmitx_boot_params(void)
@@ -122,6 +123,7 @@ static int parse_hdmitx_boot_para(char *s)
 	char *token;
 	unsigned int token_len = 0;
 	unsigned int token_offset = 0;
+	unsigned long list;
 	unsigned int offset = 0;
 	int size = strlen(s);
 
@@ -135,6 +137,13 @@ static int parse_hdmitx_boot_para(char *s)
 			if (token_len == 3 &&
 			    strncmp(token, "off", token_len) == 0) {
 				tx_params.init_state |= INIT_FLAG_NOT_LOAD;
+			} else if (strncmp(token, "cec", 3) == 0) {
+				if (kstrtoul(token+3, 16, &list) == 0) {
+					if ((list >= 0) && (list <= 0xff))
+						tx_params.cec_func_config = list;
+				}
+				pr_info("HDMI hdmi_cec_func_config:0x%x\n",
+					tx_params.cec_func_config);
 			}
 
 			if (tx_params.color_attr[0] == 0)
