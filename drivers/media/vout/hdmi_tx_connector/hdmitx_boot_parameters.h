@@ -21,6 +21,7 @@ struct hdmitx_boot_param {
 	int	edid_check;
 	u8 dsc_policy;
 	u8 scan_info;
+	u32		cec_func_config;
 };
 
 struct hdmitx_boot_param *get_hdmitx_boot_params(void);
