@@ -652,8 +652,9 @@ static int meson_ir_get_devtree_pdata(struct platform_device *pdev)
 
 	/*create map table */
 	ret = meson_ir_get_custom_tables(pdev->dev.of_node, chip);
+	// no config in DT, use configuration by 'remotecfg' tool
 	if (ret < 0)
-		return ret;
+		meson_ir_input_configure(chip->r_dev, NULL);
 
 	ret = input_register_device(chip->r_dev->input_device);
 	if (ret < 0)

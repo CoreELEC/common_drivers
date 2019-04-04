@@ -183,9 +183,24 @@ void meson_ir_input_configure(struct meson_ir_dev *dev,
 {
 	int i;
 
-	for (i = 0; i < ir_map->map_size; i++)
-		input_set_capability(dev->input_device, EV_KEY,
-				     ir_map->codemap[i].map.keycode);
+	if (ir_map) {
+		for (i = 0; i < ir_map->map_size; i++)
+			input_set_capability(dev->input_device, EV_KEY,
+					     ir_map->codemap[i].map.keycode);
+	} else {
+		for (i = KEY_RESERVED; i < BTN_MISC; i++)
+			input_set_capability(dev->input_device, EV_KEY, i);
+
+		for (i = KEY_OK; i < BTN_TRIGGER_HAPPY; i++)
+			input_set_capability(dev->input_device, EV_KEY, i);
+
+		for (i = BTN_MOUSE; i < BTN_SIDE; i++)
+			input_set_capability(dev->input_device, EV_KEY, i);
+
+		input_set_capability(dev->input_device, EV_REL, REL_X);
+		input_set_capability(dev->input_device, EV_REL, REL_Y);
+		input_set_capability(dev->input_device, EV_REL, REL_WHEEL);
+	}
 }
 EXPORT_SYMBOL(meson_ir_input_configure);
 
