@@ -615,7 +615,9 @@ static u32 skip_policy = 0x81;
 static int force_filter_mode = 1;
 #endif
 /*temp disable sr for power test*/
-bool super_scaler = true;
+bool super_scaler = false;
+module_param(super_scaler, bool, 0664);
+MODULE_PARM_DESC(super_scaler, "super_scaler");
 struct sr_info_s sr_info;
 #define USE_OLD_ASPECT_RATIO   2
 static unsigned int super_debug;
