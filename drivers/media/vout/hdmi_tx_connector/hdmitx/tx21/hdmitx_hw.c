@@ -2886,14 +2886,7 @@ static void set_aud_acr_pkt(struct aud_para *audio_param)
 	if (para->frl_rate)
 		aud_n_para = hdmi21_get_frl_aud_n_paras(audio_param->rate, para->frl_rate);
 	hdmitx21_set_reg_bits(ACR_CTS_CLK_DIV_IVCTX, para->frl_rate ? 1 : 0, 4, 1);
-	/* N must multiples 4 for DD+ */
-	switch (audio_param->type) {
-	case CT_DOLBY_D:
-		aud_n_para *= 4;
-		break;
-	default:
-		break;
-	}
+
 	HDMITX_INFO("audio: aud_n_para = %d\n", aud_n_para);
 	hdmitx21_wr_reg(N_SVAL1_IVCTX, (aud_n_para >> 0) & 0xff); //N_SVAL1
 	hdmitx21_wr_reg(N_SVAL2_IVCTX, (aud_n_para >> 8) & 0xff); //N_SVAL2
