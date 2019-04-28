@@ -2675,14 +2675,6 @@ static bool set_aud_acr_pkt(struct hdmitx_dev *hdev,
 	else
 		aud_n_para = hdmitx_hw_get_audio_n_paras(audio_param->rate,
 						  para->cd, char_rate);
-	/* N must multiples 4 for DD+ */
-	switch (audio_param->type) {
-	case CT_DD_P:
-		aud_n_para *= 4;
-		break;
-	default:
-		break;
-	}
 
 	/* ACR packet configuration */
 	data32 = 0;
