@@ -3247,6 +3247,9 @@ void pts_process(void)
 		unsigned long delta1 = 0;
 		unsigned long time_setomxpts_delta = 0;
 
+		video_notify_flag |= VIDEO_NOTIFY_TRICK_WAIT;
+		atomic_set(&trickmode_framedone, 1);
+
 		diff = system_time - omx_pts;
 		if (time_setomxpts > 0 && time_setomxpts_last > 0) {
 			/* time_setomxpts record hwc setomxpts time, */
