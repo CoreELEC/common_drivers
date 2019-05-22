@@ -16849,9 +16849,7 @@ static ssize_t amvecm_lc_store(const struct class *cls,
 
 static void def_hdr_sdr_mode(void)
 {
-	if (((READ_VPP_REG(VD1_HDR2_CTRL) >> 13) & 0x1) &&
-	    ((READ_VPP_REG(OSD1_HDR2_CTRL) >> 13) & 0x1))
-		sdr_mode = 2;
+	sdr_mode = 0;
 }
 
 void hdr_hist_config_int(void)
