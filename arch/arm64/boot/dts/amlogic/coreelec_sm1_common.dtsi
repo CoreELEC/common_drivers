@@ -50,6 +50,14 @@
 		clear_range = <0x05100000 0x02a00000>;
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_pl0 SM1_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	gpioleds {
 		/delete-node/ net_red;
 		/delete-node/ net_green;

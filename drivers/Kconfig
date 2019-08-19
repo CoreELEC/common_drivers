@@ -73,4 +73,6 @@ source "$(COMMON_DRIVERS_DIR)/drivers/fs/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/global_timer/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/staging/android/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/scripts/Kconfig"
+
+source "$(COMMON_DRIVERS_DIR)/drivers/bootloader/Kconfig"
 endmenu

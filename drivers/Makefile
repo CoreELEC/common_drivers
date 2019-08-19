@@ -75,6 +75,7 @@ obj-$(CONFIG_AMLOGIC_ENV_ENCRYPT)	+= uboot_env/
 obj-$(CONFIG_AMLOGIC_GLOBAL_TIMER)      += global_timer/
 obj-$(CONFIG_AMLOGIC_PIO)		+= pio/
 obj-$(CONFIG_ASHMEM_C)			+= staging/android/
+obj-$(CONFIG_BL30_MANAGER)	+= bootloader/
 
 KBUILD_CFLAGS_MODULE += $(GKI_EXT_KERNEL_MODULE_PREDEFINE)
 all:
