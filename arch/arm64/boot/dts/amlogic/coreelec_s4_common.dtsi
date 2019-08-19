@@ -31,6 +31,14 @@
 		compatible = "arm,mali-bifrost";
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_fifo S4_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	aml_dtv_demod {
 		status = "disabled";
 	};
