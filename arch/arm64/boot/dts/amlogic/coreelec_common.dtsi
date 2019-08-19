@@ -17,6 +17,14 @@
 	/delete-node/ custom_maps;
 	/delete-node/ ir@8000;
 
+	bl30_manager {
+		compatible = "coreelec,bl30_manager";
+		status = "okay";
+		mbox-nums = <1>;
+		mbox-names = "ree2aocpu";
+		mbox-dests = <MAILBOX_AOCPU>;
+	};
+
 	meson-ir {
 		compatible = "amlogic,meson6-ir";
 		status = "okay";

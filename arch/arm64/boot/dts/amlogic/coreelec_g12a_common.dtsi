@@ -68,6 +68,10 @@
 		#mbox-cells = <1>;
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_pl0 G12A_REE2AO_DEV>;
+	};
+
 	gpioleds {
 		/delete-node/ net_red;
 		/delete-node/ net_green;
