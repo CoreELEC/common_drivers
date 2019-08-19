@@ -36,6 +36,14 @@
 	/delete-node/ backlight1;
 	/delete-node/ lcd2;
 
+	bl30_manager {
+		mboxes = <&mbox_fifo T7_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	emmc_pwrseq: emmc-pwrseq {
 		compatible = "mmc-pwrseq-emmc";
 		reset-gpios = <&gpio GPIOB_9 GPIO_ACTIVE_LOW>;

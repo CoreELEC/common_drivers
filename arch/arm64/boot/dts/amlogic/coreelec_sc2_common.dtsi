@@ -13,6 +13,14 @@
 		compatible = "arm,mali-bifrost";
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_fifo SC2_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	reserved-memory {
 		ion_cma_reserved:linux,ion-dev {
 			size = <0x0 0x3400000>;

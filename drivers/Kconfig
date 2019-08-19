@@ -63,4 +63,6 @@ source "$(COMMON_DRIVERS_DIR)/drivers/external/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/aml_trusted_keys/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/amfc/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/fs/Kconfig"
+
+source "$(COMMON_DRIVERS_DIR)/drivers/bootloader/Kconfig"
 endmenu
