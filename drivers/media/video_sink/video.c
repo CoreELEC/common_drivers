@@ -74,9 +74,6 @@
 #endif
 #include "videolog.h"
 #include "video_reg.h"
-#ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
-#include "amvideocap_priv.h"
-#endif
 #ifdef CONFIG_AM_VIDEO_LOG
 #define AMLOG
 #endif
@@ -433,9 +430,6 @@ static u32 vsync_rdma_line_max;
 #endif
 static u32 vpts_remainder;
 static int enable_video_discontinue_report = 1;
-#ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
-static struct amvideocap_req *capture_frame_req;
-#endif
 
 u32 smallwindow_link_enable;
 u32 smallwindow_link_h = 1080;
@@ -961,7 +955,6 @@ inline struct vframe_s *amvideo_vf_get(void)
 			vf->disp_pts_us64 = 0;
 		}
 		video_notify_flag |= VIDEO_NOTIFY_PROVIDER_GET;
-		atomic_set(&vf->use_cnt, 1);
 		if (!glayer_info[1].layer_support &&
 			(vf->type & VIDTYPE_MVC))
 			vf->type &= ~VIDTYPE_MVC;
@@ -995,31 +988,25 @@ static int amvideo_vf_get_states(struct vframe_states *states)
 
 inline int amvideo_vf_put(struct vframe_s *vf)
 {
-	struct vframe_provider_s *vfp = vf_get_provider(RECEIVER_NAME);
-
 	if (vf == &hist_test_vf)
 		return 0;
 
-	if (!vfp || !vf) {
-		if (!vf)
-			return 0;
-		return -EINVAL;
-	}
+	if (!vf)
+		return 0;
 
 	check_present_fence_and_signal(vf);
-	if (atomic_dec_and_test(&vf->use_cnt)) {
-		vpp_trace_vframe("video_vf_put",
-			(void *)vf, vf->type, vf->flag, 0, vsync_cnt[VPP0]);
-		if (vf_put(vf, RECEIVER_NAME) < 0)
-			return -EFAULT;
-		if (debug_flag & DEBUG_FLAG_PRINT_FRAME_DETAIL)
-			pr_info("%s:vf=%p, vf->type=0x%x, vf->flag=0x%x,canvas adr:0x%lx, canvas0:%x, pnum:%d, afbc:0x%lx-0x%lx,\n",
-				__func__,
-				vf, vf->type, vf->flag,
-				vf->canvas0_config[0].phy_addr, vf->canvas0Addr, vf->plane_num,
-				vf->compHeadAddr, vf->compBodyAddr);
-		if (IS_DI_POSTWRTIE(vf->type))
-			put_di_count++;
+	vpp_trace_vframe("video_vf_put",
+		(void *)vf, vf->type, vf->flag, 0, vsync_cnt[VPP0]);
+	if (vf_put(vf, RECEIVER_NAME) < 0)
+		return -EFAULT;
+	if (debug_flag & DEBUG_FLAG_PRINT_FRAME_DETAIL)
+		pr_info("%s:vf=%p, vf->type=0x%x, vf->flag=0x%x,canvas adr:0x%lx, canvas0:%x, pnum:%d, afbc:0x%lx-0x%lx,\n",
+			__func__,
+			vf, vf->type, vf->flag,
+			vf->canvas0_config[0].phy_addr, vf->canvas0Addr, vf->plane_num,
+			vf->compHeadAddr, vf->compBodyAddr);
+	if (IS_DI_POSTWRTIE(vf->type))
+		put_di_count++;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 #ifdef AMLOGIC_MEDIA_DPSS
 		if (is_amdv_enable() && !is_amdv_dpss_path())
@@ -1028,10 +1015,8 @@ inline int amvideo_vf_put(struct vframe_s *vf)
 #endif
 			amdv_vf_put(vf);
 #endif
-		video_notify_flag |= VIDEO_NOTIFY_PROVIDER_PUT;
-	} else {
-		return -EINVAL;
-	}
+	video_notify_flag |= VIDEO_NOTIFY_PROVIDER_PUT;
+
 	return 0;
 }
 
@@ -1663,53 +1648,73 @@ static void dump_vdin_reg(void)
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
-static int ext_get_cur_video_frame(struct vframe_s **vf, int *canvas_index)
+int ext_get_cur_video_frame(struct vframe_s **vf, int *canvas_index)
 {
 	if (!cur_dispbuf[0])
 		return -1;
-	atomic_inc(&cur_dispbuf[0]->use_cnt);
 	if (cur_dev->display_module != S5_DISPLAY_MODULE)
 		*canvas_index = READ_VCBUS_REG(vd_layer[0].vd_mif_reg.vd_if0_canvas0);
-	*vf = cur_dispbuf;
+	*vf = *cur_dispbuf;
 	return 0;
 }
 
 int ext_put_video_frame(struct vframe_s *vf)
 {
-	u8 layer_id = 0;
-
-	if (vf == &vf_local[0])
-		return 0;
-	if (amvideo_vf_put(vf) < 0)
-		check_dispbuf(layer_id, vf, true);
 	return 0;
 }
 
 int ext_register_end_frame_callback(struct amvideocap_req *req)
 {
-	mutex_lock(&video_module_mutex);
-	capture_frame_req = req;
-	mutex_unlock(&video_module_mutex);
+	struct video_layer_s *layer = &vd_layer[0];
+	enum video_capture_state capture_state = atomic_read(&layer->capture_use_cnt);
+
+	if (capture_state == CAPTURE_STATE_OFF)
+	{
+		return -ENODATA;
+	}
+	else if (capture_state == CAPTURE_STATE_CAPTURE)
+	{
+		if (req && !req->callback) {
+			atomic_set(&layer->capture_use_cnt, CAPTURE_STATE_ON);
+			layer->capture_frame_req = NULL;
+		}
+		return -EBUSY;
+	}
+	else if (capture_state == CAPTURE_STATE_ON && req && req->callback)
+	{
+		layer->capture_frame_req = req;
+		atomic_set(&layer->capture_use_cnt, CAPTURE_STATE_CAPTURE);
+		return -EBUSY;
+	}
+
 	return 0;
 }
 
-int ext_frame_capture_poll(int endflags)
+int ext_frame_capture_poll(struct vframe_s *vf)
 {
-	mutex_lock(&video_module_mutex);
-	if (capture_frame_req && capture_frame_req->callback) {
-		struct vframe_s *vf;
-		int index;
-		int ret;
-		struct amvideocap_req *req = capture_frame_req;
+	int ret = -EAGAIN;
+	static int capture_frame_toggle = 0;
+	struct video_layer_s *layer = &vd_layer[0];
 
-		ret = ext_get_cur_video_frame(&vf, &index);
-		if (!ret) {
-			req->callback(req->data, vf, index);
-			capture_frame_req = NULL;
+	if (capture_frame_toggle == 0 && vf) {
+		if (vf->duration > 0 && div_u64((u64)96000, vf->duration) > 30)
+			capture_frame_toggle = 1;
+		if ((atomic_read(&layer->capture_use_cnt) == CAPTURE_STATE_CAPTURE) && layer->capture_frame_req) {
+			struct amvideocap_req_data *reqdata =
+				(struct amvideocap_req_data *)layer->capture_frame_req->data;
+			int index = READ_VCBUS_REG(layer->vd_mif_reg.vd_if0_canvas0);
+
+			if (layer->capture_frame_req && layer->capture_frame_req->callback && reqdata && reqdata->privdata)
+				ret = layer->capture_frame_req->callback(reqdata->privdata, vf, index);
+
+			layer->capture_frame_req = NULL;
+			atomic_set(&layer->capture_use_cnt, CAPTURE_STATE_ON);
 		}
 	}
-	mutex_unlock(&video_module_mutex);
-	return 0;
+	else
+		capture_frame_toggle = 0;
+
+	return ret;
 }
 #endif
 
@@ -3762,6 +3767,10 @@ static struct vframe_s *vsync_toggle_frame(struct vframe_s *vf, int line)
 
 	if (cur_dispbuf[0] && omx_secret_mode)
 		cur_disp_frame_index = cur_dispbuf[0]->frame_index;
+
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
+	ext_frame_capture_poll(cur_dispbuf[0]);
+#endif
 
 	if (first_picture) {
 		first_frame_toggled = 1;
@@ -18250,4 +18259,3 @@ struct video_module_debug_s debug_video[52] = {
 	{"osd_vpp2_bld_ctrl", &osd_vpp2_bld_ctrl, 1, 1},
 	{"lcevc_alpha", &lcevc_alpha, 1, 0},
 };
-
