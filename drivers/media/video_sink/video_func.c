@@ -212,7 +212,7 @@ static inline struct vframe_s *pip2_vf_get(void)
 			return NULL;
 		}
 		/* video_notify_flag |= VIDEO_NOTIFY_PROVIDER_GET; */
-		atomic_set(&vf->use_cnt_pip, 1);
+		/* atomic_set(&vf->use_cnt_pip, 1); */
 		/* atomic_set(&vf->use_cnt_pip2, 1); */
 	}
 	return vf;
@@ -226,7 +226,7 @@ static inline int pip2_vf_put(struct vframe_s *vf)
 		return 0;
 
 	/* if (vfp && vf && atomic_dec_and_test(&vf->use_cnt_pip2)) { */
-	if (vfp && vf && atomic_dec_and_test(&vf->use_cnt_pip)) {
+	if (vfp && vf /* && atomic_dec_and_test(&vf->use_cnt_pip) */) {
 		if (vf_put(vf, RECEIVERPIP2_NAME) < 0)
 			return -EFAULT;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
@@ -281,7 +281,7 @@ static inline struct vframe_s *pip_vf_get(void)
 			return NULL;
 		}
 		/* video_notify_flag |= VIDEO_NOTIFY_PROVIDER_GET; */
-		atomic_set(&vf->use_cnt_pip, 1);
+		/* atomic_set(&vf->use_cnt_pip, 1); */
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		/*tunnel mode, add dv_inst to vf*/
 		if (dv_inst_pip >= 0)
@@ -298,7 +298,7 @@ static inline int pip_vf_put(struct vframe_s *vf)
 	if (pip_loop)
 		return 0;
 
-	if (vfp && vf && atomic_dec_and_test(&vf->use_cnt_pip)) {
+	if (vfp && vf /* && atomic_dec_and_test(&vf->use_cnt_pip) */) {
 		if (vf_put(vf, RECEIVERPIP_NAME) < 0)
 			return -EFAULT;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
