@@ -1363,6 +1363,27 @@ static struct notifier_block cpufreq_notifier = {
 	.priority = INT_MAX, /* do early */
 };
 
+static u32 meson_cpufreq_get_stock(unsigned int cpu)
+{
+	char clname[24];
+	struct device_node *cln;
+	u32 stock_freq = 0;
+
+	snprintf(clname, sizeof(clname), "/cpus/cpu-map/cluster%d", cpu);
+	cln = of_find_node_by_path(clname);
+
+	if (!of_property_read_u32(cln, "stock_freq", &stock_freq)) {
+		if (stock_freq) {
+			/* in unit kHz */
+			stock_freq *= 1000;
+			pr_info("cluster%d stock freq set to: %ld\n",
+				cpu, stock_freq);
+		}
+	}
+
+	return stock_freq;
+}
+
 static int meson_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device *cpu_dev;
@@ -1372,8 +1393,11 @@ static int meson_cpufreq_probe(struct platform_device *pdev)
 	unsigned int cpu = 0;
 	int ret, i;
 
-	for (i = 0; i < MAX_CLUSTERS; i++)
+	for (i = 0; i < MAX_CLUSTERS; i++) {
 		mutex_init(&cluster_lock[i]);
+		if (!max_freq[i])
+			max_freq[i] = meson_cpufreq_get_stock(i);
+	}
 
 	cpu_dev = get_cpu_device(cpu);
 	if (!cpu_dev) {
