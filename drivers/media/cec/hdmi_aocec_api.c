@@ -618,6 +618,10 @@ void cec_message_op(unsigned char *msg, unsigned char len)
 	unsigned int a, b = 0;
 	u32 handle_type = 0;
 	struct spd_device_info *info;
+
+	if (cec_dev->hal_flag & (1 << HDMI_OPTION_SYSTEM_CEC_CONTROL))
+		return true;
+
 	//cec handle just for tv product & need port mapping
 	if (cec_dev->dev_type != CEC_TV_ADDR || cec_dev->port_seq == 0)
 		return;
@@ -2818,4 +2822,3 @@ inline unsigned int get_pin_status(void)
 
 	return reg;
 }
-
