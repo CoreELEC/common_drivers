@@ -555,7 +555,7 @@ s8 dispbuf_to_put_num[MAX_VD_LAYERS];
 struct vframe_s *recycle_buf[MAX_VD_LAYERS][1 + DISPBUF_TO_PUT_MAX];
 s32 recycle_cnt[MAX_VD_LAYERS];
 /* config */
-u32 blackout[MAX_VD_LAYERS];
+u32 blackout[MAX_VD_LAYERS] = {1};
 u32 force_blackout;
 u32 pip_frame_count[MAX_VD_LAYERS];
 u32 pip_loop;
