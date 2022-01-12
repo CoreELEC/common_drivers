@@ -435,6 +435,9 @@ int rtl8211f_suspend(struct phy_device *phydev)
 				phy_write(phydev, 0x11, 0x005e);
 				phy_write(phydev, 0x12, 0xfb00);
 			} else {
+				unsigned char *mac_addr = phydev->attached_dev->dev_addr;
+				pr_info("set mac for wol = %02x:%02x:%02x:%02x:%02x:%02x\n",
+					mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 				phy_write(phydev, 0x10, phydev->attached_dev->dev_addr[0] |
 						(phydev->attached_dev->dev_addr[1] << 8));
 				phy_write(phydev, 0x11, phydev->attached_dev->dev_addr[2] |
@@ -471,10 +474,6 @@ int rtl8211f_suspend(struct phy_device *phydev)
 		/*pad isolation*/
 		value = phy_read(phydev, 0x13);
 		phy_write(phydev, 0x13, value | (0x1 << 15));
-		/*pin 31 pull high*/
-		phy_write(phydev, RTL821x_PAGE_SELECT, 0xd40);
-		value = phy_read(phydev, 0x16);
-		phy_write(phydev, 0x16, value | (1 << 5));
 		phy_write(phydev, RTL821x_PAGE_SELECT, 0);
 
 		mutex_unlock(&phydev->lock);
@@ -528,8 +527,8 @@ int rtl8211f_resume(struct phy_device *phydev)
 		/*pad isolantion*/
 		value = phy_read(phydev, 0x13);
 		phy_write(phydev, 0x13, value & ~(0x1 << 15));
-
 		phy_write(phydev, RTL821x_PAGE_SELECT, 0);
+
 	//	mutex_unlock(&phydev->lock);
 		pr_debug("%s %d\n", __func__, __LINE__);
 	} else {
