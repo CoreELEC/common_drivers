@@ -21,6 +21,7 @@ int get_vsync_pts_inc_mode(void);
 int tsync_pcr_init(void);
 void tsync_pcr_exit(void);
 int tsync_pcr_demux_pcr_used(void);
+void tsync_pcr_mode_reinit(u8 type);
 #else
 void __weak  tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 {
