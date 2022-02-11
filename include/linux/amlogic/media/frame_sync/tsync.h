@@ -126,7 +126,7 @@ u32 get_first_pic_coming(void);
 
 void tsync_avevent_locked(enum avevent_e event, u32 param);
 
-void tsync_mode_reinit(void);
+void tsync_mode_reinit(u8 type);
 
 void tsync_avevent(enum avevent_e event, u32 param);
 
@@ -220,7 +220,7 @@ u8 tsync_get_video_pid_valid(void);
 
 void tsync_get_buf_by_type_for_newarch(u8 type, struct stream_buf_s *pbuf);
 
-u8 tsync_get_buf_by_type(u8 type, struct stream_buf_s *pbuf);
+u8 tsync_get_buf_by_type(u8 type, struct stream_buf_s **pbuf);
 
 void tsync_get_stbuf_level_for_newarch(struct stream_buf_s *pbuf,
 				       u32 *buf_level);
