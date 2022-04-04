@@ -577,6 +577,7 @@ static u8 *aud_type_string[] = {
 	"CT_MAT",
 	"CT_DST",
 	"CT_WMA",
+	"CT_DTS_HD_MA",
 	"CT_MAX",
 };
 
