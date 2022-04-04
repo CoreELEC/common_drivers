@@ -603,6 +603,9 @@ int hdmitx_audio_para_print(struct aud_para *audio_para, char *log_buf)
 	case CT_WMA:
 		conf = "WMA";
 		break;
+	case CT_DTS_HD_MA:
+		conf = "DTS_HD_MA";
+		break;
 	default:
 		conf = "MAX";
 	}
@@ -735,6 +738,7 @@ static u8 *aud_type_string[] = {
 	"CT_MAT",
 	"CT_DST",
 	"CT_WMA",
+	"CT_DTS_HD_MA",
 	"CT_MAX",
 };
 
