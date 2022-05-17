@@ -1,6 +1,8 @@
 #include "coreelec_common.dtsi"
 
 / {
+	compatible = "amlogic, t7";
+
 	amhdmitx: amhdmitx{
 		vend_data: vend_data{ /* Should modified by Customer */
 			product_desc = "T7"; /* Max Chars: 16 */
