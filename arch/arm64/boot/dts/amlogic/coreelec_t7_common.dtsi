@@ -1,0 +1,334 @@
+#include "coreelec_common.dtsi"
+
+/ {
+	amhdmitx: amhdmitx{
+		vend_data: vend_data{ /* Should modified by Customer */
+			product_desc = "T7"; /* Max Chars: 16 */
+		};
+	};
+
+	reserved-memory {
+		ion_cma_reserved:linux,ion-dev {
+			size = <0x00000000 0x09800000>;
+		};
+
+		ion_fb_reserved:linux,ion-fb {
+			size = <0x00000000 0x11000000>;
+		};
+
+		secmon_reserved:linux,secmon {
+			/delete-property/ alloc-ranges;
+		};
+	};
+
+	/delete-node/ hdmirx;
+	/delete-node/ smartcard;
+	/delete-node/ lcd;
+	/delete-node/ backlight;
+	/delete-node/ local_dimming_device;
+	/delete-node/ lcd1;
+	/delete-node/ backlight1;
+	/delete-node/ lcd2;
+
+	emmc_pwrseq: emmc-pwrseq {
+		compatible = "mmc-pwrseq-emmc";
+		reset-gpios = <&gpio GPIOB_9 GPIO_ACTIVE_LOW>;
+	};
+
+	/delete-node/ auge_sound;
+	auge_sound {
+		compatible = "amlogic, auge-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
+
+		/*avout mute gpio*/
+		avout_mute-gpios = <&gpio GPIOH_2 GPIO_ACTIVE_HIGH>;
+
+		aml-audio-card,dai-link@0 {
+			mclk-fs = <128>;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifb>;
+			};
+			codec {
+				sound-dai = <&spdifb>;
+			};
+		};
+
+		aml-audio-card,dai-link@1 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&tdmb>;
+			frame-master = <&tdmb>;
+			cpu {
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+				sound-dai = <&tdmb>;
+			};
+			codec {
+				sound-dai = <&acodec>;
+			};
+		};
+
+		aml-audio-card,dai-link@2 {
+			mclk-fs = <128>;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifa>;
+			};
+			codec {
+				sound-dai = <&spdifa>;
+			};
+		};
+
+		aml-audio-card,dai-link@3 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&aml_i2s2hdmi>;
+			frame-master = <&aml_i2s2hdmi>;
+			cpu {
+				sound-dai = <&aml_i2s2hdmi>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+	};
+};
+
+&aml_wifi {
+	status = "okay";
+	wifi_static_buf = <1>;
+	/delete-property/ pwm_config;
+
+	pwm_channel1_conf {
+		pwms = <&pwm_ab 0 30550 0>;
+		duty-cycle = <15270>;
+		times = <8>;
+	};
+	pwm_channel2_conf {
+		pwms = <&pwm_ab 2 30500 0>;
+		duty-cycle = <15250>;
+		times = <12>;
+	};
+};
+
+&vdin0 {
+	status = "disabled";
+};
+
+&vdin1 {
+	status = "disabled";
+};
+
+&audiobus {
+	aml_i2s2hdmi: i2s2hdmi {
+		compatible = "amlogic, t7-snd-tdmc";
+	};
+	tdm@1 {
+		/delete-property/ tdmin-src-name;
+		/delete-property/ ctrl_gain;
+		/delete-node/ Channel_Mask;
+	};
+	resample@0 {
+		status = "disabled";
+	};
+	/delete-node/ resample@1;
+	loopback@0 {
+		datain_chnum = <0>;
+		datain_chmask = <0x0>;
+		/* config which data pin for loopback */
+		datain-lane-mask-in = <0 0 0 0>;
+	};
+	spdif@0 {
+		/delete-property/ samesource_sel;
+	};
+};
+
+&nna_tsensor {
+	status = "disabled";
+};
+
+&i2c1 {
+	/delete-node/ tas5707_36@1b;
+	/delete-node/ tas5707_3a@1d;
+};
+
+&connectors_dev {
+	/delete-node/ endpoint@2;
+	/delete-node/ endpoint@3;
+	/delete-node/ endpoint@4;
+};
+
+&sd_emmc_c {
+	mmc-pwrseq = <&emmc_pwrseq>;
+};
+
+&vpu {
+	status = "okay";
+};
+
+&vout {
+	status = "okay";
+};
+
+&vout2 {
+	status = "okay";
+};
+
+&vout3 {
+	status = "okay";
+};
+
+&vout_mux {
+	status = "okay";
+};
+
+&vpu_tsensor {
+	status = "okay";
+};
+
+&{/multi-di} {
+	status = "okay";
+};
+
+&{/vpu_security} {
+	status = "okay";
+};
+
+&eDPTX0 {
+	status = "disabled";
+};
+
+&eDPTX1 {
+	status = "disabled";
+};
+
+/delete-node/ &crg_phy_20;
+/delete-node/ &crg_phy_21;
+/delete-node/ &crg3_phy_20;
+/delete-node/ &crg3_phy_21;
+/delete-node/ &crg20_otg;
+/delete-node/ &crg21_otg;
+
+&{/soc} {
+	usbphy0: usbphy0@fe03a000 {
+		compatible = "amlogic,uphy-t7c";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "okay";
+
+		u2p0port0: u2p@0 {
+			#phy-cells = <0>;
+			port-speed = <0x0>; /* 0~2: HS HSP SS */
+			reg = <0xfe03a000 0x80
+			       0xfe002000 0x100
+			       0x0 0x0
+			       0xfe03c000 0x2000>;
+			reset-level = <0x40>;
+			phy-reset-level-bits = <8>;
+			usb-reset-bit = <4>;
+			pll-settings = <0x09400414
+					0x927E0000
+					0xac5f69e5
+					0xbe18
+					0x8000fff
+					0x78000
+					0xe0004
+					0xe000c>;
+			dis-thred-enhance = <0x2>;
+			clocks = <&clkc CLKID_USB>;
+			clock-names = "crg_general";
+			interrupts = <GIC_SPI 129 IRQ_TYPE_EDGE_RISING>;
+			gpio-vbus-power = "GPIOM_8";
+			gpios = <&gpio GPIOM_8 GPIO_ACTIVE_HIGH>;
+		};
+
+		u3p0port0: u3p@0 {
+			compatible = "amlogic, amlogic-crg-drd-usb3";
+			#phy-cells = <0>;
+			port-speed = <0x2>; /* 0~2: HS HSP SS */
+			reg = <0xfe03a080 0x20>;
+			phy1-reg = <0xfe062000>;
+			phy1-reg-size = <0x2000>;
+			phy-pcie-reg = <0xfe02a000>;
+			phy-pcie-reg-size = <0x2000>;
+			reset-reg = <0xFE002000>;
+			reset-reg-size = <0x100>;
+			reset-level = <0x40>;
+			usb3-apb-reset-bit = <23>;
+			usb3-phy-reset-bit = <22>;
+			usb3-reset-shit = <0x4>;
+			clocks = <&clkc CLKID_PCIE_PLL
+				  &clkc CLKID_PCIE_HCSL>;
+			clock-names = "pcie_refpll",
+				      "pcie_hcsl";
+		};
+	};
+
+	usbphy1: usbphy1@fe03a020 {
+		compatible = "amlogic,uphy-t7c";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		status = "okay";
+
+		u2p1port0: u2p@0 {
+			#phy-cells = <0>;
+			port-speed = <0x0>; /* 0~2: HS HSP SS */
+			reg = <0xfe03a020 0x60
+			       0xfe002000 0x100
+			       0x0 0x0
+			       0xfe03e000 0x2000>;
+			reset-level = <0x40>;
+			phy-reset-level-bits = <9>;
+			usb-reset-bit = <4>;
+			pll-settings = <0x09400414
+					0x927E0000
+					0xac5f69e5
+					0xbe18
+					0x8000fff
+					0x78000
+					0xe0004
+					0xe000c>;
+			dis-thred-enhance = <0x2>;
+			clocks = <&clkc CLKID_USB>;
+			clock-names = "crg_general";
+			interrupts = <GIC_SPI 281 IRQ_TYPE_EDGE_RISING>;
+			gpio-vbus-power = "GPIOM_9";
+			gpios = <&gpio GPIOM_9 GPIO_ACTIVE_HIGH>;
+			phy-otg;
+			controller-type = <1>; /* 0~3: normal, host, device, otg */
+		};
+	};
+};
+
+&crg2_drd {
+	/delete-property/ usb-phy;
+	phys = <&u2p1port0>;
+	phy-names = "usb2-phy";
+};
+
+&crg3_drd {
+	/delete-property/ usb-phy;
+	phys = <&u2p0port0>, <&u3p0port0>;
+	phy-names = "usb2-phy", "usb3-phy";
+};
+
+&crg_udc_2 {
+	/delete-property/ phy-reg;
+	/delete-property/ phy-reg-size;
+	phys = <&u2p1port0>;
+};
+
+&crg_udc_3 {
+	/delete-property/ phy-reg;
+	/delete-property/ phy-reg-size;
+	phys = <&u2p0port0>;
+};
