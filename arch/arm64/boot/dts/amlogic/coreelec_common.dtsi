@@ -2,12 +2,6 @@
 	coreelec;
 	/delete-property/ amlogic-dt-id;
 
-	reserved-memory {
-		linux,meson-fb {
-			alloc-ranges = <0x0 0x77800000 0x0 0x800000>;
-		};
-	};
-
 	gpioleds {
 		compatible = "gpio-leds";
 		status = "okay";
