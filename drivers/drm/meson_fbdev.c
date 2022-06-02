@@ -388,10 +388,10 @@ int am_meson_drm_fb_helper_set_par(struct fb_info *info)
 	    var->xres_virtual != fb->width ||
 	    var->yres_virtual != fb->height) {
 		/*realloc framebuffer, free old then alloc new gem*/
-		sizes.fb_height = var->yres_virtual;
-		sizes.fb_width = var->xres_virtual;
-		sizes.surface_width = sizes.fb_width;
-		sizes.surface_height = sizes.fb_height;
+		sizes.fb_height = var->yres;
+		sizes.fb_width = var->xres;
+		sizes.surface_width = var->xres_virtual;
+		sizes.surface_height = var->yres_virtual;
 		sizes.surface_bpp = var->bits_per_pixel;
 		sizes.surface_depth = PREFERRED_DEPTH;
 
@@ -417,8 +417,8 @@ int am_meson_drm_fb_helper_set_par(struct fb_info *info)
 				((mode_cmd.pixel_format >> 16) & 0xFF),
 				((mode_cmd.pixel_format >> 24) & 0xFF));
 
-		fb->width = sizes.fb_width;
-		fb->height = sizes.fb_height;
+		fb->width = var->xres_virtual;
+		fb->height = var->yres_virtual;
 		bytes_per_pixel = DIV_ROUND_UP(sizes.surface_bpp, 8);
 		fb->pitches[0] =  ALIGN(fb->width * bytes_per_pixel, 64);
 		fb->format = drm_get_format_info(dev, &mode_cmd);
