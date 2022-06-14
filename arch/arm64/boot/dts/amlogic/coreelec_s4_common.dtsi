@@ -1,0 +1,148 @@
+#include "coreelec_common.dtsi"
+
+/ {
+	compatible = "amlogic, s4";
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			/delete-property/ no-map;
+			/delete-property/ reg;
+			reusable;
+			size = <0x00000000 0x03400000>;
+			alloc-ranges = <0x00000000 0x05000000 0x00000000 0x03400000>;
+		};
+
+		ion_cma_reserved:linux,ion-dev {
+			size = <0x0 0x8000000>;
+		};
+
+		ion_fb_reserved:linux,ion-fb {
+			size = <0x0 0x11000000>;
+		};
+	};
+
+	amhdmitx: amhdmitx{
+		vend_data: vend_data{ /* Should modified by Customer */
+			product_desc = "S4"; /* Max Chars: 16 */
+		};
+	};
+
+	aml_dtv_demod {
+		status = "disabled";
+	};
+
+	emmc_pwrseq: emmc-pwrseq {
+		compatible = "mmc-pwrseq-emmc";
+		reset-gpios = <&gpio GPIOB_9 GPIO_ACTIVE_LOW>;
+	};
+
+	/delete-node/ auge_sound;
+	auge_sound {
+		compatible = "amlogic, auge-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
+
+		/*avout mute gpio*/
+		avout_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+
+		aml-audio-card,dai-link@0 {
+			mclk-fs = <128>;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifb>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@1 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&tdmb>;
+			frame-master = <&tdmb>;
+			cpu {
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+				sound-dai = <&tdmb>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@2 {
+			mclk-fs = <128>;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifa>;
+			};
+			codec {
+				sound-dai = <&spdifa>;
+			};
+		};
+
+		aml-audio-card,dai-link@3 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&aml_i2s2hdmi>;
+			frame-master = <&aml_i2s2hdmi>;
+			cpu {
+				sound-dai = <&aml_i2s2hdmi>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+	};
+
+	gpio_keypad {
+		key_num = <1>;
+		key_name = "power";
+		key_code = <116>;
+	};
+};
+
+&aml_wifi {
+	wifi_static_buf = <1>;
+};
+
+&vdin0 {
+	status = "disabled";
+};
+
+&vdin1 {
+	status = "disabled";
+};
+
+&audiobus {
+	aml_i2s2hdmi: i2s2hdmi {
+		compatible = "amlogic, t5-snd-tdmc";
+	};
+};
+
+&i2c1 {
+	clock-frequency = <100000>; /* default 100k */
+	/delete-node/ tlc59116@60;
+	/delete-node/ aw9523_led@5b;
+};
+
+&usb3_phy_v2 {
+	otg = <0>;
+};
+
+&sd_emmc_c {
+	mmc-pwrseq = <&emmc_pwrseq>;
+};
+
+&amlogic_codec {
+	/delete-property/ tocodec_inout;
+	/delete-property/ tdmout_index;
+};
