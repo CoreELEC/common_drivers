@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
 DTC_FLAGS += -Wno-unit_address_format
 
+dtb-y += s4_s905y4_buzztv_hd5_2g.dtb
+dtb-y += s4_s905y4_buzztv_hd5_4g.dtb
 dtb-y += sc2_s905x4_buzztv_x5_2g.dtb
 dtb-y += sc2_s905x4_buzztv_x5_2g_1gbit.dtb
 dtb-y += sc2_s905x4_buzztv_x5_4g.dtb
