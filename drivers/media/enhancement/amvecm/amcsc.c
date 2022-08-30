@@ -528,7 +528,7 @@ uint cur_csc_type[VD_PATH_MAX] = {0xffff, 0xffff, 0xffff};
 /* Android U force mode: hdr_policy = 4 */
 /* 0: follow sink, 1: follow source, 2: debug, 0xff: bootup default value */
 /* by default follow source to match default sdr_mode*/
-uint hdr_policy;
+uint hdr_policy = 1;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static uint cur_hdr_policy = 0xff;
 #endif
