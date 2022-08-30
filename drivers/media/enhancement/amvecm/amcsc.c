@@ -518,7 +518,7 @@ MODULE_PARM_DESC(hdmi_csc_type, "\n current color space convert type\n");
 /* Android U force mode: hdr_policy = 4 */
 /* 0: follow sink, 1: follow source, 2: debug, 0xff: bootup default value */
 /* by default follow source to match default sdr_mode*/
-static uint hdr_policy;
+static uint hdr_policy = 1;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static uint cur_hdr_policy = 0xff;
 #endif
