@@ -1,0 +1,30 @@
+#include "sc2_s905x4_ah212_drm.dts"
+#include "coreelec_sc2_common.dtsi"
+
+/ {
+	model = "Amlogic";
+	coreelec-dt-id = "sc2_s905x4_2g";
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	gpio_keypad {
+		status = "disabled";
+	};
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&sd_emmc_b {
+	status = "okay";
+	max-frequency = <150000000>;
+};
