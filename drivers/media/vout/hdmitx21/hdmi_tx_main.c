@@ -3670,11 +3670,6 @@ static void amhdmitx_infoframe_init(struct hdmitx_dev *hdev)
 	if (!ret)
 		HDMITX_INFO("%s[%d] init vendor infoframe failed %d\n", __func__, __LINE__, ret);
 	hdmi_avi_infoframe_init(&hdev->infoframes.avi.avi);
-
-	// TODO, panic
-	// hdmi_spd_infoframe_init(&hdev->infoframes.spd.spd,
-	//	hdev->config_data.vend_data->vendor_name,
-	//	hdev->config_data.vend_data->product_desc);
 	hdmi_audio_infoframe_init(&hdev->infoframes.aud.audio);
 	hdmi_drm_infoframe_init(&hdev->infoframes.drm.drm);
 }
