@@ -1,0 +1,11 @@
+#include "s4_s905y4_ap222_drm.dts"
+#include "coreelec_s4_common.dtsi"
+
+/ {
+	model = "Amlogic";
+	coreelec-dt-id = "s4_s905y4_2g";
+};
+
+&i2c1 {
+	status = "disabled";
+};
