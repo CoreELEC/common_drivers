@@ -37,6 +37,10 @@
 	};
 
 	/delete-node/ gpio_keypad;
+
+	regulator-vbus_usb {
+		gpio = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &periphs_pinctrl {
@@ -64,11 +68,6 @@
 
 &i2c3 {
 	/delete-node/ es8388@10;
-};
-
-&usb2_phy_v2 {
-	gpio-vbus-power = "GPIOH_5";
-	gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
 };
 
 &sd_emmc_b {
