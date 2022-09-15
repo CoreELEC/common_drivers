@@ -50,6 +50,17 @@
 	/delete-node/ cpu_opp_table1;
 	/delete-node/ cpu_opp_table2;
 	/delete-node/ cpu_opp_table3;
+
+	regulator-vbus_usb {
+		compatible = "regulator-fixed";
+		regulator-name = "vbus_usb";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 };
 
 &ext_mdio {
