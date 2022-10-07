@@ -31,7 +31,8 @@ static int am_meson_fbdev_alloc_fb_gem(struct fb_info *info)
 	struct meson_drm_fbdev *fbdev = container_of(helper, struct meson_drm_fbdev, base);
 	struct drm_framebuffer *fb = helper->fb;
 	struct drm_device *dev = helper->dev;
-	size_t size = info->screen_size;
+	struct meson_drm *private = dev->dev_private;
+	size_t size = ALIGN(private->ui_config.fb_w * DIV_ROUND_UP(private->ui_config.fb_bpp, 8), 64) * private->ui_config.fb_h;
 	struct am_meson_gem_object *meson_gem;
 	void *vaddr;
 	struct page **pages;
@@ -77,6 +78,7 @@ static int am_meson_fbdev_alloc_fb_gem(struct fb_info *info)
 		}
 		info->screen_base = (char __iomem *)vaddr;
 		info->fix.smem_start = meson_gem->addr;
+		info->fix.smem_len = size;
 
 		MESON_DRM_FBDEV("alloc memory %d done\n", (u32)size);
 	} else {
