@@ -1,0 +1,150 @@
+#include "s4_s905y4_ap222_drm.dts"
+#include "coreelec_s4_common.dtsi"
+
+/ {
+	model = "Khadas VIM1S";
+	coreelec-dt-id = "s4_s905y4_khadas_vim1s";
+
+	gpio_keypad {
+		key_num = <1>;
+		key_name = "power";
+		key_code = <KEY_POWER>;
+		key_type = <EV_KEY>;
+		key-gpios = <&gpio GPIOD_8 GPIO_ACTIVE_LOW>;
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	sdcard_power: regulator-sdcard {
+		compatible = "regulator-fixed";
+		regulator-name = "SDCARD_POWER";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOD_4 GPIO_ACTIVE_LOW>;
+		enable-active-low;
+		regulator-always-on;
+	};
+
+	vddio_card: gpio-regulator {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_CARD";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&gpio GPIOD_9 GPIO_ACTIVE_HIGH>;
+		gpios-states = <1>;
+		states = <1800000 1 3300000 0>;
+	};
+
+	onewire: onewire {
+		compatible = "w1-gpio";
+		gpios = <&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+
+	vir_tsensor: vir_tsensor {
+		compatible = "amlogic, vir-tsens";
+		zone-name = "soc_thermal";
+		num-vtsens = <1>;
+		#thermal-sensor-cells = <1>;
+	};
+};
+
+&i2c1 {
+	hym8563-rtc@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+	};
+
+	khadas_mcu: khadas-mcu@18 {
+		compatible = "khadas,vim4-mcu";
+		reg = <0x18>;
+		#cooling-cells = <2>;
+	};
+};
+
+&vrtc {
+	status = "disabled";
+};
+
+&i2c4 {
+	status = "disabled";
+};
+
+&aml_bt {
+	power_down_disable = <1>;
+};
+
+&sd_emmc_b {
+	vmmc-supply = <&sdcard_power>;
+	vqmmc-supply = <&vddio_card>;
+};
+
+&dwc2_a {
+	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
+	controller-type = <2>;
+};
+
+&periphs_pinctrl {
+	spdifout: spdifout {
+		mux { /* GPIOH_4 */
+			groups = "spdif_out_h";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIOZ_9 */
+			groups = "GPIOZ_9";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+};
+
+&{/thermal-zones} {
+	fan_thermal: fan_thermal {
+		polling-delay = <1000>;
+		polling-delay-passive = <100>;
+		thermal-sensors = <&vir_tsensor 0>;
+
+		trips {
+			fan_trip0: fan-trip0 {
+				temperature = <50000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+
+			fan_trip1: fan-trip1 {
+				temperature = <60000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+
+			fan_trip2: fan-trip2 {
+				temperature = <70000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+		};
+
+		cooling-maps {
+			fan_cooling_map0 {
+				trip = <&fan_trip0>;
+				cooling-device = <&khadas_mcu 3 3>;
+			};
+
+			fan_cooling_map1 {
+				trip = <&fan_trip1>;
+				cooling-device = <&khadas_mcu 4 4>;
+			};
+
+			fan_cooling_map2 {
+				trip = <&fan_trip2>;
+				cooling-device = <&khadas_mcu 5 5>;
+			};
+		};
+	};
+};
