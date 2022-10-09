@@ -1,0 +1,102 @@
+#include "s4_s905y4_ap222_drm.dts"
+#include "coreelec_s4_common.dtsi"
+
+/ {
+	model = "Khadas VIM1S";
+	coreelec-dt-id = "s4_s905y4_khadas_vim1s";
+
+	gpio_keypad {
+		key_num = <1>;
+		key_name = "power";
+		key_code = <KEY_POWER>;
+		key_type = <EV_KEY>;
+		key-gpios = <&gpio GPIOD_8 GPIO_ACTIVE_LOW>;
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	sdcard_power: regulator-sdcard {
+		compatible = "regulator-fixed";
+		regulator-name = "SDCARD_POWER";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOD_4 GPIO_ACTIVE_LOW>;
+		enable-active-low;
+		regulator-always-on;
+	};
+
+	vddio_card: gpio-regulator {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_CARD";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&gpio GPIOD_9 GPIO_ACTIVE_HIGH>;
+		gpios-states = <1>;
+		states = <1800000 1 3300000 0>;
+	};
+
+	onewire: onewire {
+		compatible = "w1-gpio";
+		gpios = <&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+};
+
+&i2c1 {
+	hym8563-rtc@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+	};
+
+	khadas-mcu@18 {
+		compatible = "khadas-mcu";
+		reg = <0x18>;
+		fan,trig_temp_level0 = <50>;
+		fan,trig_temp_level1 = <60>;
+		fan,trig_temp_level2 = <70>;
+		fan,trig_temp_level3 = <80>;
+		hwver = "VIM1S.V10"; /* Will be updated in uboot. */
+	};
+};
+
+&vrtc {
+	status = "disabled";
+};
+
+&i2c4 {
+	status = "disabled";
+};
+
+&aml_bt {
+	power_down_disable = <1>;
+};
+
+&sd_emmc_b {
+	vmmc-supply = <&sdcard_power>;
+	vqmmc-supply = <&vddio_card>;
+};
+
+&dwc2_a {
+	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
+	controller-type = <2>;
+};
+
+&periphs_pinctrl {
+	spdifout: spdifout {
+		mux { /* GPIOH_4 */
+			groups = "spdif_out_h";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIOZ_9 */
+			groups = "GPIOZ_9";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+};
