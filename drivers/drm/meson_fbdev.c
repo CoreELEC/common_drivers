@@ -130,6 +130,9 @@ static int am_meson_fbdev_alloc_fb_gem(struct fb_info *info)
 
 		MESON_DRM_FBDEV("alloc memory %d done\n", (u32)size);
 	} else {
+		struct drm_gem_object *gem_obj = fbdev->fb_gem;
+		meson_gem = container_of(gem_obj, struct am_meson_gem_object, base);
+		get_dma_buf(meson_gem->dmabuf);
 		MESON_DRM_FBDEV("no need repeate alloc memory %d\n", (u32)size);
 	}
 	return 0;
@@ -154,6 +157,7 @@ static void am_meson_fbdev_free_fb_gem(struct fb_info *info)
 		struct am_meson_gem_object *meson_gem = container_of(gem_obj,
 					struct am_meson_gem_object, base);
 
+		dma_buf_put(meson_gem->dmabuf);
 		if (!meson_gem->is_dma)
 			ion_heap_unmap_kernel(meson_gem->ionbuffer->heap,
 					meson_gem->ionbuffer);
@@ -790,6 +794,7 @@ static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 		fbdma.flags = O_CLOEXEC;
 		dma_buf_get(fbdma.fd);
 		ret = copy_to_user(argp, &fbdma, sizeof(fbdma)) ? -EFAULT : 0;
+		get_dma_buf(meson_fb->bufp[0]->dmabuf);
 	} else if (cmd == FBIO_WAITFORVSYNC) {
 		am_meson_drm_wait_one_vblank(info);
 

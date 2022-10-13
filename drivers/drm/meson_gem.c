@@ -341,7 +341,6 @@ static void am_meson_gem_free_buf(struct drm_device *dev,
 	if (meson_gem_obj->ionbuffer) {
 		DRM_DEBUG_PRIME("free buffer(0x%p),dmabuf(%px)\n",
 			meson_gem_obj->ionbuffer, meson_gem_obj->dmabuf);
-		dma_buf_put(meson_gem_obj->dmabuf);
 		meson_gem_obj->ionbuffer = NULL;
 		meson_gem_obj->dmabuf = NULL;
 	}
