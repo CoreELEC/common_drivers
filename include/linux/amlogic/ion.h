@@ -54,6 +54,8 @@ struct ion_buffer {
 };
 
 void ion_buffer_destroy(struct ion_buffer *buffer);
+void *ion_buffer_kmap_get(struct ion_buffer *buffer);
+void ion_buffer_kmap_put(struct ion_buffer *buffer);
 
 /**
  * struct ion_device - the metadata of the ion device node
