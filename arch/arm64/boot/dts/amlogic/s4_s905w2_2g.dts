@@ -1,0 +1,33 @@
+#include "s4_s905w2_ap201_1g.dts"
+#include "coreelec_s4_common.dtsi"
+
+/ {
+	model = "Amlogic";
+	coreelec-dt-id = "s4_s905w2_2g";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x0 0x0 0x80000000>;
+	};
+
+	reserved-memory {
+		codec_mm_cma:linux,codec_mm_cma {
+			size = <0x0 0x0d000000>;
+		};
+	};
+
+	gpio_keypad {
+		status = "disabled";
+	};
+};
+
+&sd_emmc_c {
+	tx_delay = <0xa>;
+};
+
+&i2c1 {
+	status = "disabled";
+};
+
+&i2c4 {
+	status = "disabled";
+};
