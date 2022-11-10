@@ -7183,7 +7183,7 @@ bool is_vinfo_available(const struct vinfo_s *vinfo)
 EXPORT_SYMBOL(is_vinfo_available);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-static enum hdr_type_e get_source_type(enum vd_path_e vd_path,
+static enum hdr_type_e get_source_type_by_sink_limit(enum vd_path_e vd_path,
 	enum vpp_index_e vpp_index)
 {
 	struct vinfo_s *vinfo;
@@ -7251,7 +7251,7 @@ enum hdr_type_e get_cur_source_type(enum vd_path_e vd_path,
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (vd_path >= VD_PATH_MAX)
 		return UNKNOWN_SOURCE;
-	return get_source_type(vd_path, vpp_index);
+	return get_source_type_by_sink_limit(vd_path, vpp_index);
 #else
 	return HDRTYPE_SDR;
 #endif
@@ -7267,7 +7267,7 @@ int get_hdr_module_status(enum vd_path_e vd_path,
 	    is_amdv_enable() &&
 	    get_amdv_policy()
 	    == AMDV_FOLLOW_SOURCE &&
-	    get_source_type(VD1_PATH, vpp_index)
+	    get_source_type_by_sink_limit(VD1_PATH, vpp_index)
 	    == HDRTYPE_SDR &&
 	    sdr_process_mode[VD1_PATH]
 	    == PROC_BYPASS) {
@@ -7280,7 +7280,7 @@ int get_hdr_module_status(enum vd_path_e vd_path,
 	    is_amdv_enable() &&
 	    get_amdv_policy()
 	    == AMDV_FOLLOW_SOURCE &&
-	    get_source_type(VD2_PATH, vpp_index)
+	    get_source_type_by_sink_limit(VD2_PATH, vpp_index)
 	    == HDRTYPE_SDR &&
 	    sdr_process_mode[VD2_PATH]
 	    == PROC_BYPASS)
@@ -8713,9 +8713,19 @@ static int vpp_matrix_update(struct vframe_s *vf,
 			signal_change_flag |= SIG_HDR_MODE;
 		}
 
-		source_format[VD1_PATH] = get_source_type(VD1_PATH, vpp_index);
-		source_format[VD2_PATH] = get_source_type(VD2_PATH, vpp_index);
-		source_format[VD3_PATH] = get_source_type(VD3_PATH, vpp_index);
+		// get source type by hdr policy
+		if (get_hdr_policy() == 0) {
+			// source type limited by sink capability
+			source_format[VD1_PATH] = get_source_type_by_sink_limit(VD1_PATH, vpp_index);
+			source_format[VD2_PATH] = get_source_type_by_sink_limit(VD2_PATH, vpp_index);
+			source_format[VD3_PATH] = get_source_type_by_sink_limit(VD3_PATH, vpp_index);
+		} else {
+			// real source type
+			source_format[VD1_PATH] = get_hdr_source_type();
+			source_format[VD2_PATH] = get_hdr_source_type();
+			source_format[VD3_PATH] = get_hdr_source_type();
+		}
+
 		get_cur_vd_signal_type(vd_path);
 #ifdef T7_BRINGUP_MULTI_VPP
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
@@ -9295,16 +9305,16 @@ int amvecm_matrix_process(struct vframe_s *vf,
 				       dv_hdr_policy);
 				if (vd_path == VD2_PATH || // TODO, add vd3??
 				    (vd_path == VD1_PATH &&
-				     (get_source_type(VD1_PATH, vpp_index) == HDRTYPE_HDR10PLUS ||
-				      get_source_type(VD1_PATH, vpp_index) == HDRTYPE_MVC ||
-				      get_source_type(VD1_PATH, vpp_index) == HDRTYPE_CUVA_HDR ||
-				      get_source_type(VD1_PATH, vpp_index) == HDRTYPE_CUVA_HLG ||
+				     (get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_HDR10PLUS ||
+				      get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_MVC ||
+				      get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_CUVA_HDR ||
+				      get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_CUVA_HLG ||
 				      ((get_dv_support_info() & 7) != 7) ||
-				      (get_source_type(VD1_PATH, vpp_index) == HDRTYPE_HDR10 &&
+				      (get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_HDR10 &&
 				       !(dv_hdr_policy & 1)) ||
-				      (get_source_type(VD1_PATH, vpp_index) == HDRTYPE_HLG &&
+				      (get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_HLG &&
 				       !(dv_hdr_policy & 2)) ||
-				      (get_source_type(VD1_PATH, vpp_index) == HDRTYPE_SDR &&
+				      (get_source_type_by_sink_limit(VD1_PATH, vpp_index) == HDRTYPE_SDR &&
 				       !(dv_hdr_policy & 0x20))))) {
 					/* and VD1 adaptive or VD2*/
 					/* or always hdr hdr+/hlg bypass */
