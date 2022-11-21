@@ -2102,11 +2102,11 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 		 * channel status: for i2s hbr/pcm
 		 * actually audio module only notify 4 bytes
 		 */
-		hdmitx21_wr_reg(I2S_CHST0_IVCTX, audio_param->status[0]);
-		hdmitx21_wr_reg(I2S_CHST1_IVCTX, audio_param->status[1]);
-		hdmitx21_wr_reg(I2S_CHST2_IVCTX, audio_param->status[2]);
-		hdmitx21_wr_reg(I2S_CHST3_IVCTX, audio_param->status[3]);
-		hdmitx21_wr_reg(I2S_CHST4_IVCTX, audio_param->status[4]);
+		hdmitx21_wr_reg(I2S_CHST0_IVCTX, 0x15); //I2S_CHST0
+		hdmitx21_wr_reg(I2S_CHST1_IVCTX, audio_param->status[0]); //I2S_CHST1
+		hdmitx21_wr_reg(I2S_CHST1_IVCTX, audio_param->status[1]); //I2S_CHST1
+		hdmitx21_wr_reg(I2S_CHST2_IVCTX, audio_param->status[2]); //I2S_CHST2
+		hdmitx21_wr_reg(I2S_CHST3_IVCTX, audio_param->status[3]);//I2S_CHST3
 	}
 	data32 = 0;
 	/*
