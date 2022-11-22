@@ -2126,17 +2126,18 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 	 */
 	data32 = 0;
 	if (audio_param->aud_src_if == 1) {
-		if (audio_param->chs == 2 - 1) {
-			i2s_line_mask = 1;
-		} else if (audio_param->chs == 4 - 1) {
-			/* SD0/1 */
-			i2s_line_mask = 0x3;
-		} else if (audio_param->chs == 6 - 1) {
-			/* SD0/1/2 */
-			i2s_line_mask = 0x7;
-		} else if (audio_param->chs == 8 - 1) {
+		if (audio_param->chs > 6) {
 			/* SD0/1/2/3 */
 			i2s_line_mask = 0xf;
+		} else if (audio_param->chs > 4) {
+			/* SD0/1/2 */
+			i2s_line_mask = 0x7;
+		} else if (audio_param->chs > 2) {
+			/* SD0/1 */
+			i2s_line_mask = 0x3;
+		} else {
+			/* SD0 */
+			i2s_line_mask = 0x1;
 		}
 		if (GET_OUTCHN_MSK(aud_output_i2s_ch))
 			i2s_line_mask = GET_OUTCHN_MSK(aud_output_i2s_ch);
