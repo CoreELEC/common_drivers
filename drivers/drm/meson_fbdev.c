@@ -83,11 +83,11 @@ static int am_meson_fbdev_alloc_fb_gem(struct fb_info *info)
 	} else {
 		struct drm_gem_object *gem_obj = fbdev->fb_gem;
 		meson_gem = container_of(gem_obj, struct am_meson_gem_object, base);
-		get_dma_buf(meson_gem->dmabuf);
 		vaddr = ion_buffer_kmap_get(meson_gem->ionbuffer);
 		info->screen_base = (char __iomem *)vaddr;
 		MESON_DRM_FBDEV("no need repeate alloc memory %d\n", (u32)size);
 	}
+	get_dma_buf(meson_gem->dmabuf);
 	return 0;
 }
 
@@ -110,6 +110,7 @@ static void am_meson_fbdev_free_fb_gem(struct fb_info *info)
 					struct am_meson_gem_object, base);
 
 		ion_buffer_kmap_put(meson_gem->ionbuffer);
+		dma_buf_put(meson_gem->dmabuf);
 
 		if (meson_gem->ionbuffer->kmap_cnt)
 			return;
