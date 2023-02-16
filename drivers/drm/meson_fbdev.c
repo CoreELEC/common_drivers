@@ -630,7 +630,8 @@ retry:
 		plane_state->crtc_x, plane_state->crtc_y,
 		plane_state->crtc_w, plane_state->crtc_h);
 
-	state->legacy_cursor_update = true;
+	if (plane == mode_set->crtc->cursor)
+		state->legacy_cursor_update = true;
 	start2 = ktime_get();
 	ret = drm_atomic_commit(state);
 	end2 = ktime_get();
