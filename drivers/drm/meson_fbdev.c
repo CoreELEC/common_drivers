@@ -531,7 +531,8 @@ retry:
 		plane_state->zpos, plane_state->crtc_w,
 		plane_state->crtc_h);
 
-	state->legacy_cursor_update = true;
+	if (plane == mode_set->crtc->cursor)
+		state->legacy_cursor_update = true;
 	am_plane_state = to_am_meson_plane_state(plane_state);
 	am_plane_state->fbdev_commit = true;
 	ret = drm_atomic_commit(state);
