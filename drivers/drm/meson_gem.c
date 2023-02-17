@@ -707,10 +707,8 @@ int am_meson_gem_object_mmap(struct am_meson_gem_object *obj,
 			vma->vm_page_prot =
 				pgprot_writecombine(vma->vm_page_prot);
 
-		mutex_lock(&buffer->lock);
 		/* now map it to userspace */
 		ret = ion_heap_map_user(heap, buffer, vma);
-		mutex_unlock(&buffer->lock);
 	}
 
 	if (ret) {
