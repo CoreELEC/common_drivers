@@ -523,8 +523,6 @@ int am_meson_drm_fb_helper_set_par(struct fb_info *info)
 		var->yres = yres_set;
 	}
 
-	am_meson_drm_wait_one_vblank(info);
-
 	return 0;
 }
 
