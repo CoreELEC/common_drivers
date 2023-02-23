@@ -55,7 +55,7 @@ static char local_name[VMODE_NAME_LEN_MAX] = {0};
 static char vout2_mode_uboot[VMODE_NAME_LEN_MAX] = "null";
 static char connector1_type[VMODE_NAME_LEN_MAX];
 static unsigned int vout2_init_vmode = VMODE_INIT_NULL;
-static int uboot_display;
+static int uboot_display = 0;
 static unsigned int bist_mode2;
 
 static struct vout_cdev_s *vout2_cdev;
@@ -1084,7 +1084,7 @@ static int get_vout2_init_mode(char *str)
 
 	return 1;
 }
-__setup("vout2=", get_vout2_init_mode);
+//__setup("vout2=", get_vout2_init_mode);
 
 static int get_connector1_type(char *str)
 {
