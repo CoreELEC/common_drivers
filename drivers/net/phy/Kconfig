@@ -9,3 +9,8 @@ config AMLOGIC_REALTEK
 	tristate "Amlogic realtek PHY"
 	help
 	  Currently has a driver for the Amlogic realtek PHY
+
+config AMLOGIC_MAXIO
+	tristate "Amlogic maxio PHY"
+	help
+	  Currently has a driver for the Amlogic Maxio PHY

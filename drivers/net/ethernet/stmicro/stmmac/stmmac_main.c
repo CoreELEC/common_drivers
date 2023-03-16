@@ -7545,6 +7545,10 @@ static void stmmac_reset_queues_param(struct stmmac_priv *priv)
  * Description: when resume this function is invoked to setup the DMA and CORE
  * in a usable state.
  */
+#ifdef CONFIG_AMLOGIC_MAXIO
+#define MAXIO_PHY_MAE0621A_Q2C_ID 0x7b744411
+#define MAXIO_PHY_MAE0621A_Q3C_ID 0x7b744412
+#endif
 int stmmac_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
@@ -7603,6 +7607,14 @@ int stmmac_resume(struct device *dev)
 
 	stmmac_free_tx_skbufs(priv);
 	stmmac_clear_descriptors(priv);
+
+#ifdef CONFIG_AMLOGIC_MAXIO
+	if (ndev->phydev->drv->config_init) {
+		if (ndev->phydev->phy_id == MAXIO_PHY_MAE0621A_Q2C_ID ||
+		    ndev->phydev->phy_id == MAXIO_PHY_MAE0621A_Q3C_ID)
+			ndev->phydev->drv->config_init(ndev->phydev);
+	}
+#endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 	ret = stmmac_hw_setup(ndev, false);
