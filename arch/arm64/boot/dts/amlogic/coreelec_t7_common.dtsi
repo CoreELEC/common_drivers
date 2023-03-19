@@ -163,3 +163,8 @@
 &sd_emmc_c {
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
+
+&ethmac {
+	internal_phy = <2>;
+	cali_val = <0x80000>;
+};
