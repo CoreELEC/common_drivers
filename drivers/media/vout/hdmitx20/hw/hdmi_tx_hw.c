@@ -135,8 +135,6 @@ static int hdmitx_cntl_misc(struct hdmitx_hw_common *tx_hw, unsigned int cmd,
 			    unsigned int  argv);
 static void audio_mute_op(bool flag);
 
-static DEFINE_MUTEX(aud_mutex);
-
 #define EDID_RAM_ADDR_SIZE	 (8)
 
 /* HSYNC polarity: active high */
@@ -2866,7 +2864,6 @@ static void audio_mute_op(bool flag)
 	struct aud_para *tx_aud_param = &hdev->tx_comm.cur_audio_param;
 
 	aud_output_i2s_ch = tx_aud_param->aud_output_i2s_ch;
-	mutex_lock(&aud_mutex);
 	if (flag == 0) {
 		hdmitx_set_reg_bits(HDMITX_DWC_AUD_CONF0, 0x20, 0, 6);
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 0, 1);
@@ -2885,7 +2882,6 @@ static void audio_mute_op(bool flag)
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 3, 1);
 	}
 	HDMITX_INFO("audio state: %s\n", flag == 0 ? "AUDIO_MUTE" : "AUDIO_UNMUTE");
-	mutex_unlock(&aud_mutex);
 }
 
 static bool audio_get_mute_st(void)
@@ -2919,7 +2915,6 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw,
 
 	pr_debug(HW "set audio\n");
 	aud_output_i2s_ch = hdev->tx_comm.cur_audio_param.aud_output_i2s_ch;
-	mutex_lock(&aud_mutex);
 	memcpy(&hdmiaud_config_data,
 		   audio_param, sizeof(struct aud_para));
 	if (hsty_hdmiaud_config_loc > 7)
@@ -3001,7 +2996,6 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw,
 	hdmitx_hw_cntl_misc(tx_hw, MISC_AUDIO_RESET, 1);
 	if (audio_param->aud_output_en)
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 0, 1);
-	mutex_unlock(&aud_mutex);
 
 	return 0;
 }
@@ -7000,4 +6994,3 @@ void hdmitx20_csc_update_avi_infoframe(u32 output_color_format)
 		HDMITX_INFO("avi not support/implemented yet\n");
 	}
 }
-
