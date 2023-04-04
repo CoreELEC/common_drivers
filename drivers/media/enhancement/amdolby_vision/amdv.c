@@ -17518,6 +17518,16 @@ static const struct file_operations amdolby_vision_fops = {
 	.poll = amdolby_vision_poll,
 };
 
+static ssize_t amdolby_vision_ko_info_show
+		(const struct class *cla,
+		 const struct class_attribute *attr, char *buf)
+{
+	if (ko_info)
+		return sprintf(buf, "%s", ko_info);
+	else
+		return 0;
+}
+
 static const char *amdolby_vision_debug_usage_str = {
 	"Usage:\n"
 	"echo amdv_crc 0/1 > /sys/class/amdolby_vision/debug; amdv_crc insert or clr\n"
@@ -20151,6 +20161,8 @@ int amdv_notifier_call_chain(unsigned long val, void *v)
 EXPORT_SYMBOL_GPL(amdv_notifier_call_chain);
 
 static struct class_attribute amdolby_vision_class_attrs[] = {
+	__ATTR(ko_info, 0444,
+	       amdolby_vision_ko_info_show, NULL),
 	__ATTR(debug, 0644,
 	       amdolby_vision_debug_show,
 	       amdolby_vision_debug_store),
