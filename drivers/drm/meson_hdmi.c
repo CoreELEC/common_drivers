@@ -327,7 +327,7 @@ static int meson_hdmitx_decide_color_attr
 				switch (common->hdmi_current_tunnel_mode) {
 					case RGB_8BIT:
 					case RGB_10_12BIT:
-						attr->colorformat = HDMI_COLORSPACE_RGB;
+						attr->colorformat = HDMI_COLORSPACE_YUV444;
 						break;
 					case YUV422_BIT12:
 						attr->colorformat = HDMI_COLORSPACE_YUV422;
