@@ -546,6 +546,32 @@ static ssize_t disp_mode_store(struct device *dev,
 	return count;
 }
 
+static ssize_t cs_show(struct device *dev,
+			 struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct hdmitx_dev *hdev = get_hdmitx21_device();
+	struct hdmi_avi_infoframe *info = &hdev->infoframes.avi.avi;
+
+	pos +=
+	snprintf(buf + pos, PAGE_SIZE, "%d\n", info->colorspace);
+
+	return pos;
+}
+
+static ssize_t cd_show(struct device *dev,
+			 struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct hdmitx_dev *hdev = get_hdmitx21_device();
+	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
+
+	pos +=
+	snprintf(buf + pos, PAGE_SIZE, "%d\n", para->cd);
+
+	return pos;
+}
+
 static DEFINE_MUTEX(aud_mute_mutex);
 void hdmitx21_audio_mute_op(u32 flag, unsigned int path)
 {
@@ -2864,6 +2890,8 @@ static ssize_t not_restart_hdcp_store(struct device *dev,
 }
 
 static DEVICE_ATTR_RW(disp_mode);
+static DEVICE_ATTR_RO(cs);
+static DEVICE_ATTR_RO(cd);
 static DEVICE_ATTR_RW(vid_mute);
 static DEVICE_ATTR_WO(config);
 static DEVICE_ATTR_RO(vrr_cap);
@@ -3787,6 +3815,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	}
 	hdev->hdtx_dev = dev;
 	ret = device_create_file(dev, &dev_attr_disp_mode);
+	ret = device_create_file(dev, &dev_attr_cs);
+	ret = device_create_file(dev, &dev_attr_cd);
 	ret = device_create_file(dev, &dev_attr_vid_mute);
 	ret = device_create_file(dev, &dev_attr_config);
 	ret = device_create_file(dev, &dev_attr_vrr_cap);
@@ -3966,6 +3996,8 @@ static int amhdmitx_remove(struct platform_device *pdev)
 
 	/* Remove the cdev */
 	device_remove_file(dev, &dev_attr_disp_mode);
+	device_remove_file(dev, &dev_attr_cs);
+	device_remove_file(dev, &dev_attr_cd);
 	device_remove_file(dev, &dev_attr_vid_mute);
 	device_remove_file(dev, &dev_attr_config);
 	device_remove_file(dev, &dev_attr_vrr_cap);

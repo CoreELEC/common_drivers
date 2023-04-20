@@ -354,6 +354,35 @@ static ssize_t disp_mode_store(struct device *dev,
 	return count;
 }
 
+static ssize_t cs_show(struct device *dev,
+			 struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	int cs = hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3;
+
+	pos +=
+	snprintf(buf + pos, PAGE_SIZE, "%d\n", cs);
+
+	return pos;
+}
+
+static ssize_t cd_show(struct device *dev,
+			 struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	int cs = hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3;
+	int cd = (hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1;
+
+	// YUV422
+	if (cs == HDMI_COLORSPACE_YUV422)
+		cd = (~cd & 0x3);
+
+	pos +=
+	snprintf(buf + pos, PAGE_SIZE, "%d\n", cd);
+
+	return pos;
+}
+
 /*
  * hdcp_repeater attr
  * For hdcp 22, hdcp_tx22 will write to hdcp_repeater_store
@@ -2985,6 +3014,8 @@ static ssize_t hdcp22_top_reset_store(struct device *dev,
 }
 
 static DEVICE_ATTR_RW(disp_mode);
+static DEVICE_ATTR_RO(cs);
+static DEVICE_ATTR_RO(cd);
 static DEVICE_ATTR_RW(vid_mute);
 static DEVICE_ATTR_WO(config);
 static DEVICE_ATTR_RO(hdmi_hdr_status);
@@ -3772,6 +3803,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	}
 	hdev->hdtx_dev = dev;
 	ret = device_create_file(dev, &dev_attr_disp_mode);
+	ret = device_create_file(dev, &dev_attr_cs);
+	ret = device_create_file(dev, &dev_attr_cd);
 	ret = device_create_file(dev, &dev_attr_vid_mute);
 	ret = device_create_file(dev, &dev_attr_config);
 	ret = device_create_file(dev, &dev_attr_hdmi_hdr_status);
@@ -3945,6 +3978,8 @@ static int amhdmitx_remove(struct platform_device *pdev)
 
 	/* Remove the cdev */
 	device_remove_file(dev, &dev_attr_disp_mode);
+	device_remove_file(dev, &dev_attr_cs);
+	device_remove_file(dev, &dev_attr_cd);
 	device_remove_file(dev, &dev_attr_vid_mute);
 	device_remove_file(dev, &dev_attr_config);
 	device_remove_file(dev, &dev_attr_max_exceed);
