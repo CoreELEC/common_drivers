@@ -16296,6 +16296,18 @@ static ssize_t amdolby_vision_inst_debug_store
 	return count;
 }
 
+static ssize_t dv_video_on_show
+		(struct class *cla,
+		 struct class_attribute *attr,
+		 char *buf)
+{
+	ssize_t len = 0;
+
+	len += sprintf(buf + len, "%d\n",
+				   is_amdv_video_on());
+	return len;
+}
+
 static ssize_t amdolby_vision_operate_mode_show
 	 (struct class *cla,
 	  struct class_attribute *attr,
@@ -16603,6 +16615,9 @@ static struct class_attribute amdolby_vision_class_attrs[] = {
 		   NULL, amdv_probe_size_store),
 	__ATTR(probe_data, 0644,
 	       amdv_probe_data_show,
+	       NULL),
+	__ATTR(dv_video_on, 0644,
+	       dv_video_on_show,
 	       NULL),
 	__ATTR_NULL
 };
