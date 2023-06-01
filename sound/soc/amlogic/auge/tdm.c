@@ -1958,7 +1958,7 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 			tdm_sharebuffer_prepare(substream, p_tdm);
 
 		/* i2s source to hdmix */
-		if (get_hdmitx_audio_src(rtd->card) == (p_tdm->id + HDMITX_SRC_TDM_A)) {
+		if (get_hdmitx_audio_src(rtd->card) > HDMITX_SRC_SPDIF) {
 			enum aud_codec_types codec_type = get_i2s2hdmitx_audio_format(rtd->card);
 			int i2s_out_mask = get_hdmitx_i2s_mask(rtd->card);
 			unsigned int event_type = 0;
