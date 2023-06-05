@@ -47,7 +47,7 @@ static struct early_suspend bt_early_suspend;
 #define POWER_EVENT_RESET   1
 #define POWER_EVENT_EN      2
 #define KEY_NETFLIX (133)
-//#define CONTROL_POWER_EN_LINUX
+#define CONTROL_POWER_EN_LINUX
 
 struct bt_dev_runtime_data {
 	struct rfkill *bt_rfk;
