@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <linux/module.h>
 
 #include "regs.h"
 #include "iomap.h"
