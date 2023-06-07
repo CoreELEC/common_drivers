@@ -117,7 +117,17 @@ int __init amlogic_usb2_m31_drv_init(void)
 	return platform_driver_register(&amlogic_usb2_m31_driver);
 }
 #else
-module_platform_driver(amlogic_usb2_m31_driver);
+int __init amlogic_usb2_m31_drv_init(void)
+{
+	int ret;
+	ret = platform_driver_register(&amlogic_usb2_m31_driver);
+	return ret;
+}
+
+void __exit amlogic_usb2_m31_drv_exit(void)
+{
+	platform_driver_unregister(&amlogic_usb2_m31_driver);
+}
 
 MODULE_ALIAS("platform: amlogic_usb2_m31");
 MODULE_AUTHOR("Amlogic Inc.");
