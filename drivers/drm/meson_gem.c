@@ -254,7 +254,8 @@ static void am_meson_gem_free_ion_buf(struct drm_device *dev,
 			  meson_gem_obj->ionbuffer);
 		meson_gem_obj->ionbuffer = NULL;
 		meson_gem_obj->dmabuf = NULL;
-	}
+	} else if (!meson_gem_obj->ionbuffer && !meson_gem_obj->is_dma)
+		DRM_ERROR("meson_gem_obj buffer is null\n");
 #endif
 #if (defined CONFIG_AMLOGIC_HEAP_CMA) || (defined CONFIG_AMLOGIC_HEAP_CODEC_MM)
 	if (meson_gem_obj->is_dma) {
@@ -267,8 +268,6 @@ static void am_meson_gem_free_ion_buf(struct drm_device *dev,
 		meson_gem_obj->dmabuf = NULL;
 	}
 #endif
-	if (!meson_gem_obj->ionbuffer && !meson_gem_obj->is_dma)
-		DRM_ERROR("meson_gem_obj buffer is null\n");
 }
 
 static int am_meson_gem_alloc_video_secure_buff(struct am_meson_gem_object *meson_gem_obj)
