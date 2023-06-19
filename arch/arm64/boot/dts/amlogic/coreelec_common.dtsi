@@ -15,7 +15,6 @@
 
 	/delete-node/ custom_maps;
 	/delete-node/ ir@8000;
-	/delete-node/ optee;
 
 	meson-ir {
 		compatible = "amlogic,meson6-ir";
