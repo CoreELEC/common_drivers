@@ -17,10 +17,10 @@
 		ion_fb_reserved:linux,ion-fb {
 			size = <0x00000000 0x11000000>;
 		};
+	};
 
-		secmon_reserved:linux,secmon {
-			/delete-property/ alloc-ranges;
-		};
+	secmon {
+		clear_range = <0x05100000 0x02a00000>;
 	};
 
 	/delete-node/ hdmirx;
