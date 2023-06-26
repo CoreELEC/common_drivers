@@ -1,0 +1,149 @@
+/ {
+	memory@0 {
+		device_type = "memory";
+		linux,usable-memory = <0x00000000 0x00000000 0x00000000 0xE0000000
+		                       0x00000001 0x00000000 0x00000000 0xE0000000
+		                       0x00000002 0x00000000 0x00000000 0x40000000>;
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio GPIOD_6 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	gpio_keypad {
+		key-gpios = <&gpio GPIOD_4 GPIO_ACTIVE_HIGH>;
+	};
+
+	sdcard_power: regulator-sdcard {
+		compatible = "regulator-fixed";
+		regulator-name = "SDCARD_POWER";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOD_11 GPIO_ACTIVE_LOW>;
+		regulator-boot-on;
+		enable-active-low;
+		regulator-always-on;
+	};
+
+	vddio_card: gpio-regulator {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_CARD";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&gpio GPIOD_9 GPIO_ACTIVE_HIGH>;
+		gpios-states = <1>;
+		states = <1800000 1 3300000 0>;
+	};
+
+	vir_tsensor: vir_tsensor {
+		compatible = "amlogic, vir-tsens";
+		zone-name = "soc_thermal";
+		num-vtsens = <1>;
+		#thermal-sensor-cells = <1>;
+	};
+};
+
+&ext_mdio {
+	external_phy: ethernet-phy@0 {
+		reg = <0>;
+		max-speed = <1000>;
+	};
+};
+
+&ethmac {
+	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+	phy-mode = "rgmii";
+	phy-handle = <&external_phy>;
+	mc_val = <0x1621>;
+	amlogic,tx-delay-ns = <2>;
+};
+
+&i2c_AO_A {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_ao_pins1>;
+	clock-frequency = <100000>; /* default 100k */
+
+	hym8563-rtc@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+	};
+
+	khadas_mcu: khadas-mcu@18 {
+		compatible = "khadas,vim4-mcu";
+		reg = <0x18>;
+		#cooling-cells = <2>;
+	};
+};
+
+&pwm_ef {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm_f_pins>;
+};
+
+&sd_emmc_b {
+	use_intf3_tuning;
+
+	vmmc-supply = <&sdcard_power>;
+	vqmmc-supply = <&vddio_card>;
+};
+
+&u2p0port0 {
+	gpio-vbus-power = "GPIOY_5";
+	gpios = <&gpio GPIOY_5 GPIO_ACTIVE_HIGH>;
+};
+
+&u2p1port0 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&{/thermal-zones} {
+	fan_thermal: fan_thermal {
+		polling-delay = <1000>;
+		polling-delay-passive = <100>;
+		thermal-sensors = <&vir_tsensor 0>;
+
+		trips {
+			fan_trip0: fan-trip0 {
+				temperature = <50000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+
+			fan_trip1: fan-trip1 {
+				temperature = <60000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+
+			fan_trip2: fan-trip2 {
+				temperature = <70000>;
+				hysteresis = <2000>;
+				type = "active";
+			};
+		};
+
+		cooling-maps {
+			fan_cooling_map0 {
+				trip = <&fan_trip0>;
+				cooling-device = <&khadas_mcu 3 3>;
+			};
+
+			fan_cooling_map1 {
+				trip = <&fan_trip1>;
+				cooling-device = <&khadas_mcu 4 4>;
+			};
+
+			fan_cooling_map2 {
+				trip = <&fan_trip2>;
+				cooling-device = <&khadas_mcu 5 5>;
+			};
+		};
+	};
+};
