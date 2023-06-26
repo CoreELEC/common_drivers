@@ -1,0 +1,5 @@
+#include "coreelec_t7_common.dtsi"
+
+/ {
+	compatible = "amlogic, t7c";
+};
