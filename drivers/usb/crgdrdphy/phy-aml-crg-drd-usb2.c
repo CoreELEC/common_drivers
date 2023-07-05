@@ -735,7 +735,7 @@ static int amlogic_crg_drd_usb2_probe(struct platform_device *pdev)
 	}
 
 	/**USB PHY CLOCK ENABLE**/
-	phy->clk = devm_clk_get(dev, "crg_general");
+	phy->clk = devm_clk_get(dev, "usb_phy");
 	if (!IS_ERR(phy->clk)) {
 		retval = clk_prepare_enable(phy->clk);
 		if (retval) {
