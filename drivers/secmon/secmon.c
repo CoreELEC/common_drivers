@@ -61,11 +61,11 @@ static void get_sharemem_size(unsigned int function_id)
 	struct arm_smccc_res res;
 
 	arm_smccc_smc(function_id, 1, 0, 0, 0, 0, 0, 0, &res);
-	if (res.a0 != -1)
+	if ((int)res.a0 != -1)
 		sharemem_in_size =  res.a0;
 
 	arm_smccc_smc(function_id, 2, 0, 0, 0, 0, 0, 0, &res);
-	if (res.a0 != -1)
+	if ((int)res.a0 != -1)
 		sharemem_out_size =  res.a0;
 }
 
