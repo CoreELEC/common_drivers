@@ -13,6 +13,7 @@
 		};
 	};
 
+	/delete-node/ adc_keypad;
 	/delete-node/ custom_maps;
 	/delete-node/ ir@8000;
 
@@ -90,7 +91,20 @@
 				&clkc CLKID_MPLL2>;
 		clock-names = "mclk", "clk_srcpll";
 		i2s2hdmi = <1>;
+		suspend-clk-off = <0>;
 		status = "okay";
+	};
+
+	tdmb: tdm@1 {
+		suspend-clk-off = <0>;
+	};
+
+	spdifa: spdif@0 {
+		suspend-clk-off = <0>;
+	};
+
+	spdifb: spdif@1 {
+		suspend-clk-off = <0>;
 	};
 
 	/delete-node/ tdma;
@@ -114,4 +128,7 @@
 
 &drm_subsystem {
 	fbdev_sizes = <4096 2160 4096 4320 32>;
+	/delete-property/ overwrite_crtcmask_of_osd;
+	/delete-property/ overwrite_crtcmask_of_video;
+	/delete-property/ dummyl_from_hdmitx;
 };
