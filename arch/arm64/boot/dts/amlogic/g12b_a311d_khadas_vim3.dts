@@ -1,0 +1,119 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "Khadas VIM3";
+	coreelec-dt-id = "g12b_a311d_khadas_vim3";
+
+	/delete-node/ memory@00000000;
+	/delete-node/ rtc;
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x300000>;
+		};
+	};
+
+	gpio_keypad {
+		key-gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
+	};
+
+	gpioleds {
+		sys_led {
+			gpios=<&gpio_ao GPIOAO_4 GPIO_ACTIVE_HIGH>;
+		};
+
+		red_led {
+			label = "red_led";
+			gpios = <&gpio_expander 5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger="none";
+		};
+	};
+
+	adc_keypad {
+		key_name = "home";
+		key_num = <1>;
+		key_code = <102>;
+		key_val = <108>; //val=voltage/1800mV*1023
+		key_tolerance = <40>;
+	};
+
+	unifykey {
+		unifykey-num = <1>;
+		unifykey-index-0 = <&keysn_0>;
+
+		keysn_0: key_0 {
+			key-name = "mac";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+	};
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&vddio_c {
+	/delete-property/ gpio;
+};
+
+&i2c_AO {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&ao_i2c_master_pins1>;
+	clock-frequency = <400000>;
+
+	gpio_expander: gpio-controller@20 {
+		compatible = "ti,tca6408";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+	};
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+	};
+
+	khadas_mcu: system-controller@18 {
+		compatible = "khadas-mcu";
+		reg = <0x18>;
+		#cooling-cells = <2>;
+		fan,trig_temp_level0 = <50>;
+		fan,trig_temp_level1 = <60>;
+		fan,trig_temp_level2 = <70>;
+		hwver = "VIM3.V11";
+	};
+};
+
+&usb2_phy_v2 {
+	gpio-vbus-power = "GPIOA_6";
+	gpios = <&gpio GPIOA_6 GPIO_ACTIVE_HIGH>;
+};
+
+&usb3_phy_v2 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&pcie_A {
+	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+};
+
+&spicc1 {
+	spidev@0 {
+		status = "disabled";
+		compatible = "linux,spidev";
+		/* spi default max clock 100Mhz */
+		spi-max-frequency = <100000000>;
+		reg = <0>;
+	};
+};
