@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
+dtb-y += g12b_a311d_khadas_vim3.dtb
 dtb-y += g12b_s922x_odroid_n2.dtb
 dtb-y += s4_s905w2_2g.dtb
 dtb-y += s4_s905w2_4g.dtb
