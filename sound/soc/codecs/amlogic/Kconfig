@@ -222,6 +222,17 @@ config AMLOGIC_SND_SOC_ES7243
 	  Enable Support for EVEREST SEMI ES7243 CODEC.
 	  Select this if your ES7243 is connected via an I2C bus.
 
+config AMLOGIC_SND_SOC_ES8388
+	tristate "EVEREST SEMI ES8388"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+	  Enable Support for EVEREST SEMI ES8388 CODEC.
+	  Select this if your ES8388 is connected via an I2C bus.
+	  Enable Support for EVEREST SEMI ES8388 CODEC.
+	  Select this if your ES8388 is connected via an I2C bus.
+
 config AMLOGIC_SND_SOC_AD82584F
 	tristate "ESMT AD82584F"
 	depends on AMLOGIC_SND_SOC_CODECS
