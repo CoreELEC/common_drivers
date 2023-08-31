@@ -1,0 +1,96 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "Minix U22-XJ Max";
+	coreelec-dt-id = "g12b_s922x_minix_u22xj_max";
+
+	memory@0 {
+		linux,usable-memory = <0x0 0x0 0x0 0xf5000000>;
+	};
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x2300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x2300000>;
+		};
+	};
+
+	secmon {
+		reserve_mem_size = <0x02300000>;
+		clear_range = <0x05300000 0x2000000>;
+	};
+
+	/delete-node/ rtc;
+
+	auge_sound {
+		aml-audio-card,dai-link@1 {
+			codec {
+				sound-dai = <&es8316>;
+			};
+		};
+	};
+
+};
+
+&pinctrl_periphs {
+	external_eth_pins {
+		mux {
+			groups = "eth_mdio",
+			"eth_mdc",
+			"eth_rgmii_rx_clk",
+			"eth_rx_dv",
+			"eth_rxd0",
+			"eth_rxd1",
+			"eth_rxd2_rgmii",
+			"eth_rxd3_rgmii",
+			"eth_rgmii_tx_clk",
+			"eth_txen",
+			"eth_txd0",
+			"eth_txd1",
+			"eth_txd2_rgmii",
+			"eth_txd3_rgmii";
+			function = "eth";
+			drive-strength = <3>;
+		};
+	};
+};
+
+&pinctrl_periphs {
+	a_uart_pins:a_uart {
+		mux {
+			groups = "uart_a_tx",
+				"uart_a_rx",
+				"uart_a_cts",
+				"uart_a_rts";
+		};
+		/delete-node/ mux1;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_master_pins3>;
+	clock-frequency = <100000>;
+
+	rtc_hym8563: rtc_hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+	};
+};
+
+&i2c3 {
+	es8316: es8316@10 {
+		compatible = "everest,es8316";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		status = "okay";
+	};
+};
+
+/* the sd card stops responding while GPIOH_5 is low, keep the u-boot level */
+&u2p0port1 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
