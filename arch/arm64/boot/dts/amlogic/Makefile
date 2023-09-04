@@ -2,6 +2,7 @@
 DTC_FLAGS += -Wno-unit_address_format
 
 dtb-y += g12b_a311d_khadas_vim3.dtb
+dtb-y += g12b_a311d_radxa_zero2.dtb
 dtb-y += g12b_s922x_minix_u22xj_max.dtb
 dtb-y += g12b_s922x_odroid_n2.dtb
 dtb-y += s4_s905w2_2g.dtb
