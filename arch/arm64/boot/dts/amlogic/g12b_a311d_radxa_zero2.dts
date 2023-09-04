@@ -1,0 +1,20 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "Radxa Zero 2";
+	coreelec-dt-id = "g12b_a311d_radxa_zero2";
+
+	/delete-node/ memory@00000000;
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x300000>;
+		};
+	};
+};
+
+&ethmac {
+	status = "disabled";
+};
