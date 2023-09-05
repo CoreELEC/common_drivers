@@ -30,6 +30,7 @@ dtb-y += s4_s905y4_4g.dtb
 dtb-y += s4_s905y4_buzztv_hd5_2g.dtb
 dtb-y += s4_s905y4_buzztv_hd5_4g.dtb
 dtb-y += s4_s905y4_khadas_vim1s.dtb
+dtb-y += s5_s928x_tencent_aurora_5x.dtb
 dtb-y += sm1_s905d3_libre_computer_solitude.dtb
 dtb-y += sm1_s905x3_2g.dtb
 dtb-y += sm1_s905x3_2g_1gbit.dtb
