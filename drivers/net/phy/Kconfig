@@ -14,3 +14,8 @@ config AMLOGIC_MAXIO
 	tristate "Amlogic maxio PHY"
 	help
 	  Currently has a driver for the Amlogic maxio PHY
+
+config AMLOGIC_JLSEMI
+	tristate "Amlogic jlsemi PHY"
+	help
+	  Currently has a driver for the Amlogic jlsemi PHY
