@@ -20,3 +20,10 @@ PR_FMT_DEFINE_MAXIO = "-Dpr_fmt(fmt)= \"[$(PR_FMT_MAXIO)]: \" fmt"
 CFLAGS_maxio.o += $(PR_FMT_DEFINE_MAXIO)
 obj-$(CONFIG_AMLOGIC_MAXIO) += $(MAXIO_MODULE_NAME).o
 $(MAXIO_MODULE_NAME)-y += maxio.o
+
+JLSEMI_MODULE_NAME = amlogic-jlsemi
+PR_FMT_MAXIO = $(subst amlogic-,,$(JLSEMI_MODULE_NAME))
+PR_FMT_DEFINE_JLSEMI = "-Dpr_fmt(fmt)= \"[$(PR_FMT_JLSEMI)]: \" fmt"
+CFLAGS_jlsemi.o += $(PR_FMT_DEFINE_JLSEMI)
+obj-$(CONFIG_AMLOGIC_JLSEMI) += $(JLSEMI_MODULE_NAME).o
+$(JLSEMI_MODULE_NAME)-y += jlsemi.o jlsemi-core.o
