@@ -27,6 +27,10 @@
 		};
 	};
 
+	gpu:bifrost {
+		compatible = "arm,mali-bifrost";
+	};
+
 	aml_dtv_demod {
 		status = "disabled";
 	};
