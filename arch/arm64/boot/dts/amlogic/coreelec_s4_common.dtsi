@@ -48,6 +48,10 @@
 		reset-gpios = <&gpio GPIOB_9 GPIO_ACTIVE_LOW>;
 	};
 
+	gpu:bifrost {
+		compatible = "arm,mali-bifrost";
+	};
+
 	/delete-node/ auge_sound;
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
