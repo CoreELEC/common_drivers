@@ -93,6 +93,10 @@
 		interrupts = <GIC_SPI 196 IRQ_TYPE_EDGE_RISING>;
 	};
 
+	gpu:bifrost {
+		compatible = "arm,mali-bifrost";
+	};
+
 	emmc_pwrseq: emmc-pwrseq {
 		compatible = "mmc-pwrseq-emmc";
 		reset-gpios = <&gpio BOOT_12 GPIO_ACTIVE_LOW>;
