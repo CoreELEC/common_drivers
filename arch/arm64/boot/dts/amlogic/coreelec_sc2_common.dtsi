@@ -21,6 +21,10 @@
 		status = "disabled";
 	};
 
+	gpu:bifrost {
+		compatible = "arm,mali-bifrost";
+	};
+
 	reserved-memory {
 		ion_cma_reserved:linux,ion-dev {
 			size = <0x0 0x3400000>;
