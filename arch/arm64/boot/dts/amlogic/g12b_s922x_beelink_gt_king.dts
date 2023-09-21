@@ -1,0 +1,32 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "Beelink";
+	coreelec-dt-id = "g12b_s922x_beelink_gt_king";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x0 0x0 0xf0800000>;
+	};
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x2300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x2300000>;
+		};
+	};
+
+	secmon {
+		reserve_mem_size = <0x02300000>;
+		clear_range = <0x05300000 0x2000000>;
+	};
+
+	/delete-node/ rtc;
+};
+
+&i2c3 {
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+	};
+};
