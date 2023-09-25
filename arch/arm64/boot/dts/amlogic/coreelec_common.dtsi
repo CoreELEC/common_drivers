@@ -118,6 +118,7 @@
 };
 
 &amhdmitx {
+	max_refreshrate = <120>;
 	/delete-property/ hdcp_ctl_lvl;
 	/delete-property/ vrr_type;
 };
