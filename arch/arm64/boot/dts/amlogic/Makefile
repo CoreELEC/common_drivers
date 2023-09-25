@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
+dtb-y += g12b_a311d_bananapi_m2s.dtb
 dtb-y += g12b_a311d_khadas_vim3.dtb
 dtb-y += g12b_a311d_radxa_zero2.dtb
+dtb-y += g12b_s922x_bananapi_m2s.dtb
 dtb-y += g12b_s922x_beelink_gt_king.dtb
 dtb-y += g12b_s922x_beelink_gs_king_x.dtb
 dtb-y += g12b_s922x_minix_u22xj_max.dtb

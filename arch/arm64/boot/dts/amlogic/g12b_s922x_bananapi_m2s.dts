@@ -1,0 +1,53 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+#include "coreelec_meson_fb_2g.dtsi"
+
+/ {
+	model = "Sinovoip Bananapi-M2S";
+	coreelec-dt-id = "g12b_s922x_bananapi_m2s";
+	amlogic-dt-id = "bananapi_m2s_922x";
+
+	/delete-node/ memory@00000000;
+	/delete-node/ rtc;
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x300000>;
+		};
+	};
+
+	gpioleds {
+		sys_led {  /* blue */
+			gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "default-on";
+			retain-state-suspended;
+		};
+
+		green_led {
+			gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	bt-dev {
+		status = "disabled";
+	};
+
+	wifi {
+		status = "disabled";
+	};
+};
+
+&pcie_A {
+	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&usb3_phy_v2 {
+	portnum = <0>;
+};
