@@ -1,0 +1,59 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+#include "coreelec_meson_fb_2g.dtsi"
+
+/ {
+	model = "Sinovoip Bananapi-M2S";
+	coreelec-dt-id = "g12b_s922x_bananapi_m2s";
+	amlogic-dt-id = "bananapi_m2s_922x";
+
+	/delete-node/ memory@0;
+	/delete-node/ rtc;
+
+	reserved-memory {
+		secmon_reserved:linux,secmon {
+			size = <0x0 0x300000>;
+			alloc-ranges = <0x0 0x05000000 0x0 0x300000>;
+		};
+	};
+
+	gpioleds {
+		sys_led {  /* blue */
+			gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "default-on";
+			retain-state-suspended;
+		};
+
+		green_led {
+			gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	aml_bt {
+		status = "disabled";
+	};
+
+	aml_wifi {
+		status = "disabled";
+	};
+};
+
+&pcie_A {
+	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+/* usb3 is muxed to pcie, a failing u3p port drops the whole provider */
+&usbphy0 {
+	/delete-node/ u3p@80;
+};
+
+&dwc3 {
+	phys = <&u2p0port0>, <&u2p0port1>;
+	phy-names = "usb2-0", "usb2-1";
+};
