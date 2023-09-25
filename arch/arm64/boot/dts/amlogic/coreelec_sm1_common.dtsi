@@ -1,0 +1,253 @@
+#include "coreelec_common.dtsi"
+
+/ {
+	compatible = "amlogic, g12a";
+
+	/delete-node/ ir@0xff808040;
+	/delete-node/ optee;
+
+	amhdmitx: amhdmitx{
+		hdmitx-gpios-hpd = <&gpio GPIOH_2 0>;
+		hdmitx-gpios-scl = <&gpio GPIOH_1 0>;
+		hdmitx-gpios-sda = <&gpio GPIOH_0 0>;
+		vend_data: vend_data{ /* Should modified by Customer */
+			product_desc = "SM1"; /* Max Chars: 16 */
+		};
+	};
+
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x0 0x77800000 0x0 0x800000>;
+		};
+
+		ion_cma_reserved:linux,ion-dev {
+			size = <0x00000000 0x09800000>;
+		};
+
+		ion_fb_reserved:linux,ion-fb {
+			size = <0x00000000 0x11000000>;
+		};
+
+		dmaheap_fb_reserved:heap-fb {
+			/* 4k STB androidT size 160M */
+			size = <0x0 0xa000000>;
+		};
+
+		di_cma_reserved:linux,di_cma {
+			status = "disabled";
+		};
+
+		codec_mm_cma:linux,codec_mm_cma {
+			size = <0x0 0x1b000000>;
+		};
+
+		vdin1_cma_reserved:linux,vdin1_cma {
+			status = "disabled";
+		};
+	};
+
+	secmon {
+		clear_range = <0x05100000 0x02a00000>;
+	};
+
+	gpioleds {
+		/delete-node/ net_red;
+		/delete-node/ net_green;
+		/delete-node/ remote_led;
+	};
+
+	multi-di {
+		compatible = "amlogic, dim-sm1";
+		status = "okay";
+		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
+		flag_cma = <4>;	//<1>;
+		//memory-region = <&di_reserved>;
+		memory-region = <&di_cma_reserved>;
+		interrupts = <0 46 1
+				0 40 1>;
+		interrupt-names = "pre_irq", "aisr_irq";
+		clocks = <&clkc CLKID_VPU_CLKB_TMP>,
+			<&clkc CLKID_VPU_CLKB>;
+		clock-names = "vpu_clkb",
+			"vpu_mux";
+		clock-range = <334 667>;
+		/* buffer-size = <3621952>;(yuv422 8bit) */
+		buffer-size = <4074560>;/*yuv422 fullpack*/
+		/* reserve-iomap = "true"; */
+		/* if enable nr10bit, set nr10bit-support to 1 */
+		post-wr-support = <1>;
+		nr10bit-support = <1>;
+		nrds-enable = <1>;
+		pps-enable = <1>;
+	};
+
+	meson-ir {
+		reg = <0x0 0xff808040 0x00 0x44>, /*Multi-format IR controller*/
+			<0x0 0xff808000 0x00 0x20>; /*Legacy IR controller*/
+		interrupts = <GIC_SPI 196 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	meson-remote {
+		reg = <0x0 0xff808040 0x00 0x44>, /*Multi-format IR controller*/
+			<0x0 0xff808000 0x00 0x20>; /*Legacy IR controller*/
+		interrupts = <GIC_SPI 196 IRQ_TYPE_EDGE_RISING>;
+	};
+
+	emmc_pwrseq: emmc-pwrseq {
+		compatible = "mmc-pwrseq-emmc";
+		reset-gpios = <&gpio BOOT_12 GPIO_ACTIVE_LOW>;
+	};
+
+	/delete-node/ auge_sound;
+	auge_sound {
+		compatible = "amlogic, auge-sound-card";
+		aml-audio-card,name = "AML-AUGESOUND";
+
+		/*avout mute gpio*/
+		avout_mute-gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+
+		aml-audio-card,dai-link@0 {
+			mclk-fs = <128>;
+			continuous-clock;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifb>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@1 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&tdmb>;
+			frame-master = <&tdmb>;
+			continuous-clock;
+			cpu {
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+				sound-dai = <&tdmb>;
+			};
+			codec {
+				sound-dai = <&amlogic_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@2 {
+			mclk-fs = <128>;
+			continuous-clock;
+			cpu {
+				system-clock-frequency = <6144000>;
+				sound-dai = <&spdifa>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@3 {
+			format = "i2s";
+			mclk-fs = <256>;
+			bitclock-master = <&aml_i2s2hdmi>;
+			frame-master = <&aml_i2s2hdmi>;
+			continuous-clock;
+			cpu {
+				sound-dai = <&aml_i2s2hdmi>;
+				dai-tdm-slot-tx-mask = <1 1>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+	};
+
+	soc {
+		periphs: periphs@ff634400 {
+			status = "okay";
+		};
+	};
+};
+
+&CPU0 {
+	/delete-property/ cpu-idle-states;
+};
+
+&CPU1 {
+	reg = <0x0 0x1>;
+	/delete-property/ cpu-idle-states;
+};
+
+&CPU2 {
+	reg = <0x0 0x2>;
+	/delete-property/ cpu-idle-states;
+};
+
+&CPU3 {
+	reg = <0x0 0x3>;
+	/delete-property/ cpu-idle-states;
+};
+
+&sd_emmc_a {
+	/delete-property/ cap-sd-highspeed;
+	/delete-property/ sd-uhs-sdr104;
+};
+
+&sd_emmc_c {
+	mmc-pwrseq = <&emmc_pwrseq>;
+};
+
+&audiobus {
+	aml_i2s2hdmi: i2s2hdmi {
+		compatible = "amlogic, sm1-snd-tdmc";
+	};
+
+	tdmb: tdm@1 {
+		/delete-property/ start_clk_enable;
+		/delete-property/ clk_tuning_enable;
+	};
+
+	spdifa: spdif@0 {
+		/delete-property/ clk_tuning_enable;
+	};
+};
+
+&aml_wifi {
+	wifi_static_buf = <1>;
+};
+
+&i2c0 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&dwc2_a {
+	controller-type = <3>;
+};
+
+&earc {
+	status = "disabled";
+};
+
+&pinctrl_aobus {
+	/delete-node/ spdifout;
+};
+
+&pinctrl_periphs {
+	spdifout: spdifout {
+		mux { /* GPIOH_4 */
+			groups = "spdif_out_h";
+			function = "spdif_out";
+		};
+	};
+};
