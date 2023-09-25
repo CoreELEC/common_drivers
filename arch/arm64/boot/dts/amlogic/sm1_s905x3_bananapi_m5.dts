@@ -1,0 +1,172 @@
+#include "sm1_s905x3_4g_1gbit.dts"
+
+/{
+	model = "Sinovoip Bananapi-M5";
+	/delete-property/ amlogic-dt-id;
+	coreelec-dt-id = "sm1_s905x3_bananapi_m5";
+
+	/delete-node/ rtc;
+	/delete-node/ aml_bt;
+	/delete-node/ aml_wifi;
+	/delete-node/ wifi_pwm_conf;
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+
+	cpu_opp_table0: cpu_opp_table0 {
+		opp12 {
+			opp-hz = /bits/ 64 <2016000000>;
+			opp-microvolt = <1010000>;
+		};
+		opp13 {
+			opp-hz = /bits/ 64 <2100000000>;
+			opp-microvolt = <1030000>;
+		};
+	};
+
+	cpus:cpus {
+		cpu-map {
+			cluster0:cluster0 {
+				stock_freq = <1908000000>;
+			};
+		};
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+		green_led {
+			gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+		};
+	};
+
+	gpio-reset {
+		compatible = "linux,gpio-reset";
+		usb_hub {
+			gpios = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH>;
+			asserted-state = <0>;
+			duration-ms = <100>;
+		};
+	};
+
+	unifykey {
+		unifykey-num = <1>;
+		unifykey-index-0 = <&keysn_0>;
+
+		keysn_0: key_0 {
+			key-name = "usid";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+	};
+
+	dvb {
+		compatible = "amlogic,dvb";
+		dev_name = "avl6862";
+		status = "disabled";
+		dtv_demod0_i2c_adap_id = <2>;
+		ts0 = "serial";
+		ts0_control = <0>;
+		ts0_invert = <0>;
+		fec_reset_gpio-gpios = <&gpio GPIOX_13 GPIO_ACTIVE_HIGH>;
+		power_ctrl_gpio-gpios = <&gpio GPIOX_12 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "s_ts0", "s_ts1";
+		pinctrl-0 = <&dvb_s_ts0_pins>;
+		pinctrl-1 = <&dvb_s_ts1_pins>;
+		interrupts = <GIC_SPI 23 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI  5 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 19 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "demux0", "demux1", "asyncfifo0", "asyncfifo1";
+	};
+
+	onewire {
+		compatible = "w1-gpio";
+		pinctrl-names = "default";
+		gpios = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+};
+
+&i2c0 {
+	status = "disabled";
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-node/ gt9xx@5d;
+	/delete-node/ ftxx@38;
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-0 = <&i2c2_master_pins1>;
+	clock-frequency = <400000>;
+};
+
+&i2c3 {
+	status = "okay";
+	clock-frequency = <100000>;
+	pcf8563: rtc@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+	};
+};
+
+&audiobus {
+	tdmb: tdm@1 {
+		/delete-property/ pinctrl-names;
+		/delete-property/ pinctrl-0;
+	};
+};
+
+&pinctrl_periphs {
+	/delete-node/ spdifout;
+
+	i2c3_master_pins2: i2c3_pins2 {
+		mux {
+			drive-strength = <3>;
+		};
+	};
+
+	dvb_s_ts0_pins: dvb_s_ts0_pins {
+		tsin_a {
+			groups ="tsin_a_valid",
+				"tsin_a_sop",
+				"tsin_a_din0",
+				"tsin_a_clk";
+			function = "tsin_a";
+		};
+	};
+
+	dvb_s_ts1_pins: dvb_s_ts1_pins {
+		tsin_b {
+			groups = "tsin_b_sop_x",
+			"tsin_b_valid_x",
+			"tsin_b_clk_x",
+			"tsin_b_din0_x";
+			function = "tsin_b";
+		};
+	};
+};
+
+&pinctrl_aobus {
+	/delete-node/ dvb_s_ts0_pins;
+
+	spdifout: spdifout {
+		mux { /* GPIOAO_10 */
+			groups = "spdif_ao_out";
+			function = "spdif_ao_out";
+		};
+	};
+};
+
+&usb3_phy_v2 {
+	otg = <1>;
+};
+
+&sd_emmc_a {
+	 status = "disabled";
+};
