@@ -9,6 +9,7 @@ $(MODULE_NAME)-y = meson-mmc-main.o
 $(MODULE_NAME)-y += meson-gx-mmc.o
 $(MODULE_NAME)-y += meson-g12a-mmc.o
 $(MODULE_NAME)-y += mmc_dtb.o
+$(MODULE_NAME)-y += mmc_partitions.o
 $(MODULE_NAME)-y += mmc_key.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_MMC_CQHCI) += meson-cqhci.o
 
