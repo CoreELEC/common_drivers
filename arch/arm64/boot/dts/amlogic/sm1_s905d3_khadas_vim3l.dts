@@ -1,0 +1,173 @@
+#include "sm1_s905x3_2g_1gbit.dts"
+
+/{
+	model = "Khadas VIM3L";
+	amlogic-dt-id = "sm1_kvim3l";
+	coreelec-dt-id = "sm1_s905d3_khadas_vim3l";
+
+	/delete-node/ memory@00000000;
+	/delete-node/ rtc;
+
+	reserved-memory {
+		vm0_cma_reserved:linux,vm0_cma {
+			status = "disabled";
+		};
+	};
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+
+	cpu_opp_table0: cpu_opp_table0 {
+		opp12 {
+			opp-hz = /bits/ 64 <2016000000>;
+			opp-microvolt = <1010000>;
+		};
+		opp13 {
+			opp-hz = /bits/ 64 <2100000000>;
+			opp-microvolt = <1030000>;
+		};
+	};
+
+	cpus:cpus {
+		cpu-map {
+			cluster0:cluster0 {
+				stock_freq = <1908000000>;
+			};
+		};
+	};
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio_ao GPIOAO_4 GPIO_ACTIVE_HIGH>;
+		};
+
+		red_led {
+			label = "red_led";
+			gpios = <&gpio_expander 5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger="none";
+		};
+	};
+
+	gpio_keypad{
+		key-gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
+	};
+
+	unifykey {
+		unifykey-num = <1>;
+		unifykey-index-0 = <&keysn_0>;
+
+		keysn_0: key_0 {
+			key-name = "mac";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+	};
+};
+
+&i2c0 {
+	status = "disabled";
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-node/ gt9xx@5d;
+	/delete-node/ ftxx@38;
+};
+
+&i2c_AO {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&ao_i2c_master_pins1>;
+	clock-frequency = <400000>;
+
+	gpio_expander: gpio-controller@20 {
+		compatible = "ti,tca6408";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "okay";
+	};
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+	};
+
+	khadas_mcu: khadas_mcu@18 {
+		compatible = "khadas-mcu";
+		reg = <0x18>;
+		fan,trig_temp_level0 = <50>;
+		fan,trig_temp_level1 = <60>;
+		fan,trig_temp_level2 = <70>;
+		hwver = "VIM3.V11";
+	};
+};
+
+&audiobus {
+	spdifa: spdif@0 {
+		pinctrl-names = "spdif_pins", "spdif_pins_mute";
+		pinctrl-0 = <&spdifout>;
+		pinctrl-1 = <&spdifout_a_mute>;
+	};
+};
+
+&pinctrl_periphs {
+	/delete-node/ spdifout;
+
+	i2c3_master_pins2: i2c3_pins2 {
+		mux {
+			drive-strength = <3>;
+		};
+	};
+
+	bl_pwm_off_pins:bl_pwm_off_pin {
+		mux {
+			/delete-property/ pins;
+			/delete-property/ output-high;
+		};
+	};
+};
+
+&pinctrl_aobus {
+	spdifout: spdifout {
+		mux { /* GPIOAO_10 */
+			groups = "spdif_ao_out";
+			function = "spdif_ao_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux {
+			groups = "GPIOAO_10";
+			function = "gpio_aobus";
+		};
+	};
+};
+
+&usb2_phy_v2 {
+	gpio-vbus-power = "GPIOA_6";
+	gpios = <&gpio GPIOA_6 GPIO_ACTIVE_HIGH>;
+};
+
+&usb3_phy_v2 {
+	otg = <1>;
+};
+
+&pcie_A {
+	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+};
+
+&spicc1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc1_pins>;
+	cs-gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+
+	spidev@0 {
+		status = "disabled";
+		compatible = "linux,spidev";
+		/* spi default max clock 100Mhz */
+		spi-max-frequency = <100000000>;
+		reg = <0>;
+	};
+};
