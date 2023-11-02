@@ -1,5 +1,4 @@
 #include "g12b_s922x_bananapi_m2s.dts"
-#include "coreelec_meson_fb_4g.dtsi"
 
 /{
 	model = "Sinovoip Bananapi-M2S";
