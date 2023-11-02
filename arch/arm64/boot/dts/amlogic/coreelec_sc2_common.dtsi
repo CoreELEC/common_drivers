@@ -148,3 +148,7 @@
 &sd_emmc_c {
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
+
+&clkc {
+	compatible = "amlogic,sc2-clkc-secure";
+};

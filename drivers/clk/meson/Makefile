@@ -42,7 +42,7 @@ CFLAGS_s4.o += $(PR_FMT_DEFINE_S4)
 
 SC2_MODULE_NAME = amlogic-clk-soc-sc2
 obj-$(CONFIG_AMLOGIC_COMMON_CLK_SC2) += $(SC2_MODULE_NAME).o
-$(SC2_MODULE_NAME)-y = sc2.o
+$(SC2_MODULE_NAME)-y = sc2.o sc2-secure.o sc2_clk_regmap.o
 PR_FMT_SC2 = $(subst amlogic-,,$(SC2_MODULE_NAME))
 PR_FMT_DEFINE_SC2="-Dpr_fmt(fmt)= \"[$(PR_FMT_SC2)]: \" fmt"
 CFLAGS_sc2.o += $(PR_FMT_DEFINE_SC2)
