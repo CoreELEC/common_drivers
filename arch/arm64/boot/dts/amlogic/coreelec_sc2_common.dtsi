@@ -148,3 +148,18 @@
 &sd_emmc_c {
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
+
+&clkc {
+	compatible = "amlogic,sc2-clkc-secure";
+	/*
+	 * The secure driver also maps the cpu clock registers and only
+	 * uses xtal as input; the PLL/sys clocks it registers itself
+	 * instead of taking them from SCMI.
+	 */
+	reg = <0x0 0x0 0x0 0x49c>,
+	      <0x0 0x8000 0x0 0x2e8>,
+	      <0x0 0xe140 0x0 0x24>;
+	reg-names = "basic", "pll", "cpu_clk";
+	clocks = <&xtal>;
+	clock-names = "xtal";
+};

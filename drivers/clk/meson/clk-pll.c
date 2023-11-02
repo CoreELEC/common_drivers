@@ -33,6 +33,7 @@
 #include <linux/math64.h>
 #include <linux/module.h>
 #include "clk-regmap.h"
+#include "clk-secure.h"
 #include "clk-pll.h"
 #include <linux/amlogic/arm-smccc.h>
 
@@ -677,6 +678,98 @@ static void meson_clk_pcie_pll_restore_context(struct clk_hw *hw)
 		meson_clk_pll_disable(hw);
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+static int meson_secure_clk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
+					 unsigned long parent_rate)
+{
+	int i = 0, ret = 0;
+	struct arm_smccc_res res;
+
+	if (!strcmp(clk_hw_get_name(hw), "sys_pll_dco")) {
+		arm_smccc_smc(CLK_SECURE_RW, SYS_PLL_STEP0,
+			      rate, 0, 0, 0, 0, 0, &res);
+	} else if (!strcmp(clk_hw_get_name(hw), "gp1_pll_dco")) {
+		arm_smccc_smc(CLK_SECURE_RW, GP1_PLL_STEP0,
+			      rate, 0, 0, 0, 0, 0, &res);
+	} else {
+		pr_err("%s: %s pll not found!!!\n",
+		       __func__, clk_hw_get_name(hw));
+		return -EINVAL;
+	}
+
+	/* waiting for 10us to rewrite */
+	udelay(10);
+
+	if (!strcmp(clk_hw_get_name(hw), "sys_pll_dco"))
+		arm_smccc_smc(CLK_SECURE_RW, SYS_PLL_STEP1,
+			      0, 0, 0, 0, 0, 0, &res);
+	else
+		arm_smccc_smc(CLK_SECURE_RW, GP1_PLL_STEP1,
+			      0, 0, 0, 0, 0, 0, &res);
+
+	ret = meson_clk_pll_wait_lock(hw);
+
+	if (ret) {
+		pr_info("%s: %s did not lock, trying to lock rate %lu again\n",
+			__func__, clk_hw_get_name(hw), rate);
+		if (i++ < 10)
+			meson_secure_clk_pll_set_rate(hw, rate, parent_rate);
+	}
+	return ret;
+}
+
+static long meson_secure_clk_pll_round_rate(struct clk_hw *hw,
+					    unsigned long rate,
+					    unsigned long *parent_rate)
+{
+	return rate;
+}
+
+static int meson_secure_clk_pll_enable(struct clk_hw *hw)
+{
+	struct clk_regmap *clk = to_clk_regmap(hw);
+	struct meson_clk_pll_data *pll = meson_clk_pll_data(clk);
+	unsigned int first_set = 1, val;
+	struct clk_hw *parent = clk_hw_get_parent(hw);
+	u64 rate;
+
+	if (meson_parm_read(clk->map, &pll->en))
+		return 0;
+
+	if (!strcmp(clk_hw_get_name(hw), "sys_pll_dco") ||
+	    !strcmp(clk_hw_get_name(hw), "gp1_pll_dco")) {
+		regmap_read(clk->map, (&pll->en)->reg_off + (6 * 4), &val);
+		if (val == 0x56540000)
+			first_set = 0;
+	}
+
+	/*First init, just set minimal rate.*/
+	if (first_set) {
+		rate = __pll_params_to_rate(clk_hw_get_rate(parent),
+					    pll->table[0].m,
+					    pll->table[0].n, 0,
+					    pll->table[0].od, pll);
+	} else {
+		rate = meson_clk_pll_recalc_rate(hw, clk_hw_get_rate(parent));
+		rate = meson_secure_clk_pll_round_rate(hw, rate, NULL);
+	}
+
+	return meson_secure_clk_pll_set_rate(hw, rate, clk_hw_get_rate(parent));
+}
+
+static void meson_secure_clk_pll_disable(struct clk_hw *hw)
+{
+	struct arm_smccc_res res;
+
+	if (!strcmp(clk_hw_get_name(hw), "sys_pll_dco"))
+		arm_smccc_smc(CLK_SECURE_RW, SYS_PLL_DISABLE,
+			      0, 0, 0, 0, 0, 0, &res);
+	else
+		arm_smccc_smc(CLK_SECURE_RW, GP1_PLL_DISABLE,
+			      0, 0, 0, 0, 0, 0, &res);
+}
+#endif
+
 /*
  * The Meson G12A PCIE PLL is fined tuned to deliver a very precise
  * 100MHz reference clock for the PCIe Analog PHY, and thus requires
@@ -707,6 +800,15 @@ const struct clk_ops meson_clk_pll_ops = {
 	.restore_context = meson_clk_pll_restore_context,
 };
 EXPORT_SYMBOL_GPL(meson_clk_pll_ops);
+
+const struct clk_ops meson_secure_clk_pll_ops = {
+	.recalc_rate	= meson_clk_pll_recalc_rate,
+	.round_rate	= meson_secure_clk_pll_round_rate,
+	.set_rate	= meson_secure_clk_pll_set_rate,
+	.enable		= meson_secure_clk_pll_enable,
+	.disable	= meson_secure_clk_pll_disable
+};
+EXPORT_SYMBOL_GPL(meson_secure_clk_pll_ops);
 
 static void meson_secure_pll_v2_disable(struct clk_hw *hw)
 {
