@@ -7,6 +7,13 @@
 #ifndef __MESON_CLK_CPU_DYNDIV_H
 #define __MESON_CLK_CPU_DYNDIV_H
 
+#include "parm.h"
+
+struct meson_clk_cpu_dyndiv_data {
+	struct parm div;
+	struct parm dyn;
+};
+
 struct cpu_dyn_table {
 	unsigned long rate;
 	u16	dyn_pre_mux;
