@@ -1,0 +1,54 @@
+#include "g12a_s905x2_u212.dts"
+#include "coreelec_g12a_common.dtsi"
+
+/{
+	model = "Amlogic";
+	coreelec-dt-id = "g12a_s905y2_2g";
+
+	cvbsout {
+		status = "disabled";
+	};
+};
+
+&pinctrl_periphs {
+	/delete-node/ spdifout;
+	/delete-node/ spdifout_a_mute;
+};
+
+&pinctrl_aobus {
+	spdifout: spdifout {
+		mux {
+			groups = "spdif_ao_out";
+			function = "spdif_ao_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux {
+			groups = "GPIOAO_10";
+			function = "gpio_aobus";
+		};
+	};
+};
+
+&usbphy0 {
+	/delete-node/ u3p@80;
+};
+
+&u2p0port1 {
+	gpio-vbus-power = "GPIOH_6";
+	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+};
+
+&dwc3 {
+	phys = <&u2p0port0>, <&u2p0port1>;
+	phy-names = "usb2-0", "usb2-1";
+};
+
+&ethmac {
+	status = "disabled";
+};
+
+&eth_phy {
+	status = "disabled";
+};
