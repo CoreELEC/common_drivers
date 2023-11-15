@@ -1,0 +1,22 @@
+#include "g12a_s905x2_beelink_gt_mini_a_2g.dts"
+
+/{
+	model = "Beelink";
+	coreelec-dt-id = "g12a_s905x2_beelink_gt1_mini_2g";
+	amlogic-dt-id = "g12a_u212_2g";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x0 0x0 0x80000000>;
+	};
+};
+
+&i2c3 {
+	status = "okay";
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		i2c_bus = "i2c_bus_c";
+		#clock-cells = <0x00000000>;
+		status = "okay";
+		reg = <0x51>;
+	};
+};
