@@ -81,7 +81,7 @@ void optee_pool_op_free_helper(struct tee_shm_pool *pool, struct tee_shm *shm,
 
 static void optee_bus_scan(struct work_struct *work)
 {
-	WARN_ON(optee_enumerate_devices(PTA_CMD_GET_DEVICES_SUPP));
+	optee_enumerate_devices(PTA_CMD_GET_DEVICES_SUPP);
 }
 
 int optee_open(struct tee_context *ctx, bool cap_memref_null)
