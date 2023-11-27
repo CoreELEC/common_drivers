@@ -3767,6 +3767,7 @@ static u32 codec_mm_scatter_get_reserved_block_size(struct codec_mm_scatter_mgt 
 	u32 ret, reserved_block_size;
 	int alloc_mode = smgt->scatter_alloc_mode;
 	u32 total_size = codec_mm_get_total_size() / SZ_1M;
+	int reserved_size = codec_mm_get_reserved_size();
 
 	switch (alloc_mode) {
 	case SCATTER_ALLOC_FROM_SYS:
@@ -3781,7 +3782,7 @@ static u32 codec_mm_scatter_get_reserved_block_size(struct codec_mm_scatter_mgt 
 		reserved_block_size =
 			codec_mm_get_property_from_dts("reserved_block_size");
 		if (reserved_block_size > total_size) {
-			ret = 300;
+			ret = (reserved_size > 0) ? reserved_size / SZ_1M : 0;
 			pr_info("reserved_block_size is %d, reset as 300.\n",
 				reserved_block_size);
 		} else {
@@ -3791,7 +3792,7 @@ static u32 codec_mm_scatter_get_reserved_block_size(struct codec_mm_scatter_mgt 
 
 	case SCATTER_ALLOC_FROM_DEFAULT:
 	default:
-		ret = 300;
+		ret = (reserved_size > 0) ? reserved_size / SZ_1M : 0;
 	}
 
 	return ret;
