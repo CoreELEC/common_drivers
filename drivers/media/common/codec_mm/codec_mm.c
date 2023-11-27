@@ -4030,6 +4030,15 @@ static int codec_mm_probe(struct platform_device *pdev)
 					pr_err("secure_vdec_res_setup device init failed\n");
 			}
 			break;
+		} else if (!strcmp(search_target->name, "linux,codec_mm_reserved")) {
+			mem = of_reserved_mem_lookup(search_target);
+			if (mem) {
+				r = of_reserved_mem_device_init_by_idx(&pdev->dev,
+					pdev->dev.of_node, secure_region_index);
+				if (r)
+					pr_err("codec_mm reserved memory device init failed\n");
+			}
+			break;
 		}
 		secure_region_index++;
 	}

@@ -3084,6 +3084,7 @@ static void codec_mm_scatter_monitor(struct work_struct *work)
 static int codec_mm_scatter_mgt_alloc_in(struct codec_mm_scatter_mgt **psmgt)
 {
 	struct codec_mm_scatter_mgt *smgt;
+	int reserved_size = codec_mm_get_reserved_size();
 
 	smgt = kmalloc(sizeof(*smgt), GFP_KERNEL);
 	if (!smgt) {
@@ -3098,7 +3099,8 @@ static int codec_mm_scatter_mgt_alloc_in(struct codec_mm_scatter_mgt **psmgt)
 	smgt->try_alloc_in_sys_page_cnt_max = MAX_SYS_BLOCK_PAGE;
 	smgt->try_alloc_in_sys_page_cnt = MAX_SYS_BLOCK_PAGE;
 	smgt->try_alloc_in_sys_page_cnt_min = MIN_SYS_BLOCK_PAGE;
-	smgt->reserved_block_mm_M = 300;
+	reserved_size = (reserved_size > 0) ? reserved_size / (1024 * 1024) : 0;
+	smgt->reserved_block_mm_M = reserved_size;
 	smgt->keep_size_PAGE = 20 * SZ_1M >> PAGE_SHIFT;
 	smgt->alloc_from_cma_first = 1;
 	smgt->enable_slot_from_sys = 0;
