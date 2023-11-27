@@ -283,7 +283,6 @@ int cma_mmu_op(struct page *page, int count, bool set)
 static void dump_mem_infos(void);
 
 static int dump_free_mem_infos(void *buf, int size);
-static int __init secure_vdec_res_setup(struct reserved_mem *rmem);
 
 static inline u32 codec_mm_align_up2n(u32 addr, u32 alg2n)
 {
@@ -4021,13 +4020,10 @@ static int codec_mm_probe(struct platform_device *pdev)
 		if (!strcmp(search_target->name, "linux,secure_vdec_reserved")) {
 			mem = of_reserved_mem_lookup(search_target);
 			if (mem) {
-				r = secure_vdec_res_setup(mem);
-				if (r)
-					pr_err("secure_vdec_res_setup res %x\n", r);
 				r = of_reserved_mem_device_init_by_idx(&pdev->dev,
 					pdev->dev.of_node, secure_region_index);
 				if (r)
-					pr_err("secure_vdec_res_setup device init failed\n");
+					pr_err("secure-vdec-reserved device init failed\n");
 			}
 			break;
 		} else if (!strcmp(search_target->name, "linux,codec_mm_reserved")) {
