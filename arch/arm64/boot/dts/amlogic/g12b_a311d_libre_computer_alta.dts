@@ -1,0 +1,156 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "Libre-Computer Alta";
+	coreelec-dt-id = "g12b_a311d_libre_computer_alta";
+
+	/delete-node/ memory@00000000;
+
+	bt-dev {
+		status = "disabled";
+	};
+
+	wifi {
+		status = "disabled";
+	};
+
+	gpioleds {
+		/* green led, system running */
+		sys_led {
+			gpios=<&gpio GPIOX_3 GPIO_ACTIVE_LOW>;
+		};
+
+		/* orange led, standby */
+		orange_led {
+			label = "orange_led";
+			gpios = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			retain-state-shutdown;
+		};
+
+		/* blue led, disk */
+		blue_led {
+			label = "blue_led";
+			gpios = <&gpio GPIOX_7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "mmc0";
+		};
+	};
+
+	auge_sound {
+		avout_mute-gpios = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>;
+	};
+
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		/* GPIOAO_6, 7J2, pin 7 */
+		pwms = <&pwm_AO_cd 0 25000 0>;
+		#cooling-cells = <2>;
+		cooling-levels = <0 100 150 200 255>;
+	};
+
+	thermal-zones {
+		soc_thermal: soc_thermal {
+			trips {
+				cpu_active: cpu-active {
+					temperature = <50000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+				cpu_warm: cpu-warm {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				fan_cooling_map0 {
+					trip = <&cpu_active>;
+					cooling-device = <&fan0 THERMAL_NO_LIMIT 1>;
+				};
+				fan_cooling_map1 {
+					trip = <&cpu_warm>;
+					cooling-device = <&fan0 2 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&pinctrl_periphs {
+	external_eth_pins: external_eth_pins {
+		mux {
+			groups = "eth_mdio",
+			"eth_mdc",
+			"eth_rgmii_rx_clk",
+			"eth_rx_dv",
+			"eth_rxd0",
+			"eth_rxd1",
+			"eth_rxd2_rgmii",
+			"eth_rxd3_rgmii",
+			"eth_rgmii_tx_clk",
+			"eth_txen",
+			"eth_txd0",
+			"eth_txd1",
+			"eth_txd2_rgmii",
+			"eth_txd3_rgmii";
+			function = "eth";
+			drive-strength = <3>;
+		};
+	};
+};
+
+&pinctrl_aobus {
+	/delete-node/ spdifout_a_mute;
+
+	spdifout: spdifout {
+		mux { /* 7J2, pin 32 */
+			groups = "GPIOAO_11";
+			function = "gpio_aobus";
+		};
+	};
+
+	ao_b_uart_pins:ao_b_uart {
+		mux {
+			groups = "uart_ao_b_tx_8",
+				"uart_ao_b_rx_9";
+		};
+	};
+};
+
+&audiobus {
+	aml_spdif: spdif {
+		/delete-property/ pinctrl-1;
+	};
+};
+
+&uart_A {
+	status = "disabled";
+};
+
+&uart_AO_B {
+	status = "okay";
+};
+
+&pwm_ab {
+	status = "disabled";
+};
+
+&pwm_ef {
+	status = "disabled";
+};
+
+&pwm_AO_cd {
+	status = "okay";
+	pinctrl-0 = <&pwm_ao_c_pins2>;
+	pinctrl-names = "default";
+};
+
+&sd_emmc_a {
+	 status = "disabled";
+};
