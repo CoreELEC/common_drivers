@@ -1974,6 +1974,8 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 				case AUD_CODEC_TYPE_STEREO_PCM:
 				case AUD_CODEC_TYPE_MULTI_LPCM:
 				case AUD_CODEC_TYPE_HSR_STEREO_PCM:
+				case AUD_CODEC_TYPE_TRUEHD:
+				case AUD_CODEC_TYPE_DTS_HD_MA:
 					aud_param.chs  = runtime->channels;
                                         aud_param.i2s_ch_mask = (1 << (runtime->channels / 2)) - 1;
 					break;
