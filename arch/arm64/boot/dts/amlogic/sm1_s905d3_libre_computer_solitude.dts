@@ -1,0 +1,138 @@
+#include "sm1_s905x3_ac214.dts"
+#include "coreelec_sm1_common.dtsi"
+
+/ {
+	model = "Libre-Computer Solitude";
+	coreelec-dt-id = "sm1_s905d3_libre_computer_solitude";
+
+	/delete-node/ memory@00000000;
+
+	bt-dev {
+		status = "disabled";
+	};
+
+	aml_wifi {
+		status = "disabled";
+	};
+
+	gpioleds {
+		/* green led, system running */
+		sys_led {
+			gpios=<&gpio GPIOX_3 GPIO_ACTIVE_LOW>;
+		};
+
+		/* orange led, standby */
+		orange_led {
+			label = "orange_led";
+			gpios = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			retain-state-shutdown;
+		};
+
+		/* blue led, disk */
+		blue_led {
+			label = "blue_led";
+			gpios = <&gpio GPIOX_7 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "mmc0";
+		};
+	};
+
+	auge_sound {
+		avout_mute-gpios = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>;
+	};
+
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		/* GPIOAO_6, 7J2, pin 7 */
+		pwms = <&pwm_AO_cd 0 25000 0>;
+		#cooling-cells = <2>;
+		cooling-levels = <0 100 150 200 255>;
+	};
+
+	thermal-zones {
+		soc_thermal: soc_thermal {
+			trips {
+				cpu_active: cpu-active {
+					temperature = <50000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+				cpu_warm: cpu-warm {
+					temperature = <60000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				fan_cooling_map0 {
+					trip = <&cpu_active>;
+					cooling-device = <&fan0 THERMAL_NO_LIMIT 1>;
+				};
+				fan_cooling_map1 {
+					trip = <&cpu_warm>;
+					cooling-device = <&fan0 2 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
+	};
+};
+
+&pinctrl_periphs {
+	/delete-node/ spdifout;
+};
+
+&pinctrl_aobus {
+	spdifout: spdifout {
+		mux { /* 7J2, pin 32 */
+			groups = "GPIOAO_11";
+			function = "gpio_aobus";
+		};
+	};
+
+	ao_b_uart_pins:ao_b_uart {
+		mux {
+			groups = "uart_ao_b_tx_8",
+				"uart_ao_b_rx_9";
+		};
+	};
+};
+
+&ext_mdio {
+	external_phy: ethernet-phy@0 {
+		reg = <0>;
+		max-speed = <1000>;
+	};
+};
+
+&ethmac {
+	pinctrl-0 = <&external_eth_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+	phy-mode = "rgmii";
+	phy-handle = <&external_phy>;
+	internal_phy = <0>;
+	amlogic,tx-delay-ns = <2>;
+};
+
+&uart_A {
+	status = "disabled";
+};
+
+&uart_AO_B {
+	status = "okay";
+};
+
+&pwm_ef {
+	status = "disabled";
+};
+
+&pwm_AO_cd {
+	status = "okay";
+	pinctrl-0 = <&pwm_ao_c_pins2>;
+	pinctrl-names = "default";
+};
+
+&sd_emmc_a {
+	 status = "disabled";
+};
