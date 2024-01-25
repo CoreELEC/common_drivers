@@ -131,5 +131,5 @@
 	fbdev_sizes = <4096 2160 4096 4320 32>;
 	/delete-property/ overwrite_crtcmask_of_osd;
 	/delete-property/ overwrite_crtcmask_of_video;
-	/delete-property/ dummyl_from_hdmitx;
+	dummyl_from_hdmitx = /bits/ 8  <1>;
 };
