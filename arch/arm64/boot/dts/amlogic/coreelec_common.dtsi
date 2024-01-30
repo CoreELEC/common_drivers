@@ -133,3 +133,7 @@
 	/delete-property/ overwrite_crtcmask_of_video;
 	dummyl_from_hdmitx = /bits/ 8  <1>;
 };
+
+&drm_amcvbsout {
+	status = "disabled";
+};
