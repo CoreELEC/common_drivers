@@ -1760,10 +1760,10 @@ static int meson_hdmitx_encoder_atomic_check(struct drm_encoder *encoder,
 	if (!am_hdmi_info.android_path || crtc_state->vrr_enabled)
 		return 0;
 
-	if (hdmitx_common_validate_format_para(common, &hdmitx_state->hcs.para)) {
-		DRM_ERROR("format para check fail.\n");
-		return -EINVAL;
-	}
+	//if (hdmitx_common_validate_format_para(common, &hdmitx_state->hcs.para)) {
+	//	DRM_ERROR("format para check fail.\n");
+	//	return -EINVAL;
+	//}
 
 	DRM_DEBUG("vic: %d, cs: %d, cd: %d\n", hdmitx_state->hcs.para.vic,
 		 hdmitx_state->hcs.para.cs, hdmitx_state->hcs.para.cd);
