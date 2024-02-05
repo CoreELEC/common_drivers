@@ -183,6 +183,9 @@ int hdmitx_format_para_rebuild_fmt_attr_str(struct hdmi_format_para *para, char 
 	const char *conf;
 	ssize_t pos = 0;
 
+	// skip update fmt_attr
+	goto out;
+
 	attr_str[0] = 0;
 	conf = NULL;
 	for (i = 0; i < sizeof(parse_cs_) / sizeof(struct parse_cs); i++) {
@@ -217,5 +220,6 @@ int hdmitx_format_para_rebuild_fmt_attr_str(struct hdmi_format_para *para, char 
 	pos += snprintf(attr_str + pos, len - pos, "%s", conf);
 
 	HDMITX_DEBUG("rebuild fmt_string %s from (%d,%d)\n", attr_str, para->cs, para->cd);
+out:
 	return 0;
 }
