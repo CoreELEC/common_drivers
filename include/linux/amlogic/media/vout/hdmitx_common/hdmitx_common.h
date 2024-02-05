@@ -150,6 +150,11 @@ void hdmitx_get_init_state(struct hdmitx_common *tx_common,
 			   struct hdmitx_common_state *state);
 
 /*******************************hdmitx common api*******************************/
+/* if 4k can support Y420, return 1.
+ * when current cs == 420, and vic can support 420,
+ * current output is 4k420 mode.
+ */
+bool is_hdmi4k_support_420(enum hdmi_vic vic);
 int hdmitx_common_init(struct hdmitx_common *tx_common, struct hdmitx_hw_common *hw_comm);
 int hdmitx_common_destroy(struct hdmitx_common *tx_common);
 /* modename policy: get vic from name and check if support by rx;

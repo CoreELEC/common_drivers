@@ -71,10 +71,4 @@ struct dentry *hdmitx_get_dbgfsdentry(void);
 int hdmitx_pkt_dump(struct hdmitx_dev *hdev, char *buf, int len);
 int hdmitx_debug_reg_dump(struct hdmitx_dev *hdev, char *buf, int len);
 
-/* if 4k can support Y420, return 1.
- * when current cs == 420, and vic can support 420,
- * current output is 4k420 mode.
- */
-bool is_hdmi4k_support_420(enum hdmi_vic vic);
-
 #endif

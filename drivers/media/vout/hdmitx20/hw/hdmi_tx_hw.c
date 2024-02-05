@@ -6936,14 +6936,3 @@ struct hdmitx20_hw *get_hdmitx20_hw_instance(void)
 {
 	return global_tx_hw;
 }
-
-bool is_hdmi4k_support_420(enum hdmi_vic vic)
-{
-	if (vic == HDMI_102_4096x2160p60_256x135 ||
-		vic == HDMI_101_4096x2160p50_256x135 ||
-		vic == HDMI_97_3840x2160p60_16x9 ||
-		vic == HDMI_96_3840x2160p50_16x9)
-		return true;
-
-	return false;
-}
