@@ -143,6 +143,19 @@ static void hdmitx_work_init(struct hdmitx_common *tx_comm)
 	INIT_DELAYED_WORK(&tx_comm->work_hpd_plugout, hdmitx_hpd_plugout_irq_handler);
 }
 
+bool is_hdmi4k_support_420(enum hdmi_vic vic)
+{
+	if (vic == HDMI_102_4096x2160p60_256x135 ||
+		vic == HDMI_101_4096x2160p50_256x135 ||
+		vic == HDMI_97_3840x2160p60_16x9 ||
+		vic == HDMI_96_3840x2160p50_16x9 ||
+		vic == HDMI_106_3840x2160p50_64x27 ||
+		vic == HDMI_107_3840x2160p60_64x27)
+		return true;
+
+	return false;
+}
+
 /* init hdmitx_common struct which is done only when driver probe */
 int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *hw_comm)
 {

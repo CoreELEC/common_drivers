@@ -107,11 +107,5 @@ void set_hpll_od3_sc2(unsigned int div);
 
 void set_hpll_sspll_sc2(enum hdmi_vic vic);
 
-/* if 4k can support Y420, return 1.
- * when current cs == 420, and vic can support 420,
- * current output is 4k420 mode.
- */
-bool is_hdmi4k_support_420(enum hdmi_vic vic);
-
 void set_vmode_enc_hw(struct hdmitx20_dev *hdev);
 #endif
