@@ -1926,6 +1926,53 @@ static void hdmitx_set_emp_pkt(u8 *data, u32 type, u32 size)
 {
 }
 
+static ssize_t config_show(struct device *dev,
+			   struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct hdmitx_dev *hdev = dev_get_drvdata(dev);
+	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
+	int colour_depths[] = { 8, 10, 12, 16 };
+	char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
+	char* eotf_hdr[] = {"unknown", "HDR10","HLG","HDR","SDR"};
+	char* eotf_DV[] = {"unknown", "DV-Std","DV-LL"};
+	char* eotf_hdr10p[] = {"unknown", "HDR10+"};
+	char* eotf = eotf_hdr[4];
+	char* range[] = {"default","limited","full"};
+	char* colourmetry[] = {"unknown", "BT.709", "undefined", "BT.601", "BT.470M", "BT.470BG",
+		"SMPTE-170M", "SMPTE-240M", "SMPTE-431", "BT.2020"};
+
+	if (para) {
+		u8 color_depth = para->cd; // Pixel bit width: 4=24-bit; 5=30-bit; 6=36-bit; 7=48-bit.
+		u8 input_color_format = HDMI_COLORSPACE_YUV444;  // Pixel format: 0=RGB444; 1=YCbCr422; 2=YCbCr444; 3=YCbCr420.
+		u8 input_color_range = HDMI_QUANTIZATION_RANGE_LIMITED;  // Pixel range: 0=limited; 1=full.
+		u8 output_color_format = para->cs; // Pixel format: 0=RGB444; 1=YCbCr422; 2=YCbCr444; 3=YCbCr420.
+		u8 output_color_range = HDMI_QUANTIZATION_RANGE_LIMITED; // Pixel range: 0=limited; 1=full.
+
+		if (hdmitx_hdr10p_en(&hdev->tx_hw.base))
+			eotf = eotf_hdr10p[hdmitx_hw_get_hdr10p_st(&hdev->tx_hw.base) & ~HDMI_HDR10P_TYPE];
+		else if (hdmitx_dv_en(&hdev->tx_hw.base))
+		{
+			eotf = eotf_DV[hdmitx_hw_get_dv_st(&hdev->tx_hw.base) & ~HDMI_DV_TYPE];
+			if (hdmitx_hw_get_dv_st(&hdev->tx_hw.base) == HDMI_DV_VSIF_STD)
+				output_color_format = HDMI_COLORSPACE_RGB;
+		}
+		else if (hdmitx_hdr_en(&hdev->tx_hw.base))
+			eotf = eotf_hdr[hdmitx_hw_get_hdr_st(&hdev->tx_hw.base) & ~HDMI_HDR_TYPE];
+
+		pos += snprintf(buf + pos, PAGE_SIZE, "VIC: %d %s\n", para->vic, para->name);
+		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nYCC colour range: %s\n",
+				colour_depths[color_depth & 0x3],
+				pix_fmt[output_color_format & 0x3],
+				range[(input_color_format != output_color_format || input_color_range  != output_color_range) ? 1 : 0],
+				eotf,
+				range[(input_color_format != output_color_format || input_color_range  != output_color_range) ? 1 : 0]);
+		pos += snprintf(buf + pos, PAGE_SIZE, "Colourimetry: %s\n",
+				colourmetry[hdev->hdr_color_feature]);
+	}
+	return pos;
+}
+
 static ssize_t config_store(struct device *dev,
 			    struct device_attribute *attr,
 			    const char *buf, size_t count)
@@ -3743,7 +3790,7 @@ static DEVICE_ATTR_RW(disp_mode);
 static DEVICE_ATTR_RO(cs);
 static DEVICE_ATTR_RO(cd);
 static DEVICE_ATTR_RW(vid_mute);
-static DEVICE_ATTR_WO(config);
+static DEVICE_ATTR_RW(config);
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static DEVICE_ATTR_RO(vrr_cap);
 static DEVICE_ATTR_RW(vrr_mode);

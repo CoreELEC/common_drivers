@@ -1706,6 +1706,58 @@ static void hdmitx_set_emp_pkt(unsigned char *data, unsigned int type,
 	hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_EMP_PHY_ADDR, phys_ptr);
 }
 
+static ssize_t config_show(struct device *dev,
+			   struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct hdmitx_dev *hdev = dev_get_drvdata(dev);
+	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
+	int colour_depths[] = { 8, 10, 12, 16 };
+	char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
+	char* eotf_hdr[] = {"unknown", "HDR10","HLG","HDR","SDR"};
+	char* eotf_DV[] = {"unknown", "DV-Std","DV-LL"};
+	char* eotf_hdr10p[] = {"unknown", "HDR10+"};
+	char* eotf = eotf_hdr[4];
+	char* range[] = {"default","limited","full"};
+	char* colourimetry[] = {"default", "BT.601", "BT.709", "xvYCC601","xvYCC709",
+	"sYCC601","Adobe_YCC601","Adobe_RGB","BT.2020c","BT.2020nc","P3 D65","P3 DCI"};
+
+	if (para) {
+		int cs = hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3;
+		int cd = (hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1;
+
+		// YUV422
+		if (cs == HDMI_COLORSPACE_YUV422)
+			cd = (~cd & 0x3);
+
+		if (hdmitx_hdr10p_en(&hdev->tx_hw.base))
+			eotf = eotf_hdr10p[hdmitx_hw_get_hdr10p_st(&hdev->tx_hw.base) & ~HDMI_HDR10P_TYPE];
+		else if (hdmitx_dv_en(&hdev->tx_hw.base))
+		{
+			eotf = eotf_DV[hdmitx_hw_get_dv_st(&hdev->tx_hw.base) & ~HDMI_DV_TYPE];
+			if (hdmitx_hw_get_dv_st(&hdev->tx_hw.base) == HDMI_DV_VSIF_STD)
+				cs = HDMI_COLORSPACE_RGB;
+		}
+		else if (hdmitx_hdr_en(&hdev->tx_hw.base))
+			eotf = eotf_hdr[hdmitx_hw_get_hdr_st(&hdev->tx_hw.base) & ~HDMI_HDR_TYPE];
+
+		pos += snprintf(buf + pos, PAGE_SIZE, "VIC: %d %s\n", para->vic, para->name);
+		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nYCC colour range: %s\n",
+				colour_depths[cd],
+				pix_fmt[cs],
+				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
+				eotf,
+				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
+		if (((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6) < 0x3)
+			pos += snprintf(buf + pos, PAGE_SIZE, "Colourimetry: %s\n",
+				colourimetry[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6]);
+		else
+			pos += snprintf(buf + pos, PAGE_SIZE, "Colourimetry: %s\n",
+				colourimetry[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
+	}
+	return pos;
+}
+
 static ssize_t config_store(struct device *dev,
 			    struct device_attribute *attr,
 			    const char *buf, size_t count)
@@ -3097,7 +3149,7 @@ static DEVICE_ATTR_RW(disp_mode);
 static DEVICE_ATTR_RO(cs);
 static DEVICE_ATTR_RO(cd);
 static DEVICE_ATTR_RW(vid_mute);
-static DEVICE_ATTR_WO(config);
+static DEVICE_ATTR_RW(config);
 static DEVICE_ATTR_RO(hdmi_hdr_status);
 static DEVICE_ATTR_RW(sspll);
 static DEVICE_ATTR_RW(rxsense_policy);
