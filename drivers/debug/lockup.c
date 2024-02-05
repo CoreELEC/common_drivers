@@ -1004,8 +1004,9 @@ static void fiq_debug_addr_init(void)
 	fiq_percpu_size = res.result.percpu_size;
 
 	/* Current ATF version does not support FIQ DEBUG */
-	if (fiq_phy_addr == 0 || fiq_phy_addr == -1) {
-		WARN(1, "invalid fiq_phy_addr\n");
+	if (fiq_phy_addr == 0 || fiq_phy_addr == U64_MAX ||
+		 (fiq_phy_addr == U32_MAX && fiq_phy_addr >> 32 == 0)) {
+		pr_err("invalid fiq_phy_addr\n");
 		return;
 	}
 
