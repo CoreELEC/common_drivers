@@ -62,10 +62,12 @@ static int mbox_transfer_data(struct mbox_chan *mbox_chan, void *data)
 {
 	struct aml_mbox_chan *aml_chan = mbox_chan->con_priv;
 	struct aml_mbox_data *aml_data = data;
-	union mbox_stat mbox_stat;
-	struct mbox_cmd_t *mbox_cmd = &mbox_stat.mbox_cmd_t;
+	union mbox_stat_old mbox_stat;
+	struct mbox_cmd_old_t *mbox_cmd = &mbox_stat.mbox_cmd_t;
 
 	mbox_cmd->cmd = aml_data->cmd;
+	mbox_cmd->client_id = aml_data->client_id;
+	mbox_cmd->size = aml_data->txsize;
 
 	if (!aml_chan->tx_chan) {
 		dev_err(mbox_chan->cl->dev, "%s: mbox channel is not tx channel\n",
@@ -118,12 +120,12 @@ static irqreturn_t mbox_irq_handler(int irq, void *p)
 	struct aml_mbox_data *aml_data;
 	union mbox_stat mbox_stat;
 
-	pr_err("%s %x\n", __func__, irq);
+	pr_debug("%s %x\n", __func__, irq);
 	mbox_stat.set_cmd = readl(aml_chan->mbox_fsts_addr);
 	if (mbox_stat.set_cmd && irq == aml_chan->mbox_irq) {
 		aml_data = mbox_chan->active_req;
 		if (aml_data->rxbuf && aml_data->rxsize > 0)
-			memcpy_fromio(aml_data->rxbuf, aml_chan->mbox_rd_addr + 4,
+			memcpy_fromio(aml_data->rxbuf, aml_chan->mbox_rd_addr,
 				      aml_data->rxsize);
 	}
 

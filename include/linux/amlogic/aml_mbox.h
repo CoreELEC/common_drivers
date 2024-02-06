@@ -23,6 +23,7 @@ enum aml_mbox_sync {
 /**
  * struct aml_mbox_data - mbox physical channel info
  * @cmd:               Use to remote mailbox driver recognize callback function
+ * @client_id:         Mbox tansfer client_id
  * @txbuf:             Mbox tansfer data buffer
  * @rxbuf:             Mbox receive data buffer
  * @txsize:            Mbox transfer data size
@@ -33,6 +34,7 @@ enum aml_mbox_sync {
  */
 struct aml_mbox_data {
 	u32 cmd;
+	u32 client_id;
 	void *txbuf;
 	void *rxbuf;
 	u32 txsize;
@@ -140,6 +142,29 @@ static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *d
 	}
 	return mbox_chan;
 }
+static inline int aml_mbox_transfer(struct mbox_chan *mbox_chan, struct aml_mbox_data *aml_data,
+					 enum aml_mbox_sync sync)
+{
+	struct aml_mbox_chan *aml_chan;
+	int ret;
+
+	if (IS_ERR_OR_NULL(mbox_chan)) {
+		pr_err("mbox chan is NULL\n");
+		return -EINVAL;
+	}
+	aml_chan = mbox_chan->con_priv;
+	init_completion(&aml_data->complete);
+	mutex_lock(&aml_chan->mutex);
+	ret = mbox_send_message(mbox_chan, aml_data);
+	mutex_unlock(&aml_chan->mutex);
+	if (ret < 0) {
+		dev_err(mbox_chan->cl->dev, "Fail to send mbox data %d\n", ret);
+		return ret;
+	}
+	if (sync == MBOX_TSYNC)
+		ret = wait_for_completion_killable(&aml_data->complete);
+	return ret;
+}
 
 /**
  * aml_mbox_transfer_data - A way for transfer mbox data
@@ -156,31 +181,39 @@ static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 					 enum aml_mbox_sync sync)
 {
 	struct aml_mbox_data aml_data;
-	struct aml_mbox_chan *aml_chan;
-	int ret;
-
-	if (IS_ERR_OR_NULL(mbox_chan)) {
-		pr_err("mbox chan is NULL\n");
-		return -EINVAL;
-	}
-	aml_chan = mbox_chan->con_priv;
-	init_completion(&aml_data.complete);
 	aml_data.sync = sync;
 	aml_data.cmd = cmd;
 	aml_data.txbuf = txbuf;
 	aml_data.txsize = txsize;
 	aml_data.rxbuf = rxbuf;
 	aml_data.rxsize = rxsize;
-	mutex_lock(&aml_chan->mutex);
-	ret = mbox_send_message(mbox_chan, &aml_data);
-	mutex_unlock(&aml_chan->mutex);
-	if (ret < 0) {
-		dev_err(mbox_chan->cl->dev, "Fail to send mbox data %d\n", ret);
-		return ret;
-	}
-	if (sync == MBOX_TSYNC)
-		ret = wait_for_completion_killable(&aml_data.complete);
-	return ret;
+	return aml_mbox_transfer(mbox_chan, &aml_data, sync);
+}
+
+/**
+ * aml_mbox_transfer_data_old - A way for transfer mbox data on g12b/sm1
+ * @mbox_chan:            Mbox channel, this requested by mbox consumer driver
+ * @cmd:                  Mbox cmd, use remote driver recognize callback function
+ * @client_id:            Mbox client id
+ * @txbuf:                Mbox transfer data buffer
+ * @txsize:               Mbox transfer data size
+ * @rxbuf:                Mbox receive data size
+ * @rxsize:               Mbox receive data size
+ * @sync                  Mbox Sync info
+ */
+static inline int aml_mbox_transfer_data_old(struct mbox_chan *mbox_chan, int cmd, int client_id,
+					 void *txbuf, u32 txsize, void *rxbuf, u32 rxsize,
+					 enum aml_mbox_sync sync)
+{
+	struct aml_mbox_data aml_data;
+	aml_data.sync = sync;
+	aml_data.cmd = cmd;
+	aml_data.client_id = client_id;
+	aml_data.txbuf = txbuf;
+	aml_data.txsize = txsize;
+	aml_data.rxbuf = rxbuf;
+	aml_data.rxsize = rxsize;
+	return aml_mbox_transfer(mbox_chan, &aml_data, sync);
 }
 
 #endif
