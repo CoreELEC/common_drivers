@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/of_device.h>
 #include <linux/amlogic/aml_mbox.h>
+#include <dt-bindings/mailbox/g12a-mbox.h>
 #include <dt-bindings/mailbox/sm1-mbox.h>
 #include <dt-bindings/mailbox/g12b-mbox.h>
 #include "meson_mbox_pl.h"
@@ -276,6 +277,20 @@ static int mbox_pl_remove(struct platform_device *pdev)
 	return 0;
 }
 
+struct mbox_domain g12a_mbox_domains[] = {
+	[G12A_REE2AO0]   = MBOX_DOMAIN(G12A_REE2AO0, G12A_MBOX_REE2AO, 0),
+	[G12A_REE2AO1]   = MBOX_DOMAIN(G12A_REE2AO1, G12A_MBOX_REE2AO, 0),
+	[G12A_REE2AO2]   = MBOX_DOMAIN(G12A_REE2AO2, G12A_MBOX_REE2AO, 0),
+	[G12A_REE2AO3]   = MBOX_DOMAIN(G12A_REE2AO3, G12A_MBOX_REE2AO, 0),
+	[G12A_REE2AO4]   = MBOX_DOMAIN(G12A_REE2AO4, G12A_MBOX_REE2AO, 0),
+	[G12A_REE2AO5]   = MBOX_DOMAIN(G12A_REE2AO5, G12A_MBOX_REE2AO, 0),
+};
+
+static struct mbox_domain_data g12a_mbox_domains_data __initdata = {
+	.mbox_domains = g12a_mbox_domains,
+	.domain_counts = ARRAY_SIZE(g12a_mbox_domains),
+};
+
 struct mbox_domain sm1_mbox_domains[] = {
 	[SM1_REE2AO0]   = MBOX_DOMAIN(SM1_REE2AO0, SM1_MBOX_REE2AO, 0),
 	[SM1_REE2AO1]   = MBOX_DOMAIN(SM1_REE2AO1, SM1_MBOX_REE2AO, 0),
@@ -307,6 +322,10 @@ static struct mbox_domain_data g12b_mbox_domains_data __initdata = {
 };
 
 static const struct of_device_id mbox_of_match[] = {
+	{
+		.compatible = "amlogic, g12a-mbox-pl-old",
+		.data = &g12a_mbox_domains_data,
+	},
 	{
 		.compatible = "amlogic, sm1-mbox-pl-old",
 		.data = &sm1_mbox_domains_data,

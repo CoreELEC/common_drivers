@@ -1,3 +1,4 @@
+#include <dt-bindings/mailbox/g12a-mbox.h>
 #include "coreelec_common.dtsi"
 
 / {
@@ -28,6 +29,43 @@
 
 	secmon {
 		clear_range = <0x05100000 0x02a00000>;
+	};
+
+	/delete-node/ mhu@c883c400;
+
+	mbox_pl1: mbox_pl1@0xfffe7400 {
+		status = "okay";
+		compatible = "amlogic, g12a-mbox-pl";
+		reg = <0x0 0xfffe7600 0x0 0x200>,   // m4 rx buf
+					<0x0 0xff63c41c 0x0 0x4>,     // m4 rx set addr
+					<0x0 0xff63c424 0x0 0x4>,     // m4 rx clr addr
+					<0x0 0xff63c420 0x0 0x4>,     // m4 rx sts addr
+					<0x0 0xfffe7400 0x0 0x200>,   // m4 tx buf
+					<0x0 0xff63c440 0x0 0x4>,     // m4 tx set addr
+					<0x0 0xff63c448 0x0 0x4>,     // m4 tx clr addr
+					<0x0 0xff63c444 0x0 0x4>;     // m4 tx sts addr
+		interrupts = <GIC_SPI 210 IRQ_TYPE_EDGE_RISING>,   // mbox rx irq
+					 <GIC_SPI 213 IRQ_TYPE_EDGE_RISING>;   // mbox tx irq
+		mbox-tx = "rx", "tx";
+		mbox-nums = <G12A_MBOX_MF_NUMS>;
+		mboxids = <G12A_MBOX_MF2REE>,
+				<G12A_MBOX_REE2MF>;
+		#mbox-cells = <1>;
+	};
+
+	mbox_pl0: mbox_pl0@0xfffe7000 {
+		status = "okay";
+		compatible = "amlogic, g12a-mbox-pl-old";
+		reg = <0x0 0xfffe7200 0x0 0x200>,   // aocpu tx buf
+		      <0x0 0xfffe7000 0x0 0x200>,   // aocpu rx buf
+		      <0x0 0xff63c434 0x0 0x4>,     // aocpu tx set addr
+		      <0x0 0xff63c418 0x0 0x4>,     // aocpu rx clr addr
+		      <0x0 0xff63c414 0x0 0x4>;     // aocpu rx sts addr
+		interrupts = <GIC_SPI 209 IRQ_TYPE_EDGE_RISING>;   /* mbox aocpu irq */
+		mbox-tx = "tx";
+		mbox-nums = <G12A_MBOX_AO_NUMS>;
+		mboxids = <G12A_MBOX_REE2AO>;
+		#mbox-cells = <1>;
 	};
 
 	gpioleds {
