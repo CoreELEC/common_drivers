@@ -176,7 +176,7 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 	if (tx_comm->ready)
 		HDMITX_ERROR("Should run disable_mode before enable new mode.\n");
 
-	if (tx_comm->hpd_state == 0 || tx_comm->suspend_flag) {
+	if (tx_comm->suspend_flag) {
 		HDMITX_ERROR("%s current hpd_state/suspend (%d,%d), exit\n",
 			__func__, tx_comm->hpd_state, tx_comm->suspend_flag);
 		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_SKIP);
