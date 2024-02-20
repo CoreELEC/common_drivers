@@ -3272,7 +3272,7 @@ static void sdio_rescan(struct mmc_host *mmc)
 		pr_info("Error: delayed_work mmc_rescan() already idle!\n");
 }
 
-static void sdio_reset_comm(struct mmc_card *card)
+void sdio_reset_comm(struct mmc_card *card)
 {
 	struct mmc_host *host = card->host;
 	int i = 0, err = 0;
@@ -3288,6 +3288,7 @@ static void sdio_reset_comm(struct mmc_card *card)
 		pr_info("%s Failed, error = %d\n", __func__, err);
 	return;
 }
+EXPORT_SYMBOL(sdio_reset_comm);
 
 void sdio_reinit(void)
 {
