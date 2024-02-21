@@ -137,12 +137,13 @@ static int tdma_of_parse(struct mmc_host *mmc, u32 index)
 		return 0;
 
 	mmc->caps |= MMC_CAP_4_BIT_DATA;
-	/* f_max is obtained from the optional "max-frequency" property */
-	device_property_read_u32(dev, "max-frequency", &mmc->f_max);
 
 	if (index == MMC_MULT_DEV_SEQ_SDIO) {
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
+		device_property_read_u32(dev, "max-frequency-sdio", &mmc->f_max);
 	} else {
+		device_property_read_u32(dev, "max-frequency-sd", &mmc->f_max);
+
 		if (device_property_read_bool(dev, "cd-inverted"))
 			mmc->caps2 |= MMC_CAP2_CD_ACTIVE_HIGH;
 
@@ -167,14 +168,24 @@ static int tdma_of_parse(struct mmc_host *mmc, u32 index)
 		mmc->caps2 |= MMC_CAP2_NO_WRITE_PROTECT;
 	if (device_property_read_bool(dev, "cap-sd-highspeed"))
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
+	if (device_property_read_bool(dev, "cap-mmc-highspeed"))
+		mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
 
 	if (index == MMC_MULT_DEV_SEQ_SDIO) {
+		if (device_property_read_bool(dev, "sd-uhs-sdr12"))
+			mmc->caps |= MMC_CAP_UHS_SDR12;
+		if (device_property_read_bool(dev, "sd-uhs-sdr25"))
+			mmc->caps |= MMC_CAP_UHS_SDR25;
+		if (device_property_read_bool(dev, "sd-uhs-sdr50"))
+			mmc->caps |= MMC_CAP_UHS_SDR50;
 		if (device_property_read_bool(dev, "sd-uhs-sdr104"))
 			mmc->caps |= MMC_CAP_UHS_SDR104;
 		if (device_property_read_bool(dev, "cap-sdio-irq"))
 			mmc->caps |= MMC_CAP_SDIO_IRQ;
 		if (device_property_read_bool(dev, "keep-power-in-suspend"))
 			mmc->pm_caps |= MMC_PM_KEEP_POWER;
+		if (device_property_read_bool(dev, "non-removable"))
+			mmc->caps |= MMC_CAP_NONREMOVABLE;
 	}
 	if (device_property_read_bool(dev, "no-sdio"))
 		mmc->caps2 |= MMC_CAP2_NO_SDIO;
