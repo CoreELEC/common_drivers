@@ -2971,7 +2971,7 @@ static int hdmitx21_pre_enable_mode(struct hdmitx_common *tx_comm, struct hdmi_f
 {
 	struct hdmitx_dev *hdev = to_hdmitx21_dev(tx_comm);
 
-	if (tx_comm->rxcap.max_frl_rate) {
+	if (tx_comm->rxcap.max_frl_rate && hdev->tx_hw.chip_data->chip_type > MESON_CPU_ID_T7) {
 		hdev->frl_rate = hdmitx_select_frl_rate(hdev->dsc_en, para->vic,
 			para->cs, para->cd);
 		if (hdev->frl_rate > hdev->tx_hw.tx_max_frl_rate)
