@@ -3853,7 +3853,7 @@ static int hdmitx21_pre_enable_mode(struct hdmitx_common *tx_comm, struct hdmi_f
 	if (tx_comm->tx_hw->hdmi_tx_cap.tx_max_frl_rate == FRL_NONE)
 		return 0;
 
-	if (tx_comm->rxcap.max_frl_rate) {
+	if (tx_comm->rxcap.max_frl_rate && hdev->tx_hw.chip_data->chip_type > MESON_CPU_ID_T7) {
 		u8 sink_ver = scdc_tx_sink_version_get();
 		u8 test_cfg = 0;
 
