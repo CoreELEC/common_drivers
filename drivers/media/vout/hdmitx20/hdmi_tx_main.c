@@ -279,7 +279,7 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	mutex_unlock(&hdev->tx_comm.hdmimode_mutex);
 
 	/* notify to drm hdmi */
-	hdmitx_fire_drm_hpd_cb_unlocked(&hdev->tx_comm);
+	//hdmitx_fire_drm_hpd_cb_unlocked(&hdev->tx_comm);
 }
 
 /* Set avmute_set signal to HDMIRX */

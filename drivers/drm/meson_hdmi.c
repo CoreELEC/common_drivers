@@ -2022,6 +2022,8 @@ static void meson_hdmitx_hpd_cb(void *data)
 #ifdef CONFIG_CEC_NOTIFIER
 	struct edid *pedid;
 #endif
+	struct drm_device *drm = connector->dev;
+	struct drm_mode_config mode_config = drm->mode_config;
 
 	DRM_INFO("drm hdmitx hpd notify\n");
 	if (!hdmitx_get_hpd_state(tx_comm) && !am_hdmi->android_path) {
@@ -2037,10 +2039,13 @@ static void meson_hdmitx_hpd_cb(void *data)
 		pedid = (struct edid *)hdmitx_get_raw_edid(tx_comm);
 		cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
 						     pedid);
+		if (mode_config.suspend_state)
+			drm_mode_config_helper_resume(drm);
 	} else {
 		DRM_DEBUG("%s[%d]\n", __func__, __LINE__);
 		cec_notifier_set_phys_addr(am_hdmi->cec_notifier,
 					   CEC_PHYS_ADDR_INVALID);
+		drm_mode_config_helper_suspend(drm);
 	}
 #endif
 	drm_kms_helper_hotplug_event(am_hdmi->base.connector.dev);
