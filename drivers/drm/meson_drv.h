@@ -173,6 +173,9 @@ struct meson_drm {
 	ktime_t start;
 	struct drm_mode_set logo_set[MESON_MAX_CRTC];
 	enum drm_pm_state pm_state;
+	struct mutex hpd_pm_lock;
+	bool pm_suspended;
+	bool hpd_connected;
 };
 
 /*component bind functions*/
