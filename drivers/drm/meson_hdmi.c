@@ -2714,6 +2714,9 @@ static void meson_hdmitx_hpd_cb(void *data)
 	unsigned char *raw_edid = NULL;
 #endif
 	struct drm_device *drm = connector->dev;
+#ifdef CONFIG_CEC_NOTIFIER
+	struct meson_drm *priv = drm->dev_private;
+#endif
 	u8 *edid_raw_buf;
 	size_t edid_raw_len = 0;
 
@@ -2739,11 +2742,24 @@ static void meson_hdmitx_hpd_cb(void *data)
 			pedid = (struct edid *)raw_edid;
 			cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
 						     pedid);
+			mutex_lock(&priv->hpd_pm_lock);
+			priv->hpd_connected = true;
+			if (!priv->pm_suspended && drm->mode_config.suspend_state &&
+			    !READ_ONCE(priv->shutdown_on))
+				drm_mode_config_helper_resume(drm);
+			mutex_unlock(&priv->hpd_pm_lock);
 		}
 	} else {
 		DRM_DEBUG_KMS("[%d]\n", __LINE__);
 		cec_notifier_set_phys_addr(am_hdmi->cec_notifier,
 					   CEC_PHYS_ADDR_INVALID);
+		mutex_lock(&priv->hpd_pm_lock);
+		priv->hpd_connected = false;
+		/* atomic commits wait forever once drm is shut down */
+		if (!priv->pm_suspended && !drm->mode_config.suspend_state &&
+		    !READ_ONCE(priv->shutdown_on))
+			drm_mode_config_helper_suspend(drm);
+		mutex_unlock(&priv->hpd_pm_lock);
 	}
 #endif
 
