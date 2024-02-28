@@ -63,16 +63,29 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 	struct sg_page_iter piter;
 	struct sg_table *table = buffer->sg_table;
 	unsigned long addr = vma->vm_start;
+	unsigned long offset = vma->vm_pgoff * PAGE_SIZE;
 	int ret;
 
 	for_each_sgtable_page(table, &piter, vma->vm_pgoff) {
 		struct page *page = sg_page_iter_page(&piter);
+		struct scatterlist *sg = piter.sg;
+		unsigned long remainder = vma->vm_end - addr;
+		unsigned long len = sg->length;
 
-		ret = remap_pfn_range(vma, addr, page_to_pfn(page), PAGE_SIZE,
+		if (offset >= sg->length) {
+			offset -= sg->length;
+			continue;
+		} else if (offset) {
+			page += offset / PAGE_SIZE;
+			len = sg->length - offset;
+			offset = 0;
+		}
+		len = min(len, remainder);
+		ret = remap_pfn_range(vma, addr, page_to_pfn(page), len,
 				      vma->vm_page_prot);
 		if (ret)
 			return ret;
-		addr += PAGE_SIZE;
+		addr += len;
 		if (addr >= vma->vm_end)
 			return 0;
 	}
