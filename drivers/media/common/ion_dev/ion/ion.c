@@ -154,16 +154,18 @@ err2:
 
 void ion_buffer_destroy(struct ion_buffer *buffer)
 {
-	if (buffer->kmap_cnt > 0) {
-		pr_warn_once("%s: buffer still mapped in the kernel\n",
-			     __func__);
-		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
-	}
-	buffer->heap->ops->free(buffer);
+	ion_buffer_kmap_put(buffer);
 	spin_lock(&buffer->heap->stat_lock);
 	buffer->heap->num_of_buffers--;
 	buffer->heap->num_of_alloc_bytes -= buffer->size;
 	spin_unlock(&buffer->heap->stat_lock);
+
+	if (buffer->kmap_cnt > 0) {
+		pr_warn_once("%s: buffer still mapped in the kernel\n",
+			     __func__);
+		return 0;
+	}
+	buffer->heap->ops->free(buffer);
 
 	kfree(buffer);
 }
@@ -182,7 +184,7 @@ void *ion_buffer_kmap_get(struct ion_buffer *buffer)
 {
 	void *vaddr;
 
-	if (buffer->kmap_cnt) {
+	if (buffer->kmap_cnt > 0) {
 		buffer->kmap_cnt++;
 		return buffer->vaddr;
 	}
@@ -199,10 +201,12 @@ void *ion_buffer_kmap_get(struct ion_buffer *buffer)
 
 void ion_buffer_kmap_put(struct ion_buffer *buffer)
 {
-	buffer->kmap_cnt--;
-	if (!buffer->kmap_cnt) {
-		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
-		buffer->vaddr = NULL;
+	if (buffer->kmap_cnt > 0) {
+		buffer->kmap_cnt--;
+		if (buffer->kmap_cnt == 0) {
+			buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
+			buffer->vaddr = NULL;
+		}
 	}
 }
 
