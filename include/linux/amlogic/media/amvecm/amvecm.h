@@ -42,6 +42,7 @@ void amdv_set_toggle_flag(int flag);
 int get_dv_support_info(void);
 bool support_multi_core1(void);
 bool is_hdmi_ll_as_hdr10(void);
+bool is_amdv_sdr2020_force_hlg(void);
 #endif
 
 #ifndef MAX

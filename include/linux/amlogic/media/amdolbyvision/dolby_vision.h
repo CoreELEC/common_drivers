@@ -229,6 +229,7 @@ void update_dvcore2_timing(u32 *hsize, u32 *vsize);
 int dv_inst_map(int *inst);
 void dv_inst_unmap(int inst);
 bool is_hdmi_ll_as_hdr10(void);
+bool is_amdv_sdr2020_force_hlg(void);
 bool is_multi_dv_mode(void);
 bool support_multi_core1(void);
 bool is_aml_hw5(void);

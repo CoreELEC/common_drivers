@@ -13170,6 +13170,12 @@ bool is_hdmi_ll_as_hdr10(void)
 }
 EXPORT_SYMBOL(is_hdmi_ll_as_hdr10);
 
+bool is_amdv_sdr2020_force_hlg(void)
+{
+	return !!((test_dv & DEBUG_SDR2020_FORCE_HLG) == DEBUG_SDR2020_FORCE_HLG);
+}
+EXPORT_SYMBOL(is_amdv_sdr2020_force_hlg);
+
 bool is_multi_dv_mode(void)
 {
 	return multi_dv_mode;

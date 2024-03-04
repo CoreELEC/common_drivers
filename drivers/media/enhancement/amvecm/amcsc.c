@@ -4541,7 +4541,9 @@ static int get_hdr_type(void)
 {
 	int change_flag = 0;
 
-	if (signal_transfer_characteristic == 18)
+	if ((signal_transfer_characteristic == 14 &&
+	    is_amdv_sdr2020_force_hlg()) ||
+	     signal_transfer_characteristic == 18)
 		change_flag |= HLG_FLAG;
 
 	return change_flag;
@@ -4551,7 +4553,9 @@ enum hdr_type_e get_hdr_source_type(void)
 {
 	enum hdr_type_e hdr_type;
 
-	if (signal_transfer_characteristic == 18 &&
+	if (((signal_transfer_characteristic == 14 &&
+	    is_amdv_sdr2020_force_hlg()) ||
+	     signal_transfer_characteristic == 18) &&
 	    signal_color_primaries == 9)
 		hdr_source_type =
 			signal_cuva ? CUVA_HLG_SOURCE : HLG_SOURCE;

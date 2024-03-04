@@ -71,7 +71,7 @@ bool l1l4_enabled = true;/*when top1 on,enable l1l4 by default.some idk case dis
 u32 l1l4_distance;
 struct vd_proc_info_t *vd_proc_info;
 
-u32 test_dv;
+u32 test_dv = DEBUG_SDR2020_FORCE_HLG;
 module_param(test_dv, uint, 0664);
 MODULE_PARM_DESC(test_dv, "\n test_dv\n");
 
