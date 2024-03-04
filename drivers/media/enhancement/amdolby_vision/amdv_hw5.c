@@ -101,7 +101,7 @@ u32 top1_scale;
 #define PR_ON_DELAY_CNT 3
 u32 reset_type;/*1: all hw reset, 2:skip reset, 0: sw reset*/
 
-u32 test_dv;// = DEBUG_SW_TRIGGER_TOP2_RST | MANUAL_DPE_START;
+u32 test_dv = DEBUG_SDR2020_FORCE_HLG;// = DEBUG_SW_TRIGGER_TOP2_RST | MANUAL_DPE_START;
 module_param(test_dv, uint, 0664);
 MODULE_PARM_DESC(test_dv, "\n test_dv\n");
 

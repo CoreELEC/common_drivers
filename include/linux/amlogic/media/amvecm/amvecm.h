@@ -689,6 +689,7 @@ void amve_safa_demo_ctrl(unsigned int enable);
 void osd_sharpness_size_ctrl(void);
 void osd_sharpness_demo_ctrl(void);
 bool is_hdr10plus_enable(void);
+bool is_amdv_sdr2020_force_hlg(void);
 
 bool is_hdr10plus_enable(void);
 void d_convert_str(int num,
