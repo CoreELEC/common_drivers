@@ -247,13 +247,21 @@ static int add_emmc_partition(struct gendisk *disk,
 static int is_card_emmc(struct mmc_card *card)
 {
 	struct mmc_host *mmc = card->host;
-	struct meson_host *host = mmc_priv(mmc);
-
+	const char *dev_driver_name = dev_driver_string(mmc->parent);
+	int ret = 1;
+	
 	/* emmc port, so it must be an eMMC or TSD */
-	if (aml_card_type_mmc(host))
-		return 0;
-	else
-		return 1;
+	if (!strcmp(dev_driver_name, G12A_DRIVER_NAME)) {
+		struct amlsd_platform *pdata = mmc_priv(mmc);
+		if (aml_card_type_mmc(pdata))
+			ret = 0;
+	} else {
+		struct meson_host *pdata = mmc_priv(mmc);
+		if (aml_card_type_mmc(pdata))
+			ret = 0;
+	}
+
+	return ret;
 }
 
 static int mmc_partition_tbl_checksum_calc(struct partitions *part,
