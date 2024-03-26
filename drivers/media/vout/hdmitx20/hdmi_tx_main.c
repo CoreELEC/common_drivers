@@ -93,6 +93,8 @@ const char *hdmitx_mode_get_timing_name(enum hdmi_vic vic);
 const struct hdmi_timing *hdmitx_mode_match_timing_name(const char *name);
 static void hdmitx_notify_hpd_to_rx(int hpd, void *p);
 
+bool dovi_tv_led_bt2020 = false;
+
 static inline int com_str(const char *buf, const char *str)
 {
 	return strncmp(buf, str, strlen(str)) == 0;
@@ -1118,11 +1120,19 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 			/*first disable drm package*/
 			hdmitx_hw_set_packet(tx_hw_base, HDMI_PACKET_DRM, NULL, NULL);
 			hdmitx_hw_set_packet(tx_hw_base, HDMI_PACKET_VEND, VEN_DB1, VEN_HB);
-			/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
-			 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
-			 */
-			hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
-				SET_AVI_BT2020);/*BT.2020*/
+
+			if (dovi_tv_led_bt2020) {
+				/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
+				 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
+				 */
+				hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
+					SET_AVI_BT2020);/*BT.2020*/
+			} else {
+				/* BT.2020 flag should not be used for TV-LED config */
+				hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
+					CLR_AVI_BT2020);
+			}
+
 			if (tunnel_mode == RGB_8BIT) {
 				hdmitx_hw_cntl_config(&hdev->tx_hw.base,
 					CONF_AVI_RGBYCC_INDIC,
@@ -1225,11 +1235,19 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 			/*first disable drm package*/
 			hdmitx_hw_set_packet(tx_hw_base, HDMI_PACKET_DRM, NULL, NULL);
 			hdmitx_hw_set_packet(tx_hw_base, HDMI_PACKET_VEND, VEN_DB2, VEN_HB);
-			/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
-			 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
-			 */
-			hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
-				SET_AVI_BT2020);/*BT.2020*/
+
+			if (dovi_tv_led_bt2020) {
+				/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
+				 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
+				 */
+				hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
+					SET_AVI_BT2020);/*BT.2020*/
+			} else {
+				/* BT.2020 flag should not be used for TV-LED config */
+				hdmitx_hw_cntl_config(&hdev->tx_hw.base, CONF_AVI_BT2020,
+					CLR_AVI_BT2020);
+			}
+
 			if (tunnel_mode == RGB_8BIT) {/*RGB444*/
 				hdmitx_hw_cntl_config(&hdev->tx_hw.base,
 					CONF_AVI_RGBYCC_INDIC,
@@ -4165,6 +4183,9 @@ void __exit amhdmitx_exit(void)
 //MODULE_DESCRIPTION("AMLOGIC HDMI TX driver");
 //MODULE_LICENSE("GPL");
 //MODULE_VERSION("1.0.0");
+
+MODULE_PARM_DESC(dovi_tv_led_bt2020, "\n dovi_tv_led_bt2020\n");
+module_param(dovi_tv_led_bt2020, bool, 0644);
 
 /*************DRM connector API**************/
 static struct meson_hdmitx_dev drm_hdmitx_instance = {

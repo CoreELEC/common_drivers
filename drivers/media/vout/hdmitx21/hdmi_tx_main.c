@@ -73,6 +73,7 @@
 static u8 hdmi_allm_passthough_en;
 unsigned int rx_hdcp2_ver;
 //static unsigned int hdcp_ctl_lvl;
+extern bool dovi_tv_led_bt2020;
 
 #define TEE_HDCP_IOC_START _IOW('P', 0, int)
 #define to_hdmitx21_dev(x)	container_of(x, struct hdmitx_dev, tx_comm)
@@ -1064,10 +1065,17 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 			/*first disable drm package*/
 			hdmi_drm_infoframe_set(NULL);
 			hdmi_vend_infoframe_rawset(ven_hb, db1);
-			/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
-			 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
-			 */
-			hdmi_avi_infoframe_config(CONF_AVI_BT2020, SET_AVI_BT2020);/*BT2020*/
+
+			if (dovi_tv_led_bt2020) {
+				/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
+				 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
+				 */
+				hdmi_avi_infoframe_config(CONF_AVI_BT2020, SET_AVI_BT2020);/*BT2020*/
+			} else {
+				/* BT.2020 flag should not be used for TV-LED config */
+				hdmi_avi_infoframe_config(CONF_AVI_BT2020, CLR_AVI_BT2020);
+			}
+
 			if (tunnel_mode == RGB_8BIT) {
 				hdmi_avi_infoframe_config(CONF_AVI_CS, HDMI_COLORSPACE_RGB);
 				hdmi_avi_infoframe_config(CONF_AVI_Q01, RGB_RANGE_FUL);
@@ -1170,10 +1178,17 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 			/*first disable drm package*/
 			hdmi_drm_infoframe_set(NULL);
 			hdmi_vend_infoframe_rawset(ven_hb, db2);
-			/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
-			 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
-			 */
-			hdmi_avi_infoframe_config(CONF_AVI_BT2020, SET_AVI_BT2020);/*BT.2020*/
+
+			if (dovi_tv_led_bt2020) {
+				/* Dolby Vision Source System-on-Chip Platform Kit Version 2.6:
+				 * 4.4.1 Expected AVI-IF for Dolby Vision output, need BT2020 for DV
+				 */
+				hdmi_avi_infoframe_config(CONF_AVI_BT2020, SET_AVI_BT2020);/*BT2020*/
+			} else {
+				/* BT.2020 flag should not be used for TV-LED config */
+				hdmi_avi_infoframe_config(CONF_AVI_BT2020, CLR_AVI_BT2020);
+			}
+
 			if (tunnel_mode == RGB_8BIT) {/*RGB444*/
 				hdmi_avi_infoframe_config(CONF_AVI_CS, HDMI_COLORSPACE_RGB);
 				hdmi_avi_infoframe_config(CONF_AVI_Q01, RGB_RANGE_FUL);
