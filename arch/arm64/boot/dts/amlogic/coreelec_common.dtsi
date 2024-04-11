@@ -131,6 +131,12 @@
 	/delete-property/ vrr_type;
 };
 
+&ext_mdio {
+	external_phy: ethernet-phy@0 {
+		/delete-property/ reg;
+	};
+};
+
 &ethmac {
 	wol = <0>;
 };
