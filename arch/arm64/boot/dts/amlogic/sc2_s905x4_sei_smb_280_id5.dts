@@ -19,6 +19,8 @@
 };
 
 &i2c3 {
+	status = "okay";
+
 	bct3236@3c {
 		compatible = "amlogic,bct3236_led";
 		reg = <0x3c>;
