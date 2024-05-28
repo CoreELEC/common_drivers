@@ -784,6 +784,48 @@ static ssize_t disp_cap_3d_show(struct device *dev,
 
 static DEVICE_ATTR_RO(disp_cap_3d);
 
+static ssize_t stereo_mode_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	// enum from xbmc/rendering/RenderSystemTypes.h
+	enum RENDER_STEREO_MODE
+	{
+	  RENDER_STEREO_MODE_OFF,
+	  RENDER_STEREO_MODE_SPLIT_HORIZONTAL,
+	  RENDER_STEREO_MODE_SPLIT_VERTICAL,
+	  RENDER_STEREO_MODE_ANAGLYPH_RED_CYAN,
+	  RENDER_STEREO_MODE_ANAGLYPH_GREEN_MAGENTA,
+	  RENDER_STEREO_MODE_ANAGLYPH_YELLOW_BLUE,
+	  RENDER_STEREO_MODE_INTERLACED,
+	  RENDER_STEREO_MODE_CHECKERBOARD,
+	  RENDER_STEREO_MODE_HARDWAREBASED,
+	  RENDER_STEREO_MODE_MONO,
+	  RENDER_STEREO_MODE_COUNT,
+
+	  // Pseudo modes
+	  RENDER_STEREO_MODE_AUTO = 100,
+	  RENDER_STEREO_MODE_UNDEFINED = 999,
+	};
+	int pos = 0;
+
+	if (global_tx_common->flag_3dtb)
+		pos += snprintf(buf, PAGE_SIZE, "%d\n",
+			RENDER_STEREO_MODE_SPLIT_HORIZONTAL);
+	else if (global_tx_common->flag_3dss)
+		pos += snprintf(buf, PAGE_SIZE, "%d\n",
+			RENDER_STEREO_MODE_SPLIT_VERTICAL);
+	else if (global_tx_common->flag_3dfp)
+		pos += snprintf(buf, PAGE_SIZE, "%d\n",
+			RENDER_STEREO_MODE_HARDWAREBASED);
+	else
+		pos += snprintf(buf, PAGE_SIZE, "%d\n",
+			RENDER_STEREO_MODE_OFF);
+
+	return pos;
+}
+
+static DEVICE_ATTR_RO(stereo_mode);
+
 /* cea_cap, a clone of disp_cap */
 static ssize_t cea_cap_show(struct device *dev,
 			    struct device_attribute *attr,
@@ -1229,6 +1271,7 @@ int hdmitx_sysfs_common_create(struct device *dev,
 	ret = device_create_file(dev, &dev_attr_edid);
 	ret = device_create_file(dev, &dev_attr_disp_cap);
 	ret = device_create_file(dev, &dev_attr_disp_cap_3d);
+	ret = device_create_file(dev, &dev_attr_stereo_mode);
 	ret = device_create_file(dev, &dev_attr_preferred_mode);
 	ret = device_create_file(dev, &dev_attr_cea_cap);
 	ret = device_create_file(dev, &dev_attr_vesa_cap);
@@ -1272,6 +1315,7 @@ int hdmitx_sysfs_common_destroy(struct device *dev)
 	device_remove_file(dev, &dev_attr_edid);
 	device_remove_file(dev, &dev_attr_disp_cap);
 	device_remove_file(dev, &dev_attr_disp_cap_3d);
+	device_remove_file(dev, &dev_attr_stereo_mode);
 	device_remove_file(dev, &dev_attr_preferred_mode);
 	device_remove_file(dev, &dev_attr_cea_cap);
 	device_remove_file(dev, &dev_attr_vesa_cap);
