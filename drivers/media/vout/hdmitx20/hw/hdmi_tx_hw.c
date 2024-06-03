@@ -2389,8 +2389,13 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw)
 							colour_depths[para->cd - COLORDEPTH_24B]);
 					}
 				}
-				HDMITX_INFO("display colourdepth is auto set to %d bits (VIC: %d)\n",
-					colour_depths[para->cd - COLORDEPTH_24B], para->vic);
+				if (hdev->tx_comm.flag_3dfp) {
+					para->cd = COLORDEPTH_24B;
+					HDMITX_INFO("display colourdepth is auto set to %d bits because of 3dfp mode (VIC: %d)\n",
+						colour_depths[para->cd - COLORDEPTH_24B], para->vic);
+				} else
+					HDMITX_INFO("display colourdepth is auto set to %d bits (VIC: %d)\n",
+						colour_depths[para->cd - COLORDEPTH_24B], para->vic);
 			}
 			break;
 	}
