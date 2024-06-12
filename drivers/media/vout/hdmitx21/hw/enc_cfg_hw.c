@@ -65,6 +65,12 @@ static void config_tv_enc_calc(struct hdmitx_dev *hdev, enum hdmi_vic vic)
 	timing = *tp;
 	tp = &timing;
 
+	if (hdev->tx_comm.flag_3dfp)
+	{
+		timing.v_active = timing.v_active * 2 + timing.v_blank;
+		timing.v_total *= 2;
+	}
+
 	/* the FRL works at dual mode, so the horizon parameters will reduce to half */
 	if (hdev->frl_rate && y420_mode == 1)
 		hpara_div = 4;
