@@ -125,14 +125,20 @@ void update_vinfo_from_formatpara(struct hdmitx_common *tx_comm)
 
 	/*update vinfo for out device.*/
 	calc_vinfo_from_hdmi_timing(&fmtpara->timing, vinfo);
-	/*vinfo->info_3d = NON_3D;
-	 *if (hdev->flag_3dfp)
-	 *	vinfo->info_3d = FP_3D;
-	 *if (hdev->flag_3dtb)
-	 *	vinfo->info_3d = TB_3D;
-	 *if (hdev->flag_3dss)
-	 *	vinfo->info_3d = SS_3D;
-	 */
+	vinfo->info_3d = NON_3D;
+
+	if (tx_comm->flag_3dfp) {
+		vinfo->height =
+			vinfo->height * 2 + fmtpara->timing.v_blank;
+		vinfo->field_height =
+			vinfo->field_height * 2 + fmtpara->timing.v_blank;
+		vinfo->vtotal *= 2;
+		vinfo->info_3d = FP_3D;
+	} else if (tx_comm->flag_3dtb)
+		vinfo->info_3d = TB_3D;
+	else if (tx_comm->flag_3dss)
+		vinfo->info_3d = SS_3D;
+
 	/*dynamic info, always need set.*/
 	vinfo->cs = fmtpara->cs;
 	vinfo->cd = fmtpara->cd;
