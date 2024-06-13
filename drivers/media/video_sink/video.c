@@ -810,7 +810,6 @@ void pre_process_for_3d(struct vframe_s *vf)
 	/*can be moved to h264mvc.c */
 	if ((vf->type & VIDTYPE_MVC) &&
 	    (process_3d_type & MODE_3D_ENABLE) && vf->trans_fmt) {
-		vf->type = VIDTYPE_PROGRESSIVE | VIDTYPE_VIU_FIELD;
 		process_3d_type |= MODE_3D_MVC;
 		mvc_flag = 1;
 	} else {
@@ -5187,6 +5186,11 @@ s32 di_request_afbc_hw(u8 id, bool on)
 	return ret;
 }
 EXPORT_SYMBOL(di_request_afbc_hw);
+
+bool is_enable_3d_to_2d(void) {
+	return (process_3d_type & MODE_3D_ENABLE) &&
+		(process_3d_type & MODE_3D_TO_2D_MASK);
+}
 
 u32 get_video_hold_state(void)
 {

@@ -1571,6 +1571,14 @@ void primary_swap_frame(struct video_layer_s *layer,
 		}
 		vpp_hold_setting_cnt = 0;
 	}
+
+	if (((last_process_3d_type & MODE_3D_ENABLE) &&
+	    !(process_3d_type & MODE_3D_ENABLE)) |
+	   (!(last_process_3d_type & MODE_3D_TO_2D_MASK) &&
+	     (process_3d_type & MODE_3D_TO_2D_MASK))) {
+		need_disable_vd[2] = true;
+	}
+
 	last_process_3d_type = process_3d_type;
 
 	/* if el is unnecessary, afbc2 need to be closed */
@@ -1857,7 +1865,8 @@ s32 primary_render_frame(struct video_layer_s *layer,
 	if ((dispbuf &&
 	     (dispbuf->type & VIDTYPE_MVC)) ||
 	    last_mode_3d) {
-		layer->sc_setting.sc_v_enable = false;
+		layer->sc_setting.sc_v_enable = is_enable_3d_to_2d() ||
+			(dispbuf && (dispbuf->type & VIDTYPE_INTERLACE));
 		config_3d_vd2_pps
 			(layer, &local_vd2_pps, vinfo);
 		config_3d_vd2_blend
