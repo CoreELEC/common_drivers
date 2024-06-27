@@ -1459,10 +1459,12 @@ static ssize_t config_show(struct device *dev,
 	char* eotf_hdr10p[] = {"unknown", "HDR10+"};
 	char* eotf = eotf_hdr[4];
 	char* range[] = {"default","limited","full"};
-	char* colourmetry[] = {"unknown", "BT.709", "undefined", "BT.601", "BT.470M", "BT.470BG",
-		"SMPTE-170M", "SMPTE-240M", "SMPTE-431", "BT.2020"};
+	char* colourmetry[] = {"unknown", "BT.601", "BT.709"};
+	char* extended_colorimetry[] = {"xvYCC 601", "xvYCC 709", "sYCC 601",
+		"opYCC 601", "opRGB", "BT.2020 CL", "BT.2020"};
 
 	if (para) {
+		struct hdmi_avi_infoframe *info = &hdev->infoframes.avi.avi;
 		u8 color_depth = para->cd; // Pixel bit width: 4=24-bit; 5=30-bit; 6=36-bit; 7=48-bit.
 		u8 input_color_format = HDMI_COLORSPACE_YUV444;  // Pixel format: 0=RGB444; 1=YCbCr422; 2=YCbCr444; 3=YCbCr420.
 		u8 input_color_range = HDMI_QUANTIZATION_RANGE_LIMITED;  // Pixel range: 0=limited; 1=full.
@@ -1484,7 +1486,9 @@ static ssize_t config_show(struct device *dev,
 				eotf,
 				range[(input_color_format != output_color_format || input_color_range  != output_color_range) ? 1 : 0]);
 		pos += snprintf(buf + pos, PAGE_SIZE, "Colourimetry: %s\n",
-				colourmetry[hdev->hdr_color_feature]);
+				info->colorimetry == HDMI_COLORIMETRY_EXTENDED ?
+					extended_colorimetry[info->extended_colorimetry] :
+					colourmetry[info->colorimetry]);
 	}
 	return pos;
 }
