@@ -2598,6 +2598,8 @@ static enum hdmi_tf_type hdmitx21_get_cur_dv_st(void)
 	union hdmi_infoframe info;
 	/* struct hdmi_vendor_infoframe *vend = (struct hdmi_vendor_infoframe *)&info; */
 	struct hdmi_avi_infoframe *avi = (struct hdmi_avi_infoframe *)&info;
+	struct hdmitx21_dev *hdev = get_hdmitx21_device();
+	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
 	unsigned int ieee_code = 0;
 	unsigned int size = 0;
 	unsigned int amdv_signal = 0;
@@ -2626,7 +2628,7 @@ static enum hdmi_tf_type hdmitx21_get_cur_dv_st(void)
 	ret = hdmi_avi_infoframe_unpack_renew(avi, body, sizeof(body));
 	if (ret)
 		return type;
-	cs = avi->colorspace;
+	cs = para->cs;
 
 	if (ieee_code == HDMI_IEEE_OUI && size == 0x18) {
 		if (cs == HDMI_COLORSPACE_RGB)
