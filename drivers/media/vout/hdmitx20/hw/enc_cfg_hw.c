@@ -1658,7 +1658,7 @@ static const struct reg_s *tvregs_setting_mode(struct hdmitx_dev *hdev)
 	int i = 0;
 	enum hdmi_vic vic = hdev->tx_comm.fmt_para.vic;
 
-	if (hdev->flag_3dfp) {
+	if (hdev->tx_comm.flag_3dfp) {
 		for (i = 0; i < ARRAY_SIZE(tvregstab_3dfp); i++) {
 			if (vic == tvregstab_3dfp[i].vic)
 				return tvregstab_3dfp[i].reg_setting;

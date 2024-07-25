@@ -118,8 +118,8 @@ int hdmitx21_set_display(struct hdmitx_dev *hdev, enum hdmi_vic videocode)
 		    videocode == HDMI_98_4096x2160p24_256x135) {
 			if (!hdev->frl_rate) /* TODO */
 				hdmi_set_vend_spec_infofram(hdev, videocode);
-		} else if ((!hdev->flag_3dfp) && (!hdev->flag_3dtb) &&
-			 (!hdev->flag_3dss))
+		} else if ((!hdev->tx_comm.flag_3dfp) && (!hdev->tx_comm.flag_3dtb) &&
+			 (!hdev->tx_comm.flag_3dss))
 			hdmi_set_vend_spec_infofram(hdev, 0);
 		else
 			;

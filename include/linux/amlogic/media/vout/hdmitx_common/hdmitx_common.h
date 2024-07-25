@@ -144,6 +144,10 @@ struct hdmitx_common {
 	 */
 	struct aud_para cur_audio_param;
 	/*audio end*/
+
+	u32 flag_3dfp;
+	u32 flag_3dtb;
+	u32 flag_3dss;
 };
 
 void hdmitx_get_init_state(struct hdmitx_common *tx_common,

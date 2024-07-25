@@ -146,9 +146,6 @@ struct hdmitx_dev {
 	bool hdmi_current_signal_sdr;
 	/*hdr/dv end*/
 
-	unsigned int flag_3dfp:1;
-	unsigned int flag_3dtb:1;
-	unsigned int flag_3dss:1;
 	unsigned int cedst_en:1; /* configure in DTS */
 	unsigned int bist_lock:1;
 
