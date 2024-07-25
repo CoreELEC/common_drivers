@@ -96,8 +96,8 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic videocode)
 			    videocode == HDMI_98_4096x2160p24_256x135)
 				hdmitx_common_setup_vsif_packet(&hdev->tx_comm,
 					VT_HDMI14_4K, 1, NULL);
-			else if ((!hdev->flag_3dfp) && (!hdev->flag_3dtb) &&
-				 (!hdev->flag_3dss))
+			else if ((!hdev->tx_comm.flag_3dfp) && (!hdev->tx_comm.flag_3dtb) &&
+				 (!hdev->tx_comm.flag_3dss))
 				/* For non-4kx2k mode setting */
 				hdmitx_common_setup_vsif_packet(&hdev->tx_comm,
 					VT_HDMI14_4K, 0, NULL);
@@ -175,4 +175,3 @@ static void hdmitx_set_spd_info(struct hdmitx_dev *hdev)
 	SPD_DB[24] = 0x1;
 	hdmitx_hw_set_packet(tx_hw_base, HDMI_SOURCE_DESCRIPTION, SPD_DB, SPD_HB);
 }
-

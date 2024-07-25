@@ -184,9 +184,6 @@ struct hdmitx_dev {
 	enum eotf_type hdmi_current_eotf_type;
 	enum mode_type hdmi_current_tunnel_mode;
 	bool hdmi_current_signal_sdr;
-	u32 flag_3dfp:1;
-	u32 flag_3dtb:1;
-	u32 flag_3dss:1;
 	u32 pxp_mode:1;
 	u32 aon_output:1; /* always output in bl30 */
 	u32 bist_lock:1;

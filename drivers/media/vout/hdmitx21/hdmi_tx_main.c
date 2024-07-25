@@ -2008,17 +2008,17 @@ static ssize_t config_store(struct device *dev,
 	} else if (strncmp(buf, "3d", 2) == 0) {
 		/* Second, set 3D parameters */
 		if (strncmp(buf + 2, "tb", 2) == 0) {
-			hdev->flag_3dtb = 1;
-			hdev->flag_3dss = 0;
-			hdev->flag_3dfp = 0;
+			hdev->tx_comm.flag_3dtb = 1;
+			hdev->tx_comm.flag_3dss = 0;
+			hdev->tx_comm.flag_3dfp = 0;
 			hdmi21_set_3d(hdev, T3D_TAB, 0);
 		} else if ((strncmp(buf + 2, "lr", 2) == 0) ||
 			(strncmp(buf + 2, "ss", 2) == 0)) {
 			unsigned long sub_sample_mode = 0;
 
-			hdev->flag_3dtb = 0;
-			hdev->flag_3dss = 1;
-			hdev->flag_3dfp = 0;
+			hdev->tx_comm.flag_3dtb = 0;
+			hdev->tx_comm.flag_3dss = 1;
+			hdev->tx_comm.flag_3dfp = 0;
 			if (buf[2])
 				ret = kstrtoul(buf + 2, 10,
 					       &sub_sample_mode);
@@ -2026,14 +2026,14 @@ static ssize_t config_store(struct device *dev,
 			hdmi21_set_3d(hdev, T3D_SBS_HALF,
 				    sub_sample_mode);
 		} else if (strncmp(buf + 2, "fp", 2) == 0) {
-			hdev->flag_3dtb = 0;
-			hdev->flag_3dss = 0;
-			hdev->flag_3dfp = 1;
+			hdev->tx_comm.flag_3dtb = 0;
+			hdev->tx_comm.flag_3dss = 0;
+			hdev->tx_comm.flag_3dfp = 1;
 			hdmi21_set_3d(hdev, T3D_FRAME_PACKING, 0);
 		} else if (strncmp(buf + 2, "off", 3) == 0) {
-			hdev->flag_3dfp = 0;
-			hdev->flag_3dtb = 0;
-			hdev->flag_3dss = 0;
+			hdev->tx_comm.flag_3dfp = 0;
+			hdev->tx_comm.flag_3dtb = 0;
+			hdev->tx_comm.flag_3dss = 0;
 			hdmi21_set_3d(hdev, T3D_DISABLE, 0);
 		}
 	} else if (strncmp(buf, "sdr_hdr_dov", 11) == 0) {
@@ -3445,12 +3445,12 @@ static ssize_t hdmitx_basic_config_show(struct device *dev,
 
 	pos += hdmitx_audio_para_print(&hdev->tx_comm.cur_audio_param, buf + pos);
 
-	if (hdev->flag_3dfp)
+	if (hdev->tx_comm.flag_3dfp)
 		conf = "FramePacking";
-	else if (hdev->flag_3dss)
+	else if (hdev->tx_comm.flag_3dss)
 		conf = "SidebySide";
-	else if (hdev->flag_3dtb)
-		conf = "TopButtom";
+	else if (hdev->tx_comm.flag_3dtb)
+		conf = "TopBottom";
 	else
 		conf = "off";
 	pos += snprintf(buf + pos, PAGE_SIZE - pos, "3D config: %s\n", conf);
@@ -4393,9 +4393,9 @@ static int amhdmitx21_device_init(struct hdmitx_dev *hdev)
 	 */
 	hdev->hpdmode = 1;
 
-	hdev->flag_3dfp = 0;
-	hdev->flag_3dss = 0;
-	hdev->flag_3dtb = 0;
+	hdev->tx_comm.flag_3dfp = 0;
+	hdev->tx_comm.flag_3dss = 0;
+	hdev->tx_comm.flag_3dtb = 0;
 	hdev->def_stream_type = DEFAULT_STREAM_TYPE;
 
 	/* default audio configure is on */

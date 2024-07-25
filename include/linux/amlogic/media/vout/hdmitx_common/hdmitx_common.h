@@ -196,6 +196,10 @@ struct hdmitx_common {
 	struct hdmitx_event_mgr *event_mgr;
 	struct st_debug_param debug_param;
 	u8 enable_hdr10plus;
+
+	u32 flag_3dfp;
+	u32 flag_3dtb;
+	u32 flag_3dss;
 };
 
 void hdmitx_get_init_state(struct hdmitx_common *tx_common,
