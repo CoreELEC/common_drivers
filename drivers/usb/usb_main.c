@@ -17,26 +17,9 @@
 #include "usb_main.h"
 #include <linux/amlogic/module_merge.h>
 
-bool force_device_mode;
-module_param_named(otg_device, force_device_mode,
-		bool, 0644);
-
-static char otg_mode_string[2] = "0";
-static int force_otg_mode(char *s)
-{
-	if (s)
-		sprintf(otg_mode_string, "%s", s);
-	if (strcmp(otg_mode_string, "0") == 0)
-		force_device_mode = 0;
-	else
-		force_device_mode = 1;
-	return 0;
-}
-__setup("otg_device=", force_otg_mode);
-
 int get_otg_mode(void)
 {
-	return force_device_mode;
+	return 0;  /* force_device_mode */
 }
 EXPORT_SYMBOL(get_otg_mode);
 
