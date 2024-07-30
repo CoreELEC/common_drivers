@@ -114,6 +114,6 @@ static void __exit usb_main_exit(void)
 	pr_debug("### %s() end\n", __func__);
 }
 
-module_init(usb_main_init);
+late_initcall(usb_main_init);
 module_exit(usb_main_exit);
 MODULE_LICENSE("GPL v2");
