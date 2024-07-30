@@ -66,5 +66,5 @@ static int __init usb_main_init(void)
 	return 0;
 }
 
-module_init(usb_main_init);
+late_initcall(usb_main_init);
 MODULE_LICENSE("GPL v2");
