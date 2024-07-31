@@ -190,3 +190,7 @@
 	/delete-property/ pinctrl-names;
 	/delete-property/ gpio;
 };
+
+&aml_wifi {
+	wifi_static_buf = <2>;  /* dhd wifi for android */
+};
