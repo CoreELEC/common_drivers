@@ -174,6 +174,9 @@
 &audiobus {
 	aml_i2s2hdmi: i2s2hdmi {
 		compatible = "amlogic, g12a-snd-tdmc";
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+				 &clkc CLKID_MPLL2>;
+		clock-names = "mclk", "clk_srcpll";
 	};
 
 	aml_tdmb: tdmb {
