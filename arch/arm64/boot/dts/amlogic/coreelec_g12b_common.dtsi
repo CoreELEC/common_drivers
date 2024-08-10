@@ -350,3 +350,7 @@
 &sd_emmc_c {
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
+
+&vddio_c {
+	/delete-property/ gpio;
+};

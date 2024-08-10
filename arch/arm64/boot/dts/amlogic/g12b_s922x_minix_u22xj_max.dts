@@ -125,3 +125,7 @@
 	/delete-property/ gpio-vbus-power;
 	/delete-property/ gpios;
 };
+
+&vddio_c {
+	gpio = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+};
