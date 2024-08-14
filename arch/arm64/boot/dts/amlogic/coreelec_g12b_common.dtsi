@@ -169,6 +169,8 @@
 
 &audiobus {
 	/delete-node/ tdm@1;
+	/delete-node/ tdmc;
+	/delete-node/ tdm@2;
 	/delete-node/ spdif@0;
 	/delete-node/ spdif@1;
 
