@@ -171,6 +171,11 @@
 	};
 };
 
+&amlogic_codec {
+    tocodec_inout = <2>;
+    tdmout_index = <2>;
+};
+
 &earc {
 	status = "disabled";
 };
