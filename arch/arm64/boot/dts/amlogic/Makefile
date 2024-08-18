@@ -18,6 +18,7 @@ dtb-y += g12b_s922x_bananapi_m2s.dtb
 dtb-y += g12b_s922x_beelink_gt_king.dtb
 dtb-y += g12b_s922x_beelink_gs_king_x.dtb
 dtb-y += g12b_s922x_minix_u22xj_max.dtb
+dtb-y += g12b_s922x_minix_u22xj.dtb
 dtb-y += g12b_s922x_odroid_n2.dtb
 dtb-y += g12b_s922x_ugoos_am6_2g.dtb
 dtb-y += g12b_s922x_ugoos_am6_4g.dtb

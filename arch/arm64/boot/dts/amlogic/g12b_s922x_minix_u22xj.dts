@@ -1,0 +1,27 @@
+#include "g12b_s922x_minix_u22xj_max.dts"
+
+/{
+	model = "Minix U22-XJ";
+	coreelec-dt-id = "g12b_s922x_minix_u22xj";
+
+	auge_sound {
+		aml-audio-card,dai-link@1 {
+			codec {
+				sound-dai = <&rt5651>;
+			};
+		};
+	};
+};
+
+&i2c3 {
+	/delete-node/ es8316@10;
+
+	rt5651: rt5651@1a {
+		compatible = "realtek,rt5651";
+		#sound-dai-cells = <0>;
+		reg = <0x1a>;
+		status = "okay";
+		realtek,dmic-en = "false";
+		realtek,in2-differential = "false";
+	};
+};
