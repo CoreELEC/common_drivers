@@ -25,6 +25,10 @@
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
 
+		codec_mm_cma:linux,codec_mm_cma {
+			size = <0x0 0x4b000000>;
+		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
