@@ -4,7 +4,7 @@
 
 	reserved-memory {
 		codec_mm_cma:linux,codec_mm_cma {
-			size = <0x0 0x2fc00000>;
+			size = <0x0 0x1b000000>;
 		};
 
 		ion_fb_reserved:linux,ion-fb {
