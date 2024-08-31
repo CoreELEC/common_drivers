@@ -49,6 +49,7 @@ RAMDISK_MODULES_LOAD_LIST=(
 	amlogic-soc-amfc.ko
 	amlogic-soc-erofs.ko
 	amlogic-audio-utils.ko
+	amlogic-env.ko
 )
 
 VENDOR_MODULES_LOAD_FIRST_LIST=(

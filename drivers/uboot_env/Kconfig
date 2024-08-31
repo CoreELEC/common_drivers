@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Generic Trusted Execution Environment Configuration
+config AMLOGIC_ENV_ENCRYPT
+	tristate "Encrypt interface for uboot env"
+	depends on HAVE_ARM_SMCCC
+	default n
+	help
+	  This config enables upper layer to encrypt uboot environment. Can
+	  help to increase security of uboot env.
