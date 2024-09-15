@@ -4588,7 +4588,10 @@ static int hdmitx21_hw_cntl_ddc(struct hdmitx_hw_common *tx_hw, u32 cmd,
 	case DDC_RESET_EDID:
 		break;
 	case DDC_EDID_READ_DATA:
-		hdmitx21_read_edid(tx_comm);
+		if (hdmitx_edid_valid_block_num(tx_comm->custom_edid_buf))
+			memcpy(tx_comm->edid_buf, tx_comm->custom_edid_buf, sizeof(tx_comm->edid_buf));
+		else
+			hdmitx21_read_edid(tx_comm);
 		break;
 	case DDC_GLITCH_FILTER_RESET:
 		hdmitx21_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 6, 1);
