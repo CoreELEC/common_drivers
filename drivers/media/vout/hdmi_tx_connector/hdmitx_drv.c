@@ -534,6 +534,22 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 	else
 		tx_comm->arc_rx_en = 0;
 	amhdmitx_clktree_probe(&pdev->dev, tx_comm);
+
+	/* Get custom EDID from DT */
+	const char *custom_edid;
+	hdmitx_edid_buffer_clear(tx_comm->custom_edid_buf, sizeof(tx_comm->custom_edid_buf));
+	ret = of_property_read_string(pdev->dev.of_node, "custom_edid", &custom_edid);
+	if (!ret) {
+		int i = 0;
+		while ((i * 2) < strlen(custom_edid)) {
+			if (i == sizeof(tx_comm->custom_edid_buf))
+				break;
+			sscanf(custom_edid + i * 2, "%02x", &tx_comm->custom_edid_buf[i]);
+			i++;
+		}
+		if (hdmitx_edid_valid_block_num(tx_comm->custom_edid_buf))
+			HDMITX_INFO(EDID "using custom edid from dt\n");
+	}
 	return ret;
 }
 
