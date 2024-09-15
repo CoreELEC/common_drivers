@@ -3744,6 +3744,22 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_dev 
 		if (ret)
 			hdev->tx_comm.hdcp_ctl_lvl = 0;
 
+		/* Get custom EDID */
+		const char *custom_edid;
+		hdmitx_edid_buffer_clear(hdev->tx_comm.custom_EDID_buf, sizeof(hdev->tx_comm.custom_EDID_buf));
+		ret = of_property_read_string(pdev->dev.of_node, "custom_edid", &custom_edid);
+		if (!ret) {
+			int i = 0;
+			while ((i * 2) < strlen(custom_edid)) {
+				if (i == sizeof(hdev->tx_comm.custom_EDID_buf))
+					break;
+				sscanf(custom_edid + i * 2, "%02x", &hdev->tx_comm.custom_EDID_buf[i]);
+				i++;
+			}
+			if (hdmitx_edid_valid_block_num(hdev->tx_comm.custom_EDID_buf))
+				HDMITX_INFO(EDID "using custom edid from dt\n");
+		}
+
 		/* Get reg information */
 		ret = hdmitx_init_reg_map(pdev);
 	}

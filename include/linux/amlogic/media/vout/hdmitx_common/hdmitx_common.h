@@ -53,6 +53,7 @@ struct hdmitx_common {
 	/* edid hdr/dv cap lock, hdr/dv handle in irq, need spinlock*/
 	spinlock_t edid_spinlock;
 	unsigned char EDID_buf[EDID_MAX_BLOCK * 128];
+	unsigned char custom_EDID_buf[EDID_MAX_BLOCK * 128];
 	struct rx_cap rxcap;
 
 	/****** hdmitx state ******/

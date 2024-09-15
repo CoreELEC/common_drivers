@@ -2297,7 +2297,10 @@ static int hdmitx_cntl_ddc(struct hdmitx_hw_common *hw_comm, u32 cmd,
 		/* if running on pxp, then skip EDID reading */
 		if (hdev->pxp_mode)
 			return 0;
-		hdmitx21_read_edid(hdev->tx_comm.EDID_buf);
+		if (hdmitx_edid_valid_block_num(hdev->tx_comm.custom_EDID_buf))
+			memcpy(hdev->tx_comm.EDID_buf, hdev->tx_comm.custom_EDID_buf, sizeof(hdev->tx_comm.EDID_buf));
+		else
+			hdmitx21_read_edid(hdev->tx_comm.EDID_buf);
 		break;
 	case DDC_GLITCH_FILTER_RESET:
 		hdmitx21_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 6, 1);

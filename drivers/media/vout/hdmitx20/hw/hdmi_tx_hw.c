@@ -4873,7 +4873,10 @@ static int hdmitx_cntl_ddc(struct hdmitx_hw_common *tx_hw,
 		hdmitx_wr_reg(HDMITX_DWC_I2CM_SOFTRSTZ, 0);
 		break;
 	case DDC_EDID_READ_DATA:
-		hdmitx_read_edid(hdev->tx_comm.EDID_buf);
+		if (hdmitx_edid_valid_block_num(hdev->tx_comm.custom_EDID_buf))
+			memcpy(hdev->tx_comm.EDID_buf, hdev->tx_comm.custom_EDID_buf, sizeof(hdev->tx_comm.EDID_buf));
+		else
+			hdmitx_read_edid(hdev->tx_comm.EDID_buf);
 		break;
 	case DDC_GLITCH_FILTER_RESET:
 		hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 6, 1);
