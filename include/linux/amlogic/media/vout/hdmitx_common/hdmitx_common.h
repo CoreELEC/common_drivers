@@ -226,6 +226,7 @@ struct hdmitx_common {
 	/* for external loading EDID */
 	u32 forced_edid;
 	unsigned char edid_buf[EDID_MAX_BLOCK * 128];
+	unsigned char custom_edid_buf[EDID_MAX_BLOCK * 128];
 	u32 edid_mask_qms:1;
 	struct rx_cap rxcap;
 	/*
