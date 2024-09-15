@@ -86,6 +86,7 @@ struct hdmitx_common {
 	spinlock_t edid_spinlock;
 	u32 forced_edid; /* for external loading EDID */
 	unsigned char EDID_buf[EDID_MAX_BLOCK * 128];
+	unsigned char custom_EDID_buf[EDID_MAX_BLOCK * 128];
 	struct rx_cap rxcap;
 
 	/****** hdmitx state ******/
