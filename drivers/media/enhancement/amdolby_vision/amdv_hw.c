@@ -1014,7 +1014,8 @@ static int dv_core1_set(u32 dm_count,
 
 	if ((bl_enable && el_enable && (amdv_mask & 1)) ||
 	    (copy_core1a_to_core1b || copy_core1a_to_core1c)) {
-		if (is_aml_g12() || is_aml_tm2_stbmode()) {
+		if (is_aml_g12() || is_aml_sc2() ||
+			is_aml_tm2_stbmode() || is_aml_s4d()) {
 			VSYNC_WR_DV_REG_BITS
 				(AMDV_PATH_CTRL,
 				 /* vd2 to core1a */
@@ -1445,11 +1446,12 @@ static int dv_core1_set(u32 dm_count,
 			}
 		} else if (amdv_core1_on &&
 			bypass_core1) {
-			if (is_aml_g12() || is_aml_sc2() || is_aml_s4d()) {
+			if (is_aml_g12()) {
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 1, 0, 1);
-			} else if (is_aml_tm2_stbmode()) {
+			} else if (is_aml_sc2() || is_aml_tm2_stbmode() ||
+			           is_aml_s4d()) {
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 3, 0, 2); /* core1 */
