@@ -486,9 +486,23 @@ int rtl8211f_suspend(struct phy_device *phydev)
 }
 #endif
 
-static int rtl821x_resume(struct phy_device *phydev)
+int rtl821x_resume(struct phy_device *phydev)
 {
 	int ret;
+
+	ret = rtl8211f_config_init(phydev);
+	if (ret < 0)
+		return ret;
+
+	/*pad isolation*/
+	ret = phy_modify_paged_changed(phydev, 0xd8a, 0x13, 1 << 12, 1 << 12);
+	if (ret < 0)
+		return ret;
+
+	/*pin 31 pull high*/
+	ret = phy_modify_paged_changed(phydev, 0xd40, 0x16, 1 << 5, 1 << 5);
+	if (ret < 0)
+		return ret;
 
 	ret = genphy_resume(phydev);
 	if (ret < 0)
