@@ -960,7 +960,7 @@ bool is_hdmi_ll_as_hdr10(void)
 
 int get_amdv_mode(void)
 {
-	return -1;
+	return false;
 }
 
 void set_amdv_mode(int mode)
