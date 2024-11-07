@@ -31,6 +31,12 @@
 		clear_range = <0x05100000 0x02a00000>;
 	};
 
+	vpu: vpu {
+		reg =	<0x0 0xfe000000 0x0 0x100    /* clk */
+			 0x0 0xfe00c000 0x0 0x70     /* pwrctrl */
+			 0x0 0xff000000 0x0 0xf000>; /* vcbus */
+	};
+
 	/delete-node/ hdmirx;
 	/delete-node/ smartcard;
 	/delete-node/ lcd;
