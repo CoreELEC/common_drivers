@@ -210,7 +210,7 @@ static int parse_hdmitx_hdr_priority(char *str)
 		tx_params.hdr_mask);
 	return 0;
 }
-__setup("hdr_priority=", parse_hdmitx_hdr_priority);
+//__setup("hdr_priority=", parse_hdmitx_hdr_priority);
 
 static int parse_hdmitx_checksum(char *str)
 {
