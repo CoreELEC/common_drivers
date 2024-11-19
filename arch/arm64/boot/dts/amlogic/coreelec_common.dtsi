@@ -136,6 +136,7 @@
 &amhdmitx {
 	custom_edid = "";
 	max_refreshrate = <120>;
+	hdr_8bit_en = <1>;
 	/delete-property/ hdcp_ctl_lvl;
 	/delete-property/ vrr_type;
 };
