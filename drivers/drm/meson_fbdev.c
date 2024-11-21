@@ -796,9 +796,10 @@ static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 		ret = copy_to_user(argp, &fbdma, sizeof(fbdma)) ? -EFAULT : 0;
 		get_dma_buf(meson_fb->bufp[0]->dmabuf);
 	} else if (cmd == FBIO_WAITFORVSYNC) {
-		am_meson_drm_wait_one_vblank(info);
-
 		val = meson_drm_read_reg(rdma_chk_addr[plane->index]);
+
+		if (val != frame_seq[plane->index])
+			am_meson_drm_wait_one_vblank(info);
 
 		while (i < MAX_RETRY_CNT && val != frame_seq[plane->index]) {
 			usleep_range(2000, 2500);
