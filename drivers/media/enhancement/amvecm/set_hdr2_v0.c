@@ -5282,7 +5282,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		/* turn off OSD mtx and use HDR for g12, sm1, tl1 */
 		if (!osd_pic_en ||
 			chip_type_id != chip_t5m) {
-			/* VSYNC_WRITE_VPP_REG_VPP_SEL(VPP_WRAP_OSD1_MATRIX_EN_CTRL, 0, vpp_sel); */
+			if (chip_type_id < chip_t3x)
+				VSYNC_WRITE_VPP_REG_VPP_SEL(VPP_WRAP_OSD1_MATRIX_EN_CTRL, 0, vpp_sel);
 			if (!is_amdv_on() || chip_cls_id == TV_CHIP) {
 				hdr_process_select |= RGB_OSD;
 				pr_csc(128, "dv off proc sel or tv chip = 0x%x\n",
