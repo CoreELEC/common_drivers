@@ -271,8 +271,10 @@ static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 		else
 			crtc_index = 0;
 
-		drm_wait_one_vblank(helper->dev, crtc_index);
 		val = meson_drm_read_reg(rdma_chk_addr[plane->index]);
+
+		if (val != frame_seq[plane->index])
+			drm_wait_one_vblank(helper->dev, crtc_index);
 
 		while (i < MAX_RETRY_CNT && val != frame_seq[plane->index]) {
 			usleep_range(2000, 2500);
