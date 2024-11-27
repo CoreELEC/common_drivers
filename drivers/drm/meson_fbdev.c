@@ -29,13 +29,6 @@
 #define PREFERRED_BPP		32
 #define PREFERRED_DEPTH	32
 #define MESON_DRM_MAX_CONNECTOR	2
-#define MAX_RETRY_CNT 20
-
-static u32 rdma_chk_addr[] = {
-	VIU_OSD1_TCOLOR_AG3,
-	VIU_OSD2_TCOLOR_AG3,
-	VIU_OSD3_TCOLOR_AG3,
-};
 
 static size_t cal_fbdev_afbc_size(struct fb_info *info)
 {
@@ -390,28 +383,6 @@ static int am_meson_drm_fb_helper_check_var(struct fb_var_screeninfo *var,
 	return 0;
 }
 
-static void am_meson_drm_wait_one_vblank(struct fb_info *info)
-{
-	struct drm_fb_helper *fb_helper = info->par;
-	struct meson_drm_fbdev *fbdev = container_of(fb_helper, struct meson_drm_fbdev, base);
-	int crtc_index;
-	struct drm_vblank_crtc *vblank;
-
-	if (fbdev->plane->crtc)
-		crtc_index = fbdev->plane->crtc->index;
-	else if (fbdev->modeset.crtc)
-		crtc_index = fbdev->modeset.crtc->index;
-	else
-		crtc_index = 0;
-
-	vblank = &fb_helper->dev->vblank[crtc_index];
-	if (vblank->enabled)
-		drm_wait_one_vblank(fb_helper->dev, crtc_index);
-	else
-		MESON_DRM_FBDEV("crtc-%d is disabled, can not wait vblank.\n",
-			crtc_index);
-}
-
 /**
  * drm_fb_helper_set_par - implementation for ->fb_set_par
  * @info: fbdev registered by the helper
@@ -726,7 +697,6 @@ int am_meson_drm_fb_blank(int blank, struct fb_info *info)
 	struct drm_fb_helper *helper = info->par;
 	struct meson_drm_fbdev *fbdev = container_of(helper, struct meson_drm_fbdev, base);
 	struct drm_device *dev = helper->dev;
-	struct meson_drm *priv = dev->dev_private;
 	struct drm_crtc *crtc = NULL;
 	struct drm_modeset_acquire_ctx ctx;
 	int ret = 0;
@@ -737,8 +707,6 @@ int am_meson_drm_fb_blank(int blank, struct fb_info *info)
 			fbdev->plane->name, fbdev->plane->fb);
 		fbdev->blank = false;
 		ret = am_meson_drm_fb_pan_display(&info->var, info);
-
-		am_meson_drm_wait_one_vblank(info);
 	} else {
 		MESON_DRM_FBDEV("IN, pid[%s %d] meson_fbdev[%s]fb[%p] goto blank.\n",
 			current->comm, current->pid,
@@ -755,10 +723,6 @@ int am_meson_drm_fb_blank(int blank, struct fb_info *info)
 		}
 
 		meson_drm_modeset_lock_crtc(crtc, fbdev->plane, &ctx);
-		if (priv->pan_async_commit_ran) {
-			DRM_INFO("Force to wait one vblank!\n");
-			am_meson_drm_wait_one_vblank(info);
-		}
 		drm_atomic_helper_disable_plane(fbdev->plane, &ctx);
 		meson_drm_modeset_unlock_crtc(crtc, &ctx);
 
@@ -773,8 +737,7 @@ int am_meson_drm_fb_blank(int blank, struct fb_info *info)
 static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 				    unsigned int cmd, unsigned long arg)
 {
-	int ret = 0, i = 0;
-	u32 val;
+	int ret = 0;
 	void __user *argp = (void __user *)arg;
 	struct fb_dmabuf_export fbdma;
 	struct drm_fb_helper *helper = info->par;
@@ -792,27 +755,13 @@ static int am_meson_drm_fbdev_ioctl(struct fb_info *info,
 		meson_fb = container_of(helper->fb, struct am_meson_fb, base);
 		fbdma.fd = dma_buf_fd(meson_fb->bufp[0]->dmabuf, O_CLOEXEC);
 		fbdma.flags = O_CLOEXEC;
-		dma_buf_get(fbdma.fd);
 		ret = copy_to_user(argp, &fbdma, sizeof(fbdma)) ? -EFAULT : 0;
 		get_dma_buf(meson_fb->bufp[0]->dmabuf);
 	} else if (cmd == FBIO_WAITFORVSYNC) {
-		val = meson_drm_read_reg(rdma_chk_addr[plane->index]);
-
-		if (val != frame_seq[plane->index])
-			am_meson_drm_wait_one_vblank(info);
-
-		while (i < MAX_RETRY_CNT && val != frame_seq[plane->index]) {
-			usleep_range(2000, 2500);
-			i++;
-			val = meson_drm_read_reg(rdma_chk_addr[plane->index]);
-		}
-
-		if (i == MAX_RETRY_CNT)
-			DRM_ERROR("timeout, frame seq %u-%u\n",
-				  frame_seq[plane->index], val);
-
-		MESON_DRM_FBDEV("wait for vsync last for %d ms, %u-%u\n", i * 2,
-			  frame_seq[plane->index], val);
+		if (plane->crtc)
+			drm_wait_one_vblank(helper->dev, plane->crtc->index);
+		else if (fbdev->modeset.crtc)
+			MESON_DRM_FBDEV("crtc is not set for plane [%d]\n", plane->index);
 	} else if (cmd == FBIOSET_OSD_DST_RESOLUTION) {
 		ret = copy_from_user(&dst, argp, sizeof(struct region)) ? -EFAULT : 0;
 		if (ret) {
