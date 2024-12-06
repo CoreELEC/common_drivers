@@ -416,8 +416,7 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return ret;
 	}
 
-//	return genphy_soft_reset(phydev);
-	return 0;
+	return genphy_soft_reset(phydev);
 }
 
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
