@@ -2057,7 +2057,8 @@ static int meson_hdmitx_encoder_atomic_check(struct drm_encoder *encoder,
 	}
 
 	/*The recovery mode not have composer to set attr*/
-	if (!meson_crtc_state->uboot_mode_init && am_hdmi_info.recovery_mode)
+	if ((!meson_crtc_state->uboot_mode_init && am_hdmi_info.recovery_mode) ||
+	    (get_hdr_policy() == 1))
 		meson_hdmitx_decide_color_attr(common, meson_crtc_state,
 						 attr, sequence_id);
 
