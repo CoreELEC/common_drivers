@@ -1252,11 +1252,11 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 			HDMITX_INFO("TV not support DV, clr dv_vsif\n");
 	}
 
-	if (hdev->hdmi_current_eotf_type != type ||
-		hdev->hdmi_current_tunnel_mode != tunnel_mode ||
+	if (hdev->tx_comm.hdmi_current_eotf_type != type ||
+		hdev->tx_comm.hdmi_current_tunnel_mode != tunnel_mode ||
 		hdev->hdmi_current_signal_sdr != signal_sdr) {
-		hdev->hdmi_current_eotf_type = type;
-		hdev->hdmi_current_tunnel_mode = tunnel_mode;
+		hdev->tx_comm.hdmi_current_eotf_type = type;
+		hdev->tx_comm.hdmi_current_tunnel_mode = tunnel_mode;
 		hdev->hdmi_current_signal_sdr = signal_sdr;
 		HDMITX_INFO("%s: type=%d, tunnel_mode=%d, signal_sdr=%d\n",
 			__func__, type, tunnel_mode, signal_sdr);
@@ -4378,8 +4378,8 @@ static int amhdmitx21_device_init(struct hdmitx_dev *hdev)
 	hdev->hdr_transfer_feature = T_UNKNOWN;
 	hdev->hdr_color_feature = C_UNKNOWN;
 	hdev->colormetry = 0;
-	hdev->hdmi_current_eotf_type = EOTF_T_NULL;
-	hdev->hdmi_current_tunnel_mode = 0;
+	hdev->tx_comm.hdmi_current_eotf_type = EOTF_T_NULL;
+	hdev->tx_comm.hdmi_current_tunnel_mode = 0;
 	hdev->hdmi_current_signal_sdr = true;
 
 	hdev->tx_comm.ready = 0;

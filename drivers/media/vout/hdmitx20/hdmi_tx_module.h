@@ -138,8 +138,6 @@ struct hdmitx_dev {
 	unsigned int colormetry;
 	unsigned int sdr_hdr_feature;
 	unsigned int hdr10plus_feature;
-	enum eotf_type hdmi_current_eotf_type;
-	enum mode_type hdmi_current_tunnel_mode;
 	bool hdmi_current_signal_sdr;
 	/*hdr/dv end*/
 

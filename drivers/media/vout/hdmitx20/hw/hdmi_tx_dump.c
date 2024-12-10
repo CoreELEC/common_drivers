@@ -1319,9 +1319,9 @@ static void print_current_dv_hdr_(struct seq_file *s)
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
 	seq_printf(s, "hdmi_current_eotf_type: 0x%x\n",
-		   hdev->hdmi_current_eotf_type);
+		   hdev->tx_comm.hdmi_current_eotf_type);
 	seq_printf(s, "hdmi_current_tunnel_mode: 0x%x\n",
-		   hdev->hdmi_current_tunnel_mode);
+		   hdev->tx_comm.hdmi_current_tunnel_mode);
 	seq_printf(s, "hdr_transfer_feature: %d\n",
 		   hdev->hdr_transfer_feature);
 	seq_printf(s, "hdr_color_feature: %d\n", hdev->hdr_color_feature);

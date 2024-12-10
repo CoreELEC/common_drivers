@@ -3708,7 +3708,7 @@ static void config_hdmi21_tx(struct hdmitx_dev *hdev)
 		hdmitx21_wr_reg(VP_CMS_CSC1_MULTI_CSC_CONFIG_IVCTX, 0x00);
 		hdmitx21_wr_reg((VP_CMS_CSC1_MULTI_CSC_CONFIG_IVCTX + 1), 0x08);
 		if (output_color_format == HDMI_COLORSPACE_RGB &&
-				hdev->hdmi_current_eotf_type != EOTF_T_DOLBYVISION) {
+				hdev->tx_comm.hdmi_current_eotf_type != EOTF_T_DOLBYVISION) {
 			hdmitx21_wr_reg(VP_CMS_CSC0_MULTI_CSC_CONFIG_IVCTX, 0x65);
 			hdmitx21_wr_reg((VP_CMS_CSC0_MULTI_CSC_CONFIG_IVCTX + 1), 0x08);
 		}

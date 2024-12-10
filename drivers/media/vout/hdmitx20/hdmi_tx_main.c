@@ -1004,11 +1004,11 @@ static void hdmitx_set_vsif_pkt(enum eotf_type type,
 		return;
 	}
 
-	if (hdev->hdmi_current_eotf_type != type ||
-		hdev->hdmi_current_tunnel_mode != tunnel_mode ||
+	if (hdev->tx_comm.hdmi_current_eotf_type != type ||
+		hdev->tx_comm.hdmi_current_tunnel_mode != tunnel_mode ||
 		hdev->hdmi_current_signal_sdr != signal_sdr) {
-		hdev->hdmi_current_eotf_type = type;
-		hdev->hdmi_current_tunnel_mode = tunnel_mode;
+		hdev->tx_comm.hdmi_current_eotf_type = type;
+		hdev->tx_comm.hdmi_current_tunnel_mode = tunnel_mode;
 		hdev->hdmi_current_signal_sdr = signal_sdr;
 		HDMITX_INFO("%s: type=%d, tunnel_mode=%d, signal_sdr=%d\n",
 			__func__, type, tunnel_mode, signal_sdr);
@@ -3560,8 +3560,8 @@ static int amhdmitx_device_init(struct hdmitx_dev *hdmi_dev)
 	hdmi_dev->hdr_transfer_feature = T_UNKNOWN;
 	hdmi_dev->hdr_color_feature = C_UNKNOWN;
 	hdmi_dev->colormetry = 0;
-	hdmi_dev->hdmi_current_eotf_type = EOTF_T_NULL;
-	hdmi_dev->hdmi_current_tunnel_mode = 0;
+	hdmi_dev->tx_comm.hdmi_current_eotf_type = EOTF_T_NULL;
+	hdmi_dev->tx_comm.hdmi_current_tunnel_mode = 0;
 	hdmi_dev->hdmi_current_signal_sdr = true;
 	hdmi_dev->tx_comm.hdcp_mode = 0;
 	hdmi_dev->tx_comm.ready = 0;

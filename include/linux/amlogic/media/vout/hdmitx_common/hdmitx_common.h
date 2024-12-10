@@ -139,6 +139,8 @@ struct hdmitx_common {
 	/* HDR format state */
 	u32 hdmi_last_hdr_mode;
 	u32 hdmi_current_hdr_mode;
+	enum eotf_type hdmi_current_eotf_type;
+	enum mode_type hdmi_current_tunnel_mode;
 
 	/* 0.1% clock shift, 1080p60hz->59.94hz */
 	u32 frac_rate_policy;

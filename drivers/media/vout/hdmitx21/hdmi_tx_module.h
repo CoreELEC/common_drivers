@@ -181,8 +181,6 @@ struct hdmitx_dev {
 	u32 colormetry;
 	u32 sdr_hdr_feature;
 	u32 hdr10plus_feature;
-	enum eotf_type hdmi_current_eotf_type;
-	enum mode_type hdmi_current_tunnel_mode;
 	bool hdmi_current_signal_sdr;
 	u32 pxp_mode:1;
 	u32 aon_output:1; /* always output in bl30 */
