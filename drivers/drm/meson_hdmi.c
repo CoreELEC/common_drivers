@@ -291,43 +291,163 @@ static int meson_hdmitx_decide_color_attr
 {
 	struct hdmitx_common_state comm_state;
 	char *outputmode = crtc_state->base.adjusted_mode.name;
-	struct hdmitx_color_attr *attr_list = NULL;
-	char attr_str[HDMITX_ATTR_LEN_MAX];
+	enum hdmi_vic vic;
+	char* colour_sampling[] = {"RGB","YUV422","YUV444","YUV420"};
+	struct hdmitx_color_attr fmt_attr = {};
 
 	if (!outputmode) {
 		DRM_ERROR("%s current mode empty.\n", __func__);
 		return -EINVAL;
 	}
 
-	attr_list = meson_hdmitx_get_candidate_attr_list(crtc_state);
-
-	do {
-		if (attr_list->colorformat == HDMI_COLORSPACE_RESERVED6)
-			break;
-		memset(&comm_state, 0, sizeof(comm_state));
-		comm_state.state_sequence_id = sequence_id;
-		build_hdmitx_attr_str(attr_str,
-			attr_list->colorformat, attr_list->bitdepth);
-		if (!hdmitx_common_validate_mode_locked(common, &comm_state, outputmode,
-				attr_str, false, true)) {
-			attr->colorformat = attr_list->colorformat;
-			attr->bitdepth = attr_list->bitdepth;
-			DRM_INFO("%s get fmt attr [%d]+[%d]\n",
-				__func__,
-				attr->colorformat,
-				attr->bitdepth);
-			break;
-		}
-	} while (attr_list++);
-	if (attr_list->colorformat == HDMI_COLORSPACE_RESERVED6) {
-		DRM_INFO("%s no attr found, reset to 444,8bit.\n", __func__);
-		attr->colorformat = HDMI_COLORSPACE_RGB;
-		attr->bitdepth = 8;
+	vic = hdmitx_common_parse_vic_in_edid(common, outputmode);
+	if (vic == HDMI_0_UNKNOWN) {
+		DRM_ERROR("invalid vic for %s\n", outputmode);
+		return -EINVAL;
 	}
 
-	DRM_DEBUG_KMS("[%s]:[%s,eotf:%d]=>attr[%d,%d]\n", __func__,
-		outputmode, crtc_state->crtc_eotf_type,
-		attr->colorformat, attr->bitdepth);
+	// set default
+	comm_state.state_sequence_id = sequence_id;
+	attr->colorformat = HDMI_COLORSPACE_YUV444;
+	attr->bitdepth = 10;
+
+	// read override fmt_attr by boot param hdmitx=
+	hdmitx_parse_color_attr(common->fmt_attr, &fmt_attr.colorformat, &fmt_attr.bitdepth, &fmt_attr.colorrange);
+	fmt_attr.bitdepth = colordepth_to_bitdepth(fmt_attr.bitdepth);
+
+	// try autoselect
+	// check if any colour subsampling is set
+	// force colour subsampling when DV mode
+	switch (common->hdmi_current_eotf_type) {
+		case EOTF_T_DOLBYVISION:
+		case EOTF_T_LL_MODE:
+		case EOTF_T_DV_AHEAD:
+			{
+				int cs = attr->colorformat;
+				switch (common->hdmi_current_tunnel_mode) {
+					case RGB_8BIT:
+					case RGB_10_12BIT:
+						attr->colorformat = HDMI_COLORSPACE_RGB;
+						break;
+					case YUV422_BIT12:
+						attr->colorformat = HDMI_COLORSPACE_YUV422;
+						break;
+					case YUV444_10_12BIT:
+						attr->colorformat = HDMI_COLORSPACE_YUV444;
+						break;
+					default:
+						break;
+				}
+				if (cs != attr->colorformat)
+					DRM_INFO("[%s]: display colour subsampling is forced to %s by Dolby Vision tunneling\n", __func__,
+						colour_sampling[attr->colorformat]);
+			}
+			break;
+		default:
+			if (strstr(common->fmt_attr, "rgb") == NULL &&
+			    strstr(common->fmt_attr, "420") == NULL &&
+			    strstr(common->fmt_attr, "422") == NULL &&
+			    strstr(common->fmt_attr, "444") == NULL) {
+				if (is_hdmi4k_support_420(vic & 0xff)) {
+					attr->colorformat = HDMI_COLORSPACE_YUV420;
+					DRM_INFO("[%s]: display colour subsampling is forced to %s because of current video information code %d\n", __func__,
+						colour_sampling[attr->colorformat], vic);
+				}
+				else
+					DRM_INFO("[%s]: display colour subsampling is auto set to %s\n", __func__,
+						colour_sampling[attr->colorformat]);
+			}
+			else
+			{
+				DRM_INFO("[%s]: display colour subsampling is forced by attr to %s: %s\n", __func__,
+					colour_sampling[fmt_attr.colorformat], common->fmt_attr);
+					attr->colorformat = fmt_attr.colorformat;
+			}
+			break;
+	}
+
+	// parse and set maximum colourdepth given by edid
+	// check for colour subsampling limit
+	switch (common->hdmi_current_eotf_type) {
+		case EOTF_T_DOLBYVISION:
+		case EOTF_T_LL_MODE:
+		case EOTF_T_DV_AHEAD:
+			{
+				const struct dv_info *dv_info = &common->rxcap.dv_info;
+				int cd = bitdepth_to_colordepth(attr->bitdepth);
+				switch (common->hdmi_current_tunnel_mode) {
+					case RGB_8BIT:
+							attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
+						break;
+					case RGB_10_12BIT:
+					case YUV444_10_12BIT:
+						if (dv_info->ver == 2) {
+							switch (dv_info->sup_10b_12b_444) {
+								case 1:
+									attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_30B);
+									break;
+								case 2:
+									attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_36B);
+									break;
+								default:
+									break;
+							}
+						}
+						break;
+					case YUV422_BIT12:
+						attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_36B);
+						break;
+					default:
+						break;
+				}
+				if (cd != bitdepth_to_colordepth(attr->bitdepth))
+					DRM_INFO("[%s]: display colourdepth is forced to %d bits because of Dolby Vision sink capability\n", __func__,
+						attr->bitdepth);
+			}
+			break;
+		default:
+			// check colourdepth
+			if (strstr(common->fmt_attr, "bit") != NULL) {
+				DRM_INFO("[%s]: display colourdepth is forced by attr to %d bits: %s\n", __func__,
+					fmt_attr.bitdepth, common->fmt_attr);
+					attr->bitdepth = fmt_attr.bitdepth;
+			} else {
+				if (common->rxcap.ColorDeepSupport & 0x78 && attr->colorformat != HDMI_COLORSPACE_YUV420) {
+					enum hdmi_color_depth cd;
+					for (cd = COLORDEPTH_30B; cd >= COLORDEPTH_24B; cd--) {
+						if (common->rxcap.ColorDeepSupport & (1 << (cd - 1))) {
+							attr->bitdepth = colordepth_to_bitdepth(cd);
+							break;
+						}
+					}
+				} else if (common->rxcap.hf_ieeeoui == HF_IEEEOUI) {
+					if (common->rxcap.dc_30bit_420)
+						attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_30B);
+					else
+						attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
+				}
+
+				if (is_hdmi4k_support_420(vic & 0xff)) {
+					if (attr->colorformat == HDMI_COLORSPACE_RGB || attr->colorformat == HDMI_COLORSPACE_YUV444) {
+						attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
+						DRM_INFO("[%s]: display colourdepth is forced to %d bits because of current video information code %d\n", __func__,
+							attr->bitdepth, vic);
+					}
+				}
+				if (common->flag_3dfp) {
+					attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
+					DRM_INFO("[%s]: display colourdepth is auto set to %d bits because of 3dfp mode\n", __func__,
+						attr->bitdepth);
+				} else
+					DRM_INFO("[%s]: display colourdepth is auto set to %d bits\n", __func__,
+						attr->bitdepth);
+			}
+			break;
+	}
+
+	DRM_INFO("[%s]:[%s,eotf:%d,vic:%d]=>attr[%s,%dbit]\n", __func__,
+		outputmode, common->hdmi_current_eotf_type, vic,
+		colour_sampling[attr->colorformat], attr->bitdepth);
 
 	return 0;
 }
