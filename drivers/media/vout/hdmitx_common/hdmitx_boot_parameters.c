@@ -103,15 +103,15 @@ static int get_hdmitx_color_attr(char *token, char *color_attr)
 				if (strlen(cd[i]) <
 					(sizeof(attr) - strlen(attr)))
 					strcat(attr, cd[i]);
-
-			if (strlen(attr) >= sizeof(attr)) {
-				HDMITX_ERROR("get err attr: %zu-%s\n", strlen(attr), attr);
-			} else {
-				strncpy(color_attr, attr, strlen(attr));
-				ret = 0;
-			}
 			break;
 		}
+	}
+
+	if (strlen(attr) >= sizeof(attr)) {
+		HDMITX_ERROR("get err attr: %zu-%s\n", strlen(attr), attr);
+	} else {
+		strncpy(color_attr, attr, strlen(attr));
+		ret = 0;
 	}
 
 	return ret;
