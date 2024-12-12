@@ -79,6 +79,7 @@ struct am_hdmi_tx {
 	struct drm_property *update_attr_prop;
 	struct drm_property *color_space_prop;
 	struct drm_property *color_depth_prop;
+	struct drm_property *color_force;
 	struct drm_property *avmute_prop;
 	struct drm_property *hdmi_hdr_status_prop;
 	struct drm_property *hdr_cap_property;
