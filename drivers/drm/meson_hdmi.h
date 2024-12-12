@@ -105,6 +105,7 @@ struct am_hdmi_tx {
 	 *colorspace/colordepth from sysfs.
 	 */
 	struct drm_property *update_attr_prop;
+	struct drm_property *color_force;
 	struct drm_property *avmute_prop;
 	struct drm_property *ready_prop;
 	struct drm_property *frac_rate_policy_prop;
