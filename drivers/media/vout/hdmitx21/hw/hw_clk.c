@@ -97,7 +97,7 @@ void hdmitx21_set_audioclk(bool en)
 	//use 200M = 2G / 5 / 2
 	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 0, 8, 1);
 	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 3, 9, 2);	/* FIXPLL/5 */
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 1, 0, 1);	/* div 2 */
+	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 1, 0, 8);	/* div 2 */
 
 	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, en, 8, 1);
 }
