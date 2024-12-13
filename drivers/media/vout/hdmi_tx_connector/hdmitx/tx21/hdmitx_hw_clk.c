@@ -107,7 +107,7 @@ void hdmitx21_set_audioclk(bool en)
 	/* FIXPLL/5 */
 	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 3, 9, 2);
 	/* div 2 */
-	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 1, 0, 1);
+	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 1, 0, 8);
 	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, en, 8, 1);
 }
 
