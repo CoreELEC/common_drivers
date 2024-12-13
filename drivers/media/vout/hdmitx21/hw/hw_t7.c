@@ -44,10 +44,12 @@ static bool set_hpll_hclk_v1(u32 m, u32 frac_val)
 	hd21_write_reg(ANACTRL_HDMIPLL_CTRL2, 0x00000000);
 
 	if (frac_val == 0x8168) {
-		if ((para->timing.vic == HDMI_96_3840x2160p50_16x9 ||
-		     para->timing.vic == HDMI_97_3840x2160p60_16x9 ||
-		     para->timing.vic == HDMI_106_3840x2160p50_64x27 ||
-		     para->timing.vic == HDMI_107_3840x2160p60_64x27) &&
+		if ((para->vic == HDMI_96_3840x2160p50_16x9 ||
+		     para->vic == HDMI_97_3840x2160p60_16x9 ||
+		     para->vic == HDMI_106_3840x2160p50_64x27 ||
+		     para->vic == HDMI_107_3840x2160p60_64x27 ||
+		     para->vic == HDMI_101_4096x2160p50_256x135 ||
+		     para->vic == HDMI_102_4096x2160p60_256x135) &&
 		     para->cs != HDMI_COLORSPACE_YUV420) {
 			hd21_write_reg(ANACTRL_HDMIPLL_CTRL3, 0x6a685c00);
 			hd21_write_reg(ANACTRL_HDMIPLL_CTRL4, 0x11551293);
@@ -56,13 +58,13 @@ static bool set_hpll_hclk_v1(u32 m, u32 frac_val)
 			hd21_write_reg(ANACTRL_HDMIPLL_CTRL4, 0x44331290);
 		}
 	} else {
-		if ((para->timing.vic == HDMI_96_3840x2160p50_16x9 ||
-		    para->timing.vic == HDMI_97_3840x2160p60_16x9 ||
-		    para->timing.vic == HDMI_106_3840x2160p50_64x27 ||
-		    para->timing.vic == HDMI_107_3840x2160p60_64x27 ||
-		    para->timing.vic == HDMI_101_4096x2160p50_256x135 ||
-		    para->timing.vic == HDMI_102_4096x2160p60_256x135) &&
-		    para->cs != HDMI_COLORSPACE_YUV420) {
+		if ((para->vic == HDMI_96_3840x2160p50_16x9 ||
+		     para->vic == HDMI_97_3840x2160p60_16x9 ||
+		     para->vic == HDMI_106_3840x2160p50_64x27 ||
+		     para->vic == HDMI_107_3840x2160p60_64x27 ||
+		     para->vic == HDMI_101_4096x2160p50_256x135 ||
+		     para->vic == HDMI_102_4096x2160p60_256x135) &&
+		     para->cs != HDMI_COLORSPACE_YUV420) {
 			hd21_write_reg(ANACTRL_HDMIPLL_CTRL3, 0x6a685c00);
 			hd21_write_reg(ANACTRL_HDMIPLL_CTRL4, 0x11551293);
 		} else {

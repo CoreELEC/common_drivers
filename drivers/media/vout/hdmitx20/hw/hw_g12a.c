@@ -94,7 +94,9 @@ static bool set_hpll_hclk_v1(unsigned int m, unsigned int frac_val)
 		if ((para->vic == HDMI_96_3840x2160p50_16x9 ||
 		     para->vic == HDMI_97_3840x2160p60_16x9 ||
 		     para->vic == HDMI_106_3840x2160p50_64x27 ||
-		     para->vic == HDMI_107_3840x2160p60_64x27) &&
+		     para->vic == HDMI_107_3840x2160p60_64x27 ||
+		     para->vic == HDMI_101_4096x2160p50_256x135 ||
+		     para->vic == HDMI_102_4096x2160p60_256x135) &&
 		     para->cs != HDMI_COLORSPACE_YUV420) {
 			hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a685c00);
 			hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x11551293);
@@ -103,15 +105,13 @@ static bool set_hpll_hclk_v1(unsigned int m, unsigned int frac_val)
 			hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x44331290);
 		}
 	} else {
-		if (hdev->tx_hw.chip_data->chip_type == MESON_CPU_ID_SM1 &&
-		    hdmitx_find_vendor_6g(hdev->tx_comm.EDID_buf) &&
-		    (para->vic == HDMI_96_3840x2160p50_16x9 ||
-		    para->vic == HDMI_97_3840x2160p60_16x9 ||
-		    para->vic == HDMI_106_3840x2160p50_64x27 ||
-		    para->vic == HDMI_107_3840x2160p60_64x27 ||
-		    para->vic == HDMI_101_4096x2160p50_256x135 ||
-		    para->vic == HDMI_102_4096x2160p60_256x135) &&
-		    para->cs != HDMI_COLORSPACE_YUV420) {
+		if ((para->vic == HDMI_96_3840x2160p50_16x9 ||
+		     para->vic == HDMI_97_3840x2160p60_16x9 ||
+		     para->vic == HDMI_106_3840x2160p50_64x27 ||
+		     para->vic == HDMI_107_3840x2160p60_64x27 ||
+		     para->vic == HDMI_101_4096x2160p50_256x135 ||
+		     para->vic == HDMI_102_4096x2160p60_256x135) &&
+		     para->cs != HDMI_COLORSPACE_YUV420) {
 			hd_write_reg(P_HHI_HDMI_PLL_CNTL3, 0x6a685c00);
 			hd_write_reg(P_HHI_HDMI_PLL_CNTL4, 0x11551293);
 		} else {
