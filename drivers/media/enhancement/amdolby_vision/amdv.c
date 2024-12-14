@@ -14272,7 +14272,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 
 		if (!get_ko) {
 			pr_info("error: dolby vision get fail ko, version: %s", func->version_info);
-			return ret;
+			//return ret;
 		}
 	}
 
