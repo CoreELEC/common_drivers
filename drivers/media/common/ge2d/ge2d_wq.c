@@ -1305,7 +1305,7 @@ int ge2d_wq_add_work(struct ge2d_context_s *wq, int enqueue)
 
 	ge2d_log_dbg("add new work @@%s:%d\n", __func__, __LINE__);
 	if (work_queue_no_space(wq)) {
-		pitem = kzalloc(sizeof(*pitem), GFP_KERNEL);
+		pitem = kzalloc(sizeof(*pitem), GFP_ATOMIC);
 		if (!pitem)
 			goto error;
 		spin_lock(&wq->lock);
@@ -1657,7 +1657,7 @@ int ge2d_set_clut_table(struct ge2d_context_s *context, unsigned long args)
 	u32 *data;
 	int ret;
 
-	clut8_table_t = kmalloc(sizeof(*clut8_table_t), GFP_KERNEL);
+	clut8_table_t = kmalloc(sizeof(*clut8_table_t), GFP_ATOMIC);
 	if (!clut8_table_t)
 		return -ENOMEM;
 
@@ -1672,7 +1672,7 @@ int ge2d_set_clut_table(struct ge2d_context_s *context, unsigned long args)
 	if (clut8_table_t->count > 0 && clut8_table_t->count <= 256) {
 		/* memory is allocated only once when running here. */
 		if (!context->config.clut8_table.data) {
-			data = kcalloc(256, sizeof(u32), GFP_KERNEL);
+			data = kcalloc(256, sizeof(u32), GFP_ATOMIC);
 			if (!data) {
 				kfree(clut8_table_t);
 				return -ENOMEM;
@@ -1910,7 +1910,7 @@ build_ge2d_addr_config_dma(struct ge2d_context_s *context,
 			if (!cfg)
 				return -1;
 
-			dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_KERNEL);
+			dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_ATOMIC);
 			if (!dma_cfg)
 				return ret;
 			dma_cfg->fd = plane[i].shared_fd;
@@ -2077,7 +2077,7 @@ static int build_ge2d_config_ex_dma(struct ge2d_context_s *context,
 				if (!cfg)
 					return -1;
 
-				dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_KERNEL);
+				dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_ATOMIC);
 				if (!dma_cfg)
 					return ret;
 				dma_cfg->fd = plane[i].shared_fd;
@@ -3393,7 +3393,7 @@ int ge2d_ioctl_attach_dma_fd(struct ge2d_context_s *wq,
 			if (!cfg)
 				return -1;
 			cfg->dma_used[i] = 1;
-			dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_KERNEL);
+			dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_ATOMIC);
 			if (!dma_cfg) {
 				ge2d_log_err("%s, kzalloc error\n", __func__);
 				return ret;
@@ -3462,7 +3462,7 @@ struct ge2d_context_s *create_ge2d_work_queue(void)
 
 	if (!ge2d_manager.probe)
 		return NULL;
-	ge2d_work_queue = kzalloc(sizeof(*ge2d_work_queue), GFP_KERNEL);
+	ge2d_work_queue = kzalloc(sizeof(*ge2d_work_queue), GFP_ATOMIC);
 	if (!ge2d_work_queue) {
 		ge2d_log_err("can't create work queue\n");
 		return NULL;
