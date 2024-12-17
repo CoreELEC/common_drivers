@@ -356,12 +356,10 @@ static int hdmitx_edid_validate_format_para(struct tx_cap *hdmi_tx_cap,
 		if (calc_tmds_clk > hdmi_tx_cap->tx_max_tmds_clk) {
 			HDMITX_DEBUG_EDID("output tmds clk:%d exceed tx cap: %d\n",
 				calc_tmds_clk, hdmi_tx_cap->tx_max_tmds_clk);
-			return -EPERM;
 		}
 		if (calc_tmds_clk > rx_max_tmds_clk) {
 			HDMITX_DEBUG_EDID("output tmds clk:%d exceed rx cap: %d\n",
 					  calc_tmds_clk, rx_max_tmds_clk);
-			return -EPERM;
 		}
 	} else {
 #ifdef CONFIG_AMLOGIC_DSC
@@ -378,12 +376,10 @@ static int hdmitx_edid_validate_format_para(struct tx_cap *hdmi_tx_cap,
 			if (calc_tmds_clk > hdmi_tx_cap->tx_max_tmds_clk) {
 				HDMITX_DEBUG_EDID("output tmds clk:%d exceed tx cap: %d\n",
 					calc_tmds_clk, hdmi_tx_cap->tx_max_tmds_clk);
-				return -EPERM;
 			}
 			if (calc_tmds_clk > rx_max_tmds_clk) {
 				HDMITX_DEBUG_EDID("output tmds clk:%d exceed rx cap: %d\n",
 						  calc_tmds_clk, rx_max_tmds_clk);
-				return -EPERM;
 			}
 		} else {
 			/* try to check if able to run under FRL mode */
@@ -434,6 +430,9 @@ static int hdmitx_edid_validate_format_para(struct tx_cap *hdmi_tx_cap,
 	}
 
 	/* step4: check color space/depth is within RX cap */
+	/* skip cd/cs check as it is already auto selected */
+	goto out;
+
 	if (para->cs == HDMI_COLORSPACE_YUV444) {
 		enum hdmi_color_depth rx_y444_max_dc = COLORDEPTH_24B;
 		/* Rx may not support Y444 */
@@ -498,6 +497,9 @@ static int hdmitx_edid_validate_format_para(struct tx_cap *hdmi_tx_cap,
 	}
 
 	return -EACCES;
+
+out:
+	return 0;
 }
 
 /*
