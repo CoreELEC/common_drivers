@@ -2918,7 +2918,10 @@ static void hdmitx_set_div40(u32 div40)
 		hdev->pre_tmds_clk_div40)
 		hdmitx_set_scdc_div40(0);
 	else
+	{
+		hdmitx_set_scdc_div40(0);
 		HDMITX_INFO("warn: SCDC not present, should not send 1:10\n");
+	}
 	set_top_div40(div40);
 	hdmitx21_wr_reg(SCRCTL_IVCTX, (1 << 5) | !!div40);
 	hdev->pre_tmds_clk_div40 = !!div40;
