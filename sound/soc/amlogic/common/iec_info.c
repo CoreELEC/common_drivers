@@ -45,6 +45,7 @@ int audio_multi_clk(enum audio_coding_types coding_type)
 	else if (coding_type == AUDIO_CODING_TYPE_MULTICH_8CH_LPCM)
 		multi = 4;
 	else if (coding_type == AUDIO_CODING_TYPE_EAC3 ||
+		 coding_type == AUDIO_CODING_TYPE_DTS_HD ||
 		 coding_type == AUDIO_CODING_TYPE_MLP ||
 		 coding_type == AUDIO_CODING_TYPE_DTS_HD_MA ||
 		 coding_type == AUDIO_CODING_TYPE_AC3_LAYOUT_B)
@@ -276,7 +277,8 @@ bool raw_is_4x_clk(enum aud_codec_types codec_type)
 {
 	bool is_4x = false;
 
-	if (/*codec_type == AUD_CODEC_TYPE_EAC3 || */
+	if (/*codec_type == AUD_CODEC_TYPE_EAC3 ||
+	    codec_type == AUD_CODEC_TYPE_DTS_HD ||*/
 	    codec_type == AUD_CODEC_TYPE_TRUEHD ||
 	    codec_type == AUD_CODEC_TYPE_DTS_HD_MA ||
 	    codec_type == AUD_CODEC_TYPE_AC3_LAYOUT_B) {
@@ -330,6 +332,7 @@ unsigned int mpll2dmac_clk_ratio_by_type(enum audio_coding_types coding_type)
 		ratio = 4;
 		break;
 	case AUDIO_CODING_TYPE_EAC3:
+	case AUDIO_CODING_TYPE_DTS_HD:
 	case AUDIO_CODING_TYPE_AC3_LAYOUT_B:
 		ratio = 4;
 		break;
