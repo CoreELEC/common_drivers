@@ -251,6 +251,18 @@ static const struct pll_params_table t7_hifi_pll_table[] = {
 	{ /* sentinel */  }
 };
 
+/*
+ * Internal hifi pll emulation configuration parameters
+ */
+static const struct reg_sequence t7_hifi_init_regs[] = {
+	{ .reg = ANACTRL_HIFIPLL_CTRL1,	.def = 0x00014820 }, /*frac = 20.16M */
+	{ .reg = ANACTRL_HIFIPLL_CTRL2,	.def = 0x00000000 },
+	{ .reg = ANACTRL_HIFIPLL_CTRL3,	.def = 0x6a285c00 },
+	{ .reg = ANACTRL_HIFIPLL_CTRL4,	.def = 0x65771290 },
+	{ .reg = ANACTRL_HIFIPLL_CTRL5,	.def = 0x3927200a },
+	{ .reg = ANACTRL_HIFIPLL_CTRL6,	.def = 0x56540000 }
+};
+
 static struct clk_regmap t7_hifi_pll = {
 	.data = &(struct meson_clk_pll_data){
 		.en = {
@@ -290,6 +302,8 @@ static struct clk_regmap t7_hifi_pll = {
 		},
 		.table = t7_hifi_pll_table,
 		.od_max = 3,
+		.init_regs = t7_hifi_init_regs,
+		.init_count = ARRAY_SIZE(t7_hifi_init_regs),
 		.flags = CLK_MESON_PLL_ROUND_CLOSEST |
 			 CLK_MESON_PLL_FIXED_FRAC_WEIGHT_PRECISION |
 			 CLK_MESON_PLL_FIXED_N
