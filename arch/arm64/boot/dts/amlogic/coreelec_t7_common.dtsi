@@ -267,8 +267,11 @@
 	aml_i2s2hdmi: i2s2hdmi {
 		compatible = "amlogic, t7-snd-tdmc";
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+				&clkc CLKID_HIFI_PLL
 				&clkc CLKID_MPLL2>;
-		clock-names = "mclk", "clk_srcpll";
+		clock-names = "mclk", "clk_srcpll", "clk_src_cd";
+		src-clk-freq = <491520000>;
+		i2s2hdmi = <1>;
 	};
 
 	tdm@1 {
@@ -277,10 +280,7 @@
 		/delete-node/ Channel_Mask;
 	};
 
-	resample@0 {
-		status = "disabled";
-	};
-
+	/delete-node/ resample@0;
 	/delete-node/ resample@1;
 
 	loopback@0 {
