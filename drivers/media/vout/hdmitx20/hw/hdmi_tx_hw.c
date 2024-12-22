@@ -2437,13 +2437,13 @@ static enum hdmi_tf_type hdmitx_get_cur_dv_st(void)
 		 * Dolby_Vision_Signal (bit1) is 1,
 		 * and Low_Latency (bit0) is 1
 		 */
-		if (cs == 0x1 && amdv_signal == 0x3)
+		if (cs == HDMI_COLORSPACE_YUV422 && amdv_signal == 0x3)
 			type = HDMI_DV_VSIF_LL;
 		/* When outputting DV_STD, cs needs to be rgb,
 		 * Dolby_Vision_Signal (bit1) is 1,
 		 * and Low_Latency (bit0) is 0
 		 */
-		if (cs == 0x0 && amdv_signal == 0x2)
+		if ((cs == HDMI_COLORSPACE_RGB || cs == HDMI_COLORSPACE_YUV444) && amdv_signal == 0x2)
 			type = HDMI_DV_VSIF_STD;
 	}
 	return type;

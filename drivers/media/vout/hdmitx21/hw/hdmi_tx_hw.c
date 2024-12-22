@@ -1737,7 +1737,7 @@ static enum hdmi_tf_type hdmitx21_get_cur_dv_st(void)
 		 * Dolby_Vision_Signal (bit1) is 1,
 		 * and Low_Latency (bit0) is 0
 		 */
-		if (cs == HDMI_COLORSPACE_RGB && amdv_signal == 0x2)
+		if ((cs == HDMI_COLORSPACE_RGB || cs == HDMI_COLORSPACE_YUV444) && amdv_signal == 0x2)
 			type = HDMI_DV_VSIF_STD;
 	}
 	return type;
