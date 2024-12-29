@@ -18,6 +18,16 @@
 	gpio_keypad {
 		status = "disabled";
 	};
+
+	gpioleds {
+	  status = "disabled";
+
+		sys_led {
+			label="sys_led";
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+		};
+	};
 };
 
 &sd_emmc_c {
