@@ -160,6 +160,11 @@
 	otg = <0>;
 };
 
+&sd_emmc_b {
+	cap-mmc-highspeed;
+	max-frequency = <50000000>;
+};
+
 &sd_emmc_c {
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
