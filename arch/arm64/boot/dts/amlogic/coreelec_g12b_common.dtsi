@@ -259,6 +259,15 @@
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
 
+&sd_emmc_b {
+	max-frequency = <50000000>;
+	cap-mmc-highspeed;
+	/delete-property/ sd-uhs-sdr12;
+	/delete-property/ sd-uhs-sdr25;
+	/delete-property/ sd-uhs-sdr50;
+	/delete-property/ sd-uhs-sdr104;
+};
+
 &vddio_c {
 	/delete-property/ gpio;
 };

@@ -195,6 +195,15 @@
 	sustainable-power = <3000>;
 };
 
+&sd_emmc_b {
+	max-frequency = <50000000>;
+	cap-mmc-highspeed;
+	/delete-property/ sd-uhs-sdr12;
+	/delete-property/ sd-uhs-sdr25;
+	/delete-property/ sd-uhs-sdr50;
+	/delete-property/ sd-uhs-sdr104;
+};
+
 &periphs_pinctrl {
 	/delete-node/ spdifin;
 	/delete-node/ spdifin_a_mute;

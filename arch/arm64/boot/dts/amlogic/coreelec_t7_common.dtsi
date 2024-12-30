@@ -318,6 +318,11 @@
 	mmc-pwrseq = <&emmc_pwrseq>;
 };
 
+&sd_emmc_b {
+	cap-mmc-highspeed;
+	max-frequency = <50000000>;
+};
+
 &ethmac {
 	internal_phy = <2>;
 	cali_val = <0x80000>;
