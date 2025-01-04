@@ -268,6 +268,10 @@
 	/delete-property/ sd-uhs-sdr104;
 };
 
+&sd_emmc_a {
+	/delete-property/ sd-uhs-sdr104;
+};
+
 &vddio_c {
 	/delete-property/ gpio;
 };
