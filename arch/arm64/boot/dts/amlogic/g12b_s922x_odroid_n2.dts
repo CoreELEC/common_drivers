@@ -210,7 +210,3 @@
 &uart_A {
 	status = "disabled";
 };
-
-&vddio_c {
-	gpio = <&gpio_ao GPIOAO_9 GPIO_ACTIVE_HIGH>;
-};
