@@ -32,37 +32,33 @@
 
 	cpu_opp_table0: cpu_opp_table0 {
 		opp09 {
-			opp-hz = /bits/ 64 <1896000000>;
-			opp-microvolt = <980000>;
+			opp-hz = /bits/ 64 <1908000000>;
+			opp-microvolt = <1030000>;
 		};
 		opp10 {
-			opp-hz = /bits/ 64 <1920000000>;
-			opp-microvolt = <1000000>;
+			opp-hz = /bits/ 64 <2016000000>;
+			opp-microvolt = <1040000>;
 		};
 	};
 
 	cpu_opp_table1: cpu_opp_table1 {
-		opp08 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <980000>;
+		opp13 {
+			opp-hz = /bits/ 64 <2304000000>;
+			opp-microvolt = <1030000>;
 		};
-		opp09 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <1020000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <2004000000>;
-			opp-microvolt = <1020000>;
+		opp14 {
+			opp-hz = /bits/ 64 <2400000000>;
+			opp-microvolt = <1040000>;
 		};
 	};
 
 	cpus:cpus {
 		cpu-map {
 			cluster0:cluster0 {
-				stock_freq = <1896000000>;
+				stock_freq = <1908000000>;
 			};
 			cluster1:cluster1 {
-				stock_freq = <1800000000>;
+				stock_freq = <2208000000>;
 			};
 		};
 	};
