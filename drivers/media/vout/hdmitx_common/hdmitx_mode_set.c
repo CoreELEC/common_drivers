@@ -278,10 +278,12 @@ int hdmitx_common_do_mode_setting(struct hdmitx_common *tx_comm,
 	}
 
 	mutex_lock(&tx_comm->hdmimode_mutex);
+/*
 	if (new_state->state_sequence_id != tx_comm->tx_hw->hw_sequence_id) {
 		HDMITX_ERROR("state_sequence_id failed %lld\n", new_state->state_sequence_id);
 		goto fail;
 	}
+*/
 	ret = hdmitx_common_pre_enable_mode(tx_comm, new_para);
 	if (ret < 0) {
 		HDMITX_ERROR("pre mode enable fail\n");

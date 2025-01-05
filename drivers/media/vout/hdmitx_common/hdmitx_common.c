@@ -159,13 +159,13 @@ int hdmitx_common_validate_mode_locked(struct hdmitx_common *tx_comm,
 	enum hdmi_vic vic = HDMI_0_UNKNOWN;
 
 	new_para = &new_state->para;
-
+/*
 	if (new_state->state_sequence_id != tx_comm->tx_hw->hw_sequence_id) {
 		HDMITX_ERROR("%s: state_sequence_id failed: %lld\n",
 						__func__, new_state->state_sequence_id);
 		return -1;
 	}
-
+*/
 	mutex_lock(&tx_comm->hdmimode_mutex);
 	mutex_lock(&tx_comm->valid_mutex);
 
