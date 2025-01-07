@@ -1,0 +1,7 @@
+#include "g12b_s922x_ugoos_am6b_2g.dts"
+#include "coreelec_g12b_a_common.dtsi"
+
+/ {
+	coreelec-dt-id = "g12b_s922x_ugoos_am6b_rev_a_2g";
+	amlogic-dt-id = "g12b_AM6b_a2g";
+};
