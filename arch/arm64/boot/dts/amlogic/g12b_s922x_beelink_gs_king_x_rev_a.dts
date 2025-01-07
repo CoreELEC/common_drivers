@@ -1,0 +1,7 @@
+#include "g12b_s922x_beelink_gs_king_x.dts"
+#include "coreelec_g12b_a_common.dtsi"
+
+/ {
+	coreelec-dt-id = "g12b_s922x_beelink_gs_king_x_rev_a";
+	amlogic-dt-id = "g12b_w400_a";
+};
