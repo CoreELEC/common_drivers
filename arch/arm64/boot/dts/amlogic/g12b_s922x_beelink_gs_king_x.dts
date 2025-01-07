@@ -3,6 +3,7 @@
 
 / {
 	coreelec-dt-id = "g12b_s922x_beelink_gs_king_x";
+	amlogic-dt-id = "g12b_w400_b";
 
 	gpioleds {
 		/delete-node/ sys_led;
