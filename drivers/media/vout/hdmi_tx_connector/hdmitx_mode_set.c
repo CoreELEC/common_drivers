@@ -239,6 +239,7 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 	bool phy_dis, bool hdcp_reset, bool pkt_clear, bool edid_clear)
 {
 	struct hdmitx_hw_common *tx_hw_base = tx_comm->tx_hw;
+	struct hdmi_format_para *para = &tx_comm->fmt_para;
 	u32 arg;
 
 	/* step1 detach vinfo
@@ -275,7 +276,7 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 		hdmitx_common_edid_clear(tx_comm);
 
 	/* step4: HW: clear packets */
-	if (pkt_clear)
+	if (pkt_clear && !para->flag_3dfp && !para->flag_3dss && !para->flag_3dtb)
 		hdmitx_clear_all_infoframe_pkt(tx_comm);
 
 	/* step5: reset hdcp */
