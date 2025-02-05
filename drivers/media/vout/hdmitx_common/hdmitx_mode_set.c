@@ -470,7 +470,7 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 		hdmitx_common_edid_clear(tx_comm);
 
 	/* step4: HW: clear packets */
-	if (pkt_clear)
+	if (pkt_clear && !tx_comm->flag_3dfp && !tx_comm->flag_3dss && !tx_comm->flag_3dtb)
 		tx_comm->ctrl_ops->clear_pkt(tx_hw_base);
 
 	/* step5: reset hdcp */
