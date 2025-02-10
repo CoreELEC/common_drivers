@@ -1101,6 +1101,8 @@ static void set_hdmitx_htx_pll(struct hdmitx21_dev *hdev,
 	if (!test_clk)
 		return;
 
+	hdmitx_mode_update_timing(&para->timing, frac_rate);
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S5) {
 		set_hdmitx_s5_htx_pll(hdev);
