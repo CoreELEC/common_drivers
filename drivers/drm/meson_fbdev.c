@@ -523,6 +523,11 @@ retry:
 	}
 
 	drm_mode_get_hv_timing(&mode_set->crtc->mode, &hdisplay, &vdisplay);
+	if (hdisplay < 3840)
+	{
+		hdisplay = var->xres;
+		vdisplay = var->yres;
+	}
 	plane_state->crtc_x = 0;
 	plane_state->crtc_y = 0;
 	plane_state->crtc_w = hdisplay;
