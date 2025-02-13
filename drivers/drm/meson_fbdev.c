@@ -573,6 +573,11 @@ retry:
 		plane_state->crtc_w = fbdev->dst_changed.w;
 		plane_state->crtc_h = fbdev->dst_changed.h;
 	} else {
+		if (hdisplay < 3840)
+		{
+			hdisplay = var->xres;
+			vdisplay = var->yres;
+		}
 		plane_state->crtc_x = 0;
 		plane_state->crtc_y = 0;
 		plane_state->crtc_w = hdisplay;
