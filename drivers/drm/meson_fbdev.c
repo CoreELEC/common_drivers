@@ -664,6 +664,7 @@ static int am_meson_drm_fbdev_probe(struct drm_fb_helper *helper,
 	struct drm_framebuffer *fb;
 	struct fb_info *fbi;
 	unsigned int bytes_per_pixel;
+	int hdisplay, vdisplay;
 	int ret;
 
 	if (private->ui_config.overlay_flag == 1) {
@@ -717,6 +718,14 @@ static int am_meson_drm_fbdev_probe(struct drm_fb_helper *helper,
 
 	drm_fb_helper_fill_info(fbi, helper, &sizes);
 	am_meson_drm_fbdev_modeset_create(helper);
+
+	drm_mode_get_hv_timing(&fbdev->modeset.crtc->mode, &hdisplay, &vdisplay);
+	hdisplay = hdisplay != 0 ? hdisplay : 1920;
+	vdisplay = vdisplay != 0 ? vdisplay : 1080;
+	fbi->var.xres = hdisplay;
+	fbi->var.yres = vdisplay;
+	fbi->var.xres_virtual = hdisplay;
+	fbi->var.yres_virtual = vdisplay * 2;
 
 	return 0;
 
