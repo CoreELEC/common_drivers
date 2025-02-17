@@ -1,6 +1,19 @@
 #include "coreelec_common.dtsi"
 
 / {
+	cpus:cpus {
+		cpu-map {
+			cluster0:cluster0 {
+				/delete-node/ core4;
+			};
+			cluster1:cluster1 {
+				core0 {
+					cpu = <&CPU4>;
+				};
+			};
+		};
+	};
+
 	amhdmitx: amhdmitx{
 		/delete-property/ pxp_mode;
 		vend_data: vend_data{ /* Should modified by Customer */
