@@ -3,6 +3,25 @@
 / {
 	compatible = "amlogic, sc2";
 
+	cpus:cpus {
+		cpu-map {
+			cluster0:cluster0 {
+				core0 {
+					cpu = <&CPU0>;
+				};
+				core1 {
+					cpu = <&CPU1>;
+				};
+				core2 {
+					cpu = <&CPU2>;
+				};
+				core3 {
+					cpu = <&CPU3>;
+				};
+			};
+		};
+	};
+
 	amhdmitx: amhdmitx{
 		vend_data: vend_data{ /* Should modified by Customer */
 			product_desc = "SC2"; /* Max Chars: 16 */
