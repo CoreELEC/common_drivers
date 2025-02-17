@@ -86,12 +86,9 @@ static unsigned int get_cpufreq_table_index(u64 function_id,
 	return res.a0;
 }
 
-#define OF_NODE_CPU_OPP_0	"/cpu_opp_table0/"	/* Core A53 */
-#define OF_NODE_CPU_OPP_1	"/cpu_opp_table1/"	/* Core A73 */
-
 static unsigned long max_freq[2] = {
-		0, /* freq for A53 */
-		0  /* freq for A73 */
+		0, /* freq for cluster 0 */
+		0  /* freq for cluster 1 */
 };
 
 static unsigned int meson_cpufreq_get_rate(unsigned int cpu)
@@ -1134,53 +1131,43 @@ free_np:
 	return ret;
 }
 
-static int __init get_max_freq_a53(char *str)
+static int __init get_max_freq_cluster(char *str)
 {
+	char *cluster_option;
+	char *cluster_index;
+	int cluster;
 	int ret;
 
 	if (str == NULL) {
-		/* default freq value for A53 core is 1.896GHz */
 		pr_info("[%s] no data\n", __func__);
 		return -EINVAL;
 	}
-	ret = kstrtoul(str, 0, &max_freq[0]);
-	if (ret != 0) {
-		pr_info("[%s] invalid data - err %d, str %s\n",
-			__func__, ret, str);
-		return -EINVAL;
-	}
 
-	/* in unit kHz */
-	max_freq[0] *= 1000;
-	pr_info("[%s] - max_freq : %ld\n", __func__, max_freq[0]);
+	while ((cluster_option = strsep(&str, ",")) != NULL) {
+		cluster_index = strsep(&cluster_option, ":");
+
+		ret = kstrtoint(cluster_index, 10, &cluster);
+		if (ret != 0) {
+			pr_info("[%s] invalid data - err %d, str %s\n",
+				__FUNCTION__, ret, str);
+			return -EINVAL;
+		}
+
+		ret = kstrtoul(cluster_option, 10, &max_freq[cluster]);
+		if (ret != 0) {
+			pr_info("[%s] invalid data - err %d, str %s\n",
+				__FUNCTION__, ret, cluster_option);
+			return -EINVAL;
+		}
+
+		/* in unit kHz */
+		max_freq[cluster] *= 1000;
+		pr_info("[%s] - max_freq[%d] : %ld\n", __FUNCTION__, cluster, max_freq[cluster]);
+	}
 
 	return 0;
 }
-__setup("max_freq_a53=", get_max_freq_a53);
-
-static int __init get_max_freq_a73(char *str)
-{
-	int ret;
-
-	if (str == NULL) {
-		/* default freq value for A73 core is 1.800GHz */
-		pr_info("[%s] no data\n", __func__);
-		return -EINVAL;
-	}
-	ret = kstrtoul(str, 0, &max_freq[1]);
-	if (ret != 0) {
-		pr_info("[%s] invalid data - err %d, str %s\n",
-			__func__, ret, str);
-		return -EINVAL;
-	}
-
-	/* in unit kHz */
-	max_freq[1] *= 1000;
-	pr_info("[%s] - max_freq : %ld\n", __func__, max_freq[1]);
-
-	return 0;
-}
-__setup("max_freq_a73=", get_max_freq_a73);
+__setup("max_freq_cluster=", get_max_freq_cluster);
 
 static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 {
