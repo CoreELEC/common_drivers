@@ -1387,6 +1387,8 @@ void meson_hdmitx_reset(struct drm_connector *connector)
 {
 	struct am_hdmitx_connector_state *hdmitx_state;
 	struct am_hdmi_tx *am_hdmi = connector_to_am_hdmi(connector);
+	struct hdmitx_common *tx_comm = to_hdmitx_common(am_hdmi->hdmitx_dev);
+	struct hdmi_format_para *para = &tx_comm->fmt_para;
 
 	hdmitx_state = kzalloc(sizeof(*hdmitx_state), GFP_KERNEL);
 	if (!hdmitx_state)
@@ -1401,9 +1403,10 @@ void meson_hdmitx_reset(struct drm_connector *connector)
 	hdmitx_state->base.hdcp_content_type = am_hdmi->hdcp_request_content_type;
 	hdmitx_state->base.content_protection = am_hdmi->hdcp_request_content_protection;
 
-	hdmitx_state->pref_hdr_policy = MESON_PREF_DV;
-	hdmitx_state->color_attr_para.colorformat = HDMI_COLORSPACE_RGB;
-	hdmitx_state->color_attr_para.bitdepth = 8;
+	hdmitx_state->pref_hdr_policy = MESON_PREF_SDR;
+	hdmitx_state->color_attr_para.colorformat = HDMI_COLORSPACE_YUV444;
+	hdmitx_state->color_attr_para.bitdepth = 10;
+	hdmitx_state->frac_rate_policy = para->frac_mode;
 
 	/*drm api need update state, so need delay attach when create state.*/
 	if (!connector->max_bpc_property)
