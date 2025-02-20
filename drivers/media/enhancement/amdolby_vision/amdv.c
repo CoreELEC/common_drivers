@@ -1695,7 +1695,8 @@ static bool is_match_amdv_attr(void)
 		vinfo->cd == COLORDEPTH_24B) ||
 		(dolby_vision_ll_policy == DOLBY_VISION_LL_YUV422 &&
 		vinfo->cs == HDMI_COLORSPACE_YUV422 &&
-		vinfo->cd == COLORDEPTH_36B))
+		vinfo->cd == COLORDEPTH_36B) ||
+		(dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE))
 		return true;
 	else
 		return false;
@@ -4085,10 +4086,10 @@ static int amdv_policy_process_v1(struct vframe_s *vf,
 			mode_change = 1;
 		}
 	} else if (dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE) {
-		if (force_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL) {
+		if (force_mode == AMDV_OUTPUT_MODE_IPT || force_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL) {
 			if ((vinfo && sink_support_dv(vinfo) && is_match_amdv_attr()) ||
 				debug_force_mode) {
-				*mode = AMDV_OUTPUT_MODE_IPT_TUNNEL;
+				*mode = force_mode;
 				if (dolby_vision_mode != *mode)
 					mode_change = 1;
 				else
@@ -4527,10 +4528,10 @@ static int amdv_policy_process_v2_stb(struct vframe_s *vf,
 			mode_change = 1;
 		}
 	} else if (dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE) {
-		if (force_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL) {
+		if (force_mode == AMDV_OUTPUT_MODE_IPT || force_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL) {
 			if ((vinfo && sink_support_dv(vinfo) && is_match_amdv_attr()) ||
 				debug_force_mode) {
-				*mode = AMDV_OUTPUT_MODE_IPT_TUNNEL;
+				*mode = force_mode;
 				if (dolby_vision_mode != *mode)
 					mode_change = 1;
 				else
