@@ -20,6 +20,7 @@
 #include <linux/kthread.h>
 #include <linux/device.h>
 #include <linux/workqueue.h>
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #include <linux/miscdevice.h>
 
@@ -2454,7 +2455,7 @@ static int meson_hdmitx_encoder_atomic_check(struct drm_encoder *encoder,
 
 	/*The recovery mode not have composer to set attr*/
 	if ((!meson_crtc_state->uboot_mode_init && am_hdmi->recovery_mode) ||
-		(get_hdr_policy() == 1))
+		(get_hdr_policy() == 1) || (get_amdv_policy() == AMDV_FORCE_OUTPUT_MODE))
 		meson_hdmitx_decide_color_attr(am_hdmi, meson_crtc_state,
 						 attr, sequence_id);
 
