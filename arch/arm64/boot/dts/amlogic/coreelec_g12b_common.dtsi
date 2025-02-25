@@ -69,6 +69,10 @@
 		};
 	};
 
+	drm_vpu: drm-vpu@0xff900000  {
+		osd_ver = /bits/ 8 <OSD_V3>;
+	};
+
 	multi-di {
 		compatible = "amlogic, dim-g12b";
 	};
