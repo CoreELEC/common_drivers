@@ -1169,6 +1169,29 @@ void set_dma_ops_hook(void *data, struct device *dev)
 	set_dma_ops(dev, &aml_pcie_dma_ops);
 }
 
+#define AML_TEE_SMC_FAST_CALL_VAL(func_num) \
+	ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_32, \
+			ARM_SMCCC_OWNER_TRUSTED_OS, (func_num))
+
+#define AML_TEE_SMC_PROTECT_MEM_BY_TYPE AML_TEE_SMC_FAST_CALL_VAL(0xE023)
+
+static u32 aml_tee_protect_mem_by_type(u32 type,
+		u32 start, u32 size,
+		u32 *handle)
+{
+	struct arm_smccc_res res;
+
+	if (!handle)
+		return 0xFFFF0006;
+
+	arm_smccc_smc(AML_TEE_SMC_PROTECT_MEM_BY_TYPE,
+			type, start, size, 0, 0, 0, 0, &res);
+
+	*handle = res.a1;
+
+	return res.a0;
+}
+
 static void *get_symbol_addr(const char *symbol_name)
 {
 	struct kprobe kp = {
@@ -1332,7 +1355,7 @@ static int __nocfi aml_smmu_symbol_init(void *data)
 
 		dev_info(dev, "tee protect memory: %lu MiB at 0x%lx\n",
 				(unsigned long)rmem->size / SZ_1M, (unsigned long)rmem->base);
-		ret = tee_protect_mem(TEE_MEM_TYPE_PCIE, 0,
+		ret = aml_tee_protect_mem_by_type(TEE_MEM_TYPE_PCIE,
 				rmem->base, rmem->size, &handle);
 		if (ret) {
 			dev_err(dev, "pcie tee mem protect fail: 0x%x\n", ret);
@@ -1429,8 +1452,8 @@ static int aml_smmu_device_resume_noirq(struct device *dev)
 	if (g_rmem1) {
 		dev_info(dev, "tee protect memory: %lu MiB at 0x%lx\n",
 			(unsigned long)g_rmem1->size / SZ_1M, (unsigned long)g_rmem1->base);
-		ret = tee_protect_mem(TEE_MEM_TYPE_PCIE, 0,
-					g_rmem1->base, g_rmem1->size, &handle);
+		ret = aml_tee_protect_mem_by_type(TEE_MEM_TYPE_PCIE,
+						  g_rmem1->base, g_rmem1->size, &handle);
 		if (ret) {
 			dev_err(dev, "pcie tee mem protect fail: 0x%x\n", ret);
 			return -1;
