@@ -1063,7 +1063,7 @@ static int host_parse_devtree(struct platform_device *pdev, struct host_module *
 		}
 	}
 
-	if (host->host_dsp->pm_support_ffv &&
+	if (host->pm_support && host->host_dsp->pm_support_ffv &&
 	    !of_property_read_string_index(dev->of_node, "clock-names", 1, &clk_name)) {
 		host->host_dsp->clk_hifi = devm_clk_get(dev, clk_name);
 		if (IS_ERR_OR_NULL(host->host_dsp->clk_hifi))
