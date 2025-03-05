@@ -153,6 +153,8 @@
 
 &sd_emmc_c {
 	/delete-property/ mmc-hs400-1_8v;
+	/delete-property/ full-pwr-cycle;
+	full-pwr-cycle-in-suspend;
 };
 
 &ethmac {
