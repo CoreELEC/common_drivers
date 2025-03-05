@@ -1358,6 +1358,7 @@ int rdma_write_reg(int handle, u32 adr, u32 val)
 #ifdef CONFIG_AMLOGIC_BL_LDIM
 	if (!is_video_process_in_thread() &&
 		(get_rdma_handle(VSYNC_RDMA) == handle) &&
+		(cur_cpuid == 0) &&
 		(cur_cpuid != rdma_done_cpuid ||
 		(!is_in_vsync_isr(cur_cpuid) &&
 		!is_in_pre_vsync_isr(cur_cpuid) &&
@@ -1367,6 +1368,7 @@ int rdma_write_reg(int handle, u32 adr, u32 val)
 #else
 	if (!is_video_process_in_thread() &&
 		(get_rdma_handle(VSYNC_RDMA) == handle) &&
+		(cur_cpuid == 0) &&
 		(cur_cpuid != rdma_done_cpuid ||
 		(!is_in_vsync_isr(cur_cpuid) &&
 		!is_in_pre_vsync_isr(cur_cpuid) &&
