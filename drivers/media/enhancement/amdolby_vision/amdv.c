@@ -2562,6 +2562,7 @@ void force_unmap_all_inst(void)
 		dv_inst[i].video_height = 0;
 		dv_inst[i].video_width = 0;
 		dv_inst[i].src_format = FORMAT_INVALID;
+		dv_inst[i].amdv_src_format = 0;
 		dv_inst[i].valid = 0;
 		dv_inst[i].current_id = 0;
 		dv_inst[i].in_md = NULL;
@@ -4529,7 +4530,18 @@ static int amdv_policy_process_v2_stb(struct vframe_s *vf,
 		}
 	} else if (dolby_vision_policy == AMDV_FORCE_OUTPUT_MODE) {
 		if (force_mode == AMDV_OUTPUT_MODE_IPT || force_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL) {
-			if ((vinfo && sink_support_dv(vinfo) && is_match_amdv_attr()) ||
+			if (src_format == FORMAT_HDR10PLUS && vinfo && sink_support_hdr10_plus(vinfo))
+			{
+				force_mode = AMDV_OUTPUT_MODE_BYPASS;
+				*mode = force_mode;
+				if (dolby_vision_mode != *mode)
+					mode_change = 1;
+				else
+					mode_change = 0;
+				pr_dv_dbg("src=%d, force output mode %d -> %d, cap=%x\n",
+					src_format, dolby_vision_mode, *mode,
+					sink_hdr_support(vinfo));
+			} else if ((vinfo && sink_support_dv(vinfo) && is_match_amdv_attr()) ||
 				debug_force_mode) {
 				*mode = force_mode;
 				if (dolby_vision_mode != *mode)
@@ -11495,7 +11507,7 @@ void update_amdv_status(enum signal_format_enum src_format)
 			pr_dv_dbg("Dolby Vision mode changed to DV_PROCESS %d\n",
 			     src_format);
 		dolby_vision_status = DV_PROCESS;
-	} else if (src_format == FORMAT_HDR10 &&
+	} else if ((src_format == FORMAT_HDR10 || src_format == FORMAT_HDR10PLUS) &&
 		   dolby_vision_status != HDR_PROCESS) {
 		if ((debug_dolby & 1) || (debug_dolby & 0x100))
 			pr_dv_dbg("Dolby Vision mode changed to HDR_PROCESS %d\n",
