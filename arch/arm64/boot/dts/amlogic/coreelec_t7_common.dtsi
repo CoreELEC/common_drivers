@@ -355,6 +355,10 @@
 &sd_emmc_b {
 	cap-mmc-highspeed;
 	max-frequency = <50000000>;
+	/delete-property/ sd-uhs-sdr12;
+	/delete-property/ sd-uhs-sdr25;
+	/delete-property/ sd-uhs-sdr50;
+	/delete-property/ sd-uhs-sdr104;
 };
 
 &ethmac {
