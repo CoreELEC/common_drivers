@@ -609,10 +609,6 @@ static void hdmitx_set_i2s_mask(struct aud_para *tx_aud_param, char ch_num, char
 		tx_aud_param->aud_output_i2s_ch = 0;
 		return;
 	}
-	if (!ch_num || !(ch_num % 2 == 0)) {
-		ch_num = 2;
-		HDMITX_ERROR("audio: chn setting, must be 2, 4, 6 or 8, Rst as def 2\n");
-	}
 	if (ch_msk == 0) {
 		ch_msk = 1;
 		HDMITX_ERROR("audio: chn msk, must larger than 0, Rst as def 1\n");
@@ -679,6 +675,7 @@ static int hdmitx_audio_notify_callback(struct notifier_block *block,
 	tx_aud_param->size = n_size;
 	tx_aud_param->chs = aud_param->chs - 1;
 	tx_aud_param->aud_src_if = aud_param->aud_src_if;
+	tx_aud_param->chmap_layout = aud_param->chmap_layout;
 	hdmitx_set_i2s_mask(tx_aud_param, aud_param->chs, aud_param->i2s_ch_mask);
 	HDMITX_DEBUG_AUDIO("audio: aout notify format %s\n",
 		aud_type_string[cmd & 0xff]);
