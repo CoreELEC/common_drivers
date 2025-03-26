@@ -160,6 +160,7 @@ struct aud_para {
 	 * 0: default setting  1:ch0/1  2:ch2/3  3:ch4/5  4:ch6/7
 	 */
 	u8 aud_output_i2s_ch;
+	unsigned int chmap_layout;
 	bool fifo_rst;
 	bool aud_output_en; /* 0, off; 1, on */
 	bool aud_notify_update;

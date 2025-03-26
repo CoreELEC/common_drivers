@@ -89,14 +89,39 @@ struct channel_speaker_allocation {
 #define FCH	SNDRV_CHMAP_TFC
 
 static struct channel_speaker_allocation channel_allocations[] = {
-/*      	       channel:   7     6    5    4    3     2    1    0  */
-{ .channels = 2,  .speakers = {  NL,   NL,  NL,  NL,  NL,   NL,  FR,  FL } },
-                                 /* 3.1 CEA 0x03 */
-{ .channels = 4,  .speakers = {  NL,   NL,  NL,  NL,  FC,  LFE,  FR,  FL } },
-                                 /* surround51 CEA 0x0b */
-{ .channels = 6,  .speakers = {  NL,   NL,  RR,  RL,  FC,  LFE,  FR,  FL } },
-                                 /* surround71 CEA 0x13 */
-{ .channels = 8,  .speakers = { RRC,  RLC,  RR,  RL,  FC,  LFE,  FR,  FL } },
+//                     channel:   7,    6,   5,   4,   3,    2,   1,   0
+{ .channels = 2,  .speakers = {                                  FR,  FL } }, // AE_CH_LAYOUT_2_0        0x00
+{ .channels = 3,  .speakers = {                            LFE,  FR,  FL } }, // AE_CH_LAYOUT_2_1        0x01
+{ .channels = 3,  .speakers = {                       FC,        FR,  FL } }, // AE_CH_LAYOUT_3_0        0x02
+{ .channels = 4,  .speakers = {                       FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_3_1        0x03
+{ .channels = 3,  .speakers = {                  RC,             FR,  FL } }, // 3.0                     0x04
+{ .channels = 4,  .speakers = {                  RC,       LFE,  FR,  FL } }, // 3.1                     0x05
+{ .channels = 4,  .speakers = {                  RC,  FC,        FR,  FL } }, // 4.0                     0x06
+{ .channels = 5,  .speakers = {                  RC,  FC,  LFE,  FR,  FL } }, // 4.1                     0x07
+{ .channels = 4,  .speakers = {             RR,  RL,             FR,  FL } }, // AE_CH_LAYOUT_4_0        0x08
+{ .channels = 5,  .speakers = {             RR,  RL,       LFE,  FR,  FL } }, // AE_CH_LAYOUT_4_1        0x09
+{ .channels = 5,  .speakers = {             RR,  RL,  FC,        FR,  FL } }, // AE_CH_LAYOUT_5_0        0x0a
+{ .channels = 6,  .speakers = {             RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_5_1        0x0b
+{ .channels = 5,  .speakers = {        RC,  RR,  RL,             FR,  FL } }, // 5.0                     0x0c
+{ .channels = 6,  .speakers = {        RC,  RR,  RL,       LFE,  FR,  FL } }, // 5.1                     0x0d
+{ .channels = 6,  .speakers = {        RC,  RR,  RL,  FC,        FR,  FL } }, // 6.0                     0x0e
+{ .channels = 7,  .speakers = {        RC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // 6.1                     0x0f
+{ .channels = 6,  .speakers = { RRC,  RLC,  RR,  RL,             FR,  FL } }, // 6.0                     0x10
+{ .channels = 7,  .speakers = { RRC,  RLC,  RR,  RL,       LFE,  FR,  FL } }, // 6.1                     0x11
+{ .channels = 7,  .speakers = { RRC,  RLC,  RR,  RL,  FC,        FR,  FL } }, // AE_CH_LAYOUT_7_0        0x12
+{ .channels = 8,  .speakers = { RRC,  RLC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_7_1        0x13
+{ .channels = 4,  .speakers = { FRC,  FLC,                       FR,  FL } }, // 4.0                     0x14
+{ .channels = 5,  .speakers = { FRC,  FLC,                 LFE,  FR,  FL } }, // 4.1                     0x15
+{ .channels = 5,  .speakers = { FRC,  FLC,            FC,        FR,  FL } }, // 5.0                     0x16
+{ .channels = 6,  .speakers = { FRC,  FLC,            FC,  LFE,  FR,  FL } }, // 5.1                     0x17
+{ .channels = 5,  .speakers = { FRC,  FLC,       RC,             FR,  FL } }, // 5.0                     0x18
+{ .channels = 6,  .speakers = { FRC,  FLC,       RC,       LFE,  FR,  FL } }, // 5.1                     0x19
+{ .channels = 6,  .speakers = { FRC,  FLC,       RC,  FC,        FR,  FL } }, // 6.0                     0x1A
+{ .channels = 7,  .speakers = { FRC,  FLC,       RC,  FC,  LFE,  FR,  FL } }, // 6.1                     0x1B
+{ .channels = 6,  .speakers = { FRC,  FLC,  RR,  RL,             FR,  FL } }, // 6.0                     0x1C
+{ .channels = 7,  .speakers = { FRC,  FLC,  RR,  RL,       LFE,  FR,  FL } }, // 6.1                     0x1D
+{ .channels = 7,  .speakers = { FRC,  FLC,  RR,  RL,  FC,        FR,  FL } }, // 7.0                     0x1E
+{ .channels = 8,  .speakers = { FRC,  FLC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // 7.1                     0x1F
 };
 
 static void dump_pcm_setting(struct pcm_setting *setting)
@@ -1821,160 +1846,145 @@ static void set_aud_param_ch_status(struct iec958_chsts *chsts,
 static int aml_dai_tdm_chmap_ctl_tlv(struct snd_kcontrol *kcontrol, int op_flag,
                                      unsigned int size, unsigned int __user *tlv)
 {
-    unsigned int __user *dst;
-    int count = 0;
-    int i;
+	unsigned int __user *dst;
+	int count = 0;
+	int i;
 
-    if (size < 8)
-        return -ENOMEM;
+	if (size < 8)
+		return -ENOMEM;
 
-    if (put_user(SNDRV_CTL_TLVT_CONTAINER, tlv))
-        return -EFAULT;
+	if (put_user(SNDRV_CTL_TLVT_CONTAINER, tlv))
+		return -EFAULT;
 
-    size -= 8;
-    dst = tlv + 2;
+	size -= 8;
+	dst = tlv + 2;
 
-    for (i = 0; i < ARRAY_SIZE(channel_allocations); i++)
-    {
-        struct channel_speaker_allocation *ch = &channel_allocations[i];
-        int num_chs = 0;
-        int chs_bytes;
-        int c;
+	for (i = 0; i < ARRAY_SIZE(channel_allocations); i++)
+	{
+		struct channel_speaker_allocation *ch = &channel_allocations[i];
+		int chs_bytes;
+		int c;
 
-        for (c = 0; c < 8; c++)
-        {
-            if (ch->speakers[c])
-                num_chs++;
-        }
+		chs_bytes = ch->channels * 4;
 
-        chs_bytes = num_chs * 4;
-        if (size < 8)
-            return -ENOMEM;
+		if (size < 8)
+			return -ENOMEM;
 
-        if (put_user(SNDRV_CTL_TLVT_CHMAP_FIXED, dst) ||
-            put_user(chs_bytes, dst + 1))
-            return -EFAULT;
+		if (put_user(SNDRV_CTL_TLVT_CHMAP_FIXED, dst) ||
+		    put_user(chs_bytes, dst + 1))
+			return -EFAULT;
 
-        dst += 2;
-        size -= 8;
-        count += 8;
+		dst += 2;
+		size -= 8;
+		count += 8;
 
-        if (size < chs_bytes)
-            return -ENOMEM;
+		if (size < chs_bytes)
+			return -ENOMEM;
 
-        size -= chs_bytes;
-        count += chs_bytes;
+		size -= chs_bytes;
+		count += chs_bytes;
 
-        for (c = 0; c < 8; c++)
-        {
-            int sp = ch->speakers[7 - c];
-            if (sp)
-            {
-                if (put_user(sp, dst))
-                    return -EFAULT;
-                dst++;
-            }
-        }
-    }
+		for (c = ch->channels - 1; c >= 0; c--)
+		{
+			int sp = ch->speakers[c];
+			if (sp)
+			{
+				if (put_user(sp, dst))
+					return -EFAULT;
+				dst++;
+			}
+		}
+	}
 
-    if (put_user(count, tlv + 1))
-        return -EFAULT;
+	if (put_user(count, tlv + 1))
+		return -EFAULT;
 
-    return 0;
+	return 0;
 }
 
 static int aml_dai_tdm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
                                      struct snd_ctl_elem_value *ucontrol)
 {
 
-    struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
-//    unsigned int idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
-//    struct snd_pcm_substream *substream = snd_pcm_chmap_substream(info, idx);
+	struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
 	struct aml_chmap *prtd = info->private_data;
-//     struct snd_pcm_runtime *runtime = substream->runtime;
-//     struct aml_runtime_data *prtd = (struct aml_runtime_data *)runtime->private_data;
-    int res = 0, channel;
+	struct channel_speaker_allocation *ch = &channel_allocations[prtd->chmap_layout];
+	int res = 0, channel;
 
-    if (mutex_lock_interruptible(&prtd->chmap_lock))
-        return -EINTR;
+	if (mutex_lock_interruptible(&prtd->chmap_lock))
+		return -EINTR;
 
-    for (channel=0; channel<8; channel++)
-    {
-        ucontrol->value.integer.value[7 - channel] = channel_allocations[prtd->chmap_layout].speakers[channel];
-    }
+	for (channel = 0; channel < ch->channels; channel++)
+		ucontrol->value.integer.value[ch->channels - channel - 1] = ch->speakers[channel];
 
-    mutex_unlock(&prtd->chmap_lock);
-    return res;
+	mutex_unlock(&prtd->chmap_lock);
+	return res;
 }
 
 static int aml_dai_tdm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
                                      struct snd_ctl_elem_value *ucontrol)
 {
-
-    struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
-    unsigned int idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
-    struct snd_pcm_substream *substream = snd_pcm_chmap_substream(info, idx);
+	struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
+	unsigned int idx = snd_ctl_get_ioffidx(kcontrol, &ucontrol->id);
+	struct snd_pcm_substream *substream = snd_pcm_chmap_substream(info, idx);
 	struct aml_chmap *prtd = info->private_data;
-    struct snd_pcm_runtime *runtime = substream->runtime;
-//     struct aml_runtime_data *prtd = (struct aml_runtime_data *)runtime->private_data;
-    int res = 0, channel, layout, matches, matched_layout;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	int res = 0, channel, layout, matches, matched_layout;
 
-    if (mutex_lock_interruptible(&prtd->chmap_lock))
-        return -EINTR;
+	if (mutex_lock_interruptible(&prtd->chmap_lock))
+		return -EINTR;
 
-    // now check if the channel setup matches one of our layouts
-    for (layout = 0; layout < ARRAY_SIZE(channel_allocations); layout++)
-    {
-        matches = 1;
+	// now check if the channel setup matches one of our layouts
+	for (layout = 0; layout < ARRAY_SIZE(channel_allocations); layout++)
+	{
+		struct channel_speaker_allocation *ch = &channel_allocations[layout];
 
-        for (channel = 0; channel < substream->runtime->channels; channel++)
-        {
-            int sp = ucontrol->value.integer.value[channel];
-            int chan = channel_allocations[layout].speakers[7 - channel];
+		if (substream->runtime->channels != ch->channels)
+			continue;
 
-            if (sp != chan)
-            {
-                matches = 0;
-                break;
-            }
-        }
+		matches = 1;
+		for (channel = 0; channel < substream->runtime->channels; channel++)
+		{
+			if (ucontrol->value.integer.value[channel] != ch->speakers[substream->runtime->channels - channel - 1])
+			{
+				matches = 0;
+				break;
+			}
+		}
 
-        if (matches)
-        {
-            matched_layout = layout;
-            break;
-        }
-    }
+		if (matches)
+		{
+			matched_layout = layout;
+			break;
+		}
+	}
 
+	// default to first layout if we didnt find any
+	if (!matches)
+		matched_layout = 0;
 
-    // default to first layout if we didnt find any
-    if (!matches)
-        matched_layout = 0;
+	pr_info("Setting a %d channel layout matching layout #%d\n", runtime->channels, matched_layout);
 
-    pr_info("Setting a %d channel layout matching layout #%d\n", runtime->channels, matched_layout);
+	prtd->chmap_layout = matched_layout;
 
-    prtd->chmap_layout = matched_layout;
-
-    mutex_unlock(&prtd->chmap_lock);
-    return res;
+	mutex_unlock(&prtd->chmap_lock);
+	return res;
 }
 
 static struct snd_kcontrol *aml_dai_tdm_chmap_kctrl_get(struct snd_pcm_substream *substream)
 {
-    int str;
+	int str;
 
-    if ((substream) && (substream->pcm))
-    {
-        for (str=0; str<2; str++)
-        {
-            if (substream->pcm->streams[str].chmap_kctl)
-            {
-                return substream->pcm->streams[str].chmap_kctl;
-            }
-        }
-    }
+	if ((substream) && (substream->pcm))
+	{
+		for (str = 0; str < 2; str++)
+		{
+			if (substream->pcm->streams[str].chmap_kctl)
+				return substream->pcm->streams[str].chmap_kctl;
+		}
+	}
 
-    return 0;
+	return NULL;
 }
 
 static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
@@ -2032,6 +2042,15 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					aud_param.chs  = 2;
                                         aud_param.i2s_ch_mask = (u8)i2s_out_mask;
 					break;
+			}
+
+			if ((kctl = aml_dai_tdm_chmap_kctrl_get(substream)) != NULL)
+			{
+				if ((info = snd_kcontrol_chip(kctl)) != NULL)
+				{
+					prtd = info->private_data;
+					aud_param.chmap_layout = prtd->chmap_layout;
+				}
 			}
 
 			aud_param.aud_src_if = AUD_SRC_IF_I2S;
@@ -2093,13 +2112,13 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 
 			if (ret < 0)
 			{
-			pr_err("aml_dai_tdm_startup error %d\n", ret);
-			goto out;
+				pr_err("aml_dai_tdm_startup error %d\n", ret);
+				goto out;
 			}
 
 			kctl = chmap->kctl;
 			for (i = 0; i < kctl->count; i++)
-			kctl->vd[i].access |= SNDRV_CTL_ELEM_ACCESS_WRITE;
+				kctl->vd[i].access |= SNDRV_CTL_ELEM_ACCESS_WRITE;
 
 			kctl->get = aml_dai_tdm_chmap_ctl_get;
 			kctl->put = aml_dai_tdm_chmap_ctl_put;

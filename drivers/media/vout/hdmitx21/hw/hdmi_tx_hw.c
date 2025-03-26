@@ -1819,39 +1819,8 @@ static void set_aud_info_pkt(struct aud_para *audio_param)
 		info->channel_allocation = 0x13;
 		break;
 	case CT_PCM:
-		/* Refer to CEA861-D P90, only even channels */
-		switch (audio_param->chs + 1) {
-		case 2:
-			info->channel_allocation = 0;
-			break;
-		case 4:
-			info->channel_allocation = 0x3;
-			break;
-		case 6:
-			info->channel_allocation = 0xb;
-			break;
-		case 8:
-			info->channel_allocation = 0x13;
-			break;
-		default:
-			break;
-		}
-		switch (GET_OUTCHN_NO(aud_output_i2s_ch)) {
-		case 2:
-			info->channel_allocation = 0x00;
-			break;
-		case 4:
-			info->channel_allocation =  0x03;
-			break;
-		case 6:
-			info->channel_allocation = 0x0b;
-			break;
-		case 8:
-			info->channel_allocation = 0x13;
-			break;
-		default:
-			break;
-		}
+		/* Refer to CEA861-D P90 */
+		info->channel_allocation = audio_param->chmap_layout;
 		break;
 	case CT_DTS:
 	case CT_DTS_HD:

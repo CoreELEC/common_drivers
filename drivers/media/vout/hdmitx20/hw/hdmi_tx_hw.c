@@ -2696,27 +2696,8 @@ static void set_aud_info_pkt(struct aud_para *audio_param)
 	case CT_PCM:
 		if (!aud_output_i2s_ch)
 			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF0, audio_param->chs, 4, 3);
-		if (audio_param->chs == 0x7 && !aud_output_i2s_ch)
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x13);
-		else
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x00);
 		/* Refer to CEA861-D P90 */
-		switch (GET_OUTCHN_NO(aud_output_i2s_ch)) {
-		case 2:
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x00);
-			break;
-		case 4:
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x03);
-			break;
-		case 6:
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x0b);
-			break;
-		case 8:
-			hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, 0x13);
-			break;
-		default:
-			break;
-		}
+		hdmitx_wr_reg(HDMITX_DWC_FC_AUDICONF2, audio_param->chmap_layout);
 		break;
 	case CT_DTS:
 	case CT_DTS_HD:
