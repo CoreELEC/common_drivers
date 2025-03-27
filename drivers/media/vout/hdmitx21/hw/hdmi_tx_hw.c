@@ -2002,18 +2002,11 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 		/* hbr no layout, see hdmi1.4 spec table 5-28 */
 		data32 = (0 << 1);
 	} else if (audio_param->aud_src_if == 1) {
-		unsigned char mask = GET_OUTCHN_MSK(aud_output_i2s_ch);
 		/* multi-channel lpcm use layout 1 */
-		if (audio_param->type == CT_PCM && audio_param->chs >= 2)
-			data32 = (1 << 1);
-		else
+		if (GET_OUTCHN_NO(aud_output_i2s_ch) == 2)
 			data32 = (0 << 1);
-		if (mask) {
-			if (mask == 8 || mask == 4 || mask == 2 || mask == 1)
-				data32 = (0 << 1);
-			else
-				data32 = (1 << 1);
-		}
+		else
+			data32 = (1 << 1);
 	} else {
 		data32 = (0 << 1);
 	}
@@ -2056,7 +2049,7 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 			[8] = 3,
 		};
 
-		hdmitx21_wr_reg(I2S_IN_MAP_IVCTX, 0xE4);
+		hdmitx21_wr_reg(I2S_IN_MAP_IVCTX, 0);
 		if (mask) {
 			for (j = 0; j < 4; j++) {
 				if (mask & (1 << j)) {

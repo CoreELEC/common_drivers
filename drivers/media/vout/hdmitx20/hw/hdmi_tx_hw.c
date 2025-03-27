@@ -2802,22 +2802,10 @@ static void set_aud_samp_pkt(struct aud_para *audio_param)
 		hdmitx_set_reg_bits(HDMITX_DWC_AUD_SPDIF1, 0, 7, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_AUD_SPDIF1, 0, 6, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_AUD_SPDIF1, 24, 0, 5);
-		if (audio_param->chs == 0x7 && !aud_output_i2s_ch)
-			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDSCONF, 1, 0, 1);
+		if (GET_OUTCHN_NO(aud_output_i2s_ch) == 2)
+			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDSCONF, 0, 0, 1);
 		else
-			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDSCONF, 0, 0, 1);
-		switch (GET_OUTCHN_NO(aud_output_i2s_ch)) {
-		case 2:
-			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDSCONF, 0, 0, 1);
-			break;
-		case 4:
-		case 6:
-		case 8:
 			hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDSCONF, 1, 0, 1);
-			break;
-		default:
-			break;
-		}
 		break;
 	case CT_AC_3:
 	case CT_DD_P:
