@@ -9,8 +9,8 @@
 #include <dt-bindings/input/input.h>
 
 / {
-	amlogic-dt-id = "a5_a113x2_av400v2_1g";
-	compatible = "a5_a113x2_av400v2_1g";
+	amlogic-dt-id = "a5_a113x2_av401_1g";
+	compatible = "a5_a113x2_av401_1g";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
