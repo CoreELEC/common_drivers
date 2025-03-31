@@ -476,6 +476,23 @@ static int meson8b_init_prg_eth(struct meson8b_dwmac *dwmac)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE) && defined(CONFIG_PM_SLEEP)
+static struct aml_eth_priv *meson8b_wol_eth_priv;
+#endif
+
+/* WOL GPIO of the probed ethernet device for the bl30_manager */
+u32 meson8b_dwmac_get_gpio_wol(void)
+{
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE) && defined(CONFIG_PM_SLEEP)
+	struct aml_eth_priv *eth_priv = READ_ONCE(meson8b_wol_eth_priv);
+
+	if (eth_priv)
+		return eth_priv->support_gpio_wol;
+#endif
+	return 0;
+}
+EXPORT_SYMBOL(meson8b_dwmac_get_gpio_wol);
+
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 #ifdef CONFIG_PM_SLEEP
 static void set_wol_notify_bl31(struct meson8b_dwmac *dwmac, u32 enable_bl31)
@@ -556,6 +573,7 @@ static int aml_custom_setting(struct platform_device *pdev, struct meson8b_dwmac
 			pr_info("gpio %d\n", priv->eth_priv.support_gpio_wol);
 			ndev->ethtool->wol_enabled = false;
 		}
+		WRITE_ONCE(meson8b_wol_eth_priv, &priv->eth_priv);
 
 		if (of_property_read_u32(np, "mdns_wkup", &priv->eth_priv.exphy_mdns_wkup) == 0)
 			pr_debug("feature exphy_mdns_wkup\n");
@@ -1251,6 +1269,9 @@ static void meson8b_dwmac_remove(struct platform_device *pdev)
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
 	if (dwmac->wol_en)
 		amlogic_wol_remove(dwmac->dev);
+#endif
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE) && defined(CONFIG_PM_SLEEP)
+	WRITE_ONCE(meson8b_wol_eth_priv, NULL);
 #endif
 	input_unregister_device(dwmac->input_dev);
 
