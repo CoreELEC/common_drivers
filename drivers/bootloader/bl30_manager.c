@@ -15,6 +15,7 @@
  */
 
 #include "bl30_manager.h"
+#include <linux/amlogic/aml_phy_debug.h>
 #include <linux/amlogic/media/registers/cpu_version.h>
 #include "gpio_data.h"
 
@@ -122,7 +123,12 @@ static ssize_t setup_bl30_store(const struct class *cla,
 
 {
 	/* mbox request channel */
-	struct mbox_chan *bl30_mbox_chan = aml_mbox_request_channel_byname(&bl30_pdev->dev, "ree2aocpu");
+	static struct mbox_chan *bl30_mbox_chan = NULL;
+	u32 support_gpio_wol = meson8b_dwmac_get_gpio_wol();
+
+	if (IS_ERR_OR_NULL(bl30_mbox_chan))
+		bl30_mbox_chan = aml_mbox_request_channel_byname(&bl30_pdev->dev, "ree2aocpu");
+
 	pr_info("%s: Do setup BL30 blob\n", DRIVER_NAME);
 	pr_info("%s: IR remote wake-up code: 0x%x\n", DRIVER_NAME, remotewakeup);
 	pr_info("%s: IR remote wake-up code protocol: 0x%x\n", DRIVER_NAME, decode_type);
@@ -130,6 +136,7 @@ static ssize_t setup_bl30_store(const struct class *cla,
 	pr_info("%s: enable 5V system power on suspend/power off state: %d\n", DRIVER_NAME
 		, enable_system_power);
 	pr_info("%s: gpiopower: %d (%s)\n", DRIVER_NAME, gpiopower, gpio);
+	pr_info("%s: support WOL: %d\n", DRIVER_NAME, support_gpio_wol);
 
 	if (!IS_ERR_OR_NULL(bl30_mbox_chan)) {
 		// uboot 2015
@@ -144,6 +151,9 @@ static ssize_t setup_bl30_store(const struct class *cla,
 			NULL, 0, MBOX_SYNC);
 		aml_mbox_transfer_data_old(bl30_mbox_chan, MBOX_CMD_SET_USR_DATA, AML_MBOX_CL_5V_SYSTEM_POWER,
 			(void *)&enable_system_power, sizeof(enable_system_power),
+			NULL, 0, MBOX_SYNC);
+		aml_mbox_transfer_data_old(bl30_mbox_chan, MBOX_CMD_SET_USR_DATA, AML_MBOX_CL_WOL,
+			(void *)&support_gpio_wol, sizeof(support_gpio_wol),
 			NULL, 0, MBOX_SYNC);
 
 		// uboot 2019
@@ -162,8 +172,6 @@ static ssize_t setup_bl30_store(const struct class *cla,
 		aml_mbox_transfer_data(bl30_mbox_chan, MBOX_CMD_SET_GPIO_POWER,
 			(void *)&gpiopower, sizeof(gpiopower),
 			NULL, 0, MBOX_SYNC);
-
-		devm_kfree(&bl30_pdev->dev, bl30_mbox_chan->cl);
 	}
 
 	return count;
