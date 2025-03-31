@@ -113,4 +113,14 @@ struct aml_eth_priv *aml_get_eth_priv_by_ndev(struct device *dev);
 struct device *aml_get_ethmac_dev_by_priv(struct aml_eth_priv *eth_priv);
 int g12a_resume_enable_internal_mdio(struct device *mdio_dev);
 int gxl_resume_internal_registers(struct phy_device *phydev);
+
+#if IS_REACHABLE(CONFIG_AMLOGIC_DWMAC_MESON)
+u32 meson8b_dwmac_get_gpio_wol(void);
+#else
+static inline u32 meson8b_dwmac_get_gpio_wol(void)
+{
+	return 0;
+}
+#endif
+
 #endif
