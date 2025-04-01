@@ -66,6 +66,9 @@ static long meson_ir_ioctl(struct file *file, unsigned int cmd,
 
 	case IR_IOC_SET_KEY_MAPPING_TAB:
 		if (chip->key_num.update_flag) {
+			struct input_dev *input_device = NULL;
+			const char *name;
+			int current_index = 0;
 			ir_map = kzalloc(sizeof(*ir_map) + chip->key_num.value *
 					 sizeof(union _codemap),
 			    GFP_KERNEL);
@@ -90,67 +93,74 @@ static long meson_ir_ioctl(struct file *file, unsigned int cmd,
 				goto err;
 			}
 
-			/*
-			for (i = 0; i < chip->r_dev->input_dev_num; i++)
-				meson_ir_input_configure(chip->r_dev->input_devs[i],
-							 &ir_map->tab);
-			*/
-
-			// register new input device if not already done by driver probe
-			if (chip->r_dev->input_dev_num == 0)
-			{
-				struct input_dev *input_device;
-				const char *name;
-
+			if (chip->r_dev->input_devs == NULL)
 				chip->r_dev->input_devs = devm_kzalloc(chip->dev,
 								 sizeof(struct input_dev *),
 								 GFP_KERNEL);
-
-				input_device = devm_input_allocate_device(chip->dev);
-				if (!input_device)
-					return -ENOMEM;
-				name = devm_kasprintf(chip->dev, GFP_KERNEL, "ir_keypad%d_%d",
-						      chip->dev_no, chip->r_dev->input_dev_num);
-
-				input_device->name = name;
-				input_device->phys = "keypad/input0";
-				input_device->dev.parent = chip->dev;
-
-				if (!ir_map->tab.id.vendor)
-					ir_map->tab.id.vendor = 0x0001;
-				if (!ir_map->tab.id.product)
-					ir_map->tab.id.product = 0x0001;
-				if (!ir_map->tab.id.version)
-					ir_map->tab.id.version = 0x0100;
-				if (!ir_map->tab.id.bustype)
-					ir_map->tab.id.bustype = BUS_ISA;
-
-				memcpy(&input_device->id, &ir_map->tab.id,
-				       sizeof(struct input_id));
-				input_device->rep[REP_DELAY] = 0xffffffff;  /*close input repeat*/
-				input_device->rep[REP_PERIOD] = 0xffffffff; /*close input repeat*/
-
-				meson_ir_input_configure(input_device, NULL);
-				input_set_drvdata(input_device, chip->r_dev);
-				input_register_device(input_device);
-
-				chip->r_dev->input_devs[chip->r_dev->input_dev_num] = input_device;
-				chip->r_dev->input_dev_num++;
-			}
 
 			/*scancode sort*/
 			meson_ir_scancode_sort(&ir_map->tab);
 
 			/*overwrite the old map table or insert new map table*/
-			spin_lock_irqsave(&chip->slock, flags);
 			ptable = meson_ir_seek_map_tab(chip,
 						       ir_map->tab.custom_code);
 			if (ptable) {
+				dev_info(chip->dev, "remove custom_code 0x%08X from ir map table\n",
+					ir_map->tab.custom_code);
+
+				input_device = meson_ir_match_input_dev(chip->r_dev, ptable);
+				if (input_device)
+					current_index = input_device->id.product - 1;
+
 				if (ptable == chip->cur_tab)
 					chip->cur_tab = ir_map;
 				list_del(&ptable->list);
 				meson_ir_tab_free(ptable);
 			}
+			else
+				current_index = chip->r_dev->input_dev_num;
+
+			// register new input device
+			if (!input_device)
+			{
+				input_device = devm_input_allocate_device(chip->dev);
+				if (!input_device)
+					return -ENOMEM;
+
+				name = devm_kasprintf(chip->dev, GFP_KERNEL, "ir_keypad%d_%d",
+						      chip->dev_no, current_index);
+
+				input_device->name = name;
+				input_device->phys = "keypad/input0";
+				input_device->dev.parent = chip->dev;
+
+				input_device->rep[REP_DELAY] = 0xffffffff;
+				input_device->rep[REP_PERIOD] = 0xffffffff;
+
+				input_set_drvdata(input_device, chip->r_dev);
+				if (input_register_device(input_device))
+				{
+					input_free_device(input_device);
+					return -ENOMEM;
+				}
+			}
+
+			ir_map->tab.id.vendor = 0x0001;
+			ir_map->tab.id.product = current_index + 1;
+			ir_map->tab.id.version = 0x0100;
+			ir_map->tab.id.bustype = BUS_ISA;
+			memcpy(ir_map->tab.custom_name, input_device->name,
+			       CUSTOM_NAME_LEN);
+
+			memcpy(&input_device->id, &ir_map->tab.id,
+			       sizeof(struct input_id));
+
+			meson_ir_input_configure(input_device, NULL);
+			chip->r_dev->input_devs[current_index] = input_device;
+			chip->r_dev->input_dev_num++;
+			dev_info(chip->dev, "add custom_code 0x%08X to ir map table at index %d\n",
+				ir_map->tab.custom_code, current_index);
+			spin_lock_irqsave(&chip->slock, flags);
 			list_add_tail(&ir_map->list, &chip->map_tab_head);
 			spin_unlock_irqrestore(&chip->slock, flags);
 			chip->key_num.update_flag = false;

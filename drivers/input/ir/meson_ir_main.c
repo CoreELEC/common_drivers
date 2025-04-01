@@ -834,10 +834,17 @@ static int meson_ir_input_device_init(struct device *parent)
 
 	kfree(match_id);
 
-	r_dev->input_devs = devm_kzalloc(chip->dev,
-					 sizeof(struct input_dev *) * match_cnt,
-					 GFP_KERNEL);
+	if (match_cnt > 0)
+		r_dev->input_devs = devm_kzalloc(chip->dev,
+						 sizeof(struct input_dev *) * match_cnt,
+						 GFP_KERNEL);
+	else
+		r_dev->input_devs = NULL;
+
 	r_dev->input_dev_num = 0;
+
+	if (r_dev->input_devs == NULL)
+		return 0;
 
 	list_for_each_entry(ir_map, &chip->map_tab_head, list) {
 		input_device = meson_ir_match_input_dev(r_dev, ir_map);
