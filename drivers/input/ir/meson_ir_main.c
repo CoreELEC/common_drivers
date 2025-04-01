@@ -346,7 +346,10 @@ static bool meson_ir_is_valid_custom(struct meson_ir_dev *dev)
 	custom_code = chip->ir_contr[chip->ir_work].get_custom_code(chip);
 	chip->cur_tab = meson_ir_seek_map_tab(chip, custom_code);
 	if (chip->cur_tab) {
-		dev->keyup_delay = chip->cur_tab->tab.release_delay;
+		if (chip->cur_tab->tab.repeat_enable)
+			dev->keyup_delay = chip->cur_tab->tab.repeat_delay;
+		else
+			dev->keyup_delay = chip->cur_tab->tab.release_delay;
 		return true;
 	}
 	return false;
