@@ -310,7 +310,7 @@ static int meson_hdmitx_decide_color_attr
 	// set default
 	comm_state.state_sequence_id = sequence_id;
 	attr->colorformat = HDMI_COLORSPACE_YUV444;
-	attr->bitdepth = 10;
+	attr->bitdepth = 8;
 
 	// read override fmt_attr by boot param hdmitx=
 	hdmitx_parse_color_attr(common->fmt_attr, &fmt_attr.colorformat, &fmt_attr.bitdepth, &fmt_attr.colorrange);
@@ -1282,7 +1282,7 @@ void meson_hdmitx_reset(struct drm_connector *connector)
 
 	hdmitx_state->pref_hdr_policy = MESON_PREF_SDR;
 	hdmitx_state->color_attr_para.colorformat = HDMI_COLORSPACE_YUV444;
-	hdmitx_state->color_attr_para.bitdepth = 10;
+	hdmitx_state->color_attr_para.bitdepth = 8;
 	hdmitx_state->frac_rate_policy = tx_comm->frac_rate_policy;
 
 	/*drm api need update state, so need delay attach when create state.*/
