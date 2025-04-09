@@ -10786,7 +10786,7 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	u32 graphic_min = 50; /* 0.0001 */
 	int ret_flags = 0;
 	static int bypass_frame = -1;
-	static int last_current_format;
+	static int last_current_format = FORMAT_INVALID;
 	int ret = -1;
 	bool mel_flag = false;
 	u32 cur_md_id;
@@ -10949,7 +10949,7 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 					src_format = FORMAT_PRIMESL;
 				else if (load_fixed_setting)
 					src_format = FORMAT_SDR;
-				else
+				else {
 					meta_flag_bl =
 					parse_sei_and_meta
 						(vf, &req,
@@ -10958,6 +10958,10 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 						 &src_format,
 						 &ret_flags, drop_flag,
 						 dv_id);
+					// received not finished metadata from decoder, ignore source format change
+					if (last_current_format == FORMAT_DOVI && src_format != FORMAT_DOVI)
+						src_format = FORMAT_DOVI;
+				}
 			} else {/* parse failed*/
 				src_format = FORMAT_SDR;
 			}
