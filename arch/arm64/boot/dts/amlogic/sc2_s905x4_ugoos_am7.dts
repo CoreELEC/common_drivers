@@ -9,6 +9,8 @@
 	/delete-node/ vrtc;
 
 	gpioleds {
+		/delete-node/ sys_led;
+
 		/* red led */
 		net_red {
 			label = "net_red";
