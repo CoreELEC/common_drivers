@@ -1,0 +1,295 @@
+From b9d5bbd1662bce67e1f93b3a31e2ec47e23154b1 Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Wed, 16 Apr 2025 11:01:25 +0000
+Subject: [PATCH] debug: uart print before earlycon. [1/1]
+
+PD#SWPL-266040
+
+Problem:
+uart print before earlycon.
+
+Solution:
+uart print before earlycon.
+
+Verify:
+sc2
+
+Change-Id: I47095cf640728295d2c5a36548b7d0b5977c041a
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ arch/arm/Kconfig.debug                        |  2 +-
+ .../arm/boot/compressed/fdt_check_mem_start.c |  6 +++
+ arch/arm/boot/compressed/head.S               |  8 ++++
+ arch/arm/include/debug/uncompress_debug.h     | 17 ++++++++
+ arch/arm/kernel/aml_uart_puts.h               | 40 +++++++++++++++++++
+ arch/arm/kernel/head.S                        | 14 +++++++
+ arch/arm64/kernel/aml_uart_puts.h             | 40 +++++++++++++++++++
+ arch/arm64/kernel/head.S                      | 12 ++++++
+ 8 files changed, 138 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm/include/debug/uncompress_debug.h
+ create mode 100644 arch/arm/kernel/aml_uart_puts.h
+ create mode 100644 arch/arm64/kernel/aml_uart_puts.h
+
+diff --git a/arch/arm/Kconfig.debug b/arch/arm/Kconfig.debug
+index 7f47b4f335c3..c4202cff2521 100644
+--- a/arch/arm/Kconfig.debug
++++ b/arch/arm/Kconfig.debug
+@@ -547,7 +547,7 @@ choice
+ 
+ 	config DEBUG_MESON_UARTAO
+ 		bool "Kernel low-level debugging via Meson6 UARTAO"
+-		depends on ARCH_MESON
++		depends on ARCH_MESON || AMLOGIC_DEBUG_EARLY_UART
+ 		help
+ 		  Say Y here if you want kernel low-lever debugging support
+ 		  on Amlogic Meson6 based platforms on the UARTAO.
+diff --git a/arch/arm/boot/compressed/fdt_check_mem_start.c b/arch/arm/boot/compressed/fdt_check_mem_start.c
+index aa856567fd33..c09f0b205a8c 100644
+--- a/arch/arm/boot/compressed/fdt_check_mem_start.c
++++ b/arch/arm/boot/compressed/fdt_check_mem_start.c
+@@ -4,6 +4,9 @@
+ #include <linux/libfdt.h>
+ #include <linux/sizes.h>
+ #include "misc.h"
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++#include "debug/uncompress_debug.h"
++#endif
+ 
+ static const void *get_prop(const void *fdt, const char *node_path,
+ 			    const char *property, int minlen)
+@@ -158,6 +161,9 @@ uint32_t fdt_check_mem_start(uint32_t mem_start, const void *fdt)
+ 		return mem_start;
+ 	}
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	putstr_debug("fdt_check_mem_start end\n");
++#endif
+ 	/*
+ 	 * The calculated address is not usable, or was overridden by the
+ 	 * "linux,usable-memory-range" property.
+diff --git a/arch/arm/boot/compressed/head.S b/arch/arm/boot/compressed/head.S
+index cc2ef4c29e1d..786f727a1f6b 100644
+--- a/arch/arm/boot/compressed/head.S
++++ b/arch/arm/boot/compressed/head.S
+@@ -229,6 +229,10 @@ start:
+ 		mov	r7, r1			@ save architecture ID
+ 		mov	r8, r2			@ save atags pointer
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++		kputc	#'A'
++		kputc	#'\n'
++#endif
+ #ifndef CONFIG_CPU_V7M
+ 		/*
+ 		 * Booting from Angel - need to enter SVC mode and disable
+@@ -258,6 +262,10 @@ not_angel:
+ 
+ 		.text
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++		kputc	#'Z'
++		kputc	#'\n'
++#endif
+ #ifdef CONFIG_AUTO_ZRELADDR
+ 		/*
+ 		 * Find the start of physical memory.  As we are executing
+diff --git a/arch/arm/include/debug/uncompress_debug.h b/arch/arm/include/debug/uncompress_debug.h
+new file mode 100644
+index 000000000000..3351d71cd930
+--- /dev/null
++++ b/arch/arm/include/debug/uncompress_debug.h
+@@ -0,0 +1,17 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++extern void putc(int c);
++static inline void flush(void) {}
++static void putstr_debug(const char *ptr)
++{
++       char c;
++
++       while ((c = *ptr++) != '\0') {
++               if (c == '\n')
++                       putc('\r');
++               putc(c);
++       }
++
++       flush();
++}
++#endif
+diff --git a/arch/arm/kernel/aml_uart_puts.h b/arch/arm/kernel/aml_uart_puts.h
+new file mode 100644
+index 000000000000..c93ac6572c8f
+--- /dev/null
++++ b/arch/arm/kernel/aml_uart_puts.h
+@@ -0,0 +1,40 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __AML_UART_PUTS_H
++#define __AML_UART_PUTS_H
++.macro puts_uart_m base, tmp1, tmp2, str
++    adr     \base, 3f
++    ldr     \base, [\base]
++
++    adr     \tmp1, 2f
++
++    ldr     \tmp2, [\base, #8]
++    orr     \tmp2, \tmp2, #(1 << 12)
++    bic     \tmp2, \tmp2, #(3 << 27)
++    dmb     sy
++    str     \tmp2, [\base, #8]
++    dmb     sy
++
++1:
++    ldr     \tmp2, [\base, #0xc]
++    tst     \tmp2, #(1 << 21)
++    bne     1b
++
++    ldrb    \tmp2, [\tmp1], #1
++    cmp     \tmp2, #0
++    beq     4f
++
++    strb    \tmp2, [\base]
++    b       1b
++
++2:
++    .ascii  "\str"
++    .byte   0
++    .align  4
++
++3:
++    .word   CONFIG_DEBUG_UART_PHYS
++
++4:
++    nop
++.endm
++#endif /* __AML_UART_PUTS_H */
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index 4b3dab0968b4..d113fa0874ba 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -20,6 +20,10 @@
+ #include <asm/page.h>
+ #include <asm/thread_info.h>
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++#include "aml_uart_puts.h"
++#endif
++
+ #if defined(CONFIG_DEBUG_LL) && !defined(CONFIG_DEBUG_SEMIHOSTING)
+ #include CONFIG_DEBUG_LL_INCLUDE
+ #endif
+@@ -143,11 +147,18 @@ ENTRY(stext)
+ #ifdef CONFIG_SMP_ON_UP
+ 	bl	__fixup_smp
+ #endif
++
+ #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
+ 	bl	__fixup_pv_table
++#endif
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m r3 r7 r12 "----------primary_entry aarch 1----------\r\n"
+ #endif
+ 	bl	__create_page_tables
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m r3 r7 r12 "----------primary_entry aarch 2----------\r\n"
++#endif
+ 	/*
+ 	 * The following calls CPU specific code in a position independent
+ 	 * manner.  See arch/arm/mm/proc-*.S for details.  r10 = base of
+@@ -195,6 +206,9 @@ ENDPROC(stext)
+  *  r4 = physical page table address
+  */
+ __create_page_tables:
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m r3 r7 r12 "----------__create_page_tables aarch 1----------\r\n"
++#endif
+ 	pgtbl	r4, r8				@ page table address
+ 
+ 	/*
+diff --git a/arch/arm64/kernel/aml_uart_puts.h b/arch/arm64/kernel/aml_uart_puts.h
+new file mode 100644
+index 000000000000..3f13aa0c16d6
+--- /dev/null
++++ b/arch/arm64/kernel/aml_uart_puts.h
+@@ -0,0 +1,40 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __AML_UART_PUTS_H
++#define __AML_UART_PUTS_H
++
++//puts_uart_m - print string to uart
++//@base: save uart register base address
++//@tmp1 @tmp2: temp register
++//@str: string to print
++.macro puts_uart_m base tmp1 tmp2 str
++	adr \base, 3f
++	ldr \base, [\base]
++        adr \tmp1, 2f
++
++        ldr \tmp2, [\base,#8]
++        orr \tmp2, \tmp2, #(1 << 12)      //set tx_en
++        bic \tmp2, \tmp2, #(3 << 27)      //clear rx_int_en/tx_int_en
++        dmb sy
++        str \tmp2, [\base, #8]
++        dmb sy
++1:
++        ldr \tmp2, [\base, #0xc]    //get status
++        tbnz \tmp2, #21, 1b         //test tx full
++        dmb sy
++        ldrb \tmp2, [\tmp1], #1
++        cmp \tmp2, #0x0             //is string end?
++        b.eq 4f
++        str \tmp2, [\base]          //put char
++        b 1b
++2:
++	.ascii "\str"
++	.long 0			    //str doesn't contain '\0'
++	.align 8                    //@base must 8 bytes aligned
++3:
++	.long CONFIG_AMLOGIC_DEBUG_UART_PHYS	    //low  4 bytes of @base
++	.long 0                     //high 4 bytes of @base
++4:
++	nop
++.endm
++
++#endif /* __AML_UART_PUTS_H */
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index bbb1860d0364..eda5c0cc4384 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -35,6 +35,9 @@
+ #include <asm/thread_info.h>
+ #include <asm/virt.h>
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++#include "aml_uart_puts.h"
++#endif
+ #include "efi-header.S"
+ 
+ #if (PAGE_OFFSET & 0x1fffff) != 0
+@@ -119,6 +122,9 @@ SYM_CODE_START(primary_entry)
+ 	bl	init_kernel_el			// w0=cpu_boot_mode
+ 	mov	x20, x0
+ 
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m x15 x16 w3 "----------primary_entry 1----------\r\n"
++#endif
+ 	/*
+ 	 * The following calls CPU setup code, see arch/arm64/mm/proc.S for
+ 	 * details.
+@@ -504,7 +510,13 @@ SYM_FUNC_END(__no_granule_support)
+ 
+ SYM_FUNC_START_LOCAL(__primary_switch)
+ 	adrp	x1, reserved_pg_dir
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m x15 x16 w3 "----------__primary_switch 1----------\r\n"
++#endif
+ 	adrp	x2, init_idmap_pg_dir
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m x15 x16 w3 "----------__primary_switch 2----------\r\n"
++#endif
+ 	bl	__enable_mmu
+ 
+ 	adrp	x1, early_init_stack
+-- 
+2.46.0
+

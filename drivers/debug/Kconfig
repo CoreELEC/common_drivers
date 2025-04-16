@@ -225,3 +225,16 @@ config AMLOGIC_UBOOT_LOG
 	help
 	  Amlogic uboot log driver
 
+config AMLOGIC_DEBUG_EARLY_UART
+	bool "Amlogic debug early uart"
+	default n
+	select DEBUG_UNCOMPRESS if ARM
+	select DEBUG_LL if ARM
+	select DEBUG_MESON_UARTAO if ARM
+	help
+	  Amlogic uart print before earlycon
+
+config AMLOGIC_DEBUG_UART_PHYS
+	hex "Amlogic physical base address of debug UART"
+	default 0xff803000
+	depends on AMLOGIC_DEBUG_EARLY_UART && ARM64
