@@ -620,7 +620,7 @@ static void gx_pm_syscore_shutdown(void)
 	}
 }
 
-void gx_pm_syscore_resume(void)
+static void gx_pm_syscore_resume(void)
 {
 	sys_time_out = 0;
 	set_resume_method(get_resume_reason());
