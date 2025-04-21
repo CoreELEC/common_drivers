@@ -503,10 +503,12 @@ static int g12a_enable_internal_mdio(struct g12a_mdio_mux *priv)
 		value &= ~PHY_CNTL1_MII_MODE; // cover for mii
 	}
 	value |= PHY_CNTL1_PHY_ENB;
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 	value |= led_setting;
 	if (eth_priv->phy_mode == 5)
 		value |= 0x200000;
 	writel(value, priv->regs + ETH_PHY_CNTL1);
+#endif
 	/* The phy needs a bit of time to power up */
 	mdelay(10);
 	return 0;

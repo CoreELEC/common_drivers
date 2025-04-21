@@ -143,7 +143,7 @@
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
 		gpio = <&gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>; // default old: gpio d 3
-		startup-delay-us = <70000>;
+		startup-delay-us = <7000>;
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
@@ -158,7 +158,7 @@
 		pinctrl-names = "default";
 		//NC or 10K , dts crg_phy_20 have use GPIOA_2
 		//gpio = <&gpio GPIOA_2 GPIO_ACTIVE_HIGH>;
-		startup-delay-us = <70000>;
+		startup-delay-us = <7000>;
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;

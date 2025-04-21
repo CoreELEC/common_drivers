@@ -6,7 +6,7 @@
 
 ROOT_DIR=`pwd`
 ARCH=arm
-CROSS_COMPILE_TOOL=${ROOT_DIR}/prebuilts/gcc/linux-x86/host/x86_64-arm-10.3-2021.07/bin/arm-none-linux-gnueabihf-
+#CROSS_COMPILE_TOOL=${ROOT_DIR}/prebuilts/gcc/linux-x86/host/x86_64-arm-10.3-2021.07/bin/arm-none-linux-gnueabihf-
 
 OPTION_PARAM="$*"
 if [[ "${OPTION_PARAM}" =~ "--c3_debug" ]]; then

@@ -1859,9 +1859,9 @@ int dmabuf_manage_secure_pool_create(u32 id_high, u32 id_low, u32 block_size,
 	u32 version)
 {
 	int res = 0;
+#if IS_ENABLED(CONFIG_AMLOGIC_OPTEE)
 	struct secure_pool_info *pool = NULL;
 
-#if IS_ENABLED(CONFIG_AMLOGIC_OPTEE)
 	mutex_lock(&g_secure_pool_mutex);
 	pool = dmabuf_manage_get_secure_vdec_pool(id_high, id_low);
 	if (!pool)

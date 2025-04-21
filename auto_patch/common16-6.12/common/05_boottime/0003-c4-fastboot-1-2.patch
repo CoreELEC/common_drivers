@@ -1,0 +1,160 @@
+From 8e41553c4eac48dd1f49b2442aeb04ae34b53582 Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Thu, 24 Apr 2025 11:08:43 +0000
+Subject: [PATCH] c4 fastboot [1/2]
+
+Change-Id: I0a675fa20d9a8bcd7d82f256bd16237835af0ec4
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ arch/arm/kernel/entry-armv.S          | 6 ++++++
+ drivers/cpuidle/cpuidle-psci-domain.c | 4 ++++
+ drivers/of/platform.c                 | 5 ++++-
+ fs/inode.c                            | 4 ++++
+ fs/locks.c                            | 4 ++++
+ fs/sysctls.c                          | 5 ++++-
+ init/Kconfig.gki                      | 4 ++--
+ kernel/signal.c                       | 4 ++++
+ kernel/umh.c                          | 4 ++++
+ security/keys/sysctl.c                | 4 ++++
+ 10 files changed, 40 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/cpuidle/cpuidle-psci-domain.c b/drivers/cpuidle/cpuidle-psci-domain.c
+index 146f97068022..4128f2370c95 100644
+--- a/drivers/cpuidle/cpuidle-psci-domain.c
++++ b/drivers/cpuidle/cpuidle-psci-domain.c
+@@ -202,4 +202,8 @@ static int __init psci_idle_init_domains(void)
+ {
+ 	return platform_driver_register(&psci_cpuidle_domain_driver);
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++subsys_initcall(psci_idle_init_domains);
++#else
+ core_initcall(psci_idle_init_domains);
++#endif
+diff --git a/drivers/of/platform.c b/drivers/of/platform.c
+index 9bafcff3e628..83dff7de6ce8 100644
+--- a/drivers/of/platform.c
++++ b/drivers/of/platform.c
+@@ -594,10 +594,13 @@ static int __init of_platform_default_populate_init(void)
+ 		/* Populate everything else. */
+ 		of_platform_default_populate(NULL, NULL, NULL);
+ 	}
+-
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++pure_initcall(of_platform_default_populate_init);
++#else
+ arch_initcall_sync(of_platform_default_populate_init);
++#endif
+ 
+ static int __init of_platform_sync_state_init(void)
+ {
+diff --git a/fs/inode.c b/fs/inode.c
+index a14667461d9b..66c0edcb0afb 100644
+--- a/fs/inode.c
++++ b/fs/inode.c
+@@ -140,8 +140,12 @@ static int __init init_fs_inode_sysctls(void)
+ 	register_sysctl_init("fs", inodes_sysctls);
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_fs_inode_sysctls);
++#else
+ early_initcall(init_fs_inode_sysctls);
+ #endif
++#endif
+ 
+ static int no_open(struct inode *inode, struct file *file)
+ {
+diff --git a/fs/locks.c b/fs/locks.c
+index 204847628f3e..5ed1f1d6a735 100644
+--- a/fs/locks.c
++++ b/fs/locks.c
+@@ -121,7 +121,11 @@ static int __init init_fs_locks_sysctls(void)
+ 	register_sysctl_init("fs", locks_sysctls);
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_fs_locks_sysctls);
++#else
+ early_initcall(init_fs_locks_sysctls);
++#endif
+ #endif /* CONFIG_SYSCTL */
+ 
+ /*
+diff --git a/fs/sysctls.c b/fs/sysctls.c
+index 8dbde9a802fa..86e5945c9e89 100644
+--- a/fs/sysctls.c
++++ b/fs/sysctls.c
+@@ -33,5 +33,8 @@ static int __init init_fs_sysctls(void)
+ 	register_sysctl_init("fs", fs_shared_sysctls);
+ 	return 0;
+ }
+-
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_fs_sysctls);
++#else
+ early_initcall(init_fs_sysctls);
++#endif
+diff --git a/init/Kconfig.gki b/init/Kconfig.gki
+index 88f4946d963a..35e290e8ae53 100644
+--- a/init/Kconfig.gki
++++ b/init/Kconfig.gki
+@@ -24,8 +24,8 @@ config GKI_HIDDEN_REGMAP_CONFIGS
+ 	bool "Hidden Regmap configs needed for GKI"
+ 	select REGMAP_IRQ
+ 	select REGMAP_MMIO
+-	select REGMAP_SPMI
+-	select SPMI
++	select REGMAP_SPMI if !AMLOGIC_LINUX_S_OPTIMIZE
++	select SPMI if !AMLOGIC_LINUX_S_OPTIMIZE
+ 	help
+ 	  Dummy config option used to enable hidden regmap configs.
+ 	  These are normally selected implicitly when a module
+diff --git a/kernel/signal.c b/kernel/signal.c
+index 9209fa9c47ee..38daf79bd160 100644
+--- a/kernel/signal.c
++++ b/kernel/signal.c
+@@ -4870,7 +4870,11 @@ static int __init init_signal_sysctls(void)
+ 	register_sysctl_init("debug", signal_debug_table);
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_signal_sysctls);
++#else
+ early_initcall(init_signal_sysctls);
++#endif
+ #endif /* CONFIG_SYSCTL */
+ 
+ void __init signals_init(void)
+diff --git a/kernel/umh.c b/kernel/umh.c
+index ff1f13a27d29..2d10db8ae0cc 100644
+--- a/kernel/umh.c
++++ b/kernel/umh.c
+@@ -567,5 +567,9 @@ static int __init init_umh_sysctls(void)
+ 	register_sysctl_init("kernel/usermodehelper", usermodehelper_table);
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_umh_sysctls);
++#else
+ early_initcall(init_umh_sysctls);
++#endif
+ #endif /* CONFIG_SYSCTL */
+diff --git a/security/keys/sysctl.c b/security/keys/sysctl.c
+index 91f000eef3ad..8ff2d61abcc4 100644
+--- a/security/keys/sysctl.c
++++ b/security/keys/sysctl.c
+@@ -73,4 +73,8 @@ static int __init init_security_keys_sysctls(void)
+ 	register_sysctl_init("kernel/keys", key_sysctls);
+ 	return 0;
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++arch_initcall(init_security_keys_sysctls);
++#else
+ early_initcall(init_security_keys_sysctls);
++#endif
+-- 
+2.46.0
+

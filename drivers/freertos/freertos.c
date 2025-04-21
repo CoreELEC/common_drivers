@@ -297,8 +297,10 @@ static int freertos_coreup_prepare(int cpu, int bootup)
 #ifndef CONFIG_AMLOGIC_FREERTOS_T7
 	freertos_allow_coreup();
 #endif
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
 	if (bootup)
 		usleep_range(10000, 15000);
+#endif
 	return 0;
 }
 
@@ -869,7 +871,12 @@ static int __init aml_freertos_init(void)
 
 	return platform_driver_register(&aml_rtos_driver);
 }
+
+#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+postcore_initcall(aml_freertos_init);
+#else
 subsys_initcall_sync(aml_freertos_init);
+#endif
 
 static void __exit aml_freertos_exit(void)
 {

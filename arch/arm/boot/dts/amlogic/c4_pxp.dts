@@ -31,7 +31,7 @@
 		stdout-path = "serial0:115200n8";
 		linux,initrd-start = <0x0 0x8000000>;
 		linux,initrd-end = <0x0   0x9000000>;
-		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000  nosmp debug initcall_debug=1 initcall_blacklist=secmon_main_init,debug_main_init";
+		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000  nosmp debug initcall_debug=0 loglevel=7 initcall_blacklist=secmon_main_init,debug_main_init module_blacklist=amlogic_wireless";
 	};
 
 	memory@0 {

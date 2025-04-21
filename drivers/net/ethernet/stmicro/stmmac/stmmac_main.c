@@ -7986,7 +7986,7 @@ void stmmac_dvr_remove(struct device *dev)
 	pm_runtime_put_noidle(dev);
 }
 EXPORT_SYMBOL_GPL(stmmac_dvr_remove);
-
+#ifdef CONFIG_PM_SLEEP
 static int phy_poll_aneg_done(struct phy_device *phydev)
 {
 	unsigned int retries = 100;
@@ -8002,7 +8002,7 @@ static int phy_poll_aneg_done(struct phy_device *phydev)
 	msleep(100);
 	return ret < 0 ? ret : 0;
 }
-
+#endif
 /**
  * stmmac_suspend - suspend callback
  * @dev: device pointer

@@ -16,9 +16,9 @@ config AMLOGIC_MEDIA_MODULE
 
 config AMLOGIC_MEDIA_ENABLE
 	bool "Amlogic Multimedia Support"
-	select VIDEOBUF2_DMA_CONTIG if ARM
-	select V4L2_MEM2MEM_DEV if ARM
-	select VIDEOBUF2_DMA_SG if ARM
+	select VIDEOBUF2_DMA_CONTIG if ARM && !AMLOGIC_LINUX_S_OPTIMIZE
+	select V4L2_MEM2MEM_DEV if ARM && !AMLOGIC_LINUX_S_OPTIMIZE
+	select VIDEOBUF2_DMA_SG if ARM && !AMLOGIC_LINUX_S_OPTIMIZE
 	default n
 	help
 		Amlogic multimedia framework composed of two parts,
