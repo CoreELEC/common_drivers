@@ -34,7 +34,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a35";
 			reg = <0x0>;
-			//enable-method = "psci";
+			enable-method = "psci";
 			//cpu-idle-states = <&CPU_SLEEP_0>;
 			next-level-cache = <&l2>;
 //			clocks = <&clkc CLKID_CPU_CLK>,
@@ -57,7 +57,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a35";
 			reg = <0x1>;
-			//enable-method = "psci";
+			enable-method = "psci";
 			next-level-cache = <&l2>;
 //			cpu-idle-states = <&CPU_SLEEP_0>;
 //			clocks = <&clkc CLKID_CPU_CLK>,
@@ -99,10 +99,10 @@
 		};
 	};
 
-//	psci {
-//		compatible = "arm,psci-0.2";
-//		method = "smc";
-//	};
+	psci {
+		compatible = "arm,psci-0.2";
+		method = "smc";
+	};
 
 	dolby_fw: dolby_fw {
 		compatible = "amlogic, dolby_fw";

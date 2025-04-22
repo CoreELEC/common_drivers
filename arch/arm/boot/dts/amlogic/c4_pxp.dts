@@ -29,8 +29,8 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
-		linux,initrd-start = <0x0 0x8000000>;
-		linux,initrd-end = <0x0   0x9000000>;
+		linux,initrd-start = <0x0 0xc000000>;
+		linux,initrd-end = <0x0   0xd000000>;
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000  nosmp debug initcall_debug=0 loglevel=7 initcall_blacklist=secmon_main_init,debug_main_init module_blacklist=amlogic_wireless";
 	};
 
@@ -57,8 +57,7 @@
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			no-map;
-			alignment = <0x400000>;
-			reg = <0x05000000 0x400000>;
+			reg = <0x07f50000 0x110000>;
 		};
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
