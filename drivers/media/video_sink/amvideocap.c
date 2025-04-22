@@ -235,6 +235,11 @@ static int amvideocap_get_input_format(struct vframe_s *vf)
 		pr_debug
 		("*****************Into VIDTYPE_VIU_444******************\n");
 		format = GE2D_FORMAT_S24_YUV444;
+	} else if ((vf->type & VIDTYPE_VIU_NV12) == VIDTYPE_VIU_NV12 &&
+	           (vf->flag & VFRAME_FLAG_VIDEO_LINEAR)) {
+		pr_debug
+		("**************Into VIDTYPE_VIU_NV12_LINEAR****************\n");
+		format = GE2D_FORMAT_M24_NV21;
 	} else if ((vf->type & VIDTYPE_VIU_NV21) == VIDTYPE_VIU_NV21) {
 		pr_debug
 		("****************Into VIDTYPE_VIU_NV21******************\n");
