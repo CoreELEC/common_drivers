@@ -650,7 +650,7 @@ static struct platform_driver aml_jtag_driver = {
 #endif
 	},
 	.probe = aml_jtag_probe,
-	.remove = __exit_p(aml_jtag_remove),
+	.remove = aml_jtag_remove,
 };
 
 static int __init aml_jtag_init(void)
