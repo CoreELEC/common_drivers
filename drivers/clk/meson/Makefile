@@ -62,6 +62,13 @@ PR_FMT_C3 = $(subst amlogic-,,$(C3_MODULE_NAME))
 PR_FMT_DEFINE_C3="-Dpr_fmt(fmt)= \"[$(PR_FMT_C3)]: \" fmt"
 CFLAGS_c3.o += $(PR_FMT_DEFINE_C3)
 
+C4_MODULE_NAME = amlogic-clk-soc-c4
+obj-$(CONFIG_AMLOGIC_COMMON_CLK_C4) += $(C4_MODULE_NAME).o
+$(C4_MODULE_NAME)-y += c4.o
+PR_FMT_C4 = $(subst amlogic-,,$(C4_MODULE_NAME))
+PR_FMT_DEFINE_C4="-Dpr_fmt(fmt)= \"[$(PR_FMT_C4)]: \" fmt"
+CFLAGS_c4.o += $(PR_FMT_DEFINE_C4)
+
 A1_MODULE_NAME = amlogic-clk-soc-a1
 obj-$(CONFIG_AMLOGIC_COMMON_CLK_A1) += $(A1_MODULE_NAME).o
 $(A1_MODULE_NAME)-y += a1.o

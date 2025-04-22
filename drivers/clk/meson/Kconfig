@@ -127,6 +127,19 @@ config AMLOGIC_COMMON_CLK_C3
 	 Support for the clock controller on Amlogic C3
 	 chipset. Say Y if you want peripherals to work.
 
+config AMLOGIC_COMMON_CLK_C4
+	tristate "Meson C4 clock controller"
+	depends on AMLOGIC_COMMON_CLK_MESON_REGMAP
+	depends on AMLOGIC_COMMON_CLK_MESON_DUALDIV
+	depends on AMLOGIC_COMMON_CLK_MESON_PLL
+	depends on AMLOGIC_COMMON_CLK_MESON_CPU_DYNDIV
+	depends on AMLOGIC_COMMON_CLK_MESON_CLKC_UTILS
+	depends on MFD_SYSCON
+	default n
+	help
+	 Support for the clock controller on Amlogic C4
+	 chipset. Say Y if you want peripherals to work.
+
 config AMLOGIC_COMMON_CLK_A1
 	tristate "Meson A1 clock controller"
 	depends on AMLOGIC_COMMON_CLK_MESON_REGMAP
