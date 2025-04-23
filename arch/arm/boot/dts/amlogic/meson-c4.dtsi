@@ -8,7 +8,7 @@
 #include <dt-bindings/clock/amlogic,c4-clkc.h>
 #include <dt-bindings/clock/amlogic,c4-scmi-clks.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/gpio/meson-c3-gpio.h>
+#include <dt-bindings/gpio/meson-c4-gpio.h>
 #include <dt-bindings/clock/amlogic,c3-audio-clk.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
@@ -256,19 +256,29 @@
 			};
 
 			periphs_pinctrl: pinctrl@4000 {
-				compatible = "amlogic,meson-c3-periphs-pinctrl";
+				compatible = "amlogic,meson-c4-periphs-pinctrl";
 				#address-cells = <1>;
 				#size-cells = <1>;
 				ranges;
 
 				gpio: bank@4000 {
 					reg = <0x4000 0x004c>,
-					      <0x4100 0x01de>;
+					      <0x40c0 0x0240>;
 					reg-names = "mux", "gpio";
 					gpio-controller;
 					#gpio-cells = <2>;
 					gpio-ranges = <&periphs_pinctrl 0 0 55>;
 				};
+			};
+
+			gpio_intc: interrupt-controller@4080 {
+				compatible = "amlogic,meson-gpio-intc",
+					      "amlogic,meson-c4-gpio-intc";
+				reg = <0x4080 0x20>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				amlogic,channel-interrupts =
+							<10 11 12 13 14 15 16 17 18 19 20 21>;
 			};
 
 			analog_pinctrl: pinctrl@43a0 {
@@ -339,16 +349,6 @@
 				support-sysrq = <1>;
 			};
 
-			gpio_intc: interrupt-controller@440 {
-				compatible = "amlogic,meson-gpio-intc",
-					      "amlogic,meson-c3-gpio-intc";
-				reg = <0x4080 0x20>;
-				interrupt-controller;
-				#interrupt-cells = <2>;
-				amlogic,channel-interrupts =
-							<10 11 12 13 14 15 16 17 18 19 20 21>;
-			};
-
 			watchdog {
 				compatible = "arm,smc-wdt";
 				arm,smc-id = <0x8200004f>;
@@ -374,6 +374,52 @@
 				status = "disabled";
 				//amlogic,enable-continuous-sampling;
 			};
+		};
+
+		aobus_pinctrl: pinctrl@fe430400 {
+			compatible = "amlogic,meson-c4-aobus-pinctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+			amlogic,ao-interrupt-controller;
+			status = "disabled";
+
+			ao_gpio: bank@fe430400 {
+				reg = <0xfe430400 0x08>,
+				      <0xfe430408 0x20>;
+				reg-names = "mux", "gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				gpio-ranges = <&aobus_pinctrl 0 0 14>;
+			};
+		};
+
+		testn_pinctrl: pinctrl@fe430464 {
+			compatible = "amlogic,meson-c4-testn-pinctrl";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+			amlogic,ao-interrupt-controller;
+			status = "disabled";
+
+			testn_gpio: bank@fe430464 {
+				reg = <0xfe430484 0x04>,
+				      <0xfe430464 0x20>;
+				reg-names = "mux", "gpio";
+				gpio-controller;
+				#gpio-cells = <2>;
+				gpio-ranges = <&testn_pinctrl 0 0 1>;
+			};
+		};
+
+		gpio_ao_intc: interrupt-controller@fe430440 {
+			compatible = "amlogic,meson-gpio-ao-intc",
+					"amlogic,meson-c4-gpio-ao-intc";
+			reg = <0xfe430440 0x18>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			amlogic,channel-interrupts = <196 197 198 199 200 201 202>;
+			status = "disabled";
 		};
 
 		gic: interrupt-controller@fff01000 {
