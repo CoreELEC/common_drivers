@@ -67,6 +67,10 @@
 	status = "disabled";
 };
 
+&i2c3 {
+	status = "disabled";
+};
+
 &i2c4 {
 	status = "disabled";
 };
