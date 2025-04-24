@@ -563,6 +563,21 @@ static inline u32 get_table_max(struct cpufreq_frequency_table *table)
 	return max_freq;
 }
 
+/* get the frequency one below in the cpufreq_frequency_table */
+static inline u32 get_table_one_below(struct cpufreq_frequency_table *table, u32 freq)
+{
+	struct cpufreq_frequency_table *pos;
+	u32 below_freq = freq;
+
+	cpufreq_for_each_entry(pos, table) {
+		if (pos->frequency != freq)
+			below_freq = pos->frequency;
+		else if (pos->frequency == freq)
+			break;
+	}
+	return below_freq;
+}
+
 int choose_cpufreq_tables_index(const struct device_node *np, u32 cur_cluster)
 {
 	int ret = 0;
@@ -1218,11 +1233,17 @@ static int meson_cpufreq_suspend(struct cpufreq_policy *policy)
 
 static int meson_cpufreq_resume(struct cpufreq_policy *policy)
 {
+	unsigned int original_freq;
+
 	if (!policy)
 		return 0;
 	if (policy->cdev)
 		dev_set_uevent_suppress(&policy->cdev->device, false);
 
+	original_freq = policy->suspend_freq;
+	policy->suspend_freq = get_table_one_below(policy->freq_table, policy->suspend_freq);
+	cpufreq_generic_suspend(policy);
+	policy->suspend_freq = original_freq;
 	return cpufreq_generic_suspend(policy);
 }
 
@@ -1273,7 +1294,8 @@ static struct cpufreq_driver meson_cpufreq_driver = {
 	.name			= "arm-big-little",
 	.flags			= CPUFREQ_IS_COOLING_DEV |
 					CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
-					CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+					CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+					CPUFREQ_NEED_UPDATE_LIMITS,
 	.verify			= meson_cpufreq_verify,
 	.target_index	= meson_cpufreq_set_target,
 	.get			= meson_cpufreq_get_rate,
