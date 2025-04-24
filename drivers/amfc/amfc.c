@@ -160,10 +160,6 @@ static int amfc_hw_init(void)
 	if (init_clk)
 		amfc->rate = init_clk;
 	/* fix 500mhz for s7d reva */
-	if (is_meson_s7d_cpu() && is_meson_rev_a()) {
-		pr_info("reva of s7d\n");
-		amfc->rate = 500000000;
-	}
 
 	amfc->hw_version = amfc_hw_read(AMFC_GL_VERSION);
 	pr_info("AMFC VLSI version:%x, feature:%x, clk:%ld\n",
@@ -898,6 +894,7 @@ error_handled:
 }
 EXPORT_SYMBOL(amfc_decompress);
 
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE // for C4
 /*
  * src: source buffer that need compress
  * dst: destination buffer that need store
@@ -1249,6 +1246,7 @@ static struct crypto_alg eamfc2_alg = {
 		}
 	}
 };
+#endif
 
 /*----------- debug fs layer --------------*/
 static ssize_t log_store(const struct class *cla,
@@ -1399,8 +1397,6 @@ static ssize_t clk_store(const struct class *cla,
 		pr_emerg("unsupported clk:%ld\n", value);
 		return -1;
 	}
-	if (is_meson_s7d_cpu() && is_meson_rev_a())
-		value = 500000000;
 	clk_set_rate(amfc->clk, value);
 	amfc->rate = value;
 	return count;
@@ -1867,6 +1863,31 @@ const struct file_operations amfc_fops = {
 	.compat_ioctl   = amfc_compat_ioctl,
 #endif
 };
+
+int amfc_supported(void)
+{
+	int cpu;
+
+
+	if (!amfc)
+		return 0;
+
+	cpu = amfc->chip;
+	switch (cpu) {
+	case AMFC_S7D:
+	case AMFC_S6:
+	case AMFC_T6W:
+	case AMFC_T6D:
+	case AMFC_T6X:
+	case AMFC_C4:
+		return 1;
+	default:
+		return 0;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(amfc_supported);
+
 /*------------ driver layer ---------------*/
 static void amfc_remove(struct platform_device *pdev)
 {
@@ -1911,9 +1932,12 @@ static struct syscore_ops amfc_syscore_ops = {
 /* vendor hook to probe compression of f2fs */
 static int amfc_probe(struct platform_device *pdev)
 {
-	int r = 0, irq, num;
+	int r = 0, num;
 	unsigned int tmp;
 	struct resource *res;
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
+	int irq;
+#endif
 	struct device_node *node;
 	struct device *dev;
 
@@ -1959,6 +1983,9 @@ static int amfc_probe(struct platform_device *pdev)
 		page_to_pfn(garbage_page), amfc->bounce_buffer, amfc->compress, amfc->decompress);
 	amfc->chip = tmp;
 
+	if (!amfc_supported())
+		return -ENODEV;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res)
 		amfc->io_base = ioremap(res->start, resource_size(res));
@@ -1987,6 +2014,7 @@ static int amfc_probe(struct platform_device *pdev)
 	 * with IRQ disabled. So finally chose spinlock with IRQ off.
 	 */
 	amfc->work_mode = AMFC_POLL_IRQ_OFF;
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
 	if (!amfc->work_mode) {
 		irq = platform_get_irq_byname(pdev, "amfc0");
 		r = request_irq(irq, amfc0_irq_handler,
@@ -2000,10 +2028,11 @@ static int amfc_probe(struct platform_device *pdev)
 		if (r < 0)
 			pr_err("request irq failed:%d, r:%d\n", irq, r);
 	}
-
+#endif
 	amfc->clk = devm_clk_get(&pdev->dev, NULL);
 	if (!amfc->clk) {
 		pr_err("%s, can't get clk\n", __func__);
+		r = -EPROBE_DEFER;
 		goto err;
 	}
 	clk_prepare_enable(amfc->clk);
@@ -2012,6 +2041,7 @@ static int amfc_probe(struct platform_device *pdev)
 	r = pm_runtime_get(amfc->dev);
 	if (r) {
 		pr_err("get runtime pm failed:%d\n", r);
+		r = -EPROBE_DEFER;
 		goto err;
 	}
 
@@ -2031,6 +2061,7 @@ static int amfc_probe(struct platform_device *pdev)
 			goto err;
 	}
 
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
 	r = crypto_register_alg(&amfc_alg);
 	if (r) {
 		pr_err("register amfc crypto failed:%d\n", r);
@@ -2045,6 +2076,7 @@ static int amfc_probe(struct platform_device *pdev)
 		pr_err("register eamfc crypto failed:%d\n", r);
 		goto err;
 	}
+#endif
 
 	r = class_register(&amfc_class);
 	if (r)
@@ -2095,14 +2127,14 @@ err:
 	return r;
 }
 
-static int amfc_suspend(struct device *dev)
+static int __maybe_unused amfc_suspend(struct device *dev)
 {
 	atomic_inc(&amfc->in_suspend);
 	clk_disable_unprepare(amfc->clk);
 	return 0;
 }
 
-static int amfc_resume(struct device *dev)
+static int __maybe_unused amfc_resume(struct device *dev)
 {
 	clk_prepare_enable(amfc->clk);
 	amfc_hw_init();
@@ -2126,11 +2158,16 @@ static const struct of_device_id amfc_match[] = {
 		.compatible = "amlogic,amfc-t6x",
 		.data = (void *)AMFC_T6X,
 	},
+	{
+		.compatible = "amlogic,amfc-c4",
+		.data = (void *)AMFC_C4,
+	},
 	{}
 };
 #endif
 
 static struct platform_driver amfc_driver = {
+	.probe = amfc_probe,
 	.driver = {
 		.name  = "amfc",
 		.owner = THIS_MODULE,

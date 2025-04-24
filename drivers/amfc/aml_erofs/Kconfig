@@ -3,6 +3,7 @@
 config AMLOGIC_EROFS
 	tristate "EROFS filesystem support"
 	depends on BLOCK
+	depends on AMLOGIC_AMFC
 	select AMLOGIC_SYM_HELPER
 	help
 	  EROFS (Enhanced Read-Only File System) is a lightweight read-only

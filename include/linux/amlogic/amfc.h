@@ -7,8 +7,11 @@
 
 #include <linux/amlogic/cpu_version.h>
 #define AMFC_S7D				0x37
+#define AMFC_T6W                                0x43
+#define AMFC_S6					0x48
 #define AMFC_T6D				0x49
 #define AMFC_T6X				0x4B
+#define AMFC_C4					0x4c
 
 #define ALGORITHM_ZSTD				1
 #define ALGORITHM_LZ4				2
@@ -214,19 +217,6 @@ void cache_clean_flush(unsigned long start, unsigned long end);
 int hook_f2fs(void);
 #endif
 
-static inline int amfc_supported(void)
-{
-	int cpu = get_cpu_type();
-
-	switch (cpu) {
-	case MESON_CPU_MAJOR_ID_T6W:
-	case MESON_CPU_MAJOR_ID_S7D:
-	case MESON_CPU_MAJOR_ID_S6:
-	case MESON_CPU_MAJOR_ID_T6D:
-	case MESON_CPU_MAJOR_ID_T6X:
-		return 1;
-	}
-	return 0;
-}
+int amfc_supported(void);
 
 #endif
