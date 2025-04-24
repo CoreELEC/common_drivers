@@ -38,6 +38,12 @@
 	};
 
 	cpu_opp_table1: cpu_opp_table1 {
+		opp02 {
+			opp-microvolt = <820000>;
+		};
+		opp03 {
+			opp-microvolt = <820000>;
+		};
 		opp08 {
 			opp-hz = /bits/ 64 <1800000000>;
 			opp-microvolt = <830000>;
