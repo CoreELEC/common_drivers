@@ -680,7 +680,7 @@ static void am_meson_drm_fb_suspend(struct drm_device *drm)
 	for (i = 0; i < MESON_MAX_OSD; i++) {
 		fbdev = priv->osd_fbdevs[i];
 		if (fbdev)
-			drm_fb_helper_set_suspend(&fbdev->base, 1);
+			drm_fb_helper_set_suspend_unlocked(&fbdev->base, 1);
 	}
 #endif
 }
@@ -695,7 +695,7 @@ static void am_meson_drm_fb_resume(struct drm_device *drm)
 	for (i = 0; i < MESON_MAX_OSD; i++) {
 		fbdev = priv->osd_fbdevs[i];
 		if (fbdev)
-			drm_fb_helper_set_suspend(&fbdev->base, 0);
+			drm_fb_helper_set_suspend_unlocked(&fbdev->base, 0);
 	}
 #endif
 }

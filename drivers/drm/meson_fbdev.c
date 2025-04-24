@@ -488,6 +488,11 @@ static int am_meson_drm_fb_pan_display(struct fb_var_screeninfo *var,
 		return 0;
 	}
 
+	if (info->state == FBINFO_STATE_SUSPENDED) {
+		MESON_DRM_FBDEV("%s skip because of suspended.\n", __func__);
+		return 0;
+	}
+
 	if (fbdev->vscreen_info_changed) {
 		fbdev->vscreen_info_changed = false;
 		DRM_INFO("%s, skip set_par's pan display\n", __func__);
@@ -1241,6 +1246,7 @@ int am_meson_drm_fbdev_init(struct drm_device *dev)
 	if (drmdev->primary_plane) {
 		drmdev->ui_config.overlay_flag = 0;
 		fbdev = am_meson_create_drm_fbdev(dev, drmdev->primary_plane);
+		drmdev->osd_fbdevs[0] = fbdev;
 		fbdev->zorder = OSD_PLANE_BEGIN_ZORDER + drmdev->fbdev_zorder[0];
 		DRM_INFO("create fbdev for primary plane [%p]\n", fbdev);
 	}
@@ -1258,6 +1264,7 @@ int am_meson_drm_fbdev_init(struct drm_device *dev)
 		fbdev = am_meson_create_drm_fbdev(dev, &osd_plane->base);
 		if (fbdev) {
 			fbdev->zorder = OSD_PLANE_BEGIN_ZORDER + drmdev->fbdev_zorder[i];
+			drmdev->osd_fbdevs[i] = fbdev;
 			fbdev_cnt++;
 			DRM_INFO("create fbdev for plane (%d %d) zorder=%d\n",
 				i, osd_plane->plane_index, drmdev->fbdev_zorder[i]);
