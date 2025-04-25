@@ -673,7 +673,7 @@
 
 				clocks = <&clkc CLKID_SYS_ETH_PHY>,
 					 <&xtal>,
-					 <&clkc CLKID_FCLK50M>;
+					 <&clkc CLKID_FCLK_50M>;
 				clock-names = "pclk", "clkin0", "clkin1";
 				mdio-parent-bus = <&mdio0>;
 				#address-cells = <1>;
@@ -924,7 +924,7 @@
 			//power-domains = <&pwrdm PDID_C3_ETH>;
 			clocks = <&clkc CLKID_SYS_ETH_MAC>,
 				 <&clkc CLKID_FCLK_DIV2>,
-				 <&clkc CLKID_FCLK50M>;
+				 <&clkc CLKID_FCLK_50M>;
 			clock-names = "stmmaceth", "clkin0", "clkin1";
 			rx-fifo-depth = <4096>;
 			tx-fifo-depth = <2048>;
