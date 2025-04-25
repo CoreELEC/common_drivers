@@ -15,7 +15,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_ir.h>
 #include "meson-ir-map.dtsi"
-#include <dt-bindings/power/c3-pd.h>
+#include <dt-bindings/power/c4-pd.h>
 #include <dt-bindings/mailbox/amlogic,mbox.h>
 #include <dt-bindings/thermal/thermal.h>
 
@@ -367,7 +367,7 @@
 					 <&clkc CLKID_FCLK_DIV2>;
 			clock-names = "gate", "fdiv2pll";
 			nand_clk_ctrl = <0xfe08c000>;
-			power-domains = <&pwrdm PDID_C3_EMMC>;
+			//power-domains = <&pwrdm PDID_C3_EMMC>;
 		};
 
 		spifc: spi@fe056000 {
@@ -906,7 +906,7 @@
 			      <0xfe024000 0x8>;
 			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "macirq";
-			power-domains = <&pwrdm PDID_C3_ETH>;
+			//power-domains = <&pwrdm PDID_C3_ETH>;
 			clocks = <&clkc CLKID_SYS_ETH_MAC>,
 				 <&clkc CLKID_FCLK_DIV2>,
 				 <&clkc CLKID_FCLK50M>;
@@ -1422,7 +1422,7 @@
 	csiphy0: csiphy0@ff019000 {
 		compatible = "amlogic, csiphy0";
 		reg = <0xff019000 0x700>;
-		power-domains = <&pwrdm PDID_C3_ISP_TOP>;
+		//power-domains = <&pwrdm PDID_C3_ISP_TOP>;
 		clocks = <&clkc CLKID_CSI_PHY>;
 		clock-names = "mipi_phy_clk";
 		reg-names = "csi_phy0";
@@ -1460,7 +1460,7 @@
 	isp0: isp0@ff000000 {
 		compatible = "amlogic, isp";
 		reg = <0xff000000 0x10100>;
-		power-domains = <&pwrdm PDID_C3_MIPI_ISP_WRAP>;
+		//power-domains = <&pwrdm PDID_C3_MIPI_ISP_WRAP>;
 		//clocks = <&clkc CLKID_ISP>,
 		//		<&clkc CLKID_VAPB_CLK>;
 		clock-names = "mipi_isp_clk", "vapb_clk";
@@ -1636,13 +1636,13 @@
 		interrupts = <0 128 4>;
 		clocks = <&clkc CLKID_NNA>;
 		clock-names = "adla_core_clk";
-		power-domains=<&pwrdm PDID_C3_NNA>;
+		//power-domains=<&pwrdm PDID_C3_NNA>;
 		//memory-region = <&nna_cma_reserved>;
 	};
 	pwrdm: power-domains {
-		compatible = "amlogic,c3-power-domain";
+		compatible = "amlogic,c4-power-domain";
 		#power-domain-cells = <1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	crg_phy_20: crgphy20@fe03c000 {
@@ -1847,7 +1847,7 @@
 		reg-names = "cve";
 		interrupts = <GIC_SPI 133 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "cve";
-		power-domains = <&pwrdm PDID_C3_CVE>;
+		//power-domains = <&pwrdm PDID_C3_CVE>;
 		status = "disabled";
 	};
 
@@ -1868,7 +1868,7 @@
 		clocks = <&clkc CLKID_GE2D>;
 		clock-names = "clk_ge2d_gate";
 		reg = <0xfe04c000 0x2000>;
-		power-domains = <&pwrdm PDID_C3_GE2D>;
+		//power-domains = <&pwrdm PDID_C3_GE2D>;
 	};
 
 	mbd_audio: mbd_audio {
@@ -1979,7 +1979,7 @@
 		clocks = <&clkc CLKID_DEWARP>;
 		clock-names = "clk_gate";
 		clk-rate = <800000000>;
-		power-domains = <&pwrdm PDID_C3_GDC_WRAP>;
+		//power-domains = <&pwrdm PDID_C3_GDC_WRAP>;
 	};
 
 	freertos: freertos {

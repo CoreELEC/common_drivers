@@ -34,6 +34,7 @@
 #include <dt-bindings/power/t6d-pd.h>
 #include <dt-bindings/power/t6w-pd.h>
 #include <dt-bindings/power/t6x-pd.h>
+#include <dt-bindings/power/c4-pd.h>
 #include <linux/kallsyms.h>
 
 struct sec_pm_private_domain {
@@ -64,18 +65,18 @@ to_sec_pm_domain(struct generic_pm_domain *genpd)
 
 static int sec_pm_domain_power_off(struct generic_pm_domain *genpd)
 {
-	struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
+	//struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
 
-	pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_OFF);
+	//pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_OFF);
 
 	return 0;
 }
 
 static int sec_pm_domain_power_on(struct generic_pm_domain *genpd)
 {
-	struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
+	//struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
 
-	pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_ON);
+	//pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_ON);
 
 	return 0;
 }
@@ -969,6 +970,40 @@ static struct sec_pm_domain_data t6x_pm_domain_data __initdata = {
 	.domains_count = ARRAY_SIZE(t6x_pm_domains),
 };
 
+static struct sec_pm_private_domain c4_pm_domains[] __initdata = {
+	[PDID_C4_NNA] = POWER_DOMAIN(nna, PDID_C4_NNA,
+					   DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_U2DRD] = POWER_DOMAIN(u2drd, PDID_C4_U2DRD,
+					DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_AMFC] = POWER_DOMAIN(amfc, PDID_C4_AMFC,
+					DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_EMMC_A] = POWER_DOMAIN(emmc_a, PDID_C4_EMMC_A,
+					DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_EMMC_B] = POWER_DOMAIN(emmc_b, PDID_C4_EMMC_B,
+					  DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_EMMC_C] = POWER_DOMAIN(emmc_c, PDID_C4_EMMC_C,
+						DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_ETH] = POWER_DOMAIN(eth, PDID_C4_ETH,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_AUDIO_TOP] = POWER_DOMAIN(audio, PDID_C4_AUDIO_TOP,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_ISP] = POWER_DOMAIN(isp, PDID_C4_ISP,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_GE2D] = POWER_DOMAIN(ge2d, PDID_C4_GE2D,
+					   DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_CVE] = POWER_DOMAIN(cve, PDID_C4_CVE,
+						DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_TAHOE] = POWER_DOMAIN(tahoe, PDID_C4_TAHOE,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_HCODEC] = POWER_DOMAIN(hecodec, PDID_C4_HCODEC,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+};
+
+static struct sec_pm_domain_data c4_pm_domain_data __initdata = {
+	.domains = c4_pm_domains,
+	.domains_count = ARRAY_SIZE(c4_pm_domains),
+};
+
 static int hib_enable;
 static struct genpd_onecell_data *sec_pd_onecell_data;
 
@@ -1282,6 +1317,10 @@ static const struct of_device_id pd_match_table[] = {
 	{
 		.compatible = "amlogic,a5-power-domain",
 		.data = &a5_pm_domain_data,
+	},
+	{
+		.compatible = "amlogic,c4-power-domain",
+		.data = &c4_pm_domain_data,
 	},
 	{}
 };
