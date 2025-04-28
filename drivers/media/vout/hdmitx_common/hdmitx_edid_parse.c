@@ -518,6 +518,8 @@ static void edid_established_timings(struct rx_cap *prxcap, u8 *data)
 	if (!prxcap || !data)
 		return;
 
+	if (data[0] & (1 << 5))
+		store_vesa_idx(prxcap, HDMIV_640x480p60hz);
 	if (data[0] & (1 << 0))
 		store_vesa_idx(prxcap, HDMIV_800x600p60hz);
 	if (data[1] & (1 << 3))
@@ -1862,9 +1864,7 @@ static void _store_vics(struct rx_cap *prxcap, u8 vic_dat)
 	if (vic_bit6_0 >= 1 && vic_bit6_0 <= 64) {
 		prxcap->SVD_VIC[prxcap->SVD_VIC_count] = vic_bit6_0;
 		prxcap->SVD_VIC_count++;
-		/* don't support 640x480p60 */
-		if (vic_bit6_0 > 1)
-			store_cea_idx(prxcap, vic_bit6_0);
+		store_cea_idx(prxcap, vic_bit6_0);
 		if (vic_bit7) {
 			if (prxcap->native_vic && !prxcap->native_vic2)
 				prxcap->native_vic2 = vic_bit6_0;

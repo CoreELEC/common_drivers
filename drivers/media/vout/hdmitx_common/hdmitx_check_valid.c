@@ -307,9 +307,6 @@ static int hdmitx_edid_validate_format_para(struct tx_cap *hdmi_tx_cap,
 		if (para->cs == HDMI_COLORSPACE_YUV422)
 			return -EPERM;
 		break;
-	/* don't support 640x480p60 */
-	case HDMI_1_640x480p60_4x3:
-		return -EPERM;
 	default:
 		break;
 	}
