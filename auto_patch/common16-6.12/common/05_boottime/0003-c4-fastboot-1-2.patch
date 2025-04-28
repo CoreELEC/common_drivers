@@ -1,7 +1,19 @@
 From 8e41553c4eac48dd1f49b2442aeb04ae34b53582 Mon Sep 17 00:00:00 2001
 From: yao zhang1 <yao.zhang1@amlogic.com>
 Date: Thu, 24 Apr 2025 11:08:43 +0000
-Subject: [PATCH] c4 fastboot [1/2]
+Subject: [PATCH] c4 fastboot [1/1]
+
+PD#SWPL-209894
+
+Problem:
+c4 fastboot
+
+Solution:
+1,kernel configs trim
+2,optimization modules
+
+Verify:
+c4 pxp
 
 Change-Id: I0a675fa20d9a8bcd7d82f256bd16237835af0ec4
 Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
@@ -155,6 +167,74 @@ index 91f000eef3ad..8ff2d61abcc4 100644
 +#else
  early_initcall(init_security_keys_sysctls);
 +#endif
+-- 
+2.46.0
+
+From 318422cc6eb90983b4c08fd77d9e3842a02738e9 Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Mon, 28 Apr 2025 02:59:38 +0000
+Subject: [PATCH] c4 kernel trim [1/1]
+
+PD#SWPL-209894
+
+Problem:
+c4 kernel trim
+
+Solution:
+kernel configs trim
+
+Verify:
+c4 pxp
+
+Change-Id: I5e4a074db6c284ab104d0927d2c7a0c6fb0c35e5
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ arch/arm/Kconfig     | 4 ++--
+ drivers/ptp/Kconfig  | 2 +-
+ drivers/scsi/Kconfig | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 981736bbe641..4f6bc184342c 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -57,8 +57,8 @@ config ARM
+ 	select DMA_DECLARE_COHERENT
+ 	select DMA_GLOBAL_POOL if !MMU
+ 	select DMA_NONCOHERENT_MMAP if MMU
+-	select EDAC_SUPPORT
+-	select EDAC_ATOMIC_SCRUB
++	select EDAC_SUPPORT if !AMLOGIC_LINUX_S_OPTIMIZE
++	select EDAC_ATOMIC_SCRUB if !AMLOGIC_LINUX_S_OPTIMIZE
+ 	select GENERIC_ALLOCATOR
+ 	select GENERIC_ARCH_TOPOLOGY if ARM_CPU_TOPOLOGY
+ 	select GENERIC_ATOMIC64 if CPU_V7M || CPU_V6 || !CPU_32v6K || !AEABI
+diff --git a/drivers/ptp/Kconfig b/drivers/ptp/Kconfig
+index 604541dcb320..b993bc0d766e 100644
+--- a/drivers/ptp/Kconfig
++++ b/drivers/ptp/Kconfig
+@@ -29,7 +29,7 @@ config PTP_1588_CLOCK
+ 
+ config PTP_1588_CLOCK_OPTIONAL
+ 	tristate
+-	default y if PTP_1588_CLOCK=n
++	default y if PTP_1588_CLOCK=n && !AMLOGIC_LINUX_S_OPTIMIZE
+ 	default PTP_1588_CLOCK
+ 	help
+ 	  Drivers that can optionally use the PTP_1588_CLOCK framework
+diff --git a/drivers/scsi/Kconfig b/drivers/scsi/Kconfig
+index 37c24ffea65c..8a6fb5a34395 100644
+--- a/drivers/scsi/Kconfig
++++ b/drivers/scsi/Kconfig
+@@ -3,7 +3,7 @@ menu "SCSI device support"
+ 
+ config SCSI_MOD
+ 	tristate
+-	default y if SCSI=n || SCSI=y
++	default y if (SCSI=n || SCSI=y) && !AMLOGIC_LINUX_S_OPTIMIZE
+ 	default m if SCSI=m
+ 	depends on BLOCK
+ 
 -- 
 2.46.0
 
