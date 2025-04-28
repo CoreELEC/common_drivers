@@ -1,0 +1,38 @@
+From 2a329327edf6d6028af7facc26dd24e85a68c93b Mon Sep 17 00:00:00 2001
+From: "biao.sun" <biao.sun@amlogic.com>
+Date: Mon, 28 Apr 2025 02:49:13 +0000
+Subject: [PATCH] module: cmdline size change [1/1]
+
+PD#SWPL-77317
+
+Problem:
+cmdline size is not enough
+
+Solution:
+increase the cmdline size
+
+Verify:
+compile pass
+
+Change-Id: Ib7fca90f6a1b5760218b309f8c586d4e29a1cab5
+Signed-off-by: biao.sun <biao.sun@amlogic.com>
+---
+ arch/arm/include/uapi/asm/setup.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm/include/uapi/asm/setup.h b/arch/arm/include/uapi/asm/setup.h
+index 25ceda63b284..345bf0a9a0ab 100644
+--- a/arch/arm/include/uapi/asm/setup.h
++++ b/arch/arm/include/uapi/asm/setup.h
+@@ -17,7 +17,7 @@
+
+ #include <linux/types.h>
+
+-#define COMMAND_LINE_SIZE 1024
++#define COMMAND_LINE_SIZE 2048
+
+ /* The list ends with an ATAG_NONE node. */
+ #define ATAG_NONE	0x00000000
+--
+2.46.0
+
