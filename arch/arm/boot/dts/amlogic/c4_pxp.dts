@@ -354,6 +354,26 @@
 	 *	regulator-always-on;
 	 *};
 	 */
+
+	unifykey{
+		compatible = "amlogic,unifykey";
+		status = "okay";
+		unifykey-num = <2>;
+		unifykey-index-0 = <&keysn_0>;
+		unifykey-index-1 = <&keysn_1>;
+
+		keysn_0: key_0{
+			key-name = "usid";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_1:key_1{
+			key-name = "hdcp";
+			key-device = "secure";
+			key-type = "sha1";
+			key-permit = "read","write","del";
+		};
+	};//End unifykey
 };
 
 /* Audio Related start */
