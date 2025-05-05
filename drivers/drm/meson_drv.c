@@ -77,23 +77,7 @@ static int check_reboot_mode(char *str)
 
 __setup("reboot_mode=", check_reboot_mode);
 
-static void am_meson_fb_output_poll_changed(struct drm_device *dev)
-{
-#ifdef CONFIG_AMLOGIC_DRM_EMULATE_FBDEV
-	int i;
-	struct meson_drm_fbdev *fbdev;
-	struct meson_drm *priv = dev->dev_private;
-
-	for (i = 0; i < MESON_MAX_OSD; i++) {
-		fbdev = priv->osd_fbdevs[i];
-		if (fbdev)
-			drm_fb_helper_hotplug_event(&fbdev->base);
-	}
-#endif
-}
-
 static const struct drm_mode_config_funcs meson_mode_config_funcs = {
-	.output_poll_changed = am_meson_fb_output_poll_changed,
 	.atomic_check        = drm_atomic_helper_check,
 	.atomic_commit       = meson_atomic_commit,
 #ifdef CONFIG_AMLOGIC_DRM_USE_ION
