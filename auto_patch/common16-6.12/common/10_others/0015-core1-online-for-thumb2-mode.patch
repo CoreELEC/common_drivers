@@ -1,0 +1,44 @@
+From 1fc55ca31d3e67b550b14c90143feb4cc95e781a Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Wed, 7 May 2025 02:36:49 +0000
+Subject: [PATCH] smp: core1 online for thumb2 mode [1/1]
+
+PD#SWPL-209894
+
+Problem:
+core1 cannot online in thumb2 mode.
+
+Solution:
+use secondary_startup_arm
+
+Verify:
+c4 pxp
+
+Change-Id: Icbfefef06b8e64d57557fcc4017403c6489de551
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ arch/arm/kernel/psci_smp.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm/kernel/psci_smp.c b/arch/arm/kernel/psci_smp.c
+index 3bb0c4dcfc5c..28a8bf478b64 100644
+--- a/arch/arm/kernel/psci_smp.c
++++ b/arch/arm/kernel/psci_smp.c
+@@ -50,9 +50,14 @@ static int psci_boot_secondary(unsigned int cpu, struct task_struct *idle)
+ 			((phys_addr_t)(&secondary_startup)
+ 			- XIP_VIRT_ADDR(CONFIG_XIP_PHYS_ADDR)
+ 			+ CONFIG_XIP_PHYS_ADDR));
++#else
++#ifdef CONFIG_THUMB2_KERNEL
++		return psci_ops.cpu_on(cpu_logical_map(cpu),
++					virt_to_idmap(&secondary_startup_arm));
+ #else
+ 		return psci_ops.cpu_on(cpu_logical_map(cpu),
+ 					virt_to_idmap(&secondary_startup));
++#endif
+ #endif
+ 	return -ENODEV;
+ }
+-- 
+2.46.0
+
