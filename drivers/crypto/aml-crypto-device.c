@@ -33,7 +33,10 @@
 #include "aml-crypto-dma.h"
 #include <linux/compat.h>
 
+#ifndef USE_BUSY_POLLING
 #define USE_BUSY_POLLING (0)
+#endif
+
 #define MAX_IV_SIZE (32)
 #define STATE_SIZE  (48)
 #define CRYPTO_OPERATION_CFG  (0x8200002A)
