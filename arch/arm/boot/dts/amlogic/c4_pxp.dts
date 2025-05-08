@@ -138,9 +138,9 @@
 			compatible = "shared-dma-pool";
 			//reusable;
 			no-map;
-			size = <0x5000000>;
+			size = <0x10000000>;
 			alignment = <0x400000>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		pmz_cma_a2_reserved:user_pmz {
