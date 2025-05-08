@@ -55,6 +55,7 @@ static struct early_suspend bt_early_suspend;
 
 char bt_addr[18] = "";
 char *btmac;
+u8 BT_MAC[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 //core_param(btmac, btmac, charp, 0644);
 module_param(btmac, charp, 0644);
 static struct class *bt_addr_class;
@@ -807,10 +808,22 @@ static int mac_addr_set(char *line)
 		strncpy(bt_addr, line, sizeof(bt_addr) - 1);
 		bt_addr[sizeof(bt_addr) - 1] = '\0';
 		btmac = (char *)bt_addr;
+		if (strlen(bt_addr) == 17) {
+			sscanf(bt_addr, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx",
+			       &BT_MAC[0], &BT_MAC[1], &BT_MAC[2],
+			       &BT_MAC[3], &BT_MAC[4], &BT_MAC[5]);
+			pr_info("uboot setup bt mac-addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+				BT_MAC[0], BT_MAC[1], BT_MAC[2],
+				BT_MAC[3], BT_MAC[4], BT_MAC[5]);
+		}
 	}
-
 	return 1;
 }
-
 __setup("mac_bt=", mac_addr_set);
+
+u8 *bt_get_mac(void)
+{
+	return BT_MAC;
+}
+EXPORT_SYMBOL(bt_get_mac);
 
