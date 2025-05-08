@@ -57,6 +57,7 @@
 #define DMC_TYPE_T6D			0x49
 #define DMC_TYPE_T6W			0x4A
 #define DMC_TYPE_T6X			0x4B
+#define DMC_TYPE_C4			0x4C
 
 #define DMC_READ			0
 #define DMC_WRITE			1

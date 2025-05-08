@@ -2457,7 +2457,41 @@ static struct ddr_priority_v2 ddr_priority_t6x __initdata = {
 	.hcodec = &hcodec_t6x,
 	.vpu = &vpu_t6x,
 };
+static struct ddr_priority_v1 ddr_priority_c4[] __initdata = {
+	{ .port_id = 0, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
 
+	{ .port_id = 1, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0x85 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0x85 << 2), .r_bit_s = 16, .r_width = 0xf	},
+
+	{ .port_id = 2, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0x8a << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0x8a << 2), .r_bit_s = 16, .r_width = 0xf	},
+	{ .port_id = 3, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
+
+	{ .port_id = 4, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0x95 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0x95 << 2), .r_bit_s = 16, .r_width = 0xf	},
+
+	{ .port_id = 6, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
+
+	{ .port_id = 7, .reg_base = 0xfe036000,
+		.reg_mode = 0, .force_enable = 0x8000,
+		.w_offset = (0xa5 << 2), .w_bit_s = 16, .w_width = 0xf,
+		.r_offset = (0xa5 << 2), .r_bit_s = 16, .r_width = 0xf	},
+};
 #endif
 static struct ddr_priority_v1 ddr_priority_s1a[] __initdata = {
 	{ .port_id = 0, .reg_base = 0xfe036000,
@@ -2755,6 +2789,10 @@ struct ddr_priority * __init get_ddr_priority(int cpu_type)
 		break;
 	case DMC_TYPE_T6X:
 		v2 = &ddr_priority_t6x;
+		break;
+	case DMC_TYPE_C4:
+		v1 = ddr_priority_c4;
+		v1_num = ARRAY_SIZE(ddr_priority_c4);
 		break;
 #endif
 	case DMC_TYPE_S1A:

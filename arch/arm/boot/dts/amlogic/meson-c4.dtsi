@@ -1620,20 +1620,19 @@
 	};
 
 	ddr_bandwidth {
-		compatible = "amlogic,ddr-bandwidth-c3";
-		status = "disabled";
-		reg = <0xfe036000 0x400
-		       0xfe040000 0x100>;
-		sec_base = <0xfe037000>;
+		compatible = "amlogic,ddr-bandwidth-c4";
+		status = "okay";
+		reg = <0xfe036000 0x1000
+		       0xfe0368a8 0x4>;
 		interrupts = <0 78 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ddr_bandwidth";
 	};
 
 	dmc_monitor {
-		compatible = "amlogic,dmc_monitor-c3";
-		status = "disabled";
+		compatible = "amlogic,dmc_monitor-c4";
+		status = "okay";
 		memory-region = <&dmc_reserved>;
-		reg_base = <0xfe037000>;
+		reg_base = <0xfe036000>;
 		reg = <0xfe036000 0x400>;
 		interrupts = <0 62 IRQ_TYPE_LEVEL_HIGH
 			      0 61 IRQ_TYPE_EDGE_RISING>;

@@ -1257,6 +1257,26 @@ static struct ddr_port_desc ddr_port_desc_t6x[] __initdata = {
 	{ .port_id = 51, .bus_id = 6, .bus = 3, .mdc_bus = 3, .port_name = "BCON"          },
 	{ .port_id = 53, .bus_id = 6, .bus = 3, .mdc_bus = 3, .port_name = "DAP"           },
 };
+
+static struct ddr_port_desc ddr_port_desc_c4[] __initdata = {
+	{ .port_id =  0, .bus = 0, .port_name = "ARM"           },
+	{ .port_id =  1, .bus = 1, .port_name = "ISP"           },
+	{ .port_id =  2, .bus = 2, .port_name = "CVE_GE2D"      },
+	{ .port_id =  3, .bus = 3, .port_name = "NNA"           },
+	{ .port_id =  4, .bus = 4, .port_name = "VEDIO_ENCODER" },
+	{ .port_id =  6, .bus = 6, .port_name = "JPEG_ENCODER"  },
+	{ .port_id =  7, .bus = 7, .port_name = "DEVICE"        },
+	/* start of each device */
+	{ .port_id = 32, .bus = 7, .port_name = "AMFC"          },
+	{ .port_id = 33, .bus = 7, .port_name = "SD_EMMC"       },
+	{ .port_id = 34, .bus = 7, .port_name = "DMA"           },
+	{ .port_id = 35, .bus = 7, .port_name = "SDIO_A"        },
+	{ .port_id = 38, .bus = 7, .port_name = "USB2DRD"       },
+	{ .port_id = 40, .bus = 7, .port_name = "AUDIO"         },
+	{ .port_id = 41, .bus = 7, .port_name = "SDIO_B"        },
+	{ .port_id = 42, .bus = 7, .port_name = "SPICC"         },
+	{ .port_id = 43, .bus = 7, .port_name = "ETH"           },
+};
 #endif
 static struct ddr_port_desc ddr_port_desc_s1a[] __initdata = {
 	{ .port_id =  0, .bus =  0, .port_name = "ARM_A35"       },
@@ -1544,6 +1564,10 @@ int __init ddr_find_port_desc_type(int cpu_type, struct ddr_port_desc **desc, in
 	case DMC_TYPE_T6X:
 		*desc = ddr_port_desc_t6x;
 		desc_size = ARRAY_SIZE(ddr_port_desc_t6x);
+		break;
+	case DMC_TYPE_C4:
+		*desc = ddr_port_desc_c4;
+		desc_size = ARRAY_SIZE(ddr_port_desc_c4);
 		break;
 #endif
 	case DMC_TYPE_S1A:
