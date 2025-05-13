@@ -1059,12 +1059,17 @@ void parser_dynamic_metadata(struct vframe_s *vf)
 						   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
 						   (void *)&req);
 			if (!req.aux_buf)
+				vf_notify_provider_by_name("vdec.av1.00",
+							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
+							   (void *)&req);
+			if (!req.aux_buf)
+				vf_notify_provider_by_name("vdec.avs2.00",
+							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
+							   (void *)&req);
+			if (!req.aux_buf)
 				vf_notify_provider_by_name("decoder",
 							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
 							   (void *)&req);
-			vf_notify_provider_by_name("vdec.avs2.00",
-				VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
-				(void *)&req_avs2);
 		}
 		if (req.aux_buf && req.aux_size &&
 			(debug_csc & 0x10)) {
