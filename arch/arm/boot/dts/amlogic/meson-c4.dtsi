@@ -195,6 +195,72 @@
 			cust_governor = "power_allocator";
 		};
 
+		sd_emmc_c: mmc@fe08c000 {
+			compatible = "amlogic,meson-axg-mmc";
+			reg = <0xfe08c000 0x800>,
+			      <0xfe00016c 0x4>,
+			      <0xfe004000 0x4>;
+			interrupts = <GIC_SPI 178 IRQ_TYPE_EDGE_RISING>;
+			status = "disabled";
+			clocks = <&clkc CLKID_SYS_SD_EMMC_C>,
+				 <&clkc CLKID_SD_EMMC_C_MUX>,
+				 <&clkc CLKID_SD_EMMC_C>,
+				 <&scmi_clk CLKID_OSC>,
+				 <&clkc CLKID_FCLK_DIV2>;
+			clock-names = "core", "mux0", "mux1",
+					 "clkin0", "clkin1";
+			card_type = <1>;
+			mmc_debug_flag;
+			// src_clk_rate = <1152000000>;
+			tx_delay = <16>;
+			nwr_cnt = <0>;
+			full-pwr-cycle;
+			no-sd;
+			no-sdio;
+			// resets = <&reset RESET_SD_EMMC_C>;
+		};
+
+		sd_emmc_b: sd@fe08a000 {
+			compatible = "amlogic,meson-axg-mmc";
+			reg = <0xfe08a000 0x800>,
+			      <0xfe000168 0x4>,
+			      <0xfe004024 0x4>;
+			interrupts = <GIC_SPI 177 IRQ_TYPE_EDGE_RISING>;
+			status = "disabled";
+			clocks = <&clkc CLKID_SYS_SD_EMMC_B>,
+				 <&clkc CLKID_SD_EMMC_B_MUX>,
+				 <&clkc CLKID_SD_EMMC_B>,
+				 <&scmi_clk CLKID_OSC>,
+				 <&clkc CLKID_FCLK_DIV2>;
+			clock-names = "core", "mux0", "mux1",
+					"clkin0", "clkin1";
+			card_type = <5>;
+			mmc_debug_flag;
+			no-mmc;
+			no-sdio;
+			// resets = <&reset RESET_SD_EMMC_B>;
+		};
+
+		sd_emmc_a: sdio@fe088000 {
+			compatible = "amlogic,meson-axg-mmc";
+			reg = <0xfe088000 0x800>,
+			      <0xfe000168 0x4>,
+			      <0xfe00400c 0x4>;
+				status = "disabled";
+			interrupts = <GIC_SPI 176 IRQ_TYPE_EDGE_RISING>;
+			clocks = <&clkc CLKID_SYS_SD_EMMC_A>,
+				<&clkc CLKID_SD_EMMC_A_MUX>,
+				<&clkc CLKID_SD_EMMC_A>,
+				<&scmi_clk CLKID_OSC>,
+				<&clkc CLKID_FCLK_DIV2>;
+				clock-names = "core", "mux0", "mux1",
+						"clkin0", "clkin1";
+			card_type = <3>;
+			mmc_debug_flag;
+			auto-clock-sdio;
+			// resets = <&reset RESET_SD_EMMC_A>;
+		};
+
 		mtd_nand: nfc@fe08d000 {
 			compatible = "amlogic,meson-nfc-single-ecc";
 			status = "disabled";
@@ -1564,49 +1630,55 @@
 
 	emmc_pins: emmc {
 		mux {
-			groups = "emmc_nand_d0",
-			"emmc_nand_d1",
-			"emmc_nand_d2",
-			"emmc_nand_d3",
-			"emmc_nand_d4",
-			"emmc_nand_d5",
-			"emmc_nand_d6",
-			"emmc_nand_d7",
-			"emmc_clk",
-			"emmc_cmd";
+			groups = "emmc_d0",
+				 "emmc_d1",
+				 "emmc_d2",
+				 "emmc_d3",
+				 "emmc_d4",
+				 "emmc_d5",
+				 "emmc_d6",
+				 "emmc_d7",
+				 "emmc_clk",
+				 "emmc_cmd";
 			function = "emmc";
 			bias-pull-up;
 			input-enable;
-			drive-strength = <3>;
+			drive-strength-microamp = <3000>;
 		};
 		mux1 {
-			groups = "emmc_nand_ds";
+			groups = "emmc_ds";
 			function = "emmc";
 			input-enable;
 			bias-pull-down;
-			drive-strength = <3>;
+			drive-strength-microamp = <3000>;
+		};
+		mux2 {
+			groups = "emmc_reset";
+			function = "emmc";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	emmc_pins_sleep:emmc_all_pins_sleep {
 		mux {
 			groups = "GPIOB_0",
-			"GPIOB_1",
-			"GPIOB_2",
-			"GPIOB_3",
-			"GPIOB_4",
-			"GPIOB_5",
-			"GPIOB_6",
-			"GPIOB_7",
-			"GPIOB_8",
-			"GPIOB_10";
+				 "GPIOB_1",
+				 "GPIOB_2",
+				 "GPIOB_3",
+				 "GPIOB_4",
+				 "GPIOB_5",
+				 "GPIOB_6",
+				 "GPIOB_7",
+				 "GPIOB_8",
+				 "GPIOB_10";
 			function = "gpio_periphs";
 			input-enable;
 		};
 		mux1 {
-			 groups = "GPIOB_11";
-			 function = "gpio_periphs";
-			 input-enable;
+			groups = "GPIOB_11";
+			function = "gpio_periphs";
+			input-enable;
 		};
 	};
 
@@ -1615,60 +1687,60 @@
 			groups = "emmc_clk";
 			function = "emmc";
 			bias-pull-down;
-			drive-strength = <3>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	sdio_x_clk_gate_pins:sdio_x_clk_cmd_pins {
 		mux {
-			groups = "sdio_clk_x";
+			groups = "sdio_clk";
 			function = "sdio";
 			bias-pull-down;
-			drive-strength-microamp = <4000>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	sdio_x_pins:sdio_x_all_pins {
 		mux {
-			groups = "sdio_d0_x",
-				"sdio_d1_x",
-				"sdio_d2_x",
-				"sdio_d3_x",
-				"sdio_clk_x",
-				"sdio_cmd_x";
+			groups = "sdio_d0",
+				 "sdio_d1",
+				 "sdio_d2",
+				 "sdio_d3",
+				 "sdio_clk",
+				 "sdio_cmd";
 			function = "sdio";
 			input-enable;
 			bias-pull-up;
-			drive-strength-microamp = <4000>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	sdio_m_clk_gate_pins:sdio_m_clk_cmd_pins {
 		mux {
-			 groups = "sdio_clk";
-			 function = "sdio";
-			 bias-pull-down;
-			 drive-strength-microamp = <4000>;
+			groups = "sdio_clk";
+			function = "sdio";
+			bias-pull-down;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	sdio_m_pins:sdio_m_all_pins {
 		mux {
 			groups = "sdio_d0",
-				"sdio_d1",
-				"sdio_d2",
-				"sdio_d3",
-				"sdio_clk",
-				"sdio_cmd";
+				 "sdio_d1",
+				 "sdio_d2",
+				 "sdio_d3",
+				 "sdio_clk",
+				 "sdio_cmd";
 			function = "sdio";
 			input-enable;
 			bias-pull-up;
-			drive-strength-microamp = <4000>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
-      sdcard_pins:sdcard_all_pins {
-	      mux {
+	sdcard_pins:sdcard_all_pins {
+		mux {
 			groups = "sdcard_d0",
 				 "sdcard_d1",
 				 "sdcard_d2",
@@ -1678,7 +1750,7 @@
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
-			drive-strength = <4>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
@@ -1687,32 +1759,32 @@
 			groups = "sdcard_clk";
 			function = "sdcard";
 			bias-pull-down;
-			drive-strength = <4>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	sd_1bit_pins:sd_1bit_pins {
 		mux {
 			groups = "sdcard_d0",
-				"sdcard_cmd";
+				 "sdcard_cmd";
 			function = "sdcard";
 			input-enable;
 			bias-pull-up;
-			drive-strength = <4>;
+			drive-strength-microamp = <3000>;
 		};
 		mux1 {
 			groups = "sdcard_clk";
 			function = "sdcard";
 			bias-pull-up;
 			output-high;
-			drive-strength = <4>;
+			drive-strength-microamp = <3000>;
 		};
 	};
 
 	ao_to_sd_uart_pins:ao_to_sd_uart_pins {
 		mux {
 			groups = "uart_b_tx_c",
-				"uart_b_rx_c";
+				 "uart_b_rx_c";
 			function = "uart_b";
 			bias-pull-up;
 			input-enable;
@@ -1722,11 +1794,11 @@
 	sdcard_pins_sleep:sdcard_all_pins_sleep {
 		mux {
 			groups = "GPIOC_0",
-				"GPIOC_1",
-				"GPIOC_2",
-				"GPIOC_3",
-				"GPIOC_4",
-				"GPIOC_5";
+				 "GPIOC_1",
+				 "GPIOC_2",
+				 "GPIOC_3",
+				 "GPIOC_4",
+				 "GPIOC_5";
 			function = "gpio_periphs";
 			output-low;
 			bias-disable;
@@ -1735,14 +1807,14 @@
 
 	all_nand_pins: all_nand_pins {
 		mux {
-			groups = "emmc_nand_d0",
-				"emmc_nand_d1",
-				"emmc_nand_d2",
-				"emmc_nand_d3",
-				"emmc_nand_d4",
-				"emmc_nand_d5",
-				"emmc_nand_d6",
-				"emmc_nand_d7",
+			groups = "emmc_d0",
+				"emmc_d1",
+				"emmc_d2",
+				"emmc_d3",
+				"emmc_d4",
+				"emmc_d5",
+				"emmc_d6",
+				"emmc_d7",
 				"nand_ce0",
 				"nand_ale",
 				"nand_cle",
