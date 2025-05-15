@@ -65,18 +65,18 @@ to_sec_pm_domain(struct generic_pm_domain *genpd)
 
 static int sec_pm_domain_power_off(struct generic_pm_domain *genpd)
 {
-	//struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
+	struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
 
-	//pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_OFF);
+	pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_OFF);
 
 	return 0;
 }
 
 static int sec_pm_domain_power_on(struct generic_pm_domain *genpd)
 {
-	//struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
+	struct sec_pm_domain *pd = to_sec_pm_domain(genpd);
 
-	//pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_ON);
+	pwr_ctrl_psci_smc(pd->private_domain->pd_index, PWR_ON);
 
 	return 0;
 }

@@ -8,21 +8,21 @@
 
 unsigned long pwr_ctrl_psci_smc(int power_domain, bool power_control)
 {
-	// struct arm_smccc_res res;
+	struct arm_smccc_res res;
 
-	// arm_smccc_smc(0x82000093, power_domain, power_control, 0,
-	//	0, 0, 0, 0, &res);
-	return 0;
+	arm_smccc_smc(0x82000093, power_domain, power_control, 0,
+		      0, 0, 0, 0, &res);
+	return res.a0;
 }
 EXPORT_SYMBOL(pwr_ctrl_psci_smc);
 
 unsigned long pwr_ctrl_status_psci_smc(int power_domain)
 {
-	// struct arm_smccc_res res;
+	struct arm_smccc_res res;
 
-	// arm_smccc_smc(0x82000095, power_domain, 0, 0,
-	//	0, 0, 0, 0, &res);
-	return 0;
+	arm_smccc_smc(0x82000095, power_domain, 0, 0,
+		      0, 0, 0, 0, &res);
+	return res.a0;
 }
 EXPORT_SYMBOL(pwr_ctrl_status_psci_smc);
 
