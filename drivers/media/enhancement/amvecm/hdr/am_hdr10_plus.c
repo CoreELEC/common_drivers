@@ -1063,6 +1063,10 @@ void parser_dynamic_metadata(struct vframe_s *vf)
 							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
 							   (void *)&req);
 			if (!req.aux_buf)
+				vf_notify_provider_by_name("vdec.vp9.00",
+							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
+							   (void *)&req);
+			if (!req.aux_buf)
 				vf_notify_provider_by_name("vdec.avs2.00",
 							   VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
 							   (void *)&req);
