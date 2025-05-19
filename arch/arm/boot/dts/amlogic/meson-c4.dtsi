@@ -6,6 +6,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/amlogic,c4-clkc.h>
+#include <dt-bindings/clock/amlogic,c4-scmi-clks.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-c3-gpio.h>
 #include <dt-bindings/clock/amlogic,c3-audio-clk.h>
@@ -278,6 +279,34 @@
 			<0xfe0102dc 0x4>; /*SYSCTRL_STICKY_REG7*/
 	};
 
+	shmem {
+		compatible = "mmio-sram";
+		reg = <0x7f58000 0x100>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x0 0x7f58000 0x100>;
+
+		scmi_shmem: shmem@0 {
+			compatible = "arm,scmi-shmem";
+			reg = <0x0 0x100>;
+		};
+	};
+
+	firmware {
+		scmi: scmi {
+			compatible = "arm,scmi-smc";
+			arm,smc-id = <0x820000C1>;
+			shmem = <&scmi_shmem>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			scmi_clk: protocol@14 {
+				reg = <0x14>;
+				#clock-cells = <1>;
+			};
+		};
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -311,7 +340,7 @@
 			clocks = <&clkc CLKID_SYS_SD_EMMC_C>,
 				 <&clkc CLKID_SD_EMMC_C_MUX>,
 				 <&clkc CLKID_SD_EMMC_C>,
-				 <&xtal>,
+				 <&scmi_clk CLKID_OSC>,
 				 //<&clkc CLKID_FCLK_DIV2>,
 				 //<&clkc CLKID_FCLK_DIV2>;
 				 <&clkc CLKID_GP0_PLL>;
@@ -340,7 +369,7 @@
 			clocks = <&clkc CLKID_SYS_SD_EMMC_B>,
 				 <&clkc CLKID_SD_EMMC_B_MUX>,
 				 <&clkc CLKID_SD_EMMC_B>,
-				 <&xtal>,
+				 <&scmi_clk CLKID_OSC>,
 				 <&clkc CLKID_FCLK_DIV2>;
 			clock-names = "core", "mux0", "mux1",
 					"clkin0", "clkin1";
@@ -363,7 +392,7 @@
 			clocks = <&clkc CLKID_SYS_SD_EMMC_A>,
 				<&clkc CLKID_SD_EMMC_A_MUX>,
 				<&clkc CLKID_SD_EMMC_A>,
-				<&xtal>,
+				<&scmi_clk CLKID_OSC>,
 				<&clkc CLKID_FCLK_DIV2>;
 				clock-names = "core", "mux0", "mux1",
 						"clkin0", "clkin1";
@@ -413,8 +442,16 @@
 				reg = <0x0    0x228>,
 				      <0x8000 0x194>;
 				reg-names = "basic", "pll";
-				clocks = <&xtal>;
-				clock-names = "xtal";
+				clocks = <&xtal>,
+					 <&scmi_clk CLKID_OSC>,
+					 <&scmi_clk CLKID_SYS_CLK>,
+					 <&scmi_clk CLKID_AXI_CLK>,
+					 <&scmi_clk CLKID_FIXED_PLL>;
+				clock-names = "xtal",
+					      "oscin",
+					      "sys_clk",
+					      "axi_clk",
+					      "fixed_pll";
 				status = "okay";
 			};
 
@@ -786,7 +823,7 @@
 				#io-channel-cells = <1>;
 				//power-domains = <&pwrdm PDID_CX_I2C>;
 				interrupts = <GIC_SPI 181 IRQ_TYPE_EDGE_RISING>;
-				clocks = <&xtal>,
+				clocks = <&scmi_clk CLKID_OSC>,
 					<&clkc CLKID_SYS_SAR_ADC>,
 					<&clkc CLKID_SAR_ADC>,
 					<&clkc CLKID_SAR_ADC_MUX>;

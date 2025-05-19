@@ -129,6 +129,7 @@ config AMLOGIC_COMMON_CLK_C3
 
 config AMLOGIC_COMMON_CLK_C4
 	tristate "Meson C4 clock controller"
+	depends on COMMON_CLK_SCMI
 	depends on AMLOGIC_COMMON_CLK_MESON_REGMAP
 	depends on AMLOGIC_COMMON_CLK_MESON_DUALDIV
 	depends on AMLOGIC_COMMON_CLK_MESON_PLL
