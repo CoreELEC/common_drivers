@@ -1641,16 +1641,18 @@
 	adla: adla@fe04a000 {
 		compatible = "amlogic,adla";
 		dev_name = "adla";
-		status = "disabled";
+		status = "okay";
 		reg = <0xfe04a000 0x2000
-			0xf7000000 0x40000
+			0xf3C00000 0x20000
 			>;
 		reg-names = "adla_reg\0adla_sram";
 		interrupt-names = "adla";
-		interrupts = <0 128 4>;
+		interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc CLKID_NNA>;
 		clock-names = "adla_core_clk";
-		//power-domains=<&pwrdm PDID_C3_NNA>;
+		power-domains=<&pwrdm PDID_C4_NNA>;
+		nn_hw_version="r0p1";
+		adla_core_clk_rate = <800000000>;
 		//memory-region = <&nna_cma_reserved>;
 	};
 	pwrdm: power-domains {

@@ -69,7 +69,7 @@
 			alignment = <0x400000>;
 			reusable;
 			//no-map;
-			status = "disabled";
+			status = "okay";
 		};
 
 		logo_reserved:linux,meson-fb {
@@ -942,7 +942,7 @@
 };
 
 &adla {
-	status = "disabled";
+	status = "okay";
 	memory-region = <&nna_cma_reserved>;
 };
 
