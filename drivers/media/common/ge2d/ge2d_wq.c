@@ -439,7 +439,8 @@ bool ge2d_is_busy(void)
 {
 	int reg = GE2D_STATUS0, bit = 0;
 
-	if (ge2d_meson_dev.chip_type >= MESON_CPU_MAJOR_ID_S7D) {
+	if (ge2d_meson_dev.chip_type >= MESON_CPU_MAJOR_ID_S7D &&
+		ge2d_meson_dev.chip_type != MESON_CPU_MAJOR_ID_C4) {
 		reg = GE2D_STATUS2;
 		bit = 3;
 	}
