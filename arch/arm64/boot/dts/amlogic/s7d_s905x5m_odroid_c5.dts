@@ -1,0 +1,211 @@
+#include "s7d_s905x5m_4g_1gbit.dts"
+
+/{
+	model = "Hardkernel ODROID-C5";
+	coreelec-dt-id = "s7d_s905x5m_odroid_c5";
+
+  TFLASH_VDD: fixed@sdcard-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "TFLASH_VDD";
+		vin-supply = <&vcc5v_reg>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		// GPIOH_6(Up) Output H= Enable SD_3V3
+		gpio = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+		enable-active-high; //3.3V , high: 0V
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	VDDIO_C: gpio@sdcard-1v8_3v3 {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_C";
+		vin-supply = <&vcc5v_reg>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		// GPIODV_4(DOWN) H: 1.8V, L: 3.3V
+		gpio = <&gpio GPIODV_4 GPIO_ACTIVE_HIGH>;
+		gpios-states = <0>;
+
+		/* Based on P200 schematics, signal CARD_1.8V/3.3V_CTR */
+		states = <1800000 1
+			  3300000 0>;
+	};
+
+	gpioleds {
+		sys_led {
+			linux,default-trigger = "heartbeat";
+		};
+		red_led {
+			linux,default-trigger = "default-on";
+			gpios = <&gpio GPIODV_6 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+	/delete-node/ aml_bt;
+	/delete-node/ aml_wifi;
+	/delete-node/ wifi_pwm_conf;
+
+  gpio-reset {
+		compatible = "linux,gpio-reset";
+
+		usb_hub {
+			gpios = <&gpio GPIOX_19 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+			asserted-state = <0>;
+			duration-ms = <100>;
+		};
+	};
+
+  auge_sound {
+		/delete-property/ avout_mute-gpios;
+  };
+};
+
+&periphs_pinctrl {
+	pwm_a_gpio_x6: pwm_a_gpio_x6 {
+		mux {
+			groups = "pwm_a_x6";
+			function = "pwm_a";
+		};
+	};
+
+  pwm_b_gpio_d4: pwm_b_gpio_d4 {
+		mux {
+			groups = "pwm_b_d4";
+			function = "pwm_b";
+		};
+	};
+
+  pwm_c_gpio_dv2: pwm_c_gpio_dv2 {
+		mux {
+			groups = "pwm_c_dv2";
+			function = "pwm_c";
+		};
+	};
+
+  pwm_e_gpio_x16: pwm_e_gpio_x16 {
+		mux {
+			groups = "pwm_e_x16";
+			function = "pwm_e";
+		};
+	};
+
+  pwm_f_gpio_x7: pwm_f_gpio_x7 {
+		mux {
+			groups = "pwm_f_x7";
+			function = "pwm_f";
+		};
+	};
+
+  spi0_pins: spicc0_pins {
+		mux {
+			groups = "spi_a_mosi_x8",
+					 "spi_a_miso_x9",
+					 "spi_a_ss0_x10",
+					 "spi_a_clk_x11";
+			function = "spi_a";
+			drive-strength = <3>;
+		};
+	};
+
+	spi0_pins_sw: spicc0_pins_sw {
+		mux {
+			groups = "spi_a_mosi_x8",
+					 "spi_a_miso_x9",
+//					 "spi_a_ss0_x10",
+					 "spi_a_clk_x11";
+			function = "spi_a";
+			drive-strength = <3>;
+		};
+	};
+
+  a_uart_pins_not_cts_rts:a_uart_not_cts_rts {
+		mux {
+			groups = "uart_a_tx",
+					 "uart_a_rx";
+			function = "uart_a";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+};
+
+&pwm_a {
+	pinctrl-0 = <&pwm_a_gpio_x6>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&pwm_b {
+	pinctrl-0 = <&pwm_b_gpio_d4>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&pwm_c {
+	pinctrl-0 = <&pwm_c_gpio_dv2>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&pwm_e {
+	pinctrl-0 = <&pwm_e_gpio_x16>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&pwm_f {
+	pinctrl-0 = <&pwm_f_gpio_x7>;
+	pinctrl-names = "default";
+	status = "disabled";
+};
+
+&spdifa {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+};
+
+&sd_emmc_a {
+	status = "disabled";
+	/delete-node/ wifi@1;
+};
+
+&sd_emmc_b {
+	vmmc-supply = <&TFLASH_VDD>;
+	vqmmc-supply = <&VDDIO_C>;
+};
+
+&gpio_intc {
+	mboxes = <&mbox_fifo S7D_REE2AO_KEYPAD>;
+};
+
+&spicc0 {
+	pinctrl-0 = <&spi0_pins_sw>;
+	pinctrl-1 = <&spi0_pins>;
+};
+
+&uart_A {
+	status = "disabled";
+	pinctrl-0 = <&a_uart_pins_not_cts_rts>;
+	pinctrl-1 = <&a_uart_pins>;
+	pinctrl-names = "default";
+	/delete-property/ uart_for_bt;
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins4>;
+	pinctrl-names = "default";
+	clock-frequency = <100000>;		/* default 100k */
+};
+
+&i2c3 {
+	status = "disabled";
+	pinctrl-0 = <&i2c3_pins1>;
+	clock-frequency = <100000>;		/* default 100k */
+};
+
+&i2c4 {
+	pinctrl-0 = <&i2c4_pins2>;
+	clock-frequency = <100000>;		/* default 100k */
+};
