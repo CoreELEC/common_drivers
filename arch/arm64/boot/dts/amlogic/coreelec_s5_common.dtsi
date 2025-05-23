@@ -22,7 +22,7 @@
 	};
 
 	gpu:valhall {
-		compatible = "arm,mali-valhall";
+		compatible = "arm,mali-valhall-jm";
 	};
 
 	reserved-memory {

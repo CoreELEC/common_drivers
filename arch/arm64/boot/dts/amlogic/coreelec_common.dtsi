@@ -84,7 +84,6 @@
 	};
 
 	/delete-node/ partitions;
-	/delete-node/ firmware;
 
 	dvb-extern {
 		status = "disabled";
