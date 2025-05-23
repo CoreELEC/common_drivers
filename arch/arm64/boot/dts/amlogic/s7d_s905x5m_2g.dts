@@ -1,0 +1,7 @@
+#include "s7d_s905x5m_bm201.dts"
+#include "coreelec_s7d_common.dtsi"
+
+/{
+	model = "Amlogic";
+	coreelec-dt-id = "s7d_s905x5m_2g";
+};
