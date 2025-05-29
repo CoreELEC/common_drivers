@@ -110,13 +110,14 @@
 		mem_size = <0x100000>;
 		status = "disabled";
 	};
+
 	aml_reboot: reboot@fe01037c {
 		compatible = "aml, reboot";
 		sys_reset = <0x84000009>;
 		sys_poweroff = <0x84000008>;
 		extend_reboot_reason; /* Support up to 128 reboot reasons*/
 		reg = <0xfe01037c 0x4>; /* SEC_AO_SEC_SD_CFG15 */
-		status = "disabled";
+		status = "okay";
 	};
 
 	arm_pmu {
