@@ -237,4 +237,141 @@ index 37c24ffea65c..8a6fb5a34395 100644
  
 -- 
 2.46.0
+ 
+From e5d42c52a91751930c2d02c3ec5fb0352d7ac445 Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Tue, 10 Jun 2025 11:29:40 +0000
+Subject: [PATCH] fastboot: c4 optimization boottime [1/1]
+
+PD#SWPL-216019
+
+Problem:
+c4 need fastboot
+
+Solution:
+1, dts trim.
+2, Defer the execution of of_platform_work for a longer time.
+3, Disabled DELAY_DEQUEUE.
+4, inet_frag_wq_init use core_initcall
+
+Verify:
+c4 pxp
+
+Change-Id: I5b0e3acd00bb4a6733464b47e2c970de9ce3e65e
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ drivers/of/platform.c    | 36 ++++++++++++++++++++++++++++++++++++
+ kernel/sched/features.h  |  4 ++++
+ net/ipv4/inet_fragment.c |  4 ++++
+ 3 files changed, 44 insertions(+)
+
+diff --git a/drivers/of/platform.c b/drivers/of/platform.c
+index 83dff7de6ce8..dba9d540af9d 100644
+--- a/drivers/of/platform.c
++++ b/drivers/of/platform.c
+@@ -24,6 +24,12 @@
+ 
+ #include "of_private.h"
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++static struct device_node *g_root;
++static struct device_node *g_child;
++static struct delayed_work of_platform_work;
++#endif
++
+ const struct of_device_id of_default_bus_match_table[] = {
+ 	{ .compatible = "simple-bus", },
+ 	{ .compatible = "simple-mfd", },
+@@ -432,6 +438,22 @@ int of_platform_bus_probe(struct device_node *root,
+ }
+ EXPORT_SYMBOL(of_platform_bus_probe);
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++static void of_platform_populate_for_soc_work_func(struct work_struct *work)
++{
++	device_links_supplier_sync_state_pause();
++
++	of_platform_bus_create(g_child, of_default_bus_match_table, NULL, NULL, true);
++	pr_debug("child->name = %s, matches->name = %s, matches->compatible = %s\n",
++				g_child->name, of_default_bus_match_table->name, of_default_bus_match_table->compatible);
++
++	device_links_supplier_sync_state_resume();
++
++	of_node_set_flag(g_root, OF_POPULATED_BUS);
++
++	of_node_put(g_root);
++}
++#endif
+ /**
+  * of_platform_populate() - Populate platform_devices from device tree data
+  * @root: parent of the first level to probe or NULL for the root of the tree
+@@ -467,6 +489,13 @@ int of_platform_populate(struct device_node *root,
+ 
+ 	device_links_supplier_sync_state_pause();
+ 	for_each_child_of_node_scoped(root, child) {
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++		if (!strcmp(child->name, "soc") && !strcmp(matches->compatible, "simple-bus")) {
++			g_child = child;
++			g_root = root;
++			continue;
++		}
++#endif
+ 		rc = of_platform_bus_create(child, matches, lookup, parent, true);
+ 		if (rc)
+ 			break;
+@@ -504,6 +533,9 @@ static int __init of_platform_default_populate_init(void)
+ {
+ 	struct device_node *node;
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++	INIT_DELAYED_WORK(&of_platform_work, of_platform_populate_for_soc_work_func);
++#endif
+ 	device_links_supplier_sync_state_pause();
+ 
+ 	if (IS_ENABLED(CONFIG_PPC)) {
+@@ -593,6 +625,10 @@ static int __init of_platform_default_populate_init(void)
+ 
+ 		/* Populate everything else. */
+ 		of_platform_default_populate(NULL, NULL, NULL);
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++		queue_delayed_work(system_unbound_wq, &of_platform_work,
++				   msecs_to_jiffies(10));
++#endif
+ 	}
+ 	return 0;
+ }
+diff --git a/kernel/sched/features.h b/kernel/sched/features.h
+index 050d7503064e..8b367ff20261 100644
+--- a/kernel/sched/features.h
++++ b/kernel/sched/features.h
+@@ -55,7 +55,11 @@ SCHED_FEAT(CACHE_HOT_BUDDY, true)
+  *
+  * DELAY_ZERO clips the lag on dequeue (or wakeup) to 0.
+  */
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++SCHED_FEAT(DELAY_DEQUEUE, false)
++#else
+ SCHED_FEAT(DELAY_DEQUEUE, true)
++#endif
+ SCHED_FEAT(DELAY_ZERO, true)
+ 
+ /*
+diff --git a/net/ipv4/inet_fragment.c b/net/ipv4/inet_fragment.c
+index d179a2c84222..16a3b348ec5e 100644
+--- a/net/ipv4/inet_fragment.c
++++ b/net/ipv4/inet_fragment.c
+@@ -217,7 +217,11 @@ static int __init inet_frag_wq_init(void)
+ 	return 0;
+ }
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++core_initcall(inet_frag_wq_init);
++#else
+ pure_initcall(inet_frag_wq_init);
++#endif
+ 
+ void fqdir_exit(struct fqdir *fqdir)
+ {
+-- 
+2.46.0
 

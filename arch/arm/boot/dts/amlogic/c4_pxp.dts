@@ -13,17 +13,8 @@
 
 	aliases {
 		serial0 = &uart_B;
-		serial1 = &uart_A;
-		serial2 = &uart_C;
-		serial3 = &uart_D;
-		serial4 = &uart_E;
-		i2c0 = &i2c0;
-		i2c1 = &i2c1;
 		i2c2 = &i2c2;
-		i2c3 = &i2c3;
 		spi0 = &spifc;
-		spi1 = &spicc0;
-		spi2 = &spicc1;
 		tsensor0 = &tsensor;
 	};
 
@@ -65,7 +56,7 @@
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
 			//alloc-ranges = <0x70000000 0x18000000>;
-			size = <0x2000000>;
+			size = <0x1000000>;
 			alignment = <0x400000>;
 			reusable;
 			//no-map;
@@ -138,7 +129,7 @@
 			compatible = "shared-dma-pool";
 			//reusable;
 			no-map;
-			size = <0x10000000>;
+			size = <0x4000000>;
 			alignment = <0x400000>;
 			status = "okay";
 		};
@@ -188,14 +179,7 @@
 		};
 	};
 
-	codec_mm {
-		compatible = "amlogic, codec, mm";
-		memory-region = <&codec_mm_cma &codec_mm_reserved>;
-		dev_name = "codec_mm";
-		status = "disabled";
-	};
-
-	sensor: sensor {
+	sensor0: sensor0 {
 		compatible = "soc, sensor";
 		status = "disabled";
 		sensor-name = "imx335"; /*imx290;os08a10;imx227*/
@@ -217,41 +201,9 @@
 		status = "disabled";
 	};
 
-	sdcard_power: regulator-sdcard {
-		compatible = "regulator-fixed";
-		regulator-name = "SDCARD_POWER";
-		vin-supply = <&vddao3v3_reg>;
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		//gpio = <&gpio GPIOD_13 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-boot-on;
-		status = "disabled";
-	};
-
-	vddio_card: gpio-regulator {
-		compatible = "regulator-gpio";
-		regulator-name = "VDDIO_CARD";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <3300000>;
-		//gpio = <&gpio GPIOE_2 GPIO_ACTIVE_HIGH>;
-		gpios-states = <1>;
-
-		/* Based on P200 schematics, signal CARD_1.8V/3.3V_CTR */
-		states = <1800000 1
-			  3300000 0>;
-		status = "disabled";
-	};
-
 	pmz_a1_dev {
 		compatible = "amlogic, pmz_dev";
 		memory-region = <&pmz_cma_a1_reserved>;
-		pmz-allocator = "priv";
-	};
-
-	pmz_a2_dev {
-		compatible = "amlogic, pmz_dev";
-		memory-region = <&pmz_cma_a2_reserved>;
 		pmz-allocator = "priv";
 	};
 
@@ -378,23 +330,6 @@
 		status = "disabled";
 	};
 
-	audiolocker: locker {
-		compatible = "amlogic, audiolocker";
-		clocks = <&clkaudio CLKID_AUDIO_LOCKER_OUT
-				&clkaudio CLKID_AUDIO_LOCKER_IN
-				&clkaudio CLKID_AUDIO_MCLK_C
-				&clkaudio CLKID_AUDIO_MCLK_D
-				&clkc CLKID_FCLK_DIV2
-				&clkc CLKID_FCLK_DIV3>;
-		clock-names = "lock_out", "lock_in", "out_src",
-					"in_src", "out_calc", "in_ref";
-		interrupts = <GIC_SPI 42 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "irq";
-		frequency = <49000000>; /* pll */
-		dividor = <49>; /* locker's parent */
-		//power-domains = <&pwrdm PDID_CX_AUDIO>;
-		status = "disabled";
-	};
 	/* Audio Related end */
 	/* to check
 	 *wifivbat_power: regulator-wifivbat {
@@ -419,172 +354,6 @@
 	 *	regulator-always-on;
 	 *};
 	 */
-
-	gpio_keypad{
-		compatible = "amlogic, gpio_keypad";
-		status = "disabled";
-		scan_period = <20>;
-		key_num = <1>;
-		key_name = "power";
-		key_code = <116>;
-		key-gpios = <&gpio  GPIOD_4  GPIO_ACTIVE_HIGH>;
-		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
-	};
-
-	unifykey{
-		compatible = "amlogic,unifykey";
-		status = "disabled";
-		unifykey-num = <22>;
-		unifykey-index-0 = <&keysn_0>;
-		unifykey-index-1 = <&keysn_1>;
-		unifykey-index-2 = <&keysn_2>;
-		unifykey-index-3 = <&keysn_3>;
-		unifykey-index-4 = <&keysn_4>;
-		unifykey-index-5 = <&keysn_5>;
-		unifykey-index-6 = <&keysn_6>;
-		unifykey-index-7 = <&keysn_7>;
-		unifykey-index-8 = <&keysn_8>;
-		unifykey-index-9 = <&keysn_9>;
-		unifykey-index-10= <&keysn_10>;
-		unifykey-index-11= <&keysn_11>;
-		unifykey-index-12= <&keysn_12>;
-		unifykey-index-13= <&keysn_13>;
-		unifykey-index-14= <&keysn_14>;
-		unifykey-index-15= <&keysn_15>;
-		unifykey-index-16= <&keysn_16>;
-		unifykey-index-17= <&keysn_17>;
-		unifykey-index-18= <&keysn_18>;
-		unifykey-index-19= <&keysn_19>;
-		unifykey-index-20= <&keysn_20>;
-		unifykey-index-21= <&keysn_21>;
-
-		keysn_0: key_0{
-			key-name = "usid";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_1:key_1{
-			key-name = "mac";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_2:key_2{
-			key-name = "hdcp";
-			key-device = "secure";
-			key-type = "sha1";
-			key-permit = "read","write","del";
-		};
-		keysn_3:key_3{
-			key-name = "secure_boot_set";
-			key-device = "efuse";
-			key-permit = "write";
-		};
-		keysn_4:key_4{
-			key-name = "mac_bt";
-			key-device = "normal";
-			key-permit = "read","write","del";
-			key-type  = "mac";
-		};
-		keysn_5:key_5{
-			key-name = "mac_wifi";
-			key-device = "normal";
-			key-permit = "read","write","del";
-			key-type = "mac";
-		};
-		keysn_6:key_6{
-			key-name = "hdcp2_tx";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_7:key_7{
-			key-name = "hdcp2_rx";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_8:key_8{
-			key-name = "widevinekeybox";
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_9:key_9{
-			key-name = "deviceid";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_10:key_10{
-			key-name = "hdcp22_fw_private";
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_11:key_11{
-			key-name = "PlayReadykeybox25";
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_12:key_12{
-			key-name = "prpubkeybox";// PlayReady
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_13:key_13{
-			key-name = "prprivkeybox";// PlayReady
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_14:key_14{
-			key-name = "attestationkeybox";// attestation key
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_15:key_15{
-			key-name = "region_code";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_16:key_16{
-			key-name = "netflix_mgkid";
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_17:key_17{
-			key-name = "attestationdevidbox";// attest dev id box
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
-		keysn_18:key_18{
-			key-name = "oemkey";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_19:key_19{
-			key-name = "lcd";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_20:key_20{
-			key-name = "lcd_extern";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-		keysn_21:key_21{
-			key-name = "backlight";
-			key-device = "normal";
-			key-permit = "read","write","del";
-		};
-	};//End unifykey
-
-	adc_keypad {
-		compatible = "amlogic, adc_keypad";
-		status = "disabled";
-		key_name = "update", "vol-", "vol+", "ok";
-		key_num = <4>;
-		io-channels = <&saradc 2>;
-		io-channel-names = "key-chan-2";
-		key_chan = <2 2 2 2>;
-		key_code = <141 114 115 28>;
-		key_val = <0 143 266 389>; //val=voltage/1800mV*1023
-		key_tolerance = <40 40 40 40>;
-	};
 };
 
 /* Audio Related start */
@@ -634,63 +403,6 @@
 		//power-domains = <&pwrdm PDID_CX_AUDIO>;
 
 		src-clk-freq = <1155072000>;
-
-		status = "disabled";
-	};
-
-	tdmlb:tdm@3 {
-		compatible = "amlogic, a1-snd-tdmlb";
-		#sound-dai-cells = <0>;
-
-		dai-tdm-lane-lb-slot-mask-in = <1 0 0 0>;
-		dai-tdm-clk-sel = <1>;
-
-		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
-				&clkc CLKID_FCLK_DIV3>;
-		clock-names = "mclk", "clk_srcpll";
-
-		/*
-		 * select tdmin_lb src;
-		 * AXG
-		 *  0: TDMOUTA
-		 *  1: TDMOUTB
-		 *  2: TDMOUTC
-		 *  3: PAD_TDMINA
-		 *  4: PAD_TDMINB
-		 *  5: PAD_TDMINC
-		 *
-		 * G12A/G12B
-		 *  0: TDMOUTA
-		 *  1: TDMOUTB
-		 *  2: TDMOUTC
-		 *  3: PAD_TDMINA_DIN*
-		 *  4: PAD_TDMINB_DIN*
-		 *  5: PAD_TDMINC_DIN*
-		 *  6: PAD_TDMINA_D*, oe pin
-		 *  7: PAD_TDMINB_D*, oe pin
-		 *
-		 * TL1/SM1
-		 *  0: TDMOUTA
-		 *  1: TDMOUTB
-		 *  2: TDMOUTC
-		 *  3: PAD_TDMINA_DIN*
-		 *  4: PAD_TDMINB_DIN*
-		 *  5: PAD_TDMINC_DIN*
-		 *  6: PAD_TDMINA_D*
-		 *  7: PAD_TDMINB_D*
-		 *  8: PAD_TDMINC_D*
-		 *  9: HDMIRX_I2S
-		 *  10: ACODEC_ADC
-		 *
-		 * A1
-		 *  0: TDMOUTA
-		 *  1: TDMOUTB
-		 *  3: PAD_TDMINA_DIN*
-		 *  4: PAD_TDMINB_DIN*
-		 */
-
-		lb-src-sel = <1>;
-		//power-domains = <&pwrdm PDID_CX_AUDIO>;
 
 		status = "disabled";
 	};
@@ -889,14 +601,6 @@
 	/* Audio Related end */
 };
 
-&aml_bc {
-	status = "disable";
-};
-
-&aml_cc {
-	status = "disable";
-};
-
 &uart_B {
 	status = "okay";
 };
@@ -927,12 +631,6 @@
 	portnum = <0>;
 };
 
-&i2c1 {
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c1_master_pins2>;
-};
-
 &i2c2 {
 	status = "disabled";
 	pinctrl-names = "default", "sleep";
@@ -946,106 +644,12 @@
 	memory-region = <&nna_cma_reserved>;
 };
 
-&ir {
-	status = "disabled";
-	pinctrl-0 = <&remote_pins>;
-	pinctrl-names = "default";
-};
-
-&sd_emmc_c {
-	status = "disabled";
-	pinctrl-0 = <&emmc_pins>;
-	pinctrl-1 = <&emmc_clk_gate_pins>;
-	pinctrl-2 = <&emmc_pins_sleep>;
-	pinctrl-names = "default", "clk-gate", "sleep";
-	cap-mmc-highspeed;
-	non-removable;
-	mmc-run-pxp;
-	//mmc-ddr-1_8v;
-	//mmc-hs200-1_8v;
-	//mmc-hs400-1_8v;
-	max-frequency = <200000000>;
-	disable-wp;
-	bus-width = <8>;
-};
-
-&sd_emmc_b {
-	status = "disabled";
-	pinctrl-0 = <&sdcard_pins>;
-	pinctrl-1 = <&sdcard_clk_gate_pins>;
-	pinctrl-2 = <&sd_1bit_pins>;
-	pinctrl-3 = <&b_uart_pins1
-		     &sdcard_clk_gate_pins &ao_to_sd_uart_pins>;
-//	pinctrl-4 = <&b_uart_pins1
-//		     &sd_1bit_pins &ao_to_sd_uart_pins>;
-//	pinctrl-5 = <&sdcard_pins &b_uart_enable_pins1>;
-//	pinctrl-6 = <&b_uart_pins1
-//		     &ao_to_sd_uart_pins>;
-//	pinctrl-7 = <&sdcard_pins &b_uart_enable_pins1>;
-//	pinctrl-8 = <&b_uart_pins1
-//		     &ao_to_sd_uart_pins>;
-//	pinctrl-9 = <&sdcard_pins_sleep>;
-	pinctrl-names = "sd_default",
-			"clk-gate",
-			"sd_1bit_pins",
-			"sd_clk_cmd_uart_pins";
-//			"sd_1bit_uart_pins",
-//			"sd_to_ao_uart_pins",
-//			"ao_to_sd_uart_pins",
-//			"sd_to_ao_jtag_pins",
-//			"ao_to_sd_jtag_pins",
-//			 "sleep";
-	bus-width = <4>;
-	cap-sd-highspeed;
-	non-removable;
-	//sd-uhs-sdr104;
-	disable-wp;
-	mmc-run-pxp;
-	max-frequency = <200000000>;
-	cd-gpios = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
-	dat1-gpios = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
-	//dat3-gpios = <&gpio GPIOC_3 GPIO_ACTIVE_HIGH>;
-	//vmmc-supply = <&sdcard_power>;
-	//vqmmc-supply = <&vddio_card>;
-};
-
-&sd_emmc_a {
-	status = "disabled";
-	pinctrl-0 = <&sdio_m_pins>;
-	pinctrl-1 = <&sdio_m_clk_gate_pins>;
-	pinctrl-names = "default", "clk-gate";
-	bus-width = <4>;
-	cap-sd-highspeed;
-	sd-uhs-sdr104;
-	non-removable;
-	max-frequency = <200000000>;
-	disable-wp;
-	cap-sdio-irq;
-	keep-power-in-suspend;
-};
-
-&pwm_ef {
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&pwm_e_pins1>;
-};
-
 &aml_wifi {
 	status = "disabled";
 };
 
 &aml_bt {
 	status = "disabled";
-};
-
-&fb {
-	status = "disabled";
-	display_size_default = <1920 1080 1920 2160 32>;
-	mem_size = <0x00800000 0x1000000>;
-	logo_addr = "0xe800000";
-	/* display_device_cnt = <2>; */ /* for dual screen upport */
-	mem_alloc = <1>;
-	pxp_mode = <1>; /** 0:normal mode 1:pxp mode */
 };
 
 &mtd_nand {
@@ -1159,21 +763,8 @@
 	};
 };
 
-&ethmac {
-	status = "disabled";
-	phy-handle = <&internal_ephy>;
-	phy-mode = "rmii";
-};
-
 &saradc {
 	status = "disabled";
-};
-
-&spicc1 {
-	status = "disabled";
-	pinctrl-names = "default";
-	pinctrl-0 = <&spicc1_pins1>;
-	//cs-gpios = <&gpio GPIOA_14 0>;
 };
 
 &freertos {
