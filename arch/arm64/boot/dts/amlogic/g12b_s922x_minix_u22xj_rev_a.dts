@@ -1,0 +1,6 @@
+#include "g12b_s922x_minix_u22xj.dts"
+#include "coreelec_g12b_a_common.dtsi"
+
+/ {
+	coreelec-dt-id = "g12b_s922x_minix_u22xj_rev_a";
+};
