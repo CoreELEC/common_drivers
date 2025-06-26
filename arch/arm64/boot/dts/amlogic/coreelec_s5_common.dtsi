@@ -30,20 +30,6 @@
 			size = <0x0 0x400000>;
 		};
 
-		ion_cma_reserved:linux,ion-dev {
-			size = <0x0 0xd000000>;
-		};
-
-		ion_fb_reserved:linux,ion-fb {
-			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
-		};
-
-		logo_reserved:linux,meson-fb {
-				compatible = "shared-dma-pool";
-				/delete-property/ reg;
-				reusable;
-		};
-
 		codec_mm_cma:linux,codec_mm_cma {
 			size = <0x0 0x70000000>;
 		};

@@ -45,11 +45,7 @@
 	};
 
 	reserved-memory {
-		ion_cma_reserved:linux,ion-dev {
-			size = <0x0 0x3400000>;
-		};
-
-		ion_fb_reserved:linux,ion-fb {
+		dmaheap_fb_reserved:heap-fb {
 			size = <0x0 0x11000000>;
 		};
 	};
