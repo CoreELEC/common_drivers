@@ -16,23 +16,6 @@
 	};
 
 	reserved-memory {
-		logo_reserved:linux,meson-fb {
-			reg = <0x0 0x77800000 0x0 0x800000>;
-		};
-
-		ion_cma_reserved:linux,ion-dev {
-			size = <0x00000000 0x09800000>;
-		};
-
-		ion_fb_reserved:linux,ion-fb {
-			size = <0x00000000 0x11000000>;
-		};
-
-		dmaheap_fb_reserved:heap-fb {
-			/* 4k STB androidT size 160M */
-			size = <0x0 0xa000000>;
-		};
-
 		di_cma_reserved:linux,di_cma {
 			status = "disabled";
 		};

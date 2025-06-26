@@ -30,14 +30,6 @@
 			size = <0x00000000 0x03400000>;
 			alloc-ranges = <0x00000000 0x05000000 0x00000000 0x03400000>;
 		};
-
-		ion_cma_reserved:linux,ion-dev {
-			size = <0x0 0x8000000>;
-		};
-
-		ion_fb_reserved:linux,ion-fb {
-			size = <0x0 0x11000000>;
-		};
 	};
 
 	amhdmitx: amhdmitx{
