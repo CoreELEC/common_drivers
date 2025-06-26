@@ -5,13 +5,16 @@
 	/delete-property/ amlogic-dt-id;
 
 	reserved-memory {
-		codec_mm_cma:linux,codec_mm_cma {
-			size = <0x0 0x1b000000>;
+		dmaheap_fb_reserved:heap-fb {
+			size = <0x0 0x11000000>;
 		};
 
-		ion_fb_reserved:linux,ion-fb {
-			/* 1920x1080x4x4 round up 4M align */
-			size = <0x0 0x11000000>;
+		dmaheap_cma_reserved:heap-gfx {
+			size = <0x0 0x5800000>;
+		};
+
+		codec_mm_cma:linux,codec_mm_cma {
+			size = <0x0 0x1b000000>;
 		};
 	};
 
