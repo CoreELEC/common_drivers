@@ -53,11 +53,30 @@
 
 	reserved-memory {
 		ion_cma_reserved:linux,ion-dev {
-			size = <0x00000000 0x09800000>;
+			size = <0x0 0x0>;
 		};
 
 		ion_fb_reserved:linux,ion-fb {
-			size = <0x00000000 0x11000000>;
+			size = <0x0 0x0>;
+		};
+
+		dmaheap_cma_reserved:heap-gfx {
+			compatible = "shared-dma-pool";
+			reusable;
+			/* maximum size of fbdev and wayland-drm backend
+			 * fbdev: 2 * (number of /dev/fbx device) buffers
+			 * wayland-drm: 4 buffers for westeros or 2 buffers for weston,
+			 *   3 buffers for direct display(enabled on weston)
+			 */
+			size = <0x0 0x5800000>;
+			alignment = <0x0 0x400000>;
+		};
+
+		dmaheap_fb_reserved:heap-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x11000000>;
+			alignment = <0x0 0x400000>;
 		};
 	};
 
