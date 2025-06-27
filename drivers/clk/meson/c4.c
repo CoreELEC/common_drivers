@@ -1661,7 +1661,7 @@ static const struct clk_parent_data sd_emmc_a_parent_data[] = {
 
 static struct clk_regmap sd_emmc_a_mux = {
 	.data = &(struct clk_regmap_mux_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.mask = 0x7,
 		.shift = 9,
 	},
@@ -1675,7 +1675,7 @@ static struct clk_regmap sd_emmc_a_mux = {
 
 static struct clk_regmap sd_emmc_a_div = {
 	.data = &(struct clk_regmap_div_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.shift = 0,
 		.width = 7,
 	},
@@ -1691,7 +1691,7 @@ static struct clk_regmap sd_emmc_a_div = {
 
 static struct clk_regmap sd_emmc_a = {
 	.data = &(struct clk_regmap_gate_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.bit_idx = 7,
 	},
 	.hw.init = &(struct clk_init_data) {
@@ -1717,7 +1717,7 @@ static const struct clk_parent_data sd_emmc_b_parent_data[] = {
 
 static struct clk_regmap sd_emmc_b_mux = {
 	.data = &(struct clk_regmap_mux_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.mask = 0x7,
 		.shift = 25,
 	},
@@ -1731,7 +1731,7 @@ static struct clk_regmap sd_emmc_b_mux = {
 
 static struct clk_regmap sd_emmc_b_div = {
 	.data = &(struct clk_regmap_div_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.shift = 16,
 		.width = 7,
 	},
@@ -1747,7 +1747,7 @@ static struct clk_regmap sd_emmc_b_div = {
 
 static struct clk_regmap sd_emmc_b = {
 	.data = &(struct clk_regmap_gate_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
 		.bit_idx = 23,
 	},
 	.hw.init = &(struct clk_init_data) {
@@ -1773,7 +1773,7 @@ static const struct clk_parent_data sd_emmc_c_parent_data[] = {
 
 static struct clk_regmap sd_emmc_c_mux = {
 	.data = &(struct clk_regmap_mux_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
 		.mask = 0x7,
 		.shift = 9,
 	},
@@ -1787,7 +1787,7 @@ static struct clk_regmap sd_emmc_c_mux = {
 
 static struct clk_regmap sd_emmc_c_div = {
 	.data = &(struct clk_regmap_div_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
 		.shift = 0,
 		.width = 7,
 	},
@@ -1803,7 +1803,7 @@ static struct clk_regmap sd_emmc_c_div = {
 
 static struct clk_regmap sd_emmc_c = {
 	.data = &(struct clk_regmap_gate_data) {
-		.offset = CLKCTRL_SD_EMMC_CLK_CTRL0,
+		.offset = CLKCTRL_SD_EMMC_CLK_CTRL1,
 		.bit_idx = 7,
 	},
 	.hw.init = &(struct clk_init_data) {
