@@ -1042,12 +1042,7 @@
 	};
 
 	ge2d {
-		/* for kernel driver:
-		 * compatible = "amlogic, ge2d-c3"
-		 * for mbp driver:
-		 * compatible = "amlogic, mbp-ge2d-c3";
-		 */
-		compatible = "amlogic, ge2d-c4";
+		compatible = "amlogic, mbp-ge2d-c4";
 		status = "okay";
 		interrupts = <GIC_SPI 217 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ge2d";
@@ -1091,20 +1086,14 @@
 	amlgdc {
 		#address-cells=<2>;
 		#size-cells=<2>;
-		status = "disabled";
-		/* for kernel driver:
-		 * compatible = "amlogic, aml-gdc-v3"
-		 * for mbp driver:
-		 * compatible = "amlogic, mbp-dewarp";
-		 */
-		compatible = "amlogic, mbp-dewarp";
-		reg = <0xfe04e000 0x000015c>;
-		interrupts = <GIC_SPI 218 IRQ_TYPE_EDGE_RISING>;
+		status = "okay";
+		compatible = "amlogic, mbp-dewarp-v2";
+		reg = <0xff016c00 0x000015c>;
+		interrupts = <GIC_SPI 153 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amlgdc";
-		clocks = <&clkc CLKID_DEWARP>;
-		clock-names = "clk_gate";
+		clocks = <&clkc CLKID_DEWARP>, <&clkc CLKID_CVE_ARB>, <&clkc CLKID_ISP>;
+		clock-names = "clk_gate", "cve_arb", "isp_clk";
 		clk-rate = <800000000>;
-		//power-domains = <&pwrdm PDID_C3_GDC_WRAP>;
 	};
 
 	freertos: freertos {
