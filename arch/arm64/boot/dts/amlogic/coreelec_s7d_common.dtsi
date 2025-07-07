@@ -9,6 +9,14 @@
 		};
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_fifo S7D_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	gpu:valhall {
 		compatible = "arm,mali-valhall-csf";
 	};
