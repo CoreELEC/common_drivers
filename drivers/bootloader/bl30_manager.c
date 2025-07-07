@@ -171,6 +171,9 @@ static ssize_t setup_bl30_store(struct class *cla,
 		aml_mbox_transfer_data(bl30_mbox_chan, MBOX_CMD_SET_GPIO_POWER,
 			(void *)&gpiopower, sizeof(gpiopower),
 			NULL, 0, MBOX_SYNC);
+		aml_mbox_transfer_data(bl30_mbox_chan, MBOX_CMD_SET_ETHERNET_WOL,
+			(void *)&support_gpio_wol, sizeof(support_gpio_wol),
+			NULL, 0, MBOX_SYNC);
 	}
 
 	return count;
