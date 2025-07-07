@@ -21,6 +21,14 @@
 		};
 	};
 
+	bl30_manager {
+		mboxes = <&mbox_fifo S5_REE2AO_DEV>;
+	};
+
+	mbox_devfs {
+		status = "disabled";
+	};
+
 	gpu:valhall {
 		compatible = "arm,mali-valhall-jm";
 	};
