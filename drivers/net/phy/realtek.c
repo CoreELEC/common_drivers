@@ -416,6 +416,11 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return ret;
 	}
 
+	/*pin 31 pull high*/
+	phy_write(phydev, RTL821x_PAGE_SELECT, 0xd40);
+	ret = phy_read(phydev, 0x16);
+	phy_write(phydev, 0x16, ret | (1 << 5));
+
 	return genphy_soft_reset(phydev);
 }
 
