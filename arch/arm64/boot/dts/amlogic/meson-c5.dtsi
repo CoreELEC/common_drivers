@@ -1471,7 +1471,7 @@
 		aml_aes {
 			compatible = "amlogic,aes_g12a_dma";
 			dev_name = "aml_aes_dma";
-			status = "disabled";
+			status = "okay";
 			iv_swap = /bits/ 8 <0x0>;
 		};
 
@@ -1479,7 +1479,7 @@
 			compatible = "amlogic,sha_dma";
 			dev_name = "aml_sha_dma";
 			hw_ctx_sz = /bits/ 32 <0x28>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		aml_sha3 {
@@ -1491,7 +1491,7 @@
 		aml_tdes {
 			compatible = "amlogic,des_dma,tdes_dma";
 			dev_name = "aml_tdes_dma";
-			status = "disabled";
+			status = "okay";
 		};
 
 		aml_sm4 {
@@ -1504,9 +1504,9 @@
 		crypto {
 			compatible = "amlogic,crypto_s5";
 			dev_name = "aml_crypto_dev";
-			status = "disabled";
-			thread = /bits/ 8 <0x5>;
-			interrupts = <0 29 1>;
+			status = "okay";
+			thread = /bits/ 8 <0x1>;
+			interrupts = <0 25 1>;
 		};
 	};
 
