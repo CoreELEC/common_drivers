@@ -202,3 +202,4 @@ dtb-y += s6_a311y2s_bq220.dtb
 dtb-y += s6_a311y2s_bq220_4g.dtb
 dtb-y += s6_a311y2s_bq220_16g.dtb
 dtb-y += s6_a311y2s_bq220_sdio.dtb
+dtb-y += a9_pxp.dtb
