@@ -214,6 +214,7 @@ static int aml_dma_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int err = -EPERM;
 	const struct meson_dma_data *priv_data;
+	u32 version = 0;
 
 	dma_dd = devm_kzalloc(dev, sizeof(struct aml_dma_dev), GFP_KERNEL);
 	if (!dma_dd) {
@@ -270,6 +271,11 @@ static int aml_dma_probe(struct platform_device *pdev)
 		err = PTR_ERR(dma_dd->kthread);
 		goto dma_err;
 	}
+	version = aml_read_crypto_reg(DMA_VER) >> 8;
+	if (version == 0x202506)
+		dma_dd->dma_version = DMA_VERSION_2;
+	else
+		dma_dd->dma_version = DMA_VERSION_1;
 
 	err = aml_dma_init_dbgfs(dev);
 	if (err)

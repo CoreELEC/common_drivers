@@ -67,7 +67,7 @@ u32 aml_read_crypto_reg(u32 addr)
 }
 EXPORT_SYMBOL_GPL(aml_read_crypto_reg);
 
-void aml_dma_debug(void *descriptor, u32 nents, const char *msg,
+void aml_dma_debug_v1(void *descriptor, u32 nents, const char *msg,
 		   u32 thread, u32 status, u8 dma_bus64)
 {
 	u32 i = 0;
@@ -145,6 +145,100 @@ void aml_dma_debug(void *descriptor, u32 nents, const char *msg,
 	}
 	dbgp(0, "end %s\n", msg);
 }
+
+void aml_dma_debug_v2(void *descriptor, u32 nents, const char *msg,
+		   u32 thread, u32 status, u8 dma_bus64)
+{
+	u32 i = 0;
+	struct dma_dsc_v2 *dsc = descriptor;
+	struct dma_dsc_v2_64 *dsc_64 = descriptor;
+
+	dbgp(0, "begin %s\n", msg);
+	dbgp(0, "reg(%u) = 0x%8x\n", thread,
+	     aml_read_crypto_reg(thread));
+	dbgp(0, "reg(%u) = 0x%8x\n", status,
+	     aml_read_crypto_reg(status));
+	dbgp(0, "bus64   = %u\n", dma_bus64);
+	if (dma_bus64) {
+		for (i = 0; i < nents; i++) {
+			dbgp(0, "desc (%4x) (len) = 0x%8x\n", i,
+					dsc_64[i].length);
+			dbgp(0, "desc (%4x) (skp) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.skip_block_count);
+			dbgp(0, "desc (%4x) (crp) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.crypt_block_count);
+			dbgp(0, "desc (%4x) (irq) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.irq);
+			dbgp(0, "desc (%4x) (eoc) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.eoc);
+			dbgp(0, "desc (%4x) (lop) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.loop);
+			dbgp(0, "desc (%4x) (mod) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.mode);
+			dbgp(0, "desc (%4x) (beg) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.begin);
+			dbgp(0, "desc (%4x) (end) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.end);
+			dbgp(0, "desc (%4x) (opm) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.op_mode);
+			dbgp(0, "desc (%4x) (enc) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.enc_sha_only);
+			dbgp(0, "desc (%4x) (lnk_err) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.link_error);
+			dbgp(0, "desc (%4x) (own) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.owner);
+			dbgp(0, "desc (%4x) (src) = 0x%16llx\n", i,
+					dsc_64[i].src_addr);
+			dbgp(0, "desc (%4x) (tgt) = 0x%16llx\n", i,
+					dsc_64[i].tgt_addr);
+		}
+	} else {
+		for (i = 0; i < nents; i++) {
+			dbgp(0, "desc (%4x) (len) = 0x%8x\n", i,
+					dsc[i].length);
+			dbgp(0, "desc (%4x) (skp) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.skip_block_count);
+			dbgp(0, "desc (%4x) (crp) = 0x%8x\n", i,
+					dsc_64[i].dsc_cfg.b.crypt_block_count);
+			dbgp(0, "desc (%4x) (irq) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.irq);
+			dbgp(0, "desc (%4x) (eoc) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.eoc);
+			dbgp(0, "desc (%4x) (lop) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.loop);
+			dbgp(0, "desc (%4x) (mod) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.mode);
+			dbgp(0, "desc (%4x) (beg) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.begin);
+			dbgp(0, "desc (%4x) (end) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.end);
+			dbgp(0, "desc (%4x) (opm) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.op_mode);
+			dbgp(0, "desc (%4x) (enc) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.enc_sha_only);
+			dbgp(0, "desc (%4x) (lnk_err) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.link_error);
+			dbgp(0, "desc (%4x) (own) = 0x%8x\n", i,
+					dsc[i].dsc_cfg.b.owner);
+			dbgp(0, "desc (%4x) (src) = 0x%8x\n", i,
+					dsc[i].src_addr);
+			dbgp(0, "desc (%4x) (tgt) = 0x%8x\n", i,
+					dsc[i].tgt_addr);
+		}
+	}
+	dbgp(0, "end %s\n", msg);
+}
+
+void aml_dma_debug(void *descriptor, u32 nents, const char *msg,
+		   u32 thread, u32 status, struct aml_dma_dev *dma)
+{
+	if (dma->dma_version == DMA_VERSION_1)
+		return aml_dma_debug_v1(descriptor, nents, msg, thread, status, dma->dma_bus64);
+	else if (dma->dma_version == DMA_VERSION_2)
+		return aml_dma_debug_v2(descriptor, nents, msg, thread, status, dma->dma_bus64);
+	else
+		return;
+}
 EXPORT_SYMBOL_GPL(aml_dma_debug);
 
 void aml_dma_link_debug(void *descriptor, dma_addr_t dma_dsc,
@@ -218,8 +312,7 @@ u32 aml_dma_do_hw_crypto(struct aml_dma_dev *dd,
 			 u8 polling, u8 dma_flags)
 {
 	u32 status = 0;
-	struct dma_dsc *dsc = descriptor;
-	struct dma_dsc_64 *dsc_64 = descriptor;
+	struct dma_dsc_v2_64 dsc;
 
 	spin_lock_irqsave(&dd->dma_lock, dd->irq_flags);
 	dd->dma_busy |= dma_flags;
@@ -238,17 +331,12 @@ u32 aml_dma_do_hw_crypto(struct aml_dma_dev *dd,
 		/* If error occurs, report it and don't wait owner bit */
 		pr_err("Error returned by DMA(0x%8x)\n", status);
 	} else {
-		if (dd->dma_bus64) {
-			WARN_ON(!(dsc_64[dsc_len - 1].dsc_cfg.b.eoc == 1));
-			if (dsc_64[dsc_len - 1].dsc_cfg.b.eoc == 1) {
-				while (dsc_64[dsc_len - 1].dsc_cfg.b.owner)
-					cpu_relax();
-			}
-		} else {
-			WARN_ON(!(dsc[dsc_len - 1].dsc_cfg.b.eoc == 1));
-			if (dsc[dsc_len - 1].dsc_cfg.b.eoc == 1) {
-				while (dsc[dsc_len - 1].dsc_cfg.b.owner)
-					cpu_relax();
+		aml_dma_dsc_reader(descriptor, dsc_len - 1, &dsc, 0, dd);
+		WARN_ON(!dsc.dsc_cfg.b.eoc);
+		if (dsc.dsc_cfg.b.eoc == 1) {
+			while (dsc.dsc_cfg.b.owner != 0) {
+				cpu_relax();
+				aml_dma_dsc_reader(descriptor, dsc_len - 1, &dsc, 0, dd);
 			}
 		}
 	}
@@ -297,13 +385,92 @@ noinline int aml_dma_call_smc(u64 func_id, u64 arg0, u64 arg1, u64 arg2)
 }
 EXPORT_SYMBOL_GPL(aml_dma_call_smc);
 
-inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc,
-			       u32 dma_bus64, u32 is_sg_dsc)
+inline void aml_dma_dsc_writer_v1(void *base, u32 i, void *dsc,
+			       u8 dma_bus64, u8 is_sg_dsc)
 {
+	u8 use_block_mode = 0;
+
 	if (dma_bus64) {
 		if (!is_sg_dsc) {
 			struct dma_dsc_64 *dsc_base = base;
-			struct dma_dsc_64 *dsc_to_write = dsc;
+			struct dma_dsc_v2_64 *dsc_to_write = dsc;
+
+			if (!(dsc_to_write->length % DMA_BLOCK_MODE_SIZE))
+				use_block_mode = 1;
+
+			dsc_base[i].src_addr = dsc_to_write->src_addr;
+			dsc_base[i].tgt_addr = dsc_to_write->tgt_addr;
+			dsc_base[i].dsc_cfg.d32 = 0;
+			dsc_base[i].dsc_cfg.b.irq = dsc_to_write->dsc_cfg.b.irq;
+			dsc_base[i].dsc_cfg.b.eoc = dsc_to_write->dsc_cfg.b.eoc;
+			dsc_base[i].dsc_cfg.b.loop = dsc_to_write->dsc_cfg.b.loop;
+			dsc_base[i].dsc_cfg.b.mode = dsc_to_write->dsc_cfg.b.mode;
+			dsc_base[i].dsc_cfg.b.begin = dsc_to_write->dsc_cfg.b.begin;
+			dsc_base[i].dsc_cfg.b.end = dsc_to_write->dsc_cfg.b.end;
+			dsc_base[i].dsc_cfg.b.op_mode = dsc_to_write->dsc_cfg.b.op_mode;
+			dsc_base[i].dsc_cfg.b.enc_sha_only = dsc_to_write->dsc_cfg.b.enc_sha_only;
+			if (use_block_mode) {
+				dsc_base[i].dsc_cfg.b.length =
+				    dsc_to_write->length / DMA_BLOCK_MODE_SIZE;
+				dsc_base[i].dsc_cfg.b.block = 1;
+			} else {
+				dsc_base[i].dsc_cfg.b.length = dsc_to_write->length;
+				WARN_ON(dsc_base[i].dsc_cfg.b.length != dsc_to_write->length);
+			}
+			dsc_base[i].dsc_cfg.b.link_error = dsc_to_write->dsc_cfg.b.link_error;
+			dsc_base[i].dsc_cfg.b.owner = dsc_to_write->dsc_cfg.b.owner;
+		} else {
+			struct dma_sg_dsc_64 *dsc_base = base;
+			struct dma_sg_dsc_64 *dsc_to_write = dsc;
+
+			dsc_base[i] = *dsc_to_write;
+		}
+	} else {
+		if (!is_sg_dsc) {
+			struct dma_dsc *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_to_write = dsc;
+
+			if (!(dsc_to_write->length % DMA_BLOCK_MODE_SIZE))
+				use_block_mode = 1;
+
+			dsc_base[i].src_addr = dsc_to_write->src_addr;
+			dsc_base[i].tgt_addr = dsc_to_write->tgt_addr;
+			dsc_base[i].dsc_cfg.d32 = 0;
+			dsc_base[i].dsc_cfg.b.length = dsc_to_write->length;
+			dsc_base[i].dsc_cfg.b.irq = dsc_to_write->dsc_cfg.b.irq;
+			dsc_base[i].dsc_cfg.b.eoc = dsc_to_write->dsc_cfg.b.eoc;
+			dsc_base[i].dsc_cfg.b.loop = dsc_to_write->dsc_cfg.b.loop;
+			dsc_base[i].dsc_cfg.b.mode = dsc_to_write->dsc_cfg.b.mode;
+			dsc_base[i].dsc_cfg.b.begin = dsc_to_write->dsc_cfg.b.begin;
+			dsc_base[i].dsc_cfg.b.end = dsc_to_write->dsc_cfg.b.end;
+			dsc_base[i].dsc_cfg.b.op_mode = dsc_to_write->dsc_cfg.b.op_mode;
+			dsc_base[i].dsc_cfg.b.enc_sha_only = dsc_to_write->dsc_cfg.b.enc_sha_only;
+			if (use_block_mode) {
+				dsc_base[i].dsc_cfg.b.length =
+				    dsc_to_write->length / DMA_BLOCK_MODE_SIZE;
+				dsc_base[i].dsc_cfg.b.block = 1;
+			} else {
+				dsc_base[i].dsc_cfg.b.length = dsc_to_write->length;
+			}
+			dsc_base[i].dsc_cfg.b.link_error = dsc_to_write->dsc_cfg.b.link_error;
+			dsc_base[i].dsc_cfg.b.owner = dsc_to_write->dsc_cfg.b.owner;
+		} else {
+			struct dma_sg_dsc *dsc_base = base;
+			struct dma_sg_dsc_64 *dsc_to_write = dsc;
+
+			dsc_base[i].dsc_cfg = dsc_to_write->dsc_cfg;
+			dsc_base[i].addr = dsc_to_write->addr;
+		}
+	}
+}
+
+inline void aml_dma_dsc_writer_v2(void *base, u32 i, void *dsc,
+			       u8 dma_bus64, u8 is_sg_dsc)
+{
+	if (dma_bus64) {
+		if (!is_sg_dsc) {
+			struct dma_dsc_v2_64 *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_to_write = dsc;
 
 			dsc_base[i] = *dsc_to_write;
 		} else {
@@ -314,8 +481,8 @@ inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc,
 		}
 	} else {
 		if (!is_sg_dsc) {
-			struct dma_dsc *dsc_base = base;
-			struct dma_dsc_64 *dsc_to_write = dsc;
+			struct dma_dsc_v2 *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_to_write = dsc;
 
 			dsc_base[i].dsc_cfg = dsc_to_write->dsc_cfg;
 			dsc_base[i].src_addr = dsc_to_write->src_addr;
@@ -329,15 +496,91 @@ inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc,
 		}
 	}
 }
+
+inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc, u8 is_sg_dsc, struct aml_dma_dev *dma)
+{
+	if (dma->dma_version == DMA_VERSION_1)
+		return aml_dma_dsc_writer_v1(base, i, dsc, dma->dma_bus64, is_sg_dsc);
+	else if (dma->dma_version == DMA_VERSION_2)
+		return aml_dma_dsc_writer_v2(base, i, dsc, dma->dma_bus64, is_sg_dsc);
+	else
+		return;
+}
+
 EXPORT_SYMBOL_GPL(aml_dma_dsc_writer);
 
-inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc,
-			       u32 dma_bus64, u32 is_sg_dsc)
+inline void aml_dma_dsc_reader_v1(void *base, u32 i, void *dsc,
+				  u8 dma_bus64, u8 is_sg_dsc)
 {
 	if (dma_bus64) {
 		if (!is_sg_dsc) {
 			struct dma_dsc_64 *dsc_base = base;
-			struct dma_dsc_64 *dsc_read = dsc;
+			struct dma_dsc_v2_64 *dsc_read = dsc;
+
+			if (dsc_base[i].dsc_cfg.b.block)
+				dsc_read->length =
+				    dsc_base[i].dsc_cfg.b.length * DMA_BLOCK_MODE_SIZE;
+			else
+				dsc_read->length = dsc_base[i].dsc_cfg.b.length;
+			dsc_read->src_addr = dsc_base[i].src_addr;
+			dsc_read->tgt_addr = dsc_base[i].tgt_addr;
+			dsc_read->dsc_cfg.d32 = 0;
+			dsc_read->dsc_cfg.b.irq = dsc_base[i].dsc_cfg.b.irq;
+			dsc_read->dsc_cfg.b.eoc = dsc_base[i].dsc_cfg.b.eoc;
+			dsc_read->dsc_cfg.b.loop = dsc_base[i].dsc_cfg.b.loop;
+			dsc_read->dsc_cfg.b.mode = dsc_base[i].dsc_cfg.b.mode;
+			dsc_read->dsc_cfg.b.begin = dsc_base[i].dsc_cfg.b.begin;
+			dsc_read->dsc_cfg.b.end = dsc_base[i].dsc_cfg.b.end;
+			dsc_read->dsc_cfg.b.op_mode = dsc_base[i].dsc_cfg.b.op_mode;
+			dsc_read->dsc_cfg.b.enc_sha_only = dsc_base[i].dsc_cfg.b.enc_sha_only;
+			dsc_read->dsc_cfg.b.link_error = dsc_base[i].dsc_cfg.b.link_error;
+			dsc_read->dsc_cfg.b.owner = dsc_base[i].dsc_cfg.b.owner;
+		} else {
+			struct dma_sg_dsc_64 *dsc_base = base;
+			struct dma_sg_dsc_64 *dsc_read = dsc;
+
+			*dsc_read = dsc_base[i];
+		}
+	} else {
+		if (!is_sg_dsc) {
+			struct dma_dsc *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_read = dsc;
+
+			if (dsc_base[i].dsc_cfg.b.block)
+				dsc_read->length =
+				    dsc_base[i].dsc_cfg.b.length * DMA_BLOCK_MODE_SIZE;
+			else
+				dsc_read->length = dsc_base[i].dsc_cfg.b.length;
+			dsc_read->src_addr = dsc_base[i].src_addr;
+			dsc_read->tgt_addr = dsc_base[i].tgt_addr;
+			dsc_read->dsc_cfg.d32 = 0;
+			dsc_read->dsc_cfg.b.irq = dsc_base[i].dsc_cfg.b.irq;
+			dsc_read->dsc_cfg.b.eoc = dsc_base[i].dsc_cfg.b.eoc;
+			dsc_read->dsc_cfg.b.loop = dsc_base[i].dsc_cfg.b.loop;
+			dsc_read->dsc_cfg.b.mode = dsc_base[i].dsc_cfg.b.mode;
+			dsc_read->dsc_cfg.b.begin = dsc_base[i].dsc_cfg.b.begin;
+			dsc_read->dsc_cfg.b.end = dsc_base[i].dsc_cfg.b.end;
+			dsc_read->dsc_cfg.b.op_mode = dsc_base[i].dsc_cfg.b.op_mode;
+			dsc_read->dsc_cfg.b.enc_sha_only = dsc_base[i].dsc_cfg.b.enc_sha_only;
+			dsc_read->dsc_cfg.b.link_error = dsc_base[i].dsc_cfg.b.link_error;
+			dsc_read->dsc_cfg.b.owner = dsc_base[i].dsc_cfg.b.owner;
+		} else {
+			struct dma_sg_dsc *dsc_base = base;
+			struct dma_sg_dsc_64 *dsc_read = dsc;
+
+			dsc_read->dsc_cfg = dsc_base[i].dsc_cfg;
+			dsc_read->addr = dsc_base[i].addr;
+		}
+	}
+}
+
+inline void aml_dma_dsc_reader_v2(void *base, u32 i, void *dsc,
+				  u8 dma_bus64, u8 is_sg_dsc)
+{
+	if (dma_bus64) {
+		if (!is_sg_dsc) {
+			struct dma_dsc_v2_64 *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_read = dsc;
 
 			*dsc_read = dsc_base[i];
 		} else {
@@ -348,8 +591,8 @@ inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc,
 		}
 	} else {
 		if (!is_sg_dsc) {
-			struct dma_dsc *dsc_base = base;
-			struct dma_dsc_64 *dsc_read = dsc;
+			struct dma_dsc_v2 *dsc_base = base;
+			struct dma_dsc_v2_64 *dsc_read = dsc;
 
 			dsc_read->dsc_cfg = dsc_base[i].dsc_cfg;
 			dsc_read->src_addr = dsc_base[i].src_addr;
@@ -363,16 +606,37 @@ inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc,
 		}
 	}
 }
+
+inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc, u8 is_sg_dsc, struct aml_dma_dev *dma)
+{
+	if (dma->dma_version == DMA_VERSION_1)
+		return aml_dma_dsc_reader_v1(base, i, dsc, dma->dma_bus64, is_sg_dsc);
+	else if (dma->dma_version == DMA_VERSION_2)
+		return aml_dma_dsc_reader_v2(base, i, dsc, dma->dma_bus64, is_sg_dsc);
+	else
+		return;
+}
 EXPORT_SYMBOL_GPL(aml_dma_dsc_reader);
 
-inline u32 aml_dma_get_dsc_sz(u32 dma_bus64, u32 is_sg_dsc)
+inline u32 aml_dma_get_dsc_sz(u8 is_sg_dsc, struct aml_dma_dev *dma)
 {
-	if (!is_sg_dsc)
-		return dma_bus64 ? sizeof(struct dma_dsc_64) :
-				   sizeof(struct dma_dsc);
-	else
-		return dma_bus64 ? sizeof(struct dma_sg_dsc_64) :
-				   sizeof(struct dma_sg_dsc);
+	if (dma->dma_version == DMA_VERSION_1) {
+		if (!is_sg_dsc)
+			return dma->dma_bus64 ? sizeof(struct dma_dsc_64) :
+				sizeof(struct dma_dsc);
+		else
+			return dma->dma_bus64 ? sizeof(struct dma_sg_dsc_64) :
+				sizeof(struct dma_sg_dsc);
+	} else if (dma->dma_version == DMA_VERSION_2) {
+		if (!is_sg_dsc)
+			return dma->dma_bus64 ? sizeof(struct dma_dsc_v2_64) :
+				sizeof(struct dma_dsc_v2);
+		else
+			return dma->dma_bus64 ? sizeof(struct dma_sg_dsc_64) :
+				sizeof(struct dma_sg_dsc);
+	} else {
+		return 0;
+	}
 }
 EXPORT_SYMBOL_GPL(aml_dma_get_dsc_sz);
 

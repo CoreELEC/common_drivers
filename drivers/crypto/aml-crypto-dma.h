@@ -10,6 +10,8 @@
 #include <crypto/algapi.h>
 
 #define MAX_KTE        (255)
+#define DMA_VER     0x13
+
 #define MAX_NUM_TABLES (16)
 #define USE_BUSY_POLLING (0)
 
@@ -57,6 +59,12 @@ enum CRYPTO_ALGO_CAPABILITY {
 	CAP_TDES = 0x4,
 	CAP_S17 = 0x8,
 	CAP_SM4 = 0x10,
+};
+
+enum {
+	DMA_VERSION_NOT_CONFIGURED = 0,
+	DMA_VERSION_1 = 1,
+	DMA_VERSION_2 = 2
 };
 
 #define aml_write_reg(addr, data) \
@@ -127,6 +135,40 @@ struct dma_dsc_64 {
 	u64 tgt_addr;
 } __packed;
 
+union dsc_common_v2 {
+	u32 d32;
+	struct {
+		unsigned skip_block_count:4;
+		unsigned crypt_block_count:4;
+		unsigned resv1:9;
+		unsigned irq:1;
+		unsigned eoc:1;
+		unsigned loop:1;
+		unsigned mode:4;
+		unsigned begin:1;
+		unsigned end:1;
+		unsigned op_mode:2;
+		unsigned enc_sha_only:1;
+		unsigned resv2:1;
+		unsigned link_error:1;
+		unsigned owner:1;
+	} b;
+};
+
+struct dma_dsc_v2 {
+	union dsc_common_v2 dsc_cfg;
+	u32 length;
+	u32 src_addr;
+	u32 tgt_addr;
+} __packed;
+
+struct dma_dsc_v2_64 {
+	union dsc_common_v2 dsc_cfg;
+	u32 length;
+	u64 src_addr;
+	u64 tgt_addr;
+} __packed;
+
 union sg_dsc_common {
 	u32 d32;
 	struct {
@@ -171,6 +213,7 @@ struct aml_dma_dev {
 	struct crypto_queue	queue;
 	spinlock_t queue_lock; /* spinlock for queue */
 	u8 dma_bus64;
+	u8 dma_version;
 	struct device *dev;
 	struct completion done;
 };
@@ -179,7 +222,7 @@ u32 swap_ulong32(u32 val);
 void aml_write_crypto_reg(struct aml_dma_dev *dd, u32 addr, u64 data);
 u32 aml_read_crypto_reg(u32 addr);
 void aml_dma_debug(void *dsc, u32 nents, const char *msg,
-		   u32 thread, u32 status, u8 dma_bus64);
+		   u32 thread, u32 status, struct aml_dma_dev *dma);
 void aml_dma_link_debug(void *descriptor, dma_addr_t dma_dsc,
 			u32 nents, const char *msg, u8 dma_bus64);
 u32 aml_dma_do_hw_crypto(struct aml_dma_dev *dd,
@@ -191,9 +234,9 @@ irqreturn_t aml_crypto_dma_irq(int irq, void *dev_id);
 
 noinline int aml_dma_call_smc(u64 func_id, u64 arg0, u64 arg1, u64 arg2);
 
-inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc, u32 dma_bus64, u32 is_sg_dsc);
-inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc, u32 dma_bus64, u32 is_sg_dsc);
-inline u32 aml_dma_get_dsc_sz(u32 dma_bus64, u32 is_sg_dsc);
+inline void aml_dma_dsc_writer(void *base, u32 i, void *dsc, u8 is_sg_dsc, struct aml_dma_dev *dma);
+inline void aml_dma_dsc_reader(void *base, u32 i, void *dsc, u8 is_sg_dsc, struct aml_dma_dev *dma);
+inline u32 aml_dma_get_dsc_sz(u8 is_sg_dsc, struct aml_dma_dev *dma);
 
 void aml_dma_finish_hw_crypto(struct aml_dma_dev *dd, u8 dma_flags);
 

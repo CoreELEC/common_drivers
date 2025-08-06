@@ -183,7 +183,7 @@ static int aml_sha3_xmit_dma(struct aml_sha3_dev *dd,
 			    u32 nents, int final)
 {
 	int i = 0;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	u32 mode;
 	struct aml_sha3_reqctx *ctx = ahash_request_ctx(req);
 	size_t length = 0;
@@ -224,8 +224,8 @@ static int aml_sha3_xmit_dma(struct aml_sha3_dev *dd,
 
 	if (!nents) {
 		dsc.src_addr = 0;
+		dsc.length = 0;
 		dsc.dsc_cfg.d32 = 0;
-		dsc.dsc_cfg.b.length = 0;
 		dsc.tgt_addr = (uintptr_t)ctx->hash_ctx_addr;
 		dsc.dsc_cfg.b.enc_sha_only = enc_sha_only;
 		dsc.dsc_cfg.b.mode = mode;
@@ -236,15 +236,15 @@ static int aml_sha3_xmit_dma(struct aml_sha3_dev *dd,
 		dsc.dsc_cfg.b.eoc = 1;
 		dsc.dsc_cfg.b.owner = 1;
 
-		aml_dma_dsc_writer(descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+		aml_dma_dsc_writer(descriptor, 0, &dsc, 0, dd->dma);
 
 		nents = 1;
 		aml_dma_debug(descriptor, nents, __func__, dd->thread, dd->status,
-			      dd->dma->dma_bus64);
+			      dd->dma);
 	} else {
 		for (i = 0; i < nents; i++) {
 			/* some fields are already filled, read it back and update dsc */
-			aml_dma_dsc_reader(descriptor, i, &dsc, dd->dma->dma_bus64, 0);
+			aml_dma_dsc_reader(descriptor, i, &dsc, 0, dd->dma);
 
 			dsc.dsc_cfg.b.enc_sha_only = enc_sha_only;
 			dsc.dsc_cfg.b.mode = mode;
@@ -260,15 +260,15 @@ static int aml_sha3_xmit_dma(struct aml_sha3_dev *dd,
 				dsc.dsc_cfg.b.end = 0;
 				dsc.dsc_cfg.b.eoc = 0;
 			}
-			length = dsc.dsc_cfg.b.length;
+			length = dsc.length;
 			ctx->digcnt[0] += length;
 			if (ctx->digcnt[0] < length)
 				ctx->digcnt[1]++;
 
-			aml_dma_dsc_writer(descriptor, i, &dsc, dd->dma->dma_bus64, 0);
+			aml_dma_dsc_writer(descriptor, i, &dsc, 0, dd->dma);
 		}
 		aml_dma_debug(descriptor, nents, __func__, dd->thread, dd->status,
-			      dd->dma->dma_bus64);
+			      dd->dma);
 	}
 
 	if (final)
@@ -286,7 +286,7 @@ static int aml_sha3_xmit_dma(struct aml_sha3_dev *dd,
 	if (status & DMA_STATUS_KEY_ERROR)
 		dd->flags |= SHA_FLAGS_ERROR;
 	aml_dma_debug(descriptor, nents, "end sha3", dd->thread, dd->status,
-		      dd->dma->dma_bus64);
+		      dd->dma);
 
 	dd->flags |= SHA_FLAGS_OUTPUT_READY;
 	dd->flags &= ~SHA_FLAGS_DMA_ACTIVE;
@@ -306,7 +306,7 @@ static int aml_sha3_update_dma_start(struct aml_sha3_dev *dd,
 	struct aml_sha3_reqctx *ctx = ahash_request_ctx(req);
 	unsigned int length = 0, final = 0;
 	struct scatterlist *sg;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	struct device *dev = dd->dev;
 	u32 nents = 0, nents_act;
 	u32 mapped = 0;
@@ -344,9 +344,9 @@ static int aml_sha3_update_dma_start(struct aml_sha3_dev *dd,
 			ctx->dma_addr = sg_dma_address(sg);
 
 			dsc.src_addr = (uintptr_t)ctx->dma_addr;
+			dsc.length = length;
 			dsc.dsc_cfg.d32 = 0;
-			dsc.dsc_cfg.b.length = length;
-			aml_dma_dsc_writer(dd->descriptor, i, &dsc, dd->dma->dma_bus64, 0);
+			aml_dma_dsc_writer(dd->descriptor, i, &dsc, 0, dd->dma);
 
 			sg = sg_next(sg);
 			ctx->total -= length;
@@ -371,7 +371,7 @@ static int aml_sha3_update_dma_stop(struct aml_sha3_dev *dd)
 	u32 nents = 0;
 
 	aml_dma_debug(dd->descriptor, ctx->fast_nents, __func__, dd->thread,
-		      dd->status, dd->dma->dma_bus64);
+		      dd->status, dd->dma);
 
 	if (ctx->fast_nents) {
 		dma_unmap_sg(dd->parent, ctx->sg, ctx->fast_nents, DMA_TO_DEVICE);
@@ -477,7 +477,7 @@ void aml_sha3_finish_req(struct ahash_request *req, int err)
 
 static int aml_sha3_hw_init(struct aml_sha3_dev *dd)
 {
-	u32 dma_dsc_sz = aml_dma_get_dsc_sz(dd->dma->dma_bus64, 0);
+	u32 dma_dsc_sz = aml_dma_get_dsc_sz(0, dd->dma);
 
 	if (!(dd->flags & SHA_FLAGS_INIT)) {
 		dd->descriptor =
@@ -501,7 +501,7 @@ static int aml_sha3_state_restore(struct ahash_request *req)
 	struct aml_sha3_reqctx *ctx = ahash_request_ctx(req);
 	struct aml_sha3_ctx *tctx = crypto_tfm_ctx(req->base.tfm);
 	struct aml_sha3_dev *dd = tctx->dd;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	s32 len = SHA3_HW_CONTEXT_SIZE;
 	u32 status = 0;
 	int err = 0;
@@ -512,12 +512,12 @@ static int aml_sha3_state_restore(struct ahash_request *req)
 	memcpy(ctx->state, ctx->state_v, SHA3_CONTEXT_LEN);
 	dsc.src_addr = (uintptr_t)ctx->hash_ctx_addr;
 	dsc.tgt_addr = 0;
+	dsc.length = len;
 	dsc.dsc_cfg.d32 = 0;
-	dsc.dsc_cfg.b.length = len;
 	dsc.dsc_cfg.b.mode = MODE_KEY;
 	dsc.dsc_cfg.b.eoc = 1;
 	dsc.dsc_cfg.b.owner = 1;
-	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, 0, dd->dma);
 	status = aml_dma_do_hw_crypto(dd->dma, dd->descriptor, 1, dd->dma_descript_tab,
 				      USE_BUSY_POLLING, DMA_FLAG_SHA_IN_USE);
 	if (status & DMA_STATUS_KEY_ERROR) {
@@ -525,7 +525,7 @@ static int aml_sha3_state_restore(struct ahash_request *req)
 		err = -EINVAL;
 	}
 	aml_dma_debug(dd->descriptor, 1, "end restore", dd->thread, dd->status,
-		      dd->dma->dma_bus64);
+		      dd->dma);
 	return err;
 }
 
@@ -807,7 +807,7 @@ static int aml_shake_squeeze_dma(struct ahash_request *req)
 	struct aml_sha3_reqctx *ctx = ahash_request_ctx(req);
 	struct aml_sha3_ctx *tctx = crypto_ahash_ctx(tfm);
 	struct aml_sha3_dev *dd = tctx->dd;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	int err = 0;
 	u32 status = 0;
 	u8 enc_sha_only = 0;
@@ -830,8 +830,8 @@ static int aml_shake_squeeze_dma(struct ahash_request *req)
 
 	dsc.src_addr = 0;
 	dsc.tgt_addr = (uintptr_t)ctx->hash_ctx_addr;
+	dsc.length = digest_size;
 	dsc.dsc_cfg.d32 = 0;
-	dsc.dsc_cfg.b.length = digest_size;
 	dsc.dsc_cfg.b.enc_sha_only = enc_sha_only;
 	dsc.dsc_cfg.b.mode = mode;
 	dsc.dsc_cfg.b.begin = 0;
@@ -839,10 +839,10 @@ static int aml_shake_squeeze_dma(struct ahash_request *req)
 	dsc.dsc_cfg.b.op_mode = op_mode;
 	dsc.dsc_cfg.b.eoc = 1;
 	dsc.dsc_cfg.b.owner = 1;
-	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, 0, dd->dma);
 
 	aml_dma_debug(dd->descriptor, 1, __func__, dd->thread, dd->status,
-		      dd->dma->dma_bus64);
+		      dd->dma);
 
 	dd->req = req;
 
@@ -854,7 +854,7 @@ static int aml_shake_squeeze_dma(struct ahash_request *req)
 		err = -EINVAL;
 	}
 	aml_dma_debug(dd->descriptor, 1, "end squeeze", dd->thread, dd->status,
-		      dd->dma->dma_bus64);
+		      dd->dma);
 	return err;
 }
 
@@ -1208,7 +1208,7 @@ sha_dd_err:
 static void aml_sha3_remove(struct platform_device *pdev)
 {
 	static struct aml_sha3_dev *sha_dd;
-	u32 dma_dsc_sz = aml_dma_get_dsc_sz(sha_dd->dma->dma_bus64, 0);
+	u32 dma_dsc_sz = aml_dma_get_dsc_sz(0, sha_dd->dma);
 
 	sha_dd = platform_get_drvdata(pdev);
 	if (!sha_dd)

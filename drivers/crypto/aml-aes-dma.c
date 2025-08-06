@@ -135,7 +135,7 @@ static int set_aes_kl_key_iv(struct aml_aes_dev *dd, u32 *key,
 			     u32 keylen, u32 *iv, u8 swap)
 {
 	struct device *dev = dd->dev;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	u32 *key_iv = kzalloc(DMA_KEY_IV_BUF_SIZE, GFP_ATOMIC);
 	u32 status = 0;
 	int err = 0;
@@ -175,29 +175,29 @@ static int set_aes_kl_key_iv(struct aml_aes_dev *dd, u32 *key,
 
 	dsc.src_addr = (u64)(0xffffffffffffff00 | dd->ctx->kte);
 	dsc.tgt_addr = 0;
+	dsc.length = keylen;
 	dsc.dsc_cfg.d32 = 0;
-	dsc.dsc_cfg.b.length = keylen;
 	dsc.dsc_cfg.b.mode = MODE_KEY;
 	dsc.dsc_cfg.b.eoc = iv ? 0 : 1;
 	dsc.dsc_cfg.b.owner = 1;
-	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, 0, dd->dma);
 
 	if (iv) {
 		dsc.src_addr = (u64)dma_addr_key;
 		dsc.tgt_addr = 32;
+		dsc.length = 16;
 		dsc.dsc_cfg.d32 = 0;
-		dsc.dsc_cfg.b.length = 16;
 		dsc.dsc_cfg.b.mode = MODE_KEY;
 		dsc.dsc_cfg.b.eoc = 1;
 		dsc.dsc_cfg.b.owner = 1;
-		aml_dma_dsc_writer(dd->descriptor, 1, &dsc, dd->dma->dma_bus64, 0);
+		aml_dma_dsc_writer(dd->descriptor, 1, &dsc, 0, dd->dma);
 		nents++;
 	}
 
 	status = aml_dma_do_hw_crypto(dd->dma, dd->descriptor, nents, dd->dma_descript_tab,
 				      USE_BUSY_POLLING, DMA_FLAG_AES_IN_USE);
 	aml_dma_debug(dd->descriptor, nents, __func__, dd->thread, dd->status,
-			dd->dma->dma_bus64);
+			dd->dma);
 	if (status & DMA_STATUS_KEY_ERROR) {
 		dev_err(dev, "hw crypto failed, status: 0x%x\n", status);
 		err = -EINVAL;
@@ -214,7 +214,7 @@ static int set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 			  u32 keylen, u32 *iv, u8 swap)
 {
 	struct device *dev = dd->dev;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	u32 *key_iv = kzalloc(DMA_KEY_IV_BUF_SIZE, GFP_ATOMIC);
 
 	s32 len = keylen;
@@ -255,19 +255,19 @@ static int set_aes_key_iv(struct aml_aes_dev *dd, u32 *key,
 
 	dsc.src_addr = (uintptr_t)dma_addr_key;
 	dsc.tgt_addr = 0;
+	dsc.length = len;
 	dsc.dsc_cfg.d32 = 0;
-	dsc.dsc_cfg.b.length = len;
 	dsc.dsc_cfg.b.mode = MODE_KEY;
 	dsc.dsc_cfg.b.eoc = 1;
 	dsc.dsc_cfg.b.owner = 1;
-	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, 0, dd->dma);
 
 	aml_dma_debug(dd->descriptor, 1, __func__, dd->thread, dd->status,
-		      dd->dma->dma_bus64);
+			 dd->dma);
 	status = aml_dma_do_hw_crypto(dd->dma, dd->descriptor, 1, dd->dma_descript_tab,
 				      USE_BUSY_POLLING, DMA_FLAG_AES_IN_USE);
 	aml_dma_debug(dd->descriptor, 1, "end aes keyiv", dd->thread, dd->status,
-			dd->dma->dma_bus64);
+			dd->dma);
 	if (status & DMA_STATUS_KEY_ERROR) {
 		dev_err(dev, "hw crypto failed, status: 0x%x\n", status);
 		err = -EINVAL;
@@ -320,8 +320,8 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, void *descriptor,
 	struct scatterlist *out_sg = dd->out_sg;
 	u32 in_nents = 0, out_nents = 0;
 	struct dma_sg_dsc_64 sg_dsc;
-	u32 dma_sg_sz = aml_dma_get_dsc_sz(dd->dma->dma_bus64, 1);
-	struct dma_dsc_64 dsc;
+	u32 dma_sg_sz = aml_dma_get_dsc_sz(1, dd->dma);
+	struct dma_dsc_v2_64 dsc;
 
 	in_nents = sg_nents(in_sg);
 	out_nents = sg_nents(out_sg);
@@ -377,7 +377,7 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, void *descriptor,
 		sg_dsc.dsc_cfg.b.eoc = i == (in_nents - 1) ? 1 : 0;
 		sg_dsc.dsc_cfg.b.length = in_sg->length;
 		sg_dsc.addr = in_sg->dma_address;
-		aml_dma_dsc_writer(dd->sg_dsc_in, i, &sg_dsc, dd->dma->dma_bus64, 1);
+		aml_dma_dsc_writer(dd->sg_dsc_in, i, &sg_dsc, 1, dd->dma);
 
 		in_sg = sg_next(in_sg);
 	}
@@ -391,7 +391,7 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, void *descriptor,
 		sg_dsc.dsc_cfg.b.eoc = i == (out_nents - 1) ? 1 : 0;
 		sg_dsc.dsc_cfg.b.length = out_sg->length;
 		sg_dsc.addr = out_sg->dma_address;
-		aml_dma_dsc_writer(dd->sg_dsc_out, i, &sg_dsc, dd->dma->dma_bus64, 1);
+		aml_dma_dsc_writer(dd->sg_dsc_out, i, &sg_dsc, 1, dd->dma);
 
 		out_sg = sg_next(out_sg);
 	}
@@ -404,10 +404,10 @@ static size_t aml_aes_sg_dma(struct aml_aes_dev *dd, void *descriptor,
 
 	dsc.src_addr = dd->dma_sg_dsc_in;
 	dsc.tgt_addr = dd->dma_sg_dsc_out;
+	dsc.length = total;
 	dsc.dsc_cfg.d32 = 0;
-	dsc.dsc_cfg.b.length = total;
 	dsc.dsc_cfg.b.link_error = 1;
-	aml_dma_dsc_writer(descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	aml_dma_dsc_writer(descriptor, 0, &dsc, 0, dd->dma);
 
 	return total;
 }
@@ -458,7 +458,7 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, void *descriptor,
 {
 	u32 op_mode = OP_MODE_ECB;
 	u32 i = 0;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	int err = 0;
 	u32 status = 0;
 
@@ -469,7 +469,7 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, void *descriptor,
 
 	for (i = 0; i < nents; i++) {
 		/* some fields are already filled, read it back and update dsc */
-		aml_dma_dsc_reader(descriptor, i, &dsc, dd->dma->dma_bus64, 0);
+		aml_dma_dsc_reader(descriptor, i, &dsc, 0, dd->dma);
 
 		dsc.dsc_cfg.b.enc_sha_only = dd->flags & AES_FLAGS_ENCRYPT;
 		dsc.dsc_cfg.b.mode =
@@ -480,10 +480,10 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, void *descriptor,
 		dsc.dsc_cfg.b.eoc = (i == (nents - 1));
 		dsc.dsc_cfg.b.owner = 1;
 
-		aml_dma_dsc_writer(descriptor, i, &dsc, dd->dma->dma_bus64, 0);
+		aml_dma_dsc_writer(descriptor, i, &dsc, 0, dd->dma);
 	}
 
-	aml_dma_debug(descriptor, nents, __func__, dd->thread, dd->status, dd->dma->dma_bus64);
+	aml_dma_debug(descriptor, nents, __func__, dd->thread, dd->status, dd->dma);
 
 	/* Start DMA transfer */
 	dd->flags |= AES_FLAGS_DMA;
@@ -491,7 +491,7 @@ static int aml_aes_crypt_dma(struct aml_aes_dev *dd, void *descriptor,
 				      USE_BUSY_POLLING, DMA_FLAG_AES_IN_USE);
 	if (status & DMA_STATUS_KEY_ERROR)
 		dd->flags |= AES_FLAGS_ERROR;
-	aml_dma_debug(descriptor, nents, "end aes", dd->thread, dd->status, dd->dma->dma_bus64);
+	aml_dma_debug(descriptor, nents, "end aes", dd->thread, dd->status, dd->dma);
 	err = aml_aes_crypt_dma_stop(dd);
 	if (!err) {
 		err = dd->flags & AES_FLAGS_ERROR;
@@ -505,7 +505,7 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 	int err = 0;
 	size_t count = 0;
 	dma_addr_t addr_in, addr_out;
-	struct dma_dsc_64 dsc;
+	struct dma_dsc_v2_64 dsc;
 	u32 nents;
 
 	/* slow dma */
@@ -522,14 +522,14 @@ static int aml_aes_crypt_dma_start(struct aml_aes_dev *dd)
 
 	dsc.src_addr = (u64)addr_in;
 	dsc.tgt_addr = (u64)addr_out;
-	dsc.dsc_cfg.d32 = 0;
 	/* We align data to AES_BLOCK_SIZE for old aml-dma devices */
-	dsc.dsc_cfg.b.length = ((count + AES_BLOCK_SIZE - 1)
+	dsc.length = ((count + AES_BLOCK_SIZE - 1)
 			/ AES_BLOCK_SIZE) * AES_BLOCK_SIZE;
-	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, dd->dma->dma_bus64, 0);
+	dsc.dsc_cfg.d32 = 0;
+	aml_dma_dsc_writer(dd->descriptor, 0, &dsc, 0, dd->dma);
 
 	dbgp(1, "use slow dma: cnt:%zd, len:%d\n",
-			count, dsc.dsc_cfg.b.length);
+			count, dsc.length);
 	nents = 1;
 	dd->flags &= ~AES_FLAGS_FAST;
 	dd->total -= count;
@@ -619,7 +619,8 @@ static int aml_aes_handle_queue(struct aml_aes_dev *dd,
 		if (dd->total % AML_AES_DMA_THRESHOLD == 0 ||
 		    (dd->flags & AES_FLAGS_CTR)) {
 			if (dd->link_mode && !disable_link_mode &&
-			    dd->total < MAX_DMA_BYTE_LENGTH) {
+			    !(dd->dma->dma_version == DMA_VERSION_1 &&
+				dd->total >= MAX_DMA_BYTE_LENGTH)) {
 				err = aml_aes_crypt_dma_link_mode_start(dd);
 			} else {
 				do {
@@ -672,7 +673,7 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 	int err = -EINVAL;
 	size_t count;
 	u32 in_nents = 0, out_nents = 0;
-	u32 dma_sg_dsc_sz = aml_dma_get_dsc_sz(dd->dma->dma_bus64, 1);
+	u32 dma_sg_dsc_sz = aml_dma_get_dsc_sz(1, dd->dma);
 
 	if (dd->flags & AES_FLAGS_DMA) {
 		err = 0;
@@ -768,7 +769,7 @@ static int aml_aes_crypt_dma_stop(struct aml_aes_dev *dd)
 static int aml_aes_buff_init(struct aml_aes_dev *dd)
 {
 	struct device *dev = dd->dev;
-	u32 dma_dsc_sz = aml_dma_get_dsc_sz(dd->dma->dma_bus64, 0);
+	u32 dma_dsc_sz = aml_dma_get_dsc_sz(0, dd->dma);
 	int err = -ENOMEM;
 
 	dd->buf_in = (void *)__get_free_pages(GFP_KERNEL, 0);
@@ -824,7 +825,7 @@ err_alloc:
 
 static void aml_aes_buff_cleanup(struct aml_aes_dev *dd)
 {
-	u32 dma_dsc_sz = aml_dma_get_dsc_sz(dd->dma->dma_bus64, 0);
+	u32 dma_dsc_sz = aml_dma_get_dsc_sz(0, dd->dma);
 
 	dma_unmap_single(dd->parent, dd->dma_addr_out, dd->buflen,
 			 DMA_FROM_DEVICE);
