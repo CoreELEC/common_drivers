@@ -62,6 +62,7 @@ struct cma *cma_logo;
 
 static char *strmode;
 struct am_meson_logo logo[MESON_MAX_CRTC];
+#define NUM_CONNECTORS_LOGO	1
 static struct platform_device *gp_dev;
 static unsigned long gem_mem_start, gem_mem_size;
 static struct resource osd_mem_res;
@@ -770,27 +771,30 @@ static void am_meson_load_logo(struct drm_device *dev,
 		return;
 	}
 
-	connector_set = vmalloc(sizeof(struct drm_connector *));
+	DRM_DEBUG("mode flag %x\n", mode->flags);
+
+	private->logo_set[idx].num_connectors = NUM_CONNECTORS_LOGO;
+
+	connector_set = kmalloc_array(private->logo_set[idx].num_connectors,
+			sizeof(struct drm_connector *), GFP_KERNEL);
 	if (!connector_set)
 		return;
 
-	DRM_DEBUG("mode flag %x\n", mode->flags);
-
 	connector_set[0] = connector;
+	private->logo_set[idx].connectors = connector_set;
+
 	private->logo_set[idx].crtc = &private->crtcs[idx]->base;
 	private->logo_set[idx].x = 0;
 	private->logo_set[idx].y = 0;
 	private->logo_set[idx].mode = mode;
 	private->logo_set[idx].crtc->mode = *mode;
-	private->logo_set[idx].connectors = connector_set;
-	private->logo_set[idx].num_connectors = 1;
 	private->logo_set[idx].fb = fb;
 
 	if (am_meson_drm_set_config(&private->logo_set[idx],
 		state, meson_fb->logo->panel_index))
 		DRM_INFO("[%s]am_meson_drm_set_config fail\n", __func__);
 
-	vfree(connector_set);
+	kfree(connector_set);
 }
 
 static int parse_reserve_mem_resource(struct device_node *np,
