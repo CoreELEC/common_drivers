@@ -141,6 +141,7 @@
 };
 
 &i2c3 {
+	status = "disabled";
 	/delete-node/ sy602x_54@2a;
 	/delete-node/ aw9523_led@5b;
 };
