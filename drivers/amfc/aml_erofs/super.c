@@ -877,7 +877,7 @@ static struct file_system_type erofs_fs_type = {
 	.kill_sb        = erofs_kill_sb,
 	.fs_flags       = FS_REQUIRES_DEV | FS_ALLOW_IDMAP,
 };
-MODULE_ALIAS_FS("erofs");
+//MODULE_ALIAS_FS("erofs");
 
 static int __init erofs_module_init(void)
 {
