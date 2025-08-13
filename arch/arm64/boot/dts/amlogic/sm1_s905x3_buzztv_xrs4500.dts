@@ -1,0 +1,87 @@
+#include "sm1_s905x3_2g_1gbit.dts"
+
+/{
+	coreelec-dt-id = "sm1_s905x3_buzztv_xrs4500";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x100000 0x0 0xf0800000>;
+		/* 0xf5700000 used in stock android dtb changed
+		to 0xf0800000 to fix some 4G generic devices
+		not able to boot with the default value.*/
+	};
+
+    gpioleds {
+        sys_led {
+            gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+	vsledpwm {
+		compatible = "vsledpwm";
+		status = "okay";
+	};
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+};
+
+&aml_wifi{
+	status = "okay";
+	interrupt-gpios = <&gpio  GPIOX_18  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&gpio   GPIOX_6  GPIO_ACTIVE_HIGH>;
+	irq_trigger_type = "GPIO_IRQ_HIGH";
+};
+
+&i2c3 {
+	clock-frequency = <100000>; /* default 100k */
+
+	hym8563: hym8563@51 {
+		/* SCK:GPIOA_15 / SDA:GPIOA_14 / INT:GPIOAO_2 */
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+		//i2c_bus = "i2c_bus_c";
+		#clock-cells = <0>;
+		status = "okay";
+	};
+};
+
+&audiobus {
+	tdmb: tdm@1 {
+		mclk_pad = <0>;  /* 0: mclk_0; 1: mclk_1 */
+	};
+
+	tdmc: tdm@2 {
+		mclk_pad = <0>;  /* 0: mclk_0; 1: mclk_1 */
+	};
+};
+
+&pdmin {
+	mux { /* gpioa_5, gpioa_6, gpioa_7, gpioa_8, gpioa_9*/
+		groups = "pdm_din0_a",
+		/*"pdm_din1_a",*/
+		"pdm_din2_a",
+		/*"pdm_din3_a",*/
+		"pdm_dclk_a";
+		function = "pdm";
+	};
+};
+
+&sd_emmc_a {
+	sdio {
+		f_max = <170000000>;
+	};
+};
+
+&logo_reserved {
+	alloc-ranges = <0x0 0xdf800000 0x0 0x800000>;
+};
+
+&meson_fb {
+	logo_addr = "0xdf800000";
+};
+
+&drm_vpu {
+	logo_addr = "0xdf800000";
+};
