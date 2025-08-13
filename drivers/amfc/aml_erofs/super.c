@@ -868,7 +868,7 @@ static struct file_system_type erofs_fs_type = {
 	.kill_sb        = erofs_kill_sb,
 	.fs_flags       = FS_REQUIRES_DEV,
 };
-MODULE_ALIAS_FS("erofs");
+//MODULE_ALIAS_FS("erofs");
 
 #ifdef CONFIG_ARM64
 static void __exit erofs_module_exit(void);
