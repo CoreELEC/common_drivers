@@ -235,6 +235,8 @@
 
 &i2c3 {
 	status = "disabled";
+	/delete-node/ aw9523_led@5b;
+	/delete-node/ ad82584f_62@31;
 };
 
 &dwc2_a {
