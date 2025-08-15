@@ -1,0 +1,53 @@
+#include "sc2_s905x4_2g.dts"
+
+/ {
+	coreelec-dt-id = "sc2_s905x4_x96_x4_2g";
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+		/delete-property/ spk_mute-gpios;
+	};
+};
+
+&i2c1 {
+	status = "disabled";
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&periphs_pinctrl {
+	/delete-node/ spdifin;
+
+	spdifout: spdifout {
+		mux { /* GPIOH_4 */
+			groups = "spdif_out_h";
+			function = "spdif_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIOH_4 */
+			groups = "GPIOH_4";
+			function = "gpio_periphs";
+			output-low;
+		}; 
+	};
+};
+
+&sd_emmc_a {
+	max-frequency = <150000000>;
+	brcmf: wifi@1 {
+		compatible = "sprd,unisoc-wifi";
+	};
+};
+
+&aml_bt {
+	bt_en-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
+	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
+};
