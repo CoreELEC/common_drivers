@@ -894,7 +894,7 @@ error_handled:
 }
 EXPORT_SYMBOL(amfc_decompress);
 
-#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE // for C4
+
 /*
  * src: source buffer that need compress
  * dst: destination buffer that need store
@@ -1086,6 +1086,7 @@ error_handled:
 }
 EXPORT_SYMBOL(amfc_compress);
 
+#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE // for C4
 /*
  * IRQ for compress
  */
