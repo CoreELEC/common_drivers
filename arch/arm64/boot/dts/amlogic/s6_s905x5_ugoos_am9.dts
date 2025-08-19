@@ -1,0 +1,278 @@
+#include "s6_s905x5_bl201.dts"
+#include "coreelec_s6_common.dtsi"
+#include "dt-bindings/usb/pd.h"
+
+/ {
+	model = "Ugoos AM9";
+	coreelec-dt-id = "s6_s905x5_ugoos_am9";
+
+	// 4gb
+	memory@00000000 {
+		device_type = "memory";
+		linux,usable-memory = <0x0 0x000000 0x0 0xe0000000
+					0x1 0x000000 0x0 0x20000000>;
+	};
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+
+		aml-audio-card,dai-link@1 {
+			codec {
+				sound-dai = <&dummy_codec &es8388>;
+			};
+		};
+	};
+
+	/delete-node/ gpioleds;
+
+	/delete-node/ fixed@vcc5v_reg;
+	/delete-node/ fixed@vcc3v3_reg;
+
+	hub_5v_reg: fixed@hub_5v_reg {
+		vin-supply = <&vddao_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "HUB_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	sdcard_3v3: sdcard-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "SD_3V3";
+		vin-supply = <&vdd3v3_soc_reg>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOA_10 GPIO_ACTIVE_LOW>;
+		startup-delay-us = <70000>;
+		enable-active-low; //3.3V , high: 0V
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddio_c: sdcard-1v8_3v3 {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_C";
+		vin-supply = <&vdd3v3_soc_reg>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		// H: 1.8V, L: 3.3V
+		gpio = <&gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		gpios-states = <0>;
+
+		/* Based on P200 schematics, signal CARD_1.8V/3.3V_CTR */
+		states = <1800000 1
+			  3300000 0>;
+	};
+
+	// usb
+	usb5v_reg: fixed@usb5v {
+		vin-supply = <&vddao_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USB5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	// usbc
+	usbc5v_reg: fixed@usbc5v {
+		vin-supply = <&vddao_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USBC5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		enable-active-high;
+		early-suspend;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	typec_usb_mux: usb-mux {
+		compatible = "gpio-typec-switch";
+		sel-gpios = <&gpio GPIOF_4 GPIO_ACTIVE_LOW>;
+		oe-gpios = <&gpio GPIOX_2 GPIO_ACTIVE_LOW>;
+
+		orientation-switch;
+		port {
+			usb_mux_ss: endpoint {
+				remote-endpoint = <&typec_ss>;
+			};
+		};
+	};
+
+	dc_in {
+		compatible = "adc-power";
+		name = "dc_in";
+		voltage_k = <8740>;
+		io-channels = <&saradc 0>;
+		io-channel-names = "voltage";
+	};
+};
+
+&i2c0 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+};
+
+&i2c5 {
+	clock-frequency = <300000>;
+
+	// usbc
+	fusb302@22 {
+		compatible = "fcs,fusb302";
+		reg = <0x22>;
+		// hw irq doesn't work
+		//interrupt-parent = <&gpio_intc>;
+		//interrupts = <GPIOA_8 IRQ_TYPE_LEVEL_LOW>;
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&fusb302_int>;
+		fcs,int_n-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+		vbus-supply = <&usbc5v_reg>;
+		port {
+			typec_dr_sw: endpoint {
+				remote-endpoint = <&usb_dr_sw>;
+			};
+		};
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "source";
+			source-pdos = <PDO_FIXED(5000, 1000,
+				PDO_FIXED_USB_COMM |
+				PDO_FIXED_DUAL_ROLE |
+				PDO_FIXED_DATA_SWAP |
+				PDO_FIXED_EXTPOWER)>;
+			sink-pdos = <PDO_FIXED(5000, 100,
+				PDO_FIXED_USB_COMM |
+				PDO_FIXED_DUAL_ROLE |
+				PDO_FIXED_DATA_SWAP |
+				PDO_FIXED_EXTPOWER)>;
+			op-sink-microwatt = <1000000>;
+			port {
+				typec_ss: endpoint {
+					remote-endpoint = <&usb_mux_ss>;
+				};
+			};
+		};
+	};
+
+	// rtc
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "xin32k";
+	};
+
+	// codec
+	es8388: es8388@10 {
+		status = "okay";
+		compatible = "everest,es8388";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+		def-vol = <0x1d>;
+		def-dacvol = <0x0a>;
+	};
+};
+
+&tdmc {
+	dai-tdm-lane-slot-mask-in = <0 1 0 0>;
+	dai-tdm-lane-slot-mask-out = <1 0 0 0>;
+	clocks = <&clkaudio CLKID_AUDIO_MCLK_C
+			&clkaudio CLKID_AUDIO_MCLK_PAD1
+			&clkc CLKID_HIFI_PLL
+			&clkc CLKID_HIFI1_PLL>;
+	clock-names = "mclk", "mclk_pad", "clk_srcpll", "clk_src_cd";
+	pinctrl-0 = <&tdmc_mclk
+		&i2s_gpio_d_pins_1
+		&i2s_gpio_f_pins
+		&tdm_d3_pins
+		&tdm_d4_pins
+		&tdmc_clk_pins>;
+};
+
+&periphs_pinctrl {
+	tdmc_mclk: tdmc_mclk {
+		mux {
+			groups = "mclk_1_d";
+			function = "mclk";
+		};
+	};
+
+	i2s_gpio_f_pins: i2s_gpio_f {
+		mux {
+			groups = "tdm_d4_f";
+			function = "tdm";
+		};
+	};
+
+	remote_pins: remote_pin {
+		mux {
+			groups = "ir_remote_in_f1";
+			function = "ir_remote";
+			bias-disable;
+		};
+	};
+}; /* end of periphs_pinctrl */
+
+&pinctrl_audio {
+	tdm_d4_pins: tdm_d4_pin {
+		mux {
+			groups = "tdm_d4";
+			function = "tdminc_lane1";
+		};
+	};
+};
+
+&crg_otg {
+	port {
+		usb_dr_sw: endpoint {
+			remote-endpoint = <&typec_dr_sw>;
+		};
+	};
+};
+
+&usb_phy21 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&crg {
+	vbus-supply = <&usb5v_reg>;
+	early-suspend;
+};
+
+&vrtc {
+	status = "disabled";
+};
+
+&sd_emmc_b {
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	vmmc-supply = <&sdcard_3v3>;
+	vqmmc-supply = <&vddio_c>;
+};
+
+&uart_C {
+	status = "okay";
+};
