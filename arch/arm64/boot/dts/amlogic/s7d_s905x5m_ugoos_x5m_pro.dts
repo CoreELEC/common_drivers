@@ -1,0 +1,194 @@
+#include "s7d_s905x5m_4g_1gbit.dts"
+
+/{
+	model = "Ugoos X5M Pro";
+	coreelec-dt-id = "s7d_s905x5m_ugoos_x5m_pro";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x000000 0x0 0xf0000000>;
+	};
+
+	gpioleds {
+		/delete-node/ sys_led;
+
+		/* red led */
+		net_red {
+			label = "net_red";
+			gpios = <&gpio GPIODV_6 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "default-on";
+			retain-state-suspended;
+		};
+
+		/* green led */
+		net_green {
+			label = "net_green";
+			gpios = <&gpio GPIODV_3 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+
+		/* blue led */
+		net_blue {
+			label = "net_blue";
+			gpios = <&gpio GPIODV_4 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "default-on";
+			retain-state-shutdown;
+		};
+	};
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+
+		aml-audio-card,dai-link@2 {
+			codec {
+				/delete-property/ prefix-names;
+				sound-dai = <&amlogic_codec>;
+			};
+		};
+	};
+
+	/delete-node/ fixed@vin_12v_reg;
+	/delete-node/ fixed@vddao_5v_reg;
+	/delete-node/ fixed@vcc5v_reg;
+	vin_5v_reg: fixed@vin_5v_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	hdmi5v_reg: fixed@hdmi5v_reg {
+		vin-supply = <&vin_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "HDMI5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOD_3 (GPIO_ACTIVE_HIGH)>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	fixed@vddq_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	fixed@vddao_3v3p_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	fixed@vdd1v8_dcdc_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	sdcard_3v3: sdcard-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "SD_3V3";
+		vin-supply = <&vddao_3v3_reg>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOD_4 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddio_c: sdcard-1v8_3v3 {
+		compatible = "regulator-gpio";
+		regulator-name = "VDDIO_C";
+		vin-supply = <&vddao_3v3_reg>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		// GPIOH_8(DOWN) L: 1.8V, H: 3.3V
+		gpio = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		gpios-states = <1>;
+		states = <1800000 0
+			  3300000 1>;
+	};
+
+	usb_5v_reg: fixedregulator@usb_5v {
+		vin-supply = <&vin_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USB_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOC_7 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		startup-delay-us = <70000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	// dummy
+	usb_otg_5v_reg: fixedregulator@usb_otg_5v {
+		vin-supply = <&vin_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USB_OTG_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	usb_otg_connector {
+		compatible = "sw-usb-connector", "usb-a-connector";
+		label = "OTG-USB";
+		vbus-supply = <&usb_otg_5v_reg>;
+		port {
+			sw_dr_sw: endpoint {
+				remote-endpoint = <&usb_dr_sw>;
+			};
+		};
+	};
+};
+
+&vrtc {
+	status = "disabled";
+};
+
+&i2c1 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c1_pins2>;
+	clock-frequency = <100000>;
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "xin32k";
+	};
+};
+
+&crg_otg {
+	port {
+		usb_dr_sw: endpoint {
+			remote-endpoint = <&sw_dr_sw>;
+		};
+	};
+};
+
+&usb_phy21 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&crg {
+	vbus-supply = <&usb_5v_reg>;
+};
+
+&sd_emmc_b {
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	vmmc-supply = <&sdcard_3v3>;
+	vqmmc-supply = <&vddio_c>;
+};
