@@ -1,0 +1,1471 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
+ */
+
+#include "aml-clock-func.h"
+
+/ {
+	clk_eth_125m_div: clock-eth_125m_div {
+		compatible = "fixed-factor-clock";
+		clock-div = <8>;
+		clock-mult = <1>;
+		clock-output-names = "eth_125m_div";
+		clocks = <&scmi_clk CLKID_FCLK_DIV2>;
+		#clock-cells = <0>;
+	};
+
+	rtc_parents: rtc_parents {
+		clock-parents = <&scmi_clk CLKID_OSC>,
+				<&clkc_rtc CLKID_RTC_DUAL>;
+		#clock-cells = <0>;
+	};
+
+	sar_adc_parents: sar_adc_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_SYS_CLK>;
+		#clock-cells = <0>;
+	};
+
+	sc_parents: sc_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	mali_parents: mali_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_GP1_PLL>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		#clock-cells = <0>;
+	};
+
+	hevcf_parents: hevcf_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_GP1_PLL>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	hcodec_parents: hcodec_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&hifi_pll>,
+				<&gp0_pll>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	vpu_parents: vpu_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_GP1_PLL>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <4>,
+				       <6>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	vapb_pre_parents: vapb_pre_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <4>,
+				       <6>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	vapb_parents: vapb_parents {
+		clock-parents = <&clkc_vapb_ge2d CLKID_VAPB_0>,
+				<&clkc_vapb_ge2d CLKID_VAPB_1>;
+		#clock-cells = <0>;
+	};
+
+	hdmitx_parents: hdmitx_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>;
+		#clock-cells = <0>;
+	};
+
+	pwm_parents: pwm_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>;
+		#clock-cells = <0>;
+	};
+
+	spisg_parents: spisg_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&gp0_pll>;
+		#clock-cells = <0>;
+	};
+
+	sd_emmc_parents: sd_emmc_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_GP1_PLL>,
+				<&gp0_pll>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <4>,
+				       <6>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	vdin_meas_parents: vdin_meas_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>;
+		#clock-cells = <0>;
+	};
+
+	amfc_parents: amfc_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		#clock-cells = <0>;
+	};
+
+	pcie_tl_parents: pcie_tl_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&gp0_pll>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	pp_parents: pp_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&gp0_pll>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	glb_parents: glb_parents {
+		clock-parents = <&xtal>,
+				<&clkc_dspa>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&clkc_isp>,
+				<&clkc_rtc CLKID_RTC_CLK>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <4>,
+				       <5>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	cmpr_parents: cmpr_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_GP1_PLL>;
+		#clock-cells = <0>;
+	};
+
+	cve_vge_parents: cve_vge_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&gp0_pll>,
+				<&clkc_rtc CLKID_RTC_CLK>;
+		#clock-cells = <0>;
+	};
+
+	dewarp_parents: dewarp_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&gp0_pll>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_GP1_PLL>;
+		#clock-cells = <0>;
+	};
+
+	dptx_apb2_parents: dptx_apb2_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>;
+		#clock-cells = <0>;
+	};
+
+	dptx_aud_parents: dptx_aud_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_SYS_CLK>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>;
+		#clock-cells = <0>;
+	};
+
+	dsi_meas_parents: dsi_meas_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&gp0_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <5>,
+				       <6>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	dsi_phy_parents: dsi_phy_parents {
+		clock-parents = <&gp0_pll>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		clock-parent-indices = <1>,
+				       <2>,
+				       <4>,
+				       <5>,
+				       <6>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	hdmirx_parents: hdmirx_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>;
+		#clock-cells = <0>;
+	};
+
+	usb_250m_parents: usb_250m_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <3>,
+				       <4>,
+				       <7>;
+		#clock-cells = <0>;
+	};
+
+	nna_core_parents: nna_core_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_GP2_PLL>,
+				<&hifi_pll>;
+		#clock-cells = <0>;
+	};
+
+	tahoe_parents: tahoe_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&hifi_pll>,
+				<&gp0_pll>;
+		#clock-cells = <0>;
+	};
+
+	isp_parents: isp_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&gp0_pll>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	mipi_csi_phy_parents: mipi_csi_phy_parents {
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&gp0_pll>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&xtal>;
+		#clock-cells = <0>;
+	};
+
+	dspa_parents: dspa_parents {
+		clock-parents = <&xtal>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_GP2_PLL>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&hifi_pll>,
+				<&clkc_rtc CLKID_RTC_CLK>;
+		#clock-cells = <0>;
+	};
+
+	gen_parents: gen_parents {
+		clock-parents = <&xtal>,
+				<&clkc_rtc CLKID_RTC_CLK>,
+				<&scmi_clk CLKID_SYS_PLL_DIV16>,
+				<&gp0_pll>,
+				<&hifi1_pll>,
+				<&hifi_pll>,
+				<&scmi_clk CLKID_GP1_PLL>,
+				<&scmi_clk CLKID_GP2_PLL>,
+				<&scmi_clk CLKID_CPU_CLK_DIV16>,
+				<&scmi_clk CLKID_FCLK_DIV2>,
+				<&scmi_clk CLKID_FCLK_DIV2P5>,
+				<&scmi_clk CLKID_FCLK_DIV3>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		clock-parent-indices = <0>,
+				       <1>,
+				       <2>,
+				       <5>,
+				       <6>,
+				       <7>,
+				       <8>,
+				       <9>,
+				       <17>,
+				       <19>,
+				       <20>,
+				       <21>,
+				       <22>,
+				       <23>,
+				       <24>;
+		#clock-cells = <0>;
+	};
+};
+
+&apb4 {
+	clkc_rtc: clock-rtc@200 {
+		compatible = "amlogic,dualdiv-mux-clk";
+		reg = <0x0 0x200 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "rtc_dualdiv",
+				     "rtc_clk";
+		clock-indices = <CLKID_RTC_DUAL>,
+				<CLKID_RTC_CLK>;
+		clock-dualdiv-tables = <1 732 7 731 10>;  /* div_mode n0 m0 n1 m1 */
+		clock-parents = <&scmi_clk CLKID_OSC>,
+				<&rtc_parents>;
+		clocks = <&xtal>;
+	};
+
+	clkc_sar_adc: clock-sar_adc@350 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x350 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "sar_adc";
+		clock-reg-offsets = <0x0 0>;
+		clock-parents = <&sar_adc_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_SYS_CLK>;
+	};
+
+	clkc_sc: clock-smart_card@370 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x370 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "sc_pre_mux",
+				     "sc_pre_div",
+				     "sc_pre",
+				     "sc";
+		clock-basic-types = <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_DIV>;
+		clock-reg-offsets = <0x0 9  2>,  /* regoffset shift width */
+				    <0x0 0  8>,
+				    <0x0 8  1>,
+				    <0x0 16 4>;
+		clock-indices = <CLKID_SC_PRE_MUX>,
+				<CLKID_SC_PRE_DIV>,
+				<CLKID_SC_PRE>,
+				<CLKID_SC>;
+		clock-parents = <&sc_parents>,
+				<&clkc_sc CLKID_SC_PRE_MUX>,
+				<&clkc_sc CLKID_SC_PRE_DIV>,
+				<&clkc_sc CLKID_SC_PRE>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&xtal>;
+	};
+
+	clkc_mali: clock-mali@400 {
+		compatible = "amlogic,noglitch-clk";
+		reg = <0x0 0x400 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "mali",
+				     "mali_stack";
+		clock-reg-offsets = <0x0>,
+				    <0x4>;
+		clock-indices = <CLKID_MALI>,
+				<CLKID_MALI_STACK>;
+		clock-parents = <&mali_parents>,
+				<&mali_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_GP1_PLL>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
+	};
+
+	clkc_hevcf: clock-hevcf@440 {
+		compatible = "amlogic,noglitch-clk";
+		reg = <0x0 0x440 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "hevcf";
+		clock-parents = <&hevcf_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_GP1_PLL>,
+			 <&xtal>;
+	};
+
+	clkc_hcodec: clock-hcodec@444 {
+		compatible = "amlogic,noglitch-clk";
+		reg = <0x0 0x444 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "hcodec";
+		clock-parents = <&hcodec_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&hifi_pll>,
+			 <&gp0_pll>,
+			 <&xtal>;
+	};
+
+	clkc_vpu: clock-vpu@460 {
+		compatible = "amlogic,noglitch-clk";
+		reg = <0x0 0x460 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "vpu";
+		clock-parents = <&vpu_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_GP1_PLL>;
+	};
+
+	clkc_vapb_ge2d: clock-vapb_ge2d@468 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x468 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "vapb_0_mux",
+				     "vapb_0_div",
+				     "vapb_0",
+				     "vapb_1_mux",
+				     "vapb_1_div",
+				     "vapb_1",
+				     "vapb",
+				     "ge2d";
+		clock-basic-types = <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 9  3>,  /* regoffset shift width */
+				    <0x0 0  7>,
+				    <0x0 8  1>,
+				    <0x0 25 3>,
+				    <0x0 16 7>,
+				    <0x0 24 1>,
+				    <0x0 31 1>,
+				    <0x0 30 1>;
+		clock-indices = <CLKID_VAPB_0_MUX>,
+				<CLKID_VAPB_0_DIV>,
+				<CLKID_VAPB_0>,
+				<CLKID_VAPB_1_MUX>,
+				<CLKID_VAPB_1_DIV>,
+				<CLKID_VAPB_1>,
+				<CLKID_VAPB>,
+				<CLKID_GE2D>;
+		clock-parents = <&vapb_pre_parents>,
+				<&clkc_vapb_ge2d CLKID_VAPB_0_MUX>,
+				<&clkc_vapb_ge2d CLKID_VAPB_0_DIV>,
+				<&vapb_pre_parents>,
+				<&clkc_vapb_ge2d CLKID_VAPB_1_MUX>,
+				<&clkc_vapb_ge2d CLKID_VAPB_1_DIV>,
+				<&vapb_parents>,
+				<&clkc_vapb_ge2d CLKID_VAPB>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 (CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE)>,
+			      <0 0>,
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 (CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE)>,
+			      <0 (CLK_SET_RATE_PARENT | CLK_OPS_PARENT_ENABLE)>,
+			      <0 0>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>;
+	};
+
+	clkc_hdmitx: clock-hdmitx@484 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x484 0x0 0xc>;
+		#clock-cells = <1>;
+		clock-output-names = "hdmitx_sys",
+				     "hdmitx_prif",
+				     "hdmitx_200m",
+				     "hdmitx_aud";
+		clock-reg-offsets = <0x0 0>,
+				    <0x4 0>,
+				    <0x4 16>,
+				    <0x8 0>;
+		clock-indices = <CLKID_HDMITX_SYS>,
+				<CLKID_HDMITX_PRIF>,
+				<CLKID_HDMITX_200M>,
+				<CLKID_HDMITX_AUD>;
+		clock-div-width = <7>;
+		clock-parents = <&hdmitx_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>;
+	};
+
+	clkc_pwm: clock-pwm@2bc {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x2bc 0x0 0x1c>;
+		#clock-cells = <1>;
+		clock-output-names = "pwm_h",
+				     "pwm_i",
+				     "pwm_j",
+				     "pwm_k",
+				     "pwm_l",
+				     "pwm_m",
+				     "pwm_n";
+		clock-reg-offsets = <0x0 0>,
+				    <0x4 0>,
+				    <0x8 0>,
+				    <0xc 0>,
+				    <0x10 0>,
+				    <0x14 0>,
+				    <0x18 0>;
+		clock-indices = <CLKID_PWM_H>,
+				<CLKID_PWM_I>,
+				<CLKID_PWM_J>,
+				<CLKID_PWM_K>,
+				<CLKID_PWM_L>,
+				<CLKID_PWM_M>,
+				<CLKID_PWM_N>;
+		clock-parents = <&pwm_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>;
+	};
+
+	clkc_spisg: clock-spisg@300 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x300 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "spisg_0",
+				     "spisg_1",
+				     "spisg_2";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>,
+				    <0x4 0>;
+		clock-div-width = <6>;
+		clock-indices = <CLKID_SPISG_0>,
+				<CLKID_SPISG_1>,
+				<CLKID_SPISG_2>;
+		clock-parents = <&spisg_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_SYS_CLK>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&gp0_pll>;
+	};
+
+	clkc_sd_emmc: clock-sd_emmc@168 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x168 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "emmc_a",
+				     "emmc_b",
+				     "emmc_c";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>,
+				    <0x4 0>;
+		clock-div-width = <7>;
+		clock-indices = <CLKID_SD_EMMC_A>,
+				<CLKID_SD_EMMC_B>,
+				<CLKID_SD_EMMC_C>;
+		clock-parents = <&sd_emmc_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_GP1_PLL>,
+			 <&gp0_pll>;
+	};
+
+	clkc_vdin_meas: clock-vdin_meas@4a8 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x4a8 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "vdin_meas";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&vdin_meas_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>;
+	};
+
+	clkc_vid_lock: clock-vid_lock@4a4 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x4a4 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "vid_lock";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&xtal>;
+		clocks = <&xtal>;
+	};
+
+	clkc_eth: clock-eth@3a4 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x3a4 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "eth_rmii_mux",
+				     "eth_rmii_div",
+				     "eth_rmii",
+				     "eth_125m";
+		clock-basic-types = <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 9  3>,  /* regoffset shift width */
+				    <0x0 0  7>,
+				    <0x0 8  1>,
+				    <0x0 7  1>;
+		clock-indices = <CLKID_ETH_RMII_MUX>,
+				<CLKID_ETH_RMII_DIV>,
+				<CLKID_ETH_RMII>,
+				<CLKID_ETH_125M>;
+		clock-parents = <&scmi_clk CLKID_FCLK_DIV2>,
+				<&clkc_eth CLKID_ETH_RMII_MUX>,
+				<&clkc_eth CLKID_ETH_RMII_DIV>,
+				<&clk_eth_125m_div>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 0>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&clk_eth_125m_div>;
+	};
+
+	clkc_ts: clock-ts@3a0 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x3a0 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "ts_div",
+				     "ts";
+		clock-basic-types = <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 0  8>,  /* regoffset shift width */
+				    <0x0 8  1>;
+		clock-indices = <CLKID_TS_DIV>,
+				<CLKID_TS>;
+		clock-parents = <&xtal>,
+				<&clkc_ts CLKID_TS_DIV>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>;
+		clocks = <&xtal>;
+	};
+
+	clkc_amfc: clock-amfc@354 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x354 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "amfc";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <6>;
+		clock-parents = <&amfc_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_SYS_CLK>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
+	};
+
+	clkc_pcie_tl: clock-pcie_tl@364 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x364 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "pcie_tl_0",
+				     "pcie_tl_1";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>;
+		clock-indices = <CLKID_PCIE_TL_0>,
+				<CLKID_PCIE_TL_1>;
+		clock-parents = <&pcie_tl_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&gp0_pll>,
+			 <&scmi_clk CLKID_SYS_CLK>,
+			 <&xtal>;
+	};
+
+	clkc_pp: clock-pp@384 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x384 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "pp";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <6>;
+		clock-parents = <&pp_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&gp0_pll>,
+			 <&scmi_clk CLKID_SYS_CLK>,
+			 <&xtal>;
+	};
+
+	clkc_glb: clock-glb@388 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x388 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "glb";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&glb_parents>;
+		clocks = <&xtal>,
+			 <&clkc_dspa>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&clkc_isp>,
+			 <&clkc_rtc CLKID_RTC_CLK>;
+	};
+
+	clkc_cmpr: clock-cmpr@368 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x368 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "cmpr";
+		clock-reg-offsets = <0x0 16>;
+		clock-div-width = <7>;
+		clock-parents = <&cmpr_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_GP1_PLL>;
+	};
+
+	clkc_cve_vge: clock-cve_vge@380 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x380 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "cve",
+				     "vge";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>;
+		clock-div-width = <7>;
+		clock-indices = <CLKID_CVE>,
+				<CLKID_VGE>;
+		clock-parents = <&cve_vge_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&gp0_pll>,
+			 <&clkc_rtc CLKID_RTC_CLK>;
+	};
+
+	clkc_dewarp: clock-dewarp@36c {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x36c 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "dewarp";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&dewarp_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&gp0_pll>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_GP1_PLL>;
+	};
+
+	clkc_dptx: clock-dptx@378 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x378 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "dptx_apb2",
+				     "dptx_aud";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>;
+		clock-div-width = <7>;
+		clock-indices = <CLKID_DPTX_APB2>,
+				<CLKID_DPTX_AUD>;
+		clock-parents = <&dptx_apb2_parents>,
+				<&dptx_aud_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_SYS_CLK>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>;
+	};
+
+	clkc_dsi_meas: clock-dsi_meas@4f4 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x4f4 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "dsi_meas",
+				     "dsi_b_meas";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>;
+		clock-div-width = <7>;
+		clock-indices = <CLKID_DSI_MEAS>,
+				<CLKID_DSI_B_MEAS>;
+		clock-parents = <&dsi_meas_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&gp0_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
+	};
+
+	clkc_dsi_phy: clock-dsi_phy@4f0 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x4f0 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "dsi_phy";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&dsi_phy_parents>;
+		clocks = <&gp0_pll>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
+	};
+
+	clkc_hdmirx: clock-hdmirx@494 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x494 0x0 0x10>;
+		#clock-cells = <1>;
+		clock-output-names = "hdmirx_5m",
+				     "hdmirx_2m",
+				     "hdmirx_cfg",
+				     "hdmirx_hdcp2x",
+				     "hdmirx_acr_ref",
+				     "hdmirx_meter";
+		clock-reg-offsets = <0x0 0>,
+				    <0x0 16>,
+				    <0x4 0>,
+				    <0x4 16>,
+				    <0x8 16>,
+				    <0xc 0>;
+		clock-div-width = <7>;
+		clock-indices = <CLKID_HDMIRX_5M>,
+				<CLKID_HDMIRX_2M>,
+				<CLKID_HDMIRX_CFG>,
+				<CLKID_HDMIRX_DHCP2X>,
+				<CLKID_HDMIRX_ACR_REF>,
+				<CLKID_HDMIRX_METER>;
+		clock-parents = <&hdmirx_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>;
+	};
+
+	clkc_usb_250m: clock-usb_250m@360 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x360 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "usb_250m";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&usb_250m_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>;
+	};
+
+	clkc_nna_core: clock-nna_core@35c {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x35c 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "nna_core";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&nna_core_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_GP2_PLL>,
+			 <&hifi_pll>;
+	};
+
+	clkc_tahoe: clock-tahoe@358 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x358 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "tahoe";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&tahoe_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&hifi_pll>,
+			 <&gp0_pll>;
+	};
+
+	clkc_isp: clock-isp@37c {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x37c 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "isp";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&isp_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&gp0_pll>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&xtal>;
+	};
+
+	clkc_mipi_csi_phy: clock-mipi_csi_phy@4e0 {
+		compatible = "amlogic,general-clk";
+		reg = <0x0 0x4e0 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "mipi_csi_phy";
+		clock-reg-offsets = <0x0 0>;
+		clock-div-width = <7>;
+		clock-parents = <&mipi_csi_phy_parents>;
+		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&gp0_pll>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&xtal>;
+	};
+
+	clkc_dspa: clock-dspa@420 {
+		compatible = "amlogic,noglitch-clk";
+		reg = <0x0 0x420 0x0 0x4>;
+		#clock-cells = <0>;
+		clock-output-names = "dspa";
+		clock-parents = <&dspa_parents>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_GP2_PLL>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&hifi_pll>,
+			 <&clkc_rtc CLKID_RTC_CLK>;
+	};
+
+	clkc_sys: clock-sys@230 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x230 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "sys_am_axi",
+				     "sys_dos",
+				     "sys_tahoe",
+				     "sys_mipi_dsi",
+				     "sys_eth_phy",
+				     "sys_amfc",
+				     "sys_mali",
+				     "sys_nna",
+				     "sys_eth_axi",
+				     "sys_dp_apb",
+				     "sys_edptx_apb",
+				     "sys_u3hsg",
+				     "sys_pp",
+				     "sys_aucpu",
+				     "sys_glb",
+				     "sys_combo_dphy_apb",
+				     "sys_hdmirx_apb",
+				     "sys_hdmi_pclk",
+				     "sys_mipi_dsi_phy",
+				     "sys_sd_emmc_a",
+				     "sys_sd_emmc_b",
+				     "sys_sd_emmc_c",
+				     "sys_sc",
+				     "sys_acodec",
+				     "sys_mipi_isp",
+				     "sys_msr_clk",
+				     "sys_audio",
+				     "sys_mipi_dsi_b",
+				     "sys_mipi_dsi1_phy",
+				     "sys_eth",
+				     "sys_uart_a",
+				     "sys_uart_f",
+				     "sys_ts_a55",
+				     "sys_usb3drd_b",
+				     "sys_ts_core",
+				     "sys_ts_pll",
+				     "sys_cdi_dig_clkin",
+				     "sys_cve",
+				     "sys_ge2d",
+				     "sys_spisg_0",
+				     "sys_usb3drd_1",
+				     "sys_usb_u2h",
+				     "sys_pcie_mac_a",
+				     "sys_usb3drd_a",
+				     "sys_usb2drd",
+				     "sys_pcie_phy",
+				     "sys_pcie_mac_b",
+				     "sys_i2c_m_e",
+				     "sys_i2c_m_f",
+				     "sys_hdmitx_apb",
+				     "sys_i2c_m_i",
+				     "sys_i2c_m_g",
+				     "sys_i2c_m_h",
+				     "sys_hdmi20_aes",
+				     "sys_mmc_apb",
+				     "sys_csi2_host",
+				     "sys_csi_adapt",
+				     "sys_cpu_apb",
+				     "sys_dspa",
+				     "sys_periph_top",
+				     "sys_periph_apb_top",
+				     "sys_vpu_intr",
+				     "sys_csi2_phy0",
+				     "sys_sar_adc",
+				     "sys_pwm_j",
+				     "sys_gic",
+				     "sys_pwm_i",
+				     "sys_pwm_h",
+				     "sys_pwm_n",
+				     "sys_pwm_m",
+				     "sys_pwm_l",
+				     "sys_pwm_k";
+		clock-basic-types = <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 0  1>,  /* regoffset shift width */
+				    <0x0 1  1>,
+				    <0x0 2  1>,
+				    <0x0 3  1>,
+				    <0x0 4  1>,
+				    <0x0 5  1>,
+				    <0x0 6  1>,
+				    <0x0 7  1>,
+				    <0x0 8  1>,
+				    <0x0 9  1>,
+				    <0x0 10 1>,
+				    <0x0 11 1>,
+				    <0x0 12 1>,
+				    <0x0 14 1>,
+				    <0x0 15 1>,
+				    <0x0 17 1>,
+				    <0x0 18 1>,
+				    <0x0 19 1>,
+				    <0x0 20 1>,
+				    <0x0 24 1>,
+				    <0x0 25 1>,
+				    <0x0 26 1>,
+				    <0x0 27 1>,
+				    <0x0 28 1>,
+				    <0x0 29 1>,
+				    <0x0 30 1>,
+				    <0x4 0  1>,
+				    <0x4 1  1>,
+				    <0x4 2  1>,
+				    <0x4 3  1>,
+				    <0x4 5  1>,
+				    <0x4 10 1>,
+				    <0x4 11 1>,
+				    <0x4 14 1>,
+				    <0x4 15 1>,
+				    <0x4 16 1>,
+				    <0x4 18 1>,
+				    <0x4 19 1>,
+				    <0x4 20 1>,
+				    <0x4 21 1>,
+				    <0x4 22 1>,
+				    <0x4 23 1>,
+				    <0x4 24 1>,
+				    <0x4 25 1>,
+				    <0x4 26 1>,
+				    <0x4 27 1>,
+				    <0x4 28 1>,
+				    <0x8 2  1>,
+				    <0x8 3  1>,
+				    <0x8 4  1>,
+				    <0x8 5  1>,
+				    <0x8 6  1>,
+				    <0x8 7  1>,
+				    <0x8 9  1>,
+				    <0x8 11 1>,
+				    <0x8 16 1>,
+				    <0x8 17 1>,
+				    <0x8 19 1>,
+				    <0x8 21 1>,
+				    <0x8 22 1>,
+				    <0x8 23 1>,
+				    <0x8 25 1>,
+				    <0x8 27 1>,
+				    <0x8 28 1>,
+				    <0x8 29 1>,
+				    <0x8 30 1>,
+				    <0x8 31 1>,
+				    <0xc 0  1>,
+				    <0xc 8  1>,
+				    <0xc 9  1>,
+				    <0xc 10 1>,
+				    <0xc 11 1>;
+		clock-indices = <CLKID_SYS_AM_AXI>,
+				<CLKID_SYS_DOS>,
+				<CLKID_SYS_TAHOE>,
+				<CLKID_SYS_MIPI_DSI>,
+				<CLKID_SYS_ETH_PHY>,
+				<CLKID_SYS_AMFC>,
+				<CLKID_SYS_MALI>,
+				<CLKID_SYS_NNA>,
+				<CLKID_SYS_ETH_AXI>,
+				<CLKID_SYS_DP_APB>,
+				<CLKID_SYS_EDPTX_APB>,
+				<CLKID_SYS_U3HSG>,
+				<CLKID_SYS_PP>,
+				<CLKID_SYS_AUCPU>,
+				<CLKID_SYS_GLB>,
+				<CLKID_SYS_COMBO_DPHY_APB>,
+				<CLKID_SYS_HDMIRX_APB>,
+				<CLKID_SYS_HDMIRX_PCLK>,
+				<CLKID_SYS_MIPI_DSI_PHY>,
+				<CLKID_SYS_SD_EMMC_A>,
+				<CLKID_SYS_SD_EMMC_B>,
+				<CLKID_SYS_SD_EMMC_C>,
+				<CLKID_SYS_SC>,
+				<CLKID_SYS_ACODEC>,
+				<CLKID_SYS_MIPI_ISP>,
+				<CLKID_SYS_MSR_CLK>,
+				<CLKID_SYS_AUDIO>,
+				<CLKID_SYS_MIPI_DSI_B>,
+				<CLKID_SYS_MIPI_DSI1_PHY>,
+				<CLKID_SYS_ETH>,
+				<CLKID_SYS_UART_A>,
+				<CLKID_SYS_UART_F>,
+				<CLKID_SYS_TS_A55>,
+				<CLKID_SYS_USB3DRD_B>,
+				<CLKID_SYS_TS_CORE>,
+				<CLKID_SYS_TS_PLL>,
+				<CLKID_SYS_CDI_DIG_CLKIN>,
+				<CLKID_SYS_CVE>,
+				<CLKID_SYS_GE2D>,
+				<CLKID_SYS_SPISG_0>,
+				<CLKID_SYS_USB3DRD_1>,
+				<CLKID_SYS_USB_U2H>,
+				<CLKID_SYS_PCIE_MAC_A>,
+				<CLKID_SYS_USB3DRD_A>,
+				<CLKID_SYS_USB2DRD>,
+				<CLKID_SYS_PCIE_PHY>,
+				<CLKID_SYS_PCIE_MAC_B>,
+				<CLKID_SYS_I2C_M_E>,
+				<CLKID_SYS_I2C_M_F>,
+				<CLKID_SYS_HDMITX_APB>,
+				<CLKID_SYS_I2C_M_I>,
+				<CLKID_SYS_I2C_M_G>,
+				<CLKID_SYS_I2C_M_H>,
+				<CLKID_SYS_HDMI20_AES>,
+				<CLKID_SYS_MMC_APB>,
+				<CLKID_SYS_CSI2_HOST>,
+				<CLKID_SYS_CSI2_ADAPT>,
+				<CLKID_SYS_CPU_APB>,
+				<CLKID_SYS_DSPA>,
+				<CLKID_SYS_PERIPH_TOP>,
+				<CLKID_SYS_PERIPH_TOP_APB>,
+				<CLKID_SYS_VPU_INTR>,
+				<CLKID_SYS_CSI2_PHY0>,
+				<CLKID_SYS_SAR_ADC>,
+				<CLKID_SYS_PWM_J>,
+				<CLKID_SYS_GIC>,
+				<CLKID_SYS_PWM_I>,
+				<CLKID_SYS_PWM_H>,
+				<CLKID_SYS_PWM_N>,
+				<CLKID_SYS_PWM_M>,
+				<CLKID_SYS_PWM_L>,
+				<CLKID_SYS_PWM_K>;
+		clocks = <&scmi_clk CLKID_SYS_CLK>;
+	};
+
+	clkc_12_24_25m: clock-12-24-25m@3ac {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x3ac 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "clk_24m_in",
+				     "clk_12m_24m",
+				     "clk_25m_div",
+				     "clk_25m";
+		clock-basic-types = <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 11 1>,  /* regoffset shift width */
+				    <0x0 10 1>,
+				    <0x0 0  8>,
+				    <0x0 12 1>;
+		clock-indices = <CLKID_24M_IN>,
+				<CLKID_12M_24M>,
+				<CLKID_25M_DIV>,
+				<CLKID_25M>;
+		clock-parents = <&xtal>,
+				<&clkc_12_24_25m CLKID_24M_IN>,
+				<&scmi_clk CLKID_FIXED_PLL>,
+				<&clkc_12_24_25m CLKID_25M_DIV>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 0>,
+			      <0 0>,
+			      <0 CLK_SET_RATE_PARENT>;
+		clocks = <&xtal>,
+			 <&scmi_clk CLKID_FIXED_PLL>;
+	};
+
+	clkc_gen_out: clock-gen-out@178 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x178 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "gen_sel",
+				     "gen_seldiv",
+				     "gen";
+		clock-basic-types = <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 12 5>,  /* regoffset shift width */
+				    <0x0 0  11>,
+				    <0x0 11 1>;
+		clock-indices = <CLKID_GEN_SEL>,
+				<CLKID_GEN_DIV>,
+				<CLKID_GEN>;
+		clock-parents = <&gen_parents>,
+				<&clkc_gen_out CLKID_GEN_SEL>,
+				<&clkc_gen_out CLKID_GEN_DIV>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>;
+		clocks = <&xtal>,
+			 <&clkc_rtc CLKID_RTC_CLK>,
+			 <&scmi_clk CLKID_SYS_PLL_DIV16>,
+			 <&gp0_pll>,
+			 <&hifi1_pll>,
+			 <&hifi_pll>,
+			 <&scmi_clk CLKID_GP1_PLL>,
+			 <&scmi_clk CLKID_GP2_PLL>,
+			 <&scmi_clk CLKID_CPU_CLK_DIV16>,
+			 <&scmi_clk CLKID_FCLK_DIV2>,
+			 <&scmi_clk CLKID_FCLK_DIV2P5>,
+			 <&scmi_clk CLKID_FCLK_DIV3>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
+	};
+
+	gp0_pll: pll-gp0@8200 {
+		compatible = "amlogic,pll";
+		reg = <0x0 0x8200 0x0 0x10>;
+		pll-dco-range = <0 1400000000 0 2800000000>;  /* min_dco max_dco */
+		pll-init-regs = <0x0  0x08010000 0>,  /* regoffset value delay_us */
+				<0x4  0x11480000 0>,
+				<0x8  0x1219b010 0>,
+				<0xc  0x00008010 0>;
+		clock-flags = <AML_PLL_M_EN0P5 0>;
+		pll-special-parms = <(AML_PLL_SPEC_PARM_FRAC | AML_PLL_SPEC_PARM_OD |
+				      AML_PLL_SPEC_PARM_LOCK_DETECT)>;
+		pll-max-frac = <131071>;  /* 2^17 - 1 */
+		pll-max-od = <4>;
+		clock-output-names = "gp0_pll";
+		clocks = <&xtal>;
+		#clock-cells = <0>;
+	};
+
+	hifi_pll: pll-hifi@8280 {
+		compatible = "amlogic,pll";
+		reg = <0x0 0x8280 0x0 0x10>;
+		pll-dco-range = <0 1600000000 0 3200000000>;  /* min_dco max_dco */
+		pll-init-regs = <0x0  0x08010000 0>,  /* regoffset value delay_us */
+				<0x4  0x11480000 0>,
+				<0x8  0x1219b010 0>,
+				<0xc  0x00008010 0>;
+		clock-flags = <(AML_PLL_ROUND_CLOSEST | AML_PLL_M_EN0P5) 0>;
+		pll-special-parms = <(AML_PLL_SPEC_PARM_FRAC | AML_PLL_SPEC_PARM_OD |
+				      AML_PLL_SPEC_PARM_LOCK_DETECT)>;
+		pll-max-frac = <100000>;
+		pll-max-od = <4>;
+		clock-output-names = "hifi_pll";
+		clocks = <&xtal>;
+		#clock-cells = <0>;
+	};
+
+	hifi1_pll: pll-hifi1@82a0 {
+		compatible = "amlogic,pll";
+		reg = <0x0 0x82a0 0x0 0x10>;
+		pll-dco-range = <0 1600000000 0 3200000000>;  /* min_dco max_dco */
+		pll-init-regs = <0x0  0x08010000 0>,  /* regoffset value delay_us */
+				<0x4  0x11480000 0>,
+				<0x8  0x1219b010 0>,
+				<0xc  0x00008010 0>;
+		clock-flags = <(AML_PLL_ROUND_CLOSEST | AML_PLL_M_EN0P5) 0>;
+		pll-special-parms = <(AML_PLL_SPEC_PARM_FRAC | AML_PLL_SPEC_PARM_OD |
+				      AML_PLL_SPEC_PARM_LOCK_DETECT)>;
+		pll-max-frac = <100000>;
+		pll-max-od = <4>;
+		clock-output-names = "hifi1_pll";
+		clocks = <&xtal>;
+		#clock-cells = <0>;
+	};
+};

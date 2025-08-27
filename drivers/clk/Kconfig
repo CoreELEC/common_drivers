@@ -1,3 +1,4 @@
 # SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 
 source "$(COMMON_DRIVERS_DIR)/drivers/clk/meson/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/clk/amlogic/Kconfig"

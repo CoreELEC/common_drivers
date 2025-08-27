@@ -511,8 +511,8 @@
 		interrupts = <0 203 1
 				0 202 1>;
 		interrupt-names = "pre_irq", "post_irq";
-		clocks = <&clkc CLKID_VPU_CLKB>,
-			<&clkc CLKID_VPU>;
+		//clocks = <&clkc CLKID_VPU_CLKB>,
+		//	<&clkc_vpu>;
 		clock-names = "vpu_clkb",
 			"vpu_mux";
 		clock-range = <334 667>;
@@ -718,7 +718,7 @@
 		reg-data-type = <1>;
 
 		// using cm_mclk_0 24M
-		clocks = <&clkc CLKID_MCLK0>;
+		//clocks = <&clkc CLKID_MCLK0>;
 		clock-names = "mclk0";
 
 		pwdn-gpios = <&gpio GPIOX_5 GPIO_ACTIVE_HIGH>;
