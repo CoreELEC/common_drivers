@@ -926,7 +926,7 @@
 			uart_AO_B: serial@1e000 {
 				compatible = "amlogic,meson-uart";
 				reg = <0x0 0x1e000 0x0 0x18>;
-				interrupts = <0 407 1>;
+				interrupts = <0 66 1>;
 				status = "okay";
 				clocks = <&xtal>;
 				clock-names = "clk_uart";
