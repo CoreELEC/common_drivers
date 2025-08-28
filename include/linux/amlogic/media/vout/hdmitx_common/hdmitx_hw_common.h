@@ -310,6 +310,7 @@ enum amhdmitx_chip_e {
 	MESON_CPU_ID_S7,
 	MESON_CPU_ID_S7D,
 	MESON_CPU_ID_S6,
+	MESON_CPU_ID_A9,
 	MESON_CPU_ID_MAX,
 };
 

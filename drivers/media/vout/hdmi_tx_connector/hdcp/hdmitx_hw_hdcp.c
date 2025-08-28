@@ -500,6 +500,7 @@ void hdmitx21_ctrl_hdcp_gate(enum amhdmitx_chip_e chip_type, int hdcp_mode, bool
 	case MESON_CPU_ID_S7:
 	case MESON_CPU_ID_S7D:
 	case MESON_CPU_ID_S6:
+	case MESON_CPU_ID_A9:
 		hdcptx_ctrl_gate(hdcp_mode, en);
 		break;
 	default:

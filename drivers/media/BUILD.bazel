@@ -295,6 +295,7 @@ ddk_module(
                 "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s1a.c",
                 "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s7d.c",
                 "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s6.c",
+                "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_a9.c",
                 "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_interrupts.c",
                 "vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_frl_training.c",
             ],

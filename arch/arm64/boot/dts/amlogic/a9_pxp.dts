@@ -1130,7 +1130,8 @@
 //};
 
 &amhdmitx {
-	status = "disabled";
+	status = "okay";
+	pxp_mode = <1>;
 };
 
 //&drm_amhdmitx {

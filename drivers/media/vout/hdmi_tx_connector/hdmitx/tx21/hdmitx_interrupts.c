@@ -196,7 +196,8 @@ void hdcp_enable_intr(bool en)
 
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
+		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 		if (hdev->tx_comm.hdcptx_comm.hdcp_mode == 1) {
 			_intr_enable((struct intr_t *)&hdmi_all_intr.entity.tpi_intr, en);
 		} else if (hdev->tx_comm.hdcptx_comm.hdcp_mode == 2) {
@@ -390,7 +391,8 @@ static void intr_status_save_and_clear(void)
 #ifdef CONFIG_AMLOGIC_HDCP_TX
 		if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 			if (!(gate_status & BIT_HDMITX_TOP_CLK_GATE_HDCP1X)) {
 				if (pint->intr_st_reg == TPI_INTR_ST0_IVCTX)
 					continue;
@@ -443,7 +445,8 @@ void intr_status_init_clear(void)
 #ifdef CONFIG_AMLOGIC_HDCP_TX
 		if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 			if (!(gate_status & BIT_HDMITX_TOP_CLK_GATE_HDCP1X)) {
 				if (pint->intr_st_reg == TPI_INTR_ST0_IVCTX)
 					continue;

@@ -58,6 +58,14 @@ static int dump_hdmi_phy_pll_show(struct seq_file *s, void *p)
 	}
 
 	switch (hdev->tx21_hw.base->chip_data->chip_type) {
+	case MESON_CPU_ID_A9:
+		seq_puts(s, "\n--------ANACTRL_HDMIPHY registers--------\n");
+		/* ((0x0140 << 2) + 0xfe008000) ~ ((0x0147 << 2) + 0xfe008000) */
+		dump32(s, ANACTRL_HDMIPHY_CTRL0_A9, ANACTRL_HDMIPHY_STS_A9);
+		seq_puts(s, "\n--------ANACTRL_HDMIPLL registers--------\n");
+		/* ((0x00C0 << 2) + 0xfe008000) ~ ((0x00C3 << 2) + 0xfe008000) */
+		dump32(s, ANACTRL_HDMIPLL_CTRL0_A9, ANACTRL_HDMIPLL_CTRL0_A9);
+		break;
 	case MESON_CPU_ID_S6:
 	case MESON_CPU_ID_S7D:
 	case MESON_CPU_ID_S7:
@@ -117,11 +125,13 @@ static int dump_regs_show(struct seq_file *s, void *p)
 
 	if (tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 		// ((0x0000 << 2) + 0xfe008000) ~ ((0x00e0 << 2) + 0xfe008000)
 		dump32(s, ANACTRL_SYS0PLL_CTRL0, ANACTRL_CHIP_TEST_STS);
 		// ((0x0001 << 2) + 0xfe000000) ~ ((0x0126 << 2) + 0xfe000000)
-		dump32(s, CLKCTRL_OSCIN_CTRL, CLKCTRL_EFUSE_LOCK);
+		dump32(s, CLKCTRL_OSCIN_CTRL, tx_comm->tx_hw->chip_data->chip_type ==
+			MESON_CPU_ID_A9 ? CLKCTRL_TST_CTRL1_A9 : CLKCTRL_EFUSE_LOCK);
 		// ((0x0000 << 2) + 0xfe00c000) ~ ((0x012f << 2) + 0xfe00c000)
 		dump32(s, PWRCTRL_PWR_ACK0, PWRCTRL_CPUTOP_FSM_JUMP);
 		// ((0x1b00 << 2) + 0xff000000) ~ ((0x1bea << 2) + 0xff000000)
@@ -235,7 +245,8 @@ static int dump_hdmireg_show(struct seq_file *s, void *p)
 #ifdef CONFIG_AMLOGIC_HDCP_TX
 	if (tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 		gate_status = hdmitx21_get_gate_status();
 		if (gate_status & BIT_HDMITX_TOP_CLK_GATE_HDCP2X) {
 			dump_core(s, HDCP2X_DEBUG_CTRL0_IVCTX, HDCP2X_DEBUG_STAT16_IVCTX);
@@ -272,7 +283,8 @@ static int dump_hdmireg_show(struct seq_file *s, void *p)
 	// 0x00000f80 - 0x00000fa9
 	if (!(tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6))
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+		tx_comm->tx_hw->chip_data->chip_type == MESON_CPU_ID_A9))
 		dump_core(s, DSC_PKT_GEN_CTL_IVCTX, DSC_PKT_SPARE_9_IVCTX);
 	hdmitx_dump_infoframe_packets(s);
 	return 0;

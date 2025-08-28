@@ -143,6 +143,9 @@ static u32 get_enc_paddr(unsigned int addr)
 	if (hdev->tx_comm.enc_idx == 2 && idx == VPUCTRL_REG_IDX) {
 		if (offset >= 0x1b00 && offset < 0x1d00)
 			return addr + (0x800 << 2);
+	} else if (hdev->tx_comm.enc_idx == 1 && idx == VPUCTRL_REG_IDX) {
+		if (offset >= 0x1b00 && offset < 0x1d00)
+			return addr + (0x600 << 2);
 	}
 	return addr;
 }

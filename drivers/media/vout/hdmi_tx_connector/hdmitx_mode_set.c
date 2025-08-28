@@ -29,8 +29,8 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 	if (tx_comm->ready)
 		HDMITX_ERROR("Should run disable_mode before enable new mode.\n");
 
-	if (tx_comm->hpd_state == 0 || tx_comm->suspend_flag) {
-		HDMITX_WARNING("%s current hpd_state/suspend (%d,%d), skip phy setting\n",
+	if ((tx_comm->hpd_state == 0 || tx_comm->suspend_flag) && !tx_comm->pxp_mode) {
+		HDMITX_ERROR("%s current hpd_state/suspend (%d,%d), exit\n",
 			__func__, tx_comm->hpd_state, tx_comm->suspend_flag);
 		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_SKIP);
 		tx_comm->skip_phy_setting = true;
@@ -40,19 +40,22 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 	memcpy(&tx_comm->fmt_para, para, sizeof(struct hdmi_format_para));
 
 	/*check if vic supported by rx*/
-	if (!hdmitx_edid_validate_mode(&tx_comm->rxcap, tx_comm->fmt_para.vic)) {
+	if (!hdmitx_edid_validate_mode(&tx_comm->rxcap, tx_comm->fmt_para.vic) &&
+		!tx_comm->pxp_mode) {
 		HDMITX_ERROR("edid invalid vic-%d return error\n", tx_comm->fmt_para.vic);
 		mutex_unlock(&tx_comm->valid_mutex);
 		return -EINVAL;
 	}
 
-	if (hdmitx_common_validate_vic(tx_comm, tx_comm->fmt_para.vic)) {
+	if (hdmitx_common_validate_vic(tx_comm, tx_comm->fmt_para.vic) &&
+		!tx_comm->pxp_mode) {
 		HDMITX_ERROR("validate vic-%d return error\n", tx_comm->fmt_para.vic);
 		mutex_unlock(&tx_comm->valid_mutex);
 		return -EINVAL;
 	}
 
-	if (hdmitx_common_validate_format_para(tx_comm, &tx_comm->fmt_para)) {
+	if (hdmitx_common_validate_format_para(tx_comm, &tx_comm->fmt_para) &&
+		!tx_comm->pxp_mode) {
 		HDMITX_ERROR("format para check fail.\n");
 		mutex_unlock(&tx_comm->valid_mutex);
 		return -EINVAL;

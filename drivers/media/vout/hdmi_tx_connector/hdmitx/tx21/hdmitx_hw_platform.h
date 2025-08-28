@@ -234,6 +234,7 @@ void hdmitx_set_phy_by_mode_s1a(u32 mode);
 void hdmitx_set_phy_by_mode_s7(u32 mode);
 void hdmitx_set_phy_by_mode_s7d(u32 mode);
 void hdmitx_set_phy_by_mode_s6(u32 mode);
+void hdmitx_set_phy_by_mode_a9(u32 mode);
 
 void hdmitx_s5_phy_pre_init(struct hdmitx21_dev *hdev);
 void hdmitx_s7_phy_pre_init(struct hdmitx21_dev *hdev);
@@ -247,7 +248,7 @@ void hdmitx21_set_cts_sys_clk(struct hdmitx21_dev *hdev);
 void hdmitx21_set_top_pclk(struct hdmitx21_dev *hdev);
 void hdmitx21_set_hdcp_pclk(struct hdmitx21_dev *hdev);
 void hdmitx21_set_cts_hdcp22_clk(struct hdmitx21_dev *hdev);
-bool hdmitx21_is_basic_clk_en(void);
+bool hdmitx21_is_basic_clk_en(struct hdmitx21_dev *hdev);
 
 /* 6.2 sys clk */
 void hdmitx21_sys_reset_t7(void);
@@ -255,6 +256,7 @@ void hdmitx21_sys_reset_s5(void);
 void hdmitx21_sys_reset_s6(void);
 void hdmitx21_sys_reset_s7(void);
 void hdmitx21_sys_reset_s7d(void);
+void hdmitx21_sys_reset_a9(void);
 
 /* 6.3 special clk */
 void hdmitx_set_s5_tmds_clk_div(struct hdmitx21_dev *hdev);
@@ -273,6 +275,7 @@ void hdmitx_disable_s5_plls(struct hdmitx21_dev *hdev);
 void hdmitx_disable_s7_plls(struct hdmitx21_dev *hdev);
 void hdmitx_disable_s7d_plls(struct hdmitx21_dev *hdev);
 void hdmitx_disable_s6_plls(struct hdmitx21_dev *hdev);
+void hdmitx_disable_a9_plls(struct hdmitx21_dev *hdev);
 
 /* 7.2 fpll */
 void hdmitx_set_frl_hpll_od(enum frl_rate_enum rate);
@@ -288,11 +291,9 @@ void hdmitx_set_t7_hpll_clk_out(u32 frac_rate, u32 clk);
 void hdmitx_set_s5_htxpll_clk_out(u32 clk, u32 div);
 void hdmitx_set_s1a_hpll_clk_out(u32 frac_rate, u32 clk);
 void hdmitx_set_s7_htxpll_clk_out(u32 clk, u32 div);
-void hdmitx_set_s7_htx_pll(struct hdmitx21_dev *hdev);
 void hdmitx_set_s7d_htxpll_clk_out(u32 clk, u32 div);
-void hdmitx_set_s7d_htx_pll(struct hdmitx21_dev *hdev);
 void hdmitx_set_s6_htxpll_clk_out(u32 clk, u32 div);
-void hdmitx_set_s6_htx_pll(struct hdmitx21_dev *hdev);
+void hdmitx_set_a9_htxpll_clk_out(u32 clk, u32 div);
 void hdmitx_set_hpll_od0_t7(u32 div);
 void hdmitx_set_hpll_od1_t7(u32 div);
 void hdmitx_set_hpll_od2_t7(u32 div);
@@ -304,6 +305,7 @@ void hdmitx_set_hpll_sspll_s5(enum hdmi_vic vic);
 void hdmitx_set_hpll_sspll_s7(enum hdmi_vic vic);
 void hdmitx_set_hpll_sspll_s7d(enum hdmi_vic vic);
 void hdmitx_set_hpll_sspll_s6(enum hdmi_vic vic);
+void hdmitx_set_hpll_sspll_a9(enum hdmi_vic vic);
 
 /* 7.6 clk gate for suspend power */
 void hdmitx_t7_clock_gate_ctrl(bool en);
@@ -312,6 +314,7 @@ void hdmitx_s1a_clock_gate_ctrl(bool en);
 void hdmitx_s7_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en);
 void hdmitx_s7d_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en);
 void hdmitx_s6_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en);
+void hdmitx_a9_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en);
 void hdmitx21_clks_gate_ctrl(bool en);
 
 /* 8. hpd */

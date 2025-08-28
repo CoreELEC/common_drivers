@@ -228,6 +228,46 @@ static const struct reg_s tvregs_1080i50[] = {
 	{MREG_END_MARKER, 0},
 };
 
+static const struct reg_s tvregs_encp_480i60[] = {
+	{ENCP_VIDEO_MODE, 0x1c40 | (1 << 14)},//i source
+	{ENCP_VIDEO_MODE_ADV, 0x0009}, //Sampling rate: 1
+	{ENCP_VIDEO_MAX_PXCNT, 1715},
+	{ENCP_VIDEO_MAX_LNCNT, 524},
+	{ENCP_VIDEO_HAVON_BEGIN, 240},
+	{ENCP_VIDEO_HAVON_END, 1679},
+	{ENCP_VIDEO_VAVON_BLINE, 17},
+	{ENCP_VIDEO_VAVON_ELINE, 256},
+	{ENCP_VIDEO_HSO_BEGIN, 2},
+	{ENCP_VIDEO_HSO_END, 130},
+	{ENCP_VIDEO_VSO_BEGIN, 2},
+	{ENCP_VIDEO_VSO_END, 130},
+	{ENCP_VIDEO_VSO_BLINE, 0},
+	{ENCP_VIDEO_VSO_ELINE, 3},
+	{ENCP_VIDEO_OFLD_VPEQ_OFST, 0x0100},
+	{ENCP_VIDEO_OFLD_VOAV_OFST, 0x0111},
+	{MREG_END_MARKER, 0},
+};
+
+static const struct reg_s tvregs_encp_576i50[] = {
+	{ENCP_VIDEO_MODE, 0x1c40 | (1 << 14)},//i source
+	{ENCP_VIDEO_MODE_ADV, 0x0009}, //Sampling rate: 1
+	{ENCP_VIDEO_MAX_PXCNT, 1727},
+	{ENCP_VIDEO_MAX_LNCNT, 624},
+	{ENCP_VIDEO_HAVON_BEGIN, 240},
+	{ENCP_VIDEO_HAVON_END, 1679},
+	{ENCP_VIDEO_VAVON_BLINE, 19},
+	{ENCP_VIDEO_VAVON_ELINE, 306},
+	{ENCP_VIDEO_HSO_BEGIN, 3},
+	{ENCP_VIDEO_HSO_END, 5},
+	{ENCP_VIDEO_VSO_BEGIN, 3},
+	{ENCP_VIDEO_VSO_END, 5},
+	{ENCP_VIDEO_VSO_BLINE, 9},
+	{ENCP_VIDEO_VSO_ELINE, 14},
+	{ENCP_VIDEO_OFLD_VPEQ_OFST, 0x0100},
+	{ENCP_VIDEO_OFLD_VOAV_OFST, 0x0111},
+	{MREG_END_MARKER, 0},
+};
+
 static void set_vmode_enc_hw(const struct reg_s *s)
 {
 	if (!s)
@@ -239,7 +279,7 @@ static void set_vmode_enc_hw(const struct reg_s *s)
 	}
 }
 
-static void hdmi_tvenc1080i_set(enum hdmi_vic vic)
+static void hdmi_tvenc_interlaced_set(enum hdmi_vic vic)
 {
 	unsigned long VFIFO2VD_TO_HDMI_LATENCY = 2;
 	unsigned long TOTAL_PIXELS = 0, PIXEL_REPEAT_HDMI = 0,
@@ -273,6 +313,36 @@ static void hdmi_tvenc1080i_set(enum hdmi_vic vic)
 	HDMITX_INFO("%s[%d] vic = %d\n", __func__, __LINE__, tp->vic);
 
 	switch (vic) {
+	case HDMI_6_720x480i60_4x3:
+	case HDMI_7_720x480i60_16x9:
+		INTERLACE_MODE = 1;
+		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_HDMI = 1;
+		ACTIVE_PIXELS = (720 * (1 + PIXEL_REPEAT_HDMI));
+		ACTIVE_LINES = (480 / (1 + INTERLACE_MODE));
+		LINES_F0 = 262;
+		LINES_F1 = 263;
+		FRONT_PORCH = 38;
+		HSYNC_PIXELS = 124;
+		BACK_PORCH = 114;
+		VSYNC_LINES = 3;
+		set_vmode_enc_hw(tvregs_encp_480i60);
+		break;
+	case HDMI_21_720x576i50_4x3:
+	case HDMI_22_720x576i50_16x9:
+		INTERLACE_MODE = 1;
+		PIXEL_REPEAT_VENC = 1;
+		PIXEL_REPEAT_HDMI = 1;
+		ACTIVE_PIXELS = (720 * (1 + PIXEL_REPEAT_HDMI));
+		ACTIVE_LINES = (576 / (1 + INTERLACE_MODE));
+		LINES_F0 = 313;
+		LINES_F1 = 312;
+		FRONT_PORCH = 24;
+		HSYNC_PIXELS = 126;
+		BACK_PORCH = 138;
+		VSYNC_LINES = 3;
+		set_vmode_enc_hw(tvregs_encp_576i50);
+		break;
 	case HDMI_5_1920x1080i60_16x9:
 	case HDMI_46_1920x1080i120_16x9:
 		INTERLACE_MODE = 1;
@@ -411,11 +481,15 @@ void hdmitx_set_tv_encp_new(struct hdmitx21_dev *hdev, u32 enc_index, enum hdmi_
 		return;
 
 	switch (vic) {
+	case HDMI_6_720x480i60_4x3:
+	case HDMI_7_720x480i60_16x9:
+	case HDMI_21_720x576i50_4x3:
+	case HDMI_22_720x576i50_16x9:
 	case HDMI_5_1920x1080i60_16x9:
 	case HDMI_46_1920x1080i120_16x9:
 	case HDMI_20_1920x1080i50_16x9:
 	case HDMI_40_1920x1080i100_16x9:
-		hdmi_tvenc1080i_set(vic);
+		hdmi_tvenc_interlaced_set(vic);
 		break;
 	default:
 		config_tv_enc_calc(hdev, vic);
@@ -797,7 +871,8 @@ void hdmitx21_pbist_config(struct hdmitx21_dev *hdev, enum hdmi_vic vic, int reg
 	HDMITX_DEBUG("find hdmitx vic %d timing\n", vic);
 	if (reg_pbist_en && (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6))
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9))
 		hdmitx21_set_reg_bits(HDMITX_TOP_CLK_GATE, 1, 0, 1);//enable pbist
 	else
 		hdmitx21_set_reg_bits(HDMITX_TOP_CLK_GATE, 0, 0, 1);//disable pbist

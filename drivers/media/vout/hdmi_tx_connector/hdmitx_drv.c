@@ -140,6 +140,12 @@ static struct amhdmitx_data_s amhdmitx_data_s6 = {
 	.chip_name = "s6",
 	.hdmitx_ops = &hdmitx21_ops,
 };
+
+static struct amhdmitx_data_s amhdmitx_data_a9 = {
+	.chip_type = MESON_CPU_ID_A9,
+	.chip_name = "a9",
+	.hdmitx_ops = &hdmitx21_ops,
+};
 #endif
 
 static const struct of_device_id meson_amhdmitx_of_match[] = {
@@ -189,6 +195,10 @@ static const struct of_device_id meson_amhdmitx_of_match[] = {
 	{
 		.compatible	 = "amlogic, amhdmitx-s6",
 		.data = &amhdmitx_data_s6,
+	},
+	{
+		.compatible	 = "amlogic, amhdmitx-a9",
+		.data = &amhdmitx_data_a9,
 	},
 #endif
 	{},
@@ -473,6 +483,8 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 					   "enc_idx", &val);
 		if (!ret && val == 2)
 			tx_comm->enc_idx = 2;
+		else if (!ret && val == 1)
+			tx_comm->enc_idx = 1;
 		else
 			tx_comm->enc_idx = 0;
 
@@ -966,7 +978,8 @@ void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)
 			 *	Assume EDID remains unchanged
 			 *	Notify system/DRM to configure HDMI mode
 			 */
-			if (hdmitx_hw_cntl(tx_hw, PLATFORM_GET_HPD_GPI_ST, NULL, NULL) == 1) {
+			if ((hdmitx_hw_cntl(tx_hw, PLATFORM_GET_HPD_GPI_ST, NULL, NULL) == 1) ||
+				tx_comm->pxp_mode) {
 				tx_comm->hpd_state = 1;
 				update_hpd = true;
 			}
@@ -1105,6 +1118,10 @@ void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)
 		ret = kstrtoul(tmpbuf + 10, 10, &value);
 		tx_comm->force_frac_mode = value & 0x3;
 		HDMITX_INFO("set force_frac_mode: 0x%x\n", tx_comm->force_frac_mode);
+	} else if (strncmp(tmpbuf, "venc", 4) == 0) {
+		ret = kstrtoul(tmpbuf + 4, 10, &value);
+		tx_comm->enc_idx = value;
+		HDMITX_INFO("set venc index: %d\n", tx_comm->enc_idx);
 	}
 }
 

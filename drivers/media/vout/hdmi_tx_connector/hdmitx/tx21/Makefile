@@ -24,5 +24,6 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s7.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s7d.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_s6.o
+$(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_hw_a9.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_interrupts.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX21) += vout/hdmi_tx_connector/hdmitx/tx21/hdmitx_frl_training.o
