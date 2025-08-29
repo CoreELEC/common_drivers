@@ -1631,53 +1631,63 @@
 	mesonstream {
 		compatible = "amlogic, codec, streambuf";
 		dev_name = "mesonstream";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vcodec_dos_dev: vcodec_dos_dev {
-		compatible = "amlogic, cpu-major-id-s6";
+		compatible = "amlogic, cpu-major-id-a9";
 		dev_name = "vcodec_dos_dev";
-		status = "disabled";
+		status = "okay";
 		reg = <0x0 0xfe320000 0x0 0x10000>,
-			<0x0 0xfe036000 0x0 0x2000>;
+			<0x0 0xfe036000 0x0 0x2000>,
+			<0x0 0xfe010000 0x0 0x2000>;
 		reg-names = "dosbus",
-			"dmcbus";
-		//clocks = <&clkc_sys CLKID_SYS_DOS>,
-		//	 <&clkc CLKID_VDEC>,
-		//	 <&clkc_hevcf>;
+			"dmcbus",
+			"sysctrl";
+		clocks = <&clkc_sys CLKID_SYS_DOS>,
+			 <&clkc_hcodec>,
+			 <&clkc_hevcf>;
 		clock-names = "vdec",
-			"clk_vdec_mux",
+			"clk_hcodec_mux",
 			"clk_hevcf_mux";
+		assigned-clocks = <&scmi_clk CLKID_GP1_PLL>;
+		assigned-clock-rates = <852000000>;
 	};
 
 	vdec {
 		compatible = "amlogic, vdec-pm-pd";
 		dev_name = "vdec.0";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 3 1
-			0 23 1
+			0 155 1
 			0 32 1
-			0 91 1
-			0 92 1
-			0 93 1
-			0 72 1>;
+			0 87 1
+			0 88 1
+			0 89 1
+			0 252 1
+			0 201 1
+			0 113 1>;
 		interrupt-names = "vsync",
 			"demux",
 			"parser",
 			"mailbox_0",
 			"mailbox_1",
 			"mailbox_2",
-			"parser_b";
-		//power-domains = <&pwrdm PDID_S6_DOS_VDEC>,
-		//	<&pwrdm PDID_S6_DOS_HEVC>;
-		//power-domain-names = "pwrc-vdec",
-		//	"pwrc-hevc";
+			"assist_mbox_irq_ee",
+			"viff_empty",
+			"axi_monitor";
+		power-domains = <&pwrdm PDID_A9_DOS_HEVC>,
+			<&pwrdm PDID_A9_DOS_HCODEC>;
+		power-domain-names = "pwrc-hevc",
+			"pwrc-hcodec";
+		reset-names = "hevcf_dmc_pipel";
+		resets = <&reset RESET_BRG_HEVCF_DMC_PIPEL>;
 	};
 
 	vcodec_dec {
 		compatible = "amlogic, vcodec-dec";
 		dev_name = "aml-vcodec-dec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	ddr_bandwidth {
@@ -2649,6 +2659,8 @@
 		 * 1: only alloc from system
 		 */
 		scatter_alloc_mode = <1>;
+		/* secure memory controller para <switch  align_2n> */
+		secure_ctrl_para = <1 16>;
 	};
 
 	amdolby_vision {

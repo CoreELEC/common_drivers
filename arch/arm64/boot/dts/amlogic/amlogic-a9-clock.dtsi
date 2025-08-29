@@ -590,7 +590,7 @@
 		#clock-cells = <0>;
 		clock-output-names = "hevcf";
 		clock-parents = <&hevcf_parents>;
-		clock-rate-range = <0 0 0 850000000>;
+		clock-rate-range = <0 0 0 852000000>;
 		clocks = <&scmi_clk CLKID_FCLK_DIV2P5>,
 			 <&scmi_clk CLKID_FCLK_DIV3>,
 			 <&scmi_clk CLKID_FCLK_DIV4>,
