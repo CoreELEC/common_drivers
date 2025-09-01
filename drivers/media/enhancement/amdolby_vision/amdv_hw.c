@@ -3490,7 +3490,7 @@ void apply_stb_core_settings(dma_addr_t dma_paddr,
 			enable_core1b = 0;
 
 		for (i = 0; i < NUM_IPCORE1; i++) {
-			if (cur_valid_video_num <= 1) {
+			if (new_m_dovi_setting.input[0].valid) {
 				p_comp1[i] = &new_m_dovi_setting.core1[0].comp_reg;
 				p_dm_reg1[i] = &new_m_dovi_setting.core1[0].dm_reg;
 				p_dm_lut1[i] = &new_m_dovi_setting.core1[0].dm_lut;

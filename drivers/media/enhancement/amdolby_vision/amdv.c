@@ -448,8 +448,6 @@ static int pri_input;
 
 static int force_pri_input = -1;
 
-int cur_valid_video_num;
-
 /* cfg bin data */
 char *cfg_data;
 char *bin_data;
@@ -10670,7 +10668,6 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 	}
 
 	if (enable_multi_core1) {
-		cur_valid_video_num = valid_video_num;
 		if (last_pri_input != pri_input) {
 			pri_change = true;
 			pr_dv_dbg("pri change changed %d->%d, reset cp\n",
@@ -10766,7 +10763,7 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 		 flag);
 	}
 
-	if (flag == -2 && cur_valid_video_num == 1 &&
+	if (flag == -2 && new_m_dovi_setting.input[0].valid &&
 		!is_aml_stb_hdmimode() && vf &&
 		new_m_dovi_setting.input[0].src_format == FORMAT_DOVI) {
 		pr_dv_dbg("dv source but metadata checked as el, force as sdr source\n");
@@ -16934,7 +16931,7 @@ static ssize_t amdolby_vision_inst_status_show
 
 	len += sprintf(buf + len, "enable multi core1: %d\n", enable_multi_core1);
 	len += sprintf(buf + len, "valid num %d, pri_input: %d\n",
-		       cur_valid_video_num, pri_input);
+		       dv_inst[0].valid, pri_input);
 	len += sprintf(buf + len, "vd1_inst_id %d, vd2_inst_id: %d\n",
 		       vd1_inst_id + 1, vd2_inst_id + 1);
 
