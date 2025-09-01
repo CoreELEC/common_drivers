@@ -1302,9 +1302,9 @@ static const char * const i2c5_groups[] = {
 };
 
 static const char * const ir_remote_groups[] = {
-	"ir_remote_in_c", "ir_remote_out_f", "ir_remote_in_f3",
-	"ir_remote_in_d", "ir_remote_out_h", "ir_remote_out_z",
-	"ir_remote_out_a", "ir_remote_in_d10"
+	"ir_remote_in_c", "ir_remote_out_f", "ir_remote_in_f1",
+	"ir_remote_in_f3", "ir_remote_in_d", "ir_remote_out_h",
+	"ir_remote_out_z", "ir_remote_out_a", "ir_remote_in_d10"
 };
 
 static const char * const jtag_groups[] = {
