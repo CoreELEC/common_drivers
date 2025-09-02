@@ -11,6 +11,6 @@
  * 1: enable hdr10plus
  * 0: disable hdr10plus
  */
-#define HDR10PLUS_STATE  0
+#define HDR10PLUS_STATE  1
 
 #endif
