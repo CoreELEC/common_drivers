@@ -122,6 +122,13 @@
 		io-channels = <&saradc 0>;
 		io-channel-names = "voltage";
 	};
+
+	gpio_keypad{
+		key_num = <1>;
+		key_name = "power";
+		key_code = <116>;
+		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &i2c0 {
@@ -191,6 +198,10 @@
 		def-vol = <0x1d>;
 		def-dacvol = <0x0a>;
 	};
+};
+
+&sd_emmc_c {
+	mmc-hs400-1_8v;
 };
 
 &tdmc {
