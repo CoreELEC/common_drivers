@@ -28,6 +28,10 @@
 		status = "disabled";
 	};
 
+	amvdec_csi {
+		status = "disabled";
+	};
+
 	gpu:valhall {
 		compatible = "arm,mali-valhall-csf";
 	};
