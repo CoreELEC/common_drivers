@@ -26,11 +26,7 @@
 	};
 
 	/delete-node/ gpio_leds;
-	gpioleds {
-		sys_led {
-			gpios = <&gpio GPIODV_5 GPIO_ACTIVE_HIGH>;
-		};
-	};
+	/delete-node/ gpioleds;
 
 	/delete-node/ auge_sound;
 	auge_sound {
