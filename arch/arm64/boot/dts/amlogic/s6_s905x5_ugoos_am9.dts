@@ -37,7 +37,6 @@
 		pinctrl-names = "default";
 		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 		enable-active-high;
-		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
@@ -49,7 +48,6 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio GPIOA_10 GPIO_ACTIVE_LOW>;
-		startup-delay-us = <70000>;
 		enable-active-low; //3.3V , high: 0V
 		regulator-boot-on;
 		regulator-always-on;
@@ -63,7 +61,6 @@
 		regulator-max-microvolt = <3300000>;
 		// H: 1.8V, L: 3.3V
 		gpio = <&gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
-		startup-delay-us = <70000>;
 		gpios-states = <0>;
 
 		/* Based on P200 schematics, signal CARD_1.8V/3.3V_CTR */
@@ -80,7 +77,6 @@
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
 		gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
-		startup-delay-us = <70000>;
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
@@ -95,7 +91,6 @@
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
 		gpio = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
-		startup-delay-us = <70000>;
 		enable-active-high;
 		early-suspend;
 		regulator-boot-on;
