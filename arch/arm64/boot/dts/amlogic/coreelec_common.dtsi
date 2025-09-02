@@ -1,4 +1,5 @@
 #include <dt-bindings/mailbox/amlogic,mbox.h>
+#include <dt-bindings/display/hdr10plus.h>
 
 /{
 	coreelec;
@@ -33,8 +34,12 @@
 	/delete-node/ custom_maps;
 	/delete-node/ ir@8000;
 
+	/* Attention: Please turn on or off the hdr10+ function in the */
+	/* dt-bindings/display/hdr10plus.h file and */
+	/* do not modify it in this dtsi file!!! */
+
 	amlvecm {
-		enable_hdr10plus = <1>;/*1:enable ;0:disable*/
+		enable_hdr10plus = <HDR10PLUS_STATE>;
 	};
 
 	bl30_manager {
