@@ -59,6 +59,9 @@
 #define CLKCTRL_VPU_CLK_CTRL         0x003a
 #define CLKCTRL_VAPBCLK_CTRL         0x003f
 
+#define CLKCTRL_VPU_CLK_CTRL_A9      0x0118
+#define CLKCTRL_VAPBCLK_CTRL_A9      0x011a
+
 #define CLKCTRL_VOUTENC_CLK_CTRL     0x0046
 
 /* cbus */

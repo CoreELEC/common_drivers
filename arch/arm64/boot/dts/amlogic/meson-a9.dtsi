@@ -1582,20 +1582,14 @@
 			"vc9000e_top";
 	};
 	vpu: vpu {
-		compatible = "amlogic, vpu-s6";
-		status = "disabled";
-		reg =	<0x0 0xfe000000 0x0 0x100    /* clk */
+		compatible = "amlogic, vpu-a9";
+		status = "okay";
+		reg =	<0x0 0xfe000000 0x0 0x2000    /* clk */
 			 0x0 0xfe00c000 0x0 0x70     /* pwrctrl */
-			 0x0 0xff000000 0x0 0xf000>; /* vcbus */
-		//clocks = <&clkc_vapb_ge2d CLKID_VAPB>,
-		//	 <&clkc_sys CLKID_SYS_VPU_INTR>,
-		//	 <&clkc CLKID_VPU_0>,
-		//	 <&clkc CLKID_VPU_1>,
-		//	 <&clkc_vpu>;
+			 0x0 0xff500000 0x0 0x40000>; /* vcbus */
+		clocks = <&clkc_vapb_ge2d CLKID_VAPB>,
+			 <&clkc_vpu>;
 		clock-names =	"vapb_clk",
-				//"vpu_intr_gate",
-				//"vpu_clk0",
-				//"vpu_clk1",
 				"vpu_clk";
 		clk_level = <8>;
 		/* 0: 24.0M  1: 100.0M    2: 166.7M    3: 200.0M    4: 250.0M */

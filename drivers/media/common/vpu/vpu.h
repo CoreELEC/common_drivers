@@ -38,6 +38,7 @@ enum vpu_chip_e {
 	VPU_CHIP_T6D,
 	VPU_CHIP_T6W,
 	VPU_CHIP_T6X,
+	VPU_CHIP_A9,
 	VPU_CHIP_MAX,
 };
 
@@ -208,9 +209,11 @@ unsigned int get_vpu_clk_level_from_venc(unsigned int venc_clk);
 int vpu_clk_apply_dft(unsigned int clk_level);
 int vpu_clk_apply_t6x(unsigned int clk_level);
 int vpu_clk_apply_c3(unsigned int clk_level);
+int vpu_clk_apply_a9(unsigned int clk_level);
 int set_vpu_clk(unsigned int vclk);
 void vpu_clktree_init_dft(struct device *dev);
 void vpu_clktree_init_c3(struct device *dev);
+void vpu_clktree_init_a9(struct device *dev);
 
 void vpu_mem_pd_init_off(void);
 void vpu_module_init_config(void);
