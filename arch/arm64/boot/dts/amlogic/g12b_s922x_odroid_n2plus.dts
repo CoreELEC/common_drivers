@@ -56,10 +56,10 @@
 	cpus:cpus {
 		cpu-map {
 			cluster0:cluster0 {
-				stock_freq = <1908000000>;
+				stock_freq = <1908>;
 			};
 			cluster1:cluster1 {
-				stock_freq = <2208000000>;
+				stock_freq = <2208>;
 			};
 		};
 	};
