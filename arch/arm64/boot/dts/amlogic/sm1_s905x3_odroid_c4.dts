@@ -28,7 +28,7 @@
 	cpus:cpus {
 		cpu-map {
 			cluster0:cluster0 {
-				stock_freq = <1908000000>;
+				stock_freq = <1908>;
 			};
 		};
 	};
