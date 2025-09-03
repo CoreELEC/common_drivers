@@ -29,4 +29,15 @@
 		/delete-node/ opp13;
 		/delete-node/ opp14;
 	};
+
+	cpus:cpus {
+		cpu-map {
+			cluster0:cluster0 {
+				stock_freq = <1896>;
+			};
+			cluster1:cluster1 {
+				stock_freq = <1800>;
+			};
+		};
+	};
 };
