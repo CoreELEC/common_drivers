@@ -663,7 +663,7 @@
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
 		// GPIOF_2(Down) Output L/H= Enable/Disable VCC3V3
-		gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
+		// TODO: must check! // gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
@@ -846,7 +846,7 @@
 		status = "disabled";
 		/* otg & 3.0 share the vbus power.*/
 		gpio-vbus-power = "GPIOH_8";
-		gpios = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		// TODO: must check! // gpios = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
 	};
 
 	u3p@80 {
@@ -1181,8 +1181,8 @@
 &aml_bt {
 	status = "disabled";
 	reset-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
-	btwakeup-gpios = <&gpio    GPIOX_18 GPIO_ACTIVE_HIGH>;
-	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
+	// TODO: must check! // btwakeup-gpios = <&gpio    GPIOX_18 GPIO_ACTIVE_HIGH>;
+	// TODO: must check! // hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 };
 
 &pwm_e {

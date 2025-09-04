@@ -10,7 +10,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/a9-pd.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/gpio/meson-s6-gpio.h>
+#include <dt-bindings/gpio/meson-a9-gpio.h>
 #include <dt-bindings/reset/amlogic,meson-s6-reset.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
@@ -651,7 +651,7 @@
 			};
 
 			periphs_pinctrl: pinctrl@4000 {
-				compatible = "amlogic,meson-s6-periphs-pinctrl";
+				compatible = "amlogic,meson-a9-periphs-pinctrl";
 				#address-cells = <2>;
 				#size-cells = <2>;
 				ranges;
@@ -662,12 +662,12 @@
 					reg-names = "mux", "gpio";
 					gpio-controller;
 					#gpio-cells = <2>;
-					gpio-ranges = <&periphs_pinctrl 0 0 101>;
+					gpio-ranges = <&periphs_pinctrl 0 0 96>;
 				};
 			};
 
 			gpio_intc: interrupt-controller@4080 {
-				compatible = "amlogic,meson-s6-gpio-intc",
+				compatible = "amlogic,meson-a9-gpio-intc",
 					     "amlogic,meson-gpio-intc";
 				reg = <0x0 0x4080 0x0 0x20>;
 				interrupt-controller;
@@ -897,6 +897,50 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xffa00000 0x0 0x100000>;
+
+			aobus_pinctrl: pinctrl@4000 {
+				compatible = "amlogic,meson-a9-aobus-pinctrl";
+				#address-cells = <2>;
+				#size-cells = <2>;
+				ranges;
+				amlogic,ao-interrupt-controller;
+
+				ao_gpio: bank@4000 {
+					reg = <0x0 0x4000 0x0 0x0014>,
+					      <0x0 0x401c 0x0 0x0064>;
+					reg-names = "mux", "gpio";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&aobus_pinctrl 0 0 38>;
+				};
+			};
+
+			gpio_ao_intc: interrupt-controller@4080 {
+				compatible = "amlogic,meson-a9-gpio-ao-intc",
+					     "amlogic,meson-gpio-ao-intc";
+				reg = <0x0 0x4080 0x0 0x34>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				amlogic,channel-interrupts =
+					<32 33 34 35 36 37 38 39 40 41>,
+					<384 385 386 387 388 389 390 391 392 393>;
+			};
+
+			test_pinctrl: pinctrl@40c0 {
+				compatible = "amlogic,meson-a9-test-pinctrl";
+				#address-cells = <2>;
+				#size-cells = <2>;
+				ranges;
+				amlogic,ao-interrupt-controller;
+
+				test_gpio: bank@40c0 {
+					reg = <0x0 0x40c0 0x0 0x0020>;
+					reg-names = "gpio";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&test_pinctrl 0 0 1>;
+				};
+			};
 
 			uart_AO_B: serial@1e000 {
 				compatible = "amlogic,meson-uart";
