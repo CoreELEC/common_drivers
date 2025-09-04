@@ -532,3 +532,22 @@ ddk_module(
     visibility = ["//visibility:public"],
     deps = amlogic_pinctrl_soc_deps,
 )
+
+ddk_module(
+    name = "amlogic-pinctrl-soc-a9",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_PINCTRL_MESON_A9": {
+            True: ["pinctrl/pinctrl-meson-a9.c"],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = ["pr_fmt(fmt)=\"[pinctrl-soc-a9]: \" fmt"],
+    out = "amlogic-pinctrl-soc-a9.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = amlogic_pinctrl_soc_deps,
+)

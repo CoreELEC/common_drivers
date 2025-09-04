@@ -360,6 +360,14 @@ static const struct meson_gpio_irq_params a4_ao_params = {
 static const struct meson_gpio_irq_params a5_params = {
 	INIT_MESON_SC2_COMMON_DATA(99)
 };
+
+static const struct meson_gpio_irq_params a9_params = {
+	INIT_MESON_A9_COMMON_DATA(96)
+};
+
+static const struct meson_gpio_irq_params a9_ao_params = {
+	INIT_MESON_A9_COMMON_DATA(38)
+};
 #endif //end of CONFIG_AMLOGIC_MODIFY
 
 static const struct of_device_id meson_irq_gpio_matches[] = {
@@ -408,6 +416,8 @@ static const struct of_device_id meson_irq_gpio_matches[] = {
 	{ .compatible = "amlogic,meson-a4-gpio-intc", .data = &a4_params },
 	{ .compatible = "amlogic,meson-a4-gpio-ao-intc", .data = &a4_ao_params },
 	{ .compatible = "amlogic,meson-a5-gpio-intc", .data = &a5_params },
+	{ .compatible = "amlogic,meson-a9-gpio-intc", .data = &a9_params },
+	{ .compatible = "amlogic,meson-a9-gpio-ao-intc", .data = &a9_ao_params },
 #endif // end of CONFIG_AMLOGIC_MODIFY
 	{ }
 };

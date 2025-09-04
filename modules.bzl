@@ -156,6 +156,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-t6w",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-t6x.ko",
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-t6x",
+    "common_drivers/drivers/gpio/amlogic-pinctrl-soc-a9.ko",
+    "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-a9",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-t7.ko",
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-t7",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-tm2.ko",

@@ -186,3 +186,10 @@ $(C4_MODULE_NAME)-y += pinctrl/pinctrl-meson-c4.o
 PR_FMT_C4 = $(subst amlogic-,,$(C4_MODULE_NAME))
 PR_FMT_DEFINE_C4="-Dpr_fmt(fmt)= \"[$(PR_FMT_C4)]: \" fmt"
 CFLAGS_pinctrl-meson-c4.o += $(PR_FMT_DEFINE_C4)
+
+A9_MODULE_NAME = amlogic-pinctrl-soc-a9
+obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_A9) += $(A9_MODULE_NAME).o
+$(A9_MODULE_NAME)-y += pinctrl/pinctrl-meson-a9.o
+PR_FMT_A9 = $(subst amlogic-,,$(A9_MODULE_NAME))
+PR_FMT_DEFINE_A9="-Dpr_fmt(fmt)= \"[$(PR_FMT_A9)]: \" fmt"
+CFLAGS_pinctrl-meson-a9.o += $(PR_FMT_DEFINE_A9)

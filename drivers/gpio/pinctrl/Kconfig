@@ -245,4 +245,13 @@ config AMLOGIC_PINCTRL_MESON_C4
 	  C4 pinctrl can work.
 	  otherwise C4 pinctrl can't work
 
+config AMLOGIC_PINCTRL_MESON_A9
+	tristate "Meson A9 SoC pinctrl driver"
+	default n
+	help
+	  the chip of A9 will be built
+	  when enable this config.
+	  A9 pinctrl can work.
+	  otherwise A9 pinctrl can't work
+
 endif

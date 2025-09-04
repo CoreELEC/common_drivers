@@ -155,8 +155,11 @@ CONFIG_AMLOGIC_PINCTRL_MESON_T6D=m
 # amlogic-pinctrl-soc-t6w.ko
 CONFIG_AMLOGIC_PINCTRL_MESON_T6W=m
 
-amlogic-pinctrl-soc-t6x.ko
+# amlogic-pinctrl-soc-t6x.ko
 CONFIG_AMLOGIC_PINCTRL_MESON_T6X=m
+
+# amlogic-pinctrl-soc-a9.ko
+CONFIG_AMLOGIC_PINCTRL_MESON_A9=m
 
 # amlogic-secmon.ko
 CONFIG_AMLOGIC_SECMON=y
