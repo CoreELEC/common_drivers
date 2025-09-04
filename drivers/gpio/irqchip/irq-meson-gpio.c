@@ -164,6 +164,18 @@ struct meson_gpio_irq_params {
 	.pin_sel_reg_base = 0x04,				\
 	.channel_num = 12,
 
+/* For a9 like platform */
+#define INIT_MESON_A9_COMMON_DATA(irqs)				\
+	INIT_MESON_SC2_COMMON(irqs, meson_a1_gpio_irq_init,	\
+			      meson_a1_gpio_irq_sel_pin,	\
+			      meson_sc2_gpio_irq_sel_type)	\
+	.support_edge_both = true,				\
+	.edge_both_offset = 0,					\
+	.edge_single_offset = 12,				\
+	.pol_low_offset = 0,					\
+	.pin_sel_mask = 0xff,					\
+	.pin_sel_reg_base = 0x04,
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 #define INIT_MESON_P1_COMMON_DATA(irqs)			\
 	INIT_MESON_SC2_COMMON(irqs, meson_a1_gpio_irq_init,	\
@@ -907,12 +919,21 @@ static int meson_gpio_irq_parse_dt(struct device_node *node,
 	}
 #else
 	ctl->channel_num = ctl->params->channel_num;
+	if (!ctl->channel_num) {
+		ret = of_property_count_u32_elems(node, "amlogic,channel-interrupts");
+		if (ret <= 0) {
+			pr_err("unable to read the number of %pOFP\n", node);
+			return -EINVAL;
+		}
+		ctl->channel_num = (u8)ret;
+	}
+
 	ctl->channel_irqs = kcalloc(ctl->channel_num,
 				    sizeof(*ctl->channel_irqs), GFP_KERNEL);
 	ctl->channel_map = bitmap_zalloc(ctl->params->channel_num, GFP_KERNEL);
 
 	if (!ctl->channel_irqs || !ctl->channel_map) {
-		pr_err("allocate  irqs and channel maps mem fail\n");
+		pr_err("allocate irqs and channel maps mem fail\n");
 		return -ENOMEM;
 	}
 

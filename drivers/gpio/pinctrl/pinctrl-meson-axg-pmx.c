@@ -113,6 +113,12 @@ static int meson_axg_pmx_update_function(struct meson_pinctrl *pc,
 	int offset;
 	struct meson_pmx_bank *bank;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	/* Skip if there is no mux register (usually used for TEST_N pin) */
+	if (!pc->reg_mux)
+		return 0;
+#endif
+
 	ret = meson_axg_pmx_get_bank(pc, pin, &bank);
 	if (ret)
 		return ret;

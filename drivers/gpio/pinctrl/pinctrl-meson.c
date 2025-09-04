@@ -892,10 +892,15 @@ static int meson_pinctrl_parse_dt(struct meson_pinctrl *pc,
 #endif
 
 	pc->reg_mux = meson_map_resource(pc, gpio_np, "mux");
+#ifdef CONFIG_AMLOGIC_MODIFY
+	if (IS_ERR(pc->reg_mux))
+		pc->reg_mux = NULL;
+#else
 	if (IS_ERR_OR_NULL(pc->reg_mux)) {
 		dev_err(pc->dev, "mux registers not found\n");
 		return pc->reg_mux ? PTR_ERR(pc->reg_mux) : -ENOENT;
 	}
+#endif
 
 	pc->reg_gpio = meson_map_resource(pc, gpio_np, "gpio");
 	if (IS_ERR_OR_NULL(pc->reg_gpio)) {
@@ -1327,6 +1332,10 @@ static ssize_t show_reg_store(const struct class *class,
 	}
 
 	if (pin == -EINVAL)
+		goto exit_free_buf;
+
+	/* Skip if there is no mux register (usually used for TEST_N pin) */
+	if (!pc->reg_mux)
 		goto exit_free_buf;
 
 	mux_ctx = pc->reg_mux->bus_context;
