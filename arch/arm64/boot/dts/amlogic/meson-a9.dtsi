@@ -11,7 +11,7 @@
 #include <dt-bindings/power/a9-pd.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-a9-gpio.h>
-#include <dt-bindings/reset/amlogic,meson-s6-reset.h>
+#include <dt-bindings/reset/amlogic,meson-a9-reset.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
@@ -541,7 +541,7 @@
 			amlogic,reg10-init = <0x70503010>;
 			amlogic,reg11-init = <0xf0d0b090>;
 			reset-names = "analog";
-			resets = <&reset RESET_SAR_ANA>;
+			//resets = <&reset RESET_SAR_ANA>;
 			status = "disabled";
 		};
 
@@ -940,7 +940,7 @@
 			};
 
 			reset: reset-controller@2000 {
-				compatible = "amlogic,meson-sc2-reset";
+				compatible = "amlogic,meson-t7-reset";
 				reg = <0x0 0x2000 0x0 0x98>;
 				#reset-cells = <1>;
 			};
@@ -962,6 +962,12 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xffa00000 0x0 0x100000>;
+
+			ao_reset: ao-reset-controller@2000 {
+				compatible = "amlogic,meson-a9-ao-reset";
+				reg = <0x0 0x2000 0x0 0xc>;
+				#reset-cells = <1>;
+			};
 
 			pwm_a: pwm@10000 {
 				compatible = "amlogic,meson-pwm-tee";
@@ -1817,9 +1823,9 @@
 			"vc9000e_irq2";
 		//power-domains = <&pwrdm PDID_S6_VC9000E>;
 		reset-names = "vc9000e_areset", "vc9000e_core_rst", "vc9000e_apb_reset";
-		resets = <&reset RESET_VC9000E>,
-			<&reset RESET_VC9000E_CORE>,
-			<&reset RESET_VC9000E_APB>;
+		//resets = <&reset RESET_VC9000E>,
+		//	<&reset RESET_VC9000E_CORE>,
+		//	<&reset RESET_VC9000E_APB>;
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;

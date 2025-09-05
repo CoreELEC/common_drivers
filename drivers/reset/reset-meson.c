@@ -106,6 +106,11 @@ static const struct meson_reset_param meson_sc2_param = {
 	.level_offset	= 0x40,
 };
 
+static const struct meson_reset_param meson_a9_ao_param = {
+	.reg_count	= 1,
+	.level_offset	= 0x4,
+};
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static const struct meson_reset_param meson_t7_param = {
 	.reg_count	= 7,
@@ -143,6 +148,7 @@ static const struct of_device_id meson_reset_dt_ids[] = {
 #endif
 	 // zapper use sc2
 	 { .compatible = "amlogic,meson-sc2-reset",  .data = &meson_sc2_param},
+	 { .compatible = "amlogic,meson-a9-ao-reset",  .data = &meson_a9_ao_param},
 #endif
 	 { /* sentinel */ },
 };
