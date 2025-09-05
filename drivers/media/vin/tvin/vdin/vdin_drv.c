@@ -1617,7 +1617,11 @@ static void vdin_start_param_init(struct vdin_dev_s *devp)
 	devp->af_num = VDIN_CANVAS_MAX_CNT;
 	/* write vframe as default */
 	devp->vframe_wr_en = 1;
-	devp->vframe_wr_en_pre = 1;
+	if (devp->dtdata->hw_ver == VDIN_HW_T3X &&
+		devp->hw_core == VDIN_HW_CORE_LITE)
+		devp->vframe_wr_en_pre = 0;
+	else
+		devp->vframe_wr_en_pre = 1;
 	devp->keystone_vframe_ready = 0;
 	devp->rdma_undone_cnt = 0;
 	devp->h_skip_en = false;
@@ -4746,6 +4750,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	vdin_set_crc_pulse(devp);
 	devp->vdin_reset_flag = vdin_vsync_reset_mif(devp);
 	offset = devp->addr_offset;
+
 	vdin_set_mif_on_off(devp, devp->flags & VDIN_FLAG_RDMA_ENABLE);
 
 	if (devp)

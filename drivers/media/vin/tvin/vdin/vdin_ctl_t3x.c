@@ -1900,14 +1900,6 @@ void vdin_pause_mif_write_t3x(struct vdin_dev_s *devp, unsigned int rdma_enable,
 			VDIN0_CORE_CTRL + devp->addr_offset, !pause_en, 6, 1);
 		rdma_write_reg_bits(devp->rdma_handle, VDIN0_WRMIF_CTRL + devp->addr_offset,
 			!pause_en, WR_REQ_EN_BIT, WR_REQ_EN_WID);
-	} else {
-#endif
-		if (devp->hw_core == VDIN_HW_CORE_LITE) {
-			wr_bits(devp->addr_offset, VDIN0_CORE_CTRL, !pause_en, 6, 1);
-			wr_bits(devp->addr_offset, VDIN0_WRMIF_CTRL, !pause_en,
-				WR_REQ_EN_BIT, WR_REQ_EN_WID);
-		}
-#ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	}
 #endif
 }
