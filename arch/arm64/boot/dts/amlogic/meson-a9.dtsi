@@ -1575,12 +1575,12 @@
 
 	canvas: canvas{
 		compatible = "amlogic, meson, canvas";
-		status = "disabled";
+		status = "okay";
 	};
 
 	codec_io: codec_io {
-		compatible = "amlogic, meson-s6, codec-io";
-		status = "disabled";
+		compatible = "amlogic, meson-a9, codec-io";
+		status = "okay";
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;
@@ -1588,7 +1588,7 @@
 			<0x0 0xfe320000 0x0 0x10000>,
 			<0x0 0x0 0x0 0x0>,
 			<0x0 0x0 0x0 0x00>,
-			<0x0 0xff000000 0x0 0x40000>,
+			<0x0 0xff500000 0x0 0x40000>,
 			<0x0 0xfe036000 0x0 0x2000>,
 			<0x0 0x0 0x0 0x0>;
 		reg-names = "cbus",
@@ -1648,13 +1648,14 @@
 	};
 
 	rdma {
-		compatible = "amlogic, meson-t7, rdma";
-		status = "disabled";
+		compatible = "amlogic, meson-t3, rdma";
+		status = "okay";
 		interrupts = <GIC_SPI 215 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "rdma";
 		/* after sc2 */
 		reset-names = "rdma";
 		resets = <&reset RESET_RDMA>;
+		rdma_table_page_count = <16>;
 	};
 
 	amlvecm: amlvecm {

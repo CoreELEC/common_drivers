@@ -175,6 +175,10 @@ static struct codecio_device_data_s codecio_t6w = {
 static struct codecio_device_data_s codecio_t6x = {
 	.cpu_id = MESON_CPU_MAJOR_ID_T6X,
 };
+
+static struct codecio_device_data_s codecio_a9 = {
+	.cpu_id = MESON_CPU_MAJOR_ID_A9,
+};
 #endif
 #endif
 
@@ -337,6 +341,10 @@ static const struct of_device_id codec_io_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-t6x, codec-io",
 		.data = &codecio_t6x,
+	},
+	{
+		.compatible = "amlogic, meson-a9, codec-io",
+		.data = &codecio_a9,
 	},
 #endif
 #endif
