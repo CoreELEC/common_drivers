@@ -1244,7 +1244,7 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 	memset(&dpss_out_info, 0, sizeof(struct dpss_out_vf_info));
 	ret = dpss_get_vf_info(vf, &dpss_out_info);
 	if (ret != 0)
-		dp_print(dev->index, PRINT_ERROR, "dpss_get_vf_info err %d\n", ret);
+		dp_print(dev->index, PRINT_OTHER, "dpss_get_vf_info err %d\n", ret);
 	dp_print(dev->index, PRINT_OTHER, "idx_m idx_s (%d,%d)\n",
 		dpss_out_info.idx_m, dpss_out_info.idx_s);
 
@@ -1269,7 +1269,10 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 	else
 		dp_print(dev->index, PRINT_OTHER, "%s: no ud.\n", __func__);
 
-	vf->dpss_flg |= DPSS_FLG_OUT_DONE;
+	if (dev->dpss_parm.dps_work_mode == DPSS_WORK_MODE_FRC)
+		vf->dpss_flg |= DPSS_FLG_OUT_BYPASS | DPSS_FLG_SET_DPSS_PROCESS;
+	else
+		vf->dpss_flg |= DPSS_FLG_OUT_DONE;
 	private_data->vf = *vf;
 	private_data->vf_p = vf;
 	private_data->vf.vf_ext2 = &private_data->vf_ext;
@@ -1760,6 +1763,7 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 	dev->transform = 0;
 	dev->dpss_is_tvp = false;
 	dev->cur_is_i = false;
+	dev->cur_is_frcgame = false;
 
 	max_width = vf->compWidth >= vf->width ? vf->compWidth : vf->width;
 	max_height = vf->compHeight >= vf->height ? vf->compHeight : vf->height;
@@ -1777,6 +1781,11 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 	}
 
 	dev->dpss_parm.dps_work_mode = dpss_config_work_mode(dev->index);
+	if (check_need_do_game_frc(&dev->dpss_parm, vf)) {
+		dev->is_start_with_dpss = false;
+		dev->dpss_parm.dps_work_mode = DPSS_WORK_MODE_FRC;
+		dev->cur_is_frcgame = true;
+	}
 	dev->dpss_parm.di_parm.buffer_mode = DPSS_BUFFER_MODE_ALLOC_SELF;
 	dev->dpss_parm.di_parm.output_format = DPSS_OUTPUT_BY_DI_DEFINE;
 	if (vf->flag & VFRAME_FLAG_VIDEO_SECURE) {
@@ -1844,6 +1853,7 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->last_frame_bypass = false;
 	dev->cur_is_i = false;
 	dev->last_buf_mgr = NULL;
+	dev->cur_is_frcgame = false;
 	dev->last_file = NULL;
 	dev->direct_mode_en = 0;
 	dev->frc_en = 0;
@@ -2179,7 +2189,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	u32 is_repeat = false;
 	u32 frame_index = 0;
 	u32 max_width_new = 0, max_width_last = 0;
-	bool ip_switch = false, tvp_switch = false, rotate180_switch = false;
+	bool ip_switch = false, tvp_switch = false, rotate180_switch = false, game_switch = false;
 	bool need_do_dummy = false, rotate_en = false;
 	bool vf_from_vdin = false;
 	struct dp_buf_mgr_t *cur_buf_mgr;
@@ -2219,13 +2229,14 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		is_dtv_src = true;
 	vf->dpss_flg |= DPSS_FLG_SET_DPSS_PROCESS;
 	dp_print(dev->index, PRINT_OTHER,
-		"%s: len =%d, fd=%d, frame_index=%d, file_vf=%px, file_count=%ld\n",
+		"%s: len =%d, fd=%d, frame_index=%d, file_vf=%px, file_count=%ld， vf_ext:%d\n",
 		__func__,
 		kfifo_len(&dev->receive_q),
 		frame_info->in_fd,
 		vf->frame_index,
 		file_vf,
-		file_count(file_vf));
+		file_count(file_vf),
+		vf->flag_ext);
 
 	if (dev->dpss_index == -1) {
 		if (dev->index == 0 || (dev->index == 1 && (vf->type & VIDTYPE_INTERLACE))) {
@@ -2279,7 +2290,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	dev->output_duration = get_output_duration(dev);
 
-	do_dpss_type = dpss_is_bypass(vf);
+	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
 	if (do_dpss_type)
 		dp_print(dev->index, PRINT_OTHER,
 		"need bypass due to dpss, reason=%d.\n", do_dpss_type);
@@ -2351,7 +2362,18 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		rotate180_switch = true;
 	}
 
-	if (tvp_switch || ip_switch || rotate180_switch) {
+	/*need check game mode switch*/
+	if (check_need_do_game_frc(&dev->dpss_parm, vf) && !dev->cur_is_frcgame) {
+		dp_print(dev->index, PRINT_ERROR, "need up layer reinit to game.\n");
+		game_switch = true;
+	} else if (!check_need_do_game_frc(&dev->dpss_parm, vf) && dev->cur_is_frcgame) {
+		dp_print(dev->index, PRINT_ERROR, "need up layer reinit to other.\n");
+		game_switch = true;
+	} else {
+		game_switch = false;
+	}
+
+	if (tvp_switch || ip_switch || rotate180_switch || game_switch) {
 		dev->last_vf.type = 0;
 		dp_put_file(dev, file_vf);
 		return 1;
@@ -2379,8 +2401,18 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		return 0;
 	}
 
+	if (dev->dpss_parm.dps_work_mode == DPSS_WORK_MODE_FRC) {
+		if (dpss_state.game_mode && !dpss_state.game_frc_locked) {
+			dp_print(dev->index, PRINT_OTHER, "dpss game not ready.\n");
+			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
+			display_original_frame(dev, frame_info, file_vf, vf);
+			return 0;
+		}
+	}
+
 	//VD1 switch to DPSS
-	if (dev->index == 0 && dev->last_frame_vd1_toggle) {
+	if (dev->index == 0 && dev->last_frame_vd1_toggle &&
+		!check_need_do_game_frc(&dev->dpss_parm, vf)) {
 		dp_print(dev->index, PRINT_OTHER, "vd1 switch to dpss\n");
 		hdr_path_switch_to_dpss(1);
 		dev->need_check_hdr_state = true;
@@ -2426,6 +2458,11 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 				vf->frame_index);
 		}
 	}
+
+	if (check_need_do_game_frc(&dev->dpss_parm, vf))
+		dev->cur_is_frcgame = true;
+	else
+		dev->cur_is_frcgame = false;
 
 	dp_print(dev->index, PRINT_OTHER,
 		"frame_index=%d,type=0x%x,flag=0x%x,compWidth=%d,compHeight=%d,width=%d,height=%d.\n",

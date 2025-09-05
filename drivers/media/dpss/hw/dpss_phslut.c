@@ -730,7 +730,7 @@ void cfg_dpss_gmd_phs_lut(enum DPSS_FRC_RATIO frc_ratio_mode, u32 config_ini_en)
 	w_reg_bit(FRC_REG_TOP_CTRL7, 2, 20, 2);	//reg_dae_step_sel
 	config_dae_ofrm_step_at_dae_site(phs_step);	//reg_dae_ofrm_step
 	w_reg_bit(VPU_DAE_WRAP_GMAE_MODE, dae_phs0, 24, 8);	//todo
-	w_reg_bit(FRC_DPSS_LLM, 1, 2, 1);	//reg_less_rd_one
+	// w_reg_bit(FRC_DPSS_LLM, 1, 2, 1);	//reg_less_rd_one
 	w_reg_bit(FRC_AUTO_MODE_PHS_INIT, phs_ini, 4, 8);	// ini_phase
 	w_reg_bit(FRC_AUTO_MODE_PHS_INIT, 1, 0, 1);	// ini_en pulse
 }

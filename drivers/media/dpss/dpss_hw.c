@@ -14,6 +14,8 @@
 #include <linux/kfifo.h>
 #include <linux/sched/clock.h>
 #include <linux/amlogic/media/di/dpss_interface.h>
+#include <linux/amlogic/media/video_sink/video.h>
+#include <linux/amlogic/media/vout/vout_notify.h>
 #endif
 #include <linux/amlogic/media/dpss/frc_common_x.h>
 #include "dpss_base.h"
@@ -1765,7 +1767,10 @@ module_param_named(dpss_int, dpss_int, uint, 0664);
 unsigned int dpss_dbg_dae0_byp_cnt = 20;
 module_param_named(dpss_dbg_dae0_byp_cnt, dpss_dbg_dae0_byp_cnt, uint, 0664);
 
-int dpss_dbg_irq_ko = 0x1111;
+int dpss_dbg_adj_idx = 1;
+module_param_named(dpss_dbg_adj_idx, dpss_dbg_adj_idx, uint, 0664);
+
+unsigned int dpss_dbg_irq_ko = 0x1111;
 module_param_named(dpss_dbg_irq_ko, dpss_dbg_irq_ko, uint, 0664);
 
 static void mc_put_buffer(struct frc_state_s *state_st)
@@ -1816,6 +1821,139 @@ static bool mc_need_drop_frame(struct dpss_frc_top_type_s *frc_top, struct frc_s
 	return ret;
 }
 
+void pre_vs_game(void)
+{
+	struct frc_chip_st *pchip_st;
+	struct frc_state_s *state_st;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct dpss_frc_top_type_s *frc_top;
+	u32 ro_disp_info_0;
+	bool src0_disp_obuf_rdy = 0;
+	unsigned int dpss_frc_vpp_link;
+	// unsigned int mc_ibuf_stats = rd(DPSS_FRC_MC_IUFF_STATUS);
+	unsigned int pre_idx, cur_idx;
+	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+	struct frc_interrupt_s *frc_int_st;
+	u32 dae_frm_phs;
+	u32 dpe_intp_phs;
+	bool mc_ibuf_vld;
+	bool is_vd1_link;
+	bool manual_disable_link = false;
+	bool phs_swth = false;
+	u64 timestamp = sched_clock();
+	u32 frc_dst_buf;
+	static u32 cur_idx_last;
+
+	pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st || !pchip_st->state_st.frc_en)
+		return;
+
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pfw_data) {
+		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
+		return;
+	}
+	state_st = &pchip_st->state_st;
+	frc_int_st = &state_st->frc_int_st;
+	frc_top = &pfw_data->frc_top_type;
+
+	/*update inp_irq time*/
+	timestamp = div64_u64(timestamp, 1000);
+	frc_int_st->pre_vsync_duration = timestamp - frc_int_st->pre_vsync_timestamp;
+	frc_int_st->pre_vsync_timestamp = timestamp;
+	frc_int_st->pre_vsync_cnt++;
+	// w_reg_bit(VPU_DAE_WRAP_DI, 1, 22, 1);
+
+	// dpss_frc_check_reg_stats();
+	dbg_h2("irq_pre_vsync start %d\n", frc_int_st->pre_vsync_cnt);
+	dpss_frc_vpp_link = rd(FRC_DPSS_VPP_LINK);
+	src0_disp_obuf_rdy = state_st->src0_disp_obuf_rdy;
+
+	if (dpss_frc_vpp_link)
+		frc_undone_check();
+
+	if (src0_disp_obuf_rdy && dpss_frc_vpp_link) {
+		w_reg_bit(FRC_DAE_SW_CTRL0, 1, 25, 1);
+		cfg_dpss_done_trigger(FRC_DST_DONE);	//last frame
+	}
+	frc_dst_buf = rd(DPSS_FRC_DST_BUFF_STATUS) & 0xf;
+	dbg_f2("frc_dst_buf pre = %d\n", frc_dst_buf);
+
+	check_dpss_frc_status();
+	dpss_pre_vs_reg_monitor();
+	src0_disp_obuf_rdy = disp_obuf_trigger(FRC_DST_DONE);
+	dbg_h2("src0_disp_obuf_rdy_cur: %d\n", src0_disp_obuf_rdy);
+
+	dae_frm_phs = (rd(FRC_DPSS_DISP_BUFF_INFO_1) >> 12) & 0x1;
+
+	state_st->src0_disp_obuf_rdy = src0_disp_obuf_rdy;
+	frc_ocnt_status = src0_disp_obuf_rdy;
+	ro_disp_info_0 = rd(FRC_DPSS_DISP_BUFF_INFO_0);
+	pre_idx = (ro_disp_info_0 >> 2) & 0xf;
+	cur_idx = (ro_disp_info_0 >> 8) & 0xf;
+	if (src0_disp_obuf_rdy) {
+		if (cur_idx_last == pre_idx)
+			phs_swth = true;
+		cur_idx_last = cur_idx;
+		dbg_f2("ro_disp_info_0:%#x pre_idx/cur_idx:%x %x, phs_swth=%d, cur_last=%x\n",
+			ro_disp_info_0, pre_idx, cur_idx, phs_swth, cur_idx_last);
+	}
+
+	is_vd1_link = is_vd1_link_state();
+	if (!enable_mc_link && !is_vd1_link)
+		manual_disable_link = true;
+
+	hw_dpss_dpe_game_info_cfg(prm_top, src0_disp_obuf_rdy);
+	if (src0_disp_obuf_rdy && frc_top->fw_pause == 0 &&
+		pfw_data->pre_vsync_irq_handler && (dpss_dbg_irq_ko & C_BIT0))
+		pfw_data->pre_vsync_irq_handler(pfw_data);
+
+	if (state_st->mc_bypass || manual_disable_link) {
+		wr(DPSS_DPE_MC_PHASE, 0);
+		dbg_f2("set mc phase 0 (mcbypass:%d, disable_link:%d)\n",
+			state_st->mc_bypass, manual_disable_link);
+		state_st->mc_set_phase0 = true;
+	}
+
+	mc_ibuf_vld = (rd(DPSS_FRC_MC_IUFF_STATUS) >> 4) & 0x1;
+	dpe_intp_phs = mc_ibuf_vld ? (rd(FRC_DPSS_DISP_BUFF_INFO_0) >> 22) & 0xff : 0;
+
+	if (state_st->cut_pre_mc_work == 1) {
+		wr(DPSS_DPE_MC_PHASE, 0);
+		dbg_f2("only for cut set phase0)\n");
+		state_st->cut_pre_mc_work = 0;
+	}
+
+	if (state_st->mc_bypass && phs_swth && state_st->have_update_vfcd &&
+		!state_st->mc_bypass_always && frc_top->memc_enable) {
+		if (state_st->mc_bypass_cnt) {
+			dbg_f2("mc_bypass_cnt = %d\n", state_st->mc_bypass_cnt);
+			state_st->mc_bypass_cnt--;
+		} else {
+			frc_set_mc_bypass(0);
+			state_st->mc_bypass = false;
+			dbg_f2("mc bypass set 0\n");
+		}
+	}
+
+	dbg_f2("mc_intp_phs=%x, mc_phase=%x, mc_ibuf_vld=%d, mc_bypass:%d\n",
+		dpe_intp_phs, rd(DPSS_DPE_MC_PHASE), mc_ibuf_vld, state_st->mc_bypass);
+
+	//don't add  logic after triggle function,add by fxj
+	// hw_cfg_dpss_mc_pre_triggle();
+	w_reg_bit(DPSS_DPE_MC_START_CTRL, 1, 30, 1); //mc pre trig
+
+#ifdef USE_FRC_PRE_VS_RDMA
+	// dpss_rdma_auto_wr_reg(reg, val + idx);
+	DPSS_RDMA_WR_PRE_VS(FRC_REG_TOP_RESERVE0, frc_int_st->pre_vsync_cnt);
+	dpss_rdma_auto_wr_tri(1);
+
+#endif
+	if (pchip_st->dbg_st.ctrl_dbg.reg_tab_pr_en & 0x1)
+		frc_dbg_read_table_value();
+}
+
 void irq_pre_vs(void)
 {
 	struct frc_chip_st *pchip_st;
@@ -1848,6 +1986,11 @@ void irq_pre_vs(void)
 		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
 		return;
 	}
+	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+		pre_vs_game();
+		return;
+	}
+
 	state_st = &pchip_st->state_st;
 	frc_int_st = &state_st->frc_int_st;
 	frc_top = &pfw_data->frc_top_type;
@@ -2016,6 +2159,92 @@ void irq_pre_vs(void)
 		frc_dbg_read_table_value();
 }
 
+void display_game(void)
+{
+	struct frc_chip_st *pchip_st;
+	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct dpss_frc_top_type_s *frc_top;
+	bool src0_disp_obuf_rdy;
+	bool phs_swth;
+	u64 timestamp = sched_clock();
+	// struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+	struct frc_interrupt_s *frc_int_st;
+	u32 ro_disp_info;
+	u32 mc_ibuf_rdy = 0;
+
+	pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st || !pchip_st->state_st.frc_en)
+		return;
+
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pfw_data) {
+		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
+		return;
+	}
+	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
+	frc_int_st = &state_st->frc_int_st;
+	frc_top = &pfw_data->frc_top_type;
+
+	/*update inp_irq time*/
+	timestamp = div64_u64(timestamp, 1000);
+	frc_int_st->frc_vsync_duration = timestamp - frc_int_st->frc_vsync_timestamp;
+	frc_int_st->frc_vsync_timestamp = timestamp;
+	frc_int_st->frc_vsync_cnt++;
+
+	dpss_vsync_reg_monitor();
+	if (frc_ocnt_status)
+		dpss_disp0_frm_cnt++;
+
+	src0_disp_obuf_rdy = disp_obuf_trigger(FRC_DST_DONE);
+	ro_disp_info = rd(FRC_DPSS_DISP_BUFF_INFO_0);
+	mc_ibuf_rdy = (rd(DPSS_FRC_MC_IUFF_STATUS) >> 4) & 0x1;
+	state_st->pre_idx = state_st->cur_idx;
+	if (mc_ibuf_rdy == 1)
+		state_st->cur_idx = (ro_disp_info >> 2) & 0xf;
+	phs_swth = state_st->pre_idx != state_st->cur_idx;
+
+	if (phs_swth && src0_disp_obuf_rdy) {
+		dbg_h2("now mc rls pre_idx: %d\n", state_st->pre_idx);
+		w_reg_bit(DPSS_FNR_SW_DRV_CTRL1, state_st->pre_idx, 4, 4);
+		w_reg_bit(DPSS_FNR_SW_DRV_CTRL0, 1, 1, 1);
+		state_st->phs_swth = true;
+		// if (prm_top->dpss_mode == DPSS_FRC_MODE)
+		dpss_tsk_m_wake(2); // recycle buf
+	}
+
+	if (frc_top->fw_pause == 0 && (dpss_dbg_irq_ko & C_BIT4)) {
+		if (pfw_data->vsync_irq_handler)
+			pfw_data->vsync_irq_handler(pfw_data);
+	}
+	if (state_st->is_frc_vpp_link) {
+		hw_cfg_dpss_mc_triggle();
+		dbg_h2("vsync, trigger mc\n");
+	}
+
+	if (game_st->video_mute_en &&
+		(dpss_disp0_frm_cnt > game_st->video_mute_cnt ||
+		frc_int_st->frc_vsync_cnt > 100)) {
+		set_video_mute(FRC_MUTE_SET, false);
+		game_st->video_mute_en = false;
+		dbg_h2("video unmute cnt %d\n", game_st->video_mute_cnt);
+	}
+
+	dbg_h2("vsync disp_done_int_cnt=%d\tvsync_cnt=%d\n",
+		dpss_disp0_frm_cnt, frc_int_st->frc_vsync_cnt);
+
+#ifdef USE_FRC_VS_RDMA
+	// dpss_rdma_auto_wr_reg(reg, val + idx);
+	DPSS_RDMA_WR_VS(FRC_REG_TOP_RESERVE13, dpss_disp0_frm_cnt);
+	DPSS_RDMA_WR_BIT_VS(FRC_REG_TOP_RESERVE14, dpss_disp0_frm_cnt, 16, 16);
+	DPSS_RDMA_WR_BIT_VS(FRC_REG_TOP_RESERVE14, dpss_disp0_frm_cnt + 1, 0, 16);
+	// dpss_rdma_auto_wr_tri(2);
+#endif
+}
+
 void irq_display(void)
 {
 	struct frc_chip_st *pchip_st;
@@ -2035,6 +2264,10 @@ void irq_display(void)
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 	if (!pfw_data) {
 		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
+		return;
+	}
+	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+		display_game();
 		return;
 	}
 	state_st = &pchip_st->state_st;
@@ -2149,6 +2382,10 @@ void irq_inp(void)
 	pchip_st = dpss_get_frc_st();
 	if (!pchip_st)
 		return;
+
+	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1)
+		dbg_h2("irq_inp: yline_sync: %#X, cline_sync:%#X\r\n",
+			rd(FRC_INP_RD_YLINE_CNT), rd(FRC_INP_RD_CLINE_CNT));
 
 	frc_top = &pfw_data->frc_top_type;
 	frc_fw_working = frc_top->frc_fw_working;
@@ -2359,6 +2596,119 @@ void irq_inp(void)
 	}
 }
 
+void dae0_game(void)
+{
+	// unsigned int frc_reg_top_reserve0 = rd(FRC_REG_TOP_RESERVE0);
+	//unsigned int badedit_en = frc_reg_top_reserve0&0x1;
+	//unsigned int memc_link_en = (frc_reg_top_reserve0>>1)&0x1;
+	unsigned int start_mode;
+	unsigned int inp_cnt = rd(FRC_REG_INPUT_FUL_IDX);
+	u32 dae_out_fid = rd(FRC_REG_OUT_FID);
+	u32 pre_fid;
+	u32 cur_fid;
+	u32 nxt_fid;
+	u32 phs_swth;
+	// u32 tmpseg;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct dpss_frc_top_type_s *frc_top;
+	struct frc_chip_st *pchip_st;
+	struct frc_state_s *state_st;
+	struct frc_interrupt_s *frc_int_st;
+	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+	struct PRM_DPSS_DAE *prm_dae = prm_dpss_dae;
+	u64 timestamp = sched_clock();
+
+	//unsigned int pvsync_intr_en = rd(FRC_REG_TOP_RESERVE2);
+
+	enum DPSS_FILM_MODE dae_film_mode =
+		(enum DPSS_FILM_MODE)(rd(FRC_FRC_DAE_STATUS) & 0xff);
+
+	pchip_st = dpss_get_frc_st();
+	if (!pchip_st)
+		return;
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pfw_data)
+		return;
+
+	state_st = &pchip_st->state_st;
+	frc_int_st = &state_st->frc_int_st;
+	frc_top = &pfw_data->frc_top_type;
+
+	/*update inp_irq time*/
+	timestamp = div64_u64(timestamp, 1000);
+	frc_int_st->dae0_duration = timestamp - frc_int_st->dae0_timestamp;
+	frc_int_st->dae0_timestamp = timestamp;
+
+	// frc_int_st->dae0_int_cnt++;
+
+	// u32 frc_stats = rd(DPSS_FRC_PROC_STATUS);
+	dbg_h2("irq_dae0: yline_sync: %#X, cline_sync:%#X\r\n",
+		rd(VPU_DAE_WRAP_LLM_RO), rd(VPU_DAE_WRAP_LLM_R1));
+
+	if (state_st->mc_bypass_always && state_st->dae0_bypass_mode == 1) {
+		if (frc_int_st->dae0_int_cnt <= 30 && dae_film_mode != DPSS_VIDEO)
+			state_st->dae0_bypass_mode = 0;
+		if (frc_int_st->dae0_int_cnt > 30 && dae_film_mode == DPSS_VIDEO)
+			state_st->dae0_bypass_mode = 2;
+		dbg_f2("irq_dae0: dae0_bypass_mode=%d\n", state_st->dae0_bypass_mode);
+	}
+
+	if (frc_top->memc_enable == 0 || state_st->need_drop_dd)
+		state_st->enable_last_drop = true;
+	else
+		state_st->enable_last_drop = false;
+	if (state_st->force_disable_drop_last)
+		state_st->enable_last_drop = false;
+
+	pre_fid = (dae_out_fid >> 16) & 0xf;
+	cur_fid = (dae_out_fid >> 12) & 0xf;
+	nxt_fid = rd(FRC_DAE_IN_FRM_IDX) & 0xf;
+	phs_swth = (dae_out_fid >> 20) & 0x1;
+	if (dpss_slt_mode)
+		w_reg_bit(FRC_ME_CMV_CTRL, 1, 31, 1);
+	dpss_dae0_reg_monitor();
+	dbg_h2("phs_swth=%d,pre_fid = %d,cur_fid = %d,nxt_fid= %d\r\n",
+	       phs_swth, pre_fid, cur_fid, nxt_fid);
+
+	dbg_h2("inp_cnt = %d frc_dae_cnt = %d dpss_dae_frm_cnt_src0 = %d\n",
+			inp_cnt, frc_int_st->dae0_int_cnt, dpss_dae_frm_cnt_src0);
+
+	dbg_h2("DAE (dae_in_idx(80a3):%d,dae_idx(80a4):%d,fbuf_dae_idx(83e8):%d,sw_dae_cnt:%d)\n",
+		rd(FRC_DAE_IN_FRM_IDX), rd(FRC_DAE_FRM_IDX),
+		rd(DPSS_FBUF_DAE_FRM_IDX), frc_int_st->dae0_int_cnt);
+	dbg_h2("DAE (stats:%d, film:%d)\n",
+		rd(DPSS_FRC_DAE_BUF_STATUS), dae_film_mode);
+	dpss_dae_frm_cnt_src0++;
+	prm_top->frame_count = dpss_dae_frm_cnt_src0;
+
+	if (pfw_data->dae_irq_handler)
+		prm_top->frc_no_alg_ko = 0;
+	else
+		prm_top->frc_no_alg_ko = 1;
+
+	hw_cfg_dpss_dae_frc(DAE_FRC_MODE, prm_top, prm_dae);
+
+	if (!pfw_data->dae_irq_handler || frc_top->fw_pause == 1)
+		prm_top->fw_en = 0;
+	else
+		prm_top->fw_en = 1;
+	hw_config_dae_loop_tab(prm_top->frc_ratio, dae_film_mode, 0);
+	//tmpseg = 0xA0A00000;
+	//tmpseg |= ((rd(FRC_REG_FILM_PHS_1) >> 8) & 0xff) << 16;
+	//wr(FRC_MC_SEVEN_FLAG_NUM13_NUM14_NUM15_NUM16, tmpseg);
+
+	if (frc_top->fw_pause == 0 && pfw_data->dae_irq_handler &&
+		(dpss_dbg_irq_ko & C_BIT12))
+		pfw_data->dae_irq_handler(pfw_data);
+	// hw_config_dae_loop_tab(prm_dpss_top.frc_ratio, dae_film_mode, 0);
+
+	//don't add  logic after triggle function,add by fxj
+	start_mode = rd(VPU_DAE_WRAP_CTRL) & 0x1;
+	dbg_h2("dae0 start_mode = %d\n", start_mode);
+	if (start_mode == 1)
+		cfg_dae_triggle();
+}
+
 void irq_dae0(void)
 {
 	// unsigned int frc_reg_top_reserve0 = rd(FRC_REG_TOP_RESERVE0);
@@ -2408,8 +2758,7 @@ void irq_dae0(void)
 	frc_int_st->dae0_int_cnt++;
 
 	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
-		dbg_h2("irq_dae_0: yline_sync: %#X, cline_sync:%#X\r\n",
-		       rd(VPU_DAE_WRAP_LLM_RO), rd(VPU_DAE_WRAP_LLM_R1));
+		dae0_game();
 		return;
 	}
 
@@ -2453,7 +2802,7 @@ void irq_dae0(void)
 	       phs_swth, pre_fid, cur_fid, nxt_fid);
 
 	dbg_h2("inp_cnt = %d frc_dae_cnt = %d dpss_dae_frm_cnt_src0 = %d\n",
-	       inp_cnt, frc_int_st->dae0_int_cnt, dpss_dae_frm_cnt_src0);
+			inp_cnt, frc_int_st->dae0_int_cnt, dpss_dae_frm_cnt_src0);
 
 	dbg_h2("DAE (dae_in_idx(80a3):%d,dae_idx(80a4):%d,fbuf_dae_idx(83e8):%d,sw_dae_cnt:%d)\n",
 		rd(FRC_DAE_IN_FRM_IDX), rd(FRC_DAE_FRM_IDX),
@@ -4356,36 +4705,90 @@ void hw_config_top_post(struct PRM_DPSS_TOP *prm_top)
 void venc_vrr_vdin(void)
 {
 	static u32 enable;
+	u32 vtotal, vmin_num, vmax_num, out_frm_rate;
+	u32 encl_frc_ctrl, venc_vrr_ctrl, venc_vrr_adj_lmt, venc_vrr_ctrl_1;
+	struct vinfo_s *vinfo;
+	struct dpss_game_state_s *game_st;
+	struct dpss_game_dly_s *dly_st;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct dpss_frc_top_type_s *frc_top;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+
+	if (!pfw_data)
+		return;
+
+	game_st = &pchip_st->game_st;
+	dly_st = &game_st->dly_st;
+	venc_vrr_ctrl = pchip_st->venc_vrr_ctrl;
+	encl_frc_ctrl = pchip_st->encl_frc_ctrl;
+	venc_vrr_adj_lmt = pchip_st->venc_vrr_adj_lmt;
+	venc_vrr_ctrl_1 = pchip_st->venc_vrr_ctrl_1;
+	frc_top = &pfw_data->frc_top_type;
+	frc_top->game_mode = (game_st->game_film << 1) | game_st->game_n2m;
+	prm_top->game_mode_n2m = frc_top->game_mode & 0x1;
+	prm_top->game_mode_film = (frc_top->game_mode >> 1) & 0x1;
+
+	vinfo = get_current_vinfo();
+	if (vinfo)
+		out_frm_rate = vinfo->sync_duration_num / vinfo->sync_duration_den;
+
+	if (game_st->off_game_mode) {
+		prm_top->game_mode_n2m  = 0;
+		prm_top->game_mode_film = 0;
+		game_st->off_game_mode = false;
+	}
+
+	dbg_h2("frc game_mode:%d->%d\n",
+		frc_top->game_mode, (prm_top->game_mode_n2m | prm_top->game_mode_film));
 	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
 		if (enable == 1)
 			return;
 		enable = 1;
-		wr_vc(VENC_VRR_CTRL, (1 & 0xf) << 24 |	//cfg_vrr_frm_num
-		      (200 & 0xffff) << 8 |	//cfg_vsp_dly_num
-		      (0 & 0xf) << 4 |	//cfg_vrr_frm_ths
-		      1 << 2 |	//cfg_vrr_vsp_en  vdin en
-		      (enable & 0x1) << 1 |	//cfg_vrr_mode
-		      1		//sel vdin
-		    );
-		wr_vc(VENC_VRR_ADJ_LMT, 20 << 16 | 0);	//cfg_vrr_min_vnum,cfg_vrr_max_vnum
-		wr_vc(ENCL_FRC_CTRL, 1125 << 16 | 20);	//cfg_vrr_vtotal,cfg_frc_st_ln
-		w_reg_bit_vc(VENC_VRR_CTRL1, 0x10, 4, 8);	//cfg_iofrm_num
-		dbg_h2("%s enable : %d\n", __func__, enable);
+		vtotal = vinfo->vtotal;
+		dly_st->vtotal = vtotal;
+		vmin_num = vtotal - dly_st->pre_dly - dly_st->vmin_num_adj;
+		vmax_num = vtotal - dly_st->pre_dly + dly_st->vmax_num_adj;
+
+		wr_vc(venc_vrr_ctrl, (1 & 0xf) << 24 |  //cfg_vrr_frm_num
+			(dly_st->vsp_dly & 0xffff) << 8 |  //cfg_vsp_dly_num
+			(0 & 0xf) << 4 |        //cfg_vrr_frm_ths
+			1 << 2 |                //cfg_vrr_vsp_en  vdin en
+			(enable & 0x1) << 1 |   //cfg_vrr_mode
+			1                       //sel vdin
+		);
+
+		wr_vc(encl_frc_ctrl, vtotal << 16); //cfg_vrr_vtotal,cfg_frc_st_ln
+		wr_vc(venc_vrr_adj_lmt, vmin_num << 16 | vmax_num);//cfg_vrr_min/max_vnum
+		if (prm_top->game_mode_film)
+			w_reg_bit_vc(venc_vrr_ctrl_1, 0x0, 4, 8); //film iofrm_num set 0
+		else
+			w_reg_bit_vc(venc_vrr_ctrl_1, 0x10, 4, 8); //cfg_iofrm_num 1:2
+
+		w_reg_bit_vc(venc_vrr_ctrl_1, dly_st->pre_dly, 12, 16); //cfg_iofrm_num
+		dbg_h2("game_frc enable : %d\n", enable);
 	} else if (prm_top->game_mode_film == 0 &&
 		   prm_top->game_mode_n2m == 0) {
 		if (enable == 0)
 			return;
 		enable = 0;
-		wr_vc(VENC_VRR_CTRL, (1 & 0xf) << 24 |	//cfg_vrr_frm_num
-		      (200 & 0xffff) << 8 |	//cfg_vsp_dly_num
-		      (0 & 0xf) << 4 |	//cfg_vrr_frm_ths
-		      1 << 2 |	//cfg_vrr_vsp_en  vdin en
-		      (enable & 0x1) << 1 |	//cfg_vrr_mode
-		      1		//sel vdin
-		    );
-		dbg_h2("%s enable : %d\n", __func__, enable);
+		wr_vc(venc_vrr_ctrl, (0 & 0xf) << 24 | //cfg_vrr_frm_num
+			(0 & 0xffff) << 8 |     //cfg_vsp_dly_num
+			(0 & 0xf) << 4 |        //cfg_vrr_frm_ths
+			0 << 2 |                //cfg_vrr_vsp_en  vdin en
+			(enable & 0x1) << 1 |   //cfg_vrr_mode
+			0                       //sel vdin
+		);
+
+		w_reg_bit_vc(venc_vrr_ctrl, 1, 30, 1); // clr vrr
+		wr_vc(venc_vrr_adj_lmt, 0);
+		wr_vc(encl_frc_ctrl, 0); //cfg_vrr_vtotal,cfg_frc_st_ln
+		w_reg_bit_vc(venc_vrr_ctrl_1, 0x0, 4, 8);       //cfg_iofrm_num
+		w_reg_bit_vc(venc_vrr_ctrl_1, 0x0, 12, 16);     //cfg_iofrm_num
+		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 16, 4);
+		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 20, 4);
+		dbg_h2("game_frc enable : %d\n", enable);
 	}
-	// mc_undone_cnt =0;
 }

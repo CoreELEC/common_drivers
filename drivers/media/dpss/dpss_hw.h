@@ -225,6 +225,7 @@ extern struct PRM_INTF_TYPE g_ds_wmif1;
 extern struct PRM_INTF_TYPE g_inp_yuv_rdmif;
 extern bool dpss_dbg_dis_dw;
 extern unsigned int dpss_o_dw;
+extern unsigned int dpss_dbg_irq_ko;
 
 void hw_cfg_dpe_size(enum DPSS_WORK_MODE dpe_mode,
 				struct PRM_DPSS_TOP *prm_top,

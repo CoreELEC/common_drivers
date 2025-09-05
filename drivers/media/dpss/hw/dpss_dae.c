@@ -555,6 +555,7 @@ void hw_cfg_dpss_dae(enum DPSS_WORK_MODE  dae_mode,
 		w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 0, 1);  //reg_me_periodic2_en_0
 		w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 1, 1);  //reg_me_periodic2_en_1
 		w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 2, 1);  //reg_me_periodic2_en_2
+		w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);//reg_me_mode_ctrl
 
 		if (game_mode) {
 			w_reg_bit(FRC_ME_RPD_EN, 0, 31, 1); //reg_me_rpd_cn_en
@@ -881,9 +882,9 @@ void hw_cfg_dpss_dae_frc(enum DPSS_WORK_MODE  dae_mode,
 		dae_yuv->reg_mode,
 		dae_yuv->field_mode);
 	dae_yuv->mmu_mode_en = prm_top->ds_mif_mmu_mode_en;
-	dae_yuv->uv_swap = dpss_dbg_uv_swap & C_BIT0;
-	dae_yuv->little_endian = dpss_dbg_uv_swap & C_BIT1; //ary add default is 1;
-	dae_yuv->swap_64bit = dpss_dbg_uv_swap & C_BIT2;
+	dae_yuv->uv_swap = 0;//dpss_dbg_uv_swap & C_BIT0;
+	dae_yuv->little_endian = 0;//dpss_dbg_uv_swap & C_BIT1; //ary add default is 1;
+	dae_yuv->swap_64bit = 1;//dpss_dbg_uv_swap & C_BIT2;
 	dbg_h2("dae uv_swap: %d, little_endian:%d, swap-64bit:%d\n",
 		dae_yuv->uv_swap,
 		dae_yuv->little_endian,
@@ -1046,6 +1047,7 @@ void hw_cfg_dpss_dae_frc(enum DPSS_WORK_MODE  dae_mode,
 				//w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 1, 1);
 				//w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 2, 1);
 			}
+			w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);//reg_me_mode_ctrl
 		} else {  // (game_mode)
 			w_reg_bit(FRC_ME_RPD_EN, 0, 31, 1); //reg_me_rpd_cn_en
 			w_reg_bit(FRC_ME_RPD_EN, 0, 30, 1); //reg_me_rpd_cn_en
@@ -1605,6 +1607,7 @@ void hw_cfg_dpss_dae0_frc(enum DPSS_WORK_MODE  dae_mode,
 				//w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 1, 1);
 				//w_reg_bit(FRC_ME_PERIODIC2_S1, frc_me_en, 2, 1);
 			}
+			w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);//reg_me_mode_ctrl
 		} else {  // (game_mode)
 			w_reg_bit(FRC_ME_RPD_EN, 0, 31, 1); //reg_me_rpd_cn_en
 			w_reg_bit(FRC_ME_RPD_EN, 0, 30, 1); //reg_me_rpd_cn_en

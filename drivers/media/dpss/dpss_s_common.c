@@ -1281,7 +1281,7 @@ static struct vframe_s *dpss_h_b_buf_put(struct dpss_ch_s *pch,
 
 	mng = &pch->d->h_nr_mng[idx];
 	if (!mng->active || mng->r_b_idx == DPSS_NR_NO_FREE || !mng->used) {
-		DBG_WARN("%s:%d,0x%x,%d\n", __func__, mng->active, mng->r_b_idx,
+		dbg_h2("buf_put:%d,0x%x,%d\n", mng->active, mng->r_b_idx,
 			 mng->used);
 		return NULL;
 	}
@@ -1377,8 +1377,8 @@ void dpss_reg_val(struct dpss_ch_s *pch)
 		if (cfg_num_o && cfg_num_o < DPSS_HW_LOOP_IN_OUT_BUF_NUB)
 			pch->c.o_b_nub = cfg_num_o;
 	} else {
-		pch->c.in_b_nub = 16;
-		pch->c.o_b_nub = 16;
+		pch->c.in_b_nub = DPSS_HW_LOOP_IN_OUT_BUF_NUB;//buf num from vdin
+		pch->c.o_b_nub = DPSS_HW_LOOP_IN_OUT_BUF_NUB;
 	}
 	dbg_i0("in_b_nub=%d o = %d\n", pch->c.in_b_nub, pch->c.o_b_nub);
 
@@ -1613,10 +1613,11 @@ void dpss_s2_work(struct dpss_ch_s *pch)
 		itf_polling_in_o(pch);
 	} else { //  dps_work_mode == DPSS_WORK_MODE_FRC
 		dpss_s2_recycle_back_frc(pch);
-		itf_polling_in_o(pch);
+		// itf_polling_in_o(pch);
 		dpss_s2_parser_input_frc(pch);
 		dpss_h_parser_frc(pch);
 		dpss_s2_parser_rd_frc(pch);
+		itf_polling_in_o(pch);
 	}
 }
 
@@ -1828,7 +1829,8 @@ void dpss_s2_parser_input_frc(struct dpss_ch_s *pch)
 	} else {
 		frc_i->chg = 0;
 	}
-	if (pch->d->frc_ds_scale_en == 0) {
+	if (pch->d->frc_ds_scale_en == 0 &&
+		!VFM_IS_COMP_MODE(vfm->type)) {
 		vfm->width = frc_i->sub_vf_in.width;
 		vfm->height = frc_i->sub_vf_in.height;
 	}
@@ -3059,7 +3061,7 @@ void dpss_s2_parser_rd_frc(struct dpss_ch_s *pch)
 			pch->c.out_cnt, idx, b_idx);
 
 	if (!vfm || !vfm->dpss_data) {
-		DBG_ERR("%s:no vfm?\n", __func__);
+		dbg_h2("rd_frc:no vfm?\n");
 		return;
 	}
 	frc_i = lk_get_frc_i(vfm);
@@ -3212,6 +3214,9 @@ void dpss_s2_recycle_back(struct dpss_ch_s *pch)
 	}
 }
 
+unsigned int dpss_dbg_back_frm_cnt = 2;
+module_param_named(dpss_dbg_back_frm_cnt, dpss_dbg_back_frm_cnt, uint, 0664);
+
 void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
 {
 	struct vframe_s *vfm;
@@ -3219,11 +3224,13 @@ void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
 
 	//struct dpss_nr_i_s *nr_i;
 	struct dpss_frc_i_s *frc_i;
-	int i;
+	// int i;
 	unsigned int len;
 	unsigned char type;
-	u32 rls_idx;
-	u32 rls_buf_is_empty;
+	//u32 rls_idx = 0;
+	// u32 rls_buf_is_empty;
+	struct frc_state_s *state_st;
+	// static unsigned int phs_swth_cnt;
 
 	len = kfifo_len(&pch->d->q_ch[EDPSS_Q_CH_BACK].f);
 	if (!len)
@@ -3232,30 +3239,35 @@ void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
 	if (!pchip_st)
 		return;
 
-	if (dpss_dae_frm_cnt_src0 <= 2)
+	state_st = &pchip_st->state_st;
+
+	if (dpss_dae_frm_cnt_src0 <= 3)
 		return;
 
-	dbg_h2("%s vpp return num:%d\n", __func__, len);
-	for (i = 0; i < len; i++) {
-		if (!vpu_dequeue(&inp_bufQ, &rls_idx, &rls_buf_is_empty)) {
-			if (i == 0)
-				dbg_h2("%s is empty (%d)\n", __func__, i);
-			return;
-		}
-		vfm = dpss_q_out_vfm(pch, EDPSS_Q_CH_BACK);
-		frc_i = lk_get_frc_i(vfm);
-		if (frc_i->inp_idx != rls_idx)
-			dbg_h2("%s buffer id don't match(%d, %d)\n", __func__,
-					frc_i->inp_idx, rls_idx);
-		else
-			dbg_h2("%s rls buffer id (%d,%d)\n", __func__,
-					frc_i->inp_idx, rls_idx);
-		type = lk_owner_get(vfm);
-		if (type ==  DPSS_VF_OWNER_FRC)
-			if (frc_i->in_vfm) //recycle input vfm:
-				//recycle input vfm:
-				dpss_q_in_vfm(&pch->d->q_ch[EDPSS_Q_CH_IN_RECYCLE], vfm);
+	dbg_h2("back_frc vpp return num:%d\n", len);
+
+	if (len < dpss_dbg_back_frm_cnt)
+		return;
+
+	vfm = dpss_q_out_vfm(pch, EDPSS_Q_CH_BACK);
+	frc_i = lk_get_frc_i(vfm);
+	//if (frc_i->inp_idx != rls_idx)
+		//dbg_h2("%s buffer id don't match(%d, %d)\n", __func__,
+			//frc_i->inp_idx, rls_idx);
+	//else
+		//dbg_h2("%s rls buffer id (%d,%d)\n", __func__,
+			//frc_i->inp_idx, rls_idx);
+	type = lk_owner_get(vfm);
+	if (type == DPSS_VF_OWNER_FRC) {
+		if (frc_i->in_vfm) //recycle input vfm:
+		//recycle input vfm:
+			dpss_q_in_vfm(&pch->d->q_ch[EDPSS_Q_CH_IN_RECYCLE], vfm);
+		//dbg_h2("%s type:%d, frc:%d)\n", __func__,
+			//type, DPSS_VF_OWNER_FRC);
 	}
+
+	state_st->phs_swth = false;
+
 }
 
 /********************************************************/

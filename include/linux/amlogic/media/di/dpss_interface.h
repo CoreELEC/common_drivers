@@ -167,6 +167,12 @@ struct dpss_sub_init_parm { //di_init_parm
 
 struct frc_init_parm {
 	enum dpss_buffer_mode buffer_mode;
+	bool do_game_frc;
+	unsigned int width;
+	unsigned int height;
+	unsigned int duration;
+	unsigned int in_frm_rate;
+	unsigned int out_frm_rate;
 };
 
 struct lc_evc_init_parm {
@@ -237,6 +243,8 @@ struct ins_mng_s {	/*ary add*/
 struct dpss_status {
 	unsigned int status;
 	enum DPSS_BUF_STATE buf_status;
+	unsigned int game_mode;
+	unsigned int game_frc_locked;
 };
 
 struct dpss_cmd_a_s {
@@ -353,7 +361,9 @@ int dpss_get_vf_info(struct vframe_s *vf, struct dpss_out_vf_info *dpss_out_info
  * @return      0 for do dpss,or bypass dpss
  */
 
-unsigned char  dpss_is_bypass(struct vframe_s *vf);
+unsigned char  dpss_is_bypass(struct dpss_init_parm *parm, struct vframe_s *vf);
+bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf);
+void dpss_game_frc_lock(struct dpss_init_parm *parm);
 
 //dpss to-do: vpp link api
 

@@ -64,6 +64,9 @@ void detect_axis_change(struct pvpp_dis_frc_para_in_s *in_para);
 void detect_crop_change(struct frc_win_s *vpp_win, struct vframe_s *vfm);
 void update_frc_screen_vinfo(struct pvpp_dis_frc_para_in_s *in_para);
 
+// frc game
+void dpss_game_reinit_reg_tab(void);
+
 //fw
 void update_n2m_info_to_fw(enum DPSS_FRC_RATIO frc_ratio);
 void update_mc_cut_size_to_fw(u16 mc_hsize, u16 mc_vsize,

@@ -57,15 +57,25 @@ void hw_cfg_dpss_mc_ini(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr)
 	prm_mc = &pchip->prm_mc;
 	w_reg_bit(DPSS_DPE_MC_START_CTRL, 4, 4, 13);
 	w_reg_bit(DPSS_DPE_MC_START_CTRL, 3, 0, 2);
-	w_reg_bit(DPSS_DPE_MC_START_CTRL, 4, 4, 13);
+	// w_reg_bit(DPSS_DPE_MC_START_CTRL, 4, 4, 13);
 	//w_reg_bit(DPSS_DPE_MC_TOP_GCLK, 0xF, 8, 4);
 	//w_reg_bit(DPSS_DPE_MC_TOP_GCLK, 2, 16, 2);
 	wr(DPSS_DPE_MC_TOP_GCLK, 0x20f00);
 	// game mode cfg start
-	w_reg_bit(FRC_MC_HW_CTRL0, (game_mode | mc_lp_mode), 3, 1);	// lp_mode
+	// w_reg_bit(FRC_MC_HW_CTRL0, (game_mode | mc_lp_mode), 3, 1);	// lp_mode
+	if (game_mode)
+		w_reg_bit(FRC_MC_HW_CTRL0, 0, 3, 1); // game mode disable mc lp mode
+	else
+		w_reg_bit(FRC_MC_HW_CTRL0, mc_lp_mode, 3, 1);	//lp_mode
 
-	w_reg_bit(FRC_MC_MVRD_CTRL, !(game_mode || me_mc_link_en), 0, 1);
-	w_reg_bit(FRC_MC_MVRD_CTRL, !(game_mode), 1, 1);
+	if (game_mode && prm_top->frm_hsize * prm_top->frm_hsize < 1920 * 1080) {
+		// for game 720P mv err
+		w_reg_bit(FRC_MC_MVRD_CTRL, 1, 0, 1);
+		w_reg_bit(FRC_MC_MVRD_CTRL, 1, 1, 1);
+	} else {
+		w_reg_bit(FRC_MC_MVRD_CTRL, !(game_mode || me_mc_link_en), 0, 1);
+		w_reg_bit(FRC_MC_MVRD_CTRL, !game_mode, 1, 1);
+	}
 
 	// game mode cfg end
 	prm_mc->mmu_mode_en = prm_top->mif_mmu_mode_en;
@@ -1452,6 +1462,273 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	}
 
 	return true;
+}
+
+void hw_dpss_dpe_game_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
+{
+	u32 data32;
+	u32 dpe_pre_pixl_buf;
+	u32 dpe_cur_pixl_buf;
+	u32 dpe_plogo_buf;
+	u32 dpe_clogo_buf;
+	u32 dpe_intp_phs;
+	u32 dpe_byp_en;
+	u32 dpe_mvlogo_buf;
+	u32 dpe_mv_cur_frm_idx;
+	u32 dpe_image_cur_frm_idx;
+	u32 dpe_image_pre_frm_idx;
+
+	u32 mc_inp_body_ybuf_addr[2];
+	u32 mc_inp_body_cbuf_addr[2];
+	u32 mc_inp_head_ybuf_addr;
+	u32 mc_inp_head_cbuf_addr;
+
+	u32 mc_inp_head_ybuf_step;
+	u32 mc_inp_head_cbuf_step;
+
+	u32 mc_pix_logo_buf;
+	u32 mc_blk_logo_buf;
+	u32 mc_vpmc_mv_buf;
+
+	u32 mc_pix_logo_step;
+	u32 mc_blk_logo_step;
+	u32 mc_vpmc_mv_step;
+	u32 mc_ibuf_vld;
+	u32 game_mode_ntm;
+
+	u32 mc_luma0_rdmif_baddr0;
+	u32 mc_luma0_rdmif_baddr1;
+	u32 mc_luma1_rdmif_baddr0;
+	u32 mc_luma1_rdmif_baddr1;
+
+	u32 mc_chrm0_rdmif_baddr0;
+	u32 mc_chrm0_rdmif_baddr1;
+	u32 mc_chrm1_rdmif_baddr0;
+	u32 mc_chrm1_rdmif_baddr1;
+
+	u32 ip_logo0_rdmif_baddr;
+	u32 ip_logo1_rdmif_baddr;
+	u32 dpe_melogo_baddr;
+	u32 dpe_vpmc_mv_baddr;
+
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
+
+	if (!pchip_st || !obuf_rdy)
+		return;
+
+	state_st = &pchip_st->state_st;
+
+	data32		  = rd(DPSS_FRC_MC_IUFF_STATUS);
+	mc_ibuf_vld	  = (data32 >> 4) & 0x1;
+	game_mode_ntm = (rd(FRC_DPSS_LLM) >> 2) & 0x1;
+
+	data32			 = rd(FRC_DPSS_DISP_BUFF_INFO_0);
+	dpe_pre_pixl_buf = (data32 >> 2) & 0xf;
+	dpe_cur_pixl_buf = (data32 >> 8) & 0xf;
+
+	dpe_plogo_buf		 = (data32 >> 14) & 0xf;
+	dpe_clogo_buf		 = (data32 >> 18) & 0xf;
+	dpe_intp_phs		 = (mc_ibuf_vld) ? (data32 >> 22) & 0xff : 0;
+	dpe_byp_en			 = (data32 >> 30) & 0x1;
+
+	if (pchip_st && (pchip_st->state_st.mc_bypass || pchip_st->state_st.force_mc_phase0))
+		dpe_intp_phs = 0;
+
+	state_st->dpe_ready = true;
+	pr_frc(1, "game frc dpe_pre_pixl_buf=%d, dpe_cur_pixl_buf=%d\n",
+		dpe_pre_pixl_buf, dpe_cur_pixl_buf);
+
+	pr_frc(1, "display buff info: %x\n", data32);
+	pr_frc(1, "dpe_plogo_buf        = %#x\n", dpe_plogo_buf);
+	pr_frc(1, "dpe_clogo_buf        = %#x\n", dpe_clogo_buf);
+	pr_frc(1, "dpe_intp_phs         = %#x\n", dpe_intp_phs);
+
+	data32				  = rd(FRC_DPSS_DISP_BUFF_INFO_1);
+	dpe_mvlogo_buf		  = (data32 >> 0) & 0xf;
+	dpe_mv_cur_frm_idx	  = dpe_mvlogo_buf;
+	dpe_image_cur_frm_idx = dpe_cur_pixl_buf;
+	dpe_image_pre_frm_idx = dpe_pre_pixl_buf;
+	pr_frc(1, "dpe_mv_cur_frm_idx      = %#x\n", dpe_mv_cur_frm_idx);
+
+	bool mc_mif_reg_mode = (rd(DPSS_DPE_MC_MIF_CTRL0) >> 2) & 0x1;
+	u32	 dpe_pixl_buf_idx0 =
+		 mc_mif_reg_mode && dpe_intp_phs <= 64 ? dpe_cur_pixl_buf : dpe_pre_pixl_buf;
+	u32 dpe_pixl_buf_idx1 =
+		mc_mif_reg_mode && dpe_intp_phs <= 64 ? dpe_pre_pixl_buf : dpe_cur_pixl_buf;
+
+	u32 src0_fbuf_yaddr[2];
+	u32 src0_fbuf_caddr[2];
+
+	w_reg_bit(DPSS_DPE_INTF_CTRL2, 0, 4, 2);
+
+	src0_fbuf_yaddr[0]		 = rd(DPSS_SRC0_FBUF_YADDR0 + dpe_pixl_buf_idx0);
+	src0_fbuf_caddr[0]		 = rd(DPSS_SRC0_FBUF_CADDR0 + dpe_pixl_buf_idx0);
+	src0_fbuf_yaddr[1]		 = rd(DPSS_SRC0_FBUF_YADDR0 + dpe_pixl_buf_idx1);
+	src0_fbuf_caddr[1]		 = rd(DPSS_SRC0_FBUF_CADDR0 + dpe_pixl_buf_idx1);
+	mc_inp_body_ybuf_addr[0] = src0_fbuf_yaddr[0];
+	mc_inp_body_cbuf_addr[0] = src0_fbuf_caddr[0];
+	mc_inp_body_ybuf_addr[1] = src0_fbuf_yaddr[1];
+	mc_inp_body_cbuf_addr[1] = src0_fbuf_caddr[1];
+	mc_inp_head_ybuf_addr = 0;
+	mc_inp_head_cbuf_addr = 0;
+	mc_inp_head_ybuf_step = 0;
+	mc_inp_head_cbuf_step = 0;
+
+	mc_pix_logo_buf = rd(DPSS_SRC0_PIX_LOGO_ADDR);
+	mc_blk_logo_buf = rd(DPSS_SRC0_VP_MC_LOGO_ADDR);
+	mc_vpmc_mv_buf	= rd(DPSS_SRC0_VP_MC_MV_ADDR);
+
+	mc_pix_logo_step = rd(DPSS_SRC0_PIX_LOGO_STEP);
+	mc_blk_logo_step = rd(DPSS_SRC0_VP_MC_LOGO_STEP);
+	mc_vpmc_mv_step	 = rd(DPSS_SRC0_VP_MC_MV_STEP);
+
+	//=====================================================================================////
+	// dpe input data
+	//=====================================================================================////
+	mc_luma0_rdmif_baddr0 = mc_inp_body_ybuf_addr[0] << 5;
+	if (game_mode_ntm)
+		mc_luma0_rdmif_baddr1 = prm_top->src0_head_yaddr[dpe_pixl_buf_idx0];
+	else
+		mc_luma0_rdmif_baddr1 = mc_inp_head_ybuf_addr +
+			mc_inp_head_ybuf_step * dpe_pixl_buf_idx0;
+
+	mc_luma1_rdmif_baddr0 = mc_inp_body_ybuf_addr[1] << 5;
+	if (game_mode_ntm)
+		mc_luma1_rdmif_baddr1 = prm_top->src0_head_yaddr[dpe_pixl_buf_idx1];
+	else
+		mc_luma1_rdmif_baddr1 = mc_inp_head_ybuf_addr +
+			mc_inp_head_ybuf_step * dpe_pixl_buf_idx1;
+
+	mc_chrm0_rdmif_baddr0 = mc_inp_body_cbuf_addr[0] << 5;
+	mc_chrm0_rdmif_baddr1 =
+		mc_inp_head_cbuf_addr + mc_inp_head_cbuf_step * dpe_pixl_buf_idx0;
+
+	mc_chrm1_rdmif_baddr0 = mc_inp_body_cbuf_addr[1] << 5;
+	mc_chrm1_rdmif_baddr1 =
+		mc_inp_head_cbuf_addr + mc_inp_head_cbuf_step * dpe_pixl_buf_idx1;
+	if (prm_top->dpss_mode == DPSS_FRC_MODE) {
+		mc_luma0_rdmif_baddr1 = prm_top->src0_head_yaddr[dpe_pixl_buf_idx0];
+		mc_luma0_rdmif_baddr0 = prm_top->src0_fbuf_yaddr[dpe_pixl_buf_idx0];
+		mc_chrm0_rdmif_baddr1 = prm_top->src0_head_caddr[dpe_pixl_buf_idx0];
+		mc_chrm0_rdmif_baddr0 = prm_top->src0_fbuf_caddr[dpe_pixl_buf_idx0];
+		mc_luma1_rdmif_baddr1 = prm_top->src0_head_yaddr[dpe_pixl_buf_idx1];
+		mc_luma1_rdmif_baddr0 = prm_top->src0_fbuf_yaddr[dpe_pixl_buf_idx1];
+		mc_chrm1_rdmif_baddr1 = prm_top->src0_head_caddr[dpe_pixl_buf_idx1];
+		mc_chrm1_rdmif_baddr0 = prm_top->src0_fbuf_caddr[dpe_pixl_buf_idx1];
+	}
+	ip_logo0_rdmif_baddr = mc_pix_logo_buf + dpe_plogo_buf * mc_pix_logo_step;
+	ip_logo1_rdmif_baddr = mc_pix_logo_buf + dpe_clogo_buf * mc_pix_logo_step;
+	dpe_melogo_baddr	 = mc_blk_logo_buf + dpe_mvlogo_buf * mc_blk_logo_step;
+	dpe_vpmc_mv_baddr	 = mc_vpmc_mv_buf + dpe_mvlogo_buf * mc_vpmc_mv_step;
+
+	pr_frc(1, "mc_luma0_rdmif_baddr1= %x\n", mc_luma0_rdmif_baddr1);
+	pr_frc(1, "mc_luma0_rdmif_baddr0= %x\n", mc_luma0_rdmif_baddr0);
+	pr_frc(1, "mc_chrm0_rdmif_baddr1= %x\n", mc_chrm0_rdmif_baddr1);
+	pr_frc(1, "mc_chrm0_rdmif_baddr0= %x\n", mc_chrm0_rdmif_baddr0);
+	pr_frc(1, "mc_luma1_rdmif_baddr1= %x\n", mc_luma1_rdmif_baddr1);
+	pr_frc(1, "mc_luma1_rdmif_baddr0= %x\n", mc_luma1_rdmif_baddr0);
+	pr_frc(1, "mc_chrm1_rdmif_baddr1= %x\n", mc_chrm1_rdmif_baddr1);
+	pr_frc(1, "mc_chrm1_rdmif_baddr0= %x\n", mc_chrm1_rdmif_baddr0);
+
+	pr_frc(1, "ip_logo0_rdmif_baddr = %x\n", ip_logo0_rdmif_baddr);
+	pr_frc(1, "ip_logo1_rdmif_baddr = %x\n", ip_logo1_rdmif_baddr);
+	pr_frc(1, "dpe_melogo_baddr     = %x\n", dpe_melogo_baddr);
+	pr_frc(1, "dpe_vpmc_mv_baddr    = %x\n", dpe_vpmc_mv_baddr);
+
+	////==========================================================////
+	//// dpe input data
+	////==========================================================////
+
+	u32 mc_use_tbc_addr = rd(DPSS_TOP_APB_TBC_SEL_CTRL) & 0x1;
+
+	if (mc_use_tbc_addr == 0) {
+		pr_frc(1, "MC use driver config\n");
+
+		wr(DPSS_DPE_MC_DIN_LUMA0_BADDR0, mc_luma0_rdmif_baddr0);
+		wr(DPSS_DPE_MC_DIN_LUMA0_BADDR1, mc_luma0_rdmif_baddr1);
+
+		wr(DPSS_DPE_MC_DIN_LUMA1_BADDR0, mc_luma1_rdmif_baddr0);
+		wr(DPSS_DPE_MC_DIN_LUMA1_BADDR1, mc_luma1_rdmif_baddr1);
+
+		wr(DPSS_DPE_MC_DIN_CHRM0_BADDR0, mc_chrm0_rdmif_baddr0);
+		wr(DPSS_DPE_MC_DIN_CHRM0_BADDR1, mc_chrm0_rdmif_baddr1);
+
+		wr(DPSS_DPE_MC_DIN_CHRM1_BADDR0, mc_chrm1_rdmif_baddr0);
+		wr(DPSS_DPE_MC_DIN_CHRM1_BADDR1, mc_chrm1_rdmif_baddr1);
+		if (prm_top->dpss_mode == DPSS_FRC_MODE &&
+			pchip_st->state_st.compr_sel != DDR_MIF) {
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC0) +
+				VFCD_AFBC_HEAD_BADDR, mc_luma0_rdmif_baddr1);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC0) +
+				VFCD_AFBC_BODY_BADDR, mc_luma0_rdmif_baddr0);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC0) +
+				VFCD_AFRC_CHRM_HEAD_BADDR, mc_chrm0_rdmif_baddr1);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC0) +
+				VFCD_AFRC_CHRM_BODY_BADDR, mc_chrm0_rdmif_baddr0);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC1) +
+				VFCD_AFBC_HEAD_BADDR, mc_luma1_rdmif_baddr1);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC1) +
+				VFCD_AFBC_BODY_BADDR, mc_luma1_rdmif_baddr0);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC1) +
+				VFCD_AFRC_CHRM_HEAD_BADDR, mc_chrm1_rdmif_baddr1);
+			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC1) +
+				VFCD_AFRC_CHRM_BODY_BADDR, mc_chrm1_rdmif_baddr0);
+			pr_frc(1, "MC vfcd afbc/afrc config\n");
+		}
+
+		wr(DPSS_DPE_MC_DIN_LOGO_BADDR0, ip_logo0_rdmif_baddr);
+		wr(DPSS_DPE_MC_DIN_LOGO_BADDR1, ip_logo1_rdmif_baddr);
+		wr(DPSS_DPE_MC_DIN_MELG_BADDR1, dpe_melogo_baddr);
+		wr(DPSS_DPE_MC_DIN_MV_BADDR1, dpe_vpmc_mv_baddr);
+		w_reg_bit(DPSS_DPE_MC_DIN_FRM_IDX0, dpe_image_pre_frm_idx, 8, 4);
+		w_reg_bit(DPSS_DPE_MC_DIN_FRM_IDX0, dpe_image_cur_frm_idx, 4, 4);
+		w_reg_bit(DPSS_DPE_MC_DIN_FRM_IDX0, dpe_mv_cur_frm_idx, 0, 4);
+		// w_reg_bit(DPSS_DPE_MC_CTRL0,dpe_intp_phs,20,8);
+		w_reg_bit(DPSS_DPE_MC_PHASE, dpe_intp_phs, 0, 8);
+
+		dpss_dpe_dbg_cfg();
+	} else {
+		pr_frc(1, "MC use tbc config\n");
+	}
+
+	bool cut_win_en = prm_top->cut_win_en;
+	u32 get_pix_logo_mode;
+	struct frc_chip_st *pchip = dpss_get_frc_st();
+
+	if (unlikely(!pchip)) {
+		DBG_ERR("dpe cfg null pointer: pchip is NULL\n");
+		return;
+	}
+
+	struct PRM_INTF_TYPE *pre_logo_rmif = &pchip->pre_logo_rmif;
+	struct PRM_INTF_TYPE *cur_logo_rmif = &pchip->cur_logo_rmif;
+	struct PRM_INTF_TYPE *mv_rmif = &pchip->mv_rmif;
+	struct PRM_INTF_TYPE *me_logo_rmif = &pchip->me_logo_rmif;
+
+	memset((void *)(pre_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
+	memset((void *)(cur_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
+	memset((void *)(mv_rmif), 0, sizeof(struct PRM_INTF_TYPE));
+	memset((void *)(me_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
+
+	pre_logo_rmif->burst_len = 2;   // 1: burst4, 2: brst8, 3: burst16
+	cur_logo_rmif->burst_len = 2;
+	mv_rmif->burst_len		= 2;
+	me_logo_rmif->burst_len	= 2;
+	if (cut_win_en) {
+		get_pix_logo_mode = rd(FRC_MC_LOGO_OPTION);
+		pre_logo_rmif->src_baddr[0] =
+			get_pix_logo_mode == 2 ? ip_logo1_rdmif_baddr : ip_logo0_rdmif_baddr;
+		cur_logo_rmif->src_baddr[0] =
+			get_pix_logo_mode == 1 ? ip_logo0_rdmif_baddr : ip_logo1_rdmif_baddr;
+		mv_rmif->src_baddr[0]	  = dpe_vpmc_mv_baddr;
+		me_logo_rmif->src_baddr[0] = dpe_melogo_baddr;
+
+		cfg_mc_sub_rdmif(pre_logo_rmif, 0, 1);
+		cfg_mc_sub_rdmif(cur_logo_rmif, 1, 1);
+		cfg_mc_sub_rdmif(mv_rmif, 2, 1);
+		cfg_mc_sub_rdmif(me_logo_rmif, 3, 1);
+	}
 }
 
 #define PIC_ORG_Y_BADDR 0x72000000

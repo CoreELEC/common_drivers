@@ -16,6 +16,7 @@ void hw_cfg_dpss_mc_slice(u32 frm_hsize, u32 frm_vsize, u32 slice_num);
 void hw_cfg_dpss_mc_bbd(u32 frm_hsize, u32 frm_vsize, u32 bbd_en, u32 bbd_sel,
 			u32 src_hsize, u32 src_vsize);
 bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy);
+void hw_dpss_dpe_game_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy);
 void hw_dpss_dpe_info_cfg_sw(u32 *base_addr, u32 *base_oft, u32 buf_num, u32 out_addr_en,
 			struct PRM_DPSS_TOP *prm_top, u32 dae_frm_idx, u32 vdin_frm_idx);
 void hw_mc_vfcd_cfg_update(void);

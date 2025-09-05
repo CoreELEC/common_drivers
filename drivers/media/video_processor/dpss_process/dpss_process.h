@@ -126,6 +126,7 @@ struct dpss_process_dev {
 	bool last_frame_bypass;
 	bool dpss_is_tvp;
 	bool cur_is_i;
+	bool cur_is_frcgame;
 	bool dpss_module_bypass;
 	bool last_frame_vd1_toggle;
 	u32 transform;

@@ -207,6 +207,16 @@ struct tool_debug_s {
 	u32 reg_read_val;
 };
 
+struct dpss_frc_game_res_t {
+	u32 width;
+	u32 height;
+};
+
+struct dpss_game_n2m_t {
+	u32 input_framerate;
+	u32 output_framerate;
+};
+
 struct frc_monitor_s {
 	u32 dbg_reg_monitor_inp;
 	u32 dbg_inp_reg[MONITOR_REG_MAX];
@@ -451,6 +461,33 @@ struct frc_vf_ctrl_s {
 	bool last_valid;
 };
 
+struct dpss_game_dly_s {
+	/* data */
+	u32 vtotal;
+	u32 mc_dly;
+	u32 vsp_dly;
+	u32 pre_dly;
+	u32 vmin_num_adj;
+	u32 vmax_num_adj;
+};
+
+struct dpss_game_state_s {
+	bool game_n2m;
+	bool game_film;
+	bool frc_only_path;
+	bool vdin_game_flag_en;
+	bool mc_link_en;
+	bool game_vrr_en;
+	bool video_mute_en;
+	bool do_game_frc;
+	bool off_game_mode;
+	u32 vrr_drop_cnt;
+	u32 video_mute_cnt;
+	u32 vdin_buf_num;
+
+	struct dpss_game_dly_s dly_st;
+};
+
 struct frc_state_s {
 	bool is_frc_vpp_link;
 	bool need_disable_mc_link;
@@ -479,6 +516,7 @@ struct frc_state_s {
 	bool demo_win_en;
 	bool mc_cut_position;
 	bool mc_lp_mode;
+	u8 cut_pre_mc_work;
 	u8 mc_bypass_always;
 	u8 use_inp_big;
 	bool detect_speed;
@@ -499,7 +537,8 @@ struct frc_state_s {
 	u8 mv_buf_idx;
 	bool win_size_zero_flag;
 	bool used_seq_vfm;
-	u8 check_fallback;//0:init 1:start force 2:maintain state 3:end
+	bool phs_swth;
+	u8 check_fallback;
 	u8 detect_threshold;
 	u8 dae0_bypass_mode;
 	u8 dst_buf_th;
@@ -508,6 +547,7 @@ struct frc_state_s {
 	u8 force_mc_cur_idx;
 	u8 mc_drop_idx;
 	u8 mc_switch_adj_idx;
+	u32 frc_only_rst;
 	u32 mc_bypass_cnt;
 	u32 force_mc_byp_cnt;
 	u32 pre_vsync_offset;
@@ -517,11 +557,14 @@ struct frc_state_s {
 	u32 dpe_intp_phs;
 	unsigned int put_frame_cnt;
 	enum compress_fmt_s compr_sel;
+	unsigned int pre_idx;
+	unsigned int cur_idx;
 	unsigned int big_fmt;
 	unsigned int big_bits;
 	unsigned int big_plane;
 	unsigned int mc_used_cnt;
 	enum frc_src_s frc_src;/*2025312 not use*/
+	unsigned int phs_swth_cnt;
 
 	bool enable_last_drop; //drop last frame
 	bool need_drop_dd;
@@ -546,6 +589,10 @@ struct frc_chip_st {
 	u8 frc_en;
 	u32 encl_frc_ctrl;
 	u32 dbg_vfcd_holdline;
+	u32 venc_vrr_ctrl;
+	u32 venc_vrr_adj_lmt;
+	u32 venc_vrr_ctrl_1;
+	u32 venc_ro_vrr;
 //      struct frc_attribute_s *attr_st;
 //      struct frc_buf_s *buf_st;
 //      struct frc_clock_s *clk_st;
@@ -566,6 +613,7 @@ struct frc_chip_st {
 	struct frc_cut_win_s win_st;
 	struct disp_screen_vinfo_s vinfo_st;
 	struct frc_mc_csc_set_s init_csc;
+	struct dpss_game_state_s game_st;
 	int fmt444_out;
 };
 

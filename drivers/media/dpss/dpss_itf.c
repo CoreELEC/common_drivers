@@ -17,6 +17,7 @@
 #include <linux/amlogic/media/di/dpss_interface.h>
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_prealloc.h>
+#include <linux/amlogic/media/vout/vout_notify.h>
 
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -31,6 +32,31 @@
 bool dpss_bypass_all;
 module_param_named(dpss_bypass_all, dpss_bypass_all, bool, 0664);
 
+/*game frc*/
+#define GAME_RES_LIST_MAX 3
+#define GAME_N2M_LIST_MAX 5
+#define DPSS_FRC_RATIO_1_1  0
+#define DPSS_FRC_RATIO_1_2  1
+// #define DPSS_FRC_RATIO_1_4  2
+
+static struct dpss_frc_game_res_t frc_res_list[GAME_RES_LIST_MAX] = {
+	{1280, 720},
+	{1920, 1080},
+	//{2560, 1440},
+	{3840, 2160},
+};
+
+static struct dpss_game_n2m_t frc_n2m_list[GAME_N2M_LIST_MAX] = {
+	// {25,  50},
+	// {30,  60},
+	{60,  60},
+	{50,  100},
+	{60,  120},
+	{100, 100},
+	{120, 120},
+};
+
+/*game end*/
 static void _ch_releas_data_fifo(struct dpss_ch_d_s1 *pch_d)
 {
 	int i;
@@ -333,7 +359,7 @@ struct dpss_nr_i_s *lk_get_nr_i(struct vframe_s *vfm)
 		return NULL;
 
 	if (lk->idx_t != DPSS_VF_OWNER_NR) {
-		DBG_WARN("%s: not nr? (%u)\n", __func__, lk->idx_t);
+		dbg_h2("not nr? (%u)\n", lk->idx_t);
 		return NULL;
 	}
 	nr_inf = (struct dpss_nr_i_s *)lk->lk_info;
@@ -672,7 +698,8 @@ int _create_instance(bool fix, int index, struct dpss_init_parm *parm)
 			return DPSS_ERR_INDEX_OVERFLOW;
 
 	} else {
-		if (parm->dps_work_mode & DPSS_WORK_MODE_MAIN)
+		if (parm->dps_work_mode & DPSS_WORK_MODE_MAIN ||
+			parm->dps_work_mode == DPSS_WORK_MODE_FRC)
 			ch = 0;
 		else
 			ch = 1;
@@ -728,6 +755,9 @@ int _create_instance(bool fix, int index, struct dpss_init_parm *parm)
 				pch->c.o_afbc = 0;
 		}
 	}
+
+	if (parm->dps_work_mode == DPSS_WORK_MODE_FRC)
+		dpss_game_frc_lock(parm);
 
 	if (dpss_nr_debug == 1)
 		pch->c.o_afbc = 0;
@@ -1891,6 +1921,8 @@ int dpss_get_state(int index, enum DPSS_STATE cmd_state, struct vframe_s *vfm,
 	pch = dpss_get_ch(ch);
 	state->buf_status = pch->c.buf_status;
 
+	dpss_get_game_lock_st(state);
+
 	return ret;
 }
 EXPORT_SYMBOL(dpss_get_state);
@@ -1909,7 +1941,7 @@ int dpss_get_vf_info(struct vframe_s *vf, struct dpss_out_vf_info *dpss_out_info
 	}
 	nr_i = lk_get_nr_i(vf);
 	if (!nr_i) {	//check  tmp
-		DBG_ERR("%s illegal 0x%px\n", __func__, vf);
+		dbg_h2("illegal 0x%px\n", vf);
 		dpss_out_info->flag = 0xfffff;
 		return DPSS_ERR_UNDEFINED;
 	}
@@ -1959,8 +1991,75 @@ int dpss_cmd_asy(int index, unsigned int cmd_asy, struct dpss_cmd_a_s *para)
 }
 EXPORT_SYMBOL(dpss_cmd_asy);
 
+bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
+{
+	int i;
+	u32 in_frm_rate, in_frm_frac, out_frm_rate;
+	struct vinfo_s *vinfo;
+	bool need_do_game_frc = true;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+	struct dpss_init_parm *dpss_parm = parm;
+
+	vinfo = get_current_vinfo();
+
+	if (!pchip_st) {
+		dbg_h0("pchip_st or vfs is null\n");
+		return need_do_game_frc;
+	}
+
+	if (!vinfo)
+		return need_do_game_frc;
+
+	//INTERLACE
+	if (vf->type & VIDTYPE_INTERLACE)
+		need_do_game_frc = false;
+
+	// game flag
+	if (!(vf->flag & VFRAME_FLAG_GAME_MODE) ||
+		!(vf->flag_ext & VDIN_GAME_FRC_FLAG_EN))
+		need_do_game_frc = false;
+
+	//Resolution
+	for (i = 0; i < GAME_RES_LIST_MAX; i++)
+		if (vf->compWidth == frc_res_list[i].width &&
+			vf->compHeight == frc_res_list[i].height)
+			break;
+
+	if (i == GAME_RES_LIST_MAX)
+		need_do_game_frc = false;
+
+	//N2M
+	in_frm_rate = 96000 / vf->duration;
+	in_frm_frac = 96000 * 1000 / vf->duration % 1000;
+	in_frm_rate = in_frm_rate + (in_frm_frac + 500) / 1000;
+	out_frm_rate = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	for (i = 0; i < GAME_N2M_LIST_MAX; i++)
+		if (in_frm_rate == frc_n2m_list[i].input_framerate &&
+			out_frm_rate == frc_n2m_list[i].output_framerate)
+			break;
+
+	if (i == GAME_N2M_LIST_MAX)
+		need_do_game_frc = false;
+
+	game_st = &pchip_st->game_st;
+	dpss_parm->frc_parm.do_game_frc = need_do_game_frc;
+	dpss_parm->frc_parm.width = vf->compWidth;
+	dpss_parm->frc_parm.height = vf->compHeight;
+	dpss_parm->frc_parm.duration =  vf->duration;
+	dpss_parm->frc_parm.in_frm_rate = in_frm_rate;
+	dpss_parm->frc_parm.out_frm_rate = out_frm_rate;
+	game_st->do_game_frc = need_do_game_frc;
+
+	dbg_h2("game ret:%d, res:(%d,%d), in/out:(%d/%d), frac:%d\n",
+		need_do_game_frc, vf->compWidth, vf->compHeight,
+		in_frm_rate, out_frm_rate, in_frm_frac);
+
+	return need_do_game_frc;
+}
+
 //dpss bypas
-unsigned char  dpss_is_bypass(struct vframe_s *vf)
+unsigned char dpss_is_bypass(struct dpss_init_parm *parm, struct vframe_s *vf)
 {
 	unsigned int reason = 0;
 
@@ -1973,7 +2072,19 @@ unsigned char  dpss_is_bypass(struct vframe_s *vf)
 	if (dpss_bypass_all) {
 		reason = 0x1;
 	} else if (vf->flag & VFRAME_FLAG_GAME_MODE) {
-		reason = 0x2;
+		//if (!check_need_do_game_frc(parm, vf)) {
+		if (check_need_do_game_frc(parm, vf)) {
+			//reason = 0x2;// game mode
+			//dbg_h2("game mode, no need do dpss.\n");
+			reason = 0x0;// normal dpss
+			dbg_h2("frc game mode, need do dpss.\n");
+		// } else if (parm->dps_work_mode == DPSS_WORK_MODE_FRC) {
+		//	reason = 0x0;// normal dpss
+		//	dbg_h2("frc game mode, need do dpss.\n");
+		} else {
+			reason = 0x2;// game mode
+			dbg_h2("support frc game, cur is normal game, no need do dpss.\n");
+		}
 	} else if (vf->flag & VFRAME_FLAG_PC_MODE) {
 		if (vf->type & VIDTYPE_INTERLACE && vf->type & VIDTYPE_VIU_422)
 			reason = 0x0;
@@ -2017,6 +2128,39 @@ unsigned char  dpss_is_bypass(struct vframe_s *vf)
 
 	dbg_ins0("bypass: %d\n", reason);
 	return reason;
+}
+
+void dpss_game_frc_lock(struct dpss_init_parm *parm)
+{
+	u32 in_frm_rate, out_frm_rate;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+
+	if (!pchip_st)
+		return;
+
+	if (!parm->frc_parm.do_game_frc)
+		return;
+
+	game_st = &pchip_st->game_st;
+	in_frm_rate = parm->frc_parm.in_frm_rate;
+	out_frm_rate = parm->frc_parm.out_frm_rate;
+	if (out_frm_rate / in_frm_rate > 1)
+		game_st->game_n2m = 1;
+	else
+		game_st->game_film = 1;
+
+	if (game_st->game_vrr_en) {
+		venc_vrr_vdin();
+		dbg_h0("do frc game mdoe:[film:%d, n2m:%d]\n",
+			game_st->game_film, game_st->game_n2m);
+	} else {
+		game_st->game_n2m = 0;
+		game_st->game_film = 0;
+		venc_vrr_vdin();
+		dbg_h0("frc only mdoe:[film:%d, n2m:%d]\n",
+			game_st->game_film, game_st->game_n2m);
+	}
 }
 
 /*****************************************

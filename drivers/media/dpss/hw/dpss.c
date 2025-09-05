@@ -239,9 +239,9 @@ void hw_cfg_dpss_top(struct PRM_DPSS_TOP *prm_top)
 			w_reg_bit(FRC_DPSS_LLM, me_game_mode_en << 1 |
 				me_mc_link_en, 0,
 			2);//me_game_mode_en,frc_me_mc_link
-			w_reg_bit_vc(VPU_AXIRD_LINE_CRTL0,
-				me_game_mode_en * 15, 28,
-				4); //reg_line_sync_en vfcd
+			// w_reg_bit_vc(VPU_AXIRD_LINE_CRTL0,
+				// me_game_mode_en * 15, 28,
+				// 4); //reg_line_sync_en vfcd
 			hw_cfg_dpss_mc_ini(prm_top, (frc_nr_en & 0x1) || amdv_prl_en);
 
 			if (prm_top->dpe_game_mode) {
@@ -394,7 +394,7 @@ void hw_cfg_dpss_top(struct PRM_DPSS_TOP *prm_top)
 	//==============================================================//
 	// dpss_top:inp/dae/dpe triggle mode auto/manual
 	//==============================================================//
-	if (!prm_top->src_mode) { //07-10 add for 2ch nr+frc +i
+	if (!prm_top->src_mode && !prm_top->dpe_game_mode) { //07-10 add for 2ch nr+frc +i
 	//trigger frm_en by config_done_signal
 		w_reg_bit(FRC_REG_INP_FRM_CTRL, 1, 4, 1);
 		dbg_h2("patch 0523\n");

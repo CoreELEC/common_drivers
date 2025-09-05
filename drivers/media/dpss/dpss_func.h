@@ -304,4 +304,8 @@ void dpss_hdr_proc(struct vframe_s *vfm);
 //frc rdma
 void dpss_frc_rdma_reg(void);
 void dpss_frc_rdma_unreg(void);
+//frc game
+int dpss_get_game_lock_st(struct dpss_status *state);
+void venc_vrr_vdin(void);
+
 #endif	/*__DPSS_FUNC_H__*/

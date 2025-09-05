@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
 #include <linux/amlogic/media/video_sink/vpp.h>
+#include <linux/amlogic/media/video_sink/video.h>
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
@@ -33,6 +34,7 @@
 #include <linux/amlogic/media/dpss/frc_common_x.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
+#include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include "dpss_base.h"
 #include "dpss_s.h"
 #include "dpss_sys.h"
@@ -103,7 +105,7 @@ const char *stats_fmt_str[] = {
 	"REQ",
 	"INIT",
 	"PROC",
-	"IDLE",
+	"IRDY",
 	"ORDY",
 	"NULL",
 };
@@ -195,6 +197,7 @@ static struct class_attribute frc_class_attrs[] = {
 	__ATTR(dump_table, 0644, dpss_frc_dump_reg_table_show,
 	       dpss_frc_dump_reg_table_store),
 	__ATTR(rdma, 0644, dpss_frc_rdma_show, dpss_frc_rdma_store),
+	__ATTR(game, 0644, dpss_frc_game_show, dpss_frc_game_store),
 	__ATTR(bbd_ctrl_param, 0644, dpss_frc_bbd_ctrl_param_show,
 	       dpss_frc_bbd_ctrl_param_store),
 	__ATTR(vp_ctrl_param, 0644, dpss_frc_vp_ctrl_param_show,
@@ -491,7 +494,7 @@ void dpss_frc_check_undone_stats(void)
 
 void check_dpss_frc_status(void)
 {
-	u32 tmp1, tmp2, tmp3;
+	u32 tmp1, tmp2, tmp3, tmp4;
 	struct frc_chip_st *pchip_st;
 
 	pchip_st = dpss_get_frc_st();
@@ -501,8 +504,9 @@ void check_dpss_frc_status(void)
 	tmp1 = rd(DPSS_FRC_INP_BUF_STATUS) & 0xff;
 	tmp2 = rd(DPSS_FRC_DAE_BUF_STATUS) & 0xff;
 	tmp3 = rd(DPSS_FRC_MC_IUFF_STATUS) & 0xf;
-	PR_FRC("%s: ro_inp_status:%#x ro_dae_status:%#x ro_mc_status:%#x\n",
-		__func__, tmp1, tmp2, tmp3);
+	tmp4 = rd(VPU_DAE_WRAP_INTF_RO);
+	PR_FRC("ro_inp_status:%#x ro_dae_status:%#x ro_mc_status:%#x dae_check:%#x\n",
+		tmp1, tmp2, tmp3, tmp4);
 	g_frc_work_stats.buf_stats.inp_in_order_idx = rd(FRC_REG_INPUT_FUL_IDX);
 	g_frc_work_stats.buf_stats.inp_out_order_idx =
 	    rd(FRC_REG_OUT_FRAME_IDX);
@@ -608,6 +612,8 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	struct dpss_data_s *pdata;
 	struct frc_work_s *work_st;
 	struct frc_debug_s *dbg_st;
+	struct dpss_game_state_s *game_st;
+	struct dpss_game_dly_s *dly_st;
 
 	if (!devp || !devp->data_l) {
 		PR_ERR("%s: dpss_devp null\n", __func__);
@@ -620,6 +626,8 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	state_st = &pchip_st->state_st;
 	dbg_st =  &pchip_st->dbg_st;
 	work_st = &devp->pchip_st->work_st;
+	game_st = &pchip_st->game_st;
+	dly_st = &game_st->dly_st;
 	INIT_WORK(&work_st->print_work, frc_dbg_table_print);
 	for (idx = 0; idx < DPSS_MODULE_MAX; idx++)
 		frc_module_log_level[idx] = FRC_LOG_LEVEL_DEBUG;
@@ -669,6 +677,7 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	state_st->dst_buf_th = 6;
 	state_st->enable_frclink_cnt = 2;
 	state_st->first_put_vfm = true;
+	state_st->frc_only_rst = 0x3;
 	frc_top->memc_enable = 2;
 	frc_top->frc_memc_level = 10;
 	frc_top->frc_deblur_level = 10;
@@ -680,15 +689,35 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	frc_fw_alg_ctrl->frc_me_en = 1;
 	dbg_st->ctrl_dbg.mc_rdmif_err_reset_en = 1;
 	dbg_st->ctrl_dbg.frc_dae_div4 = 1;
+	// frc game
+	dly_st->vtotal = 2250;
+	dly_st->vsp_dly = 700;
+	dly_st->pre_dly = 700;
+	dly_st->vmin_num_adj = 20;
+	dly_st->vmax_num_adj = 50;
+	game_st->vrr_drop_cnt = 10;
+	game_st->video_mute_cnt = 15;
+	game_st->mc_link_en = true;
+	game_st->game_vrr_en = true;
+
 	frc_dbg(DPSS_FRC_TOP, "%s init_version_20250905\n", __func__);
 	if (pdata && pdata->mdata) {
 		if (pdata->mdata->ic_id == IC_ID_T6W) {
 			frc_st.chip = ID_T6W;
 			frc_st.encl_frc_ctrl = ENCL_FRC_CTRL;
+			frc_st.venc_vrr_ctrl = VENC_VRR_CTRL;
+			frc_st.venc_vrr_adj_lmt = VENC_VRR_ADJ_LMT;
+			frc_st.venc_vrr_ctrl_1 = VENC_VRR_CTRL1;
+			frc_st.venc_ro_vrr = VENC_RO_VRR;
 		} else if (pdata->mdata->ic_id == IC_ID_T6X) {
 			frc_st.chip = ID_T6X;
-			frc_st.encl_frc_ctrl = ENCL_FRC_CTRL_T6X;
 			// dpss_light_chg = 0;
+			dpss_light_chg = 0;
+			frc_st.encl_frc_ctrl = ENCL_FRC_CTRL_T6X;
+			frc_st.venc_vrr_ctrl = VENC_VRR_CTRL_T6X;
+			frc_st.venc_vrr_adj_lmt = VENC_VRR_ADJ_LMT_T6X;
+			frc_st.venc_vrr_ctrl_1 = VENC_VRR_CTRL1_T6X;
+			frc_st.venc_ro_vrr = VENC_RO_VRR_T6X;
 		} else { // for further
 			frc_st.chip = ID_T6W;
 			frc_st.encl_frc_ctrl = ENCL_FRC_CTRL;
@@ -753,16 +782,21 @@ void dpss_frc_remove(void)
 #endif
 }
 
+unsigned int dpss_dbg_pre_dly_dae = 0x1500001;
+module_param_named(dpss_dbg_pre_dly_dae, dpss_dbg_pre_dly_dae, uint, 0664);
+
 void hw_init_part1(struct vframe_s *vfrm)
 {
 	struct frc_chip_st *pchip_st;
 	u32 vsync_lines, real_vtotal; // 8cc
+	struct frc_state_s *state_st;
 	u32 input_height;
 	struct vinfo_s *vinfo = get_current_vinfo();
 	u32 out_frm_rate = 0;
 	u32 out_4k2k_120_up_flag;
 
 	pchip_st = dpss_get_frc_st();
+	state_st = &pchip_st->state_st;
 	if (!pchip_st) {
 		DBG_ERR("%s pchip_st is null\n", __func__);
 		return;
@@ -832,10 +866,11 @@ void hw_init_part1(struct vframe_s *vfrm)
 		DBG_ERR("%s:vsync_lines %d, panel_height:%d\n",
 				__func__, vsync_lines, vinfo->height);
 	w_reg_bit_vc(pchip_st->encl_frc_ctrl, vsync_lines, 0, 16);//cfg_vrr_vtotal,cfg_frc_st_ln
-	w_reg_bit(DPSS_TOP_PER_DLY, 0x1, 0, 16);  //pre_vsync dae_dly_num
-	w_reg_bit(DPSS_TOP_PER_DLY, 0x150, 16, 16);   //pre_vsync dpe_dly_num
+	// w_reg_bit(DPSS_TOP_PER_DLY, 0x1, 0, 16);  //pre_vsync dae_dly_num
+	// w_reg_bit(DPSS_TOP_PER_DLY, 0x150, 16, 16);   //pre_vsync dpe_dly_num
+	wr(DPSS_TOP_PER_DLY, dpss_dbg_pre_dly_dae);
 	//w_reg_bit(DPSS_TOP_SOFT_RST , 0xfff,1,12);//top initial reset
-	w_reg_bit(DPSS_TOP_SYNC_RST, 0x1ff, 0, 9);	// pls_ctrl_syn_rst  //for some regs latch
+	w_reg_bit(DPSS_TOP_SYNC_RST, 0x1ff, 0, 9);// pls_ctrl_syn_rst  //for some regs latch
 	dbg_f1("%s:vsync_line %d\n", __func__, vsync_lines);
 }
 
@@ -847,6 +882,7 @@ void _prm_top_init_frc(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 	unsigned int fmt = YUV422, plan = PLANAR_X2, bit = BIT_010;
 	unsigned int i_p, cmpr;
 	struct dpss_frc_fw_data_s *pfw_data;
@@ -857,6 +893,7 @@ void _prm_top_init_frc(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 		return;
 	}
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 	dbg_h1("%s:path_id =%d\n", __func__, path_id);
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 	if (pfw_data) {
@@ -986,7 +1023,7 @@ void _prm_top_init_frc(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 //              dbg_h1("o:fmt:%d,%d,%d", fmt, plan, bit);
 //      }
 
-	prm_top->dpe_game_mode = 0;	//dpe_game_mode
+	prm_top->dpe_game_mode = game_st->game_n2m | game_st->game_film;
 	prm_top->me_mc_link_en = frc_top->me_mc_link_en;	//me_mc_link_en
 	prm_top->dae_step_sel = 2;
 	prm_top->dolby_mode = DOLBY_WRAP_BYPS;
@@ -1028,7 +1065,7 @@ void _prm_top_init_frc(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 	prm_top->sw_ctrl_en = 0;
 	prm_top->src_is_1080p_nods = frc_top->src_is_1080p_nods;
 	prm_top->nr_hscale_on = 0;
-	prm_top->frc_fbuf_only = frc_top->frc_fbuf_only;
+	// prm_top->frc_fbuf_only = frc_top->frc_fbuf_only;
 	prm_top->nr_double_rst_mode = 1;
 	prm_top->bbd_only = 0;
 	prm_top->bbd_parallel = 0;
@@ -1084,6 +1121,7 @@ static void frc_state_init(void)
 	state_st->bypass_chg = false;
 	state_st->mc_phase0_rdma = false;
 	state_st->mc_link_available = false;
+	state_st->phs_swth = false;
 	if (state_st->force_n2m == 0)
 		memset(&state_st->n2m_status, 0, sizeof(state_st->n2m_status));
 	memset(&state_st->me_pcn_st, 0, sizeof(state_st->me_pcn_st));
@@ -1206,6 +1244,8 @@ void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch)
 	prm_top->mc_lp_mode = state_st->mc_lp_mode;
 	prm_top->use_inp_big = state_st->use_inp_big;
 	prm_top->frc_dae_div4 = dbg_st->ctrl_dbg.frc_dae_div4;
+	prm_top->badedit_en = 1; // nr + frc default
+	frc_top->badedit_en = 1; // nr + frc default
 	nr_dpe_dw_cfg(prm_top);
 	if (prm_top->dpe_dw_dsx == 1 && prm_top->dpe_dw_dsy == 1)
 		frc_top->is_me1mc4 = 0;
@@ -1254,6 +1294,7 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 {
 	struct vinfo_s *vinfo = get_current_vinfo();
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top; //ary need check
+	struct PRM_DPSS_DAE *prm_dae = prm_dpss_dae;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
 
@@ -1281,19 +1322,23 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 		w_reg_bit(FRC_DPSS_SRC_BUFF_RLS_CTRL, 1, 0, 1);	//release in order=1, 0:disorder
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 1, 0, 5);	//reg_dae_frm_dly_num
 		w_reg_bit(FRC_DPSS_LLM, 1, 0, 1);	// game mode
+		w_reg_bit(FRC_DPSS_LLM, 1, 3, 1);
 		w_reg_bit(FRC_ME_TOP_CTRL, 1, 29, 1);	//reg_me_mode_ctrl
 		// w_reg_bit(0x1139,3,8,2);// change vdin line clr from frm_done to frm_rst
-		wr(VPU_DAE_WRAP_BYPASS, (prm_top->frm_hsize << 16) | prm_top->frm_vsize);
+		// wr(VPU_DAE_WRAP_BYPASS, (prm_top->frm_hsize << 16) | prm_top->frm_vsize);
+		wr(VPU_DAE_WRAP_BYPASS,
+			(prm_dae->prm_size.me_hsize << 16) | prm_dae->prm_size.me_vsize);
 
 		w_reg_bit(FRC_REG_BLK_SCALE, 0, 0, 2);	//change form badedit to normal mode
 		w_reg_bit(VPU_DAE_WRAP_CTRL, 0, 0, 1);	//change frc me frm_start to hold-lint mode
 		if (prm_top->game_mode_n2m == 1) {
-			wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883088);	//tbc mux, vdin->me->mc->vpp
+			// wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883088);	//tbc mux, vdin->me->mc->vpp
 			//w_reg_bit(FRC_REG_TOP_CTRL7, 0x40000,0,20); //todo 1:2
+			w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
+		} else {
+			w_reg_bit_vc(VDIN_TOP_MISC, 0, 10, 2);  // game film
 		}
 		cfg_dpss_gmd_phs_lut(prm_top->frc_ratio, 1);	//set phase ini
-
-		w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
 
 		//change inp-tbc-ctrl frm_start from auto-config to reg-config
 		if (prm_top->sw_buf_rls_en == 1)
@@ -1302,6 +1347,7 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 	} else {
 		w_reg_bit(FRC_DPSS_SRC_BUFF_RLS_CTRL, 0, 0, 1);
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 2, 0, 5);
+		w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);
 	}
 	venc_vrr_vdin();
 
@@ -1341,13 +1387,19 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 	struct PRM_DPSS_TOP *prm_top, struct dpss_sub_vf_s *vfms, bool is_ex_di)
 {
-//      unsigned int val;
+	unsigned int vout_fr;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct dpss_frc_top_type_s *frc_top;
+	struct vinfo_s *vinfo = get_current_vinfo();
 
 	if (!prm_top || !vfms) {
 		DBG_ERR("%s is_ex_di:%d\n", __func__, is_ex_di);
 		return;
 	}
 
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+
+	frc_top = &pfw_data->frc_top_type;
 	prm_top->frm_hsize = vfms->width;
 	prm_top->frm_vsize = vfms->height;
 
@@ -1366,6 +1418,11 @@ void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 		prm_top->slc_num = 1;
 		prm_top->dpe_slc_num = 1;	//
 	}
+
+	if (prm_top->frm_hsize * prm_top->frm_vsize < 1920 * 1080)
+		prm_top->frc_fbuf_only = 1; //no dw buf
+	else
+		prm_top->frc_fbuf_only = 0;
 
 	if (pch->c.case_id == TST_CASE_IDX_0002) {
 		// prm_top->frc_ratio	   = DPSS_FRC_RATIO_1_2;
@@ -1437,17 +1494,23 @@ void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 		//w_reg_bit(VPU_AXIRD_PATH_CTRL,0,0,3);
 
 		// test game mode
-		prm_top->game_mode_n2m = 0;
+		prm_top->game_mode_n2m = frc_top->game_mode & 0x1;
+		prm_top->game_mode_film = (frc_top->game_mode >> 1) & 0x1;
+		dbg_i2("game_mode_n2m = %d game_mode_film = %d\n",
+			prm_top->game_mode_n2m, prm_top->game_mode_film);
 		// test soft contrl case
 		prm_top->sw_buf_rls_en = 0;
 		prm_top->sw_tbc_ctrl_en = 0;
-		prm_top->inp_done_int = 1;
+		// prm_top->inp_done_int = 1;
 		prm_top->me_mc_link_en = 0;
 
-		if (prm_top->game_mode_n2m | prm_top->game_mode_film)
+		if (prm_top->game_mode_n2m | prm_top->game_mode_film) {
 			prm_top->dpe_game_mode = 1;
-		else
+			prm_top->inp_done_int = 0;
+		} else {
 			prm_top->dpe_game_mode = 0;
+			prm_top->inp_done_int = 1;
+		}
 		fnr_dpe_obuf_rls_ini = 0;
 		if (prm_top->frc_fbuf_only == 1) {
 			prm_top->dae_dsx_scale = 1;
@@ -1484,17 +1547,23 @@ void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 		//w_reg_bit(VPU_AXIRD_PATH_CTRL,0,0,3);
 
 		// test game mode
-		prm_top->game_mode_n2m = 0;
+		prm_top->game_mode_n2m = frc_top->game_mode & 0x1;
+		prm_top->game_mode_film = (frc_top->game_mode >> 1) & 0x1;
+		dbg_i2("game_mode_n2m = %d game_mode_film = %d\n",
+			prm_top->game_mode_n2m, prm_top->game_mode_film);
 		// test soft contrl case
 		prm_top->sw_buf_rls_en = 0;
 		prm_top->sw_tbc_ctrl_en = 0;
-		prm_top->inp_done_int = 1;
+		// prm_top->inp_done_int = 1;
 		prm_top->me_mc_link_en = 0;
 
-		if (prm_top->game_mode_n2m | prm_top->game_mode_film)
+		if (prm_top->game_mode_n2m | prm_top->game_mode_film) {
 			prm_top->dpe_game_mode = 1;
-		else
+			prm_top->inp_done_int = 0;
+		} else {
 			prm_top->dpe_game_mode = 0;
+			prm_top->inp_done_int = 1;
+		}
 		fnr_dpe_obuf_rls_ini = 0;
 		if (prm_top->frm_hsize <= 1920 &&
 			(prm_top->frm_hsize * prm_top->frm_vsize <= 1920 * 1080)) {
@@ -1532,6 +1601,14 @@ void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 		pch->c.case_id == TST_CASE_IDX_0102) {
 		pch->d->frc_link = true;
 	}
+
+	if (vinfo)
+		vout_fr = vinfo->sync_duration_num / vinfo->sync_duration_den;
+
+	if (prm_top->frc_dae_div4 == 1 && vout_fr > 199 && prm_top->frm_vsize >= 1080) {
+		prm_top->dpe_dw_dsx = 2;
+		prm_top->dpe_dw_dsy = 2;
+	}
 	dbg_i2("frc link = %d\n", pch->d->frc_link);
 }
 
@@ -1552,6 +1629,18 @@ static void dpss_frc_h_val_init(struct dpss_ch_s *pch)
 	pch->c.prm_dae.prm_size_ext = &pch->c.prm_size;
 }
 
+void dpss_frc_only_reset(unsigned int para)
+{
+	if (para & 0x1) {
+		wr(DPSS_DPE_MC_TOP_RESET, BIT_22 + BIT_25);
+		dbg_f1("mc reset bit 22+25\n");
+	}
+	if (para & 0x2) {
+		w_reg_bit(DPSS_TOP_SOFT_RST, 0x047e, 0, 13);
+		w_reg_bit(DPSS_TOP_SOFT_RST, 0x0000, 0, 13);
+	}
+}
+
 void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vframe_s *vf)
 {
 	struct PRM_DPSS_TOP *prm_top = &pch->c.prm_top;//&prm_dpss_top;
@@ -1562,6 +1651,7 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 	struct dpss_frc_fw_data_s *pfw_data;
 	struct dpss_frc_top_type_s *frc_top;
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 
 	int i;
@@ -1578,11 +1668,22 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 	}
 	frc_top = &pfw_data->frc_top_type;
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 
 	dpss_frc_h_val_init(pch);
-	if (dpss_reset_ctrl)
-		dbg_dpss_reset(dpss_reset_ctrl);
+	dpss_frc_only_reset(state_st->frc_only_rst);
 	hw_init_part1(vf);
+
+	// game clr
+	w_reg_bit(VPU_DAE_WRAP_GMAE_MODE, 0xf, 4, 4); //4:7
+	w_reg_bit(VPU_DAE_WRAP_GMAE_MODE, 0x0, 4, 4);
+	w_reg_bit(DPSS_DPE_MC_TOP_RESET, 0xf, 11, 4);  //11:14
+	w_reg_bit(DPSS_DPE_MC_TOP_RESET, 0x0, 11, 4);
+	w_reg_bit(FRC_INP_RD_YLINE, 0xf, 20, 4);     //20:23
+	w_reg_bit(FRC_INP_RD_YLINE, 0x0, 20, 4);
+
+	w_reg_bit(VPU_DAE_WRAP_MIF_MASK, 1, 27, 1);
+
 	//tmp here:
 	for (i = 0; i < DPSS_VFM_IN_NUB; i++)
 		pch->d->h_dae_vf_idx[i] = 0xff;
@@ -1604,7 +1705,7 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 
 	ini_cfg_frc_dae = 0;
 	frc_fst_frm = 0;
-	dpss_dbg_uv_swap = 0x1f4; // only frc used
+	//dpss_dbg_uv_swap = 0x1f4; // only frc used
 	pch->c.cnt_in = 0;
 	pch->c.cnt_proce = 0;
 	frc_top->auto_align_en = 1;
@@ -1675,6 +1776,7 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 		prm_top->swap_64bit = 1;
 	}
 
+	//dpss_dbg_irq_ko = 0x0; // frc only close fw irq
 	_prm_top_init_frc(pch, prm_top, src); //path id 0 is src 0 //dpss_prm_init
 	dpss_val_2_top(prm_top, prm_user);
 	fpga_ucode_1217(prm_top, dpss_dbg_top_cfg0); //part of HW_Initialize 12-17
@@ -1686,6 +1788,15 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 	frc_top->hsize = prm_top->frm_hsize;
 	frc_top->vsize = prm_top->frm_vsize;
 	frc_top->dpss_mode = prm_top->dpss_mode;
+
+	if (prm_top->dpe_dw_dsx == 1 && prm_top->dpe_dw_dsy == 1)
+		frc_top->is_me1mc4 = 0;
+	else if (prm_top->dpe_dw_dsx == 2 && prm_top->dpe_dw_dsy == 2)
+		frc_top->is_me1mc4 = 1;
+	else if (prm_top->dpe_dw_dsx == 2 && prm_top->dpe_dw_dsy == 1)
+		frc_top->is_me1mc4 = 2;
+	dbg_h2("frc_top->is_me1mc4:%d\n", frc_top->is_me1mc4);
+
 	if (pfw_data->frc_input_cfg)
 		pfw_data->frc_input_cfg(pfw_data);
 	//} else {
@@ -1719,28 +1830,51 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 		w_reg_bit(FRC_DPSS_SRC_BUFF_RLS_CTRL, 1, 0, 1);	//release in order=1, 0:disorder
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 1, 0, 5);	//reg_dae_frm_dly_num
 		w_reg_bit(FRC_DPSS_LLM, 1, 0, 1);	// game mode
+		w_reg_bit(FRC_DPSS_LLM, 1, 3, 1);   // game mode inp
 		w_reg_bit(FRC_ME_TOP_CTRL, 1, 29, 1);	//reg_me_mode_ctrl
 		// w_reg_bit(0x1139,3,8,2);//reg_line_clr,chg vdin line clr from frm_done to frm_rst
-		wr(VPU_DAE_WRAP_BYPASS, (prm_top->frm_hsize << 16) | prm_top->frm_vsize);
+		// wr(VPU_DAE_WRAP_BYPASS, (prm_top->frm_hsize << 16) | prm_top->frm_vsize);
+		wr(VPU_DAE_WRAP_BYPASS,
+			(prm_dae->prm_size.me_hsize << 16) | prm_dae->prm_size.me_vsize);
 
 		w_reg_bit(FRC_REG_BLK_SCALE, 0, 0, 2);	//phase gain chg form badedit to normal mode
 		w_reg_bit(VPU_DAE_WRAP_CTRL, 0, 0, 1);	//change frc me frm_start to hold-lint mode
 		if (prm_top->game_mode_n2m == 1) {
-			wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883088);	//tbc mux, vdin->me->mc->vpp
+			// wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883088);	//tbc mux, vdin->me->mc->vpp
 			//w_reg_bit(FRC_REG_TOP_CTRL7, 0x40000,0,20); //todo 1:2
+			w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
+		} else {
+			w_reg_bit_vc(VDIN_TOP_MISC, 0, 10, 2);  // game film
 		}
+		wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883180); //tbc mux, vdin->inp->me->mc->vpp
 		cfg_dpss_gmd_phs_lut(prm_top->frc_ratio, 1);	//set phase ini
-
-		w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
 
 		//change inp-tbc-ctrl frm_start from auto-config to reg-config
 		if (prm_top->sw_buf_rls_en == 1)
 			w_reg_bit(FRC_INP_HOLD_CTRL, 1, 24, 1);
 
+		dpss_frc_set_dejudder(10);
+		dpss_frc_set_deblur(10);
+		set_video_mute(FRC_MUTE_SET, true);
+		game_st->video_mute_en = true;
+		//w_reg_bit(FRC_ME_GCV_EN, 0, 16, 1); // disable clear v-buffer
+		//w_reg_bit(FRC_ME_GCV2_EN, 0, 15, 1);// disable clear v-buffer2
+		//w_reg_bit(FRC_MC_HW_CTRL1, 0, 16, 1); // fhd->4K err mc_fhd_lbuf
+		//frc_top->fw_pause = 1; // pause fw
+		prm_top->badedit_en = 0;
+		frc_top->badedit_en = 0;
+		w_reg_bit(FRC_REG_INP_FRM_CTRL, 0, 4, 1); //game mode used auto frm_start mode
 	} else {
 		w_reg_bit(FRC_DPSS_SRC_BUFF_RLS_CTRL, 1, 0, 1);//release in order=1, 0:disorder
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 2, 0, 5);	//reg_dae_frm_dly_num
+		w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);	//reg_me_mode_ctrl
 	}
+
+	game_st->vdin_buf_num = get_vdin_buffer_num();
+	w_reg_bit(FRC_AUTO_MODE_BUFF_NUM,
+		game_st->vdin_buf_num, 0, 5); //set vdin buf num 1.29 from tao.yao
+
+	frc_set_mc_bypass(3);
 	venc_vrr_vdin();
 
 	w_reg_bit(FRC_REG_CURSOR, 1, 3, 1);
@@ -1756,6 +1890,9 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 	else
 		w_reg_bit(DPSS_DAE_TOP_ARB_MODE, 1, 0, 2);	//reg_dae_top_arb_mode
 	// hw_config_top_post(prm_top);
+
+	if (pchip_st && pchip_st->state_st.demo_win_en)
+		dpss_frc_demo_win(1, 0); // update mc demo size
 
 	if (dpss_dbg_top_cfg0 & C_BIT31)
 		f_dpss_hw_init(prm_top);
@@ -1940,6 +2077,13 @@ bool frc_only_input_buf(struct dpss_ch_s *pch, struct dpss_frc_i_s *frc_i)
 	unsigned int index;
 	struct dpss_sub_vf_s *vfs;
 	struct vframe_s *vf;
+	struct dpss_game_state_s *game_st;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st)
+		return false;
+
+	game_st = &pchip_st->game_st;
 
 	if (!frc_i || !frc_i->in_vfm) {
 		DBG_ERR("%s:no vf?\n", __func__);
@@ -1950,13 +2094,15 @@ bool frc_only_input_buf(struct dpss_ch_s *pch, struct dpss_frc_i_s *frc_i)
 	vf = frc_i->in_vfm;
 
 	index = pch->c.in_cnt % pch->c.in_b_nub;
+	if (game_st->vdin_buf_num)
+		index = pch->c.in_cnt % game_st->vdin_buf_num;
 	pch->c.in_cnt++;
 	frc_i->inp_idx = index;
 	if (pch->d->is_afbcd)
 		frc_prm_top_input_afbcd(prm_top, index, vfs);
 	else
 		frc_prm_top_input_buffer_set(prm_top, src, index, vfs);
-	dbg_h2("in:%d\n", index);
+	dbg_h2("in:%d vdin_buf_num:%d\n", index, game_st->vdin_buf_num);
 	pch->d->h_dae_vf_idx[index] = frc_i->idx;
 	dbg_h2("%s:dae_vf:set:%d,%d\n", __func__, index, frc_i->idx);
 
@@ -2061,6 +2207,7 @@ void frc_cut_win_chk_2_step(struct frc_win_s *vpp_win, struct vframe_s *vfm)
 	struct frc_cut_win_s *frc_win;
 	unsigned int src_width, src_height;
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 	static bool win_size_chg_flag;
 	u32 src_from_nr;
 	u32 align_base_h = 8, align_base_v = 8;
@@ -2084,18 +2231,21 @@ void frc_cut_win_chk_2_step(struct frc_win_s *vpp_win, struct vframe_s *vfm)
 	}
 	prm_top  = prm_dpss_top;
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 	frc_top = &pfw_data->frc_top_type;
 	frc_win = &pchip_st->win_st;
 
 	if (state_st->mc_cut_position == 1)
 		return;   // cut after mc
 
-	detect_crop_change(vpp_win, vfm);
-	if (!frc_win->cut_win_chg)
-		return;
+	if (!game_st->game_n2m && !game_st->game_film) {
+		detect_crop_change(vpp_win, vfm);
+		if (!frc_win->cut_win_chg)
+			return;
 
-	if (!state_st->mc_phase0_rdma)
-		return;
+		if (!state_st->mc_phase0_rdma)
+			return;
+	}
 
 	if (vpp_win->x_size == 0 || vpp_win->y_size == 0) {
 		dbg_f1("win size = 0, chg_fleg reset 0\n");
@@ -2156,6 +2306,7 @@ void frc_cut_win_chk_2_step(struct frc_win_s *vpp_win, struct vframe_s *vfm)
 			src_from_nr = 1;
 		if (frc_win->cut_win_en == 1) {
 			prm_top->cut_win_en = 1;
+			state_st->cut_pre_mc_work = 1;
 			prm_top->prm_cut_win.frm_hsize = src_width;
 			prm_top->prm_cut_win.frm_vsize = src_height;
 
@@ -2210,6 +2361,7 @@ void frc_cut_win_chk_2_step(struct frc_win_s *vpp_win, struct vframe_s *vfm)
 					frc_win->cut_win_en, prm_top->cut_win_en);
 		} else if (frc_win->cut_win_en == 0 && prm_top->cut_win_en == 1) {
 			prm_top->cut_win_en = 0;
+			state_st->cut_pre_mc_work = 1;
 			if (frc_top->mc_cut_en == 0)
 				frc_mc_cut_0(prm_top, src_from_nr);
 			else
@@ -2521,6 +2673,128 @@ static bool frc_get_current_frame(void)
 	return true;
 }
 
+unsigned int dpss_dbg_mc_byp_cnt = 0x5;
+module_param_named(dpss_dbg_mc_byp_cnt, dpss_dbg_mc_byp_cnt, uint, 0664);
+
+int pvpp_display_frc_game(struct vframe_s *vfm,
+			struct pvpp_dis_frc_para_in_s *in_para,
+			void *out_para)
+{
+	int ret = 0;
+	//struct pvpp_dis_frc_para_in_s *in;
+	//static int last_x, last_v;
+	enum EPVPP_FRC_API_MODE mode;
+	enum EPVPP_DISPLAY_FRC_MODE display_mode;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
+	bool is_vd1_link = false;
+
+	if (!vfm || !pchip_st)
+		return ret;
+
+	if (!in_para) {
+		dbg_h1("pvpp_game: in_para is null\n");
+		return ret;
+	}
+
+	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
+
+	if (!state_st->dpss_reg || !state_st->dpe_ready)
+		return ret;
+
+	is_vd1_link = is_vd1_link_state();
+
+	// if (is_vd1_link && state_st->need_switch_to_vd1)
+		// state_st->need_switch_to_vd1 = false;
+
+	if (!enable_mc_link && state_st->mc_set_phase0) {
+		state_st->is_frc_vpp_link = 0;
+		dbg_f1("\tret:0 enable_mc_link:%d mc_set_phase0:%d\n",
+				enable_mc_link,
+				state_st->mc_set_phase0);
+		return ret;
+	}
+	if (state_st->need_disable_mc_link || !game_st->mc_link_en) {
+		state_st->is_frc_vpp_link = 0;
+		return ret;
+	}
+	if (state_st->unformat_bypass &&
+		state_st->special_format == 1) {
+		state_st->is_frc_vpp_link = 0;
+		dbg_f1("\tret:0 unformat_bypass:%d special_format:%d\n",
+				state_st->unformat_bypass,
+				state_st->special_format);
+		return ret;
+	}
+
+	//get_nr_buf_idx(vfm, state_st);
+	//frc_cut_win_check(&in_para->win, vfm);
+	if (dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt) {
+		dbg_h1("\tret:0 dae0_cnt:%d link_cnt:%d\n", dpss_dae_frm_cnt_src0,
+			state_st->enable_frclink_cnt);
+		return ret;
+	}
+
+	mode = in_para->link_mode;
+	display_mode = in_para->dmode;
+	if (in_para) {
+		if (in_para->vinfo.x_d_size * in_para->vinfo.y_d_size <
+			in_para->vinfo.width * in_para->vinfo.height) {
+			dbg_h1("pvpp_game: litter_win bypass game frc\n");
+			return ret;
+		}
+
+		dbg_h1("pvpp_game in_para win:size(%d,%d),start(%d,%d),end(%d,%d),orig(%d,%d)\n",
+			in_para->win.x_size, in_para->win.y_size,
+			in_para->win.x_st, in_para->win.y_st,
+			in_para->win.x_end, in_para->win.y_end,
+			in_para->win.orig_w, in_para->win.orig_h);
+		dbg_h1("pvpp_game in_para vinfo:size(%d,%d)(%d,%d),start(%d,%d),end(%d,%d)\n",
+			in_para->vinfo.width, in_para->vinfo.height,
+			in_para->vinfo.x_d_size, in_para->vinfo.y_d_size,
+			in_para->vinfo.x_d_st, in_para->vinfo.y_d_st,
+			in_para->vinfo.x_d_end, in_para->vinfo.y_d_end);
+	}
+
+	if (display_mode == EPVPP_DISPLAY_MODE_FRC_BYPASS) {
+		if (state_st->is_frc_vpp_link) {
+			// state_st->need_switch_to_vd1 = true;
+			state_st->is_frc_vpp_link = 0;
+			state_st->have_update_vfcd = 0;
+			dbg_f1("pvpp_game bypass frc\n");
+		}
+		if (is_vd1_link)
+			w_reg_bit(DPSS_DPE_MC_START_CTRL, 3, 0, 2);
+		ret = 0;
+	} else if (display_mode == EPVPP_DISPLAY_MODE_FRC) {
+		if (!state_st->is_frc_vpp_link) {
+			state_st->is_frc_vpp_link = 1;
+			state_st->have_update_vfcd = 1;
+			state_st->mc_set_phase0 = false;
+			wr(DPSS_DPE_MC_TOP_RESET, BIT_25); // RESET BIT 25
+			w_reg_bit(DPSS_DPE_MC_START_CTRL, 2, 0, 2);
+			hw_mc_vfcd_cfg_update();
+			state_st->mc_bypass = true;
+			state_st->mc_bypass_cnt = dpss_dbg_mc_byp_cnt & 0xffff;
+			frc_set_mc_bypass(3);
+			dbg_f1("pvpp_game enable frc\n");
+		}
+		frc_transform_check(vfm, in_para);
+		frc_cut_win_chk_2_step(&in_para->win, vfm);
+		frc_cut_win_set_2_step(&in_para->win, vfm);
+		check_readback_reg(BIT_0);
+		check_readback_reg(BIT_5);
+		ret = 1;
+	}
+	check_readback_reg(BIT_1);
+	check_readback_reg(BIT_2);
+	check_readback_reg(BIT_3);
+	check_readback_reg(BIT_4);
+	return ret;
+}
+
 int pvpp_display_frc(struct vframe_s *vfm,
 			struct pvpp_dis_frc_para_in_s *in_para,
 			void *out_para)
@@ -2530,6 +2804,7 @@ int pvpp_display_frc(struct vframe_s *vfm,
 	enum EPVPP_DISPLAY_FRC_MODE display_mode;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 	struct frc_cut_win_s *frc_win;
 	bool is_vd1_link = false;
 
@@ -2537,7 +2812,13 @@ int pvpp_display_frc(struct vframe_s *vfm,
 		return ret;
 
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 	frc_win = &pchip_st->win_st;
+
+	if (game_st->game_n2m || game_st->game_film) { // game frc
+		ret = pvpp_display_frc_game(vfm, in_para, out_para);
+		return ret;
+	}
 
 	if (!vfm || !in_para) {
 		state_st->is_frc_vpp_link = 0;
@@ -2752,11 +3033,13 @@ void frc_unreg_clear_state(u32 ch)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 
 	if (!pchip_st || ch)
 		return;
 
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 
 	state_st->dpss_reg = 0;
 	state_st->is_frc_vpp_link = 0;
@@ -2766,6 +3049,20 @@ void frc_unreg_clear_state(u32 ch)
 	state_st->frc_en = false;
 	dpss_inp_frm_cnt = 0;
 	memset(&state_st->frc_int_st, 0, sizeof(state_st->frc_int_st));
+
+	if (game_st->game_n2m || game_st->game_film) {
+		// exit dpss need disable frc vrr
+		game_st->off_game_mode = true;
+		game_st->game_n2m = 0;
+		game_st->game_film = 0;
+		venc_vrr_vdin();
+	}
+
+	if (game_st->video_mute_en) {
+		game_st->video_mute_en = false;
+		set_video_mute(FRC_MUTE_SET, false);
+	}
+
 	dpss_frc_rdma_unreg();
 }
 
@@ -4698,12 +4995,78 @@ bool mc_phase0_ready(void)
 {
 	struct frc_chip_st *pchip_st;
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 
 	pchip_st = dpss_get_frc_st();
 
 	if (!pchip_st)
 		return false;
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 
-	return state_st->mc_phase0_rdma;
+	if (game_st->game_n2m || game_st->game_film)
+		return 1;
+	else
+		return state_st->mc_phase0_rdma;
+}
+
+int dpss_get_game_lock_st(struct dpss_status *state)
+{
+	u8 vrr_status;
+	u32 vrr_val;
+	static u32 vrr_lock_cnt;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+
+	if (!pchip_st)
+		return 0;
+
+	game_st = &pchip_st->game_st;
+	vrr_val = rd_vc(pchip_st->venc_ro_vrr);
+
+	if (!game_st->game_vrr_en) {
+		state->game_mode = 0;
+		state->game_frc_locked = 1;
+		return 0;
+	}
+
+	dbg_h0("vrr_val_ro:%x, vrr_lock_cnt:%d\n", vrr_val, vrr_lock_cnt);
+	vrr_status = (vrr_val >> 31) & 0x1;
+	state->game_mode = game_st->game_n2m ? 0x1 :
+					   game_st->game_film ? 0x2 : 0;
+
+	if (vrr_status)
+		vrr_lock_cnt++;
+	else
+		vrr_lock_cnt = 0;
+
+	state->game_frc_locked =
+		vrr_lock_cnt > game_st->vrr_drop_cnt ? vrr_status : 0;
+
+	return 0;
+}
+
+void vdin_game_frc_notify(struct game_frc_s *frc_data)
+{
+	struct dpss_frc_top_type_s *frc_top;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	// struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
+
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pchip_st || !pfw_data)
+		return;
+
+	// state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
+	frc_top = &pfw_data->frc_top_type;
+
+	if (!frc_data->vdin_stop_dec) {
+		dbg_h0("vdin stop dec\n");
+		if (frc_top->game_mode) {
+			game_st->off_game_mode = true;
+			venc_vrr_vdin();
+		}
+	}
 }

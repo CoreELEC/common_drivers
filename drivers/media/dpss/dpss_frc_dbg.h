@@ -43,22 +43,26 @@ ssize_t dpss_frc_param_store(const struct class *class, const struct class_attri
 ssize_t dpss_frc_other_show(const struct class *class, const struct class_attribute *attr,
 			    char *buf);
 ssize_t dpss_frc_other_store(const struct class *class, const struct class_attribute *attr,
-			     const char *buf, size_t count);
+			    const char *buf, size_t count);
 ssize_t dpss_frc_probe_dbg_show(const struct class *class,
 				const struct class_attribute *attr, char *buf);
 ssize_t dpss_frc_probe_dbg_store(const struct class *class,
-				 const struct class_attribute *attr, const char *buf,
-				 size_t count);
+				const struct class_attribute *attr, const char *buf,
+				size_t count);
 ssize_t dpss_frc_dump_reg_table_show(const struct class *class,
-				     const struct class_attribute *attr, char *buf);
+			const struct class_attribute *attr, char *buf);
 ssize_t dpss_frc_dump_reg_table_store(const struct class *class,
-				      const struct class_attribute *attr,
-				      const char *buf, size_t count);
+			const struct class_attribute *attr,
+			const char *buf, size_t count);
 ssize_t dpss_frc_rdma_show(const struct class *class,
-				const struct class_attribute *attr, char *buf);
+			const struct class_attribute *attr, char *buf);
 ssize_t dpss_frc_rdma_store(const struct class *class,
-				const struct class_attribute *attr,
-						const char *buf, size_t count);
+			const struct class_attribute *attr,
+			const char *buf, size_t count);
+ssize_t dpss_frc_game_show(const struct class *class,
+			const struct class_attribute *attr, char *buf);
+ssize_t dpss_frc_game_store(const struct class *class,
+			const struct class_attribute *attr, const char *buf, size_t count);
 
 void dump_vfcd_reg_t6w(void);
 void dump_param_frc_init_apb(void);

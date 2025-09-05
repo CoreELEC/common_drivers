@@ -32,6 +32,7 @@
 #include "dpss_hw.h"
 #include "dpss_func.h"
 #include "dpss_s_frc.h"
+#include "dpss_rdma.h"
 
 #include "hw/dpss.h"
 #include "hw/dpss_phslut.h"
@@ -1126,7 +1127,8 @@ void dpss_val_user(struct dpss_ch_s *pch,
 	if (dpss_dbg_tst_case) {
 		pch->c.case_id = dpss_dbg_tst_case;
 	} else {
-		if (pch->c.parm.dps_work_mode & DPSS_WORK_MODE_MAIN)
+		if (pch->c.parm.dps_work_mode & DPSS_WORK_MODE_MAIN ||
+			pch->c.parm.dps_work_mode == DPSS_WORK_MODE_FRC)
 			src = 0;
 		else
 			src = 1;
@@ -2693,6 +2695,7 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	if (pch->c.case_id == TST_CASE_IDX_0157)
 		pch->d->en_di_src = true;
 
+	dpss_dbg_irq_ko = 0x1111;
 	if (light_chg) { //1005
 		_prm_top_init_light(pch, prm_top, src, false, vf);
 //		dpss_val_2_top(prm_top, prm_user);
@@ -3541,18 +3544,29 @@ void dbg_step4_int_dpe(unsigned int step)
 void dbg_step0_trig_input(unsigned int index)
 {
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
 
-	if (!src0_data_trigger() && !nr_bypass_test) {
+	if (!pchip_st)
+		return;
+
+	game_st = &pchip_st->game_st;
+
+	if (!src0_data_trigger()) {
 		DBG_WARN("%s:src0 no rd\n", __func__);
 		return;
 	}
+
 	if (prm_top->game_mode_n2m == 1 || prm_top->game_mode_film == 1) {
+		w_reg_bit_vc(VDIN_TOP_SIZE, game_st->vdin_buf_num - 1, 20, 4);
+		// w_reg_bit_vc(VDIN_TOP_SIZE, dpss_frc_vrr_index, 16, 4);
 		w_reg_bit_vc(VDIN_TOP_SIZE, index, 16, 4);
-		w_reg_bit_vc(VDIN_TOP_SIZE, 1, 24, 1);
+		// w_reg_bit_vc(VDIN_TOP_SIZE, 1, 24, 1);
 	}
 	dbg_h1("%s:index =%d\n", __func__, index);
 	w_reg_bit(FRC_REG_INP_IBUF_CFG, index, 4, 4);
 	cfg_dpss_done_trigger(FRC_SRC_DONE);
+
 	dbg_h2("%s:index =%d, VDIN_TOP_SIZE=%#X, DPSS_REG_INP_IBUF=%#X\n",
 	       __func__, index, rd_vc(VDIN_TOP_SIZE), rd(FRC_REG_INP_IBUF_CFG));
 	src0_frm_idx_cnt++;

@@ -61,6 +61,7 @@
 #include <linux/amlogic/media/vpu_secure/vpu_secure.h>
 #endif
 #include <linux/amlogic/media/vrr/vrr.h>
+#include <linux/amlogic/media/dpss/frc_common_x.h>
 /* Local Headers */
 #include "../tvin_global.h"
 #include "../tvin_format_table.h"
@@ -566,6 +567,20 @@ void vdin_frame_lock_check(struct vdin_dev_s *devp, int state)
 		}
 		devp->vrr_data.frame_lock_vrr_en = false;
 	}
+}
+
+void vdin_game_frc_check(struct vdin_dev_s *devp, int state)
+{
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+	struct game_frc_s frc_data;
+
+	// if (!state)
+		// if (devp->vdin_game_frc && devp->game_mode) {
+			//notify close game frc
+		frc_data.vdin_stop_dec = 0;
+		vdin_game_frc_notify(&frc_data);
+		// }
+#endif
 }
 
 static inline void vdin_get_in_out_fps(struct vdin_dev_s *devp)
@@ -2200,6 +2215,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	if (IS_HDMI_SRC(devp->parm.port))
 		vdin_mute_vpp(devp, true);
 
+	vdin_game_frc_check(devp, 0);//check game frc status
 	disable_irq(devp->irq);
 	devp->flags &= (~VDIN_FLAG_ISR_EN);
 	vdin_unregister_rdma_read(devp);
