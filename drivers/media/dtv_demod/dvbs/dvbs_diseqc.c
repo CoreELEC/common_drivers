@@ -117,6 +117,10 @@ int aml_diseqc_set_lnb_voltage(struct aml_diseqc *diseqc,
 		return -EINVAL;
 	}
 
+	// setup OFF to ON
+	if (diseqc->voltage == SEC_VOLTAGE_OFF && voltage != SEC_VOLTAGE_OFF)
+		usleep_range(50000, 51000);
+
 	diseqc->voltage = voltage;
 
 	return ret;
@@ -267,9 +271,9 @@ int aml_diseqc_set_voltage(struct dvb_frontend *fe,
 
 	ret = aml_diseqc_set_lnb_voltage(diseqc, voltage);
 
-	c->voltage = voltage;
+	dprintk(1, "%s: %d to %d ret %d\n", __func__, c->voltage, voltage, ret);
 
-	dprintk(1, "%s: %d ret %d\n", __func__, voltage, ret);
+	c->voltage = voltage;
 
 	mutex_unlock(&devp->lock);
 
@@ -362,7 +366,7 @@ int aml_diseqc_send_master_cmd(struct dvb_frontend *fe,
 	struct amldtvdemod_device_s *devp = (struct amldtvdemod_device_s *)demod->priv;
 	struct aml_diseqc *diseqc = &devp->diseqc;
 	bool tone = diseqc->tone_on;
-	bool unicable_cmd = false;
+	unsigned char unicable_cmd = 0;
 
 	mutex_lock(&devp->lock);
 
@@ -412,16 +416,27 @@ int aml_diseqc_send_master_cmd(struct dvb_frontend *fe,
 	 */
 	if ((cmd->msg[0] == 0xE0 &&
 		(cmd->msg[1] == 0x00 || cmd->msg[1] == 0x10 || cmd->msg[1] == 0x11) &&
-		(cmd->msg[2] == 0x5A || cmd->msg[2] == 0x5B)) ||
-		cmd->msg[0] == 0x70 || cmd->msg[0] == 0x71 ||
+		(cmd->msg[2] == 0x5A || cmd->msg[2] == 0x5B)))
+		unicable_cmd = 1; // V1
+	else if (cmd->msg[0] == 0x70 || cmd->msg[0] == 0x71 ||
 		(0x7A <= cmd->msg[0] && 0x7E >= cmd->msg[0]))
-		unicable_cmd = true;
+		unicable_cmd = 2;  // V2
 
 	if (unicable_cmd) {
+		if (unicable_cmd == 2) {
+			if (diseqc->voltage != SEC_VOLTAGE_13)
+				aml_diseqc_set_lnb_voltage(diseqc, SEC_VOLTAGE_13);
+
+			usleep_range(2000, 3000);
+		}
+
 		if (diseqc->voltage != SEC_VOLTAGE_18)
 			aml_diseqc_set_lnb_voltage(diseqc, SEC_VOLTAGE_18);
 
-		usleep_range(4000, 5000);
+		if (unicable_cmd == 2)
+			usleep_range(2000, 3000);
+		else
+			usleep_range(4000, 5000);
 	}
 
 	dprintk(1, "send len %d, msg: [0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X]\n",
@@ -637,7 +652,7 @@ void aml_diseqc_attach(struct device *dev, struct dvb_frontend *fe)
 		}
 
 		ret = wt20_1811_create(&diseqc->lnbc, i2c_adap, i2c_addr);
-
+		diseqc->lnbc.name = diseqc->name;
 		if (diseqc->lnbc.init)
 			diseqc->lnbc.init(&diseqc->lnbc);
 	} else {
@@ -654,7 +669,7 @@ void aml_diseqc_attach(struct device *dev, struct dvb_frontend *fe)
 		}
 
 		ret = gpio_lnbc_create(&diseqc->lnbc, gpio_en, gpio_sel);
-
+		diseqc->lnbc.name = diseqc->name;
 		if (diseqc->lnbc.init)
 			diseqc->lnbc.init(&diseqc->lnbc);
 	}

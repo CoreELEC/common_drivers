@@ -91,13 +91,45 @@ static int gpio_lnbc_set_voltage(struct lnbc *lnbc,
 	}
 
 	if (voltage != LNBC_VOLTAGE_OFF) {
-		if (lnbc->voltage != LNBC_VOLTAGE_OFF)
-			usleep_range(6000, 7000);
-		else
-			usleep_range(50000, 51000);
+		// switch between 13V and 18V
+		if (lnbc->voltage != LNBC_VOLTAGE_OFF) {
+			if (!strncasecmp(lnbc->name, "TMI8037", strlen("TMI8037")) ||
+				!strncasecmp(lnbc->name, "STI8036", strlen("STI8036")))
+				usleep_range(1000, 1500);
+			else if (!strncasecmp(lnbc->name, "sgm_41286", strlen("sgm_41286")) ||
+				!strncasecmp(lnbc->name, "sgm41286", strlen("sgm41286")))
+				usleep_range(6000, 7000);
+			else if (!strncasecmp(lnbc->name, "LP6220A", strlen("LP6220A")))
+				usleep_range(10000, 11000);
+			else
+				usleep_range(2000, 2500);
+		} else {
+			// OFF to 13/18V
+			if (!strncasecmp(lnbc->name, "TMI8037", strlen("TMI8037")) ||
+				!strncasecmp(lnbc->name, "STI8036", strlen("STI8036")))
+				usleep_range(1500, 2000);
+			else if (!strncasecmp(lnbc->name, "sgm_41286", strlen("sgm_41286")) ||
+				!strncasecmp(lnbc->name, "sgm41286", strlen("sgm41286")))
+				usleep_range(20000, 21000);
+			else if (!strncasecmp(lnbc->name, "LP6220A", strlen("LP6220A")))
+				usleep_range(10000, 11000);
+			else
+				usleep_range(2000, 2500);
+		}
 	} else {
-		if (lnbc->voltage != LNBC_VOLTAGE_OFF)
-			usleep_range(24000, 25000);
+		// 13/18V to OFF
+		if (lnbc->voltage != LNBC_VOLTAGE_OFF) {
+			if (!strncasecmp(lnbc->name, "TMI8037", strlen("TMI8037")) ||
+				!strncasecmp(lnbc->name, "STI8036", strlen("STI8036")))
+				usleep_range(1000, 1500);
+			else if (!strncasecmp(lnbc->name, "sgm_41286", strlen("sgm_41286")) ||
+				!strncasecmp(lnbc->name, "sgm41286", strlen("sgm41286")))
+				usleep_range(20000, 21000);
+			else if (!strncasecmp(lnbc->name, "LP6220A", strlen("LP6220A")))
+				usleep_range(10000, 11000);
+			else
+				usleep_range(2000, 2500);
+		}
 	}
 
 	lnbc->voltage = voltage;

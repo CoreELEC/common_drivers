@@ -59,6 +59,8 @@ struct lnbc {
 	int high_voltage;             /* Definition of high voltage. */
 	void *user;                   /* User defined data. */
 
+	const char *name;
+
 	enum LNBC_STATE state;                 /* The state of this driver */
 	enum LNBC_VOLTAGE voltage;             /* Current voltage. */
 	enum LNBC_TONE tone;                   /* Current tone status. */

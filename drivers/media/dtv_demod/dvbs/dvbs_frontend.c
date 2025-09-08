@@ -505,6 +505,8 @@ void dvbs_blind_scan_new_work(struct work_struct *work)
 		else
 			PR_ERR("invalid unicable ver %d\n",
 					devp->singlecable_param.version);
+	} else {
+		demod->demod_status.is_singlecable = 0;
 	}
 
 	demod->last_lock = -1;
@@ -1446,6 +1448,7 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 	int integer = 0, integer1 = 0, integer2 = 0, integer3 = 0;
 	unsigned int decimal = 0, decimal1 = 0, decimal2 = 0, decimal3 = 0;
 	unsigned char TRY_LOCK_TIMES = 60; //100ms x 60 = 6000ms
+	unsigned char bak_spectrum = 0;
 
 	fe = &demod->frontend;
 
@@ -1456,7 +1459,6 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 	demod->blind_result_frequency = 0;
 	demod->blind_result_symbol_rate = 0;
 
-	PR_DVBS("[id %d] start launch_spectrum %d\n", demod->id, dvbs_blind_spectrum_invert);
 	c->symbol_rate = 45000000;
 	c->bandwidth_hz = 8000000;
 	c->modulation = QPSK;
@@ -1474,13 +1476,20 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 
 	if (devp->singlecable_param.version) {
 		demod->demod_status.is_singlecable = 1;
-		dvbs_blind_spectrum_invert = 1;
+		bak_spectrum = dvbs_blind_spectrum_invert;
+		if (devp->singlecable_param.version == SINGLECABLE_VERSION_1_EN50494)
+			dvbs_blind_spectrum_invert = 1; //V1
+		else
+			dvbs_blind_spectrum_invert = 0; //V2
+
 		//when blind scan started, reset the voltage for H/V polarization.
 		if (devp->singlecable_param.version != SINGLECABLE_VERSION_UNKNOWN)
 			aml_diseqc_set_voltage(fe, SEC_VOLTAGE_13);
 		else
 			PR_ERR("%s: invalid unicable ver %d\n", __func__,
 					devp->singlecable_param.version);
+	} else {
+		demod->demod_status.is_singlecable = 0;
 	}
 
 	f_max = MIN_FREQ_KHZ;
@@ -1493,9 +1502,13 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 	asperity = 0;
 	sr_est = 0;
 
+	PR_INFO("[id %d] start launch_spectrum %d, version %d\n",
+			demod->id, dvbs_blind_spectrum_invert,
+			devp->singlecable_param.version);
+
 	while (f_max < MAX_FREQ_KHZ) {
 		if (devp->blind_scan_stop)
-			return;
+			break;
 
 		PR_INFO("Search From: [%d KHz to %d KHz]\n", f_max, MAX_FREQ_KHZ);
 		PR_DVBS("=====f_max %d KHz,freq_add %d KHz, freq_add1 %d KHz, ",
@@ -1554,7 +1567,7 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 		//when a signal is detected, report blind scan result
 		if (asperity == 2) {
 			if (devp->blind_scan_stop)
-				return;
+				break;
 
 			dvbs2_reg_initial(fe, sr_est, 1);
 		}
@@ -1565,7 +1578,7 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 		car_offset_lock2 = 0;
 		while (dly_cnt < BLIND_TIM && asperity == 2) {
 			if (devp->blind_scan_stop)
-				return;
+				break;
 
 			PR_DVBS("f_max %d KHz,sr_est %d KS/s,dly_cnt %d,second_lock %d, ",
 					f_max, sr_est, dly_cnt, second_lock);
@@ -1622,7 +1635,7 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 			second_lock = 0;
 			while (ts_lock == 0 && dly_cnt < BLIND_TIM) {
 				if (devp->blind_scan_stop)
-					return;
+					break;
 
 				dly_cnt++;
 				sr_lock_dly = sr_lock;
@@ -1776,6 +1789,10 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 			}
 		}
 
+		// for previous step "stop" to exit
+		if (devp->blind_scan_stop)
+			break;
+
 		if (ts_lock == 1 && asperity == 2) {
 			PR_DBGL("search result: freq_est %d KHz, freq_result %d KHz",
 				f_max, f_max - car_offset_lock / 1000);
@@ -1867,6 +1884,9 @@ void dvbs_blind_scan_new_work2(struct aml_dtvdemod *demod)
 		PR_INFO("%s: force 100%% to upper layer\n", __func__);
 		dvb_frontend_add_event(fe, status);
 		devp->blind_scan_stop = 1;
+		if (demod->demod_status.is_singlecable)
+			dvbs_blind_spectrum_invert = bak_spectrum;
+
 		devp->singlecable_param.version = 0;
 	}
 
