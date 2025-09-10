@@ -432,6 +432,7 @@ extern struct hw_vpp_path_size_s vpp_path_size_reg;
 extern struct hw_vpp_path_size_s vpp_path_size_reg_t6w;
 extern struct hw_viu_misc_reg_s viu_misc_reg;
 extern struct hw_vppx_blend_reg_s vppx_blend_reg_array[MAX_VPP_NUM - 1];
+extern struct hw_vppx_blend_reg_s vppx_blend_reg_a9_array[MAX_VPP_NUM - 1];
 
 extern struct hw_vd_reg_s vd_mif_reg_c3_array[MAX_VD_LAYER_C3];
 extern struct hw_vd_linear_reg_s vd_mif_linear_reg_c3_array[MAX_VD_LAYER_C3];

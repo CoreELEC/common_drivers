@@ -16625,6 +16625,62 @@ static struct amvideo_device_data_s amvideo_t6x = {
 	.share_afbc_with_di = 1,
 	.has_2ppc_support = 1,
 };
+
+static struct amvideo_device_data_s amvideo_a9 = {
+	.cpu_type = MESON_CPU_MAJOR_ID_A9_,
+	.sr_reg_offt = 0x1e00,
+	.sr_reg_offt2 = 0x1f80,
+	.layer_support[0] = 1,
+	.layer_support[1] = 1,
+	.layer_support[2] = 1,
+	.afbc_support[0] = 1,
+	.afbc_support[1] = 1,
+	.afbc_support[2] = 1,
+	.pps_support[0] = 1,
+	.pps_support[1] = 1,
+	.pps_support[2] = 1,
+	.alpha_support[0] = 1,
+	.alpha_support[1] = 1,
+	.alpha_support[2] = 1,
+	.dv_support = 1,
+	.sr0_support = 0,
+	.sr1_support = 0,
+	.inline_aisr_support = 1,
+	.core_v_disable_width_max[0] = 4096,
+	.core_v_disable_width_max[1] = 4096,
+	.core_v_enable_width_max[0] = 2048,
+	.core_v_enable_width_max[1] = 2048,
+	.supscl_path = VSR_BEFORE_VE,
+	.fgrain_support[0] = 1,
+	.fgrain_support[1] = 1,
+	.fgrain_support[2] = 0,
+	.has_hscaler_8tap[0] = 1,
+	.has_hscaler_8tap[1] = 1,
+	.has_hscaler_8tap[2] = 1,
+	.has_pre_hscaler_ntap[0] = 2,
+	.has_pre_hscaler_ntap[1] = 2,
+	.has_pre_hscaler_ntap[2] = 2,
+	.has_pre_vscaler_ntap[0] = 1,
+	.has_pre_vscaler_ntap[1] = 1,
+	.has_pre_vscaler_ntap[2] = 1,
+	.src_width_max[0] = 4096,
+	.src_width_max[1] = 4096,
+	.src_width_max[2] = 2048,
+	.src_height_max[0] = 2160,
+	.src_height_max[1] = 2160,
+	.src_height_max[2] = 1088,
+	.ofifo_size = 0x1000,
+	.afbc_conv_lbuf_len[0] = 0x100,
+	.afbc_conv_lbuf_len[1] = 0x100,
+	.afbc_conv_lbuf_len[2] = 0x80,
+	.mif_linear = 1,
+	.display_module = T7_DISPLAY_MODULE,
+	.max_vd_layers = 3,
+	.has_vpp1 = 1,
+	.has_vpp2 = 1,
+	.is_tv_panel = 0,
+};
+
 #endif
 
 static struct video_device_hw_s legcy_dev_property = {
@@ -16859,6 +16915,10 @@ static const struct of_device_id amlogic_amvideom_dt_match[] = {
 		.compatible = "amlogic, amvideom-t6x",
 		.data = &amvideo_t6x,
 	},
+	{
+		.compatible = "amlogic, amvideom-a9",
+		.data = &amvideo_a9,
+	},
 #endif
 	{}
 };
@@ -17038,6 +17098,15 @@ bool video_is_meson_t6x_cpu(void)
 {
 	if (amvideo_meson_dev.cpu_type ==
 		MESON_CPU_MAJOR_ID_T6X_)
+		return true;
+	else
+		return false;
+}
+
+bool video_is_meson_a9_cpu(void)
+{
+	if (amvideo_meson_dev.cpu_type ==
+		MESON_CPU_MAJOR_ID_A9_)
 		return true;
 	else
 		return false;
@@ -17370,7 +17439,8 @@ static int amvideom_probe(struct platform_device *pdev)
 		memcpy(&amvideo_meson_dev.dev_property, &t6d_dev_property,
 		       sizeof(struct video_device_hw_s));
 		cur_dev->power_ctrl = true;
-	} else if (amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_T6W_) {
+	} else if (amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_T6W_ ||
+		amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_A9_) {
 		memcpy(&amvideo_meson_dev.dev_property, &t6w_dev_property,
 		       sizeof(struct video_device_hw_s));
 		cur_dev->power_ctrl = false;

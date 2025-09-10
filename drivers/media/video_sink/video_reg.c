@@ -993,6 +993,27 @@ struct hw_vppx_blend_reg_s vppx_blend_reg_array[MAX_VPP_NUM - 1] = {
 	},
 };
 
+struct hw_vppx_blend_reg_s vppx_blend_reg_a9_array[MAX_VPP_NUM - 1] = {
+	{
+		A9_VPP1_BLD_DIN0_HSCOPE,
+		A9_VPP1_BLD_DIN0_VSCOPE,
+		A9_VPP1_BLD_OUT_SIZE,
+		A9_VPP1_BLD_CTRL,
+		A9_VPP1_BLEND_BLEND_DUMMY_DATA,
+		A9_VPP1_BLEND_DUMMY_ALPHA,
+		A9_VPP1_BLEND_CTRL,
+	},
+	{
+		A9_VPP2_BLD_DIN0_HSCOPE,
+		A9_VPP2_BLD_DIN0_VSCOPE,
+		A9_VPP2_BLD_OUT_SIZE,
+		A9_VPP2_BLD_CTRL,
+		A9_VPP2_BLEND_BLEND_DUMMY_DATA,
+		A9_VPP2_BLEND_DUMMY_ALPHA,
+		A9_VPP2_BLEND_CTRL,
+	},
+};
+
 struct hw_viu_misc_reg_s viu_misc_reg = {
 	MALI_AFBCD_TOP_CTRL,
 	MALI_AFBCD1_TOP_CTRL,

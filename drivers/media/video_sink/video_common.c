@@ -1570,14 +1570,25 @@ static void dump_vppx_blend_reg(void)
 		return;
 
 	for (i = 0; i < 2; i++) {
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_din0_hscope;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_din0_vscope;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_out_size;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_ctrl;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_dummy_data;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_dummy_alpha;
-		vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_blend_ctrl;
-		j = 0;
+		if (video_is_meson_a9_cpu()) {
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_din0_hscope;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_din0_vscope;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_out_size;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_ctrl;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_dummy_data;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_bld_dummy_alpha;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_a9_array[i].vpp_blend_ctrl;
+			j = 0;
+		} else {
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_din0_hscope;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_din0_vscope;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_out_size;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_ctrl;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_dummy_data;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_bld_dummy_alpha;
+			vppx_blend_reg[i][j++] = vppx_blend_reg_array[i].vpp_blend_ctrl;
+			j = 0;
+		}
 	}
 	if (cur_dev->has_vpp1) {
 		pr_info("vpp1 blend regs:\n");

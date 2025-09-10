@@ -889,6 +889,7 @@ enum cpu_type_e {
 	MESON_CPU_MAJOR_ID_T6D_,
 	MESON_CPU_MAJOR_ID_T6W_,
 	MESON_CPU_MAJOR_ID_T6X_,
+	MESON_CPU_MAJOR_ID_A9_,
 	MESON_CPU_MAJOR_ID_UNKNOWN_,
 };
 
@@ -1295,6 +1296,7 @@ bool video_is_meson_s6_cpu(void);
 bool video_is_meson_t6d_cpu(void);
 bool video_is_meson_t6w_cpu(void);
 bool video_is_meson_t6x_cpu(void);
+bool video_is_meson_a9_cpu(void);
 bool video_is_after_meson_t6w_cpu(void);
 bool video_is_after_meson_t6x_cpu(void);
 void alpha_win_set(struct video_layer_s *layer);

@@ -555,6 +555,30 @@
 #define VPP2_BLEND_BLEND_DUMMY_DATA                0x59e9
 #define VPP2_BLEND_DUMMY_ALPHA                     0x59ea
 
+#define A9_VPP1_BLD_CTRL                              0x6485
+#define A9_VPP1_BLD_OUT_SIZE                          0x6486
+#define A9_VPP1_BLD_DIN0_HSCOPE                       0x6487
+#define A9_VPP1_BLD_DIN0_VSCOPE                       0x6488
+#define A9_VPP1_BLD_DIN1_HSCOPE                       0x6489
+#define A9_VPP1_BLD_DIN1_VSCOPE                       0x648a
+#define A9_VPP1_BLD_DIN2_HSCOPE                       0x648b
+#define A9_VPP1_BLD_DIN2_VSCOPE                       0x648c
+#define A9_VPP1_BLEND_CTRL                            0x64a8
+#define A9_VPP1_BLEND_BLEND_DUMMY_DATA                0x64a9
+#define A9_VPP1_BLEND_DUMMY_ALPHA                     0x64aa
+
+#define A9_VPP2_BLD_CTRL                              0x64c5
+#define A9_VPP2_BLD_OUT_SIZE                          0x64c6
+#define A9_VPP2_BLD_DIN0_HSCOPE                       0x64c7
+#define A9_VPP2_BLD_DIN0_VSCOPE                       0x64c8
+#define A9_VPP2_BLD_DIN1_HSCOPE                       0x64c9
+#define A9_VPP2_BLD_DIN1_VSCOPE                       0x64ca
+#define A9_VPP2_BLD_DIN2_HSCOPE                       0x64cb
+#define A9_VPP2_BLD_DIN2_VSCOPE                       0x64cc
+#define A9_VPP2_BLEND_CTRL                            0x64e8
+#define A9_VPP2_BLEND_BLEND_DUMMY_DATA                0x64e9
+#define A9_VPP2_BLEND_DUMMY_ALPHA                     0x64ea
+
 /* aisr */
 #define AISR_RESHAP_CTRL0                          0x2e40
 #define AISR_RESHAP_CTRL1                          0x2e41

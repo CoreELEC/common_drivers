@@ -756,7 +756,8 @@ static void set_cfg_pi_safa(struct vsr_setting_s *vsr)
 		!vsr_safa->prev_en) {
 		if ((video_is_meson_s6_cpu() ||
 			video_is_meson_t6w_cpu() ||
-			video_is_meson_t6x_cpu()) &&
+			video_is_meson_t6x_cpu() ||
+			video_is_meson_a9_cpu()) &&
 			hsize_in <= 2048)
 			vsr_safa->dejaggy_en = true & dejaggy_en;
 		else if (video_is_meson_t6d_cpu() &&

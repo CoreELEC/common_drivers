@@ -2288,20 +2288,19 @@
 		/* vdin v4l2 end */
 	};
 
-	meson-amvideom {
-		compatible = "amlogic, amvideom-s6";
+	amvideom: meson-amvideom {
+		compatible = "amlogic, amvideom-a9";
 		dev_name = "amvideom";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 195 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "vsync", "line_n";
+			GIC_SPI 194 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "vsync", "vsync_viu2";
 		low_latency = <1>;
-		low_latency_en = <1>;
 	};
 
 	lut_dma:lut_dma {
 		compatible = "amlogic, meson-s5, lut_dma";
-		status = "disabled";
+		status = "okay";
 	};
 
 	v2d {
@@ -2330,7 +2329,7 @@
 	};
 
 	vpu_security {
-		compatible = "amlogic, meson-s7, vpu_security";
+		compatible = "amlogic, meson-t6d, vpu_security";
 		dev_name = "amlogic-vpu-security";
 		status = "okay";
 		interrupts = <GIC_SPI 220 IRQ_TYPE_EDGE_RISING>;
