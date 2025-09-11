@@ -4,6 +4,9 @@
  */
 
 #include <linux/clk.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 #include <linux/err.h>
 
 #include "of-clk-common.h"
@@ -30,8 +33,57 @@ struct regmap *aml_clk_regmap_init(struct platform_device *pdev)
 }
 EXPORT_SYMBOL_GPL(aml_clk_regmap_init);
 
+#ifdef CONFIG_DEBUG_FS
+static const struct {
+	unsigned int type;
+	const char *name;
+} clk_types[] = {
+#define ENTRY(f) { f, #f }
+	ENTRY(AML_CLK_MUX),
+	ENTRY(AML_CLK_DIV),
+	ENTRY(AML_CLK_GATE),
+	ENTRY(AML_CLK_DUALDIV),
+	ENTRY(AML_CLK_GENERAL),
+	ENTRY(AML_CLK_NOGLITCH),
+	ENTRY(AML_CLK_PLL),
+#undef ENTRY
+};
+
+static int aml_clk_types_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct aml_clk *clk = to_aml_clk(hw);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(clk_types); i++) {
+		if (clk_types[i].type == clk->type) {
+			seq_printf(s, "%s\n", clk_types[i].name);
+			return 0;
+		}
+	}
+
+	seq_puts(s, "UNKNOWN\n");
+
+	return -EINVAL;
+}
+
+static int aml_clk_types_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, aml_clk_types_show, inode->i_private);
+}
+
+const struct file_operations aml_clk_type_fops = {
+	.owner		= THIS_MODULE,
+	.open		= aml_clk_types_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+EXPORT_SYMBOL_GPL(aml_clk_type_fops);
+#endif
+
 #ifdef CONFIG_OF
-static int of_get_aml_clk_real_parent_index(struct device_node *np, int index)
+static int of_aml_clk_get_real_parent_index(struct device_node *np, int index)
 {
 	int count = of_count_phandle_with_args(np, "clock-parents",
 					       "#clock-cells");
@@ -50,7 +102,7 @@ static int of_get_aml_clk_real_parent_index(struct device_node *np, int index)
 	return index;
 }
 
-unsigned int of_get_aml_clk_parent_count(struct device *dev, int index)
+unsigned int of_aml_clk_get_parent_count(struct device *dev, int index)
 {
 	int count, ret;
 	struct device_node *dev_np = dev_of_node(dev);
@@ -62,10 +114,11 @@ unsigned int of_get_aml_clk_parent_count(struct device *dev, int index)
 	 * current device.
 	 */
 	if (of_property_present(dev_np, "clocks") &&
+	    !of_property_present(dev_np, "clock-parents") &&
 	    (of_count_phandle_with_args(dev_np, "clocks", "#clock-cells") == 1))
 		return 1;
 
-	index = of_get_aml_clk_real_parent_index(dev_np, index);
+	index = of_aml_clk_get_real_parent_index(dev_np, index);
 	if (index < 0)
 		return 0;
 
@@ -116,7 +169,7 @@ unsigned int of_get_aml_clk_parent_count(struct device *dev, int index)
 	 * "<&phandle1 2>".
 	 */
 	if (parent_args.np != dev_np &&
-	    of_property_present(parent_args.np, "clock-parents"))
+	    of_property_present(parent_args.np, "clock-mult-parents"))
 		count = of_count_phandle_with_args(parent_args.np,
 						   "clock-parents",
 						   "#clock-cells");
@@ -130,15 +183,19 @@ unsigned int of_get_aml_clk_parent_count(struct device *dev, int index)
 
 	return count;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_parent_count);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_parent_count);
 
 static struct clk_hw *of_aml_clk_get_hw_with_args(struct of_phandle_args *args)
 {
 	struct clk *clk = of_clk_get_from_provider(args);
 	struct clk_hw *clk_hw;
 
-	if (IS_ERR(clk))
-		return ERR_PTR(-ENOENT);
+	if (IS_ERR(clk)) {
+		if (PTR_ERR(clk) != -EPROBE_DEFER)
+			pr_warn("clk: couldn't get clock for %pOF\n", args->np);
+
+		return ERR_CAST(clk);
+	}
 
 	clk_hw = __clk_get_hw(clk);
 	clk_put(clk);
@@ -146,7 +203,7 @@ static struct clk_hw *of_aml_clk_get_hw_with_args(struct of_phandle_args *args)
 	return clk_hw;
 }
 
-struct clk_parent_data *of_get_aml_clk_parent_data(struct device *dev,
+struct clk_parent_data *of_aml_clk_get_parent_data(struct device *dev,
 						   struct clk_hw **dev_hws,
 						   int index)
 {
@@ -156,7 +213,7 @@ struct clk_parent_data *of_get_aml_clk_parent_data(struct device *dev,
 	struct of_phandle_args parent_args, out_args;
 	struct clk_hw *hw;
 
-	parent_num = of_get_aml_clk_parent_count(dev, index);
+	parent_num = of_aml_clk_get_parent_count(dev, index);
 	if (parent_num == 0) {
 		dev_err(dev, "Invalid clock parents number, index = %d\n", index);
 		return ERR_PTR(-EINVAL);
@@ -170,6 +227,7 @@ struct clk_parent_data *of_get_aml_clk_parent_data(struct device *dev,
 	}
 
 	if (of_property_present(dev_np, "clocks") &&
+	    !of_property_present(dev_np, "clock-parents") &&
 	    (of_count_phandle_with_args(dev_np, "clocks", "#clock-cells") == 1)) {
 		ret = of_parse_phandle_with_args(dev_np, "clocks",
 						 "#clock-cells",
@@ -194,7 +252,7 @@ struct clk_parent_data *of_get_aml_clk_parent_data(struct device *dev,
 		return parent_data;
 	}
 
-	index = of_get_aml_clk_real_parent_index(dev_np, index);
+	index = of_aml_clk_get_real_parent_index(dev_np, index);
 	if (index < 0)
 		return ERR_PTR(index);
 
@@ -207,7 +265,7 @@ struct clk_parent_data *of_get_aml_clk_parent_data(struct device *dev,
 		if (parent_args.np == dev_np) {
 			parent_data[i].hw = dev_hws[parent_args.args[0]];
 		} else {
-			if (!of_property_present(parent_args.np, "clock-parents")) {
+			if (!of_property_present(parent_args.np, "clock-mult-parents")) {
 				hw = of_aml_clk_get_hw_with_args(&parent_args);
 				if (IS_ERR(hw)) {
 					ret = PTR_ERR(hw);
@@ -252,7 +310,7 @@ fail_node_put:
 
 	return ERR_PTR(ret);
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_parent_data);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_parent_data);
 
 void of_aml_clk_parent_data_release(struct device *dev,
 				    struct clk_parent_data *data)
@@ -261,14 +319,14 @@ void of_aml_clk_parent_data_release(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(of_aml_clk_parent_data_release);
 
-u32 *of_get_aml_clk_parent_table(struct device *dev, int index)
+u32 *of_aml_clk_get_parent_table(struct device *dev, int index)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	struct of_phandle_args parent_args;
 	int i, ret, parent_num, index_num;
 	u32 *mux_tab;
 
-	index = of_get_aml_clk_real_parent_index(dev_np, index);
+	index = of_aml_clk_get_real_parent_index(dev_np, index);
 	if (index < 0)
 		return ERR_PTR(index);
 
@@ -284,7 +342,7 @@ u32 *of_get_aml_clk_parent_table(struct device *dev, int index)
 		goto fail_node_put;
 	}
 
-	parent_num = of_get_aml_clk_parent_count(dev, index);
+	parent_num = of_aml_clk_get_parent_count(dev, index);
 	if (index_num != parent_num) {
 		dev_err(dev, "Invalid clock parent indices, index = %d\n", index);
 		ret = -EINVAL;
@@ -320,9 +378,9 @@ fail_node_put:
 	else
 		return ERR_PTR(ret);
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_parent_table);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_parent_table);
 
-u32 of_get_aml_clk_count(struct device_node *np)
+u32 of_aml_clk_get_count(struct device_node *np)
 {
 	int ret = of_property_count_strings(np, "clock-output-names");
 
@@ -333,11 +391,11 @@ u32 of_get_aml_clk_count(struct device_node *np)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_count);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_count);
 
-int of_get_aml_clk_clkid_index(struct device_node *np, u32 index)
+int of_aml_clk_get_clkid_index(struct device_node *np, u32 index)
 {
-	u32 clks_count = of_get_aml_clk_count(np);
+	u32 clks_count = of_aml_clk_get_count(np);
 	u32 clkid;
 	int ret = of_property_read_u32_index(np, "clock-indices", index, &clkid);
 
@@ -349,9 +407,9 @@ int of_get_aml_clk_clkid_index(struct device_node *np, u32 index)
 
 	return clkid;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_clkid_index);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_clkid_index);
 
-const char *of_get_aml_clk_name_index(struct device_node *np, u32 index)
+const char *of_aml_clk_get_name_index(struct device_node *np, u32 index)
 {
 	const char *name;
 
@@ -363,7 +421,7 @@ const char *of_get_aml_clk_name_index(struct device_node *np, u32 index)
 
 	return name;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_name_index);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_name_index);
 
 /*
  * The 'clock-flags' property can be defined in three forms:
@@ -371,7 +429,7 @@ EXPORT_SYMBOL_GPL(of_get_aml_clk_name_index);
  * 2) Single definition: Applies to all clocks under the device.
  * 3) Per-clock definition: Must match clk_num count (one entry per clock).
  */
-int of_get_aml_clk_flag_index(struct device_node *np, u32 index, u32 *d_flag,
+int of_aml_clk_get_flag_index(struct device_node *np, u32 index, u32 *d_flag,
 			      u32 *hw_flag)
 {
 	const __be32 *prop;
@@ -404,7 +462,7 @@ int of_get_aml_clk_flag_index(struct device_node *np, u32 index, u32 *d_flag,
 
 	return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_flag_index);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_flag_index);
 
 /*
  * The 'clock-div-width' property can be defined in three forms:
@@ -414,7 +472,7 @@ EXPORT_SYMBOL_GPL(of_get_aml_clk_flag_index);
  * 3) Per-clock definition: Individually specify the divider register bit width
  * for each clock under the current device.
  */
-int of_get_aml_clk_div_width_index(struct device_node *np, u32 index)
+int of_aml_clk_get_div_width_index(struct device_node *np, u32 index)
 {
 	const __be32 *prop;
 	unsigned int psize;
@@ -435,7 +493,54 @@ int of_get_aml_clk_div_width_index(struct device_node *np, u32 index)
 
 	return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(of_get_aml_clk_div_width_index);
+EXPORT_SYMBOL_GPL(of_aml_clk_get_div_width_index);
+
+int of_aml_clk_get_init_reg_count(struct device_node *np)
+{
+	return of_property_count_elems_of_size(np, "clock-init-regs",
+					       sizeof(struct reg_sequence));
+}
+EXPORT_SYMBOL_GPL(of_aml_clk_get_init_reg_count);
+
+int of_aml_clk_get_init_reg(struct device_node *np, int reg_count,
+			    struct reg_sequence *init_regs)
+{
+	return of_property_read_u32_array(np, "clock-init-regs", (u32 *)init_regs,
+					  3 * reg_count);
+}
+EXPORT_SYMBOL_GPL(of_aml_clk_get_init_reg);
+
+int of_aml_clk_get_rate_range(struct device_node *np, u32 index, u64 *min, u64 *max)
+{
+	const __be64 *val;
+	unsigned int psize;
+	int elems_size = 2 * sizeof(u64);
+	u32 val_index = 2 * index;
+
+	val = of_get_property(np, "clock-rate-range", &psize);
+	if (!val)
+		return -EEXIST;
+
+	if (psize % elems_size)
+		return -EINVAL;
+
+	if (psize == elems_size) {
+		*min = be64_to_cpu(val[0]);
+		*max = be64_to_cpu(val[1]);
+
+		return 0;
+	} else if (psize >= (index + 1) * elems_size) {
+		*min = be64_to_cpu(val[val_index]);
+		*max = be64_to_cpu(val[val_index + 1]);
+
+		return 0;
+	}
+
+	pr_err("<%pOFn>: Invalid clock-rate-range property, index = %d\n", np, index);
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(of_aml_clk_get_rate_range);
 #endif  /* CONFIG_OF */
 
 MODULE_DESCRIPTION("Amlogic Of Common Clock driver");

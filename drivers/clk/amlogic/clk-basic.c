@@ -3,6 +3,9 @@
  * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
  */
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/module.h>
@@ -65,10 +68,62 @@ static int aml_clk_gate_is_enabled(struct clk_hw *hw)
 	return val ? 1 : 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int aml_clk_div_available_rates_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct clk_hw *phw = clk_hw_get_parent(hw);
+	struct aml_clk *clk = to_aml_clk(hw);
+	struct aml_clk_divider_data *div = (struct aml_clk_divider_data *)clk->data;
+	unsigned long min_rate, max_rate, prate;
+	unsigned long core_min_rate, core_max_rate;
+
+	if (!phw) {
+		pr_err("%s: can't get parent\n", clk_hw_get_name(hw));
+
+		return -ENOENT;
+	}
+
+	prate = clk_hw_get_rate(phw);
+	max_rate = prate;
+	if (div->flags & CLK_DIVIDER_READ_ONLY)
+		min_rate = prate;
+	else
+		min_rate = divider_recalc_rate(hw, prate, (1 << div->width) - 1,
+					       div->table, div->flags, div->width);
+
+	clk_hw_get_rate_range(hw, &core_min_rate, &core_max_rate);
+	if (core_min_rate > min_rate)
+		min_rate = core_min_rate;
+
+	if (core_max_rate < max_rate)
+		max_rate = core_max_rate;
+
+	seq_printf(s, "min_rate:%ld\n", min_rate);
+	seq_printf(s, "max_rate:%ld\n", max_rate);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(aml_clk_div_available_rates);
+
+static void aml_clk_basic_debug_init(struct clk_hw *hw, struct dentry *dentry)
+{
+	struct aml_clk *clk = to_aml_clk(hw);
+
+	debugfs_create_file("clk_type", 0444, dentry, hw, &aml_clk_type_fops);
+	if (clk->type == AML_CLK_DIV)
+		debugfs_create_file("clk_available_rates", 0444, dentry, hw,
+				    &aml_clk_div_available_rates_fops);
+}
+#endif
+
 const struct clk_ops aml_clk_gate_ops = {
 	.enable = aml_clk_gate_enable,
 	.disable = aml_clk_gate_disable,
 	.is_enabled = aml_clk_gate_is_enabled,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_basic_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_gate_ops);
 
@@ -147,12 +202,18 @@ const struct clk_ops aml_clk_divider_ops = {
 	.recalc_rate = aml_clk_div_recalc_rate,
 	.determine_rate = aml_clk_div_determine_rate,
 	.set_rate = aml_clk_div_set_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_basic_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_divider_ops);
 
 const struct clk_ops aml_clk_divider_ro_ops = {
 	.recalc_rate = aml_clk_div_recalc_rate,
 	.determine_rate = aml_clk_div_determine_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_basic_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_divider_ro_ops);
 
@@ -196,16 +257,22 @@ const struct clk_ops aml_clk_mux_ops = {
 	.get_parent = aml_clk_mux_get_parent,
 	.set_parent = aml_clk_mux_set_parent,
 	.determine_rate = aml_clk_mux_determine_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_basic_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_mux_ops);
 
 const struct clk_ops aml_clk_mux_ro_ops = {
 	.get_parent = aml_clk_mux_get_parent,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_basic_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_mux_ro_ops);
 
 #ifdef CONFIG_OF
-static int of_get_aml_clk_basic_reg_index(struct device_node *np, u32 index,
+static int of_aml_clk_get_basic_reg_index(struct device_node *np, u32 index,
 					  u32 *offset, u32 *shift, u32 *width)
 {
 	const __be32 *prop;
@@ -230,7 +297,7 @@ static int of_get_aml_clk_basic_reg_index(struct device_node *np, u32 index,
  * 2) Per-clock definition: Must match clk_num count (one entry
  * per clock).
  */
-static int of_get_aml_clk_basic_type_index(const struct device_node *np,
+static int of_aml_clk_get_basic_type_index(const struct device_node *np,
 					   u32 index)
 {
 	int ret;
@@ -250,14 +317,14 @@ static int of_get_aml_clk_basic_type_index(const struct device_node *np,
 }
 
 static struct aml_clk_mux_data *
-of_get_aml_clk_mux_data_index(struct device *dev, u32 data_flags, u32 index)
+of_aml_clk_get_mux_data_index(struct device *dev, u32 data_flags, u32 index)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	u32 offset, shift, width;
 	struct aml_clk_mux_data *mux;
 	int ret;
 
-	ret = of_get_aml_clk_basic_reg_index(dev_np, index,
+	ret = of_aml_clk_get_basic_reg_index(dev_np, index,
 					     &offset, &shift, &width);
 	if (ret)
 		return ERR_PTR(ret);
@@ -269,21 +336,21 @@ of_get_aml_clk_mux_data_index(struct device *dev, u32 data_flags, u32 index)
 	mux->reg_offset = offset;
 	mux->shift = shift;
 	mux->mask = GENMASK(width - 1, 0);
-	mux->table = of_get_aml_clk_parent_table(dev, index);
+	mux->table = of_aml_clk_get_parent_table(dev, index);
 	mux->flags = data_flags;
 
 	return mux;
 }
 
 static struct aml_clk_divider_data *
-of_get_aml_clk_div_data_index(struct device *dev, u32 data_flags, u32 index)
+of_aml_clk_get_div_data_index(struct device *dev, u32 data_flags, u32 index)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	u32 offset, shift, width;
 	struct aml_clk_divider_data *div;
 	int ret;
 
-	ret = of_get_aml_clk_basic_reg_index(dev_np, index,
+	ret = of_aml_clk_get_basic_reg_index(dev_np, index,
 					     &offset, &shift, &width);
 	if (ret)
 		return ERR_PTR(ret);
@@ -301,14 +368,14 @@ of_get_aml_clk_div_data_index(struct device *dev, u32 data_flags, u32 index)
 }
 
 static struct aml_clk_gate_data *
-of_get_aml_clk_gate_data_index(struct device *dev, u32 data_flags, u32 index)
+of_aml_clk_get_gate_data_index(struct device *dev, u32 data_flags, u32 index)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	u32 offset, shift, width;
 	struct aml_clk_gate_data *gate;
 	int ret;
 
-	ret = of_get_aml_clk_basic_reg_index(dev_np, index,
+	ret = of_aml_clk_get_basic_reg_index(dev_np, index,
 					     &offset, &shift, &width);
 	if (ret)
 		return ERR_PTR(ret);
@@ -323,6 +390,33 @@ of_get_aml_clk_gate_data_index(struct device *dev, u32 data_flags, u32 index)
 	gate->flags = data_flags;
 
 	return gate;
+}
+
+static int aml_clk_basic_regs_init(struct device *dev, struct regmap *regmap)
+{
+	struct device_node *dev_np = dev_of_node(dev);
+	int ret, reg_count;
+	struct reg_sequence *init_regs;
+
+	ret = of_aml_clk_get_init_reg_count(dev_np);
+	if (ret < 0)
+		return 0;
+
+	reg_count = ret;
+	init_regs = devm_kcalloc(dev, reg_count, sizeof(*init_regs), GFP_KERNEL);
+	if (!init_regs)
+		return -ENOMEM;
+
+	ret = of_aml_clk_get_init_reg(dev_np, reg_count, init_regs);
+	if (ret)
+		goto fail;
+
+	ret = regmap_multi_reg_write(regmap, init_regs, reg_count);
+
+fail:
+	devm_kfree(dev, init_regs);
+
+	return ret;
 }
 
 static int aml_clk_basic_probe(struct platform_device *pdev)
@@ -341,8 +435,9 @@ static int aml_clk_basic_probe(struct platform_device *pdev)
 	struct aml_clk_divider_data *div;
 	struct aml_clk_gate_data *gate;
 	struct clk_init_data init = { 0 };
+	u64 min_rate, max_rate;
 
-	clk_num = of_get_aml_clk_count(dev_np);
+	clk_num = of_aml_clk_get_count(dev_np);
 	if (clk_num == 0)
 		return -EINVAL;
 
@@ -363,18 +458,22 @@ static int aml_clk_basic_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(regmap))
 		return -EIO;
 
+	ret = aml_clk_basic_regs_init(dev, regmap);
+	if (ret)
+		return ret;
+
 	for (i = 0, clkid = 0; i < clk_num; i++) {
-		clkid = of_get_aml_clk_clkid_index(dev_np, i);
+		clkid = of_aml_clk_get_clkid_index(dev_np, i);
 		if (clkid < 0 && clk_num > 1)
 			return -EINVAL;
 
-		clk_name = of_get_aml_clk_name_index(dev_np, i);
+		clk_name = of_aml_clk_get_name_index(dev_np, i);
 		if (!clk_name)
 			return -EINVAL;
 
 		init.name = clk_name;
-		init.num_parents = of_get_aml_clk_parent_count(dev, i);
-		parent_data = of_get_aml_clk_parent_data(dev, clk_data->hws, i);
+		init.num_parents = of_aml_clk_get_parent_count(dev, i);
+		parent_data = of_aml_clk_get_parent_data(dev, clk_data->hws, i);
 		if (IS_ERR(parent_data)) {
 			if (PTR_ERR(parent_data) != -EPROBE_DEFER)
 				dev_err(dev, "Get parent_data failed!\n");
@@ -382,7 +481,7 @@ static int aml_clk_basic_probe(struct platform_device *pdev)
 			return PTR_ERR(parent_data);
 		}
 		init.parent_data = parent_data;
-		ret = of_get_aml_clk_flag_index(dev_np, i, &d_flag, &hw_flag);
+		ret = of_aml_clk_get_flag_index(dev_np, i, &d_flag, &hw_flag);
 		if (ret)
 			return ret;
 
@@ -391,32 +490,35 @@ static int aml_clk_basic_probe(struct platform_device *pdev)
 		clk[clkid].hw.init = &init;
 		clk[clkid].map = regmap;
 
-		clktype = of_get_aml_clk_basic_type_index(dev_np, i);
+		clktype = of_aml_clk_get_basic_type_index(dev_np, i);
 		if (clktype == AML_CLKTYPE_MUX) {
-			mux = of_get_aml_clk_mux_data_index(dev, d_flag, i);
+			mux = of_aml_clk_get_mux_data_index(dev, d_flag, i);
 			if (IS_ERR(mux))
 				return PTR_ERR(mux);
 
+			clk[clkid].type = AML_CLK_MUX;
 			clk[clkid].data = mux;
 			if (mux->flags & CLK_MUX_READ_ONLY)
 				init.ops = &aml_clk_mux_ro_ops;
 			else
 				init.ops = &aml_clk_mux_ops;
 		} else if (clktype == AML_CLKTYPE_DIV) {
-			div = of_get_aml_clk_div_data_index(dev, d_flag, i);
+			div = of_aml_clk_get_div_data_index(dev, d_flag, i);
 			if (IS_ERR(div))
 				return PTR_ERR(div);
 
+			clk[clkid].type = AML_CLK_DIV;
 			clk[clkid].data = div;
 			if (div->flags & CLK_DIVIDER_READ_ONLY)
 				init.ops = &aml_clk_divider_ro_ops;
 			else
 				init.ops = &aml_clk_divider_ops;
 		} else if (clktype == AML_CLKTYPE_GATE) {
-			gate = of_get_aml_clk_gate_data_index(dev, d_flag, i);
+			gate = of_aml_clk_get_gate_data_index(dev, d_flag, i);
 			if (IS_ERR(gate))
 				return PTR_ERR(gate);
 
+			clk[clkid].type = AML_CLK_GATE;
 			clk[clkid].data = gate;
 			init.ops = &aml_clk_gate_ops;
 		}
@@ -426,6 +528,16 @@ static int aml_clk_basic_probe(struct platform_device *pdev)
 			return ret;
 
 		of_aml_clk_parent_data_release(dev, parent_data);
+
+		ret = of_aml_clk_get_rate_range(dev_np, i, &min_rate, &max_rate);
+		if (ret) {
+			if (ret != -EEXIST)
+				return ret;
+		} else {
+			if (min_rate || max_rate)
+				clk_hw_set_rate_range(&clk[clkid].hw, min_rate,
+						      max_rate);
+		}
 	}
 
 	if (clk_num == 1)

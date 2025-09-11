@@ -85,9 +85,16 @@
 #define CLKID_HDMIRX_5M				0
 #define CLKID_HDMIRX_2M				1
 #define CLKID_HDMIRX_CFG			2
-#define CLKID_HDMIRX_DHCP2X			3
+#define CLKID_HDMIRX_HDCP2X			3
 #define CLKID_HDMIRX_ACR_REF			4
 #define CLKID_HDMIRX_METER			5
+
+/* USB */
+#define CLKID_USB_250M				0
+#define CLKID_USB_48M_PRE			1
+
+#define CLKID_USB_48M_DUAL			0
+#define CLKID_USB_48M				1
 
 /* APB */
 #define CLKID_SYS_AM_AXI			0
@@ -173,5 +180,44 @@
 #define CLKID_GEN_SEL				0
 #define CLKID_GEN_DIV				1
 #define CLKID_GEN				2
+
+/* CAN */
+#define CLKID_CAN_PE_0				0
+#define CLKID_CAN_PE_1				1
+#define CLKID_CAN_FILTER_0			2
+#define CLKID_CAN_FILTER_1			3
+
+/* MCLK */
+#define CLKID_MCLK_0_PRE_DIV			0
+#define CLKID_MCLK_0_SEL			1
+#define CLKID_MCLK_0_DIV			2
+#define CLKID_MCLK_0				3
+#define CLKID_MCLK_1_PRE_DIV			4
+#define CLKID_MCLK_1_SEL			5
+#define CLKID_MCLK_1_DIV			6
+#define CLKID_MCLK_1				7
+
+/* MCLK1 */
+#define CLKID_MCLK1_0_PRE_DIV			0
+#define CLKID_MCLK1_0_SEL			1
+#define CLKID_MCLK1_0_DIV			2
+#define CLKID_MCLK1_0				3
+#define CLKID_MCLK1_1_PRE_DIV			4
+#define CLKID_MCLK1_1_SEL			5
+#define CLKID_MCLK1_1_DIV			6
+#define CLKID_MCLK1_1				7
+
+/* AO CECB */
+#define CLKID_AO_CECB_DUAL			0
+#define CLKID_AO_CECB_CLK			1
+
+/* AO PWM */
+#define CLKID_AO_PWM_A				0
+#define CLKID_AO_PWM_B				1
+#define CLKID_AO_PWM_C				2
+#define CLKID_AO_PWM_D				3
+#define CLKID_AO_PWM_E				4
+#define CLKID_AO_PWM_F				5
+#define CLKID_AO_PWM_G				6
 
 #endif  /* _DT_BINDINGS_CLOCK_AMLOGIC_A9_CLK_H */

@@ -4,6 +4,9 @@
  */
 
 #include <linux/clk-provider.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/io.h>
@@ -47,15 +50,6 @@ struct aml_pll_reg_parms {
 		u32 val;
 	} reg1;
 };
-
-static int __aml_pll_round_closest_mult(struct aml_pll_data *pll)
-{
-	if ((pll->flags & AML_PLL_ROUND_CLOSEST) &&
-	    (pll->parm_flags & AML_PLL_SPEC_PARM_FRAC))
-		return 1;
-
-	return 0;
-}
 
 static unsigned long __aml_pll_params_to_rate(unsigned long parent_rate,
 					      unsigned int m, unsigned int n,
@@ -106,44 +100,10 @@ static unsigned long aml_pll_recalc_rate(struct clk_hw *hw,
 				    regs.reg0.bits.od, pll);
 }
 
-static unsigned int __aml_pll_params_with_frac(unsigned long rate,
-					       unsigned long parent_rate,
-					       unsigned int m,
-					       unsigned int n,
-					       unsigned int od,
-					       struct aml_pll_data *pll)
-{
-	u32 frac_max = pll->frac_max ? pll->frac_max : DEFAULT_AML_PLL_FRAC_MAX;
-	u64 val;
-	u64 dco_rate = rate;
-
-	if (pll->parm_flags & AML_PLL_SPEC_PARM_OD)
-		dco_rate = dco_rate << od;
-
-	if (pll->flags & AML_PLL_M_EN0P5)
-		parent_rate = parent_rate >> 1;
-
-	if (pll->parm_flags & AML_PLL_SPEC_PARM_N) {
-		dco_rate = dco_rate >> n;
-		/* Bail out if we are already over the requested rate */
-		if (dco_rate < ((parent_rate >> n) * m))
-			return 0;
-	}
-
-	if (pll->flags & AML_PLL_ROUND_CLOSEST)
-		val = DIV_ROUND_CLOSEST_ULL(dco_rate * frac_max, parent_rate);
-	else
-		val = div_u64(dco_rate * frac_max, parent_rate);
-
-	val -= m * frac_max;
-
-	return min((unsigned int)val, (frac_max - 1));
-}
-
 static bool aml_pll_is_better(unsigned long rate, unsigned long best,
 			      unsigned long now, struct aml_pll_data *pll)
 {
-	if (__aml_pll_round_closest_mult(pll)) {
+	if (pll->flags & AML_PLL_ROUND_CLOSEST) {
 		/* Round Closest */
 		if (abs(now - rate) < abs(best - rate))
 			return true;
@@ -156,16 +116,18 @@ static bool aml_pll_is_better(unsigned long rate, unsigned long best,
 	return false;
 }
 
-static int aml_get_pll_table(unsigned long rate, unsigned long parent_rate,
+static int aml_pll_get_table(unsigned long rate, unsigned long parent_rate,
 			     struct aml_pll_parms_table *parm,
-			     struct aml_pll_data *pll)
+			     struct aml_pll_data *pll,
+			     unsigned long *out_rate)
 {
 	unsigned int idx, best_idx;
 	unsigned long now, best = 0;
 
 	for (idx = 0; idx < pll->table_count; idx++) {
 		now = __aml_pll_params_to_rate(parent_rate, pll->table[idx].m,
-					       pll->table[idx].n, 0,
+					       pll->table[idx].n,
+					       pll->table[idx].frac,
 					       pll->table[idx].od, pll);
 		if (aml_pll_is_better(rate, best, now, pll)) {
 			best = now;
@@ -179,95 +141,146 @@ static int aml_get_pll_table(unsigned long rate, unsigned long parent_rate,
 	if (idx >= pll->table_count)
 		return -EINVAL;
 
-	parm->m = pll->table[idx].m;
-	parm->n = pll->table[idx].n;
-	parm->od = pll->table[idx].od;
+	parm->m = pll->table[best_idx].m;
+	parm->n = pll->table[best_idx].n;
+	parm->frac = pll->table[best_idx].frac;
+	parm->od = pll->table[best_idx].od;
+
+	*out_rate = best;
 
 	return 0;
 }
 
-static int aml_get_pll_range(unsigned long rate, unsigned long parent_rate,
+static int aml_pll_get_range(unsigned long rate, unsigned long parent_rate,
 			     struct aml_pll_parms_table *parm,
-			     struct aml_pll_data *pll)
+			     struct aml_pll_data *pll,
+			     unsigned long *out_rate)
 {
 	unsigned int idx, t_m;
-	u64 vco_rate = rate;
+	u8 t_od = (pll->parm_flags & AML_PLL_SPEC_PARM_OD) ? pll->od_max : 0;
+	u64 vco_rate, req_vco_rate;
+	u64 val;
+	u32 frac_max;
+	unsigned int frac = 0;
+	unsigned long frac_step;
+	unsigned long now_rate, best_rate = 0;
+	unsigned int best_m, best_frac, best_od;
 
 	if (pll->flags & AML_PLL_M_EN0P5)
 		parent_rate = parent_rate >> 1;
 
-	if (pll->parm_flags & AML_PLL_SPEC_PARM_OD) {
-		for (idx = 0; idx <= pll->od_max; idx++) {
-			vco_rate = (u64)rate << idx;
-			if (vco_rate > pll->range.min &&
-			    vco_rate < pll->range.max)
-				break;
-
-			if (vco_rate < pll->range.min)
-				continue;
-
-			if (vco_rate > pll->range.max)
-				return -EINVAL;
-		}
-	}
-	if (vco_rate < pll->range.min || vco_rate > pll->range.max)
-		return -EINVAL;
-
-	if (__aml_pll_round_closest_mult(pll))
-		t_m = DIV_ROUND_CLOSEST_ULL(vco_rate, parent_rate);
-	else
-		t_m = div_u64(vco_rate,  parent_rate);
-
-	/* the multiplier too big - stop */
-	if (t_m > AML_PLL_PARM_M_MAX)
-		return -EINVAL;
-
-	parm->m = t_m;
 	/*
 	 * NOTE: Configuring the 'n' divider affects PLL loop bandwidth and
-	 * phase margin, making its use strongly discouraged.
+	 * phase margin, making its use strongly discouraged. Here fix 'n = 0'
+	 * to disable pre-division.
 	 *
-	 * If absolutely required, rigorously assess the risks and only
+	 * If absolutely required, rigorously assess the risks and ONLY
 	 * implement via 'pll->table' configuration.
 	 */
 	parm->n = 0;
-	parm->od = idx;
+
+	for (idx = 0; idx <= t_od; idx++) {
+		req_vco_rate = (u64)rate << idx;
+		if (req_vco_rate < pll->range.min)
+			continue;
+
+		if (req_vco_rate > pll->range.max)
+			goto out;
+
+		if ((pll->flags & AML_PLL_ROUND_CLOSEST) &&
+		    !(pll->parm_flags & AML_PLL_SPEC_PARM_FRAC) &&
+		    (req_vco_rate + (parent_rate >> 1)) <= pll->range.max)
+			t_m = DIV_ROUND_CLOSEST_ULL(req_vco_rate, parent_rate);
+		else
+			t_m = div_u64(req_vco_rate,  parent_rate);
+
+		vco_rate = (u64)parent_rate * t_m;
+		if (pll->parm_flags & AML_PLL_SPEC_PARM_FRAC) {
+			frac_max = pll->frac_max ? pll->frac_max :
+						   DEFAULT_AML_PLL_FRAC_MAX;
+			val = div_u64(req_vco_rate * frac_max, parent_rate);
+			val -= t_m * frac_max;
+			frac = min((unsigned int)val, (frac_max - 1));
+
+			frac_step = parent_rate / frac_max;
+			vco_rate += frac_step * frac;
+
+			/*
+			 * With AML_PLL_ROUND_CLOSEST configured, the condition
+			 * req_vco_rate >= vco_rate is guaranteed to be true.
+			 */
+			val = req_vco_rate - vco_rate;
+			if (pll->flags & AML_PLL_ROUND_CLOSEST &&
+			    (abs(val - frac_step) < val) &&
+			    (vco_rate + frac_step <= pll->range.max)) {
+				frac += 1;
+				vco_rate += frac_step;
+			}
+		}
+
+		if (vco_rate < pll->range.min)
+			continue;
+
+		now_rate = vco_rate >> idx;
+		if (aml_pll_is_better(rate, best_rate, now_rate, pll)) {
+			best_rate = now_rate;
+
+			best_m = t_m;
+			best_frac = frac;
+			best_od = idx;
+
+			if (now_rate == rate)
+				break;
+		}
+	}
+
+out:
+	if (!best_rate)
+		return -EINVAL;
+
+	parm->m = best_m;
+	parm->frac = best_frac;
+	parm->od = best_od;
+
+	*out_rate = best_rate;
 
 	return 0;
 }
 
-static int aml_get_pll_settings(unsigned long rate,
-				unsigned long parent_rate,
-				struct aml_pll_parms_table *parm,
-				struct aml_pll_data *pll)
+static int aml_pll_get_best_parms(unsigned long rate,
+				  unsigned long parent_rate,
+				  struct aml_pll_parms_table *parm,
+				  struct aml_pll_data *pll,
+				  unsigned long *out_rate)
 {
 	unsigned long range_rate = 0, table_rate = 0;
 	struct aml_pll_parms_table range_parm, table_parm;
-	int ret;
 
-	ret = aml_get_pll_range(rate, parent_rate, &range_parm, pll);
-	if (!ret)
-		range_rate = __aml_pll_params_to_rate(parent_rate, range_parm.m,
-						      range_parm.n, 0,
-						      range_parm.od, pll);
-
-	ret = aml_get_pll_table(rate, parent_rate, &table_parm, pll);
-	if (!ret)
-		table_rate = __aml_pll_params_to_rate(parent_rate, table_parm.m,
-						      table_parm.n, 0,
-						      table_parm.od, pll);
-
+	aml_pll_get_range(rate, parent_rate, &range_parm, pll, &range_rate);
+	aml_pll_get_table(rate, parent_rate, &table_parm, pll, &table_rate);
 	if (!range_rate && !table_rate)
 		return -EINVAL;
 
 	if (aml_pll_is_better(rate, range_rate, table_rate, pll)) {
-		parm->m = table_parm.m;
-		parm->n = table_parm.n;
-		parm->od = table_parm.od;
+		if (parm) {
+			parm->m = table_parm.m;
+			parm->n = table_parm.n;
+			parm->frac = table_parm.frac;
+			parm->od = table_parm.od;
+		}
+
+		if (out_rate)
+			*out_rate = table_rate;
 	} else {
-		parm->m = range_parm.m;
-		parm->n = range_parm.n;
-		parm->od = range_parm.od;
+		if (parm) {
+			parm->m = range_parm.m;
+			parm->n = range_parm.n;
+			parm->frac = range_parm.frac;
+			parm->od = range_parm.od;
+		}
+
+		if (out_rate)
+			*out_rate = range_rate;
 	}
 
 	return 0;
@@ -278,8 +291,6 @@ static int aml_pll_determine_rate(struct clk_hw *hw,
 {
 	struct aml_clk *clk = to_aml_clk(hw);
 	struct aml_pll_data *pll = (struct aml_pll_data *)clk->data;
-	unsigned int frac = 0;
-	struct aml_pll_parms_table parm;
 	int ret;
 
 	if (pll->flags & AML_PLL_READ_ONLY) {
@@ -287,18 +298,10 @@ static int aml_pll_determine_rate(struct clk_hw *hw,
 		return 0;
 	}
 
-	ret = aml_get_pll_settings(req->rate, req->best_parent_rate, &parm,
-				   pll);
+	ret = aml_pll_get_best_parms(req->rate, req->best_parent_rate, NULL,
+				     pll, &req->rate);
 	if (ret)
 		return ret;
-
-	if (pll->parm_flags & AML_PLL_SPEC_PARM_FRAC)
-		frac = __aml_pll_params_with_frac(req->rate,
-						  req->best_parent_rate,
-						  parm.m, parm.n, parm.od, pll);
-
-	req->rate = __aml_pll_params_to_rate(req->best_parent_rate, parm.m,
-					     parm.n, frac, parm.od, pll);
 
 	return 0;
 }
@@ -430,6 +433,8 @@ static int aml_pll_enable(struct clk_hw *hw)
 			return 0;
 	} while (retry > PLL_LOCK_RETRY_MAX);
 
+	/* disable PLL when PLL lock failed. */
+	aml_pll_disable(hw);
 	pr_warn("%s: PLL lock failed!!!\n", clk_hw_get_name(hw));
 
 	return -EIO;
@@ -442,12 +447,12 @@ static int aml_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct aml_pll_data *pll = (struct aml_pll_data *)clk->data;
 	struct aml_pll_reg_parms regs;
 	struct aml_pll_parms_table parm;
-	int ret, enabled;
+	int enabled, ret;
 
 	if (parent_rate == 0 || rate == 0)
 		return -EINVAL;
 
-	ret = aml_get_pll_settings(rate, parent_rate, &parm, pll);
+	ret = aml_pll_get_best_parms(rate, parent_rate, &parm, pll, NULL);
 	if (ret)
 		return ret;
 
@@ -464,9 +469,7 @@ static int aml_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	if (pll->parm_flags & AML_PLL_SPEC_PARM_FRAC) {
 		regmap_read(clk->map, AML_PLL_REG1_OFFSET, &regs.reg1.val);
-		regs.reg1.bits.frac = __aml_pll_params_with_frac(rate, parent_rate,
-								 parm.m, parm.n,
-								 parm.od, pll);
+		regs.reg1.bits.frac = parm.frac;
 		regmap_write(clk->map, AML_PLL_REG1_OFFSET, regs.reg1.val);
 	}
 
@@ -510,6 +513,173 @@ static void aml_pll_restore_context(struct clk_hw *hw)
 		aml_pll_disable(hw);
 }
 
+#ifdef CONFIG_DEBUG_FS
+static unsigned long aml_pll_get_rate_step(struct aml_pll_data *pll,
+					   unsigned long parent_rate)
+{
+	unsigned long step;
+	u32 frac_max;
+
+	if (pll->flags & AML_PLL_M_EN0P5)
+		parent_rate = parent_rate >> 1;
+
+	if (pll->parm_flags & AML_PLL_SPEC_PARM_FRAC) {
+		frac_max = pll->frac_max ? pll->frac_max :
+					   DEFAULT_AML_PLL_FRAC_MAX;
+
+		step = parent_rate / frac_max;
+	} else {
+		step = parent_rate;
+	}
+
+	return step;
+}
+
+enum round_type {
+	ROUND_DOWN	= 0,
+	ROUND_UP
+};
+
+static int aml_pll_get_best_rate(unsigned long rate, unsigned long step_rate,
+				 u64 min_vco_rate, u64 max_vco_rate,
+				 u8 od_max, enum round_type round,
+				 unsigned long *out_rate)
+{
+	int i;
+	u64 vco_rate;
+	unsigned long now_rate, best_rate = 0;
+
+	for (i = 0; i <= od_max; i++) {
+		vco_rate = rate << i;
+		if (vco_rate < min_vco_rate)
+			continue;
+
+		if (vco_rate > max_vco_rate)
+			break;
+
+		if (vco_rate % step_rate == 0) {
+			best_rate = rate;
+
+			break;
+		}
+
+		/* round up */
+		if (round == ROUND_DOWN) {
+			vco_rate = vco_rate - (vco_rate % step_rate);
+			now_rate = vco_rate >> i;
+			if ((rate - now_rate) < (rate - best_rate))
+				best_rate = now_rate;
+		} else {
+			vco_rate = vco_rate + step_rate - (vco_rate % step_rate);
+			now_rate = vco_rate >> i;
+			if ((now_rate - rate) < (best_rate - rate))
+				best_rate = now_rate;
+		}
+	}
+
+	if (!best_rate)
+		return -EINVAL;
+
+	*out_rate = best_rate;
+
+	return 0;
+}
+
+static int aml_pll_get_rate_range(struct clk_hw *hw, unsigned long parent_rate,
+				  unsigned long *min, unsigned long *max)
+{
+	struct aml_clk *clk = to_aml_clk(hw);
+	struct aml_pll_data *pll = (struct aml_pll_data *)clk->data;
+	u8 od = (pll->parm_flags & AML_PLL_SPEC_PARM_OD) ? pll->od_max : 0;
+	unsigned long step = aml_pll_get_rate_step(pll, parent_rate);
+	unsigned long min_rate, max_rate;
+	unsigned long core_min_rate, core_max_rate;
+	int ret;
+
+	min_rate = pll->range.min >> od;
+	max_rate = pll->range.max;
+
+	clk_hw_get_rate_range(hw, &core_min_rate, &core_max_rate);
+	if (min_rate < core_min_rate)
+		min_rate = core_min_rate;
+
+	ret = aml_pll_get_best_rate(min_rate, step, pll->range.min,
+				    pll->range.max, od, ROUND_UP, min);
+	if (ret)
+		return ret;
+
+	if (max_rate > core_max_rate)
+		max_rate = core_max_rate;
+
+	ret = aml_pll_get_best_rate(max_rate, step, pll->range.min,
+				    pll->range.max, od, ROUND_DOWN, max);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int aml_pll_available_rates_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct clk_hw *phw = clk_hw_get_parent(hw);
+	struct aml_clk *clk = to_aml_clk(hw);
+	struct aml_pll_data *pll = (struct aml_pll_data *)clk->data;
+	u64 rate, prate = 0;
+	unsigned long min, max;
+	int i, ret;
+
+	if (!phw) {
+		pr_err("%s: can't get parent\n", clk_hw_get_name(hw));
+
+		return -ENOENT;
+	}
+
+	prate = clk_hw_get_rate(phw);
+	if (pll->flags & AML_PLL_READ_ONLY) {
+		seq_printf(s, "%ld\n", clk_hw_get_rate(hw));
+
+		return 0;
+	}
+
+	if (pll->range.min || pll->range.max) {
+		ret = aml_pll_get_rate_range(hw, prate, &min, &max);
+		if (ret)
+			return ret;
+
+		seq_printf(s, "min_rate:%ld\n", min);
+		seq_printf(s, "max_rate:%ld\n", max);
+	} else if (pll->table) {
+		if (pll->flags & AML_PLL_M_EN0P5)
+			prate >>= 1;
+
+		clk_hw_get_rate_range(hw, &min, &max);
+
+		for (i = 0; pll->table[i].m != 0; i++) {
+			rate = (prate * pll->table[i].m) >> pll->table[i].n;
+
+			rate = rate >> pll->table[i].od;
+			if (rate < min || rate > max)
+				continue;
+
+			seq_printf(s, "%ld\n", (unsigned long)rate);
+		}
+	} else {
+		seq_printf(s, "%ld\n", clk_hw_get_rate(hw));
+	}
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(aml_pll_available_rates);
+
+static void aml_pll_debug_init(struct clk_hw *hw, struct dentry *dentry)
+{
+	debugfs_create_file("clk_type", 0444, dentry, hw, &aml_clk_type_fops);
+	debugfs_create_file("clk_available_rates", 0444, dentry, hw,
+			    &aml_pll_available_rates_fops);
+}
+#endif
+
 const struct clk_ops aml_pll_ops = {
 	.init		= aml_pll_init,
 	.recalc_rate	= aml_pll_recalc_rate,
@@ -519,7 +689,10 @@ const struct clk_ops aml_pll_ops = {
 	.save_context	= aml_pll_save_context,
 	.restore_context = aml_pll_restore_context,
 	.enable		= aml_pll_enable,
-	.disable	= aml_pll_disable
+	.disable	= aml_pll_disable,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_pll_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_pll_ops);
 
@@ -539,7 +712,7 @@ const struct clk_ops aml_pcie_pll_ops = {
 EXPORT_SYMBOL_GPL(aml_pcie_pll_ops);
 
 #ifdef CONFIG_OF
-static struct aml_pll_data *of_get_aml_pll_data(struct device *dev)
+static struct aml_pll_data *of_aml_pll_get_data(struct device *dev)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	struct aml_pll_data *pll;
@@ -551,8 +724,7 @@ static struct aml_pll_data *of_get_aml_pll_data(struct device *dev)
 	if (!pll)
 		return ERR_PTR(-ENOMEM);
 
-	ret = of_property_count_elems_of_size(dev_np, "pll-init-regs",
-					      sizeof(*pll->init_regs));
+	ret = of_aml_clk_get_init_reg_count(dev_np);
 	if (ret > 0) {
 		pll->init_count = ret;
 		pll->init_regs = devm_kcalloc(dev, pll->init_count,
@@ -563,21 +735,23 @@ static struct aml_pll_data *of_get_aml_pll_data(struct device *dev)
 			goto fail;
 		}
 
-		ret = of_property_read_u32_array(dev_np,
-						 "pll-init-regs",
-						 &pll->init_regs->reg,
-						 3 * pll->init_count);
+		ret = of_aml_clk_get_init_reg(dev_np, pll->init_count,
+					      pll->init_regs);
 		if (ret)
 			goto fail;
 	}
 
-	ret = of_get_aml_clk_flag_index(dev_np, 0, &d_flag, &hw_flag);
+	ret = of_aml_clk_get_flag_index(dev_np, 0, &d_flag, &hw_flag);
 	if (ret)
 		goto fail;
 
 	pll->flags = d_flag;
 
-	of_property_read_u64_array(dev_np, "pll-dco-range", &pll->range.min, 2);
+	ret = of_property_read_u64_array(dev_np, "pll-dco-range",
+					 &pll->range.min, 2);
+	if (ret < 0)
+		goto fail;
+
 	ret = of_property_count_elems_of_size(dev_np, "pll-rate-tables",
 					      sizeof(*pll->table));
 	if (ret > 0) {
@@ -591,7 +765,7 @@ static struct aml_pll_data *of_get_aml_pll_data(struct device *dev)
 
 		ret = of_property_read_u32_array(dev_np, "pll-rate-tables",
 						 &pll->table->m,
-						 3 * pll->table_count);
+						 4 * pll->table_count);
 		if (ret)
 			goto fail;
 	}
@@ -641,16 +815,17 @@ static int aml_pll_probe(struct platform_device *pdev)
 	struct clk_parent_data *parent_data;
 	struct aml_pll_data *pll;
 	struct clk_init_data init = { 0 };
+	u64 min_rate, max_rate;
 
 	clk = devm_kzalloc(dev, sizeof(*clk), GFP_KERNEL);
 	if (!clk)
 		return -ENOMEM;
 
-	clk_name = of_get_aml_clk_name_index(dev_np, 0);
+	clk_name = of_aml_clk_get_name_index(dev_np, 0);
 	if (!clk_name)
 		return -EINVAL;
 
-	parent_data = of_get_aml_clk_parent_data(dev, NULL, 0);
+	parent_data = of_aml_clk_get_parent_data(dev, NULL, 0);
 	if (IS_ERR(parent_data)) {
 		if (PTR_ERR(parent_data) != -EPROBE_DEFER)
 			dev_err(dev, "Get parent_data failed!\n");
@@ -659,7 +834,7 @@ static int aml_pll_probe(struct platform_device *pdev)
 	}
 
 	init.name = clk_name;
-	init.num_parents = of_get_aml_clk_parent_count(dev, 0);
+	init.num_parents = of_aml_clk_get_parent_count(dev, 0);
 	init.parent_data = parent_data;
 
 	clk->hw.init = &init;
@@ -668,11 +843,12 @@ static int aml_pll_probe(struct platform_device *pdev)
 		return -EIO;
 
 	clk->map = regmap;
-	pll = of_get_aml_pll_data(dev);
+	pll = of_aml_pll_get_data(dev);
 	if (IS_ERR(pll))
 		return -EINVAL;
 
 	clk->data = pll;
+	clk->type = AML_CLK_PLL;
 	if (pll->flags & AML_PLL_READ_ONLY)
 		init.ops = &aml_pll_ro_ops;
 	else
@@ -683,6 +859,15 @@ static int aml_pll_probe(struct platform_device *pdev)
 		return ret;
 
 	of_aml_clk_parent_data_release(dev, parent_data);
+
+	ret = of_aml_clk_get_rate_range(dev_np, 0, &min_rate, &max_rate);
+	if (ret) {
+		if (ret != -EEXIST)
+			return ret;
+	} else {
+		if (min_rate || max_rate)
+			clk_hw_set_rate_range(&clk->hw, min_rate, max_rate);
+	}
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_simple_get, &clk->hw);
 }

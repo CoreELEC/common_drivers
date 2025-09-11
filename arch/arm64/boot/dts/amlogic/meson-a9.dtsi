@@ -593,17 +593,16 @@
 		clkfreq-khz = <800000>;
 	};
 
-	shmem@50f6000 {
+	shmem@f3c58c00 {
 		compatible = "mmio-sram";
 		status = "okay";
-		reg = <0x0 0x50f6000 0x0 0x100>;
+		reg = <0x0 0xf3c58c00 0x0 0x100>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ranges = <0 0x0 0x50f6000 0x100>;
+		ranges = <0 0x0 0xf3c58c00 0x100>;
 
 		scmi_shmem: shmem@0 {
 			compatible = "arm,scmi-shmem";
-			status = "disabled";
 			reg = <0x0 0x100>;
 		};
 	};
@@ -713,7 +712,7 @@
 				reg = <0x0 0x58000 0x0 0x24>,
 					  <0x0 0x180 0x0 0x4>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_A>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_A>;
 				clock-names = "clkin0";
 				status = "disabled";
 			};
@@ -723,7 +722,7 @@
 				reg = <0x0 0x58200 0x0 0x24>,
 					  <0x0 0x180 0x0 0x4>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_B>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_B>;
 				clock-names = "clkin0";
 				status = "disabled";
 			};
@@ -732,7 +731,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x0  0x58400 0x0 0x24>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_C>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_C>;
 				clock-names = "clkin0";
 				tee_id = <2>;
 				status = "disabled";
@@ -742,7 +741,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x0 0x58600 0x0 0x24>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_D>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_D>;
 				clock-names = "clkin0";
 				tee_id = <3>;
 				status = "disabled";
@@ -752,7 +751,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x0 0x58800 0x0 0x24>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_E>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_E>;
 				clock-names = "clkin0";
 				tee_id = <4>;
 				status = "disabled";
@@ -762,7 +761,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x0 0x58a00 0x0 0x24>;
 				#pwm-cells = <3>;
-				//clocks = <&clkc_pwm_ao CLKID_PWM_F>;
+				//clocks = <&clkc_ao_pwm CLKID_AO_PWM_F>;
 				clock-names = "clkin0";
 				tee_id = <5>;
 				status = "okay";

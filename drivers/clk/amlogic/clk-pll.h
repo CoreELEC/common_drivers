@@ -18,6 +18,7 @@
 struct aml_pll_parms_table {
 	unsigned int	m;
 	unsigned int	n;
+	unsigned int	frac;
 	unsigned int	od;
 };
 

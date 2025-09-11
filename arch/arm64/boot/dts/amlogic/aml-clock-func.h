@@ -79,7 +79,6 @@
 #define AML_PLL_SPEC_PARM_FRAC		0x2
 #define AML_PLL_SPEC_PARM_OD		0x4
 #define AML_PLL_SPEC_PARM_LOCK_DETECT	0x8
-#define AML_PLL_SPEC_PARM_EN0P5		0x10
 
 /**
  * hardware-specific flags of Amlogic PLL.

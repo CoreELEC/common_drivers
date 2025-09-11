@@ -3,6 +3,9 @@
  * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
  */
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 #include <linux/clk-provider.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -69,10 +72,13 @@ static unsigned long aml_clk_dualdiv_recalc_rate(struct clk_hw *hw,
 	struct aml_dualdiv_mux_reg_parms reg;
 	struct aml_clk_dualdiv_param parm;
 
-	regmap_read(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG0_OFFSET,
-		    &reg.reg0.val);
 	regmap_read(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG1_OFFSET,
 		    &reg.reg1.val);
+	if (reg.reg1.bits.force_clkout == 1)
+		return parent_rate;
+
+	regmap_read(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG0_OFFSET,
+		    &reg.reg0.val);
 	parm.div_mode = reg.reg0.bits.div_mode;
 	parm.n0 = reg.reg0.bits.n0;
 	parm.n1 = reg.reg0.bits.n1;
@@ -115,6 +121,13 @@ static int aml_clk_dualdiv_determine_rate(struct clk_hw *hw,
 	struct aml_clk_dualdiv_data *dualdiv = clk->data;
 	const struct aml_clk_dualdiv_param *setting;
 
+	/* Just need to set "force_clkout" = 1 */
+	if (req->rate == req->best_parent_rate) {
+		req->rate = req->best_parent_rate;
+
+		return 0;
+	}
+
 	setting = aml_clk_dualdiv_get_setting(req->rate, req->best_parent_rate,
 					      dualdiv);
 	if (setting)
@@ -133,9 +146,20 @@ static int aml_clk_dualdiv_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct aml_clk *clk = to_aml_clk(hw);
 	struct aml_clk_dualdiv_data *dualdiv = clk->data;
 	struct aml_dualdiv_mux_reg_parms reg;
-	const struct aml_clk_dualdiv_param *setting =
-		aml_clk_dualdiv_get_setting(rate, parent_rate, dualdiv);
+	const struct aml_clk_dualdiv_param *setting;
 
+	/* Just need to set "force_clkout" = 1 */
+	if (rate == parent_rate) {
+		regmap_read(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG1_OFFSET,
+			    &reg.reg1.val);
+		reg.reg1.bits.force_clkout = 1;
+		regmap_write(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG1_OFFSET,
+				     reg.reg1.val);
+
+		return 0;
+	}
+
+	setting = aml_clk_dualdiv_get_setting(rate, parent_rate, dualdiv);
 	if (!setting)
 		return -EINVAL;
 
@@ -143,6 +167,8 @@ static int aml_clk_dualdiv_set_rate(struct clk_hw *hw, unsigned long rate,
 		    &reg.reg0.val);
 	regmap_read(clk->map, dualdiv->reg_offset + AML_DUALDIV_REG1_OFFSET,
 		    &reg.reg1.val);
+	reg.reg1.bits.force_clkout = 0;
+
 	reg.reg0.bits.div_mode = setting->div_mode;
 	reg.reg0.bits.n0 = setting->n0;
 	reg.reg0.bits.n1 = setting->n1;
@@ -204,6 +230,53 @@ static int aml_clk_dualdiv_is_enabled(struct clk_hw *hw)
 		return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int aml_clk_dualdiv_available_rates_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct clk_hw *phw = clk_hw_get_parent(hw);
+	struct aml_clk *clk = to_aml_clk(hw);
+	struct aml_clk_dualdiv_data *dualdiv = clk->data;
+	unsigned long rate, prate;
+	unsigned long core_min_rate, core_max_rate;
+	int i;
+
+	if (!phw) {
+		pr_err("%s: can't get parent\n", clk_hw_get_name(hw));
+
+		return -ENOENT;
+	}
+
+	prate = clk_hw_get_rate(phw);
+	clk_hw_get_rate_range(hw, &core_min_rate, &core_max_rate);
+	if (dualdiv->table) {
+		for (i = 0; i < dualdiv->table_count; i++) {
+			rate = aml_dualdiv_param_to_rate(prate,
+							 &dualdiv->table[i]);
+			if (rate < core_min_rate || rate > core_max_rate)
+				continue;
+
+			seq_printf(s, "%ld\n", (unsigned long)rate);
+		}
+	} else {
+		seq_printf(s, "%ld\n", prate);
+	}
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(aml_clk_dualdiv_available_rates);
+
+static void aml_clk_dualdiv_mux_debug_init(struct clk_hw *hw, struct dentry *dentry)
+{
+	struct aml_clk *clk = to_aml_clk(hw);
+
+	debugfs_create_file("clk_type", 0444, dentry, hw, &aml_clk_type_fops);
+	if (clk->type == AML_CLK_DUALDIV)
+		debugfs_create_file("clk_available_rates", 0444, dentry, hw,
+				    &aml_clk_dualdiv_available_rates_fops);
+}
+#endif
+
 const struct clk_ops aml_clk_dualdiv_ops = {
 	.enable		= aml_clk_dualdiv_enable,
 	.disable	= aml_clk_dualdiv_disable,
@@ -211,12 +284,18 @@ const struct clk_ops aml_clk_dualdiv_ops = {
 	.recalc_rate	= aml_clk_dualdiv_recalc_rate,
 	.determine_rate	= aml_clk_dualdiv_determine_rate,
 	.set_rate	= aml_clk_dualdiv_set_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_dualdiv_mux_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_dualdiv_ops);
 
 const struct clk_ops aml_clk_dualdiv_ro_ops = {
 	.is_enabled	= aml_clk_dualdiv_is_enabled,
 	.recalc_rate	= aml_clk_dualdiv_recalc_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_dualdiv_mux_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_dualdiv_ro_ops);
 
@@ -226,7 +305,7 @@ static u8 aml_clk_dualdiv_mux_get_parent(struct clk_hw *hw)
 	struct aml_clk_dualdiv_mux_data *mux = clk->data;
 	struct aml_dualdiv_mux_reg_parms reg;
 
-	regmap_read(clk->map, mux->reg_offset + AML_DUALDIV_REG0_OFFSET,
+	regmap_read(clk->map, mux->reg_offset + AML_DUALDIV_REG1_OFFSET,
 		    &reg.reg1.val);
 
 	return clk_mux_val_to_index(hw, mux->table, 0, reg.reg1.bits.out_mux);
@@ -239,11 +318,12 @@ static int aml_clk_dualdiv_mux_set_parent(struct clk_hw *hw, u8 index)
 	unsigned int val = clk_mux_index_to_val(mux->table, 0, index);
 	struct aml_dualdiv_mux_reg_parms reg;
 
-	regmap_read(clk->map, mux->reg_offset + AML_DUALDIV_REG0_OFFSET,
+	regmap_read(clk->map, mux->reg_offset + AML_DUALDIV_REG1_OFFSET,
 		    &reg.reg1.val);
 	reg.reg1.bits.out_mux = val;
 
-	regmap_write(clk->map, reg.reg1.val, reg.reg1.val);
+	regmap_write(clk->map, mux->reg_offset + AML_DUALDIV_REG1_OFFSET,
+		     reg.reg1.val);
 
 	return 0;
 }
@@ -258,11 +338,17 @@ const struct clk_ops aml_clk_dualdiv_mux_ops = {
 	.get_parent = aml_clk_dualdiv_mux_get_parent,
 	.set_parent = aml_clk_dualdiv_mux_set_parent,
 	.determine_rate = aml_clk_dualdiv_mux_determine_rate,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_dualdiv_mux_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_dualdiv_mux_ops);
 
 const struct clk_ops aml_clk_dualdiv_mux_ro_ops = {
 	.get_parent = aml_clk_dualdiv_mux_get_parent,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_dualdiv_mux_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_dualdiv_mux_ro_ops);
 
@@ -275,7 +361,7 @@ enum aml_dualdiv_mux_index {
 };
 
 static struct aml_clk_dualdiv_data *
-of_get_aml_clk_dualdiv_data(struct device *dev)
+of_aml_clk_get_dualdiv_data(struct device *dev)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	struct aml_clk_dualdiv_data *dualdiv;
@@ -316,7 +402,7 @@ free_duandiv:
 }
 
 static struct aml_clk_dualdiv_mux_data *
-of_get_aml_clk_dualdiv_mux_data(struct device *dev)
+of_aml_clk_get_dualdiv_mux_data(struct device *dev)
 {
 	struct aml_clk_dualdiv_mux_data *mux;
 
@@ -324,7 +410,7 @@ of_get_aml_clk_dualdiv_mux_data(struct device *dev)
 	if (!mux)
 		return ERR_PTR(-ENOMEM);
 
-	mux->table = of_get_aml_clk_parent_table(dev, MUX);
+	mux->table = of_aml_clk_get_parent_table(dev, MUX);
 
 	return mux;
 }
@@ -343,12 +429,13 @@ static int aml_clk_dualdiv_mux_probe(struct platform_device *pdev)
 	u32 clkid;
 	const char *clk_name;
 	struct clk_init_data init = { 0 };
+	u64 min_rate, max_rate;
 
-	dualdiv = of_get_aml_clk_dualdiv_data(dev);
+	dualdiv = of_aml_clk_get_dualdiv_data(dev);
 	if (IS_ERR(dualdiv))
 		return -EINVAL;
 
-	mux = of_get_aml_clk_dualdiv_mux_data(dev);
+	mux = of_aml_clk_get_dualdiv_mux_data(dev);
 	if (IS_ERR(mux))
 		return -EINVAL;
 
@@ -356,7 +443,7 @@ static int aml_clk_dualdiv_mux_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(regmap))
 		return -EIO;
 
-	ret = of_get_aml_clk_count(dev_np);
+	ret = of_aml_clk_get_count(dev_np);
 	if (ret != AML_DUALDIV_MUX_CLK_NUB)
 		return -EINVAL;
 
@@ -374,15 +461,15 @@ static int aml_clk_dualdiv_mux_probe(struct platform_device *pdev)
 		clk_data->hws[i] = &clk[i].hw;
 
 	for (i = 0; i < AML_DUALDIV_MUX_CLK_NUB; i++) {
-		clk_name = of_get_aml_clk_name_index(dev_np, i);
+		clk_name = of_aml_clk_get_name_index(dev_np, i);
 		if (!clk_name)
 			return -EINVAL;
 
-		clkid = of_get_aml_clk_clkid_index(dev_np, i);
+		clkid = of_aml_clk_get_clkid_index(dev_np, i);
 		if (clkid < 0)
 			return -EINVAL;
 
-		parent_data = of_get_aml_clk_parent_data(dev, clk_data->hws, i);
+		parent_data = of_aml_clk_get_parent_data(dev, clk_data->hws, i);
 		if (IS_ERR(parent_data)) {
 			if (PTR_ERR(parent_data) != -EPROBE_DEFER)
 				dev_err(dev, "Get parent_data failed!\n");
@@ -391,17 +478,26 @@ static int aml_clk_dualdiv_mux_probe(struct platform_device *pdev)
 		}
 
 		init.name = clk_name;
-		init.num_parents = of_get_aml_clk_parent_count(dev, i);
+		init.num_parents = of_aml_clk_get_parent_count(dev, i);
 		init.parent_data = parent_data;
 
 		clk[clkid].hw.init = &init;
 		clk[clkid].map = regmap;
 		if (i == DUALDIV) {
 			init.ops = &aml_clk_dualdiv_ops;
+			init.flags = 0;
 			clk[clkid].data = dualdiv;
+			clk[clkid].type = AML_CLK_DUALDIV;
 		} else {
 			init.ops = &aml_clk_dualdiv_mux_ops;
+			/*
+			 * NOTE: The rtc_clk mux needs to ensure that both the
+			 * old and new parent clocks have clock inputs in order
+			 * to switch stably, similar to a glitch-free mux.
+			 */
+			init.flags = CLK_OPS_PARENT_ENABLE;
 			clk[clkid].data = mux;
+			clk[clkid].type = AML_CLK_MUX;
 		}
 
 		ret = devm_clk_hw_register(dev, &clk[clkid].hw);
@@ -409,6 +505,16 @@ static int aml_clk_dualdiv_mux_probe(struct platform_device *pdev)
 			return ret;
 
 		of_aml_clk_parent_data_release(dev, parent_data);
+
+		ret = of_aml_clk_get_rate_range(dev_np, i, &min_rate, &max_rate);
+		if (ret) {
+			if (ret != -EEXIST)
+				return ret;
+		} else {
+			if (min_rate || max_rate)
+				clk_hw_set_rate_range(&clk[clkid].hw, min_rate,
+						      max_rate);
+		}
 	}
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get, clk_data);

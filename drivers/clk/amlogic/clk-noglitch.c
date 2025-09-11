@@ -4,6 +4,9 @@
  * Author: Chuan Liu <chuan.liu@amlogic.com>
  */
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -444,6 +447,47 @@ static void aml_clk_noglitch_disable(struct clk_hw *hw)
 	regmap_write(clk->map, noglitch->reg_offset, reg.val);
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int aml_clk_noglitch_available_rates_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct clk_hw *phw = clk_hw_get_parent(hw);
+	unsigned long min_rate, max_rate, prate;
+	unsigned long core_min_rate, core_max_rate;
+
+	if (!phw) {
+		pr_err("%s: can't get parent\n", clk_hw_get_name(hw));
+
+		return -ENOENT;
+	}
+
+	prate = clk_hw_get_rate(phw);
+	max_rate = prate;
+	min_rate = divider_recalc_rate(hw, prate, (1 << CLK_NOGLITCH_DIV_WIDTH) - 1,
+				       NULL, 0, CLK_NOGLITCH_DIV_WIDTH);
+
+	clk_hw_get_rate_range(hw, &core_min_rate, &core_max_rate);
+	if (core_min_rate > min_rate)
+		min_rate = core_min_rate;
+
+	if (core_max_rate < max_rate)
+		max_rate = core_max_rate;
+
+	seq_printf(s, "min_rate:%ld\n", min_rate);
+	seq_printf(s, "max_rate:%ld\n", max_rate);
+
+	return 0;
+}
+DEFINE_SHOW_ATTRIBUTE(aml_clk_noglitch_available_rates);
+
+static void aml_clk_noglitch_debug_init(struct clk_hw *hw, struct dentry *dentry)
+{
+	debugfs_create_file("clk_type", 0444, dentry, hw, &aml_clk_type_fops);
+	debugfs_create_file("clk_available_rates", 0444, dentry, hw,
+			    &aml_clk_noglitch_available_rates_fops);
+}
+#endif
+
 const struct clk_ops aml_clk_noglitch_ops = {
 	.get_parent = aml_clk_noglitch_get_parent,
 	.set_parent = aml_clk_noglitch_set_parent,
@@ -454,12 +498,15 @@ const struct clk_ops aml_clk_noglitch_ops = {
 	.enable = aml_clk_noglitch_enable,
 	.disable = aml_clk_noglitch_disable,
 	.is_enabled = aml_clk_noglitch_is_enabled,
+#ifdef CONFIG_DEBUG_FS
+	.debug_init = aml_clk_noglitch_debug_init,
+#endif
 };
 EXPORT_SYMBOL_GPL(aml_clk_noglitch_ops);
 
 #ifdef CONFIG_OF
 static struct aml_clk_noglitch_data *
-of_get_aml_clk_noglitch_data(struct device *dev, u32 index)
+of_aml_clk_get_noglitch_data(struct device *dev, u32 index)
 {
 	struct device_node *dev_np = dev_of_node(dev);
 	struct aml_clk_noglitch_data *noglitch;
@@ -474,7 +521,7 @@ of_get_aml_clk_noglitch_data(struct device *dev, u32 index)
 	if (ret && ret != -EINVAL)
 		goto fail;
 
-	noglitch->mux_table = of_get_aml_clk_parent_table(dev, index);
+	noglitch->mux_table = of_aml_clk_get_parent_table(dev, index);
 
 	return noglitch;
 
@@ -499,8 +546,9 @@ static int aml_noglitch_clk_probe(struct platform_device *pdev)
 	struct clk_init_data init = {
 		.ops = &aml_clk_noglitch_ops,
 	};
+	u64 min_rate, max_rate;
 
-	clk_num = of_get_aml_clk_count(dev_np);
+	clk_num = of_aml_clk_get_count(dev_np);
 	if (clk_num == 0)
 		return -EINVAL;
 
@@ -522,17 +570,17 @@ static int aml_noglitch_clk_probe(struct platform_device *pdev)
 		return -EIO;
 
 	for (i = 0, clkid = 0; i < clk_num; i++) {
-		clkid = of_get_aml_clk_clkid_index(dev_np, i);
+		clkid = of_aml_clk_get_clkid_index(dev_np, i);
 		if (clkid < 0 && clk_num > 1)
 			return -EINVAL;
 
-		clk_name = of_get_aml_clk_name_index(dev_np, i);
+		clk_name = of_aml_clk_get_name_index(dev_np, i);
 		if (!clk_name)
 			return -EINVAL;
 
 		init.name = clk_name;
-		init.num_parents = of_get_aml_clk_parent_count(dev, i);
-		parent_data = of_get_aml_clk_parent_data(dev, clk_data->hws, i);
+		init.num_parents = of_aml_clk_get_parent_count(dev, i);
+		parent_data = of_aml_clk_get_parent_data(dev, clk_data->hws, i);
 		if (IS_ERR(parent_data)) {
 			if (PTR_ERR(parent_data) != -EPROBE_DEFER)
 				dev_err(dev, "Get parent_data failed!\n");
@@ -543,17 +591,28 @@ static int aml_noglitch_clk_probe(struct platform_device *pdev)
 
 		clk[clkid].hw.init = &init;
 		clk[clkid].map = regmap;
-		noglitch = of_get_aml_clk_noglitch_data(dev, i);
+		noglitch = of_aml_clk_get_noglitch_data(dev, i);
 		if (IS_ERR(noglitch))
 			return PTR_ERR(noglitch);
 
 		clk[clkid].data = noglitch;
+		clk[clkid].type = AML_CLK_NOGLITCH;
 
 		ret = devm_clk_hw_register(dev, &clk[clkid].hw);
 		if (ret)
 			return ret;
 
 		of_aml_clk_parent_data_release(dev, parent_data);
+
+		ret = of_aml_clk_get_rate_range(dev_np, i, &min_rate, &max_rate);
+		if (ret) {
+			if (ret != -EEXIST)
+				return ret;
+		} else {
+			if (min_rate || max_rate)
+				clk_hw_set_rate_range(&clk[clkid].hw, min_rate,
+						      max_rate);
+		}
 	}
 
 	if (clk_num == 1)
