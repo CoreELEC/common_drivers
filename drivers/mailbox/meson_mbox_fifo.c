@@ -41,6 +41,7 @@
 #include <dt-bindings/mailbox/t6d-mbox.h>
 #include <dt-bindings/mailbox/t6w-mbox.h>
 #include <dt-bindings/mailbox/t6x-mbox.h>
+#include <dt-bindings/mailbox/a9-mbox.h>
 #include "meson_mbox_fifo.h"
 #include "meson_mbox_comm.h"
 #include "meson_mbox_health.h"
@@ -1419,6 +1420,46 @@ static struct mbox_domain_data t6x_mbox_domains_data __initdata = {
 	.mbox_domains = t6x_mbox_domains,
 	.domain_counts = ARRAY_SIZE(t6x_mbox_domains),
 };
+
+const struct mbox_domain a9_mbox_domains[] = {
+	MBOX_DOMAIN(A9_AO2REE0, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE1, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE2, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE3, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE4, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE5, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE6, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE7, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE8, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE9, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_AO2REE10, A9_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(A9_REE2AO0, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO1, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO2, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO3, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO4, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO5, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO6, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO7, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO8, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO9, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_REE2AO10, A9_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(A9_DSPA2REE0, A9_MBOX_DSPA2REE, 0),
+	MBOX_DOMAIN(A9_DSPA2REE1, A9_MBOX_DSPA2REE, 0),
+	MBOX_DOMAIN(A9_DSPA2REE2, A9_MBOX_DSPA2REE, 0),
+	MBOX_DOMAIN(A9_DSPA2REE3, A9_MBOX_DSPA2REE, 0),
+	MBOX_DOMAIN(A9_DSPA2REE4, A9_MBOX_DSPA2REE, 0),
+	MBOX_DOMAIN(A9_REE2DSPA0, A9_MBOX_REE2DSPA, 0),
+	MBOX_DOMAIN(A9_REE2DSPA1, A9_MBOX_REE2DSPA, 0),
+	MBOX_DOMAIN(A9_REE2DSPA2, A9_MBOX_REE2DSPA, 0),
+	MBOX_DOMAIN(A9_REE2DSPA3, A9_MBOX_REE2DSPA, 0),
+	MBOX_DOMAIN(A9_REE2DSPA4, A9_MBOX_REE2DSPA, 0),
+};
+
+static struct mbox_domain_data a9_mbox_domains_data __initdata = {
+	.mbox_domains = a9_mbox_domains,
+	.domain_counts = ARRAY_SIZE(a9_mbox_domains),
+};
 #endif
 
 const struct mbox_domain s1a_mbox_domains[] = {
@@ -1512,6 +1553,10 @@ static const struct of_device_id mbox_of_match[] = {
 	{
 		.compatible = "amlogic, t6x-mbox-fifo",
 		.data = &t6x_mbox_domains_data,
+	},
+	{
+		.compatible = "amlogic, a9-mbox-fifo",
+		.data = &a9_mbox_domains_data,
 	},
 #endif
 	{
