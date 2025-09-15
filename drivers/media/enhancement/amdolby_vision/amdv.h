@@ -55,6 +55,7 @@
 
 #define VPP_VD1_DSC_CTRL                   0x1a83
 #define VIU_VD1_PATH_CTRL                  0x1a73
+#define VIU_OSD1_PATH_CTRL                 0x1a76
 #define VPP_VD2_DSC_CTRL                   0x1a84
 #define VPP_VD3_DSC_CTRL                   0x1a85
 #define AMDV_PATH_SWAP_CTRL1              0x1a70
@@ -814,6 +815,7 @@ enum cpu_id_e {
 	_CPU_MAJOR_ID_S6,
 	_CPU_MAJOR_ID_T6W,
 	_CPU_MAJOR_ID_T6X,
+	_CPU_MAJOR_ID_A9,
 	_CPU_MAJOR_ID_UNKNOWN,
 };
 
@@ -1352,6 +1354,7 @@ bool is_aml_s7d(void);
 bool is_aml_s6(void);
 bool is_aml_t6w(void);
 bool is_aml_t6x(void);
+bool is_aml_a9(void);
 
 u32 VSYNC_RD_DV_REG(u32 adr);
 int VSYNC_WR_DV_REG(u32 adr, u32 val);

@@ -251,7 +251,8 @@ void adjust_vpotch(u32 graphics_w, u32 graphics_h)
 		} else {
 			g_vpotch = 0x20;
 		}
-	} else if (is_aml_s7d() || is_aml_s6()) {
+	} else if (is_aml_s7d() || is_aml_s6() ||
+		is_aml_a9()) {
 		if (vinfo) {
 			if (debug_dolby & 2)
 				pr_dv_dbg("vinfo %d %d %d, graphics_h %d\n",
@@ -390,8 +391,8 @@ void amdv_core_reset(enum core_type type)
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 1 << 1);
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 0);
 		} else if (is_aml_tm2() || is_aml_sc2() ||
-			 is_aml_s4d() || is_aml_t7() ||
-			 is_aml_t3() || is_aml_s7d() || is_aml_s6()) {
+			 is_aml_s4d() || is_aml_t7() || is_aml_t3() ||
+			 is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 1 << 30);
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 0);
 		} else if (is_aml_s5()) {
@@ -423,10 +424,9 @@ void amdv_core_reset(enum core_type type)
 		}
 		break;
 	case AMDV_CORE2A:
-		if (is_aml_tm2() || is_aml_sc2() ||
-		    is_aml_s4d() || is_aml_t7() ||
-		    is_aml_t3() || is_aml_g12() ||
-		    is_aml_s7d() || is_aml_s6()) {
+		if (is_aml_tm2() || is_aml_sc2() || is_aml_s4d() ||
+			is_aml_t7() || is_aml_t3() || is_aml_g12() ||
+		    is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 1 << 2);
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 0);
 		} else if (is_aml_s5()) {
@@ -435,10 +435,9 @@ void amdv_core_reset(enum core_type type)
 		}
 		break;
 	case AMDV_CORE2B:
-		if (is_aml_tm2() || is_aml_sc2() ||
-		    is_aml_s4d() || is_aml_t7() ||
-		    is_aml_t3() || is_aml_g12() ||
-		    is_aml_s7d() || is_aml_s6()) {
+		if (is_aml_tm2() || is_aml_sc2() || is_aml_s4d() ||
+			is_aml_t7() || is_aml_t3() || is_aml_g12() ||
+		    is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 1 << 3);
 			VSYNC_WR_DV_REG(VIU_SW_RESET, 0);
 		}
@@ -533,7 +532,7 @@ int tv_dv_core1_set(u64 *dma_data,
 
 	/*for stb hdmi in mode*/
 	if (multi_dv_mode && (is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
-	    layerid_valid(hdmi_path_id)) {
+		layerid_valid(hdmi_path_id)) {
 		core1_on_flag = dv_core1[0].core1_on || dv_core1[1].core1_on;
 		runmode_cnt = dv_core1[hdmi_path_id].run_mode_count;
 	}
@@ -551,8 +550,8 @@ int tv_dv_core1_set(u64 *dma_data,
 			 __func__, reset, bl_enable, amdv_core1_on);
 
 	adjust_vpotch_tv();
-	if (is_aml_tm2() || is_aml_t7() ||
-	    is_aml_t3() || is_aml_t5w() || is_aml_t5m()) {
+	if (is_aml_tm2() || is_aml_t7() || is_aml_t3() || is_aml_t5w() ||
+		is_aml_t5m()) {
 		/* mempd for ipcore */
 		if (is_aml_tm2_stbmode() || is_aml_t7_stbmode()) {
 			if (get_dv_vpu_mem_power_status(VPU_DOLBY0) ==
@@ -567,8 +566,8 @@ int tv_dv_core1_set(u64 *dma_data,
 				VPU_MEM_POWER_DOWN)
 				dv_mem_power_on(VPU_DOLBY0);
 			VSYNC_WR_DV_REG_BITS(AMDV_TV_SWAP_CTRL7, 0, 4, 9);
-			if (is_aml_tm2revb() || is_aml_t7() ||
-			    is_aml_t3() || is_aml_t5w() || is_aml_t5m()) {
+			if (is_aml_tm2revb() || is_aml_t7() || is_aml_t3() ||
+				is_aml_t5w() || is_aml_t5m()) {
 				/* comp on, mempd on */
 				VSYNC_WR_DV_REG_BITS(AMDV_TV_SWAP_CTRL7,
 						     0, 14, 4);
@@ -1004,25 +1003,38 @@ static int dv_core1_set(u32 dm_count,
 	/*           dolby_path_ctrl[2] = 0 to enable OSD*/
 	if (is_amdv_stb_mode() &&
 		get_frame_count() == 1 && amdv_core1_on == 0) {
-		pr_dv_dbg("((%s %d, register AMDV_PATH_CTRL: %x))\n",
-			__func__, __LINE__,
-			VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
-		if ((VSYNC_RD_DV_REG(AMDV_PATH_CTRL) & 0x1) != 0) {
-			pr_dv_dbg("BL is disable for 1st frame.Re-enable BL\n");
-			VSYNC_WR_DV_REG_BITS(AMDV_PATH_CTRL, 0, 0, 1);
-			pr_dv_dbg("((%s %d, enable_bl, AMDV_PATH_CTRL: %x))\n",
+		if (is_aml_a9()) {
+			pr_dv_dbg("((%s %d, register VIU_VD1_PATH_CTRL: %x))\n",
+				__func__, __LINE__,
+				VSYNC_RD_DV_REG(VIU_VD1_PATH_CTRL));
+			if ((VSYNC_RD_DV_REG(VIU_VD1_PATH_CTRL) & 0x10000) != 0) {
+				pr_dv_dbg("BL is disable for 1st frame.Re-enable BL\n");
+				VSYNC_WR_DV_REG_BITS(VIU_VD1_PATH_CTRL, 0, 16, 1);
+				pr_dv_dbg("((%s %d, enable_bl, VIU_VD1_PATH_CTRL: %x))\n",
+					__func__, __LINE__,
+					VSYNC_RD_DV_REG(VIU_VD1_PATH_CTRL));
+			}
+		} else {
+			pr_dv_dbg("((%s %d, register AMDV_PATH_CTRL: %x))\n",
 				__func__, __LINE__,
 				VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
-		}
-		if (el_enable) {
-			if ((VSYNC_RD_DV_REG(AMDV_PATH_CTRL) & 0x10) != 0) {
-				pr_dv_dbg("((%s %d enable el))\n",
-					__func__, __LINE__);
-				VSYNC_WR_DV_REG_BITS(AMDV_PATH_CTRL,
-					0, 1, 1);
-				pr_dv_dbg("((%s %d, enable_el, AMDV_PATH_CTRL: %x))\n",
+			if ((VSYNC_RD_DV_REG(AMDV_PATH_CTRL) & 0x1) != 0) {
+				pr_dv_dbg("BL is disable for 1st frame.Re-enable BL\n");
+				VSYNC_WR_DV_REG_BITS(AMDV_PATH_CTRL, 0, 0, 1);
+				pr_dv_dbg("((%s %d, enable_bl, AMDV_PATH_CTRL: %x))\n",
 					__func__, __LINE__,
 					VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
+			}
+			if (el_enable) {
+				if ((VSYNC_RD_DV_REG(AMDV_PATH_CTRL) & 0x10) != 0) {
+					pr_dv_dbg("((%s %d enable el))\n",
+						__func__, __LINE__);
+					VSYNC_WR_DV_REG_BITS(AMDV_PATH_CTRL,
+						0, 1, 1);
+					pr_dv_dbg("((%s %d, enable_el, AMDV_PATH_CTRL: %x))\n",
+						__func__, __LINE__,
+						VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
+				}
 			}
 		}
 	}
@@ -1484,6 +1496,10 @@ static int dv_core1_set(u32 dm_count,
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 0, 0, 1); /* core1 */
+			} else if (is_aml_a9()) {
+				VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 0, 16, 1); /* core1 */
 			} else if (is_aml_s5()) {
 				VSYNC_WR_DV_REG_BITS
 					(VD1_S0_DV_BYPASS_CTRL,
@@ -1501,6 +1517,10 @@ static int dv_core1_set(u32 dm_count,
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 1, 0, 1);
+			} else if (is_aml_a9()) {
+				VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 1, 16, 1); /* core1 bypass */
 			} else if (is_aml_tm2_stbmode()) {
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
@@ -1531,7 +1551,7 @@ static int dv_core1_set(u32 dm_count,
 	if (is_aml_g12() || is_aml_tm2_stbmode() ||
 	    is_aml_t7_stbmode() || is_aml_sc2() ||
 	    is_aml_s4d() || is_aml_s5() || is_aml_s7d() ||
-	    is_aml_s6()) {
+	    is_aml_s6() || is_aml_a9()) {
 		VSYNC_WR_DV_REG(AMDV_CORE1A_SWAP_CTRL0,
 			(el_41_mode ? (0x3 << 4) : (0x0 << 4)) |
 			bl_enable | composer_enable << 1 | el_41_mode << 2 |
@@ -1908,6 +1928,10 @@ static int dv_core1a_set(u32 dm_count,
 				(AMDV_PATH_CTRL,
 				 1,
 				 0, 1);
+		else if (is_aml_a9())
+			VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 1, 16, 1); /* core1 bypass */
 		else if (is_aml_t7_stbmode())
 			VSYNC_WR_DV_REG_BITS
 				(VPP_VD1_DSC_CTRL,
@@ -2060,6 +2084,10 @@ static int dv_core1a_set(u32 dm_count,
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 0, 0, 1); /* core1 */
+			} else if (is_aml_a9()) {
+				VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 0, 16, 1); /* core1 */
 			} else if (is_aml_s5()) {
 				VSYNC_WR_DV_REG_BITS
 					(VD1_S0_DV_BYPASS_CTRL,
@@ -2086,6 +2114,10 @@ static int dv_core1a_set(u32 dm_count,
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 1, 0, 1);/* core1a bypass */
+			} else if (is_aml_a9()) {
+				VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 1, 16, 1); /* core1 bypass */
 			} else if (is_aml_tm2_stbmode()) {
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
@@ -2107,9 +2139,9 @@ static int dv_core1a_set(u32 dm_count,
 		}
 	}
 
-	if (is_aml_g12() || is_aml_tm2_stbmode() ||
-	    is_aml_t7_stbmode() || is_aml_sc2() ||
-	    is_aml_s4d() || is_aml_s5() || is_aml_s7d() || is_aml_s6()) {
+	if (is_aml_g12() || is_aml_tm2_stbmode() || is_aml_t7_stbmode() ||
+		is_aml_sc2() || is_aml_s4d() || is_aml_s5() || is_aml_s7d() ||
+		is_aml_s6() || is_aml_a9()) {
 		VSYNC_WR_DV_REG(AMDV_CORE1A_SWAP_CTRL0,
 			(el_41_mode ? (0x3 << 4) : (0x0 << 4)) |
 			core1a_enable | composer_enable << 1 | el_41_mode << 2 |
@@ -2814,10 +2846,9 @@ static int dv_core2a_set
 				(g_vtiming & 0xff) : g_vpotch));
 	if (is_aml_txlx_stbmode())
 		VSYNC_WR_DV_REG(AMDV_CORE2A_SWAP_CTRL5, 0xf8000000);
-	else if (is_aml_g12() || is_aml_tm2_stbmode() ||
-		 is_aml_t7_stbmode() || is_aml_sc2() ||
-		 is_aml_s4d() || is_aml_s5() || is_aml_s7d() ||
-		 is_aml_s6())
+	else if (is_aml_g12() || is_aml_tm2_stbmode() || is_aml_t7_stbmode() ||
+		is_aml_sc2() || is_aml_s4d() || is_aml_s5() || is_aml_s7d() ||
+		is_aml_s6() || is_aml_a9())
 		VSYNC_WR_DV_REG(AMDV_CORE2A_SWAP_CTRL5,  0xa8000000);
 	else
 		VSYNC_WR_DV_REG(AMDV_CORE2A_SWAP_CTRL5, 0x0);
@@ -3221,7 +3252,7 @@ static int dv_core3_set
 
 	/*s6 has clk_gating function, but its logical is unreasonable, lead to crc is not matched*/
 	/*bit5: 0->enable clk gate, 1->disable clk gate*/
-	if (is_aml_s6())
+	if (is_aml_s6() || is_aml_a9())
 		VSYNC_WR_DV_REG(CORE3_CLKGATE_CTRL, 0x20);
 	else
 		VSYNC_WR_DV_REG(CORE3_CLKGATE_CTRL, 0);
@@ -4650,13 +4681,9 @@ void enable_amdv_v1(int enable)
 					dolby_vision_ll_policy;
 				pr_info("DV STB cores turn on\n");
 			} else if (is_aml_g12() ||
-				   is_aml_tm2_stbmode() ||
-				   is_aml_t7_stbmode() ||
-				   is_aml_sc2() ||
-				   is_aml_s4d() ||
-				   is_aml_s5() ||
-				   is_aml_s7d() ||
-				   is_aml_s6()) {
+				   is_aml_tm2_stbmode() || is_aml_t7_stbmode() ||
+				   is_aml_sc2() || is_aml_s4d() || is_aml_s5() ||
+				   is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 				hdr_osd_off(VPP_TOP0);
 				hdr_vd1_off(VPP_TOP0);
 				set_hdr_module_status(VD1_PATH,
@@ -4773,6 +4800,27 @@ void enable_amdv_v1(int enable)
 							(AMDV_PATH_CTRL,
 							 1,
 							 0, 1); /* core1 off*/
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off
+							(VPU_PRIME_DOLBY_RAM);
+						VSYNC_WR_DV_REG
+							(AMDV_CORE1A_CLKGATE_CTRL,
+							0x55555455);
+						amdv_core1_on = false;
+					}
+				} else if (is_aml_a9()) {
+					if ((amdv_mask & 1) &&
+					    amdv_setting_video_flag) {
+						VSYNC_WR_DV_REG_BITS
+							(VIU_VD1_PATH_CTRL,
+							 0,
+							 16, 1); /* core1 on*/
+						amdv_core1_on = true;
+					} else {
+						VSYNC_WR_DV_REG_BITS
+							(VIU_VD1_PATH_CTRL,
+							 1,
+							 16, 1); /* core1 off*/
 						dv_mem_power_off(VPU_DOLBY1A);
 						dv_mem_power_off
 							(VPU_PRIME_DOLBY_RAM);
@@ -5031,11 +5079,8 @@ void enable_amdv_v1(int enable)
 			if (!amdv_core1_on &&
 				(amdv_mask & 1) &&
 				amdv_setting_video_flag) {
-				if (is_aml_g12() ||
-				    is_aml_tm2_stbmode() ||
-				    is_aml_sc2() ||
-				    is_aml_s4d() ||
-				    is_aml_s7d() ||
+				if (is_aml_g12() || is_aml_tm2_stbmode() ||
+				    is_aml_sc2() || is_aml_s4d() || is_aml_s7d() ||
 				    is_aml_s6()) {
 					/* enable core1 with el */
 					if (dovi_setting.el_flag)
@@ -5062,6 +5107,12 @@ void enable_amdv_v1(int enable)
 					} else {
 						hdr_vd1_off(VPP_TOP0);
 					}
+				} else if (is_aml_a9()) {
+					/*enable core1a*/
+					VSYNC_WR_DV_REG_BITS
+						(VIU_VD1_PATH_CTRL,
+						 0, 16, 1);
+					hdr_vd1_off(VPP_TOP0);
 				} else if (is_aml_tm2_tvmode()) {
 					VSYNC_WR_DV_REG_BITS
 						(AMDV_PATH_CTRL,
@@ -5177,14 +5228,10 @@ void enable_amdv_v1(int enable)
 			} else if (amdv_core1_on &&
 					   (!(amdv_mask & 1) ||
 					    !amdv_setting_video_flag)) {
-				if (is_aml_g12() ||
-				    is_aml_tm2_stbmode() ||
-				    is_aml_t7_stbmode() ||
-				    is_aml_sc2() ||
-				    is_aml_s4d() ||
-				    is_aml_s5() ||
-				    is_aml_s7d() ||
-				    is_aml_s6()) {
+				if (is_aml_g12() || is_aml_tm2_stbmode() ||
+				    is_aml_t7_stbmode() || is_aml_sc2() ||
+				    is_aml_s4d() || is_aml_s5() || is_aml_s7d() ||
+				    is_aml_s6() || is_aml_a9()) {
 					if (is_aml_t7_stbmode()) {
 						VSYNC_WR_DV_REG_BITS
 							(VPP_VD1_DSC_CTRL,
@@ -5203,6 +5250,10 @@ void enable_amdv_v1(int enable)
 						VSYNC_WR_DV_REG_BITS
 						(VD1_S0_DV_BYPASS_CTRL,
 						 0, 0, 1);
+					} else if (is_aml_a9()) {
+						VSYNC_WR_DV_REG_BITS
+							(VIU_VD1_PATH_CTRL,
+							1, 16, 1);
 					} else {
 						VSYNC_WR_DV_REG_BITS
 							(AMDV_PATH_CTRL,
@@ -5402,13 +5453,9 @@ void enable_amdv_v1(int enable)
 				dovi_setting.src_format = FORMAT_SDR;
 				pr_dv_dbg("DV STB cores turn off\n");
 			} else if (is_aml_g12() ||
-				   is_aml_tm2_stbmode() ||
-				   is_aml_t7_stbmode() ||
-				   is_aml_sc2() ||
-				   is_aml_s4d() ||
-				   is_aml_s5() ||
-				   is_aml_s7d() ||
-				   is_aml_s6()) {
+				   is_aml_tm2_stbmode() || is_aml_t7_stbmode() ||
+				   is_aml_sc2() || is_aml_s4d() || is_aml_s5() ||
+				   is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 				if (is_aml_t7_stbmode()) {
 					VSYNC_WR_DV_REG_BITS
 						(VPP_VD1_DSC_CTRL,
@@ -5445,6 +5492,11 @@ void enable_amdv_v1(int enable)
 						(OSD_DOLBY_BYPASS_EN,
 						 1,
 						 4, 1);/*core2c bypass*/
+				} else if (is_aml_a9()) {
+					VSYNC_WR_DV_REG_BITS(VIU_VD1_PATH_CTRL,
+						1, 16, 1);   /* core1 bypass */
+					VSYNC_WR_DV_REG_BITS(VIU_OSD1_PATH_CTRL,
+						1, 16, 1);   /* core2 bypass */
 				} else {
 					VSYNC_WR_DV_REG_BITS
 						(AMDV_PATH_CTRL,
@@ -5754,6 +5806,26 @@ void enable_amdv_v2_stb(int enable)
 							 1,
 							 4, 1);/*core2c bypass*/
 					}
+				} else if (is_aml_a9()) {
+					if (amdv_mask & 4)
+						VSYNC_WR_DV_REG_BITS
+						(VPP_AMDV_CTRL,
+						 1, 3, 1);   /* core3 enable */
+					else
+						VSYNC_WR_DV_REG_BITS
+						(VPP_AMDV_CTRL,
+						 0, 3, 1);   /* bypass core3  */
+
+					if (amdv_mask & 2)
+						VSYNC_WR_DV_REG_BITS
+							(VIU_OSD1_PATH_CTRL,
+							 0,
+							 16, 1);/*core2 enable*/
+					else
+						VSYNC_WR_DV_REG_BITS
+							(VIU_OSD1_PATH_CTRL,
+							 1,
+							 16, 1);/*core2 bypass*/
 				} else {
 					if (amdv_mask & 4)
 						VSYNC_WR_DV_REG_BITS
@@ -5799,6 +5871,32 @@ void enable_amdv_v2_stb(int enable)
 							0x55555455);
 						dv_core1[0].core1_on = false;
 					}
+				} else if (is_aml_a9()) {
+					if ((amdv_mask & 1) &&
+					    dv_core1[0].amdv_setting_video_flag) {
+						VSYNC_WR_DV_REG_BITS
+							(VIU_VD1_PATH_CTRL,
+							 0,
+							 16, 1); /* core1 on*/
+						dv_core1[0].core1_on = true;
+						dv_core1[0].core1_on_cnt = 0;
+					} else {
+						VSYNC_WR_DV_REG_BITS
+							(VIU_VD1_PATH_CTRL,
+							 1,
+							 16, 1); /* core1 off*/
+						dv_mem_power_off(VPU_DOLBY1A);
+						dv_mem_power_off
+							(VPU_PRIME_DOLBY_RAM);
+						VSYNC_WR_DV_REG
+							(AMDV_CORE1A_CLKGATE_CTRL,
+							0x55555455);
+						dv_core1[0].core1_on = false;
+					}
+					pr_dv_dbg
+						("DV a9 turn on %s\n",
+						 dv_core1[0].core1_on ?
+						 "core1" : "");
 				} else if (is_aml_tm2_stbmode()) {
 					if (is_aml_stb_hdmimode() && !core1_detunnel())
 						core_flag = 1;
@@ -5903,7 +6001,7 @@ void enable_amdv_v2_stb(int enable)
 						core_flag = 1;
 					/* AMDV_PATH_SWAP_CTRL1 todo*/
 					if ((amdv_mask & 1) &&
-					    dv_core1[0].amdv_setting_video_flag) {
+						dv_core1[0].amdv_setting_video_flag) {
 						/*core1a on*/
 						VSYNC_WR_DV_REG_BITS
 							(VPP_VD1_DSC_CTRL,
@@ -6039,12 +6137,9 @@ void enable_amdv_v2_stb(int enable)
 			if (!dv_core1[0].core1_on &&
 			    (amdv_mask & 1) &&
 			    dv_core1[0].amdv_setting_video_flag) {
-				if (is_aml_g12() ||
-				    is_aml_tm2_stbmode() ||
-				    is_aml_sc2() ||
-				    is_aml_s4d() ||
-				    is_aml_s7d() ||
-				    is_aml_s6()) {
+				if (is_aml_g12() || is_aml_tm2_stbmode() ||
+				    is_aml_sc2() || is_aml_s4d() ||
+				    is_aml_s7d() || is_aml_s6()) {
 					VSYNC_WR_DV_REG_BITS
 						(AMDV_PATH_CTRL,
 						/* enable core1a */
@@ -6064,6 +6159,12 @@ void enable_amdv_v2_stb(int enable)
 					} else {
 						hdr_vd1_off(VPP_TOP0);
 					}
+				} else if (is_aml_a9()) {
+					VSYNC_WR_DV_REG_BITS
+						(VIU_VD1_PATH_CTRL,
+						/* enable core1a */
+						 0, 16, 1);
+					hdr_vd1_off(VPP_TOP0);
 				} else if (is_aml_t7_stbmode()) {
 					/* vd1 to core1a*/
 					VSYNC_WR_DV_REG_BITS
@@ -6331,15 +6432,23 @@ void enable_amdv_v2_stb(int enable)
 		set_vsync_count(0);
 	} else {
 		if (dolby_vision_on) {
-			if (is_aml_g12() || is_aml_sc2() ||
-			    is_aml_s4d() || is_aml_tm2_stbmode() ||
-			    is_aml_s7d() || is_aml_s6()) {
+			if (is_aml_g12() || is_aml_sc2() || is_aml_s4d() ||
+				is_aml_tm2_stbmode() || is_aml_s7d() || is_aml_s6()) {
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_CTRL,
 					 (1 << 2) |	/* core2 bypass */
 					 (1 << 1) |	/* vd2 connect to vpp */
 					 (1 << 0),	/* core1 bl bypass */
 					 0, 3);
+			} else if (is_aml_a9()) {
+				VSYNC_WR_DV_REG_BITS
+					(VIU_VD1_PATH_CTRL,
+					 /* disable core1 */
+					 1, 16, 1);
+				VSYNC_WR_DV_REG_BITS
+					(VIU_OSD1_PATH_CTRL,
+					 /* disable core2 */
+					 1, 16, 1);
 			} else if (is_aml_t7_stbmode()) {
 				VSYNC_WR_DV_REG_BITS
 					(VPP_VD1_DSC_CTRL,

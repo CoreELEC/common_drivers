@@ -715,7 +715,7 @@ bool is_aml_s5(void)
 bool is_aml_box(void)
 {
 	if (is_aml_gxm() || is_aml_g12() || is_aml_sc2() || is_aml_s4d() ||
-		is_aml_s5() || is_aml_s7d() || is_aml_s6())
+		is_aml_s5() || is_aml_s7d() || is_aml_s6() || is_aml_a9())
 		return true;
 	else
 		return false;
@@ -882,6 +882,14 @@ bool is_aml_s6(void)
 		return false;
 }
 
+bool is_aml_a9(void)
+{
+	if (dv_meson_dev.cpu_id == _CPU_MAJOR_ID_A9)
+		return true;
+	else
+		return false;
+}
+
 bool is_amdv_stb_mode(void)
 {
 	return is_aml_txlx_stbmode() ||
@@ -921,7 +929,7 @@ bool is_aml_stb_hdmimode(void)
 int is_graphics_output_off(void)
 {
 	if (is_aml_g12() || is_aml_tm2_stbmode() || is_aml_sc2() ||
-		is_aml_s4d() || is_aml_s7d() || is_aml_s6()) {
+		is_aml_s4d() || is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 		if (((READ_VPP_REG(OSD1_BLEND_SRC_CTRL) >> 8 & 0xf) == 3) ||
 			((READ_VPP_REG(OSD2_BLEND_SRC_CTRL) >> 8 & 0xf) == 3) ||
 			((READ_VPP_REG(VD1_BLEND_SRC_CTRL) >> 8 & 0xf) == 3) ||
@@ -988,8 +996,8 @@ void init_amdv_rdma_part_ins(void)
 	for (i = 0; i < MAX_RDMA_TABLE_CNT; i++)
 		amdv_rdma_part_ins[0].table_index = -1;
 
-	if (is_aml_g12() || is_aml_tm2() || is_aml_t7() ||
-		is_aml_sc2() || is_aml_s4d() || is_aml_s6() || is_aml_s7d()) {
+	if (is_aml_g12() || is_aml_tm2() || is_aml_t7() || is_aml_sc2() ||
+		is_aml_s4d() || is_aml_s6() || is_aml_s7d() || is_aml_a9()) {
 		/*core1a*/
 		amdv_rdma_part_ins[0].vpp_index = RDMA_VPP0;
 		amdv_rdma_part_ins[0].table_index = AMLDV_PARTITION_TABLE_0;
@@ -1344,7 +1352,7 @@ static void amdv_addr(void)
 	} else if (is_aml_t3()) {
 		CORETV_BASE = 0x4300;
 	} else if (is_aml_s4d() || is_aml_s7d() ||
-		is_aml_s6()) {
+		is_aml_s6() || is_aml_a9()) {
 		CORE1A_BASE = 0x3300;
 		CORE2A_BASE = 0x3400;
 		CORE3_BASE = 0x3600;
@@ -3836,6 +3844,17 @@ static void dump_setting(struct dovi_setting_s *setting,
 			is_aml_s6()) {
 			pr_info("g12/sc2/s4d/s7d/s6  stb reg: 0x1a0c val = 0x%x\n",
 				READ_VPP_DV_REG(AMDV_PATH_CTRL));
+		} else if (is_aml_a9()) {
+			pr_info("a9 reg: SWAP_CTRL1 0x1a70 val = 0x%x\n",
+				READ_VPP_DV_REG(AMDV_PATH_SWAP_CTRL1));
+			pr_info("a9 reg: SWAP_CTRL2 0x1a71 val = 0x%x\n",
+				READ_VPP_DV_REG(AMDV_PATH_SWAP_CTRL2));
+			pr_info("a9 reg: core1 0x1a73 (bit16, 0:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VIU_VD1_PATH_CTRL));
+			pr_info("a9 reg: core2 0x1a76 (bit16, 0:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VIU_OSD1_PATH_CTRL));
+			pr_info("a9 reg: core3 0x1d93 (bit3, 1:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VPP_AMDV_CTRL));
 		} else if (is_aml_tm2_stbmode()) {
 			pr_info("tm2_stb reg: 0x1a0c val = 0x%x\n",
 				READ_VPP_DV_REG(AMDV_PATH_CTRL));
@@ -4094,6 +4113,17 @@ static void dump_m_setting(struct m_dovi_setting_s *m_setting,
 			is_aml_s6()) {
 			pr_info("g12/sc2/s4d/s7d/s6  stb reg: 0x1a0c = 0x%x\n",
 				READ_VPP_DV_REG(AMDV_PATH_CTRL));
+		} else if (is_aml_a9()) {
+			pr_info("a9 reg: SWAP_CTRL1 0x1a70 val = 0x%x\n",
+				READ_VPP_DV_REG(AMDV_PATH_SWAP_CTRL1));
+			pr_info("a9 reg: SWAP_CTRL2 0x1a71 val = 0x%x\n",
+				READ_VPP_DV_REG(AMDV_PATH_SWAP_CTRL2));
+			pr_info("a9 reg: core1 0x1a73 (bit16, 0:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VIU_VD1_PATH_CTRL));
+			pr_info("a9 reg: core2 0x1a76 (bit16, 0:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VIU_OSD1_PATH_CTRL));
+			pr_info("a9 reg: core3 0x1d93 (bit3, 1:enable)val = 0x%x\n",
+				READ_VPP_DV_REG(VPP_AMDV_CTRL));
 		} else if (is_aml_tm2_stbmode()) {
 			pr_info("tm2_stb reg: 0x1a0c = 0x%x\n",
 				READ_VPP_DV_REG(AMDV_PATH_CTRL));
@@ -12463,7 +12493,8 @@ int amdv_wait_metadata_v1(struct vframe_s *vf)
 			if (READ_VPP_DV_REG(VPP_MISC) & (1 << 10))
 				vd1_on = true;
 		} else if (is_aml_tm2() || is_aml_sc2() || is_aml_t7() || is_aml_t3() ||
-		is_aml_s4d() || is_aml_t5w() || is_aml_t5m() || is_aml_s7d() || is_aml_s6()) {
+		is_aml_s4d() || is_aml_t5w() || is_aml_t5m() || is_aml_s7d() || is_aml_s6() ||
+		is_aml_a9()) {
 			if (READ_VPP_DV_REG(VD1_BLEND_SRC_CTRL) & (1 << 0))
 				vd1_on = true;
 		} else if (is_aml_s5()) {
@@ -12640,7 +12671,8 @@ int amdv_wait_metadata_v2(struct vframe_s *vf, enum vd_path_e vd_path)
 			if (READ_VPP_DV_REG(VPP_MISC) & (1 << 10))
 				vd_on = true;
 		} else if (is_aml_tm2() || is_aml_sc2() || is_aml_t7() || is_aml_t3() ||
-		is_aml_s4d() || is_aml_t5w() || is_aml_t5m() || is_aml_s7d() || is_aml_s6()) {
+		is_aml_s4d() || is_aml_t5w() || is_aml_t5m() || is_aml_s7d() || is_aml_s6() ||
+		is_aml_a9()) {
 			if (vd_path == VD1_PATH) {
 				if (READ_VPP_DV_REG(VD1_BLEND_SRC_CTRL) & (1 << 0))
 					vd_on = true;
@@ -13823,10 +13855,8 @@ int amdolby_vision_process_v1(struct vframe_s *vf,
 				}
 				/* if tv ko loaded for tm2/T7 stb*/
 				/* switch to tv vore */
-				if ((is_aml_tm2_stbmode() ||
-				     is_aml_t7_stbmode()) &&
-					p_funcs_tv && !p_funcs_stb &&
-					!is_amdv_on()) {
+				if ((is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
+					p_funcs_tv && !p_funcs_stb && !is_amdv_on()) {
 					pr_dv_dbg("Switch from STB to TV core Done\n");
 					switch_to_tv_mode();
 				}
@@ -14836,8 +14866,7 @@ static int amdolby_vision_process_v2_stb
 				/* if tv ko loaded for tm2/t7 stb*/
 				/* switch to tv vore */
 				if ((is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
-					p_funcs_tv && !p_funcs_stb &&
-					!is_amdv_on()) {
+					p_funcs_tv && !p_funcs_stb && !is_amdv_on()) {
 					switch_to_tv_mode();
 				}
 			} else {
@@ -14890,7 +14919,7 @@ static int amdolby_vision_process_v2_stb
 		}
 	}
 
-	if (is_aml_s6() && !boot_reset_core2_en) {
+	if ((is_aml_s6() || is_aml_a9()) && !boot_reset_core2_en) {
 		boot_reset_core2_en = true;
 		set_force_reset_core2(true, OSD1_INDEX);
 	}
@@ -16073,6 +16102,8 @@ static int get_chip_name(void)
 		snprintf(chip_name, sizeof("t6w"), "%s", "t6w");
 	else if (is_aml_t6x())
 		snprintf(chip_name, sizeof("t6x"), "%s", "t6x");
+	else if (is_aml_a9())
+		snprintf(chip_name, sizeof("a9"), "%s", "a9");
 	else
 		snprintf(chip_name, sizeof("null"), "%s", "null");
 
@@ -16093,14 +16124,12 @@ static int get_chip_name(void)
 
 bool chip_support_dv(void)
 {
-	if (is_aml_txlx() || is_aml_gxm() ||
-	    is_aml_g12() || is_aml_tm2() ||
-	    is_aml_sc2() || is_aml_t7() ||
-	    is_aml_t3() || is_aml_s4d() ||
-	    is_aml_t5w() || is_aml_t5m() ||
-		is_aml_s5() || is_aml_t3x() ||
-		is_aml_s7d() || is_aml_s6() ||
-		is_aml_t6w() || is_aml_t6x())
+	if (is_aml_txlx() || is_aml_gxm() || is_aml_g12() ||
+		is_aml_tm2() || is_aml_sc2() || is_aml_t7() ||
+	    is_aml_t3() || is_aml_s4d() || is_aml_t5w() ||
+	    is_aml_t5m() || is_aml_s5() || is_aml_t3x() ||
+		is_aml_s7d() || is_aml_s6() || is_aml_t6w() ||
+		is_aml_t6x() || is_aml_a9())
 		return true;
 	else
 		return false;
@@ -16146,7 +16175,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 	}
 	if (is_aml_t7() || is_aml_t3() || is_aml_s4d() || is_aml_t5w() ||
 		is_aml_t5m() || is_aml_s5() || is_aml_t3x() || is_aml_s7d() ||
-		is_aml_s6() || is_aml_t6w() || is_aml_t6x()) {
+		is_aml_s6() || is_aml_t6w() || is_aml_t6x() || is_aml_a9()) {
 		total_name_len = get_chip_name();
 		if (func) {
 			get_ko = strstr(func->version_info, total_chip_name);
@@ -16426,10 +16455,10 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 
 		/*stb core doesn't need run mode*/
 		/*TV core need run mode and the value is 2*/
-		if (is_aml_txlx_stbmode() ||
-		    is_aml_tm2_stbmode() || is_aml_t7_stbmode() ||
-		    is_aml_sc2() || is_aml_s4d() || is_aml_s5() ||
-		    is_aml_g12() || is_aml_s7d() || is_aml_s6())
+		if (is_aml_txlx_stbmode() || is_aml_tm2_stbmode() ||
+			is_aml_t7_stbmode() || is_aml_sc2() || is_aml_s4d() ||
+			is_aml_s5() || is_aml_g12() || is_aml_s7d() || is_aml_s6() ||
+			is_aml_a9())
 			amdv_run_mode_delay = 0;
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
 		else if (is_aml_gxm())
@@ -17564,9 +17593,10 @@ static ssize_t amdolby_vision_debug_store
 			return -EINVAL;
 		enable_tunnel = val;
 		pr_info("enable_tunnel %d\n", enable_tunnel);
-		if (is_aml_sc2() || is_aml_t7() ||
-		    is_aml_s4d() || is_aml_s5() ||
-		    is_aml_s7d() || is_aml_s6()) {/*not include tm2*/
+		if (is_aml_sc2() || is_aml_t7() || is_aml_t3() ||
+		    is_aml_s4d() || is_aml_t5w() || is_aml_t5m() ||
+		    is_aml_s5() || is_aml_t3x() || is_aml_s7d() ||
+		    is_aml_s6() || is_aml_a9()) {/*not include tm2*/
 			/*for vdin1 loop back, 444,12bit->422,12bit->444,8bit*/
 			if (enable_tunnel) {
 				if (vpp_data_422T0444_backup == 0) {
@@ -18749,7 +18779,7 @@ unsigned int amdv_check_enable(void)
 	/*second step: check ott mode*/
 	if (is_aml_g12() || is_aml_sc2() || is_aml_tm2_stbmode() ||
 		is_aml_t7_stbmode() || is_aml_s4d() || is_aml_s5() ||
-		is_aml_s7d() || is_aml_s6()) {
+		is_aml_s7d() || is_aml_s6() || is_aml_a9()) {
 		if (amdv_on_in_uboot) {
 			if (amdv_uboot_on == 2) {
 				if ((READ_VPP_DV_REG
@@ -18900,7 +18930,7 @@ unsigned int amdv_check_enable(void)
 				if (vinfo->sync_duration_den)
 					sync_duration_num = vinfo->sync_duration_num /
 						vinfo->sync_duration_den;
-				if (is_aml_s6() && vinfo->width == 1280 &&
+				if ((is_aml_s6() || is_aml_a9()) && vinfo->width == 1280 &&
 					vinfo->height == 720 &&
 					sync_duration_num <= 30)
 					boot_reset_core2_en = false;
@@ -20240,6 +20270,10 @@ static struct dv_device_data_s dolby_vision_t6x = {
 	.cpu_id = _CPU_MAJOR_ID_T6X,
 };
 
+static struct dv_device_data_s dolby_vision_a9 = {
+	.cpu_id = _CPU_MAJOR_ID_A9,
+};
+
 static const struct of_device_id amlogic_dolby_vision_match[] = {
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
 	{
@@ -20318,6 +20352,10 @@ static const struct of_device_id amlogic_dolby_vision_match[] = {
 	{
 		.compatible = "amlogic, dolby_vision_t6x",
 		.data = &dolby_vision_t6x,
+	},
+	{
+		.compatible = "amlogic, dolby_vision_a9",
+		.data = &dolby_vision_a9,
 	},
 	{},
 };
