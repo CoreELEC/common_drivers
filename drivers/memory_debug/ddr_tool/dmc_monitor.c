@@ -540,6 +540,11 @@ static inline int dmc_dev_is_byte(struct dmc_monitor *mon)
 	return mon->configs & DMC_DEVICE_8BIT;
 }
 
+static inline int dmc_use_remapid(struct dmc_monitor *mon)
+{
+	return mon->configs & DMC_USE_DEV_REMAPID;
+}
+
 static int dev_name_to_id(const char *dev_name)
 {
 	int i, len;
@@ -1835,6 +1840,10 @@ static void __init get_dmc_ops(int chip, struct dmc_monitor *mon)
 	case DMC_TYPE_C4:
 		mon->ops = &c4_dmc_mon_ops;
 		break;
+#ifdef CONFIG_AMLOGIC_DMC_MONITOR_A9
+	case DMC_TYPE_A9:
+		mon->ops = &a9_dmc_mon_ops;
+		break;
 #endif
 	default:
 		pr_err("Can't find ops for chip:%x\n", chip);
@@ -2150,6 +2159,10 @@ static const struct of_device_id dmc_monitor_match[] = {
 	{
 		.compatible = "amlogic,dmc_monitor-c4",
 		.data = (void *)DMC_TYPE_C4,
+	},
+	{
+		.compatible = "amlogic,dmc_monitor-a9",
+		.data = (void *)DMC_TYPE_A9,
 	},
 #endif
 	{

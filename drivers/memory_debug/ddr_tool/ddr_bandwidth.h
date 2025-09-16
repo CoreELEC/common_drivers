@@ -424,6 +424,9 @@ extern struct ddr_bandwidth_ops t6x_ddr_bw_ops;
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_C4
 extern struct ddr_bandwidth_ops c4_ddr_bw_ops;
 #endif
+#ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_A9
+extern struct ddr_bandwidth_ops a9_ddr_bw_ops;
+#endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_DDR_SSR)
 unsigned long ddr_ssr_access(unsigned long addr, unsigned long value, int rw, int is_sec);

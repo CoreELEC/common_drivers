@@ -32,6 +32,7 @@
 
 /* for configs */
 #define DMC_DEVICE_8BIT		BIT(0)
+#define DMC_USE_DEV_REMAPID	BIT(1)
 
 /* for debug */
 #define DMC_DEBUG_WRITE		BIT(0)
@@ -233,6 +234,9 @@ extern struct dmc_mon_ops t6x_dmc_mon_ops;
 #endif
 #ifdef CONFIG_AMLOGIC_DMC_MONITOR_C4
 extern struct dmc_mon_ops c4_dmc_mon_ops;
+#endif
+#ifdef CONFIG_AMLOGIC_DMC_MONITOR_A9
+extern struct dmc_mon_ops a9_dmc_mon_ops;
 #endif
 
 #ifdef CONFIG_AMLOGIC_DMC_MONITOR

@@ -2208,6 +2208,14 @@ static int __init init_chip_config(int cpu, struct ddr_bandwidth *band)
 		band->mali_port[0] = 24;
 		band->mali_port[1] = -1;
 		break;
+#ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_A9
+	case DMC_TYPE_A9:
+		band->ops          = &a9_ddr_bw_ops;
+		band->channels     = 24;
+		band->dmc_number   = 1;
+		band->mali_port[0] = 12;
+		band->mali_port[1] = -1;
+		break;
 #endif
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_C4
 	case DMC_TYPE_C4:
@@ -3677,6 +3685,10 @@ static const struct of_device_id aml_ddr_bandwidth_dt_match[] = {
 	{
 		.compatible = "amlogic,ddr-bandwidth-c4",
 		.data = (void *)DMC_TYPE_C4,
+	},
+	{
+		.compatible = "amlogic,ddr-bandwidth-a9",
+		.data = (void *)DMC_TYPE_A9,
 	},
 #endif
 	{

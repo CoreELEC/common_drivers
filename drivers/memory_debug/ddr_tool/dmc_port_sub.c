@@ -1245,6 +1245,55 @@ static struct vpu_sub_list vpu1_sub_w_s7[] __initdata = {
 VPU_SUB_RW(s7, 0, 1, 4);
 VPU_SUB_RW(s7, 1, 2, 6);
 VPU_SUB_DESC_INIT(s7, &vpu0_sub_s7, &vpu1_sub_s7, NULL, NULL);
+
+static struct vpu_sub vpu0_r_a9[] __initdata = {
+	{ .id = 0x00, .name = "OSD1"			},
+	{ .id = 0x01, .name = "OSD2"			},
+	{ .id = 0x02, .name = "VD1"			},
+	{ .id = 0x03, .name = "VD2"			},
+	{ .id = 0x04, .name = "OSD3"			},
+	{ .id = 0x05, .name = "OSD4"			},
+	{ .id = 0x08, .name = "VD3"			},
+	{ .id = 0x09, .name = "OSD5"			},
+	{ .id = 0x0A, .name = "RDMA"			},
+	{ .id = 0x0D, .name = "VDIN0_AFBCE"		},
+	{ .id = 0x0E, .name = "VDIN1_AFBCE"		},
+	{ .id = 0x0F, .name = "LUT_DMA"			},
+};
+
+static struct vpu_sub vpu0_w_a9[] __initdata = {
+	{ .id = 0x00, .name = "VDIN0_WR"		},
+	{ .id = 0x01, .name = "VDIN1_WR"		},
+	{ .id = 0x02, .name = "VDIN_DOLBY_WR"		},
+	{ .id = 0x03, .name = "VDIN0_AFBCE_WR"		},
+	{ .id = 0x06, .name = "RDMA"			},
+	{ .id = 0x09, .name = "VDIN1_AFBCE_WR"		},
+	{ .id = 0x0A, .name = "VPU_DMA"			},
+};
+
+static struct vpu_sub vpu1_r_a9[] __initdata = {
+	{ .id = 0x00, .name = "DI_IF1"			},
+	{ .id = 0x01, .name = "DI_MEM"			},
+	{ .id = 0x42, .name = "DI_INP"			},
+	{ .id = 0x03, .name = "DI_CHAN2"		},
+	{ .id = 0x04, .name = "CONTP_RD"		},
+	{ .id = 0x14, .name = "CONTP2_RD"		},
+	{ .id = 0x24, .name = "MTN_RD"			},
+	{ .id = 0x34, .name = "MCVEC_RD"		},
+	{ .id = 0x44, .name = "MCINF_RD"		},
+	{ .id = 0x05, .name = "DI_IF2"			},
+	{ .id = 0x06, .name = "DI_IF0"			},
+};
+
+static struct vpu_sub vpu1_w_a9[] __initdata = {
+	{ .id = 0x00, .name = "NR_WR"			},
+	{ .id = 0x01, .name = "DI_WR"			},
+	{ .id = 0x02, .name = "CONT_WR"			},
+	{ .id = 0x12, .name = "MTN_WR"			},
+	{ .id = 0x22, .name = "MCINF_WR"		},
+	{ .id = 0x32, .name = "MCVEC_WR"		},
+	{ .id = 0x42, .name = "NRDS_WR"			},
+};
 #endif
 
 static int __init vpu_sub_desc_alloc(struct vpu_sub_desc **dst, struct vpu_sub_desc *src)
@@ -1378,6 +1427,8 @@ static struct vpu_sub_desc *__init get_vpu_sub_desc(int cpu_type)
 		return &vpu_sub_desc_t6x;
 	case DMC_TYPE_S7:
 		return &vpu_sub_desc_s7;
+	case DMC_TYPE_A9:
+		return &vpu_sub_desc_a9;
 #endif
 	default:
 		return NULL;

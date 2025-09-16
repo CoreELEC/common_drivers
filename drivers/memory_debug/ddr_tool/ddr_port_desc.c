@@ -1277,6 +1277,92 @@ static struct ddr_port_desc ddr_port_desc_c4[] __initdata = {
 	PORT_DESC(.port_id = 7, .sub_id = 10, .bus = 7, .port_name = "SPICC"),
 	PORT_DESC(.port_id = 7, .sub_id = 11, .bus = 7, .port_name = "ETH"),
 };
+
+static struct ddr_port_desc ddr_port_desc_a9_prot[] __initdata = {
+	{ .port_id =  0, .bus =  0, .port_name = "ARM_A78"       },
+	{ .port_id =  1, .bus =  1, .port_name = "ARM_A55"       },
+	{ .port_id =  2, .bus =  2, .port_name = "VPU0"          },
+	{ .port_id =  3, .bus =  3, .port_name = "VPU1"          },
+	{ .port_id =  4, .bus =  4, .port_name = "NNA"           },
+	{ .port_id =  5, .bus =  5, .port_name = "DMC_TEST"      },
+	{ .port_id =  6, .bus =  6, .port_name = "HEVC_B"        },
+	{ .port_id =  7, .bus =  7, .port_name = "HEVC_F"        },
+	{ .port_id =  8, .bus =  8, .port_name = "MIPI"          },
+	{ .port_id = 11, .bus = 11, .port_name = "DEMUX"         },
+	{ .port_id = 12, .bus = 12, .port_name = "MALI"          },
+	{ .port_id = 16, .bus =  9, .port_name = "CVE"           },
+	{ .port_id = 17, .bus =  9, .port_name = "GE2D"          },
+	{ .port_id = 18, .bus =  9, .port_name = "OPP"           },
+	{ .port_id = 19, .bus =  9, .port_name = "VID_CMPR"      },
+	{ .port_id = 20, .bus = 13, .port_name = "PCIE_IF1"      },
+	{ .port_id = 21, .bus = 13, .port_name = "USB3B"         },
+	{ .port_id = 22, .bus = 13, .port_name = "PCIE_IF0"      },
+	{ .port_id = 23, .bus = 13, .port_name = "USB2T"         },
+	{ .port_id = 24, .bus = 14, .port_name = "HCODEC"        },
+	{ .port_id = 25, .bus = 14, .port_name = "VC9000E"       },
+	{ .port_id = 28, .bus = 15, .port_name = "DSP"           },
+	{ .port_id = 29, .bus = 15, .port_name = "HDMIRX"        },
+	{ .port_id = 30, .bus = 15, .port_name = "AMFC"          },
+	{ .port_id = 32, .bus = 10, .port_name = "AM_AXI"        },
+	{ .port_id = 33, .bus = 10, .port_name = "DMA"           },
+	{ .port_id = 34, .bus = 10, .port_name = "USBDRDA"       },
+	{ .port_id = 35, .bus = 10, .port_name = "ETH"           },
+	{ .port_id = 36, .bus = 10, .port_name = "SDIOB"         },
+	{ .port_id = 37, .bus = 10, .port_name = "EMMC"          },
+	{ .port_id = 38, .bus = 10, .port_name = "USB3A"         },
+	{ .port_id = 39, .bus = 10, .port_name = "AUDIO"         },
+	{ .port_id = 40, .bus = 10, .port_name = "PP_DMA"        },
+	{ .port_id = 48, .bus = 10, .port_name = "SPICCX2"       },
+	{ .port_id = 49, .bus = 10, .port_name = "SDIOA"         },
+};
+
+static struct ddr_port_desc ddr_port_desc_a9_mon[] __initdata = {
+	{ .port_id =  0, .bus =  0, .port_name = "ARM_A78"       },
+	{ .port_id =  1, .bus =  1, .port_name = "ARM_A55"       },
+	{ .port_id =  2, .bus =  2, .port_name = "VPU0"          },
+	{ .port_id =  3, .bus =  3, .port_name = "VPU1"          },
+	{ .port_id =  4, .bus =  4, .port_name = "NNA"           },
+	{ .port_id =  5, .bus =  4, .port_name = "DMC_TEST"      },
+	{ .port_id =  6, .bus =  6, .port_name = "HEVC_B"        },
+	{ .port_id =  7, .bus =  7, .port_name = "HEVC_F"        },
+	{ .port_id =  8, .bus =  8, .port_name = "MIPI"          },
+	{ .port_id =  9, .bus =  9, .port_name = "VGE"           },
+	{ .port_id = 10, .bus = 10, .port_name = "DEVICE"        },
+	{ .port_id = 11, .bus = 11, .port_name = "DEMUX"         },
+	{ .port_id = 12, .bus = 12, .port_name = "MALI"          },
+	{ .port_id = 13, .bus = 13, .port_name = "PP_DMC"        },
+	{ .port_id = 14, .bus = 14, .port_name = "HC_VC"         },
+	{ .port_id = 15, .bus = 15, .port_name = "ADH_MMC"       },
+	/* start of VGE sub */
+	{ .port_id = 32, .bus =  9, .port_name = "CVE"           },
+	{ .port_id = 33, .bus =  9, .port_name = "GE2D"          },
+	{ .port_id = 34, .bus =  9, .port_name = "OPP"           },
+	{ .port_id = 35, .bus =  9, .port_name = "VID_CMPR"      },
+	/* start of DEVICE sub */
+	{ .port_id = 48, .bus = 10, .port_name = "AM_AXI"        },
+	{ .port_id = 49, .bus = 10, .port_name = "DMA"           },
+	{ .port_id = 50, .bus = 10, .port_name = "USBDRDA"       },
+	{ .port_id = 51, .bus = 10, .port_name = "ETH"           },
+	{ .port_id = 52, .bus = 10, .port_name = "SDIOB"         },
+	{ .port_id = 53, .bus = 10, .port_name = "EMMC"          },
+	{ .port_id = 54, .bus = 10, .port_name = "USB3A"         },
+	{ .port_id = 55, .bus = 10, .port_name = "AUDIO"         },
+	{ .port_id = 56, .bus = 10, .port_name = "PP_DMA"        },
+	{ .port_id = 56, .bus = 10, .port_name = "SPICCX2"       },
+	{ .port_id = 58, .bus = 10, .port_name = "SDIOA"         },
+	/* start of PP_DMC sub */
+	{ .port_id = 64, .bus = 13, .port_name = "PCIE_IF1"      },
+	{ .port_id = 65, .bus = 13, .port_name = "USB3B"         },
+	{ .port_id = 66, .bus = 13, .port_name = "PCIE_IF0"      },
+	{ .port_id = 67, .bus = 13, .port_name = "USB2T"         },
+	/* start of TAHOE sub */
+	{ .port_id = 80, .bus = 14, .port_name = "HCODEC"        },
+	{ .port_id = 81, .bus = 14, .port_name = "VC9000E"       },
+	/* start of ADH_MMC sub */
+	{ .port_id = 96, .bus = 15, .port_name = "DSP"           },
+	{ .port_id = 97, .bus = 15, .port_name = "HDMIRX"        },
+	{ .port_id = 98, .bus = 15, .port_name = "AMFC"          },
+};
 #endif
 static struct ddr_port_desc ddr_port_desc_s1a[] __initdata = {
 	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM_A35"),
@@ -1570,6 +1656,15 @@ int __init ddr_find_port_desc_type(int cpu_type, struct ddr_port_desc **desc, in
 	case DMC_TYPE_C4:
 		*desc = ddr_port_desc_c4;
 		desc_size = ARRAY_SIZE(ddr_port_desc_c4);
+		break;
+	case DMC_TYPE_A9:
+		if (type) {
+			*desc = ddr_port_desc_a9_mon;
+			desc_size = ARRAY_SIZE(ddr_port_desc_a9_mon);
+		} else {
+			*desc = ddr_port_desc_a9_prot;
+			desc_size = ARRAY_SIZE(ddr_port_desc_a9_prot);
+		}
 		break;
 #endif
 	case DMC_TYPE_S1A:

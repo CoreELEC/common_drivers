@@ -94,6 +94,9 @@ ddk_module(
         "CONFIG_AMLOGIC_DDR_BANDWIDTH_T6X": {
             True: ["ddr_tool/ddr_band_op_t6x.c"],
         },
+        "CONFIG_AMLOGIC_DDR_BANDWIDTH_A9": {
+            True: ["ddr_tool/ddr_band_op_a9.c"],
+        },
         "CONFIG_AMLOGIC_DMC_MONITOR": {
             True: [
                 "ddr_tool/dmc_monitor.c",
@@ -156,6 +159,9 @@ ddk_module(
         },
         "CONFIG_AMLOGIC_DMC_MONITOR_T6X": {
             True: ["ddr_tool/dmc_t6x.c"],
+        },
+        "CONFIG_AMLOGIC_DMC_MONITOR_A9": {
+            True: ["ddr_tool/dmc_a9.c"],
         },
         "CONFIG_AMLOGIC_RAMDUMP": {
             True: ["ramdump/ram_dump.c"],
