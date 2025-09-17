@@ -31,7 +31,9 @@
 		i2c7 = &i2c7;
 		i2c8 = &i2c8;
 		spi0 = &spifc;
-		spi1 = &spicc0;
+		spi1 = &spisg_c;
+		spi2 = &spisg_e;
+		spi3 = &spisg_f;
 		tsensor0 = &p_tsensor;
 		tsensor1 = &c_tsensor;
 	};
@@ -1097,10 +1099,22 @@
 	pinctrl-names = "default";
 };
 
-&spicc0 {
-	status = "disabled";
+&spisg_c {
+	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&spicc0_pins_x>;
+	pinctrl-0 = <&spisg_c_pins_a>;
+};
+
+&spisg_e {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spisg_e_pins_z>;
+};
+
+&spisg_f {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spisg_f_pins_z>;
 };
 
 &spifc {
