@@ -930,7 +930,7 @@ static int meson_gpio_irq_parse_dt(struct device_node *node,
 
 	ctl->channel_irqs = kcalloc(ctl->channel_num,
 				    sizeof(*ctl->channel_irqs), GFP_KERNEL);
-	ctl->channel_map = bitmap_zalloc(ctl->params->channel_num, GFP_KERNEL);
+	ctl->channel_map = bitmap_zalloc(ctl->channel_num, GFP_KERNEL);
 
 	if (!ctl->channel_irqs || !ctl->channel_map) {
 		pr_err("allocate irqs and channel maps mem fail\n");
