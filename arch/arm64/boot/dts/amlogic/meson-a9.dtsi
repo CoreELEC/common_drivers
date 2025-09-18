@@ -1245,15 +1245,15 @@
 		sd_emmc_b: sd@fe08a000 {
 			compatible = "amlogic,meson-v8-mmc";
 			reg = <0x0 0xfe08a000 0x0 0x1000>,
-				<0x0 0xfe00016c 0x0 0x4>,
-				<0x0 0xfe004024 0x0 0x4>;
+				<0x0 0xfe000290 0x0 0x4>,
+				<0x0 0xffa04010 0x0 0x4>;
 			interrupts = <GIC_SPI 177 IRQ_TYPE_EDGE_RISING>;
 			status = "disabled";
-			//clocks = <&clkc_sys CLKID_SYS_SD_EMMC_B>,
-			//	 <&clkc_sd_emmc CLKID_SD_EMMC_B>,
-			//	 <&clkc_sd_emmc CLKID_SD_EMMC_B>,
-			//	 <&xtal>,
-			//	 <&scmi_clk CLKID_FCLK_DIV2>;
+			clocks = <&clkc_sys CLKID_SYS_SD_EMMC_B>,
+				 <&clkc_sd_emmc CLKID_SD_EMMC_B>,
+				 <&clkc_sd_emmc CLKID_SD_EMMC_B>,
+				 <&xtal>,
+				 <&scmi_clk CLKID_FCLK_DIV2>;
 			clock-names = "core", "mux0", "mux1",
 					"clkin0", "clkin1";
 			card_type = <5>;
@@ -3050,20 +3050,6 @@
 		};
 	};
 
-	sdcard_pins: sdcard_pins {
-		mux {
-			groups = "sdcard_d0",
-				 "sdcard_d1",
-				 "sdcard_d2",
-				 "sdcard_d3",
-				 "sdcard_clk",
-				 "sdcard_cmd";
-			function = "sdcard";
-			bias-pull-up;
-			drive-strength-microamp = <3000>;
-		};
-	};
-
 	ao_to_sd_uart_pins: ao_to_sd_uart_pins {
 		mux {
 			groups = "uart_b_tx_c",
@@ -3099,26 +3085,6 @@
 				   "GPIOC_5";
 			function = "gpio_periphs";
 			output-high;
-		};
-	};
-
-	sd_1bit_pins: sd_1bit_pins {
-		mux {
-			groups = "sdcard_d0",
-				 "sdcard_clk",
-				 "sdcard_cmd";
-			function = "sdcard";
-			bias-pull-up;
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	sdcard_clk_gate_pins: sdcard_clk_gate_pins {
-		mux {
-			groups = "GPIOC_4";
-			function = "gpio_periphs";
-			bias-pull-down;
-			drive-strength-microamp = <3000>;
 		};
 	};
 
@@ -3562,6 +3528,41 @@
 			function = "eth";
 			drive-strength-microamp = <3000>;
 			bias-disable;
+		};
+	};
+};
+
+&aobus_pinctrl{
+	sdcard_pins: sdcard_pins {
+		mux {
+			groups = "sdcard_d0_ao",
+				 "sdcard_d1_ao",
+				 "sdcard_d2_ao",
+				 "sdcard_d3_ao",
+				 "sdcard_clk_ao",
+				 "sdcard_cmd_ao";
+			function = "sdcard_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+	sd_1bit_pins: sd_1bit_pins {
+		mux {
+			groups = "sdcard_d0_ao",
+				 "sdcard_clk_ao",
+				 "sdcard_cmd_ao";
+			function = "sdcard_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	sdcard_clk_gate_pins: sdcard_clk_gate_pins {
+		mux {
+			groups = "GPIOC_4";
+			function = "gpio_aobus";
+			bias-pull-down;
+			drive-strength-microamp = <3000>;
 		};
 	};
 };
