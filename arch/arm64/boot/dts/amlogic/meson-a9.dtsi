@@ -22,7 +22,7 @@
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/thermal/ddr-params.h>
 #include "meson-ir-map.dtsi"
-#include "meson-valhall.dtsi"
+#include "meson-avalon.dtsi"
 
 / {
 	cpus:cpus {
@@ -2409,28 +2409,8 @@
 
 	gpu_opp_table: gpu_opp_table {
 		compatible = "operating-points-v2";
-		opp-285 {
-			opp-hz = /bits/ 64 <285714281>;
-			opp-microvolt = <1150>;
-		};
-		opp-400 {
-			opp-hz = /bits/ 64 <400000000>;
-			opp-microvolt = <1150>;
-		};
 		opp-500 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <1150>;
-		};
-		opp-666 {
-			opp-hz = /bits/ 64 <666666666>;
-			opp-microvolt = <1150>;
-		};
-		opp-800 {
-			opp-hz = /bits/ 64 <800000000>;
-			opp-microvolt = <1150>;
-		};
-		opp-996 {
-			opp-hz = /bits/ 64 <996000000>;
 			opp-microvolt = <1150>;
 		};
 	};
@@ -3646,14 +3626,14 @@
 };
 
 &gpu{
-	status = "disabled";
+	status = "okay";
 	operating-points-v2 = <&gpu_opp_table>;
 	reg =   <0x0 0xFD000000 0x0 0x800000>, /*mali APB bus base address*/
 		<0x0 0xFE002000 0x0 0x01000>; /*reset register*/
 
-	interrupts = <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>,
-		     <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
+	interrupts = <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 145 IRQ_TYPE_LEVEL_HIGH>;
 	interrupt-names = "GPU", "MMU", "JOB";
 
 	/* Protected memory allocator default not available*/
@@ -3670,9 +3650,9 @@
 			  <&scmi_clk CLKID_GP1_PLL>;
 	assigned-clock-rates = <400000000>,
 			       <400000000>,
-			       <996000000>;
+			       <852000000>;
 
-	tbl = <&dvfs400_cfg>;//bringup s6 use fix clock 400M
+	tbl = <&dvfs500_cfg>;//bringup s6 use fix clock 500M
 
 };
 
