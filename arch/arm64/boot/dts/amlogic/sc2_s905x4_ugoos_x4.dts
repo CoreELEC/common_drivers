@@ -4,8 +4,6 @@
 	model = "Ugoos X4";
 	coreelec-dt-id = "sc2_s905x4_ugoos_x4";
 
-	/delete-node/ gpio_leds;
-
 	gpioleds {
 		/delete-node/ net_red;
 		/delete-node/ net_green;
