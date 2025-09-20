@@ -128,6 +128,8 @@
 		key_name = "power";
 		key_code = <116>;
 	};
+
+	/delete-node/ gpio_leds;
 };
 
 &aml_wifi {
