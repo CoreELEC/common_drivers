@@ -71,6 +71,7 @@
 		pinctrl-0 = <&remote_pins>;
 		protocol = <REMOTE_TYPE_NEC>;
 		max_frame_time = <200>; /*set software decoder max frame time*/
+		led_blink = <1>;
 	};
 
 	openvfd {
