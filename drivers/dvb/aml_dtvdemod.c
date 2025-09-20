@@ -39,7 +39,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#ifdef DEMOD_UNUSED
 	{
 		.name = "m1",
 		.id = AM_DTV_DEMOD_M1,
@@ -64,7 +63,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#endif //DEMOD_UNUSED
 	{
 		.name = "avl6211",
 		.id = AM_DTV_DEMOD_AVL6211,
@@ -89,7 +87,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#ifdef DEMOD_UNUSED
 	{
 		.name = "ite9173",
 		.id = AM_DTV_DEMOD_ITE9173,
@@ -162,7 +159,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#endif //DEMOD_UNUSED
 	{
 		.name = "atbm8881",
 		.id = AM_DTV_DEMOD_ATBM8881,
@@ -247,7 +243,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#ifdef DEMOD_UNUSED
 	{
 		.name = "mxl212c",
 		.id = AM_DTV_DEMOD_MXL212C,
@@ -320,7 +315,6 @@ static const struct demod_module demod_modules[] = {
 		.register_frontend = aml_dvb_register_frontend,
 		.unregister_frontend = aml_dvb_unregister_frontend
 	},
-#endif //DEMOD_UNUSED
 	{
 		.name = "mxl258c", //compatible with mxl212c/213c/214c/252c/254c/256c.
 		.id = AM_DTV_DEMOD_MXL258C,

@@ -13,7 +13,6 @@ static int aml_tuner_match(const struct tuner_module *module, int std);
 static int aml_tuner_detect(const struct tuner_config *cfg);
 
 static const struct tuner_module tuner_modules[] = {
-#ifdef TUNER_UNUSED
 	{
 		.name = "si2176",
 		.id = AM_TUNER_SI2176,
@@ -98,7 +97,6 @@ static const struct tuner_module tuner_modules[] = {
 		.match = aml_tuner_match,
 		.detect = aml_tuner_detect
 	},
-#endif //TUNER_UNUSED
 	{
 		.name = "r840",
 		.id = AM_TUNER_R840,
@@ -116,7 +114,6 @@ static const struct tuner_module tuner_modules[] = {
 		.match = aml_tuner_match,
 		.detect = aml_tuner_detect
 	},
-#ifdef TUNER_UNUSED
 	{
 		.name = "si2157",
 		.id = AM_TUNER_SI2157,
@@ -134,7 +131,6 @@ static const struct tuner_module tuner_modules[] = {
 		.match = aml_tuner_match,
 		.detect = aml_tuner_detect
 	},
-#endif //TUNER_UNUSED
 	{
 		.name = "si2151",
 		.id = AM_TUNER_SI2151,
