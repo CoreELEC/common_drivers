@@ -401,6 +401,13 @@
 			     <MAILBOX_ARM>;
 	};
 
+	aml_hwspinlock: hwlock {
+		status = "disabled";
+		compatible = "amlogic, hwspinlock";
+		syscon = <&aml_hwspinlock_regs 0 0x4>;
+		#hwlock-cells = <1>;
+	};
+
 	vddcpu0_board2: pwm_f_board2-regulator {
 		compatible = "pwm-regulator";
 		pwms = <&pwm_f MESON_PWM_0 1512 0>;
@@ -883,6 +890,11 @@
 			cpu_version {
 				compatible = "amlogic,meson-gx-ao-secure", "syscon";
 				reg=<0x0 0x10220 0x0 0x4>;
+			};
+
+			aml_hwspinlock_regs: syscon@e300 {
+				compatible = "syscon";
+				reg = <0x0 0xe300 0x0 0x20>;
 			};
 		};
 
