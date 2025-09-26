@@ -1,0 +1,53 @@
+#include "s7d_s905x5m_2g.dts"
+
+/{
+	model = "Xiaomi 3rd Gen";
+	coreelec-dt-id = "s7d_s905x5m_xiaomi_3rd_gen";
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+
+	/delete-node/ gpio_keypad;
+
+	vcc5v_reg: fixed@vcc5v_reg {
+		/delete-property/ gpio;
+	};
+
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		sys_led {
+			label = "sys_led";
+			gpios = <&gpio GPIODV_6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+	};
+};
+
+&aml_bt {
+	/delete-property/ reset-gpios;
+};
+
+&aml_wifi{
+	disable-wifi-32k;
+	interrupt-gpios = <&gpio  GPIOX_6  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&gpio   GPIOX_7  GPIO_ACTIVE_HIGH>;
+};
+
+&pwm_e {
+	status = "disabled";
+};
+
+&pwm_g {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "okay";
+};
+
+&sd_emmc_b {
+	status = "disabled";
+};
