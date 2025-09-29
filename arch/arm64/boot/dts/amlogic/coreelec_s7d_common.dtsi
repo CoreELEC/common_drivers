@@ -107,6 +107,10 @@
 		      <0x0 0xfe084000 0x0 0x58>; /*Legacy IR controller*/
 		interrupts = <GIC_SPI 148 IRQ_TYPE_EDGE_RISING>;
 	};
+
+	ppmgr {
+		status = "okay";
+	};
 };
 
 &audiobus {
