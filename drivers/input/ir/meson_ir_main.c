@@ -948,7 +948,7 @@ static int meson_ir_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, true);
 
-	led_trigger_register_simple("ir_led", &dev->led_feedback);
+	led_trigger_register_simple("rc-feedback", &dev->led_feedback);
 
 	if (MULTI_IR_SOFTWARE_DECODE(dev->rc_type))
 		meson_ir_raw_event_register(dev);
