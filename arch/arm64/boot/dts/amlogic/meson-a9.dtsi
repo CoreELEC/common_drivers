@@ -2135,16 +2135,16 @@
 	};
 
 	ge2d {
-		compatible = "amlogic, ge2d-s6";
-		status = "disabled";
+		compatible = "amlogic, ge2d-a9";
+		status = "okay";
 		interrupts = <GIC_SPI 217 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ge2d";
 		clocks = <&clkc_vapb_ge2d CLKID_VAPB>,
 			 <&clkc_vapb_ge2d CLKID_GE2D>;
 		clock-names = "clk_vapb_0",
 			"clk_ge2d_gate";
-		reg = <0x0 0xff040000 0x0 0x100>;
-		//power-domains = <&pwrdm PDID_S6_GE2D>;
+		reg = <0x0 0xff560000 0x0 0x100>;
+		power-domains = <&pwrdm PDID_A9_GE2D>;
 	};
 
 	amlgdc {

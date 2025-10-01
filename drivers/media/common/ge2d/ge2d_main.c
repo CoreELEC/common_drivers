@@ -1795,6 +1795,25 @@ static struct ge2d_device_data_s ge2d_t6x = {
 	.dst_sign_mode = 1,
 	.blk_stride_mode = 1,
 };
+	
+static struct ge2d_device_data_s ge2d_a9 = {
+	.ge2d_rate = 667000000,
+	.src2_alp = 1,
+	.canvas_status = 2,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+	.has_self_pwr = 1,
+	.poweron_table = &runtime_poweron_table,
+	.poweroff_table = &runtime_poweroff_table,
+	.chip_type = MESON_CPU_MAJOR_ID_A9,
+	.adv_matrix = 1,
+	.src2_repeat = 1,
+	.dst_repeat = 1,
+	.dst_sign_mode = 1,
+	.blk_stride_mode = 1,
+	.cmd_queue_mode = 0,
+};
 #endif
 #endif
 
@@ -1935,6 +1954,10 @@ static const struct of_device_id ge2d_dt_match[] = {
 	{
 		.compatible = "amlogic, ge2d-t6x",
 		.data = &ge2d_t6x,
+	},
+	{
+		.compatible = "amlogic, ge2d-a9",
+		.data = &ge2d_a9,
 	},
 #endif
 #endif
