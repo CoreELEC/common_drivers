@@ -298,13 +298,85 @@ static void meson_uvm_release(struct dma_buf *dmabuf)
 static int meson_uvm_begin_cpu_access(struct dma_buf *dmabuf,
 				      enum dma_data_direction dir)
 {
-	return 0;
+	int ret = 0;
+	struct uvm_handle *handle;
+	struct uvm_alloc *ua;
+	struct uvm_buf_obj *obj;
+	struct mua_buffer *buffer;
+	struct dma_buf *rel_dmabuf = NULL;
+
+	handle = dmabuf->priv;
+	if (!handle)
+		goto err_out;
+	ua = handle->ua;
+	if (!ua)
+		goto err_out;
+	obj = dmabuf_get_uvm_buf_obj(dmabuf);
+	if (IS_ERR_OR_NULL(obj))
+		goto err_out;
+	buffer = container_of(obj, struct mua_buffer, base);
+	if (!buffer)
+		goto err_out;
+
+	if (((ua->flags & BIT(UVM_IMM_ALLOC)) || !ua->sgt[1]) &&
+	    !(ua->flags & BIT(UVM_FBC_DEC)))
+		rel_dmabuf = buffer->idmabuf[0];
+	else
+		rel_dmabuf = buffer->idmabuf[1];
+	if (!rel_dmabuf)
+		goto err_out;
+
+	if (rel_dmabuf->ops->begin_cpu_access) {
+		ret = rel_dmabuf->ops->begin_cpu_access(rel_dmabuf, dir);
+		UVM_PRINTK(UVM_INFO, "uvm_begin_cpu_access: flags=0x%lx\n", handle->flags);
+	}
+	return ret;
+
+err_out:
+	UVM_PRINTK(UVM_DBG, "uvm_begin_cpu_access: null pointer\n");
+	return -ENOMEM;
 }
 
 static int meson_uvm_end_cpu_access(struct dma_buf *dmabuf,
 				    enum dma_data_direction dir)
 {
-	return 0;
+	int ret = 0;
+	struct uvm_handle *handle;
+	struct uvm_alloc *ua;
+	struct uvm_buf_obj *obj;
+	struct mua_buffer *buffer;
+	struct dma_buf *rel_dmabuf = NULL;
+
+	handle = dmabuf->priv;
+	if (!handle)
+		goto err_out;
+	ua = handle->ua;
+	if (!ua)
+		goto err_out;
+	obj = dmabuf_get_uvm_buf_obj(dmabuf);
+	if (IS_ERR_OR_NULL(obj))
+		goto err_out;
+	buffer = container_of(obj, struct mua_buffer, base);
+	if (!buffer)
+		goto err_out;
+
+	if (((ua->flags & BIT(UVM_IMM_ALLOC)) || !ua->sgt[1]) &&
+	    !(ua->flags & BIT(UVM_FBC_DEC)))
+		rel_dmabuf = buffer->idmabuf[0];
+	else
+		rel_dmabuf = buffer->idmabuf[1];
+	if (!rel_dmabuf)
+		goto err_out;
+
+	if (rel_dmabuf->ops->end_cpu_access) {
+		ret = rel_dmabuf->ops->end_cpu_access(rel_dmabuf, dir);
+		UVM_PRINTK(UVM_INFO, "uvm_end_cpu_access: flags=0x%lx\n", handle->flags);
+	}
+	return ret;
+
+err_out:
+	UVM_PRINTK(UVM_DBG, "uvm_end_cpu_access: null pointer\n");
+	return -ENOMEM;
 }
 
 static int meson_uvm_attach(struct dma_buf *dmabuf,
