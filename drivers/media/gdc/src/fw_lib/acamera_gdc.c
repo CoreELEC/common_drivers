@@ -210,7 +210,7 @@ static void gdc_uvswap_config(struct gdc_cmd_s *gdc_cmd, u32 core_id)
 
 		uv_swap_enable = gdc_cmd->uvswap_enable;
 		gdc_uv_swap_write(uv_swap_enable, core_id);
-		gdc_log(LOG_DEBUG, "uv_swap_enable%d\n", uv_swap_enable);
+		gdc_log(LOG_DEBUG, "uv_swap_enable:%d\n", uv_swap_enable);
 	}
 }
 
@@ -280,13 +280,13 @@ static void set_ext_8g_msb(struct gdc_dma_cfg_t *dma_cfg, u32 format_plane)
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process(struct gdc_cmd_s *gdc_cmd,
-		u32 y_base_addr, u32 uv_base_addr,
+		u32 *y_base_addr, u32 *uv_base_addr,
 		struct gdc_dma_cfg_t *dma_cfg, u32 core_id)
 {
 	u32 gdc_out_base_addr = gdc_cmd->current_addr;
 	u32 output_height = gdc_cmd->gdc_config.output_height;
-	u32 i_y_line_offset = gdc_cmd->gdc_config.input_y_stride;
-	u32 i_uv_line_offset = gdc_cmd->gdc_config.input_c_stride;
+	u32 *i_y_line_offset = gdc_cmd->gdc_config.input_y_stride;
+	u32 *i_uv_line_offset = gdc_cmd->gdc_config.input_c_stride;
 	u32 o_y_line_offset = gdc_cmd->gdc_config.output_y_stride;
 	u32 o_uv_line_offset = gdc_cmd->gdc_config.output_c_stride;
 	u32 dev_type = gdc_cmd->dev_type;
@@ -357,14 +357,14 @@ int gdc_process(struct gdc_cmd_s *gdc_cmd,
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process_yuv420p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr, u32 u_base_addr, u32 v_base_addr,
+			u32 *y_base_addr, u32 *u_base_addr, u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg, u32 core_id)
 {
 	struct gdc_config_s  *gc = &gdc_cmd->gdc_config;
 	u32 gdc_out_base_addr = gdc_cmd->current_addr;
-	u32 input_stride = gc->input_y_stride;
-	u32 input_u_stride = gc->input_c_stride;
-	u32 input_v_stride = gc->input_c_stride;
+	u32 *input_stride = gc->input_y_stride;
+	u32 *input_u_stride = gc->input_c_stride;
+	u32 *input_v_stride = gc->input_c_stride;
 	u32 dev_type = gdc_cmd->dev_type;
 
 	gdc_log(LOG_DEBUG, "is_waiting_gdc=%d\n", gdc_cmd->is_waiting_gdc);
@@ -451,12 +451,12 @@ int gdc_process_yuv420p(struct gdc_cmd_s *gdc_cmd,
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process_y_grey(struct gdc_cmd_s *gdc_cmd,
-		       u32 y_base_addr,
+		       u32 *y_base_addr,
 		       struct gdc_dma_cfg_t *dma_cfg, u32 core_id)
 {
 	struct gdc_config_s  *gc = &gdc_cmd->gdc_config;
 	u32 gdc_out_base_addr = gdc_cmd->current_addr;
-	u32 input_stride = gc->input_y_stride;
+	u32 *input_stride = gc->input_y_stride;
 	u32 output_stride = gc->output_y_stride;
 	u32 dev_type = gdc_cmd->dev_type;
 
@@ -511,14 +511,14 @@ int gdc_process_y_grey(struct gdc_cmd_s *gdc_cmd,
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process_yuv444p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr, u32 u_base_addr, u32 v_base_addr,
+			u32 *y_base_addr, u32 *u_base_addr, u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg, u32 core_id)
 {
 	struct gdc_config_s  *gc = &gdc_cmd->gdc_config;
 	u32 gdc_out_base_addr = gdc_cmd->current_addr;
-	u32 input_stride = gc->input_y_stride;
-	u32 input_u_stride = gc->input_c_stride;
-	u32 input_v_stride = gc->input_c_stride;
+	u32 *input_stride = gc->input_y_stride;
+	u32 *input_u_stride = gc->input_c_stride;
+	u32 *input_v_stride = gc->input_c_stride;
 	u32 output_height = gc->output_height;
 	u32 output_stride = gc->output_y_stride;
 	u32 output_u_stride = gc->output_c_stride;
@@ -603,14 +603,14 @@ int gdc_process_yuv444p(struct gdc_cmd_s *gdc_cmd,
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process_rgb444p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr, u32 u_base_addr, u32 v_base_addr,
+			u32 *y_base_addr, u32 *u_base_addr, u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg, u32 core_id)
 {
 	struct gdc_config_s  *gc = &gdc_cmd->gdc_config;
 	u32 gdc_out_base_addr = gdc_cmd->current_addr;
-	u32 input_stride = gc->input_y_stride;
-	u32 input_u_stride = gc->input_c_stride;
-	u32 input_v_stride = gc->input_c_stride;
+	u32 *input_stride = gc->input_y_stride;
+	u32 *input_u_stride = gc->input_c_stride;
+	u32 *input_v_stride = gc->input_c_stride;
 	u32 output_height = gc->output_height;
 	u32 output_stride = gc->output_y_stride;
 	u32 output_u_stride = gc->output_c_stride;

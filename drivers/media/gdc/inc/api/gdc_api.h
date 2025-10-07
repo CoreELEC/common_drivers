@@ -85,6 +85,7 @@ struct gdc_settings_ex {
 	u32 magic;
 	struct gdc_config_s gdc_config;
 	struct gdc_buffer_info input_buffer;
+	struct gdc_buffer_info input2_buffer;
 	struct gdc_buffer_info config_buffer;
 	struct gdc_buffer_info output_buffer;
 };
@@ -292,30 +293,30 @@ void gdc_start(struct gdc_cmd_s *gdc_cmd, u32 core_id);
  *	 -1 - no interrupt from GDC.
  */
 int gdc_process(struct gdc_cmd_s *gdc_cmd,
-		u32 y_base_addr,
-		u32 uv_base_addr,
+		u32 *y_base_addr,
+		u32 *uv_base_addr,
 		struct gdc_dma_cfg_t *dma_cfg,
 		u32 core_id);
 int gdc_process_yuv420p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr,
-			u32 u_base_addr,
-			u32 v_base_addr,
+			u32 *y_base_addr,
+			u32 *u_base_addr,
+			u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg,
 			u32 core_id);
 int gdc_process_y_grey(struct gdc_cmd_s *gdc_cmd,
-		       u32 y_base_addr,
+		       u32 *y_base_addr,
 		       struct gdc_dma_cfg_t *dma_cfg,
 		       u32 core_id);
 int gdc_process_yuv444p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr,
-			u32 u_base_addr,
-			u32 v_base_addr,
+			u32 *y_base_addr,
+			u32 *u_base_addr,
+			u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg,
 			u32 core_id);
 int gdc_process_rgb444p(struct gdc_cmd_s *gdc_cmd,
-			u32 y_base_addr,
-			u32 u_base_addr,
-			u32 v_base_addr,
+			u32 *y_base_addr,
+			u32 *u_base_addr,
+			u32 *v_base_addr,
 			struct gdc_dma_cfg_t *dma_cfg,
 			u32 core_id);
 

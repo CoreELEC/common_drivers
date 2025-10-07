@@ -18,10 +18,12 @@
 #define AXI_WORD_ALIGN(size) (((size) + WORD_SIZE - 1) & WORD_MASK)
 
 #define UVSWAP_ENABLE 0x100
+#define INPUT_MAX 2
 
 enum {
 	ARM_GDC,
 	AML_GDC,
+	AML_GDC_V2,
 	HW_TYPE
 };
 
@@ -58,6 +60,7 @@ struct gdc_dmabuf_cfg_s {
 struct gdc_dma_cfg_t {
 	struct gdc_dmabuf_cfg_s config_cfg;
 	struct gdc_dmabuf_cfg_s input_cfg[GDC_MAX_PLANE];
+	struct gdc_dmabuf_cfg_s input2_cfg[GDC_MAX_PLANE];
 	struct gdc_dmabuf_cfg_s output_cfg[GDC_MAX_PLANE];
 };
 
@@ -76,10 +79,10 @@ struct gdc_config_s {
 	u32 format;
 	u32 config_addr;     /* gdc config address */
 	u32 config_size;     /* gdc config size in 32bit */
-	u32 input_width;     /* gdc input width resolution */
-	u32 input_height;    /* gdc input height resolution */
-	u32 input_y_stride;  /* gdc input y stride resolution */
-	u32 input_c_stride;  /* gdc input uv stride */
+	u32 input_width[INPUT_MAX];     /* gdc input width resolution */
+	u32 input_height[INPUT_MAX];    /* gdc input height resolution */
+	u32 input_y_stride[INPUT_MAX];  /* gdc input y stride resolution */
+	u32 input_c_stride[INPUT_MAX];  /* gdc input uv stride */
 	u32 output_width;    /* gdc output width resolution */
 	u32 output_height;   /* gdc output height resolution */
 	u32 output_y_stride; /* gdc output y stride */
@@ -110,12 +113,12 @@ struct gdc_cmd_s {
 	/* set when expecting an interrupt from gdc */
 	s32 is_waiting_gdc;
 	/* input address for y and u, v planes */
-	u32 y_base_addr;
+	u32 y_base_addr[INPUT_MAX];
 	union {
-		u32 uv_base_addr;
-		u32 u_base_addr;
+		u32 uv_base_addr[INPUT_MAX];
+		u32 u_base_addr[INPUT_MAX];
 	};
-	u32 v_base_addr;
+	u32 v_base_addr[INPUT_MAX];
 	unsigned char wait_done_flag;
 	/* ARM_GDC or AML_GDC */
 	u32 dev_type;

@@ -68,6 +68,7 @@ struct gdc_device_data_s {
 
 struct meson_gdc_dev_t {
 	struct miscdevice misc_dev;
+	int dev_type;
 	int irq;
 	int probed;
 	struct platform_device *pdev;
@@ -160,6 +161,32 @@ extern int gdc_uv_swap_enable;
 #define ISP_DWAP_TOP_DST_V_CTRL0           ((0x17 << 2) | ISP_DWAP_REG_MARK)
 #define ISP_DWAP_TOP_DST_V_CTRL1           ((0x18 << 2) | ISP_DWAP_REG_MARK)
 
+/* c4 registers */
+#define C4_ISP_DWAP_TOP_CTRL0              ((0x01 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_COEF_CTRL0         ((0x02 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_COEF_CTRL1         ((0x03 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_CMD_CTRL0          ((0x04 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_CMD_CTRL1          ((0x05 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_CTRL0        ((0x06 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_STRD0        ((0x07 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_CTRL0        ((0x08 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_STRD0        ((0x09 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_CTRL0        ((0x0a << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_STRD0        ((0x0b << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_MESH_CTRL0         ((0x0c << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_MESH_STRD0         ((0x0d << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_GCLK               ((0x0e << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_Y_CTRL0        ((0x0f << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_Y_STRD0        ((0x10 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_U_CTRL0        ((0x11 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_U_STRD0        ((0x12 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_V_CTRL0        ((0x13 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_DST_V_STRD0        ((0x14 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_CTRL1        ((0x67 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_CTRL1        ((0x77 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_CTRL1        ((0x87 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_PPS_CTRL               ((0xc2 << 2) | ISP_DWAP_REG_MARK)
+
 #define ISP_DWAP_CMD_SWAP                  ((0x2b << 2) | ISP_DWAP_REG_MARK)
 #define ISP_DWAP_WMIF_CTRL1                ((0x40 << 2) | ISP_DWAP_REG_MARK)
 #define ISP_DWAP_RMIF_CTRL1                ((0x50 << 2) | ISP_DWAP_REG_MARK)
@@ -174,6 +201,7 @@ extern int gdc_uv_swap_enable;
 #define DEWARP_STRIDE_ALIGN(x) (((x) + 15) / 16)
 #define AML_GDC_COEF_SIZE  256
 #define AML_GDC_CFG_STRIDE 8191
+#define AML_GDC_CFG_STRIDE_C4 4096
 
 // ----------------------------------- //
 // Instance 'gdc' of module 'gdc_ip_config'
@@ -265,28 +293,46 @@ static inline u32 gdc_id_revision_read(void)
 #define GDC_CONFIG_ADDR_OFFSET (0x10)
 #define GDC_CONFIG_ADDR_MASK (0xffffffff)
 
-static inline void gdc_coef_addr_write(ulong data, u32 core_id)
+static inline void gdc_coef_addr_write(ulong data, u32 dev_type, u32 core_id)
 {
 	gdc_log(LOG_DEBUG, "coef paddr: 0x%lx\n", data);
-	system_gdc_write_32(ISP_DWAP_TOP_COEF_CTRL0, data >> 4, core_id);
-	system_gdc_write_32(ISP_DWAP_TOP_COEF_CTRL1, AML_GDC_COEF_SIZE,
-			    core_id);
+
+	if (dev_type == AML_GDC_V2) {
+		system_gdc_write_32(C4_ISP_DWAP_TOP_COEF_CTRL0, data >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_COEF_CTRL1, AML_GDC_COEF_SIZE, core_id);
+	} else {
+		system_gdc_write_32(ISP_DWAP_TOP_COEF_CTRL0, data >> 4, core_id);
+		system_gdc_write_32(ISP_DWAP_TOP_COEF_CTRL1, AML_GDC_COEF_SIZE, core_id);
+	}
 }
 
-static inline void gdc_aml_cfg_addr_write(ulong data, u32 core_id)
+static inline void gdc_aml_cfg_addr_write(ulong data, u32 dev_type, u32 core_id)
 {
-	u32 curr = system_gdc_read_32(ISP_DWAP_TOP_CMD_CTRL1, core_id);
+	u32 curr = 0;
 
 	gdc_log(LOG_DEBUG, "cfg paddr: 0x%lx\n", data);
-	system_gdc_write_32(ISP_DWAP_TOP_CMD_CTRL0, data >> 4, core_id);
-	system_gdc_write_32(ISP_DWAP_TOP_CMD_CTRL1, AML_GDC_CFG_STRIDE | curr,
+
+	if (dev_type == AML_GDC_V2) {
+		curr = system_gdc_read_32(C4_ISP_DWAP_TOP_CMD_CTRL1, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_CMD_CTRL0, data >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_CMD_CTRL1,
+				    AML_GDC_CFG_STRIDE_C4 | (curr & 0xffff0000), core_id);
+	} else {
+		curr = system_gdc_read_32(ISP_DWAP_TOP_CMD_CTRL1, core_id);
+		system_gdc_write_32(ISP_DWAP_TOP_CMD_CTRL0, data >> 4, core_id);
+		system_gdc_write_32(ISP_DWAP_TOP_CMD_CTRL1, AML_GDC_CFG_STRIDE | curr,
 			    core_id);
+	}
 }
 
-static inline void gdc_mesh_addr_write(ulong data, u32 core_id)
+static inline void gdc_mesh_addr_write(ulong data, u32 dev_type, u32 core_id)
 {
 	gdc_log(LOG_DEBUG, "mesh paddr: 0x%lx\n", data);
 	system_gdc_write_32(ISP_DWAP_TOP_MESH_CTRL0, data >> 4, core_id);
+	if (dev_type == AML_GDC_V2)
+		system_gdc_write_32(C4_ISP_DWAP_TOP_MESH_CTRL0, data >> 4, core_id);
+	else
+		system_gdc_write_32(ISP_DWAP_TOP_MESH_CTRL0, data >> 4, core_id);
 }
 
 static inline void gdc_bit_width_write(u32 format, u32 core_id)
@@ -359,9 +405,9 @@ static inline void gdc_config_addr_write(u32 msb, u32 data, u32 dev_type,
 
 		fw_addr += fw_offset;
 
-		gdc_coef_addr_write(fw_addr, core_id);
-		gdc_mesh_addr_write(fw_addr + coef_size, core_id);
-		gdc_aml_cfg_addr_write(fw_addr + coef_size + mesh_size,
+		gdc_coef_addr_write(fw_addr, dev_type, core_id);
+		gdc_mesh_addr_write(fw_addr + coef_size, dev_type, core_id);
+		gdc_aml_cfg_addr_write(fw_addr + coef_size + mesh_size, dev_type,
 				       core_id);
 
 		kunmap(page);
@@ -408,40 +454,46 @@ static inline u32 gdc_config_size_read(void)
 // args: enable (1-swap endian  0-do not swap)
 static inline void gdc_datain_swap_endian_write(u32 enable, u32 core_id)
 {
-	u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+		u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
 
-	curr &= ~(1 << 6);
-	if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG)
-		curr |= ((enable ? 0 : 1) << 6);
-	else
-		curr |= (enable << 6);
-	system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		curr &= ~(1 << 6);
+		if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG)
+			curr |= ((enable ? 0 : 1) << 6);
+		else
+			curr |= (enable << 6);
+		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+	}
 }
 
 static inline void gdc_dataout_swap_endian_write(u32 enable, u32 core_id)
 {
-	u32 curr = system_gdc_read_32(ISP_DWAP_WMIF_CTRL1, core_id);
+	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+		u32 curr = system_gdc_read_32(ISP_DWAP_WMIF_CTRL1, core_id);
 
-	curr &= ~(1 << 6);
-	curr |= ((enable ? 0 : 1) << 6);
-	system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
+		curr &= ~(1 << 6);
+		curr |= ((enable ? 0 : 1) << 6);
+		system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
 
-	if (GDC_DEV_T(AML_GDC)->endian_config == OLD_ENDIAN_CONFIG) {
-		curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
-		curr &= ~(1 << 8);
-		curr |= (enable << 8);
-		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		if (GDC_DEV_T(AML_GDC)->endian_config == OLD_ENDIAN_CONFIG) {
+			curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+			curr &= ~(1 << 8);
+			curr |= (enable << 8);
+			system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		}
 	}
 }
 
 // args: enable (1-uv swap  0-do not uv swap)
 static inline void gdc_uv_swap_write(u32 enable, u32 core_id)
 {
-	u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+		u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
 
-	curr &= ~(1 << 7);
-	curr |= (enable << 7);
-	system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		curr &= ~(1 << 7);
+		curr |= (enable << 7);
+		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+	}
 }
 
 // args: enable (1-swap 64bit of 128bit  0-do not swap)
@@ -449,20 +501,22 @@ static inline void gdc_datain_swap_64bit_write(u32 enable, u32 core_id)
 {
 	u32 curr;
 
-	if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG) {
-		curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
-		curr &= ~(1 << 11);
-		curr |= (enable << 11);
-		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
-	} else {
-		curr = system_gdc_read_32(ISP_DWAP_RMIF_CTRL1, core_id);
-		curr &= ~(1 << 7);
-		curr |= (enable << 7);
+	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+		if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG) {
+			curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+			curr &= ~(1 << 11);
+			curr |= (enable << 11);
+			system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		} else {
+			curr = system_gdc_read_32(ISP_DWAP_RMIF_CTRL1, core_id);
+			curr &= ~(1 << 7);
+			curr |= (enable << 7);
 
-		/* for coef and mesh, in the case of swap_64bit */
-		curr &= ~(1 << 6);
-		curr |= ((enable ? 0 : 1) << 6);
-		system_gdc_write_32(ISP_DWAP_RMIF_CTRL1, curr, core_id);
+			/* for coef and mesh, in the case of swap_64bit */
+			curr &= ~(1 << 6);
+			curr |= ((enable ? 0 : 1) << 6);
+			system_gdc_write_32(ISP_DWAP_RMIF_CTRL1, curr, core_id);
+		}
 	}
 }
 
@@ -470,9 +524,11 @@ static inline void gdc_dataout_swap_64bit_write(u32 enable, u32 core_id)
 {
 	u32 curr = system_gdc_read_32(ISP_DWAP_WMIF_CTRL1, core_id);
 
-	curr &= ~(1 << 7);
-	curr |= (enable << 7);
-	system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
+	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+		curr &= ~(1 << 7);
+		curr |= (enable << 7);
+		system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
+	}
 }
 
 // ----------------------------------- //
@@ -489,18 +545,18 @@ static inline void gdc_dataout_swap_64bit_write(u32 enable, u32 core_id)
 #define GDC_DATAIN_WIDTH_MASK (0xffff)
 
 // args: data (16-bit)
-static inline void gdc_datain_width_write(u16 data, u32 dev_type, u32 core_id)
+static inline void gdc_datain_width_write(u32 *data, u32 dev_type, u32 core_id)
 {
 	u32 curr;
 
 	if (dev_type == ARM_GDC) {
 		curr = system_gdc_read_32(0x20L, core_id);
-		system_gdc_write_32(0x20L, ((curr & 0xffff0000) | data),
+		system_gdc_write_32(0x20L, ((curr & 0xffff0000) | data[0]),
 				    core_id);
-	} else {
+	} else if (dev_type == AML_GDC) {
 		curr = system_gdc_read_32(ISP_DWAP_TOP_SRC_FSIZE, core_id);
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_FSIZE,
-				    ((curr & 0x0000ffff) | (data << 16)),
+				    ((curr & 0x0000ffff) | (data[0] << 16)),
 				    core_id);
 	}
 }
@@ -524,18 +580,18 @@ static inline uint16_t gdc_datain_width_read(void)
 #define GDC_DATAIN_HEIGHT_MASK (0xffff)
 
 // args: data (16-bit)
-static inline void gdc_datain_height_write(u16 data, u32 dev_type, u32 core_id)
+static inline void gdc_datain_height_write(u32 *data, u32 dev_type, u32 core_id)
 {
 	u32 curr = 0;
 
 	if (dev_type == ARM_GDC) {
 		curr = system_gdc_read_32(0x24L, core_id);
-		system_gdc_write_32(0x24L, ((curr & 0xffff0000) | data),
+		system_gdc_write_32(0x24L, ((curr & 0xffff0000) | data[0]),
 				    core_id);
-	} else {
+	} else if (dev_type == AML_GDC) {
 		curr = system_gdc_read_32(ISP_DWAP_TOP_SRC_FSIZE, core_id);
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_FSIZE,
-				    ((curr & 0xffff0000) | data),
+				    ((curr & 0xffff0000) | data[0]),
 				    core_id);
 	}
 }
@@ -561,14 +617,20 @@ static inline uint16_t gdc_datain_height_read(void)
 #define GDC_DATA1IN_ADDR_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data1in_addr_write(u32 msb, u32 data, u32 dev_type,
+static inline void gdc_data1in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					  u32 core_id)
 {
-	if (dev_type == ARM_GDC)
-		system_gdc_write_32(0x28L, data, core_id);
-	else
+	if (dev_type == ARM_GDC) {
+		system_gdc_write_32(0x28L, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_CTRL0,
+					(((u64)msb << 32) + data[0]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_CTRL1,
+					(((u64)msb << 32) + data[1]) >> 4, core_id);
+	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_Y_CTRL0,
-				    (((u64)msb << 32) + data) >> 4, core_id);
+				    (((u64)msb << 32) + data[0]) >> 4, core_id);
+	}
 }
 
 static inline u32 gdc_data1in_addr_read(void)
@@ -592,14 +654,21 @@ static inline u32 gdc_data1in_addr_read(void)
 #define GDC_DATA1IN_LINE_OFFSET_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data1in_line_offset_write(u32 data, u32 dev_type,
+static inline void gdc_data1in_line_offset_write(u32 *data, u32 dev_type,
 						 u32 core_id)
 {
+	u32 tmp, tmp1;
+
 	if (dev_type == ARM_GDC) {
-		system_gdc_write_32(0x2cL, data, core_id);
+		system_gdc_write_32(0x2cL, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_STRD0,
+				(tmp1 << 16) | tmp, core_id);
 	} else {
-		data = DEWARP_STRIDE_ALIGN(data);
-		system_gdc_write_32(ISP_DWAP_TOP_SRC_Y_CTRL1, data, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		system_gdc_write_32(ISP_DWAP_TOP_SRC_Y_CTRL1, tmp, core_id);
 	}
 }
 
@@ -624,14 +693,20 @@ static inline u32 gdc_data1in_line_offset_read(void)
 #define GDC_DATA2IN_ADDR_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data2in_addr_write(u32 msb, u32 data, u32 dev_type,
+static inline void gdc_data2in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					  u32 core_id)
 {
-	if (dev_type == ARM_GDC)
-		system_gdc_write_32(0x30L, data, core_id);
-	else
+	if (dev_type == ARM_GDC) {
+		system_gdc_write_32(0x30L, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_CTRL0,
+					(((u64)msb << 32) + data[0]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_CTRL1,
+					(((u64)msb << 32) + data[1]) >> 4, core_id);
+	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_U_CTRL0,
-				    (((u64)msb << 32) + data) >> 4, core_id);
+				    (((u64)msb << 32) + data[0]) >> 4, core_id);
+	}
 }
 
 static inline u32 gdc_data2in_addr_read(void)
@@ -655,14 +730,21 @@ static inline u32 gdc_data2in_addr_read(void)
 #define GDC_DATA2IN_LINE_OFFSET_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data2in_line_offset_write(u32 data, u32 dev_type,
+static inline void gdc_data2in_line_offset_write(u32 *data, u32 dev_type,
 						 u32 core_id)
 {
+	u32 tmp, tmp1;
+
 	if (dev_type == ARM_GDC) {
-		system_gdc_write_32(0x34L, data, core_id);
+		system_gdc_write_32(0x34L, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_STRD0,
+				(tmp1 << 16) | tmp, core_id);
 	} else {
-		data = DEWARP_STRIDE_ALIGN(data);
-		system_gdc_write_32(ISP_DWAP_TOP_SRC_U_CTRL1, data, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		system_gdc_write_32(ISP_DWAP_TOP_SRC_U_CTRL1, tmp, core_id);
 	}
 }
 
@@ -687,14 +769,20 @@ static inline u32 gdc_data2in_line_offset_read(void)
 #define GDC_DATA3IN_ADDR_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data3in_addr_write(u32 msb, u32 data, u32 dev_type,
+static inline void gdc_data3in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					  u32 core_id)
 {
-	if (dev_type == ARM_GDC)
-		system_gdc_write_32(0x38L, data, core_id);
-	else
+	if (dev_type == ARM_GDC) {
+		system_gdc_write_32(0x38L, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_CTRL0,
+					(((u64)msb << 32) + data[0]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_CTRL1,
+					(((u64)msb << 32) + data[1]) >> 4, core_id);
+	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_V_CTRL0,
-				    (((u64)msb << 32) + data) >> 4, core_id);
+				    (((u64)msb << 32) + data[0]) >> 4, core_id);
+	}
 }
 
 static inline u32 gdc_data3in_addr_read(void)
@@ -719,14 +807,21 @@ static inline u32 gdc_data3in_addr_read(void)
 #define GDC_DATA3IN_LINE_OFFSET_MASK (0xffffffff)
 
 // args: data (32-bit)
-static inline void gdc_data3in_line_offset_write(u32 data, u32 dev_type,
+static inline void gdc_data3in_line_offset_write(u32 *data, u32 dev_type,
 						 u32 core_id)
 {
+	u32 tmp, tmp1;
+
 	if (dev_type == ARM_GDC) {
-		system_gdc_write_32(0x3cL, data, core_id);
+		system_gdc_write_32(0x3cL, data[0], core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_STRD0,
+				   (tmp1 << 16) | tmp, core_id);
 	} else {
-		data = DEWARP_STRIDE_ALIGN(data);
-		system_gdc_write_32(ISP_DWAP_TOP_SRC_V_CTRL1, data, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[0]);
+		system_gdc_write_32(ISP_DWAP_TOP_SRC_V_CTRL1, tmp, core_id);
 	}
 }
 
@@ -749,7 +844,7 @@ static inline u32 gdc_data3in_line_offset_read(void)
 #define GDC_DATAOUT_WIDTH_MASK (0xffff)
 
 // args: data (16-bit)
-static inline void gdc_dataout_width_write(u16 data, u32 dev_type, u32 core_id)
+static inline void gdc_dataout_width_write(u32 data, u32 dev_type, u32 core_id)
 {
 	u32 curr;
 
@@ -757,7 +852,7 @@ static inline void gdc_dataout_width_write(u16 data, u32 dev_type, u32 core_id)
 		curr = system_gdc_read_32(0x40L, core_id);
 		system_gdc_write_32(0x40L, ((curr & 0xffff0000) | data),
 				    core_id);
-	} else {
+	} else if (dev_type == AML_GDC) {
 		curr = system_gdc_read_32(ISP_DWAP_TOP_DST_FSIZE, core_id);
 		system_gdc_write_32(ISP_DWAP_TOP_DST_FSIZE,
 				    ((curr & 0x0000ffff) | (data << 16)),
@@ -784,7 +879,7 @@ static inline uint16_t gdc_dataout_width_read(void)
 #define GDC_DATAOUT_HEIGHT_MASK (0xffff)
 
 // args: data (16-bit)
-static inline void gdc_dataout_height_write(u16 data, u32 dev_type, u32 core_id)
+static inline void gdc_dataout_height_write(u32 data, u32 dev_type, u32 core_id)
 {
 	u32 curr;
 
@@ -792,7 +887,7 @@ static inline void gdc_dataout_height_write(u16 data, u32 dev_type, u32 core_id)
 		curr = system_gdc_read_32(0x44L, core_id);
 		system_gdc_write_32(0x44L, ((curr & 0xffff0000) | data),
 				    core_id);
-	} else {
+	} else if (dev_type == AML_GDC) {
 		curr = system_gdc_read_32(ISP_DWAP_TOP_DST_FSIZE, core_id);
 		system_gdc_write_32(ISP_DWAP_TOP_DST_FSIZE,
 				    ((curr & 0xffff0000) | data), core_id);
@@ -825,6 +920,9 @@ static inline void gdc_data1out_addr_write(u32 msb, u32 data, u32 dev_type,
 {
 	if (dev_type == ARM_GDC)
 		system_gdc_write_32(0x48L, data, core_id);
+	else if (dev_type == AML_GDC_V2)
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_Y_CTRL0,
+					(((u64)msb << 32) + data) >> 4, core_id);
 	else
 		system_gdc_write_32(ISP_DWAP_TOP_DST_Y_CTRL0,
 				    (((u64)msb << 32) + data) >> 4, core_id);
@@ -854,8 +952,15 @@ static inline u32 gdc_data1out_addr_read(void)
 static inline void gdc_data1out_line_offset_write(u32 data, u32 dev_type,
 						  u32 core_id)
 {
+	u32 curr;
+
 	if (dev_type == ARM_GDC) {
 		system_gdc_write_32(0x4cL, data, core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		curr = system_gdc_read_32(C4_ISP_DWAP_TOP_DST_Y_STRD0, core_id);
+		data = DEWARP_STRIDE_ALIGN(data);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_Y_STRD0,
+				data | (curr & 0xffff0000), core_id);
 	} else {
 		data = DEWARP_STRIDE_ALIGN(data);
 		system_gdc_write_32(ISP_DWAP_TOP_DST_Y_CTRL1, data, core_id);
@@ -887,6 +992,9 @@ static inline void gdc_data2out_addr_write(u32 msb, u32 data, u32 dev_type,
 {
 	if (dev_type == ARM_GDC)
 		system_gdc_write_32(0x50L, data, core_id);
+	else if (dev_type == AML_GDC_V2)
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_U_CTRL0,
+				    (((u64)msb << 32) + data) >> 4, core_id);
 	else
 		system_gdc_write_32(ISP_DWAP_TOP_DST_U_CTRL0,
 				    (((u64)msb << 32) + data) >> 4, core_id);
@@ -916,8 +1024,15 @@ static inline u32 gdc_data2out_addr_read(void)
 static inline void gdc_data2out_line_offset_write(u32 data, u32 dev_type,
 						  u32 core_id)
 {
+	u32 curr;
+
 	if (dev_type == ARM_GDC) {
 		system_gdc_write_32(0x54L, data, core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		curr = system_gdc_read_32(C4_ISP_DWAP_TOP_DST_U_STRD0, core_id);
+		data = DEWARP_STRIDE_ALIGN(data);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_U_STRD0,
+				    data | (curr & 0xffff000), core_id);
 	} else {
 		data = DEWARP_STRIDE_ALIGN(data);
 		system_gdc_write_32(ISP_DWAP_TOP_DST_U_CTRL1, data, core_id);
@@ -949,6 +1064,9 @@ static inline void gdc_data3out_addr_write(u32 msb, u32 data, u32 dev_type,
 {
 	if (dev_type == ARM_GDC)
 		system_gdc_write_32(0x58L, data, core_id);
+	else if (dev_type == AML_GDC_V2)
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_V_CTRL0,
+				    (((u64)msb << 32) + data) >> 4, core_id);
 	else
 		system_gdc_write_32(ISP_DWAP_TOP_DST_V_CTRL0,
 				    (((u64)msb << 32) + data) >> 4, core_id);
@@ -978,8 +1096,15 @@ static inline u32 gdc_data3out_addr_read(void)
 static inline void gdc_data3out_line_offset_write(u32 data, u32 dev_type,
 						  u32 core_id)
 {
+	u32 curr;
+
 	if (dev_type == ARM_GDC) {
 		system_gdc_write_32(0x5cL, data, core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		curr = system_gdc_read_32(C4_ISP_DWAP_TOP_DST_V_STRD0, core_id);
+		data = DEWARP_STRIDE_ALIGN(data);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_DST_V_STRD0,
+				    data | (curr & 0xffff0000), core_id);
 	} else {
 		data = DEWARP_STRIDE_ALIGN(data);
 		system_gdc_write_32(ISP_DWAP_TOP_DST_V_CTRL1, data, core_id);
@@ -1319,6 +1444,35 @@ static inline void gdc_start_flag_write(u8 data, u32 dev_type, u32 core_id)
 		u32 val = ((data & 0x1) << 0) | (curr & 0xfffffffe);
 
 		system_gdc_write_32(0x64L, val, core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		u32 sec_bit = 0, val = 0, val_orin = 0, cmp_on = 0;
+		u32 cmp_type = 0; //0: 4x16 1: 2x32
+		u32 pps_chn0_on = 0, pps_chn1_on = 0, pps_chn2_on = 0;
+
+		system_gdc_write_32(C4_ISP_DWAP_PPS_CTRL,
+				    cmp_type    << 8 |
+				    pps_chn2_on << 5 |
+				    1           << 4 |
+				    pps_chn1_on << 3 |
+				    1           << 2 |
+				    pps_chn0_on << 1 |
+				    1,
+				    core_id);
+		if (data) {
+			/* secure mem access */
+			val_orin = system_gdc_read_32(C4_ISP_DWAP_TOP_CTRL0, core_id);
+			sec_bit = val_orin & (1 << 5);
+			system_gdc_write_32(C4_ISP_DWAP_TOP_CTRL0, val_orin | 1, core_id);
+			val = sec_bit        |
+				1 << 30      | /* reg_sw_rst */
+				0 << 16      | /* reg_stdly_num */
+				cmp_on << 12 | /* reg_cmp_src_en */
+				1 << 2       | /* reg_hs_sel */
+				1;             /* reg_frm_sel */
+			system_gdc_write_32(C4_ISP_DWAP_TOP_CTRL0, val, core_id);
+			val = system_gdc_read_32(C4_ISP_DWAP_TOP_CTRL0, core_id);
+			system_gdc_write_32(C4_ISP_DWAP_TOP_CTRL0, val | (1 << 31), core_id);
+		}
 	} else {
 		if (data) {
 			/* secure mem access */
@@ -1344,7 +1498,7 @@ static inline void gdc_secure_set(u8 data, u32 dev_type, u32 core_id)
 		#if IS_ENABLED(CONFIG_AMLOGIC_TEE)
 		tee_config_device_state(DMC_DEV_ID_GDC, data);
 		#endif
-	} else {
+	} else if (dev_type == AML_GDC) {
 		u32 val = system_gdc_read_32(ISP_DWAP_TOP_CTRL0, core_id);
 
 		if (data)

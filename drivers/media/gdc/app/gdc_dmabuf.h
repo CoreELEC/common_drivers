@@ -52,7 +52,7 @@ int gdc_dma_buffer_export(struct aml_dma_buffer *buffer,
 int gdc_dma_buffer_map(struct aml_dma_cfg *cfg);
 void gdc_dma_buffer_unmap(struct aml_dma_cfg *cfg);
 int gdc_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
-			    struct aml_dma_cfg *cfg, unsigned long *addr);
+			    struct aml_dma_cfg *cfg, dma_addr_t *addr);
 void gdc_dma_buffer_dma_flush(struct device *dev, int fd);
 void gdc_dma_buffer_cache_flush(struct device *dev, int fd);
 #endif

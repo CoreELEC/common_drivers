@@ -615,7 +615,7 @@ error:
 
 static int gdc_dma_buffer_get_phys_internal(struct aml_dma_buffer *buffer,
 					    struct aml_dma_cfg *cfg,
-					    unsigned long *addr)
+					    dma_addr_t *addr)
 {
 	int i = 0, ret = -1;
 	struct aml_dma_buf *dma_buf;
@@ -643,10 +643,9 @@ static int gdc_dma_buffer_get_phys_internal(struct aml_dma_buffer *buffer,
 }
 
 int gdc_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
-			    struct aml_dma_cfg *cfg, unsigned long *addr)
+			    struct aml_dma_cfg *cfg, dma_addr_t *addr)
 {
 	struct sg_table *sg_table;
-	struct page *page;
 	int ret = 0;
 
 	if (!cfg || cfg->fd < 0) {
@@ -663,8 +662,7 @@ int gdc_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
 		}
 		if (cfg->sg) {
 			sg_table = cfg->sg;
-			page = sg_page(sg_table->sgl);
-			*addr = PFN_PHYS(page_to_pfn(page));
+			*addr = sg_dma_address(sg_table->sgl);
 			ret = 0;
 		}
 		gdc_dma_buffer_unmap(cfg);

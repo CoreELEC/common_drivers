@@ -2474,10 +2474,10 @@
 	amlgdc {
 		#address-cells=<2>;
 		#size-cells=<2>;
-		status = "disabled";
-		compatible = "amlogic, aml-gdc-v3";
-		reg = <0 0xfe092000 0 0x000015c>;
-		interrupts = <GIC_SPI 147 IRQ_TYPE_EDGE_RISING>;
+		status = "okay";
+		compatible = "amlogic, aml-gdc-v5";
+		reg = <0 0xff566c00 0 0x000030c>;
+		interrupts = <GIC_SPI 383 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amlgdc";
 		clocks = <&clkc_dewarp>;
 		clock-names = "clk_gate";

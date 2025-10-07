@@ -320,7 +320,8 @@ struct gdc_context_s *create_gdc_work_queue(u32 dev_type)
 	int  empty;
 
 	if ((dev_type == ARM_GDC && gdc_manager.gdc_dev->probed) ||
-	    (dev_type == AML_GDC && gdc_manager.aml_gdc_dev->probed)) {
+	    ((dev_type == AML_GDC || dev_type == AML_GDC_V2) &&
+	    gdc_manager.aml_gdc_dev->probed)) {
 		gdc_log(LOG_DEBUG, "Create a work queue, dev_type %d\n",
 			dev_type);
 	} else {
