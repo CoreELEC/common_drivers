@@ -4576,7 +4576,7 @@ int signal_type_changed(struct vframe_s *vf,
 	return change_flag;
 }
 
-#define signal_cuva ((cur_vd_signal_type >> 31) & 1)
+#define signal_cuva ((cur_vd_signal_type >> 31) & !is_amdv_sdr2020_force_hlg() & 1)
 #define signal_format ((cur_vd_signal_type >> 26) & 7)
 #define signal_range ((cur_vd_signal_type >> 25) & 1)
 #define signal_color_primaries ((cur_vd_signal_type >> 16) & 0xff)
