@@ -333,22 +333,20 @@
 	};
 
 	adla: adla@fe098000 {
-		compatible = "amlogic,adla";
+		compatible = "amlogic,adla-gen3b";
 		dev_name = "adla";
 		status = "okay";
 		reg = <0x0 0xfe098000 0x0 0x2000
-			0x0 0xf3c16000 0x0 0x3f000
+			0x0 0xf3c19000 0x0 0x3c000
 			>;
 		reg-names = "adla_reg\0adla_sram";
 		interrupt-names = "adla";
 		interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc_nna_core>;
 		clock-names = "adla_core_clk";
-		//power-domains=<&pwrdm PDID_S6_NNA_4T>;
-		nn_hw_version="r3p1";
+		power-domains=<&pwrdm PDID_A9_NNA_4T>;
+		nn_hw_version="r4p0";
 		adla_core_clk_rate = <1000000000>;
-		//assigned-clocks = <&clkc_nna_core>;
-		//assigned-clock-rates = <1000000000>;
 		adla_smc_cmd = <0x820000b2>;
 		smmu;
 	};
