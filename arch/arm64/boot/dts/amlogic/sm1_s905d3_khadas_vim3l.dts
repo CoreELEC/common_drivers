@@ -63,6 +63,8 @@
 			key-permit = "read","write","del";
 		};
 	};
+
+	/delete-node/ sdcard-1v8_3v3;
 };
 
 &i2c0 {
