@@ -870,6 +870,9 @@ void lcd_clk_config_probe(struct aml_lcd_drv_s *pdrv)
 	case LCD_CHIP_T6X:
 		cconf = lcd_clk_config_chip_init_t6x(pdrv);
 		break;
+	case LCD_CHIP_A9:
+		cconf = lcd_clk_config_chip_init_a9(pdrv);
+		break;
 #endif
 	default:
 		LCD_ERR(pdrv, " %s: invalid chip type", __func__);

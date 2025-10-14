@@ -479,6 +479,10 @@ ddk_module(
                 "vout/lcd/lcd_venc/lcd_venc_t3x.c",
                 "vout/lcd/lcd_venc/lcd_venc_t6x.c",
                 "vout/lcd/lcd_mode.c",
+                "vout/lcd/lcd_venc/lcd_venc_a9.c",
+                "vout/lcd/lcd_mode_common.c",
+                "vout/lcd/lcd_mode_tablet.c",
+                "vout/lcd/lcd_mode_tv.c",
                 "vout/lcd/lcd_device_mgr.c",
                 "vout/lcd/connectors/lcd_connector_common.c",
                 "vout/lcd/connectors/lvds.c",
@@ -517,6 +521,7 @@ ddk_module(
                 "vout/lcd/lcd_clk/lcd_clk_s6.c",
                 "vout/lcd/lcd_clk/lcd_clk_t6w.c",
                 "vout/lcd/lcd_clk/lcd_clk_t6x.c",
+                "vout/lcd/lcd_clk/lcd_clk_a9.c",
             ],
         },
         "CONFIG_AMLOGIC_LCD_TCON": {

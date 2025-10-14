@@ -1256,6 +1256,12 @@ struct reg_name_set_s {
 #define ENCL_INBUF_CNTL1                           0x1cd4
 #define ENCL_INBUF_CNT                             0x1cd5
 
+#define VPU_VENC_PROBE_CTRL                        0x1cfd
+#define VPU_VENC_PROBE_POS                         0x1cfe
+#define VPU_VENC_PROBE_SIZE                        0x1cff
+#define VPU_VENC_PROBE_HL_COL0                     0x1c52
+#define VPU_VENC_PROBE_HL_COL1                     0x1c53
+
 #define VPU_VENC_CTRL                              0x1cef
 #define VPP_INT_LINE_NUM                           0x1dce
 #define VPU_DISP_VIU0_CTRL                         0x2786
@@ -1480,6 +1486,7 @@ struct reg_name_set_s {
 #define VPU_VIU_VENC_MUX_CTRL                      0x271a
 #define ENCL_INFO_READ                             0x271f
 #define VPU_VENCP_STAT                             0x1cec
+#define VPU_VENCL_STAT                             0x1ced
 
 /* Bit  6 RW, gclk_mpeg_vpu_misc
  * Bit  5 RW, gclk_mpeg_venc_l_top
@@ -1843,7 +1850,11 @@ struct reg_name_set_s {
 #define CLKCTRL_VIID_CLK_CTRL_S6   0x0034
 #define CLKCTRL_VID_CLK_CTRL2_S6   0x0031
 #define CLKCTRL_DSI_PLL_CLK_DIV_S6 0x0045
-
+#define CLKCTRL_VID_CLK_CTRL_A9    0x0130
+#define CLKCTRL_VID_CLK_CTRL2_A9   0x0131
+#define CLKCTRL_VID_CLK_DIV_A9     0x0132
+#define CLKCTRL_VIID_CLK_DIV_A9    0x0133
+#define CLKCTRL_VIID_CLK_CTRL_A9   0x0134
 /* ***********************************************
  * register access api
  */

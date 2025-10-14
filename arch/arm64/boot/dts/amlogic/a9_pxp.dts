@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "meson-a9.dtsi"
+#include "mesona9-panel.dtsi"
 //#include "hdr10plus.dtsi"
 //#include "mesons6_drm.dtsi"
 //#include "mesons6_audio.dtsi"

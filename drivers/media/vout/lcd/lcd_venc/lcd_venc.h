@@ -36,6 +36,8 @@ struct lcd_venc_op_s {
 	void (*venc_set_htotal)(struct aml_lcd_drv_s *pdrv, unsigned int htotal);
 	void (*venc_set_vtotal)(struct aml_lcd_drv_s *pdrv, unsigned int vtotal);
 	int (*venc_reg_dump)(struct aml_lcd_drv_s *pdrv, char *buf, int offset);
+	int (*window_attr_change)(struct aml_lcd_drv_s *pdrv);
+	int (*venc_probe_cursor)(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *cursor_attr);
 };
 
 int lcd_venc_op_init_dft(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op);
@@ -43,6 +45,7 @@ int lcd_venc_op_init_t7(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op)
 int lcd_venc_op_init_c3(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op);
 int lcd_venc_op_init_t3x(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op);
 int lcd_venc_op_init_t6x(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op);
+int lcd_venc_op_init_a9(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op);
 
 #endif
 

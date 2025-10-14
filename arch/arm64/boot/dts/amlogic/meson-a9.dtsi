@@ -23,7 +23,6 @@
 #include <dt-bindings/thermal/ddr-params.h>
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
-
 / {
 	cpus:cpus {
 		#address-cells = <2>;
@@ -2038,7 +2037,7 @@
 		compatible = "amlogic, vclk_serve";
 		status = "okay";
 		reg = <0x0 0xfe008000 0x0 0x400    /* ana reg */
-			0x0 0xfe000000 0x0 0x4a0>; /* clk reg */
+			0x0 0xfe000000 0x0 0x590>; /* clk reg */
 	};
 
 	vout_sys: vout_sys {
@@ -2092,6 +2091,47 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				dummyl_to_drm: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <0>;
+				};
+			};
+		};
+	};
+
+	eDPTX0: eDPTX0{
+		compatible = "amlogic, eDPTX-a9";
+		status = "okay";
+		index = <0>;
+
+		reg = <0x0 0xfe016000 0x0 0x120>,   /* combo_dphy + anactrl */
+		      <0x0 0xfe074000 0x0 0x10b0>,  /* edp_a host */
+		      <0x0 0xfe002000 0x0 0xa0>,    /* reset */
+		      <0x0 0xfe004000 0x0 0x70>;    /* periphs */
+		/* power-domains = <&pwrdm PDID_T7_EDP0>; */
+		interrupts = <0 197 1>,<0 194 1>,<0 287 1>;
+		interrupt-names = "vsync","vsync2","DPTX-HPD";
+		/* pinctrl-0 = <&lcd_edp_a_pins>; */
+		/* pinctrl-1 = <&lcd_edp_a_off_pins>; */
+		/* pinctrl-names = "DPTX-ON","DPTX-OFF"; */
+
+		device_name = "amlogic-eDPTX";
+		HPD-ignore = <0>;
+		/* edptx_vcc-gpio      = <&gpio GPIOY_0 GPIO_ACTIVE_HIGH>; */
+		/* edptx_vcc-gpio-name = "GPIOY_0"; */
+		/* edptx-gpio-OD     = <&gpio GPIOY_0 GPIO_ACTIVE_HIGH>; */
+		/* edptx-gpio-OD-name = "GPIOY_0"; */
+
+		drive-strength-lut =
+			<0x3 0x3 0x0>,<0x3 0x7 0x0>,<0x3 0xb 0x0>,<0x3 0xf 0x0>,
+			<0x7 0x3 0x0>,<0x7 0x8 0x0>,<0x8 0xc 0x0>,
+			<0xa 0x4 0x0>,<0xa 0x8 0x0>,
+			<0xf 0x5 0x0>;
+
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				dptx0_to_drm: endpoint@0 {
 					reg = <0>;
 					remote-endpoint = <0>;
 				};

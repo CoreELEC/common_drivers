@@ -1310,6 +1310,11 @@ static inline void lcd_vsync_handler(struct aml_lcd_drv_s *pdrv)
 		}
 	}
 
+	if (pdrv->window_attr.window_attr_changed) {
+		lcd_window_attr_change(pdrv);
+		pdrv->window_attr.window_attr_changed = 0;
+	}
+
 	if (pdrv->vs_msr && pdrv->vs_msr_rt && pdrv->vs_msr_en) {
 		temp = vout_frame_rate_msr_high_res(pdrv->viu_sel);
 		pdrv->vs_msr_rt[pdrv->vs_msr_i++] = temp;
@@ -2685,6 +2690,17 @@ static struct lcd_data_s lcd_data_t6x = {
 	.offset_venc_data = {0x0},
 };
 
+static struct lcd_data_s lcd_data_a9 = {
+	.chip_type = LCD_CHIP_A9,
+	.chip_name = "a9",
+	.rev_type = 0,
+	.reg_map_table = &lcd_reg_g12a[0],
+	.drv_max = 1,
+	.offset_venc = {0x0},
+	.offset_venc_if = {0x0},
+	.offset_venc_data = {0x0},
+};
+
 static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-g12a",
@@ -2749,6 +2765,10 @@ static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-t6x",
 		.data = &lcd_data_t6x,
+	},
+	{
+		.compatible = "amlogic, lcd-a9",
+		.data = &lcd_data_a9,
 	},
 	{}
 };

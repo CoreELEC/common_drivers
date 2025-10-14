@@ -13,5 +13,6 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD_CLK_SOC) += vout/lcd/lcd_clk/lcd_clk_t
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD_CLK_SOC) += vout/lcd/lcd_clk/lcd_clk_t3x.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD_CLK_SOC) += vout/lcd/lcd_clk/lcd_clk_s6.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_clk/lcd_clk_c3.o
+$(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_clk/lcd_clk_a9.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_clk/lcd_clk_if.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_clk/lcd_clk_utils.o

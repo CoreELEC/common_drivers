@@ -106,6 +106,74 @@ void lcd_debug_test(struct aml_lcd_drv_s *pdrv, unsigned int num)
 		LCD_PR(pdrv, "disable test pattern");
 }
 
+void lcd_window_attr_change(struct aml_lcd_drv_s *pdrv)
+{
+	int ret;
+
+	if (!lcd_venc_op.window_attr_change) {
+		LCDERR("[%d]: %s: invalid\n", pdrv->index, __func__);
+		return;
+	}
+
+	ret = lcd_venc_op.window_attr_change(pdrv);
+	if (ret) {
+		LCDERR("[%d]: %s: window attr change failed\n", pdrv->index, __func__);
+		return;
+	}
+}
+
+void lcd_debug_cursor(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *cursor_attr)
+{
+	int ret;
+
+	if (!lcd_venc_op.venc_probe_cursor) {
+		LCDERR("[%d]: %s: invalid\n", pdrv->index, __func__);
+		return;
+	}
+
+	ret = lcd_venc_op.venc_probe_cursor(pdrv, cursor_attr);
+	if (ret) {
+		LCDERR("[%d]: %s: cursor set failed\n", pdrv->index, __func__);
+		return;
+	}
+}
+
+void lcd_screen_restore(struct aml_lcd_drv_s *pdrv)
+{
+	unsigned long flags = 0;
+
+	if (lcd_venc_op.mute_set) {
+		spin_lock_irqsave(&pdrv->isr_lock, flags);
+		pdrv->mute_flag = 0;
+		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
+		LCD_PR(pdrv, "%s", __func__);
+	} else if (pdrv->viu_sel == 1) {
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+		set_output_mute(false);
+		pdrv->mute_flag = 0;
+		LCD_PR(pdrv, "%s", __func__);
+#endif
+	}
+}
+
+void lcd_screen_black(struct aml_lcd_drv_s *pdrv)
+{
+	unsigned long flags = 0;
+
+	if (lcd_venc_op.mute_set) {
+		spin_lock_irqsave(&pdrv->isr_lock, flags);
+		pdrv->mute_flag = 1;
+		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
+		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	} else if (pdrv->viu_sel == 1) {
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+		set_output_mute(true);
+		pdrv->mute_flag = 1;
+		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+#endif
+	}
+}
+
 //vsync isr stage
 void lcd_bist_change(struct aml_lcd_drv_s *pdrv, unsigned int level_r,
 		     unsigned int level_g, unsigned int level_b)
@@ -370,6 +438,9 @@ int lcd_venc_config_init(struct lcd_data_s *pdata)
 		break;
 	case LCD_CHIP_T6X:
 		ret = lcd_venc_op_init_t6x(pdata, &lcd_venc_op);
+		break;
+	case LCD_CHIP_A9:
+		ret = lcd_venc_op_init_a9(pdata, &lcd_venc_op);
 		break;
 	case LCD_CHIP_TXHD2:
 	case LCD_CHIP_S6:

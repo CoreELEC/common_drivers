@@ -260,6 +260,8 @@ void lcd_gamma_debug_test_en(struct aml_lcd_drv_s *pdrv, int flag);
 void lcd_debug_test(struct aml_lcd_drv_s *pdrv, unsigned int num);
 void lcd_bist_change(struct aml_lcd_drv_s *pdrv, unsigned int level_r,
 		     unsigned int level_g, unsigned int level_b);
+void lcd_window_attr_change(struct aml_lcd_drv_s *pdrv);
+void lcd_debug_cursor(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *cursor_attr);
 void lcd_set_venc_timing(struct aml_lcd_drv_s *pdrv);
 void lcd_set_venc(struct aml_lcd_drv_s *pdrv);
 void lcd_venc_set_dummy(struct aml_lcd_drv_s *pdrv);

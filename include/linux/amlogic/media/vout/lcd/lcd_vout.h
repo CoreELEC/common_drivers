@@ -160,6 +160,7 @@ enum lcd_chip_e {
 	LCD_CHIP_T6D,	/* 17 */
 	LCD_CHIP_T6W,	/* 18 */
 	LCD_CHIP_T6X,	/* 19 */
+	LCD_CHIP_A9,	/* 20 */
 	LCD_CHIP_MAX,
 };
 
@@ -895,6 +896,36 @@ struct aml_vrr_test_s {
 	unsigned int vtotal_max;
 };
 
+struct lcd_window_pos_s {
+	unsigned short start_x;
+	unsigned short start_y;
+	unsigned short end_x;
+	unsigned short end_y;
+};
+
+struct lcd_window_color_s {
+	unsigned short red;
+	unsigned short green;
+	unsigned short blue;
+};
+
+struct lcd_window_attr_s {
+	unsigned short window_attr_changed;
+	struct lcd_window_pos_s pos;
+	struct lcd_window_color_s color_in;
+	struct lcd_window_color_s color_out;
+};
+
+struct lcd_cursor_attr_s {
+	unsigned char status;
+	unsigned char mode;
+	unsigned short x;
+	unsigned short y;
+	unsigned short red;
+	unsigned short green;
+	unsigned short blue;
+};
+
 #define LCD_CONFIG_NONE 0
 #define LCD_CONFIG_DTS  1
 #define LCD_CONFIG_FILE 2
@@ -977,6 +1008,7 @@ struct aml_lcd_drv_s {
 	unsigned char probe_done;
 	unsigned char viu_sel;
 	unsigned char vsync_none_timer_flag;
+	struct lcd_window_attr_s window_attr;
 
 	char output_name[30];
 	unsigned int vmode_switch;

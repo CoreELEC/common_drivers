@@ -2699,6 +2699,102 @@ static ssize_t lcd_debug_mute_store(struct device *dev, struct device_attribute 
 	return count;
 }
 
+static ssize_t lcd_debug_window_attr_store(struct device *dev, struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	struct aml_lcd_drv_s *pdrv = dev_get_drvdata(dev);
+	int ret = 0;
+	char *buf_orig;
+	char *parm[7];
+	unsigned long flags = 0;
+	unsigned int temp = 0;
+
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig) {
+		LCDERR("%s: buf malloc error\n", __func__);
+		return count;
+	}
+	lcd_debug_parse_param(buf_orig, (char **)&parm, 7);
+
+	if (strcmp(parm[0], "pos")  == 0) { /* for window position */
+		spin_lock_irqsave(&pdrv->isr_lock, flags);
+		ret = kstrtouint(parm[1], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.pos.start_x = (unsigned short)temp;
+		ret = kstrtouint(parm[2], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.pos.start_y = (unsigned short)temp;
+		ret = kstrtouint(parm[3], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.pos.end_x = (unsigned short)temp;
+		ret = kstrtouint(parm[4], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.pos.end_y = (unsigned short)temp;
+		pdrv->window_attr.window_attr_changed = 1;
+		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
+	} else if (strcmp(parm[0], "color")  == 0) { /* for window color */
+		spin_lock_irqsave(&pdrv->isr_lock, flags);
+		ret = kstrtouint(parm[1], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_in.red = (unsigned short)temp;
+		ret = kstrtouint(parm[2], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_in.green = (unsigned short)temp;
+		ret = kstrtouint(parm[3], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_in.blue = (unsigned short)temp;
+		ret = kstrtouint(parm[4], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_out.red = (unsigned short)temp;
+		ret = kstrtouint(parm[5], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_out.green = (unsigned short)temp;
+		ret = kstrtouint(parm[6], 10, &temp);
+		if (ret)
+			goto lcd_debug_window_attr_store_next;
+		pdrv->window_attr.color_out.blue = (unsigned short)temp;
+		pdrv->window_attr.window_attr_changed = 1;
+		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
+	}
+lcd_debug_window_attr_store_next:
+	kfree(buf_orig);
+
+	return count;
+}
+
+static ssize_t lcd_debug_cursor_store(struct device *dev, struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	struct aml_lcd_drv_s *pdrv = dev_get_drvdata(dev);
+	int ret = 0;
+	struct lcd_cursor_attr_s cursor_attr;
+
+	ret = sscanf(buf, "%c %c %hu %hu %hu %hu %hu",
+				&cursor_attr.status, &cursor_attr.mode,
+				&cursor_attr.x, &cursor_attr.y,
+				&cursor_attr.red, &cursor_attr.green, &cursor_attr.blue);
+	if (ret != 7) {
+		ret = sscanf(buf, "%c", &cursor_attr.status);
+		if (ret != 1 || cursor_attr.status != 0) {
+			pr_info("invalid cmd type\n");
+			return -EINVAL;
+		}
+	}
+
+	lcd_debug_cursor(pdrv, &cursor_attr);
+
+	return count;
+}
+
 static void lcd_debug_reg_op(struct aml_lcd_drv_s *pdrv, unsigned int reg,
 				unsigned int data, unsigned int bus, unsigned char reg_write)
 {
@@ -4989,6 +5085,8 @@ static struct device_attribute lcd_debug_attrs[] = {
 	__ATTR(clk,         0644, lcd_debug_clk_show, lcd_debug_clk_store),
 	__ATTR(test,        0644, lcd_debug_test_show, lcd_debug_test_store),
 	__ATTR(mute,        0644, lcd_debug_mute_show, lcd_debug_mute_store),
+	__ATTR(window_attr, 0200, NULL, lcd_debug_window_attr_store),
+	__ATTR(cursor,      0200, NULL, lcd_debug_cursor_store),
 	__ATTR(mute_count,  0644, lcd_debug_mute_cnt_show, lcd_debug_mute_cnt_store),
 	__ATTR(unmute_count, 0644, lcd_debug_unmute_cnt_show, lcd_debug_unmute_cnt_store),
 	__ATTR(prbs,        0644, lcd_debug_prbs_show, lcd_debug_prbs_store),
@@ -5409,6 +5507,38 @@ static struct lcd_debug_info_s lcd_debug_info_s6 = {
 #endif
 };
 
+static struct lcd_debug_info_s lcd_debug_info_a9_0 = {
+	.reg_pinmux_table = lcd_reg_dump_pinmux_t7,
+
+	.reg_dump_lvds   = lcd_reg_print_lvds_t7,
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
+	.reg_dump_vbyone = lcd_reg_print_vbyone_t7,
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
+	.reg_dump_mipi   = lcd_reg_print_mipi,
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	.reg_dump_mlvds  = NULL,
+	.reg_dump_p2p    = NULL,
+#endif
+};
+
+static struct lcd_debug_info_s lcd_debug_info_a9_1 = {
+	.reg_pinmux_table = lcd_reg_dump_pinmux_t7,
+
+	.reg_dump_lvds   = lcd_reg_print_lvds_t7,
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
+	.reg_dump_vbyone = lcd_reg_print_vbyone_t7,
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
+	.reg_dump_mipi   = lcd_reg_print_mipi,
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	.reg_dump_mlvds  = NULL,
+	.reg_dump_p2p    = NULL,
+#endif
+};
+
 int lcd_debug_probe(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_debug_info_s *lcd_debug_info;
@@ -5462,6 +5592,12 @@ int lcd_debug_probe(struct aml_lcd_drv_s *pdrv)
 		break;
 	case LCD_CHIP_S6:
 		lcd_debug_info = &lcd_debug_info_s6;
+		break;
+	case LCD_CHIP_A9:
+		if (pdrv->index == 1)
+			lcd_debug_info = &lcd_debug_info_a9_1;
+		else
+			lcd_debug_info = &lcd_debug_info_a9_0;
 		break;
 	default:
 		lcd_debug_info = NULL;
