@@ -264,12 +264,6 @@ static void __maybe_unused isr_in_hook(void *data, int irq, struct irqaction *ac
 	isr_info = &info->isr_infos[irq];
 	now = sched_clock();
 	isr_info->exec_start_time = now;
-
-	if (now >= CHK_WINDOW + isr_info->period_start_time) {
-		isr_info->period_start_time = now;
-		isr_info->exec_sum_time = 0;
-		isr_info->cnt = 0;
-	}
 }
 
 static bool is_high_frequency_irq(struct isr_check_info *isr_info, struct irqaction *action)
@@ -530,7 +524,11 @@ EXPORT_SYMBOL(__arm_smccc_smc_glue);
 
 static void __dump_cpu_task(int cpu)
 {
-	pr_info("Task dump for CPU %d:\n", cpu);
+	pr_info("Task dump for CPU%d: running:%d cfs_running:%d\n",
+		cpu,
+		cpu_rq(cpu)->nr_running,
+		cpu_rq(cpu)->cfs.h_nr_running);
+
 	sched_show_task(cpu_curr(cpu));
 }
 
@@ -958,6 +956,21 @@ void fiq_debug_entry(void)
 		show_regs_32(&regs);
 #endif
 	}
+#ifdef CONFIG_ARM64
+	pr_info("PC:%pS/%lx LR:%pS/%lx SP:%lx\n",
+			(void *)regs.pc,
+			(unsigned long)regs.pc,
+			(void *)regs.regs[30],
+			(unsigned long)regs.regs[30],
+			(unsigned long)regs.regs[29]);
+#elif defined(CONFIG_AMLOGIC_ARMV8_AARCH32)
+	pr_info("PC:%pS/%lx LR:%pS/%lx SP:%lx\n",
+			(void *)regs.ARM_pc,
+			(unsigned long)regs.ARM_pc,
+			(void *)regs.ARM_lr,
+			(unsigned long)regs.ARM_lr,
+			(unsigned long)regs.ARM_sp);
+#endif
 	dump_stack();
 	pr_info("\n");
 	while (1)
@@ -1306,21 +1319,142 @@ static int dts_reg_show(struct seq_file *m, void *v)
 	return 0;
 }
 
+static void sysrq_deadloop_work_func(struct work_struct *work)
+{
+	while (1)
+		;
+}
+
+static int sysrq_timer_storm_thread(void *unused)
+{
+	int i;
+
+	set_cpus_allowed_ptr(current, cpumask_of(smp_processor_id()));
+	sched_set_fifo(current);
+
+	//double of irqratio warning count
+	for (i = 0; i < 30000; i++)
+		usleep_range(1, 1);
+
+	return 0;
+}
+
+static int sysrq_ipi_stop;
+
+static int sysrq_ipi_wake_thread(void *sleep_task)
+{
+	int i;
+
+	set_cpus_allowed_ptr(current, cpumask_of(0));
+	sched_set_fifo(current);
+
+	//double of irqratio warning count
+	for (i = 0; i < 30000; i++) {
+		wake_up_process(sleep_task);
+
+		/* delay some time to let sleep_task wakeup and sleep */
+		udelay(20);
+	}
+
+	sysrq_ipi_stop = 1;
+	return 0;
+}
+
+static int sysrq_ipi_sleep_thread(void *unused)
+{
+	set_cpus_allowed_ptr(current, cpumask_of(1));
+	sched_set_fifo(current);
+
+	while (1) {
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+
+		if (sysrq_ipi_stop)
+			break;
+	}
+
+	return 0;
+}
+
+static void sysrq_trigger_handler(char c)
+{
+	static struct work_struct works[8];
+	int cpu;
+	struct task_struct *sleep_task;
+
+	switch (c) {
+	case 'x':
+		local_irq_disable();
+		pr_emerg("trigger hardlockup\n");
+
+		//make all cpus busy out of idle, otherwise may cause watchdog reboot
+		for_each_online_cpu(cpu) {
+			INIT_WORK(&works[cpu], sysrq_deadloop_work_func);
+			schedule_work_on(cpu, &works[cpu]);
+		}
+		while (1)
+			;
+		break;
+	case 'c':
+		pr_emerg("trigger null pointer crash\n");
+		*(volatile int *)0;
+		break;
+	case 's':
+		pr_emerg("trigger softlockup\n");
+		preempt_disable();
+		while (1)
+			;
+		break;
+	case 'r':
+		pr_emerg("trigger rcu stall\n");
+		rcu_read_lock();
+		while (1)
+			;
+		break;
+	case 'w':
+		pr_emerg("trigger workqueue lockup\n");
+		preempt_disable();
+		INIT_WORK(&works[0], sysrq_deadloop_work_func);
+		schedule_work(&works[0]);
+		INIT_WORK(&works[1], sysrq_deadloop_work_func);
+		schedule_work(&works[1]);
+		preempt_enable();
+		break;
+	case 't':
+		pr_emerg("trigger timer irqratio\n");
+		kthread_run(sysrq_timer_storm_thread, NULL, "sysrq_timer");
+		break;
+	case 'i':
+		pr_emerg("trigger ipi irqratio\n");
+		sysrq_ipi_stop = 0;
+		sleep_task = kthread_run(sysrq_ipi_sleep_thread, NULL, "sysrq_ipi_sleep");
+		kthread_run(sysrq_ipi_wake_thread, sleep_task, "sysrq_ipi_wake");
+		break;
+	case 'u':
+		pr_emerg("trigger undefine instruction\n");
+		asm(".inst      0xf876ffcd");
+		break;
+	case 'h':
+	default:
+		pr_emerg("Help: null-pointer-crash(c) hardlockup(x) softlockup(s) rcu_stall(r) workqueue_lockup(w) timer_irqratio(t) ipi_irqratio(i)\n");
+		pr_emerg(" - workqueue_lockup needs first: echo 0 >  /sys/module/workqueue/parameters/cpu_intensive_thresh_us\n");
+		pr_emerg(" - softlockup needs first: echo 30 > /sys/module/rcupdate/parameters/rcu_cpu_stall_timeout\n");
+		pr_emerg("\n");
+
+		break;
+	}
+}
+
 static ssize_t write_sysrq_trigger(struct file *file, const char __user *buf,
 				size_t count, loff_t *ppos)
 {
-	if (count) {
-		char c;
+	char c;
 
-		if (get_user(c, buf))
-			return -EFAULT;
-		if (c == 'x') {
-			local_irq_disable();
-			pr_emerg("trigger hardlockup\n");
-			while (1)
-				;
-		}
-	}
+	if (get_user(c, buf))
+		return -EFAULT;
+
+	sysrq_trigger_handler(c);
+
 	return count;
 }
 
@@ -1333,18 +1467,8 @@ static const struct file_operations sysrq_trigger_debug_ops = {
 static ssize_t sysrq_trigger_store(struct kobject *kobj, struct kobj_attribute *attr,
 				const char *buf, size_t count)
 {
-	if (count) {
-		char c;
+	sysrq_trigger_handler(buf[0]);
 
-		if (sscanf(buf, "%c", &c) != 1)
-			return -EFAULT;
-		if (c == 'x') {
-			local_irq_disable();
-			pr_emerg("trigger hardlockup\n");
-			while (1)
-				;
-		}
-	}
 	return count;
 }
 

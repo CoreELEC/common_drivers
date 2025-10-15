@@ -90,8 +90,11 @@ static int show_kernel_data_valid(unsigned long reg)
 
 #ifdef CONFIG_ARM64
 	reg = reg | MTE_TAG_MASK;
-#endif
+
 	if (reg < (unsigned long)PAGE_OFFSET)
+#elif CONFIG_ARM
+	if (reg < (unsigned long)MODULES_VADDR)
+#endif
 		return 0;
 	else if (reg <= (unsigned long)high_memory)
 		return 1;
@@ -121,7 +124,7 @@ static void show_data(unsigned long addr, int nbytes, const char *name)
 #ifdef CONFIG_ARM64
 	if ((addr | MTE_TAG_MASK) < PAGE_OFFSET || (addr | MTE_TAG_MASK) > -256UL)
 #else
-	if (addr < PAGE_OFFSET || addr > -256UL)
+	if (addr < MODULES_VADDR || addr > -256UL)
 #endif
 #endif
 		return;

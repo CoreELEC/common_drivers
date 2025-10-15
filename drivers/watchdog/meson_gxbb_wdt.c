@@ -21,6 +21,7 @@
 #include <linux/debugfs.h>
 #include <linux/amlogic/gki_module.h>
 #include <linux/syscore_ops.h>
+#include <trace/hooks/ftrace_dump.h>
 
 #define DRIVER_NAME		"meson_gxbb_wdt"
 #endif
@@ -521,6 +522,20 @@ static int meson_gxbb_wdt_notifier(struct notifier_block *self,
 
 	return NOTIFY_DONE;
 }
+
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+static void ftrace_dump_hook(void *arg, struct trace_seq *trace_buf, bool *dump_printk)
+{
+	static int cnt;
+	struct meson_gxbb_wdt *data;
+
+	if (cnt++ % 1024 != 0)
+		return;
+
+	data = dev_get_drvdata(gdev);
+	writel(0, data->reg_base + GXBB_WDT_RSET_REG);
+}
+#endif
 #endif
 
 static int meson_gxbb_wdt_probe(struct platform_device *pdev)
@@ -712,6 +727,11 @@ static int meson_gxbb_wdt_probe(struct platform_device *pdev)
 	 */
 	gdev = dev;
 	register_syscore_ops(&meson_gxbb_wdt_syscore_ops);
+
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+	//ping watchdog when ftrace_dump
+	register_trace_android_vh_ftrace_dump_buffer(ftrace_dump_hook, NULL);
+#endif
 
 	return 0;
 #else

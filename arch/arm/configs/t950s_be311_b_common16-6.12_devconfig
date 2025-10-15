@@ -19,7 +19,6 @@ CONFIG_AMLOGIC_DEBUG=y
 
 # amlogic-debug-iotrace.ko
 # CONFIG_AMLOGIC_DEBUG_IOTRACE is not set
-# CONFIG_TRACE_MMIO_ACCESS is not set
 
 # amlogic-clk.ko
 CONFIG_AMLOGIC_COMMON_CLK=y
