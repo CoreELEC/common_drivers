@@ -767,49 +767,9 @@
 				status = "okay";
 			};
 
-			i2c0: i2c@66000 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x66000 0x0 0x48>;
-				interrupts = <GIC_SPI 160 IRQ_TYPE_EDGE_RISING>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
-				status = "disabled";
-			};
-
-			i2c1: i2c@66400 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x66400 0x0 0x48>;
-				interrupts = <GIC_SPI 161 IRQ_TYPE_EDGE_RISING>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_B>;
-				status = "disabled";
-			};
-
-			i2c2: i2c@66800 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x66800 0x0 0x48>;
-				interrupts = <GIC_SPI 162 IRQ_TYPE_EDGE_RISING>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_C>;
-				status = "disabled";
-			};
-
-			i2c3: i2c@66c00 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x66c00 0x0 0x48>;
-				interrupts = <GIC_SPI 163 IRQ_TYPE_EDGE_RISING>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_D>;
-				status = "disabled";
-			};
-
-			i2c4: i2c@67000 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x67000 0x0 0x48>;
+			i2c4: i2c@3a4400 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0x3a4400 0x0 0x3c>;
 				interrupts = <GIC_SPI 164 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -817,13 +777,43 @@
 				status = "disabled";
 			};
 
-			i2c5: i2c@67400 {
-				compatible = "amlogic,meson-i2c";
-				reg = <0x0 0x67400 0x0 0x24>;
+			i2c5: i2c@3a4500 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0x3a4500 0x0 0x3c>;
 				interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_F>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_I>;
+				status = "disabled";
+			};
+
+			i2c6: i2c@3a4600 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0x3a4600 0x0 0x3c>;
+				interrupts = <GIC_SPI 173 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_G>;
+				status = "disabled";
+			};
+
+			i2c7: i2c@3a4700 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0x3a4700 0x0 0x3c>;
+				interrupts = <GIC_SPI 179 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_H>;
+				status = "disabled";
+			};
+
+			i2c8: i2c@3a4800 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0x3a4800 0x0 0x3c>;
+				interrupts = <GIC_SPI 166 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_I>;
 				status = "disabled";
 			};
 
@@ -917,6 +907,46 @@
 					#gpio-cells = <2>;
 					gpio-ranges = <&aobus_pinctrl 0 0 38>;
 				};
+			};
+
+			i2c0: i2c@e000 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0xe000 0x0 0x3c>;
+				interrupts = <GIC_SPI 24 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				status = "okay";
+			};
+
+			i2c1: i2c@e100 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0xe100 0x0 0x3c>;
+				interrupts = <GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				status = "disabled";
+			};
+
+			i2c2: i2c@e200 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0xe200 0x0 0x3c>;
+				interrupts = <GIC_SPI 26 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				status = "disabled";
+			};
+
+			i2c3: i2c@e300 {
+				compatible = "amlogic,meson-i2c-v2-1";
+				reg = <0x0 0xe300 0x0 0x3c>;
+				interrupts = <GIC_SPI 27 IRQ_TYPE_EDGE_RISING>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				status = "disabled";
 			};
 
 			gpio_ao_intc: interrupt-controller@4080 {
@@ -2587,6 +2617,116 @@
 	};
 };
 
+&aobus_pinctrl {
+	i2c0_pins1:i2c0_pins1 {
+		mux {
+			groups = "i2c_a_scl_ao",
+				"i2c_a_sda_ao";
+			function = "i2c_a_ao";
+			bias-disable;
+		};
+	};
+
+	i2c0_pins2:i2c0_pins2 {
+		mux {
+			groups = "i2c_a_scl_ao_c",
+				"i2c_a_sda_ao_c";
+			function = "i2c_a_ao";
+			bias-disable;
+		};
+	};
+
+	i2c0_pins3:i2c0_pins3 {
+		mux {
+			groups = "i2c_a_scl_ao_d",
+				"i2c_a_sda_ao_d";
+			function = "i2c_a_ao";
+			bias-disable;
+		};
+	};
+
+	i2c0_pins4:i2c0_pins4 {
+		mux {
+			groups = "i2c_a_scl_ao_ao",
+				"i2c_a_sda_ao_ao";
+			function = "i2c_a_ao";
+			bias-disable;
+		};
+	};
+	i2c1_pins1:i2c1_pins1 {
+		mux {
+			groups = "i2c_b_scl_ao",
+				"i2c_b_sda_ao";
+			function = "i2c_b_ao";
+			bias-disable;
+		};
+	};
+
+	i2c1_pins2:i2c1_pins2 {
+		mux {
+			groups = "i2c_b_scl_ao_c",
+				"i2c_b_sda_ao_c";
+			function = "i2c_b_ao";
+			bias-disable;
+		};
+	};
+
+	i2c2_pins1:i2c2_pins1 {
+		mux {
+			groups = "i2c_c_scl_ao",
+				"i2c_c_sda_ao";
+			function = "i2c_c_ao";
+			bias-disable;
+		};
+	};
+
+	i2c2_pins2:i2c2_pins2 {
+		mux {
+			groups = "i2c_c_scl_ao_c",
+				"i2c_c_sda_ao_c";
+			function = "i2c_c_ao";
+			bias-disable;
+		};
+	};
+
+	i2c2_pins3:i2c2_pins3 {
+		mux {
+			groups = "i2c_c_scl_ao_ao",
+				"i2c_c_scl_ao_ao";
+			function = "i2c_c_ao";
+			bias-disable;
+		};
+	};
+
+	i2c3_pins1:i2c3_pins1 {
+		mux {
+			groups = "i2c_d_scl_ao",
+				"i2c_d_sda_ao";
+			function = "i2c_d_ao";
+			bias-disable;
+		};
+	};
+
+	i2c3_pins2:i2c3_pins2 {
+		mux {
+			groups = "i2c_d_scl_ao_ao",
+				"i2c_d_scl_ao_ao";
+			function = "i2c_d_ao";
+			bias-disable;
+		};
+	};
+
+	i2c3_pins3:i2c3_pins3 {
+		mux {
+			groups = "i2c_d_scl_ao_ao8",
+				"i2c_d_sda_ao_ao9";
+			function = "i2c_d_ao";
+			bias-disable;
+		};
+	};
+
+};
+
 &periphs_pinctrl {
 	bl_pwm_off_pins:bl_pwm_off_pin {
 		mux {
@@ -2597,286 +2737,155 @@
 		};
 	};
 
-	i2c0_pins1:i2c0_pins1 {
-		mux {
-			groups = "i2c0_sda_e",
-				"i2c0_scl_e";
-			function = "i2c0";
-			drive-strength = <3>;
-			bias-disable;
-		};
-	};
-
-	i2c0_pins2:i2c0_pins2 {
-		mux {
-			groups = "i2c0_sda_z",
-				"i2c0_scl_z";
-			function = "i2c0";
-			drive-strength = <3>;
-			bias-disable;
-		};
-	};
-
-	i2c0_pins3:i2c0_pins3 {
-		mux {
-			groups = "i2c0_sda_a",
-				"i2c0_scl_a";
-			function = "i2c0";
-			drive-strength = <3>;
-			bias-disable;
-		};
-	};
-
-	i2c0_pins4:i2c0_pins4 {
-		mux {
-			groups = "i2c0_sda_f",
-				"i2c0_scl_f";
-			function = "i2c0";
-			drive-strength = <3>;
-			bias-disable;
-		};
-	};
-
-	i2c0_pins5:i2c0_pins5 {
-		mux {
-			groups = "i2c0_sda_d",
-				"i2c0_scl_d";
-			function = "i2c0";
-			drive-strength = <3>;
-			bias-disable;
-		};
-	};
-
-	i2c1_pins1:i2c1_pins1 {
-		mux {
-			groups = "i2c1_sda_c",
-				"i2c1_scl_c";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins2:i2c1_pins2 {
-		mux {
-			groups = "i2c1_sda_d",
-				"i2c1_scl_d";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins3:i2c1_pins3 {
-		mux {
-			groups = "i2c1_sda_a",
-				"i2c1_scl_a";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins4:i2c1_pins4 {
-		mux {
-			groups = "i2c1_sda_x",
-				"i2c1_scl_x";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins5:i2c1_pins5 {
-		mux {
-			groups = "i2c1_sda_z3",
-				"i2c1_scl_z3";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins5:i2c1_pins5 {
-		mux {
-			groups = "i2c1_sda_z3",
-				"i2c1_scl_z11";
-			function = "i2c1";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins1:i2c2_pins1 {
-		mux {
-			groups = "i2c2_sda_d",
-				"i2c2_scl_d";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins2:i2c2_pins2 {
-		mux {
-			groups = "i2c2_sda_h",
-				"i2c2_scl_h";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins3:i2c2_pins3 {
-		mux {
-			groups = "i2c2_sda_x",
-				"i2c2_scl_x";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins4:i2c2_pins4 {
-		mux {
-			groups = "i2c2_sda_a",
-				"i2c2_scl_a";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins5:i2c2_pins5 {
-		mux {
-			groups = "i2c2_sda_z0",
-				"i2c2_scl_z1";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins6:i2c2_pins6 {
-		mux {
-			groups = "i2c2_sda_z10",
-				"i2c2_scl_z11";
-			function = "i2c2";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins1:i2c3_pins1 {
-		mux {
-			groups = "i2c3_sda_x0",
-				"i2c3_scl_x1";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins2:i2c3_pins2 {
-		mux {
-			groups = "i2c3_sda_f",
-				"i2c3_scl_f";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins3:i2c3_pins3 {
-		mux {
-			groups = "i2c3_sda_h",
-				"i2c3_scl_h";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins4:i2c3_pins4 {
-		mux {
-			groups = "i2c3_sda_x10",
-				"i2c3_scl_x11";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins5:i2c3_pins5 {
-		mux {
-			groups = "i2c3_sda_a6",
-				"i2c3_scl_a7";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins6:i2c3_pins6 {
-		mux {
-			groups = "i2c3_sda_x14",
-				"i2c3_scl_x15";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins7:i2c3_pins7 {
-		mux {
-			groups = "i2c3_sda_a14",
-				"i2c3_scl_a15";
-			function = "i2c3";
-			bias-disable;
-		};
-	};
-
 	i2c4_pins1:i2c4_pins1 {
 		mux {
-			groups = "i2c4_sda_b",
-				"i2c4_scl_b";
-			function = "i2c4";
+			groups = "i2c_e_sda",
+				"i2c_e_scl";
+			function = "i2c_e";
 			bias-disable;
 		};
 	};
 
 	i2c4_pins2:i2c4_pins2 {
 		mux {
-			groups = "i2c4_sda_h",
-				"i2c4_scl_h";
-			function = "i2c4";
+			groups = "i2c_e_scl_m",
+				"i2c_e_sda_m";
+			function = "i2c_e";
 			bias-disable;
 		};
 	};
 
 	i2c4_pins3:i2c4_pins3 {
 		mux {
-			groups = "i2c4_sda_z",
-				"i2c4_scl_z";
-			function = "i2c4";
+			groups = "i2c_e_scl_y",
+				"i2c_e_sda_y";
+			function = "i2c_e";
 			bias-disable;
 		};
 	};
 
 	i2c4_pins4:i2c4_pins4 {
 		mux {
-			groups = "i2c4_sda_a",
-				"i2c4_scl_a";
-			function = "i2c4";
+			groups = "i2c_e_scl_z",
+				"i2c_e_sda_z";
+			function = "i2c_e";
 			bias-disable;
 		};
 	};
 
 	i2c5_pins1:i2c5_pins1 {
 		mux {
-			groups = "i2c5_sda_z",
-				"i2c5_scl_z";
-			function = "i2c5";
+			groups = "i2c_f_scl",
+				"i2c_f_sda";
+			function = "i2c_f";
 			bias-disable;
 		};
 	};
 
 	i2c5_pins2:i2c5_pins2 {
 		mux {
-			groups = "i2c5_sda_a10",
-				"i2c5_scl_a11";
-			function = "i2c5";
+			groups = "i2c_f_scl_h",
+				"i2c_f_sda_h";
+			function = "i2c_f";
 			bias-disable;
 		};
 	};
 
 	i2c5_pins3:i2c5_pins3 {
 		mux {
-			groups = "i2c5_sda_a14",
-				"i2c5_scl_a15";
-			function = "i2c5";
+			groups = "i2c_f_sda_cc",
+				"i2c_f_scl_cc";
+			function = "i2c_f";
+			bias-disable;
+		};
+	};
+
+	i2c5_pins4:i2c5_pins4 {
+		mux {
+			groups = "i2c_f_scl_m",
+				"i2c_f_sda_m";
+			function = "i2c_f";
+			bias-disable;
+		};
+	};
+
+	i2c6_pins1:i2c6_pins1 {
+		mux {
+			groups = "i2c_g_scl",
+				"i2c_g_sda";
+			function = "i2c_g";
+			bias-disable;
+		};
+	};
+
+	i2c6_pins2:i2c6_pins2 {
+		mux {
+			groups = "i2c_g_scl_m",
+				"i2c_g_sda_m";
+			function = "i2c_g";
+			bias-disable;
+		};
+	};
+
+	i2c6_pins3:i2c6_pins3 {
+		mux {
+			groups = "i2c_g_scl_z",
+				"i2c_g_sda_z";
+			function = "i2c_g";
+			bias-disable;
+		};
+	};
+
+	i2c7_pins1:i2c7_pins1 {
+		mux {
+			groups = "i2c_h_scl",
+				"i2c_h_sda";
+			function = "i2c_h";
+			bias-disable;
+		};
+	};
+
+	i2c7_pins2:i2c7_pins2 {
+		mux {
+			groups = "i2c_h_scl_m",
+				"i2c_h_sda_m";
+			function = "i2c_h";
+			bias-disable;
+		};
+	};
+
+	i2c7_pins3:i2c7_pins3 {
+		mux {
+			groups = "i2c_h_scl_z",
+				"i2c_h_sda_z";
+			function = "i2c_h";
+			bias-disable;
+		};
+	};
+
+	i2c8_pins1:i2c8_pins1 {
+		mux {
+			groups = "i2c_i_scl",
+				"i2c_i_sda";
+			function = "i2c_i";
+			bias-disable;
+		};
+	};
+
+	i2c8_pins2:i2c8_pins2 {
+		mux {
+			groups = "i2c_i_scl_a",
+				"i2c_i_sda_a";
+			function = "i2c_i";
+			bias-disable;
+		};
+	};
+
+	i2c8_pins3:i2c8_pins3 {
+		mux {
+			groups = "i2c_i_scl_y",
+				"i2c_i_sda_y";
+			function = "i2c_i";
 			bias-disable;
 		};
 	};

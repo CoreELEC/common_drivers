@@ -79,12 +79,10 @@
 #define RX_FIFO_READ		BIT(5)
 #define TX_FIFO_WRITE		BIT(6)
 #define PHY_DONE		BIT(7)
-//if use thresh mode, should be set at start.
-#define THRESH_MODE		(RX_FIFO_READ | TX_FIFO_WRITE)
+
 #define TRANS_ERROR		(RCH_ERROR | WCH_ERROR | NCK_ERROR)
 #define TRANS_DONE		(PHY_DONE | TRANS_ERROR)
 
-#define REG_FIFO_BASE	0x80
 /* enable irq, critical trans done bit must be set.
  * tx/rx thresh bit used for continuously transfer,
  * set it manul when transfer.
@@ -93,6 +91,27 @@
  */
 #define ENABLE_IRQ_BIT	(NCK_ERROR | RCH_ERROR | WCH_ERROR | PHY_DONE)
 //| RX_FIFO_READ | TX_FIFO_WRITE)
+
+/*A9 and new IRQ fields*/
+#define A9_NCK_ERROR		BIT(0)
+#define A9_RX_EMPTY		BIT(1)
+#define A9_RX_FULL		BIT(2)
+#define A9_TX_EMPTY		BIT(3)
+#define A9_TX_FULL		BIT(4)
+//#define A9_RX_FIFO_READ	BIT(5) same as the old
+//#define A9_TX_FIFO_WRITE	BIT(6) same as the old
+//#define A9_PHY_DONE		BIT(7) same as the old
+#define A9_TASK_DONE		BIT(8)
+#define A9_ALL_DONE		BIT(9)
+
+#define A9_TRANS_DONE		(PHY_DONE | A9_NCK_ERROR)
+#define A9_TRANS_ERROR		(A9_NCK_ERROR)
+#define A9_ENABLE_IRQ_BIT	(A9_NCK_ERROR | PHY_DONE)
+
+//if use thresh mode, should be set at start.
+#define THRESH_MODE		(RX_FIFO_READ | TX_FIFO_WRITE)
+#define REG_FIFO_BASE		0x80
+
 /* keep the same with I2C_TIMEOUT_MS */
 #define MESON_I2C_PM_TIMEOUT	500
 #define I2C_TIMEOUT_MS		500
@@ -108,6 +127,9 @@ enum {
 struct meson_i2c_data {
 	bool tee;
 	u32 tee_id;
+	u32 enable_irq_bits;
+	u32 xfer_done_bits;
+	u32 xfer_err_bits;
 };
 
 /**
@@ -238,7 +260,7 @@ static void meson_i2c_init(struct meson_i2c *i2c)
 	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK, 1 << 12);
 	meson_i2c_writel(i2c, 0, REG_CFG_START);
 	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
-	meson_i2c_writel(i2c, ENABLE_IRQ_BIT, REG_CGF_IRQ_ENABLE);
+	meson_i2c_writel(i2c, i2c->data->enable_irq_bits, REG_CGF_IRQ_ENABLE);
 	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK, 1 << 12);
 	/* set rx thresh, when fifo has data and fifo full will generate irq for cpu read.
 	 * set tx thresh, when fifo empty will generate irq for continue transfer.
@@ -322,7 +344,7 @@ static irqreturn_t meson_i2c_irq(int irqno, void *dev_id)
 	// if last transfer, exit thresh MODE, avoid thresh bit and done bit come at the same time.
 	if ((i2c->pos + i2c->fifo_depth) >= i2c->msg->len && (irq_en & THRESH_MODE))
 		meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE, THRESH_MODE, 0);
-	if (irq_state & TRANS_ERROR) {
+	if (irq_state & i2c->data->xfer_err_bits) {
 		dev_dbg(i2c->dev, "bus phy erro set\n");
 		i2c->error = -ENXIO;
 		complete(&i2c->done);
@@ -341,7 +363,7 @@ static irqreturn_t meson_i2c_irq(int irqno, void *dev_id)
 			meson_i2c_push_data_to_user(i2c, rd_val & TX_RX_DATA);
 			i2c->pos += i2c->count;
 		}
-	} else if (irq_state & TRANS_DONE) {
+	} else if (irq_state & i2c->data->xfer_done_bits) {
 		// no thresh mode and trans done
 		dev_dbg(i2c->dev, "trans_done\n");
 		if (i2c->state == STATE_READ) {
@@ -701,10 +723,23 @@ static const struct dev_pm_ops meson_i2c_pm_ops = {
 
 static struct meson_i2c_data i2c_tee_data = {
 	.tee = true,
+	.enable_irq_bits = ENABLE_IRQ_BIT,
+	.xfer_done_bits = TRANS_DONE,
+	.xfer_err_bits = TRANS_ERROR,
 };
 
 static struct meson_i2c_data i2c_normal_data = {
 	.tee = false,
+	.enable_irq_bits = ENABLE_IRQ_BIT,
+	.xfer_done_bits = TRANS_DONE,
+	.xfer_err_bits = TRANS_ERROR,
+};
+
+static struct meson_i2c_data i2c_normal_a9 = {
+	.tee = false,
+	.enable_irq_bits = A9_ENABLE_IRQ_BIT,
+	.xfer_done_bits = A9_TRANS_DONE,
+	.xfer_err_bits = A9_TRANS_ERROR,
 };
 
 static const struct of_device_id meson_i2c_v2_match[] = {
@@ -714,6 +749,9 @@ static const struct of_device_id meson_i2c_v2_match[] = {
 	{
 		.compatible = "amlogic,meson-tee-i2c-v2",
 		.data = &i2c_tee_data
+	},
+	{	.compatible = "amlogic,meson-i2c-v2-1",
+		.data = &i2c_normal_a9
 	},
 	{},
 };
