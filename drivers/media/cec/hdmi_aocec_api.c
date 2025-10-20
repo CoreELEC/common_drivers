@@ -263,7 +263,7 @@ unsigned int waiting_aocec_free(unsigned int r)
 
 	while (read_ao(r) & (1 << 23)) {
 		if (cnt++ >= 3500) {
-			pr_info("waiting aocec %x free time out %d\n", r, cnt);
+			CEC_INFO("waiting aocec %x free time out %d\n", r, cnt);
 			/*if (cec_dev->probe_finish)*/
 			/*	cec_hw_reset(CEC_A);*/
 			ret = false;
@@ -1176,7 +1176,7 @@ int ceca_trigger_tx(const unsigned char *msg, int len)
 			pos += sprintf(msg_log_buf + pos, "\n");
 
 			msg_log_buf[pos] = '\0';
-			pr_info("%s", msg_log_buf);
+			CEC_INFO("%s", msg_log_buf);
 		}
 		cec_timeout_cnt = 0;
 		return 0;
