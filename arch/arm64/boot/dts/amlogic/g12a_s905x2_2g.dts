@@ -4,4 +4,10 @@
 /{
 	model = "Amlogic";
 	coreelec-dt-id = "g12a_s905x2_2g";
+
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x0 0x3d800000 0x0 0x800000>;
+		};
+	};
 };
