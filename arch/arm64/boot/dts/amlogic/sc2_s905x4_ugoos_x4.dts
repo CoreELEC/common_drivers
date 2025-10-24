@@ -4,6 +4,12 @@
 	model = "Ugoos X4";
 	coreelec-dt-id = "sc2_s905x4_ugoos_x4";
 
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x00 0x3d800000 0x00 0x800000>;
+		};
+	};
+
 	gpioleds {
 		/delete-node/ net_red;
 		/delete-node/ net_green;
