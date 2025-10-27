@@ -448,10 +448,6 @@ static const struct of_device_id meson_irq_gpio_matches[] = {
 	{ }
 };
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-struct meson_gpio_irq_controller *gclt;
-#endif
-
 struct meson_gpio_irq_controller {
 	const struct meson_gpio_irq_params *params;
 	void __iomem *base;
@@ -679,20 +675,28 @@ meson_gpio_irq_release_channel(struct meson_gpio_irq_controller *ctl,
 }
 
 #ifdef CONFIG_AMLOGIC_MODIFY
-unsigned int gpio_irq_get_channel_idx(int irq)
+unsigned int gpio_irq_get_channel_idx(int irq, u32 *hwirq)
 {
 	struct irq_desc *desc;
+	struct irq_data *data;
+	struct meson_gpio_irq_controller *ctl;
 	u32 *channel_hwirq;
 
 	desc = irq_to_desc(irq);
-	if (!desc)
+	if (IS_ERR_OR_NULL(desc)) {
+		pr_err("%s: can't get irq desc\n", __func__);
 		return -EINVAL;
+	}
 
-	channel_hwirq = irq_data_get_irq_chip_data(irq_desc_get_irq_data(desc));
+	data = irq_desc_get_irq_data(desc);
+	ctl = data->domain->host_data;
 
-	return meson_gpio_irq_get_channel_idx(gclt, channel_hwirq);
+	channel_hwirq = irq_data_get_irq_chip_data(data);
+	*hwirq = *channel_hwirq;
+
+	return meson_gpio_irq_get_channel_idx(ctl, channel_hwirq);
 }
-EXPORT_SYMBOL(gpio_irq_get_channel_idx);
+EXPORT_SYMBOL_GPL(gpio_irq_get_channel_idx);
 #endif
 
 static int meson_gpio_irq_type_setup(struct meson_gpio_irq_controller *ctl,
@@ -1035,7 +1039,7 @@ static int meson_gpio_irq_of_init(struct device_node *node,
 #else
 	pr_info("%d to %d gpio interrupt mux initialized\n",
 		ctl->params->nr_hwirq, ctl->channel_num);
-	gclt = ctl;
+
 #endif
 
 #if defined(CONFIG_AMLOGIC_MODIFY)

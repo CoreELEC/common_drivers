@@ -89,7 +89,7 @@ enum meson_glb_outctl_reg {
 	OUTPUT_ST1			= 0x07 << 2,
 };
 
-#ifdef CONFIG_AMLOGIC_GLOBAL_TIMER
+#if IS_ENABLED(CONFIG_AMLOGIC_GLOBAL_TIMER)
 int glb_timer_mipi_config(u8 srcn, unsigned int trig);
 unsigned long long glb_timer_get_counter(u8 srcn);
 
@@ -100,14 +100,13 @@ u64 ns_to_global_timer_count(u64 time_in_ns);
 u64 global_timer_count_to_ns(u64 time_in_global_timer_ticks);
 
 int meson_global_timer_isp_event_snapshot_configure(u8 isp_event_src,
-						    enum meson_glb_srcsel_flag trigger_type);
+				enum meson_glb_srcsel_flag trigger_type);
 u64 meson_global_timer_isp_snapshot(u8 isp_event_src);
 
 u64 meson_global_timer_input_gpio_get_snapshot(int id);
-int meson_global_timer_input_gpio_get_source_index(int virq);
-int meson_global_timer_input_gpio_configure(u8 id,
-					    enum meson_glb_srcsel_flag trigger_type);
-unsigned int gpio_irq_get_channel_idx(int irq);
+int meson_global_timer_input_gpio_configure(int virq,
+				enum meson_glb_srcsel_flag trigger_type);
+unsigned int gpio_irq_get_channel_idx(int irq, u32 *hwirq);
 
 struct global_timer_output_gpio*
 global_timer_output_gpio_get_from_index(struct device *dev, int index);
@@ -116,8 +115,12 @@ int global_timer_output_start(struct global_timer_output_gpio *gtod,
 int global_timer_output_gpio_setup(struct global_timer_output_gpio *gtod,
 				   bool oneshot, u64 pulse_width, u64 interval,
 				   u8 init_val);
+int global_timer_output_stop(struct global_timer_output_gpio *gtod);
 #else
-unsigned int gpio_irq_get_channel_idx(int irq);
+unsigned int gpio_iq_get_channel_idx(int irq, u32 *hwirq)
+{
+	return 0;
+}
 int glb_timer_mipi_config(u8 srcn, unsigned int trig)
 {
 	return 0;
@@ -149,7 +152,7 @@ u64 global_timer_count_to_ns(u64 time_in_global_timer_ticks)
 }
 
 int meson_global_timer_isp_event_snapshot_configure(u8 isp_event_src,
-						    enum meson_glb_srcsel_flag trigger_type)
+				enum meson_glb_srcsel_flag trigger_type)
 {
 	return 0;
 }
@@ -159,18 +162,13 @@ u64 meson_global_timer_isp_snapshot(u8 isp_event_src)
 	return 0;
 }
 
-int meson_global_timer_input_gpio_get_source_index(int virq)
-{
-	return 0;
-}
-
 u64 meson_global_timer_input_gpio_get_snapshot(int id)
 {
 	return 0;
 }
 
-int meson_global_timer_input_gpio_configure(u8 id,
-					    enum meson_glb_srcsel_flag trigger_type)
+int meson_global_timer_input_gpio_configure(int virq,
+				enum meson_glb_srcsel_flag trigger_type)
 {
 	return 0;
 }
@@ -194,6 +192,10 @@ int global_timer_output_gpio_setup(struct global_timer_output_gpio *gtod,
 	return 0;
 }
 
+int global_timer_output_stop(struct global_timer_output_gpio *gtod)
+{
+	return 0;
+}
 #endif
 
 #endif //__AML_GLB_TIMER_H__

@@ -678,6 +678,29 @@
 					<10 11 12 13 14 15 16 17 18 19 20 21>;
 			};
 
+			gbl_timer_core: global-timer@30000 {
+				compatible = "amlogic,meson-glb-timer-core";
+				reg = <0x0 0x30000 0x0 0x28>;
+				reg-names = "topctrl";
+				clocks = <&clkc_sys CLKID_SYS_GLB>;
+				clock-names = "glb_clk";
+				//hwlocks = <&aml_hwlock HWSPINLOCK_ID_GLB_TIMER>;
+			};
+
+			gbl_timer_isp: global-timer@830040 {
+				compatible = "amlogic,meson-glb-timer-isp";
+				reg = <0x0 0x30040 0x0 0x140>;
+				reg-names = "isp";
+			};
+
+			gbl_timer_gpio_input: global-timer@30180 {
+				compatible = "amlogic,meson-glb-timer-gpio-input";
+				reg-names = "input-src-sel";
+				// first 20 trigger sources is ao_irq.
+				first_irq_ranges = <384 403>;
+				reg = <0x0 0x30180 0x0 0x56c>;
+			};
+
 			spisg_c: spi@50000 {
 				compatible = "amlogic,meson-a4-spicc-v2";
 				reg = <0x0 0x50000 0x0 0x38>;

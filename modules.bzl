@@ -128,6 +128,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/gki_tool:amlogic-gkitool",
     "common_drivers/drivers/gpio/amlogic-gpio.ko",
     "//common_drivers/drivers/gpio:amlogic-gpio",
+    "common_drivers/drivers/global_timer/amlogic-global-timer.ko",
+    "//common_drivers/drivers/global_timer:amlogic-global-timer",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-g12a.ko",
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-g12a",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-s4.ko",
