@@ -1323,14 +1323,16 @@
 		sd_emmc_c: mmc@fe08c000 {
 			compatible = "amlogic,meson-v8-mmc";
 			reg = <0x0 0xfe08c000 0x0 0x1000>,
-				<0x0 0xfe000168 0x0 0x4>,
+				<0x0 0xfe000294 0x0 0x4>,
 				<0x0 0xfe004000 0x0 0x4>;
 			interrupts = <GIC_SPI 178 IRQ_TYPE_EDGE_RISING>;
 			status = "disabled";
-			//clocks = <&clkc_sys CLKID_SYS_SD_EMMC_C>,
-			//	 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
-			//	 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
-			//	 <&xtal>,
+			clocks = <&clkc_sys CLKID_SYS_SD_EMMC_C>,
+				 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
+				 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
+				 <&xtal>,
+				 <&scmi_clk CLKID_FCLK_DIV2>,
+				 <&scmi_clk CLKID_FCLK_DIV2>;
 			//	 <&gp0_pll>,
 			//	 <&gp0_pll>;
 			clock-names = "core", "mux0", "mux1",
@@ -1340,7 +1342,7 @@
 			card_type = <1>;
 			ignore_desc_busy;
 			mmc_debug_flag;
-			src_clk_rate = <1152000000>;
+			//src_clk_rate = <1152000000>;
 			//assigned-clocks = <&gp0_pll>,
 			//		    <&clkc_sd_emmc CLKID_SD_EMMC_C>;
 			//assigned-clock-rates = <1152000000>,
@@ -3226,14 +3228,14 @@
 
 	emmc_pins: emmc_pins {
 		mux-0 {
-			groups = "emmc_nand_d0",
-				 "emmc_nand_d1",
-				 "emmc_nand_d2",
-				 "emmc_nand_d3",
-				 "emmc_nand_d4",
-				 "emmc_nand_d5",
-				 "emmc_nand_d6",
-				 "emmc_nand_d7",
+			groups = "emmc_d0",
+				 "emmc_d1",
+				 "emmc_d2",
+				 "emmc_d3",
+				 "emmc_d4",
+				 "emmc_d5",
+				 "emmc_d6",
+				 "emmc_d7",
 				 "emmc_cmd";
 			function = "emmc";
 			bias-pull-up;
