@@ -1991,6 +1991,9 @@ void lc_init(int bitdepth)
 	unsigned int reg_sat = SRSHARP1_LC_SAT_LUT_62;
 	unsigned int adr = 16;
 
+	if (chip_type_id == chip_a9)
+		return;
+
 	if (chip_type_id == chip_t6d ||
 		chip_type_id == chip_t6w ||
 		chip_type_id == chip_t6x) {
@@ -2861,6 +2864,7 @@ void lc_process(struct vframe_s *vf,
 		chip_type_id == chip_s5 ||
 		chip_type_id == chip_s7 ||
 		chip_type_id == chip_s6 ||
+		chip_type_id == chip_a9 ||
 		lc_force_ctrl)
 		return;
 

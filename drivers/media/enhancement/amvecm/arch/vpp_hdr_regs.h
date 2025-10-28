@@ -106,6 +106,7 @@ extern struct am_regs_s r_lut_hdr_sdr_level3;
 #define VD1_HDR2_GMUT_COMP6                0x3849
 #define VD1_HDR2_GMUT_COMP7                0x384a
 #define VD1_HDR2_GMUT_COMP8                0x384b
+
 //T6W add
 #define VD1_HDR2_HIST_SLC_X_ST_ED_0        0x384c
 #define VD1_HDR2_HIST_SLC_X_ST_ED_1        0x384d
@@ -193,6 +194,7 @@ extern struct am_regs_s r_lut_hdr_sdr_level3;
 #define VD2_HDR2_GMUT_COMP6                0x3899
 #define VD2_HDR2_GMUT_COMP7                0x389a
 #define VD2_HDR2_GMUT_COMP8                0x389b
+
 //T6W add
 #define VD2_HDR2_HIST_SLC_X_ST_ED_0        0x389c
 #define VD2_HDR2_HIST_SLC_X_ST_ED_1        0x389d

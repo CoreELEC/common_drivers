@@ -1224,11 +1224,14 @@
 //};
 
 &amlvecm {
-	compatible = "amlogic, vecm-s6";
+	compatible = "amlogic, vecm-a9";
 	dev_name = "aml_vecm";
-	status = "disabled";
-	gamma_en = <0>;/*1:enable ;0:disable*/
-	wb_en = <0>;/*1:enable ;0:disable*/
+	status = "okay";
+	gamma_en = <1>;/*1:enable ;0:disable*/
+	wb_en = <1>;/*1:enable ;0:disable*/
+	cm_en = <1>;/*1:enable ;0:disable*/
+	wb_sel = <0>;/*1:mtx ;0:gainoff*/
+	osd_pic_en = <1>;
 	/*0: 709/601  1: bt2020*/
 	tx_op_color_primary = <0>;
 };

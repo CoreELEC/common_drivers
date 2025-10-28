@@ -505,7 +505,8 @@ void ve_dnlp_calculate_reg(void)
 				chip_type_id == chip_s6 ||
 				chip_type_id == chip_t6d ||
 				chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x) {
+				chip_type_id == chip_t6x ||
+				chip_type_id == chip_a9) {
 				ve_dnlp_reg_v2[i] |= data << 12;
 			} else {
 				ve_dnlp_reg_v2[i] |= data << 16;

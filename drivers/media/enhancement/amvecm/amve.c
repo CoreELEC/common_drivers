@@ -266,7 +266,8 @@ void ve_dnlp_load_reg(void)
 					chip_type_id == chip_s6 ||
 					chip_type_id == chip_t6d ||
 					chip_type_id == chip_t6w ||
-					chip_type_id == chip_t6x)
+					chip_type_id == chip_t6x ||
+					chip_type_id == chip_a9)
 					dnlp_reg = VPP_DNLP_YGRID_0;
 
 				for (i = 0; i < 32; i++)
@@ -309,7 +310,7 @@ static void ve_dnlp_load_def_reg(void)
 
 			if (chip_type_id == chip_s7d || chip_type_id == chip_s6 ||
 				chip_type_id == chip_t6d || chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x)
+				chip_type_id == chip_t6x || chip_type_id == chip_a9)
 				dnlp_reg = VPP_DNLP_YGRID_0;
 
 			for (i = 0; i < 32; i++)
@@ -355,7 +356,7 @@ void dnlp_en_update(int vpp_index)
 					dnlp_en_2, 0, 1, vpp_index);
 			else if (chip_type_id == chip_s7d || chip_type_id == chip_s6 ||
 				chip_type_id == chip_t6d || chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x)
+				chip_type_id == chip_t6x || chip_type_id == chip_a9)
 				VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_DNLP_EN_MODE,
 						dnlp_en_2, 4, 1, vpp_index);
 			else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
@@ -603,7 +604,8 @@ void lcd_gamma_api(unsigned int index,
 		chip_type_id == chip_txhd2 ||
 		chip_type_id == chip_t6d ||
 		chip_type_id == chip_t6w ||
-		chip_type_id == chip_t6x) {
+		chip_type_id == chip_t6x ||
+		chip_type_id == chip_a9) {
 		p_gm = get_gm_data();
 		auto_inc = p_gm->auto_inc;
 		max_idx = p_gm->max_idx;
@@ -721,7 +723,8 @@ void vpp_get_lcd_gamma_table(u32 rgb_mask)
 			chip_type_id == chip_a4 ||
 			chip_type_id == chip_t6d ||
 			chip_type_id == chip_t6w ||
-			chip_type_id == chip_t6x) {
+			chip_type_id == chip_t6x ||
+			chip_type_id == chip_a9) {
 			p_gm = get_gm_data();
 			lcd_gamma_api(gamma_index,
 				p_gm->dbg_gm_tbl.gamma_r,
@@ -787,7 +790,8 @@ void vpp_get_lcd_gamma_table(u32 rgb_mask)
 
 void vpp_get_lcd_gamma_table_sub(void)
 {
-	if (is_meson_t7_cpu())
+	if (is_meson_t7_cpu() ||
+		chip_type_id == chip_a9)
 		lcd_gamma_api(gamma_index_sub,
 			gamma_data_r,
 			gamma_data_g,
@@ -810,7 +814,8 @@ void amve_write_gamma_table(u16 *data, u32 rgb_mask)
 			chip_type_id == chip_a4 ||
 			chip_type_id == chip_t6d ||
 			chip_type_id == chip_t6w ||
-			chip_type_id == chip_t6x) {
+			chip_type_id == chip_t6x ||
+			chip_type_id == chip_a9) {
 			p_gm = get_gm_data();
 			max_idx = p_gm->max_idx;
 			lcd_gamma_api(gamma_index, p_gm->dbg_gm_tbl.gamma_r,
@@ -877,7 +882,8 @@ void amve_write_gamma_table(u16 *data, u32 rgb_mask)
 
 void amve_write_gamma_table_sub(u16 *data, u32 rgb_mask)
 {
-	if (is_meson_t7_cpu()) {
+	if (is_meson_t7_cpu() ||
+		chip_type_id == chip_a9) {
 		lcd_gamma_api(gamma_index_sub,
 			gamma_data_r, gamma_data_g, gamma_data_b, WR_VCB, RD_MOD, 0);
 
@@ -1182,7 +1188,8 @@ void ve_enable_dnlp(void)
 				chip_type_id == chip_s6 ||
 				chip_type_id == chip_t6d ||
 				chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x) {
+				chip_type_id == chip_t6x ||
+				chip_type_id == chip_a9) {
 				reg_ctrl = VPP_DNLP_EN_MODE;
 			} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 				if ((!vinfo_lcd_support() && chip_type_id != chip_s5) ||
@@ -1199,7 +1206,8 @@ void ve_enable_dnlp(void)
 				chip_type_id != chip_s6 &&
 				chip_type_id != chip_t6d &&
 				chip_type_id != chip_t6w &&
-				chip_type_id != chip_t6x)
+				chip_type_id != chip_t6x &&
+				chip_type_id != chip_a9)
 				WRITE_VPP_REG_BITS(reg_ctrl, 1, 0, 1);
 			else
 				WRITE_VPP_REG_BITS(reg_ctrl, 1, 4, 1);
@@ -1228,7 +1236,8 @@ void ve_disable_dnlp(void)
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_t6d ||
 			chip_type_id == chip_t6w ||
-			chip_type_id == chip_t6x) {
+			chip_type_id == chip_t6x ||
+			chip_type_id == chip_a9) {
 				reg_ctrl = VPP_DNLP_EN_MODE;
 			} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
 				if ((!vinfo_lcd_support() && chip_type_id != chip_s5) ||
@@ -1245,7 +1254,8 @@ void ve_disable_dnlp(void)
 				chip_type_id != chip_s6 &&
 				chip_type_id != chip_t6d &&
 				chip_type_id != chip_t6w &&
-				chip_type_id != chip_t6x)
+				chip_type_id != chip_t6x &&
+				chip_type_id != chip_a9)
 				WRITE_VPP_REG_BITS(reg_ctrl, 0, 0, 1);
 			else
 				WRITE_VPP_REG_BITS(reg_ctrl, 0, 4, 1);
@@ -1496,7 +1506,8 @@ void ve_lcd_gamma_process(int vpp_index)
 				chip_type_id == chip_a4 ||
 				chip_type_id == chip_t6d ||
 				chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x) {
+				chip_type_id == chip_t6x ||
+				chip_type_id == chip_a9) {
 				p_gm = get_gm_data();
 				memcpy(p_gm->gm_tbl.gamma_r,
 					video_gamma_table_r.data,
@@ -1602,7 +1613,8 @@ void ve_lcd_gamma_process(int vpp_index)
 	}
 
 	/*for t7 vpp1 lcd gamma*/
-	if (is_meson_t7_cpu()) {
+	if (is_meson_t7_cpu() ||
+		chip_type_id == chip_a9) {
 		if (vecm_latch_flag2 & FLAG_GAMMA_TABLE_EN_SUB) {
 			vecm_latch_flag2 &= ~FLAG_GAMMA_TABLE_EN_SUB;
 			vpp_enable_lcd_gamma_table(gamma_index_sub, 1, vpp_index);
@@ -3671,7 +3683,8 @@ void sharpness_gain_update(int vpp_index)
 			if (chip_type_id == chip_s6 ||
 				chip_type_id == chip_s7d ||
 				chip_type_id == chip_t6w ||
-				chip_type_id == chip_t6x) {
+				chip_type_id == chip_t6x ||
+				chip_type_id == chip_a9) {
 				VSYNC_WRITE_VPP_REG_BITS(VPP_PK_FINAL_GAIN,
 					sr_gain[0], 0, 32);
 			} else {
@@ -3971,7 +3984,7 @@ int vpp_pq_ctrl_config(struct pq_ctrl_s pq_cfg, enum wr_md_e md, int vpp_index)
 				pq_cfg_cur.sharpness0_en = pq_cfg.sharpness0_en;
 				if (chip_type_id == chip_t6d || chip_type_id == chip_s6 ||
 					chip_type_id == chip_s7d || chip_type_id == chip_t6w ||
-					chip_type_id == chip_t6x)
+					chip_type_id == chip_t6x || chip_type_id == chip_a9)
 					WRITE_VPP_REG_BITS(VPP_SR_EN,
 						pq_cfg.sharpness0_en, 0, 1);
 				else
@@ -4168,7 +4181,7 @@ int vpp_pq_ctrl_config(struct pq_ctrl_s pq_cfg, enum wr_md_e md, int vpp_index)
 				pq_cfg_cur.sharpness0_en = pq_cfg.sharpness0_en;
 				if (chip_type_id == chip_t6d || chip_type_id == chip_s6 ||
 					chip_type_id == chip_s7d || chip_type_id == chip_t6w ||
-					chip_type_id == chip_t6x)
+					chip_type_id == chip_t6x || chip_type_id == chip_a9)
 					VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_SR_EN,
 						pq_cfg.sharpness0_en, 0, 1, vpp_index);
 				else
@@ -5316,7 +5329,9 @@ void safa_pq_config(enum vsr_pq_cfg_e vsr_cfg,
 
 	if (chip_type_id == chip_t6d)
 		addr_offset = 0x7;
-	else if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
+	else if (chip_type_id == chip_t6w ||
+		chip_type_id == chip_t6x ||
+		chip_type_id == chip_a9)
 		addr_offset = 0x8;
 
 	switch (vsr_cfg) {
@@ -6312,8 +6327,13 @@ void amve_vsr_config_update(struct vframe_s *vf, int vpp_index)
 
 void amve_sharpness_sub_ctrl(unsigned int sel, unsigned int enable)
 {
+	unsigned int addr_offset = 0;
+
 	if (enable)
 		enable = 1;
+
+	if (chip_type_id == chip_a9)
+		addr_offset = 0x8;
 
 	/*0:sr all; 1:peaking; 2:lti/cti; 3:dering;*/
 	/*4: pi; 5: safa; 6: drlpf;*/
@@ -6352,7 +6372,7 @@ void amve_sharpness_sub_ctrl(unsigned int sel, unsigned int enable)
 			enable, 4, 1);
 		break;
 	case 5:
-		WRITE_VPP_REG_BITS(SAFA_PPS_INTERP_EN_MODE,
+		WRITE_VPP_REG_BITS(SAFA_PPS_INTERP_EN_MODE + addr_offset,
 			enable, 25, 1);
 		break;
 	case 6:
@@ -6399,6 +6419,8 @@ void osd_sharpness_init(void)
 
 	if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
 		addr_offset = 0x2900;
+	else if (chip_type_id == chip_a9)
+		addr_offset = 0x1a00;
 
 	WRITE_VPP_REG_BITS(OSD_SR_EN - addr_offset, 0, 0, 1);
 	WRITE_VPP_REG_BITS(OSD_PK_EN - addr_offset, 0, 0, 1);
@@ -6427,6 +6449,8 @@ void osd_sharpness_ctrl(unsigned int sel, unsigned int enable)
 
 	if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
 		addr_offset = 0x2900;
+	else if (chip_type_id == chip_a9)
+		addr_offset = 0x1a00;
 
 	if (enable)
 		enable = 1;
@@ -6460,6 +6484,8 @@ void osd_sharpness_size_ctrl(void)
 
 	if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
 		addr_offset = 0x2900;
+	else if (chip_type_id == chip_a9)
+		addr_offset = 0x1a00;
 
 	WRITE_VPP_REG_BITS(OSD_SR_SIZE - addr_offset, hsize_in, 0, 16);//hsize
 	WRITE_VPP_REG_BITS(OSD_SR_SIZE - addr_offset, vsize_in, 16, 16);//vsize
@@ -6471,6 +6497,8 @@ void osd_sharpness_demo_ctrl(void)
 
 	if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
 		addr_offset = 0x2900;
+	else if (chip_type_id == chip_a9)
+		addr_offset = 0x1a00;
 
 	WRITE_VPP_REG_BITS(OSD_PK_MODE - addr_offset, reg_pk_nor_rsft_mode, 20, 2);
 	WRITE_VPP_REG_BITS(OSD_PK_FINAL_GAIN - addr_offset, reg_pk_dir_final_gain, 24, 8);
@@ -6499,10 +6527,14 @@ void lc_evc_pq_settings(unsigned int lc_evc_src, int vpp_index)
 
 void amve_lc_evc_ctrl(unsigned int enable, unsigned int lc_evc_src)
 {
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	enum vpp_muxio_sel_e sel = VPP_MUXIO_SEL_VD1_HDR;
 	unsigned int val = 0;
 #endif
+
+	if (chip_type_id == chip_a9)
+		return;
 
 	if (flag_lc_evc == enable &&
 		flag_lc_evc_src == lc_evc_src)

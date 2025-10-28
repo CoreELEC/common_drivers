@@ -351,7 +351,8 @@ enum chip_type {
 	chip_s6,
 	chip_t6d,
 	chip_t6w,
-	chip_t6x
+	chip_t6x,
+	chip_a9
 };
 
 enum chip_cls_e {

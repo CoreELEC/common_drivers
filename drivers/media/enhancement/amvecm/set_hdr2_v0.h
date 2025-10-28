@@ -115,6 +115,7 @@ extern uint adp_scal_x_shift;
 extern uint adp_scal_y_shift;
 extern uint clip_func;
 extern uint vd1_bp_force;
+
 extern uint fw_alg_ctl_en;
 
 enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
