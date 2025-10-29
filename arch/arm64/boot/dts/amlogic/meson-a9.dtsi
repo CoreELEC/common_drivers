@@ -21,6 +21,7 @@
 #include <dt-bindings/mailbox/a9-mbox.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/thermal/ddr-params.h>
+#include <dt-bindings/rtc/amlogic,rtc.h>
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
 
@@ -319,11 +320,13 @@
 		#clock-cells = <0>;
 	};
 
-	vrtc: rtc@fe010288 {
-		compatible = "amlogic,meson-vrtc";
-		reg = <0x0 0xfe010288 0x0 0x4>;
-		status = "disabled";
-		mboxes = <&mbox_fifo A9_REE2AO_VRTC>;
+	rtc: rtc@ffa08000 {
+		compatible = "amlogic,meson-rtc";
+		reg = <0x0 0xffa08000 0x0 0x38>;
+		interrupts = <GIC_SPI 404 IRQ_TYPE_EDGE_RISING>;
+		osc_freq = <OSC_32KHZ>;
+		time-storage-format-gray;
+		status = "okay";
 	};
 
 	pwrdm: power-domains {

@@ -94,4 +94,5 @@ struct aml_rtc_data {
 	bool alarm_enabled;
 	bool wakealrm_enabled;
 	bool time_storage_format;
+	bool need_mbox_chan;
 };
