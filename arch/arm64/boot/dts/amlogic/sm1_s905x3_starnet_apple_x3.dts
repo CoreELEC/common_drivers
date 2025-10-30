@@ -1,0 +1,35 @@
+#include "sm1_s905x3_2g.dts"
+
+/{
+	model = "StarNet Apple-X3";
+	coreelec-dt-id = "sm1_s905x3_starnet_apple_x3";
+
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "okay";
+
+		fe_num = <1>;
+		fe0_demod = "m88dm6k";
+		fe0_i2c_adap_id = <&i2c2>;
+		fe0_demod_i2c_addr = <0x69>;
+		fe0_reset_value = <0>;
+		fe0_reset_gpio = <&gpio GPIOZ_1 GPIO_ACTIVE_HIGH>;
+		fe0_ts = <1>;
+	};
+	
+	dvb-demux {
+		status = "okay";
+	};
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0 = <&i2c2_master_pins2>;
+	clock-frequency = <100000>;
+};
+
+&demux {
+	status = "okay";
+};
