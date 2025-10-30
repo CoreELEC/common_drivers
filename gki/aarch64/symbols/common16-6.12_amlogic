@@ -105,3 +105,18 @@
  divider_ro_determine_rate
  of_clk_get_from_provider
  of_clk_hw_simple_get
+
+# amlogic-i3c.ko
+ i3c_generic_ibi_alloc_pool
+ i3c_generic_ibi_free_pool
+ i3c_generic_ibi_get_free_slot
+ i3c_generic_ibi_recycle_slot
+ i3c_master_add_i3c_dev_locked
+ i3c_master_disec_locked
+ i3c_master_do_daa
+ i3c_master_enec_locked
+ i3c_master_get_free_addr
+ i3c_master_queue_ibi
+ i3c_master_register
+ i3c_master_set_info
+ i3c_master_unregister

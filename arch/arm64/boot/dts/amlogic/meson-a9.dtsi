@@ -888,6 +888,18 @@
 				status = "disabled";
 			};
 
+			i3c1: i3c@3a7000 {
+				compatible = "amlogic,meson-i3c-ee";
+				reg = <0x0 0x3a7000 0x0 0x10000>;
+				interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
+				#address-cells = <3>;
+				#size-cells = <0>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_I>,
+					 <&clkc_i3c>;
+				clock-names = "pclk", "fast_clk";
+				status = "disabled";
+			};
+
 			eth_phy: mdio-multiplexer@360000 {
 				compatible = "amlogic,g12a-mdio-mux";
 				status = "disabled";
@@ -1134,6 +1146,17 @@
 				fifosize = < 64 >;
 				/* 0 not support; 1 support */
 				support-sysrq = <1>;
+			};
+
+			i3c0: i3c@22000 {
+				compatible = "amlogic,meson-i3c-ao";
+				reg = <0x0 0x22000 0x0 0x10000>;
+				interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
+				#address-cells = <3>;
+				#size-cells = <0>;
+				clocks = <&clkc_sys CLKID_SYS_I2C_M_I>;
+				clock-names = "fast_clk";
+				status = "disabled";
 			};
 
 			spisg_a: spi@30000 {
@@ -3067,6 +3090,24 @@
 		};
 	};
 
+	i3c0_ao_pins1:i3c0_ao_pins1 {
+		mux {
+			groups = "i3c_a_scl_ao",
+				"i3c_a_sda_ao";
+			function = "i3c_a";
+			bias-disable;
+		};
+	};
+
+	i3c0_ao_pins2:i3c0_ao_pins2 {
+		mux {
+			groups = "i3c_a_scl_ao_c",
+				"i3c_a_sda_ao_c";
+			function = "i3c_a";
+			bias-disable;
+		};
+	};
+
 };
 
 &periphs_pinctrl {
@@ -3289,6 +3330,57 @@
 			groups = "i2c_i_scl_a",
 				"i2c_i_sda_a";
 			function = "i2c_i";
+			bias-disable;
+		};
+	};
+
+	i3c0_pins1:i3c0_pins1 {
+		mux {
+			groups = "i3c_a_scl",
+				"i3c_a_sda";
+			function = "i3c_b";
+			bias-disable;
+		};
+	};
+
+	i3c1_pins1:i3c1_pins1 {
+		mux {
+			groups = "i3c_b_scl",
+				"i3c_b_sda_d0";
+			function = "i3c_b";
+			bias-disable;
+		};
+	};
+
+	i3c1_pins2:i3c1_pins2 {
+		mux {
+			groups = "i3c_b_scl_a",
+				"i3c_b_sda_d0_a";
+			function = "i3c_b";
+			bias-disable;
+		};
+	};
+
+	i3c1_pinsbt1:i3c1_pinsbt1 {
+		mux {
+			groups = "i3c_b_scl",
+				"i3c_b_sda_d0",
+				"i3c_b_sda_d1",
+				"i3c_b_sda_d2",
+				"i3c_b_sda_d3";
+			function = "i3c_b";
+			bias-disable;
+		};
+	};
+
+	i3c1_pinsbt2:i3c1_pinsbt2 {
+		mux {
+			groups = "i3c_b_scl_a",
+				"i3c_b_sda_d0_a",
+				"i3c_b_sda_d1_a",
+				"i3c_b_sda_d2_a",
+				"i3c_b_sda_d3_a";
+			function = "i3c_b";
 			bias-disable;
 		};
 	};

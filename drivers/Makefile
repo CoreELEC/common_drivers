@@ -27,6 +27,7 @@ obj-$(CONFIG_THERMAL)			+= thermal/
 obj-y					+= mmc/
 obj-$(CONFIG_AMLOGIC_EFUSE_UNIFYKEY)	+= efuse_unifykey/
 obj-y					+= i2c/
+obj-y					+= i3c/
 obj-$(CONFIG_SPI)			+= spi/
 obj-y					+= char/
 obj-$(CONFIG_AMLOGIC_TEE)		+= tee/

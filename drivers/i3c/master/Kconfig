@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menu "I3C Hardware Bus support"
+	depends on HAS_IOMEM
+	depends on I3C
+	depends on HAS_IOMEM
+	depends on !(ALPHA || PARISC)
+
+config AMLOGIC_I3C
+	tristate "Amlogic Meson I3C controller"
+	help
+	  If you say yes to this option, support will be included for the
+	  I3C interface on the Amlogic Meson family of SoCs.
+
+config AMLOGIC_I3C_MASTER
+	bool "Amlogic I3C Dual-Role Master driver"
+	help
+	  Support for Amlogic I3C Dual-Role Master Controller.
+
+endmenu

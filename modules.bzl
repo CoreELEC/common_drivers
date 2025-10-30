@@ -170,6 +170,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/hwspinlock:amlogic-hwspinlock",
     "common_drivers/drivers/i2c/busses/amlogic-i2c.ko",
     "//common_drivers/drivers/i2c/busses:amlogic-i2c",
+    "common_drivers/drivers/i3c/master/amlogic-i3c.ko",
+    "//common_drivers/drivers/i3c/master:amlogic-i3c",
     "common_drivers/drivers/iio/adc/amlogic-adc.ko",
     "//common_drivers/drivers/iio/adc:amlogic-adc",
     "common_drivers/drivers/input/amlogic-input.ko",
