@@ -1,0 +1,46 @@
+#include "sm1_s905x3_ac214.dts"
+#include "coreelec_sm1_common.dtsi"
+
+/ {
+	model = "Mecool K5";
+	coreelec-dt-id = "sm1_s905x3_mecool_k5";
+
+	gpioleds {
+		sys_led {
+			gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "okay";
+
+		fe_num = <1>;
+		fe0_demod = "avl68xx";
+		fe0_i2c_adap_id = <&i2c3>;
+		fe0_demod_i2c_addr = <0x14>;
+		fe0_ts_out_mode = <1>;
+		fe0_ts  = <1>;
+		fe0_tuner0 = <0>;
+		fe0_tuner1 = <0>;
+
+		tuner_num = <1>;
+		tuner0_name = "r848";
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x7a>;
+		tuner0_xtal = <16000000>;
+	};
+
+	dvb-demux {
+		status = "okay";
+	};
+};
+
+&i2c3 {
+	status = "okay";
+};
+
+&demux {
+	status = "okay";
+};
