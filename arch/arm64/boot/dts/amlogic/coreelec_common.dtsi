@@ -93,13 +93,9 @@
 
 	/delete-node/ partitions;
 
-	dvb-extern {
-		status = "disabled";
-	};
-
-	dvb-demux {
-		status = "disabled";
-	};
+	/delete-node/ dvb-extern;
+	/delete-node/ dvb-demux;
+	/delete-node/ demux;
 
 	jtag {
 		status = "disabled";
