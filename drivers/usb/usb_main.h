@@ -171,7 +171,7 @@ static inline int __init meson_uphy_drv_init(void)
 	return -1;
 }
 
-static inline void __exit meson_uphy_drv_exit(void);
+static inline void __exit meson_uphy_drv_exit(void)
 {
 }
 #endif

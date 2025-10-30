@@ -1,0 +1,51 @@
+From e94608db67920f59aa55230556f2909aa6a043b9 Mon Sep 17 00:00:00 2001
+From: yao zhang1 <yao.zhang1@amlogic.com>
+Date: Thu, 30 Oct 2025 08:42:33 +0000
+Subject: [PATCH] config: Add AMLOGIC_LINUX_S_OPTIMIZE for arch64. [1/1]
+
+PD#SWPL-237486
+
+Problem:
+Add AMLOGIC_LINUX_S_OPTIMIZE for arch64.
+
+Solution:
+Add AMLOGIC_LINUX_S_OPTIMIZE for arch64.
+
+Verify:
+c4
+
+Change-Id: I054c3d9651b6db64221170c975c9dbdefeba88d6
+Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
+---
+ arch/arm64/Kconfig | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
+index 52ff599c25e1..d06be7372204 100644
+--- a/arch/arm64/Kconfig
++++ b/arch/arm64/Kconfig
+@@ -2401,7 +2401,7 @@ config EFI
+ 	select EFI_STUB
+ 	select EFI_GENERIC_STUB
+ 	imply IMA_SECURE_AND_OR_TRUSTED_BOOT
+-	default y
++	default y if !AMLOGIC_LINUX_S_OPTIMIZE
+ 	help
+ 	  This option provides support for runtime services provided
+ 	  by UEFI firmware (such as non-volatile variables, realtime
+@@ -2431,6 +2431,12 @@ config DMI
+ 	  However, even with this option, the resultant kernel should
+ 	  continue to boot on existing non-UEFI platforms.
+ 
++config AMLOGIC_LINUX_S_OPTIMIZE
++	bool "linux kernel size optimize"
++	default n
++	help
++	Amlogic linux kernel size optimize
++
+ endmenu # "Boot options"
+ 
+ menu "Power management options"
+-- 
+2.46.0
+
