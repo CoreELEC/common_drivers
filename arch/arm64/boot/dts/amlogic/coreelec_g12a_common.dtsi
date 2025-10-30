@@ -117,6 +117,37 @@
 			};
 		};
 	};
+
+	soc {
+		demux: demux {
+			compatible = "amlogic, dmx";
+			status = "disabled";
+
+			interrupts = <GIC_SPI 23 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 5 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 21 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 19 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "demux0_irq",
+				"demux1_irq",
+				"demux2_irq",
+				"dvr0_irq",
+				"dvr1_irq";
+		};
+	};
+
+	dvb-demux {
+		compatible = "amlogic, dvb-demux";
+		dev_name = "dvb-demux";
+		status = "disabled";
+		dmx =<&demux>;
+
+		ts1 = "parallel";
+		ts1_control = <0x00>;
+		ts1_invert = <0x00>;
+		pinctrl-names = "p_ts1";
+		pinctrl-0 = <&dvb_p_ts1_pins>;
+	};
 };
 
 &audiobus {
