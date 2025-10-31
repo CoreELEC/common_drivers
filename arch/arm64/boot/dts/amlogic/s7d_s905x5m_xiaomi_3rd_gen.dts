@@ -48,6 +48,10 @@
 	status = "okay";
 };
 
+&sd_emmc_a {
+	status = "disabled";
+};
+
 &sd_emmc_b {
 	status = "disabled";
 };
