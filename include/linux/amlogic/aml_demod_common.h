@@ -46,7 +46,8 @@ enum tuner_type {
 	AM_TUNER_RDA5815M = 28,
 	AM_TUNER_RDA5160 = 29,
 	AM_TUNER_R856 = 30,
-	AM_TUNER_MAX = 31
+	AM_TUNER_R912 = 31,
+	AM_TUNER_MAX = 32
 };
 
 enum atv_demod_type {
