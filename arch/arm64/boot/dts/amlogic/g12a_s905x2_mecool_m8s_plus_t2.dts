@@ -1,0 +1,66 @@
+#include "g12a_s905x2_u212.dts"
+#include "coreelec_g12a_common.dtsi"
+
+/{
+	model = "MECOOL M8S Plus DVB-T2";
+	coreelec-dt-id = "g12a_s905x2_mecool_m8s_plus_t2";
+
+	memory@00000000 {
+		device_type = "memory";
+		linux,usable-memory = <0x0 0x100000 0x0 0x5ff00000>; 
+	};
+
+	/* Hardcoded LED (GPIOAO_11) */
+	gpioleds {
+		status = "okay";
+		sys_led {
+			gpios = <&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "okay";
+
+		fe_num = <1>;
+		fe0_demod = "avl6762";
+		fe0_i2c_adap_id = <&i2c3>;
+		fe0_demod_i2c_addr = <0x14>;
+		fe0_ts_out_mode = <1>;
+		fe0_ts  = <1>;
+		fe0_tuner0 = <0>;
+
+		tuner_num = <1>;
+		tuner0_name = "mxl603_tuner";
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x60>;
+		tuner0_xtal = <0>;
+		tuner0_if_hz = <6>;
+		tuner0_if_agc = <0>;
+		tuner0_xtal_cap = <25>;
+		tuner0_if_invert = <1>;
+		tuner0_lt_out = <0>;
+		tuner0_xtal_mode = <0>;
+		tuner0_dual_power = <0>;
+	};
+
+	dvb-demux {
+		status = "okay";
+	};
+};
+
+/* Hardcoded SDIO frequency for stability */
+&sd_emmc_b2 {
+	max-frequency-sdio = <40000000>; /* 40 MHz */
+	max-frequency-sd = <50000000>;   /* 50 MHz */
+};
+
+&i2c3 {
+	status = "okay";
+	clock-frequency = <400000>;
+};
+
+&demux {
+	status = "okay";
+};

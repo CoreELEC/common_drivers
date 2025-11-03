@@ -31,14 +31,13 @@
 		status = "disabled";
 	};
 
-	/delete-node/ dvb-extern;
 	dvb-extern {
 		compatible = "amlogic, dvb-extern";
 		dev_name = "dvb-extern";
 		status = "okay";
 
 		fe_num = <1>;
-		fe0_demod = "avl68xx";
+		fe0_demod = "avl6762";
 		fe0_i2c_adap_id = <&i2c3>;
 		fe0_demod_i2c_addr = <0x14>;
 		fe0_ts_out_mode = <1>;
@@ -46,7 +45,7 @@
 		fe0_tuner0 = <0>;
 
 		tuner_num = <1>;
-		tuner0_name = "mxl603_tuner";
+		tuner0_name = "mxl603";
 		tuner0_i2c_adap = <&i2c3>;
 		tuner0_i2c_addr = <0x60>;
 		tuner0_xtal = <0>;
@@ -59,27 +58,9 @@
 		tuner0_dual_power = <0>;
 	};
 
-	/delete-node/ dvb-demux;
 	dvb-demux {
-		compatible = "amlogic sc2, dvb-demux";
-		dev_name = "dvb-demux";
 		status = "okay";
-
-		reg = <0x0 0xfe000000 0x0 0x480000>;
-
-		dmxdev_num = <3>;
-
-		tsn_from = "demod";
-		ts_clone = <0>;
 		tee_compat = <1>;
-
-		ts1_sid = <0x20>;
-		ts1 = "parallel";
-		ts1_control = <0>;
-		ts1_invert = <0>;
-
-		pinctrl-names = "p_ts1";
-		pinctrl-0 = <&dvb_p_ts1_pins>;
 	};
 };
 
@@ -93,24 +74,4 @@
 
 &sd_emmc_b {
 	max-frequency = <150000000>;
-};
-
-&periphs_pinctrl {
-	dvb_p_ts1_pins: dvb_p_ts1_pins {
-		tsin_b {
-			groups = "tsin_b_sop",
-			"tsin_b_valid",
-			"tsin_b_clk",
-			"tsin_b_fail",
-			"tsin_b_din0",
-			"tsin_b_din1",
-			"tsin_b_din2",
-			"tsin_b_din3",
-			"tsin_b_din4",
-			"tsin_b_din5",
-			"tsin_b_din6",
-			"tsin_b_din7";
-			function = "tsin_b";
-		};
-	};
 };
