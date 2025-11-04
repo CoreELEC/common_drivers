@@ -939,7 +939,7 @@
 	max-frequency = <200000000>;
 	disable-wp;
 
-	cd-gpios = <&ao_gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
+	cd-gpios = <&gpio_ao GPIOC_6 GPIO_ACTIVE_HIGH>;
 	//dat1-gpios = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
 	//vmmc-supply = <&vddao_3v3>;
 	//vqmmc-supply = <&emmc_1v8>;

@@ -1010,7 +1010,7 @@
 				ranges;
 				amlogic,ao-interrupt-controller;
 
-				ao_gpio: bank@4000 {
+				gpio_ao: bank@4000 {
 					reg = <0x0 0x4000 0x0 0x0014>,
 					      <0x0 0x401c 0x0 0x0064>;
 					reg-names = "mux", "gpio";
@@ -1067,8 +1067,8 @@
 				interrupt-controller;
 				#interrupt-cells = <2>;
 				amlogic,channel-interrupts =
-					<32 33 34 35 36 37 38 39 40 41>,
-					<384 385 386 387 388 389 390 391 392 393>;
+					<384 385 386 387 388 389 390 391 392 393
+					394 395 396 397 398 399 400 401 402 403>;
 			};
 
 			test_pinctrl: pinctrl@40c0 {

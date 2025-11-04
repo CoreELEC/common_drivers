@@ -176,6 +176,20 @@ struct meson_gpio_irq_params {
 	.pin_sel_mask = 0xff,					\
 	.pin_sel_reg_base = 0x04,
 
+#define INIT_MESON_A9_AO_COMMON_DATA(irqs)			\
+	INIT_MESON_SC2_COMMON(irqs, meson_a1_gpio_irq_init,	\
+			      meson_a1_gpio_irq_sel_pin,	\
+			      meson_p1_gpio_irq_sel_type)	\
+	.support_edge_both = true,				\
+	.edge_both_offset = 0,					\
+	.edge_single_offset = 12,				\
+	.pol_low_offset = 0,					\
+	.pin_sel_mask = 0xff,					\
+	.pin_sel_reg_base = 0x04,				\
+	.edge_sel_reg = 0x00,					\
+	.pol_low_sel_reg = 0x00,				\
+	.both_sel_reg =  0x2c,
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 #define INIT_MESON_P1_COMMON_DATA(irqs)			\
 	INIT_MESON_SC2_COMMON(irqs, meson_a1_gpio_irq_init,	\
@@ -378,7 +392,7 @@ static const struct meson_gpio_irq_params a9_params = {
 };
 
 static const struct meson_gpio_irq_params a9_ao_params = {
-	INIT_MESON_A9_COMMON_DATA(38)
+	INIT_MESON_A9_AO_COMMON_DATA(38)
 };
 #endif //end of CONFIG_AMLOGIC_MODIFY
 
