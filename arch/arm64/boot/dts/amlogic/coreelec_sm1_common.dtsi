@@ -278,6 +278,16 @@
 
 &pinctrl_aobus {
 	/delete-node/ spdifout;
+
+	dvb_s_ts0_pins {
+		tsin_a {
+			groups = "tsin_ao_asop",
+				"tsin_ao_a_valid",
+				"tsin_ao_aclk",
+				"tsin_ao_adin0";
+			function = "tsin_ao_a";
+		};
+	};
 };
 
 &pinctrl_periphs {
