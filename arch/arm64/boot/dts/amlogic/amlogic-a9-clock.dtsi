@@ -82,16 +82,22 @@
 		clock-parents = <&scmi_clk CLKID_FCLK_DIV3>,
 				<&scmi_clk CLKID_FCLK_DIV4>,
 				<&scmi_clk CLKID_FCLK_DIV5>,
-				<&scmi_clk CLKID_FCLK_DIV7>,
+				/*
+				 * TODO: Currently the driver does not support
+				 * vid_pll
+				 */
+				//<&vid1_pll>,
 				<&scmi_clk CLKID_FCLK_DIV2>,
-				<&hifi_pll>,
+				//<&vid_pll>,
+				//<&vid2_pll>,
 				<&scmi_clk CLKID_GP1_PLL>;
 		clock-parent-indices = <0>,
 				       <1>,
 				       <2>,
-				       <3>,
+				//       <3>,
 				       <4>,
-				       <6>,
+				//       <5>,
+				//       <6>,
 				       <7>;
 		#clock-cells = <0>;
 	};
@@ -482,26 +488,20 @@
 	cecb_parents: cecb_parents {
 		clock-mult-parents;
 		clock-parents = <&clkc_ao_cecb CLKID_AO_CECB_DUAL>,
-				<&xtal>;
+				<&clkc_ao_rtc CLKID_AO_RTC_CLK>;
 		#clock-cells = <0>;
 	};
+
+	ao_rtc_parents: ao_rtc_parents {
+		clock-mult-parents;
+		clock-parents = <&xtal>,
+				<&clkc_ao_rtc CLKID_AO_RTC_DUAL>;
+		#clock-cells = <0>;
+	};
+
 };
 
 &apb4 {
-	clkc_rtc: clock-rtc@200 {
-		compatible = "amlogic,dualdiv-mux-clk";
-		reg = <0x0 0x200 0x0 0x8>;
-		#clock-cells = <1>;
-		clock-output-names = "rtc_dualdiv",
-				     "rtc_clk";
-		clock-indices = <CLKID_RTC_DUAL>,
-				<CLKID_RTC_CLK>;
-		clock-dualdiv-tables = <1 732 7 731 10>;  /* div_mode n0 m0 n1 m1 */
-		clock-parents = <&xtal>,
-				<&rtc_parents>;
-		clocks = <&xtal>;
-	};
-
 	clkc_sar_adc: clock-sar_adc@350 {
 		compatible = "amlogic,general-clk";
 		reg = <0x0 0x350 0x0 0x4>;
@@ -619,9 +619,7 @@
 		clocks = <&scmi_clk CLKID_FCLK_DIV3>,
 			 <&scmi_clk CLKID_FCLK_DIV4>,
 			 <&scmi_clk CLKID_FCLK_DIV5>,
-			 <&scmi_clk CLKID_FCLK_DIV7>,
 			 <&scmi_clk CLKID_FCLK_DIV2>,
-			 <&hifi_pll>,
 			 <&scmi_clk CLKID_GP1_PLL>;
 	};
 
@@ -1249,6 +1247,8 @@
 				     "sys_hdmirx_apb",
 				     "sys_hdmi_pclk",
 				     "sys_mipi_dsi_phy",
+				     "sys_can_0",
+				     "sys_can_1",
 				     "sys_sd_emmc_a",
 				     "sys_sd_emmc_b",
 				     "sys_sd_emmc_c",
@@ -1260,9 +1260,12 @@
 				     "sys_mipi_dsi_b",
 				     "sys_mipi_dsi1_phy",
 				     "sys_eth",
+				     "sys_eth_mac_1g",
 				     "sys_uart_a",
 				     "sys_uart_f",
 				     "sys_ts_a55",
+				     "sys_eth_axi_1g",
+				     "sys_ts_dos",
 				     "sys_usb3drd_b",
 				     "sys_ts_core",
 				     "sys_ts_pll",
@@ -1277,6 +1280,9 @@
 				     "sys_usb2drd",
 				     "sys_pcie_phy",
 				     "sys_pcie_mac_b",
+				     "sys_periph",
+				     "sys_pio",
+				     "sys_i3c",
 				     "sys_i2c_m_e",
 				     "sys_i2c_m_f",
 				     "sys_hdmitx_apb",
@@ -1286,16 +1292,16 @@
 				     "sys_hdmi20_aes",
 				     "sys_mmc_apb",
 				     "sys_csi2_host",
-				     "sys_csi_adapt",
+				     "sys_csi2_adapt",
 				     "sys_cpu_apb",
 				     "sys_dspa",
-				     "sys_periph_top",
-				     "sys_periph_apb_top",
+				     "sys_pp_dma",
+				     "sys_pp_warpper",
 				     "sys_vpu_intr",
 				     "sys_csi2_phy0",
 				     "sys_sar_adc",
-				     "sys_pwm_j",
 				     "sys_gic",
+				     "sys_pwm_j",
 				     "sys_pwm_i",
 				     "sys_pwm_h",
 				     "sys_pwm_n",
@@ -1322,6 +1328,8 @@
 				    <0x0 18 1>,
 				    <0x0 19 1>,
 				    <0x0 20 1>,
+				    <0x0 21 1>,
+				    <0x0 22 1>,
 				    <0x0 24 1>,
 				    <0x0 25 1>,
 				    <0x0 26 1>,
@@ -1333,9 +1341,12 @@
 				    <0x4 1  1>,
 				    <0x4 2  1>,
 				    <0x4 3  1>,
+				    <0x4 4  1>,
 				    <0x4 5  1>,
 				    <0x4 10 1>,
 				    <0x4 11 1>,
+				    <0x4 12 1>,
+				    <0x4 13 1>,
 				    <0x4 14 1>,
 				    <0x4 15 1>,
 				    <0x4 16 1>,
@@ -1350,6 +1361,9 @@
 				    <0x4 26 1>,
 				    <0x4 27 1>,
 				    <0x4 28 1>,
+				    <0x4 29 1>,
+				    <0x8 0  1>,
+				    <0x8 1  1>,
 				    <0x8 2  1>,
 				    <0x8 3  1>,
 				    <0x8 4  1>,
@@ -1394,6 +1408,8 @@
 				<CLKID_SYS_HDMIRX_APB>,
 				<CLKID_SYS_HDMIRX_PCLK>,
 				<CLKID_SYS_MIPI_DSI_PHY>,
+				<CLKID_SYS_CAN_0>,
+				<CLKID_SYS_CAN_1>,
 				<CLKID_SYS_SD_EMMC_A>,
 				<CLKID_SYS_SD_EMMC_B>,
 				<CLKID_SYS_SD_EMMC_C>,
@@ -1405,9 +1421,12 @@
 				<CLKID_SYS_MIPI_DSI_B>,
 				<CLKID_SYS_MIPI_DSI1_PHY>,
 				<CLKID_SYS_ETH>,
+				<CLKID_SYS_ETH_MAC_1G>,
 				<CLKID_SYS_UART_A>,
 				<CLKID_SYS_UART_F>,
 				<CLKID_SYS_TS_A55>,
+				<CLKID_SYS_ETH_AXI_1G>,
+				<CLKID_SYS_TS_DOS>,
 				<CLKID_SYS_USB3DRD_B>,
 				<CLKID_SYS_TS_CORE>,
 				<CLKID_SYS_TS_PLL>,
@@ -1422,6 +1441,9 @@
 				<CLKID_SYS_USB2DRD>,
 				<CLKID_SYS_PCIE_PHY>,
 				<CLKID_SYS_PCIE_MAC_B>,
+				<CLKID_SYS_PERIPH>,
+				<CLKID_SYS_PIO>,
+				<CLKID_SYS_I3C>,
 				<CLKID_SYS_I2C_M_E>,
 				<CLKID_SYS_I2C_M_F>,
 				<CLKID_SYS_HDMITX_APB>,
@@ -1434,13 +1456,13 @@
 				<CLKID_SYS_CSI2_ADAPT>,
 				<CLKID_SYS_CPU_APB>,
 				<CLKID_SYS_DSPA>,
-				<CLKID_SYS_PERIPH_TOP>,
-				<CLKID_SYS_PERIPH_TOP_APB>,
+				<CLKID_SYS_PP_DMA>,
+				<CLKID_SYS_PP_WARPPER>,
 				<CLKID_SYS_VPU_INTR>,
 				<CLKID_SYS_CSI2_PHY0>,
 				<CLKID_SYS_SAR_ADC>,
-				<CLKID_SYS_PWM_J>,
 				<CLKID_SYS_GIC>,
+				<CLKID_SYS_PWM_J>,
 				<CLKID_SYS_PWM_I>,
 				<CLKID_SYS_PWM_H>,
 				<CLKID_SYS_PWM_N>,
@@ -1773,7 +1795,8 @@
 		clock-dualdiv-tables = <1 732 7 731 10>;  /* div_mode n0 m0 n1 m1 */
 		clock-parents = <&xtal>,
 				<&cecb_parents>;
-		clocks = <&xtal>;
+		clocks = <&xtal>,
+			 <&clkc_ao_rtc CLKID_AO_RTC_CLK>;
 	};
 
 	clkc_ao_pwm: clock-ao_pwm@1c {
@@ -1806,5 +1829,137 @@
 			 <&scmi_clk CLKID_FCLK_DIV5>,
 			 <&scmi_clk CLKID_FCLK_DIV4>,
 			 <&scmi_clk CLKID_FCLK_DIV3>;
+	};
+
+	clkc_sys_ao: clock-sys-ao@4 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x4 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "ao_sys_i3c",
+				     "ao_sys_rtc_reg",
+				     "ao_sys_clk_tree",
+				     "ao_sys_rst_ctrl",
+				     "ao_sys_pad",
+				     "ao_sys_rtc_dig",
+				     "ao_sys_irq",
+				     "ao_sys_pwr_ctrl",
+				     "ao_sys_pwm_a",
+				     "ao_sys_pwm_b",
+				     "ao_sys_pwm_c",
+				     "ao_sys_pwm_d",
+				     "ao_sys_pwm_e",
+				     "ao_sys_pwm_f",
+				     "ao_sys_pwm_g",
+				     "ao_sys_i2c_m_a",
+				     "ao_sys_i2c_m_b",
+				     "ao_sys_i2c_m_c",
+				     "ao_sys_i2c_m_d",
+				     "ao_sys_sed",
+				     "ao_sys_ir_ctrl",
+				     "ao_sys_uart_b",
+				     "ao_sys_uart_c",
+				     "ao_sys_uart_d",
+				     "ao_sys_uart_e",
+				     "ao_sys_spisg_0",
+				     "ao_sys_rtc_sec",
+				     "ao_sys_cec",
+				     "ao_sys_aocpu",
+				     "ao_sys_sram",
+				     "ao_sys_spisg_1",
+				     "ao_sys_spisg_2";
+		clock-basic-types = <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 0  1>,  /* regoffset shift width */
+				    <0x0 1  1>,
+				    <0x0 2  1>,
+				    <0x0 3  1>,
+				    <0x0 4  1>,
+				    <0x0 5  1>,
+				    <0x0 6  1>,
+				    <0x0 7  1>,
+				    <0x0 8  1>,
+				    <0x0 9  1>,
+				    <0x0 10 1>,
+				    <0x0 11 1>,
+				    <0x0 12 1>,
+				    <0x0 13 1>,
+				    <0x0 14 1>,
+				    <0x0 15 1>,
+				    <0x0 16 1>,
+				    <0x0 17 1>,
+				    <0x0 18 1>,
+				    <0x0 19 1>,
+				    <0x0 19 1>,
+				    <0x0 21 1>,
+				    <0x0 22 1>,
+				    <0x0 23 1>,
+				    <0x0 24 1>,
+				    <0x0 25 1>,
+				    <0x0 26 1>,
+				    <0x0 27 1>,
+				    <0x0 28 1>,
+				    <0x0 29 1>,
+				    <0x0 30 1>,
+				    <0x0 31 1>;
+		clock-indices = <CLKID_AO_SYS_I3C>,
+				<CLKID_AO_SYS_RTC_REG>,
+				<CLKID_AO_SYS_CLK_TREE>,
+				<CLKID_AO_SYS_RST_CTRL>,
+				<CLKID_AO_SYS_PAD>,
+				<CLKID_AO_SYS_RTC_DIG>,
+				<CLKID_AO_SYS_IRQ>,
+				<CLKID_AO_SYS_PWR_CTRL>,
+				<CLKID_AO_SYS_PWM_A>,
+				<CLKID_AO_SYS_PWM_B>,
+				<CLKID_AO_SYS_PWM_C>,
+				<CLKID_AO_SYS_PWM_D>,
+				<CLKID_AO_SYS_PWM_E>,
+				<CLKID_AO_SYS_PWM_F>,
+				<CLKID_AO_SYS_PWM_G>,
+				<CLKID_AO_SYS_I2C_M_A>,
+				<CLKID_AO_SYS_I2C_M_B>,
+				<CLKID_AO_SYS_I2C_M_C>,
+				<CLKID_AO_SYS_I2C_M_D>,
+				<CLKID_AO_SYS_SED>,
+				<CLKID_AO_SYS_IR_CTRL>,
+				<CLKID_AO_SYS_UART_B>,
+				<CLKID_AO_SYS_UART_C>,
+				<CLKID_AO_SYS_UART_D>,
+				<CLKID_AO_SYS_UART_E>,
+				<CLKID_AO_SYS_SPISG_0>,
+				<CLKID_AO_SYS_RTC_SEC>,
+				<CLKID_AO_SYS_CEC>,
+				<CLKID_AO_SYS_AOCPU>,
+				<CLKID_AO_SYS_SRAM>,
+				<CLKID_AO_SYS_SPISG_1>,
+				<CLKID_AO_SYS_SPISG_2>;
+		clocks = <&scmi_clk CLKID_SYS_CLK>;
+	};
+
+	clkc_rtc: clock-rtc@8014c {
+		compatible = "amlogic,dualdiv-mux-clk";
+		reg = <0x0 0x8014c 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "rtc_dualdiv",
+				     "rtc_clk";
+		clock-indices = <CLKID_RTC_DUAL>,
+				<CLKID_RTC_CLK>;
+		clock-dualdiv-tables = <1 732 7 731 10>;  /* div_mode n0 m0 n1 m1 */
+		clock-parents = <&xtal>,
+				<&rtc_parents>;
+		clocks = <&xtal>;
+	};
+
+	clkc_ao_rtc: clock-ao-rtc@50 {
+		compatible = "amlogic,dualdiv-mux-clk";
+		reg = <0x0 0x50 0x0 0x8>;
+		#clock-cells = <1>;
+		clock-output-names = "ao_rtc_dualdiv",
+				     "ao_rtc_clk";
+		clock-indices = <CLKID_AO_RTC_DUAL>,
+				<CLKID_AO_RTC_CLK>;
+		clock-dualdiv-tables = <1 732 7 731 10>;  /* div_mode n0 m0 n1 m1 */
+		clock-parents = <&xtal>,
+				<&ao_rtc_parents>;
+		clocks = <&xtal>;
 	};
 };

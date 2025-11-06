@@ -26,6 +26,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/highmem.h>
 #include <linux/amlogic/clk_measure.h>
+#include <linux/math64.h>
 
 /* Local Include */
 #include "hdmi_rx_repeater.h"
@@ -2286,10 +2287,10 @@ void txhd2_aud_clk_cal(void)
 	int clk_rate;
 
 	clk_rate = rx_get_scdc_clkrate_sts(rx_info.main_port);
+	tmds_clk = div_s64(meson_clk_measure_with_precision(63, 32), MHz);
 	if (clk_rate)
-		tmds_clk = meson_clk_measure_with_precision(63, 32) / MHz / 4;
-	else
-		tmds_clk = meson_clk_measure_with_precision(63, 32) / MHz;
+		tmds_clk = tmds_clk / 4;
+
 	rx_pr("tmds clk = %d\n", tmds_clk);
 	M = hdmirx_rd_bits_amlphy(TXHD2_HDMIRX20PLL_CTRL0, MSK(5, 4));
 	if (M == 0)

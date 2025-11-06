@@ -6,7 +6,7 @@
 #ifndef __CLK_MEASURE_H__
 #define __CLK_MEASURE_H__
 
-int meson_clk_measure(unsigned int id);
-int meson_clk_measure_with_precision(unsigned int id, unsigned int precision);
+s64 meson_clk_measure(unsigned int id);
+s64 meson_clk_measure_with_precision(unsigned int id, unsigned int precision);
 
 #endif

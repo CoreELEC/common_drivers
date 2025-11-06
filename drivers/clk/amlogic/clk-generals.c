@@ -245,6 +245,11 @@ static int aml_clk_general_available_rates_show(struct seq_file *s, void *data)
 	if (core_max_rate < max_rate)
 		max_rate = core_max_rate;
 
+	min_rate = divider_round_rate(hw, min_rate, &prate, NULL,
+				      general->div_width, 0);
+	max_rate = divider_round_rate(hw, max_rate, &prate, NULL,
+				      general->div_width, 0);
+
 	seq_printf(s, "min_rate:%ld\n", min_rate);
 	seq_printf(s, "max_rate:%ld\n", max_rate);
 

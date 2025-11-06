@@ -473,6 +473,11 @@ static int aml_clk_noglitch_available_rates_show(struct seq_file *s, void *data)
 	if (core_max_rate < max_rate)
 		max_rate = core_max_rate;
 
+	min_rate = divider_round_rate(hw, min_rate, &prate, NULL,
+				      CLK_NOGLITCH_DIV_WIDTH, 0);
+	max_rate = divider_round_rate(hw, max_rate, &prate, NULL,
+				      CLK_NOGLITCH_DIV_WIDTH, 0);
+
 	seq_printf(s, "min_rate:%ld\n", min_rate);
 	seq_printf(s, "max_rate:%ld\n", max_rate);
 

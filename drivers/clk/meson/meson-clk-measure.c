@@ -4829,7 +4829,7 @@ static struct meson_msr_id clk_msr_a9[] __initdata = {
 };
 #endif
 
-static int meson_measure_id(struct meson_msr_id *clk_msr_id,
+static s64 meson_measure_id(struct meson_msr_id *clk_msr_id,
 			    unsigned int duration)
 {
 	struct meson_msr *priv = clk_msr_id->priv;
@@ -4879,11 +4879,11 @@ static int meson_measure_id(struct meson_msr_id *clk_msr_id,
 				     duration);
 }
 
-static int meson_measure_best_id(struct meson_msr_id *clk_msr_id,
+static s64 meson_measure_best_id(struct meson_msr_id *clk_msr_id,
 				 unsigned int *precision)
 {
 	unsigned int duration = DIV_MAX;
-	int ret;
+	s64 ret;
 
 	/* Start from max duration and down to min duration */
 	do {
@@ -4897,11 +4897,11 @@ static int meson_measure_best_id(struct meson_msr_id *clk_msr_id,
 	return ret;
 }
 
-int meson_clk_measure(unsigned int id)
+s64 meson_clk_measure(unsigned int id)
 {
 	struct meson_msr_id *clk_msr_id = NULL;
 	unsigned int precision = 0;
-	int val;
+	s64 val;
 
 	clk_msr_id = &glo_meson_msr->data->msr_table[id];
 
@@ -4915,10 +4915,10 @@ int meson_clk_measure(unsigned int id)
 }
 EXPORT_SYMBOL_GPL(meson_clk_measure);
 
-int meson_clk_measure_with_precision(unsigned int id, unsigned int precision)
+s64 meson_clk_measure_with_precision(unsigned int id, unsigned int precision)
 {
 	struct meson_msr_id *clk_msr_id = NULL;
-	int val;
+	s64 val;
 
 	clk_msr_id = &glo_meson_msr->data->msr_table[id];
 
@@ -4935,13 +4935,13 @@ static int clk_msr_show(struct seq_file *s, void *data)
 {
 	struct meson_msr_id *clk_msr_id = s->private;
 	unsigned int precision = 0;
-	int val;
+	s64 val;
 
 	val = meson_measure_best_id(clk_msr_id, &precision);
 	if (val < 0)
 		return val;
 
-	seq_printf(s, "%d\t+/-%dHz\n", val, precision);
+	seq_printf(s, "%lld\t+/-%dHz\n", val, precision);
 
 	return 0;
 }
@@ -4950,7 +4950,8 @@ DEFINE_SHOW_ATTRIBUTE(clk_msr);
 static int clk_msr_summary_show(struct seq_file *s, void *data)
 {
 	unsigned int precision = 0;
-	int val, i;
+	s64 val;
+	int i;
 
 	seq_puts(s, "  clock                     rate    precision\n");
 	seq_puts(s, "---------------------------------------------\n");
@@ -4965,7 +4966,7 @@ static int clk_msr_summary_show(struct seq_file *s, void *data)
 			return val;
 		}
 
-		seq_printf(s, "[%d] %-20s %10d    +/-%dHz\n", i,
+		seq_printf(s, "[%d] %-20s %10lld    +/-%dHz\n", i,
 			   msr_table[i].name, val, precision);
 	}
 

@@ -1340,9 +1340,9 @@ static ssize_t cvbs_clk_msr(char *buf)
 	if (cpu_type == CVBS_CPU_TYPE_G12A ||
 	    cpu_type == CVBS_CPU_TYPE_G12B ||
 	    cpu_type == CVBS_CPU_TYPE_SM1) {
-		len += sprintf(buf + len, "[6]cts_enci_clk %d\n",
+		len += sprintf(buf + len, "[6]cts_enci_clk %lld\n",
 			meson_clk_measure(6));
-		len += sprintf(buf + len, "[10]cts_vdac_clk %d\n",
+		len += sprintf(buf + len, "[10]cts_vdac_clk %lld\n",
 			meson_clk_measure(10));
 	} else if (cpu_type == CVBS_CPU_TYPE_SC2 ||
 		cpu_type == CVBS_CPU_TYPE_S4 ||
@@ -1352,9 +1352,9 @@ static ssize_t cvbs_clk_msr(char *buf)
 		cpu_type == CVBS_CPU_TYPE_S7D ||
 #endif
 		cpu_type == CVBS_CPU_TYPE_S1A) {
-		len += sprintf(buf + len, "[51]cts_enci_clk %d\n",
+		len += sprintf(buf + len, "[51]cts_enci_clk %lld\n",
 			meson_clk_measure(51));
-		len += sprintf(buf + len, "[54]cts_vdac_clk %d\n",
+		len += sprintf(buf + len, "[54]cts_vdac_clk %lld\n",
 			meson_clk_measure(54));
 	}
 	return len;
