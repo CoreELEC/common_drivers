@@ -1,0 +1,55 @@
+#include "sm1_s905x3_2g.dts"
+
+/{
+	model = "MagicSee C500 Pro";
+	coreelec-dt-id = "sm1_s905x3_magicsee_c500_pro_2g";
+
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "okay";
+
+		fe_num = <1>;
+		fe0_demod = "avl6762";
+		fe0_i2c_adap_id = <&i2c3>;
+		fe0_demod_i2c_addr = <0x14>;
+		fe0_ts_out_mode = <0>;
+		fe0_ts  = <0>;
+		fe0_tuner0 = <0>;
+
+		tuner_num = <1>;
+		tuner0_name = "mxl603";
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x60>;
+		tuner0_xtal = <1>;
+		tuner0_if_hz = <6>;
+		tuner0_if_agc = <0>;
+		tuner0_xtal_cap = <25>;
+		tuner0_if_invert = <1>;
+		tuner0_lt_out = <0>;
+		tuner0_xtal_mode = <0>;
+		tuner0_dual_power = <0>;
+	};
+
+	dvb-demux {
+		status = "okay";
+
+		ts0 = "serial";
+		ts0_control = <0x800>;
+		ts0_invert = <0x00>;
+		/delete-property/ ts1;
+		/delete-property/ ts1_control;
+		/delete-property/ ts1_invert;
+		pinctrl-names = "s_ts0";
+		pinctrl-0 = <&dvb_s_ts0_pins>;
+	};
+};
+
+&i2c3 {
+	status = "okay";
+	clock-frequency = <300000>;
+};
+
+&demux {
+	status = "okay";
+};
