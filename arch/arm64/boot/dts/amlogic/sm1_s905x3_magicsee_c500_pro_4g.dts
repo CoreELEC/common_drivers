@@ -9,15 +9,20 @@
 		dev_name = "dvb-extern";
 		status = "okay";
 
-		fe_num = <1>;
+		fe_num = <2>;
 		fe0_demod = "avl6762";
 		fe0_i2c_adap_id = <&i2c3>;
 		fe0_demod_i2c_addr = <0x14>;
 		fe0_ts_out_mode = <0>;
 		fe0_ts  = <0>;
 		fe0_tuner0 = <0>;
+		fe1_demod = "avl6221c";
+		fe1_i2c_adap_id = <&i2c2>;
+		fe1_demod_i2c_addr = <0x14>;
+		fe1_ts  = <1>;
+		fe1_tuner0 = <1>;
 
-		tuner_num = <1>;
+		tuner_num = <2>;
 		tuner0_name = "mxl603";
 		tuner0_i2c_adap = <&i2c3>;
 		tuner0_i2c_addr = <0x60>;
@@ -29,6 +34,10 @@
 		tuner0_lt_out = <0>;
 		tuner0_xtal_mode = <0>;
 		tuner0_dual_power = <0>;
+		tuner1_name = "av2018";
+		tuner1_i2c_adap = <&i2c2>;
+		tuner1_i2c_addr = <0x62>;
+		tuner1_xtal = <27000>;
 	};
 
 	dvb-demux {
@@ -37,12 +46,17 @@
 		ts0 = "serial";
 		ts0_control = <0x800>;
 		ts0_invert = <0x00>;
-		/delete-property/ ts1;
-		/delete-property/ ts1_control;
-		/delete-property/ ts1_invert;
-		pinctrl-names = "s_ts0";
+		pinctrl-names = "s_ts0", "p_ts1";
 		pinctrl-0 = <&dvb_s_ts0_pins>;
+		pinctrl-1 = <&dvb_p_ts1_pins>;
 	};
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_master_pins2>;
+	clock-frequency = <300000>;
 };
 
 &i2c3 {
