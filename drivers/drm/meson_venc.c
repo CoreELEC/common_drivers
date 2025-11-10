@@ -158,7 +158,6 @@ int meson_venc_bist_mode_set(struct regmap *regmap, enum venc_type enc_type,
 		regmap_read(regmap, ENCL_VIDEO_VAVON_BLINE, &v_active);
 		v_active = temp - v_active + 1;
 		regmap_read(regmap, ENCL_VIDEO_HAVON_BEGIN, &h_start);
-		pr_info("h_active[%d] v_active[%d]\n", h_active, v_active);
 	} else if (enc_type == VENC_ENCP) {
 		/* ENCP pure color pattern with YCC mode */
 		if (bist_type == VENC_BIST_PTTN_BLACK) {
