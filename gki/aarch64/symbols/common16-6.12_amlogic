@@ -99,9 +99,9 @@
  __tracepoint_android_vh_ftrace_dump_buffer
 
 # amlogic-clk-v2.ko
-  clk_hw_forward_rate_request
-  clk_hw_get_rate_range
-  divider_determine_rate
-  divider_ro_determine_rate
-  of_clk_get_from_provider
-  of_clk_hw_simple_get
+ clk_hw_forward_rate_request
+ clk_hw_get_rate_range
+ divider_determine_rate
+ divider_ro_determine_rate
+ of_clk_get_from_provider
+ of_clk_hw_simple_get

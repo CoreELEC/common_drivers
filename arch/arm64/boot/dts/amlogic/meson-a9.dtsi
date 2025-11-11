@@ -21,7 +21,6 @@
 #include <dt-bindings/mailbox/a9-mbox.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/thermal/ddr-params.h>
-#include <dt-bindings/rtc/amlogic,rtc.h>
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
 
@@ -320,13 +319,21 @@
 		#clock-cells = <0>;
 	};
 
+	xtal_32k: xtal-32k-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32768>;
+		clock-output-names = "xtal_32k";
+		#clock-cells = <0>;
+	};
+
 	rtc: rtc@ffa08000 {
 		compatible = "amlogic,meson-rtc";
 		reg = <0x0 0xffa08000 0x0 0x38>;
 		interrupts = <GIC_SPI 404 IRQ_TYPE_EDGE_RISING>;
-		osc_freq = <OSC_32KHZ>;
+		//clocks = <&xtal_32k>, <&clkc CLKID_SYS_RTC>;
+		//clock-names = "osc", "sys";
 		time-storage-format-gray;
-		status = "okay";
+		status = "disabled";
 	};
 
 	pwrdm: power-domains {

@@ -2208,6 +2208,7 @@ static int __init init_chip_config(int cpu, struct ddr_bandwidth *band)
 		band->mali_port[0] = 24;
 		band->mali_port[1] = -1;
 		break;
+#endif
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_A9
 	case DMC_TYPE_A9:
 		band->ops          = &a9_ddr_bw_ops;
