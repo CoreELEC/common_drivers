@@ -6,8 +6,13 @@
 	coreelec-dt-id = "g12a_s905x2_mecool_m8s_plus_t2";
 
 	memory@00000000 {
-		device_type = "memory";
-		linux,usable-memory = <0x0 0x100000 0x0 0x5ff00000>; 
+		linux,usable-memory = <0x0 0x100000 0x0 0x5f300000>;
+	};
+
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x0 0x3d800000 0x0 0x800000>;
+		};
 	};
 
 	/* Hardcoded LED (GPIOAO_11) */
