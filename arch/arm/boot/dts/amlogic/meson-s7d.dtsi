@@ -273,9 +273,11 @@
 		mbox-nums = <S7D_MBOX_NUMS>;
 		mboxids = <S7D_MBOX_AO2REE>,
 			  <S7D_MBOX_REE2AO>;
-		aocpu_sts_mboxid = <S7D_MBOX_AO2TEE>;
-		ree2aocpu_mboxid = <S7D_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		aocpu-hang-detect;
+		aocpu-sts-mboxid = <S7D_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -286,8 +288,6 @@
 			     "aocpu2ree";
 		mboxes = <&mbox_fifo S7D_REE2AO_DEV>,
 			     <&mbox_fifo S7D_AO2REE_DEV>;
-		mbox-dests = <MAILBOX_AOCPU>,
-					 <MAILBOX_ARM>;
 	};
 
 	vddcpu0: pwm_j-regulator {

@@ -24,5 +24,6 @@ ddk_module(
     kernel_build = kernel_select(),
     visibility = ["//visibility:public"],
     deps = [
+        "//common_drivers/drivers/mailbox:amlogic-mailbox",
     ],
 )

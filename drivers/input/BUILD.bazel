@@ -56,5 +56,6 @@ ddk_module(
         "//common_drivers/drivers/power:amlogic-power",
         "//common_drivers/drivers/gpio:amlogic-gpio",
         "//common_drivers/drivers/pm:amlogic-pm",
+        "//common_drivers/drivers/mailbox:amlogic-mailbox",
     ],
 )

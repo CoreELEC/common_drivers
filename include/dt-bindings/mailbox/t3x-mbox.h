@@ -86,4 +86,7 @@
 #define T3X_MBOX_REE2AO    3
 #define T3X_MBOX_NUMS      4
 
+/* AOCPU STATUS MBOX CHANNEL ID */
+#define T3X_AOCPU_STS_CHAN 4
+
 #endif /* __T3X_MBOX_H__ */

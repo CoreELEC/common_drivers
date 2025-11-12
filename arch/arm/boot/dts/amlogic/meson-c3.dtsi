@@ -2043,7 +2043,7 @@
 			     "se_dev";
 		mboxes = <&mbox_pl 1>,
 			 <&mbox_pl 3>;
-		mbox-dests = <MAILBOX_DSP>,
+		mbox-dests = <MAILBOX_DSPA>,
 			     <MAILBOX_AOCPU>;
 	};
 
