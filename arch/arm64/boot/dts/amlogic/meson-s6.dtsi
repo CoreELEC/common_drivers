@@ -304,9 +304,14 @@
 			  <S6_MBOX_REE2DSPA>,
 			  <S6_MBOX_AO2REE>,
 			  <S6_MBOX_REE2AO>;
-		aocpu_sts_mboxid = <S6_MBOX_AO2TEE>;
-		ree2aocpu_mboxid = <S6_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_DSPA>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		dspa-hang-detect;
+		aocpu-hang-detect;
+		aocpu-sts-mboxid = <S6_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -321,10 +326,6 @@
 			 <&mbox_fifo S6_AO2REE_DEV>,
 			 <&mbox_fifo S6_REE2DSPA_DEV>,
 			 <&mbox_fifo S6_DSPA2REE_DEV>;
-		mbox-dests = <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSP>,
-			     <MAILBOX_ARM>;
 	};
 
 	vddcpu0_board2: pwm_f_board2-regulator {

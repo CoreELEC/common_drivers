@@ -1287,6 +1287,12 @@
 			  <C1_MBOX_REE2DSPB>,
 			  <C1_MBOX_DSPB2REE>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_DSPA>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSPB>,
+			     <MAILBOX_ARM>;
+		dspa-hang-detect;
+		dspb-hang-detect;
 	};
 
 	mbox_devfs {
@@ -1301,10 +1307,6 @@
 			 <&mbox_pl C1_DSPA2REE_DEV>,
 			 <&mbox_pl C1_REE2DSPB_DEV>,
 			 <&mbox_pl C1_DSPB2REE_DEV>;
-		mbox-dests = <MAILBOX_DSP>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSP>,
-			     <MAILBOX_ARM>;
 	};
 
 	canvas: canvas {

@@ -283,6 +283,13 @@
 			  <SC2_MBOX_AO2REE>,
 			  <SC2_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_DSPA>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		dspa-hang-detect;
+		aocpu-hang-detect;
+		aocpu-sts-mboxid = <SC2_AOCPU_STS_CHAN>;
 	};
 
 	mbox_sec: mbox_sec@fe441800 {
@@ -294,6 +301,7 @@
 		      <0xfe441e00 0x80>;   /* scpu2nee st*/
 		interrupts = <0 49 1>;   /* irq ree */
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_SECPU>;
 	};
 
 	mbox_devfs {
@@ -310,11 +318,6 @@
 			 <&mbox_fifo SC2_AO2REE_DEV>,
 			 <&mbox_fifo SC2_REE2DSPA_DEV>,
 			 <&mbox_fifo SC2_DSPA2REE_DEV>;
-		mbox-dests = <MAILBOX_SECPU>,
-			     <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSP>,
-			     <MAILBOX_ARM>;
 	};
 
 	vddcpu0: pwm_j-regulator {

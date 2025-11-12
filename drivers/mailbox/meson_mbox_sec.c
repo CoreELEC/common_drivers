@@ -196,6 +196,7 @@ static int mbox_sec_probe(struct platform_device *pdev)
 	struct mbox_chan *mbox_chans;
 	struct device *dev = &pdev->dev;
 	struct aml_mbox_chan *aml_chan;
+	int err = 0;
 
 	aml_chan = devm_kzalloc(dev, sizeof(*aml_chan), GFP_KERNEL);
 
@@ -214,6 +215,11 @@ static int mbox_sec_probe(struct platform_device *pdev)
 	aml_chan->mbox_rd_addr = devm_platform_ioremap_resource(pdev, 3);
 	if (IS_ERR(aml_chan->mbox_rd_addr))
 		return PTR_ERR(aml_chan->mbox_rd_addr);
+
+	err = of_property_read_u32_index(dev->of_node, "mbox-dests",
+			0, &aml_chan->dest);
+	if (err)
+		return -ENXIO;
 
 	aml_chan->mbox_irq = platform_get_irq(pdev, 0);
 	mutex_init(&aml_chan->mutex);

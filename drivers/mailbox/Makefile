@@ -9,6 +9,7 @@ $(MODULE_NAME)-y += meson_mbox_main.o \
 		    meson_mbox_pl_v1.o \
 		    meson_mbox_pl_v2.o \
 		    meson_mbox_devfs.o \
+		    meson_mbox_health.o \
 		    meson_mbox_sec.o
 
 PR_FMT = $(subst amlogic-,,$(MODULE_NAME))

@@ -471,8 +471,11 @@ static irqreturn_t mbox_ack_irq_handler(int irq, void *p)
 	struct aml_mbox_chan *aml_chan = p;
 	struct mbox_chan *mbox_chan = container_of(aml_chan->tx_complete,
 						   struct mbox_chan, tx_complete);
-	struct aml_mbox_data *aml_data = mbox_chan->active_req;
+	struct aml_mbox_data *aml_data;
+	unsigned long flags;
 
+	spin_lock_irqsave(&mbox_chan->lock, flags);
+	aml_data = mbox_chan->active_req;
 	if (aml_data && aml_data->sync == MBOX_SYNC) {
 		if (aml_data->rxbuf && aml_data->rxsize) {
 			if (aml_data->rxsize > MBOX_DATA_SIZE) {
@@ -485,6 +488,7 @@ static irqreturn_t mbox_ack_irq_handler(int irq, void *p)
 				       aml_data->rxsize);
 		}
 	}
+	spin_unlock_irqrestore(&mbox_chan->lock, flags);
 	mbox_chan_txdone(mbox_chan, 0);
 	return IRQ_HANDLED;
 }
@@ -509,6 +513,17 @@ static int mbox_pl_parse_dt(struct platform_device *pdev, struct aml_chan_priv *
 	aml_chan = devm_kzalloc(dev, sizeof(*aml_chan) * mbox_nums, GFP_KERNEL);
 	if (IS_ERR(aml_chan))
 		return -ENOMEM;
+
+	if (of_property_read_bool(dev->of_node, "dspa-hang-detect"))
+		priv->dspa_hang_detect = true;
+	else
+		priv->dspa_hang_detect = false;
+
+	if (of_property_read_bool(dev->of_node, "dspb-hang-detect"))
+		priv->dspb_hang_detect = true;
+	else
+		priv->dspb_hang_detect = false;
+
 	for (idx = 0; idx < mbox_nums; idx++) {
 		err = of_property_read_string_index(dev->of_node, "mbox-tx", idx, &dir);
 		if (!err && !strncmp(dir, "tx", 2))
@@ -538,6 +553,25 @@ static int mbox_pl_parse_dt(struct platform_device *pdev, struct aml_chan_priv *
 		aml_chan[idx].mbox_fsts_addr = devm_platform_ioremap_resource(pdev, idx * 4 + 3);
 		if (IS_ERR(aml_chan[idx].mbox_fsts_addr))
 			return PTR_ERR(aml_chan[idx].mbox_fsts_addr);
+
+		err = of_property_read_u32_index(dev->of_node, "mbox-dests",
+				idx, &aml_chan[idx].dest);
+		if (err)
+			return -ENXIO;
+
+		if (aml_chan[idx].dest == MAILBOX_DSPA) {
+			if (priv->dspa_hang_detect)
+				aml_chan[idx].dspa_hang_detect = true;
+			else
+				aml_chan[idx].dspa_hang_detect = false;
+		}
+
+		if (aml_chan[idx].dest == MAILBOX_DSPB) {
+			if (priv->dspb_hang_detect)
+				aml_chan[idx].dspb_hang_detect = true;
+			else
+				aml_chan[idx].dspb_hang_detect = false;
+		}
 
 		mutex_init(&aml_chan[idx].mutex);
 		aml_chan[idx].tx_complete = NULL;

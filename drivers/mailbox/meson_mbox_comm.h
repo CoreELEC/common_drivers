@@ -6,9 +6,10 @@
 #ifndef _MESON_MBOX_COMM_H_
 #define _MESON_MBOX_COMM_H_
 #include <linux/cdev.h>
+#include <linux/semaphore.h>
 
-#define MAX_ACTIVE_WORK 5
 #define MBOX_RX_QUEUE_LEN_DEFAULT 10
+#define AOCPU_HEALTH_POLLING_MS 1000
 
 #define MBOX_DOMAIN(drv_id, mbox_id, flag)      \
 {                                               \
@@ -43,6 +44,11 @@ struct aml_chan_priv {
 	struct aml_mbox_chan *aml_chan;
 	u32 mbox_nums;
 	u32 mbox_rx_queue_len;
+	u32 health_polling_ms;
+	bool aocpu_hang_detect;
+	bool dspa_hang_detect;
+	bool dspb_hang_detect;
+	void __iomem *aocpu_health_reg;
 };
 
 struct aml_mbox_rx_header {
@@ -66,10 +72,21 @@ struct aml_mbox_rx_msg {
 	struct task_struct *thread;             /* rx thread for mssg process */
 };
 
+struct aocpu_health_info {
+	struct delayed_work aocpu_monitor_work;    /* delayed work for aocpu monitor */
+	struct workqueue_struct *aocpu_health_wq;  /* work queue for aocpu monitor */
+	struct device *dev;                        /* device pointer */
+	u32 pre_cnt;                               /* previous aocpu tick count */
+	u32 cur_cnt;                               /* current aocpu tick count */
+	u32 health_polling_ms;                     /* aocpu health polling msec */
+	void __iomem *health_reg;                  /* aocpu health status register */
+};
+
 struct aml_priv_data {
 	struct mbox_controller *mbox_ctrl;
 	struct mbox_domain_data domain_data;
 	struct aml_mbox_rx_msg *rx_msg;
+	struct aocpu_health_info *health_info;
 };
 
 #endif

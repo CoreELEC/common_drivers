@@ -88,6 +88,6 @@
 #define S6_MBOX_NUMS      4
 
 /* AOCPU STATUS MBOX CHANNEL ID */
-#define S6_MBOX_AO2TEE    4
+#define S6_AOCPU_STS_CHAN 4
 
 #endif /* __S6_MBOX_H__ */

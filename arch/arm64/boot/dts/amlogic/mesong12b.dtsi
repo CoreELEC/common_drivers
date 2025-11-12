@@ -311,6 +311,7 @@
 		mbox-nums = <G12B_MBOX_AO_NUMS>;
 		mboxids = <G12B_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_AOCPU>;
 	};
 
 	cpu_iomap {

@@ -23,6 +23,7 @@
 #include <linux/cdev.h>
 #include <linux/sched/signal.h>
 #include <linux/amlogic/aml_mbox.h>
+#include <linux/amlogic/aml_mbox_health.h>
 #include <dt-bindings/mailbox/amlogic,mbox.h>
 #include "meson_mbox_devfs.h"
 
@@ -49,7 +50,6 @@ struct aml_mbox_dev {
 	struct aml_mbox_dev_rx_msg *rx_msg;
 	wait_queue_head_t waitq;
 	const char *name;
-	u32 dest;
 	u32 mbox_nums;
 };
 
@@ -105,9 +105,12 @@ static ssize_t mbox_message_write(struct file *filp,
 	struct aml_mbox_priv_data aml_priv_data;
 	struct device *dev = aml_dev->p_dev;
 	int ret = 0;
+	u32 dest;
+	bool ip_hang;
 
+	dest = aml_chan->dest;
 	if (count > MBOX_USER_SIZE) {
-		dev_err(dev, "Msg len %zd over range dest %d\n", count, aml_dev->dest);
+		dev_err(dev, "Msg len %zd over range dest %d\n", count, dest);
 		return -EINVAL;
 	}
 	ret = copy_from_user(&aml_priv_data, userbuf, count);
@@ -118,12 +121,13 @@ static ssize_t mbox_message_write(struct file *filp,
 	ree2remote_data->cmd = aml_priv_data.cmd;
 	ree2remote_data->txsize = count - sizeof(u32);
 
-	switch (aml_dev->dest) {
+	switch (dest) {
 	case MAILBOX_AOCPU:
 		ree2remote_data->rxsize = count - sizeof(u32);
 		ree2remote_data->sync = MBOX_SYNC;
 		break;
-	case MAILBOX_DSP:
+	case MAILBOX_DSPA:
+	case MAILBOX_DSPB:
 		ree2remote_data->rxsize = MBOX_DATA_SIZE;
 		ree2remote_data->sync = MBOX_TSYNC;
 		break;
@@ -137,10 +141,19 @@ static ssize_t mbox_message_write(struct file *filp,
 		break;
 	};
 
+	ip_hang = mbox_check_ip_hang(mbox_chan);
+	if (ip_hang) {
+		dev_err(dev, "error: dest processor %d is not boot up or hang\n",
+				dest);
+		return -ENODEV;
+	}
+
 	mutex_lock(&aml_chan->mutex);
 	ret = mbox_send_message(mbox_chan, ree2remote_data);
 	if (ret < 0) {
-		dev_err(dev, "Msg send fail %d dest %d\n", ret, aml_dev->dest);
+		dev_err(dev, "Msg send fail %d, dest %d\n",
+				ret, dest);
+		dev_warn(dev, "Must not send new msg before TX ACK done!\n");
 		complete(&ree2remote_data->complete);
 		mutex_unlock(&aml_chan->mutex);
 		return ret;
@@ -149,6 +162,7 @@ static ssize_t mbox_message_write(struct file *filp,
 	if (ree2remote_data->sync == MBOX_SYNC)
 		complete(&ree2remote_data->complete);
 	mutex_unlock(&aml_chan->mutex);
+
 	return count;
 }
 
@@ -157,6 +171,8 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 {
 	struct aml_mbox_priv *aml_priv = filp->private_data;
 	struct aml_mbox_dev *aml_dev = aml_priv->aml_dev;
+	struct mbox_chan *mbox_chan = aml_dev->mbox_chan;
+	struct aml_mbox_chan *aml_chan = mbox_chan->con_priv;
 	struct aml_mbox_data *ree2remote_data = aml_priv->aml_ree2remote_data;
 	struct aml_mbox_rx_data aml_rx_data;
 	struct device *dev = aml_dev->p_dev;
@@ -166,7 +182,7 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 	void *rx_data_buf = NULL;
 	DECLARE_WAITQUEUE(mbox_wq, current);
 
-	if (aml_dev->dest != MAILBOX_ARM) {
+	if (aml_chan->dest != MAILBOX_ARM) {
 		ret = wait_for_completion_killable(&ree2remote_data->complete);
 		if (ret < 0) {
 			dev_err(dev, "Read msg wait killed %d\n", ret);
@@ -179,7 +195,7 @@ static ssize_t mbox_message_read(struct file *filp, char __user *userbuf,
 	if (count > MBOX_USER_SIZE)
 		count = MBOX_USER_SIZE;
 
-	switch (aml_dev->dest) {
+	switch (aml_chan->dest) {
 	case MAILBOX_ARM:
 		rx_msg = aml_dev->rx_msg;
 		if (IS_ERR_OR_NULL(rx_msg)) {
@@ -246,6 +262,8 @@ static int mbox_message_open(struct inode *inode, struct file *filp)
 {
 	struct cdev *cdev = inode->i_cdev;
 	struct aml_mbox_dev *aml_dev = container_of(cdev, struct aml_mbox_dev, cdev);
+	struct mbox_chan *mbox_chan = aml_dev->mbox_chan;
+	struct aml_mbox_chan *aml_chan = mbox_chan->con_priv;
 	struct device *dev = aml_dev->p_dev;
 	struct aml_mbox_priv *aml_priv;
 	struct aml_mbox_data *ree2remote_data;
@@ -256,9 +274,10 @@ static int mbox_message_open(struct inode *inode, struct file *filp)
 
 	dev_dbg(dev, "Open dev name: %s\n", aml_dev->name);
 
-	switch (aml_dev->dest) {
+	switch (aml_chan->dest) {
 	case MAILBOX_AOCPU:
-	case MAILBOX_DSP:
+	case MAILBOX_DSPA:
+	case MAILBOX_DSPB:
 	case MAILBOX_SECPU:
 		ree2remote_data = devm_kzalloc(dev, sizeof(*ree2remote_data),
 					       GFP_KERNEL);
@@ -309,9 +328,11 @@ static int mbox_message_fasync(int fd, struct file *filp, int on)
 	int ret = 0;
 	struct aml_mbox_priv *aml_priv = filp->private_data;
 	struct aml_mbox_dev *aml_dev = aml_priv->aml_dev;
+	struct mbox_chan *mbox_chan = aml_dev->mbox_chan;
+	struct aml_mbox_chan *aml_chan = mbox_chan->con_priv;
 	struct device *dev = aml_dev->p_dev;
 
-	if (aml_dev->dest == MAILBOX_ARM) {
+	if (aml_chan->dest == MAILBOX_ARM) {
 		dev_dbg(dev, "%s register mbox message fasync signal\n",
 				aml_dev->name);
 		ret = fasync_helper(fd, filp, on, &aml_dev->async_queue);
@@ -504,8 +525,10 @@ static int mbox_cdev_init(struct device *dev)
 	struct aml_mbox_dev *mbox_devs = NULL;
 	struct aml_mbox_dev *mbox_dev = NULL;
 	struct aml_mbox_rx_data *mbox_rx_buf = NULL;
+	struct aml_mbox_chan *aml_chan = NULL;
 	dev_t dev_t = 0;
 	u32 idx = 0;
+	u32 dest;
 	int ret = 0;
 	int mbox_nums = 0;
 	unsigned int rx_buf_len = 0;
@@ -558,14 +581,6 @@ static int mbox_cdev_init(struct device *dev)
 			goto cleanup;
 		}
 
-		if (of_property_read_u32_index(dev->of_node, "mbox-dests",
-					       idx, &mbox_dev->dest)) {
-			ret = -ENOMEM;
-			dev_dbg(dev, "%s get mbox[%d] dest fail\n",
-				__func__, idx);
-			goto cleanup;
-		}
-
 		mbox_dev->dev = device_create(mbox_class, NULL, mbox_dev->dev_t,
 					mbox_dev, "%s", mbox_dev->name);
 		if (IS_ERR_OR_NULL(mbox_dev->dev)) {
@@ -590,7 +605,9 @@ static int mbox_cdev_init(struct device *dev)
 		else if (!strcmp(mbox_dev->name, "dspb2ree"))
 			mbox_dev->mbox_chan->cl->rx_callback = mbox_dspb2ree_rx_callback;
 
-		if (mbox_dev->dest == MAILBOX_ARM) {
+		aml_chan = mbox_dev->mbox_chan->con_priv;
+		dest = aml_chan->dest;
+		if (dest == MAILBOX_ARM) {
 			mbox_dev->rx_msg = devm_kzalloc(dev,
 					sizeof(*mbox_dev->rx_msg), GFP_KERNEL);
 			if (IS_ERR_OR_NULL(mbox_dev->rx_msg)) {

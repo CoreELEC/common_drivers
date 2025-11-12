@@ -414,6 +414,10 @@
 		mboxids = <A4_MBOX_AO2REE>,
 			  <A4_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		aocpu-hang-detect;
+		aocpu-sts-mboxid = <A4_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -426,9 +430,6 @@
 		mboxes = <&mbox_fifo A4_REE2AO_DEV>,
 			 <&mbox_fifo A4_AO2REE_DEV>,
 			 <&mbox_fifo A4_AO2REE_BTCLK_SYNC>;
-		mbox-dests = <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_ARM>;
 	};
 
 	aml_hwlock: aml_hwlock@0 {

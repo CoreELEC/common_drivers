@@ -43,6 +43,7 @@
 #include <dt-bindings/mailbox/t6x-mbox.h>
 #include "meson_mbox_fifo.h"
 #include "meson_mbox_comm.h"
+#include "meson_mbox_health.h"
 
 #define ASYNC	1
 #define SYNC	2
@@ -364,7 +365,7 @@ static void mbox_add_rx_queue(struct device *dev, int drv_id,
 			up(&mbox_rx_msg->sem);
 		}
 	} else {
-		dev_err(dev, "%s: error: chan_id %d invalid!\n", __func__, chan_id);
+		dev_err(dev, "Error: chan_id %d invalid!\n", chan_id);
 	}
 }
 
@@ -385,8 +386,8 @@ static void mbox_isr_handler(struct aml_mbox_chan *aml_chan)
 		if (mbox_cmd->size >= MBOX_HEAD_SIZE) {
 			aml_data.cmd = mbox_cmd->cmd;
 			if (mbox_cmd->size > (MBOX_DATA_SIZE + MBOX_HEAD_SIZE)) {
-				dev_err(dev, "%s: rxsize %x > %x\n",
-					__func__, mbox_cmd->size,
+				dev_err(dev, "rxsize %d > %d\n",
+					mbox_cmd->size,
 					MBOX_DATA_SIZE + MBOX_HEAD_SIZE);
 				mbox_cmd->size = MBOX_DATA_SIZE + MBOX_HEAD_SIZE;
 			}
@@ -415,13 +416,16 @@ mbox_isr_handler_done:
 static void mbox_ack_isr_handler(struct mbox_chan *mbox_chan)
 {
 	struct aml_mbox_chan *aml_chan = mbox_chan->con_priv;
-	struct aml_mbox_data *aml_data = mbox_chan->active_req;
+	struct aml_mbox_data *aml_data;
+	unsigned long flags;
 
+	spin_lock_irqsave(&mbox_chan->lock, flags);
+	aml_data = mbox_chan->active_req;
 	if (aml_data && aml_data->sync == MBOX_SYNC) {
 		if (aml_data->rxbuf && aml_data->rxsize) {
 			if (aml_data->rxsize > MBOX_DATA_SIZE) {
-				dev_err(mbox_chan->cl->dev, "%s: rxsize %x > %x\n",
-					__func__, aml_data->txsize, MBOX_DATA_SIZE);
+				dev_err(mbox_chan->cl->dev, "rxsize %d > %d\n",
+					aml_data->txsize, MBOX_DATA_SIZE);
 				aml_data->rxsize = MBOX_DATA_SIZE;
 			}
 			mbox_fifo_read(aml_data->rxbuf,
@@ -429,6 +433,7 @@ static void mbox_ack_isr_handler(struct mbox_chan *mbox_chan)
 				       aml_data->rxsize);
 		}
 	}
+	spin_unlock_irqrestore(&mbox_chan->lock, flags);
 	aml_chan->tx_complete = NULL;
 	mbox_fifo_clr(aml_chan->mbox_wr_addr, MBOX_FIFO_SIZE);
 	mbox_irq_clean(aml_chan, 1);
@@ -498,10 +503,11 @@ static int mbox_transfer_data(struct mbox_chan *mbox_chan, void *data)
 
 	mbox_cmd->cmd = aml_data->cmd;
 	if (aml_data->txsize > MBOX_DATA_SIZE) {
-		dev_err(mbox_chan->cl->dev, "%s: size %x > %x\n",
-			__func__, aml_data->txsize, MBOX_DATA_SIZE);
+		dev_err(mbox_chan->cl->dev, "size %d > %d\n",
+			aml_data->txsize, MBOX_DATA_SIZE);
 		return -EINVAL;
 	}
+
 	mbox_cmd->size = aml_data->txsize + MBOX_HEAD_SIZE;
 	if (aml_data->sync == MBOX_SYNC)
 		mbox_cmd->sync = SYNC;
@@ -562,9 +568,8 @@ static int mbox_fifo_parse_dt(struct platform_device *pdev, struct aml_chan_priv
 	u32 irq_nums = 0;
 	u32 mbox_nums = 0;
 	u32 mboxid = 0;
-	u32 spt_ao_alive_det = 0;
-	u32 ao_sts_mboxid = 0;
-	u32 ree2ao_mboxid = 0;
+	u32 aocpu_sts_mboxid = 0;
+	u32 health_polling_ms = 0;
 	u32 rx_queue_len = 0;
 	int idx = 0;
 	int err = 0;
@@ -627,18 +632,36 @@ static int mbox_fifo_parse_dt(struct platform_device *pdev, struct aml_chan_priv
 	if (IS_ERR(aml_chan))
 		return PTR_ERR(aml_chan);
 
-	err = of_property_read_u32(dev->of_node,
-			"aocpu_sts_mboxid", &ao_sts_mboxid);
-	if (err) {
-		dev_dbg(dev, "Do not support aocpu alive detection\n");
-	} else {
+	if (of_property_read_bool(dev->of_node, "aocpu-hang-detect")) {
 		err = of_property_read_u32(dev->of_node,
-				"ree2aocpu_mboxid", &ree2ao_mboxid);
+				"aocpu-sts-mboxid", &aocpu_sts_mboxid);
 		if (err)
-			dev_dbg(dev, "failed to get ree2aocpu mbox id, %d\n", err);
-		else
-			spt_ao_alive_det = 1;
+			return -ENXIO;
+
+		err = of_property_read_u32(dev->of_node,
+				"aocpu-health-polling-ms", &health_polling_ms);
+		if (err || health_polling_ms < 20)
+			health_polling_ms = AOCPU_HEALTH_POLLING_MS;
+		dev_dbg(dev, "Set aocpu_health_polling_ms to %d\n", health_polling_ms);
+
+		priv->aocpu_hang_detect = true;
+		priv->health_polling_ms = health_polling_ms;
+		priv->aocpu_health_reg = mbox_rd_base + PAYLOAD_OFFSET(aocpu_sts_mboxid);
+	} else {
+		priv->aocpu_hang_detect = false;
+		priv->health_polling_ms = 0;
+		priv->aocpu_health_reg = NULL;
 	}
+
+	if (of_property_read_bool(dev->of_node, "dspa-hang-detect"))
+		priv->dspa_hang_detect = true;
+	else
+		priv->dspa_hang_detect = false;
+
+	if (of_property_read_bool(dev->of_node, "dspb-hang-detect"))
+		priv->dspb_hang_detect = true;
+	else
+		priv->dspb_hang_detect = false;
 
 	for (idx = 0; idx < mbox_nums; idx++) {
 		err = of_property_read_u32_index(dev->of_node, "mboxids",
@@ -654,9 +677,33 @@ static int mbox_fifo_parse_dt(struct platform_device *pdev, struct aml_chan_priv
 		aml_chan[idx].mbox_fsts_addr = mbox_fsts_base + CTL_OFFSET(mboxid);
 		aml_chan[idx].mbox_irqsts_addr = mbox_irq_base + IRQ_STS_OFFSET(irqctlr);
 		aml_chan[idx].mbox_irqclr_addr = mbox_irq_base + IRQ_CLR_OFFSET(irqclr);
-		if (spt_ao_alive_det && mboxid == ree2ao_mboxid)
-			aml_chan[idx].aocpu_tick_cnt_addr = mbox_rd_base +
-				PAYLOAD_OFFSET(ao_sts_mboxid);
+
+		err = of_property_read_u32_index(dev->of_node, "mbox-dests",
+				idx, &aml_chan[idx].dest);
+		if (err)
+			return -ENXIO;
+
+		if (aml_chan[idx].dest == MAILBOX_AOCPU) {
+			if (priv->aocpu_hang_detect)
+				aml_chan[idx].aocpu_hang_detect = true;
+			else
+				aml_chan[idx].aocpu_hang_detect = false;
+		}
+
+		if (aml_chan[idx].dest == MAILBOX_DSPA) {
+			if (priv->dspa_hang_detect)
+				aml_chan[idx].dspa_hang_detect = true;
+			else
+				aml_chan[idx].dspa_hang_detect = false;
+		}
+
+		if (aml_chan[idx].dest == MAILBOX_DSPB) {
+			if (priv->dspb_hang_detect)
+				aml_chan[idx].dspb_hang_detect = true;
+			else
+				aml_chan[idx].dspb_hang_detect = false;
+		}
+
 		mutex_init(&aml_chan[idx].mutex);
 		aml_chan[idx].tx_complete = NULL;
 	}
@@ -691,10 +738,12 @@ static int mbox_fifo_probe(struct platform_device *pdev)
 	struct aml_chan_priv aml_priv;
 	struct aml_mbox_rx_msg *mbox_rx_msg;
 	struct aml_priv_data *mbox_priv_data;
+	struct aocpu_health_info *health_info;
 	u32 mboxid = 0;
 	u32 mbox_nums;
 	u32 rx_pkt_size;
 	u32 rx_queue_len;
+	bool aocpu_hang_detect;
 	int mbox_irq;
 	int err = 0;
 	int idx0 = 0;
@@ -764,6 +813,19 @@ static int mbox_fifo_probe(struct platform_device *pdev)
 	sema_init(&mbox_rx_msg->sem, 0);
 	mbox_priv_data->rx_msg = mbox_rx_msg;
 
+	aocpu_hang_detect = aml_priv.aocpu_hang_detect;
+	if (aocpu_hang_detect) {
+		health_info = devm_kzalloc(dev, sizeof(*health_info), GFP_KERNEL);
+		if (IS_ERR(health_info))
+			return PTR_ERR(health_info);
+
+		health_info->health_polling_ms = aml_priv.health_polling_ms;
+		health_info->health_reg = aml_priv.aocpu_health_reg;
+		health_info->dev = dev;
+		mbox_aocpu_health_monitor_start(health_info);
+		mbox_priv_data->health_info = health_info;
+	}
+
 	platform_set_drvdata(pdev, mbox_priv_data);
 	err = devm_mbox_controller_register(dev, mbox_cons);
 	if (err) {
@@ -809,15 +871,30 @@ static void mbox_fifo_remove(struct platform_device *pdev)
 {
 	struct aml_priv_data *mbox_priv_data;
 	struct aml_mbox_rx_msg *mbox_rx_msg;
+	struct aocpu_health_info *health_info;
 
 	mbox_priv_data = platform_get_drvdata(pdev);
 	mbox_rx_msg = mbox_priv_data->rx_msg;
+	health_info = mbox_priv_data->health_info;
 
 	if (mbox_rx_msg->thread) {
 		up(&mbox_rx_msg->sem);
 		kthread_stop(mbox_rx_msg->thread);
 	}
+
+	mbox_aocpu_health_monitor_stop(health_info);
+	mbox_priv_data->health_info = NULL;
 	platform_set_drvdata(pdev, NULL);
+}
+
+static void mbox_fifo_shutdown(struct platform_device *pdev)
+{
+	struct aml_priv_data *mbox_priv_data;
+	struct aocpu_health_info *health_info;
+
+	mbox_priv_data = platform_get_drvdata(pdev);
+	health_info = mbox_priv_data->health_info;
+	mbox_aocpu_health_monitor_stop(health_info);
 }
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
@@ -1252,6 +1329,17 @@ static struct mbox_domain_data t6d_mbox_domains_data __initdata = {
 };
 
 const struct mbox_domain t6w_mbox_domains[] = {
+	MBOX_DOMAIN(T6W_AO2REE0, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE1, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE2, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE3, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE4, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE5, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE6, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE7, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE8, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE9, T6W_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(T6W_AO2REE10, T6W_MBOX_AO2REE, 0),
 	MBOX_DOMAIN(T6W_REE2AO0, T6W_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(T6W_REE2AO1, T6W_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(T6W_REE2AO2, T6W_MBOX_REE2AO, 0),
@@ -1439,6 +1527,7 @@ static struct platform_driver mbox_fifo_driver = {
 		.name   = DRIVER_NAME,
 		.of_match_table = mbox_of_match,
 	},
+	.shutdown = mbox_fifo_shutdown,
 };
 
 int __init mbox_fifo_init(void)

@@ -7,20 +7,40 @@
 #define _AML_MBOX_H_
 #include <linux/cdev.h>
 #include <linux/completion.h>
-#include <linux/delay.h>
-#include <linux/io.h>
 #include <linux/mailbox_client.h>
 #include <linux/mailbox_controller.h>
 #include "aml_mbox_cmd.h"
+#include "aml_mbox_health.h"
 
-#define MBOX_DATA_SIZE          0x60
-#define MBOX_NO_FEEDBACK	0xA5A5A5A5
+#define MBOX_DATA_SIZE      0x60
+#define MBOX_NO_FEEDBACK    0xA5A5A5A5
 
 enum aml_mbox_sync {
 	MBOX_ASYNC = 0,    /* Only send data, not get data from remote */
 	MBOX_SYNC  = 1,    /* Send data, also can get data from remote if needed */
 	MBOX_TSYNC = 2,    /* Send data, wait for data feedback, the wake up wait task */
 };
+
+/* mbox client id, only used for mbox_pl_v0 */
+enum mbox_client_id {
+	MBOX_CL_NONE,
+	MBOX_CL_CLOCKS,
+	MBOX_CL_DVFS,
+	MBOX_CL_POWER,
+	MBOX_CL_THERMAL,
+	MBOX_CL_REMOTE,
+	MBOX_CL_LED_TIMER,
+	MBOX_CL_SET_CEC_DATA,
+	MBOX_CL_MAX,
+};
+
+#define MBOX_CMD_ID_SHIFT       0
+#define MBOX_CMD_ID_MASK        0xff
+#define MBOX_CLIENT_ID_SHIFT    8
+#define MBOX_CLIENT_ID_MASK     0xff
+#define MBOX_PACK_CMD(cmd, client_id)					\
+	((((cmd) & MBOX_CMD_ID_MASK) << MBOX_CMD_ID_SHIFT) | \
+	 (((client_id) & MBOX_CLIENT_ID_MASK) << MBOX_CLIENT_ID_SHIFT))
 
 /**
  * struct aml_mbox_data - mbox physical channel info
@@ -61,6 +81,10 @@ struct aml_mbox_data {
  * @mutex:                Mbox channel mutex lock
  * @mbox:                 Mbox controller
  * @tx_complete:          Use to recognize the which channel send data
+ * @aocpu_hang_detect:    If it support aocpu hang status detect
+ * @dspa_hang_detect:     If it support dspa hang status detect
+ * @dspb_hang_detect:     If it support dspb hang status detect
+ * @dest:                 The processor which mailbox transmission send to
  */
 struct aml_mbox_chan {
 	/* mbox fifo */
@@ -69,6 +93,7 @@ struct aml_mbox_chan {
 	void __iomem *mbox_irqctlr_addr;
 	void __iomem *mbox_irqclr_addr;
 	void __iomem *mbox_irqsts_addr;
+	bool aocpu_hang_detect;
 
 	/* mbox payload */
 	u32 mbox_irq;
@@ -81,10 +106,12 @@ struct aml_mbox_chan {
 	void __iomem *mbox_fset_addr;
 	void __iomem *mbox_fclr_addr;
 	void __iomem *mbox_fsts_addr;
-	void __iomem *aocpu_tick_cnt_addr;
 	struct mutex mutex; /* for aml mbox chan mutex */
 	struct mbox_controller *mbox;
 	void *tx_complete;
+	bool dspa_hang_detect;
+	bool dspb_hang_detect;
+	u32 dest;
 };
 
 /**
@@ -170,33 +197,6 @@ static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *d
 }
 #endif
 
-/*
- * Check if the aocpu is alive
- * @sts_addr: aocpu tick count read address
- * return - 0: aocpu is alive
- *        - 1: aocpu is not alive
- */
-static inline int check_aocpu_status(void __iomem *sts_addr)
-{
-	u32 aocpu_tick_count_1;
-	u32 aocpu_tick_count_2;
-	int ret;
-
-	aocpu_tick_count_1 = readl(sts_addr);
-	pr_info("%s: aocpu_tick_count_1 = 0x%x\n", __func__,
-			aocpu_tick_count_1);
-	/* Sleep for 50 msec to let tick count update */
-	msleep(50);
-	aocpu_tick_count_2 = readl(sts_addr);
-	pr_info("%s: aocpu_tick_count_2 = 0x%x\n", __func__,
-			aocpu_tick_count_2);
-	if (aocpu_tick_count_1 != aocpu_tick_count_2)
-		ret = 0;
-	else
-		ret = 1;
-	return ret;
-}
-
 /**
  * aml_mbox_transfer_data - A way for transfer mbox data
  * @mbox_chan:            Mbox channel, this requested by mbox consumer driver
@@ -206,6 +206,8 @@ static inline int check_aocpu_status(void __iomem *sts_addr)
  * @rxbuf:                Mbox receive data size
  * @rxsize:               Mbox receive data size
  * @sync                  Mbox Sync info
+ * return - 0:            Mbox transfer data success
+ *        - less than 0:  Mbox transfer data fail
  */
 #ifdef CONFIG_MAILBOX
 static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
@@ -214,15 +216,19 @@ static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 {
 	struct aml_mbox_data aml_data;
 	struct aml_mbox_chan *aml_chan;
-	void __iomem *sts_addr;
+	struct device *dev;
 	int ret;
-	int chk_ret;
+	u32 dest;
+	bool ip_hang;
 
 	if (IS_ERR_OR_NULL(mbox_chan)) {
 		pr_err("mbox chan is NULL\n");
 		return -EINVAL;
 	}
+
 	aml_chan = mbox_chan->con_priv;
+	dest = aml_chan->dest;
+	dev = mbox_chan->cl->dev;
 	init_completion(&aml_data.complete);
 	aml_data.sync = sync;
 	aml_data.cmd = cmd;
@@ -230,21 +236,22 @@ static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 	aml_data.txsize = txsize;
 	aml_data.rxbuf = rxbuf;
 	aml_data.rxsize = rxsize;
+
+	ip_hang = mbox_check_ip_hang(mbox_chan);
+	if (ip_hang) {
+		dev_err(dev, "error: dest processor %d is not boot up or hang\n",
+				dest);
+		return -ENODEV;
+	}
+
 	mutex_lock(&aml_chan->mutex);
 	ret = mbox_send_message(mbox_chan, &aml_data);
 	mutex_unlock(&aml_chan->mutex);
 	if (ret < 0) {
-		dev_err(mbox_chan->cl->dev, "Fail to send mbox data %d\n", ret);
-		sts_addr = aml_chan->aocpu_tick_cnt_addr;
-		if (sts_addr) {
-			chk_ret = check_aocpu_status(sts_addr);
-			if (!chk_ret)
-				pr_info("Info: aocpu is alive\n");
-			else
-				pr_info("Info: aocpu is not alive\n");
-			return ret;
-		}
+		dev_err(dev, "Error: fail to send mbox data %d\n", ret);
+		dev_warn(dev, "Warning: must not send new msg before TX ACK done!\n");
 	}
+
 	if (sync == MBOX_TSYNC)
 		ret = wait_for_completion_killable(&aml_data.complete);
 	return ret;
