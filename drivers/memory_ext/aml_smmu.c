@@ -1241,6 +1241,13 @@ static u32 aml_tee_protect_mem_by_type(u32 type,
 
 	*handle = res.a1;
 
+	if (res.a0) {
+		pr_err("arm_smccc_smc() pcie tee mem protect fail: 0x%x, trying tee_protect_mem()\n", res.a0);
+
+		return tee_protect_mem(type, 0,
+				start, size, handle);
+	}
+
 	return res.a0;
 }
 
