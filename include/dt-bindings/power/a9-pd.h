@@ -50,3 +50,5 @@
 #define PDID_A9_AUCPU      44
 #define PDID_A9_DSI0       45
 #define PDID_A9_DSI1       46
+#define PDID_A9_CAN0       47
+#define PDID_A9_CAN1       48

@@ -1110,6 +1110,10 @@ static struct sec_pm_private_domain a9_pm_domains[] __initdata = {
 					  DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 	[PDID_A9_DSI1] = POWER_DOMAIN(dsi1, PDID_A9_DSI1,
 					   DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_A9_CAN0] = POWER_DOMAIN(can0, PDID_A9_CAN0,
+					  DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_A9_CAN1] = POWER_DOMAIN(can1, PDID_A9_CAN1,
+					   DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 };
 
 static struct sec_pm_domain_data a9_pm_domain_data __initdata = {
