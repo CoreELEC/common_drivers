@@ -301,6 +301,7 @@ void set_mif_stride(struct vid_cmpr_mif_s *mif, int *stride_y, int *stride_cb, i
 void set_vid_cmpr_shrink(int is_enable, int size, int mode_h, int mode_v);
 void set_vid_cmpr_afbce(int enable, struct vid_cmpr_afbce_s *afbce, bool rdma_en);
 void set_vid_cmpr_wmif(struct vid_cmpr_mif_s *wr_mif, int wrmif_en);
+void set_vid_cmpr_wmif_new(struct vid_cmpr_mif_s *wr_mif, int wrmif_en);
 void set_vid_cmpr_rmif(struct vid_cmpr_mif_s *rd_mif, int urgent, int hold_line);
 void set_vid_cmpr_scale(int is_enable, struct vid_cmpr_scaler_s *scaler);
 void set_vid_cmpr_afbcd(int hold_line_num, bool rdma_en, struct vid_cmpr_afbcd_s *afbcd);

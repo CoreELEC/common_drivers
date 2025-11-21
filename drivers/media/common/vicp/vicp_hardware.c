@@ -130,6 +130,10 @@ void init_vicp_module_reg(enum meson_cpuid_type_e cpuid)
 		vicp_reg_array_init(VICP_SUPPORT_CHIP_S6, VICP_MODULE_AFBCE, &afbce_reg);
 		vicp_reg_array_init(VICP_SUPPORT_CHIP_S6, VICP_MODULE_LOSSY_COMPRESS,
 			&lossy_compress_reg);
+	} else if (cpuid == MESON_CPU_MAJOR_ID_A9) {
+		vicp_reg_array_init(VICP_SUPPORT_CHIP_A9, VICP_MODULE_AFBCE, &afbce_reg);
+		vicp_reg_array_init(VICP_SUPPORT_CHIP_A9, VICP_MODULE_LOSSY_COMPRESS,
+			&lossy_compress_reg);
 	} else {
 		vicp_print(VICP_ERROR, "%s: this chip don't support vicp.\n", __func__);
 	}

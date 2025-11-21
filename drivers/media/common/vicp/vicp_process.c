@@ -1531,6 +1531,60 @@ void set_vid_cmpr_wmif(struct vid_cmpr_mif_s *wr_mif, int wrmif_en)
 	set_wrmif_control(wrmif_control);
 };
 
+void set_vid_cmpr_wmif_new(struct vid_cmpr_mif_s *wr_mif, int wrmif_en)
+{
+	u32 stride_y, stride_cb, stride_cr, rgb_mode, bit10_mode, bubble;
+
+	if (IS_ERR_OR_NULL(wr_mif)) {
+		vicp_print(VICP_ERROR, "%s: invalid param,return.\n", __func__);
+		return;
+	}
+
+	if (print_flag & VICP_WRMIF) {
+		pr_info("vicp: ##########mif_out config##########\n");
+		pr_info("vicp: luma_x: %d, %d.\n", wr_mif->luma_x_start0, wr_mif->luma_x_end0);
+		pr_info("vicp: luma_y: %d, %d.\n", wr_mif->luma_y_start0, wr_mif->luma_y_end0);
+		pr_info("vicp: chrm_x: %d, %d.\n", wr_mif->chrm_x_start0, wr_mif->chrm_x_end0);
+		pr_info("vicp: chrm_y: %d, %d.\n", wr_mif->chrm_y_start0, wr_mif->chrm_y_end0);
+		pr_info("vicp: input_fmt = %d.\n", wr_mif->fmt_mode);
+		pr_info("vicp: output_color_dep = %d.\n", wr_mif->bits_mode);
+		pr_info("vicp: output addr0: 0x%llx.\n", wr_mif->canvas0_addr0);
+		pr_info("vicp: output addr1: 0x%llx.\n", wr_mif->canvas0_addr1);
+		pr_info("vicp: reversion: x %d, y %d.\n", wr_mif->rev_x, wr_mif->rev_y);
+		pr_info("vicp: endian = %d.\n", wr_mif->endian);
+		pr_info("vicp: swap_cbcr = %d.\n", wr_mif->swap_cbcr);
+		pr_info("vicp: #################################.\n");
+	};
+
+	set_mif_stride(wr_mif, &stride_y, &stride_cb, &stride_cr);
+
+	write_vicp_reg(VID_CMPR_WMIF_LUMA_BADDR, wr_mif->canvas0_addr0 >> 4);
+	write_vicp_reg(VID_CMPR_WMIF_CHRM_BADDR, wr_mif->canvas0_addr1 >> 4);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_CTRL1, stride_y, 0, 13);
+	write_vicp_reg_bits(VID_CMPR_WMIF_CHRM_CTRL1, stride_cb, 0, 13);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_X, wr_mif->luma_x_start0, 0, 13);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_X, wr_mif->luma_x_end0, 16, 13);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_Y, wr_mif->luma_y_start0, 0, 13);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_Y, wr_mif->luma_y_end0, 16, 13);
+
+	rgb_mode = wr_mif->fmt_mode == 2 ? 0 : 1;//no 420
+	bubble = wr_mif->bits_mode == 1 ? 1 : 0;
+	bit10_mode = wr_mif->bits_mode == 0 ? 0 : 1;
+	write_vicp_reg_bits(VID_CMPR_WMIF_CTRL1, bit10_mode & 0x3, 28, 2);
+	write_vicp_reg_bits(VID_CMPR_WMIF_CTRL1, rgb_mode & 0x3, 26, 2);
+	write_vicp_reg_bits(VID_CMPR_WMIF_CTRL1, bubble, 31, 1);
+
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_CTRL0, 1, 25, 1);//swap64
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_CTRL0, 0, 24, 1);//endian
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_CTRL0, wr_mif->rev_x, 22, 1);
+	write_vicp_reg_bits(VID_CMPR_WMIF_LUMA_CTRL0, wr_mif->rev_y, 23, 1);
+
+	write_vicp_reg_bits(VID_CMPR_WMIF_CHRM_CTRL0, 1, 25, 1);//swap64
+	write_vicp_reg_bits(VID_CMPR_WMIF_CHRM_CTRL0, 0, 24, 1);//endian
+	write_vicp_reg_bits(VID_CMPR_WMIF_CHRM_CTRL0, wr_mif->rev_x, 22, 1);
+	write_vicp_reg_bits(VID_CMPR_WMIF_CHRM_CTRL0, wr_mif->rev_y, 23, 1);
+};
+
 static void set_vid_cmpr_rdma_config(bool rdma_en, int input_count, int input_number)
 {
 	int i, data_size;
@@ -2073,7 +2127,10 @@ static void set_vid_cmpr_all_param(struct vid_cmpr_top_s *vid_cmpr_top)
 		vid_cmpr_wmif.endian = vid_cmpr_top->out_endian;
 		vid_cmpr_wmif.swap_cbcr = vid_cmpr_top->out_need_swap_cbcr;
 
-		set_vid_cmpr_wmif(&vid_cmpr_wmif, vid_cmpr_top->wrmif_en);
+		if (vicp_dev.cpu_type >= MESON_CPU_MAJOR_ID_A9)
+			set_vid_cmpr_wmif_new(&vid_cmpr_wmif, vid_cmpr_top->wrmif_en);
+		else
+			set_vid_cmpr_wmif(&vid_cmpr_wmif, vid_cmpr_top->wrmif_en);
 	} else {
 		set_wrmif_path_enable(0);
 	}
