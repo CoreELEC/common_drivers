@@ -1897,8 +1897,8 @@
 		interrupts = <0 203 1
 				0 202 1>;
 		interrupt-names = "pre_irq", "post_irq";
-		//clocks = <&clkc CLKID_VPU_CLKB>,
-		//	<&clkc_vpu>;
+		clocks = <&clkc_vpu_clkb CLKID_VPU_CLKB>,
+			 <&clkc_vpu>;
 		clock-names = "vpu_clkb",
 			"vpu_mux";
 		clock-range = <334 667>;

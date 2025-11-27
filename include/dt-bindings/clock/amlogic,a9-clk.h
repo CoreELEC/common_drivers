@@ -20,6 +20,13 @@
 #define CLKID_MALI				0
 #define CLKID_MALI_STACK			1
 
+/* DI */
+#define CLKID_VPU_CLKB_TMP_MUX			0
+#define CLKID_VPU_CLKB_TMP_DIV			1
+#define CLKID_VPU_CLKB_TMP			2
+#define CLKID_VPU_CLKB_DIV			3
+#define CLKID_VPU_CLKB				4
+
 /* VAPB GE2D */
 #define CLKID_VAPB_0_MUX			0
 #define CLKID_VAPB_0_DIV			1

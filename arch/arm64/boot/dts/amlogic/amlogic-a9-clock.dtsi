@@ -102,6 +102,15 @@
 		#clock-cells = <0>;
 	};
 
+	vpu_clkb_parents: vpu_clkb_parents {
+		clock-mult-parents;
+		clock-parents = <&clkc_vpu>,
+				<&scmi_clk CLKID_FCLK_DIV4>,
+				<&scmi_clk CLKID_FCLK_DIV5>,
+				<&scmi_clk CLKID_FCLK_DIV7>;
+		#clock-cells = <0>;
+	};
+
 	vapb_pre_parents: vapb_pre_parents {
 		clock-mult-parents;
 		clock-parents = <&scmi_clk CLKID_FCLK_DIV4>,
@@ -621,6 +630,51 @@
 			 <&scmi_clk CLKID_FCLK_DIV5>,
 			 <&scmi_clk CLKID_FCLK_DIV2>,
 			 <&scmi_clk CLKID_GP1_PLL>;
+	};
+
+	clkc_vpu_clkb: clock-vpu_clkb@480 {
+		compatible = "amlogic,basic-clk";
+		reg = <0x0 0x480 0x0 0x4>;
+		#clock-cells = <1>;
+		clock-output-names = "vpu_clkb_tmp_mux",
+				     "vpu_clkb_tmp_div",
+				     "vpu_clkb_tmp",
+				     "vpu_clkb_div",
+				     "vpu_clkb";
+		clock-basic-types = <AML_CLKTYPE_MUX>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>,
+				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_GATE>;
+		clock-reg-offsets = <0x0 25 3>,  /* regoffset shift width */
+				    <0x0 16 4>,
+				    <0x0 24 1>,
+				    <0x0 0  8>,
+				    <0x0 8  1>;
+		clock-indices = <CLKID_VPU_CLKB_TMP_MUX>,
+				<CLKID_VPU_CLKB_TMP_DIV>,
+				<CLKID_VPU_CLKB_TMP>,
+				<CLKID_VPU_CLKB_DIV>,
+				<CLKID_VPU_CLKB>;
+		clock-parents = <&vpu_clkb_parents>,
+				<&clkc_vpu_clkb CLKID_VPU_CLKB_TMP_MUX>,
+				<&clkc_vpu_clkb CLKID_VPU_CLKB_TMP_DIV>,
+				<&clkc_vpu_clkb CLKID_VPU_CLKB_TMP>,
+				<&clkc_vpu_clkb CLKID_VPU_CLKB_DIV>;
+		clock-flags = <0 0>,  /* clkdata_flags clkhw_flags */
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>,
+			      <0 CLK_SET_RATE_PARENT>;
+		clock-rate-range = <0 0 0 0>,
+				   <0 0 0 667000000>,
+				   <0 0 0 667000000>,
+				   <0 0 0 667000000>,
+				   <0 0 0 667000000>;
+		clocks = <&clkc_vpu>,
+			 <&scmi_clk CLKID_FCLK_DIV4>,
+			 <&scmi_clk CLKID_FCLK_DIV5>,
+			 <&scmi_clk CLKID_FCLK_DIV7>;
 	};
 
 	clkc_vapb_ge2d: clock-vapb_ge2d@468 {
