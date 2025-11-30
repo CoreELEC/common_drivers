@@ -28,7 +28,6 @@
 };
 
 &sd_emmc_a {
-	/delete-property/ use_intf3_tuning;
 	brcmf: wifi@1 {
 		compatible = "sprd,unisoc-wifi";
 	};
