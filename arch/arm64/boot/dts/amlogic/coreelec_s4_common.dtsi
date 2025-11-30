@@ -161,6 +161,10 @@
 	otg = <0>;
 };
 
+&sd_emmc_a {
+	/delete-property/ use_intf3_tuning;
+};
+
 &sd_emmc_b {
 	cap-mmc-highspeed;
 	max-frequency = <50000000>;
