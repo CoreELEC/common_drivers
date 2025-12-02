@@ -95,7 +95,7 @@ enum bl_off_policy_e {
 #define BL_POLICY_POWER_ON_MASK              3
 
 #define BL_GPIO_MAX             0xff
-#define BL_GPIO_NUM_MAX         5
+#define BL_GPIO_NUM_MAX         16
 struct bl_gpio_s {
 	char name[LCD_CPU_GPIO_NAME_MAX];
 	struct gpio_desc *gpio;

@@ -34,6 +34,7 @@
 #include "../lcd_reg.h"
 
 unsigned int amblt_debug_print;
+static struct amblt_drv_s *amblt_driver;
 
 atomic_t amblt_inirq_flag = ATOMIC_INIT(0);
 u8 amblt_isr_cpuid;
@@ -88,6 +89,7 @@ static void set_vpu_lut_dma_mif_wr(struct vpu_lut_dma_wr_s *lut_dma, int flag)
 		//Bit 1     lut_wr_cnt_sel    // unsigned ,    RW , default = 0
 		//Bit 0     lut_wr_reg_sel    // unsigned ,    RW , default = 0,
 				// 0: sel lut0,1,2,...,7 1:sel lut8,9,...,15
+		amblt_wr_reg_bits(VPU_DMA_WRMIF_CTRL, 1, 13, 1);//wr dma enable
 		amblt_wr_reg(VPU_DMA_WRMIF_SEL, (0xff0 + lut_dma->wr_sel));
 		amblt_wr_reg(VPU_DMA_WRMIF0_CTRL + ofst,
 					((lut_dma->addr_mode & 0x3) << 28) |
@@ -112,29 +114,30 @@ static void amblt_hw_ctrl(struct amblt_drv_s *amblt_drv)
 		set_vpu_lut_dma_mif_wr(&amblt_drv->lut_dma, 1);
 
 		if (amblt_data->chip_type == LCD_CHIP_T6W) {
-			lcd_vcbus_setb(LDC_AMBIGHT_HSIZE, amblt_drv->hsize, 0, 13);  //hsize
-			lcd_vcbus_setb(LDC_AMBIGHT_VSIZE, amblt_drv->vsize, 0, 13);  //vsize
-			lcd_vcbus_setb(LDC_AMBIGHT_STAT_NUM, amblt_drv->zone_h, 0, 6);  //x num
-			lcd_vcbus_setb(LDC_AMBIGHT_STAT_NUM, amblt_drv->zone_v, 6, 5);  //y num
-			lcd_vcbus_setb(LDC_AMBIGHT_STAT_NUM, 1, 11, 1);  //reverse vs pol
-			// lcd_vcbus_setb(LDC_AMBIGHT_STAT_NUM, 1, 21, 1);  //reverse vs pol
+			amblt_wr_reg_bits(LDC_AMBIGHT_HSIZE, amblt_drv->hsize, 0, 13);  //hsize
+			amblt_wr_reg_bits(LDC_AMBIGHT_VSIZE, amblt_drv->vsize, 0, 13);  //vsize
+			amblt_wr_reg_bits(LDC_AMBIGHT_STAT_NUM, amblt_drv->zone_h, 0, 6);  //x num
+			amblt_wr_reg_bits(LDC_AMBIGHT_STAT_NUM, amblt_drv->zone_v, 6, 5);  //y num
+			amblt_wr_reg_bits(LDC_AMBIGHT_STAT_NUM, 1, 11, 1);  //reverse vs pol
+			// amblt_wr_reg_bits(LDC_AMBIGHT_STAT_NUM, 1, 21, 1);  //reverse vs pol
 			amblt_wr_reg_bits(LDC_AMBIGHT_VSIZE, 1, 13, 1); //en
 		} else if (amblt_data->chip_type == LCD_CHIP_T6X) {
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM_T6X, amblt_drv->zone_h, 9, 6);
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM_T6X, amblt_drv->zone_v, 16, 5);
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM_T6X, amblt_drv->zone_h, 9, 6);
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM_T6X, amblt_drv->zone_v, 16, 5);
 
 			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM_T6X, 1, 24, 1); //en
 		} else {
-			lcd_vcbus_setb(LCD_OLED_SIZE, amblt_drv->hsize, 0, 13);  //hsize
-			lcd_vcbus_setb(LCD_OLED_SIZE, amblt_drv->vsize, 16, 13);  //vsize
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM, amblt_drv->zone_h, 0, 6);  //x num
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM, amblt_drv->zone_v, 8, 5);  //y num
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM, 1, 15, 1);  //reverse vs pol
-			lcd_vcbus_setb(LDC_REG_INPUT_STAT_NUM, 1, 21, 1);  //reverse vs pol
+			amblt_wr_reg_bits(LCD_OLED_SIZE, amblt_drv->hsize, 0, 13);  //hsize
+			amblt_wr_reg_bits(LCD_OLED_SIZE, amblt_drv->vsize, 16, 13);  //vsize
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM, amblt_drv->zone_h, 0, 6);  //x num
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM, amblt_drv->zone_v, 8, 5);  //y num
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM, 1, 15, 1);  //reverse vs pol
+			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM, 1, 21, 1);  //reverse vs pol
 			amblt_wr_reg_bits(LDC_REG_INPUT_STAT_NUM, 1, 16, 1); //en
 			//AMBLTPR("LDC_REG_INPUT_STAT_NUM 0x%04x = 0x%08x\n",
 			//	LDC_REG_INPUT_STAT_NUM, lcd_vcbus_read(LDC_REG_INPUT_STAT_NUM));
 		}
+
 		amblt_drv->state |= AMBLT_STATE_EN;
 		if (amblt_debug_print) {
 			AMBLTPR("ambilight enable: zone x:%d, y:%d\n",
@@ -142,6 +145,7 @@ static void amblt_hw_ctrl(struct amblt_drv_s *amblt_drv)
 		}
 	} else {
 		amblt_drv->state &= ~AMBLT_STATE_EN;
+
 		if (amblt_data->chip_type == LCD_CHIP_T6W)
 			amblt_wr_reg_bits(LDC_AMBIGHT_VSIZE, 0, 13, 1);
 		else if (amblt_data->chip_type == LCD_CHIP_T6X)
@@ -167,12 +171,7 @@ int amblt_function_enable(struct amblt_drv_s *amblt_drv)
 		return 0;
 	}
 
-	amblt_drv->lut_dma.rpt_num = (amblt_drv->zone_size + 3) / 4;
 	vpu_lut_dma_clr_fcnt(&amblt_drv->lut_dma);
-
-	AMBLTPR("ambilight mem paddr: 0x%x, vaddr: 0x%px, size: 0x%x, zone_h=%d, zone_v=%d\n",
-		(unsigned int)dma_mem->paddr, dma_mem->vaddr, dma_mem->size,
-		amblt_drv->zone_h, amblt_drv->zone_v);
 	memset(dma_mem->vaddr, 0, dma_mem->size);
 
 	amblt_drv->en = 1;
@@ -218,6 +217,13 @@ static void amblt_data_refersh(struct amblt_drv_s *amblt_drv)
 				amblt_drv->buf[n].err = 1;
 			else
 				amblt_drv->buf[n].err = 0;
+
+			if (amblt_drv->buf[n].err) {
+				//AMBLTERR("buf[%d].err, x=%d,y=%d\n", n, sum->x, sum->y);
+				amblt_drv->state |= AMBLT_STATE_DATA_ERR;
+			} else {
+				amblt_drv->state &= ~AMBLT_STATE_DATA_ERR;
+			}
 		}
 	}
 }
@@ -278,11 +284,11 @@ static int amblt_get_config(struct amblt_drv_s *amblt_drv, struct platform_devic
 		AMBLTERR("%s: get zone_h_v error\n", __func__);
 		return -1;
 	}
+
 	amblt_drv->zone_h = para[0];
 	amblt_drv->zone_v = para[1];
 	amblt_drv->zone_size = para[0] * para[1];
-	//AMBLTPR("%s: zone h=%d, v=%d, size=%d\n",
-	//	__func__, amblt_drv->zone_h, amblt_drv->zone_v, amblt_drv->zone_size);
+
 	amblt_zone_pixel_init(amblt_drv);
 
 	amblt_drv->res_vs_irq = platform_get_irq_byname(pdev, "vsync");
@@ -312,11 +318,6 @@ void amblt_zone_pixel_init(struct amblt_drv_s *amblt_drv)
 	AMBLTPR("%s: %d x %d / %d x %d: %d x %d = %d\n",
 		__func__, h_active, v_active, amblt_drv->zone_h, amblt_drv->zone_v,
 		h_pixel, v_pixel, amblt_drv->zone_pixel);
-
-	kfree(amblt_drv->buf);
-	amblt_drv->buf = kcalloc(amblt_drv->zone_size, sizeof(struct amblt_data_s), GFP_KERNEL);
-	if (!amblt_drv->buf)
-		AMBLTERR("%s: data buf is NULL\n", __func__);
 }
 
 static void amblt_lut_dma_init(struct amblt_drv_s *amblt_drv)
@@ -344,7 +345,7 @@ static void amblt_lut_dma_init(struct amblt_drv_s *amblt_drv)
 	lut_dma->addr_mode = 1;//0; //1;
 	lut_dma->rpt_num = rpt_num;
 
-	lcd_vcbus_setb(VPU_DMA_WRMIF_CTRL, 1, 13, 1);//wr dma enable
+	//amblt_wr_reg_bits(VPU_DMA_WRMIF_CTRL, 1, 13, 1);//wr dma enable
 }
 
 static int amblt_dma_malloc(struct amblt_drv_s *amblt_drv, struct device *dev)
@@ -364,8 +365,35 @@ static int amblt_dma_malloc(struct amblt_drv_s *amblt_drv, struct device *dev)
 	AMBLTPR("%s: dma paddr: 0x%lx, vaddr: 0x%px, size: 0x%x, flag: %d\n",
 	       __func__, (unsigned long)dma_mem->paddr, dma_mem->vaddr,
 	       dma_mem->size, dma_mem->flag);
+
+	amblt_drv->buf = kcalloc(640, sizeof(struct amblt_data_s), GFP_KERNEL);
+	if (!amblt_drv->buf)
+		return -1;
+
 	return 0;
 }
+
+void amblt_set_en(unsigned char en, unsigned short col, unsigned short row)
+{
+	if (amblt_driver->zone_h != col || amblt_driver->zone_v != row) {
+		amblt_driver->zone_h = col;
+		amblt_driver->zone_v = row;
+		amblt_driver->zone_size = col * row;
+		amblt_zone_pixel_init(amblt_driver);
+		amblt_lut_dma_init(amblt_driver);
+	}
+	if (en)
+		amblt_function_enable(amblt_driver);
+	else
+		amblt_function_disable(amblt_driver);
+}
+EXPORT_SYMBOL(amblt_set_en);
+
+void *amblt_get_data(void)
+{
+	return amblt_driver->buf;
+}
+EXPORT_SYMBOL(amblt_get_data);
 
 /* ************************************************************* */
 /* amblt driver data                                             */
@@ -454,6 +482,8 @@ static int amblt_probe(struct platform_device *pdev)
 	ret = amblt_vsync_irq_init(amblt_drv);
 	if (ret)
 		goto amblt_probe_err_2;
+
+	amblt_driver = amblt_drv;
 
 	AMBLTPR("driver probe ok\n");
 

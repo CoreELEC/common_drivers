@@ -12,6 +12,7 @@
 #include <linux/workqueue.h>
 #include <linux/spinlock.h>
 #include <linux/irq.h>
+#include <linux/interrupt.h>
 #include <linux/notifier.h>
 #include <linux/platform_device.h>
 #include <linux/fs.h>
@@ -564,9 +565,6 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 {
 	struct bl_pwm_config_s *bl_pwm;
 	struct pwm_state pstate;
-	struct spi_device *spi0, *spi1;
-	struct spicc_controller_data *cdata0, *cdata1;
-	struct spi_private_data *priv0, *priv1;
 	int i, n, len = 0;
 	char *str = NULL;
 
@@ -620,18 +618,6 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 
 	switch (ldim_drv->dev_drv->type) {
 	case LDIM_DEV_TYPE_SPI:
-		spi0 = ldim_drv->dev_drv->spi_conf.spi_dev[0];
-		if (spi0) {
-			cdata0 = spi0->controller_data;
-			priv0 = cdata0->priv;
-		}
-
-		spi1 = ldim_drv->dev_drv->spi_conf.spi_dev[1];
-		if (spi1) {
-			cdata1 = spi1->controller_data;
-			priv1 = cdata1->priv;
-		}
-
 		pr_info("spi_pointer      = 0x%p\n"
 			"spi_modalias     = %s\n"
 			"spi_mode         = %d\n"
@@ -644,11 +630,7 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 			"lamp_err_gpio    = %d\n"
 			"fault_check      = %d\n"
 			"write_check      = %d\n"
-			"trig_mode        = %d\n"
-			"spi_mode_bit     = 0x%x\n"
-			"spi_tx_dma       = 0x%lx : 0x%lx\n"
-			"spi_rx_dma       = 0x%lx : 0x%lx\n"
-			"spi_xlen         = %d : %d\n"
+			"trig_mode         = %d\n"
 			"spi_line_n       = %d\n\n",
 			ldim_drv->dev_drv->spi_conf.spi_dev,
 			ldim_drv->dev_drv->spi_conf.spi_info[0].modalias,
@@ -665,13 +647,6 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 			ldim_drv->dev_drv->fault_check,
 			ldim_drv->dev_drv->write_check,
 			ldim_drv->dev_drv->spi_conf.trig_mode,
-			(spi0) ? spi0->controller->mode_bits : 0,
-			(ulong)((spi0 && cdata0 && priv0) ? priv0->tx_dma : 0),
-			(ulong)((spi1 && cdata1 && priv1) ? priv1->tx_dma : 0),
-			(ulong)((spi0 && cdata0 && priv0) ? priv0->rx_dma : 0),
-			(ulong)((spi1 && cdata1 && priv1) ? priv1->rx_dma : 0),
-			(spi0 && cdata0 && priv0) ? priv0->xlen : 0,
-			(spi1 && cdata1 && priv1) ? priv1->xlen : 0,
 			ldim_drv->dev_drv->spi_conf.vs2cs_delay);
 		break;
 	case LDIM_DEV_TYPE_I2C:
@@ -1134,12 +1109,35 @@ static ssize_t ldim_dev_spi_store(const struct class *class, const struct class_
 	return count;
 }
 
+static ssize_t ldim_dev_gpio_store(const struct class *class,
+				const struct class_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned int val = 0, val1 = 0;
+	unsigned int ret;
+
+	if (buf[0] == 's') {/*set*/
+		ret = sscanf(buf, "s %d %d", &val, &val1);/*s idx val*/
+		if (ret == 2)
+			ldim_gpio_set(&ldim_dev_drv, ldim_dev_drv.ctrl_gpio[val], val1);
+	} else if (buf[0] == 'g') {/*get*/
+		ret = sscanf(buf, "g %d", &val);
+		if (ret == 1) {
+			val1 = ldim_gpio_get(&ldim_dev_drv, ldim_dev_drv.ctrl_gpio[val]);
+			LDIMPR("get ctrl_gpio[%d]=%d\n", val, val1);
+		}
+	}
+
+	return count;
+}
+
 static struct class_attribute ldim_dev_class_attrs[] = {
 	__ATTR(status, 0644, ldim_dev_show, NULL),
 	__ATTR(pwm_ldim, 0644, ldim_dev_pwm_ldim_show, ldim_dev_pwm_ldim_store),
 	__ATTR(pwm_analog, 0644, ldim_dev_pwm_analog_show, ldim_dev_pwm_analog_store),
 	__ATTR(reg, 0644, ldim_dev_reg_show, ldim_dev_reg_store),
-	__ATTR(spi, 0644, NULL, ldim_dev_spi_store)
+	__ATTR(spi, 0644, NULL, ldim_dev_spi_store),
+	__ATTR(gpio, 0644, NULL, ldim_dev_gpio_store)
 };
 
 static void ldim_dev_class_create(struct ldim_dev_driver_s *dev_drv)
@@ -1164,6 +1162,12 @@ static int ldim_dev_add_driver(struct aml_ldim_driver_s *ldim_drv)
 {
 	struct ldim_dev_driver_s *dev_drv = ldim_drv->dev_drv;
 	int ret = -1;
+
+	if ((dev_drv->type == LDIM_DEV_TYPE_ABCON ||
+		dev_drv->spi_conf.trig_mode == SPI_TRIG_VSYNC ||
+		dev_drv->spi_conf.trig_mode == SPI_TRIG_LINE_N) &&
+		ldim_drv->ldim_pwm_vs_irq)
+		free_irq(ldim_drv->ldim_pwm_vs_irq, (void *)&ldim_drv->ldim_pwm_vs_irq);
 
 	switch (dev_drv->type) {
 	case LDIM_DEV_TYPE_SPI:
@@ -1216,6 +1220,8 @@ static int ldim_dev_add_driver(struct aml_ldim_driver_s *ldim_drv)
 #endif
 	} else if (strcmp(dev_drv->name, "global") == 0) {
 		ret = ldim_dev_global_probe(ldim_drv);
+	} else if (strcmp(dev_drv->name, "rgb_ld") == 0) {
+		ret = ldim_dev_rgb_probe(ldim_drv);
 	} else {
 		LDIMERR("invalid device name: %s\n", dev_drv->name);
 	}
@@ -1272,6 +1278,8 @@ static int ldim_dev_remove_driver(struct aml_ldim_driver_s *ldim_drv)
 #endif
 		} else if (strcmp(dev_drv->name, "global") == 0) {
 			ret = ldim_dev_global_remove(ldim_drv);
+		} else if (strcmp(dev_drv->name, "rgb_ld") == 0) {
+			ret = ldim_dev_rgb_remove(ldim_drv);
 		} else {
 			LDIMERR("invalid device name: %s\n", dev_drv->name);
 		}
@@ -1305,7 +1313,7 @@ static void ldim_dev_probe_func(struct work_struct *work)
 	struct spicc_controller_data *cdata;
 	struct spi_private_data *priv;
 	struct spi_conf_s *spi_conf = &ldim_dev_drv.spi_conf;
-	unsigned int val, i;
+	unsigned int i;
 	int ret = -1;
 
 	if (ldim_drv->valid_flag == 0) {
@@ -1335,9 +1343,9 @@ static void ldim_dev_probe_func(struct work_struct *work)
 	ldim_dev_drv.bl_col = ldim_drv->conf->seg_col;
 	ldim_dev_drv.ldim_pwm_config.pwm_duty_max = 4095;
 	ldim_dev_drv.analog_pwm_config.pwm_duty_max = 4095;
-	val = ldim_dev_drv.bl_row * ldim_dev_drv.bl_col;
-	ldim_dev_drv.zone_num = val;
-	ldim_dev_drv.bl_mapping = kcalloc(val * 2, sizeof(unsigned short), GFP_KERNEL);
+	ldim_dev_drv.zone_num = ldim_drv->conf->zone_num;
+	ldim_dev_drv.bl_mapping =
+		kcalloc(ldim_dev_drv.zone_num * 2, sizeof(unsigned short), GFP_KERNEL);
 	if (!ldim_dev_drv.bl_mapping)
 		goto ldim_dev_probe_func_fail0;
 
@@ -1403,18 +1411,25 @@ static void ldim_dev_probe_func(struct work_struct *work)
 	if (ldim_dev_drv.type == LDIM_DEV_TYPE_SPI) {
 		for (i = 0; i < spi_conf->spi_dev_num; i++) {
 			cdata = spi_conf->spi_dev[i]->controller_data;
+			if (!cdata)
+				goto ldim_dev_probe_func_fail2;
 			priv = cdata->priv;
+			if (!priv)
+				goto ldim_dev_probe_func_fail2;
+			if (!spi_conf->spi_dev[i]->controller)
+				goto ldim_dev_probe_func_fail2;
 			priv->tx_buf =
 			dma_alloc_coherent(spi_conf->spi_dev[i]->controller->dev.parent,
-				priv->xlen, &priv->tx_dma, GFP_KERNEL | GFP_DMA);
+			priv->xlen, &priv->tx_dma, GFP_KERNEL | GFP_DMA);
 			if (!priv->tx_buf) {
 				LDIMERR("%s: priv->tx_buf %d is error\n", __func__, i);
 				goto ldim_dev_probe_func_fail2;
 			}
+
 			if (spi_conf->rx_en) {
 				priv->rx_buf =
 				dma_alloc_coherent(spi_conf->spi_dev[i]->controller->dev.parent,
-					priv->xlen, &priv->rx_dma, GFP_KERNEL | GFP_DMA);
+				priv->xlen, &priv->rx_dma, GFP_KERNEL | GFP_DMA);
 				if (!priv->rx_buf) {
 					LDIMERR("%s: priv->rx_buf %d is error\n", __func__, i);
 					goto ldim_dev_probe_func_fail3;
@@ -1424,8 +1439,9 @@ static void ldim_dev_probe_func(struct work_struct *work)
 				priv->rx_dma = 0;
 			}
 
-			LDIMPR("%s spi_dev_idx:%d, tx_dma=0x%lx, rx_dma=0x%lx\n", __func__,
-			i, (ulong)priv->tx_dma, (ulong)priv->rx_dma);
+			if (priv)
+				LDIMPR("%s spi_dev_idx:%d, tx_dma=0x%lx, rx_dma=0x%lx\n", __func__,
+				i, (ulong)priv->tx_dma, (ulong)priv->rx_dma);
 		}
 		if (spi_conf->trig_mode == SPI_TRIG_LINE_N)
 			ldim_wr_vcbus(VPP_INT_LINE_NUM, spi_conf->vs2cs_delay);

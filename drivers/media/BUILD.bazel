@@ -607,6 +607,7 @@ ddk_module(
                 "vout/lcd/backlight/bl_ldim/ldim_dev_config.c",
                 "vout/lcd/backlight/bl_ldim/ldim_spi.c",
                 "vout/lcd/backlight/bl_ldim/global_bl.c",
+                "vout/lcd/backlight/bl_ldim/rgb_ld.c",
             ],
         },
         "CONFIG_AMLOGIC_BL_LDIM_OB3350": {

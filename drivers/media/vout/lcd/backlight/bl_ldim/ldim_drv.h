@@ -33,8 +33,9 @@
 /*20251123: modify level idx to 256 */
 /*20260110: modify ldim_fw_s */
 /*20260110: add CMD_PWROFF */
+/*20260411: support rgb */
 
-#define LDIM_DRV_VER    "20260207"
+#define LDIM_DRV_VER    "20260411"
 
 extern unsigned char ldim_print_en;
 #define LDIMPR(fmt, args...)     \

@@ -1085,7 +1085,7 @@
 };
 
 &ambilight {
-	status = "disabled";
+	status = "okay";
 	zone_h_v = <32 20>;
 };
 

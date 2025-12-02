@@ -38,6 +38,8 @@ struct ldim_config_s {
 	unsigned char bl_mode;
 	unsigned char func_en;
 	unsigned char dev_index;
+	unsigned char rgb;
+	unsigned int zone_num;
 };
 
 struct spi_private_data {
@@ -113,6 +115,7 @@ struct ldim_dev_driver_s {
 	int en_gpio_on;
 	int en_gpio_off;
 	int lamp_err_gpio;
+	int ctrl_gpio[16];
 	unsigned char fault_check;
 	unsigned char write_check;
 	unsigned char pinmux_flag;
@@ -185,8 +188,7 @@ struct ldim_drv_data_s {
 
 	void (*vs_arithmetic)(struct aml_ldim_driver_s *ldim_drv);
 	int (*memory_init)(struct platform_device *pdev,
-			   struct ldim_drv_data_s *data,
-			   unsigned int row, unsigned int col);
+			   struct ldim_drv_data_s *data);
 	void (*drv_init)(struct aml_ldim_driver_s *ldim_drv);
 	void (*func_ctrl)(struct aml_ldim_driver_s *ldim_drv, int flag);
 };

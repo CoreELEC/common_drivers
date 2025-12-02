@@ -56,6 +56,7 @@ struct amblt_drv_data_s {
 };
 
 #define AMBLT_STATE_EN        BIT(0)
+#define AMBLT_STATE_DATA_ERR        BIT(7)
 
 struct amblt_drv_s {
 	unsigned int state;

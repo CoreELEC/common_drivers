@@ -959,7 +959,7 @@
 };
 
 &spicc2 {	//for UWB/LocalDimm
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc2_pins_m>;
 };
@@ -1088,7 +1088,7 @@
 };
 
 &ambilight {
-	status = "disabled";
+	status = "okay";
 	zone_h_v = <32 20>;
 };
 

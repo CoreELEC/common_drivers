@@ -117,6 +117,7 @@ struct ldim_fw_param_s {
 #define FW_CTRL_BYPASS_ALG		BIT(29)
 #define FW_CTRL_BYPASS_REMAP_BL	BIT(28)
 #define FW_CTRL_RESUME			BIT(27)
+#define FW_CTRL_RGB				BIT(26)
 #define FW_CTRL_GET_GLB_HIST	BIT(10)
 #define FW_CTRL_FW_PRINT_EN		BIT(9)
 #define FW_CTRL_LD_SEL			BIT(8)

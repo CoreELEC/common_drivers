@@ -11,6 +11,7 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/ldi
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/ldim_dev_drv.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/ldim_dev_config.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/ldim_spi.o
+$(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/rgb_ld.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM) += vout/lcd/backlight/bl_ldim/global_bl.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM_ABCON) += vout/lcd/backlight/bl_ldim/abcon/ldim_abcon.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_BL_LDIM_ABCON) += vout/lcd/backlight/bl_ldim/abcon/ldim_abcon_spb.o

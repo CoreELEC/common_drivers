@@ -93,6 +93,8 @@ static struct ldim_config_s ldim_config = {
 	.seg_col = 1,
 	.bl_mode = 1,
 	.dev_index = 0xff,
+	.rgb = 0,
+	.zone_num = 1,
 };
 
 static struct ldim_rmem_s ldim_rmem = {
@@ -483,14 +485,12 @@ void ldim_trig_line_update(struct aml_ldim_driver_s *ldim_drv)
 
 void ldim_vs_arithmetic(struct aml_ldim_driver_s *ldim_drv)
 {
-	unsigned int size;
+	unsigned int size = ldim_config.zone_num;
 	struct ldim_fw_s *fw = ldim_drv->fw;
 	struct ldim_fw_custom_s *cus_fw = ldim_drv->cus_fw;
 
 	if (!fw || !fw->param || !fw->param->stts || !fw->bl_matrix)
 		return;
-
-	size = ldim_drv->conf->seg_row * ldim_drv->conf->seg_col;
 
 	if (fw->fw_alg_frm)
 		fw->fw_alg_frm(fw);
@@ -809,7 +809,7 @@ static void ldim_on_vs_brightness(void)
 	if (ldim_driver.time_msr_en)
 		local_time[0] = sched_clock();
 
-	size = ldim_driver.conf->seg_row * ldim_driver.conf->seg_col;
+	size = ldim_config.zone_num;
 
 	if (ldim_driver.test_bl_en) {
 		ldim_test_bl_run();
@@ -1209,6 +1209,7 @@ int aml_ldim_get_config_dts(struct device_node *child)
 	}
 	ldim_config.seg_row = para[0];
 	ldim_config.seg_col = para[1];
+	ldim_config.zone_num = ldim_config.seg_row * ldim_config.seg_col;
 
 aml_ldim_get_config_dts_next:
 	/* get bl_mode from dts */
@@ -1243,7 +1244,14 @@ int aml_ldim_get_config_json(int panel_id)
 		return -1;
 	}
 
-	parent = json_path_to_node(jsp, jsp->root, "/backlight/ldim_dev/basic_info/row_col");
+	parent = json_path_to_node(jsp, jsp->root,  "/backlight/ldim_dev/basic_info");
+	if (!parent) {
+		BLPR("failed find /backlight/ldim_dev/basic_info\n");
+		return -1;
+	}
+	ldim_config.rgb = json_get_obj_u32(jsp, parent, "rgb", 0);
+
+	parent = json_get_object_child(jsp, parent, "row_col");
 	if (!parent) {
 		BLPR("failed find /backlight/ldim_dev/basic_info/row_col\n");
 		return -1;
@@ -1252,7 +1260,12 @@ int aml_ldim_get_config_json(int panel_id)
 	ldim_config.dev_index = 0;
 	ldim_config.seg_row = json_get_arr_u32(jsp, parent, 0, 0);
 	ldim_config.seg_col = json_get_arr_u32(jsp, parent, 1, 0);
-	LDIMPR("%s row:%d, col: %d\n", __func__, ldim_config.seg_row, ldim_config.seg_col);
+	ldim_config.zone_num = ldim_config.seg_row * ldim_config.seg_col;
+	if (ldim_config.rgb)
+		ldim_config.zone_num = ldim_config.zone_num * 3;
+
+	BLPR("%s row:%d, col: %d, zone_num: %d, rgb:%d\n", __func__,
+		ldim_config.seg_row, ldim_config.seg_col, ldim_config.zone_num, ldim_config.rgb);
 
 	return 0;
 }
@@ -1265,7 +1278,12 @@ int aml_ldim_get_config_ini(void *inip, void *psec)
 	ldim_config.dev_index = 0;
 	ldim_config.seg_row = lcd_ini_get_val(inip, psec, "bl_ldim_row", 0);
 	ldim_config.seg_col = lcd_ini_get_val(inip, psec, "bl_ldim_col", 0);
-	LDIMPR("%s row:%d, col: %d\n", __func__, ldim_config.seg_row, ldim_config.seg_col);
+	ldim_config.rgb = lcd_ini_get_val(inip, psec, "rgb", 0);
+	ldim_config.zone_num = ldim_config.seg_row * ldim_config.seg_col;
+	if (ldim_config.rgb)
+		ldim_config.zone_num = ldim_config.zone_num * 3;
+	LDIMPR("%s row:%d, col: %d, zone_num:%d, rgb:%d\n", __func__,
+		ldim_config.seg_row, ldim_config.seg_col, ldim_config.zone_num, ldim_config.rgb);
 
 	return 0;
 }
@@ -1282,10 +1300,9 @@ void aml_ldim_rmem_info(void)
 		ldim_rmem.rsv_mem_size, ldim_rmem.flag);
 }
 
-static int aml_ldim_malloc(struct platform_device *pdev, struct ldim_drv_data_s *data,
-			      unsigned int row, unsigned int col)
+static int aml_ldim_malloc(struct platform_device *pdev, struct ldim_drv_data_s *data)
 {
-	unsigned int zone_num = row * col;
+	unsigned int zone_num = ldim_config.zone_num;
 	unsigned int mem_size;
 	int i, ret = 0;
 	struct ldim_fw_s *fw = aml_ldim_get_fw();
@@ -1531,8 +1548,7 @@ int aml_ldim_probe(struct platform_device *pdev)
 	current_switch_cnt = 0;
 
 	if (devp->data->memory_init) {
-		ret = devp->data->memory_init(pdev, devp->data,
-			ldim_config.seg_row, ldim_config.seg_col);
+		ret = devp->data->memory_init(pdev, devp->data);
 		if (ret) {
 			LDIMERR("%s failed\n", __func__);
 			goto err;
@@ -1550,6 +1566,8 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ldim_driver.fw->param->vsync_flag = ldim_driver.vsync_change_flag;
 	ldim_driver.fw->param->rmem = &ldim_rmem;
 	ldim_driver.fw->valid = 1;
+	if (ldim_config.rgb)
+		ldim_driver.fw->fw_ctrl |= FW_CTRL_RGB;
 
 	if (!fw_cus) {
 		LDIMPR("%s: fw_cus is null\n", __func__);

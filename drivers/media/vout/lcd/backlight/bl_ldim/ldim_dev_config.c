@@ -729,6 +729,24 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 		dev_drv->hw_on_delay = json_get_obj_u32(jsp, child, "hw_on_delay_ms", 0);
 		dev_drv->hw_off_delay = json_get_obj_u32(jsp, child, "hw_off_delay_ms", 0);
 		dev_drv->write_check = json_get_obj_u32(jsp, child, "write_check", 0);
+
+		for (i = 0; i < 16; i++)
+			dev_drv->ctrl_gpio[i] = BL_GPIO_NUM_MAX;//clear ctrl_gpio first
+		child2 = json_get_object_child(jsp, child, "ctrl_gpio");
+		if (child2) {
+			str = NULL;
+			cnt = json_get_array_size(jsp, child2);
+			cnt = lcd_s32_constraint(cnt, 0, 16);
+			LDIMPR("get ctrl_gpio cnt = %d\n", cnt);
+			if (cnt) {
+				for (i = 0; i < cnt; i++) {
+					str = json_get_arr_str(jsp, child2, i, NULL);
+					dev_drv->ctrl_gpio[i] =
+						ldim_gpio_name_to_index(dev_drv, (char *)str);
+					ldim_gpio_probe(dev_drv, dev_drv->ctrl_gpio[i]);
+				}
+			}
+		}
 	}
 
 //packet_info
