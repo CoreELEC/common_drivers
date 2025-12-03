@@ -4732,7 +4732,7 @@ static struct meson_msr_id clk_msr_a9[] __initdata = {
 	CLK_MSR_ID(144, "dptx_lnk_clk"),
 	CLK_MSR_ID(145, "edptx_lnk_clk_tx"),
 	CLK_MSR_ID(146, "mod_audio_pdm_dclk_o_ao"),
-	CLK_MSR_ID(147, "vid_pll_div_clk_out"),
+	CLK_MSR_ID(147, "vid_pll2_div_clk_out"),
 	CLK_MSR_ID(151, "can_filter_1"),
 	CLK_MSR_ID(152, "can_filter_0"),
 	CLK_MSR_ID(153, "can_pe_1"),
