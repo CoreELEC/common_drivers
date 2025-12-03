@@ -2495,7 +2495,7 @@ int meson_osd_plane_async_check(struct drm_plane *plane,
 	}
 
 	if (plane_info->status_changed) {
-		DRM_ERROR("osd%d plane info changed\n", osd_plane->plane_index);
+		DRM_DEBUG("osd%d plane info changed\n", osd_plane->plane_index);
 		return -EINVAL;
 	}
 

@@ -808,7 +808,7 @@ out:
 	ATRACE_COUNTER("async_atomic_ioctl", total_time_ms);
 #endif
 	if (total_time_ms > am_drm_param.async_commit_ioctl_threshold)
-		DRM_WARN("async commit cost (%lld %lld) ms, it is too long\n",
+		DRM_DEBUG("async commit cost (%lld %lld) ms, it is too long\n",
 			commit_time_ms, total_time_ms);
 
 	DRM_DEBUG_ATOMIC("OUT,  ret = %d\n", ret);
