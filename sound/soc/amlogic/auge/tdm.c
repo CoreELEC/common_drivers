@@ -65,6 +65,7 @@ static snd_pcm_uframes_t aml_tdm_pointer(struct snd_soc_component *component,
 
 struct channel_speaker_allocation {
         int channels;
+        int chmap_layout;
         int speakers[8];
 };
 
@@ -89,39 +90,11 @@ struct channel_speaker_allocation {
 #define FCH	SNDRV_CHMAP_TFC
 
 static struct channel_speaker_allocation channel_allocations[] = {
-//                     channel:   7,    6,   5,   4,   3,    2,   1,   0
-{ .channels = 2,  .speakers = {                                  FR,  FL } }, // AE_CH_LAYOUT_2_0        0x00
-{ .channels = 3,  .speakers = {                            LFE,  FR,  FL } }, // AE_CH_LAYOUT_2_1        0x01
-{ .channels = 3,  .speakers = {                       FC,        FR,  FL } }, // AE_CH_LAYOUT_3_0        0x02
-{ .channels = 4,  .speakers = {                       FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_3_1        0x03
-{ .channels = 3,  .speakers = {                  RC,             FR,  FL } }, // 3.0                     0x04
-{ .channels = 4,  .speakers = {                  RC,       LFE,  FR,  FL } }, // 3.1                     0x05
-{ .channels = 4,  .speakers = {                  RC,  FC,        FR,  FL } }, // 4.0                     0x06
-{ .channels = 5,  .speakers = {                  RC,  FC,  LFE,  FR,  FL } }, // 4.1                     0x07
-{ .channels = 4,  .speakers = {             RR,  RL,             FR,  FL } }, // AE_CH_LAYOUT_4_0        0x08
-{ .channels = 5,  .speakers = {             RR,  RL,       LFE,  FR,  FL } }, // AE_CH_LAYOUT_4_1        0x09
-{ .channels = 5,  .speakers = {             RR,  RL,  FC,        FR,  FL } }, // AE_CH_LAYOUT_5_0        0x0a
-{ .channels = 6,  .speakers = {             RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_5_1        0x0b
-{ .channels = 5,  .speakers = {        RC,  RR,  RL,             FR,  FL } }, // 5.0                     0x0c
-{ .channels = 6,  .speakers = {        RC,  RR,  RL,       LFE,  FR,  FL } }, // 5.1                     0x0d
-{ .channels = 6,  .speakers = {        RC,  RR,  RL,  FC,        FR,  FL } }, // 6.0                     0x0e
-{ .channels = 7,  .speakers = {        RC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // 6.1                     0x0f
-{ .channels = 6,  .speakers = { RRC,  RLC,  RR,  RL,             FR,  FL } }, // 6.0                     0x10
-{ .channels = 7,  .speakers = { RRC,  RLC,  RR,  RL,       LFE,  FR,  FL } }, // 6.1                     0x11
-{ .channels = 7,  .speakers = { RRC,  RLC,  RR,  RL,  FC,        FR,  FL } }, // AE_CH_LAYOUT_7_0        0x12
-{ .channels = 8,  .speakers = { RRC,  RLC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_7_1        0x13
-{ .channels = 4,  .speakers = { FRC,  FLC,                       FR,  FL } }, // 4.0                     0x14
-{ .channels = 5,  .speakers = { FRC,  FLC,                 LFE,  FR,  FL } }, // 4.1                     0x15
-{ .channels = 5,  .speakers = { FRC,  FLC,            FC,        FR,  FL } }, // 5.0                     0x16
-{ .channels = 6,  .speakers = { FRC,  FLC,            FC,  LFE,  FR,  FL } }, // 5.1                     0x17
-{ .channels = 5,  .speakers = { FRC,  FLC,       RC,             FR,  FL } }, // 5.0                     0x18
-{ .channels = 6,  .speakers = { FRC,  FLC,       RC,       LFE,  FR,  FL } }, // 5.1                     0x19
-{ .channels = 6,  .speakers = { FRC,  FLC,       RC,  FC,        FR,  FL } }, // 6.0                     0x1A
-{ .channels = 7,  .speakers = { FRC,  FLC,       RC,  FC,  LFE,  FR,  FL } }, // 6.1                     0x1B
-{ .channels = 6,  .speakers = { FRC,  FLC,  RR,  RL,             FR,  FL } }, // 6.0                     0x1C
-{ .channels = 7,  .speakers = { FRC,  FLC,  RR,  RL,       LFE,  FR,  FL } }, // 6.1                     0x1D
-{ .channels = 7,  .speakers = { FRC,  FLC,  RR,  RL,  FC,        FR,  FL } }, // 7.0                     0x1E
-{ .channels = 8,  .speakers = { FRC,  FLC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // 7.1                     0x1F
+//                                            channel:   7,    6,   5,   4,   3,    2,   1,   0
+{ .channels = 2,  .chmap_layout = 0x00,  .speakers = {                                  FR,  FL } }, // AE_CH_LAYOUT_2_0
+{ .channels = 4,  .chmap_layout = 0x03,  .speakers = {                       FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_3_1
+{ .channels = 6,  .chmap_layout = 0x0b,  .speakers = {             RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_5_1
+{ .channels = 8,  .chmap_layout = 0x13,  .speakers = { RRC,  RLC,  RR,  RL,  FC,  LFE,  FR,  FL } }, // AE_CH_LAYOUT_7_1
 };
 
 static void dump_pcm_setting(struct pcm_setting *setting)
@@ -1908,14 +1881,25 @@ static int aml_dai_tdm_chmap_ctl_get(struct snd_kcontrol *kcontrol,
 
 	struct snd_pcm_chmap *info = snd_kcontrol_chip(kcontrol);
 	struct aml_chmap *prtd = info->private_data;
-	struct channel_speaker_allocation *ch = &channel_allocations[prtd->chmap_layout];
-	int res = 0, channel;
+	struct channel_speaker_allocation *ch = NULL;
+	int res = 0, layout, channel;
 
 	if (mutex_lock_interruptible(&prtd->chmap_lock))
 		return -EINTR;
 
-	for (channel = 0; channel < ch->channels; channel++)
-		ucontrol->value.integer.value[ch->channels - channel - 1] = ch->speakers[channel];
+	for (layout = 0; layout < ARRAY_SIZE(channel_allocations); layout++)
+	{
+		ch = &channel_allocations[layout];
+		if (prtd->chmap_layout == ch->chmap_layout)
+			break;
+		ch = NULL;
+	}
+
+	if (ch)
+	{
+		for (channel = 0; channel < ch->channels; channel++)
+			ucontrol->value.integer.value[ch->channels - channel - 1] = ch->speakers[channel];
+	}
 
 	mutex_unlock(&prtd->chmap_lock);
 	return res;
@@ -1954,7 +1938,7 @@ static int aml_dai_tdm_chmap_ctl_put(struct snd_kcontrol *kcontrol,
 
 		if (matches)
 		{
-			matched_layout = layout;
+			matched_layout = ch->chmap_layout;
 			break;
 		}
 	}
