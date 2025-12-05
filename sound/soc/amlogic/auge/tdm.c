@@ -2315,6 +2315,11 @@ static int aml_soc_tdm_trigger(struct snd_soc_component *component,
 				aml_frddr_check(p_tdm->fddr);
 
 			aml_frddr_enable(p_tdm->fddr, false);
+
+			for (i = 0; i < 2; i++) {
+				if (substream->pcm->card && substream->pcm->streams[i].chmap_kctl)
+					snd_ctl_remove(substream->pcm->card, substream->pcm->streams[i].chmap_kctl);
+			}
 		} else {
 			bool toddr_stopped = false;
 
