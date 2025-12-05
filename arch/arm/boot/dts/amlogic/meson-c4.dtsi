@@ -1300,6 +1300,63 @@
 		interrupt-names = "mailbox_0";
 	};
 
+	tahoe_enc {
+		compatible = "amlogic, tahoe";
+		dev_name = "tahoe";
+		status = "okay";
+		power-domains = <&pwrdm PDID_C4_TAHOE>;
+		clocks = <&clkc CLKID_SYS_TAHOE
+			   &clkc CLKID_TAHOE>;
+		clock-names = "clk_tahoe_dos",
+			   "clk_tahoe_enc";
+		interrupts = <0x00 0x86 0x01>,
+				<0x00 0x5c 0x01>,
+				<0x00 0x5d 0x01>,
+				<0x00 0x5e 0x01>,
+				<0x00 0x5f 0x01>,
+				<0x00 0x87 0x01>, //4
+				<0x00 0x88 0x01>,
+				<0x00 0x89 0x01>,
+				<0x00 0x8a 0x01>,
+				<0x00 0x8b 0x01>,
+				<0x00 0x8c 0x01>,
+				<0x00 0x8d 0x01>,
+				<0x00 0x8e 0x01>,
+				<0x00 0xcc 0x01>,//12
+				<0x00 0xcd 0x01>,
+				<0x00 0xce 0x01>,
+				<0x00 0xcf 0x01>,
+				<0x00 0xd0 0x01>,
+				<0x00 0xd1 0x01>,
+				<0x00 0xd2 0x01>,
+				<0x00 0xd3 0x01>,
+				<0x00 0xd4 0x01>,
+				<0x00 0xd5 0x01>;
+		interrupt-names = "tahoe_irq0",
+				"tahoe_sp_irq0",
+				"tahoe_sp_irq1",
+				"tahoe_sp_irq2",
+				"tahoe_sp_irq3",
+				"tahoe_sp_irq4",
+				"tahoe_sp_irq5",
+				"tahoe_sp_irq6",
+				"tahoe_sp_irq7",
+				"tahoe_sp_irq8",
+				"tahoe_sp_irq9",
+				"tahoe_sp_irq10",
+				"tahoe_sp_irq11",
+				"tahoe_sp_irq12",
+				"tahoe_sp_irq13",
+				"tahoe_sp_irq14",
+				"tahoe_sp_irq15",
+				"tahoe_sp_irq16",
+				"tahoe_sp_irq17",
+				"tahoe_sp_irq18",
+				"tahoe_sp_irq19",
+				"tahoe_sp_irq20",
+				"tahoe_sp_irq21";
+	};
+
 	cve:mbd_cve {
 		compatible = "amlogic, cve";
 		reg = <0xFE046000 0x800>;
