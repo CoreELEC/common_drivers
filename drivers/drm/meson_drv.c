@@ -63,7 +63,7 @@ struct meson_drm_param am_drm_param;
 
 static int check_reboot_mode(char *str)
 {
-	if (strncmp("qui", str, 3) == 0)
+	if (strncmp("qui", str, 3) == 0 || strncmp("rtc_qui", str, 7) == 0)
 		skip_logo = 1;
 	else
 		skip_logo = 0;
@@ -74,7 +74,6 @@ static int check_reboot_mode(char *str)
 	} else {
 		recovery_mode = 0;
 	}
-
 	return 1;
 }
 
