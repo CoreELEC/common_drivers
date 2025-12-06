@@ -234,7 +234,10 @@ static int erofs_load_compr_cfgs(struct super_block *sb,
 		case Z_EROFS_COMPRESSION_LZMA:
 			ret = z_erofs_load_lzma_config(sb, dsb, data, size);
 			break;
+		case Z_EROFS_COMPRESSION_CRYPTO_2:
+			/* fall through */
 		case Z_EROFS_COMPRESSION_CRYPTO:
+			erofs_err(sb, "compressed fs with algorithm %d", alg);
 			ret = z_erofs_load_crypto_config(sb, dsb, data, size);
 			break;
 		default:

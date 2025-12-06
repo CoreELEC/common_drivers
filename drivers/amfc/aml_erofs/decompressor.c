@@ -346,6 +346,10 @@ static struct z_erofs_decompressor decompressors[] = {
 		.decompress = z_erofs_lz4_decompress,
 		.name = "lz4"
 	},
+	[Z_EROFS_COMPRESSION_CRYPTO_2] = {
+		.decompress = z_erofs_crypto_decompress,
+		.name = "crypto"
+	},
 	[Z_EROFS_COMPRESSION_CRYPTO] = {
 		.decompress = z_erofs_crypto_decompress,
 		.name = "crypto"
