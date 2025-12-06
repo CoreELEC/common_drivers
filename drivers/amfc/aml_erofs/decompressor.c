@@ -480,6 +480,7 @@ const struct z_erofs_decompressor *z_erofs_decomp[] = {
 	[Z_EROFS_COMPRESSION_ZSTD] = &z_erofs_zstd_decomp,
 #endif
 	[Z_EROFS_COMPRESSION_CRYPTO] = &z_erofs_crypto_decomp,
+	[Z_EROFS_COMPRESSION_CRYPTO_2] = &z_erofs_crypto_decomp,
 };
 
 int z_erofs_parse_cfgs(struct super_block *sb, struct erofs_super_block *dsb)
