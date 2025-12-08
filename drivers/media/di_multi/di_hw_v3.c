@@ -5160,6 +5160,18 @@ void set_di_mif_v3(struct DI_MIF_S *mif, enum DI_MIF0_ID mif_index,
 				burst_len = 2;
 		}
 	}
+
+	if (DIM_IS_IC(A9)) {
+		if (mif->src_vdin) {
+			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x60);
+		} else {
+			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x40);
+
+			if (burst_len > 0)
+				burst_len = burst_len - 1;
+		}
+	}
+
 	dim_print("burst_len=%d\n", burst_len);
 	if (mif->linear) {
 		op->wr(off + reg[MIF_GEN_REG3],
@@ -5452,6 +5464,16 @@ static void hw_init_v3(void)
 		op->wr(DI_SC2_IF0_LUMA_FIFO_SIZE, 0x80);
 		op->wr(DI_SC2_IF1_LUMA_FIFO_SIZE, 0xc0);
 		op->wr(DI_SC2_IF2_LUMA_FIFO_SIZE, 0x80);
+		if (DIM_IS_IC(A9)) {
+			/*pre*/
+			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x40);
+			op->wr(DI_SC2_MEM_LUMA_FIFO_SIZE, 0x60);
+			op->wr(DI_SC2_CHAN2_LUMA_FIFO_SIZE, 0x60);
+			/*post*/
+			op->wr(DI_SC2_IF0_LUMA_FIFO_SIZE, 0x40);
+			op->wr(DI_SC2_IF1_LUMA_FIFO_SIZE, 0x60);
+			op->wr(DI_SC2_IF2_LUMA_FIFO_SIZE, 0x40);
+		}
 	} else if (DIM_IS_IC_EF(SC2)) {
 		/*pre*/
 		op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, fifo_size_di);
@@ -6102,6 +6124,13 @@ void config_di_mif_v3(struct DI_MIF_S *di_mif,
 						(di_mif->src_prog ? 0 : 1);
 					di_mif->chroma_y_end0 =
 						(di_buf->vframe->height + 1) / 2 - 1;
+				}
+			}
+			if (DIM_IS_IC(A9)) {
+				if (IS_VDIN_SRC(di_buf->vframe->type)) {
+					di_mif->src_vdin = true;
+				} else {
+					di_mif->src_vdin = false;
 				}
 			}
 #ifdef T6D_420_10

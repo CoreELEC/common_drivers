@@ -3963,6 +3963,13 @@ static const struct di_meson_data  data_gxlx4 = {
 		IC_SUPPORT_POST_VPP_LINK
 };
 
+static const struct di_meson_data  data_a9 = {
+	.name = "dim_a9",// base on t6d
+	.ic_id	= DI_IC_ID_A9,
+	.support = IC_SUPPORT_PRE_VPP_LINK |
+		IC_SUPPORT_POST_VPP_LINK
+};
+
 #endif
 
 /* #ifdef CONFIG_USE_OF */
@@ -4005,7 +4012,9 @@ static const struct of_device_id amlogic_deinterlace_dt_match[] = {
 	}, {	.compatible = "amlogic, dim-t6d",
 		.data = &data_t6d,
 	}, {	.compatible = "amlogic, dim-gxlx4",
-	.data = &data_gxlx4,
+		.data = &data_gxlx4,
+	}, {	.compatible = "amlogic, dim-a9",
+		.data = &data_a9,
 #endif
 	}, {}
 };

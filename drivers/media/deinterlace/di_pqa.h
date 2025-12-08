@@ -196,6 +196,7 @@ bool di_attach_ops_mtn(const struct mtn_op_s **ops);
 #define DI_IC_ID_S7D		(0x42)
 #define DI_IC_ID_T6D	(0x50) // base on t3 tmp
 #define DI_IC_ID_GXLX4		(0x52) //base on T6D
+#define DI_IC_ID_A9		(0x54) //base on T6D
 
 #define DI_IC_ID_DEINTERLACE		(0xFF)
 

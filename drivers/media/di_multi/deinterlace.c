@@ -4034,7 +4034,7 @@ void dim_pre_de_process(unsigned int channel)
 		if (sc2_pre_cfg->d32 != ppre->pre_top_cfg.d32) {
 			//
 			#ifdef T6D_AFBC_TEST
-			if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4)) { //0809
+			if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4) || DIM_IS_IC(A9)) { //0809
 				if (sc2_pre_cfg->b.afbc_inp && !ppre->pre_top_cfg.b.afbc_inp) {
 					//on -> off:
 					t6d_afbc_top_sw_set(false, 1, 0, NULL);
@@ -6003,8 +6003,9 @@ unsigned char dim_pre_de_buf_config(unsigned int channel)
 				vframe->type |= VIDTYPE_INTERLACE_TOP;
 			}
 		}
-		if (di_rev && (!is_progressive(vframe)) &&
-			(DIM_IS_IC(T5DB) || DIM_IS_IC(T5) || DIM_IS_IC(T6D))) {
+		if (di_reverse && (!is_progressive(vframe)) &&
+			(DIM_IS_IC(T5DB) || DIM_IS_IC(T5) || DIM_IS_IC(T6D) ||
+			DIM_IS_IC(A9))) {
 			if ((vframe->type & VIDTYPE_TYPEMASK) ==
 			    VIDTYPE_INTERLACE_TOP) {
 				vframe->type &= (~VIDTYPE_TYPEMASK);
@@ -11221,7 +11222,7 @@ void di_unreg_setting(bool plink)
 	if (dim_afds())
 		dim_afds()->reg_sw(false);
 	#ifdef T6D_AFBC_TEST
-	if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4))
+	if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4) || DIM_IS_IC(A9))
 		t6d_afbc_top_sw_set(false, 1, 0, NULL);
 	#endif
 	dimh_hw_uninit();
@@ -11905,7 +11906,7 @@ void di_reg_setting_working(struct di_ch_s *pch,
 			    struct vframe_s *vfm)
 {
 	/****************************/
-	if (DIM_IS_IC(T5DB) || DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4))
+	if (DIM_IS_IC(T5DB) || DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4) || DIM_IS_IC(A9))
 		afbcd_enable_only_t5dvb(&di_pre_regset, false);
 	//dim_afds()->reg_sw(true);
 }
@@ -12440,6 +12441,7 @@ void dim_set_di_flag(void)
 	    DIM_IS_IC(S5) ||
 	    DIM_IS_IC(T3) ||
 	    DIM_IS_IC(T6D)	||
+	    DIM_IS_IC(A9)	||
 	    DIM_IS_IC(T3X))//s4/sc2 box bypass nr from brian
 		di_cfg_set(ECFG_DIM_BYPASS_P, 0);//for t5 enable p
 

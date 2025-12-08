@@ -4410,12 +4410,14 @@ static bool di_pre_idle(void)
 {
 	bool ret = false;
 
-	if (DIM_IS_IC_EF(S5) && !DIM_IS_IC(S7D) && !DIM_IS_IC(T6D) && !DIM_IS_IC(GXLX4)) {
+	if (DIM_IS_IC_EF(S5) && !DIM_IS_IC(S7D) && !DIM_IS_IC(T6D) && !DIM_IS_IC(GXLX4) &&
+		!DIM_IS_IC(A9)) {
 		if ((DIM_RDMA_RD(DI_ARB_DBG_STAT_L1C1) &
 			PRE_ID_MASK_S5) == PRE_ID_MASK_S5)
 			ret = true;
 	} else if ((DIM_IS_IC_EF(T3) || DIM_IS_IC(T5D) || DIM_IS_IC(T5DB) ||
-	    DIM_IS_IC(T5) || DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4)) && !DIM_IS_IC(S7D)) {
+	    DIM_IS_IC(T5) || DIM_IS_IC(T6D) || DIM_IS_IC(A9) || DIM_IS_IC(GXLX4)) &&
+	    !DIM_IS_IC(S7D)) {
 		if ((DIM_RDMA_RD(DI_ARB_DBG_STAT_L1C1) &
 			PRE_ID_MASK_T5) == PRE_ID_MASK_T5)
 			ret = true;

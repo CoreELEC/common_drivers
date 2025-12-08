@@ -1653,7 +1653,7 @@ static void afbc_prob(unsigned int cid, struct afd_s *p)
 		//afbc_cfg = BITS_EAFBC_CFG_4K;
 		afbc_cfg = 0;
 		memcpy(&pafd_ctr->fb, &cafbc_v5_sc2, sizeof(pafd_ctr->fb));
-		if (DIM_IS_IC(S4) || DIM_IS_IC(S7D))
+		if (DIM_IS_IC(S4) || DIM_IS_IC(S7D) || DIM_IS_IC(A9))
 			pafd_ctr->fb.mode = AFBC_WK_IN;//JUST 1afbc D
 		else
 			pafd_ctr->fb.mode = AFBC_WK_P;

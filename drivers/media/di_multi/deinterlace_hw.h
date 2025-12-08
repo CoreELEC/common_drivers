@@ -339,6 +339,7 @@ struct DI_MIF_S {
 	enum DI_MIF0_ID	mif_index; /* */
 	//char *name;
 	unsigned int bit8_flag;
+	bool src_vdin;
 };
 
 struct DI_SIM_MIF_S {
