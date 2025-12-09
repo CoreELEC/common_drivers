@@ -18,7 +18,7 @@
 
 		aml-audio-card,dai-link@1 {
 			codec {
-				sound-dai = <&dummy_codec &es8388>;
+				sound-dai = <&es8388>;
 			};
 		};
 	};
