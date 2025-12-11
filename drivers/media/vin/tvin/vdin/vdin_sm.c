@@ -275,6 +275,18 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 			}
 		}
 
+		if (devp->pre_prop.filmmaker.fmm_data.content_subtype !=
+		    devp->prop.filmmaker.fmm_data.content_subtype) {
+			signal_chg |= TVIN_SIG_CHG_FMM_SUBTYPE;
+			if (signal_chg)
+				pr_info("%s filmmaker content_subtype:(0x%x->0x%x)\n",
+					__func__,
+					devp->pre_prop.filmmaker.fmm_data.content_subtype,
+					devp->prop.filmmaker.fmm_data.content_subtype);
+			devp->pre_prop.filmmaker.fmm_data.content_subtype =
+				devp->prop.filmmaker.fmm_data.content_subtype;
+		}
+
 		if (devp->pre_prop.imax_flag != devp->prop.imax_flag) {
 			if (devp->dv.allm_chg_cnt > devp->dts_config.vdin_dv_chg_cnt) {
 				devp->dv.allm_chg_cnt = 0;
@@ -415,6 +427,17 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		} else {
 			devp->vrr_data.qms_plus_chg_cnt = 0;
 		}
+
+		if (devp->pre_prop.hdcp_sts != devp->prop.hdcp_sts) {
+			signal_chg |= TVIN_SIG_CHG_HDCP_STS;
+			if (signal_chg)
+				pr_info("%s hdcp sts chg:(0x%x->0x%x)\n",
+					__func__,
+					devp->pre_prop.hdcp_sts,
+					devp->prop.hdcp_sts);
+			devp->pre_prop.hdcp_sts = devp->prop.hdcp_sts;
+		}
+
 		if (color_range_force)
 			prop->color_fmt_range =
 			tvin_get_force_fmt_range(pre_prop->color_format);

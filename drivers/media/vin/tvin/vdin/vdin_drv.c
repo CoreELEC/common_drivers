@@ -5626,6 +5626,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("vdin get info fail, DEC_OPENED\n");
 			break;
 		}
+		devp->misc_info.hdcp_sts = devp->prop.hdcp_sts;
 		memcpy(&misc_info, &devp->misc_info, sizeof(struct tvin_misc_info_s));
 
 		if (copy_to_user(argp, &misc_info, sizeof(struct tvin_misc_info_s)))
@@ -5917,6 +5918,28 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				devp->prop.latency.it_content,
 				devp->prop.latency.cn_type,
 				devp->prop.latency.fmm_flag);
+		break;
+	case TVIN_IOC_G_FILMMAKER_MODE:
+		if (devp->parm.info.status != TVIN_SIG_STATUS_STABLE)
+			pr_info("get TVIN_IOC_GET_FILMMAKER_MODE signal not stable\n");
+
+		if (copy_to_user(argp, &devp->prop.filmmaker,
+				 sizeof(struct tvin_fmm_s))) {
+			ret = -EFAULT;
+			pr_info("TVIN_IOC_GET_FILMMAKER_MODE err\n\n");
+			break;
+		}
+		if (devp->debug.vdin_dbg_en)
+			pr_info("fmm_flag:%d,fmm_vsif:%d,IT=%d,CN=%d,pkt=%d,%d,%d,%d,subtype:%d\n",
+				devp->prop.filmmaker.fmm_flag,
+				devp->prop.filmmaker.fmm_vsif_flag,
+				devp->prop.filmmaker.it_content,
+				devp->prop.filmmaker.cn_type,
+				devp->prop.filmmaker.fmm_data.pkt_type,
+				devp->prop.filmmaker.fmm_data.visf_version,
+				devp->prop.filmmaker.fmm_data.payload_length,
+				devp->prop.filmmaker.fmm_data.content_type,
+				devp->prop.filmmaker.fmm_data.content_subtype);
 		break;
 	case TVIN_IOC_G_IMAX_STATUS:
 		if (devp->parm.info.status != TVIN_SIG_STATUS_STABLE)

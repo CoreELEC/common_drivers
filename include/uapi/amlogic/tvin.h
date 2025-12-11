@@ -440,7 +440,8 @@ struct tvin_buf_info_s {
 
 struct tvin_misc_info_s {
 	unsigned int afd_info; /* bit[7:4] pic_aspect_ratio, bit[3:0] active_ratio */
-	unsigned int reserved[7];
+	unsigned int hdcp_sts;
+	unsigned int reserved[6];
 };
 
 struct tvin_video_buf_s {
@@ -648,6 +649,8 @@ enum tvin_sg_chg_flg {
 	TVIN_SIG_CHG_VS_FRQ	= 0x80,
 	TVIN_SIG_CHG_DV_ALLM	= 0x100,
 	TVIN_SIG_CHG_AFD	= 0x200,/*aspect ratio*/
+	TVIN_SIG_CHG_FMM_SUBTYPE	= 0x400,/*fmm vsif cn_subtype*/
+	TVIN_SIG_CHG_HDCP_STS	= 0x800,/*hdcp status*/
 	TVIN_SIG_CHG_VRR        = 0x1000, /* gaming-vrr */
 	TVIN_SIG_CHG_QMS        = 0x2000, /* qms-vrr */
 	TVIN_SIG_CHG_CLOSE_FE	= 0x40000000,	/*closed frontend*/
@@ -732,6 +735,7 @@ struct vdin_dump_afbc_buf_arg {
 #define TVIN_IOC_S_CANVAS_RECOVERY  _IO(_TM_T, 0x0a)
 #define TVIN_IOC_S_GAME_FRC_ON_OFF           _IOW(_TM_T, 0x5a, unsigned int)
 #define TVIN_IOC_G_VDIN_MEM_SIZE	_IOR(_TM_T, 0x5b, unsigned int)
+#define TVIN_IOC_G_FILMMAKER_MODE	_IOR(_TM_T, 0x5c, struct tvin_fmm_s)
 
 /* TVAFE */
 #define TVIN_IOC_S_AFE_VGA_PARM     _IOW(_TM_T, 0x16, struct tvafe_vga_parm_s)
