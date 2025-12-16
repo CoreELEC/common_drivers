@@ -1319,63 +1319,42 @@
 			status = "okay";
 		};
 
-		pcie: pcie@f7b00000 {
-			compatible = "amlogic, amlogic-pcie-v3";
-			reg = <0x0 0xf7b00000 0x0 0x100000
-				0x0 0xfe02c000 0x0 0x2000
-				0x0 0xf4000000 0x0 0x4000000
-				0x0 0xf7e00000 0x0 0x200000
-				0x0 0xfe02a000 0x0 0x220
+		pcie_a: pcie@f4000000 {
+			compatible = "amlogic, amlogic-pcie-v4";
+			reg = <0x0 0xf4000000 0x0 0x400000
+				0x0 0xfe4d0000 0x0 0x1000
+				0x0 0xf4400000 0x0 0x200000
+				0x0 0xfe4d4000 0x0 0x800
 				0x0 0xfe002040 0x0 0x10
 				0x0 0xfe01034c 0x0 0x4>;
-			reg-names = "apb-base", "pcictrl-base", "axi-base",
-				    "ecam-base", "aml-phy-base", "reset-base",
-				    "pci-efuse";
-			interrupts = <GIC_SPI 316 IRQ_TYPE_EDGE_RISING
-				      GIC_SPI 312 IRQ_TYPE_EDGE_RISING
-				      GIC_SPI 313 IRQ_TYPE_EDGE_RISING
-				      GIC_SPI 314 IRQ_TYPE_EDGE_RISING
-				      GIC_SPI 315 IRQ_TYPE_EDGE_RISING>;
-			#interrupt-cells = <1>;
-			msi-controller;
-			msi-parent = <&pcie>;
-			interrupt-parent = <&gic>;
+			reg-names = "dbi", "cfg", "config", "phy", "reset", "efuse";
 			linux,pci-domain = <0>;
 			bus-range = <0x0 0xff>;
 			#address-cells = <3>;
 			#size-cells = <2>;
-			interrupt-map-mask = <0 0 0 7>;
-			interrupt-map = <0 0 0 1 &gic GIC_SPI 312
-					IRQ_TYPE_EDGE_RISING>,
-					<0 0 0 2 &gic GIC_SPI 313
-					IRQ_TYPE_EDGE_RISING>,
-					<0 0 0 3 &gic GIC_SPI 314
-					IRQ_TYPE_EDGE_RISING>,
-					<0 0 0 4 &gic GIC_SPI 315
-					IRQ_TYPE_EDGE_RISING>;
+			interrupts = <GIC_SPI 293 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "msi";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 303 IRQ_TYPE_EDGE_RISING>;
 			device_type = "pci";
 			ranges =
-				/*
-				 * downstream I/O
-				 *
-				 *  <0x81000000 0 0xf7800000 0 0xf7800000 0x0 0x200000
-				 */
+				/* downstream I/O */
+				<0x81000000 0 0 0 0xf4600000 0x0 0x200000>,
 				/* non-prefetchable memory */
-				<0x82000000 0 0xf4000000 0x0 0xf4000000 0 0x3800000>;
+				<0x82000000 0 0xf4800000 0x0 0xf4800000 0 0x3800000>;
 			num-lanes = <1>;
 			pcie-num = <1>;
-			phy-type = <2>;
+			phy-type = <0>;
 			/*
 			 * pinctrl-names = "default";
 			 * pinctrl-0 = <&pcieck_pins>;
 			 */
 
-			//clocks = <&clkc_sys CLKID_SYS_PCIE_MAC>,
-			//	 <&clkc_sys CLKID_SYS_PCIE_PHY>,
-			//	 <&clkc_sys CLKID_PCIE_TL>;
-			clock-names = "pcie",
-					"pcie_phy",
-					"pcie_tl_clk";
+			clocks = <&clkc_sys CLKID_SYS_PCIE_MAC_A>,
+				 <&clkc_sys CLKID_SYS_PCIE_PHY>,
+				 <&clkc_pcie_tl CLKID_PCIE_TL_0>;
+			clock-names = "pcie_mac", "pcie_phy", "pcie_tl";
 			/* amlogic pcie phy pll */
 			aml_phy_pll_version = <1>;
 			pll_setting_number = <12>;
@@ -1402,14 +1381,83 @@
 			 *1:OD pad2:Normal pad
 			 */
 			gpio-type = <2>;
-			pcie-amlphy-rst-bit = <13>;
-			pcie-apb-rst-bit = <14>;
-			pcie-a-rst-bit = <12>;
-			pcie-pipe-rst-bit = <11>;
-			u3p2-phy-apb = <10>;
-			pcie-rst-bit = <24>;
-			pcie-rst-mask = <0xff>;
-			//power-domains = <&pwrdm PDID_S6_PCIE>;
+			pcie_rst_number = <1>;
+			/* <reg_offset vlaue> */
+			pcie_rst_1 = <0x04 0xFF007800>;
+			pcie-phy-apb-rst = <0x4 0x400>;
+			power-domains = <&pwrdm PDID_A9_PCIE_A>;
+			status = "disabled";
+			dma-ranges = <0x0 0x0 0x0 0x0 0x0 0x0 0xe0000000>;
+		};
+
+		pcie_b: pcie@f8000000 {
+			compatible = "amlogic, amlogic-pcie-v4";
+			reg = <0x0 0xf8000000 0x0 0x400000
+				0x0 0xfe4d2000 0x0 0x1000
+				0x0 0xf8400000 0x0 0x200000
+				0x0 0xfe4d5000 0x0 0x800
+				0x0 0xfe002040 0x0 0x10
+				0x0 0xfe01034c 0x0 0x4>;
+			reg-names = "dbi", "cfg", "config", "phy", "reset", "efuse";
+			linux,pci-domain = <1>;
+			bus-range = <0x0 0xff>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			interrupts = <GIC_SPI 325 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "msi";
+			#interrupt-cells = <1>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 335 IRQ_TYPE_EDGE_RISING>;
+			device_type = "pci";
+			ranges =
+				/* downstream I/O */
+				<0x81000000 0 0 0 0xf8600000 0x0 0x200000>,
+				/* non-prefetchable memory */
+				<0x82000000 0 0xf8800000 0x0 0xf8800000 0 0x3800000>;
+			num-lanes = <1>;
+			pcie-num = <1>;
+			phy-type = <0>;
+			/*
+			 * pinctrl-names = "default";
+			 * pinctrl-0 = <&pcieck_pins>;
+			 */
+
+			clocks = <&clkc_sys CLKID_SYS_PCIE_MAC_B>,
+				 <&clkc_sys CLKID_SYS_PCIE_PHY>,
+				 <&clkc_pcie_tl CLKID_PCIE_TL_1>;
+			clock-names = "pcie_mac", "pcie_phy", "pcie_tl";
+			/* amlogic pcie phy pll */
+			aml_phy_pll_version = <1>;
+			pll_setting_number = <12>;
+			/* <reg_offset vlaue> */
+			phy_pll_setting_1 = <0x0000 0x03e855e9>;
+			phy_pll_setting_2 = <0x0004 0x0009e085>;
+			phy_pll_setting_3 = <0x0008 0x40000079>; /* bias_en=1 */
+			phy_pll_setting_4 = <0x000c 0x3843a320>;
+			phy_pll_setting_5 = <0x0010 0x50>;
+			phy_pll_setting_6 = <0x0014 0x0009978b>;
+			phy_pll_setting_7 = <0x0018 0x0>; /* select pll0 for debug */
+			phy_pll_setting_8 = <0x0000 0x03e855ed>;
+			phy_pll_setting_9 = <0x0004 0x0809e085>;
+			phy_pll_setting_10 = <0x0000 0x0be855ed>;
+			phy_pll_setting_11 = <0x0014 0x000b978b>;
+			/* open ssc 5000 ppm
+			 * phy_pll_setting_12 = <0x0008 0x4800007d>;
+			 * phy_pll_setting_13 = <0x0010 0x2150e050>;
+			 */
+			phy_pll_setting_12 = <0x017c 0x3000000 >;
+
+			/*reset-gpio-type
+			 *0:Shared pad(no reset)
+			 *1:OD pad2:Normal pad
+			 */
+			gpio-type = <2>;
+			pcie_rst_number = <2>;
+			/* <reg_offset vlaue> */
+			pcie_rst_1 = <0x04 0x18>;
+			pcie_rst_2 = <0x0c 0x1FF8>;
+			pcie-phy-apb-rst = <0x4 0x400>;
+			power-domains = <&pwrdm PDID_A9_PCIE_B>;
 			status = "disabled";
 			dma-ranges = <0x0 0x0 0x0 0x0 0x0 0x0 0xe0000000>;
 		};

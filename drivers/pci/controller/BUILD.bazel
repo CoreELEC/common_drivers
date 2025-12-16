@@ -29,6 +29,9 @@ ddk_module(
                 "pci_endpoint_test.c",
             ],
         },
+        "CONFIG_AMLOGIC_PCIE_V4_HOST": {
+            True: ["amlogic-pcie-v4-host.c"],
+        },
     },
     hdrs = [
         "//common:drivers/pci/controller/dwc/pcie-designware.h",

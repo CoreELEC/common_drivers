@@ -30,3 +30,14 @@ config AMLOGIC_PCIE_V3_EP
 	help
 	  Say Y or M  here if you want to support Amlogic PCIe controller in
 	  endpoint mode on Amlogic SoC.
+
+config AMLOGIC_PCIE_V4_HOST
+	tristate "Meson PCIE_V4 controller"
+	depends on AMLOGIC_PCIE
+	depends on PCI && PCI_MSI
+	depends on PCIE_DW_HOST
+	help
+	  Say Y here if you want to enable PCIE controller support on Amlogic
+	  SoCs. The PCIE controller on Amlogic is based on DesignWare hardware
+	  and therefore the driver re-uses the DesignWare core functions to
+	  implement the driver.

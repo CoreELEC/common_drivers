@@ -17,3 +17,6 @@ $(MODULE_NAME)-$(CONFIG_AMLOGIC_PCIE_V3_HOST) += amlogic-pcie-v3-host.o
 CFLAGS_amlogic-pcie-v3-host.o += $(PR_FMT_DEFINE) -I $(srctree)/drivers/pci/
 
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_PCIE_V3_EP) += amlogic-pcie-v3-ep.o pci_endpoint_test.o
+
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_PCIE_V4_HOST) += amlogic-pcie-v4-host.o
+CFLAGS_amlogic-pcie-v4-host.o += $(PR_FMT_DEFINE) -I $(srctree)/drivers/pci/controller/dwc

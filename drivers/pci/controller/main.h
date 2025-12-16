@@ -60,4 +60,18 @@ static inline void aml_pcie_ep_test_exit(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_AMLOGIC_PCIE_V4_HOST)
+int aml_pcie_rc_v4_init(void);
+void aml_pcie_rc_v4_exit(void);
+#else
+static inline int aml_pcie_rc_v4_init(void)
+{
+	return 0;
+}
+
+static inline void aml_pcie_rc_v4_exit(void)
+{
+}
+#endif
+
 #endif /*__PCIE_MAIN_H_*/
