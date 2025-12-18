@@ -8,7 +8,7 @@
 #include "meson-a9.dtsi"
 #include "mesona9-panel.dtsi"
 //#include "hdr10plus.dtsi"
-//#include "mesons6_drm.dtsi"
+#include "mesona9_drm_dual.dtsi"
 //#include "mesons6_audio.dtsi"
 //#include "firmware_ab.dtsi"
 / {
@@ -1182,20 +1182,67 @@
 	vpp1_layer_count = <1>;
 };
 
-//&drm_vpu {
-//	status = "okay";
-//	logo_addr = "0x7f800000";
-//};
+&drm_vpu {
+	status = "okay";
+	logo_addr = "0x7f800000";
 
-//&drm_subsystem {
-//	status = "okay";
-//	fbdev_sizes = <1280 720 1280 1440 32>;
-//};
+	connectors_dev: port@1 {
+		drm_to_lcd0: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&lcd0_to_drm>;
+		};
+		drm_to_lcd1: endpoint@2 {
+			reg = <2>;
+			remote-endpoint = <&lcd1_to_drm>;
+		};
+	};
+};
+
+&drm_subsystem {
+	status = "okay";
+	fbdev_sizes = <1280 720 1280 1440 32>;
+};
 
 &amhdmitx {
 	status = "okay";
 	pxp_mode = <1>;
 };
+
+&lcd {
+	status = "okay";
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			lcd0_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_lcd0>;
+			};
+		};
+	};
+};
+
+&lcd1 {
+	status = "okay";
+	ports {
+		port {
+			lcd1_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_lcd1>;
+			};
+		};
+	};
+};
+
+//&dptx {
+//	status = "okay";
+//	pxp_mode = <1>;
+//};
+
+//&edptx {
+//	status = "okay";
+//	pxp_mode = <1>;
+//};
 
 //&drm_amhdmitx {
 //	status = "disabled";
