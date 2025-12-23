@@ -1929,9 +1929,9 @@
 	};
 
 	aml_primesl {
-		compatible = "amlogic, prime_sl_s6";
+		compatible = "amlogic, prime_sl_a9";
 		dev_name = "amprime_sl";
-		status = "disabled";
+		status = "okay";
 	};
 
 	multi-di {

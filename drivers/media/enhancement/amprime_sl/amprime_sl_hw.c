@@ -483,6 +483,13 @@ void prime_sl_set_reg(const struct prime_sl_t *ps)
 		data32 |= 2 << 8;
 		WRITE_VCBUS_REG(AMDV_PATH_CTRL, data32);
 		pr_sl(1, "stb prime path reg set\n");
+	} else if (is_meson_a9()) {
+		wbits_PRIMESL_OMAT_OFFSET0(512, 512);
+		wbits_PRIMESL_OMAT_OFFSET1(256, 512);
+		wbits_PRIMESL_OMAT_OFFSET2(2048, 2048);
+		SL_VSYNC_WR_MPEG_REG(AMDV_PATH_SWAP_CTRL1, 0x2002);
+		SL_VSYNC_WR_MPEG_REG(AMDV_PATH_SWAP_CTRL2, 0x0);
+		SL_VSYNC_WR_MPEG_REG(VIU_VD1_PATH_CTRL, 0x0);
 	} else if (is_meson_t5m()) {
 		wbits_PRIMESL_OMAT_OFFSET0(2048, 2048);
 		wbits_PRIMESL_OMAT_OFFSET1(64, 2048);
@@ -526,5 +533,9 @@ void prime_sl_close(void)
 		pr_sl(1, "t6w prime reg close\n");
 	} else if (is_meson_t6x()) {
 		pr_sl(1, "t6x prime reg close\n");
+	} else if (is_meson_t5m() || is_meson_a9()) {
+		SL_VSYNC_WR_MPEG_REG(AMDV_PATH_SWAP_CTRL1, 0x0);
+		SL_VSYNC_WR_MPEG_REG(AMDV_PATH_SWAP_CTRL2, 0x0);
+		SL_VSYNC_WR_MPEG_REG(VIU_VD1_PATH_CTRL, 0x10000);
 	}
 }

@@ -40,6 +40,7 @@ enum cpu_id_e {
 	_CPU_MAJOR_ID_S6,
 	_CPU_MAJOR_ID_T6W,
 	_CPU_MAJOR_ID_T6X,
+	_CPU_MAJOR_ID_A9,
 	_CPU_MAJOR_ID_UNKNOWN,
 };
 
@@ -453,6 +454,7 @@ bool is_meson_s6(void);
 bool is_meson_t6w(void);
 bool is_meson_t6x(void);
 bool is_prime_sl_stb_mode(void);
+bool is_meson_a9(void);
 
 void prime_api_init(void);
 void prime_api_exit(void);

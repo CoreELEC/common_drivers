@@ -298,7 +298,16 @@ bool is_prime_sl_stb_mode(void)
 	if (is_meson_g12() || is_meson_tl1() ||
 		is_meson_tm2() || is_meson_sc2() ||
 		is_meson_t7() || is_meson_s4d() ||
-		is_meson_s7d() || is_meson_s6())
+		is_meson_s7d() || is_meson_s6() ||
+		is_meson_a9())
+		return true;
+	else
+		return false;
+}
+
+bool is_meson_a9(void)
+{
+	if (prime_sl_meson_dev.cpu_id == _CPU_MAJOR_ID_A9)
 		return true;
 	else
 		return false;
@@ -1258,13 +1267,6 @@ void prime_sl_process(struct vframe_s *vf)
 	if (prime_sl_debug_run_mode == 3)
 		return;
 
-	if (is_meson_t6w() || is_meson_t6x()) {
-		prime_sl_dpss_mode = dpss_mode;
-		pr_sl(0x200, "%s:dpss_mode from vecm =%d\n", __func__, dpss_mode);
-	} else {
-		prime_sl_dpss_mode = 0;
-	}
-
 	/* load fixed txt setting mode */
 	if (prime_sl_debug_run_mode == 1) {
 		pr_sl(1, "use fixed txt setting mode\n");
@@ -1284,6 +1286,13 @@ void prime_sl_process(struct vframe_s *vf)
 
 	if (!prime_sl_probe || !prime_sl_enable || !p_funcs)
 		return;
+
+	if (is_meson_t6w() || is_meson_t6x()) {
+		prime_sl_dpss_mode = dpss_mode;
+		pr_sl(0x200, "%s:dpss_mode from vecm =%d\n", __func__, dpss_mode);
+	} else {
+		prime_sl_dpss_mode = 0;
+	}
 
 	if (!prime_sl_dpss_mode) {
 		if (vf && vf->src_fmt.fmt != VFRAME_SIGNAL_FMT_HDR10PRIME) {
@@ -1340,12 +1349,6 @@ void prime_sl_process_for_dpss(struct vframe_s *vf)
 	if (prime_sl_debug_run_mode == 3)
 		return;
 
-	if (is_meson_t6w() || is_meson_t6x()) {
-		prime_sl_dpss_mode = dpss_mode;
-		pr_sl(0x200, "%s:dpss_mode from vecm =%d\n", __func__, dpss_mode);
-	} else {
-		prime_sl_dpss_mode = 0;
-	}
 	/* load fixed txt setting mode */
 	if (prime_sl_debug_run_mode == 1) {
 		pr_sl(1, "use fixed txt setting mode\n");
@@ -1366,12 +1369,11 @@ void prime_sl_process_for_dpss(struct vframe_s *vf)
 	if (!prime_sl_probe || !prime_sl_enable || !p_funcs)
 		return;
 
-	if (vf && vf->src_fmt.fmt != VFRAME_SIGNAL_FMT_HDR10PRIME) {
-		if (prime_sl_running) {
-			prime_sl_close();
-			prime_sl_running = 0;
-		}
-		return;
+	if (is_meson_t6w() || is_meson_t6x()) {
+		prime_sl_dpss_mode = dpss_mode;
+		pr_sl(0x200, "%s:dpss_mode from vecm =%d\n", __func__, dpss_mode);
+	} else {
+		prime_sl_dpss_mode = 0;
 	}
 
 	if (prime_sl_dpss_mode) {
@@ -1689,7 +1691,7 @@ static bool ampsl_read_one_line(char **text_buf, char *line_buf)
 	bool eof_flag = false;
 
 	if (!text_buf || !(*text_buf) || !line_buf) {
-		pr_info("error,line_buf %p, text_buf %p\n", line_buf, text_buf);
+		pr_info("line_buf %p, text_buf %p\n", line_buf, text_buf);
 		return true;
 	}
 
@@ -1916,6 +1918,10 @@ static struct prime_sl_device_data_s prime_sl_t6x = {
 	.cpu_id = _CPU_MAJOR_ID_T6X,
 };
 
+static struct prime_sl_device_data_s prime_sl_a9 = {
+	.cpu_id = _CPU_MAJOR_ID_A9,
+};
+
 static const struct of_device_id amprime_sl_match[] = {
 	{
 		.compatible = "amlogic, prime_sl_g12",
@@ -1968,6 +1974,10 @@ static const struct of_device_id amprime_sl_match[] = {
 	{
 		.compatible = "amlogic, prime_sl_t6x",
 		.data = &prime_sl_t6x,
+	},
+	{
+		.compatible = "amlogic, prime_sl_a9",
+		.data = &prime_sl_a9,
 	},
 	{},
 };
@@ -2033,11 +2043,11 @@ static int amprime_sl_probe(struct platform_device *pdev)
 
 fail_create_device:
 	pr_info("[amprime_sl.] : amprime_sl device create error.\n");
- /*	cdev_del(&devp->cdev);
-  *
-  *fail_add_cdev:
-  *	pr_info("[amprime_sl.] : amprime_sl add device error.\n");
-  */
+/*	cdev_del(&devp->cdev);
+ *
+ *fail_add_cdev:
+ *	pr_info("[amprime_sl.] : amprime_sl add device error.\n");
+ */
 fail_class_create_file:
 	pr_info("[amprime_sl.] : amprime_sl class create file error.\n");
 	for (i = 0; amprime_sl_class_attrs[i].attr.name; i++)
