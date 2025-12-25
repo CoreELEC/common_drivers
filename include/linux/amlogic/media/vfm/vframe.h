@@ -700,6 +700,7 @@ struct vf_vrr_param_s {
 	u32 qms_plus_en;
 	u32 frc_get_vrr;
 	u32 vrr_signal;
+	u32 game_frc;
 };
 
 struct vframe_s {

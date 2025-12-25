@@ -724,7 +724,11 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 
 	frame_sts.vrr_frame_cur = frame_lock_check_input_hz(vf);
 
-	if (vinfo->fr_adj_type == VOUT_FR_ADJ_NONE ||
+	if (vf->vf_vrr_param.game_frc) {
+		ret = FRAMELOCK_GAMEFRC;
+		vrr_skip_frame_cnt = 15;
+		hdr_low_latency = 0;
+	} else if (vinfo->fr_adj_type == VOUT_FR_ADJ_NONE ||
 		vinfo->fr_adj_type == VOUT_FR_ADJ_HDMI) {
 		ret = FRAMELOCK_VLOCK;
 		vrr_skip_frame_cnt = 15;
@@ -1062,6 +1066,16 @@ void frame_lock_process(struct vframe_s *vf,
 #endif
 			frame_lock_disable_vrr(false);
 			vlock_set_sts_by_frame_lock(false);
+		}
+		break;
+	case FRAMELOCK_GAMEFRC:
+		if (frame_sts.vrr_frame_pre_sts != frame_sts.vrr_frame_lock_type) {
+			if (frame_sts.vrr_frame_pre_sts == FRAMELOCK_NOLOCK)
+#ifdef CONFIG_AMLOGIC_LCD
+				lcd_sw_vrr_enable(index, 0);
+#endif
+			frame_lock_disable_vrr(false);
+			vlock_set_disable();
 		}
 		break;
 	default:

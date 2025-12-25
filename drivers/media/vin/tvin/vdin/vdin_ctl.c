@@ -8859,7 +8859,7 @@ enum vdin_vrr_mode_e get_cur_vrr_status(struct vdin_dev_s *devp)
 	}
 
 	freesync_type = devp->pre_prop.spd_data.data[5] >> 2 & 0x3;
-	if (!IS_HDMI_SRC(devp->parm.port)) {
+	if (!IS_HDMI_SRC(devp->parm.port) || devp->vdin_game_frc) {
 		ret = VDIN_VRR_OFF;
 	} else if (devp->prop.vtem_data.vrr_en) {
 		ret = VDIN_VRR_BASIC;
