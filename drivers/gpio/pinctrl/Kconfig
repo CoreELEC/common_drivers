@@ -272,4 +272,13 @@ config AMLOGIC_PINCTRL_MESON_A9
 	  A9 pinctrl can work.
 	  otherwise A9 pinctrl can't work
 
+config AMLOGIC_PINCTRL_MESON_C5
+	tristate "Meson C5 Soc pinctrl driver"
+	default n
+	help
+	  the chip of C5 will be built
+	  when enable this config.
+	  C5 pinctrl can work.
+	  otherwise C5 pinctrl can't work
+
 endif

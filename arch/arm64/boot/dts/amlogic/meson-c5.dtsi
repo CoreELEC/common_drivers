@@ -11,7 +11,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/c5-pd.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/gpio/meson-s6-gpio.h>
+#include <dt-bindings/gpio/meson-c5-gpio.h>
 #include <dt-bindings/reset/amlogic,meson-s6-reset.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
@@ -587,18 +587,18 @@
 			};
 
 			periphs_pinctrl: pinctrl@4000 {
-				compatible = "amlogic,meson-s6-periphs-pinctrl";
+				compatible = "amlogic,meson-c5-periphs-pinctrl";
 				#address-cells = <2>;
 				#size-cells = <2>;
 				ranges;
 
 				gpio: bank@4000 {
 					reg = <0x0 0x4000 0x0 0x004c>,
-					      <0x0 0x40c0 0x0 0x02cc>;
+					      <0x0 0x40c0 0x0 0x0260>;
 					reg-names = "mux", "gpio";
 					gpio-controller;
 					#gpio-cells = <2>;
-					gpio-ranges = <&periphs_pinctrl 0 0 101>;
+					gpio-ranges = <&periphs_pinctrl 0 0 109>;
 				};
 			};
 
@@ -805,7 +805,7 @@
 
 						reset-assert-us = <20000>;
 						reset-deassert-us = <50000>;
-						reset-gpios = <&gpio GPIOZ_15 GPIO_ACTIVE_LOW>;
+						//reset-gpios = <&gpio GPIOZ_15 GPIO_ACTIVE_LOW>;
 						realtek,clkout-disable;
 						realtek,aldps-enable;
 					};
@@ -873,6 +873,22 @@
 				fifosize = < 64 >;
 				/* 0 not support; 1 support */
 				support-sysrq = <1>;
+			};
+
+			ao_pinctrl: ao_pinctrl@4000 {
+				compatible = "amlogic,meson-c5-ao-pinctrl";
+				#address-cells = <2>;
+				#size-cells = <2>;
+				ranges;
+
+				gpio_ao: ao-bank@4000 {
+					reg = <0x0 0x4000 0x0 0x0048>,
+					      <0x0 0x4080 0x0 0x0120>;
+					reg-names = "mux", "gpio";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&ao_pinctrl 0 0 48>;
+				};
 			};
 		};
 
@@ -1362,9 +1378,9 @@
 		pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
 		pinctrl-0=<&hdmitx_hpd>;
 		pinctrl-1=<&hdmitx_ddc>;
-		hdmitx-gpios-hpd = <&gpio GPIOH_2 GPIO_ACTIVE_HIGH>;
-		hdmitx-gpios-scl = <&gpio GPIOH_1 GPIO_ACTIVE_HIGH>;
-		hdmitx-gpios-sda = <&gpio GPIOH_0 GPIO_ACTIVE_HIGH>;
+		//hdmitx-gpios-hpd = <&gpio GPIOH_2 GPIO_ACTIVE_HIGH>;
+		//hdmitx-gpios-scl = <&gpio GPIOH_1 GPIO_ACTIVE_HIGH>;
+		//hdmitx-gpios-sda = <&gpio GPIOH_0 GPIO_ACTIVE_HIGH>;
 		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH
 			GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "hdmitx_hpd", "vrr_vsync";
