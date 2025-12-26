@@ -222,6 +222,7 @@ int get_uvm_video_info(const int fd, struct uvm_fd_info *info)
 	info->timestamp = vfp->timestamp;
 	info->buf_stride = info->buf_width;
 	info->priority = vfp->priority;
+	info->fps = vfp->duration;
 
 	MUBI_PRINTK(LOG_DEBUG, "type:0x%x timestamp:%lld wxh:%dx%d crop:(%d %d %d %d)\n",
 			info->type, info->timestamp, info->buf_width, info->buf_height,
