@@ -1549,9 +1549,10 @@
 		#size-cells=<2>;
 		status = "okay";
 		compatible = "amlogic, mbp-dewarp-v2";
-		reg = <0xff016c00 0x000015c>;
-		interrupts = <GIC_SPI 153 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "amlgdc";
+		reg = <0xfe047c00 0x000015c>;
+		interrupts = <GIC_SPI 143 IRQ_TYPE_EDGE_RISING
+				GIC_SPI 150 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "gdc_done", "opp_done";
 		clocks = <&clkc CLKID_DEWARP>, <&clkc CLKID_CVE_ARB>, <&clkc CLKID_ISP>;
 		clock-names = "clk_gate", "cve_arb", "isp_clk";
 		clk-rate = <800000000>;
