@@ -56,6 +56,7 @@ dtb-y += s7d_s905x5m_4g.dtb
 dtb-y += s7d_s905x5m_4g_1gbit.dtb
 dtb-y += s7d_s905x5m_odroid_c5.dtb
 dtb-y += s7d_s905x5m_ugoos_x5m_pro.dtb
+dtb-y += s7d_s905x5m_ugoos_sk4.dtb
 dtb-y += s7d_s905x5m_xiaomi_3rd_gen.dtb
 dtb-y += sm1_s905d3_libre_computer_solitude.dtb
 dtb-y += sm1_s905x3_2g.dtb
