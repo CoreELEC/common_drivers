@@ -1,0 +1,159 @@
+#include "s7d_s905x5m_4g.dts"
+
+/{
+	model = "Ugoos SK4";
+	coreelec-dt-id = "s7d_s905x5m_ugoos_sk4";
+
+	/delete-node/ gpio_leds;
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+
+		aml-audio-card,dai-link@2 {
+			codec {
+				/delete-property/ prefix-names;
+				sound-dai = <&amlogic_codec>;
+			};
+		};
+	};
+
+	/delete-node/ adc_keypad;
+	/delete-node/ gpio_keypad;
+
+	/delete-node/ fixed@vin_12v_reg;
+	/delete-node/ fixed@vddao_5v_reg;
+	/delete-node/ fixed@vcc5v_reg;
+
+	vin_5v_reg: fixed@vin_5v_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	fixed@vddq_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	fixed@vddq_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	fixed@vddao_3v3p_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	fixed@vdd1v8_dcdc_reg {
+		vin-supply = <&vin_5v_reg>;
+	};
+
+	usb_5v_reg: fixedregulator@usb_5v {
+		vin-supply = <&vin_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USB_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIODV_1 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <70000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	// dummy
+	usb_otg_5v_reg: fixedregulator@usb_otg_5v {
+		vin-supply = <&vin_5v_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "USB_OTG_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	usb_otg_connector {
+		compatible = "sw-usb-connector", "usb-a-connector";
+		label = "OTG-USB";
+		vbus-supply = <&usb_otg_5v_reg>;
+		port {
+			sw_dr_sw: endpoint {
+				remote-endpoint = <&usb_dr_sw>;
+			};
+		};
+	};
+};
+
+&vrtc {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&i2c4 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4_pins2>;
+	clock-frequency = <300000>;
+
+	aw210xx_led@20 {
+		status = "okay";
+		compatible = "awinic,aw210xx_led";
+		reg = <0x20>;
+		global_current = <0x66>;
+		osc_clk = <1>;
+		br_res = <1>;
+
+		aw210xx,led {
+			aw210xx,name = "aw210xx_led";
+			aw210xx,imax = <1>;
+			aw210xx,brightness = <16>;
+			aw210xx,max_brightness = <255>;
+		};
+
+/*
+    R G B from led 1 to led 6
+    led-map
+      1    1    9   5
+      2    2   10   6
+      3    3   11   7
+      4    4   12   8
+      5    14  15  13
+      6    17  18  16
+*/
+	};
+};
+
+&crg_otg {
+	port {
+		usb_dr_sw: endpoint {
+			remote-endpoint = <&sw_dr_sw>;
+		};
+	};
+};
+
+&usb_phy21 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&crg {
+	vbus-supply = <&usb_5v_reg>;
+};
+
+/* SD card */
+&sd_emmc_b {
+	status = "disabled";
+};
+
+&ir_wakeup_key {
+	key_num = <3>;
+	/* same table as bl30 power.c */
+	wakeup_key = <0xeb14ff00 IR_NORMAL KEY_POWER
+		      0xe718ff00 IR_NORMAL KEY_POWER
+		      0x8b74e619 IR_NORMAL KEY_POWER>;
+};
