@@ -509,7 +509,7 @@ static int aml_rtc_probe(struct platform_device *pdev)
 
 	rtc->irq = platform_get_irq(pdev, 0);
 	if (rtc->irq < 0) {
-		dev_err_probe(&pdev->dev, rtc->irq, "Failed to get rtc irq\n");
+		ret = dev_err_probe(&pdev->dev, rtc->irq, "Failed to get rtc irq\n");
 		goto err_clk;
 	} else {
 		ret = devm_request_threaded_irq(&pdev->dev, rtc->irq, NULL, aml_rtc_alarm_handler,
