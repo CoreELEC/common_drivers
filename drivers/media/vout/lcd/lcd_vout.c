@@ -1143,7 +1143,7 @@ void lcd_late_resume(struct aml_lcd_drv_s *pdrv)
 	mutex_unlock(&lcd_power_mutex);
 }
 
-static void lcd_lata_resume_work(struct work_struct *work)
+static void lcd_late_resume_work(struct work_struct *work)
 {
 	struct aml_lcd_drv_s *pdrv;
 	int res_ready;
@@ -2457,8 +2457,15 @@ static int lcd_config_probe(struct aml_lcd_drv_s *pdrv, struct platform_device *
 	pdrv->drv_res.res_vsync_irq[0] = platform_get_irq_byname(pdev, "vsync");
 	pdrv->drv_res.res_vsync_irq[1] = platform_get_irq_byname(pdev, "vsync2");
 	pdrv->drv_res.res_vsync_irq[2] = platform_get_irq_byname(pdev, "vsync3");
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	pdrv->drv_res.res_vx1_irq = platform_get_irq_byname(pdev, "vbyone");
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	pdrv->drv_res.res_tcon_irq = platform_get_irq_byname(pdev, "tcon");
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
+	pdrv->drv_res.res_dsi_intr_irq = platform_get_irq_byname(pdev, "dsi_intr");
+#endif
 	lcd_vsync_irq_init(pdrv); //once
 
 	sprintf(lrm_dev_name, "lcd%d", pdrv->index);
@@ -2487,6 +2494,7 @@ static int lcd_config_probe(struct aml_lcd_drv_s *pdrv, struct platform_device *
 	/* lock pinmux as earlier as possible if lcd in on */
 	if (pdrv->status & LCD_STATUS_IF_ON) {
 		switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 		case LCD_RGB:
 			lcd_rgb_pinmux_set(pdrv, 1);
 			break;
@@ -2494,13 +2502,19 @@ static int lcd_config_probe(struct aml_lcd_drv_s *pdrv, struct platform_device *
 		case LCD_BT1120:
 			lcd_bt_pinmux_set(pdrv, 1);
 			break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 		case LCD_LVDS:
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
 			break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 		case LCD_VBYONE:
 			lcd_vbyone_pinmux_set(pdrv, 1);
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
 			break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 		case LCD_MLVDS:
 			lcd_mlvds_pinmux_set(pdrv, 1);
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
@@ -2509,10 +2523,13 @@ static int lcd_config_probe(struct aml_lcd_drv_s *pdrv, struct platform_device *
 			lcd_p2p_pinmux_set(pdrv, 1);
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
 			break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 		case LCD_MIPI:
 			lcd_mipi_pinmux_set(pdrv, 1);
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
 			break;
+#endif
 		default:
 			break;
 		}
@@ -2847,7 +2864,7 @@ static int lcd_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pdrv->sw_vrr.set_lock);
 	spin_lock_init(&pdrv->isr_lock);
-	INIT_WORK(&pdrv->late_resume_work, lcd_lata_resume_work);
+	INIT_WORK(&pdrv->late_resume_work, lcd_late_resume_work);
 	INIT_WORK(&pdrv->mode_switch_on_work, lcd_mode_switch_on_work);
 	INIT_DELAYED_WORK(&pdrv->init_on_delayed_work, lcd_init_on_delayed_work);
 	INIT_DELAYED_WORK(&pdrv->test_delayed_work, lcd_auto_test_delayed);

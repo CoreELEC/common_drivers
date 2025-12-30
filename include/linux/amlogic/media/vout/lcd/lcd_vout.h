@@ -9,6 +9,7 @@
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
 #include <linux/workqueue.h>
+#include <linux/printk.h>
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #endif
@@ -27,11 +28,7 @@
  * debug print define
  * **********************************
  */
-#define LCD_DEBUG_LEVEL_NORMAL    BIT(0)
-#define LCD_DEBUG_LEVEL_CLK       BIT(1)
-#define LCD_DEBUG_LEVEL_VSYNC     BIT(3)
 
-#define LCD_DEBUG_VSYNC_INTERVAL  60
 
 /* #define LCD_DEBUG_INFO */
 extern unsigned int lcd_debug_print_flag;
@@ -43,7 +40,7 @@ extern unsigned int lcd_debug_print_flag;
 #define LCD_DBG_PR_BL_NORMAL    BIT(4) //basic info & flow
 #define LCD_DBG_PR_BL_ADV       BIT(5) //ext
 #define LCD_DBG_PR_BL_PWM       BIT(6)
-#define LCD_DBG_PR_BL_LDIM		BIT(7)
+#define LCD_DBG_PR_BL_LDIM      BIT(7)
 #define LCD_DBG_PR_CLK          BIT(8)
 #define LCD_DBG_PR_TCON         BIT(9)
 #define LCD_DBG_PR_MEM          BIT(13)
@@ -67,14 +64,28 @@ extern unsigned int lcd_debug_print_flag;
 		lcd_debug_print_helper(drv, PR_TYPE_INFO, fmt, ##__VA_ARGS__)
 #define LCD_DBG(drv, fmt, ...)     \
 		lcd_debug_print_helper(drv, PR_TYPE_DBG, fmt, ##__VA_ARGS__)
-#define LCD_DBG_ADV(drv, fmt, ...)  \
+
+#define ADV_DEBUG_PR_ENABLED 1
+
+#if ADV_DEBUG_PR_ENABLED
+	#define LCD_DBG_ADV(drv, fmt, ...)  \
 		lcd_debug_print_helper(drv, PR_TYPE_DBG_ADV, fmt, ##__VA_ARGS__)
-#define LCD_DBG_ADV2(drv, fmt, ...)  \
+	#define LCD_DBG_ADV2(drv, fmt, ...)  \
 		lcd_debug_print_helper(drv, PR_TYPE_DBG_ADV2, fmt, ##__VA_ARGS__)
-#define LCD_DBG_CLK(drv, fmt, ...)  \
+	#define LCD_DBG_CLK(drv, fmt, ...)  \
 		lcd_debug_print_helper(drv, PR_TYPE_DBG_CLK, fmt, ##__VA_ARGS__)
-#define LCD_DBG_ISR(drv, fmt, ...)  \
+	#define LCD_DBG_ISR(drv, fmt, ...)  \
 		lcd_debug_print_helper(drv, PR_TYPE_DBG_ISR, fmt, ##__VA_ARGS__)
+#else
+	#define LCD_DBG_ADV(drv, fmt, ...)  \
+		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
+	#define LCD_DBG_ADV2(drv, fmt, ...)  \
+		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
+	#define LCD_DBG_CLK(drv, fmt, ...)  \
+		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
+	#define LCD_DBG_ISR(drv, fmt, ...)  \
+		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
+#endif
 
 #define LCD_DEV_DBG(drv, dev_idx, fmt, ...)     \
 		lcd_dev_debug_print_helper(drv, dev_idx, PR_TYPE_DBG, fmt, ##__VA_ARGS__)
@@ -386,6 +397,9 @@ struct dsi_dphy_s {
 struct dsi_config_s {
 	/* user config */
 	unsigned char lane_num;
+	unsigned char deskew_en;
+	unsigned short deskew_initial_time;
+	unsigned short deskew_periodic_time;
 	unsigned int bit_rate_target; /* MHz */
 	unsigned char multi_port_cfg; /* bit[0:3]*/
 	unsigned char operation_mode_init; /* 0=video mode, 1=command mode */
@@ -396,6 +410,7 @@ struct dsi_config_s {
 	unsigned int factor_numerator;
 	unsigned int factor_denominator;
 	unsigned int lane_byte_clk;
+	unsigned int tear_en_ctrl; // 0=dis, 1=dcs, 2=gpio
 
 	/* non_burst vid packet */
 	unsigned int user_pkt_size;
@@ -980,6 +995,8 @@ struct aml_lcd_drv_s {
 		int res_vx1_irq;
 		char vbyone_isr_name[10];
 		int res_tcon_irq;
+		char dsi_intr_isr_name[10];
+		int res_dsi_intr_irq;
 	} drv_res;
 
 	struct lcd_data_s *data;

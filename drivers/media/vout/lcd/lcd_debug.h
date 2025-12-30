@@ -14,7 +14,9 @@
 struct lcd_debug_info_s {
 	unsigned int *reg_pinmux_table;
 
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	int (*reg_dump_lvds)(struct aml_lcd_drv_s *pdrv, char *buf, int offset);
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	int (*reg_dump_vbyone)(struct aml_lcd_drv_s *pdrv, char *buf, int offset);
 #endif

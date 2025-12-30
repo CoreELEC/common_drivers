@@ -41,7 +41,7 @@ static int mipi_lt070me05_power_off(struct bl_extern_driver_s *bext)
  */
 static int mipi_lt070me05_set_level(struct bl_extern_driver_s *bext, unsigned int level)
 {
-#ifdef CONFIG_AMLOGIC_LCD_TABLET
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	struct aml_lcd_drv_s *pdrv;
 	unsigned char payload[] = {0x15, 2, 0x51, 0xe6, 0xff, 0xff};
 

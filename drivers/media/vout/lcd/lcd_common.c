@@ -126,7 +126,6 @@ void lcd_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 pr_type, const char *
 {
 	va_list args;
 	struct va_format vaf;
-	char buffer[20];
 
 	switch (pr_type) {
 	case PR_TYPE_DBG:
@@ -161,23 +160,18 @@ void lcd_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 pr_type, const char *
 
 	if (pr_type == PR_TYPE_ERR) {
 		if (!pdrv)
-			snprintf(buffer, sizeof(buffer), "[lcd:-](err) ");
+			pr_err("[lcd:-](err): %pV\n", &vaf);
 		else if (pdrv->device_mgr.dev_cnt > 1 && pdrv->curr_dev)
-			snprintf(buffer, sizeof(buffer), "[lcd:%u:%u](err) ",
-						pdrv->index, pdrv->curr_dev->idx);
+			pr_err("[lcd:%u:%u](err): %pV\n", pdrv->index, pdrv->curr_dev->idx, &vaf);
 		else
-			snprintf(buffer, sizeof(buffer), "[lcd:%u](err) ", pdrv->index);
-		pr_err("%s%pV\n", buffer, &vaf);
+			pr_err("[lcd:%u](err): %pV\n", pdrv->index, &vaf);
 	} else {
 		if (!pdrv)
-			snprintf(buffer, sizeof(buffer), "[lcd:-] ");
+			pr_info("[lcd:-]: %pV\n", &vaf);
 		else if (pdrv->device_mgr.dev_cnt > 1 && pdrv->curr_dev)
-			snprintf(buffer, sizeof(buffer), "[lcd:%u:%u] ",
-						pdrv->index, pdrv->curr_dev->idx);
+			pr_info("[lcd:%u:%u]: %pV\n", pdrv->index, pdrv->curr_dev->idx, &vaf);
 		else
-			snprintf(buffer, sizeof(buffer), "[lcd:%u] ", pdrv->index);
-
-		pr_info("%s%pV\n", buffer, &vaf);
+			pr_info("[lcd:%u]: %pV", pdrv->index, &vaf);
 	}
 
 	va_end(args);
@@ -508,6 +502,7 @@ unsigned int lcd_cpu_gpio_get(struct aml_lcd_drv_s *pdrv, unsigned int index)
 	return gpiod_get_value(cpu_gpio->gpio);
 }
 
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 static void lcd_custom_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 {
 	struct lcd_config_s *pconf;
@@ -540,7 +535,9 @@ static void lcd_custom_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 	}
 	pconf->pinmux_flag = index;
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 static char *lcd_rgb_pinmux_str[] = {
 	"rgb_sync_on",      /* 0 */
 	"rgb_de_on",        /* 1 */
@@ -630,7 +627,9 @@ void lcd_bt_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 	LCD_DBG(pdrv, "set bt pinmux %s: 0x%px", lcd_bt_pinmux_str[index], pconf->pin);
 	pconf->pinmux_flag = index;
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 static char *lcd_vbyone_pinmux_str[] = {
 	"vbyone",
 	"vbyone_off",
@@ -662,7 +661,9 @@ void lcd_vbyone_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 	}
 	pconf->pinmux_flag = index;
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 static char *lcd_tcon_pinmux_str[] = {
 	"tcon_p2p",       /* 0 */
 	"tcon_p2p_usit",  /* 1 */
@@ -740,7 +741,9 @@ void lcd_p2p_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 	}
 	pconf->pinmux_flag = index;
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 static char *lcd_mipi_pinmux_str[] = {
 	"dsi_on",
 	"dsi_off",
@@ -773,6 +776,7 @@ void lcd_mipi_pinmux_set(struct aml_lcd_drv_s *pdrv, int status)
 	}
 	pconf->pinmux_flag = index;
 }
+#endif
 
 /* ************************************************** *
  * lcd config
@@ -838,14 +842,15 @@ int lcd_phy_cfg_print(struct phy_config_s *cfg, char *buf, int offset, int max_l
 
 	if (len >= max_len - 1)
 		return len - offset;
-	len += snprintf(buf + len, max_len - len - 1, "  lane  en    sel   phase_sel\n");
+	len += snprintf(buf + len, max_len - len - 1, "  lane: en P/N-swap  CH-sel  Phase\n");
 
 	ch_ctrl = cfg->ch_ctrl;
 	for (i = 0; i < cfg->lane_num; i++) {
 		if (len >= max_len - 1)
 			return len - offset;
-		len += snprintf(buf + len, max_len - len - 1, "  [%2d]  %d     0x%02x  0x%02x\n",
-				i, ch_ctrl[i].en, ch_ctrl[i].sel, ch_ctrl[i].phase_sel);
+		len += snprintf(buf + len, max_len - len - 1,
+			"  [%2d]: %d      %d     0x%02x   0x%02x\n", i, ch_ctrl[i].en,
+			ch_ctrl[i].pn_swap, ch_ctrl[i].sel, ch_ctrl[i].phase_sel);
 	}
 	if (len >= max_len - 1)
 		return len - offset;
@@ -1109,6 +1114,7 @@ void lcd_optical_vinfo_update(struct aml_lcd_drv_s *pdrv)
 	pdrv->vinfo.hdr_info.ldim_support = pconf->optical.ldim_support;
 }
 
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 static unsigned int vbyone_lane_num[] = {
 	1,
 	2,
@@ -1170,7 +1176,26 @@ void lcd_vbyone_bit_rate_config(struct aml_lcd_drv_s *pdrv)
 	LCD_DBG(pdrv, "lane_count=%u, bit_rate = %lluHz, pclk=%uhz",
 		lane_count, bit_rate, pconf->timing.act_timing.pixel_clk);
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
+void lcd_lvds_bit_rate_config(struct aml_lcd_drv_s *pdrv)
+{
+	struct lcd_config_s *pconf = &pdrv->curr_dev->dev_cfg;
+	unsigned long long bit_rate, band_width;
+	unsigned int port_div;
+
+	band_width = (unsigned long long)pconf->timing.act_timing.pixel_clk * 7;
+	port_div = pconf->control.lvds_cfg.dual_port ? 2 : 1;
+	bit_rate = lcd_do_div(band_width, port_div);
+	pconf->timing.bit_rate = bit_rate;
+
+	LCD_DBG(pdrv, "port_div:%d bit_rate=%lluHz, pclk=%uhz",
+		port_div, bit_rate, pconf->timing.act_timing.pixel_clk);
+}
+#endif
+
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 void lcd_mlvds_bit_rate_config(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_config_s *pconf = &pdrv->curr_dev->dev_cfg;
@@ -1186,21 +1211,6 @@ void lcd_mlvds_bit_rate_config(struct aml_lcd_drv_s *pdrv)
 
 	LCD_DBG(pdrv, "channel_num=%u, bit_rate=%lluHz, pclk=%uhz",
 		channel_num, bit_rate, pconf->timing.act_timing.pixel_clk);
-}
-
-void lcd_lvds_bit_rate_config(struct aml_lcd_drv_s *pdrv)
-{
-	struct lcd_config_s *pconf = &pdrv->curr_dev->dev_cfg;
-	unsigned long long bit_rate, band_width;
-	unsigned int port_div;
-
-	band_width = (unsigned long long)pconf->timing.act_timing.pixel_clk * 7;
-	port_div = pconf->control.lvds_cfg.dual_port ? 2 : 1;
-	bit_rate = lcd_do_div(band_width, port_div);
-	pconf->timing.bit_rate = bit_rate;
-
-	LCD_DBG(pdrv, "port_div:%d bit_rate=%lluHz, pclk=%uhz",
-		port_div, bit_rate, pconf->timing.act_timing.pixel_clk);
 }
 
 void lcd_p2p_bit_rate_config(struct aml_lcd_drv_s *pdrv)
@@ -1258,11 +1268,14 @@ void lcd_p2p_bit_rate_config(struct aml_lcd_drv_s *pdrv)
 	LCD_DBG(pdrv, "lane_num=%u, bit_rate=%lluHz, pclk=%uhz",
 		lane_num, bit_rate, pconf->timing.act_timing.pixel_clk);
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 void lcd_mipi_dsi_bit_rate_config(struct aml_lcd_drv_s *pdrv)
 {
 	//todo
 }
+#endif
 
 struct lcd_detail_timing_s *lcd_timing_alloc(struct aml_lcd_drv_s *pdrv,
 				struct aml_lcd_device_s *dev_p)
@@ -1470,9 +1483,11 @@ void lcd_enc_timing_init_config(struct aml_lcd_drv_s *pdrv)
 		return;
 
 	switch (pconf->basic.lcd_type) {
+#if defined(CONFIG_AMLOGIC_LCD_DPI)
 	case LCD_RGB:
 		h_delay = RGB_DELAY;
 		break;
+#endif
 	default:
 		h_delay = 0;
 		break;
@@ -1569,9 +1584,11 @@ void lcd_enc_h_timing_change(struct aml_lcd_drv_s *pdrv)
 	unsigned short de_hstart, hs_start, hs_end, h_delay = 0;
 
 	switch (pconf->basic.lcd_type) {
+#if defined(CONFIG_AMLOGIC_LCD_DPI)
 	case LCD_RGB:
 		h_delay = RGB_DELAY;
 		break;
+#endif
 	default:
 		break;
 	}

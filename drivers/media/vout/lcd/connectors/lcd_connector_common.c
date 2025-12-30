@@ -39,11 +39,16 @@ static int lcd_type_supported(struct aml_lcd_drv_s *pdrv)
 	int ret = -1;
 
 	switch (lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
+		return 0;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 	case LCD_RGB:
 	case LCD_BT656:
 	case LCD_BT1120:
 		return 0;
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		return 0;
@@ -171,15 +176,19 @@ void lcd_connector_driver_init(struct aml_lcd_drv_s *pdrv)
 	}
 
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 	case LCD_RGB:
 		lcd_rgb_control_set(pdrv, 1);
 		lcd_rgb_pinmux_set(pdrv, 1);
 		break;
+
 	case LCD_BT656:
 	case LCD_BT1120:
 		lcd_bt_control_set(pdrv, 1);
 		lcd_bt_pinmux_set(pdrv, 1);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_lvds_dphy_set(pdrv, 0);
 		lcd_phy_set(pdrv, LCD_PHY_PWR_UP);
@@ -187,6 +196,7 @@ void lcd_connector_driver_init(struct aml_lcd_drv_s *pdrv)
 		lcd_lvds_enable(pdrv);
 		lcd_phy_set(pdrv, LCD_PHY_ON);
 		break;
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		lcd_vbyone_pinmux_set(pdrv, 1);
@@ -225,6 +235,7 @@ void lcd_connector_driver_init(struct aml_lcd_drv_s *pdrv)
 		lcd_phy_set(pdrv, LCD_PHY_ON);
 		lcd_mipi_dphy_set(pdrv, 1);
 		lcd_dsi_tx_ctrl(pdrv, 1);
+		lcd_dsi_interrupt_ctrl(pdrv, 1);
 		break;
 #endif
 	default:
@@ -248,6 +259,7 @@ void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv)
 		pdrv->fr_lock->rst = 1;
 
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 	case LCD_RGB:
 		lcd_rgb_pinmux_set(pdrv, 0);
 		break;
@@ -255,12 +267,15 @@ void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv)
 	case LCD_BT1120:
 		lcd_bt_pinmux_set(pdrv, 0);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_phy_set(pdrv, LCD_PHY_OFF);
 		lcd_lvds_dphy_set(pdrv, 0);
 		lcd_phy_set(pdrv, LCD_PHY_PWR_DOWN);
 		lcd_lvds_disable(pdrv);
 		break;
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		lcd_vbyone_interrupt_enable(pdrv, 0);
@@ -273,6 +288,7 @@ void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv)
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
+		lcd_dsi_interrupt_ctrl(pdrv, 0);
 		lcd_dsi_tx_ctrl(pdrv, 0);
 		lcd_phy_set(pdrv, LCD_PHY_OFF);
 		lcd_mipi_dphy_set(pdrv, 0);

@@ -1240,6 +1240,7 @@ int lcd_mode_init(struct aml_lcd_drv_s *pdrv)
 	case LCD_MIPI:
 		lcd_dsi_if_bind(pdrv);
 		lcd_dsi_post_config_load(pdrv);
+		lcd_dsi_interrupt_ctrl(pdrv, 1);
 		break;
 #endif
 	default:

@@ -1551,6 +1551,9 @@ struct reg_name_set_s {
 #define MIPI_DSI_DWC_INT_ST1_OS                    0x0030
 #define MIPI_DSI_DWC_INT_MSK0_OS                   0x0031
 #define MIPI_DSI_DWC_INT_MSK1_OS                   0x0032
+#define MIPI_DSI_TX_SKEW_CAL_CTRL_OS               0x0034
+#define MIPI_DSI_TX_SKEW_CAL_TIME_OS               0x0035
+#define MIPI_DSI_TX_SKEW_PRD_TIME_OS               0x0036
 
 /* Top-level registers */
 /* [31: 3]    Reserved.     Default 0.
@@ -1635,6 +1638,9 @@ struct reg_name_set_s {
  *		For each bit, read as this interrupt level status,
  *		write 1 to clear.
  * [31:22] Reserved
+ * [   24] stat/clr deskewcalhs_pulse_ft interrupt
+ * [   23] stat/clr deskewcalhs_pulse_rt interrupt
+ * [   22] stat/clr deskewcalhsdone_pulse_rt interrupt
  * [   21] stat/clr of eof interrupt
  * [   21] vde_fall interrupt
  * [   19] stat/clr of de_rise interrupt
@@ -1644,6 +1650,9 @@ struct reg_name_set_s {
  * [15: 0] RW intr_enable. Default 0.
  *		For each bit, 1=enable this interrupt, 0=disable.
  *	[15: 6] Reserved
+ * [    8] deskewcalhs_pulse_ft interrupt  (after s6)
+ * [    7] deskewcalhs_pulse_rt interrupt  (after s6)
+ * [    6] deskewcalhsdone_pulse_rt interrupt  (after s6)
  *	[    5] eof interrupt
  *	[    4] de_fall interrupt
  *	[    3] de_rise interrupt
@@ -1791,6 +1800,9 @@ struct reg_name_set_s {
 
 #define MIPI_DSI_TEST_CTRL1     0x10
 
+#define MIPI_DSI_DESKEW_CTRL   0x11
+
+#define MIPI_DSI_DESKEW_CTRL1  0x12
 /*******************backlight***********************/
 #define VPU_VPU_PWM_V0                             0x2730
 #define VPU_VPU_PWM_V1                             0x2731

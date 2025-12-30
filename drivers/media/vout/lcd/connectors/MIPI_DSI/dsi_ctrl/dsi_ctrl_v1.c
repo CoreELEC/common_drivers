@@ -27,9 +27,10 @@
  *               int req_ack,    // 1: request ack, 0: do not need ack
  *               int tear_en     // 1: enable tear ack, 0: disable tear ack
  */
-static void mipi_dcs_set(struct aml_lcd_drv_s *pdrv, u8 port,
-			int trans_type, int req_ack, int tear_en)
+static void mipi_dcs_set(struct aml_lcd_drv_s *pdrv, u8 port, u8 trans_type, u8 req_ack)
 {
+	u8 tear_en_by_dcs = pdrv->curr_dev->dev_cfg.control.mipi_cfg.tear_en_ctrl == 1 ? 1 : 0;
+
 	dsi_host_write(pdrv, port, MIPI_DSI_DWC_CMD_MODE_CFG_OS,
 		(trans_type << BIT_MAX_RD_PKT_SIZE) |
 		(trans_type << BIT_DCS_LW_TX)    |
@@ -44,9 +45,9 @@ static void mipi_dcs_set(struct aml_lcd_drv_s *pdrv, u8 port,
 		(trans_type << BIT_GEN_SW_1P_TX) |
 		(trans_type << BIT_GEN_SW_0P_TX) |
 		(req_ack << BIT_ACK_RQST_EN)     |
-		(tear_en << BIT_TEAR_FX_EN));
+		(tear_en_by_dcs << BIT_TEAR_FX_EN));
 
-	if (tear_en == MIPI_DCS_ENABLE_TEAR) {
+	if (tear_en_by_dcs) {
 		/* Enable Tear Interrupt if tear_en is valid */
 		dsi_host_setb(pdrv, port, MIPI_DSI_TOP_INTR_CNTL_STAT, 0x1, BIT_EDPITE_INT_EN, 1);
 		/* Enable Measure Vsync */
@@ -58,7 +59,7 @@ static void mipi_dcs_set(struct aml_lcd_drv_s *pdrv, u8 port,
 	dsi_host_write(pdrv, port, MIPI_DSI_DWC_PCKHDL_CFG_OS,
 		(1 << BIT_CRC_RX_EN)    |
 		(1 << BIT_ECC_RX_EN)    |
-		(req_ack << BIT_BTA_EN) |
+		((req_ack || tear_en_by_dcs) << BIT_BTA_EN) |
 		(0 << BIT_EOTP_RX_EN)   |
 		(0 << BIT_EOTP_TX_EN));
 }
@@ -96,7 +97,8 @@ static void check_phy_status(struct aml_lcd_drv_s *pdrv, u8 port)
 
 static void dsi_phy_init(struct aml_lcd_drv_s *pdrv, u8 port, struct dsi_dphy_s *dphy)
 {
-	u8 lane_n  = pdrv->curr_dev->dev_cfg.control.mipi_cfg.lane_num;
+	struct dsi_config_s *dsi_cfg = &pdrv->curr_dev->dev_cfg.control.mipi_cfg;
+	struct phy_config_s *phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
 
 	/* enable phy clock. */
 	dsi_phy_write(pdrv, port, MIPI_DSI_PHY_CTRL,  0x1); /* enable DSI top clock. */
@@ -159,7 +161,147 @@ static void dsi_phy_init(struct aml_lcd_drv_s *pdrv, u8 port, struct dsi_dphy_s 
 	dsi_phy_write(pdrv, port, MIPI_DSI_TURN_WCHDOG, 0x1000);
 
 	/* Powerup the analog circuit. */
-	dsi_phy_write(pdrv, port, MIPI_DSI_CHAN_CTRL, (0xf0 >> (4 - lane_n)) & 0xf);
+	dsi_phy_write(pdrv, port, MIPI_DSI_CHAN_CTRL, (0xf0 >> (4 - dsi_cfg->lane_num)) & 0xf);
+
+	//MIPI_DSI_TEST_CTRL0
+	// [0:3] ch 0~4 hs invert en
+	// [5]:ch0 [6]:ch1 [7]:ch2 [8]:ch3 [9]:clk [10]:rx+cd
+	switch (pdrv->data->chip_type) {
+	case LCD_CHIP_T7:// LP pn-swap
+		if (port == 0) { //lcd0_port0 or lcd1_port0
+			if (phy_cfg->ch_ctrl[0].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[0].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  5, 1);
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0, 10, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  5, 1);
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1, 10, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[1].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[1].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  6, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  6, 1);
+			}
+			if (phy_cfg->ch_ctrl[2].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[2].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  9, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  9, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[3].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[3].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  7, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  7, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[4].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[4].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  8, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  8, 1);
+			}
+		} else if (port == 1) {
+			if (phy_cfg->ch_ctrl[5].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[5].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  5, 1);
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0, 10, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  5, 1);
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1, 10, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[6].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[6].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  6, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  6, 1);
+			}
+			if (phy_cfg->ch_ctrl[7].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[7].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  9, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  9, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[8].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[8].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  7, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  7, 1);
+			}
+
+			if (phy_cfg->ch_ctrl[9].pn_swap == 0 ||
+			    phy_cfg->ch_ctrl[9].pn_swap == 0xff) {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  8, 1);
+			} else {
+				dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  8, 1);
+			}
+		}
+		break;
+	case LCD_CHIP_TXHD2:
+	case LCD_CHIP_S6:
+		if (phy_cfg->ch_ctrl[0].pn_swap == 0 || phy_cfg->ch_ctrl[0].pn_swap == 0xff) {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  0, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  5, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0, 10, 1);
+		} else {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  0, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  5, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1, 10, 1);
+		}
+
+		if (phy_cfg->ch_ctrl[1].pn_swap == 0 || phy_cfg->ch_ctrl[1].pn_swap == 0xff) {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  1, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  6, 1);
+		} else {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  1, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  6, 1);
+		}
+
+		if (phy_cfg->ch_ctrl[2].pn_swap == 0 || phy_cfg->ch_ctrl[2].pn_swap == 0xff)
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  9, 1);
+		else
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  9, 1);
+
+		if (phy_cfg->ch_ctrl[3].pn_swap == 0 || phy_cfg->ch_ctrl[3].pn_swap == 0xff) {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  2, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  7, 1);
+		} else {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  2, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  7, 1);
+		}
+
+		if (phy_cfg->ch_ctrl[4].pn_swap == 0 || phy_cfg->ch_ctrl[4].pn_swap == 0xff) {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  3, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 0,  8, 1);
+		} else {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  3, 1);
+			dsi_phy_setb(pdrv, port, MIPI_DSI_TEST_CTRL0, 1,  8, 1);
+		}
+		break;
+	default:
+		break;
+	}
+
+	switch (pdrv->data->chip_type) {
+	case LCD_CHIP_S6:
+		if (dsi_cfg->deskew_en) {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_DESKEW_CTRL,
+				dsi_cfg->deskew_initial_time, 0, 16); //deskew for periodic
+			dsi_phy_setb(pdrv, port, MIPI_DSI_DESKEW_CTRL1,
+				dsi_cfg->deskew_periodic_time, 0, 16); //deskew for periodic
+			dsi_phy_setb(pdrv, port, MIPI_DSI_DESKEW_CTRL, 1, 16, 1); //deskew en
+		} else {
+			dsi_phy_setb(pdrv, port, MIPI_DSI_DESKEW_CTRL, 0, 16, 1);//phy deskew en
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 static void set_dsi_phy_config(struct aml_lcd_drv_s *pdrv, u8 port)
@@ -183,7 +325,7 @@ static void set_dsi_phy_config(struct aml_lcd_drv_s *pdrv, u8 port)
 	/* Power up D-PHY */
 	dsi_host_write(pdrv, port, MIPI_DSI_DWC_PHY_RSTZ_OS, 0xf);
 
-	/* Analog */
+	/* D-PHY */
 	dsi_phy_init(pdrv, port, &dconf->dphy);
 
 	/* Check the phylock/stopstateclklane to decide if the DPHY is ready */
@@ -294,9 +436,7 @@ static void set_mipi_dsi_host(struct aml_lcd_drv_s *pdrv, u8 port, u8 vcid, u8 o
 		dsi_host_write(pdrv, port, MIPI_DSI_DWC_VID_MODE_CFG_OS,
 			(1 << BIT_LP_CMD_EN) | /* command transmission only in low power mode */
 			(0 << BIT_FRAME_BTA_ACK_EN) | /* enable BTA after one frame, need check */
-			// (1 << BIT_LP_HFP_EN)  | /* enable lp */
-			// (1 << BIT_LP_HBP_EN)  | /* enable lp */
-			(0 << BIT_LP_HFP_EN)  | /* enable lp */
+			(1 << BIT_LP_HFP_EN)  | /* enable lp */
 			(0 << BIT_LP_HBP_EN)  | /* enable lp */
 			(1 << BIT_LP_VACT_EN) | /* enable lp */
 			(1 << BIT_LP_VFP_EN)  | /* enable lp */
@@ -357,6 +497,33 @@ static void set_mipi_dsi_host(struct aml_lcd_drv_s *pdrv, u8 port, u8 vcid, u8 o
 	dsi_host_write(pdrv, port, MIPI_DSI_DWC_PHY_TMR_LPCLK_CFG_OS, //lane byte clock cycles
 		((0x0026 & 0x1ff) << 16) | //maximum time D-PHY clock HS to LP
 		(0x0017 & 0x1ff));         //maximum time D-PHY clock LP to HS
+}
+
+static inline void set_mipi_dsi_host_deskew(struct aml_lcd_drv_s *pdrv, uint8_t port, uint8_t en)
+{
+	struct dsi_config_s *dsi_cfg = &pdrv->curr_dev->dev_cfg.control.mipi_cfg;
+
+	switch (pdrv->data->chip_type) {
+	case LCD_CHIP_S6:
+		if (en && dsi_cfg->deskew_en) {
+			dsi_host_write(pdrv, port, MIPI_DSI_TX_SKEW_CAL_CTRL_OS,
+					(0x1 << 4) | //Use host to control deskew
+					(0x1 << 3) | //Initial deskew
+					(0x0 << 2) | //Deskew cal no wait
+					(0x0 << 1) | //use to stop deskew
+					(0x1 << 0)); //Deskew en
+			dsi_host_write(pdrv, port, MIPI_DSI_TX_SKEW_CAL_TIME_OS, // useless
+				(dsi_cfg->deskew_initial_time << 16) | //For initial deskew
+				(dsi_cfg->deskew_periodic_time << 0)); //For periodic deskew
+			// periodic interval frames
+			dsi_host_write(pdrv, port, MIPI_DSI_TX_SKEW_PRD_TIME_OS, 0x01);
+		} else {
+			dsi_host_setb(pdrv, port, MIPI_DSI_TX_SKEW_CAL_CTRL_OS, 0, 0, 1);//en
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 /* mipi dsi command support
@@ -956,8 +1123,7 @@ static void dsi_host_on_pre(struct aml_lcd_drv_s *pdrv)
 
 		mipi_dcs_set(pdrv, i,
 			MIPI_DSI_CMD_TRANS_TYPE, //0: high speed, 1: low power
-			MIPI_DSI_DCS_REQ_ACK, //if need bta ack check
-			MIPI_DSI_TEAR_SWITCH); //enable tear ack
+			MIPI_DSI_DCS_REQ_ACK); //if need bta ack check
 
 		set_mipi_dsi_host(pdrv, i, MIPI_DSI_VIRTUAL_CHAN_ID, dconf->operation_mode_init);
 
@@ -992,6 +1158,12 @@ static void dsi_host_on_post(struct aml_lcd_drv_s *pdrv)
 		if (port_mask & BIT(1))
 			set_mipi_dsi_host(pdrv, 1, MIPI_DSI_VIRTUAL_CHAN_ID, op_mode_disp);
 	}
+
+	if (port_mask & BIT(0))
+		set_mipi_dsi_host_deskew(pdrv, 0, 1);
+	if (port_mask & BIT(1))
+		set_mipi_dsi_host_deskew(pdrv, 1, 1);
+
 	if (op_mode_disp == MIPI_DSI_OPERATION_MODE_VIDEO)
 		lcd_venc_enable(pdrv, 1);
 }
@@ -1007,7 +1179,12 @@ static void dsi_host_off_pre(struct aml_lcd_drv_s *pdrv)
 			port_mask = BIT(0) | BIT(1);
 	}
 
-	lcd_venc_enable(pdrv, 0);
+	if (port_mask & BIT(0))
+		set_mipi_dsi_host_deskew(pdrv, 0, 0);
+	if (port_mask & BIT(1))
+		set_mipi_dsi_host_deskew(pdrv, 1, 0);
+
+	// lcd_venc_enable(pdrv, 0);
 
 	if (dconf->operation_mode_init != dconf->operation_mode_display) {
 		if (port_mask & BIT(0))
@@ -1037,6 +1214,15 @@ static void dsi_host_off_post(struct aml_lcd_drv_s *pdrv)
 
 	LCD_DBG(pdrv, "%s", __func__);
 
+	//bit[3]: ULPS exit on data
+	//bit[2]: ULPS request on data
+	//bit[1]: ULPS exit on clk
+	//bit[0]: ULPS request on clk
+	if (port_mask & BIT(0))
+		dsi_host_write(pdrv, 0, MIPI_DSI_DWC_PHY_ULPS_CTRL_OS, 0x5);
+	if (port_mask & BIT(1))
+		dsi_host_write(pdrv, 1, MIPI_DSI_DWC_PHY_ULPS_CTRL_OS, 0x5);
+
 	for (i = 0; i < 4; i++) {
 		if (!(port_mask & (1 << i)))
 			continue;
@@ -1062,6 +1248,65 @@ static void dsi_host_off_post(struct aml_lcd_drv_s *pdrv)
 	}
 }
 
+static void dsi_set_irq_meas(struct aml_lcd_drv_s *pdrv, u8 port,
+			u8 vsync_meas_en, u8 edpite_meas_en, u16 intr_mask_setting)
+{
+	u32 top_meas_ctrl = 0;
+
+	if (vsync_meas_en) {
+		top_meas_ctrl |= 1 < 19; // meas en
+		top_meas_ctrl |= 1 < 18; // meas 0=cleared / 1=accumulated
+		top_meas_ctrl |= 0 < 10; // 17:10 meas last for Vsyncs
+	}
+
+	if (edpite_meas_en) {
+		top_meas_ctrl |= 1 < 9;  // meas en
+		top_meas_ctrl |= 1 < 18; // meas 0=cleared / 1=accumulated
+		top_meas_ctrl |= 0 < 10; // 7:0 meas last for edpite
+	}
+
+	dsi_host_write(pdrv, port, MIPI_DSI_TOP_MEAS_CNTL, top_meas_ctrl);
+	dsi_host_write(pdrv, port, MIPI_DSI_TOP_INTR_CNTL_STAT, intr_mask_setting);
+}
+
+static void dsi_irq_meas_process(struct aml_lcd_drv_s *pdrv, u8 port,
+				struct dsi_intr_meas_sta_s *meas_data)
+{
+	u32 top_meas_te0, top_meas_te1;
+	u32 top_meas_vs0, top_meas_vs1;
+
+	top_meas_te0 = dsi_host_read(pdrv, port, MIPI_DSI_TOP_MEAS_STAT_TE0);
+	top_meas_vs0 = dsi_host_read(pdrv, port, MIPI_DSI_TOP_MEAS_STAT_VS0);
+	top_meas_te1 = dsi_host_read(pdrv, port, MIPI_DSI_TOP_MEAS_STAT_TE1);
+	top_meas_vs1 = dsi_host_read(pdrv, port, MIPI_DSI_TOP_MEAS_STAT_VS1);
+
+	meas_data->vsync_meas_count_n = (top_meas_vs1 >> 16) & 0xf;
+	meas_data->vsync_meas_count_msb = top_meas_vs1 & 0xffff;
+	meas_data->vsync_meas_count_lsb = top_meas_vs0;
+
+	meas_data->edpite_meas_count_n = (top_meas_te1 >> 16) & 0xf;
+	meas_data->edpite_meas_count_msb = top_meas_te1 & 0xffff;
+	meas_data->edpite_meas_count_lsb = top_meas_te0;
+}
+
+static void dsi_irq_intr_process(struct aml_lcd_drv_s *pdrv, u8 port,
+				struct dsi_intr_meas_sta_s *intr_data)
+{
+	u32 top_edpihalt_stat, top_intr_stat;
+
+	top_intr_stat = dsi_host_read(pdrv, port, MIPI_DSI_TOP_INTR_CNTL_STAT);
+	top_edpihalt_stat = dsi_host_read(pdrv, port, MIPI_DSI_TOP_STAT);
+
+	intr_data->dsi_top_intr_sta = top_intr_stat;
+
+	top_intr_stat |= 0xffff0000;
+	dsi_host_write(pdrv, port, MIPI_DSI_TOP_INTR_CNTL_STAT, top_intr_stat);
+
+	intr_data->edpihalt_status = top_edpihalt_stat & 0x80000000 ? 1 : 0;
+	intr_data->edpite_line = (top_edpihalt_stat >> 16) & 0xfff;
+	intr_data->edpite_pix = top_edpihalt_stat & 0xfff;
+}
+
 struct dsi_ctrl_s dsi_ctrl_v1 = {
 	.tx_ready    = dsi_host_on_pre,
 	.disp_on     = dsi_host_on_post,
@@ -1071,6 +1316,10 @@ struct dsi_ctrl_s dsi_ctrl_v1 = {
 
 	.fr_change_pre = NULL,
 	.fr_change_post = NULL,
+
+	.set_dsi_irq_meas = dsi_set_irq_meas,
+	.dsi_irq_intr_process = dsi_irq_intr_process,
+	.dsi_irq_meas_process = dsi_irq_meas_process,
 
 	.DT_generic_short_write = dsi_generic_write_short_packet,
 	.DT_generic_read = dsi_generic_read_packet,

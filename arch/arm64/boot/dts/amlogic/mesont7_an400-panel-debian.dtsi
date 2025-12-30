@@ -28,11 +28,8 @@
 			0x0 0xfe016000 0x0 0x200   /* mipi_dsi0-B phy */
 			0x0 0xfe002000 0x0 0xa0    /* reset */
 			0x0 0xfe004000 0x0 0x70>;  /* periphs */
-		interrupts = <0 197 1
-			0 194 1
-			0 82 1
-			0 282 1>;
-		interrupt-names = "vsync","vsync2","vsync3","vbyone";
+		interrupts = <0 197 1>, <0 194 1>, <0 82 1>, <0 282 1>, <0 55 1>;
+		interrupt-names = "vsync","vsync2","vsync3","vbyone","dsi_intr";
 		pinctrl-names = "vbyone","vbyone_off","edp","edp_off";
 		pinctrl-0 = <&lcd_vbyone_a_pins>;
 		pinctrl-1 = <&lcd_vbyone_a_off_pins>;
@@ -827,11 +824,8 @@
 			0x0 0x0 0x0 0x0            /* mipi_dsi1-B phy */
 			0x0 0xfe002000 0x0 0xa0    /* reset */
 			0x0 0xfe004000 0x0 0x70>;  /* periphs */
-		interrupts = <0 197 1
-			0 194 1
-			0 82 1
-			0 283 1>;
-		interrupt-names = "vsync","vsync2","vsync3","vbyone";
+		interrupts = <0 197 1>, <0 194 1>, <0 82 1>, <0 283 1>, <0 53 1>;
+		interrupt-names = "vsync","vsync2","vsync3","vbyone", "dsi_intr";
 		pinctrl-names = "vbyone","vbyone_off","edp","edp_off";
 		pinctrl-0 = <&lcd_vbyone_b_pins>;
 		pinctrl-1 = <&lcd_vbyone_b_off_pins>;

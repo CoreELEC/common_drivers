@@ -85,21 +85,29 @@ void lcd_clk_frac_generate(struct aml_lcd_drv_s *pdrv)
 
 	/* update bit_rate by interface */
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		lcd_vbyone_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 		lcd_mlvds_bit_rate_config(pdrv);
 		break;
 	case LCD_P2P:
 		lcd_p2p_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		lcd_mipi_dsi_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_lvds_bit_rate_config(pdrv);
 		break;
+#endif
 	default:
 		break;
 	}
@@ -170,21 +178,29 @@ void lcd_clk_generate_parameter(struct aml_lcd_drv_s *pdrv)
 
 	/* update bit_rate by interface */
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		lcd_vbyone_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 		lcd_mlvds_bit_rate_config(pdrv);
 		break;
 	case LCD_P2P:
 		lcd_p2p_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		lcd_mipi_dsi_bit_rate_config(pdrv);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_lvds_bit_rate_config(pdrv);
 		break;
+#endif
 	default:
 		break;
 	}
@@ -675,6 +691,7 @@ lcd_clk_clkmsr_print_step_1:
 
 lcd_clk_clkmsr_print_step_2:
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 	case LCD_P2P:
 		if (cconf->data->tcon_clk_msr_id == -1)
@@ -683,6 +700,7 @@ lcd_clk_clkmsr_print_step_2:
 		n = lcd_debug_info_len(len + offset);
 		len += snprintf((buf + len), n, "tcon_clk:    %u\n", clk);
 		break;
+#endif
 	default:
 		break;
 	}

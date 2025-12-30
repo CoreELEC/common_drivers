@@ -12,6 +12,22 @@ config AMLOGIC_LCD
 		LCD output module
 		Include LVDS, MIPI-DPI
 
+config AMLOGIC_LCD_DPI
+	bool "LCD DPI Output Module"
+	default n
+	depends on AMLOGIC_LCD
+	help
+		LCD DPI output module (rgb, bt656, bt2020)
+		Configure the LCD output model for DPI output
+
+config AMLOGIC_LCD_LVDS
+	bool "LCD LVDS Output Module"
+	default n
+	depends on AMLOGIC_LCD
+	help
+		LCD LVDS output module
+		Configure the LCD output model for LVDS output
+
 config AMLOGIC_LCD_VBYONE
 	bool "LCD V-BY-ONE Output Module"
 	default n

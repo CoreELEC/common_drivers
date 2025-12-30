@@ -13,8 +13,8 @@
 		clocks = <&clkc CLKID_MIPI_DSI_MEAS>;
 		clock-names = "dsi_meas";
 		reg = <0x0 0xfe01e000 0x0 0x400>, <0x0 0xfe01c000 0x0 0x60>; /*dsi host, dsi dphy*/
-		interrupts = <0 197 4>, <0 194 4>;
-		interrupt-names = "vsync","vsync2";
+		interrupts = <0 197 4>, <0 194 4>, <0 86 1>;
+		interrupt-names = "vsync","vsync2","dsi_intr";
 		/* power type:(0=cpu_gpio, 2=signal, 3=extern, 0xff=ending) */
 		/* power index:(gpios_index, or extern_index, 0xff=invalid) */
 		/* power value:(0=output low, 1=output high, 2=input) */
@@ -387,7 +387,51 @@
 			power_off_step = <0xff 0 0 0>; /*ending*/
 			backlight_index = <0xff>;
 		};
+		dsi_cvt{
+			model_name = "dsi_multi_timing";
+			interface = "mipi";
+			/*h_active, v_active, h_period, v_period, color_bit, width, height*/
+			basic_setting = <1366 768 1792 798 8 16 9>;
+			/*hs_width, hs_bp, hs_pol, vs_width, vs_bp, vs_pol*/
+			lcd_timing = <40 60 0 5 20 0>;
+			/* fr_adj_type(0=clk, 1=htotal, 2=vtotal), clk_ss_level, 1, pixel_clk */
+			clk_attr = <0 0 1 85500000>;
+			/* <lane, bit_rate, /, mode_init(0=video,1=cmd), mode_disp(0=video,1=cmd)*/
+			/* video_mode(0=sync_pulse,1=sync_event,2=burst), clk_hs, />*/
+			mipi_attr = <4 1350 0 1 0 2 1 0>;
+			/* dsi_init: data_type, num, data... */
+			dsi_init_on = <
+				0x05 1 0x11
+				0xff 200
+				0x05 1 0x29
+				0xff 20
+				0xff 0xff>; /* ending flag */
+			dsi_init_off = <
+				0x05 1 0x28
+				0xff 10
+				0x05 1 0x10
+				0xff 10
+				0xff 0xff>; /* ending flag */
+			cus_ctrl_0_attr = <0x02 0x03>;
+			extend_tmg_0 = <2720 2560 60 40  0 1481 1440 5 20 0 8 344 193 201250000>;
+			extend_tmg_1 = <2200 1920 44 148 0 1125 1080 4  5 0 8 344 193 148500000>;
+			extend_tmg_2 = <1650 1280 40 220 0 750  720  5  5 0 8 344 193  74250000>;
+			extend_tmg_3 = <800  640  96 40  0 525  480  2 25 0 8 344 193  25175000>;
 
+			extern_init = <0xff>;
+			/* power step: type,index,value,delay(ms) */
+
+			phy-pn-swap = <0 0 0 0 0>;
+			power_on_step = <
+				0 0 1 10
+				2 0 0 0
+				0xff 0 0 0>;
+			power_off_step = <
+				2 0 0 0
+				0 0 0 10
+				0xff 0 0 0>;
+			backlight_index = <0xff>;
+		};
 		ports {
 			port {
 				#address-cells = <1>;

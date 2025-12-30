@@ -18,6 +18,28 @@ struct dsi_cmd_req_s {
 	u8 rd_out_len;
 };
 
+struct dsi_intr_meas_sta_s {
+	u8 vsync_meas_count_n;
+	u32 vsync_meas_count_msb, vsync_meas_count_lsb;
+
+	u8 edpite_meas_count_n;
+	u32 edpite_meas_count_msb, edpite_meas_count_lsb;
+
+	u8 edpihalt_status;
+	u16 edpite_line, edpite_pix;
+
+	u32 dsi_top_intr_sta;
+	//[8] stat/clr deskewcalhs_pulse_ft interrupt
+	//[7] stat/clr deskewcalhs_pulse_rt interrupt
+	//[6] stat/clr deskewcalhsdone_pulse_rt interrupt
+	//[5] stat/clr of EOF interrupt
+	//[4] stat/clr of de_fall interrupt
+	//[3] stat/clr of de_rise interrupt
+	//[2] stat/clr of vs_fall interrupt
+	//[1] stat/clr of vs_rise interrupt
+	//[0] stat/clr of dwc_edpite interrupt
+};
+
 struct dsi_ctrl_s {
 	/* DSI host&phy setup, if (init_on_table) enter op_mode_init*/
 	void (*tx_ready)(struct aml_lcd_drv_s *pdrv);
@@ -33,6 +55,13 @@ struct dsi_ctrl_s {
 
 	void (*fr_change_pre)(struct aml_lcd_drv_s *pdrv, u16 fr100);
 	void (*fr_change_post)(struct aml_lcd_drv_s *pdrv);
+
+	void (*set_dsi_irq_meas)(struct aml_lcd_drv_s *pdrv, u8 port,
+			u8 vsync_meas_en, u8 edpite_meas_en, u16 intr_mask_setting);
+	void (*dsi_irq_intr_process)(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data);
+	void (*dsi_irq_meas_process)(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data);
 
 	/* Processor to Peripheral Direction (Processor-Sourced) Packet Data Types */
 	int (*DT_generic_short_write)(struct aml_lcd_drv_s *pdrv, u8 port,
@@ -62,6 +91,13 @@ void dsi_config_post(struct aml_lcd_drv_s *pdrv);
 
 void dsi_fr_change_pre(struct aml_lcd_drv_s *pdrv, u16 fr100);
 void dsi_fr_change_post(struct aml_lcd_drv_s *pdrv);
+
+void dsi_top_set_irq_meas(struct aml_lcd_drv_s *pdrv, u8 port,
+			u8 vsync_meas_en, u8 edpite_meas_en, u16 intr_mask_setting);
+void dsi_top_read_intr_sta(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data);
+void dsi_top_read_meas_sta(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data);
 
 int dsi_DT_generic_short_write(struct aml_lcd_drv_s *pdrv, u8 port, struct dsi_cmd_req_s *req);
 int dsi_DT_generic_read(struct aml_lcd_drv_s *pdrv, u8 port, struct dsi_cmd_req_s *req);

@@ -9,6 +9,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
+#include <linux/interrupt.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include "../../lcd_common.h"
 #include "./dsi_common.h"
@@ -25,18 +26,18 @@ char *dsi_video_mode_type_table[] = {
 };
 
 char *dsi_video_data_type_table[] = {
-	"16bit CFG-1",
-	"16bit CFG-2",
-	"16bit CFG-3",
-	"18bit CFG-1",
-	"18bit CFG-2",
-	"24bit",
-	"20bit YCbCr 4:2:2 (loosely)",
-	"24bit YCbCr 4:2:2",
-	"16bit YCbCr 4:2:2",
-	"30bit",
-	"36bit",
-	"12bit YCbCr 4:2:0",
+	"16b CFG-1",
+	"16b CFG-2",
+	"16b CFG-3",
+	"18b CFG-1",
+	"18b CFG-2",
+	"24b",
+	"20b YUV422 (loosely)",
+	"24b YUV422",
+	"16b YUV422",
+	"30b",
+	"36b",
+	"12b YUV420",
 	"un-support type",
 };
 
@@ -46,13 +47,13 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 	u32 esc_clk;
 
 	if (pr_flag & DSI_HOST_CFG_PR_BASIC) {
-		pr_info("MIPI DSI Config:\n"
+		pr_info("DSI Config:\n"
 			"  %u-port, %u-lane\n"
 			"  bit rate = %lluHz (limit < %uMHz)\n"
-			"  operation mode:   init:%s(%u), display:%s(%u)\n"
-			"  video mode type:  %s(%d)\n"
-			"  clk always hs:    %u\n"
-			"  data format:      %s\n",
+			"  operation mode:  init:%s(%u), display:%s(%u)\n"
+			"  video mode type: %s(%d)\n"
+			"  clk always hs:   %u\n"
+			"  data format:     %s\n",
 			dconf->multi_port_cfg ? 2 : 1, dconf->lane_num,
 			pconf->timing.bit_rate, dconf->bit_rate_target,
 			dsi_op_mode_table[dconf->operation_mode_init],
@@ -66,14 +67,9 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 	}
 
 	if (pr_flag & DSI_HOST_CFG_PR_VID_TIMING) {
-		pr_info("MIPI DSI video timing:\n"
-			"  HLINE       = %hu\n"
-			"  HSA         = %hu\n"
-			"  HBP         = %hu\n"
-			"  VSA         = %hu\n"
-			"  VBP         = %hu\n"
-			"  VFP         = %hu\n"
-			"  VACT        = %hu\n",
+		pr_info("DSI video timing:\n"
+			"  HLINE=%u HSA=%u HBP=%u\n"
+			"  VSA=%u VBP=%u VFP=%u VACT=%u\n",
 			dconf->hline, dconf->hsa, dconf->hbp,
 			pconf->timing.act_timing.vsync_width,
 			pconf->timing.act_timing.vsync_bp,
@@ -82,7 +78,7 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 	}
 
 	if (pr_flag & DSI_HOST_CFG_PR_CLK) {
-		pr_info("MIPI DSI clk:\n"
+		pr_info("DSI clk:\n"
 		      "  Pixel CLK   = %10uHz\n"
 		      "  bit_rate    = %10lluHz\n"
 		      "  LaneByteClk = %10uHz\n"
@@ -95,25 +91,15 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 	if (pr_flag & DSI_HOST_CFG_PR_DPHY_TIM) {
 		esc_clk = div_around(1000000, dconf->dphy.lp_tesc[1]);
 
-		pr_info("MIPI DSI DPHY setting:\n"
-			"  t-UI        = %u.%02uns\n"
-			"  LP-ESC clk  = %d.%03dMHz\n"
-			"  LP-tesc     = 0x%02x (%uns)\n"
-			"  LP-lpx      = 0x%02x (%uns)\n"
-			"  LP-ta_sure  = 0x%02x (%uns)\n"
-			"  LP-ta_go    = 0x%02x (%uns)\n"
-			"  LP-ta_get   = 0x%02x (%uns)\n"
-			"  HS-exit     = 0x%02x (%uns)\n"
-			"  HS-trail    = 0x%02x (%uns)\n"
-			"  HS-zero     = 0x%02x (%uns)\n"
-			"  HS-prepare  = 0x%02x (%uns)\n"
-			"  CLK-trail   = 0x%02x (%uns)\n"
-			"  CLK-post    = 0x%02x (%uns)\n"
-			"  CLK-zero    = 0x%02x (%uns)\n"
-			"  CLK-prepare = 0x%02x (%uns)\n"
-			"  CLK-pre     = 0x%02x (%uns)\n"
-			"  init        = 0x%02x\n"
-			"  wakeup      = 0x%02x\n",
+		pr_info("DSI DPHY setting:\n"
+			"  t-UI       = %u.%02uns\n"
+			"  LP-ESC clk = %d.%03dMHz\n"
+			"  LP : tesc=0x%02x:%3uns lpx=0x%02x:%3uns ta_sure=0x%02x:%3uns ta_go=0x%02x:%3uns ta_get=0x%02x:%3uns\n"
+			"  HS : exit=0x%02x:%3uns trail=0x%02x:%3uns zero=0x%02x:%3uns prepare=0x%02x:%3uns\n"
+			"  CLK: pre =0x%02x:%3uns trail=0x%02x:%3uns zero=0x%02x:%3uns prepare=0x%02x:%3uns post=0x%02x:%3uns\n"
+			"  init = 0x%02x wakeup = 0x%02x\n"
+			"  phy: hs2lp=0x%02x:%5uns lp2hs=0x%02x:%5uns\n"
+			"  max_rd_time = 0x%02x:%5uns\n",
 			dconf->dphy.t_ui / 100,     dconf->dphy.t_ui % 100,
 			(esc_clk / 1000),           (esc_clk % 1000),
 			dconf->dphy.lp_tesc[0],     dconf->dphy.lp_tesc[1],
@@ -125,17 +111,12 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 			dconf->dphy.hs_trail[0],    dconf->dphy.hs_trail[1],
 			dconf->dphy.hs_zero[0],     dconf->dphy.hs_zero[1],
 			dconf->dphy.hs_prepare[0],  dconf->dphy.hs_prepare[1],
+			dconf->dphy.clk_pre[0],     dconf->dphy.clk_pre[1],
 			dconf->dphy.clk_trail[0],   dconf->dphy.clk_trail[1],
-			dconf->dphy.clk_post[0],    dconf->dphy.clk_post[1],
 			dconf->dphy.clk_zero[0],    dconf->dphy.clk_zero[1],
 			dconf->dphy.clk_prepare[0], dconf->dphy.clk_prepare[1],
-			dconf->dphy.clk_pre[0],     dconf->dphy.clk_pre[1],
-			dconf->dphy.init, dconf->dphy.wakeup);
-
-		pr_info("MIPI DSI HOST setting:\n"
-			"  phy_hs2lp   = 0x%02x (%uns)\n"
-			"  phy_hs2lp   = 0x%02x (%uns)\n"
-			"  max_rd_time = 0x%02x (%uns)\n",
+			dconf->dphy.clk_post[0],    dconf->dphy.clk_post[1],
+			dconf->dphy.init, dconf->dphy.wakeup,
 			dconf->dphy.phy_hs2lp_time[0], dconf->dphy.phy_hs2lp_time[1],
 			dconf->dphy.phy_lp2hs_time[0], dconf->dphy.phy_lp2hs_time[1],
 			dconf->dphy.max_rd_time[0], dconf->dphy.max_rd_time[1]);
@@ -143,7 +124,7 @@ void dsi_config_print_helper(struct lcd_config_s *pconf, u8 pr_flag)
 
 	if (pr_flag & DSI_HOST_CFG_PR_N_BURST_ST) {
 		if (dconf->video_mode_type != DSI_VID_BURST) {
-			pr_info("MIPI DSI NON-BURST setting:\n"
+			pr_info("DSI NON-BURST setting:\n"
 				"  vid_num_chunks: %d\n"
 				"  vid_pkt_size:   %d\n"
 				"  vid_null_size:  %d\n\n",
@@ -179,8 +160,8 @@ void lcd_mipi_dsi_init_table_load_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd
 
 		// table_cnt = table_cnt / sizeof(unsigned int);
 		if (table_cnt <= 0 || table_cnt >= dsi_table[i].size_limit) {
-			LCD_DEV_PR(pdrv, dev_p->idx, "%s: get %s size [%d] (limit:%u) invalid",
-				__func__, dsi_table[i].name, table_cnt, dsi_table[i].size_limit);
+			LCD_DEV_PR(pdrv, dev_p->idx, "table %s: get [%d] (limit:%u) invalid",
+				dsi_table[i].name, table_cnt, dsi_table[i].size_limit);
 			continue;
 		}
 
@@ -193,8 +174,7 @@ void lcd_mipi_dsi_init_table_load_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd
 			_temp_table_addr = NULL;
 			continue;
 		}
-		LCD_DEV_PR(pdrv, dev_p->idx, "%s: get %s [%d]",
-			__func__, dsi_table[i].name, table_cnt);
+		LCD_DEV_PR(pdrv, dev_p->idx, "table %s get [%d]", dsi_table[i].name, table_cnt);
 		of_property_read_u32_array(child, dsi_table[i].name, _temp_table_addr, table_cnt);
 
 		for (j = 0; j < table_cnt; j++)
@@ -255,7 +235,7 @@ void lcd_mipi_dsi_init_table_load_json(struct aml_lcd_drv_s *pdrv, struct aml_lc
 			kfree(nums);
 			return;
 		}
-		LCD_DEV_PR(pdrv, dev_p->idx, "%s: get %s [%d]", __func__, dsi_table[i].name, cnt);
+		LCD_DEV_PR(pdrv, dev_p->idx, "table %s get [%d]", dsi_table[i].name, cnt);
 		for (i = 0; i < cnt; i++)
 			(*dsi_table[i].table_addr_addr)[i] = nums[i];
 
@@ -292,10 +272,8 @@ static void dsi_req_print(int ret, struct dsi_cmd_req_s *req)
 	u32 n = 0, k;
 
 	string = kcalloc(1024, sizeof(char), GFP_KERNEL);
-	if (!string) {
-		LCD_ERR(NULL, "%s: buf malloc error", __func__);
+	if (!string)
 		return;
-	}
 
 	u8 is_DCS =
 		req->data_type == DT_DCS_LONG_WR ||
@@ -468,7 +446,7 @@ int dsi_run_oneline_cmd(struct aml_lcd_drv_s *pdrv, u8 port,
 
 	if (!ret && is_rd && rd_back_len && rd_back) {
 		if (dsi_cmd_req.rd_out_len > rd_back_len) {
-			LCD_ERR(pdrv, "%s rd out %d, back limit %d", __func__,
+			LCD_ERR(pdrv, "dsi cmd: rd out %d, back limit %d",
 				dsi_cmd_req.rd_out_len, rd_back_len);
 			return 0;
 		}
@@ -634,7 +612,7 @@ static void dsi_panel_init(struct aml_lcd_drv_s *pdrv)
 
 	if (dconf->dsi_init_on) {
 		dsi_exec_init_table(pdrv, dconf->dsi_init_on, DSI_INIT_ON_MAX, NULL, 0);
-		LCD_PR(pdrv, "%s table", __func__);
+		LCD_PR(pdrv, "dsi init table");
 	}
 }
 
@@ -644,7 +622,7 @@ static void dsi_panel_deinit(struct aml_lcd_drv_s *pdrv)
 
 	if (dconf->dsi_init_off) {
 		dsi_exec_init_table(pdrv, dconf->dsi_init_off, DSI_INIT_OFF_MAX, NULL, 0);
-		LCD_PR(pdrv, "%s table", __func__);
+		LCD_PR(pdrv, "dsi deinit table");
 	}
 }
 
@@ -680,10 +658,72 @@ u64 lcd_dsi_get_min_bitrate(struct aml_lcd_drv_s *pdrv)
 				band_width * pdrv->curr_dev->dev_cfg.timing.act_timing.lcd_bits;
 		}
 	} else {
-		LCD_DBG(pdrv, "%s: Only VIDEO mode need HS bitrate", __func__);
+		LCD_DBG(pdrv, "dsi get bitrate: Only VIDEO mode");
 		return 0;
 	}
 
 	bit_rate_min = lcd_do_div(band_width, port_cnt * dconf->lane_num);
 	return bit_rate_min;
+}
+
+static irqreturn_t lcd_dsi_interrupt_handler(int irq, void *data)
+{
+	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
+	struct dsi_intr_meas_sta_s sta_data;
+	//u32 intr_sta;
+
+	if ((pdrv->status & LCD_STATUS_IF_ON) == 0)
+		return IRQ_HANDLED;
+
+	dsi_top_read_intr_sta(pdrv, 0, &sta_data);
+
+	//intr_sta = sta_data.dsi_top_intr_sta;
+	//intr_sta = (intr_sta >> 16) & intr_sta;
+	//if (sta_data.dsi_top_intr_sta & 0x1) // dwc_edpite interrupt
+	//if (sta_data.dsi_top_intr_sta & 0x6) // vs_fall/vs_rise interrupt
+	//if (sta_data.dsi_top_intr_sta & 0x18) // de_fall/de_rise interrupt
+	//if (sta_data.dsi_top_intr_sta & 0x20) // EOF interrupt
+	//if (sta_data.dsi_top_intr_sta & 0x40) // deskewcalhsdone_pulse_rt/rt  interrupt
+	//if (sta_data.dsi_top_intr_sta & 0x180) // deskewcalhs_pulse_ft/rt  interrupt
+
+	LCD_DBG_ISR(pdrv, "dsi irq: irq=0x%x edptile[%d] at [%d.%d]",
+		sta_data.dsi_top_intr_sta, sta_data.edpihalt_status,
+		sta_data.edpite_line, sta_data.edpite_pix);
+
+	return IRQ_HANDLED;
+}
+
+int lcd_dsi_interrupt_ctrl(struct aml_lcd_drv_s *pdrv, u8 en)
+{
+	unsigned int dsi_intr_irq = 0;
+
+	if (!(pdrv->status & LCD_STATUS_IF_ON))
+		return -1;
+
+	if (!pdrv->drv_res.res_dsi_intr_irq) {
+		LCD_ERR(pdrv, "res_dsi_intr_irq is null");
+		return -1;
+	}
+	dsi_intr_irq = pdrv->drv_res.res_dsi_intr_irq;
+	LCD_DBG(pdrv, "MIPI-DSI TOP irq: %d", dsi_intr_irq);
+
+	snprintf(pdrv->drv_res.dsi_intr_isr_name, 10, "dsi%d_intr", pdrv->index);
+	if (!en) {
+		free_irq(dsi_intr_irq, (void *)pdrv);
+		LCD_PR(pdrv, "free %s", pdrv->drv_res.dsi_intr_isr_name);
+		return 0;
+	}
+
+	if (request_irq(dsi_intr_irq, lcd_dsi_interrupt_handler, 0,
+			pdrv->drv_res.dsi_intr_isr_name, (void *)pdrv)) {
+		LCD_ERR(pdrv, "can't request %s", pdrv->drv_res.dsi_intr_isr_name);
+	} else {
+		LCD_DBG(pdrv, "request %s successful", pdrv->drv_res.dsi_intr_isr_name);
+	}
+
+	dsi_top_set_irq_meas(pdrv, 0, 1, 1, 0x01);
+	// [    1] vs_rise interrupt
+	// [    0] dwc_edpite interrupt
+
+	return 0;
 }

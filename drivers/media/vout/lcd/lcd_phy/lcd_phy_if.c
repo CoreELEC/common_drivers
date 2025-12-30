@@ -69,25 +69,32 @@ int lcd_phy_param_preset(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *de
 		amp = lcd_phy_ctrl->phy_amp_dft_val(pdrv, dev_p);
 	if (lcd_phy_ctrl->phy_rterm_dft_val)
 		rterm = lcd_phy_ctrl->phy_rterm_dft_val(pdrv, dev_p);
-	for (i = 0; i < phy_cfg->lane_num; i++) {
-		phy->lane[i].amp = amp;
-		phy->lane[i].preem = preem;
-		phy->lane[i].rterm = rterm;
-		phy_cfg->ch_ctrl[i].sel = i;
-		if (lcd_phy_ctrl->phy_lane_phase_sel_def) {
-			phy_cfg->ch_ctrl[i].phase_sel =
-				lcd_phy_ctrl->phy_lane_phase_sel_def(pdrv, dev_p, i);
+
+	for (i = 0; i < CH_LANE_MAX; i++) {
+		if (i < phy_cfg->lane_num) {
+			phy->lane[i].amp = amp;
+			phy->lane[i].preem = preem;
+			phy->lane[i].rterm = rterm;
+			phy_cfg->ch_ctrl[i].sel = i;
+			if (lcd_phy_ctrl->phy_lane_phase_sel_def) {
+				phy_cfg->ch_ctrl[i].phase_sel =
+					lcd_phy_ctrl->phy_lane_phase_sel_def(pdrv, dev_p, i);
+			} else {
+				phy_cfg->ch_ctrl[i].phase_sel = 0xff;
+			}
+			if (lcd_phy_ctrl->phy_lane_pn_swap_dft) {
+				phy_cfg->ch_ctrl[i].pn_swap =
+					lcd_phy_ctrl->phy_lane_pn_swap_dft(pdrv, dev_p, i);
+			} else {
+				phy_cfg->ch_ctrl[i].pn_swap = 0xff;
+			}
+			phy_cfg->ch_ctrl[i].en = 1;
 		} else {
-			phy_cfg->ch_ctrl[i].phase_sel = 0xff;
+			phy_cfg->ch_ctrl[i].en = 0;
+			phy_cfg->ch_ctrl[i].sel = 0xff;
 		}
-		if (lcd_phy_ctrl->phy_lane_pn_swap_dft) {
-			phy_cfg->ch_ctrl[i].pn_swap =
-				lcd_phy_ctrl->phy_lane_pn_swap_dft(pdrv, dev_p, i);
-		} else {
-			phy_cfg->ch_ctrl[i].pn_swap = 0xff;
-		}
-		phy_cfg->ch_ctrl[i].en = 1;
 	}
+
 	if (dev_p->dev_cfg.basic.lcd_type == LCD_MLVDS) {
 		phy->clk_phase = dev_p->dev_cfg.control.mlvds_cfg.clk_phase & 0xfff;
 		phy_cfg->bypass_resample = (dev_p->dev_cfg.control.mlvds_cfg.clk_phase >> 12) & 1;
@@ -127,8 +134,10 @@ int lcd_phy_param_print(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 		return 0;
 
 	ret = lcd_phy_param_get(pdrv, &local_phy_cfg, &local_phy);
-	if (ret)
-		return 0;
+	if (ret) {
+		memset(&local_phy_cfg, 0, sizeof(struct phy_config_s));
+		memset(&local_phy,     0, sizeof(struct phy_attr_s));
+	}
 
 	phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
 	phy = pdrv->curr_dev->dev_cfg.phy_cfg.act_phy;
@@ -278,21 +287,29 @@ int lcd_phy_probe(struct aml_lcd_drv_s *pdrv)
 
 	lcd_phy_ctrl->lane_lock[pdrv->index] = 0;
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		pdrv->phy_set = lcd_phy_ctrl->phy_set_lvds;
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		pdrv->phy_set = lcd_phy_ctrl->phy_set_vx1;
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 		pdrv->phy_set = lcd_phy_ctrl->phy_set_mlvds;
 		break;
 	case LCD_P2P:
 		pdrv->phy_set = lcd_phy_ctrl->phy_set_p2p;
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		pdrv->phy_set = lcd_phy_ctrl->phy_set_mipi;
 		break;
+#endif
 	default:
 		pdrv->phy_set = NULL;
 		break;

@@ -172,6 +172,34 @@ void dsi_host_reset(struct aml_lcd_drv_s *pdrv, u8 port)
 	dsi_ctrl_op->host_reset(pdrv, port);
 }
 
+void dsi_top_set_irq_meas(struct aml_lcd_drv_s *pdrv, u8 port,
+			u8 vsync_meas_en, u8 edpite_meas_en, u16 intr_mask_setting)
+{
+	if (!dsi_ctrl_op || !dsi_ctrl_op->set_dsi_irq_meas)
+		return;
+
+	dsi_ctrl_op->set_dsi_irq_meas(pdrv, port,
+			vsync_meas_en, edpite_meas_en, intr_mask_setting);
+}
+
+void dsi_top_read_intr_sta(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data)
+{
+	if (!dsi_ctrl_op || !dsi_ctrl_op->dsi_irq_intr_process)
+		return;
+
+	dsi_ctrl_op->dsi_irq_intr_process(pdrv, port, intr_data);
+}
+
+void dsi_top_read_meas_sta(struct aml_lcd_drv_s *pdrv, u8 port,
+			struct dsi_intr_meas_sta_s *intr_data)
+{
+	if (!dsi_ctrl_op || !dsi_ctrl_op->dsi_irq_meas_process)
+		return;
+
+	dsi_ctrl_op->dsi_irq_meas_process(pdrv, port, intr_data);
+}
+
 void lcd_dsi_if_bind(struct aml_lcd_drv_s *pdrv)
 {
 	switch (pdrv->data->chip_type) {

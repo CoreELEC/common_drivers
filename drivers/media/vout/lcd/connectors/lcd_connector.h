@@ -9,12 +9,16 @@
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 
 /* MIPI-DPI */
+#ifdef CONFIG_AMLOGIC_LCD_DPI
 void lcd_rgb_control_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off);
 void lcd_bt_control_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off);
+#endif
 
 /* lvds */
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 void lcd_lvds_enable(struct aml_lcd_drv_s *pdrv);
 void lcd_lvds_disable(struct aml_lcd_drv_s *pdrv);
+#endif
 
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 /* vbyone */
@@ -87,8 +91,6 @@ unsigned int lcd_tcon_get_vfp_tail(struct aml_lcd_drv_s *pdrv);
 
 #ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 /* MIPI-DSI */
-void mipi_dsi_link_off(struct aml_lcd_drv_s *pdrv);
-void mipi_dsi_tx_ctrl(struct aml_lcd_drv_s *pdrv, int status);
 /* @lcd_common.c */
 void lcd_mipi_dsi_init_table_load_json(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p,
 					struct json_parse_s *jsp, struct json_s *parent);
@@ -107,6 +109,7 @@ void lcd_dsi_write_cmd(struct aml_lcd_drv_s *pdrv, u8 *payload);
 unsigned char lcd_dsi_read(struct aml_lcd_drv_s *pdrv, u8 *payload, u8 *rd_data, u8 rd_byte_len);
 /* @lcd_addons/dsi_check_panel.c */
 int mipi_dsi_check_state(struct aml_lcd_drv_s *pdrv, u8 reg, u8 cnt);
+int lcd_dsi_interrupt_ctrl(struct aml_lcd_drv_s *pdrv, u8 en);
 #endif
 
 #endif

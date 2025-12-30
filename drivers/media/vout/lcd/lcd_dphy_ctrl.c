@@ -56,6 +56,7 @@ static void lcd_lane_map_chip_init(struct aml_lcd_drv_s *pdrv, struct phy_config
 	}
 }
 
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 static int lcd_lane_vbyone_ch_data_map(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p,
 			unsigned char *data_map)
 {
@@ -90,18 +91,22 @@ static int lcd_lane_vbyone_ch_data_map(struct aml_lcd_drv_s *pdrv, struct aml_lc
 
 	return 0;
 }
+#endif
 
 //ch_swap for reg
 static void lcd_lane_sel_to_ch_swap(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p)
 {
 	struct phy_config_s *phy_cfg = &dev_p->dev_cfg.phy_cfg;
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	unsigned char data_map[CH_LANE_MAX];
-	unsigned int data_sel, valid_flag = 0, i, bit;
 	int ret;
+#endif
+	unsigned int data_sel, valid_flag = 0, i, bit;
 
 	phy_cfg->ch_swap0 = 0xffffffff;
 	phy_cfg->ch_swap1 = 0xffffffff;
 	switch (dev_p->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		ret = lcd_lane_vbyone_ch_data_map(pdrv, dev_p, data_map);
 		if (ret)
@@ -126,6 +131,7 @@ static void lcd_lane_sel_to_ch_swap(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 			}
 		}
 		break;
+#endif
 	default:
 		for (i = 0; i < phy_cfg->lane_num; i++) {
 			data_sel = phy_cfg->ch_ctrl[i].sel;
@@ -155,12 +161,15 @@ static void lcd_lane_sel_to_ch_swap(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 static void lcd_ch_swap_to_lane_sel(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p,
 		struct phy_config_s *phy_cfg)
 {
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	unsigned char data_map[CH_LANE_MAX];
+	int ret, j;
+#endif
 	unsigned int sel = 0xff, valid_flag = 0;
-	unsigned int i, j, bit;
-	int ret;
+	unsigned int i, bit;
 
 	switch (dev_p->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		ret = lcd_lane_vbyone_ch_data_map(pdrv, dev_p, data_map);
 		if (ret)
@@ -184,6 +193,7 @@ static void lcd_ch_swap_to_lane_sel(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 			}
 		}
 		break;
+#endif
 	default:
 		for (i = 0; i < phy_cfg->lane_num; i++) {
 			if (i < 8) {
@@ -208,6 +218,8 @@ static void lcd_ch_swap_to_lane_sel(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 	LCD_DBG(pdrv, "%s: lane_num:%d, ch_swap:0x%08x,0x%08x, lane_valid:0x%x", __func__,
 		phy_cfg->lane_num, phy_cfg->ch_swap0, phy_cfg->ch_swap1, phy_cfg->lane_valid);
 }
+
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 
 struct lvds_valid_port_s {
 	unsigned char s0;
@@ -441,6 +453,7 @@ static void lcd_lvds_lane_swap(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device
 		phy_cfg->ch_ctrl[n].sel = i;
 	}
 }
+#endif
 
 void lcd_mlvds_phy_ckdi_config(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p)
 {
@@ -508,9 +521,12 @@ void lcd_lane_map_preset(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *de
 	lcd_lane_map_chip_init(pdrv, phy_cfg);
 
 	switch (dev_p->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_lvds_lane_init(pdrv, dev_p, &lane_map0, &lane_map1);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		if (dev_p->dev_cfg.control.vbyone_cfg.lane_count == 1) {
 			lane_map0 = 0xfffffff0;
@@ -529,6 +545,8 @@ void lcd_lane_map_preset(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *de
 			lane_map1 = 0xffffffff;
 		}
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 		lane_map0 = dev_p->dev_cfg.control.mlvds_cfg.channel_sel0;
 		lane_map1 = dev_p->dev_cfg.control.mlvds_cfg.channel_sel1;
@@ -537,6 +555,8 @@ void lcd_lane_map_preset(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *de
 		lane_map0 = dev_p->dev_cfg.control.p2p_cfg.channel_sel0;
 		lane_map1 = dev_p->dev_cfg.control.p2p_cfg.channel_sel1;
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		if (dev_p->dev_cfg.control.mipi_cfg.lane_num == 1) {
 			lane_map0 = 0xfffff2f0;
@@ -554,6 +574,7 @@ void lcd_lane_map_preset(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *de
 		if (dev_p->dev_cfg.control.mipi_cfg.multi_port_cfg & BIT(0))
 			lane_map1 = lane_map0;
 		break;
+#endif
 	default:
 		break;
 	}
@@ -592,9 +613,10 @@ void lcd_lane_map_update(struct aml_lcd_drv_s *pdrv)
 	if (!pdrv->curr_dev)
 		return;
 
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_LVDS)
 		lcd_lvds_lane_swap(pdrv, pdrv->curr_dev);
-
+#endif
 	lcd_lane_sel_to_ch_swap(pdrv, pdrv->curr_dev);
 
 	if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_MLVDS)
@@ -688,6 +710,7 @@ void lcd_lane_map_set(struct aml_lcd_drv_s *pdrv)
 	}
 }
 
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 void lcd_mipi_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
 	LCD_DBG(pdrv, "%s: %u", __func__, on_off);
@@ -724,7 +747,9 @@ void lcd_mipi_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		break;
 	}
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 void lcd_lvds_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
 	unsigned int reg_dphy_tx_ctrl0, reg_dphy_tx_ctrl1;
@@ -918,7 +943,9 @@ void lcd_lvds_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		break;
 	}
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 void lcd_vbyone_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
 	unsigned int div_sel, phy_div, lane_num, lane_sel = 0;
@@ -1092,7 +1119,9 @@ void lcd_vbyone_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		break;
 	}
 }
+#endif
 
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 void lcd_mlvds_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
 	unsigned int div_sel;
@@ -1305,6 +1334,7 @@ void lcd_p2p_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		break;
 	}
 }
+#endif
 
 void lcd_dphy_ctrl_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
@@ -1312,21 +1342,29 @@ void lcd_dphy_ctrl_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		return;
 
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		lcd_mipi_dphy_set(pdrv, on_off);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	case LCD_LVDS:
 		lcd_lvds_dphy_set(pdrv, on_off);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
 		lcd_vbyone_dphy_set(pdrv, on_off);
 		break;
+#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
 		lcd_mlvds_dphy_set(pdrv, on_off);
 		break;
 	case LCD_P2P:
 		lcd_p2p_dphy_set(pdrv, on_off);
 		break;
+#endif
 	default:
 		break;
 	}

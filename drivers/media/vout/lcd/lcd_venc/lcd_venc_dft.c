@@ -157,18 +157,23 @@ static void lcd_venc_set_tcon(struct aml_lcd_drv_s *pdrv)
 	}
 
 	switch (pconf->basic.lcd_type) {
+#if defined(CONFIG_AMLOGIC_LCD_LVDS)
 	case LCD_LVDS:
 		lcd_vcbus_setb(L_POL_CNTL_ADDR, 1, 0, 3);
 		// refs to lcd_lvds.c@lcd_lvds_enable
 		if (pconf->timing.act_timing.vsync_pol == pconf->timing.act_timing.hsync_pol)
 			lcd_vcbus_setb(L_POL_CNTL_ADDR, 1, 1, 1);
 		break;
+#endif
+#if defined(CONFIG_AMLOGIC_LCD_VBYONE)
 	case LCD_VBYONE:
 		if (pconf->timing.act_timing.hsync_pol)
 			lcd_vcbus_setb(L_POL_CNTL_ADDR, 1, 0, 1);
 		if (pconf->timing.act_timing.vsync_pol)
 			lcd_vcbus_setb(L_POL_CNTL_ADDR, 1, 1, 1);
 		break;
+#endif
+#if defined(CONFIG_AMLOGIC_LCD_MIPI_DSI)
 	case LCD_MIPI:
 		//lcd_vcbus_setb(L_POL_CNTL_ADDR, 0x3, 0, 2);
 		/*lcd_vcbus_write(L_POL_CNTL_ADDR,
@@ -180,6 +185,7 @@ static void lcd_venc_set_tcon(struct aml_lcd_drv_s *pdrv)
 		 *	  (1 << LCD_TCON_HS_SEL))));
 		 */
 		break;
+#endif
 	default:
 		break;
 	}
