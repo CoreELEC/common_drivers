@@ -46,6 +46,10 @@ ifeq ($(CONFIG_AMLOGIC_DRM_CUT_CVBS),)
         $(MESON_DRM_MODULE_NAME)-y += meson_cvbs.o
 endif
 
+ifeq ($(CONFIG_AMLOGIC_VIDEO_DISPLAY),y)
+	$(MESON_DRM_MODULE_NAME)-y += vpu-hw/meson_vpu_video_wrapper.o
+endif
+
 $(MESON_DRM_MODULE_NAME)-y += meson_drv.o meson_plane.o \
                               meson_atomic.o  meson_sysfs.o\
                               meson_writeback.o meson_logo.o\

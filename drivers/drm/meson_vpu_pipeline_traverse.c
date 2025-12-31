@@ -596,7 +596,8 @@ int vpu_pipeline_scaler_check(int *combination, int num_planes,
 	vpu_pipeline_recalc_global_scaler(osdblend_crtc_idx, mvps);
 
 	if (ret == 0 && mvps->num_plane > 0 &&
-	    mvps->pipeline->osd_version <= OSD_V2)
+	    mvps->pipeline->osd_version <= OSD_V2 &&
+	    mvps->pipeline->osd_version != 0)
 		vpu_osd_shift_recalc(mvps);
 	return ret;
 }

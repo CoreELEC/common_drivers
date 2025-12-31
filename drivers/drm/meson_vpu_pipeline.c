@@ -33,12 +33,6 @@ static int rdma_table_flush_time = 1;
 #define MAX_PORTS 6
 #define MAX_PORT_ID 32
 
-static struct meson_rdma_done_detect drm_rdma_cnt[MESON_MAX_CRTC] = {
-	{VIU_OSD2_TCOLOR_AG1, 0},
-	{VIU_OSD2_TCOLOR_AG2, 0},
-	{VIU_OSD2_TCOLOR_AG3, 0},
-};
-
 static struct meson_vpu_block **vpu_blocks;
 
 struct meson_vpu_link_para {
@@ -318,6 +312,7 @@ meson_vpu_create_block(struct meson_vpu_block_para *para,
 		pipeline->num_csc++;
 		break;
 
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	case MESON_BLK_VIDEO:
 		blk_size = sizeof(struct meson_vpu_video);
 		if (pipeline->priv && pipeline->priv->vpu_data)
@@ -329,6 +324,7 @@ meson_vpu_create_block(struct meson_vpu_block_para *para,
 		pipeline->video[mvb->index] = to_video_block(mvb);
 		pipeline->num_video++;
 		break;
+#endif
 	default:
 		return NULL;
 	}
@@ -562,14 +558,18 @@ int video_pipeline_block_check(struct meson_video_sub_pipeline *video_pipe,
 }
 
 /*for VIU_OSD2_TCOLOR_AGx, alpha channel [7:0] need keep 0xff in case color key is enabled*/
-void vpu_pipeline_append_finish_reg(int crtc_index, struct rdma_reg_ops *reg_ops)
+void vpu_pipeline_append_finish_reg(int crtc_index, struct rdma_reg_ops *reg_ops,
+	struct meson_drm *priv)
 {
+	struct meson_rdma_done_detect *drm_rdma_cnt = priv->vpu_data->drm_rdma_cnt;
+
 	drm_rdma_cnt[crtc_index].val += 0xff;
 	reg_ops->rdma_write_reg(drm_rdma_cnt[crtc_index].reg, drm_rdma_cnt[crtc_index].val);
 }
 
-void vpu_pipeline_check_finish_reg(int crtc_index)
+void vpu_pipeline_check_finish_reg(int crtc_index, struct meson_drm *priv)
 {
+	struct meson_rdma_done_detect *drm_rdma_cnt = priv->vpu_data->drm_rdma_cnt;
 	u32  val;
 
 	val = meson_drm_read_reg(drm_rdma_cnt[crtc_index].reg);
@@ -842,7 +842,8 @@ int vpu_pipeline_osd_update(struct meson_vpu_sub_pipeline *sub_pipeline,
 	}
 #endif
 
-	vpu_pipeline_append_finish_reg(crtc_index, sub_pipeline->reg_ops);
+	vpu_pipeline_append_finish_reg(crtc_index, sub_pipeline->reg_ops,
+		sub_pipeline->pipeline->priv);
 
 	if (rdma_tbl[crtc_index].flag)
 		meson_drm_write_allregs2rdma(crtc_index);
@@ -956,7 +957,8 @@ int vpu_osd_pipeline_update(struct meson_vpu_sub_pipeline *sub_pipeline,
 		}
 	}
 
-	vpu_pipeline_append_finish_reg(crtc_index, sub_pipeline->reg_ops);
+	vpu_pipeline_append_finish_reg(crtc_index, sub_pipeline->reg_ops,
+		sub_pipeline->pipeline->priv);
 
 	if (rdma_tbl[crtc_index].flag)
 		meson_drm_write_allregs2rdma(crtc_index);

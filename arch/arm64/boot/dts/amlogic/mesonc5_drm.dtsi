@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
+ */
+
+#include <dt-bindings/display/meson-drm-ids.h>
+#include "meson-c5.dtsi"
+
+/ {
+	drm_vpu: drm-vpu@ff900000  {
+		status = "disabled";
+		compatible = "amlogic, meson-c5-vpu";
+		reg = <0x0 0xff900000 0x0 0x40000>,
+			  <0x0 0xff63c000 0x0 0x2000>,
+			  <0x0 0xff638000 0x0 0x2000>;
+		reg-names = "base", "hhi", "dmc";
+		interrupts = <GIC_SPI 81 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "viu-vsync";
+		dma-coherent;
+		/*EXTERNAL port for driver outside of drm.*/
+		connectors_dev: port@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			drm_to_lcd0: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <0>;
+			};
+		};
+	};
+
+	drm_subsystem: drm-subsystem {
+		status = "okay";
+		compatible = "amlogic, drm-subsystem";
+		ports = <&connectors_dev>;
+		fbdev_sizes = <1920 1080 1920 2160 32>;
+		memory-region = <&logo_reserved>;
+		primary_plane_index = <0>; /* primary plane index for crtcs */
+		crtc_masks = <1 1 1>; /*for encoder: 0:hdmi 1:lcd 2:cvbs*/
+		gamma_ctl = <0>; /*0:skip gamma init 1:gamma init*/
+		pxp_mode = <0>;
+		gfcd_enable = /bits/ 8  <0>;
+		afbc_aligned_size = <1>; /*0:fbdev alloc non-afbc memory 1:fbdev alloc afbc memory*/
+		vpu_block_select = <&vpu_blocks>;
+
+		vpu_topology: vpu_topology {
+			vpu_blocks: vpu_blocks {
+				/*0:scaler1 after osdblend, 1:scaler1 before osdblend*/
+				vpu_blocks_type = <1>;
+				osd1_block: block@0 {
+					id = /bits/ 8 <OSD1_BLOCK>;
+					index = /bits/ 8  <0>;
+					type = /bits/ 8  <0>;
+					block_name = "osd1_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x1>;
+					out_links = <0 &scaler_osd1_block>;
+					capability = /bits/ 64 <0x3>;
+				};
+				scaler_osd1_block: block@8 {
+					id = /bits/ 8  <SCALER_OSD1_BLOCK>;
+					index = /bits/ 8  <0>;
+					type = /bits/ 8  <2>;
+					block_name = "scaler_osd1_block";
+					num_in_links = /bits/ 8  <0x1>;
+					in_links = <0 &osd1_block>;
+					num_out_links = /bits/ 8  <0x1>;
+					out_links = <0 &vpp_postblend_block>;
+				};
+				vpp_postblend_block: block@12 {
+					id = /bits/ 8  <VPP_POSTBLEND_BLOCK>;
+					block_name = "vpp_postblend_block";
+					type = /bits/ 8  <6>;
+					num_in_links = /bits/ 8  <0x1>;
+					in_links = <0 &scaler_osd1_block>;
+					num_out_links = <0x0>;
+				};
+				video1_block: block@13 {
+					id = /bits/ 8 <VIDEO1_BLOCK>;
+					index = /bits/ 8  <0>;
+					type = /bits/ 8  <7>;
+					block_name = "video1_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
+			};
+		};
+
+		vpu_hw_para: vpu_hw_para@0 {
+			osd_ver = /bits/ 8 <0x2>;
+			afbc_type = /bits/ 8 <0x2>;
+			has_deband = /bits/ 8 <0x1>;
+			has_lut = /bits/ 8 <0x1>;
+			has_rdma = /bits/ 8 <0x1>;
+			osd_fifo_len = /bits/ 8 <64>;
+			vpp_fifo_len = /bits/ 32 <0xfff>;
+		};
+	};
+};

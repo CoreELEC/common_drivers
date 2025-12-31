@@ -24,7 +24,6 @@
 #include "meson_crtc.h"
 #include "meson_vpu_reg.h"
 #include "meson_vpu_util.h"
-#include <linux/amlogic/media/registers/register.h>
 
 u32 frame_seq[MESON_MAX_OSDS];
 
@@ -33,8 +32,10 @@ u32 original_swap_t3x[HW_OSD_MIF_NUM];
 u32 original_osd1_fifo_ctrl_stat_t3x[HW_OSD_MIF_NUM];
 #endif
 
+#ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
 static u32 osd_secure_input_index[] = {OSD1_INPUT_SECURE,
 	OSD2_INPUT_SECURE, OSD3_INPUT_SECURE, OSD4_INPUT_SECURE};
+#endif
 
 static unsigned int osd_canvas[MESON_MAX_OSDS][MAX_CANVAS_NUM];
 static u32 canvas_index[MESON_MAX_OSDS] = {-1, -1, -1, -1};
@@ -61,6 +62,7 @@ static struct osd_mif_reg_s osd_mif_reg[HW_OSD_MIF_NUM] = {
 		VIU_OSD1_PROT_CTRL,
 		VIU_OSD1_MALI_UNPACK_CTRL,
 		VIU_OSD1_DIMM_CTRL,
+		VIU_OSD1_NORMAL_SWAP,
 	},
 	{
 		VIU_OSD2_CTRL_STAT,
@@ -83,6 +85,7 @@ static struct osd_mif_reg_s osd_mif_reg[HW_OSD_MIF_NUM] = {
 		VIU_OSD2_PROT_CTRL,
 		VIU_OSD2_MALI_UNPACK_CTRL,
 		VIU_OSD2_DIMM_CTRL,
+		VIU_OSD2_NORMAL_SWAP,
 	},
 	{
 		VIU_OSD3_CTRL_STAT,
@@ -105,6 +108,7 @@ static struct osd_mif_reg_s osd_mif_reg[HW_OSD_MIF_NUM] = {
 		VIU_OSD3_PROT_CTRL,
 		VIU_OSD3_MALI_UNPACK_CTRL,
 		VIU_OSD3_DIMM_CTRL,
+		VIU_OSD3_NORMAL_SWAP,
 	},
 	{
 		VIU_OSD4_CTRL_STAT,
@@ -127,6 +131,7 @@ static struct osd_mif_reg_s osd_mif_reg[HW_OSD_MIF_NUM] = {
 		VIU_OSD4_PROT_CTRL,
 		VIU_OSD4_MALI_UNPACK_CTRL,
 		VIU_OSD4_DIMM_CTRL,
+		VIU_OSD4_NORMAL_SWAP,
 	}
 };
 
@@ -588,6 +593,35 @@ static struct osd_mif_reg_s a9_osd_mif_reg[HW_OSD_MIF_NUM] = {
 		VIU_OSD5_MIF_CTRL,
 		VIU_OSD5_MIF_CTRL1,
 	},
+};
+
+static struct osd_mif_reg_s c5_osd_mif_reg[HW_OSD_MIF_NUM] = {
+	{
+		VOUT_OSD1_CTRL_STAT,
+		VOUT_OSD1_CTRL_STAT2,
+		VOUT_OSD1_COLOR_ADDR,
+		VOUT_OSD1_COLOR,
+		VOUT_OSD1_TCOLOR_AG0,
+		VOUT_OSD1_TCOLOR_AG1,
+		VOUT_OSD1_TCOLOR_AG2,
+		VOUT_OSD1_TCOLOR_AG3,
+		VOUT_OSD1_BLK0_CFG_W0,
+		VOUT_OSD1_BLK0_CFG_W1,
+		VOUT_OSD1_BLK0_CFG_W2,
+		VOUT_OSD1_BLK0_CFG_W3,
+		VOUT_OSD1_BLK0_CFG_W4,
+		VOUT_OSD1_BLK1_CFG_W4,
+		VOUT_OSD1_BLK2_CFG_W4,
+		VOUT_OSD1_FIFO_CTRL_STAT,
+		VOUT_OSD1_TEST_RDDATA,
+		VOUT_OSD1_PROT_CTRL,
+		VOUT_OSD1_MALI_UNPACK_CTRL,
+		VOUT_OSD1_DIMM_CTRL,
+		VOUT_OSD1_NORMAL_SWAP,
+	},
+	{},
+	{},
+	{}
 };
 
 #endif
@@ -1772,8 +1806,10 @@ static void osd_set_state(struct meson_vpu_block *vblk,
 		osd_afbc_config(vblk, reg_ops, reg, vblk->index, afbc_en);
 	}
 
+#ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
 	if (mvos->sec_en)
 		mvsps->sec_src |= osd_secure_input_index[vblk->index];
+#endif
 
 	osd_premult_enable(vblk, reg_ops, reg, alpha_div_en);
 	if (!osd->gfcd_global_alpha_policy)
@@ -2272,6 +2308,75 @@ static void a9_osd_register_init(struct meson_vpu_block *vblk,
 	MESON_DRM_BLOCK("register_init vblk:%d.\n", vblk->index);
 }
 
+static void c5_osd_register_init(struct meson_vpu_block *vblk,
+	struct meson_vpu_block_state *state)
+{
+	struct meson_vpu_osd *osd;
+	struct rdma_reg_ops *reg_ops;
+	struct osd_mif_reg_s *reg;
+	/*Need config follow crtc index.*/
+	u8 holdline = VIU1_DEFAULT_HOLD_LINE;
+	/*the fifo_size of the chips below is 512:
+	 *g12a g12b sm1 sc2 s4 s1a s7 s7d s6 t6w gxlx4 t6d t6x
+	 *t3x s5 t5m t5 t5w t3 t7 txhd2 tm2 tx1 txlx tl1
+	 *the fifo_size of the chips below is 256, but unused:
+	 *gxl gxm
+	 */
+	u32 fifo_size = 512;
+	u32 fifo_val = fifo_size / 8;
+	u32 dn_th = (fifo_size / 4) >> 6;
+	u32 up_th = (fifo_size * 3 / 4) >> 6;
+
+	if (vblk->init_done)
+		return;
+
+	reg_ops = state->sub->reg_ops;
+	osd = to_osd_block(vblk);
+	reg = osd->reg;
+	if (!reg) {
+		MESON_DRM_BLOCK("set_state break for NULL OSD mixer reg.\n");
+		return;
+	}
+
+	/*
+	 * force turning off deprecated mif interlace config
+	 */
+	osd_scan_mode_config(vblk, reg_ops, reg, 1);
+
+	reg_ops->rdma_write_reg(reg->viu_osd_fifo_ctrl_stat,
+				(1 << 31) | /*BURST_LEN_SEL[2]*/
+				(0 << 30) | /*no swap*/
+				(0 << 29) | /*div swap*/
+				(2 << 24) | /*Fifo_lim 5bits*/
+				(2 << 22) | /*Fifo_ctrl 2bits*/
+				(fifo_val << 12) | /*FIFO_DEPATH_VAL 7bits*/
+				(1 << 10) | /*BURST_LEN_SEL[1:0]*/
+				(holdline << 5) | /*hold fifo lines 5bits*/
+				(0 << 4) | /*CLEAR_ERR*/
+				(0 << 3) | /*fifo_sync_rst*/
+				(0 << 1) | /*ENDIAN:no conversion*/
+				(1 << 0)/*urgent enable*/);
+	reg_ops->rdma_write_reg(reg->viu_osd_ctrl_stat,
+				(1 << 31) | /*osd_cfg_sync_en*/
+				(0 << 30) | /*Enable free_clk*/
+				(0x100 << 12) | /*global alpha*/
+				(0 << 11) | /*TEST_RD_EN*/
+				(0 << 2) | /*osd_mem_mode 0:canvas_addr*/
+				(0 << 1) | /*premult_en*/
+				(0 << 0)/*OSD_BLK_ENABLE*/);
+	reg_ops->rdma_write_reg(reg->viu_osd_tcolor_ag3, 0);
+	reg_ops->rdma_write_reg(reg->viu_osd_prot_ctrl,
+		(fifo_size << 0) | /*13bits*/
+		(1 << 31) | /*auto_urgent_en*/
+		(0 << 30) | /*urgent_wr*/
+		(dn_th << 16) | /*4bits*/
+		(up_th << 20)/*4bits*/);
+	reg_ops->rdma_write_reg(reg->viu_osd_dimm_ctrl, 0);
+
+	vblk->init_done = 1;
+	MESON_DRM_BLOCK("register_init vblk:%d.\n", vblk->index);
+}
+
 static void osd_hw_init(struct meson_vpu_block *vblk)
 {
 	struct meson_vpu_pipeline *pipeline;
@@ -2657,6 +2762,35 @@ static void a9_osd_hw_init(struct meson_vpu_block *vblk)
 	MESON_DRM_BLOCK("%s hw_init done.\n", osd->base.name);
 }
 
+static void c5_osd_hw_init(struct meson_vpu_block *vblk)
+{
+	struct meson_vpu_pipeline *pipeline;
+	struct meson_vpu_osd *osd = to_osd_block(vblk);
+
+	if (!vblk || !osd) {
+		MESON_DRM_BLOCK("hw_init break for NULL.\n");
+		return;
+	}
+
+	pipeline = osd->base.pipeline;
+	if (!pipeline) {
+		MESON_DRM_BLOCK("hw_init break for NULL.\n");
+		return;
+	}
+
+	osd->reg = &c5_osd_mif_reg[vblk->index];
+	osd->mif_acc_mode = LINEAR_MIF;
+	osd->viu2_hold_line = VIU2_DEFAULT_HOLD_LINE;
+	osd->infos = formats_of_t6d;
+	osd->format_swap_AR30_BA30 = 1;
+
+    /* osd secure function init */
+#ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
+	secure_register(OSD_MODULE, 0, osd_secure_op, osd_secure_cb);
+#endif
+
+	MESON_DRM_BLOCK("%s hw_init done.\n", osd->base.name);
+}
 #endif
 
 /*
@@ -2824,4 +2958,14 @@ struct meson_vpu_block_ops a9_osd_ops = {
 	.fini = osd_hw_fini,
 };
 
+struct meson_vpu_block_ops c5_osd_ops = {
+	.check_state = osd_check_state,
+	.update_state = osd_set_state,
+	.enable = osd_hw_enable,
+	.disable = osd_hw_disable,
+	.dump_register = osd_dump_register,
+	.init = c5_osd_hw_init,
+	.init_register = c5_osd_register_init,
+	.fini = osd_hw_fini,
+};
 #endif

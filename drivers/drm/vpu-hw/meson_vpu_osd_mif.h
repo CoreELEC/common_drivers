@@ -21,6 +21,7 @@
 #define VIU_OSD1_TCOLOR_AG2                     0x1a19
 #define VIU_OSD1_TCOLOR_AG3                     0x1a1a
 #define VIU_OSD1_BLK0_CFG_W0                    0x1a1b
+#define VIU_OSD1_NORMAL_SWAP                    0x1abe
 #define VIU_OSD1_BLK1_CFG_W0                    0x1a1f
 #define VIU_OSD1_BLK2_CFG_W0                    0x1a23
 #define VIU_OSD1_BLK3_CFG_W0                    0x1a27
@@ -64,6 +65,7 @@
 #define VIU_OSD2_TCOLOR_AG2                     0x1a39
 #define VIU_OSD2_TCOLOR_AG3                     0x1a3a
 #define VIU_OSD2_BLK0_CFG_W0                    0x1a3b
+#define VIU_OSD2_NORMAL_SWAP                    0x1abf
 #define VIU_OSD2_BLK1_CFG_W0                    0x1a3f
 #define VIU_OSD2_BLK2_CFG_W0                    0x1a43
 #define VIU_OSD2_BLK3_CFG_W0                    0x1a47
@@ -103,6 +105,7 @@
 #define VIU_OSD3_TCOLOR_AG2                     0x3d86
 #define VIU_OSD3_TCOLOR_AG3                     0x3d87
 #define VIU_OSD3_BLK0_CFG_W0                    0x3d88
+#define VIU_OSD3_NORMAL_SWAP                    0x3da1
 #define VIU_OSD3_BLK0_CFG_W1                    0x3d8c
 #define VIU_OSD3_BLK0_CFG_W2                    0x3d90
 #define VIU_OSD3_BLK0_CFG_W3                    0x3d94
@@ -144,6 +147,7 @@
 #define VIU_OSD4_TCOLOR_AG2                     0x3dc6
 #define VIU_OSD4_TCOLOR_AG3                     0x3dc7
 #define VIU_OSD4_BLK0_CFG_W0                    0x3dc8
+#define VIU_OSD4_NORMAL_SWAP                    0x3de1
 #define VIU_OSD4_BLK0_CFG_W1                    0x3dcc
 #define VIU_OSD4_BLK0_CFG_W2                    0x3dd0
 #define VIU_OSD4_BLK0_CFG_W3                    0x3dd4
@@ -392,6 +396,46 @@
 #define VIU_OSD4_MALI_UNPACK_CTRL_S5            0x42df
 #define VIU_OSD4_DIMM_CTRL_S5                   0x42e0
 #define VIU_OSD4_NORMAL_SWAP_S5                 0x42e1
+
+/* for C5 mif */
+#define VOUT_OSD1_CTRL_STAT                     0x0140
+#define VOUT_OSD1_CTRL_STAT2                    0x0141
+#define VOUT_OSD1_COLOR_ADDR                    0x0142
+#define VOUT_OSD1_COLOR                         0x0143
+#define VOUT_OSD1_TCOLOR_AG0                    0x0144
+#define VOUT_OSD1_TCOLOR_AG1                    0x0145
+#define VOUT_OSD1_TCOLOR_AG2                    0x0146
+#define VOUT_OSD1_TCOLOR_AG3                    0x0147
+#define VOUT_OSD1_BLK0_CFG_W0                   0x0148
+#define VOUT_OSD1_BLK1_CFG_W0                   0x0149
+#define VOUT_OSD1_BLK2_CFG_W0                   0x014a
+#define VOUT_OSD1_BLK3_CFG_W0                   0x014b
+#define VOUT_OSD1_BLK0_CFG_W1                   0x014c
+#define VOUT_OSD1_BLK1_CFG_W1                   0x014d
+#define VOUT_OSD1_BLK2_CFG_W1                   0x014e
+#define VOUT_OSD1_BLK3_CFG_W1                   0x014f
+#define VOUT_OSD1_BLK0_CFG_W2                   0x0150
+#define VOUT_OSD1_BLK1_CFG_W2                   0x0151
+#define VOUT_OSD1_BLK2_CFG_W2                   0x0152
+#define VOUT_OSD1_BLK3_CFG_W2                   0x0153
+#define VOUT_OSD1_BLK0_CFG_W3                   0x0154
+#define VOUT_OSD1_BLK1_CFG_W3                   0x0155
+#define VOUT_OSD1_BLK2_CFG_W3                   0x0156
+#define VOUT_OSD1_BLK3_CFG_W3                   0x0157
+#define VOUT_OSD1_BLK0_CFG_W4                   0x0158
+#define VOUT_OSD1_BLK1_CFG_W4                   0x0159
+#define VOUT_OSD1_BLK2_CFG_W4                   0x015a
+#define VOUT_OSD1_BLK3_CFG_W4                   0x015b
+#define VOUT_OSD1_FIFO_CTRL_STAT                0x0160
+#define VOUT_OSD1_TEST_RDDATA                   0x0161
+#define VOUT_OSD1_PROT_CTRL                     0x0162
+#define VOUT_OSD1_MALI_UNPACK_CTRL              0x0163
+#define VOUT_OSD1_DIMM_CTRL                     0x0164
+#define VOUT_OSD1_NORMAL_SWAP                   0x0165
+#define VOUT_OSD1_MIF_CTRL                      0x0166
+#define VOUT_OSD1_MIF_CTRL1                     0x0167
+#define VOUT_OSD1_AXI_CHK_CTRL                  0x0168
+#define VOUT_OSD1_RO_AXI_CNT                    0x0169
 
 #define VIU_SW_RESET     0x1a01
 #define VIU2_SW_RESET     0x1e01

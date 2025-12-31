@@ -765,7 +765,6 @@ static const struct of_device_id am_meson_drm_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, am_meson_drm_dt_match);
 
-#ifdef CONFIG_PM_SLEEP
 static void am_meson_drm_fb_suspend(struct drm_device *drm)
 {
 #ifdef CONFIG_AMLOGIC_DRM_EMULATE_FBDEV
@@ -897,7 +896,6 @@ static int am_meson_drm_pm_restore(struct device *dev)
 	DRM_INFO("drm restore done\n");
 	return ret;
 }
-#endif
 
 static const struct dev_pm_ops am_meson_drm_pm_ops = {
 	.suspend = am_meson_drm_pm_suspend,

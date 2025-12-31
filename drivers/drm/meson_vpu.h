@@ -45,6 +45,7 @@ struct meson_vpu_data {
 	int has_gfcd;
 	unsigned int max_osdblend_width, max_osdblend_height;
 	const enum meson_policy_id *policy;
+	struct meson_rdma_done_detect *drm_rdma_cnt;
 };
 
 enum meson_vout_event {

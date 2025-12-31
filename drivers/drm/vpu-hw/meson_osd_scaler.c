@@ -348,6 +348,26 @@ static struct osd_scaler_reg_s osd_scaler_a9_reg[HW_OSD_SCALER_NUM] = {
 		A9_OSD5_SC_DIV_ALPHA,
 	},
 };
+static struct osd_scaler_reg_s osd_scaler_c5_reg[] = {
+	{
+		VOUT_OSD1_SCALE_COEF_IDX,
+		VOUT_OSD1_SCALE_COEF,
+		VOUT_OSD1_VSC_PHASE_STEP,
+		VOUT_OSD1_VSC_INI_PHASE,
+		VOUT_OSD1_VSC_CTRL0,
+		VOUT_OSD1_HSC_PHASE_STEP,
+		VOUT_OSD1_HSC_INI_PHASE,
+		VOUT_OSD1_HSC_CTRL0,
+		VOUT_OSD1_HSC_INI_PAT_CTRL,
+		VOUT_OSD1_SC_DUMMY_DATA,
+		VOUT_OSD1_SC_CTRL0,
+		VOUT_OSD1_SCI_WH_M1,
+		VOUT_OSD1_SCO_H_START_END,
+		VOUT_OSD1_SCO_V_START_END,
+		VOUT_OSD1_SC_DIV_ALPHA,
+	}
+};
+
 #endif
 
 static unsigned int __osd_filter_coefs_bicubic_sharp[] = {
@@ -1282,6 +1302,9 @@ static void scaler_register_init(struct meson_vpu_block *vblk,
 	if (scaler->scaler1_position == BEFORE_OSDBLEND)
 		reg_ops->rdma_write_reg_bits(VPP_OSD_SCALE_CTRL, 0x1, 0, 3);
 
+	if (scaler->latch)
+		reg_ops->rdma_write_reg_bits(reg->vpp_osd_sc_ctrl0, 0x1, 14, 1);
+
 	vblk->init_done = 1;
 }
 #endif
@@ -1496,6 +1519,19 @@ static void a9_scaler_hw_init(struct meson_vpu_block *vblk)
 
 	MESON_DRM_BLOCK("%s hw_init called.\n", scaler->base.name);
 }
+
+static void c5_scaler_hw_init(struct meson_vpu_block *vblk)
+{
+	struct meson_vpu_scaler *scaler = to_scaler_block(vblk);
+
+	scaler->reg = &osd_scaler_c5_reg[vblk->index];
+	scaler->alpha_mode = ALPHA_PROC;
+	scaler->linebuffer = OSD_SCALE_LINEBUFFER;
+	scaler->bank_length = OSD_SCALE_BANK_LENGTH;
+	scaler->latch = true;
+
+	MESON_DRM_BLOCK("%s hw_init called.\n", scaler->base.name);
+}
 #endif
 
 struct meson_vpu_block_ops scaler_ops = {
@@ -1564,6 +1600,16 @@ struct meson_vpu_block_ops a9_scaler_ops = {
 	.disable = scaler_hw_disable,
 	.dump_register = scaler_dump_register,
 	.init = a9_scaler_hw_init,
+	.init_register = scaler_register_init,
+};
+
+struct meson_vpu_block_ops c5_scaler_ops = {
+	.check_state = scaler_check_state,
+	.update_state = scaler_set_state,
+	.enable = scaler_hw_enable,
+	.disable = scaler_hw_disable,
+	.dump_register = scaler_dump_register,
+	.init = c5_scaler_hw_init,
 	.init_register = scaler_register_init,
 };
 

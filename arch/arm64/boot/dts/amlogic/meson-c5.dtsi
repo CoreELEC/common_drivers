@@ -1654,7 +1654,7 @@
 
 	vout_sys: vout_sys {
 		compatible = "amlogic, vout_sys_serve";
-		status = "disabled";
+		status = "okay";
 		reg = <0x0 0xfe01029c 0x0 0x4>;
 	};
 
@@ -1665,7 +1665,7 @@
 
 	vout: vout {
 		compatible = "amlogic, vout";
-		status = "disabled";
+		status = "okay";
 
 		/* fr_policy:
 		 *    0: disable
@@ -1688,8 +1688,8 @@
 	};
 
 	vout_mux: vout_mux {
-		compatible = "amlogic, vout_mux-s6";
-		status = "disabled";
+		compatible = "amlogic, vout_mux";
+		status = "okay";
 		//clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
 		//clock-names = "fclk_div5", "vdin_meas_clk";
 	};

@@ -267,6 +267,34 @@
 #define A9_OSD5_SCALE_COEF_IDX                     0x5a1c
 #define A9_OSD5_SCALE_COEF                         0x5a1d
 #define A9_OSD5_SC_DIV_ALPHA                       0x5a1e
+/* for c5 osd scaler */
+#define VOUT_OSD1_VSC_PHASE_STEP                   0x01a0
+#define VOUT_OSD1_VSC_INI_PHASE                    0x01a1
+#define VOUT_OSD1_VSC_CTRL0                        0x01a2
+#define VOUT_OSD1_HSC_PHASE_STEP                   0x01a3
+#define VOUT_OSD1_HSC_INI_PHASE                    0x01a4
+#define VOUT_OSD1_HSC_CTRL0                        0x01a5
+#define VOUT_OSD1_HSC_INI_PAT_CTRL                 0x01a6
+#define VOUT_OSD1_SC_DUMMY_DATA                    0x01a7
+#define VOUT_OSD1_SC_CTRL0                         0x01a8
+#define VOUT_OSD1_SCI_WH_M1                        0x01a9
+#define VOUT_OSD1_SCO_H_START_END                  0x01aa
+#define VOUT_OSD1_SCO_V_START_END                  0x01ab
+#define VOUT_OSD1_SCALE_COEF_IDX                   0x01ac
+#define VOUT_OSD1_SCALE_COEF                       0x01ad
+#define VOUT_OSD1_DB_FLT_CTRL                      0x01ae
+#define VOUT_OSD1_DB_FLT_CTRL1                     0x01af
+#define VOUT_OSD1_DB_FLT_LUMA_THRD                 0x01b0
+#define VOUT_OSD1_DB_FLT_CHRM_THRD                 0x01b1
+#define VOUT_OSD1_DB_FLT_RANDLUT                   0x01b2
+#define VOUT_OSD1_DB_FLT_PXI_THRD                  0x01b3
+#define VOUT_OSD1_DB_FLT_SEED_Y                    0x01b4
+#define VOUT_OSD1_DB_FLT_SEED_U                    0x01b5
+#define VOUT_OSD1_DB_FLT_SEED_V                    0x01b6
+#define VOUT_OSD1_DB_FLT_SEED3                     0x01b7
+#define VOUT_OSD1_DB_FLT_SEED4                     0x01b8
+#define VOUT_OSD1_DB_FLT_SEED5                     0x01b9
+#define VOUT_OSD1_SC_DIV_ALPHA                     0x01ba
 
 /*macro define for chip const*/
 /*bank length is related to scale fifo:4 line 1920??*/

@@ -113,7 +113,9 @@ static struct drm_crtc_state *meson_crtc_duplicate_state(struct drm_crtc *crtc)
 static void meson_crtc_init_hdr_preference
 	(struct am_meson_crtc_state *crtc_state)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM
 	crtc_state->crtc_hdr_process_policy = get_hdr_policy();
+#endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	crtc_state->crtc_dv_enable = is_amdv_enable();
 #else
@@ -262,7 +264,9 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 	struct am_meson_crtc *meson_crtc = to_am_meson_crtc(crtc);
 	int ret = 0;
 
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT
 	crtc_state->hdr_conversion_ctrl = get_hdr_cur_output();
+#endif
 
 	if (property == meson_crtc->hdr_policy) {
 		*val = crtc_state->crtc_hdr_process_policy;
@@ -286,7 +290,9 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 		*val = crtc_state->hdr_conversion_ctrl;
 		return 0;
 	} else if (property == meson_crtc->hdr_conversion_cap_property) {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT
 		*val = get_hdr_conversion_cap();
+#endif
 		return 0;
 	} else if (property == meson_crtc->force_output) {
 		*val = crtc_state->force_output_type;
@@ -971,11 +977,13 @@ static void am_meson_crtc_atomic_flush(struct drm_crtc *crtc,
 	}
 	spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
 
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	if (meson_crtc_state->crtc_bgcolor !=
 		old_am_crtc_state->crtc_bgcolor) {
 		video_dummy_data_set(meson_crtc_state->crtc_bgcolor,
 			meson_crtc_state->crtc_bgcolor_flag);
 	}
+#endif
 }
 
 bool am_meson_crtc_get_scanout_position(struct drm_crtc *crtc,

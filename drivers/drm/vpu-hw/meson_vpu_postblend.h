@@ -110,7 +110,7 @@
 #define VPP_POSTBLND_CTRL_S5                       0x1d02
 
 #define VPP_INTF_OSD3_CTRL                         0x4107
-#define VPP_MISC_T3X		                   0x2509
+#define VPP_MISC_T3X		                       0x2509
 
 #define VIU_MODE_CTRL                              0x1a2a
 #define VPP1_OSD3_BLD_H_SCOPE                      0x1d1c
@@ -144,6 +144,10 @@
 #define A9_VPP1_BLEND_DUMMY_ALPHA                  0x64aa
 #define A9_VPP1_OSD1_BLEND_SRC_CTRL                0x64b1
 #define VPP1_OSD2_BLEND_SRC_CTRL                   0x64b2
+/* C5 */
+#define VPU_VOUT_BLD_SRC1_HPOS                     0x045
+#define VPU_VOUT_BLD_SRC1_VPOS                     0x046
+#define VPU_VOUT_OSD_BLEND_CTRL                    0x080
 
 struct postblend_reg_s {
 	u32 vpp_osd1_bld_h_scope;

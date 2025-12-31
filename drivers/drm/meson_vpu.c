@@ -25,6 +25,7 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #endif
+
 #include <drm/amlogic/meson_drm_bind.h>
 #include <vout/vout_serve/vout_func.h>
 #ifdef CONFIG_AMLOGIC_DRM_USE_ION
@@ -386,6 +387,18 @@ static const enum meson_policy_id s7d_policy[] = {
 };
 #endif
 
+struct meson_rdma_done_detect drm_rdma_cnt[MESON_MAX_CRTC] = {
+	{VIU_OSD2_TCOLOR_AG1, 0},
+	{VIU_OSD2_TCOLOR_AG2, 0},
+	{VIU_OSD2_TCOLOR_AG3, 0},
+};
+
+struct meson_rdma_done_detect c5_drm_rdma_cnt[MESON_MAX_CRTC] = {
+	{VOUT_OSD1_TCOLOR_AG1, 0},
+	{VOUT_OSD1_TCOLOR_AG2, 0},
+	{VOUT_OSD1_TCOLOR_AG3, 0},
+};
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT_C1A
 static const struct meson_vpu_data vpu_g12a_data = {
 	.crtc_func = {
@@ -399,9 +412,12 @@ static const struct meson_vpu_data vpu_g12a_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 #endif
 
@@ -419,7 +435,10 @@ static const struct meson_vpu_data vpu_g12b_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &g12b_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t7_data = {
@@ -434,12 +453,15 @@ static const struct meson_vpu_data vpu_t7_data = {
 	.hdr_ops = &t7_hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t7_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
 	.enc_method = 1,
 	.max_osdblend_width = 3840,
 	.max_osdblend_height = 2160,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t3_data = {
@@ -454,10 +476,13 @@ static const struct meson_vpu_data vpu_t3_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t3_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
 	.enc_method = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t5w_data = {
@@ -472,10 +497,13 @@ static const struct meson_vpu_data vpu_t5w_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t5w_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
 	.enc_method = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t5m_data = {
@@ -490,10 +518,13 @@ static const struct meson_vpu_data vpu_t5m_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t3_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_t5m,
 	.video_formats = &video_formats,
 	.enc_method = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_s5_data = {
@@ -508,7 +539,9 @@ static const struct meson_vpu_data vpu_s5_data = {
 	.hdr_ops = &s5_hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &s5_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.slice2ppc_ops = &slice2ppc_ops,
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
@@ -518,6 +551,7 @@ static const struct meson_vpu_data vpu_s5_data = {
 	.max_osdblend_width = 3840,
 	.max_osdblend_height = 2160,
 	.policy = s5_policy,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t3x_data = {
@@ -532,7 +566,9 @@ static const struct meson_vpu_data vpu_t3x_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t3x_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.slice2ppc_ops = &slice2ppc_ops,
 	.osd_formats = &osd_formats_t3x,
 	.video_formats = &video_formats,
@@ -541,6 +577,7 @@ static const struct meson_vpu_data vpu_t3x_data = {
 	.slice_mode = 1,
 	.max_osdblend_width = 3840,
 	.max_osdblend_height = 2160,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_txhd2_data = {
@@ -555,9 +592,12 @@ static const struct meson_vpu_data vpu_txhd2_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &txhd2_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats,
 	.video_formats = &video_formats,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_s7_data = {
@@ -572,10 +612,13 @@ static const struct meson_vpu_data vpu_s7_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &s7_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_s1a,
 	.video_formats = &video_formats,
 	.cached_regs = s7_reg_table_cached,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_s7d_data = {
@@ -591,11 +634,14 @@ static const struct meson_vpu_data vpu_s7d_data = {
 	.hdr_ops = &s7d_hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_s7d,
 	.video_formats = &video_formats,
 	.policy = s7d_policy,
 	.has_gfcd = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_s6_data = {
@@ -612,11 +658,14 @@ static const struct meson_vpu_data vpu_s6_data = {
 	.hdr_ops = &s7d_hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &s6_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_s7d,
 	.video_formats = &video_formats,
 	.policy = s7d_policy,
 	.has_gfcd = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t6d_data = {
@@ -631,10 +680,13 @@ static const struct meson_vpu_data vpu_t6d_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t6d_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_t6d,
 	.video_formats = &video_formats,
 	.enc_method = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_t6w_data = {
@@ -649,10 +701,29 @@ static const struct meson_vpu_data vpu_t6w_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &t6d_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_t6d,
 	.video_formats = &video_formats,
 	.enc_method = 1,
+	.drm_rdma_cnt = drm_rdma_cnt,
+};
+
+static const struct meson_vpu_data vpu_c5_data = {
+	.crtc_func = {
+		.reg_ops = c5_reg_ops,
+	},
+	.pipe_ops = &t7_vpu_pipeline_ops,
+	.osd_ops = &c5_osd_ops,
+	.scaler_ops = &c5_scaler_ops,
+	.postblend_ops = &c5_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
+	.video_ops = &video_ops,
+#endif
+	.osd_formats = &osd_formats_t6d,
+	.video_formats = &video_formats,
+	.drm_rdma_cnt = c5_drm_rdma_cnt,
 };
 
 static const struct meson_vpu_data vpu_a9_data = {
@@ -688,9 +759,12 @@ static const struct meson_vpu_data vpu_s1a_data = {
 	.hdr_ops = &hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_s1a,
 	.video_formats = &video_formats,
+	.drm_rdma_cnt = drm_rdma_cnt,
 };
 
 static const struct of_device_id am_meson_vpu_driver_dt_match[] = {
@@ -750,6 +824,8 @@ static const struct of_device_id am_meson_vpu_driver_dt_match[] = {
 	 .data = &vpu_t6w_data,},
 	{.compatible = "amlogic, meson-a9-vpu",
 	 .data = &vpu_a9_data,},
+	{.compatible = "amlogic, meson-c5-vpu",
+	 .data = &vpu_c5_data,},
 #endif
 	{.compatible = "amlogic, meson-s1a-vpu",
 	  .data = &vpu_s1a_data,},

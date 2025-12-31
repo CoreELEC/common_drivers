@@ -305,6 +305,7 @@ struct meson_vpu_osd {
 	const struct meson_drm_format_info **infos;
 	int format_swap;
 	/*t6d t6w t6d a9 ARGB2101010 BGRA1010102*/
+	/*t6x ARGB2101010 BGRA1010102*/
 	int format_swap_AR30_BA30;
 	DECLARE_KFIFO(canvas_q, u32, MAX_CANVAS_FIFO_NUM);
 	bool has_gfcd;
@@ -527,6 +528,7 @@ struct meson_vpu_scaler {
 	u32 bank_length;/*base line*/
 	enum alpha_proc_mode alpha_mode;
 	enum scaler1_pos scaler1_position;
+	bool latch;
 };
 
 struct meson_vpu_scaler_state {
@@ -685,6 +687,7 @@ struct rdma_reg_ops {
 	u32 (*rdma_read_reg)(u32 addr);
 	int (*rdma_write_reg)(u32 addr, u32 val);
 	int (*rdma_write_reg_bits)(u32 addr, u32 val, u32 start, u32 len);
+	u32 (*dummy_read_reg)(u32 addr);
 	int (*dummy_write_reg)(u32 addr, u32 val);
 	int (*dummy_write_reg_bits)(u32 addr, u32 val, u32 start, u32 len);
 };
@@ -909,8 +912,9 @@ int vpu_pipeline_read_scanout_pos(struct meson_vpu_pipeline *pipeline,
 void vpu_pipeline_prepare_update(struct meson_vpu_pipeline *pipeline,
 	int vdisplay, int vrefresh, int crtc_index);
 void vpu_pipeline_finish_update(struct meson_vpu_pipeline *pipeline, int crtc_index);
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 void video_dummy_data_set(u64 crtc_bgcolor, bool crtc_bgcolor_flag);
-
+#endif
 /* meson_vpu_pipeline_private.c */
 struct meson_vpu_block_state *
 meson_vpu_block_get_state(struct meson_vpu_block *block,
@@ -947,7 +951,7 @@ int vpu_pipeline_check_osdblend(u32 *out_port, int num_planes,
 					struct drm_atomic_state *state);
 int video_pipeline_check_block(struct meson_video_sub_pipeline_state *mvps,
 				   struct drm_atomic_state *state, int plane_index);
-void vpu_pipeline_check_finish_reg(int crtc_index);
+void vpu_pipeline_check_finish_reg(int crtc_index, struct meson_drm *priv);
 void vpu_pipeline_detect_reset(struct meson_vpu_sub_pipeline *sub_pipeline);
 void vpu_pipeline_detect_status(struct meson_vpu_sub_pipeline *sub_pipeline);
 
@@ -968,11 +972,14 @@ void meson_commit_reenter_dec(struct meson_drm *priv,
 
 extern struct rdma_reg_ops common_reg_ops[3];
 extern struct rdma_reg_ops g12b_reg_ops[2];
+extern struct rdma_reg_ops c5_reg_ops[1];
 
 /*
  * for g12a/s4/s4d/sc2 soc
  */
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 extern struct meson_vpu_block_ops video_ops;
+#endif
 extern struct meson_vpu_block_ops osd_ops;
 extern struct meson_vpu_block_ops afbc_ops;
 extern struct meson_vpu_block_ops scaler_ops;
@@ -1056,6 +1063,13 @@ extern struct meson_vpu_block_ops t6d_osd_ops;
 extern struct meson_vpu_block_ops t6d_scaler_ops;
 extern struct meson_vpu_block_ops t6d_postblend_ops;
 extern struct meson_vpu_block_ops t6w_osdblend_ops;
+
+/*
+ * for C5 soc
+ */
+extern struct meson_vpu_block_ops c5_osd_ops;
+extern struct meson_vpu_block_ops c5_scaler_ops;
+extern struct meson_vpu_block_ops c5_postblend_ops;
 
 extern struct meson_vpu_pipeline_ops g12a_vpu_pipeline_ops;
 extern struct meson_vpu_pipeline_ops t7_vpu_pipeline_ops;

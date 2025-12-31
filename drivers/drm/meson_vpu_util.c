@@ -26,7 +26,7 @@ static void meson_vpu_vsync_rdma_irq(void *arg)
 	if (drm_vsync_rdma_handle[sub_pipeline->index] == -1)
 		return;
 
-	vpu_pipeline_check_finish_reg(sub_pipeline->index);
+	vpu_pipeline_check_finish_reg(sub_pipeline->index, sub_pipeline->pipeline->priv);
 	vpu_pipeline_detect_reset(sub_pipeline);
 	vpu_pipeline_detect_status(sub_pipeline);
 }
@@ -75,6 +75,11 @@ int meson_vpu_reg_vsync_config(u32 vpp_index)
 
 static u32 meson_vpu_read_reg(u32 addr)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -91,6 +96,11 @@ static u32 meson_vpu_read_reg(u32 addr)
 
 static int meson_vpu_write_reg(u32 addr, u32 val)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -108,6 +118,11 @@ static int meson_vpu_write_reg(u32 addr, u32 val)
 
 static int meson_vpu_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -124,6 +139,12 @@ static int meson_vpu_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 #endif
 }
 
+static u32 meson_vpu_dummy_read_reg(u32 addr)
+{
+	MESON_DRM_REG("%s, 0x%x, dummy_read\n", __func__, addr);
+	return 0;
+}
+
 static int meson_vpu_dummy_write_reg(u32 addr, u32 val)
 {
 	MESON_DRM_REG("0x%x, 0x%x dummy_write\n", addr, val);
@@ -138,6 +159,11 @@ static int meson_vpu_dummy_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 
 static u32 meson_vpu1_read_reg(u32 addr)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -154,6 +180,11 @@ static u32 meson_vpu1_read_reg(u32 addr)
 
 static int meson_vpu1_write_reg(u32 addr, u32 val)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -171,6 +202,11 @@ static int meson_vpu1_write_reg(u32 addr, u32 val)
 
 static int meson_vpu1_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -189,23 +225,43 @@ static int meson_vpu1_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 
 static u32 meson_vpu1_read_reg_non_rdma(u32 addr)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 	return aml_read_vcbus(addr);
 }
 
 static int meson_vpu1_write_reg_non_rdma(u32 addr, u32 val)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 	aml_write_vcbus(addr, val);
 	return 0;
 }
 
 static int meson_vpu1_write_reg_bits_non_rdma(u32 addr, u32 val, u32 start, u32 len)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 	aml_vcbus_update_bits(addr, ((1 << len) - 1) << start, val << start);
 	return 0;
 }
 
 static u32 meson_vpu2_read_reg(u32 addr)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	u32 ret;
 
@@ -222,6 +278,11 @@ static u32 meson_vpu2_read_reg(u32 addr)
 
 static int meson_vpu2_write_reg(u32 addr, u32 val)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -238,6 +299,11 @@ static int meson_vpu2_write_reg(u32 addr, u32 val)
 
 static int meson_vpu2_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	int ret;
 
@@ -259,6 +325,7 @@ struct rdma_reg_ops common_reg_ops[3] = {
 		.rdma_read_reg = meson_vpu_read_reg,
 		.rdma_write_reg = meson_vpu_write_reg,
 		.rdma_write_reg_bits = meson_vpu_write_reg_bits,
+		.dummy_read_reg = meson_vpu_dummy_read_reg,
 		.dummy_write_reg = meson_vpu_dummy_write_reg,
 		.dummy_write_reg_bits = meson_vpu_dummy_write_reg_bits,
 	},
@@ -288,6 +355,14 @@ struct rdma_reg_ops g12b_reg_ops[2] = {
 	},
 };
 
+struct rdma_reg_ops c5_reg_ops[1] = {
+	{
+		.rdma_read_reg = meson_vpu1_read_reg_non_rdma,
+		.rdma_write_reg = meson_vpu1_write_reg_non_rdma,
+		.rdma_write_reg_bits = meson_vpu1_write_reg_bits_non_rdma,
+	},
+};
+
 #ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
 void *osd_secure_op[VPP_TOP_MAX] = {
 		meson_vpu_write_reg_bits,
@@ -301,6 +376,11 @@ u32 meson_drm_read_reg(u32 addr)
 {
 	u32 val;
 
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return -EINVAL;
+	}
+
 	val = aml_read_vcbus(addr);
 
 	return val;
@@ -308,10 +388,20 @@ u32 meson_drm_read_reg(u32 addr)
 
 void meson_drm_write_reg(u32 addr, u32 val)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return;
+	}
+
 	aml_write_vcbus(addr, val);
 }
 
 void meson_drm_write_reg_bits(u32 addr, u32 val, u32 start, u32 len)
 {
+	if (!addr) {
+		MESON_DRM_REG("addr is 0, skip!\n");
+		return;
+	}
+
 	aml_vcbus_update_bits(addr, ((1 << len) - 1) << start, val << start);
 }
