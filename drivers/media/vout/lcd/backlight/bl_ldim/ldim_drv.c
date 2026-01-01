@@ -107,6 +107,8 @@ static struct aml_ldim_driver_s ldim_driver = {
 	.vsync_change_flag = 0,
 	.duty_update_flag = 0,
 	.in_vsync_flag = 0,
+	.transmit_div_en = 1,
+	.transmit_div = 0,
 
 	.init_on_flag = 0,
 	.func_en = 1,
@@ -572,6 +574,7 @@ static irqreturn_t ldim_isr(int irq, void *dev_id)
 	ldim_driver.irq_cnt++;
 	if (ldim_driver.irq_cnt > 0xfffffff)
 		ldim_driver.irq_cnt = 0;
+
 	frm_cnt = (unsigned char)lcd_get_encl_frm_cnt(pdrv);
 
 	atomic_set(&ldim_inirq_flag, 1);
@@ -702,6 +705,34 @@ static void ldim_dev_fb_handle(void)
 	}
 }
 
+static unsigned char transmit_div;
+static unsigned char bk_fw_sel;
+static void ldim_dev_transmit_div(void)
+{
+	struct ldim_dev_driver_s *dev_drv = ldim_driver.dev_drv;
+	int fr = vout_frame_rate_measure(1); //1000 multi
+
+	if (ldim_driver.transmit_div || fr > 185000) {
+		transmit_div = 1;
+		if (ldim_driver.fw->param->fw_sel) {
+			bk_fw_sel = ldim_driver.fw->param->fw_sel;
+			ldim_driver.fw->param->fw_sel = 0;
+		}
+		if (ldim_driver.irq_cnt & 0x1) {
+			if (dev_drv->dev_transmit_stop)
+				dev_drv->dev_transmit_stop();
+		} else {
+			if (dev_drv->dev_transmit_start)
+				dev_drv->dev_transmit_start();
+		}
+	} else if (transmit_div) {
+		transmit_div = 0;
+		ldim_driver.fw->param->fw_sel = bk_fw_sel;
+		if (dev_drv->dev_transmit_start)
+			dev_drv->dev_transmit_start();
+	}
+}
+
 static void ldim_dev_transmit(int update_flag, unsigned int size)
 {
 	struct ldim_dev_driver_s *dev_drv = ldim_driver.dev_drv;
@@ -746,6 +777,9 @@ static void ldim_dev_transmit(int update_flag, unsigned int size)
 			ldim_driver.state |= LDIM_STATE_TRANSMIT_EN;
 		}
 	}
+
+	if (ldim_driver.transmit_div_en)
+		ldim_dev_transmit_div();
 
 	if (update_flag) {
 		dev_drv->dev_transmit(&ldim_driver, ldim_driver.bl_matrix_cur, size);
@@ -1480,6 +1514,8 @@ int aml_ldim_probe(struct platform_device *pdev)
 	if (ret)
 		return -1;
 
+	transmit_div = 0;
+	bk_fw_sel = 0;
 	fw_pq = NULL;
 	ldim_config.hsize = pdrv->curr_dev->dev_cfg.timing.act_timing.h_active;
 	ldim_config.vsize = pdrv->curr_dev->dev_cfg.timing.act_timing.v_active;

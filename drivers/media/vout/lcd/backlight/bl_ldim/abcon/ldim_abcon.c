@@ -75,7 +75,8 @@ int ldim_abcon_autotrans_start(void)
 	//reg_abcon_auto_trans_en
 	abcon_wr_reg_bits(0x2b, 1, 20, 1);
 
-	ABCONPR("bcon autotrans start!!\n");
+	if (ldim_debug_print & LDIM_DBG_PR_BCON)
+		ABCONPR("bcon autotrans start!!\n");
 
 	return 0;
 }
@@ -88,7 +89,9 @@ int ldim_abcon_autotrans_stop(void)
 	//reg_abcon_auto_trans_en
 	abcon_wr_reg_bits(0x2b, 0, 20, 1);
 
-	ABCONPR("bcon autotrans stop!!\n");
+	if (ldim_debug_print & LDIM_DBG_PR_BCON)
+		ABCONPR("bcon autotrans stop!!\n");
+
 	return 0;
 }
 

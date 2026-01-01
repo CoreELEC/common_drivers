@@ -1289,6 +1289,20 @@ static ssize_t ldim_debug_store(const struct class *class, const struct class_at
 			ldim_drv->black_frm_en = temp;
 		}
 		pr_info("black_frm_en = %d\n", ldim_drv->black_frm_en);
+	} else if (!strcmp(parm[0], "transmit_div_en")) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 0, &temp) < 0)
+				goto ldim_debug_store_err;
+			ldim_drv->transmit_div_en = temp;
+		}
+		pr_info("transmit_div_en = %d\n", ldim_drv->transmit_div_en);
+	} else if (!strcmp(parm[0], "transmit_div")) {
+		if (parm[1]) {
+			if (kstrtouint(parm[1], 0, &temp) < 0)
+				goto ldim_debug_store_err;
+			ldim_drv->transmit_div = temp;
+		}
+		pr_info("transmit_div = %d\n", ldim_drv->transmit_div);
 	} else {
 		pr_info("no support cmd!!!\n");
 	}

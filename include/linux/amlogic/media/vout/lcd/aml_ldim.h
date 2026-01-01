@@ -219,6 +219,8 @@ struct aml_ldim_driver_s {
 	unsigned char vsync_change_flag;
 	unsigned char duty_update_flag;
 	unsigned char in_vsync_flag;
+	unsigned char transmit_div_en;
+	unsigned char transmit_div;
 
 	unsigned char init_on_flag;
 	unsigned char func_en;
