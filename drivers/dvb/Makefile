@@ -27,6 +27,7 @@ include $(COMMON_DRIVERS_DIR)/drivers/dvb/dsm/Makefile
 
 obj-$(CONFIG_AMLOGIC_DVB_DMX) += demux/
 obj-$(CONFIG_AMLOGIC_DVB_DUMMY_FRONTEND) += dummy_fe/
+obj-$(CONFIG_AMLOGIC_SMARTCARD) += smartcard/
 obj-$(CONFIG_AMLOGIC_SMARTCARD) += smartcard_sc2/
 
 #obj-$(CONFIG_AMLOGIC_DVB_EXTERN_TUNER) += tuner/
