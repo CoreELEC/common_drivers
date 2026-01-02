@@ -608,7 +608,7 @@ static ssize_t ctrl_5v3v_store(struct class *class,
 	if (smc->enable_5v3v_pin) {
 		_gpio_out(smc->enable_5v3v_pin,
 			  smc->enable_5v3v_level, SMC_ENABLE_5V3V_PIN_NAME);
-		pr_info("enable_pin: -->(%d)\n",
+		pr_info("enable_5v3v_pin: -->(%d)\n",
 			 (smc->enable_5v3v_level) ? 1 : 0);
 	}
 	mutex_unlock(&smc_lock);
@@ -2526,17 +2526,21 @@ static int _set_gpio(struct smc_dev *smc, struct gpio_desc **gpiod,
 {
 	int ret = 0;
 	/*pr_dbg("smc _set_gpio %s %p\n", str, *gpiod); */
-	if (IS_ERR(*gpiod)) {
-		pr_dbg("smc %s request failed\n", str);
-		return -1;
-	}
 	if (input_output == OUTPUT) {
 		*gpiod = gpiod_get(&smc->pdev->dev, str,
 				   output_level ? GPIOD_OUT_HIGH :
 				   GPIOD_OUT_LOW);
+		if (IS_ERR(*gpiod)) {
+			pr_error("smc %s request failed with %d\n", str, PTR_ERR(*gpiod));
+			return -1;
+		}
 		ret = gpiod_direction_output(*gpiod, output_level);
 	} else if (input_output == INPUT) {
 		*gpiod = gpiod_get(&smc->pdev->dev, str, GPIOD_IN);
+		if (IS_ERR(*gpiod)) {
+			pr_error("smc %s request failed with %d\n", str, PTR_ERR(*gpiod));
+			return -1;
+		}
 		ret = gpiod_direction_input(*gpiod);
 		ret |= gpiod_set_pull(*gpiod, GPIOD_PULL_UP);
 	} else {
@@ -2581,8 +2585,12 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 		smc->enable_pin = NULL;
 		if (!smc->enable_pin) {
 			snprintf(buf, sizeof(buf), "smc%d_enable_pin", id);
-			_set_gpio(smc, &smc->enable_pin, "enable_pin",
+			ret = _set_gpio(smc, &smc->enable_pin, "enable_pin",
 				  OUTPUT, OUTLEVEL_HIGH);
+			if (ret) {
+				pr_error("smc enable pin request failed, we can not work now\n");
+				return -1;
+			}
 		}
 
 		if (smc->use_enable_pin) {
@@ -2593,7 +2601,7 @@ static int smc_dev_init(struct smc_dev *smc, int id)
 				smc->enable_level = value;
 				if (smc->enable_pin) {
 					_gpio_out(smc->enable_pin,
-						smc->enable_level,
+						!smc->enable_level,
 						SMC_ENABLE_PIN_NAME);
 					pr_info("enable_pin: -->(%d)\n",
 						 (!smc->enable_level) ? 1 : 0);
