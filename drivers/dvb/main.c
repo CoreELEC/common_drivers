@@ -15,6 +15,7 @@ static int __init dvb_main_init(void)
 	call_sub_init(aucpu_init);
 	call_sub_init(dsm_init);
 #if IS_BUILTIN(CONFIG_AMLOGIC_SMARTCARD)
+	call_sub_init(smc_mod_init);
 	call_sub_init(smc_sc2_mod_init);
 #endif
 	pr_debug("### %s() end\n", __func__);
@@ -25,6 +26,7 @@ static void __exit dvb_main_exit(void)
 {
 #if IS_BUILTIN(CONFIG_AMLOGIC_SMARTCARD)
 	smc_sc2_mod_exit();
+	smc_mod_exit();
 #endif
 	dsm_exit();
 	aucpu_exit();
