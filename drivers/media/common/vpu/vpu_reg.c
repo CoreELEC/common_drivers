@@ -82,6 +82,9 @@ int vpu_ioremap(struct platform_device *pdev, int *reg_map_table)
 			vpu_conf.data->chip_type == VPU_CHIP_S7 ||
 			vpu_conf.data->chip_type == VPU_CHIP_S7D)
 		vpu_io_max = VPU_MAP_MAX - 1;
+	else if (vpu_conf.data->chip_type == VPU_CHIP_C3 ||
+			vpu_conf.data->chip_type == VPU_CHIP_C5)
+		vpu_io_max = VPU_MAP_MAX - 4;
 	else
 		vpu_io_max = VPU_MAP_MAX - 2;
 	if (!reg_map_table) {

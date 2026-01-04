@@ -147,6 +147,12 @@ static unsigned int vcbus_test_reg_c3[VCBUS_REG_CNT_MAX] = {
 	VPU_VOUT_DTH_DATA
 };
 
+static unsigned int vcbus_test_reg_c5[VCBUS_REG_CNT_MAX] = {
+	VPU_VOUT_BLEND_DUMDATA_C5,
+	VOUT_OSD1_CSC_OFFSET0_1_C5,
+	VPU_VOUT_DTH_DATA_C5
+};
+
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
 static unsigned int vcbus_test_reg_s5[VCBUS_REG_CNT_MAX] = {
 	VENC_VDAC_TST_VAL,

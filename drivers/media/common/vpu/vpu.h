@@ -39,6 +39,7 @@ enum vpu_chip_e {
 	VPU_CHIP_T6W,
 	VPU_CHIP_T6X,
 	VPU_CHIP_A9,
+	VPU_CHIP_C5,
 	VPU_CHIP_MAX,
 };
 

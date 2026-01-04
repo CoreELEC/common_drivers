@@ -603,6 +603,7 @@ void vpu_clktree_init_dft(struct device *dev)
 void vpu_clktree_init_c3(struct device *dev)
 {
 	int ret = 0;
+	unsigned int clk;
 
 	/* init & enable vpu_clk */
 	vpu_conf.vpu_clk = devm_clk_get(dev, "vpu_clk");
@@ -612,6 +613,26 @@ void vpu_clktree_init_c3(struct device *dev)
 		ret = clk_prepare_enable(vpu_conf.vpu_clk);
 		if (ret)
 			VPUERR("%s: %d clk_prepare_enable error\n", __func__, __LINE__);
+	}
+
+	/* init & enable vapb_clk */
+	if (vpu_conf.data->chip_type == VPU_CHIP_C5) {
+		vpu_conf.vapb_clk = devm_clk_get(dev, "vapb_clk");
+		if (IS_ERR_OR_NULL(vpu_conf.vapb_clk)) {
+			VPUERR("%s: vapb_clk\n", __func__);
+		} else {
+			ret = clk_prepare_enable(vpu_conf.vapb_clk);
+			if (ret)
+				VPUERR("%s: %d clk_prepare_enable error\n", __func__, __LINE__);
+
+			ret = clk_set_rate(vpu_conf.vapb_clk, 250000000);
+			if (ret)
+				return;
+
+			clk = clk_get_rate(vpu_conf.vapb_clk);
+			VPUPR("set vapb clk: 250000000, readback: %uHz(0x%x)\n",
+				clk, vpu_clk_read(vpu_conf.data->vapb_clk_reg));
+		}
 	}
 }
 

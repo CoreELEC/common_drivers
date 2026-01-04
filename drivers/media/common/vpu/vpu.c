@@ -44,7 +44,8 @@
 /* v20231129: add s7d support */
 /* v20231129: add s6 support */
 /* v20250410: add t6x support */
-#define VPU_VERSION        "v20250410"
+/* v20250410: add c5 support */
+#define VPU_VERSION        "v20260105"
 
 int vpu_debug_print_flag;
 unsigned int vpu_print_level;
@@ -3331,8 +3332,8 @@ static struct vpu_data_s vpu_data_a9 = {
 	.clk_gate_table = NULL,
 
 	.vpu_dmc_axi_table = NULL,
-	.vpu_arb_urg_ctrl_table = vpu_arb_urg_ctrl_a9,
-	.vpp_ofifo_urg_ctrl_table = vpp_ofifo_urg_ctrl_a9,
+	.vpu_arb_urg_ctrl_table = NULL,
+	.vpp_ofifo_urg_ctrl_table = NULL,
 
 	.power_on = vpu_power_on_new,
 	.power_off = vpu_power_off_new,
@@ -3345,6 +3346,48 @@ static struct vpu_data_s vpu_data_a9 = {
 	.clktree_init = vpu_clktree_init_a9,
 };
 
+static struct vpu_data_s vpu_data_c5 = {
+	.chip_type = VPU_CHIP_C5,
+	.chip_name = "C5",
+
+	.clk_level_dft = CLK_LEVEL_DFT_C3,
+	.clk_level_max = CLK_LEVEL_MAX_C3,
+	.fclk_div_table = fclk_div_table_c3,
+	.clk_table = vpu_clk_table,
+	.reg_map_table = vpu_reg_table_a4,
+	.test_reg_table = vcbus_test_reg_c5,
+
+	.vpu_clk_reg = CLKCTRL_VOUTENC_CLK_CTRL_C5,
+	.vapb_clk_reg = CLKCTRL_VAPBCLK_CTRL_C5,
+
+	.gp_pll_valid = 0,
+	.mem_pd_reg[0] = VPU_REG_END,
+	.mem_pd_reg[1] = VPU_REG_END,
+	.mem_pd_reg[2] = VPU_REG_END,
+	.mem_pd_reg[3] = VPU_REG_END,
+	.mem_pd_reg[4] = VPU_REG_END,
+	.mem_pd_reg_flag = 0,
+
+	.pwrctrl_id_table = NULL,
+
+	.power_table = NULL,
+	.iso_table = NULL,
+	.reset_table = NULL,
+	.module_init_table = NULL,
+
+	.mem_pd_table = NULL,
+	.clk_gate_table = NULL,
+
+	.power_on = NULL,
+	.power_off = NULL,
+	.mem_pd_init_off = NULL,
+	.module_init_config = NULL,
+	.power_init_check = vpu_power_init_check_c3,
+	.mempd_switch = NULL,
+	.mempd_get = NULL,
+	.clk_apply = vpu_clk_apply_c3,
+	.clktree_init = vpu_clktree_init_c3,
+};
 #endif
 #endif
 
@@ -3466,6 +3509,10 @@ static const struct of_device_id vpu_of_table[] = {
 	{
 		.compatible = "amlogic, vpu-a9",
 		.data = &vpu_data_a9,
+	},
+	{
+		.compatible = "amlogic, vpu-c5",
+		.data = &vpu_data_c5,
 	},
 
 #endif

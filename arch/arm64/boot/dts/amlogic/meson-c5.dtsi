@@ -1553,24 +1553,18 @@
 			"vc9000e_top";
 	};
 	vpu: vpu {
-		compatible = "amlogic, vpu-s6";
-		status = "disabled";
-		reg =	<0x0 0xfe000000 0x0 0x100    /* clk */
+		compatible = "amlogic, vpu-c5";
+		status = "okay";
+		reg =	<0x0 0xfe000000 0x0 0x2000    /* clk */
 			 0x0 0xfe00c000 0x0 0x70     /* pwrctrl */
-			 0x0 0xff000000 0x0 0xf000>; /* vcbus */
-		//clocks = <&clkc CLKID_VAPB>,
-		//	<&clkc CLKID_SYS_VPU_INTR>,
-		//	<&clkc CLKID_VPU_0>,
-		//	<&clkc CLKID_VPU_1>,
-		//	<&clkc CLKID_VPU>;
-		//clock-names =	"vapb_clk",
-		//		"vpu_intr_gate",
-		//		"vpu_clk0",
-		//		"vpu_clk1",
-		//		"vpu_clk";
-		clk_level = <8>;
+			 0x0 0xff500000 0x0 0x10000>; /* vcbus */
+		clocks = <&clkc CLKID_VAPB>,
+			<&clkc CLKID_VOUT_MCLK>;
+		clock-names =	"vapb_clk",
+				"vpu_clk";
+		clk_level = <5>;
 		/* 0: 24.0M  1: 100.0M    2: 166.7M    3: 200.0M    4: 250.0M */
-		/* 5: 333.3M    6: 400.0M    7: 500.0M    8: 666.7M */
+		/* 5: 333.3M */
 	};
 
 	rdma {
