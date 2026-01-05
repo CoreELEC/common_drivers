@@ -1236,6 +1236,7 @@ static const struct dev_pm_ops meson_resample_pm_ops = {
 	 * will enable the clk and default setting
 	 */
 	.restore = resample_platform_restore,
+	.thaw = resample_platform_restore,
 	.freeze = resample_platform_freeze,
 	.suspend = resample_platform_suspend,
 	.resume  = resample_platform_resume,

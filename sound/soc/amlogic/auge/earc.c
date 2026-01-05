@@ -282,6 +282,8 @@ struct earc {
 	bool hold_bus_flag;
 	bool shutdown;
 	bool tx_d2a_enable;
+	/* for suspend to disk (STD), once freeze done, any reset will be returned */
+	bool tx_std_status;
 };
 
 static struct earc *s_earc;
@@ -349,7 +351,10 @@ static void earc_clock_enable(void)
 	if (p_earc->suspend_clk_off) {
 		if (p_earc->chipinfo->tx_enable) {
 			if (!IS_ERR_OR_NULL(p_earc->clk_tx_cmdc) &&
-			    !IS_ERR_OR_NULL(p_earc->clk_tx_cmdc_srcpll)) {
+				!IS_ERR_OR_NULL(p_earc->clk_tx_cmdc_srcpll)) {
+				ret = clk_set_parent(p_earc->clk_tx_cmdc, NULL);
+				if (ret)
+					dev_err(p_earc->dev, "Can't set clk_tx_cmdc parent as null\n");
 				ret = clk_set_parent(p_earc->clk_tx_cmdc,
 						p_earc->clk_tx_cmdc_srcpll);
 				if (ret)
@@ -358,7 +363,9 @@ static void earc_clock_enable(void)
 			if (!IS_ERR_OR_NULL(p_earc->clk_tx_dmac) &&
 			    !IS_ERR_OR_NULL(p_earc->clk_tx_dmac_srcpll)) {
 				unsigned long flags;
-
+				ret = clk_set_parent(p_earc->clk_tx_dmac, NULL);
+				if (ret)
+					dev_err(p_earc->dev, "Can't set clk_tx_dmac parent as null\n");
 				ret = clk_set_parent(p_earc->clk_tx_dmac,
 						p_earc->clk_tx_dmac_srcpll);
 				if (ret)
@@ -1474,6 +1481,9 @@ int sharebuffer_earctx_prepare(struct snd_pcm_substream *substream,
 		return -ENOTCONN;
 
 	if (IS_ERR_OR_NULL(s_earc->clk_tx_dmac) || IS_ERR_OR_NULL(s_earc->clk_tx_dmac_srcpll))
+		return -ENOTCONN;
+
+	if (s_earc->tx_std_status)
 		return -ENOTCONN;
 
 	/* same source channels always 2 */
@@ -3918,6 +3928,7 @@ static int aml_earc_platform_restore(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct earc *p_earc = dev_get_drvdata(&pdev->dev);
 
+	p_earc->tx_std_status = false;
 	earc_platform_resume(dev);
 	earctx_cmdc_setup(p_earc);
 
@@ -3926,6 +3937,10 @@ static int aml_earc_platform_restore(struct device *dev)
 
 static int aml_earc_platform_freeze(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct earc *p_earc = dev_get_drvdata(&pdev->dev);
+
+	p_earc->tx_std_status = true;
 	earc_platform_suspend(dev);
 
 	return 0;
@@ -3936,6 +3951,7 @@ static const struct dev_pm_ops meson_earc_pm_ops = {
 	 * will enable the clk and default setting
 	 */
 	.restore = aml_earc_platform_restore,
+	.thaw = aml_earc_platform_restore,
 	.freeze = aml_earc_platform_freeze,
 	.suspend = earc_platform_suspend,
 	.resume  = earc_platform_resume,

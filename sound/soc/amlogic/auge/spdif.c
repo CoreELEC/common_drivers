@@ -2421,6 +2421,7 @@ static int aml_spdif_platform_freeze(struct device *dev)
 
 static const struct dev_pm_ops meson_spdif_pm_ops = {
 	.restore = aml_spdif_platform_restore,
+	.thaw = aml_spdif_platform_restore,
 	.freeze = aml_spdif_platform_freeze,
 	.suspend = aml_spdif_platform_suspend,
 	.resume  = aml_spdif_platform_resume,

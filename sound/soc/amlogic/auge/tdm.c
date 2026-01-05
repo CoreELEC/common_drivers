@@ -3325,6 +3325,7 @@ static const struct dev_pm_ops meson_tdm_pm_ops = {
 	 * will enable the clk and default setting
 	 */
 	.restore = aml_tdm_platform_restore,
+	.thaw = aml_tdm_platform_restore,
 	.freeze = aml_tdm_platform_freeze,
 	.suspend = aml_tdm_platform_suspend,
 	.resume  = aml_tdm_platform_resume,

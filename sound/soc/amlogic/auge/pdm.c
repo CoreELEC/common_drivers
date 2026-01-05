@@ -1841,6 +1841,7 @@ static const struct dev_pm_ops meson_pdm_pm_ops = {
 	 * will enable the clk and default setting
 	 */
 	.restore = pdm_platform_restore,
+	.thaw = pdm_platform_restore,
 	.freeze = pdm_platform_freeze,
 	.suspend = pdm_platform_suspend,
 	.resume  = pdm_platform_resume,
