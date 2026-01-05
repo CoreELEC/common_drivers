@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
+/*
+ * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
+ */
+
+#ifndef _DT_BINDINGS_AMLOGIC_MESON_C5_RESET_H
+#define _DT_BINDINGS_AMLOGIC_MESON_C5_RESET_H
+
+/* AO_RESET0 */
+#define AO_RESET_PWM_A			0
+#define AO_RESET_PWM_B			1
+#define AO_RESET_PWM_C			2
+#define AO_RESET_PWM_D			3
+#define AO_RESET_I2C_M_A		4
+#define AO_RESET_I2C_M_B		5
+#define AO_RESET_I2C_M_C		6
+#define AO_RESET_I2C_M_D		7
+#define AO_RESET_UART_A			8
+#define AO_RESET_UART_B			9
+#define AO_RESET_UART_C			10
+#define AO_RESET_SED			11
+#define AO_RESET_ISP			12
+#define AO_RESET_SPI			13
+/*					14-19*/
+#define AO_RESET_AOCPU			20
+#define AO_RESET_AOCPU_POR		21
+#define AO_RESET_AOCPU_CORE		22
+#define AO_RESET_SRAM			23
+#define AO_RESET_CAPU			24
+#define AO_RESET_BRG_NIC_AOCPU		25
+#define AO_RESET_BRG_NIC_RTC		26
+#define AO_RESET_BRG_NIC_EE		27
+#define AO_RESET_WATCHDOG		28
+#define AO_RESET_AO_TO_EE		29
+#define AO_RESET_PSRAM			30
+/*					31*/
+
+/* RESET0 */
+#define RESET_ETH			0
+#define RESET_ETH_AXI			1
+#define RESET_USB3PHY_APB		2
+#define RESET_USB3PHY			3
+#define RESET_U3DRD_USB2PHY		4
+#define RESET_USB3DRD			5
+#define RESET_USB3DRD_COMB		6
+#define RESET_U3DRD_USB2PHY_APB		7
+#define RESET_USB2H_COMB		8
+#define RESET_USB2H			9
+#define RESET_USB2H_USB2PHY_APB		10
+#define RESET_U2H_USB2PHY		11
+#define RESET_BRG_VCBUS_DEC		12
+/*					13-31*/
+
+/* RESET1 */
+#define RESET_ISP			32
+#define RESET_DEWARP			33
+#define RESET_GE2D			34
+#define RESET_VGE			35
+#define RESET_NNA_TO_VGE_PIPEL		36
+#define RESET_CVE			37
+#define RESET_MIPI_DSI_HOST		38
+#define RESET_DSI_PLL_DIV		39
+#define RESET_MIPI_DSI_PHY		40
+#define RESET_AI_ISP			41
+#define RESET_VOUT_VENC			42
+#define RESET_VOUT			43
+#define RESET_TAHOE_A			44
+#define RESET_TAHOE			45
+#define RESET_TAHOE_APB			46
+#define RESET_TAHOE_SYS_RST_N		47
+#define RESET_AMFC			48
+#define RESET_AMFC_APB			49
+#define RESET_DOS_CAPB3			50
+#define RESET_DOS			51
+#define RESET_AUDIO			52
+/*					53-63*/
+
+/* RESET2 */
+#define RESET_IR_CTRL			64
+#define RESET_TS_PLL			65
+#define RESET_TS_NNA			66
+#define RESET_TS_ISP			67
+/*					68*/
+#define RESET_SPISG_0			69
+#define RESET_PIO			70
+#define RESET_MSR_CLK			71
+#define RESET_AUX_DIG			72
+#define RESET_PP_DMA			73
+#define RESET_WATCHDOG			74
+#define RESET_PP_WRAPPER		75
+#define RESET_GLOBAL_TIMER		76
+/*					77-95*/
+
+/* RESET3 */
+#define RESET_COMBO_DPHY_PCLK		96
+#define RESET_COMBO_DPHY		97
+#define RESET_A55_ACE			98
+/*					99-127*/
+
+/* RESET4 */
+#define RESET_PWM_A			128
+#define RESET_PWM_B			129
+#define RESET_PWM_C			130
+#define RESET_PWM_D			131
+#define RESET_PWM_E			132
+#define RESET_PWM_F			133
+#define RESET_PWM_G			134
+#define RESET_PWM_H			135
+#define RESET_PWM_I			136
+#define RESET_PWM_J			137
+#define RESET_UART_A			138
+#define RESET_UART_B			139
+#define RESET_UART_C			140
+#define RESET_UART_D			141
+#define RESET_UART_E			142
+#define RESET_UART_F			143
+/*					144*/
+#define RESET_I2C_M_A			145
+#define RESET_I2C_M_B			146
+#define RESET_I2C_M_C			147
+#define RESET_I2C_M_D			148
+#define RESET_I2C_M_E			149
+#define RESET_I2C_M_F			150
+#define RESET_I2C_S_A			151
+#define RESET_SD_EMMC_A			152
+#define RESET_SD_EMMC_B			153
+#define RESET_SD_EMMC_C			154
+#define RESET_PWM_K			155
+#define RESET_PWM_L			156
+#define RESET_PWM_M			157
+#define RESET_PWM_N			158
+/*					159*/
+
+/* RESET5 */
+#define RESET_BRG_ISP_PIPEL1		160
+#define RESET_BRG_HEVCF_DMC_PIPEL	161
+/*					162*/
+#define RESET_BRG_EMMC_PIPEL1		163
+#define RESET_BRG_VGE_PIPEL1		164
+/*					165-166*/
+#define RESET_BRG_NNA_PIPEL1		167
+#define RESET_BRG_NNA_SRAM_PIPEL1	168
+#define RESET_BRG_U2DRDA_PIPEL1		169
+#define RESET_BRG_U3DRDA_PIPEL1		170
+#define RESET_BRG_NNA2_PIPEL1		171
+#define RESET_BRG_NNA2_SRAM_PIPELL	172
+#define RESET_BRG_NIC_AOSYS		173
+#define RESET_BRG_NIC_AMFC		174
+#define RESET_BRG_NIC_GIC		175
+#define RESET_BRG_SRAM_NIC_NNA2		176
+#define RESET_BRG_SRAM_NIC_NNA		177
+#define RESET_BRG_SRAM_NIC_MAIN		178
+#define RESET_BRG_SRAM_NIC_ALL		179
+#define RESET_BRG_NIC_SOCBRG		180
+#define RESET_BRG_NIC_GPV		181
+#define RESET_BRG_NIC_AO		182
+#define RESET_BRG_NIC_EMMC		183
+#define RESET_BRG_NIC_DSPA		184
+#define RESET_BRG_NIC_SDIOB		185
+#define RESET_BRG_NIC_SDIOA		186
+#define RESET_BRG_NIC_VAPB		187
+#define RESET_BRG_NIC_DSU		188
+#define RESET_BRG_NIC_CLK81		189
+#define RESET_BRG_NIC_MAIN		190
+#define RESET_BRG_NIC_ALL		191
+
+/* RESET6 */
+/*					192-219*/
+#define RESET_BRG_SRAM_NIC_SYS		220
+#define RESET_BRG_SRAM_NIC_RAM		221
+#define RESET_BRG_VPU_APB_SYNC		222
+/*					223*/
+
+#endif

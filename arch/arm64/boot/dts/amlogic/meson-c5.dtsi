@@ -12,7 +12,7 @@
 #include <dt-bindings/power/c5-pd.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-c5-gpio.h>
-#include <dt-bindings/reset/amlogic,meson-s6-reset.h>
+#include <dt-bindings/reset/amlogic,meson-c5-reset.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/input/input.h>
@@ -507,7 +507,7 @@
 			amlogic,reg10-init = <0x70503010>;
 			amlogic,reg11-init = <0xf0d0b090>;
 			reset-names = "analog";
-			resets = <&reset RESET_SAR_ANA>;
+			//resets = <&reset RESET_SAR_ANA>;
 			status = "disabled";
 		};
 
@@ -997,7 +997,7 @@
 			};
 
 			reset: reset-controller@2000 {
-				compatible = "amlogic,meson-sc2-reset";
+				compatible = "amlogic,meson-t7-reset";
 				reg = <0x0 0x2000 0x0 0x98>;
 				#reset-cells = <1>;
 			};
@@ -1111,6 +1111,12 @@
 				#size-cells = <0>;
 				clocks = <&ao_clkc CLKID_AO_SYS_I2C_M_B>;
 				status = "disabled";
+			};
+
+			ao_reset: ao-reset-controller@2000 {
+				compatible = "amlogic,meson-a9-ao-reset";
+				reg = <0x0 0x2000 0x0 0xc>;
+				#reset-cells = <1>;
 			};
 		};
 
@@ -1229,7 +1235,7 @@
 			dma-64bit-support = <1>;
 			in-nak-rty = <0x5>;
 			reset-names = "udrd";
-			resets = <&reset RESET_U2DRD>;
+			//resets = <&reset RESET_U2DRD>;
 		};
 
 		crg_udc: crgudc@fe340000 {
@@ -1245,7 +1251,7 @@
 			version = <1>; /* 1: forbid vbus detect */
 			dma-64bit-support = <1>;
 			reset-names = "udrd";
-			resets = <&reset RESET_U2DRD>;
+			//resets = <&reset RESET_U2DRD>;
 		};
 
 		crg: crg@fe350000 {
@@ -1260,7 +1266,7 @@
 			dma-64bit-support = <1>;
 			in-nak-rty = <0x5>;
 			reset-names = "udrd";
-			resets = <&reset RESET_U3DRD>;
+			//resets = <&reset RESET_U3DRD>;
 		};
 
 		dolby_fw: dolby_fw {
@@ -1836,9 +1842,9 @@
 			"vc9000e_irq2";
 		//power-domains = <&pwrdm PDID_S6_VC9000E>;
 		reset-names = "vc9000e_areset", "vc9000e_core_rst", "vc9000e_apb_reset";
-		resets = <&reset RESET_VC9000E>,
-			<&reset RESET_VC9000E_CORE>,
-			<&reset RESET_VC9000E_APB>;
+		//resets = <&reset RESET_VC9000E>,
+		//	<&reset RESET_VC9000E_CORE>,
+		//	<&reset RESET_VC9000E_APB>;
 		#address-cells=<2>;
 		#size-cells=<2>;
 		ranges;
@@ -1870,7 +1876,7 @@
 		interrupt-names = "rdma";
 		/* after sc2 */
 		reset-names = "rdma";
-		resets = <&reset RESET_RDMA>;
+		//resets = <&reset RESET_RDMA>;
 	};
 
 	amlvecm: amlvecm {
