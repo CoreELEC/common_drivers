@@ -42,6 +42,7 @@
 #include <dt-bindings/mailbox/t6w-mbox.h>
 #include <dt-bindings/mailbox/t6x-mbox.h>
 #include <dt-bindings/mailbox/a9-mbox.h>
+#include <dt-bindings/mailbox/c5-mbox.h>
 #include "meson_mbox_fifo.h"
 #include "meson_mbox_comm.h"
 #include "meson_mbox_health.h"
@@ -1460,6 +1461,36 @@ static struct mbox_domain_data a9_mbox_domains_data __initdata = {
 	.mbox_domains = a9_mbox_domains,
 	.domain_counts = ARRAY_SIZE(a9_mbox_domains),
 };
+
+const struct mbox_domain c5_mbox_domains[] = {
+	MBOX_DOMAIN(C5_AO2REE0, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE1, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE2, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE3, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE4, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE5, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE6, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE7, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE8, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE9, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_AO2REE10, C5_MBOX_AO2REE, 0),
+	MBOX_DOMAIN(C5_REE2AO0, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO1, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO2, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO3, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO4, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO5, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO6, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO7, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO8, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO9, C5_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(C5_REE2AO10, C5_MBOX_REE2AO, 0),
+};
+
+static struct mbox_domain_data c5_mbox_domains_data __initdata = {
+	.mbox_domains = c5_mbox_domains,
+	.domain_counts = ARRAY_SIZE(c5_mbox_domains),
+};
 #endif
 
 const struct mbox_domain s1a_mbox_domains[] = {
@@ -1557,6 +1588,10 @@ static const struct of_device_id mbox_of_match[] = {
 	{
 		.compatible = "amlogic, a9-mbox-fifo",
 		.data = &a9_mbox_domains_data,
+	},
+	{
+		.compatible = "amlogic, c5-mbox-fifo",
+		.data = &c5_mbox_domains_data,
 	},
 #endif
 	{
