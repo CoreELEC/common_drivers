@@ -9,7 +9,7 @@
 #include <dt-bindings/clock/g12a-aoclkc.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include <dt-bindings/power/s6-pd.h>
+#include <dt-bindings/power/c5-pd.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-s6-gpio.h>
 #include <dt-bindings/reset/amlogic,meson-s6-reset.h>
@@ -185,7 +185,7 @@
 		interrupts = <0 185 IRQ_TYPE_EDGE_RISING
 			      0 186 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amfc0", "amfc1";
-		power-domains=<&pwrdm PDID_S6_AMFC>;
+		//power-domains=<&pwrdm PDID_S6_AMFC>;
 		clocks = <&clkc CLKID_AMFC>;
 		assigned-clocks = <&clkc CLKID_AMFC>;
 		assigned-clock-rates = <666666666>;
@@ -246,9 +246,9 @@
 	};
 
 	pwrdm: power-domains {
-		compatible = "amlogic,s6-power-domain";
+		compatible = "amlogic,c5-power-domain";
 		#power-domain-cells = <1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	adla: adla@fe098000 {
@@ -263,7 +263,7 @@
 		interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc CLKID_NNA>;
 		clock-names = "adla_core_clk";
-		power-domains=<&pwrdm PDID_S6_NNA_4T>;
+		//power-domains=<&pwrdm PDID_S6_NNA_4T>;
 		nn_hw_version="r3p1";
 		adla_core_clk_rate = <1000000000>;
 		adla_smc_cmd = <0x820000b2>;
@@ -499,7 +499,7 @@
 		 * bit2: pm_support_ffv
 		 */
 		pm-support = /bits/ 8 <0x5>;
-		power-domains = <&pwrdm PDID_S6_DSPA>;
+		//power-domains = <&pwrdm PDID_S6_DSPA>;
 		power-domain-names = "dspa";
 		mboxes = <&mbox_fifo S6_REE2DSPA_HOST>,
 			 <&mbox_fifo S6_DSPA2REE_HOST>;
@@ -1110,7 +1110,7 @@
 			u3p2-phy-apb = <10>;
 			pcie-rst-bit = <24>;
 			pcie-rst-mask = <0xff>;
-			power-domains = <&pwrdm PDID_S6_PCIE>;
+			//power-domains = <&pwrdm PDID_S6_PCIE>;
 			status = "disabled";
 			dma-ranges = <0x0 0x0 0x0 0x0 0x0 0x0 0xe0000000>;
 		};
@@ -1311,10 +1311,10 @@
 			"mailbox_1",
 			"mailbox_2",
 			"parser_b";
-		power-domains = <&pwrdm PDID_S6_DOS_VDEC>,
-			<&pwrdm PDID_S6_DOS_HEVC>;
-		power-domain-names = "pwrc-vdec",
-			"pwrc-hevc";
+		//power-domains = <&pwrdm PDID_S6_DOS_VDEC>,
+		//	<&pwrdm PDID_S6_DOS_HEVC>;
+		//power-domain-names = "pwrc-vdec",
+		//	"pwrc-hevc";
 	};
 
 	vcodec_dec {
@@ -1535,7 +1535,7 @@
 			"vc9000e_irq0",
 			"vc9000e_irq1",
 			"vc9000e_irq2";
-		power-domains = <&pwrdm PDID_S6_VC9000E>;
+		//power-domains = <&pwrdm PDID_S6_VC9000E>;
 		reset-names = "vc9000e_areset", "vc9000e_core_rst", "vc9000e_apb_reset";
 		resets = <&reset RESET_VC9000E>,
 			<&reset RESET_VC9000E_CORE>,
@@ -2066,7 +2066,7 @@
 		clock-names = "clk_vapb_0",
 			"clk_ge2d_gate";
 		reg = <0x0 0xff040000 0x0 0x100>;
-		power-domains = <&pwrdm PDID_S6_GE2D>;
+		//power-domains = <&pwrdm PDID_S6_GE2D>;
 	};
 
 	amlgdc {
@@ -2080,7 +2080,7 @@
 		clocks = <&clkc CLKID_DEWARPA>;
 		clock-names = "clk_gate";
 		clk-rate = <800000000>;
-		power-domains = <&pwrdm PDID_S6_DEWARP>;
+		//power-domains = <&pwrdm PDID_S6_DEWARP>;
 	};
 
 	vicp {
@@ -2096,7 +2096,7 @@
 		clock-names = "clk_vapb_0",
 			"clk_vicp_gate";
 		reg = <0x0 0xfe094000 0x0 0xe80>;
-		power-domains = <&pwrdm PDID_S6_VICP>;
+		//power-domains = <&pwrdm PDID_S6_VICP>;
 	};
 
 	aml_bt: aml_bt {
@@ -2357,7 +2357,7 @@
 			"cts_csi_phy_clk_composite";
 
 		// depends on power domain.
-		power-domains = <&pwrdm PDID_S6_ADAPT>;
+		//power-domains = <&pwrdm PDID_S6_ADAPT>;
 
 		// 88 for csi2_adap_int
 		interrupts = <GIC_SPI 88 IRQ_TYPE_EDGE_RISING>;
