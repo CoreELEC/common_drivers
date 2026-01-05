@@ -71,6 +71,7 @@ dtb-y += sm1_s905x3_bananapi_m5.dtb
 dtb-y += sm1_s905x3_beelink_gt1mini2_2g.dtb
 dtb-y += sm1_s905x3_beelink_gt1mini2_4g.dtb
 dtb-y += sm1_s905x3_buzztv_xrs4500.dtb
+dtb-y += sm1_s905x3_gtcombo.dtb
 dtb-y += sm1_s905x3_odroid_c4.dtb
 dtb-y += sm1_s905x3_mecool_k5.dtb
 dtb-y += sm1_s905x3_starnet_apple_x3.dtb
