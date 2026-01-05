@@ -370,4 +370,13 @@ config AMLOGIC_COMMON_CLK_T6X
         help
           Support for the clock controller on Amlogic T6X
           devices, aka T6X. Say Y if you want peripherals to work.
+
+config AMLOGIC_COMMON_CLK_C5
+        tristate "Meson C5 clock controller"
+        depends on AMLOGIC_COMMON_CLK_MESON_REGMAP
+        depends on AMLOGIC_COMMON_CLK_MESON_DUALDIV
+        depends on AMLOGIC_COMMON_CLK_MESON_PLL
+        help
+          Support for the clock controller on Amlogic C5
+          devices, aka C5. Say Y if you want peripherals to work.
 endmenu

@@ -231,3 +231,12 @@ $(T6X_MODULE_NAME)-y += t6x.o
 PR_FMT_T6X = $(subst amlogic-,,$(T6X_MODULE_NAME))
 PR_FMT_DEFINE_T6X="-Dpr_fmt(fmt)= \"[$(PR_FMT_T6X)]: \" fmt"
 CFLAGS_t6x.o += $(PR_FMT_DEFINE_T6X)
+
+C5_MODULE_NAME = amlogic-clk-soc-c5
+obj-$(CONFIG_AMLOGIC_COMMON_CLK_C5) += $(C5_MODULE_NAME).o
+$(C5_MODULE_NAME)-y += c5.o c5-aoclk.o c5-main.o
+PR_FMT_C5 = $(subst amlogic-,,$(C5_MODULE_NAME))
+PR_FMT_DEFINE_C5="-Dpr_fmt(fmt)= \"[$(PR_FMT_C5)]: \" fmt"
+CFLAGS_c5.o += $(PR_FMT_DEFINE_C5)
+CFLAGS_c5-aoclk.o += $(PR_FMT_DEFINE_C5)
+CFLAGS_c5-main.o += $(PR_FMT_DEFINE_C5)
