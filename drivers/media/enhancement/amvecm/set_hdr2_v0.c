@@ -3008,10 +3008,11 @@ void set_hdr_matrix(enum hdr_module_sel module_sel,
 		if (hdr_top_ctrl_mode == 1 ||
 			hdr_top_ctrl_mode == 5) {
 			gmut_shift = customer_settings.reg_gmut_shift;
-			hdr_tool_ogain_shift = adpscl_shift[1];
 		} else {
 			customer_settings.reg_gmut_shift = gmut_shift;
 		}
+
+		hdr_tool_ogain_shift = adpscl_shift[1];
 
 		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(hdr_ctrl,
 					 hdr_mtx_param->mtx_gamut_mode, 6, 2, vpp_sel);
