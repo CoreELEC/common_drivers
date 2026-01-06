@@ -72,6 +72,16 @@
 			reg = <0x0 0x0 0x0 0x80000>;
 		};
 
+		log_reserved:linux,log {
+			compatible = "amlogic,log-reserved";
+			reg = <0x0 0x4e00000 0x0 0x10000>;
+		};
+
+		bl30log_reserved:linux,bl30log {
+			compatible = "amlogic,bl30log-reserved";
+			reg = <0x0 0xf702cc00 0x0 0x400>;
+		};
+
 		debug_reserved:linux,iotrace {
 			compatible = "amlogic, iotrace";
 			reg = <0x0 0x04f00000 0x0 0x00100000>;

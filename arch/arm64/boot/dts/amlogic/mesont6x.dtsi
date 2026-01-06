@@ -165,6 +165,14 @@
 		status = "okay";
 	};
 
+	uboot_log {
+		compatible = "amlogic, uboot_log";
+		status = "okay";
+		memory-region = <&log_reserved &bl30log_reserved>;
+		reg = <0x0 0xfe0100ec 0x0 0x04>; /*timer e*/
+		mboxes = <&mbox_fifo T6X_REE2AO_REFRESH>;
+	};
+
 	aml_reboot {
 		compatible = "aml, reboot";
 		sys_reset = <0x84000009>;
