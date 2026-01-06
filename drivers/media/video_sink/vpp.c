@@ -850,6 +850,17 @@ static bool is_4k1k144hz_out(const struct vinfo_s *vinfo)
 		return false;
 }
 
+static bool is_4k1k150hz_out(const struct vinfo_s *vinfo)
+{
+	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
+		(vinfo->brr_duration == 150 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 146 &&
+		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 154)))
+		return true;
+	else
+		return false;
+}
+
 static bool is_4k1k165hz_out(const struct vinfo_s *vinfo)
 {
 	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
@@ -888,6 +899,17 @@ static bool is_4k1k240hz_out(const struct vinfo_s *vinfo)
 		(vinfo->brr_duration == 240 ||
 		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 237 &&
 		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 243)))
+		return true;
+	else
+		return false;
+}
+
+static bool is_4k1k300hz_out(const struct vinfo_s *vinfo)
+{
+	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
+		(vinfo->brr_duration == 300 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 297 &&
+		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 303)))
 		return true;
 	else
 		return false;
@@ -1166,7 +1188,7 @@ static bool set_gamemode_dw_policy(struct video_layer_s *layer,
 
 static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 			int *min_ratio_1000, u64 *cur_vpp_speed_factor,
-			s32 height_in, s32 width_in)
+			s32 height_in, s32 width_in, s32 height_out, s32 width_out)
 {
 	if (is_meson_t6w_cpu()) {
 		if (is_4k1k180hz_out(vinfo)) {
@@ -1205,14 +1227,53 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 			*min_ratio_1000 = round_div(min_skip_ratio, 1648, 1250);
 			*cur_vpp_speed_factor =
 				div_u64((u64)vpp_speed_factor * 0xd6, 0x110);
+
+			/* 1440p input and 4k1k 360hz output, vskip = 1 */
+			if (width_in <= 2560 && height_in <= 720) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2222, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x11a, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1602, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x187, 0x110);
+				}
+			}
 		} else if (is_4k1k340hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1638, 1250);
 			*cur_vpp_speed_factor =
 				div_u64((u64)vpp_speed_factor * 0xd6, 0x110);
-		} else if (is_4k1k330hz_out(vinfo)) {
+
+			/* 1440p input and 4k1k 340hz output, vskip = 1 */
+			if (width_in <= 2560 && height_in <= 720) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2337, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x119, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1714, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x180, 0x110);
+				}
+			}
+		} else if (is_4k1k330hz_out(vinfo) || is_4k1k300hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1685, 1250);
 			*cur_vpp_speed_factor =
 				div_u64((u64)vpp_speed_factor * 0xd6, 0x110);
+
+			/* 1440p input and 4k1k 330hz output, vskip = 1 */
+			if (width_in <= 2560 && height_in <= 720) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2410, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x119, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1785, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x17c, 0x110);
+				}
+			}
 		} else if (is_4k1k288hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1830, 1250);
 			*cur_vpp_speed_factor =
@@ -1222,6 +1283,21 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 				*min_ratio_1000 = round_div(min_skip_ratio, 2035, 1250);
 				*cur_vpp_speed_factor =
 					div_u64((u64)vpp_speed_factor * 0x16b, 0x110);
+			}
+
+			/* 1440p input and 4k1k 288hz output, vskip = 1 */
+			if (width_in <= 2560 && height_in <= 720) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 =
+						round_div(min_skip_ratio, 2621, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x11a, 0x110);
+				} else {
+					*min_ratio_1000 =
+						round_div(min_skip_ratio, 2003, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x171, 0x110);
+				}
 			}
 		} else if (is_4k1k240hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1432, 1250);
@@ -1241,7 +1317,7 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 			*min_ratio_1000 = round_div(min_skip_ratio, 2226, 1250);
 			*cur_vpp_speed_factor =
 				div_u64((u64)vpp_speed_factor * 0xd2, 0x110);
-		} else if (is_4k1k165hz_out(vinfo)) {
+		} else if (is_4k1k165hz_out(vinfo) || is_4k1k150hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 2294, 1250);
 			*cur_vpp_speed_factor =
 				div_u64((u64)vpp_speed_factor * 0xd3, 0x110);
@@ -1610,13 +1686,15 @@ static int vpp_process_speed_check
 		    height_out <= 0 || height_screen <= 0)
 			return SPEED_CHECK_DONE;
 
+		width_out = next_frame_par->VPP_hsc_endp -
+			next_frame_par->VPP_hsc_startp + 1;
 		if (next_frame_par->vscale_skip_count > 0 &&
 		    ((vf->type & VIDTYPE_VIU_444) ||
 		     (vf->type & VIDTYPE_RGB_444)))
 			bpp = 2;
 		cur_vpp_speed_factor = vpp_speed_factor;
 		ratio_adjust_for_high_freq(vinfo, &min_ratio_1000,
-			&cur_vpp_speed_factor, height_in, width_in);
+			&cur_vpp_speed_factor, height_in, width_in, height_out, width_out);
 
 		if (height_in * bpp * freq_ratio > height_out) {
 			/*
