@@ -282,5 +282,7 @@ unsigned int skip_444_settings(struct am_reg_s *p);
 void amve_444_config_update(struct vframe_s *vf, int vpp_index);
 extern int lut3d_dma_case;
 extern uint flag_lut3d_resume;
+void c5_vadj_gamma_init(void);
+
 #endif
 

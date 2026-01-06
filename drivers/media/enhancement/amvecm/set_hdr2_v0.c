@@ -8341,7 +8341,8 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 
 		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(matrix_en_ctrl, mtx_on, 0, 1, vpp_sel);
 	} else if (mtx_sel == POST2_MTX) {
-		if (chip_type_id == chip_a4) {
+		if (chip_type_id == chip_a4 ||
+			chip_type_id == chip_c5) {
 			matrix_coef00_01 = VOUT_MATRIX_COEF00_01;
 			matrix_coef02_10 = VOUT_MATRIX_COEF02_10;
 			matrix_coef11_12 = VOUT_MATRIX_COEF11_12;

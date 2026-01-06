@@ -4549,7 +4549,8 @@ void video_post_process(struct vframe_s *vf,
 		cal_gamut_mapping_wrapper_matrix(gamut_src_format, vinfo,
 			bypass_gamut_wrapper, vpp_index);
 
-	if (chip_type_id == chip_a4) {
+	if (chip_type_id == chip_a4 ||
+		chip_type_id == chip_c5) {
 		if (!(vinfo->mode == VMODE_LCD || vinfo->mode == VMODE_eDP ||
 			vinfo->mode == VMODE_DUMMY_ENCP))
 			mtx_setting(POST2_MTX, MATRIX_NULL, MTX_OFF);

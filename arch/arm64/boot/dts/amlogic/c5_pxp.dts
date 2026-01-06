@@ -650,3 +650,12 @@
 &freertos {
 	status = "disabled";
 };
+
+&amlvecm {
+	compatible = "amlogic, vecm-c5";
+	dev_name = "aml_vecm";
+	status = "okay";
+	gamma_en = <0>;/*1:enable ;0:disable*/
+	wb_en = <0>;/*1:enable ;0:disable*/
+	vlock_en = <0>;/*1:enable;0:disable*/
+};

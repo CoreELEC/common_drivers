@@ -2864,6 +2864,7 @@ void lc_process(struct vframe_s *vf,
 		chip_type_id == chip_s5 ||
 		chip_type_id == chip_s7 ||
 		chip_type_id == chip_s6 ||
+		chip_type_id == chip_c5 ||
 		chip_type_id == chip_a9 ||
 		lc_force_ctrl)
 		return;

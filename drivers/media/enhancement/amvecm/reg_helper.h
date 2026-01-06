@@ -383,7 +383,7 @@ int VSYNC_WR_MPEG_REG_VPP_SEL(u32 adr, u32 val, int vpp_sel);
 
 #endif
 
-#define DPSS_RMDA (1)
+#define DPSS_RMDA (0)
 
 #if DPSS_RMDA
 int DPSS_B_WR_MPEG_REG(u32 adr, u32 val);
