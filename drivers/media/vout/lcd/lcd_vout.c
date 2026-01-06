@@ -52,6 +52,7 @@
 #define LCD_CDEV_NAME  "lcd"
 
 unsigned int lcd_debug_print_flag;
+unsigned char lcd_pxp_mode;
 /* for driver global resource init:
  *  0: none
  *  n: initialized cnt
@@ -478,7 +479,7 @@ static void lcd_power_ctrl(struct aml_lcd_drv_s *pdrv, int status)
 	unsigned int i = 0, index, wait, delay;
 	int max_step, value = -1;
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		LCD_PR(pdrv, "%s: lcd_pxp bypass", __func__);
 		return;
 	}
@@ -990,7 +991,10 @@ void lcd_power_screen_black(struct aml_lcd_drv_s *pdrv)
 		LCD_PR(pdrv, "%s: mute_wait_cnt: %d, mute_cnt: %d",
 			__func__, pdrv->mute_wait_cnt, pdrv->mute_cnt);
 		//wait for mute apply
-		ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(500));
+		if (lcd_pxp_mode)
+			ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(1));
+		else
+			ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(500));
 		if (!ret)
 			LCD_ERR(pdrv, "%s: wait_completion timeout", __func__);
 	}
@@ -1022,7 +1026,10 @@ void lcd_power_screen_restore(struct aml_lcd_drv_s *pdrv)
 	spin_unlock_irqrestore(&pdrv->isr_lock, flags);
 	LCD_PR(pdrv, "%s: unmute_wait_cnt: %d, unmute_cnt: %d",
 		__func__, pdrv->mute_wait_cnt, pdrv->unmute_cnt);
-	ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(5000));
+	if (lcd_pxp_mode)
+		ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(1));
+	else
+		ret = wait_for_completion_timeout(&pdrv->vsync_done, msecs_to_jiffies(5000));
 	if (!ret)
 		LCD_ERR(pdrv, "%s: wait_completion timeout", __func__);
 	spin_lock_irqsave(&pdrv->isr_lock, flags);
@@ -2677,6 +2684,17 @@ static struct lcd_data_s lcd_data_a9 = {
 	.offset_venc_data = {0x0, 0x100},
 };
 
+static struct lcd_data_s lcd_data_c5 = {
+	.chip_type = LCD_CHIP_C5,
+	.chip_name = "c5",
+	.rev_type = 0,
+	.reg_map_table = &lcd_reg_g12a[0],
+	.drv_max = 1,
+	.offset_venc = {0x0},
+	.offset_venc_if = {0x0},
+	.offset_venc_data = {0x0},
+};
+
 static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-g12a",
@@ -2745,6 +2763,10 @@ static const struct of_device_id lcd_dt_match_table[] = {
 	{
 		.compatible = "amlogic, lcd-a9",
 		.data = &lcd_data_a9,
+	},
+	{
+		.compatible = "amlogic, lcd-c5",
+		.data = &lcd_data_c5,
 	},
 	{}
 };

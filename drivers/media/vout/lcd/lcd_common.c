@@ -66,6 +66,8 @@ void lcd_delay_us(int us)
 {
 	if (!us)
 		return;
+	else if (lcd_pxp_mode)
+		udelay(1);
 	else if (us <= 20)
 		udelay(us);
 	else if (us < 1000)
@@ -80,6 +82,8 @@ void lcd_delay_ms(int ms)
 {
 	if (!ms)
 		return;
+	else if (lcd_pxp_mode)
+		udelay(2);
 	else if (ms < 20)
 		usleep_range(ms * 1000, ms * 1000 + 100);
 	else

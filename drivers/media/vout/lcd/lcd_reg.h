@@ -1311,43 +1311,6 @@ struct reg_name_set_s {
 #define P2P_CH_SWAP0                               0x4200
 #define P2P_CH_SWAP1                               0x4201
 
-/* ********************************
- * C3 vout
- * ********************************
- */
-#define VPU_VOUT_CORE_CTRL                         0x0100
-#define VPU_VOUT_INT_CTRL                          0x0101
-#define VPU_VOUT_DETH_CTRL                         0x0102
-#define VPU_VOUT_DTH_DATA                          0x0103
-#define VPU_VOUT_DTH_ADDR                          0x0104
-#define VPU_VOUT_HS_POS                            0x0112
-#define VPU_VOUT_VSLN_E_POS                        0x0113
-#define VPU_VOUT_VSPX_E_POS                        0x0114
-#define VPU_VOUT_VSLN_O_POS                        0x0115
-#define VPU_VOUT_VSPX_O_POS                        0x0116
-#define VPU_VOUT_DE_PX_EN                          0x0117
-#define VPU_VOUT_DELN_E_POS                        0x0118
-#define VPU_VOUT_DELN_O_POS                        0x0119
-#define VPU_VOUT_MAX_SIZE                          0x011a
-#define VPU_VOUT_FLD_BGN_LINE                      0x011b
-#define VPU_VOUTO_HS_POS                           0x0120
-#define VPU_VOUTO_VSLN_E_POS                       0x0121
-#define VPU_VOUTO_VSPX_E_POS                       0x0122
-#define VPU_VOUTO_VSLN_O_POS                       0x0123
-#define VPU_VOUTO_VSPX_O_POS                       0x0124
-#define VPU_VOUTO_DE_PX_EN                         0x0125
-#define VPU_VOUTO_DELN_E_POS                       0x0126
-#define VPU_VOUTO_DELN_O_POS                       0x0127
-#define VPU_VOUTO_MAX_SIZE                         0x0128
-#define VPU_VOUTO_FLD_BGN_LINE                     0x0129
-#define VPU_VOUT_BT_CTRL                           0x0130
-#define VPU_VOUT_BT_PLD_LINE                       0x0131
-#define VPU_VOUT_BT_PLDIDT0                        0x0132
-#define VPU_VOUT_BT_PLDIDT1                        0x0133
-#define VPU_VOUT_BT_BLK_DATA                       0x0134
-#define VPU_VOUT_BT_DAT_CLPY                       0x0135
-#define VPU_VOUT_BT_DAT_CLPC                       0x0136
-#define VPU_VOUT_RO_INT                            0x0140
 
 /* ********************************
  * Video post-processing:  VPP_VCBUS_BASE = 0x1d
@@ -1901,6 +1864,17 @@ struct reg_name_set_s {
 
 #define CLKCTRL_HDMI_CLK_CTRL_A9	0x0121
 
+#define CLKCTRL_VOUTENC_CLK_CTRL_C5       0x0118
+#define CLKCTRL_MIPIDSI_PHY_CLK_CTRL_C5   0x013c
+#define CLKCTRL_DSI_MEAS_CLK_CTRL_C5      0x013d
+#define CLKCTRL_DSI_PLL_CLK_DIV_C5        0x0140
+#define ANACTRL_DSIPLL_CTRL0_C5           0x00d8
+#define ANACTRL_DSIPLL_CTRL1_C5           0x00d9
+#define ANACTRL_DSIPLL_CTRL2_C5           0x00da
+#define ANACTRL_DSIPLL_CTRL3_C5           0x00db
+#define ANACTRL_DSIPLL_STS_C5             0x00df
+#define ANACTRL_MIPIDSI_CTRL0_C5          0x0190
+#define ANACTRL_MIPIDSI_CTRL1_C5          0x0191
 /* ***********************************************
  * register access api
  */

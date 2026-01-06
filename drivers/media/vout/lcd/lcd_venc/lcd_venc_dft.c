@@ -24,7 +24,7 @@ static void lcd_venc_wait_vsync(struct aml_lcd_drv_s *pdrv)
 	unsigned int line_cnt, line_cnt_previous;
 	int i = 0;
 
-	if (!pdrv || pdrv->lcd_pxp)
+	if (!pdrv || lcd_pxp_mode)
 		return;
 
 	line_cnt = 0x1fff;
@@ -123,7 +123,7 @@ static void lcd_venc_gamma_init(struct aml_lcd_drv_s *pdrv)
 	unsigned int data[2];
 	int index = pdrv->index;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	data[0] = index;

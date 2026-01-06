@@ -440,7 +440,7 @@ static void lcd_set_vclk_crt_by_path(struct aml_lcd_drv_s *pdrv, u8 path)
 	lcd_clk_write(reg_vid2_clk_div, 0);
 	udelay(5);
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		/* setup the XD divider value */
 		lcd_clk_setb(reg_vid2_clk_div, cconf->xd, VCLK2_XD, 8);
 		udelay(5);

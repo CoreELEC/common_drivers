@@ -130,7 +130,7 @@ int lcd_phy_param_print(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 
 	if (!pdrv)
 		return 0;
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return 0;
 
 	ret = lcd_phy_param_get(pdrv, &local_phy_cfg, &local_phy);
@@ -227,7 +227,7 @@ void lcd_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 	struct phy_config_s *phy_cfg;
 	int i;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 	if (!pdrv->curr_dev)
 		return;
@@ -263,7 +263,7 @@ void lcd_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 
 void lcd_phy_reset(struct aml_lcd_drv_s *pdrv)
 {
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 	if (!lcd_phy_ctrl || !lcd_phy_ctrl->phy_reset)
 		return;
@@ -275,7 +275,7 @@ void lcd_phy_reset(struct aml_lcd_drv_s *pdrv)
 
 int lcd_phy_probe(struct aml_lcd_drv_s *pdrv)
 {
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		pdrv->phy_set = NULL;
 		return 0;
 	}
@@ -370,6 +370,9 @@ int lcd_phy_config_init(struct lcd_data_s *pdata)
 		break;
 	case LCD_CHIP_A9:
 		lcd_phy_ctrl = lcd_phy_config_init_a9(pdata);
+		break;
+	case LCD_CHIP_C5:
+		lcd_phy_ctrl = lcd_phy_config_init_c5(pdata);
 		break;
 	default:
 		break;

@@ -32,6 +32,7 @@
 
 /* #define LCD_DEBUG_INFO */
 extern unsigned int lcd_debug_print_flag;
+extern unsigned char lcd_pxp_mode;
 //bit[15:0]
 #define LCD_DBG_PR_NORMAL       BIT(0) //basic info & flow
 #define LCD_DBG_PR_ADV          BIT(1)
@@ -161,6 +162,7 @@ enum lcd_chip_e {
 	LCD_CHIP_T6W,	/* 18 */
 	LCD_CHIP_T6X,	/* 19 */
 	LCD_CHIP_A9,	/* 20 */
+	LCD_CHIP_C5,	/* 21 */
 	LCD_CHIP_MAX,
 };
 
@@ -993,6 +995,7 @@ struct aml_lcd_drv_s {
 	unsigned int retry_cnt;
 	unsigned char mode;
 	unsigned char lcd_pxp;
+	unsigned char key_valid;
 	unsigned char clk_path; /* 0=hpll, 1=gp0_pll */
 	unsigned char config_load;
 	unsigned char init_flag; /* 0=none, 1=power on request */

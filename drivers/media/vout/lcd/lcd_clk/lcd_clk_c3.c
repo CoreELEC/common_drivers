@@ -70,7 +70,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	if (!cconf)
 		return;
 
-	if (pdrv->lcd_pxp) { //143M
+	if (lcd_pxp_mode) { //143M
 		lcd_clk_setb(CLKCTRL_VOUTENC_CLK_CTRL, 1, 16, 7);
 		lcd_clk_setb(CLKCTRL_VOUTENC_CLK_CTRL, 7, 25, 3);
 	} else {

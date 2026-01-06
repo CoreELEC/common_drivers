@@ -125,7 +125,7 @@ static void dsi_phy_init(struct aml_lcd_drv_s *pdrv, u8 port, struct dsi_dphy_s 
 		      (dphy->clk_prepare[0] << 24)));
 	dsi_phy_write(pdrv, port,  MIPI_DSI_CLK_TIM1, dphy->clk_pre[0]); /* ?? */
 	/* 0x050f090d */
-	if (pdrv->data->chip_type == LCD_CHIP_S6 ||
+	if (pdrv->data->chip_type == LCD_CHIP_S6 || pdrv->data->chip_type == LCD_CHIP_C5 ||
 	    pdrv->curr_dev->dev_cfg.timing.bit_rate > 500000000) { /*MAX than 500MHZ*/
 		dsi_phy_write(pdrv, port, MIPI_DSI_HS_TIM,
 			      (dphy->hs_exit[0] |
@@ -330,7 +330,6 @@ static void set_dsi_phy_config(struct aml_lcd_drv_s *pdrv, u8 port)
 
 	/* Check the phylock/stopstateclklane to decide if the DPHY is ready */
 	check_phy_status(pdrv, port);
-
 	/* Trigger a sync active for esc_clk */
 	// dsi_phy_set_mask(pdrv, port, MIPI_DSI_PHY_CTRL, (1 << 1));
 	dsi_phy_setb(pdrv, port, MIPI_DSI_PHY_CTRL, 1, 1, 1);
@@ -1002,6 +1001,7 @@ static void mipi_dsi_phy_config(struct aml_lcd_drv_s *pdrv, u32 dsi_bitrate)
 
 	switch (pdrv->data->chip_type) {
 	case LCD_CHIP_S6:
+	case LCD_CHIP_C5:
 		dphy->hs_exit[0] = ((DPHY_TIME_HS_EXIT(t_ui) + temp - 1) / temp) & 0xff;
 		dphy->hs_exit[0] = (dphy->hs_exit[0] > 1) ? (dphy->hs_exit[0] - 1) : 0;
 		dphy->hs_exit[1] = ((dphy->hs_exit[0] + 1) * temp + 50) / 100;

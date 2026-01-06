@@ -65,6 +65,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_t6d(struct aml_lcd_drv_s *pdrv
 struct lcd_clk_config_s *lcd_clk_config_chip_init_t6w(struct aml_lcd_drv_s *pdrv);
 struct lcd_clk_config_s *lcd_clk_config_chip_init_t6x(struct aml_lcd_drv_s *pdrv);
 struct lcd_clk_config_s *lcd_clk_config_chip_init_a9(struct aml_lcd_drv_s *pdrv);
+struct lcd_clk_config_s *lcd_clk_config_chip_init_c5(struct aml_lcd_drv_s *pdrv);
 
 /* ****************************************************
  * lcd clk prbs func

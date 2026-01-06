@@ -413,7 +413,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
 		LCDPR("[%d]: vclk_sel=%d, xd=%d\n", pdrv->index, cconf->data->vclk_sel, cconf->xd);
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		/* setup the XD divider value */
 		lcd_clk_setb(reg_vid2_clk_div, cconf->xd, VCLK2_XD, 8);
 		udelay(5);

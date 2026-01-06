@@ -5614,6 +5614,7 @@ int lcd_debug_probe(struct aml_lcd_drv_s *pdrv)
 		lcd_debug_info = &lcd_debug_info_txhd2;
 		break;
 	case LCD_CHIP_S6:
+	case LCD_CHIP_C5:
 		lcd_debug_info = &lcd_debug_info_s6;
 		break;
 	case LCD_CHIP_A9:

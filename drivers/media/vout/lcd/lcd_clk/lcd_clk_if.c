@@ -502,7 +502,7 @@ void lcd_set_clk(struct aml_lcd_drv_s *pdrv)
 	if (!cconf || !cconf->data)
 		return;
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		if (cconf->data->vclk_crt_set)
 			cconf->data->vclk_crt_set(pdrv);
 		return;
@@ -821,6 +821,9 @@ void lcd_clk_config_probe(struct aml_lcd_drv_s *pdrv)
 	switch (pdrv->data->chip_type) {
 	case LCD_CHIP_C3:
 		cconf = lcd_clk_config_chip_init_c3(pdrv);
+		break;
+	case LCD_CHIP_C5:
+		cconf = lcd_clk_config_chip_init_c5(pdrv);
 		break;
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
 	case LCD_CHIP_G12A:

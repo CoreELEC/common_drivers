@@ -244,7 +244,7 @@ static void lcd_venc_gamma_init(struct aml_lcd_drv_s *pdrv)
 	unsigned int data[2];
 	int index = pdrv->index;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	data[0] = index;

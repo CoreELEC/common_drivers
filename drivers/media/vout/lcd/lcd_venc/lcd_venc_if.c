@@ -43,7 +43,7 @@ static struct lcd_venc_op_s lcd_venc_op = {
 
 void lcd_wait_vsync(struct aml_lcd_drv_s *pdrv)
 {
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 	if (!lcd_venc_op.wait_vsync)
 		return;
@@ -411,7 +411,8 @@ int lcd_venc_config_init(struct lcd_data_s *pdata)
 		ret = lcd_venc_op_init_t7(pdata, &lcd_venc_op);
 		break;
 	case LCD_CHIP_C3:
-		ret = lcd_venc_op_init_c3(pdata, &lcd_venc_op);
+	case LCD_CHIP_C5:
+		ret = lcd_venc_op_init_vout_model(pdata, &lcd_venc_op);
 		break;
 	case LCD_CHIP_T3X:
 		ret = lcd_venc_op_init_t3x(pdata, &lcd_venc_op);

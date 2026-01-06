@@ -396,7 +396,7 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 
 	ret = of_property_read_u32(np, "pxp", &val);
 	if (ret == 0)
-		pdrv->lcd_pxp = (unsigned char)val;
+		lcd_pxp_mode = (unsigned char)val;
 
 	ret = of_property_read_u32(np, "fr_auto_policy", &val);
 	if (ret == 0)

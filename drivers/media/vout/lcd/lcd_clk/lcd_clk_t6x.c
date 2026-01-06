@@ -99,7 +99,7 @@ static void lcd_set_pll_ss_t6x(struct aml_lcd_drv_s *pdrv,
 	char prt_str[64];
 	int len = 0;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	pll_ctrl0 = lcd_vx1_lvds_ctrl_read(pdrv, ANACTRL_TCON_PLL0_CNTL0);
@@ -171,7 +171,7 @@ static void lcd_set_pll_ss_tuning(struct aml_lcd_drv_s *pdrv, unsigned int ss_fl
 	struct lcd_clk_config_s *cconf;
 	int ret;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	cconf = get_lcd_clk_config(pdrv);
@@ -202,7 +202,7 @@ static void lcd_pll_ss_enable_t6x(struct aml_lcd_drv_s *pdrv, int status)
 	unsigned int pll_ctrl0, pll_ctrl2;
 	unsigned int flag;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	cconf = get_lcd_clk_config(pdrv);
@@ -287,7 +287,7 @@ static void lcd_set_pll_t6x(struct aml_lcd_drv_s *pdrv)
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
 		LCDPR("[%d]: %s\n", pdrv->index, __func__);
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	cconf = get_lcd_clk_config(pdrv);
@@ -405,7 +405,7 @@ static void lcd_set_vid_pll_div_t6x(struct aml_lcd_drv_s *pdrv)
 	struct lcd_clk_config_s *cconf;
 	unsigned int shift_val, shift_sel;
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	cconf = get_lcd_clk_config(pdrv);
@@ -484,7 +484,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 
 	lcd_clk_setb(CLKCTRL_HDMI_VID_PLL_CLK_DIV, 0, 24, 1);
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		pxp_clk_div_gen(pdrv->curr_dev->dev_cfg.timing.enc_clk * 2,
 			&xd, &clk_sel);// *2 for pxp div 2
 		/* setup the XD divider value */
@@ -599,6 +599,17 @@ static void lcd_prbs_config_clk_t6x(struct aml_lcd_drv_s *pdrv, unsigned int lcd
 	LCD_DBG(pdrv, "%s ok", __func__);
 }
 
+static void lcd_clk_set_dummy_t6x(struct aml_lcd_drv_s *pdrv)
+{
+	lcd_clk_setb(CLKCTRL_VIID_CLK0_CTRL, 5, 16, 3);
+	lcd_clk_setb(CLKCTRL_VIID_CLK0_DIV, 19, 0, 8);
+	if (lcd_pxp_mode)
+		return;
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 28, 1);
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 29, 1);
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 30, 1);
+}
+
 static void lcd_clk_prbs_test_t6x(struct aml_lcd_drv_s *pdrv,
 				 unsigned int ms, unsigned int mode_flag)
 {
@@ -617,7 +628,7 @@ static void lcd_clk_prbs_test_t6x(struct aml_lcd_drv_s *pdrv,
 		ANACTRL_DIF_PHY_CNTL18, ANACTRL_DIF_PHY_CNTL19,
 	};
 
-	if (pdrv->lcd_pxp)
+	if (lcd_pxp_mode)
 		return;
 
 	if (!cconf)
@@ -759,7 +770,7 @@ static int lcd_clk_reg_dump(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 	if (!pdrv)
 		return 0;
 
-	if (!pdrv->lcd_pxp) {
+	if (!lcd_pxp_mode) {
 		table = pll_reg_table;
 		size = ARRAY_SIZE(pll_reg_table);
 		for (i = 0; i < size; i++) {

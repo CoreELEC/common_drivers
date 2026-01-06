@@ -439,7 +439,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	if (!cconf)
 		return;
 
-	if (pdrv->lcd_pxp) {
+	if (lcd_pxp_mode) {
 		/* setup the XD divider value */
 		lcd_hiu_setb(HHI_VIID_CLK_DIV, cconf->xd, VCLK2_XD, 8);
 		udelay(5);
