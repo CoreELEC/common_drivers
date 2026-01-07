@@ -2,6 +2,7 @@
 #
 #Makefile for the Smart card driver.
 #
-#ccflags-y += -I$(srctree)/$(COMMON_DRIVERS_DIR)/include
+MODULE_NAME = amsmc_sc2
 
-$(MODULE_NAME)-$(CONFIG_AMLOGIC_SMARTCARD) += smartcard_sc2/smartcard.o
+obj-$(CONFIG_AMLOGIC_SMARTCARD) = $(MODULE_NAME).o
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_SMARTCARD) += smartcard.o
