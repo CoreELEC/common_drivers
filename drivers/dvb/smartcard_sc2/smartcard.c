@@ -3290,6 +3290,9 @@ static struct platform_driver smc_driver = {
 	},
 };
 
+#if IS_MODULE(CONFIG_AMLOGIC_SMARTCARD)
+static
+#endif
 int __init smc_sc2_mod_init(void)
 {
 	int ret = -1;
@@ -3321,6 +3324,9 @@ error_register_chrdev:
 	return ret;
 }
 
+#if IS_MODULE(CONFIG_AMLOGIC_SMARTCARD)
+static
+#endif
 void __exit smc_sc2_mod_exit(void)
 {
 	platform_driver_unregister(&smc_driver);
@@ -3328,3 +3334,12 @@ void __exit smc_sc2_mod_exit(void)
 	unregister_chrdev(smc_major, SMC_DEV_NAME);
 	mutex_destroy(&smc_lock);
 }
+
+#if IS_MODULE(CONFIG_AMLOGIC_SMARTCARD)
+module_init(smc_sc2_mod_init);
+module_exit(smc_sc2_mod_exit);
+
+MODULE_AUTHOR("AMLOGIC");
+MODULE_DESCRIPTION("AMLOGIC smart card driver");
+MODULE_LICENSE("GPL");
+#endif

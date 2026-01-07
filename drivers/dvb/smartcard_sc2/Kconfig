@@ -4,5 +4,5 @@
 #
 
 config AMLOGIC_SMARTCARD
-	bool "Amlogic Smartcard sc2 driver"
+	tristate "Amlogic Smartcard sc2 driver"
 	default n
