@@ -57,9 +57,17 @@ config AMLOGIC_LEDS_FD650
 	  function
 
 config AMLOGIC_LEDS_BCT3236
-	tristate "LED Support for the BCT3236"
+	bool "LED Support for the BCT3236"
 	depends on LEDS_CLASS
 	default n
 	help
 	  Choose this option if you want to use the LED on
 	  BCT3236.
+
+config AMLOGIC_LEDS_SK9822
+	bool "LED Support for the SK9822"
+	select SPI_BITBANG
+	default n
+	help
+	  Choose this option if you want to
+	  use the SK9822 SPI RGB LED.
