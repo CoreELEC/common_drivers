@@ -1839,6 +1839,25 @@ static struct ge2d_device_data_s ge2d_s1a = {
 };
 #endif
 
+static struct ge2d_device_data_s ge2d_c5 = {
+	.ge2d_rate = 667000000,
+	.src2_alp = 1,
+	.canvas_status = 2,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+	.has_self_pwr = 1,
+	.poweron_table = &runtime_poweron_table,
+	.poweroff_table = &runtime_poweroff_table,
+	.chip_type = MESON_CPU_MAJOR_ID_C5,
+	.adv_matrix = 1,
+	.src2_repeat = 1,
+	.dst_repeat = 1,
+	.dst_sign_mode = 1,
+	.blk_stride_mode = 1,
+	.cmd_queue_mode = 0,
+};
+
 static const struct of_device_id ge2d_dt_match[] = {
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
@@ -1971,6 +1990,10 @@ static const struct of_device_id ge2d_dt_match[] = {
 	{
 		.compatible = "amlogic, ge2d-c4",
 		.data = &ge2d_c4,
+	},
+	{
+		.compatible = "amlogic, ge2d-c5",
+		.data = &ge2d_c5,
 	},
 	{},
 };
