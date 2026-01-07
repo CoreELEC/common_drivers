@@ -124,6 +124,22 @@
 		key_code = <116>;
 		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH>;
 	};
+
+	led {
+		compatible = "amlogic,sk9822_led";
+		status = "okay";
+		/* SPI mode 3 */
+		sck-gpios  = <&gpio GPIOF_3 GPIO_ACTIVE_HIGH>;
+		/* inverted value
+		   data transmitted is inverted, a requirement
+		   specific to this SPI device (reason unknown) */
+		mosi-gpios = <&gpio GPIOE_2 GPIO_ACTIVE_LOW>;
+
+		/* brightness R G B */
+		active-color   = [01 00 30 00]; /* green */
+		suspend-color  = [01 00 00 90]; /* blue */
+		shutdown-color = [00 00 00 00]; /* none */
+	};
 };
 
 &i2c0 {
