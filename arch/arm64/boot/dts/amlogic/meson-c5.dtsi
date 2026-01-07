@@ -238,6 +238,13 @@
 		#clock-cells = <0>;
 	};
 
+	xtal_32k: xtal_32k-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32768>;
+		clock-output-names = "xtal_32k";
+		#clock-cells = <0>;
+	};
+
 	vrtc: rtc@fe010288 {
 		compatible = "amlogic,meson-vrtc";
 		reg = <0x0 0xfe010288 0x0 0x4>;
@@ -845,12 +852,13 @@
 				reg-names = "basic";
 				#clock-cells = <1>;
 				clocks = <&xtal>,
+					<&xtal_32k>,
 					<&scmi_clk CLKID_SYS_CLK>,
 					<&clkc CLKID_FCLK_DIV5>,
 					<&clkc CLKID_FCLK_DIV4>,
 					<&clkc CLKID_FCLK_DIV3>;
-				clock-names = "xtal", "sys_clk", "fclk_div5",
-					"fclk_div4", "fclk_div3";
+				clock-names = "xtal", "xtal_32k", "sys_clk",
+					      "fclk_div5", "fclk_div4", "fclk_div3";
 				status = "okay";
 			};
 

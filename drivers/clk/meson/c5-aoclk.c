@@ -18,16 +18,35 @@
 #include "c5.h"
 #include <dt-bindings/clock/amlogic,c5-clkc.h>
 
-static const struct clk_parent_data ao_sys_clk_parent_data[] = {
+static const struct clk_parent_data ao_oscin_clk_parent_data[] = {
 	{ .fw_name = "xtal" },
-	{ .fw_name = "sys_clk" }
+	{ .fw_name = "xtal_32k" }
+};
+
+static struct clk_regmap ao_oscin_clk = {
+	.data = &(struct clk_regmap_mux_data) {
+		.offset = AO_CLKCTRL_OSCIN_CTRL,
+		.mask = 0x1,
+		.shift = 1,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "ao_oscin_clk",
+		.ops = &clk_regmap_mux_ops,
+		.parent_data = ao_oscin_clk_parent_data,
+		.num_parents = ARRAY_SIZE(ao_oscin_clk_parent_data),
+	},
+};
+
+static const struct clk_parent_data ao_sys_clk_parent_data[] = {
+	{ .fw_name = "sys_clk" },
+	{ .hw = &ao_oscin_clk.hw }
 };
 
 static struct clk_regmap ao_sys_clk = {
 	.data = &(struct clk_regmap_mux_data) {
 		.offset = AO_CLKCTRL_OSCIN_CTRL,
 		.mask = 0x1,
-		.shift = 1,
+		.shift = 0,
 	},
 	.hw.init = &(struct clk_init_data) {
 		.name = "ao_sys_clk",
@@ -329,6 +348,7 @@ MESON_CLK_GATE_AO_CLK(ao_sys_psram_apb, AO_CLKCTRL_RTC_SYS_CLK0, 30);
 MESON_CLK_GATE_AO_CLK(ao_sys_psram_axi, AO_CLKCTRL_RTC_SYS_CLK0, 31);
 
 static struct clk_regmap *const aoclk_regmaps[] = {
+	&ao_oscin_clk,
 	&ao_sys_clk,
 	&ao_psram_mux,
 	&ao_psram_div,
@@ -372,6 +392,7 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 };
 
 static struct clk_hw *c5_aoclk_hw_clks[] = {
+	[CLKID_AO_OSCIN_CLK]          = &ao_oscin_clk.hw,
 	[CLKID_AO_SYS_CLK]            = &ao_sys_clk.hw,
 	[CLKID_AO_PSRAM_MUX]          = &ao_psram_mux.hw,
 	[CLKID_AO_PSRAM_DIV]          = &ao_psram_div.hw,
