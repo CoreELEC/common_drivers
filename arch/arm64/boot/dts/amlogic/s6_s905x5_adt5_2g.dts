@@ -845,10 +845,6 @@
 		&tdmc_clk_pins_1>;
 };
 
-&pdma {
-	lane-mask-in = <0 0 0 1>;
-};
-
 //&spdifa {
 		//pinctrl-names = "spdif_pins", "spdif_pins_mute";
 		//pinctrl-0 = <&spdif_out_a_h4_pins>;
@@ -898,6 +894,15 @@
 				"tdm_fs1_c",
 				"tdm_d6_c";
 			function = "tdm";
+		};
+	};
+
+	pdmin: pdminpins {
+		mux { /* GPIOA9  GPIOA10*/
+			groups = "pdm_dclk_a9",
+				"pdm_din3_a",
+				"pdm_din2_a";
+			function = "pdm";
 		};
 	};
 }; /* end of periphs_pinctrl */
@@ -1332,7 +1337,7 @@
 	pinctrl-names = "pdm_pins";
 	pinctrl-0 = <&pdmin>;
 
-	lane-mask-in = <0 0 0 1>;
+	lane-mask-in = <0 0 1 1>;
 };
 
 &amlvecm {
