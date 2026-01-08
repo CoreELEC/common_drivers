@@ -12,6 +12,8 @@
 #endif
 #include <linux/of_address.h>
 #include <linux/of_device.h>
+#include <linux/syscore_ops.h>
+#include <linux/suspend.h>
 
 #include "meson-clkc-utils.h"
 #include "clk-pll.h"
@@ -19,6 +21,7 @@
 #include "clk-regmap.h"
 #include "c4.h"
 #include <dt-bindings/clock/amlogic,c4-clkc.h>
+#include <linux/amlogic/pm.h>
 
 static const struct pll_params_table gp0_pll_table[] = {
 	PLL_PARAMS_OD(192, 1, 1), /* DCO = 2304M OD = 1 PLL = 1152M */
@@ -3040,6 +3043,25 @@ static const struct meson_clk_hw_data c4_clks = {
 	.num = ARRAY_SIZE(c4_hw_clks),
 };
 
+static int meson_c4_syscore_suspend(void)
+{
+	if (ee_support_powerdown())
+		return clk_save_context();
+
+	return 0;
+}
+
+static void meson_c4_syscore_resume(void)
+{
+	if (ee_support_powerdown())
+		clk_restore_context();
+}
+
+static struct syscore_ops meson_c4_syscore_ops = {
+	.suspend	= meson_c4_syscore_suspend,
+	.resume		= meson_c4_syscore_resume,
+};
+
 static int meson_c4_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -3111,6 +3133,8 @@ static int meson_c4_probe(struct platform_device *pdev)
 		}
 #endif
 	}
+
+	register_syscore_ops(&meson_c4_syscore_ops);
 
 	return devm_of_clk_add_hw_provider(dev, meson_clk_hw_get,
 					   (void *)data);
