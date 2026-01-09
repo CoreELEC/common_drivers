@@ -2015,14 +2015,11 @@
 	};
 
 	meson-amvideom {
-		compatible = "amlogic, amvideom-s6";
+		compatible = "amlogic, amvideom-c5";
 		dev_name = "amvideom";
-		status = "disabled";
-		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 195 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "vsync", "line_n";
-		low_latency = <1>;
-		low_latency_en = <1>;
+		status = "okay";
+		interrupts = <GIC_SPI 81 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "vsync";
 	};
 
 	lut_dma:lut_dma {

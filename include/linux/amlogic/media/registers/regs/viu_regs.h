@@ -643,7 +643,7 @@
 #define A4_VOUT_VD1_BADDR_CR_F1                       0x011c
 #define A4_VOUT_VD1_STRIDE_0_F1                       0x011d
 #define A4_VOUT_VD1_STRIDE_1_F1                       0x011e
-#define A4_VOUT_VD1_EMPTY_REG                         A4_VOUT_VD1_CANVAS0
+#define A4_VOUT_VD1_EMPTY_REG                         0x011f
 
 //VD1_RDMIF_CSC
 #define A4_VOUT_VD1_CSC_COEF00_01                     0x0170

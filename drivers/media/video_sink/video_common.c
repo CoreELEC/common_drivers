@@ -284,7 +284,8 @@ static void dump_mif_reg(void)
 	u32 mif_reg[MAX_VD_LAYER][MIF_REG_CNT];
 	u32 mif_linear_reg[MAX_VD_LAYER][MIF_LINEAR_REG_CNT];
 
-	if (cur_dev->display_module == T7_DISPLAY_MODULE) {
+	if (cur_dev->display_module == T7_DISPLAY_MODULE ||
+		cur_dev->display_module == C3_DISPLAY_MODULE) {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 		if (!video_is_meson_t6d_cpu())
 #endif
@@ -1709,6 +1710,8 @@ ssize_t reg_dump_store(const struct class *cla,
 			dump_vpp_post_reg();
 		} else if (cur_dev->display_module == C3_DISPLAY_MODULE) {
 			dump_mif_reg();
+			if (!video_is_meson_c3_cpu())
+				dump_pps_reg();
 			dump_vout_blend_reg();
 		} else {
 			if (cur_dev->display_module == T6W_DISPLAY_MODULE) {

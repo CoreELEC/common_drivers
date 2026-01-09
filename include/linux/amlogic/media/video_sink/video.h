@@ -633,4 +633,5 @@ int register_vpp_postblend_info_func(void (*get_vpp_osd1_scope)
 u32 get_vpp_vsync_index(u32 layerid);
 void update_dd_axi_path_mode(u32 mode);
 void update_hdr_axi_path_mode(u32 mode);
+void irq_clr_c5(void);
 #endif /* VIDEO_H */

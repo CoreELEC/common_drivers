@@ -250,7 +250,9 @@ enum display_module_e {
 enum matrix_type_e {
 	MATRIX_BYPASS = 0,
 	YUV2RGB,
-	RGB2YUV
+	RGB2YUV,
+	YUV7092RGB,
+	RGB2YUV709
 };
 
 enum aisr_demo_type_e {
@@ -288,6 +290,7 @@ struct video_dev_s {
 	u32 aisr_demo_yend;
 	bool power_ctrl;
 	struct hw_pps_reg_s aisr_pps_reg;
+	struct hw_vout_blend_reg_s vout_blend_reg;
 	struct hw_aisr_demo_reg_s aisr_demo_mode_reg;
 	struct vpp_frame_par_s aisr_frame_parms;
 	struct rdma_fun_s rdma_func[RDMA_INTERFACE_NUM];
@@ -714,6 +717,7 @@ struct video_layer_s {
 	struct hw_vsr_safa_reg_s vsr_safa_reg;
 	struct hw_vsr_safa_nonlinear_reg_s vsr_safa_nonlinear_reg;
 	struct hw_vpp_blend_reg_s vpp_blend_reg;
+	struct hw_vd_csc_reg_s vd_csc_reg;
 	u8 cur_canvas_id;
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	u8 next_canvas_id;
@@ -878,6 +882,7 @@ enum cpu_type_e {
 	MESON_CPU_MAJOR_ID_T3_,
 	MESON_CPU_MAJOR_ID_T5W_,
 	MESON_CPU_MAJOR_ID_C3_,
+	MESON_CPU_MAJOR_ID_A4_,
 	MESON_CPU_MAJOR_ID_S5_,
 	MESON_CPU_MAJOR_ID_T5M_,
 	MESON_CPU_MAJOR_ID_T3X_,
@@ -890,6 +895,7 @@ enum cpu_type_e {
 	MESON_CPU_MAJOR_ID_T6W_,
 	MESON_CPU_MAJOR_ID_T6X_,
 	MESON_CPU_MAJOR_ID_A9_,
+	MESON_CPU_MAJOR_ID_C5_,
 	MESON_CPU_MAJOR_ID_UNKNOWN_,
 };
 
@@ -1097,6 +1103,8 @@ void vd_scaler_setting(struct video_layer_s *layer,
 		       struct scaler_setting_s *setting);
 void vd_blend_setting(struct video_layer_s *layer,
 		      struct blend_setting_s *setting);
+void vd_csc_setting(struct video_layer_s *layer,
+		    struct vframe_s *vf);
 void vd_clip_setting(u8 vpp_index, u8 layer_id,
 		     struct clip_setting_s *setting,
 		     bool use_vcbus);
@@ -1284,6 +1292,7 @@ bool video_is_meson_s4_cpu(void);
 bool video_is_meson_t5d_revb_cpu(void);
 bool video_is_meson_t3_cpu(void);
 bool video_is_meson_c3_cpu(void);
+bool video_is_meson_a4_cpu(void);
 bool video_is_meson_t5w_cpu(void);
 bool video_is_meson_s5_cpu(void);
 bool video_is_meson_t3x_cpu(void);
@@ -1297,8 +1306,10 @@ bool video_is_meson_t6d_cpu(void);
 bool video_is_meson_t6w_cpu(void);
 bool video_is_meson_t6x_cpu(void);
 bool video_is_meson_a9_cpu(void);
+bool video_is_meson_c5_cpu(void);
 bool video_is_after_meson_t6w_cpu(void);
 bool video_is_after_meson_t6x_cpu(void);
+bool video_is_after_meson_c5_cpu(void);
 void alpha_win_set(struct video_layer_s *layer);
 void fgrain_config(struct video_layer_s *layer,
 		   struct vpp_frame_par_s *frame_par,
@@ -1442,6 +1453,11 @@ enum {
 	PTS_TYPE_HEVC = 2,
 	PTS_TYPE_MAX = 3
 };
+
+#define TIME_UNIT90K    (90000)
+#define AM_ABSSUB(a, b) ({ unsigned int _a = a; \
+	unsigned int _b = b; \
+	((_a) >= (_b)) ? ((_a) - (_b)) : ((_b) - (_a)); })
 
 static inline void tsync_avevent_locked(enum avevent_e event, u32 param) {}
 static inline void tsync_avevent(enum avevent_e event, u32 param) {}

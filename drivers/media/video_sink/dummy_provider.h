@@ -66,6 +66,7 @@ enum {
 	VP_FMT_AFBC,
 	VP_FMT_AFRC,
 	VP_FMT_YUV444_3PLANE,
+	VP_FMT_P010, // nv21 p010
 };
 
 enum {

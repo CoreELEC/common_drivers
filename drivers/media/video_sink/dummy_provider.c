@@ -876,6 +876,12 @@ static int set_vfm_type(struct vp_frame_s *frame_info,
 		vf->bitdepth = _depth;
 		vf->source_type = VFRAME_SOURCE_TYPE_HDMI;
 		break;
+	case VP_FMT_P010:
+		vf->type = VIDTYPE_VIU_NV12; // VIDTYPE_VIU_NV12
+		vf->canvas0_config[0].bit_depth = P010_MODE;
+		vf->type_ext |= VIDTYPE_EXT_SWAP_UV;
+		*bpp = 16;
+		break;
 	default:
 		vp_info("%s-%d vf error\n", __func__, __LINE__);
 		return -EINVAL;
@@ -934,8 +940,10 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 	unsigned long protect_size = 0;
 	unsigned long protect_fg_addr = 0;
 	unsigned long protect_fg_size = FGRAIN_TBL_SIZE;
+#ifdef CONFIG_AMLOGIC_TEE
 	u32 prot_ret;
 	u32 secure_handle = 1;
+#endif
 	struct vframe_s *new_vf;
 	int bpp;
 	unsigned int canvas_width;
@@ -1119,11 +1127,23 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		new_vf->canvas0Addr = canvas_table[fill];
 		if (frame_info->secure)
 			protect_size = frame_info->height * frame_info->width * 3;
+	case VP_FMT_P010:
+		canvas_config(vp_canvas_table[fill_ptr] & 0xff,
+				addr,
+				canvas_width, frame_info->height,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		addr += canvas_width * frame_info->height;
+		canvas_config((vp_canvas_table[fill_ptr] >> 8) & 0xff,
+				addr,
+				canvas_width, frame_info->height / 2,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		new_vf->canvas0Addr = vp_canvas_table[fill_ptr];
 		break;
 	default:
 		vp_err("unsupported format to canvas_config\n");
 		return -EINVAL;
 	}
+#ifdef CONFIG_AMLOGIC_TEE
 	if (frame_info->secure) {
 		/*protect size need 64k aligned*/
 		protect_size = (((protect_size) + ((64 * 1024) - 1)) & ~((64 * 1024) - 1));
@@ -1132,6 +1152,7 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		if (prot_ret)
 			vp_err("set memory secure error prot_ret = %x\n", prot_ret);
 	}
+#endif
 	if (frame_info->fg_test) {
 		new_vf->fgs_valid = true;
 		new_vf->fgs_table_adr = fg_data_addr;
@@ -1163,12 +1184,14 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		protect_fg_size = (((protect_fg_size) + ((64 * 1024) - 1)) & ~((64 * 1024) - 1));
 		vp_dbg("%s, secure addr:%lx size:%lx\n",
 			__func__, protect_fg_addr, protect_fg_size);
+#ifdef CONFIG_AMLOGIC_TEE
 		if (frame_info->fg_secure) {
 			prot_ret = tee_protect_mem_by_type(TEE_MEM_TYPE_STREAM_OUTPUT,
 					protect_fg_addr, protect_fg_size, &secure_handle);
 			if (prot_ret)
 				vp_err("set memory secure error prot_ret = %x\n", prot_ret);
 		}
+#endif
 	}
 	new_vf->width  = frame_info->width;
 	new_vf->height = frame_info->height;

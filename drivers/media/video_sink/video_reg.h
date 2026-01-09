@@ -410,6 +410,33 @@ struct hw_mosaic_misc_reg_s {
 	u32 vpu_hdr2_top_ctrl;
 };
 
+struct hw_vd_csc_reg_s {
+	u32 vout_vd1_csc_coef00_01;
+	u32 vout_vd1_csc_coef02_10;
+	u32 vout_vd1_csc_coef11_12;
+	u32 vout_vd1_csc_coef20_21;
+	u32 vout_vd1_csc_coef22;
+	u32 vout_vd1_csc_coef13_14;
+	u32 vout_vd1_csc_coef23_24;
+	u32 vout_vd1_csc_coef15_25;
+	u32 vout_vd1_csc_clip;
+	u32 vout_vd1_csc_offset0_1;
+	u32 vout_vd1_csc_offset2;
+	u32 vout_vd1_csc_pre_offset0_1;
+	u32 vout_vd1_csc_pre_offset2;
+	u32 vout_vd1_csc_en_ctrl;
+};
+
+struct hw_vout_blend_reg_s {
+	u32 vpu_vout_blend_ctrl;
+	u32 vpu_vout_blend_dumdata;
+	u32 vpu_vout_blend_size;
+	u32 vpu_vout_bld_src0_hpos;
+	u32 vpu_vout_bld_src0_vpos;
+	u32 vpu_vout_bld_src1_hpos;
+	u32 vpu_vout_bld_src1_vpos;
+};
+
 extern struct hw_vd_reg_s vd_mif_reg_legacy_array[MAX_VD_LAYER_G12];
 extern struct hw_vd_reg_s vd_mif_reg_g12_array[MAX_VD_LAYER_G12];
 extern struct hw_vd_reg_s vd_mif_reg_sc2_array[MAX_VD_LAYER_G12];
@@ -436,6 +463,14 @@ extern struct hw_vppx_blend_reg_s vppx_blend_reg_a9_array[MAX_VPP_NUM - 1];
 
 extern struct hw_vd_reg_s vd_mif_reg_c3_array[MAX_VD_LAYER_C3];
 extern struct hw_vd_linear_reg_s vd_mif_linear_reg_c3_array[MAX_VD_LAYER_C3];
+extern struct hw_vd_csc_reg_s vd_csc_c3_reg[MAX_VD_LAYER_C3];
+extern struct hw_vout_blend_reg_s vout_blend_c3_reg;
+
+extern struct hw_vd_reg_s vd_mif_reg_a4_array[MAX_VD_LAYER_C3];
+extern struct hw_vd_linear_reg_s vd_mif_linear_reg_a4_array[MAX_VD_LAYER_C3];
+extern struct hw_pps_reg_s pps_reg_a4_array[MAX_VD_LAYER_C3];
+extern struct hw_vd_csc_reg_s vd_csc_a4_reg[MAX_VD_LAYER_C3];
+extern struct hw_vout_blend_reg_s vout_blend_a4_reg;
 
 extern struct hw_aisr_reshape_reg_s aisr_reshape_reg;
 extern struct hw_vsr_safa_reg_s vsr_safa_reg;

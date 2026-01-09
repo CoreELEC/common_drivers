@@ -2207,6 +2207,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 			alpha_win_set(&vd_layer[1]);
 	}
 	vd_blend_setting(layer, &layer->bld_setting);
+	vd_csc_setting(layer, dispbuf);
 	if (update_vd2) {
 		vd_scaler_setting(&vd_layer[1], &local_vd2_pps);
 		vd_blend_setting(&vd_layer[1], &local_vd2_blend);
@@ -5155,7 +5156,8 @@ static void misc_late_proc(void)
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	/* vsync_rdma_config(); */
 RUN_FIRST_RDMA:
-	if (cur_dev->display_module != C3_DISPLAY_MODULE)
+	if (cur_dev->display_module != C3_DISPLAY_MODULE ||
+		video_is_after_meson_c5_cpu())
 		vpp_crc_result = vpp_crc_check(vpp_crc_en, VPP0);
 	vsync_rdma_process();
 	set_vd_pi_input_size();

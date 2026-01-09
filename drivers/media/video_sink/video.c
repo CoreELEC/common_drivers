@@ -5538,6 +5538,16 @@ bool get_force_skip_cnt(u8 layer_id,
 	}
 }
 
+/* for c5 irq clr*/
+void irq_clr_c5(void)
+{
+	u32 data32;
+
+	data32 = READ_VCBUS_REG(VPU_VOUT_IRQ_CTRL);
+	data32 |= 0x01;
+	WRITE_VCBUS_REG(VPU_VOUT_IRQ_CTRL, data32);
+}
+
 #ifdef FIQ_VSYNC
 void vsync_fisr_in(void)
 #else
@@ -5562,6 +5572,8 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 #endif
 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
 		return IRQ_HANDLED;
+	if (cur_dev->display_module == C3_DISPLAY_MODULE)
+		irq_clr_c5();
 	post_vsync_process();
 	return IRQ_HANDLED;
 }
@@ -13645,6 +13657,16 @@ static ssize_t set_post_matrix_show(const struct class *cla,
 		pr_info("BIT4: 0 INPUT\n");
 		pr_info("BIT4: 1 OUTPUT\n");
 		pr_info("current setting: %d\n", probe_id | probe_output);
+	} else if (cur_dev->display_module == C3_DISPLAY_MODULE) {
+		pr_info("Usage:\n");
+		pr_info("echo port > /sys/class/amvecm/matrix_set\n");
+		pr_info("0 : VD1_PROBE\n");
+		pr_info("1 : VD1SC_PROBE\n");
+		pr_info("2 : OSD1_PROBE\n");
+		pr_info("3 : OSD1SC_PROBE\n");
+		pr_info("4 : VOUT_BLD_PROBE\n");
+		pr_info("5 : GAINOFF_PROBE\n");
+		pr_info("current setting: %d\n", probe_id);
 	}
 
 	return 0;
@@ -13682,6 +13704,10 @@ static ssize_t set_post_matrix_store(const struct class *cla,
 			return 0;
 		}
 		pr_info("VPP_MATRIX_CTRL is set\n");
+	} else if (cur_dev->display_module == C3_DISPLAY_MODULE) {
+		probe_id = val;
+		set_probe_ctrl_a4(val);
+		pr_info("VPP_MATRIX_CTRL is set\n");
 	}
 	return strnlen(buf, count);
 }
@@ -13697,6 +13723,8 @@ static ssize_t post_matrix_pos_show(const struct class *cla,
 
 	if (cur_dev->display_module == S5_DISPLAY_MODULE)
 		val = get_probe_pos_s5(probe_id);
+	else if (cur_dev->display_module == C3_DISPLAY_MODULE)
+		val = get_probe_pos_a4(probe_id);
 	pr_info("current position: %d %d\n",
 		(val >> 16) & 0x1fff,
 			(val >> 0) & 0x1fff);
@@ -13715,6 +13743,8 @@ static ssize_t post_matrix_pos_store(const struct class *cla,
 		val_y = parsed[1] & 0x1fff;
 		if (cur_dev->display_module == S5_DISPLAY_MODULE)
 			set_probe_pos_s5(val_x, val_y, probe_id, probe_output);
+		else if (cur_dev->display_module == C3_DISPLAY_MODULE)
+			set_probe_pos_a4(val_x, val_y);
 	}
 	return strnlen(buf, count);
 }
@@ -13741,6 +13771,14 @@ static ssize_t post_matrix_data_show(const struct class *cla,
 			"VPP_MATRIX_PROBE_COLOR %d, %d, %d\n",
 			((val2 & 0xf) << 8) | ((val1 >> 24) & 0xff),
 			(val1 >> 12) & 0xfff, val1 & 0xfff);
+	} else if (cur_dev->display_module == C3_DISPLAY_MODULE) {
+		/* 10bit */
+		val1 = get_probe_data_a4();
+		len += sprintf(buf + len,
+		"VPP_MATRIX_PROBE_COLOR %d, %d, %d\n",
+		((val1 >> 20) & 0x3ff),
+		(val1 >> 10) & 0x3ff,
+		val1 & 0x3ff);
 	}
 	return len;
 }
@@ -16045,6 +16083,59 @@ static struct amvideo_device_data_s amvideo_c3 = {
 	.is_tv_panel = 1,
 };
 
+static struct amvideo_device_data_s amvideo_a4 = {
+	.cpu_type = MESON_CPU_MAJOR_ID_A4_,
+	.sr_reg_offt = 0x1e00,
+	.sr_reg_offt2 = 0x1f80,
+	.layer_support[0] = 1,
+	.layer_support[1] = 0,
+	.layer_support[2] = 0,
+	.afbc_support[0] = 0,
+	.afbc_support[1] = 0,
+	.afbc_support[2] = 0,
+	.pps_support[0] = 1,
+	.pps_support[1] = 0,
+	.pps_support[2] = 0,
+	.alpha_support[0] = 0,
+	.alpha_support[1] = 0,
+	.alpha_support[2] = 0,
+	.dv_support = 0,
+	.sr0_support = 0,
+	.sr1_support = 0,
+	.core_v_disable_width_max[0] = 2048,
+	.core_v_disable_width_max[1] = 4096,
+	.core_v_enable_width_max[0] = 1024,
+	.core_v_enable_width_max[1] = 2048,
+	.supscl_path = CORE0_PPS_CORE1,
+	.fgrain_support[0] = 0,
+	.fgrain_support[1] = 0,
+	.fgrain_support[2] = 0,
+	.has_hscaler_8tap[0] = 0,
+	.has_hscaler_8tap[1] = 0,
+	.has_hscaler_8tap[2] = 0,
+	.has_pre_hscaler_ntap[0] = 0,
+	.has_pre_hscaler_ntap[1] = 0,
+	.has_pre_hscaler_ntap[2] = 0,
+	.has_pre_vscaler_ntap[0] = 0,
+	.has_pre_vscaler_ntap[1] = 0,
+	.has_pre_vscaler_ntap[2] = 0,
+	.src_width_max[0] = 4096,
+	.src_width_max[1] = 2048,
+	.src_width_max[2] = 4096,
+	.src_height_max[0] = 2160,
+	.src_height_max[1] = 1080,
+	.src_height_max[2] = 2160,
+	.ofifo_size = 0x1000,
+	.afbc_conv_lbuf_len[0] = 0x100,
+	.afbc_conv_lbuf_len[1] = 0x80,
+	.mif_linear = 1,
+	.display_module = C3_DISPLAY_MODULE,
+	.max_vd_layers = 1,
+	.has_vpp1 = 0,
+	.has_vpp2 = 0,
+	.is_tv_panel = 1,
+};
+
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
 static struct amvideo_device_data_s amvideo_s5 = {
 	.cpu_type = MESON_CPU_MAJOR_ID_S5_,
@@ -16679,6 +16770,57 @@ static struct amvideo_device_data_s amvideo_a9 = {
 	.is_tv_panel = 0,
 };
 
+static struct amvideo_device_data_s amvideo_c5 = {
+	.cpu_type = MESON_CPU_MAJOR_ID_C5_,
+	.sr_reg_offt = 0x1e00,
+	.sr_reg_offt2 = 0x1f80,
+	.layer_support[0] = 1,
+	.layer_support[1] = 0,
+	.layer_support[2] = 0,
+	.afbc_support[0] = 0,
+	.afbc_support[1] = 0,
+	.afbc_support[2] = 0,
+	.pps_support[0] = 1,
+	.pps_support[1] = 0,
+	.pps_support[2] = 0,
+	.alpha_support[0] = 0,
+	.alpha_support[1] = 0,
+	.alpha_support[2] = 0,
+	.dv_support = 0,
+	.sr0_support = 0,
+	.sr1_support = 0,
+	.core_v_disable_width_max[0] = 2048,
+	.core_v_disable_width_max[1] = 4096,
+	.core_v_enable_width_max[0] = 1024,
+	.core_v_enable_width_max[1] = 2048,
+	.supscl_path = CORE0_PPS_CORE1,
+	.fgrain_support[0] = 0,
+	.fgrain_support[1] = 0,
+	.fgrain_support[2] = 0,
+	.has_hscaler_8tap[0] = 0,
+	.has_hscaler_8tap[1] = 0,
+	.has_hscaler_8tap[2] = 0,
+	.has_pre_hscaler_ntap[0] = 0,
+	.has_pre_hscaler_ntap[1] = 0,
+	.has_pre_hscaler_ntap[2] = 0,
+	.has_pre_vscaler_ntap[0] = 0,
+	.has_pre_vscaler_ntap[1] = 0,
+	.has_pre_vscaler_ntap[2] = 0,
+	.src_width_max[0] = 2048,
+	.src_width_max[1] = 2048,
+	.src_width_max[2] = 4096,
+	.src_height_max[0] = 1080,
+	.src_height_max[1] = 1080,
+	.src_height_max[2] = 2160,
+	.ofifo_size = 0x1000,
+	.afbc_conv_lbuf_len[0] = 0x100,
+	.afbc_conv_lbuf_len[1] = 0x80,
+	.mif_linear = 1,
+	.display_module = C3_DISPLAY_MODULE,
+	.max_vd_layers = 1,
+	.has_vpp1 = 0,
+	.has_vpp2 = 0,
+};
 #endif
 
 static struct video_device_hw_s legcy_dev_property = {
@@ -16868,6 +17010,10 @@ static const struct of_device_id amlogic_amvideom_dt_match[] = {
 		.compatible = "amlogic, amvideom-c3",
 		.data = &amvideo_c3,
 	},
+	{
+		.compatible = "amlogic, amvideom-a4",
+		.data = &amvideo_a4,
+	},
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
 	{
 		.compatible = "amlogic, amvideom-s5",
@@ -16916,6 +17062,10 @@ static const struct of_device_id amlogic_amvideom_dt_match[] = {
 	{
 		.compatible = "amlogic, amvideom-a9",
 		.data = &amvideo_a9,
+	}
+	{
+		.compatible = "amlogic, amvideom-c5",
+		.data = &amvideo_c5,
 	},
 #endif
 	{}
@@ -16988,6 +17138,15 @@ bool video_is_meson_c3_cpu(void)
 {
 	if (amvideo_meson_dev.cpu_type ==
 		MESON_CPU_MAJOR_ID_C3_)
+		return true;
+	else
+		return false;
+}
+
+bool video_is_meson_a4_cpu(void)
+{
+	if (amvideo_meson_dev.cpu_type ==
+		MESON_CPU_MAJOR_ID_A4_)
 		return true;
 	else
 		return false;
@@ -17110,6 +17269,15 @@ bool video_is_meson_a9_cpu(void)
 		return false;
 }
 
+bool video_is_meson_c5_cpu(void)
+{
+	if (amvideo_meson_dev.cpu_type ==
+		MESON_CPU_MAJOR_ID_C5_)
+		return true;
+	else
+		return false;
+}
+
 bool video_is_after_meson_t6w_cpu(void)
 {
 	if (amvideo_meson_dev.cpu_type >=
@@ -17123,6 +17291,15 @@ bool video_is_after_meson_t6x_cpu(void)
 {
 	if (amvideo_meson_dev.cpu_type >=
 		MESON_CPU_MAJOR_ID_T6X_)
+		return true;
+	else
+		return false;
+}
+
+bool video_is_after_meson_c5_cpu(void)
+{
+	if (amvideo_meson_dev.cpu_type >=
+		MESON_CPU_MAJOR_ID_C5_)
 		return true;
 	else
 		return false;
@@ -17406,7 +17583,9 @@ static int amvideom_probe(struct platform_device *pdev)
 		       sizeof(struct video_device_hw_s));
 		cur_dev->power_ctrl = true;
 #endif
-	} else if (amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_C3_) {
+	} else if (amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_C3_ ||
+		amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_A4_ ||
+		amvideo_meson_dev.cpu_type == MESON_CPU_MAJOR_ID_C5_) {
 		memcpy(&amvideo_meson_dev.dev_property, &c3_dev_property,
 			   sizeof(struct video_device_hw_s));
 #ifndef CONFIG_AMLOGIC_C3_REMOVE

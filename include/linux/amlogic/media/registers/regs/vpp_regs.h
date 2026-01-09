@@ -188,6 +188,12 @@
 #define VPP_CLIP_MISC0                    0x1dd9
 #define VPP_CLIP_MISC1                    0x1dda
 
+/* vpu vout clip for c5 */
+#define VPU_VOUT_CLIP_MISC0               0x0074
+#define VPU_VOUT_CLIP_MISC1               0x0075
+#define VPU_VOUT_VD1_CLIP_MISC0           0x0076
+#define VPU_VOUT_VD1_CLIP_MISC1           0x0077
+
 #define VPP_VD1_CLIP_MISC0                0x1de1
 #define VPP_VD1_CLIP_MISC1                0x1de2
 #define VPP_VD2_CLIP_MISC0                0x1de3
@@ -388,6 +394,10 @@
 
 /* a9 vpp1 ofifo */
 #define VPP1_LFIFO_CTRL                            0x6482
+
+/* vpp crc for c5 */
+#define VPU_VOUT_CRC_CHK        0x0073
+#define VPU_VOUT_RO_CRCSUM      0x0079
 
 /* pip alpha gen */
 #define VD1_PIP_ALPH_CTRL                          0x5880

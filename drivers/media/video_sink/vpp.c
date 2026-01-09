@@ -5055,6 +5055,8 @@ int vpp_set_super_scaler_regs(struct video_layer_s *layer,
 		sr_support &= ~SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
+	if (cur_dev->display_module == C3_DISPLAY_MODULE)
+		return 0;
 	sr_reg_offt = sr->sr_reg_offt;
 	sr_reg_offt2 = sr->sr_reg_offt2;
 	/* just work around for g12a not to disable sr core2 bit2 */
