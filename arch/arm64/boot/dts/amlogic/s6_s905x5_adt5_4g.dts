@@ -666,15 +666,14 @@
 	};
 
 	vcc5v_reg: fixed@vcc5v_reg {
-		status = "disabled";
 		vin-supply = <&vddao_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "VCC5V";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		// GPIOH_7(Down) Output H/L= Enable/Disable VCC5V
-		gpio = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		// GPIOH_8(Down) Output H/L= Enable/Disable VCC5V
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -716,17 +715,10 @@
 	};
 };
 
-&i2c3 {
-	status = "disabled";
-	pinctrl-names="default";
-	pinctrl-0=<&i2c3_pins2>;
-	clock-frequency = <300000>;
-};
-
-&i2c4 {
+&i2c1 {
 	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c4_pins1>;
+	pinctrl-0=<&i2c1_pins1>;
 	clock-frequency = <300000>;
 
 	ucs11681@38 {
@@ -745,7 +737,7 @@
 		//reset_pin = <&gpio GPIOY_2 GPIO_ACTIVE_HIGH>;
 		//power-gpio = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
 		//pd-gpio = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
-		reset-gpio = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
 		//[3: 3w] | [5: 5w]
 		eq_power = <5>;
 		//default[0]: BTL [1]:PBTL
@@ -756,6 +748,63 @@
 		low_power = <0>;
 		no_mclk;
 	};
+
+	aw21036@34 {
+		compatible = "seirobotics,aw21036_led";
+		reg = <0x34>;
+		reset-gpio = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+		platform = <15>;
+
+		led0 {
+			default_colors = <0 0 0>;
+			r_io_number = <2>;
+			g_io_number = <1>;
+			b_io_number = <0>;
+		};
+
+		led1 {
+			default_colors = <0 0 0>;
+			r_io_number = <5>;
+			g_io_number = <4>;
+			b_io_number = <3>;
+		};
+
+		led2 {
+			default_colors = <0 0 0>;
+			r_io_number = <8>;
+			g_io_number = <7>;
+			b_io_number = <6>;
+		};
+
+		led3 {
+			default_colors = <0 0 0>;
+			r_io_number = <11>;
+			g_io_number = <10>;
+			b_io_number = <9>;
+		};
+
+		led4 {
+			default_colors = <0 0 0>;
+			r_io_number = <14>;
+			g_io_number = <13>;
+			b_io_number = <12>;
+		};
+	};
+};
+
+&i2c3 {
+	status = "disabled";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c3_pins2>;
+	clock-frequency = <300000>;
+};
+
+&i2c4 {
+	status = "disabled";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c4_pins3>;
+	clock-frequency = <300000>;
 };
 
 &i2c5 {
@@ -864,7 +913,7 @@
 &tdmc {
 	pinctrl-names = "tdm_pins";
 	pinctrl-0 = <&i2s_gpio_c_pins_1
-		&tdm_d6_pins_1
+		&tdm_d7_pins_1
 		&tdmc_clk_pins_1>;
 };
 
@@ -913,10 +962,10 @@
 	};
 
 	i2s_gpio_c_pins_1: i2s_gpio_c_1 {
-		mux { /* GPIOC_3 GPIOC_2 GPIOC_0 */
+		mux { /* GPIOC_3 GPIOC_2 GPIOC_1 */
 			groups = "tdm_sclk1_c",
 				"tdm_fs1_c",
-				"tdm_d6_c";
+				"tdm_d7_c";
 			function = "tdm";
 		};
 	};
@@ -932,9 +981,9 @@
 }; /* end of periphs_pinctrl */
 
 &pinctrl_audio {
-	tdm_d6_pins_1: tdm_d6_pin_1 {
+	tdm_d7_pins_1: tdm_d7_pin_1 {
 		mux {
-			groups = "tdm_d6";
+			groups = "tdm_d7";
 			function = "tdmoutc_lane0";
 		};
 	};

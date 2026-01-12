@@ -4,7 +4,8 @@
 #
 
 config LEDS_AW21036
-  tristate "LED AW21036 Support"
-  default n
-  help
-    This option enables support for LED AW21036 drivers.
+	tristate "Support for AW21036 led"
+	depends on I2C && LEDS_CLASS
+	default n
+	help
+		Say Y here if you want to use the AW21036 LED depends on I2C && LEDS_CLASS.

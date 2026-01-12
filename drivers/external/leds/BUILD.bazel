@@ -15,7 +15,10 @@ ddk_module(
     },
     hdrs = [
     ],
-    local_defines = ["pr_fmt(fmt)=\"[i2c]: \" fmt"],
+
+    local_defines = [
+        "pr_fmt(fmt)=\"[aw21036_led]: \" fmt",
+    ],
     out = "leds-aw21036.ko",
     kernel_build = kernel_select(),
     visibility = ["//visibility:public"],
