@@ -51,8 +51,8 @@
 #define pr_dbg(fmt, args...)   \
 	dprintk(LOG_DBG, debug_dmx, "dmx:" fmt, ## args)
 
-#define MAX_SEC_FEED_NUM 32
-#define MAX_TS_FEED_NUM 32
+#define MAX_SEC_FEED_NUM 64
+#define MAX_TS_FEED_NUM 64
 #define MAX_FILTER_PER_SEC_FEED 32
 
 #define DMX_STATE_FREE      0
