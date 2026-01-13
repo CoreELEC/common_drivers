@@ -8,16 +8,19 @@
 
 #include <linux/amlogic/media/vfm/vframe.h>
 
-struct composer_dst {
-	dma_addr_t phy_addr;
-	u32 buffer_width;
-	u32 buffer_height;
-	u32 content_left;
-	u32 content_top;
-	u32 content_w;
-	u32 content_h;
-	u32 format;
+enum mediasync_cb_parameter_type_e {
+	MEDIASYNC_CB_DISPLAY_DELAY = 0,
+	MEDIASYNC_CB_TYPE_MAX,
 };
+
+struct mediasync_cb {
+	int (*mediasync)(s32 sync_ins_id, int mediasync_cb_type, void *arg);
+	int (*reserved0)(void);
+	int (*reserved1)(void);
+	int (*reserved2)(void);
+};
+
+int mediasync_set_callback(struct mediasync_cb *func);
 
 #endif /* VIDEO_COMPOSER_EXT_H */
 

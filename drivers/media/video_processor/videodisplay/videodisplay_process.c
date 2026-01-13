@@ -10,6 +10,7 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 #include <linux/file.h>
+#include <linux/types.h>
 #include <uapi/linux/sched/types.h>
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 #include <linux/amlogic/media/video_sink/video.h>
@@ -135,6 +136,7 @@ static u32 vd_drop_org_i = 0x8; /*1:vdin, 2:dtv, 4:dec, 8:dpss*/
 static bool mute_vpp_vd1;
 static u32 mute_vsync_count;
 static bool enable_new_afr_pattern;
+static struct mediasync_cb *mediasync_callback;
 static DEFINE_MUTEX(videodisplay_mutex);
 
 #define to_dst_buf(vf)	container_of(vf, struct dst_buf_t, frame)
@@ -3718,11 +3720,21 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 	bool dpss_tvin_enable_pulldown;
 	int total_delay_vsync;
 	struct timespec64 cur_spec_time;
+	int frc_delay = 0;
 
 	time1 = dev->start_time;
 	time2 = vsync_time[dev->index];
 
 	if (kfifo_peek(&dev->ready_q, &vf)) {
+		frc_delay = get_playback_delay_duration();
+		if (dev->last_frc_delay != frc_delay &&
+			mediasync_callback &&
+			mediasync_callback->mediasync) {
+			vd_print(dev->index, PRINT_OTHER, "frc delay(%d) update, callback.\n",
+				frc_delay);
+			mediasync_callback->mediasync(vf->syncid, 0, &frc_delay);
+			dev->last_frc_delay = frc_delay;
+		}
 		if (is_video_process_in_thread() && dev->low_latency_case == 2) {
 			ktime_get_ts64(&cur_spec_time);
 			vd_print(dev->index, PRINT_OTHER,
@@ -4363,6 +4375,7 @@ static int video_display_init(struct videodisplay_dev *dev)
 	dev->last_vf_from_dpss = false;
 	dev->drop_org_i_count = 0;
 	dev->hdmi_drop_count = 0;
+	dev->last_frc_delay = 0;
 	dev_array[dev->index] = dev;
 	init_completion(&dev->task_done);
 	for (i = 0; i < MAX_VD_LAYERS; i++)
@@ -4770,4 +4783,16 @@ void vd_vsync_notify(u8 layer_id, u32 vpp_vsync_pts_inc_scale, u32 vpp_vsync_pts
 			mute_vpp_vd1 = false;
 		}
 	}
+}
+
+int vd_set_mediasync_callback(struct mediasync_cb *func)
+{
+	if (!func) {
+		vd_print(0, PRINT_ERROR, "%s: func is NULL.\n", __func__);
+		return -EINVAL;
+	}
+
+	mediasync_callback = func;
+
+	return 0;
 }

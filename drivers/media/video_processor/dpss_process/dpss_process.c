@@ -84,6 +84,8 @@ static u32 last_instance_frame_index;
 static u32 dpss_out_axis[4];
 static u32 display_scaling_factor[4] = {20, 48, 84, 200};
 static DEFINE_MUTEX(dpss_process_mutex);
+static DEFINE_MUTEX(play_speed_mutex);
+static struct display_speed_t display_speed[DPSSPR_POOL_SIZE];
 
 static int dp_print(int index, int debug_flag, const char *fmt, ...)
 {
@@ -1831,6 +1833,86 @@ static void dpss_frc_enable_switch(struct dpss_process_dev *dev, int enable)
 	}
 }
 
+static int update_display_speed_param(int sync_ins_id, int speed, bool is_exit)
+{
+	int i = 0;
+
+	mutex_lock(&play_speed_mutex);
+	for (i = 0; i < DPSSPR_POOL_SIZE; i++) {
+		if (display_speed[i].sync_id == sync_ins_id)
+			break;
+	}
+
+	dp_print(0, PRINT_OTHER, "update sync id(%d) speed to %d, i=%d.\n", sync_ins_id, speed, i);
+
+	if (i == DPSSPR_POOL_SIZE) {
+		dp_print(0, PRINT_OTHER, "update speed: invalid sync_id.\n");
+		mutex_unlock(&play_speed_mutex);
+		return -1;
+	}
+
+	if (speed != DISPLAY_SPEED_MASK)
+		display_speed[i].speed = speed;
+
+	if (is_exit)
+		atomic_set(&display_speed[i].on_use, false);
+	else
+		atomic_set(&display_speed[i].on_use, true);
+	mutex_unlock(&play_speed_mutex);
+
+	return 0;
+}
+
+static void display_speed_param_init(void)
+{
+	int i = 0;
+
+	for (i = 0; i < DPSSPR_POOL_SIZE; i++) {
+		display_speed[i].sync_id = i;
+		display_speed[i].speed = DISPLAY_SPEED_DEFAULT;
+		atomic_set(&display_speed[i].on_use, false);
+	}
+}
+
+static void config_play_speed_for_frc(struct dpss_process_dev *dev, struct vframe_s *vf)
+{
+	int i = 0;
+
+	if (!dev || !vf)
+		return;
+
+	for (i = 0; i < DPSSPR_POOL_SIZE; i++) {
+		dp_print(dev->index, PRINT_OTHER, "config speed: display_speed[%d].syncid=%d.\n",
+			i, display_speed[i].sync_id);
+		if (vf->syncid == display_speed[i].sync_id)
+			break;
+	}
+
+	if (i == DPSSPR_POOL_SIZE) {
+		dp_print(dev->index, PRINT_OTHER, "config speed: invalid sync_id.\n");
+		return;
+	}
+
+	if (display_speed[i].speed != DISPLAY_SPEED_DEFAULT && !dev->trick_play_en) {
+		dp_print(dev->index, PRINT_OTHER, "enable trick_play.\n");
+		dp_dynamic_detect_play_speed(true);
+		dev->trick_play_en = true;
+	} else if (display_speed[i].speed == DISPLAY_SPEED_DEFAULT && dev->trick_play_en) {
+		dp_print(dev->index, PRINT_OTHER, "disable trick_play.\n");
+		dp_dynamic_detect_play_speed(false);
+		dev->trick_play_en = false;
+	} else {
+		dp_print(dev->index, PRINT_OTHER, "no need update speed.\n");
+	}
+}
+
+int set_display_speed(int sync_ins_id, int speed)
+{
+	dp_print(0, PRINT_OTHER, "set syncid(%d) speed to %d.\n", sync_ins_id, speed);
+	return update_display_speed_param(sync_ins_id, speed, false);
+}
+EXPORT_SYMBOL(set_display_speed);
+
 static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, int rotate)
 {
 	int max_width = 0, max_height = 0;
@@ -1945,6 +2027,8 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->should_on_vd1 = 0;
 	dev->is_first_frame = false;
 	dev->is_switch_first_frame = false;
+	dev->sync_id = 0;
+	dev->trick_play_en = false;
 	atomic_set(&input_eos_enabled, 0);
 
 	receive_q_init(dev);
@@ -2342,15 +2426,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		vf->duration = 1600;
 	}
 
-	if (dev->index == 0) {
-		if (temperature_control_en)
-			dpss_frc_enable_switch(dev, 0);
-		else
-			dpss_frc_enable_switch(dev, 1);
-
-		dpss_direct_mode_switch(dev, vf);
-	}
-
 	cur_buf_mgr = get_buf_mgr(file_vf);
 	if (!dev->last_buf_mgr) {
 		dev->last_buf_mgr = cur_buf_mgr;
@@ -2365,6 +2440,26 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dp_print(dev->index, PRINT_OTHER,
 			"stream changed, need notify processor\n");
 		ret = 3;
+	}
+
+	if (dev->index == 0) {
+		if (temperature_control_en)
+			dpss_frc_enable_switch(dev, 0);
+		else
+			dpss_frc_enable_switch(dev, 1);
+
+		dpss_direct_mode_switch(dev, vf);
+
+		if (dev->sync_id != vf->syncid) {
+			dp_print(dev->index, PRINT_OTHER, "reset syncid(%d) speed.\n", vf->syncid);
+			update_display_speed_param(dev->sync_id, DISPLAY_SPEED_DEFAULT, true);
+			update_display_speed_param(vf->syncid, DISPLAY_SPEED_MASK, false);
+			dev->sync_id = vf->syncid;
+		} else {
+			update_display_speed_param(dev->sync_id, DISPLAY_SPEED_MASK, false);
+		}
+
+		config_play_speed_for_frc(dev, vf);
 	}
 
 	if (frame_info->transform == 4 || frame_info->transform == 7)
@@ -3593,7 +3688,8 @@ static int dpss_process_probe(struct platform_device *pdev)
 		register_dpss_cooling(pdev->dev.of_node);
 #endif
 
-		pr_debug("%s num=%d\n", __func__, dpss_process_instance_num);
+	display_speed_param_init();
+	pr_debug("%s num=%d\n", __func__, dpss_process_instance_num);
 	return ret;
 
 error1:

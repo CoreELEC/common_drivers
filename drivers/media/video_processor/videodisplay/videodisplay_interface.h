@@ -20,6 +20,7 @@
 #include <linux/kfifo.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
+#include <linux/amlogic/media/video_processor/video_composer_ext.h>
 
 struct video_display_frame_info_t {
 	struct dma_buf *dmabuf;
@@ -88,5 +89,4 @@ int mbd_video_display_setframe(int layer_index,
 			int flags);
 void vsync_notify_videodisplay(u8 layer_id, u32 vpp_vsync_pts_inc_scale,
 			u32 vpp_vsync_pts_inc_scale_base);
-
 #endif

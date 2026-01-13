@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
+#include <linux/amlogic/media/video_processor/dpss_process_ext.h>
 
 #define DPSSPR_POOL_SIZE 16
 #define LCEVC_POOL_SIZE  8
@@ -32,6 +33,8 @@
 
 #define LCEVC_RESIDUAL_Y10BIT_PACKED	1
 #define LCEVC_RESIDUAL_UYVY10BIT_PACKED	5
+#define DISPLAY_SPEED_DEFAULT    1000
+#define DISPLAY_SPEED_MASK       0
 
 struct frame_info_t {
 	u32 in_fd;
@@ -80,6 +83,12 @@ struct lcevc_buf_t {
 	int index;
 	struct vframe_s *dec_vf;
 	struct vframe_s lcevc_vf;
+	atomic_t on_use;
+};
+
+struct display_speed_t {
+	int sync_id;
+	int speed;
 	atomic_t on_use;
 };
 
@@ -149,6 +158,8 @@ struct dpss_process_dev {
 	bool vd1_switch_dpss_is_done;
 	bool is_first_frame;
 	bool is_switch_first_frame;
+	u32 sync_id;
+	int trick_play_en;
 };
 
 struct dpss_process_port_s {
@@ -171,5 +182,4 @@ int di_get_ref_vf(struct file *file, struct vframe_s **vf_1, struct vframe_s **v
 	struct file **file_1, struct file **file_2);
 struct uvm_di_mgr_t *get_uvm_di_mgr(struct file *file_vf);
 int di_processed_checkin(struct file *file);
-
 #endif

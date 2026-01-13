@@ -25,6 +25,7 @@
 
 #include <linux/kfifo.h>
 #include <linux/amlogic/media/video_sink/v4lvideo_ext.h>
+#include <linux/amlogic/media/video_processor/video_composer_ext.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-mapping.h>
 #include <linux/amlogic/media/ge2d/ge2d.h>
@@ -194,4 +195,5 @@ int notify_msg_to_mediaproxy(void *handle, int num, void *data);
 #endif
 int is_video_process_in_thread(void);
 void vpp_lowlatency_wakeup(void);
+int vd_set_mediasync_callback(struct mediasync_cb *func);
 #endif

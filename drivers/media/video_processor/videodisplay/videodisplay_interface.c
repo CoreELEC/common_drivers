@@ -10,6 +10,7 @@
 #include <linux/time.h>
 #include <linux/uaccess.h>
 #include <linux/file.h>
+#include <linux/types.h>
 #include <uapi/linux/sched/types.h>
 #include <linux/amlogic/meson_uvm_core.h>
 #include <linux/amlogic/media/utils/am_com.h>
@@ -74,3 +75,9 @@ void vsync_notify_videodisplay(u8 layer_id, u32 vpp_vsync_pts_inc_scale,
 	return vd_vsync_notify(layer_id, vpp_vsync_pts_inc_scale, vpp_vsync_pts_inc_scale_base);
 }
 EXPORT_SYMBOL(vsync_notify_videodisplay);
+
+int mediasync_set_callback(struct mediasync_cb *func)
+{
+	return vd_set_mediasync_callback(func);
+}
+EXPORT_SYMBOL(mediasync_set_callback);

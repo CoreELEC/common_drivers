@@ -223,6 +223,7 @@ struct videodisplay_dev {
 	struct timeval drop_start_time;
 	u32 drop_org_i_count;
 	u32 hdmi_drop_count;
+	int last_frc_delay;
 };
 
 struct videodisplay_port_s *videodisplay_get_port(u32 index);
