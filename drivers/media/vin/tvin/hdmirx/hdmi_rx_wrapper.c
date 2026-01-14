@@ -1580,7 +1580,7 @@ irqreturn_t irq2_handler(int irq, void *params)
 			if (log_level & 0x100)
 				rx_pr("port2 [isr] valid_m_fall\n");
 			rx_irq_en(IRQ_EN_HDCP, E_PORT2);
-			rx[E_PORT2].fsm_ext_state = FSM_FRL_VALID_M;
+			rx_set_ext_state(E_PORT2, FSM_FRL_VALID_M);
 		}
 	}
 	if (hdmirx_top_intr_stat & top_irq_tab[IRQ_EMP_DONE]) {
@@ -1773,7 +1773,7 @@ irqreturn_t irq3_handler(int irq, void *params)
 			if (log_level & 0x100)
 				rx_pr("port3 [isr] valid_m_fall\n");
 			rx_irq_en(IRQ_EN_HDCP, E_PORT3);
-			rx[E_PORT3].fsm_ext_state = FSM_FRL_VALID_M;
+			rx_set_ext_state(E_PORT3, FSM_FRL_VALID_M);
 		}
 	}
 	if (hdmirx_top_intr_stat & top_irq_tab[IRQ_EMP_DONE]) {
@@ -3186,7 +3186,7 @@ void fsm_restart(u8 port)
 	hdmirx_audio_disabled(port);
 	rx[port].var.vic_check_en = false;
 	rx[port].var.dvi_check_en = true;
-	rx[port].fsm_ext_state = FSM_INIT;
+	rx_set_ext_state(port, FSM_INIT);
 	rx[port].clk.cable_clk = 0;
 	rx[port].phy.pll_rate = 0;
 	rx[port].phy.phy_bw = 0;
@@ -3254,7 +3254,7 @@ void rx_send_hpd_pulse(u8 port)
 {
 	/*rx_set_cur_hpd(0);*/
 	/*fsm_restart();*/
-	rx[port].fsm_ext_state = FSM_HPD_LOW;
+	rx_set_ext_state(port, FSM_HPD_LOW);
 }
 
 static void set_hdcp(struct hdmi_rx_hdcp *hdcp, const unsigned char *b_key)
@@ -8382,6 +8382,12 @@ int hdmirx_debug(const char *buf, int size)
 	return 0;
 }
 
+void rx_set_ext_state(u8 port, unsigned int ext_state)
+{
+	if (rx[port].fsm_ext_state >= ext_state)
+		rx[port].fsm_ext_state = ext_state;
+}
+
 void rx_ext_state_monitor(u8 port)
 {
 	if (rx[port].fsm_ext_state != FSM_NULL) {
@@ -8410,7 +8416,7 @@ void rx_edid_update_handler(struct work_struct *dwork)
 	rx_pr("port%d edid update to %d\n", port, rx[port].edid_type.edid_ver);
 	hdmi_rx_top_edid_update(port);
 	if (rx[port].tx_type != DEV_ABNORMAL_SCDC)
-		rx[port].fsm_ext_state = FSM_HPD_LOW;
+		rx_set_ext_state(port, FSM_HPD_LOW);
 }
 
 void rx_edid_monitor(void)
@@ -8474,14 +8480,14 @@ void frate_monitor(void)
 			hdmirx_frl_config(port);
 			rx_lts_2_flt_ready(port);
 			if (rx[port].state >= FLT_RX_LTS_3)
-				rx[port].state = FLT_RX_LTS_3;
+				rx_set_ext_state(port, FLT_RX_LTS_3);
 		} else {
 			if (rx[port].state == FSM_SIG_READY) {
 				//hdmirx_top_irq_en(0, 0, port);
 				rx_irq_en(IRQ_EN_HDCP, port);
 			}
 			if (rx[port].state > FSM_FRL_FLT_READY)
-				rx[port].state = FSM_FRL_FLT_READY;
+				rx_set_ext_state(port, FSM_FRL_FLT_READY);
 		}
 		if (log_level & FRL_LOG)
 			rx_pr("port-%d frate change to %d\n", port, rx[port].var.frl_rate);
@@ -8533,14 +8539,14 @@ void frate_monitor1(void)
 			hdmirx_frl_config(port);
 			rx_lts_2_flt_ready(port);
 			if (rx[port].state >= FLT_RX_LTS_3)
-				rx[port].state = FLT_RX_LTS_3;
+				rx_set_ext_state(port, FLT_RX_LTS_3);
 		} else {
 			if (rx[port].state == FSM_SIG_READY) {
 				//hdmirx_top_irq_en(0, 0, port);
 				rx_irq_en(IRQ_EN_HDCP, port);
 			}
 			if (rx[port].state > FSM_FRL_FLT_READY)
-				rx[port].state = FSM_FRL_FLT_READY;
+				rx_set_ext_state(port, FSM_FRL_FLT_READY);
 		}
 		if (log_level & FRL_LOG)
 			rx_pr("port-%d frate change to %d\n", port, rx[port].var.frl_rate);

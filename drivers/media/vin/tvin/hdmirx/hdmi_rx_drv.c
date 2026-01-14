@@ -2403,12 +2403,12 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			pre_port = 0xff;
 		if (!rx_info.main_port_open) {
 			rx_set_port_hpd(port_idx, 0);
-			rx[port_idx].fsm_ext_state = FSM_INIT;
+			rx_set_ext_state(port_idx, FSM_INIT);
 			port_hpd_rst_flag |= (1 << port_idx);
 			hdmi_rx_top_edid_update(port_idx);
 		} else {
 			if (port_idx != rx_info.main_port) {
-				rx[port_idx].fsm_ext_state = FSM_INIT;
+				rx_set_ext_state(port_idx, FSM_INIT);
 				rx_set_port_hpd(port_idx, 0);
 				port_hpd_rst_flag |= (1 << port_idx);
 				hdmi_rx_top_edid_update(port_idx);
@@ -4167,7 +4167,7 @@ static void hdmirx_late_resume(struct early_suspend *h)
 		sm_pause = 0;
 	for (i = 0; i < rx_info.port_num; i++) {
 		if (rx_get_cur_hpd_sts(i)) {
-			rx[i].fsm_ext_state = FSM_HPD_LOW;
+			rx_set_ext_state(i, FSM_HPD_LOW);
 			if (rx_info.chip_id < CHIP_ID_T3X)
 				port_hpd_rst_flag |= (1 << i);
 		} else {
@@ -4175,7 +4175,7 @@ static void hdmirx_late_resume(struct early_suspend *h)
 				rx_set_cur_hpd(1, 6, i);
 			else
 				port_hpd_rst_flag |= (1 << i);
-			rx[i].fsm_ext_state = FSM_HPD_HIGH;
+			rx_set_ext_state(i, FSM_HPD_HIGH);
 		}
 	}
 	rx_add_timer(rx_info.hdmirx_dev);
@@ -5215,7 +5215,7 @@ static int hdmirx_resume(struct platform_device *pdev)
 	rx_hdcp_access_on_ddc_en(true);
 	for (i = 0; i < rx_info.port_num; i++) {
 		if (rx_get_cur_hpd_sts(i)) {
-			rx[i].fsm_ext_state = FSM_HPD_LOW;
+			rx_set_ext_state(i, FSM_HPD_LOW);
 			if (rx_info.chip_id < CHIP_ID_T3X)
 				port_hpd_rst_flag |= (1 << i);
 		} else {
@@ -5223,7 +5223,7 @@ static int hdmirx_resume(struct platform_device *pdev)
 				rx_set_cur_hpd(1, 6, i);
 			else
 				port_hpd_rst_flag |= (1 << i);
-			rx[i].fsm_ext_state = FSM_HPD_HIGH;
+			rx_set_ext_state(i, FSM_HPD_HIGH);
 		}
 	}
 	rx_add_timer(hdevp);

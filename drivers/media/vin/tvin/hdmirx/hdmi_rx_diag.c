@@ -534,10 +534,10 @@ void set_hdmirx_hpd_info(struct hdmirx_hpd_s info)
 		get_hdmirx_hpd_info(&cur_info);
 		if (info.hpd_state == HDMIRX_HPD_DISABLE) {
 			if (cur_info.hpd_state == HDMIRX_HPD_ENABLE)
-				rx[port_id].fsm_ext_state = FSM_HPD_LOW;
+				rx_set_ext_state(port_id, FSM_HPD_LOW);
 		} else if (info.hpd_state == HDMIRX_HPD_ENABLE) {
 			if (cur_info.hpd_state == HDMIRX_HPD_DISABLE)
-				rx[port_id].fsm_ext_state = FSM_HPD_HIGH;
+				rx_set_ext_state(port_id, FSM_HPD_HIGH);
 		} else if (info.hpd_state == HDMIRX_HPD_RESTART) {
 			if (cur_info.hpd_state == HDMIRX_HPD_ENABLE) {
 				rx_set_port_hpd(port_id, 0);
