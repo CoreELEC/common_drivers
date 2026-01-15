@@ -1,130 +1,77 @@
+#memory
   stack_depot_fetch
   seq_release_private
   get_track
   bitmap_alloc
   __seq_open_private
-  kobj_sysfs_ops
-  drm_match_cea_mode
-  nbcon_device_release
-  nbcon_device_try_acquire
-  strreplace
-  sysfs_emit_at
-  drm_atomic_state_default_release
+
+#page_trace.ko
   __tracepoint_android_vh_get_page_wmark
   __traceiter_android_vh_get_page_wmark
 
-# snd-aloop.ko
-  snd_card_ref
-  snd_card_register
-  snd_card_rw_proc_new
-  snd_ctl_notify
-  snd_devm_card_new
-  snd_ecards_limit
-  snd_info_get_line
-  snd_interval_refine
-  snd_pcm_format_physical_width
-  snd_pcm_format_set_silence
-  snd_pcm_hw_rule_add
-  snd_pcm_new
-  snd_pcm_set_managed_buffer_all
-  snd_pcm_set_ops
-  snd_soc_get_dai_name
-  snd_soc_of_put_dai_link_codecs
-  snd_timer_close
-  snd_timer_instance_free
-  snd_timer_instance_new
-  snd_timer_open
-  snd_timer_start
-  snd_timer_stop
-
-# amlogic-soc-f2fs.ko
-  LZ4_compress_HC
-  LZ4_compress_default
-  zstd_min_clevel
-  zstd_max_clevel
-  system_state
-  nop_mnt_idmap
-
-# aml_drm.ko
-  drm_mode_object_get
-
-# drm_display_helper.ko
-  devm_backlight_device_register
-  drm_atomic_get_old_private_obj_state
-  drm_atomic_private_obj_fini
-  drm_connector_register
-  drm_crtc_commit_wait
-  drm_crtc_wait_one_vblank
-  drm_dev_printk
-  drm_display_mode_from_cea_vic
-  drm_edid_dup
-  drm_edid_duplicate
-  drm_edid_free
-  drm_edid_get_monitor_name
-  drm_edid_raw
-  drm_edid_read_ddc
-  drm_modeset_lock_single_interruptible
-  drm_object_property_set_value
-  guid_gen
-  guid_null
-  __drm_debug
-  __drm_printfn_dbg
-  drm_panel_add
-  drm_panel_init
-  drm_panel_of_backlight
-  drm_mode_destroy
-
-# drm_dp_aux_bus.ko
-  dev_pm_domain_attach
-  device_for_each_child_reverse
-  driver_register
-  of_device_modalias
-  of_device_uevent_modalias
-
-#amlogic-gkitool.ko
-  class_compat_register
-
 #amlogic-memory-debug.ko
- bpf_trace_run12
- memory_read_from_buffer
+  bpf_trace_run12
+  memory_read_from_buffer
+  kobj_sysfs_ops
 
 #amlogic-usb.ko
- of_add_property
+  of_add_property
 
 #aml_media.ko
- __vmalloc_array_noprof
+  __vmalloc_array_noprof
 
-# amlogic-rtc.ko
- regmap_test_bits
- rtc_read_alarm
+#amlogic-rtc.ko
+  regmap_test_bits
+  rtc_read_alarm
 
-# amlogic-spi.ko
- spi_delay_exec
+#amlogic-spi.ko
+  spi_delay_exec
 
 #amlogic-pm.ko
- pm_suspend_target_state
+  pm_suspend_target_state
 
 #amlogic-snd-vad.ko
- pm_suspend
+  pm_suspend
 
 #amlogic-input.ko
- input_close_device
- input_open_device
- input_register_handle
- input_register_handler
- input_unregister_handle
- input_unregister_handler
+  input_close_device
+  input_open_device
+  input_register_handle
+  input_register_handler
+  input_unregister_handle
+  input_unregister_handler
 
-# amlogic-iotrace.ko
- stop_one_cpu_nowait
+#amlogic-iotrace.ko
+  stop_one_cpu_nowait
+
+#drm_display_helper.ko
+  drm_bridge_edid_read
+  drm_bridge_hpd_disable
+  drm_bridge_hpd_enable
+  drm_bridge_is_panel
+  drm_default_rgb_quant_range
+  drm_edid_connector_add_modes
+  drm_edid_connector_update
+  drm_edid_valid
+  drm_hdmi_avi_infoframe_from_display_mode
+  drm_hdmi_avi_infoframe_quant_range
+  drm_hdmi_connector_get_output_format_name
+  drm_hdmi_vendor_infoframe_from_display_mode
+  drm_kms_helper_connector_hotplug_event
+  drm_panel_bridge_set_orientation
+  drmm_connector_hdmi_init
+  drmm_connector_init
+  drmm_kmalloc
+  hdmi_infoframe_pack
+  drm_mode_destroy
 
 # f81232.ko
- __tty_insert_flip_string_flags
- __usb_serial_register_drivers
- usb_control_msg_send
+  __tty_insert_flip_string_flags
+  __usb_serial_register_drivers
+  usb_control_msg_send
 
 #amlogic-phy-debug.ko
- class_dev_iter_exit
- class_dev_iter_init
- class_dev_iter_next
- device_match_name
+  class_dev_iter_exit
+  class_dev_iter_init
+  class_dev_iter_next
+  device_match_name

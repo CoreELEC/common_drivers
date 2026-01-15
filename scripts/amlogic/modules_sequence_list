@@ -91,5 +91,6 @@ GKI_MODULES_LOAD_WHITE_LIST=(
 )
 
 DEFAULT_DELETE_TYPE_LIST=(
+	xfs.ko	#tv gki default add but not need
 	amlogic-soc-*
 )

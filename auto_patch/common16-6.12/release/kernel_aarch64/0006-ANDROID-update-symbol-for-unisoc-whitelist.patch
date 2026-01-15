@@ -1,0 +1,426 @@
+From 1cec532ddb42eac6a194594d3dd00c14de1f01bd Mon Sep 17 00:00:00 2001
+From: "rong.wu" <rong.wu@unisoc.com>
+Date: Tue, 2 Dec 2025 14:58:12 +0800
+Subject: [PATCH 06/15] ANDROID: update symbol for unisoc whitelist
+
+Add symbols for unisoc kernel6.12 driver
+
+7 function symbol(s) added
+  'int __typec_altmode_register_driver(struct typec_altmode_driver*, struct module*)'
+  'struct typec_port* typec_altmode2port(struct typec_altmode*)'
+  'int typec_altmode_enter(struct typec_altmode*, u32*)'
+  'int typec_altmode_exit(struct typec_altmode*)'
+  'const struct typec_altmode* typec_altmode_get_partner(struct typec_altmode*)'
+  'void typec_altmode_unregister_driver(struct typec_altmode_driver*)'
+  'int typec_get_negotiated_svdm_version(struct typec_port*)'
+
+Bug: 465243572
+Bug: 468971907
+Change-Id: I840a40f4a61e39a06972a0bce6f83b1fb23b4de0
+Signed-off-by: rong.wu <rong.wu@unisoc.com>
+(cherry picked from commit a541c4555c245d26a5cac738d4d0d5ebb2ccd047)
+---
+ gki/aarch64/abi.stg        | 183 +++++++++++++++++++++++++++++++++++++
+ gki/aarch64/symbols/unisoc |   9 ++
+ 2 files changed, 192 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index 7b8b864d6a35..1b4487b5a13c 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -6808,6 +6808,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x1d1f0988
+ }
++pointer_reference {
++  id: 0x0dd9b44e
++  kind: POINTER
++  pointee_type_id: 0x1d2637a7
++}
+ pointer_reference {
+   id: 0x0dd9ca98
+   kind: POINTER
+@@ -15283,6 +15288,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xaae5150f
+ }
++pointer_reference {
++  id: 0x2032a2b7
++  kind: POINTER
++  pointee_type_id: 0xaa8a6c43
++}
+ pointer_reference {
+   id: 0x2035145b
+   kind: POINTER
+@@ -29663,6 +29673,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xe061253c
+ }
++pointer_reference {
++  id: 0x328e2a92
++  kind: POINTER
++  pointee_type_id: 0xe0784cd6
++}
+ pointer_reference {
+   id: 0x32941b2b
+   kind: POINTER
+@@ -30263,6 +30278,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xe45d3c8c
+ }
++pointer_reference {
++  id: 0x3388de4a
++  kind: POINTER
++  pointee_type_id: 0xe4639fb7
++}
+ pointer_reference {
+   id: 0x338b6c2e
+   kind: POINTER
+@@ -42178,6 +42198,11 @@ qualified {
+   qualifier: CONST
+   qualified_type_id: 0xf170be41
+ }
++qualified {
++  id: 0xe0784cd6
++  qualifier: CONST
++  qualified_type_id: 0xf1a685d1
++}
+ qualified {
+   id: 0xe0785a59
+   qualifier: CONST
+@@ -42443,6 +42468,11 @@ qualified {
+   qualifier: CONST
+   qualified_type_id: 0xe0f26092
+ }
++qualified {
++  id: 0xe4639fb7
++  qualifier: CONST
++  qualified_type_id: 0xe1c9c854
++}
+ qualified {
+   id: 0xe46d5624
+   qualifier: CONST
+@@ -102364,6 +102394,12 @@ member {
+   type_id: 0xe3de788c
+   offset: 960
+ }
++member {
++  id: 0xd4ad44a1
++  name: "driver"
++  type_id: 0xe3de788c
++  offset: 192
++}
+ member {
+   id: 0xd4ad451a
+   name: "driver"
+@@ -133431,6 +133467,11 @@ member {
+   type_id: 0x4585663f
+   offset: 96
+ }
++member {
++  id: 0xc4f04fa0
++  name: "id_table"
++  type_id: 0x3388de4a
++}
+ member {
+   id: 0xc4f2675c
+   name: "id_table"
+@@ -162955,6 +162996,12 @@ member {
+   type_id: 0xb3e7bac9
+   offset: 480
+ }
++member {
++  id: 0x872efc9a
++  name: "mode"
++  type_id: 0xb3e7bac9
++  offset: 16
++}
+ member {
+   id: 0x872efcc8
+   name: "mode"
+@@ -194246,6 +194293,12 @@ member {
+   type_id: 0x2e7404d6
+   offset: 128
+ }
++member {
++  id: 0xd778984e
++  name: "probe"
++  type_id: 0x2e9f98e1
++  offset: 64
++}
+ member {
+   id: 0xd778c72d
+   name: "probe"
+@@ -205116,6 +205169,12 @@ member {
+   type_id: 0x0e200b74
+   offset: 1472
+ }
++member {
++  id: 0xb4ae00cc
++  name: "remove"
++  type_id: 0x0dd9b44e
++  offset: 128
++}
+ member {
+   id: 0xb4ae0703
+   name: "remove"
+@@ -233453,6 +233512,11 @@ member {
+   type_id: 0x914dbfdc
+   offset: 7296
+ }
++member {
++  id: 0x0fd66cdf
++  name: "svid"
++  type_id: 0xe8034002
++}
+ member {
+   id: 0xa8bfaeca
+   name: "svm_cid"
+@@ -339696,6 +339760,18 @@ struct_union {
+     member_id: 0x39f4cfd4
+   }
+ }
++struct_union {
++  id: 0xaa8a6c43
++  kind: STRUCT
++  name: "typec_altmode_driver"
++  definition {
++    bytesize: 200
++    member_id: 0xc4f04fa0
++    member_id: 0xd778984e
++    member_id: 0xb4ae00cc
++    member_id: 0xd4ad44a1
++  }
++}
+ struct_union {
+   id: 0xeeb2f917
+   kind: STRUCT
+@@ -339769,6 +339845,17 @@ struct_union {
+     member_id: 0xfb64dce0
+   }
+ }
++struct_union {
++  id: 0xe1c9c854
++  kind: STRUCT
++  name: "typec_device_id"
++  definition {
++    bytesize: 16
++    member_id: 0x0fd66cdf
++    member_id: 0x872efc9a
++    member_id: 0x6d08ae79
++  }
++}
+ struct_union {
+   id: 0x8d947ae0
+   kind: STRUCT
+@@ -380583,6 +380670,11 @@ function {
+   parameter_id: 0x2f73da3b
+   parameter_id: 0xf435685e
+ }
++function {
++  id: 0x1894f93e
++  return_type_id: 0x48b5725f
++  parameter_id: 0x2032a2b7
++}
+ function {
+   id: 0x18951485
+   return_type_id: 0x48b5725f
+@@ -395695,6 +395787,11 @@ function {
+   parameter_id: 0x347303b4
+   parameter_id: 0x312b639e
+ }
++function {
++  id: 0x9058feb4
++  return_type_id: 0x6720d32f
++  parameter_id: 0x3760766d
++}
+ function {
+   id: 0x905a52d9
+   return_type_id: 0x6720d32f
+@@ -403257,6 +403354,12 @@ function {
+   parameter_id: 0x2f988f89
+   parameter_id: 0xf1a6dfed
+ }
++function {
++  id: 0x95a0d4f3
++  return_type_id: 0x6720d32f
++  parameter_id: 0x2032a2b7
++  parameter_id: 0x0b27dc43
++}
+ function {
+   id: 0x95a14791
+   return_type_id: 0x6720d32f
+@@ -425282,6 +425385,11 @@ function {
+   parameter_id: 0x1efad3bd
+   parameter_id: 0x6720d32f
+ }
++function {
++  id: 0xc446f809
++  return_type_id: 0x3760766d
++  parameter_id: 0x36f998d3
++}
+ function {
+   id: 0xc44c8212
+   return_type_id: 0x3f37d9d5
+@@ -428378,6 +428486,11 @@ function {
+   parameter_id: 0x3f3a5436
+   parameter_id: 0x0793e45b
+ }
++function {
++  id: 0xf7e1123f
++  return_type_id: 0x328e2a92
++  parameter_id: 0x36f998d3
++}
+ function {
+   id: 0xf7e2e2fa
+   return_type_id: 0x6d7f5ff6
+@@ -447902,6 +448015,15 @@ elf_symbol {
+   type_id: 0x914993bc
+   full_name: "__tty_insert_flip_string_flags"
+ }
++elf_symbol {
++  id: 0xce6c6f05
++  name: "__typec_altmode_register_driver"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x07fa59cd
++  type_id: 0x95a0d4f3
++  full_name: "__typec_altmode_register_driver"
++}
+ elf_symbol {
+   id: 0xb882f62e
+   name: "__udelay"
+@@ -507603,6 +507725,15 @@ elf_symbol {
+   type_id: 0xc564dee2
+   full_name: "tty_write_room"
+ }
++elf_symbol {
++  id: 0x15f59e38
++  name: "typec_altmode2port"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xaaf0a4de
++  type_id: 0xc446f809
++  full_name: "typec_altmode2port"
++}
+ elf_symbol {
+   id: 0xfb5efe2e
+   name: "typec_altmode_attention"
+@@ -507612,6 +507743,33 @@ elf_symbol {
+   type_id: 0x931aa5b7
+   full_name: "typec_altmode_attention"
+ }
++elf_symbol {
++  id: 0xf4ad9ab3
++  name: "typec_altmode_enter"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xa67de74c
++  type_id: 0x90ddcdd6
++  full_name: "typec_altmode_enter"
++}
++elf_symbol {
++  id: 0x848c1a1a
++  name: "typec_altmode_exit"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x46971fca
++  type_id: 0x903e851b
++  full_name: "typec_altmode_exit"
++}
++elf_symbol {
++  id: 0x1f42d24c
++  name: "typec_altmode_get_partner"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xc53504da
++  type_id: 0xf7e1123f
++  full_name: "typec_altmode_get_partner"
++}
+ elf_symbol {
+   id: 0x58687602
+   name: "typec_altmode_notify"
+@@ -507621,6 +507779,15 @@ elf_symbol {
+   type_id: 0x90f57fd0
+   full_name: "typec_altmode_notify"
+ }
++elf_symbol {
++  id: 0x0d2420a7
++  name: "typec_altmode_unregister_driver"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x37687279
++  type_id: 0x1894f93e
++  full_name: "typec_altmode_unregister_driver"
++}
+ elf_symbol {
+   id: 0xe7fb597f
+   name: "typec_altmode_update_active"
+@@ -507675,6 +507842,15 @@ elf_symbol {
+   type_id: 0x5b4eac6a
+   full_name: "typec_get_drvdata"
+ }
++elf_symbol {
++  id: 0xab1410be
++  name: "typec_get_negotiated_svdm_version"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x562d1f12
++  type_id: 0x9058feb4
++  full_name: "typec_get_negotiated_svdm_version"
++}
+ elf_symbol {
+   id: 0xb8c4fc82
+   name: "typec_match_altmode"
+@@ -519233,6 +519409,7 @@ interface {
+   symbol_id: 0xc9969dba
+   symbol_id: 0xbc3bf362
+   symbol_id: 0x0f3e6156
++  symbol_id: 0xce6c6f05
+   symbol_id: 0xb882f62e
+   symbol_id: 0x79821b1f
+   symbol_id: 0xdf489de4
+@@ -525862,14 +526039,20 @@ interface {
+   symbol_id: 0x6590f3a5
+   symbol_id: 0x8e95f895
+   symbol_id: 0x30438a62
++  symbol_id: 0x15f59e38
+   symbol_id: 0xfb5efe2e
++  symbol_id: 0xf4ad9ab3
++  symbol_id: 0x848c1a1a
++  symbol_id: 0x1f42d24c
+   symbol_id: 0x58687602
++  symbol_id: 0x0d2420a7
+   symbol_id: 0xe7fb597f
+   symbol_id: 0xe6cbb47e
+   symbol_id: 0x0d23e13a
+   symbol_id: 0xd02d0c21
+   symbol_id: 0xe9d634b5
+   symbol_id: 0x84b20708
++  symbol_id: 0xab1410be
+   symbol_id: 0xb8c4fc82
+   symbol_id: 0x8fafe0a6
+   symbol_id: 0x6d4f7368
+diff --git a/gki/aarch64/symbols/unisoc b/gki/aarch64/symbols/unisoc
+index 5acaff74e13c..e8dd6f36c2d3 100644
+--- a/gki/aarch64/symbols/unisoc
++++ b/gki/aarch64/symbols/unisoc
+@@ -406,6 +406,15 @@
+   typec_unregister_altmode
+   usb_role_switch_get
+ 
++# required sprd_typec_displayport.ko
++  typec_altmode_enter
++  typec_altmode_exit
++  typec_altmode_get_partner
++  typec_altmode2port
++  __typec_altmode_register_driver
++  typec_altmode_unregister_driver
++  typec_get_negotiated_svdm_version
++
+ # required sprd_usb_f_rndis.ko
+   gether_cleanup
+   gether_connect
+-- 
+2.50.1
+

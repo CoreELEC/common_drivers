@@ -268,7 +268,7 @@ AMLOGIC_COMMON_MODULES = [
 AMLOGOC_COMMON_MODULES_REMOVE = (
     [
         "kernel/kheaders.ko",
-        "drivers/android/rust_binder.ko",
+	"drivers/android/binder/rust_binder.ko",
     ] + (
         [
             "common_drivers/drivers/tty/serial/amlogic-uart.ko",

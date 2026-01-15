@@ -1,0 +1,33 @@
+From 0ad67466918ac02e013ef7d9d6afb4ae38755125 Mon Sep 17 00:00:00 2001
+From: Cixi Geng <cixi.geng1@unisoc.com>
+Date: Mon, 15 Dec 2025 18:39:48 +0800
+Subject: [PATCH 05/15] ANDROID: GKI: Add ntfs modules symbol into unisoc.
+
+1 function symbol(s) added
+  'int filemap_fdatawrite_range_kick(struct address_space*, loff_t, loff_t)'
+
+Bug: 468971489
+Bug: 468971907
+Change-Id: I31d30aec19a205ae88af6f03fc720ac390775628
+Signed-off-by: Cixi Geng <cixi.geng1@unisoc.com>
+---
+ gki/aarch64/symbols/unisoc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/gki/aarch64/symbols/unisoc b/gki/aarch64/symbols/unisoc
+index 6eed44b9f6c6..5acaff74e13c 100644
+--- a/gki/aarch64/symbols/unisoc
++++ b/gki/aarch64/symbols/unisoc
+@@ -302,6 +302,9 @@
+ # required mmdvfs.ko
+   devfreq_event_get_event
+ 
++# required ntfs3.ko
++  filemap_fdatawrite_range_kick
++
+ # required pinctrl_sprd.ko
+   pinctrl_register
+   pinctrl_unregister
+-- 
+2.50.1
+

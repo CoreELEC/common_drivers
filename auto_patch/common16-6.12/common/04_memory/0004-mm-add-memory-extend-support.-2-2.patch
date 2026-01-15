@@ -1,4 +1,4 @@
-From 0124b337ec89dacae76bd9e4e092b03d512418e4 Mon Sep 17 00:00:00 2001
+From 209a167ac68b1b7cf65242130e7c407e8560da04 Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Tue, 15 Oct 2024 16:24:49 +0800
 Subject: [PATCH] mm: add memory extend support. [2/2]
@@ -34,7 +34,6 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  drivers/of/of_reserved_mem.c   | 22 ++++++++++++-
  fs/dcache.c                    |  4 +++
  fs/inode.c                     |  4 +++
- include/linux/android_kabi.h   |  4 +++
  include/linux/mmzone.h         | 13 +++++++-
  include/linux/page-flags.h     |  3 ++
  include/linux/printk.h         |  4 +++
@@ -46,14 +45,14 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  kernel/printk/printk.c         |  5 +++
  kernel/scs.c                   | 17 ++++++++++
  mm/cma.c                       |  2 ++
- mm/kasan/common.c              |  7 ++++
+ mm/kasan/common.c              |  8 ++++-
  mm/page_alloc.c                | 58 ++++++++++++++++++++++++++++++++++
  mm/show_mem.c                  | 12 +++++++
- mm/slab_common.c               | 43 +++++++++++++++++++++++++
- mm/slub.c                      | 32 +++++++++++++++++++
+ mm/slab_common.c               | 44 +++++++++++++++++++++++++-
+ mm/slub.c                      | 34 +++++++++++++++++++-
  mm/usercopy.c                  |  4 +++
  mm/vmscan.c                    | 32 ++++++++++++++++++-
- 25 files changed, 299 insertions(+), 3 deletions(-)
+ 24 files changed, 296 insertions(+), 6 deletions(-)
 
 diff --git a/arch/arm64/include/asm/cache.h b/arch/arm64/include/asm/cache.h
 index 06a4670bdb0b..515e6f726e95 100644
@@ -87,7 +86,7 @@ index ba9b4cbef9e0..e9b5f70e2253 100644
  	}
  
 diff --git a/drivers/of/base.c b/drivers/of/base.c
-index 4bb87e0cbaf1..771b0f9cb6ac 100644
+index 9dd08d8f5a13..14ee48f3d654 100644
 --- a/drivers/of/base.c
 +++ b/drivers/of/base.c
 @@ -166,7 +166,9 @@ void __of_phandle_cache_inv_entry(phandle handle)
@@ -115,7 +114,7 @@ index 4bb87e0cbaf1..771b0f9cb6ac 100644
  
  	/* Symlink in /proc as required by userspace ABI */
 diff --git a/drivers/of/of_reserved_mem.c b/drivers/of/of_reserved_mem.c
-index 9ecee51266cf..05c66b609e67 100644
+index 264edaaaf39e..7665a97b99ca 100644
 --- a/drivers/of/of_reserved_mem.c
 +++ b/drivers/of/of_reserved_mem.c
 @@ -9,7 +9,9 @@
@@ -128,10 +127,10 @@ index 9ecee51266cf..05c66b609e67 100644
  
  #include <linux/err.h>
  #include <linux/libfdt.h>
-@@ -130,8 +132,14 @@ static int __init __reserved_mem_reserve_reg(unsigned long node,
- 
- 		if (size &&
- 		    early_init_dt_reserve_memory(base, size, nomap) == 0)
+@@ -135,8 +137,14 @@ static int __init __reserved_mem_reserve_reg(unsigned long node,
+ 			if (of_flat_dt_is_compatible(node, "shared-dma-pool") &&
+ 			    of_get_flat_dt_prop(node, "reusable", NULL))
+ 				dma_contiguous_early_fixup(base, size);
 +		#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 +			pr_emerg("\t%08lx - %08lx, %8ld KB, %s\n",
 +				(unsigned long)base, (unsigned long)(base + size),
@@ -140,10 +139,10 @@ index 9ecee51266cf..05c66b609e67 100644
  			pr_debug("Reserved memory: reserved region for node '%s': base %pa, size %lu MiB\n",
  				uname, &base, (unsigned long)(size / SZ_1M));
 +		#endif
- 		else
+ 		} else {
  			pr_err("Reserved memory: failed to reserve memory for node '%s': base %pa, size %lu MiB\n",
  			       uname, &base, (unsigned long)(size / SZ_1M));
-@@ -444,8 +452,16 @@ static int __init __reserved_mem_init_node(struct reserved_mem *rmem)
+@@ -453,8 +461,16 @@ static int __init __reserved_mem_init_node(struct reserved_mem *rmem)
  
  		ret = initfn(rmem);
  		if (ret == 0) {
@@ -160,7 +159,7 @@ index 9ecee51266cf..05c66b609e67 100644
  			break;
  		}
  	}
-@@ -539,7 +555,11 @@ static void __init fdt_init_reserved_mem_node(struct reserved_mem *rmem)
+@@ -548,7 +564,11 @@ static void __init fdt_init_reserved_mem_node(struct reserved_mem *rmem)
  			nomap ? "nomap" : "map",
  			reusable ? "reusable" : "non-reusable",
  			rmem->name ? rmem->name : "unknown");
@@ -174,10 +173,10 @@ index 9ecee51266cf..05c66b609e67 100644
  					rmem->size, nomap, reusable);
  		if (reusable && !of_flat_dt_is_compatible(node, "shared-dma-pool"))
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 9ded79c3651a..2c07e6a075c3 100644
+index 27537ae5bb9b..2d496c31e756 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -3141,7 +3141,11 @@ ino_t d_parent_ino(struct dentry *dentry)
+@@ -3147,7 +3147,11 @@ ino_t d_parent_ino(struct dentry *dentry)
  }
  EXPORT_SYMBOL(d_parent_ino);
  
@@ -205,22 +204,6 @@ index 1897b03bdbdf..be6bc5a942f9 100644
  static int __init set_ihash_entries(char *str)
  {
  	if (!str)
-diff --git a/include/linux/android_kabi.h b/include/linux/android_kabi.h
-index f36faf4654cd..b17e1bcd5111 100644
---- a/include/linux/android_kabi.h
-+++ b/include/linux/android_kabi.h
-@@ -100,7 +100,11 @@
-  *   Similar to ANDROID_KABI_RESERVE, but this is for planned feature backports
-  *   (not for LTS).
-  */
-+#ifdef CONFIG_AMLOGIC_MEMORY_OPT
-+#define ANDROID_KABI_RESERVE(number)
-+#else
- #define ANDROID_KABI_RESERVE(number)		u64 __kabi_reserved##number
-+#endif
- #define ANDROID_BACKPORT_RESERVE(number)	u64 __kabi_reserved_backport##number
- 
- /*
 diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
 index 149c33b14807..cff7b14ad105 100644
 --- a/include/linux/mmzone.h
@@ -246,10 +229,10 @@ index 149c33b14807..cff7b14ad105 100644
  struct pglist_data;
  
 diff --git a/include/linux/page-flags.h b/include/linux/page-flags.h
-index da139446294a..3ac92e642cb9 100644
+index 47ac06b57ce9..643ad1da0cce 100644
 --- a/include/linux/page-flags.h
 +++ b/include/linux/page-flags.h
-@@ -554,6 +554,9 @@ FOLIO_FLAG(swapbacked, FOLIO_HEAD_PAGE)
+@@ -555,6 +555,9 @@ FOLIO_FLAG(swapbacked, FOLIO_HEAD_PAGE)
   */
  PAGEFLAG(Private, private, PF_ANY)
  PAGEFLAG(Private2, private_2, PF_ANY) TESTSCFLAG(Private2, private_2, PF_ANY)
@@ -339,7 +322,7 @@ index ff3f6d9db62b..a610785c28e4 100644
  $(obj)/kheaders.o: $(obj)/kheaders_data.tar.xz
  
 diff --git a/kernel/dma/contiguous.c b/kernel/dma/contiguous.c
-index 1568fea739ca..3907df250c3d 100644
+index 1c778dea3bcc..77a2f82480b3 100644
 --- a/kernel/dma/contiguous.c
 +++ b/kernel/dma/contiguous.c
 @@ -492,7 +492,9 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
@@ -351,8 +334,8 @@ index 1568fea739ca..3907df250c3d 100644
 +	#endif
  		return err;
  	}
- 	/* Architecture specific contiguous memory fixup. */
-@@ -504,8 +506,10 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
+ 
+@@ -502,8 +504,10 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
  	rmem->ops = &rmem_cma_ops;
  	rmem->priv = cma;
  
@@ -391,7 +374,7 @@ index bf65e0c3c86f..0daac1bf3491 100644
  	    || mod_mem_type_is_init(type))
  		return false;
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index a514532021ae..2aeadfb3018f 100644
+index 331d346f8652..8589b7e6e461 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -541,8 +541,13 @@ static u32 log_buf_len = __LOG_BUF_LEN;
@@ -488,13 +471,13 @@ index b26dfe96e785..8d2d2f4952b4 100644
  		if (bitmap_no >= bitmap_maxno) {
  			if ((num_attempts < max_retries) && (ret == -EBUSY)) {
 diff --git a/mm/kasan/common.c b/mm/kasan/common.c
-index ed4873e18c75..84761ffbfc2a 100644
+index 0674e4fdf89a..06a83b085db2 100644
 --- a/mm/kasan/common.c
 +++ b/mm/kasan/common.c
-@@ -28,6 +28,10 @@
- #include <linux/string.h>
+@@ -29,6 +29,10 @@
  #include <linux/types.h>
  #include <linux/bug.h>
+ #include <trace/hooks/kasan.h>
 +#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +#include "../internal.h"
 +#include <linux/amlogic/memory.h>
@@ -502,18 +485,19 @@ index ed4873e18c75..84761ffbfc2a 100644
  
  #include "kasan.h"
  #include "../slab.h"
-@@ -415,6 +419,9 @@ static inline void poison_kmalloc_large_redzone(const void *ptr, size_t size,
+@@ -416,7 +420,9 @@ static inline void poison_kmalloc_large_redzone(const void *ptr, size_t size,
  	/* Poison the aligned part of the redzone. */
  	redzone_start = round_up((unsigned long)(ptr + size), KASAN_GRANULE_SIZE);
  	redzone_end = (unsigned long)ptr + page_size(virt_to_page(ptr));
+-
 +#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +	adjust_redzone_end(ptr, size, &redzone_end);
 +#endif
+ 	trace_android_vh_poison_kmalloc_large_redzone(ptr, size, &redzone_end);
+ 
  	kasan_poison((void *)redzone_start, redzone_end - redzone_start,
- 		     KASAN_PAGE_REDZONE, false);
- }
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index f83d1102c5b6..f24b5655a1f4 100644
+index 238966aa4b30..1925dbe67233 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -73,6 +73,10 @@
@@ -559,7 +543,7 @@ index f83d1102c5b6..f24b5655a1f4 100644
  	pcp->count += 1 << order;
  
  	batch = READ_ONCE(pcp->batch);
-@@ -5315,6 +5335,9 @@ struct page *__alloc_pages_noprof(gfp_t gfp, unsigned int order,
+@@ -5321,6 +5341,9 @@ struct page *__alloc_pages_noprof(gfp_t gfp, unsigned int order,
  	 */
  	alloc_flags |= alloc_flags_nofragment(zonelist_zone(ac.preferred_zoneref), gfp);
  
@@ -569,7 +553,7 @@ index f83d1102c5b6..f24b5655a1f4 100644
  	/* First allocation attempt */
  	page = get_page_from_freelist(alloc_gfp, order, alloc_flags, &ac);
  	if (likely(page))
-@@ -7640,6 +7663,41 @@ bool put_page_back_buddy(struct page *page)
+@@ -7646,6 +7669,41 @@ bool put_page_back_buddy(struct page *page)
  }
  #endif
  
@@ -649,7 +633,7 @@ index f6e59cd713d0..da619d6a21a1 100644
  
  	for_each_online_node(nid) {
 diff --git a/mm/slab_common.c b/mm/slab_common.c
-index e95d747d3432..3d3dd6d9185f 100644
+index 1bcb9d628bf4..531d04a8d728 100644
 --- a/mm/slab_common.c
 +++ b/mm/slab_common.c
 @@ -55,7 +55,11 @@ struct kmem_cache *kmem_cache;
@@ -664,26 +648,28 @@ index e95d747d3432..3d3dd6d9185f 100644
  
  static int __init setup_slab_nomerge(char *str)
  {
-@@ -990,6 +994,9 @@ void __init create_kmalloc_caches(void)
- size_t __ksize(const void *object)
+@@ -991,7 +995,9 @@ size_t __ksize(const void *object)
  {
  	struct folio *folio;
+ 	size_t up_size = 0;
+-
 +#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +	unsigned long page_num;
 +#endif
- 
  	if (unlikely(object == ZERO_SIZE_PTR))
  		return 0;
-@@ -997,10 +1004,21 @@ size_t __ksize(const void *object)
- 	folio = virt_to_folio(object);
  
- 	if (unlikely(!folio_test_slab(folio))) {
+@@ -1002,11 +1008,22 @@ size_t __ksize(const void *object)
+ 		if (up_size)
+ 			return up_size;
+ 
 +#ifndef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
  		if (WARN_ON(folio_size(folio) <= KMALLOC_MAX_CACHE_SIZE))
  			return 0;
 +#endif
  		if (WARN_ON(object != folio_address(folio)))
  			return 0;
+ 
 +	#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +		if (unlikely(PageOwnerPriv1(folio_page(folio, 0)))) {
 +			page_num = folio_page(folio, 0)->index;
@@ -696,7 +682,7 @@ index e95d747d3432..3d3dd6d9185f 100644
  		return folio_size(folio);
  	}
  
-@@ -1075,9 +1093,18 @@ static void print_slabinfo_header(struct seq_file *m)
+@@ -1081,9 +1098,18 @@ static void print_slabinfo_header(struct seq_file *m)
  	 * without _too_ many complaints.
  	 */
  	seq_puts(m, "slabinfo - version: 2.1\n");
@@ -715,7 +701,7 @@ index e95d747d3432..3d3dd6d9185f 100644
  	trace_android_vh_print_slabinfo_header(m);
  	seq_putc(m, '\n');
  }
-@@ -1101,18 +1128,34 @@ static void slab_stop(struct seq_file *m, void *p)
+@@ -1107,18 +1133,34 @@ static void slab_stop(struct seq_file *m, void *p)
  static void cache_show(struct kmem_cache *s, struct seq_file *m)
  {
  	struct slabinfo sinfo;
@@ -751,10 +737,10 @@ index e95d747d3432..3d3dd6d9185f 100644
  	seq_putc(m, '\n');
  }
 diff --git a/mm/slub.c b/mm/slub.c
-index 53e6b6b9a223..2fb70fe21545 100644
+index f7ea349a04f7..7cca19429ae7 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
-@@ -48,6 +48,9 @@
+@@ -49,6 +49,9 @@
  
  #include "internal.h"
  
@@ -764,10 +750,10 @@ index 53e6b6b9a223..2fb70fe21545 100644
  /*
   * Lock order:
   *   1. slab_mutex (Global Mutex)
-@@ -4292,11 +4295,29 @@ static void *___kmalloc_large_node(size_t size, gfp_t flags, int node)
- 		flags = kmalloc_fix_flags(flags);
+@@ -4327,15 +4330,33 @@ static void *___kmalloc_large_node(size_t size, gfp_t flags, int node)
  
  	flags |= __GFP_COMP;
+ 
 +#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +	if (size < (PAGE_SIZE * (1 << order))) {
 +		struct page *page = aml_slub_alloc_large(node, size, flags, order);
@@ -780,7 +766,11 @@ index 53e6b6b9a223..2fb70fe21545 100644
 +		folio = (struct folio *)alloc_pages_node_noprof(node, flags, order);
 +	}
 +#else
- 	folio = (struct folio *)alloc_pages_node_noprof(node, flags, order);
+ 	if (node == NUMA_NO_NODE)
+ 		folio = (struct folio *)alloc_pages_noprof(flags, order);
+ 	else
+ 		folio = (struct folio *)__alloc_pages_noprof(flags, order, node, NULL);
+-
 +#endif
  	if (folio) {
  		ptr = folio_address(folio);
@@ -788,16 +778,17 @@ index 53e6b6b9a223..2fb70fe21545 100644
 +		lruvec_stat_mod_folio(folio, NR_SLAB_UNRECLAIMABLE_B,
 +				      PAGE_ALIGN(size));
 +	#else
++
  		lruvec_stat_mod_folio(folio, NR_SLAB_UNRECLAIMABLE_B,
  				      PAGE_SIZE << order);
 +	#endif
  	}
  
  	trace_android_vh_kmalloc_large_alloced(folio, order, flags);
-@@ -4811,7 +4832,14 @@ void kfree(const void *object)
- 
- 	folio = virt_to_folio(object);
- 	if (unlikely(!folio_test_slab(folio))) {
+@@ -4858,7 +4879,14 @@ void kfree(const void *object)
+ 		trace_android_vh_kfree_bypass(folio, object, &bypass);
+ 		if (bypass)
+ 			return;
 +#ifdef CONFIG_AMLOGIC_MEMORY_SLAB_LARGE
 +		if (aml_free_nonslab_page(folio, (void *)object))
 +			return;
@@ -809,7 +800,7 @@ index 53e6b6b9a223..2fb70fe21545 100644
  		return;
  	}
  
-@@ -5145,6 +5173,9 @@ static inline unsigned int calc_slab_order(unsigned int size,
+@@ -5192,6 +5220,9 @@ static inline unsigned int calc_slab_order(unsigned int size,
  
  static inline int calculate_order(unsigned int size)
  {
@@ -819,7 +810,7 @@ index 53e6b6b9a223..2fb70fe21545 100644
  	unsigned int order;
  	unsigned int min_objects;
  	unsigned int max_objects;
-@@ -5204,6 +5235,7 @@ static inline int calculate_order(unsigned int size)
+@@ -5251,6 +5282,7 @@ static inline int calculate_order(unsigned int size)
  	if (order <= MAX_PAGE_ORDER)
  		return order;
  	return -ENOSYS;
@@ -828,13 +819,13 @@ index 53e6b6b9a223..2fb70fe21545 100644
  
  static void
 diff --git a/mm/usercopy.c b/mm/usercopy.c
-index 83c164aba6e0..5400ce215e2c 100644
+index bd7a65fe0694..541aac696ed3 100644
 --- a/mm/usercopy.c
 +++ b/mm/usercopy.c
-@@ -195,6 +195,10 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
- 		/* Check slab allocator for flags and size. */
- 		__check_heap_object(ptr, n, folio_slab(folio), to_user);
- 	} else if (folio_test_large(folio)) {
+@@ -201,6 +201,10 @@ static inline void check_heap_object(const void *ptr, unsigned long n,
+ 		if (bypass)
+ 			return;
+ 
 +#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
 +		if (unlikely(folio_test_owner_priv_1(folio)))
 +			return;
@@ -843,10 +834,10 @@ index 83c164aba6e0..5400ce215e2c 100644
  		if (n > folio_size(folio) - offset)
  			usercopy_abort("page alloc", NULL, to_user, offset, n);
 diff --git a/mm/vmscan.c b/mm/vmscan.c
-index c044370652f1..ceac91b01370 100644
+index dccbd57ccf82..c7d0d53bc908 100644
 --- a/mm/vmscan.c
 +++ b/mm/vmscan.c
-@@ -911,9 +911,11 @@ static enum folio_references folio_check_references(struct folio *folio,
+@@ -918,9 +918,11 @@ static enum folio_references folio_check_references(struct folio *folio,
  	unsigned long vm_flags;
  	int ret = 0;
  
@@ -858,7 +849,7 @@ index c044370652f1..ceac91b01370 100644
  #endif
  	trace_android_vh_check_folio_look_around_ref(folio, &ret);
  	if (ret)
-@@ -1102,6 +1104,17 @@ static bool may_enter_fs(struct folio *folio, gfp_t gfp_mask)
+@@ -1109,6 +1111,17 @@ static bool may_enter_fs(struct folio *folio, gfp_t gfp_mask)
  	return !data_race(folio_swap_flags(folio) & SWP_FS_OPS);
  }
  
@@ -876,7 +867,7 @@ index c044370652f1..ceac91b01370 100644
  /*
   * shrink_folio_list() returns the number of reclaimed pages
   */
-@@ -1158,7 +1171,7 @@ static unsigned int shrink_folio_list(struct list_head *folio_list,
+@@ -1173,7 +1186,7 @@ static unsigned int shrink_folio_list(struct list_head *folio_list,
  			goto activate_locked;
  
  		if (!sc->may_unmap && folio_mapped(folio))
@@ -885,10 +876,10 @@ index c044370652f1..ceac91b01370 100644
  
  		/*
  		 * The number of dirty pages determines if a node is marked
-@@ -1788,8 +1801,15 @@ static unsigned long isolate_lru_folios(unsigned long nr_to_scan,
- 
- 		if (!folio_test_lru(folio))
+@@ -1830,8 +1843,15 @@ static unsigned long isolate_lru_folios(unsigned long nr_to_scan,
+ 		if (bypass)
  			goto move;
+ 
 +	#ifdef CONFIG_AMLOGIC_SWAPD_OPT
 +		if (is_active_lru(lru) && !sc->may_unmap && folio_mapped(folio))
 +			goto move;
@@ -901,7 +892,7 @@ index c044370652f1..ceac91b01370 100644
  
  		/*
  		 * Be careful not to clear the lru flag until after we're
-@@ -1912,8 +1932,10 @@ static bool too_many_isolated(struct pglist_data *pgdat, int file,
+@@ -1954,8 +1974,10 @@ static bool too_many_isolated(struct pglist_data *pgdat, int file,
  	 * won't get blocked by normal direct-reclaimers, forming a circular
  	 * deadlock.
  	 */
@@ -912,7 +903,7 @@ index c044370652f1..ceac91b01370 100644
  
  	too_many = isolated > inactive;
  
-@@ -2187,9 +2209,11 @@ static void shrink_active_list(unsigned long nr_to_scan,
+@@ -2229,9 +2251,11 @@ static void shrink_active_list(unsigned long nr_to_scan,
  			}
  		}
  
@@ -924,7 +915,7 @@ index c044370652f1..ceac91b01370 100644
  #endif
  		if (unlikely(should_protect)) {
  			nr_rotated += folio_nr_pages(folio);
-@@ -6024,9 +6048,11 @@ static inline bool should_continue_reclaim(struct pglist_data *pgdat,
+@@ -6077,9 +6101,11 @@ static inline bool should_continue_reclaim(struct pglist_data *pgdat,
  			return false;
  	}
  
@@ -936,7 +927,7 @@ index c044370652f1..ceac91b01370 100644
  #endif
  	if (!continue_reclaim)
  		return false;
-@@ -6120,10 +6146,12 @@ static void shrink_node_memcgs(pg_data_t *pgdat, struct scan_control *sc)
+@@ -6173,10 +6199,12 @@ static void shrink_node_memcgs(pg_data_t *pgdat, struct scan_control *sc)
  				   sc->nr_scanned - scanned,
  				   sc->nr_reclaimed - reclaimed);
  
@@ -949,7 +940,7 @@ index c044370652f1..ceac91b01370 100644
  #endif
  
  		/* If partial walks are allowed, bail once goal is reached */
-@@ -6436,10 +6464,12 @@ static void modify_scan_control(struct scan_control *sc)
+@@ -6489,10 +6517,12 @@ static void modify_scan_control(struct scan_control *sc)
  {
  	bool file_is_tiny = false, may_writepage = true;
  

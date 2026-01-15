@@ -1,7 +1,7 @@
-From 50aee393c7ec9dcf8920595459785cc3b7f1c3c8 Mon Sep 17 00:00:00 2001
+From ed247e7e357f5d77b03d9e9de5a5a664d78e6c64 Mon Sep 17 00:00:00 2001
 From: "wenlong.zhu" <wenlong.zhu@amlogic.com>
 Date: Fri, 24 Mar 2023 15:08:35 +0800
-Subject: [PATCH 24/32] UAC: uac related files update to kernel 5.15 [1/1]
+Subject: [PATCH] UAC: uac related files update to kernel 5.15 [1/1]
 
 PD#SWPL-114902
 
@@ -24,10 +24,10 @@ Signed-off-by: wenlong.zhu <wenlong.zhu@amlogic.com>
  4 files changed, 209 insertions(+)
 
 diff --git a/drivers/usb/gadget/function/f_hid.c b/drivers/usb/gadget/function/f_hid.c
-index 740311c4fa24..c54139a78b64 100644
+index 34d49d96def6..7d29ce4d2d51 100644
 --- a/drivers/usb/gadget/function/f_hid.c
 +++ b/drivers/usb/gadget/function/f_hid.c
-@@ -109,6 +109,10 @@ struct f_hidg {
+@@ -110,6 +110,10 @@ struct f_hidg {
  	struct usb_ep			*out_ep;
  };
  
@@ -38,7 +38,7 @@ index 740311c4fa24..c54139a78b64 100644
  static inline struct f_hidg *func_to_hidg(struct usb_function *f)
  {
  	return container_of(f, struct f_hidg, func);
-@@ -718,6 +722,97 @@ static long f_hidg_ioctl(struct file *file, unsigned int code, unsigned long arg
+@@ -724,6 +728,97 @@ static long f_hidg_ioctl(struct file *file, unsigned int code, unsigned long arg
  	}
  }
  
@@ -136,18 +136,18 @@ index 740311c4fa24..c54139a78b64 100644
  static __poll_t f_hidg_poll(struct file *file, poll_table *wait)
  {
  	struct f_hidg	*hidg  = file->private_data;
-@@ -1269,6 +1364,10 @@ static int hidg_bind(struct usb_configuration *c, struct usb_function *f)
+@@ -1284,6 +1379,10 @@ static int hidg_bind(struct usb_configuration *c, struct usb_function *f)
  	if (status)
- 		goto fail_free_descs;
+ 		goto fail_free_all;
  
 +#ifdef CONFIG_AMLOGIC_BRIDGE_HID
 +	hid_h = hidg;
 +#endif
 +
  	return 0;
- fail_free_descs:
+ fail_free_all:
  	destroy_workqueue(hidg->workqueue);
-@@ -1514,6 +1613,10 @@ static void hidg_unbind(struct usb_configuration *c, struct usb_function *f)
+@@ -1530,6 +1629,10 @@ static void hidg_unbind(struct usb_configuration *c, struct usb_function *f)
  {
  	struct f_hidg *hidg = func_to_hidg(f);
  
@@ -159,7 +159,7 @@ index 740311c4fa24..c54139a78b64 100644
  	destroy_workqueue(hidg->workqueue);
  	usb_free_all_descriptors(f);
 diff --git a/drivers/usb/gadget/function/f_uac2.c b/drivers/usb/gadget/function/f_uac2.c
-index 1cdda44455b3..3fd759f9f863 100644
+index 9b324821c93b..b32c5f0f59a4 100644
 --- a/drivers/usb/gadget/function/f_uac2.c
 +++ b/drivers/usb/gadget/function/f_uac2.c
 @@ -13,6 +13,9 @@
@@ -366,5 +366,5 @@ index d56bfedeb079..b0cab6e44246 100644
 +#endif
  #endif /* __LINUX_USB_G_HID_H */
 -- 
-2.42.0
+2.50.1
 

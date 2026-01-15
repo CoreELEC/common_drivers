@@ -84,6 +84,7 @@ def define_common_amlogic(
         kconfig_ext = kconfig_ext,
         dtstree = "//common_drivers:dtstree",
         kcflags = [
+            "-Wno-unused-command-line-argument",
             "-I${ROOT_DIR}/common_drivers/include",
             "-I${ROOT_DIR}/common_drivers/include/uapi",
         ],

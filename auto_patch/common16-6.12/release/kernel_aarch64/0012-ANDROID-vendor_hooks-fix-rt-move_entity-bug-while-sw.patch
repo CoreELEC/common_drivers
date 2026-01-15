@@ -1,0 +1,83 @@
+From 9ebcf14bc67e070c7dd9c36ce85c436d072277b4 Mon Sep 17 00:00:00 2001
+From: Hu Xile <huxile@oppo.com>
+Date: Tue, 2 Dec 2025 16:23:23 +0800
+Subject: [PATCH 12/15] ANDROID: vendor_hooks: fix rt !move_entity bug while
+ switching to sched_ext
+
+Vendor hooks added:
+android_vh_scx_restore_flags
+
+This extension, based on the ext framework, switches the task scheduling class from rt
+to ext. However, during the switch, it was found that when a task changes its schedule
+class (rt->ext and ext->rt) via rt_mutex or sched_setscheduler, canceling the DEQUEUE_MOVE
+flag if the priority hasn't changed can cause residual task rt schedule information, leading
+to a dump.Adding android_vh_scx_restore_flags restores the DEQUEUE_MOVE flag during the switch
+if it's a switch between ext and rt.
+
+Bug: 465306289
+Bug: 470903229
+Change-Id: I06d1e5ace0c60bc89407bfa02301e47e14c483de
+Signed-off-by: Hu Xile <huxile@oppo.com>
+(cherry picked from commit eb41669e1f96490b75036ee8bd3f28a9042d9cf3)
+---
+ include/trace/hooks/sched.h | 5 +++++
+ kernel/sched/core.c         | 1 +
+ kernel/sched/syscalls.c     | 1 +
+ kernel/sched/vendor_hooks.c | 1 +
+ 4 files changed, 8 insertions(+)
+
+diff --git a/include/trace/hooks/sched.h b/include/trace/hooks/sched.h
+index 6d3cc4ae4ca1..fbfec3f5ae43 100644
+--- a/include/trace/hooks/sched.h
++++ b/include/trace/hooks/sched.h
+@@ -412,6 +412,11 @@ DECLARE_RESTRICTED_HOOK(android_rvh_set_task_comm,
+ DECLARE_HOOK(android_vh_move_entity,
+ 	TP_PROTO(int *move, unsigned int flags),
+ 	TP_ARGS(move, flags));
++DECLARE_HOOK(android_vh_scx_restore_flags,
++	TP_PROTO(const struct sched_class *prev_class,
++		 const struct sched_class *next_class,
++		 int *flags),
++	TP_ARGS(prev_class, next_class, flags));
+ DECLARE_HOOK(android_vh_task_should_scx,
+ 	TP_PROTO(int *should_scx, int policy, int prio),
+ 	TP_ARGS(should_scx, policy, prio));
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 0521837ac14c..ec3a41a53240 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -8317,6 +8317,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
+ 	if (prev_class != next_class && p->se.sched_delayed)
+ 		dequeue_task(rq, p, DEQUEUE_SLEEP | DEQUEUE_DELAYED | DEQUEUE_NOCLOCK);
+ 
++	trace_android_vh_scx_restore_flags(prev_class, next_class, &queue_flag);
+ 	queued = task_on_rq_queued(p);
+ 	running = task_current_donor(rq, p);
+ 	if (queued)
+diff --git a/kernel/sched/syscalls.c b/kernel/sched/syscalls.c
+index ab70d110b38e..eafec119df31 100644
+--- a/kernel/sched/syscalls.c
++++ b/kernel/sched/syscalls.c
+@@ -737,6 +737,7 @@ int __sched_setscheduler(struct task_struct *p,
+ 	if (prev_class != next_class && p->se.sched_delayed)
+ 		dequeue_task(rq, p, DEQUEUE_SLEEP | DEQUEUE_DELAYED | DEQUEUE_NOCLOCK);
+ 
++	trace_android_vh_scx_restore_flags(prev_class, next_class, &queue_flags);
+ 	queued = task_on_rq_queued(p);
+ 	running = task_current_donor(rq, p);
+ 	if (queued)
+diff --git a/kernel/sched/vendor_hooks.c b/kernel/sched/vendor_hooks.c
+index 13e09111d821..d791ecf09c75 100644
+--- a/kernel/sched/vendor_hooks.c
++++ b/kernel/sched/vendor_hooks.c
+@@ -106,6 +106,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_set_cpus_allowed_ptr);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_update_blocked_fair);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_set_task_comm);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_move_entity);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_scx_restore_flags);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_task_should_scx);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_scx_ops_consider_migration);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_scx_fix_prev_slice);
+-- 
+2.50.1
+

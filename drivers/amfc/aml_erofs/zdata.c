@@ -1811,7 +1811,7 @@ static void z_erofs_readahead(struct readahead_control *rac)
 
 	z_erofs_pcluster_readmore(&f, rac, true);
 	nr_folios = readahead_count(rac);
-	trace_erofs_readpages(inode, readahead_index(rac), nr_folios, false);
+	trace_erofs_readahead(inode, readahead_index(rac), nr_folios, false);
 
 	while ((folio = readahead_folio(rac))) {
 		folio->private = head;

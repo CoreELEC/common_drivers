@@ -1,0 +1,113 @@
+From a2bc6533e6cc289203eaf3d879c1b485dce2cbef Mon Sep 17 00:00:00 2001
+From: renchenghan <renchenghan@vivo.corp-partner.google.com>
+Date: Fri, 22 Aug 2025 16:23:51 +0800
+Subject: [PATCH 09/15] ANDROID: GKI: Update symbol list for vivo
+
+update vivo symbol list for adding hooks for qos
+
+1 Added functions:
+  'function int __traceiter_android_vh_fas_gpu_qos_update_tracer(void*,
+struct freq_qos_request *req, s32 *value)'
+
+1 Added variables:
+  'tracepoint __tracepoint_android_vh_fas_gpu_qos_update_tracer'i
+
+Bug: 469940255
+Bug: 440488476
+Signed-off-by: renchenghan <renchenghan@vivo.corp-partner.google.com>
+Change-Id: I42e1ef1f9f401e2b8e5d95ebdbfaf45d22951e97
+(cherry picked from commit debde51af0100be1930f060255ca5f6defd8a82e)
+---
+ gki/aarch64/abi.stg      | 27 +++++++++++++++++++++++++++
+ gki/aarch64/symbols/vivo |  2 ++
+ 2 files changed, 29 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index da20c51a5207..04cb46d47ffa 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -409998,6 +409998,13 @@ function {
+   parameter_id: 0x18bd6530
+   parameter_id: 0x2b16c036
+ }
++function {
++  id: 0x9b047f13
++  return_type_id: 0x6720d32f
++  parameter_id: 0x18bd6530
++  parameter_id: 0x29082583
++  parameter_id: 0x3f979b84
++}
+ function {
+   id: 0x9b04b788
+   return_type_id: 0x6720d32f
+@@ -436559,6 +436566,15 @@ elf_symbol {
+   type_id: 0x9b2f11e2
+   full_name: "__traceiter_android_vh_f2fs_set_bio_flag"
+ }
++elf_symbol {
++  id: 0x150ea575
++  name: "__traceiter_android_vh_fas_gpu_qos_update_tracer"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x4ee3ab1a
++  type_id: 0x9b047f13
++  full_name: "__traceiter_android_vh_fas_gpu_qos_update_tracer"
++}
+ elf_symbol {
+   id: 0x6091a763
+   name: "__traceiter_android_vh_filemap_add_folio"
+@@ -443795,6 +443811,15 @@ elf_symbol {
+   type_id: 0x18ccbd2c
+   full_name: "__tracepoint_android_vh_f2fs_set_bio_flag"
+ }
++elf_symbol {
++  id: 0x2b59c1a7
++  name: "__tracepoint_android_vh_fas_gpu_qos_update_tracer"
++  is_defined: true
++  symbol_type: OBJECT
++  crc: 0x7c5aa8a7
++  type_id: 0x18ccbd2c
++  full_name: "__tracepoint_android_vh_fas_gpu_qos_update_tracer"
++}
+ elf_symbol {
+   id: 0x0c03d499
+   name: "__tracepoint_android_vh_filemap_add_folio"
+@@ -518226,6 +518251,7 @@ interface {
+   symbol_id: 0x377d134d
+   symbol_id: 0x905272e6
+   symbol_id: 0x092000c7
++  symbol_id: 0x150ea575
+   symbol_id: 0x6091a763
+   symbol_id: 0x19fc04e0
+   symbol_id: 0x980c4b2d
+@@ -519030,6 +519056,7 @@ interface {
+   symbol_id: 0x26d15e93
+   symbol_id: 0xbf5d713c
+   symbol_id: 0x160a4a5d
++  symbol_id: 0x2b59c1a7
+   symbol_id: 0x0c03d499
+   symbol_id: 0x197d6be2
+   symbol_id: 0xf045a23f
+diff --git a/gki/aarch64/symbols/vivo b/gki/aarch64/symbols/vivo
+index e9998d8c4606..14f17902b92d 100644
+--- a/gki/aarch64/symbols/vivo
++++ b/gki/aarch64/symbols/vivo
+@@ -139,6 +139,7 @@
+   __traceiter_android_vh_dup_task_struct
+   __traceiter_android_vh_f2fs_file_open
+   __traceiter_android_vh_f2fs_ra_op_flags
++  __traceiter_android_vh_fas_gpu_qos_update_tracer
+   __traceiter_android_vh_filemap_update_page
+   __traceiter_android_vh_free_task
+   __traceiter_android_vh_fuse_request_end
+@@ -272,6 +273,7 @@
+   __tracepoint_android_vh_dup_task_struct
+   __tracepoint_android_vh_f2fs_file_open
+   __tracepoint_android_vh_f2fs_ra_op_flags
++  __tracepoint_android_vh_fas_gpu_qos_update_tracer
+   __tracepoint_android_vh_filemap_update_page
+   __tracepoint_android_vh_free_task
+   __tracepoint_android_vh_fuse_request_end
+-- 
+2.50.1
+

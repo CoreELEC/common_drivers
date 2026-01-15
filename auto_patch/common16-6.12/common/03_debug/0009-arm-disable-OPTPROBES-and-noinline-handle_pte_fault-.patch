@@ -1,4 +1,4 @@
-From ce326e26e9deacc38818d64ad0866fcf9c79b92d Mon Sep 17 00:00:00 2001
+From 141bb90c13e42fce82bed1e1aefc7f420affd602 Mon Sep 17 00:00:00 2001
 From: Hanjie Lin <hanjie.lin@amlogic.com>
 Date: Thu, 25 May 2023 16:59:40 +0800
 Subject: [PATCH] arm: disable OPTPROBES and noinline handle_pte_fault [1/1]
@@ -23,11 +23,11 @@ Signed-off-by: Hanjie Lin <hanjie.lin@amlogic.com>
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index d0040fb67c36..6e29e0845d03 100644
+index d5bf16462bdb..1d66f014db05 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -121,7 +121,7 @@ config ARM
- 	select HAVE_LD_DEAD_CODE_DATA_ELIMINATION if (LD_VERSION >= 23600 || LD_CAN_USE_KEEP_IN_OVERLAY)
+ 	select HAVE_LD_DEAD_CODE_DATA_ELIMINATION if (LD_VERSION >= 23600 || LD_IS_LLD) && LD_CAN_USE_KEEP_IN_OVERLAY
  	select HAVE_MOD_ARCH_SPECIFIC
  	select HAVE_NMI
 -	select HAVE_OPTPROBES if !THUMB2_KERNEL
@@ -36,10 +36,10 @@ index d0040fb67c36..6e29e0845d03 100644
  	select HAVE_PCI if MMU
  	select HAVE_PERF_EVENTS
 diff --git a/mm/memory.c b/mm/memory.c
-index c48371a4ef02..8bfae79ae64c 100644
+index 8db0f2a1a4a7..1fc74374d805 100644
 --- a/mm/memory.c
 +++ b/mm/memory.c
-@@ -5774,7 +5774,11 @@ static vm_fault_t wp_huge_pud(struct vm_fault *vmf, pud_t orig_pud)
+@@ -5787,7 +5787,11 @@ static vm_fault_t wp_huge_pud(struct vm_fault *vmf, pud_t orig_pud)
   * The mmap_lock may have been released depending on flags and our return value.
   * See filemap_fault() and __folio_lock_or_retry().
   */
@@ -52,5 +52,5 @@ index c48371a4ef02..8bfae79ae64c 100644
  	pte_t entry;
  
 -- 
-2.42.0
+2.50.1
 
