@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 /*
- * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
+ * Copyright (c) 2026 Amlogic, Inc. All rights reserved.
  */
 
 #ifndef _DT_BINDINGS_MESON_C5_GPIO_H
