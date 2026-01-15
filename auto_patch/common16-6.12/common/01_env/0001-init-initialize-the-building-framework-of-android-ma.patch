@@ -1,4 +1,4 @@
-From 6e138c59d0b4914bee97395c158dcc8c42d851fa Mon Sep 17 00:00:00 2001
+From c2d7c3f5bf38481df25e30ba8457a3e8b46a228e Mon Sep 17 00:00:00 2001
 From: Wanwei Jiang <wanwei.jiang@amlogic.com>
 Date: Thu, 2 Feb 2023 15:49:10 +0800
 Subject: [PATCH] init: initialize the building framework of android-mainline
@@ -21,11 +21,11 @@ Signed-off-by: Dezhen Wang <dezhen.wang@amlogic.com>
 ---
  .gitignore               |   3 +
  Kbuild                   |   9 +++
- Makefile                 |  42 +++++++++++
+ Makefile                 |  44 ++++++++++-
  scripts/checkpatch.pl    | 158 +++++++++++++++++++--------------------
  scripts/kconfig/Makefile |   9 ++-
  usr/include/Makefile     |   4 +
- 6 files changed, 145 insertions(+), 80 deletions(-)
+ 6 files changed, 146 insertions(+), 81 deletions(-)
 
 diff --git a/.gitignore b/.gitignore
 index a61e4778d011..b0f871c07ad4 100644
@@ -56,7 +56,7 @@ index 464b34a08f51..88e1b7633843 100644
 +endif
 +endif
 diff --git a/Makefile b/Makefile
-index dac24d2162c2..1ae65494bac7 100644
+index dac24d2162c2..650a2730c500 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -428,6 +428,20 @@ ifneq ($(SRCARCH),$(SUBARCH))

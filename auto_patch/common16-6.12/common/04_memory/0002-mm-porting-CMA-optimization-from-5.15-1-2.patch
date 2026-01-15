@@ -1,4 +1,4 @@
-From 7b66a1e0840d751fe5b886765023668f071b5022 Mon Sep 17 00:00:00 2001
+From ebb3dce817f9da1f03f38f2560bc3353568090d6 Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Tue, 15 Oct 2024 15:51:10 +0800
 Subject: [PATCH] mm: porting CMA optimization from 5.15 [1/2]
@@ -106,7 +106,7 @@ index 79c19ffa4401..6d50f6033517 100644
  }
  EXPORT_SYMBOL(bdev_getblk);
 diff --git a/include/linux/gfp_types.h b/include/linux/gfp_types.h
-index f9f8106d3783..c0a81515a657 100644
+index f9f8106d3783..db4369e2ae9c 100644
 --- a/include/linux/gfp_types.h
 +++ b/include/linux/gfp_types.h
 @@ -61,7 +61,12 @@ enum {
