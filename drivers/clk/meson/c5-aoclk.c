@@ -305,47 +305,47 @@ static struct clk_regmap ao_pwm_d = {
 	},
 };
 
-#define MESON_CLK_GATE_AO_CLK(_name, _reg, _bit)		\
-struct clk_regmap _name = {					\
-	.data = &(struct clk_regmap_gate_data) {		\
-		.offset = (_reg),				\
-		.bit_idx = (_bit),				\
-	},							\
-	.hw.init = &(struct clk_init_data) {			\
-		.name = #_name,					\
-		.ops = &clk_regmap_gate_ops,			\
-		.parent_hws = (const struct clk_hw *[]) {	\
-			&ao_sys_clk.hw,				\
-		},						\
-		.num_parents = 1,				\
-		.flags = CLK_IGNORE_UNUSED,			\
-	},							\
+#define MESON_CLK_GATE_AO_SYS_CLK(_name, _reg, _bit)                  \
+struct clk_regmap _name = {                                           \
+	.data = &(struct clk_regmap_gate_data) {                      \
+		.offset = (_reg),                                     \
+		.bit_idx = (_bit),                                    \
+	},                                                            \
+	.hw.init = &(struct clk_init_data) {                          \
+		.name = #_name,                                       \
+		.ops = &clk_regmap_gate_ops,                          \
+		.parent_hws = (const struct clk_hw *[]) {             \
+			&ao_sys_clk.hw,                               \
+		},                                                    \
+		.num_parents = 1,                                     \
+		.flags = CLK_IGNORE_UNUSED,                           \
+	},                                                            \
 }
 
-MESON_CLK_GATE_AO_CLK(ao_sys_rtc_reg, AO_CLKCTRL_RTC_SYS_CLK0, 1);
-MESON_CLK_GATE_AO_CLK(ao_sys_clktree, AO_CLKCTRL_RTC_SYS_CLK0, 2);
-MESON_CLK_GATE_AO_CLK(ao_sys_rst_ctrl, AO_CLKCTRL_RTC_SYS_CLK0, 3);
-MESON_CLK_GATE_AO_CLK(ao_sys_clk_pad, AO_CLKCTRL_RTC_SYS_CLK0, 4);
-MESON_CLK_GATE_AO_CLK(ao_sys_rtc_dig, AO_CLKCTRL_RTC_SYS_CLK0, 5);
-MESON_CLK_GATE_AO_CLK(ao_sys_irq, AO_CLKCTRL_RTC_SYS_CLK0, 6);
-MESON_CLK_GATE_AO_CLK(ao_sys_pwrctrl, AO_CLKCTRL_RTC_SYS_CLK0, 7);
-MESON_CLK_GATE_AO_CLK(ao_sys_pwm_a, AO_CLKCTRL_RTC_SYS_CLK0, 8);
-MESON_CLK_GATE_AO_CLK(ao_sys_pwm_b, AO_CLKCTRL_RTC_SYS_CLK0, 9);
-MESON_CLK_GATE_AO_CLK(ao_sys_i3c, AO_CLKCTRL_RTC_SYS_CLK0, 10);
-MESON_CLK_GATE_AO_CLK(ao_sys_spisg_0, AO_CLKCTRL_RTC_SYS_CLK0, 11);
-MESON_CLK_GATE_AO_CLK(ao_sys_ir_ctrl, AO_CLKCTRL_RTC_SYS_CLK0, 12);
-MESON_CLK_GATE_AO_CLK(ao_sys_i2c_m_a, AO_CLKCTRL_RTC_SYS_CLK0, 15);
-MESON_CLK_GATE_AO_CLK(ao_sys_i2c_m_b, AO_CLKCTRL_RTC_SYS_CLK0, 16);
-MESON_CLK_GATE_AO_CLK(ao_sys_sed, AO_CLKCTRL_RTC_SYS_CLK0, 19);
-MESON_CLK_GATE_AO_CLK(ao_sys_uart_a, AO_CLKCTRL_RTC_SYS_CLK0, 20);
-MESON_CLK_GATE_AO_CLK(ao_sys_uart_b, AO_CLKCTRL_RTC_SYS_CLK0, 21);
-MESON_CLK_GATE_AO_CLK(ao_sys_ao_spi, AO_CLKCTRL_RTC_SYS_CLK0, 25);
-MESON_CLK_GATE_AO_CLK(ao_sys_rtc_secure, AO_CLKCTRL_RTC_SYS_CLK0, 26);
-MESON_CLK_GATE_AO_CLK(ao_sys_isp, AO_CLKCTRL_RTC_SYS_CLK0, 27);
-MESON_CLK_GATE_AO_CLK(ao_sys_aocpu, AO_CLKCTRL_RTC_SYS_CLK0, 28);
-MESON_CLK_GATE_AO_CLK(ao_sys_sram, AO_CLKCTRL_RTC_SYS_CLK0, 29);
-MESON_CLK_GATE_AO_CLK(ao_sys_psram_apb, AO_CLKCTRL_RTC_SYS_CLK0, 30);
-MESON_CLK_GATE_AO_CLK(ao_sys_psram_axi, AO_CLKCTRL_RTC_SYS_CLK0, 31);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_rtc_reg, AO_CLKCTRL_RTC_SYS_CLK0, 1);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_clktree, AO_CLKCTRL_RTC_SYS_CLK0, 2);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_rst_ctrl, AO_CLKCTRL_RTC_SYS_CLK0, 3);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_clk_pad, AO_CLKCTRL_RTC_SYS_CLK0, 4);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_rtc_dig, AO_CLKCTRL_RTC_SYS_CLK0, 5);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_irq, AO_CLKCTRL_RTC_SYS_CLK0, 6);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwrctrl, AO_CLKCTRL_RTC_SYS_CLK0, 7);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwm_a, AO_CLKCTRL_RTC_SYS_CLK0, 8);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwm_b, AO_CLKCTRL_RTC_SYS_CLK0, 9);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i3c, AO_CLKCTRL_RTC_SYS_CLK0, 10);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_spisg_0, AO_CLKCTRL_RTC_SYS_CLK0, 11);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_ir_ctrl, AO_CLKCTRL_RTC_SYS_CLK0, 12);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i2c_m_a, AO_CLKCTRL_RTC_SYS_CLK0, 15);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i2c_m_b, AO_CLKCTRL_RTC_SYS_CLK0, 16);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_sed, AO_CLKCTRL_RTC_SYS_CLK0, 19);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_uart_a, AO_CLKCTRL_RTC_SYS_CLK0, 20);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_uart_b, AO_CLKCTRL_RTC_SYS_CLK0, 21);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_ao_spi, AO_CLKCTRL_RTC_SYS_CLK0, 25);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_rtc_secure, AO_CLKCTRL_RTC_SYS_CLK0, 26);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_isp, AO_CLKCTRL_RTC_SYS_CLK0, 27);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_aocpu, AO_CLKCTRL_RTC_SYS_CLK0, 28);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_sram, AO_CLKCTRL_RTC_SYS_CLK0, 29);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_psram_apb, AO_CLKCTRL_RTC_SYS_CLK0, 30);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_psram_axi, AO_CLKCTRL_RTC_SYS_CLK0, 31);
 
 static struct clk_regmap *const aoclk_regmaps[] = {
 	&ao_oscin_clk,
@@ -444,11 +444,11 @@ static int meson_c5_aoclk_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct regmap *basic_map;
-	struct meson_clk_hw_data *ao_data;
+	struct meson_clk_hw_data *data;
 	int ret, i;
 
-	ao_data = (struct meson_clk_hw_data *)of_device_get_match_data(dev);
-	if (!ao_data)
+	data = (struct meson_clk_hw_data *)of_device_get_match_data(dev);
+	if (!data)
 		return -ENODEV;
 
 	basic_map = meson_clk_regmap_resource(pdev, dev, 0);
@@ -461,21 +461,21 @@ static int meson_c5_aoclk_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(aoclk_regmaps); i++)
 		aoclk_regmaps[i]->map = basic_map;
 
-	for (i = 0; i < ao_data->num; i++) {
+	for (i = 0; i < data->num; i++) {
 		/* array might be sparse */
-		if (!ao_data->hws[i])
+		if (!data->hws[i])
 			continue;
 
-		ret = devm_clk_hw_register(dev, ao_data->hws[i]);
+		ret = devm_clk_hw_register(dev, data->hws[i]);
 		if (ret) {
 			dev_err(dev, "Clock registration failed\n");
 			return ret;
 		}
 
 #ifdef CONFIG_AMLOGIC_CLK_DEBUG
-		ret = devm_clk_hw_register_clkdev(dev, ao_data->hws[i],
+		ret = devm_clk_hw_register_clkdev(dev, data->hws[i],
 						  NULL,
-						  clk_hw_get_name(ao_data->hws[i]));
+						  clk_hw_get_name(data->hws[i]));
 		if (ret < 0) {
 			dev_err(dev, "Failed to clkdev register: %d\n", ret);
 			return ret;
@@ -484,7 +484,7 @@ static int meson_c5_aoclk_probe(struct platform_device *pdev)
 	}
 
 	return devm_of_clk_add_hw_provider(dev, meson_clk_hw_get,
-					   (void *)ao_data);
+					   (void *)data);
 }
 
 static const struct of_device_id clkc_match_table[] = {
@@ -496,10 +496,10 @@ static const struct of_device_id clkc_match_table[] = {
 };
 
 static struct platform_driver c5_aoclk_driver = {
-	.probe		= meson_c5_aoclk_probe,
-	.driver		= {
-		.name	= "c5-aoclkc",
-		.of_match_table = clkc_match_table,
+	.probe			= meson_c5_aoclk_probe,
+	.driver			= {
+		.name		= "c5-aoclkc",
+		.of_match_table	= clkc_match_table,
 	},
 };
 

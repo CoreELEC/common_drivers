@@ -15,9 +15,8 @@
 
 #include "meson-clkc-utils.h"
 #include "clk-pll.h"
-#include "clk-regmap.h"
-#include "clk-cpu-dyndiv.h"
 #include "clk-dualdiv.h"
+#include "clk-regmap.h"
 #include "c5.h"
 #include <dt-bindings/clock/amlogic,c5-clkc.h>
 
@@ -3410,7 +3409,7 @@ MESON_CLK_GATE_SYS_CLK(sys_sd_emmc_B, CLKCTRL_SYS_CLK_EN0_REG0, 25);
 MESON_CLK_GATE_SYS_CLK(sys_sd_emmc_C, CLKCTRL_SYS_CLK_EN0_REG0, 26);
 MESON_CLK_GATE_SYS_CLK(sys_acodec, CLKCTRL_SYS_CLK_EN0_REG0, 28);
 MESON_CLK_GATE_SYS_CLK(sys_mipi_isp, CLKCTRL_SYS_CLK_EN0_REG0, 29);
-MESON_CLK_GATE_SYS_CLK(sys_ir_ctrl, CLKCTRL_SYS_CLK_EN0_REG0, 31);
+MESON_CLK_GATE_SYS_CLK(sys_msr_clk, CLKCTRL_SYS_CLK_EN0_REG0, 30);
 MESON_CLK_GATE_SYS_CLK(sys_audio, CLKCTRL_SYS_CLK_EN0_REG1, 0);
 MESON_CLK_GATE_SYS_CLK(sys_eth_1g_mac, CLKCTRL_SYS_CLK_EN0_REG1, 4);
 MESON_CLK_GATE_SYS_CLK(sys_uart_b, CLKCTRL_SYS_CLK_EN0_REG1, 6);
@@ -3435,12 +3434,11 @@ MESON_CLK_GATE_SYS_CLK(sys_pwm_i, CLKCTRL_SYS_CLK_EN0_REG1, 26);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_j, CLKCTRL_SYS_CLK_EN0_REG1, 27);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_k, CLKCTRL_SYS_CLK_EN0_REG1, 28);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_l, CLKCTRL_SYS_CLK_EN0_REG1, 29);
-MESON_CLK_GATE_SYS_CLK(sys_i2c_m_a, CLKCTRL_SYS_CLK_EN0_REG1, 30);
-MESON_CLK_GATE_SYS_CLK(sys_i2c_m_b, CLKCTRL_SYS_CLK_EN0_REG1, 31);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_m_c, CLKCTRL_SYS_CLK_EN0_REG2, 0);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_m_d, CLKCTRL_SYS_CLK_EN0_REG2, 1);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_m_e, CLKCTRL_SYS_CLK_EN0_REG2, 2);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_m_f, CLKCTRL_SYS_CLK_EN0_REG2, 3);
+MESON_CLK_GATE_SYS_CLK(sys_i2c_m_g, CLKCTRL_SYS_CLK_EN0_REG2, 4);
 MESON_CLK_GATE_SYS_CLK(sys_pio, CLKCTRL_SYS_CLK_EN0_REG2, 5);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_g, CLKCTRL_SYS_CLK_EN0_REG2, 6);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_f, CLKCTRL_SYS_CLK_EN0_REG2, 7);
@@ -3685,7 +3683,7 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_sd_emmc_C,
 	&sys_acodec,
 	&sys_mipi_isp,
-	&sys_ir_ctrl,
+	&sys_msr_clk,
 	&sys_audio,
 	&sys_eth_1g_mac,
 	&sys_uart_b,
@@ -3710,12 +3708,11 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_pwm_j,
 	&sys_pwm_k,
 	&sys_pwm_l,
-	&sys_i2c_m_a,
-	&sys_i2c_m_b,
 	&sys_i2c_m_c,
 	&sys_i2c_m_d,
 	&sys_i2c_m_e,
 	&sys_i2c_m_f,
+	&sys_i2c_m_g,
 	&sys_pio,
 	&sys_pwm_g,
 	&sys_pwm_f,
@@ -3739,7 +3736,7 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_can1,
 	&sys_i3c,
 	&axi_sys_nic,
-	&axi_rama,
+	&axi_rama
 };
 
 static struct clk_hw *c5_hw_clks[] = {
@@ -3948,7 +3945,7 @@ static struct clk_hw *c5_hw_clks[] = {
 	[CLKID_SYS_SD_EMMC_C]         = &sys_sd_emmc_C.hw,
 	[CLKID_SYS_ACODEC]            = &sys_acodec.hw,
 	[CLKID_SYS_MIPI_ISP]          = &sys_mipi_isp.hw,
-	[CLKID_SYS_IR_CTRL]           = &sys_ir_ctrl.hw,
+	[CLKID_SYS_MSR_CLK]           = &sys_msr_clk.hw,
 	[CLKID_SYS_AUDIO]             = &sys_audio.hw,
 	[CLKID_SYS_ETH_1G_MAC]        = &sys_eth_1g_mac.hw,
 	[CLKID_SYS_UART_B]            = &sys_uart_b.hw,
@@ -3973,12 +3970,11 @@ static struct clk_hw *c5_hw_clks[] = {
 	[CLKID_SYS_PWM_J]             = &sys_pwm_j.hw,
 	[CLKID_SYS_PWM_K]             = &sys_pwm_k.hw,
 	[CLKID_SYS_PWM_L]             = &sys_pwm_l.hw,
-	[CLKID_SYS_I2C_M_A]           = &sys_i2c_m_a.hw,
-	[CLKID_SYS_I2C_M_B]           = &sys_i2c_m_b.hw,
 	[CLKID_SYS_I2C_M_C]           = &sys_i2c_m_c.hw,
 	[CLKID_SYS_I2C_M_D]           = &sys_i2c_m_d.hw,
 	[CLKID_SYS_I2C_M_E]           = &sys_i2c_m_e.hw,
 	[CLKID_SYS_I2C_M_F]           = &sys_i2c_m_f.hw,
+	[CLKID_SYS_I2C_M_G]           = &sys_i2c_m_g.hw,
 	[CLKID_SYS_PIO]               = &sys_pio.hw,
 	[CLKID_SYS_PWM_G]             = &sys_pwm_g.hw,
 	[CLKID_SYS_PWM_F]             = &sys_pwm_f.hw,
@@ -4002,7 +3998,7 @@ static struct clk_hw *c5_hw_clks[] = {
 	[CLKID_SYS_CAN1]              = &sys_can1.hw,
 	[CLKID_SYS_I3C]               = &sys_i3c.hw,
 	[CLKID_AXI_SYS_NIC]           = &axi_sys_nic.hw,
-	[CLKID_AXI_RAMA]              = &axi_rama.hw,
+	[CLKID_AXI_RAMA]              = &axi_rama.hw
 };
 
 static const struct meson_clk_hw_data c5_clks = {
