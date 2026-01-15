@@ -466,7 +466,7 @@
 
 /* SD card */
 &sd_emmc_b {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&sdcard_pins>;
 	pinctrl-1 = <&sdcard_clk_gate_pins>;
 	pinctrl-2 = <&sd_1bit_pins>;
@@ -491,10 +491,10 @@
 	//		"ao_to_sd_jtag_pins";
 	bus-width = <4>;
 	cap-sd-highspeed;
-//	sd-uhs-sdr12;
-//	sd-uhs-sdr25;
-//	sd-uhs-sdr50;
-//	sd-uhs-sdr104;
+	//sd-uhs-sdr12;
+	//sd-uhs-sdr25;
+	//sd-uhs-sdr50;
+	//sd-uhs-sdr104;
 	max-frequency = <200000000>;
 	disable-wp;
 
@@ -505,23 +505,23 @@
 };
 
 &sd_emmc_c {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&emmc_pins>, <&emmc_ds_pins>;
 	pinctrl-1 = <&emmc_clk_gate_pins>;
 	pinctrl-names = "default", "clk-gate";
 
 	bus-width = <8>;
 	cap-mmc-highspeed;
-//	mmc-ddr-1_8v;
-	mmc-hs200-1_8v;
-	mmc-hs400-1_8v;
+	//mmc-ddr-1_8v;
+	//mmc-hs200-1_8v;
+	//mmc-hs400-1_8v;
 	max-frequency = <200000000>;
 	non-removable;
 	disable-wp;
 
-//	mmc-pwrseq = <&emmc_pwrseq>;
-//	vmmc-supply = <&vddao_3v3>;
-//	vqmmc-supply = <&vddao_1v8>;
+	//mmc-pwrseq = <&emmc_pwrseq>;
+	//vmmc-supply = <&vddao_3v3>;
+	//vqmmc-supply = <&vddao_1v8>;
 };
 
 &aml_wifi {

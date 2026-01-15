@@ -1168,45 +1168,40 @@
 		sd_emmc_c: mmc@fe08c000 {
 			compatible = "amlogic,meson-v8-mmc";
 			reg = <0x0 0xfe08c000 0x0 0x1000>,
-				<0x0 0xfe000168 0x0 0x4>,
-				<0x0 0xfe004000 0x0 0x4>;
+			      <0x0 0xfe000294 0x0 0x4>,
+			      <0x0 0xfe004000 0x0 0x4>;
 			interrupts = <GIC_SPI 178 IRQ_TYPE_EDGE_RISING>;
 			status = "disabled";
-			//clocks = <&clkc CLKID_SYS_SD_EMMC_C>,
-			//	<&clkc CLKID_SD_EMMC_C_MUX>,
-			//	 <&clkc CLKID_SD_EMMC_C>,
-			//	 <&xtal>,
-			//	 <&clkc CLKID_GP0_PLL>,
-			//	 <&clkc CLKID_GP0_PLL>;
-			//clock-names = "core", "mux0", "mux1",
-			//		"clkin0", "clkin1", "clkin2";
-			no-sdio;
-			no-sd;
+			clocks = <&clkc CLKID_SYS_SD_EMMC_C>,
+				 <&clkc CLKID_SD_EMMC_C_MUX>,
+				 <&clkc CLKID_SD_EMMC_C>,
+				 <&xtal>,
+				 <&clkc CLKID_FCLK_DIV2>,
+				 <&clkc CLKID_FCLK_DIV2>;
+			clock-names = "core", "mux0", "mux1", "clkin0", "clkin1", "clkin2";
 			card_type = <1>;
 			ignore_desc_busy;
 			mmc_debug_flag;
-			src_clk_rate = <1152000000>;
+			//src_clk_rate = <1152000000>;
 			tx_delay = <16>;
-			cap-mmc-crypto;
-			aml-non-cqe-64bit-dma;
-		//	nwr_cnt = <0>;
-		//	resets = <&reset RESET_SD_EMMC_C>;
+			no-sd;
+			no-sdio;
+			//resets = <&reset RESET_SD_EMMC_C>;
 		};
 
 		sd_emmc_b: sd@fe08a000 {
 			compatible = "amlogic,meson-v8-mmc";
 			reg = <0x0 0xfe08a000 0x0 0x1000>,
-				<0x0 0xfe00016c 0x0 0x4>,
-				<0x0 0xfe004024 0x0 0x4>;
+			      <0x0 0xfe000290 0x0 0x4>,
+			      <0x0 0xfe004024 0x0 0x4>;
 			interrupts = <GIC_SPI 177 IRQ_TYPE_EDGE_RISING>;
 			status = "disabled";
-			//clocks = <&clkc CLKID_SYS_SD_EMMC_B>,
-			//	<&clkc CLKID_SD_EMMC_B_MUX>,
-			//	 <&clkc CLKID_SD_EMMC_B>,
-			//	 <&xtal>,
-			//	 <&clkc CLKID_FCLK_DIV2>;
-			//clock-names = "core", "mux0", "mux1",
-			//		"clkin0", "clkin1";
+			clocks = <&clkc CLKID_SYS_SD_EMMC_B>,
+				 <&clkc CLKID_SD_EMMC_B_MUX>,
+				 <&clkc CLKID_SD_EMMC_B>,
+				 <&xtal>,
+				 <&clkc CLKID_FCLK_DIV2>;
+			clock-names = "core", "mux0", "mux1", "clkin0", "clkin1";
 			card_type = <5>;
 			mmc_debug_flag;
 			no-mmc;
@@ -1217,17 +1212,17 @@
 		sd_emmc_a: sdio@fe088000 {
 			compatible = "amlogic,meson-v8-mmc";
 			reg = <0x0 0xfe088000 0x0 0x1000>,
-				<0x0 0xfe00016c 0x0 0x4>,
-				<0x0 0xfe00400c 0x0 0x4>;
+			      <0x0 0xfe000290 0x0 0x4>,
+			      <0x0 0xfe00400c 0x0 0x4>;
 			interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
 			status = "disabled";
-			//clocks = <&clkc CLKID_SYS_SD_EMMC_A>,
-			//	<&clkc CLKID_SD_EMMC_A_MUX>,
-			//	 <&clkc CLKID_SD_EMMC_A>,
-			//	 <&xtal>,
-			//	 <&clkc CLKID_FCLK_DIV2>;
-			//clock-names = "core", "mux0", "mux1",
-			//		"clkin0", "clkin1";
+			clocks = <&clkc CLKID_SYS_SD_EMMC_A>,
+				 <&clkc CLKID_SD_EMMC_A_MUX>,
+				 <&clkc CLKID_SD_EMMC_A>,
+				 <&xtal>,
+				 <&clkc CLKID_FCLK_DIV2>,
+				 <&clkc CLKID_FCLK_DIV2>;
+			clock-names = "core", "mux0", "mux1", "clkin0", "clkin1", "clkin2";
 			card_type = <3>;
 			mmc_debug_flag;
 			cap-sdio-irq;
@@ -2930,14 +2925,14 @@
 
 	emmc_pins: emmc_pins {
 		mux-0 {
-			groups = "emmc_nand_d0",
-				 "emmc_nand_d1",
-				 "emmc_nand_d2",
-				 "emmc_nand_d3",
-				 "emmc_nand_d4",
-				 "emmc_nand_d5",
-				 "emmc_nand_d6",
-				 "emmc_nand_d7",
+			groups = "emmc_d0",
+				 "emmc_d1",
+				 "emmc_d2",
+				 "emmc_d3",
+				 "emmc_d4",
+				 "emmc_d5",
+				 "emmc_d6",
+				 "emmc_d7",
 				 "emmc_cmd";
 			function = "emmc";
 			bias-pull-up;
