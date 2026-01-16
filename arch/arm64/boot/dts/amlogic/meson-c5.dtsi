@@ -598,7 +598,7 @@
 			};
 
 			gpio_intc: interrupt-controller@4080 {
-				compatible = "amlogic,meson-s6-gpio-intc",
+				compatible = "amlogic,meson-c5-gpio-intc",
 					     "amlogic,meson-gpio-intc";
 				reg = <0x0 0x4080 0x0 0x20>;
 				interrupt-controller;
@@ -875,6 +875,7 @@
 				#address-cells = <2>;
 				#size-cells = <2>;
 				ranges;
+				amlogic,ao-interrupt-controller;
 
 				gpio_ao: ao-bank@4000 {
 					reg = <0x0 0x4000 0x0 0x0020>,
@@ -884,6 +885,18 @@
 					#gpio-cells = <2>;
 					gpio-ranges = <&ao_pinctrl 0 0 48>;
 				};
+			};
+
+			gpio_ao_intc: interrupt-controller@4040 {
+				compatible = "amlogic,meson-c5-gpio-ao-intc",
+					     "amlogic,meson-gpio-ao-intc";
+				reg = <0x0 0x4040 0x0 0x30>;
+				interrupt-controller;
+				#interrupt-cells = <2>;
+				amlogic,channel-interrupts =
+					<384 385 386 387 388 389 390 391 392
+					 393 394 395 396 397 398 399 400 401
+					 402 403 >;
 			};
 		};
 
