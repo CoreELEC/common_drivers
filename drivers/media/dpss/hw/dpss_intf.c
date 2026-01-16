@@ -316,7 +316,7 @@ void cfg_vfcd_rdmif_2ch(enum dpss_mif_e mif_index, struct PRM_INTF_TYPE *prm_mif
 		if (prm_mif->src_fmt == YUV444) {
 			if (src_bit == 10)
 				stride_y =
-				(h_buf_size * (3 * src_bit + 2) + 511) / 512 * 4;
+				(frm_hsize * (3 * src_bit + 2) + 511) / 512 * 4;
 			else
 				stride_y =
 				(h_buf_size * src_bit * 3 + 511) / 512 * 4;
