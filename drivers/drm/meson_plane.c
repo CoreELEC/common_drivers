@@ -291,7 +291,7 @@ int am_meson_dmabuf_export_sync_file_ioctl(struct drm_device *dev,
 	struct dma_buf *dmabuf = NULL;
 	struct sync_file *sync_file;
 	enum dma_resv_usage usage;
-	int fd, ret;
+	int fd, ret = -1;
 
 	MESON_DRM_FENCE("dmabuf-%px fence-%px", dmabuf, fence);
 	if (arg->flags & ~DMA_BUF_SYNC_RW)
@@ -303,12 +303,10 @@ int am_meson_dmabuf_export_sync_file_ioctl(struct drm_device *dev,
 	fd = get_unused_fd_flags(O_CLOEXEC);
 	if (fd < 0)
 		return fd;
-	if (arg->dmabuf_fd <= 0)
-		return -EINVAL;
 
 	dmabuf = dma_buf_get(arg->dmabuf_fd);
 	if (IS_ERR_OR_NULL(dmabuf))
-		return -EINVAL;
+		goto err_put_fd;
 
 	if (arg->flags & DMA_BUF_SYNC_WRITE) {
 		//fence = dma_resv_get_singleton_unlocked(dmabuf->resv);
@@ -344,6 +342,7 @@ int am_meson_dmabuf_export_sync_file_ioctl(struct drm_device *dev,
 
 err_put_fd:
 	put_unused_fd(fd);
+	MESON_DRM_FENCE("get fence fd failed! ret=%d\n", ret);
 	return ret;
 }
 #endif
