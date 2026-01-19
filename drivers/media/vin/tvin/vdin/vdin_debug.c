@@ -1388,7 +1388,12 @@ static void vdin_dump_more_mem(char *path, struct vdin_dev_s *devp,
 			pos = mem_size * k;
 			pre_put_frames = devp->put_frame_cnt;
 			rec_dum_frame[k] = pre_put_frames;
-			vf_phy_addr = devp->vfp->last_last_vfe->vf.canvas0_config[0].phy_addr;
+			if (devp->baddr_en)
+				vf_phy_addr =
+					devp->vfp->last_last_vfe->vf.canvas0_config[0].phy_addr;
+			else
+				vf_phy_addr =
+				canvas_get_addr(devp->vfp->last_last_vfe->vf.canvas0Addr & 0xff);
 			if ((devp->cma_config_flag & 0xfff) == 0x1)
 				buf = codec_mm_phys_to_virt(vf_phy_addr);
 			else if ((devp->cma_config_flag & 0xfff) == 0x101)
@@ -1417,7 +1422,11 @@ static void vdin_dump_more_mem(char *path, struct vdin_dev_s *devp,
 			pos = mem_size * k;
 			pre_put_frames = devp->put_frame_cnt;
 			rec_dum_frame[k] = pre_put_frames;
-			phys = devp->vfp->last_last_vfe->vf.canvas0_config[0].phy_addr;
+			if (devp->baddr_en)
+				phys = devp->vfp->last_last_vfe->vf.canvas0_config[0].phy_addr;
+			else
+				phys =
+				canvas_get_addr(devp->vfp->last_last_vfe->vf.canvas0Addr & 0xff);
 			for (i = 0; i < count; i++) {
 				high_addr = phys + i * devp->canvas_w;
 				buf = vdin_vmap(high_addr, devp->canvas_active_w);
