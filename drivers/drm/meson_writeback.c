@@ -64,14 +64,9 @@ static int meson_writeback_connector_atomic_check(struct drm_connector *conn,
 		return 0;
 
 	crtc_state = drm_atomic_get_new_crtc_state(state, conn_state->crtc);
-	fb = conn_state->writeback_job->fb;
-
-	if (fb->width != crtc_state->mode.hdisplay ||
-	    fb->height != crtc_state->mode.vdisplay) {
-		DRM_ERROR("Invalid framebuffer size %ux%u\n",
-			      fb->width, fb->height);
+	if (!crtc_state)
 		return -EINVAL;
-	}
+	fb = conn_state->writeback_job->fb;
 
 	for (i = 0; i < ARRAY_SIZE(writeback_fmts); i++) {
 		if (fb->format->format == writeback_fmts[i])
@@ -93,7 +88,7 @@ u32 meson_writeback_format_covert2drm(enum tvin_pixel_format_e pixel_value)
 
 	switch (pixel_value) {
 	case TVIN_PIXEL_RGB444:
-		writeback_fmt = DRM_FORMAT_RGB888;
+		writeback_fmt = DRM_FORMAT_BGR888;
 		break;
 	case TVIN_PIXEL_YUV422:
 		writeback_fmt = DRM_FORMAT_YUV422;
@@ -107,6 +102,9 @@ u32 meson_writeback_format_covert2drm(enum tvin_pixel_format_e pixel_value)
 	case TVIN_PIXEL_NV21:
 		writeback_fmt = DRM_FORMAT_NV21;
 		break;
+	case TVIN_PIXEL_RGBA8888:
+		writeback_fmt = DRM_FORMAT_ABGR8888;
+		break;
 	default:
 		break;
 	}
@@ -118,7 +116,7 @@ enum tvin_pixel_format_e meson_writeback_format_covert2vdin(u32 writeback_fmt)
 	enum tvin_pixel_format_e pixel_value = TVIN_PIXEL_RGB444;
 
 	switch (writeback_fmt) {
-	case DRM_FORMAT_RGB888:
+	case DRM_FORMAT_BGR888:
 		pixel_value = TVIN_PIXEL_RGB444;
 		break;
 	case DRM_FORMAT_YUV422:
@@ -133,6 +131,9 @@ enum tvin_pixel_format_e meson_writeback_format_covert2vdin(u32 writeback_fmt)
 	case DRM_FORMAT_NV21:
 		pixel_value = TVIN_PIXEL_NV21;
 		break;
+	case DRM_FORMAT_ABGR8888:
+		pixel_value = TVIN_PIXEL_RGBA8888;
+		break;
 	default:
 		break;
 	}
@@ -140,32 +141,44 @@ enum tvin_pixel_format_e meson_writeback_format_covert2vdin(u32 writeback_fmt)
 	return pixel_value;
 }
 
-int meson_writeback_capture_picture(struct drm_framebuffer *fb, u32 port)
+int meson_writeback_capture_picture(struct drm_framebuffer *fb, u32 port,
+	u32 hdisplay, u32 vdisplay)
+
 {
 	struct am_meson_fb *meson_fb;
-	struct dma_buf *dmabuf;
+	struct dma_buf *dmabuf = NULL;
 	struct vdin_parm_s vdin_pram;
 	u32 format;
 	int ret = 0;
 
 	meson_fb = container_of(fb, struct am_meson_fb, base);
-	if (!meson_fb)
+	if (!meson_fb || !meson_fb->bufp[0])
 		return -EINVAL;
 
-	vdin_pram.h_active = fb->width;
-	vdin_pram.v_active = fb->height;
+	vdin_pram.h_active = hdisplay;
+	vdin_pram.v_active = vdisplay;
 	vdin_pram.dest_h_active = fb->width;
 	vdin_pram.dest_v_active = fb->height;
 	vdin_pram.scan_mode = TVIN_SCAN_MODE_PROGRESSIVE;
 	vdin_pram.frame_rate = 60;
-	vdin_pram.fmt = TVIN_SIG_FMT_NULL;
+	vdin_pram.reserved |= PARAM_STATE_HISTGRAM;
+	vdin_pram.fmt = TVIN_SIG_FMT_MAX;
 	format = fb->format->format;
 	vdin_pram.port = (enum tvin_port_e)port;
 	vdin_pram.cfmt =
 	(enum tvin_color_fmt_e)meson_writeback_format_covert2vdin(format);
 	vdin_pram.dfmt =
 	(enum tvin_color_fmt_e)meson_writeback_format_covert2vdin(format);
+
 	dmabuf = meson_fb->bufp[0]->dmabuf;
+	if (!dmabuf) {
+		dmabuf = meson_fb->bufp[0]->base.dma_buf;
+		if (!dmabuf) {
+			DRM_INFO("dmabuf is NULL!\n");
+			return -EINVAL;
+		}
+	}
+
 	get_dma_buf(dmabuf);
 
 	DRM_DEBUG("dmabuf-%px, h&v(%d-%d), cfmt-%d, port-%d\n",
@@ -189,7 +202,8 @@ static void meson_writeback_capture_work(struct work_struct *work)
 			struct am_drm_writeback, writeback_work);
 
 	meson_writeback_capture_picture(drm_writeback->fb,
-		drm_writeback->capture_port);
+		drm_writeback->capture_port,
+		drm_writeback->hdisplay, drm_writeback->vdisplay);
 
 	drm_writeback_signal_completion(&drm_writeback->wb_connector, 0);
 	DRM_DEBUG("%d capture done!\n", __LINE__);
@@ -201,18 +215,25 @@ static void meson_writeback_connector_atomic_commit(struct drm_connector *conn,
 	struct drm_framebuffer *fb;
 	struct am_drm_writeback *drm_writeback;
 	struct drm_connector_state *conn_state;
+	struct drm_crtc_state *crtc_state;
 	int i;
 
 	DRM_DEBUG("am_drm_writeback: %d\n", __LINE__);
 
-	conn_state = drm_atomic_get_old_connector_state(old_atomic_state, conn);
+	conn_state = drm_atomic_get_new_connector_state(old_atomic_state, conn);
 	if (WARN_ON(!conn_state))
 		return;
 
 	if (WARN_ON(!conn_state->writeback_job))
 		return;
 
+	crtc_state = drm_atomic_get_new_crtc_state(old_atomic_state, conn_state->crtc);
+	if (!crtc_state)
+		return;
+
 	drm_writeback = connector_to_am_writeback(conn);
+	drm_writeback->hdisplay = crtc_state->mode.hdisplay;
+	drm_writeback->vdisplay = crtc_state->mode.vdisplay;
 	fb = conn_state->writeback_job->fb;
 	drm_writeback->fb = fb;
 
@@ -397,6 +418,7 @@ int meson_writeback_get_format(u32 *writeback_fmts)
 	pixel_format.pixel_value[2] = TVIN_PIXEL_UYVY444;
 	pixel_format.pixel_value[3] = TVIN_PIXEL_NV12;
 	pixel_format.pixel_value[4] = TVIN_PIXEL_NV21;
+	pixel_format->pixel_value[5] = TVIN_PIXEL_RGBA8888;
 #endif
 
 	for (i = 0; i < TVIN_PIXEL_FORMAT_NUM; i++)

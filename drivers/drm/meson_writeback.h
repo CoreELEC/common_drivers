@@ -22,6 +22,8 @@ struct am_drm_writeback {
 	/*capture port prop*/
 	struct drm_property *capture_port_prop;
 	u32 capture_port;
+	u32 hdisplay;
+	u32 vdisplay;
 };
 
 struct am_drm_writeback_state {
