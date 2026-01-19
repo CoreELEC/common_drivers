@@ -1412,6 +1412,9 @@ static struct hdr_parameter_reg_s customer_settings = {
 	8,
 };
 
+int force_eotf_type; /*0/1/2/3: auto/sdr/hdr10/hlg*/
+int force_oetf_type; /*0/1/2/3: auto/sdr/hdr10/hlg*/
+
 unsigned int _log2(unsigned int value)
 {
 	unsigned int ret;
@@ -4860,6 +4863,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	enum mtx_csc_e mtx_csc = MATRIX_NULL;
 	struct hdr_gmt_comp_param_s *gmt_comp_para = &gmt_comp_default;
 	enum hdr_hist_sel hist_select = HIST_E_RGBMAX;
+	int tmp_val;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	enum LUT_DMA_ID_e dma_id = HDR_DMA_ID;
@@ -5076,16 +5080,32 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		   hdr_process_select & CUVAHLG_HLG ||
 		   hdr_process_select & CUVAHLG_CUVA) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-			hdr_lut_param.oetf_lut[i] = oe_y_lut_bypass[i];
+			if (force_oetf_type == 1)
+				hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr[i];
+			else if (force_oetf_type == 2)
+				hdr_lut_param.oetf_lut[i] = oe_y_lut_hdr[i];
+			else if (force_oetf_type == 3)
+				hdr_lut_param.oetf_lut[i] = oe_y_lut_hlg[i];
+			else
+				hdr_lut_param.oetf_lut[i] = oe_y_lut_bypass[i];
+
 			if (osd_gamut_conv_type &&
 				chip_type_id == chip_t3x &&
 				(module_sel == OSD1_HDR || module_sel == OSD3_HDR))
 				hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
 			hdr_lut_param.ogain_lut[i] = oo_y_lut_bypass[i];
 			if (chip_type_id > chip_t6d) {
-				if (i < HDR2_EOTF_LUT_SIZE_NEW)
-					hdr_lut_param.eotf_lut[i] =
-						eo_y_lut_bypass_new[i];
+				if (i < HDR2_EOTF_LUT_SIZE_NEW) {
+					if (force_eotf_type == 1)
+						tmp_val = eo_y_lut_sdr_new[i];
+					else if (force_eotf_type == 2)
+						tmp_val = eo_y_lut_pq_new[i];
+					else if (force_eotf_type == 3)
+						tmp_val = eo_y_lut_hlg_new[i];
+					else
+						tmp_val = eo_y_lut_bypass_new[i];
+					hdr_lut_param.eotf_lut[i] = tmp_val;
+				}
 			} else {
 				if (i < HDR2_EOTF_LUT_SIZE) {
 					hdr_lut_param.eotf_lut[i] =
@@ -5125,12 +5145,28 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	} else if (hdr_process_select & HDR_SDR ||
 		hdr_process_select & HDR10P_SDR) {
 		for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-			hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+			if (force_oetf_type == 1)
+				hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+			else if (force_oetf_type == 2)
+				hdr_lut_param.oetf_lut[i]  = oe_y_lut_hdr[i];
+			else if (force_oetf_type == 3)
+				hdr_lut_param.oetf_lut[i]  = oe_y_lut_hlg[i];
+			else
+				hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+
 			hdr_lut_param.ogain_lut[i] = oo_y_lut_hdr_sdr[i];
 			if (chip_type_id > chip_t6d) {
-				if (i < HDR2_EOTF_LUT_SIZE_NEW)
-					hdr_lut_param.eotf_lut[i] =
-						eo_y_lut_pq_new[i];
+				if (i < HDR2_EOTF_LUT_SIZE_NEW) {
+					if (force_eotf_type == 1)
+						tmp_val = eo_y_lut_sdr_new[i];
+					else if (force_eotf_type == 2)
+						tmp_val = eo_y_lut_pq_new[i];
+					else if (force_eotf_type == 3)
+						tmp_val = eo_y_lut_hlg_new[i];
+					else
+						tmp_val = eo_y_lut_pq_new[i];
+					hdr_lut_param.eotf_lut[i] = tmp_val;
+				}
 			} else {
 				if (i < HDR2_EOTF_LUT_SIZE) {
 					if (eo_gmt_bit_mode)
@@ -5259,28 +5295,53 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		if (cuva_static_hlg_en) {
 			for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
 				if (is_meson_g12a_cpu() ||
-				    is_meson_g12b_cpu())
+				    is_meson_g12b_cpu()) {
 					hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr_ox2[i];
-				else
-					hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr[i];
+				} else {
+					if (force_oetf_type == 1)
+						hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr[i];
+					else if (force_oetf_type == 2)
+						hdr_lut_param.oetf_lut[i] = oe_y_lut_hdr[i];
+					else if (force_oetf_type == 3)
+						hdr_lut_param.oetf_lut[i] = oe_y_lut_hlg[i];
+					else
+						hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr[i];
+				}
 				hdr_lut_param.ogain_lut[i] =
 					oo_y_cuva_static_hlg_sdr[i];
-				if (chip_type_id > chip_t6d) {
-					if (i < HDR2_EOTF_LUT_SIZE_NEW)
-						hdr_lut_param.eotf_lut[i] =
-							eo_y_lut_hlg_new[i];
-				} else {
-					if (i < HDR2_EOTF_LUT_SIZE)
-						hdr_lut_param.eotf_lut[i] =
-							eo_y_lut_hlg[i];
+				if (chip_type_id > chip_t6d &&
+					i < HDR2_EOTF_LUT_SIZE_NEW) {
+					if (force_eotf_type == 1)
+						tmp_val = eo_y_lut_sdr_new[i];
+					else if (force_eotf_type == 2)
+						tmp_val = eo_y_lut_pq_new[i];
+					else if (force_eotf_type == 3)
+						tmp_val = eo_y_lut_hlg_new[i];
+					else
+						tmp_val = eo_y_lut_hlg_new[i];
+					hdr_lut_param.eotf_lut[i] = tmp_val;
 				}
+
+				if (chip_type_id <= chip_t6d &&
+					i < HDR2_EOTF_LUT_SIZE)
+					hdr_lut_param.eotf_lut[i] =
+						eo_y_lut_hlg[i];
+
 				if (i < HDR2_CGAIN_LUT_SIZE)
 					hdr_lut_param.cgain_lut[i] =
 						cgain_cuva_static_hlg_sdr[i];
 			}
 		} else {
 			for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
-				hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+				if (force_oetf_type == 1)
+					hdr_lut_param.oetf_lut[i] = oe_y_lut_sdr[i];
+				else if (force_oetf_type == 2)
+					hdr_lut_param.oetf_lut[i] = oe_y_lut_hdr[i];
+				else if (force_oetf_type == 3)
+					hdr_lut_param.oetf_lut[i] = oe_y_lut_hlg[i];
+				else
+					hdr_lut_param.oetf_lut[i]  = oe_y_lut_sdr[i];
+
 				hdr_lut_param.ogain_lut[i] = oo_y_lut_hlg_sdr[i];
 
 				if (i < HDR2_EOTF_LUT_SIZE &&
@@ -5293,10 +5354,17 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 							eo_y_lut_hlg_23[i];
 				}
 
-				if (chip_type_id > chip_t6d) {
-					if (i < HDR2_EOTF_LUT_SIZE_NEW)
-						hdr_lut_param.eotf_lut[i] =
-							eo_y_lut_hlg_new[i];
+				if (chip_type_id > chip_t6d &&
+					i < HDR2_EOTF_LUT_SIZE_NEW) {
+					if (force_eotf_type == 1)
+						tmp_val = eo_y_lut_sdr_new[i];
+					else if (force_eotf_type == 2)
+						tmp_val = eo_y_lut_pq_new[i];
+					else if (force_eotf_type == 3)
+						tmp_val = eo_y_lut_hlg_new[i];
+					else
+						tmp_val = eo_y_lut_hlg_new[i];
+					hdr_lut_param.eotf_lut[i] = tmp_val;
 				}
 
 				if (i < HDR2_CGAIN_LUT_SIZE)
@@ -9930,6 +9998,23 @@ void get_hdr_parameter_reg(struct hdr_parameter_reg_s *data)
 
 	memcpy(data, &customer_settings,
 		sizeof(struct hdr_parameter_reg_s));
+}
+
+void set_eotf_type(enum eotf_type_e type)
+{
+	if (type == TYPE_SDR) {
+		force_eotf_type = 1;
+		force_oetf_type = 1;
+	} else if (type == TYPE_HDR10) {
+		force_eotf_type = 2;
+		force_oetf_type = 2;
+	} else if (type == TYPE_HLG) {
+		force_eotf_type = 3;
+		force_oetf_type = 3;
+	} else {
+		force_eotf_type = 0;
+		force_oetf_type = 0;
+	}
 }
 
 int hdr10_param_dbg(char **parm)

@@ -783,6 +783,8 @@ extern unsigned int flag_cm_lc_dma_en;
 extern unsigned int pc_mode;
 extern int hdr10p_set_on;
 extern bool suspend_drv_flag;
+extern int force_eotf_type;
+extern int force_oetf_type;
 
 void gamut_mapping_wrapper_crtl(int module, int en);
 #endif /* AMVECM_H */

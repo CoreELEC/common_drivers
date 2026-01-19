@@ -362,6 +362,7 @@ int bs_3dlut_en = 1;  /*blue stretch function with 3dlut*/
 unsigned int ct_en;
 unsigned int ai_color_enable;
 unsigned int pre_aiclr_en = 1;
+unsigned int eo_curve_type = 0xff;
 enum hdr_type_e hdr_source_type = HDRTYPE_NONE;
 unsigned int pd_detect_en;
 unsigned int pd_det;
@@ -5085,6 +5086,7 @@ static long amvecm_ioctl(struct file *file,
 	struct hdr_mtrx_data_s hdr_mtrx_data;
 	struct hdr_gamut_data_s hdr_gamut_data;
 	struct panel_primary_s *panel_pri = NULL;
+	enum eotf_type_e eo_type;
 #endif
 
 	if (debug_amvecm & 2)
@@ -6555,7 +6557,19 @@ static long amvecm_ioctl(struct file *file,
 				pr_amvecm_dbg("AMVECM_IOC_S_SBTM_EN %d\n", tmp);
 			}
 		break;
-
+	case AMVECM_IOC_S_EOTF_TYPE:
+		if (copy_from_user(&eo_type,
+			(void __user *)arg,
+			sizeof(enum eotf_type_e))) {
+			ret = -EFAULT;
+		} else {
+			if (eo_curve_type != eo_type) {
+				set_eotf_type(eo_type);
+				vecm_latch_flag |= FLAG_HDR_OOTF_LATCH;
+				eo_curve_type = eo_type;
+			}
+		}
+		break;
 #endif
 	default:
 		ret = -EINVAL;
@@ -14751,6 +14765,16 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 	} else if (!strcmp(parm[0], "g_hdr_on")) {
 		hdr_on = get_hdr_on();
 		pr_info("hdr_on: %d\n", hdr_on);
+	} else if (!strcmp(parm[0], "s_hdr_eotf_type")) {
+		if (!parm[1]) {
+			pr_info("misss param1\n");
+			goto free_buf;
+		}
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		force_eotf_type = val;
+		force_oetf_type = val;
+		vecm_latch_flag2 |= FLAG_HDR_OOTF_LATCH;
 #endif
 	} else {
 		pr_info("unsupport cmd\n");

@@ -756,6 +756,13 @@ struct hdr_parameter_reg_s {
 	int reg_gmut_shift;
 };
 
+enum eotf_type_e {
+	TYPE_AUTO = 0,
+	TYPE_SDR,
+	TYPE_HDR10,
+	TYPE_HLG,
+};
+
 #define AMVECM_IOC_G_HIST_AVG			_IOW(_VE_CM, 0x22, struct ve_hist_s)
 #define AMVECM_IOC_VE_DNLP_EN			_IO(_VE_CM, 0x23)
 #define AMVECM_IOC_VE_DNLP_DIS			_IO(_VE_CM, 0x24)
@@ -899,4 +906,7 @@ struct hdr_parameter_reg_s {
 #define AMVECM_IOC_G_SBTM_MODE			_IOR(_VE_CM, 0xb7, int)
 #define AMVECM_IOC_S_SBTM_MODE			_IOW(_VE_CM, 0xb8, int)
 #define AMVECM_IOC_S_SBTM_EN			_IOW(_VE_CM, 0xb9, int)
+
+#define AMVECM_IOC_S_EOTF_TYPE  _IOW(_VE_CM, 0xba, enum eotf_type_e)
+
 #endif
