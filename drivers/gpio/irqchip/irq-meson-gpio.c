@@ -14,10 +14,8 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
-#ifdef CONFIG_AMLOGIC_MODIFY
 #include <linux/amlogic/glb_timer.h>
 #include <linux/amlogic/irq_latch.h>
-#endif
 
 #define NUM_CHANNEL 8
 #define MAX_INPUT_MUX 256
