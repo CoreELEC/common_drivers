@@ -270,6 +270,7 @@ struct frddr {
 	bool in_use;
 	struct ddr_chipinfo *chipinfo;
 	int mixer_exist;
+	int mixer_mic;
 	bool reserved;
 };
 
@@ -383,6 +384,7 @@ void get_toddr_bits_config(enum toddr_src src,
 int aml_check_and_release_sharebuffer(struct frddr *fr, enum frddr_dest ss_sel);
 int aml_frddr_mixer_set(struct frddr *fr, int exist);
 int mixer_fddr_rate(struct frddr *fr, int en);
+int aml_mixer_mic_set(struct frddr *fr, int is_mic);
 
 #endif
 

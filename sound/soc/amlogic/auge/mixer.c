@@ -222,6 +222,7 @@ static int aml_mixer_open(struct snd_soc_component *component,
 		}
 	}
 	aml_frddr_mixer_set(mixer_p->fddr, 1);
+	aml_mixer_mic_set(mixer_p->fddr, 1);
 	runtime->private_data = mixer_p;
 	mixer_substream = substream;
 	return 0;
@@ -288,7 +289,7 @@ static int aml_mixer_prepare(struct snd_soc_component *component,
 		end_addr = start_addr + runtime->dma_bytes - FIFO_BURST;
 		period   = frames_to_bytes(runtime, runtime->period_size);
 		int_addr = period / FIFO_BURST;
-
+		aml_frddr_reset(mixer_p->fddr);
 		mic_mixer_fifo_reset();
 		/*
 		 * Contrast minimum of period and fifo depth,
@@ -334,7 +335,15 @@ static int mixer_vol_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = mixer_p->mixer_vol;
 	return 0;
@@ -344,8 +353,16 @@ static int mixer_vol_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	if (value > 0x7fffffff) {
 		pr_err("vol not support %d\n",
@@ -361,10 +378,18 @@ static int mixer_get_lane_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
 	struct soc_mixer_control *mc =
 			(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = mixer_p->mixer_lane_status[reg];
 
@@ -375,11 +400,19 @@ static int mixer_set_lane_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
 	struct soc_mixer_control *mc =
 			(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	mixer_lane_source(mixer_p->coef_reg_map, reg, value);
 	mixer_p->mixer_lane_status[reg] = value;
@@ -391,7 +424,15 @@ static int mixer_stable_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = mixer_p->unstable;
 	return 0;
@@ -401,8 +442,16 @@ static int mixer_stable_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct mixer *mixer_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
 
 	if (value > 0) {
 		pr_err("mixer stable not support %d\n",
@@ -410,6 +459,55 @@ static int mixer_stable_set(struct snd_kcontrol *kcontrol,
 		return 0;
 	}
 	mixer_p->unstable = value;
+	return 0;
+}
+
+static const char * const mixer_output_source_text[] = {
+	"tdmout_b", "tdmout_b", "tdmout_c", "tdmout_d"
+};
+
+static const struct soc_enum mixer_output_source_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(mixer_output_source_text),
+		mixer_output_source_text);
+
+static int mixer_src_enum_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = mixer_p->mixer_output_src;
+	return 0;
+}
+
+static int mixer_src_enum_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct mixer *mixer_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	mixer_p  = snd_soc_component_get_drvdata(component);
+	if (!mixer_p)
+		return 0;
+
+	if (value > 3)
+		pr_info("not support mixer source:%d\n", value);
+	mixer_p->mixer_output_src = value;
+	if (component->active)
+		snd_pcm_stop_xrun(mixer_substream);
 	return 0;
 }
 
@@ -437,6 +535,11 @@ static const struct snd_kcontrol_new snd_mixer_controls[] = {
 	SOC_SINGLE_EXT("Mixer Xrun",
 			0, 0, 1, 0,
 			mixer_stable_get, mixer_stable_set),
+	SOC_ENUM_EXT("Mixer source select",
+				mixer_output_source_enum,
+				mixer_src_enum_get,
+				mixer_src_enum_put),
+
 };
 
 static const struct snd_soc_component_driver aml_mixer_component[] = {

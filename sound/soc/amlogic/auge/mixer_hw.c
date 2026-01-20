@@ -116,7 +116,7 @@ int mixer_eq_enable(struct frddr *fr, int enable)
 	mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL1, 0x1 << 27, 0x1 << 27);
 	mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL1, 0x7 << 24, 0x6 << 24);
 	mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL0, 0x1 << 3, 0 << 3);
-	eqdrc_update_bits(AED_TOP_CTL0, 0x1 << 14, 1 << 14);
+	eqdrc_update_bits(AED_TOP_CTL0, 0x1 << 14, enable << 14);
 	mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL4, 0x1 << 3, enable << 3);
 	return 0;
 }
@@ -298,7 +298,7 @@ int mixer_clip_top_en(int enable)
 				}
 			}
 		}
-		mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL0, 0x1 << 9, 1 << 9);
+
 	}
 	mmio_update_bits(mixer_reg_map, AUDIO_MIXER_CTRL0, 0x1 << 30, enable << 30);
 	return 0;

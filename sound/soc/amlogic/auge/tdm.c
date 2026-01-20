@@ -154,6 +154,7 @@ struct aml_tdm {
 	int pcpd_timeout_cnt;
 	unsigned int tdmout_master;
 	int mixer_lane;
+	struct snd_pcm_substream *substream[2];
 };
 
 #define to_aml_tdm(x)   container_of(x, struct aml_tdm, clk_nb)
@@ -862,7 +863,13 @@ static int tdm_clk_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = clk_get_rate(p_tdm->mclk);
 	return 0;
@@ -872,10 +879,19 @@ static int tdm_clk_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+	int mclk_rate;
+	int value;
 
-	int mclk_rate = p_tdm->last_mclk_freq;
-	int value = ucontrol->value.enumerated.item[0];
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	mclk_rate = p_tdm->last_mclk_freq;
+	value = ucontrol->value.enumerated.item[0];
+
 
 	if (value > 2000000 || value < 0) {
 		pr_err("Fine tdm clk setting range (0~2000000), %d\n", value);
@@ -895,10 +911,18 @@ static int tdm_clk_ppm_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+	int mclk_rate;
+	int value;
 
-	int mclk_rate = p_tdm->setting.standard_sysclk;
-	int value = ucontrol->value.enumerated.item[0];
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	mclk_rate = p_tdm->setting.standard_sysclk;
+	value = ucontrol->value.enumerated.item[0];
 
 	if (value > 2000 || value < 0) {
 		pr_err("Fine tdm clk ppm tuning range (0~2000), %d\n", value);
@@ -915,7 +939,13 @@ static int tdmout_gain_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = aml_tdmout_get_gain(p_tdm->id);
 
@@ -926,10 +956,14 @@ static int tdmout_gain_set(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-
 	int value = ucontrol->value.enumerated.item[0];
+	struct aml_tdm *p_tdm;
 
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 	pr_info("%s, id: %d, gain: 0x%x\n", __func__, p_tdm->id, value);
 	if (p_tdm->chipinfo->gain_ver == GAIN_VER3)
 		aml_tdmout_auto_gain_enable(p_tdm->id);
@@ -938,11 +972,62 @@ static int tdmout_gain_set(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tdmout_mixer_enable_get(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = p_tdm->mixer_en;
+
+	return 0;
+}
+
+static int tdmout_mixer_enable_set(struct snd_kcontrol *kcontrol,
+			   struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm;
+	int value = ucontrol->value.enumerated.item[0];
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	if (value > 1)
+		pr_info("mixer enable value is not right!\n");
+	if (value == 0) {
+		/*need clear all mixer samesource module*/
+		dev_info(p_tdm->dev, "tdm:%d disable hwmixer\n", p_tdm->id);
+		aml_check_and_release_sharebuffer(p_tdm->fddr, p_tdm->id);
+	}
+	p_tdm->mixer_en = value;
+	if (cpu_dai->stream[SNDRV_PCM_STREAM_PLAYBACK].active) {
+		snd_pcm_stop_xrun(p_tdm->substream[SNDRV_PCM_STREAM_PLAYBACK]);
+		aml_frddr_mixer_set(p_tdm->fddr, p_tdm->mixer_en);
+	}
+	return 0;
+}
+
 static int tdmout_softgain_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = p_tdm->vol_index;
 
@@ -953,9 +1038,16 @@ static int tdmout_softgain_set(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+	int value;
 
-	int value = ucontrol->value.enumerated.item[0];
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	value = ucontrol->value.enumerated.item[0];
 
 	if (value < 0 || value > 100)
 		value = 100;
@@ -968,7 +1060,13 @@ static int tdmout_get_mute_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = aml_tdmout_get_mute(p_tdm->actrl, p_tdm->id);
 
@@ -979,9 +1077,15 @@ static int tdmout_set_mute_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
 	int value = ucontrol->value.enumerated.item[0];
 	int i = 0;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	for (i = 0; i < p_tdm->lane_cnt; i++) {
 		aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, (bool)value, i);
@@ -994,11 +1098,21 @@ static int tdmout_get_lane_mute_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct soc_mixer_control *mc =
-			(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
+	struct aml_tdm *p_tdm;
+	struct soc_mixer_control *mc;
+	unsigned int reg;
 
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	mc = (struct soc_mixer_control *)kcontrol->private_value;
+	if (!mc)
+		return 0;
+
+	reg = mc->reg;
 	ucontrol->value.enumerated.item[0] = p_tdm->tdmout_lane_mute_status[reg];
 
 	return 0;
@@ -1008,13 +1122,26 @@ static int tdmout_set_lane_mute_enum(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct soc_mixer_control *mc =
+	struct aml_tdm *p_tdm;
+	struct soc_mixer_control *mc;
+	unsigned int reg;
+	int value;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	mc = (struct soc_mixer_control *)kcontrol->private_value;
+	if (!mc)
+		return 0;
+
+	mc =
 			(struct soc_mixer_control *)kcontrol->private_value;
-	unsigned int reg = mc->reg;
+	reg = mc->reg;
 
-	int value = ucontrol->value.enumerated.item[0];
-
+	value = ucontrol->value.enumerated.item[0];
 	aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, (bool)value, reg);
 	p_tdm->tdmout_lane_mute_status[reg] = value;
 
@@ -1048,6 +1175,11 @@ static const struct snd_kcontrol_new snd_tdm_a_controls[] = {
 				tdmout_softgain_get,
 				tdmout_softgain_set),
 #endif
+
+	SOC_SINGLE_EXT("TDMOUT_A Mixer Enable",
+				0, 0, 1, 0,
+				tdmout_mixer_enable_get,
+				tdmout_mixer_enable_set),
 };
 
 static const char * const tdmin_source_text[] = {
@@ -1064,7 +1196,14 @@ static int tdmin_src_enum_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
 	ucontrol->value.enumerated.item[0] = p_tdm->tdm_in_src;
 
 	return 0;
@@ -1074,9 +1213,16 @@ static int tdmin_src_enum_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
 	int value = ucontrol->value.enumerated.item[0];
-	char *p = (char *)p_tdm->tdmin_src_name;
+	char *p;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+	p = (char *)p_tdm->tdmin_src_name;
 
 	p_tdm->tdm_in_src = value;
 	if (value >= ARRAY_SIZE(tdmin_source_text))
@@ -1097,8 +1243,16 @@ static int hdmiin_audio_type_get_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct pcpd_monitor *pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
+	struct aml_tdm *p_tdm;
+	struct pcpd_monitor *pc_pd;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
 
 	if (!pc_pd)
 		return 0;
@@ -1112,7 +1266,13 @@ static int tdm_port_pcpd_detect_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = p_tdm->pcpd_monitor_enable;
 
@@ -1123,9 +1283,18 @@ static int tdm_port_pcpd_detect_set(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct pcpd_monitor *pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
-	int value = ucontrol->value.enumerated.item[0];
+	struct aml_tdm *p_tdm;
+	struct pcpd_monitor *pc_pd;
+	int value;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
+	value = ucontrol->value.enumerated.item[0];
 
 	p_tdm->pcpd_monitor_enable = value;
 	if (pc_pd)
@@ -1138,7 +1307,13 @@ static int tdm_port_pcpd_timeout_sample_count_get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = p_tdm->pcpd_timeout_cnt;
 
@@ -1149,9 +1324,18 @@ static int tdm_port_pcpd_timeout_sample_count_set(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct pcpd_monitor *pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
-	int value = ucontrol->value.enumerated.item[0];
+	struct aml_tdm *p_tdm;
+	struct pcpd_monitor *pc_pd;
+	int value;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+
+	pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
+	value = ucontrol->value.enumerated.item[0];
 
 	if (!pc_pd) {
 		pr_err("%s:pcpd monitor null!\n", __func__);
@@ -1174,8 +1358,15 @@ static int tdm_port_pcpd_timeout_get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
-	struct pcpd_monitor *pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
+	struct aml_tdm *p_tdm;
+	struct pcpd_monitor *pc_pd;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
+	pc_pd = (struct pcpd_monitor *)p_tdm->pcpd_monitor_src;
 
 	if (!pc_pd) {
 		pr_err("%s:pcpd monitor null!\n", __func__);
@@ -1223,7 +1414,13 @@ static int aml_mixer_lane_source_sel_get_enum
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = p_tdm->mixer_lane;
 	return 0;
@@ -1234,11 +1431,16 @@ static int aml_mixer_lane_source_sel_set_enum
 		struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct aml_tdm *p_tdm;
+	unsigned int val = ucontrol->value.enumerated.item[0];
 
-	int val = ucontrol->value.enumerated.item[0];
+	if (!cpu_dai)
+		return 0;
+	p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+	if (!p_tdm)
+		return 0;
 
-	if (val < 0 || val > 4) {
+	if (val > 4) {
 		pr_info("Warning: tdmout_index = %d, val = 0x%x\n", p_tdm->id, val);
 		return 0;
 	}
@@ -1286,6 +1488,11 @@ static const struct snd_kcontrol_new snd_tdm_b_controls[] = {
 			mixer_source_sel_enum,
 			aml_mixer_lane_source_sel_get_enum,
 			aml_mixer_lane_source_sel_set_enum),
+
+	SOC_SINGLE_EXT("TDMOUT_B Mixer Enable",
+				0, 0, 1, 0,
+				tdmout_mixer_enable_get,
+				tdmout_mixer_enable_set),
 
 };
 
@@ -1580,6 +1787,7 @@ static int aml_tdm_open(struct snd_soc_component *component, struct snd_pcm_subs
 			goto err_ddr;
 		}
 		aml_frddr_mixer_set(p_tdm->fddr, p_tdm->mixer_en);
+		p_tdm->substream[SNDRV_PCM_STREAM_PLAYBACK] = substream;
 	} else {
 		p_tdm->tddr = aml_audio_register_toddr(dev,
 			aml_tdm_ddr_isr, substream, 0);
