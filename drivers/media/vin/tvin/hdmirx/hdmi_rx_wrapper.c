@@ -5359,7 +5359,8 @@ void rx_port0_main_state_machine(void)
 	case FSM_HPD_LOW:
 		/* disable irq before hpd low */
 		rx_irq_en(0, port);
-		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port))
+		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
+			rx_info.arc_port == E_PORT0))
 			rx_set_cur_hpd(0, 0, port);
 		rx[port].state = FSM_INIT;
 		break;
@@ -5794,8 +5795,7 @@ void rx_port0_main_state_machine(void)
 				fsm_st[rx[port].pre_state],
 				fsm_st[rx[port].state]);
 		}
-		if (log_level & VIDEO_LOG)
-			rx_fsm_print(port);
+		rx_fsm_print(port);
 		rx[port].pre_state = rx[port].state;
 	}
 }
@@ -5817,7 +5817,8 @@ void rx_port1_main_state_machine(void)
 		break;
 	case FSM_HPD_LOW:
 		rx_irq_en(0, port);
-		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port))
+		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
+			rx_info.arc_port == E_PORT1))
 			rx_set_cur_hpd(0, 0, port);
 		rx[port].state = FSM_INIT;
 		break;
@@ -6249,8 +6250,7 @@ void rx_port1_main_state_machine(void)
 				fsm_st[rx[port].pre_state],
 				fsm_st[rx[port].state]);
 		}
-		if (log_level & VIDEO_LOG)
-			rx_fsm_print(port);
+		rx_fsm_print(port);
 		rx[port].pre_state = rx[port].state;
 	}
 }
@@ -6279,7 +6279,8 @@ void rx_port2_main_state_machine(void)
 	case FSM_HPD_LOW:
 		/* disable irq before hpd low */
 		rx_irq_en(0, port);
-		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port))
+		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
+			rx_info.arc_port == E_PORT2))
 			rx_set_cur_hpd(0, 0, port);
 		hdmi_rx_cor_reset(port);
 		rx_set_cur_hpd(0, 0, port);
@@ -6976,7 +6977,8 @@ void rx_port3_main_state_machine(void)
 	case FSM_HPD_LOW:
 		/* disable irq before hpd low */
 		rx_irq_en(0, port);
-		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port))
+		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
+			rx_info.arc_port == E_PORT3))
 			rx_set_cur_hpd(0, 0, port);
 		hdmi_rx_cor_reset(port);
 		//set_scdc_cfg(1, 0, port);
