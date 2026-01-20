@@ -273,6 +273,89 @@ static int atomic_set_prop(struct drm_atomic_state *state,
 	return ret;
 }
 
+struct drm_pending_vblank_event *meson_create_vblank_event
+	(struct drm_crtc *crtc, uint64_t user_data)
+{
+	struct drm_pending_vblank_event *e = NULL;
+
+	e = kzalloc(sizeof(*e), GFP_KERNEL);
+	if (!e)
+		return NULL;
+
+	e->event.base.type = DRM_EVENT_FLIP_COMPLETE;
+	e->event.base.length = sizeof(e->event);
+	e->event.vbl.crtc_id = crtc->base.id;
+	e->event.vbl.user_data = user_data;
+
+	return e;
+}
+
+static int meson_page_flip_prepare(struct drm_device *dev,
+	struct drm_atomic_state *state,
+	struct drm_mode_atomic *arg, struct drm_file *file_priv)
+{
+	struct drm_crtc *crtc;
+	struct drm_pending_vblank_event *e;
+	struct drm_crtc_state *crtc_state;
+	int i, c = 0, ret;
+
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+		if (arg->flags & DRM_MODE_PAGE_FLIP_EVENT) {
+			e = meson_create_vblank_event(crtc, arg->user_data);
+			DRM_DEBUG_VBL("create event, e=%p, user_data=%llx\n", e, arg->user_data);
+			if (!e) {
+				DRM_ERROR("meson_create_vblank_event fail.\n");
+				return -ENOMEM;
+			}
+
+			crtc_state->event = e;
+			if (!file_priv) {
+				DRM_INFO("file_priv is null\n");
+				continue;
+			}
+
+			ret = drm_event_reserve_init(dev, file_priv, &e->base,
+							 &e->event.base);
+			if (ret) {
+				DRM_ERROR("drm_event_reserve_init fail. len=%d, ret=%d!\n",
+					e->event.base.length, ret);
+				kfree(e);
+				crtc_state->event = NULL;
+				return ret;
+			}
+		}
+		c++;
+	}
+
+	if (c == 0 && (arg->flags & DRM_MODE_PAGE_FLIP_EVENT)) {
+		DRM_ERROR("para invalid.\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void meson_page_flip_signaling(struct drm_device *dev,
+			       struct drm_atomic_state *state)
+{
+	struct drm_crtc *crtc;
+	struct drm_crtc_state *crtc_state;
+	int i;
+
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+		struct drm_pending_vblank_event *event = crtc_state->event;
+		/*
+		 * Free the allocated event. drm_atomic_helper_setup_commit
+		 * can allocate an event too, so only free it if it's ours
+		 * to prevent a double free in drm_atomic_state_clear.
+		 */
+		if (event && (event->base.fence || event->base.file_priv)) {
+			drm_event_cancel_free(dev, &event->base);
+			crtc_state->event = NULL;
+		}
+	}
+}
+
 /**
  * same as drm_atomic_helper_check_plane_damage
  */
@@ -400,9 +483,8 @@ meson_atomic_helper_check_planes(struct drm_device *dev,
 
 		ret = funcs->atomic_check(plane, state);
 		if (ret) {
-			drm_dbg_atomic(plane->dev,
-				       "[PLANE:%d:%s] atomic driver check failed\n",
-				       plane->base.id, plane->name);
+			DRM_ERROR("[PLANE:%d:%s] atomic driver check planes failed, ret=%d!\n",
+				plane->base.id, plane->name, ret);
 			return ret;
 		}
 	}
@@ -616,7 +698,6 @@ retry:
 
 		if (obj->type != DRM_MODE_OBJECT_PLANE) {
 			DRM_ERROR("only accept plane object update, can not set (%d)\n", obj->type);
-
 			ret = -EINVAL;
 			goto out;
 		}
@@ -695,6 +776,12 @@ retry:
 
 	meson_video_bypass_vblank_wait(state);
 
+	DRM_DEBUG_ATOMIC("%s, async_update-%d\n", __func__, state->async_update);
+
+	ret = meson_page_flip_prepare(dev, state, arg, file_priv);
+	if (ret)
+		goto out;
+
 	start2 = ktime_get();
 	ret = config->funcs->atomic_commit(state->dev, state, false);
 	end2 = ktime_get();
@@ -702,6 +789,7 @@ retry:
 		DRM_ERROR("failed, ret = %d\n", ret);
 
 out:
+	meson_page_flip_signaling(dev, state);
 	if (ret == -EDEADLK) {
 		drm_atomic_state_clear(state);
 		drm_modeset_backoff(&ctx);

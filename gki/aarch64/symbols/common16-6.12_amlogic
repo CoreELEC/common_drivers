@@ -64,6 +64,8 @@
   drmm_kmalloc
   hdmi_infoframe_pack
   drm_mode_destroy
+  drm_event_cancel_free
+  drm_event_reserve_init
 
 # f81232.ko
   __tty_insert_flip_string_flags

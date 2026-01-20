@@ -2664,7 +2664,7 @@ void meson_video_plane_async_update(struct drm_plane *plane,
 {
 	struct am_video_plane *video_plane = to_am_video_plane(plane);
 	struct meson_video_sub_pipeline *sub_pipe;
-	struct am_meson_crtc *amcrtc;
+	struct am_meson_crtc *amcrtc = NULL;
 	struct meson_vpu_pipeline *pipeline = video_plane->pipeline;
 	struct meson_vpu_video *mvv;
 	int crtc_index = 0;
@@ -2673,7 +2673,9 @@ void meson_video_plane_async_update(struct drm_plane *plane,
 	int i;
 	struct drm_private_obj *obj;
 	struct drm_private_state *old_obj_state, *new_obj_state;
-	int index = 0;
+	unsigned long flags;
+	struct drm_crtc *crtc;
+	struct drm_crtc_state *crtc_state;
 
 	old_plane_state = drm_atomic_get_old_plane_state(state, plane);
 	if (!old_plane_state) {
@@ -2696,7 +2698,6 @@ void meson_video_plane_async_update(struct drm_plane *plane,
 
 	sub_pipe = &pipeline->video_subs[crtc_index];
 	mvv = pipeline->video[video_plane->plane_index];
-	index = video_plane->plane_index;
 
 	DRM_DEBUG_DRIVER("plane_index=%d,crtc=%p,crtc_index=%d,fb=%p,src=%dx%d,dst=%dx%d\n",
 		video_plane->plane_index, new_state->crtc,
@@ -2734,6 +2735,21 @@ void meson_video_plane_async_update(struct drm_plane *plane,
 		meson_video_prepare_repeat_fence(plane, new_state, mvv);
 
 	video_pipeline_block_update(sub_pipe, new_state->state, video_plane->plane_index);
+
+	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+		spin_lock_irqsave(&crtc->dev->event_lock, flags);
+		DRM_DEBUG_VBL("add event to list, event=%p, crct=%d!\n",
+			crtc_state->event, drm_crtc_vblank_get(crtc));
+		if (crtc_state->event) {
+			if (drm_crtc_vblank_get(crtc) == 0)
+				drm_crtc_arm_vblank_event(crtc, crtc_state->event);
+			else if (amcrtc)
+				amcrtc->event = crtc_state->event;
+
+			crtc_state->event = NULL;
+		}
+		spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
+	}
 }
 
 static const struct drm_plane_helper_funcs am_osd_helper_funcs = {
