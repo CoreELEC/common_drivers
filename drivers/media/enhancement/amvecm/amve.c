@@ -4572,9 +4572,13 @@ void eye_proc(int mtx_ep[][4], int mtx_on, int vpp_index)
 	int offset[3] = {
 		64, 512, 512
 	};
+	int i, j = 0;
 
-	if (vinfo_lcd_support())
+	if (chip_type_id != chip_t7 && vinfo_lcd_support())
 		return;
+
+	pr_amve_dbg("ep_ipt_flag = %d, mtx_on= %d\n",
+		ep_ipt_flag, mtx_on);
 
 	if (ep_ipt_flag) {
 		matrix_coef00_01 = VPP_POST2_MATRIX_COEF00_01;
@@ -4610,21 +4614,46 @@ void eye_proc(int mtx_ep[][4], int mtx_on, int vpp_index)
 		matrix2_en_ctrl = VPP_POST2_MATRIX_EN_CTRL;
 	}
 
-	if (ep_ipt_flag) {
-		VSYNC_WRITE_VPP_REG_VPP_SEL(matrix2_en_ctrl, mtx_on & 0x1, vpp_index);
-		VSYNC_WRITE_VPP_REG_VPP_SEL(matrix_en_ctrl, 0, vpp_index);
-	} else {
-		VSYNC_WRITE_VPP_REG_VPP_SEL(matrix2_en_ctrl, 0, vpp_index);
+	if (chip_type_id == chip_t7) {
+		matrix_coef00_01 = VPP_POST_MATRIX_COEF00_01;
+		matrix_coef02_10 = VPP_POST_MATRIX_COEF02_10;
+		matrix_coef11_12 = VPP_POST_MATRIX_COEF11_12;
+		matrix_coef20_21 = VPP_POST_MATRIX_COEF20_21;
+		matrix_coef22 = VPP_POST_MATRIX_COEF22;
+		matrix_coef13_14 = VPP_POST_MATRIX_COEF13_14;
+		matrix_coef23_24 = VPP_POST_MATRIX_COEF23_24;
+		matrix_coef15_25 = VPP_POST_MATRIX_COEF15_25;
+		matrix_clip = VPP_POST_MATRIX_CLIP;
+		matrix_offset0_1 = VPP_POST_MATRIX_OFFSET0_1;
+		matrix_offset2 = VPP_POST_MATRIX_OFFSET2;
+		matrix_pre_offset0_1 = VPP_POST_MATRIX_PRE_OFFSET0_1;
+		matrix_pre_offset2 = VPP_POST_MATRIX_PRE_OFFSET2;
+		matrix_en_ctrl = VPP_POST_MATRIX_EN_CTRL;
+
+		for (i = 0; i < 3; i++) {
+			pre_offset[i] = 0;
+			offset[i] = 0;
+			for (j = 0; j < 3; j++)
+				mtx_out[i][j] = mtx_ep[i][j];
+		}
 		VSYNC_WRITE_VPP_REG_VPP_SEL(matrix_en_ctrl, mtx_on & 0x1, vpp_index);
+	} else {
+		if (ep_ipt_flag) {
+			VSYNC_WRITE_VPP_REG_VPP_SEL(matrix2_en_ctrl, mtx_on & 0x1, vpp_index);
+			VSYNC_WRITE_VPP_REG_VPP_SEL(matrix_en_ctrl, 0, vpp_index);
+		} else {
+			VSYNC_WRITE_VPP_REG_VPP_SEL(matrix2_en_ctrl, 0, vpp_index);
+			VSYNC_WRITE_VPP_REG_VPP_SEL(matrix_en_ctrl, mtx_on & 0x1, vpp_index);
+		}
+
+		if (!mtx_on)
+			return;
+
+		if (ep_ipt_flag)
+			mtx_multi(mtx_ep, mtx_out, IPT_MOD);
+		else
+			mtx_multi(mtx_ep, mtx_out, YUV_MOD);
 	}
-
-	if (!mtx_on)
-		return;
-
-	if (ep_ipt_flag)
-		mtx_multi(mtx_ep, mtx_out, IPT_MOD);
-	else
-		mtx_multi(mtx_ep, mtx_out, YUV_MOD);
 
 	VSYNC_WRITE_VPP_REG_VPP_SEL(matrix_coef00_01,
 		((mtx_out[0][0] & 0x1fff) << 16) | (mtx_out[0][1] & 0x1fff), vpp_index);
