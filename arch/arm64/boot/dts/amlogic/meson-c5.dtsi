@@ -2215,16 +2215,16 @@
 		kl_type = <1>;
 		kl_vid_type = <0>;
 		kl_offset = <0x80 0x88 0x8c 0x90>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	aml_kt {
 		compatible = "amlogic,aml_kt";
 		reg = <0x0 0xfe440500 0x0 0xa0>;
 		kt_offset = <0x80 0x88 0x8c 0x90 0x94 0x98 0x9c>;
-		kt_cap = <0x2F97 0x6bf 0 64 0 32>;
+		kt_cap = <0x2007 0x3f 0 16 0 32>;
 		kt_reserved = <0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	chosen:chosen {
