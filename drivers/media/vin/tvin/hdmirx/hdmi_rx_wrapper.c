@@ -660,6 +660,25 @@ static bool video_mute_enabled(u8 port)
 		return false;
 }
 
+bool rx_chk_avi_chg(u8 port)
+{
+	bool ret = false;
+	u8 data8;
+
+	if (!rx_chk_avi_valid(port))
+		return ret;
+	data8 = hdmirx_rd_cor(AVIRX_DBYTE1_DP2_IVCRX, port);
+	if (rx[port].cur.colorspace != ((data8 >> 5) & 0x07))
+		ret = true;
+	data8 = hdmirx_rd_cor(AVIRX_DBYTE3_DP2_IVCRX, port);
+	if (rx[port].cur.rgb_quant_range != ((data8 >> 2) & 0x3))
+		ret = true;
+	data8 = hdmirx_rd_cor(AVIRX_DBYTE5_DP2_IVCRX, port);
+	if (rx[port].cur.yuv_quant_range != ((data8 >> 6) & 0x3))
+		ret = true;
+	return ret;
+}
+
 /*
  *func: irq tasklet
  *param: flag:
@@ -674,7 +693,7 @@ void rx_tasklet_handler(unsigned long arg)
 		return;
 
 	if (rx[port].irq_flag & IRQ_AVI_CHG_FLAG) {
-		if (video_mute_enabled(port) && rx_chk_avi_valid(port)) {
+		if (video_mute_enabled(port) && rx_chk_avi_chg(port)) {
 			if (tvin_get_game_mode_status(rx_get_port_type(port))) {
 				hdmirx_mute_vpp_pkt(true, port);
 				rx[port].vpp_mute_cnt = vpp_mute_cnt;
