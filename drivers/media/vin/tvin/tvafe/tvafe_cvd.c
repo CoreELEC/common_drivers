@@ -222,6 +222,7 @@ static unsigned int noise3;
 #define NON_STD_DEBUG_PRINT_CNT     100
 
 unsigned long vbi_mem_start;
+static bool color_stb_sts;
 
 bool agc_gain_sts = true;
 static int acd_2d_adjust = 0x94;
@@ -1836,6 +1837,10 @@ static bool tvafe_cvd2_condition_shift(struct tvafe_cvd2_s *cvd2)
 	}
 
 	if (cvd2->hw.no_color_burst) {
+		if (!color_stb_sts) {
+			tvafe_pr_info("%s: color brust change\n", __func__);
+			return true;
+		}
 		/* for SECAM format, set PAL_I */
 		if (cvd2->config_fmt != TVIN_SIG_FMT_CVBS_SECAM) {
 			/* set default fmt */
@@ -1959,8 +1964,13 @@ static void tvafe_set_visit_array(enum tvin_sig_fmt_e fmt)
 
 static void tvafe_check_format_avin(struct tvafe_cvd2_s *cvd2, struct tvafe_cvd2_mem_s *mem)
 {
-	enum tvin_sig_fmt_e try_fmt = cvd2->config_fmt;
+	enum tvin_sig_fmt_e try_fmt = TVIN_SIG_FMT_NULL;
 
+	if (cvd2->config_fmt < TVIN_SIG_FMT_CVBS_NTSC_M ||
+		cvd2->config_fmt > TVIN_SIG_FMT_CVBS_NTSC_50)
+		cvd2->config_fmt = TVIN_SIG_FMT_CVBS_PAL_I;
+
+	try_fmt = cvd2->config_fmt;
 	switch (cvd2->config_fmt) {
 	//------------------------------------625L-----------------------------------//
 	//pal-i -> pal-cn -> ntsc-50
@@ -2152,6 +2162,7 @@ static void tvafe_check_format_avin(struct tvafe_cvd2_s *cvd2, struct tvafe_cvd2
 		cvd2->det_secam_cnt = 0;
 		cvd2->det_cnt = 0;
 		check_twice &= ~1;
+		color_stb_sts = cvd2->hw.no_color_burst;
 		tvafe_clr_visit_array();
 	} else if (cvd2->info.state == TVAFE_CVD2_STATE_CHECK) {
 		;
@@ -2164,7 +2175,12 @@ static void tvafe_check_format_avin(struct tvafe_cvd2_s *cvd2, struct tvafe_cvd2
 #ifdef CONFIG_AMLOGIC_ATV_DEMOD
 static void tvafe_check_format_atv(struct tvafe_cvd2_s *cvd2, struct tvafe_cvd2_mem_s *mem)
 {
-	enum tvin_sig_fmt_e try_fmt = cvd2->config_fmt;
+	enum tvin_sig_fmt_e try_fmt = TVIN_SIG_FMT_NULL;
+
+	if (cvd2->config_fmt < TVIN_SIG_FMT_CVBS_NTSC_M ||
+		cvd2->config_fmt > TVIN_SIG_FMT_CVBS_NTSC_50)
+		cvd2->config_fmt = TVIN_SIG_FMT_CVBS_PAL_I;
+	try_fmt = cvd2->config_fmt;
 
 	if (cvd2->info.state == TVAFE_CVD2_STATE_NO_FIND ||
 		reinit_scan)
@@ -2355,6 +2371,7 @@ _wait:
 		cvd2->det_pali_sts = 0;
 		cvd2->det_palcn_sts = 0;
 		cvd2->det_cnt = 0;
+		color_stb_sts = cvd2->hw.no_color_burst;
 		tvafe_clr_visit_array();
 	} else if (cvd2->info.state == TVAFE_CVD2_STATE_CHECK) {
 		;
@@ -2507,17 +2524,16 @@ static void tvafe_cvd2_search_video_mode(struct tvafe_cvd2_s *cvd2,
 			if (cvd2->info.non_std_enable)
 				shift_cnt *= 10;
 
-			if (IS_TVAFE_AVIN_SRC(cvd2->vd_port) &&
-			    !cvd2->info.non_std_enable)
+			if (IS_TVAFE_AVIN_SRC(cvd2->vd_port))
 				tvin_notify_vdin_skip_frame(1, TVIN_PORT_MAIN);
 
 			/* if no color burst,*/
 			/*pal flag can not be trusted */
 			if (cvd2->info.fmt_shift_cnt++ > shift_cnt) {
-				if (cvd2->manual_fmt != TVIN_SIG_FMT_NULL)
-					tvafe_try_format(cvd2, mem, cvd2->manual_fmt);
-				else
-					tvafe_try_format(cvd2, mem, TVIN_SIG_FMT_CVBS_PAL_I);
+				//if (cvd2->manual_fmt != TVIN_SIG_FMT_NULL)
+				//	tvafe_try_format(cvd2, mem, cvd2->manual_fmt);
+				//else
+				//	tvafe_try_format(cvd2, mem, TVIN_SIG_FMT_CVBS_PAL_I);
 				cvd2->info.state = TVAFE_CVD2_STATE_INIT;
 				cvd2->info.ntsc_switch_cnt = 0;
 				try_format_cnt = 0;

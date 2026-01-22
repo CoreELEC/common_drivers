@@ -57,7 +57,8 @@
 /* 20251224: Notify vdin when config format changes */
 /* 20251225：Increase PGA adjustment frequency */
 /* 20260114：remove ntscm and palm switch flow, reduce pal threshold */
-#define TVAFE_VER "20251225：Increase PGA adjustment frequency"
+/* 20260205: Fix pattern flickering during switching */
+#define TVAFE_VER "20260205: Fix pattern flickering during switching"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010
