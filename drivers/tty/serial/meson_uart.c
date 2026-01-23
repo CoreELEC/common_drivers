@@ -23,6 +23,7 @@
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/amlogic/pm.h>
 
 
 /* Register offsets */
@@ -760,7 +761,6 @@ static struct uart_driver meson_uart_driver = {
 	.cons		= MESON_SERIAL_CONSOLE,
 };
 
-#ifdef CONFIG_HIBERNATION
 static u32 uart_reg_ctrl;
 static u32 uart_reg_misc;
 static u32 uart_reg_reg5;
@@ -808,21 +808,16 @@ static int meson_uart_restore(struct device *dev)
 	return 0;
 }
 
-static int meson_uart_suspend(struct platform_device *pdev,
-			      pm_message_t state);
-static int meson_uart_resume(struct platform_device *pdev);
 static int meson_uart_pm_suspend(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-
-	return meson_uart_suspend(pdev, PMSG_SUSPEND);
+	/* pr_debug("%s EE POWER:%s\n", __func__, ee_support_powerdown()? "OFF" :"ON"); */
+	return meson_uart_freeze(dev);
 }
 
 static int meson_uart_pm_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-
-	return meson_uart_resume(pdev);
+	/* pr_debug("%s EE POWER:%s\n", __func__, ee_support_powerdown()? "OFF" :"ON"); */
+	return meson_uart_restore(dev);
 }
 
 const struct dev_pm_ops meson_uart_pm = {
@@ -832,7 +827,6 @@ const struct dev_pm_ops meson_uart_pm = {
 	.suspend	= meson_uart_pm_suspend,
 	.resume		= meson_uart_pm_resume,
 };
-#endif
 
 static int meson_uart_probe(struct platform_device *pdev)
 {
@@ -1018,9 +1012,7 @@ static  struct platform_driver meson_uart_platform_driver = {
 		   .owner = THIS_MODULE,
 		   .name = "meson_uart",
 		   .of_match_table = meson_uart_dt_match,
-#ifdef CONFIG_HIBERNATION
 		.pm = &meson_uart_pm,
-#endif
 	},
 };
 
