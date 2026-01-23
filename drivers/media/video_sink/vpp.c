@@ -1240,6 +1240,18 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 						div_u64((u64)vpp_speed_factor * 0x187, 0x110);
 				}
 			}
+			/* 1080p input and 4k1k 360hz output, vskip = 0 */
+			if (width_in <= 1920 && height_in <= 1080) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2575, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x143, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1678, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x1f0, 0x110);
+				}
+			}
 		} else if (is_4k1k340hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1638, 1250);
 			*cur_vpp_speed_factor =
@@ -1257,6 +1269,18 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 						div_u64((u64)vpp_speed_factor * 0x180, 0x110);
 				}
 			}
+			/* 1080p input and 4k1k 340hz output, vskip = 0 */
+			if (width_in <= 1920 && height_in <= 1080) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2755, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x13e, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1847, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x1db, 0x110);
+				}
+			}
 		} else if (is_4k1k330hz_out(vinfo) || is_4k1k300hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1685, 1250);
 			*cur_vpp_speed_factor =
@@ -1272,6 +1296,18 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 					*min_ratio_1000 = round_div(min_skip_ratio, 1785, 1250);
 					*cur_vpp_speed_factor =
 						div_u64((u64)vpp_speed_factor * 0x17c, 0x110);
+				}
+			}
+			/* 1080p input and 4k1k 330hz output, vskip = 0 */
+			if (width_in <= 1920 && height_in <= 1080) {
+				if (width_out <= 2560) {
+					*min_ratio_1000 = round_div(min_skip_ratio, 2918, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x136, 0x110);
+				} else {
+					*min_ratio_1000 = round_div(min_skip_ratio, 1944, 1250);
+					*cur_vpp_speed_factor =
+						div_u64((u64)vpp_speed_factor * 0x1d1, 0x110);
 				}
 			}
 		} else if (is_4k1k288hz_out(vinfo)) {
@@ -1299,6 +1335,12 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 						div_u64((u64)vpp_speed_factor * 0x171, 0x110);
 				}
 			}
+			/* 1080p input and 4k1k 288hz output, vskip = 0 */
+			if (width_in <= 1920 && height_in <= 1080) {
+				*min_ratio_1000 = round_div(min_skip_ratio, 3347, 1250);
+				*cur_vpp_speed_factor =
+					div_u64((u64)vpp_speed_factor * 0x127, 0x110);
+			}
 		} else if (is_4k1k240hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1432, 1250);
 			*cur_vpp_speed_factor =
@@ -1308,6 +1350,12 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 				*min_ratio_1000 = round_div(min_skip_ratio, 1708, 1250);
 				*cur_vpp_speed_factor =
 					div_u64((u64)vpp_speed_factor * 0x15A, 0x110);
+			}
+			/* 1080p input and 4k1k 240hz output, vskip = 0 */
+			if (width_in <= 1920 && height_in <= 1080) {
+				*min_ratio_1000 = round_div(min_skip_ratio, 2565, 1250);
+				*cur_vpp_speed_factor =
+					div_u64((u64)vpp_speed_factor * 0x134, 0x110);
 			}
 		} else if (is_4k1k180hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 2273, 1250);
