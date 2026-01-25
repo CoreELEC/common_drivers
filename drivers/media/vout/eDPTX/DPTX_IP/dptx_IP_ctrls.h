@@ -33,8 +33,10 @@ struct dptx_if_ctrl_s {
 	u8 (*aux_read)(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf);
 	u8 (*aux_i2c_op)(struct dptx_drv_s *dptx, u8 port,
 			u8 cmd_type, u32 dev_addr, u8 len, u8 *data);
+	u8 (*aux_read_edid)(struct dptx_drv_s *dptx, u8 port, u8 *data, u16 len);
 
-	void (*transmit_pattern)(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane_mask);
+	void (*transmit_pattern)(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane_mask,
+		u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2);
 	void (*set_MSA)(struct dptx_drv_s *dptx, u8 port);
 
 	void (*path_reset)(struct dptx_drv_s *dptx, u8 port, u8 mask);
@@ -46,6 +48,7 @@ struct dptx_if_ctrl_s {
 	void (*transmitter_output)(struct dptx_drv_s *dptx, u8 port_mask, u8 en);
 
 	u8 (*get_hpd_level)(struct dptx_drv_s *dptx, u8 port);
+	/* hotplug out/ in irq state, 1: irq set, 0: irq not set */
 	u16 (*get_hpd_irq)(struct dptx_drv_s *dptx, u8 port);
 	void (*set_hpd_interrupt_mask)(struct dptx_drv_s *dptx, u8 port, u8 mask);
 

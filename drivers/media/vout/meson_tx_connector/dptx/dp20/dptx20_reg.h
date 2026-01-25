@@ -431,6 +431,12 @@
  */
 #define DPTX20_LPM_TIMER                       0x160
 
+/* TODO confirm is registers exists */
+#define DPTX20_PHY_POST_EMPHASIS_LANE_0		0x240
+#define DPTX20_PHY_POST_EMPHASIS_LANE_1		0x244
+#define DPTX20_PHY_POST_EMPHASIS_LANE_2		0x24c
+#define DPTX20_PHY_POST_EMPHASIS_LANE_3		0x24c
+
 /* RO   PHY_STATUS
  *      specific PHY implementation
  */

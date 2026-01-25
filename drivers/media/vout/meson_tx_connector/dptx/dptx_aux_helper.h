@@ -44,11 +44,12 @@ struct dptx_aux {
 
 struct dptx_aux *dptx_aux_init(struct dptx_hw_common *tx_comm);
 
-ssize_t dptx_aux_read_dpcd(struct dptx_aux *aux, unsigned int offset,
+int dptx_aux_read_dpcd(struct dptx_aux *aux, unsigned int offset,
 			 void *buffer, size_t size);
-ssize_t dptx_aux_write_dpcd(struct dptx_aux *aux, unsigned int offset,
+int dptx_aux_write_dpcd(struct dptx_aux *aux, unsigned int offset,
 			  void *buffer, size_t size);
-
+int dptx_dpcd_access(struct dptx_aux *aux, u8 request,
+	unsigned int offset, void *buffer, size_t size);
 static inline ssize_t dptx_aux_readb_dpcd(struct dptx_aux *aux,
 					unsigned int offset, u8 *valuep)
 {

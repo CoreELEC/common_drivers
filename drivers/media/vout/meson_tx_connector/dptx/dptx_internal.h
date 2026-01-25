@@ -23,5 +23,6 @@ int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm
 int dptx_common_uninit(struct dptx_common *tx_comm);
 void dptx_vout_init(struct dptx_common *tx_comm);
 void dptx_vout_uninit(struct dptx_common *tx_comm);
+struct dptx_common *dptx_get_edptx_inst(u8 idx);
 
 #endif

@@ -34,7 +34,7 @@
 static void link_training_prepare(struct link_train_t *lt)
 {
 	struct dptx_link_param_s *param;
-	struct dptx_link_cfg_s *lc;
+	struct dptx_link_cfg *lc;
 	enum dp_lane_count_e max_lane_count = DPTX_LANE_COUNT_UNKNOWN;
 	u8 *dpcd;
 
@@ -112,7 +112,7 @@ static void link_training_prepare(struct link_train_t *lt)
 static void dptx_training_config_port(struct link_train_t *lt)
 {
 	struct dptx_common *tx_comm = lt->tx_comm;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	bool enable = true;
 
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_ENABLE_LINK, &enable, NULL);
@@ -137,7 +137,7 @@ static void dptx_training_config_port(struct link_train_t *lt)
  */
 static void initialise_phy_drive(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	struct meson_tx_hw *tx_hw;
 	int i;
 
@@ -167,7 +167,7 @@ static void dptx_training_clk_rec_init(struct link_train_t *lt)
 	u8 dpcd_buff[5];
 	u8 dptx_vs, dptx_pe;
 	struct dptx_common *tx_comm = lt->tx_comm;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 
 	memset(dpcd_buff, 0, sizeof(dpcd_buff));   /* clear the temporary dpcd buffer before use */
 	lc->sec_test_count = 0ul;	    /* reset secondary test count */
@@ -209,7 +209,7 @@ static void dptx_training_clk_rec_init(struct link_train_t *lt)
 static bool dptx_dpcd_rd_training_status(struct link_train_t *lt)
 {
 	int ret;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	int i = 0;
 
 	ret = dptx_aux_read_dpcd(lt->aux, DP_LANE0_1_STATUS, lc->dpcd,
@@ -318,7 +318,7 @@ static bool check_sl_lane(u8 lane01, u8 lane23, u8 lane_ct)
 static enum link_status_e lt_check_cr_status(struct link_train_t *lt)
 {
 	int ret;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	u8 *dpcd = lc->dpcd;
 
 	lc->lane01_status = dpcd[0];
@@ -337,7 +337,7 @@ static enum link_status_e lt_check_cr_status(struct link_train_t *lt)
  */
 static enum link_status_e lt_check_cr_count(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 
 	if (lc->max_test_count == LINK_CR_MAX_CT - 1)
 		return LINK_ST_CR_MAX_COUNT;
@@ -395,7 +395,7 @@ static void lt_cr_dshift_lc(struct link_train_t *lt)
 {
 	struct dptx_common *tx_comm = lt->tx_comm;
 	enum dp_lane_count_e new_lane = DPTX_LANE_COUNT_1;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum dp_lane_count_e cur_lane = lc->curr.lane_count;
 
 	if (cur_lane == DPTX_LANE_COUNT_4)
@@ -418,7 +418,7 @@ static void lt_cr_dshift_lc(struct link_train_t *lt)
 static void lt_eq_reset_lc(struct link_train_t *lt)
 {
 	struct dptx_common *tx_comm = lt->tx_comm;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_LANE_COUNT,
 		(void *)&lc->base.lane_count, NULL);
@@ -436,7 +436,7 @@ static void lt_eq_reset_lc(struct link_train_t *lt)
 static void lt_eq_dshift_lr(struct link_train_t *lt)
 {
 	struct dptx_common *tx_comm = lt->tx_comm;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum dp_link_rate_e new_rate = DPTX_LINK_RATE_1P62GHZ;
 	enum dp_link_rate_e cur_rate = lt->link_cfg->curr.link_rate;
 	enum link_pattern_e pattern = LINK_PATTERN_OFF;
@@ -505,7 +505,7 @@ static void lt_eq_dshift_lc(struct link_train_t *lt)
  */
 static enum link_status_e lt_eq_dshift_lc_lr(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum link_status_e st = LINK_ST_TRAINING_FAIL;
 
 	switch (lc->curr.lane_count) {
@@ -546,7 +546,7 @@ static enum link_status_e lt_eq_dshift_lc_lr(struct link_train_t *lt)
  */
 static enum link_status_e lt_check_cr_dshift(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum link_status_e ret = LINK_ST_CR_UPDATE;
 
 	if (lc->curr.vswing == DPTX_PHY_VSWING_1200 ||
@@ -570,7 +570,7 @@ static enum link_status_e lt_check_cr_dshift(struct link_train_t *lt)
  */
 static void lt_cr_reset_lr(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum link_pattern_e pattern = LINK_PATTERN_OFF;
 
 	dptx_hw_cntl(&lt->tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN,
@@ -595,7 +595,7 @@ static void lt_cr_drive_adjust(struct link_train_t *lt)
 	u8 vs[4] = {0};
 	u8 pe[4] = {0};
 	u8 vs_max, pe_max;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum dp_lane_count_e lanes = lc->curr.lane_count;
 
 	switch (lanes) {
@@ -646,7 +646,7 @@ static void lt_cr_drive_adjust(struct link_train_t *lt)
  */
 static void lt_cr_update(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	struct phy_vswing_preemp phy = {0};
 
 	phy.vswing = lc->curr.vswing;
@@ -674,7 +674,7 @@ static void lt_eq_update(struct link_train_t *lt)
  */
 static void dptx_training_chan_eq_init(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	struct dptx_common *tx_comm = lt->tx_comm;
 	enum link_pattern_e pattern = LINK_PATTERN_2;
 
@@ -712,7 +712,7 @@ static void dptx_training_chan_eq_init(struct link_train_t *lt)
 static enum link_status_e lt_check_eq_status(struct link_train_t *lt)
 {
 	int ret[3] = {0};
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	u8 *dpcd = lc->dpcd;
 
 	lc->lane01_status = dpcd[0];
@@ -737,7 +737,7 @@ static enum link_status_e lt_check_eq_status(struct link_train_t *lt)
  */
 static enum link_status_e lt_check_eq_count(struct link_train_t *lt)
 {
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 
 	if (lc->max_test_count == LINK_EQ_MAX_CT - 1)
 		return LINK_ST_EQ_MAX_COUNT;
@@ -751,7 +751,7 @@ static enum link_status_e dptx_train_fsm(struct link_train_t *lt)
 	int st = 0;
 	enum link_status_e ret = 0;
 	struct dptx_common *tx_comm = lt->tx_comm;
-	struct dptx_link_cfg_s *lc = lt->link_cfg;
+	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum link_pattern_e pattern = LINK_PATTERN_OFF;
 
 	DPTX_INFO("train state: %d", lt->link_st);

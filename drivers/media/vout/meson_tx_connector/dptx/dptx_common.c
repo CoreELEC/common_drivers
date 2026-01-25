@@ -623,6 +623,7 @@ int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm
 	if (!tx_comm->link_train)
 		return -ENOMEM;
 	hw_comm->is_edp = tx_comm->is_edp;
+	hw_comm->ext_edptx_ctrl_en = tx_comm->ext_edptx_drv_en;
 	/* init connector_type */
 	tx_comm->base.conn_dev.connector_type =
 		(tx_comm->is_edp ? DRM_MODE_CONNECTOR_MESON_TX_EDP_A :

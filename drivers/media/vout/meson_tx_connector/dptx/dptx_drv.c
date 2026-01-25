@@ -25,7 +25,8 @@
 #include "dp20/dptx_hdcp_hw.h"
 
 #define DEVICE_NAME "dptx"
-#define DPTX_DEV_COUNT 4
+#define DPTX_DEV_COUNT 2
+struct dptx_common *global_tx_comm[DPTX_DEV_COUNT] = {NULL};
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 static void dptx_early_suspend(struct early_suspend *es)
@@ -92,6 +93,10 @@ static int dptx_bind_drm(struct device *dev, struct device *master,
 	struct dptx_common *tx_common = dev_get_drvdata(dev);
 	struct meson_drm_bound_data *bound_data = data;
 
+	/* external edptx driver enabled, use external edptx driver bind ops */
+	if (tx_common->is_edp && tx_common->ext_edptx_drv_en)
+		return -1;
+
 	type = (tx_common->is_edp ? DRM_MODE_CONNECTOR_MESON_TX_EDP_A :
 		DRM_MODE_CONNECTOR_MESON_TX_DP_A)
 		+ tx_common->enc_idx;
@@ -116,8 +121,11 @@ static void dptx_unbind_drm(struct device *dev, struct device *master,
 	struct dptx_common *tx_common = dev_get_drvdata(dev);
 	struct meson_drm_bound_data *bound_data = data;
 
-	type = tx_common->is_edp ? DRM_MODE_CONNECTOR_eDP : DRM_MODE_CONNECTOR_DisplayPort;
+	/* external edptx driver enabled, use external edptx driver unbind ops */
+	if (tx_common->is_edp && tx_common->ext_edptx_drv_en)
+		return;
 
+	type = tx_common->is_edp ? DRM_MODE_CONNECTOR_eDP : DRM_MODE_CONNECTOR_DisplayPort;
 	if (bound_data->connector_component_unbind) {
 		bound_data->connector_component_unbind(bound_data->drm, type,
 			&tx_common->base.conn_dev);
@@ -143,7 +151,7 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 	u32 i;
 	struct resource res;
 	struct device_node *np = pdev->dev.of_node;
-	struct dptx_cap *tx_cap = kzalloc(sizeof(*tx_cap), GFP_KERNEL);
+	struct dptx_cap *tx_cap = NULL;
 
 	if (!tx_comm || !hw_comm)
 		return -1;
@@ -165,6 +173,9 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 	hw_comm->dev_idx = tx_comm->dev_idx;
 
 	/* get tx capability from dts */
+	tx_cap = kzalloc(sizeof(*tx_cap), GFP_KERNEL);
+	if (!tx_cap)
+		return -ENOMEM;
 	tx_comm->base.tx_cap = tx_cap;
 	ret = of_property_read_u32(pdev->dev.of_node, "max_link_rate", &val);
 	if (ret) {
@@ -209,6 +220,13 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 	hw_comm->hw_base.pxp_mode = tx_comm->base.pxp_mode;
 	DPTX_INFO("%s: pxp_mode:%d\n", __func__, tx_comm->base.pxp_mode);
 
+	/* edptx core control by external edptx drv by default */
+	ret = of_property_read_u32(pdev->dev.of_node, "ext_edptx_en", &val);
+	if (ret)
+		tx_comm->ext_edptx_drv_en = 1;
+	else
+		tx_comm->ext_edptx_drv_en = !!val;
+
 	ret = of_property_read_u32(pdev->dev.of_node, "enc_idx", &val);
 	if (!ret && val == 2)
 		tx_comm->enc_idx = 2;
@@ -222,20 +240,24 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 		GFP_KERNEL);
 	if (!hw_comm->hw_base.regs_region) {
 		DPTX_ERROR("cannot alloc memory for regs_region\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto regs_region_alloc_fail;
 	}
 	/* get the core, vpu, ana, ... etc address from dts */
 	for (i = 0; i < REG_IDX_MAX; i++) {
 		if (of_address_to_resource(np, i, &res)) {
 			DPTX_ERROR("not get regbase index %d\n", i);
-			return PTR_ERR(&res);
+			ret = -ENODEV;
+			goto regs_region_alloc_fail;
 		}
 		hw_comm->hw_base.regs_region[i].phy_addr = res.start;
 		hw_comm->hw_base.regs_region[i].size = resource_size(&res);
 		hw_comm->hw_base.regs_region[i].p = devm_ioremap(&pdev->dev, res.start,
 					     resource_size(&res));
-		if (IS_ERR(hw_comm->hw_base.regs_region[i].p))
-			return -ENOMEM;
+		if (IS_ERR(hw_comm->hw_base.regs_region[i].p)) {
+			ret = -ENOMEM;
+			goto regs_region_alloc_fail;
+		}
 
 		DPTX_DEBUG("Mapped Addr: 0x%x\n", res.start);
 	}
@@ -244,25 +266,32 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 		irq_index = platform_get_irq_byname(pdev, "apb_dp_int");
 		if (irq_index == -ENXIO) {
 			DPTX_ERROR("%s: apb_dp_int not found\n", __func__);
-			return -ENXIO;
+			ret = -ENXIO;
+			goto regs_region_alloc_fail;
 		}
 		hw_comm->dptx_irq_id = irq_index;
 		irq_index = platform_get_irq_byname(pdev, "hdcp2tx_intr");
 		if (irq_index == -ENXIO) {
 			DPTX_ERROR("%s: hdcp2tx_intr not found\n", __func__);
-			return -ENXIO;
+			ret = -ENXIO;
+			goto regs_region_alloc_fail;
 		}
 		hw_comm->hdcp2tx_irq_id = irq_index;
 	} else {
 		irq_index = platform_get_irq_byname(pdev, "apb_int_edptx");
 		if (irq_index == -ENXIO) {
 			DPTX_ERROR("%s: apb_int_edptx not found\n", __func__);
-			return -ENXIO;
+			ret = -ENXIO;
+			goto regs_region_alloc_fail;
 		}
 		hw_comm->dptx_irq_id = irq_index;
 	}
-
 	return 0;
+
+regs_region_alloc_fail:
+	kfree(tx_cap);
+
+	return ret;
 }
 
 static struct meson_tx_phy *meson_tx_probe_phy(struct device *dev, struct meson_tx_hw *tx_hw)
@@ -346,35 +375,52 @@ static int dptx_probe(struct platform_device *pdev)
 	struct meson_tx_phy *tx_phy;
 	struct meson_tx_clk *tx_clk;
 
-	tx_comm = kzalloc(sizeof(*tx_comm), GFP_KERNEL);
-
-	if (!tx_comm)
-		return -ENOMEM;
-
 	/* get config from device tree match */
 	plat_data = of_device_get_match_data(&pdev->dev);
+	if (!plat_data)
+		return -ENOMEM;
 
 	tx_hw = plat_data->alloc_tx_hw();
+	if (!tx_hw)
+		return -ENOMEM;
+
+	tx_comm = kzalloc(sizeof(*tx_comm), GFP_KERNEL);
+	if (!tx_comm) {
+		ret = -ENOMEM;
+		goto dptx_common_alloc_fail;
+	}
 	tx_comm->is_edp	= plat_data->is_edp;
 	tx_comm->base.pdev = device;
 	tx_comm->hw_comm = to_dptx_hw_common(tx_hw);
 
 	/* get config from dts */
-	dptx_get_dt_info(pdev, tx_comm, tx_comm->hw_comm);
+	ret = dptx_get_dt_info(pdev, tx_comm, tx_comm->hw_comm);
+	if (ret < 0)
+		goto dptx_get_dt_info_fail;
 
 	/* dptx common init */
 	ret = dptx_common_init(tx_comm, tx_comm->hw_comm);
 	if (ret < 0)
-		return -ENOMEM;
+		goto dptx_common_init_fail;
+
+	ret = tx_hw->init_tx_hw(tx_hw);
+	if (ret < 0)
+		goto dptx_init_tx_hw_fail;
 
 	/* dptx probe phy */
 	tx_phy = meson_tx_probe_phy(device, tx_hw);
-
+	if (!tx_phy) {
+		ret = -ENODEV;
+		goto meson_tx_probe_phy_fail;
+	}
 	/* dptx tx hw setup tx_phy */
 	meson_tx_hw_setup_phy(tx_hw, tx_phy);
-	tx_hw->init_tx_hw(tx_hw);
 
 	tx_clk = meson_tx_probe_clk(device);
+	if (!tx_clk) {
+		ret = -ENODEV;
+		goto meson_tx_probe_clk_fail;
+	}
 	meson_tx_hw_setup_clk(tx_hw, tx_clk);
 
 	//todo for hdcp test
@@ -395,10 +441,24 @@ static int dptx_probe(struct platform_device *pdev)
 #endif
 
 	component_add(device, &dptx_bind_ops);
+	global_tx_comm[tx_comm->dev_idx] = tx_comm;
 
 	DPTX_INFO("%s for dev_index[%d]\n", __func__, tx_comm->dev_idx);
-
 	return 0;
+
+meson_tx_probe_clk_fail:
+meson_tx_probe_phy_fail:
+	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm->base.tx_hw_base);
+dptx_init_tx_hw_fail:
+	dptx_common_uninit(tx_comm);
+dptx_common_init_fail:
+dptx_get_dt_info_fail:
+	kfree(tx_comm);
+	tx_comm = NULL;
+dptx_common_alloc_fail:
+	plat_data->free_tx_hw(tx_hw);
+
+	return ret;
 }
 
 static void dptx_remove(struct platform_device *pdev)
@@ -430,6 +490,35 @@ static void dptx_remove(struct platform_device *pdev)
 	DPTX_INFO("%s for dev_index[%d]\n", __func__, tx_comm->dev_idx);
 	kfree(tx_comm);
 	tx_comm = NULL;
+}
+
+/* only for external eDPTX driver. dptx core and
+ * edptx core may be both used for edptx,
+ * so use idx to get the corresponding edptx
+ * instance in such case, or get the first edptx
+ * instance if dptx core is not used for edptx.
+ */
+struct dptx_common *dptx_get_edptx_inst(u8 idx)
+{
+	u8 i = 0;
+	struct dptx_common *tx_comm = NULL;
+
+	if (idx >= DPTX_DEV_COUNT)
+		return NULL;
+
+	/* find the edptx with index in instance list */
+	if (global_tx_comm[idx] && global_tx_comm[idx]->is_edp)
+		return global_tx_comm[idx];
+
+	/* find the first edptx in instance list */
+	for (i = 0; i < DPTX_DEV_COUNT; i++) {
+		if (global_tx_comm[i] && global_tx_comm[i]->is_edp) {
+			tx_comm	= global_tx_comm[i];
+			break;
+		}
+	}
+
+	return tx_comm;
 }
 
 static struct meson_tx_plat_data dptx_plat_data_a9 = {

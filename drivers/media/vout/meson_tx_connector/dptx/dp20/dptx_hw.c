@@ -13,6 +13,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/phy/meson_tx_phy_core.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/clk/meson_tx_clk.h>
+#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
 
 #include "meson_tx_task_mgr.h"
 #include "dptx_log.h"
@@ -848,8 +849,16 @@ static void dptx_hw_intr_init(struct dptx_hw_common *hw_comm)
 		DPTX_ERROR("%s NULL hw_comm instance!\n", __func__);
 		return;
 	}
-	tx20_hw = to_dptx20_hw(hw_comm);
 
+	/* for eDPTX, disable irq by default,
+	 * left it control by external edptx driver
+	 */
+	if (hw_comm->is_edp && hw_comm->ext_edptx_ctrl_en) {
+		intr_mask = 0xFFFFFFFF;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, intr_mask);
+		return;
+	}
+	tx20_hw = to_dptx20_hw(hw_comm);
 	if (tx20_hw->aux_block_mode)
 		intr_mask |= (INTERRUPT_MASK_REPLY_RECEIVED_EVENT |
 			INTERRUPT_MASK_REPLY_TIMEOUT_EVENT);
@@ -1027,6 +1036,25 @@ static void dptx20_hw_set_vsc_colorimetry(struct dptx_hw_common *hw_comm,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_COLORIMETRY_OVERRIDE), data);
 }
 
+static u32 dptx20_hw_calc_usr_data_ct(u32 hactive, enum colorimetry_format cs,
+	u32 bpc, u32 lane_count)
+{
+	u32 components_per_pixel;
+	u32 pixels_per_line;
+	u32 pixel_bits_per_line;
+	u32 symbols_per_line;
+	u32 h_div = 1;
+
+	components_per_pixel = dptx_get_color_component_cnt(cs);
+	if (cs == COLORIMETRY_FORMAT_YUV420)
+		h_div = 2;
+	pixels_per_line = (hactive / h_div + lane_count - 1) / lane_count;
+	pixel_bits_per_line = pixels_per_line * bpc * components_per_pixel;
+	symbols_per_line = (pixel_bits_per_line + 7) / 8;
+
+	return symbols_per_line;
+}
+
 /*
  * Function: dptx20_hw_set_msa
  *
@@ -1157,6 +1185,171 @@ static void dptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 	}
 }
 
+/*
+ * Function: edptx20_hw_set_msa
+ *
+ * set main stream attribute for external edptx driver.
+ * refer to dp1.4 spec table2-94 for detail
+ */
+static void edptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
+	u8 vc_id, struct msa_s *msa)
+{
+	u32 misc = 0;
+	u8 bit_depth = 0;
+	/*
+	 * When bit 6 is set to 1, a Source device uses a VSC SDP to indicate the Pixel
+	 * Encoding/Colorimetry format and that a Sink device shall ignore bit 7, and MISC0,
+	 * bits 7:1 (i.e., MISC1, bit 7, and MISC0, bits 7:1, become "don't care").
+	 */
+	bool vsc_colorimetry = false;
+	/*
+	 * 0: Link clock and main video stream clock are asynchronous.
+	 * 1: Link clock and main video stream clock are synchronous.
+	 */
+
+	/* Y-only or Raw mode is not default setting, support in the future */
+	bool y_only_or_raw_mode = false;
+	bool even_line_cnt = false;
+	u32 symbols_per_line = 0;
+
+	if (!hw_comm || !msa)
+		return;
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_HTOTAL),
+		msa->h_total);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_VTOTAL),
+		msa->v_total);
+	/* 0 = Active high pulse. 1 = Active low pulse */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_POLARITY),
+			(!msa->hsync_pol) | (!msa->vsync_pol << 1));
+	/* Hsync width, measured in pixel count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_HSWIDTH),
+		msa->hsw);
+	/* Vsync width, measured in line count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_VSWIDTH),
+		msa->vsw);
+	/* Active video width, measured in pixel count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_HRES),
+		msa->h_active);
+	/* Active video height, measured in line count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_VRES),
+		msa->v_active);
+	/* Horizontal active start from leading edge of Hsync, measured in pixel count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_HSTART),
+		msa->hsync_pol + msa->hbp);
+	/* Vertical active start from leading edge of Vsync, measured in line count. */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_VSTART),
+		msa->vsync_pol + msa->vbp);
+
+	misc = 0;
+	misc = msa->sync_clk_mode << 0;
+	/* color format; Note: 0x3 means reserved */
+	misc |= (msa->color_format & 0x3) << 1;
+	switch (msa->bit_depth) {
+	case 0x6:
+		bit_depth = 0;
+		break;
+	case 0x8:
+		bit_depth = 1;
+		break;
+	case 10:
+		bit_depth = 2;
+		break;
+	case 12:
+		bit_depth = 3;
+		break;
+	case 16:
+		bit_depth = 4;
+		break;
+	default:
+		/* default 8bit depth */
+		bit_depth = 1;
+		break;
+	}
+	misc |= (bit_depth & 0x7) << 5;
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_MISC0), misc);
+
+	/* check the line count is even or odd for interlace mode */
+	if (msa->interlace_mode == 1)
+		even_line_cnt = msa->v_total % 2 ? false : true;
+	else
+		even_line_cnt = false;
+
+	misc = 0;
+	/* set to 1 when the number of lines per frame of
+	 * the interlaced video stream is an even number.
+	 */
+	misc |= even_line_cnt << 0;
+	/* no stereo video(3D) transported */
+	misc |= 0x0 << 1;
+	/* bit5:3 must be set to 0 as reserved */
+	misc |= 0x0 << 3;
+	misc |= vsc_colorimetry << 6;
+	misc |= y_only_or_raw_mode << 7;
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_MISC1), misc);
+
+	if (msa->sync_clk_mode) {
+		/*
+		 * In asynchronous mode, this register is read-only and will return the
+		 * value computed by the internal logic based on the input video clock. In
+		 * synchronous mode, this register is read-write and should be set to the
+		 * pixel clock rate multiplied by 100000
+		 */
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MVID), msa->pixel_freq);
+		/*
+		 * DP1.4 spec Chapter2.2.3: The Nvid value in this Asynchronous Clock mode shall
+		 * be set to 2^15 (= 32768) or higher. A value of power of two should be used.
+		 *
+		 * In asynchronous mode, this register is read-only and will
+		 * return 0x8000. In synchronous mode, this register is read-write
+		 * and should be set to the link rate multiplied by 100000
+		 */
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_NVID),
+			msa->link_rate * 27000);
+	}
+
+	/* Note need to set link rate/lane count HW reg firstly */
+	/* dptx_set_tu_config(hw_comm, vc_id, msa->pixel_freq, */
+		/* (enum colorimetry_format)msa->color_format, msa->bit_depth); */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_TU_CONFIG),
+			msa->tu_config);
+	/* set 1 if interlace mode */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_INTERLACED),
+			msa->interlace_mode);
+	/* number of pixels per clock cycle, 1: for single pixel wide */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_PIXEL_COUNT), 1);
+
+	/* symbols per line */
+	symbols_per_line = dptx20_hw_calc_usr_data_ct(msa->h_active,
+		(enum colorimetry_format)msa->color_format, msa->bit_depth,
+		msa->lane_count);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_DATA_COUNT),
+		symbols_per_line);
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_SYNC_POLARITY),
+		msa->user_sync_polarity);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), msa->user_control);
+}
+
 /* config MST_CTRL in DPCD */
 static int dptx20_hw_mst_init(struct dptx_hw_common *hw_comm)
 {
@@ -1206,25 +1399,6 @@ static void dptx20_hw_src_vid_enable(struct dptx_hw_common *hw_comm, u8 vc_id, b
 	 * TO CONFIRM: disable bit for the disable input source when MST enabled?
 	 */
 	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SOURCE_ENABLE, src_en | 0x1 << vc_id);
-}
-
-static u32 dptx20_hw_calc_usr_data_ct(u32 hactive, enum colorimetry_format cs,
-	u32 bpc, u32 lane_count)
-{
-	u32 components_per_pixel;
-	u32 pixels_per_line;
-	u32 pixel_bits_per_line;
-	u32 symbols_per_line;
-	u32 h_div = 1;
-
-	components_per_pixel = dptx_get_color_component_cnt(cs);
-	if (cs == COLORIMETRY_FORMAT_YUV420)
-		h_div = 2;
-	pixels_per_line = (hactive / h_div + lane_count - 1) / lane_count;
-	pixel_bits_per_line = pixels_per_line * bpc * components_per_pixel;
-	symbols_per_line = (pixel_bits_per_line + 7) / 8;
-
-	return symbols_per_line;
 }
 
 static void dptx_fec_init(struct dptx_hw_common *hw_comm)
@@ -1585,6 +1759,12 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_TRAINING_PATTERN_SET, pattern);
 		dptx_aux_write_dpcd(hw_comm->tx_aux, DP_TRAINING_PATTERN_SET, dpcd, 1);
 		break;
+	case LINKCONF_SET_TRAIN_PATTERN_VALUE:
+		if (!input_argv)
+			return -1;
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			DPTX20_TRAINING_PATTERN_SET, *(u32 *)input_argv);
+		break;
 	case LINKCONF_SET_VSWING_PREEMP:
 		{
 			struct phy_vswing_preemp *phy;
@@ -1609,12 +1789,47 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 		break;
 	/* save link rate and lane count for calculation later */
 	case LINKCONF_SAVE_LINK_RATE:
+		if (!input_argv)
+			return -1;
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LINK_BW_SET,
 			*(enum dp_link_rate_e *)input_argv);
 		break;
+	case LINKCONF_GET_LINK_RATE:
+		if (!output_struct)
+			return -1;
+		*(u32 *)output_struct = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_LINK_BW_SET);
+		break;
 	case LINKCONF_SAVE_LANE_COUNT:
+		if (!input_argv)
+			return -1;
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LANE_COUNT_SET,
 			*(enum dp_lane_count_e *)input_argv);
+		break;
+	case LINKCONF_GET_LANE_COUNT:
+		if (!output_struct)
+			return -1;
+		*(u32 *)output_struct = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_LANE_COUNT_SET);
+		break;
+	case LINKCONF_SET_QUAL_PATTERN:
+		if (!input_argv)
+			return -1;
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			DPTX20_LINK_QUAL_PATTERN_SET, *(u32 *)input_argv);
+		break;
+	case LINKCONF_SET_80BIT_CUSTOM:
+		{
+			u32 cos_80b[3] = {0};
+
+			if (!input_argv)
+				return -1;
+			memcpy(cos_80b, (u32 *)input_argv, sizeof(cos_80b));
+			dptx20_reg_write(hw_comm, CORE_LEVEL,
+				DPTX20_CUSTOM_80BIT_PATTERN_31_0, cos_80b[0]);
+			dptx20_reg_write(hw_comm, CORE_LEVEL,
+				DPTX20_CUSTOM_80BIT_PATTERN_63_32, cos_80b[1]);
+			dptx20_reg_write(hw_comm, CORE_LEVEL,
+				DPTX20_CUSTOM_80BIT_PATTERN_79_64, cos_80b[2]);
+		}
 		break;
 	default:
 		break;
@@ -2399,6 +2614,82 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 			return -1;
 		value = *(u32 *)input_argv;
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HPD_OVER, value);
+		break;
+	case DP_GET_HPD_STATE:
+		return dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE);
+	case DP_GET_HPD_EVENT_STATE:
+		value = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE);
+		/* only clear HPD event intr state */
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE,
+			INTERRUPT_STATE_HPD_EVENT);
+		return value & INTERRUPT_STATE_HPD_EVENT;
+	case DP_SET_IRQ_MASK:
+		if (!input_argv)
+			return -1;
+		/* set irq mask */
+		value = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK);
+		value &= ~(*(u32 *)input_argv);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, value);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE, 0xFFFFFFFF);
+		break;
+	case EDP_REG_STORE_DATA:
+		if (!input_argv)
+			return -1;
+		value = *(u32 *)input_argv;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_PHY_POST_EMPHASIS_LANE_0,
+			value & 0xf);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_PHY_POST_EMPHASIS_LANE_1,
+			(value >> 4) & 0xf);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_PHY_POST_EMPHASIS_LANE_2,
+			(value >> 8) & 0xf);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_PHY_POST_EMPHASIS_LANE_3,
+			(value >> 12) & 0xf);
+		break;
+	case EDP_REG_GET_DATA:
+		if (!output_struct)
+			return -1;
+		value = 0;
+		value |= dptx20_reg_read(hw_comm, CORE_LEVEL,
+			DPTX20_PHY_POST_EMPHASIS_LANE_0) & 0xf;
+		value |= (dptx20_reg_read(hw_comm, CORE_LEVEL,
+			DPTX20_PHY_POST_EMPHASIS_LANE_1) & 0xf) << 4;
+		value |= (dptx20_reg_read(hw_comm, CORE_LEVEL,
+			DPTX20_PHY_POST_EMPHASIS_LANE_2) & 0xf) << 8;
+		value |= (dptx20_reg_read(hw_comm, CORE_LEVEL,
+			DPTX20_PHY_POST_EMPHASIS_LANE_3) & 0xf) << 12;
+		*(u32 *)output_struct = value;
+		break;
+	case EDP_SET_MSA:
+		/* assume vc_id = 0 */
+		edptx20_hw_set_msa(hw_comm, 0, (struct msa_s *)input_argv);
+		break;
+	case DP_SCRAMBLE_DISABLE:
+		if (!input_argv)
+			return -1;
+		value = *(u32 *)input_argv;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_DISABLE_SCRAMBLING, value);
+		break;
+	case EDP_ALTERNATE_SCRAMBLE_RESET:
+		if (!input_argv)
+			return -1;
+		value = *(u32 *)input_argv;
+		/* set bit to 1 to force TX core to use alternate scramble reset value */
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_EDP_CAPABILITY_CONFIG, value);
+		break;
+	case EDP_TRANSMITTER_INIT:
+		dptx_hw_set_clk_div(hw_comm, APB_BUS_FREQ_MHZ);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_TRANSMITTER_ENABLE, 0x1);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SOFT_RESET, 0x1f);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SRCX_VIDEO_STREAM_ENABLE, 0x0);
+		break;
+	case DP_TRANSMITTER_OUTPUT_EN:
+		if (!input_argv)
+			return -1;
+		/* assume vc_id = 0 */
+		value = *(u8 *)input_argv;
+		dptx20_hw_src_vid_enable(hw_comm, 0, !!value);
+		if (value == 0)
+			dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_TRANSMITTER_ENABLE, 0x0);
 		break;
 	default:
 		break;

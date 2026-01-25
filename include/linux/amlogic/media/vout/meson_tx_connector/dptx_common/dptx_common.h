@@ -92,6 +92,8 @@ struct dptx_common {
 	/* instance index */
 	u32 dev_idx;
 	u32 is_edp;
+	/* use external edptx driver to control HW core */
+	bool ext_edptx_drv_en;
 
 	struct dptx_aux *tx_aux;
 	struct dptx_hw_fmt_para hw_fmt_para;

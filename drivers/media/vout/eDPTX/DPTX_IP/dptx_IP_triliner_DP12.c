@@ -293,7 +293,8 @@ static u8 _aux_i2c_op(struct dptx_drv_s *dptx, u8 port, u8 cmd_type, u32 dev_add
 	return ret;
 }
 
-static void dptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane_mask)
+static void dptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane_mask,
+	u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2)
 {
 	unsigned char dptx_ip_pat_sets[11] = {
 		0x00, 0x01, 0x02, 0x03, 0xff, //TRAINING_PATTERN_SET: off, TPS1, TPS2, TPS3, TPS4
@@ -567,7 +568,7 @@ static u16 dptx_get_hpd_irq(struct dptx_drv_s *dptx, u8 port)
  * asserts immediately after the detection of HPD and after the loss of HPD for 2 msec.
  * bit[0] – HPD_IRQ: an IRQ framed with the proper timing on the HPD signal has been detected.
  */
-	return __dptx_reg_read(dptx, port, EDP_TX_AUX_INTERRUPT_STATUS);
+	return (__dptx_reg_read(dptx, port, EDP_TX_AUX_INTERRUPT_STATUS) >> 1) & 0x1;
 }
 
 static void dptx_interrupt_mask_set(struct dptx_drv_s *dptx, u8 port, u8 mask)

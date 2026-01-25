@@ -24,7 +24,7 @@
 #endif
 
 /* return accessed count if success, otherwise a negetive error code */
-static int dptx_dpcd_access(struct dptx_aux *aux, u8 request,
+int dptx_dpcd_access(struct dptx_aux *aux, u8 request,
 	unsigned int offset, void *buffer, size_t size)
 {
 	struct dptx_aux_msg msg;
@@ -80,7 +80,7 @@ unlock:
 }
 
 /* return accessed count if success, otherwise a negetive error code */
-ssize_t dptx_aux_read_dpcd(struct dptx_aux *aux, unsigned int offset,
+int dptx_aux_read_dpcd(struct dptx_aux *aux, unsigned int offset,
 			 void *buffer, size_t size)
 {
 	int ret;
@@ -91,7 +91,7 @@ ssize_t dptx_aux_read_dpcd(struct dptx_aux *aux, unsigned int offset,
 	return ret;
 }
 
-ssize_t dptx_aux_write_dpcd(struct dptx_aux *aux, unsigned int offset,
+int dptx_aux_write_dpcd(struct dptx_aux *aux, unsigned int offset,
 			  void *buffer, size_t size)
 {
 	int ret;

@@ -60,6 +60,9 @@ void dptx_vout_init(struct dptx_common *tx_comm)
 		.vout_resume = NULL,
 	};
 
+	/* for eDPTX, register vout server by external edptx driver */
+	if (tx_comm->is_edp && tx_comm->ext_edptx_drv_en)
+		return;
 	meson_tx_vout_init(&tx_comm->base, &dptx_vout_ops);
 #endif
 }
@@ -67,6 +70,9 @@ void dptx_vout_init(struct dptx_common *tx_comm)
 void dptx_vout_uninit(struct dptx_common *tx_comm)
 {
 #ifdef CONFIG_AMLOGIC_VOUT_SERVE
+	/* for eDPTX, register vout server by external edptx driver */
+	if (tx_comm->is_edp && tx_comm->ext_edptx_drv_en)
+		return;
 	meson_tx_vout_uninit(&tx_comm->base);
 #endif
 }

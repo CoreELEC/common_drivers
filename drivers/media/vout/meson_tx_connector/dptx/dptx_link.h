@@ -125,7 +125,7 @@ enum link_status_e {
 	LINK_ST_EQ_PASS,
 };
 
-struct dptx_link_cfg_s {
+struct dptx_link_cfg {
 	/* DPCD version */
 	u8 version;
 	/* current link parameters */
@@ -173,7 +173,7 @@ struct dptx_link_cfg_s {
 };
 
 struct link_train_t {
-	struct dptx_link_cfg_s *link_cfg;
+	struct dptx_link_cfg *link_cfg;
 	enum link_status_e link_st;
 	bool train_running;
 	/* link training timeout period, unit: ms */

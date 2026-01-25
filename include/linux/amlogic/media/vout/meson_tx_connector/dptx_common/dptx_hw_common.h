@@ -111,6 +111,8 @@ struct dptx_hw_common {
 	struct dptx_timer_manager *timer_manager;
 
 	u32 is_edp;
+	/* use external edptx driver to control HW core */
+	bool ext_edptx_ctrl_en;
 	/* for link training debug */
 	u8 force_tps_pattern;
 	/* DP1.4 chapter2.2.3 stream clk and link symbol clk share the same reference clk */

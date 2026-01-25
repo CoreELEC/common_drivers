@@ -222,7 +222,7 @@ static irqreturn_t dptx_HPD_isr(int irq, void *data)
 	DPTX_DBG(dptx, "HPD[%d] triggered. ignore=%d level=%u irq=0x%x", irq,
 		dptx->status & DPTX_STA_HPD_TRI_EN ? 0 : 1, curr_HPD_level, curr_irq);
 
-	if ((dptx->status & DPTX_STA_HPD_TRI_EN) && curr_irq == 0x2 &&
+	if ((dptx->status & DPTX_STA_HPD_TRI_EN) && curr_irq == 0x1 &&
 		((dptx->status & DPTX_STA_HPD_HIGH) ^ (curr_HPD_level << 3))) {
 		return IRQ_WAKE_THREAD;
 	}

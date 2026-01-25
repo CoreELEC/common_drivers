@@ -49,11 +49,21 @@ u8 dptx_if_aux_i2c_op(struct dptx_drv_s *dptx, u8 port,
 	return 0;
 }
 
-void dptx_if_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane)
+u8 dptx_if_aux_read_edid(struct dptx_drv_s *dptx, u8 port,
+			u8 *data, u16 len)
+{
+	if (likely(((struct dptx_if_ctrl_s *)dptx->if_ctrls)->aux_read_edid))
+		return ((struct dptx_if_ctrl_s *)dptx->if_ctrls)->aux_read_edid
+			(dptx, port, data, len);
+	return 0;
+}
+
+void dptx_if_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane,
+	u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2)
 {
 	if (likely(((struct dptx_if_ctrl_s *)dptx->if_ctrls)->transmit_pattern))
 		((struct dptx_if_ctrl_s *)dptx->if_ctrls)->transmit_pattern
-			(dptx, port, pattern, lane);
+			(dptx, port, pattern, lane, cos_80b_0, cos_80b_1, cos_80b_2);
 }
 
 void dptx_if_set_MSA(struct dptx_drv_s *dptx, u8 port)
@@ -154,6 +164,9 @@ void dptx_if_IP_probe(struct dptx_drv_s *dptx)
 	switch (dptx->data->chip_type) {
 	case DPTX_CHIP_T7:
 		dptx->if_ctrls = dptx_if_bind_t7(dptx);
+		break;
+	case DPTX_CHIP_A9:
+		dptx->if_ctrls = dptx_if_bind_DP14(dptx);
 		break;
 	default:
 		dptx->if_ctrls = NULL;

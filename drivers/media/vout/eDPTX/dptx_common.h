@@ -58,20 +58,6 @@ enum DP_link_rate_e {
 	DP_LINK_RATE_INVALID = 0,
 };
 
-#define DPTX_TPS_DISABLE      0
-#define DPTX_TPS1             1
-#define DPTX_TPS2             2
-#define DPTX_TPS3             3
-#define DPTX_TPS4             4
-#define DPTX_QUAL_PAT_DISABLE 5
-#define DPTX_D10P2            6
-#define DPTX_SYMBOL_ERROR_MSR 7
-#define DPTX_PRBS7            8
-#define DPTX_80BIT_CUSTOM     9
-#define DPTX_HBR2_EYE         10
-#define DPTX_TRP_CR           DPTX_TPS1
-#define DPTX_TRP_EQ           0xf0
-
 #define DPTX_AUX_CMD_WRITE            0x8
 #define DPTX_AUX_CMD_READ             0x9
 #define DPTX_AUX_CMD_I2C_WRITE        0x0
@@ -119,7 +105,9 @@ u8 dptx_if_aux_write_single(struct dptx_drv_s *dptx, u8 port, u32 addr, u8 val);
 u8 dptx_if_aux_read(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf);
 u8 dptx_if_aux_i2c_op(struct dptx_drv_s *dptx, u8 port,
 					u8 cmd_type, u32 dev_addr, u8 len, u8 *data);
-void dptx_if_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane);
+u8 dptx_if_aux_read_edid(struct dptx_drv_s *dptx, u8 port, u8 *data, u16 len);
+void dptx_if_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern, u8 lane,
+	u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2);
 void dptx_if_set_MSA(struct dptx_drv_s *dptx, u8 port);
 #define DPTX_RESET_COMBO_DPHY          BIT(0)
 #define DPTX_RESET_eDP_PIPE            BIT(1)

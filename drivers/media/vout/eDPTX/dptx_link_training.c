@@ -177,7 +177,7 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 	case DPTX_TPS1:
 	case DPTX_TPS2:
 	case DPTX_TPS3:
-		dptx_if_transmit_pattern(dptx, port, pattern, 0xf);
+		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, 0x0, 0x0, 0x0);
 		_data = (DP_test_pat[pattern].data & 0x3) |
 			(DP_test_pat[pattern].SR_disable << 5) |
 			(0x3 << 6);
@@ -191,7 +191,7 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 	case DPTX_SYMBOL_ERROR_MSR:
 	case DPTX_PRBS7:
 	case DPTX_HBR2_EYE:
-		dptx_if_transmit_pattern(dptx, port, pattern, 0xf);
+		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, 0x0, 0x0, 0x0);
 		_data = (DP_test_pat[pattern].SR_disable << 5) | (0x3 << 6);
 		ret = dptx_if_aux_write_single(dptx, port, DPCD_TRAINING_PATTERN_SET, _data);
 		//! DPCD1.0/1.1 should use DPCD_TRAINING_PATTERN_SET[2:3]

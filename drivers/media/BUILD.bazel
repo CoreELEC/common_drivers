@@ -338,6 +338,7 @@ ddk_module(
                 "vout/meson_tx_connector/dptx/dptx_gtc.c",
                 "vout/meson_tx_connector/dptx/dptx_infoframe.c",
                 "vout/meson_tx_connector/dptx/dptx_hw_common.c",
+                "vout/meson_tx_connector/dptx/edptx_core_api.c"
             ],
         },
         "CONFIG_AMLOGIC_DPTX": {

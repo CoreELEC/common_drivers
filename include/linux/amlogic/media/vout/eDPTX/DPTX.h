@@ -59,8 +59,27 @@ extern u8 dptx_print_level;
 #define RGB_DELAY                   13
 #define PRE_DE_DELAY                8
 
+/* test pattern index */
+#define DPTX_TPS_DISABLE      0
+#define DPTX_TPS1             1
+#define DPTX_TPS2             2
+#define DPTX_TPS3             3
+#define DPTX_TPS4             4
+#define DPTX_QUAL_PAT_DISABLE 5
+#define DPTX_D10P2            6
+#define DPTX_SYMBOL_ERROR_MSR 7
+#define DPTX_PRBS7            8
+#define DPTX_80BIT_CUSTOM     9
+#define DPTX_HBR2_EYE         10
+#define DPTX_CP2520_1         DPTX_HBR2_EYE
+#define DPTX_CP2520_2         11
+#define DPTX_CP2520_3         12
+#define DPTX_TRP_CR           DPTX_TPS1
+#define DPTX_TRP_EQ           0xf0
+
 enum dptx_chip_e {
 	DPTX_CHIP_T7,
+	DPTX_CHIP_A9,
 	DPTX_CHIP_MAX,
 };
 
@@ -349,6 +368,51 @@ struct dptx_vmode_mgr_s {
 
 #define DPTX_GPIO_NAME_MAX    12
 
+/* per dp1.4a spec Table 2-94 & Table 2-96 */
+struct msa_s {
+	u32 m_vid;
+	u32 n_vid;
+
+	u16 h_total;
+	u16 v_total;
+	u8 hsync_pol:1;
+	u8 vsync_pol:1;
+	u16 hsw;
+	u16 vsw;
+	u16 h_active;
+	u16 v_active;
+	u16 hbp;
+	u16 vbp;
+
+	/* mics0/1 */
+	u8 sync_clk_mode:1;
+	/* Unit: 1000, used only under sync_clk mode */
+	unsigned int pixel_freq;
+	/* 0x6/0xa/0x14/0x1e, used only under sync_clk mode */
+	u8 link_rate;
+	/* for SRCX_USER_DATA_COUNT calc */
+	u8 lane_count;
+
+	u8 interlace_mode:1;
+	/* for 3D */
+	u8 stereo_video_attr:2;
+	/* 0:rgb, 1:y422, 2:y444, 3:reserved */
+	u8 color_format:2;
+	/* 0: VESA range, 1: CEA range */
+	u8 dynamic_range;
+	/* 0: BT601, 1: BT709, others: reserved for future */
+	u8 ycbcr_colorimetry;
+	/* 6/8/10/12/16 bits per color component */
+	u8 bit_depth;
+
+	/* SRC0_TRANSFER_UNIT_CONFIG */
+	u32 tu_config;
+	/* SRC0_USER_SYNC_POLARITY */
+	u32 user_sync_polarity;
+	/* SRC0_USER _CONTROL */
+	u32 user_control;
+};
+
 struct dptx_drv_s {
 	u8 idx;
 	u8 status;
@@ -396,6 +460,7 @@ struct dptx_drv_s {
 	u8 next_vmd_idx;
 
 	struct dptx_detail_timing_s act_timing;
+	struct msa_s msa;
 	struct dptx_sink_dev_s {
 		char sink_name[32];
 		u8 port_mask;
