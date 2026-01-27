@@ -60,7 +60,7 @@
 			compatible = "shared-dma-pool";
 			no-map;
 			alignment = <0x0 0x100000>;
-			reg = <0x0 0x05100000 0x0 0x110000>;
+			reg = <0x0 0x05000000 0x0 0x00b00000>;
 		};
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
