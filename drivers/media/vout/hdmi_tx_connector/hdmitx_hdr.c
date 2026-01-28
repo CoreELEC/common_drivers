@@ -288,28 +288,31 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			schedule_work(&tx_comm->work_hdr);
 			hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_HDR_MODE_SDR);
 			buffer[4] = 0;
-		}
-		/* back to previous cs */
-		/*
-		 * currently output y444,8bit or rgb,8bit, if exit playing,
-		 * then switch back to 8bit mode
-		 */
-		if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_YUV444 &&
-			tx_comm->fmt_para.cd == COLORDEPTH_24B) {
-			arg = CSC_Y444_8BIT | CSC_UPDATE_AVI_CS;
-			hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
-				(void *)&arg, NULL);
-			HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
-				__func__, tx_comm->fmt_para.cs,
-				tx_comm->fmt_para.cd);
-		} else if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB &&
-			tx_comm->fmt_para.cd == COLORDEPTH_24B) {
-			arg = CSC_RGB_8BIT | CSC_UPDATE_AVI_CS;
-			hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
-				(void *)&arg, NULL);
-			HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
-				__func__, tx_comm->fmt_para.cs,
-				tx_comm->fmt_para.cd);
+			/* if 8bit hdr mode is enabled, no need small mode */
+			if (!tx_comm->hdr_8bit_en) {
+				/* back to previous cs */
+				/*
+				 * currently output y444,8bit or rgb,8bit, if exit playing,
+				 * then switch back to 8bit mode
+				 */
+				if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_YUV444 &&
+					tx_comm->fmt_para.cd == COLORDEPTH_24B) {
+					arg = CSC_Y444_8BIT | CSC_UPDATE_AVI_CS;
+					hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
+						(void *)&arg, NULL);
+					HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
+						__func__, tx_comm->fmt_para.cs,
+					tx_comm->fmt_para.cd);
+				} else if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB &&
+					tx_comm->fmt_para.cd == COLORDEPTH_24B) {
+					arg = CSC_RGB_8BIT | CSC_UPDATE_AVI_CS;
+					hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
+						(void *)&arg, NULL);
+					HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
+						__func__, tx_comm->fmt_para.cs,
+						tx_comm->fmt_para.cd);
+				}
+			}
 		}
 		spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
 		return;
@@ -1257,6 +1260,8 @@ void hdmitx_clear_all_infoframe_pkt(struct hdmitx_common *tx_comm)
 	tx_comm->in_color_range = 0xff;
 	tx_comm->out_color_range = 0xff;
 	tx_comm->in_color_fmt = 0xff;
+	tx_comm->csc_config_in_next_frame = false;
+	tx_comm->output_color_format = 0;
 
 	spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
 }

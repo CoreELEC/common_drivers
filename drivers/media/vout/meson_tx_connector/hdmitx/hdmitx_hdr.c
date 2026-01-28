@@ -289,28 +289,31 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			tx_task_mgr_queue_task(tx_comm->base.task_mgr, HDR_TASK, 0);
 			meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_HDR_MODE_SDR);
 			buffer[4] = 0;
-		}
-		/* back to previous cs */
-		/*
-		 * currently output y444,8bit or rgb,8bit, if exit playing,
-		 * then switch back to 8bit mode
-		 */
-		if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_YUV444 &&
-			tx_comm->fmt_para.cd == COLORDEPTH_24B) {
-			arg = CSC_Y444_8BIT | CSC_UPDATE_AVI_CS;
-			hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
-				(void *)&arg, NULL);
-			HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
-				__func__, tx_comm->fmt_para.cs,
-				tx_comm->fmt_para.cd);
-		} else if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB &&
-			tx_comm->fmt_para.cd == COLORDEPTH_24B) {
-			arg = CSC_RGB_8BIT | CSC_UPDATE_AVI_CS;
-			hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
-				(void *)&arg, NULL);
-			HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
-				__func__, tx_comm->fmt_para.cs,
-				tx_comm->fmt_para.cd);
+			/* if 8bit hdr mode is enabled, no need small mode */
+			if (!tx_hdr->hdr_8bit_en) {
+				/* back to previous cs */
+				/*
+				 * currently output y444,8bit or rgb,8bit, if exit playing,
+				 * then switch back to 8bit mode
+				 */
+				if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_YUV444 &&
+					tx_comm->fmt_para.cd == COLORDEPTH_24B) {
+					arg = CSC_Y444_8BIT | CSC_UPDATE_AVI_CS;
+					hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
+						(void *)&arg, NULL);
+					HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
+						__func__, tx_comm->fmt_para.cs,
+						tx_comm->fmt_para.cd);
+				} else if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB &&
+					tx_comm->fmt_para.cd == COLORDEPTH_24B) {
+					arg = CSC_RGB_8BIT | CSC_UPDATE_AVI_CS;
+						hdmitx_hw_cntl(tx_hw, VPU_CONFIG_CSC,
+						(void *)&arg, NULL);
+					HDMITX_INFO("hdr: [%s]: switch back to cs: %d, cd: %d\n",
+						__func__, tx_comm->fmt_para.cs,
+						tx_comm->fmt_para.cd);
+				}
+			}
 		}
 		spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
 		return;
