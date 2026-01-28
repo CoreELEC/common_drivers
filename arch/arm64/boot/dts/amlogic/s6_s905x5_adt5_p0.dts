@@ -20,7 +20,7 @@
 	aliases {
 		serial0 = &uart_B;
 		serial1 = &uart_A;
-		serial2 = &uart_C;
+		serial3 = &uart_C;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -50,7 +50,6 @@
 		};
 
 		/* global autoconfigured region for contiguous allocations */
-
 		ramoops@6b00000 {
 			compatible = "ramoops";
 			reg = <0x0 0x06b00000 0x0 0x00080000>;/* addr set in uboot */
@@ -73,12 +72,6 @@
 		dmc_reserved:linux,dmc_monitor {
 			compatible = "amlogic,dmc_monitor-reserved";
 			reg = <0x0 0x0 0x0 0x80000>;
-		};
-
-		mte_reserved:linux,mte {
-			compatible = "shared-dma-pool";
-			no-map;
-			reg = <0x0 0x0c000000 0x0 0x20000000>;
 		};
 
 		secmon_reserved:linux,secmon {
@@ -116,15 +109,15 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 4k STB androidU size 320M */
-			size = <0x0 0x14000000>;
+			/* 1080p STB android16 size 88M */
+			size = <0x0 0x5800000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 4k STB androidU size 212M */
-			size = <0x0 0xd400000>;
+			/* 1080p STB android16 size 56M */
+			size = <0x0 0x3800000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_secure_reserved:heap-secure {
@@ -174,8 +167,9 @@
 			 * Note:
 			 *  setting to 496M if scatter_alloc_mode is 0.
 			 *  setting to 444M if scatter_alloc_mode is 1.
+			 *  encoder needs an additional 152MB,total=444+152=596M
 			 */
-			size = <0x0 0x1bc00000>;
+			size = <0x0 0x25400000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 			linux,contiguous-region;
@@ -218,10 +212,10 @@
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* up to 1920x1080 yuv422 8bit and 5 buffers
-			 * 1920x1080x1.5x4 = 12 M
+			/* up to 720p yuv420 8bit and 4 buffers
+			 * 1280x720x1.5x4 = 8 M
 			 */
-			size = <0x0 0x00c00000>;
+			size = <0x0 0x00800000>;
 			alignment = <0x0 0x400000>;
 		};
 		/*  amlvideo2_1 CMA pool */
@@ -260,7 +254,7 @@
 /* Audio Related start */
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
-		spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
+		//spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
 		/*gpio high is enable spk,control by "SPK mute"*/
 		aml-audio-card,name = "AML-AUGESOUND";
 		aml-audio-card,dai-link@0 {
@@ -354,7 +348,7 @@
 			tdmccodec: codec {
 				//prefix-names = "AMP";
 				//sound-dai = <&sy602x_54>;
-				sound-dai = <&ntp8918_codec>;
+				sound-dai = <&dummy_codec &ntp8918_codec>;
 			};
 		};
 
@@ -600,9 +594,16 @@
 		key_code = <600 SW_MUTE_DEVICE>;
 		key_type = <EV_KEY EV_SW>;
 		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
-			     &gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+			     &gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
+	};
+
+	radar_wakeup {
+		compatible = "radar-wakeup";
+		report-type = <EV_KEY>;
+		report-value = <KEY_POWER>;
+		status = "disabled";
 	};
 
 	vin_12v_reg: fixed@vin_12v_reg {
@@ -671,8 +672,8 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		// GPIOH_7(Down) Output H/L= Enable/Disable VCC5V
-		gpio = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		// GPIOH_8(Down) Output H/L= Enable/Disable VCC5V
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -687,7 +688,7 @@
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
 		// GPIOF_2(Down) Output L/H= Enable/Disable VCC3V3
-		gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
+		//gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
@@ -711,6 +712,84 @@
 		regulator-max-microvolt = <1800000>;
 		regulator-boot-on;
 		regulator-always-on;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c1_pins1>;
+	clock-frequency = <300000>;
+
+	ucs11681@38 {
+		compatible = "sei,ucs11681";
+		reg = <0x38>;
+		status = "okay";
+	};
+
+	ntp8918_codec: ntp8918_codec@2a {
+		compatible = "NTP, ntp8918";
+		#sound-dai-cells = <0>;
+		reg = <0x2A>;
+		status = "okay";
+		//power_pin = <&gpio GPIOC_4 GPIO_ACTIVE_LOW>;
+		//pd_pin = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
+		//reset_pin = <&gpio GPIOY_2 GPIO_ACTIVE_HIGH>;
+		//power-gpio = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
+		//pd-gpio = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
+		//[3: 3w] | [5: 5w]
+		eq_power = <5>;
+		//default[0]: BTL [1]:PBTL
+		work_mode = <0>;
+		//default:[0]: power on mute, [1]: power on unmute
+		spk_mute = <0>;
+		//[0] disabled [1]:enable ;[low power consumption]
+		low_power = <0>;
+		no_mclk;
+	};
+
+	aw21036@34 {
+		compatible = "seirobotics,aw21036_led";
+		reg = <0x34>;
+		reset-gpio = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+		platform = <15>;
+
+		led0 {
+			default_colors = <0 0 0>;
+			r_io_number = <2>;
+			g_io_number = <1>;
+			b_io_number = <0>;
+		};
+
+		led1 {
+			default_colors = <0 0 0>;
+			r_io_number = <5>;
+			g_io_number = <4>;
+			b_io_number = <3>;
+		};
+
+		led2 {
+			default_colors = <0 0 0>;
+			r_io_number = <8>;
+			g_io_number = <7>;
+			b_io_number = <6>;
+		};
+
+		led3 {
+			default_colors = <0 0 0>;
+			r_io_number = <11>;
+			g_io_number = <10>;
+			b_io_number = <9>;
+		};
+
+		led4 {
+			default_colors = <0 0 0>;
+			r_io_number = <14>;
+			g_io_number = <13>;
+			b_io_number = <12>;
+		};
 	};
 };
 
@@ -745,7 +824,7 @@
 		clocks = <&clkc CLKID_MCLK0>;
 		clock-names = "mclk0";
 
-		pwdn-gpios = <&gpio GPIOX_5 GPIO_ACTIVE_HIGH>;
+		//pwdn-gpios = <&gpio GPIOX_5 GPIO_ACTIVE_HIGH>;
 		// reset-gpios = <&gpio GPIOX_4 GPIO_ACTIVE_HIGH>;
 
 		port {
@@ -758,7 +837,7 @@
 };
 
 &i2c0 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c0_pins4>;
 	clock-frequency = <300000>; /* default 100k */
@@ -768,24 +847,6 @@
 		reg = <0x2a>;
 		status = "disabled";
 		reset_pin-gpios = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
-	};
-
-	ntp8918_codec: ntp8918_codec@2a {
-		compatible = "NTP, ntp8918";
-		#sound-dai-cells = <0>;
-		reg = <0x2A>;
-		status = "okay";
-		power_pin = <&gpio GPIOC_4 GPIO_ACTIVE_LOW>;
-		//pd_pin = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
-		//reset_pin = <&gpio GPIOY_2 GPIO_ACTIVE_HIGH>;
-		//power-gpio = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
-		//pd-gpio = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
-		reset-gpio = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
-		eq_power = <5>;
-		work_mode = <0>;
-		spk_mute = <0>;
-		low_power = <1>;//[0] disabled [1]:enable ;[low power consumption]
-		no_mclk;
 	};
 	aw9523: aw9523_led@5b {
 		compatible = "amlogic,aw9523b_led";
@@ -843,22 +904,19 @@
 
 &tdma {
 	pinctrl-names = "tdm_pins";
-	//pinctrl-0 = <&bt_pcm_gpio_x_pins
-	//	&tdm_d1_pins
-	//	&tdm_d0_pins
-	//	&tdma_clk_pins>;
+	pinctrl-0 = </* &bt_pcm_gpio_x_pins */
+		/* &tdm_d1_pins */
+		/* &tdm_d0_pins */
+		/* &tdma_clk_pins */>;
 };
 
 &tdmc {
 	pinctrl-names = "tdm_pins";
-	pinctrl-0 = <&i2s_gpio_d_pins_1
-		&tdm_d3_pins
-		&tdmc_clk_pins>;
+	pinctrl-0 = <&i2s_gpio_c_pins_1
+		&tdm_d7_pins_1
+		&tdmc_clk_pins_1>;
 };
 
-&pdma {
-	lane-mask-in = <0 0 0 1>;
-};
 
 //&spdifa {
 		//pinctrl-names = "spdif_pins", "spdif_pins_mute";
@@ -885,8 +943,57 @@
 			drive-strength-microamp = <3000>;
 		};
 	};
+	spicc0_pins_f_1: spicc0_pins_f_1 {
+		mux {
+			groups = "spi_a_mosi_f",
+				"spi_a_ss0_f",
+				 "spi_a_clk_f";
+			function = "spi_a";
+			drive-strength-microamp = <3000>;
+		};
+	};
 
+	remote_pins_d_1: remote_pin_d_1 { //GPIOD_6
+		mux {
+			groups = "ir_remote_in_d";
+			function = "ir_remote";
+			bias-disable;
+		};
+	};
+
+	i2s_gpio_c_pins_1: i2s_gpio_c_1 {
+		mux { /* GPIOC_3 GPIOC_2 GPIOC_1 */
+			groups = "tdm_sclk1_c",
+				"tdm_fs1_c",
+				"tdm_d7_c";
+			function = "tdm";
+		};
+	};
+
+	pdmin: pdminpins {
+		mux { /* GPIOA9  GPIOA10*/
+			groups = "pdm_dclk_a9",
+				"pdm_din3_a",
+				"pdm_din2_a";
+			function = "pdm";
+		};
+	};
 }; /* end of periphs_pinctrl */
+
+&pinctrl_audio {
+	tdm_d7_pins_1: tdm_d7_pin_1 {
+		mux {
+			groups = "tdm_d7";
+			function = "tdmoutc_lane0";
+		};
+	};
+	tdmc_clk_pins_1: tdmc_clk_pin_1 {
+		mux {
+			groups = "tdm_sclk1", "tdm_lrclk1";
+			function = "tdm_clk_outc";
+		};
+	};
+};
 
 &usbphy0 {
 	status = "okay";
@@ -900,9 +1007,6 @@
 	status = "okay";
 	u2p@0 {
 		status = "okay";
-		/* otg & 3.0 share the vbus power.*/
-		gpio-vbus-power = "GPIOH_8";
-		gpios = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
 	};
 
 	u3p@80 {
@@ -926,12 +1030,12 @@
 	reset-gpio = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>;
 	max-link-speed=<1>;
 	iommu-map = <0x100 &smmu 0x5 0x10>;
-	status = "okay";
+	status = "disabled";
 };
 
 /* SDIO */
 &sd_emmc_a {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&sdio_pins>;
 	pinctrl-1 = <&sdio_clk_gate_pins>;
 	pinctrl-names = "default", "clk-gate";
@@ -1105,6 +1209,10 @@
 	};
 };
 
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 arm64.nomte";
+};
+
 &saradc {
 	status = "okay";
 };
@@ -1112,6 +1220,21 @@
 /*exphy setting*/
 &ext_mdio {
 	status = "okay";
+	external_phy_maxio: ethernet_phy@1 {
+		reg = <0>;
+		max-speed = <1000>;
+
+		reset-assert-us = <20000>;
+		reset-deassert-us = <50000>;
+		reset-gpios = <&gpio GPIOZ_15 (GPIO_ACTIVE_LOW |
+					GPIO_OPEN_DRAIN)>;
+		compatible = "ethernet-phy-id7b74.4412",
+					"ethernet-phy-ieee802.3-c22";
+	};
+};
+
+&external_phy {
+	status = "disabled";
 };
 
 &ethmac {
@@ -1119,7 +1242,7 @@
 	pinctrl-names = "default";
 	status = "okay";
 	phy-mode = "rgmii";
-	phy-handle = <&external_phy>;
+	phy-handle = <&external_phy_maxio>;
 	amlogic,tx-delay-ns = <2>;
 	internal_phy = <2>;
 	cali_val = <0x290000>;
@@ -1140,27 +1263,41 @@
 
 &ir {
 	status = "okay";
-	pinctrl-0 = <&remote_pins>;
+	pinctrl-0 = <&remote_pins_1>;
 	pinctrl-names = "default";
 };
 
 &spicc0 {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&spicc0_pins_x_1>;
+	pinctrl-0 = <&spicc0_pins_f>;
+	// cs-gpios = <&gpio GPIOX_10 0>;
 
-	st7789v3@0 {
+	/*st7789v3@0 {
 		compatible = "st7789v3";
 		dev_name = "st7789v3";
 		status = "okay";
 		reg = <0>;
 		spi-max-frequency = <30000000>;
-		gpio_rs = <&gpio GPIOX_9 GPIO_ACTIVE_LOW>;
-		gpio_rst = <&gpio GPIOC_0 GPIO_ACTIVE_LOW>;
-		gpio_fmark = <&gpio GPIOC_1 GPIO_ACTIVE_LOW>;
-		// gpio_pwm = <&gpio_ao GPIOAO_4 GPIO_ACTIVE_LOW>;
-	};
+		gpio_rs = <&gpio GPIOF_1 GPIO_ACTIVE_LOW>;
+		gpio_rst = <&gpio GPIOC_4 GPIO_ACTIVE_LOW>;
+		gpio_fmark = <&gpio GPIOC_5 GPIO_ACTIVE_LOW>;
 
+		//gpio_pwm = <&gpio GPIOF_4 GPIO_ACTIVE_HIGH>;
+
+		pwms = <&pwm_c 0 50000 0>; //50000ns period
+		default_brightness = <50>; //max brightness 100
+	};
+	*/
+
+	bgt60cutr13aip@0 {
+		compatible = "infineon,bgt60cutr13aip";
+		reg = <0>;  /* Use SS0, same as st7789v3, but controlled by status */
+		status = "okay";
+		spi-max-frequency = <25000000>;
+		reset-gpio = <&gpio GPIOB_12 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOF_4 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &spifc {
@@ -1260,21 +1397,21 @@
 	status = "okay";
 };
 
-//&pwm_f {
-//	pinctrl-names = "default";
-//	pinctrl-0 = <&pwm_f_pins2>; //GPIOZ_12
-//	status = "disabled";
-//};
-
-&pwm_b{
+&pwm_c {
+	pinctrl-0 = <&pwm_c_pins5>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pwm_b_pins6>; //GPIOZ_13
-	status = "disabled";
+	status = "okay";
 };
 
 &uart_A {
 	status = "okay";
 	uart-has-rtscts;
+};
+
+&uart_C {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&c_uart_pins>;//GPIOH_6 GPIOH_7
 };
 
 &amlogic_codec {
@@ -1283,8 +1420,10 @@
 };
 
 &pdma {
-		pinctrl-names = "pdm_pins";
-		pinctrl-0 = <&pdmin>;
+	status = "okay";
+	pinctrl-names = "pdm_pins";
+	pinctrl-0 = <&pdmin>;
+	lane-mask-in = <0 0 1 1>;
 };
 
 &amlvecm {

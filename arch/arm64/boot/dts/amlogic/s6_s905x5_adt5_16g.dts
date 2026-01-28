@@ -50,7 +50,6 @@
 		};
 
 		/* global autoconfigured region for contiguous allocations */
-
 		ramoops@6b00000 {
 			compatible = "ramoops";
 			reg = <0x0 0x06b00000 0x0 0x00080000>;/* addr set in uboot */
@@ -73,12 +72,6 @@
 		dmc_reserved:linux,dmc_monitor {
 			compatible = "amlogic,dmc_monitor-reserved";
 			reg = <0x0 0x0 0x0 0x80000>;
-		};
-
-		mte_reserved:linux,mte {
-			compatible = "shared-dma-pool";
-			no-map;
-			reg = <0x0 0x0c000000 0x0 0x20000000>;
 		};
 
 		secmon_reserved:linux,secmon {
@@ -116,15 +109,15 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 4k STB androidU size 320M */
-			size = <0x0 0x14000000>;
+			/* 1080p STB android16 size 88M */
+			size = <0x0 0x5800000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 4k STB androidU size 212M */
-			size = <0x0 0xd400000>;
+			/* 1080p STB android16 size 56M */
+			size = <0x0 0x3800000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_secure_reserved:heap-secure {
@@ -219,10 +212,10 @@
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* up to 1920x1080 yuv422 8bit and 5 buffers
-			 * 1920x1080x1.5x4 = 12 M
+			/* up to 720p yuv420 8bit and 4 buffers
+			 * 1280x720x1.5x4 = 8 M
 			 */
-			size = <0x0 0x00c00000>;
+			size = <0x0 0x00800000>;
 			alignment = <0x0 0x400000>;
 		};
 		/*  amlvideo2_1 CMA pool */
@@ -255,32 +248,6 @@
 			atomic-size = <0x0 0x40000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
-		};
-	};
-
-	sysled {
-		compatible = "amlogic, sysled";
-		dev_name = "sysled";
-		status = "disabled";
-		workqueue = <0>;
-		led_gpio = <&gpio GPIOF_4 GPIO_ACTIVE_HIGH>;
-		od_gpio_name = "null";
-	};
-
-	pwmleds {
-		compatible = "pwm-leds";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pwm_c_pins5>;
-		status = "disabled";
-		led1 {
-			//active-low | active-high d4
-			active-high;
-			label = "LCD_BL";
-			linux,default-trigger = "breathe";
-			max-brightness = <255>;
-			//1000 000 000 /
-			pwms = <&pwm_c 0 50000 0>;
-			work-mode = <22>;
 		};
 	};
 
@@ -466,7 +433,7 @@
 		dvb_power_value = <1>;
 		dvb_power_dir = <0>; /* 0: out, 1: in. */
 
-		fe_num = <3>; /* internal 2 * dvb-c, extern 1 * dvb-s */
+		fe_num = <4>; /* internal 2 * dvb-c, extern 1 * dvb-s */
 		fe0_demod = "internal";
 		fe0_tuner0 = <0>; /* use tuner0 */
 
@@ -483,6 +450,9 @@
 		//fe2_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
 		fe2_ts = <0>;
 		fe2_tuner1 = <3>; /* use tuner3, only S. */
+
+		fe3_demod = "dummy";
+		fe3_ts = <3>;
 
 		tuner_num = <4>; /* tuner number, multi tuner support */
 		tuner0_name = "r836_tuner";
@@ -542,6 +512,9 @@
 		ts2 = "parallel";
 		ts2_control = <0x0>;
 		ts2_invert = <0>;
+
+		ts3_sid = <0x7>;
+
 	};
 
 	multi-di {
@@ -621,7 +594,7 @@
 		key_code = <600 SW_MUTE_DEVICE>;
 		key_type = <EV_KEY EV_SW>;
 		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
-			     &gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+			     &gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
 	};
@@ -630,7 +603,7 @@
 		compatible = "radar-wakeup";
 		report-type = <EV_KEY>;
 		report-value = <KEY_POWER>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	vin_12v_reg: fixed@vin_12v_reg {
@@ -693,15 +666,14 @@
 	};
 
 	vcc5v_reg: fixed@vcc5v_reg {
-		status = "disabled";
 		vin-supply = <&vddao_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "VCC5V";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		// GPIOH_7(Down) Output H/L= Enable/Disable VCC5V
-		gpio = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		// GPIOH_8(Down) Output H/L= Enable/Disable VCC5V
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -743,17 +715,10 @@
 	};
 };
 
-&i2c3 {
-	status = "disabled";
-	pinctrl-names="default";
-	pinctrl-0=<&i2c3_pins2>;
-	clock-frequency = <300000>;
-};
-
-&i2c4 {
+&i2c1 {
 	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c4_pins1>;
+	pinctrl-0=<&i2c1_pins1>;
 	clock-frequency = <300000>;
 
 	ntp8918_codec: ntp8918_codec@2a {
@@ -766,7 +731,7 @@
 		//reset_pin = <&gpio GPIOY_2 GPIO_ACTIVE_HIGH>;
 		//power-gpio = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
 		//pd-gpio = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
-		reset-gpio = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
 		//[3: 3w] | [5: 5w]
 		eq_power = <5>;
 		//default[0]: BTL [1]:PBTL
@@ -781,80 +746,59 @@
 	aw21036@34 {
 		compatible = "seirobotics,aw21036_led";
 		reg = <0x34>;
-		reset-gpio = <&gpio GPIOD_3 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
 		status = "okay";
-		platform = <5>;
+		platform = <15>;
 
 		led0 {
 			default_colors = <0 0 0>;
-			r_io_number = <0>;
+			r_io_number = <2>;
 			g_io_number = <1>;
-			b_io_number = <2>;
+			b_io_number = <0>;
 		};
 
 		led1 {
 			default_colors = <0 0 0>;
-			r_io_number = <3>;
+			r_io_number = <5>;
 			g_io_number = <4>;
-			b_io_number = <5>;
+			b_io_number = <3>;
 		};
 
 		led2 {
 			default_colors = <0 0 0>;
-			r_io_number = <6>;
+			r_io_number = <8>;
 			g_io_number = <7>;
-			b_io_number = <8>;
+			b_io_number = <6>;
 		};
 
 		led3 {
 			default_colors = <0 0 0>;
-			r_io_number = <9>;
+			r_io_number = <11>;
 			g_io_number = <10>;
-			b_io_number = <11>;
+			b_io_number = <9>;
 		};
 
 		led4 {
 			default_colors = <0 0 0>;
-			r_io_number = <12>;
+			r_io_number = <14>;
 			g_io_number = <13>;
-			b_io_number = <14>;
-		};
-
-		led5 {
-			default_colors = <0 0 0>;
-			r_io_number = <15>;
-			g_io_number = <16>;
-			b_io_number = <17>;
-		};
-
-		led6 {
-			default_colors = <0 0 0>;
-			r_io_number = <18>;
-			g_io_number = <19>;
-			b_io_number = <20>;
-		};
-
-		led7 {
-			default_colors = <0 0 0>;
-			r_io_number = <21>;
-			g_io_number = <22>;
-			b_io_number = <23>;
-		};
-
-		led8 {
-			default_colors = <0 0 0>;
-			r_io_number = <24>;
-			g_io_number = <25>;
-			b_io_number = <26>;
-		};
-
-		led9 {
-			default_colors = <0 0 0>;
-			r_io_number = <27>;
-			g_io_number = <28>;
-			b_io_number = <29>;
+			b_io_number = <12>;
 		};
 	};
+};
+
+&i2c3 {
+	status = "disabled";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c3_pins2>;
+	clock-frequency = <300000>;
+};
+
+&i2c4 {
+	status = "disabled";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c4_pins3>;
+	clock-frequency = <300000>;
 };
 
 &i2c5 {
@@ -883,26 +827,6 @@
 				link-frequencies = /bits/ 64 <222750000>;
 			};
 		};
-	};
-
-	htu20d@40 {
-		compatible = "sei,htu20d";
-		reg = <0x40>;
-		status = "okay";
-	};
-
-	ucs11681@38 {
-		compatible = "sei,ucs11681";
-		reg = <0x38>;
-		status = "okay";
-	};
-
-	nta533@54 {
-		compatible = "NXP,nta533";
-		reg = <0x54>;
-		status = "okay";
-		ed-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
-		repeatcount = <5>;
 	};
 };
 
@@ -983,13 +907,10 @@
 &tdmc {
 	pinctrl-names = "tdm_pins";
 	pinctrl-0 = <&i2s_gpio_c_pins_1
-		&tdm_d6_pins_1
+		&tdm_d7_pins_1
 		&tdmc_clk_pins_1>;
 };
 
-&pdma {
-	lane-mask-in = <0 0 0 1>;
-};
 
 //&spdifa {
 		//pinctrl-names = "spdif_pins", "spdif_pins_mute";
@@ -1035,19 +956,28 @@
 	};
 
 	i2s_gpio_c_pins_1: i2s_gpio_c_1 {
-		mux { /* GPIOC_3 GPIOC_2 GPIOC_0 */
+		mux { /* GPIOC_3 GPIOC_2 GPIOC_1 */
 			groups = "tdm_sclk1_c",
 				"tdm_fs1_c",
-				"tdm_d6_c";
+				"tdm_d7_c";
 			function = "tdm";
+		};
+	};
+
+	pdmin: pdminpins {
+		mux { /* GPIOA9  GPIOA10*/
+			groups = "pdm_dclk_a9",
+				"pdm_din3_a",
+				"pdm_din2_a";
+			function = "pdm";
 		};
 	};
 }; /* end of periphs_pinctrl */
 
 &pinctrl_audio {
-	tdm_d6_pins_1: tdm_d6_pin_1 {
+	tdm_d7_pins_1: tdm_d7_pin_1 {
 		mux {
-			groups = "tdm_d6";
+			groups = "tdm_d7";
 			function = "tdmoutc_lane0";
 		};
 	};
@@ -1273,6 +1203,10 @@
 	};
 };
 
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 arm64.nomte";
+};
+
 &saradc {
 	status = "okay";
 };
@@ -1328,7 +1262,7 @@
 };
 
 &spicc0 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc0_pins_f_1>;
 	// cs-gpios = <&gpio GPIOX_10 0>;
@@ -1462,7 +1396,7 @@
 &uart_C {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&c_uart_pins>; //GPIOH_6 GPIOH_7
+	pinctrl-0 = <&c_uart_pins>;//GPIOH_6 GPIOH_7
 };
 
 &amlogic_codec {
@@ -1474,8 +1408,7 @@
 	status = "okay";
 	pinctrl-names = "pdm_pins";
 	pinctrl-0 = <&pdmin>;
-
-	lane-mask-in = <0 0 0 1>;
+	lane-mask-in = <0 0 1 1>;
 };
 
 &amlvecm {
