@@ -180,6 +180,7 @@ dtb-y += t6w_t963d5_bs309_3g_R.dtb
 dtb-y += t6w_t963d5_bs309_4g.dtb
 dtb-y += t6w_t963d5_bs309_4g_R.dtb
 dtb-y += t6w_t963d5_bs311_1.5g.dtb
+dtb-y += t6w_t963x5_bs331_1.5g.dtb
 dtb-y += t6w_t963d5_bs311_2g.dtb
 dtb-y += t6w_t963d5_bs311_2g_R.dtb
 dtb-y += t6w_t963d5_bs319_1g.dtb
