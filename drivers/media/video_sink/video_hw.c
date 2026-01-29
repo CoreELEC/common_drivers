@@ -13156,8 +13156,7 @@ void vpp_blend_update_c3(const struct vinfo_s *vinfo)
 	}
 
 	if (vd1_matrix != save_setting || force_flush) {
-		if (video_is_meson_c3_cpu() ||
-			video_is_meson_c5_cpu())
+		if (video_is_meson_c3_cpu())
 			vd1_matrix_yuv2rgb(vd1_matrix);
 
 		if (vinfo) {

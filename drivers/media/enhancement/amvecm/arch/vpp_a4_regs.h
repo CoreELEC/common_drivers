@@ -63,5 +63,20 @@
 #define LCD_GAMMA_DATA_PORT0_A4		0x05b5
 
 #define L_H_AUTO_INC_2     9
+#define VOUT_OSD1_CSC_COEF00_01_c5              0x0180
+#define VOUT_OSD1_CSC_COEF02_10_c5              0x0181
+#define VOUT_OSD1_CSC_COEF11_12_c5              0x0182
+#define VOUT_OSD1_CSC_COEF20_21_c5              0x0183
+#define VOUT_OSD1_CSC_COEF22_c5                 0x0184
+#define VOUT_OSD1_CSC_COEF30_31_c5              0x0185
+#define VOUT_OSD1_CSC_COEF32_40_c5              0x0186
+#define VOUT_OSD1_CSC_COEF41_42_c5              0x0187
+#define VOUT_OSD1_CSC_CLIP_c5                   0x0188
+#define VOUT_OSD1_CSC_OFFSET0_1_c5              0x0189
+#define VOUT_OSD1_CSC_OFFSET2_c5                0x018a
+#define VOUT_OSD1_CSC_PRE_OFFSET0_1_c5          0x018b
+#define VOUT_OSD1_CSC_PRE_OFFSET2_c5            0x018c
+#define VOUT_OSD1_CSC_EN_CTRL_c5                0x018d
+
 #endif
 

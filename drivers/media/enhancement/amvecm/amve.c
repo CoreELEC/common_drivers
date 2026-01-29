@@ -6866,6 +6866,19 @@ void set_skin_api(int en)
 
 void c5_vadj_gamma_init(void)
 {
+	int i;
+	int rgb2yuvpre[3] = {0, 0, 0};
+	int rgb2yuvpos[3] = {64, 512, 512};
+	int rgb2ycbcr[15] = {
+	264, 516, 100,
+	-152, -296, 448,
+	448, -376, -72,
+	0, 0, 0,
+	0, 0, 0};
+
+	int pre_offset[3], post_offset[3];
+	int mat_coef[15];
+
 	if (chip_type_id != chip_c5)
 		return;
 
@@ -6886,5 +6899,42 @@ void c5_vadj_gamma_init(void)
 	/*gamma*/
 	WRITE_VPP_REG_BITS(LCD_GAMMA_CNTL_PORT0_A4, 1, 1, 1);
 	WRITE_VPP_REG_BITS(LCD_GAMMA_CNTL_PORT0_A4, 1, 6, 1);
+
+	/*vadj csc*/
+	WRITE_VPP_REG(VOUT_MATRIX_COEF00_01, 0x04ac0000);
+	WRITE_VPP_REG(VOUT_MATRIX_COEF02_10, 0x073104ac);
+	WRITE_VPP_REG(VOUT_MATRIX_COEF11_12, 0x1f251ddd);
+	WRITE_VPP_REG(VOUT_MATRIX_COEF20_21, 0x04ac0879);
+	WRITE_VPP_REG(VOUT_MATRIX_PRE_OFFSET0_1, 0x7c00600);
+	WRITE_VPP_REG(VOUT_MATRIX_PRE_OFFSET2, 0x00000600);
+	WRITE_VPP_REG(VOUT_MATRIX_EN_CTRL, 0x1);
+
+	/*osd csc*/
+	for (i = 0; i < 3; i++) {
+		pre_offset[i] = rgb2yuvpre[i];
+		post_offset[i] = rgb2yuvpos[i];
+	}
+
+	for (i = 0; i < 15; i++)
+		mat_coef[i] = rgb2ycbcr[i];
+
+	WRITE_VPP_REG(VOUT_OSD1_CSC_COEF00_01_c5,
+		(mat_coef[0 * 3 + 0] << 16) | (mat_coef[0 * 3 + 1] & 0x1FFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_COEF02_10_c5,
+		(mat_coef[0 * 3 + 2] << 16) | (mat_coef[1 * 3 + 0] & 0x1FFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_COEF11_12_c5,
+		(mat_coef[1 * 3 + 1] << 16) | (mat_coef[1 * 3 + 2] & 0x1FFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_COEF20_21_c5,
+		(mat_coef[2 * 3 + 0] << 16) | (mat_coef[2 * 3 + 1] & 0x1FFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_COEF22_c5,
+		mat_coef[2 * 3 + 2]);
+	WRITE_VPP_REG(VOUT_OSD1_CSC_OFFSET0_1_c5,
+		(post_offset[0] << 16) | (post_offset[1] & 0xFFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_OFFSET2_c5,
+		post_offset[2]);
+	WRITE_VPP_REG(VOUT_OSD1_CSC_PRE_OFFSET0_1_c5,
+		(pre_offset[0] << 16) | (pre_offset[1] & 0xFFF));
+	WRITE_VPP_REG(VOUT_OSD1_CSC_PRE_OFFSET2_c5, pre_offset[2]);
+	WRITE_VPP_REG(VOUT_OSD1_CSC_EN_CTRL_c5, 0x1);
 }
 
