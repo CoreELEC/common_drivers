@@ -2063,6 +2063,29 @@ static struct ddr_priority_info ddr_priority_info_a9 __initdata = {
 	.dmc_force = ddr_priority_force_a9,
 };
 
+static struct ddr_priority_force ddr_priority_force_c5[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(9, BIT(15), (0xa4 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(10, BIT(15), (0xa8 << 2), 16, 4)
+};
+
+static struct ddr_priority_info ddr_priority_info_c5 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_c5),
+	.dmc_force = ddr_priority_force_c5,
+};
+
 static struct dmc_priority dmc_t6x[] __initdata = {
 	{ .bus_id = 0, .reg_base = 0xfe036000, .offset = (0x458 << 2),
 	  .force_enable = 0x8000, .w_bit_s = 16, .r_bit_s = 16, .width = 0xf	},
@@ -2886,6 +2909,9 @@ int __init ddr_priority_init(int cpu_type)
 		break;
 	case DMC_TYPE_A9:
 		info = &ddr_priority_info_a9;
+		break;
+	case DMC_TYPE_C5:
+		info = &ddr_priority_info_c5;
 		break;
 #endif
 	case DMC_TYPE_S1A:

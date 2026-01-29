@@ -1297,6 +1297,14 @@ static struct sub_port_list vpu1_sub_w_a9[] __initdata = {
 SUB_DEV_RW(a9, vpu0, 2, 2);
 SUB_DEV_RW(a9, vpu1, 3, 3);
 SUB_DEV_DESC_INIT(a9, &vpu0_sub_a9, &vpu1_sub_a9);
+
+static struct sub_port_list vpu0_sub_r_c5[] __initdata = {
+	{ .id = 0x00, .name = "VD0"		},
+	{ .id = 0x01, .name = "OSD1"		},
+};
+
+SUB_DEV_RO(c5, 0, 1);
+SUB_DEV_DESC_INIT(c5, &vpu0_sub_c5);
 #endif
 
 static int __init sub_dev_desc_alloc(struct sub_dev_desc **dst, struct sub_dev_desc *src)
@@ -1430,6 +1438,8 @@ static struct sub_dev_desc *__init get_sub_dev_desc(int cpu_type)
 		return &sub_dev_desc_s7;
 	case DMC_TYPE_A9:
 		return &sub_dev_desc_a9;
+	case DMC_TYPE_C5:
+		return &sub_dev_desc_c5;
 #endif
 	default:
 		return NULL;

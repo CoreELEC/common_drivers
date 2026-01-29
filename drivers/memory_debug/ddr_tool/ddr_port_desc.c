@@ -1442,6 +1442,69 @@ static struct ddr_port_desc ddr_port_desc_a5[] __initdata = {
 	PORT_DESC(.port_id = 6, .sub_id = 12, .bus =  6, .port_name = "AUDIO")
 };
 
+static struct ddr_port_desc ddr_port_desc_c5_prot[] __initdata = {
+	PORT_DESC(.port_id =  0, .bus = 0, .port_name = "ARM"),
+	PORT_DESC(.port_id =  1, .bus = 1, .port_name = "VPU0"),
+	PORT_DESC(.port_id =  2, .bus = 2, .port_name = "MIPI_ISP"),
+	PORT_DESC(.port_id =  4, .bus = 3, .port_name = "CVE"),
+	PORT_DESC(.port_id =  5, .bus = 3, .port_name = "GE2D"),
+	PORT_DESC(.port_id =  6, .bus = 3, .port_name = "OPP"),
+	PORT_DESC(.port_id =  8, .bus = 4, .port_name = "AI_ISP"),
+	PORT_DESC(.port_id =  9, .bus = 5, .port_name = "DMC_TEST"),
+	PORT_DESC(.port_id = 10, .bus = 6, .port_name = "ADLA3"),
+	PORT_DESC(.port_id = 11, .bus = 7, .port_name = "ADLA2"),
+	PORT_DESC(.port_id = 12, .bus = 8, .port_name = "HCODEC"),
+	PORT_DESC(.port_id = 13, .bus = 8, .port_name = "TAHOE"),
+	PORT_DESC(.port_id = 14, .bus = 9, .port_name = "HEVC"),
+	/* start of each device */
+	PORT_DESC(.port_id = 15, .bus = 10, .port_name = "DMA"),
+	PORT_DESC(.port_id = 16, .bus = 10, .port_name = "SDIOA"),
+	PORT_DESC(.port_id = 17, .bus = 10, .port_name = "SDIOB"),
+	PORT_DESC(.port_id = 18, .bus = 10, .port_name = "SD_EMMC"),
+	PORT_DESC(.port_id = 19, .bus = 10, .port_name = "USB2H"),
+	PORT_DESC(.port_id = 20, .bus = 10, .port_name = "SPICC"),
+	PORT_DESC(.port_id = 21, .bus = 10, .port_name = "ETH"),
+	PORT_DESC(.port_id = 22, .bus = 10, .port_name = "USB3DRD"),
+	PORT_DESC(.port_id = 23, .bus = 10, .port_name = "AMFC"),
+	PORT_DESC(.port_id = 24, .bus = 10, .port_name = "AUDIO"),
+	PORT_DESC(.port_id = 25, .bus = 10, .port_name = "PP_DMA"),
+	PORT_DESC(.port_id = 26, .bus = 10, .port_name = "PCIE")
+};
+
+static struct ddr_port_desc ddr_port_desc_c5_mon[] __initdata = {
+	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM"),
+	PORT_DESC(.port_id =  1, .bus =  1, .port_name = "VPU0"),
+	PORT_DESC(.port_id =  2, .bus =  2, .port_name = "MIPI_ISP"),
+	PORT_DESC(.port_id =  3, .bus =  3, .port_name = "VGE"),
+	PORT_DESC(.port_id =  4, .bus =  4, .port_name = "AI_ISP"),
+	PORT_DESC(.port_id =  5, .bus =  5, .port_name = "DMC_TEST"),
+	PORT_DESC(.port_id =  6, .bus =  6, .port_name = "ADLA3"),
+	PORT_DESC(.port_id =  7, .bus =  7, .port_name = "ADLA2"),
+	PORT_DESC(.port_id =  8, .bus =  8, .port_name = "DOS"),
+	PORT_DESC(.port_id =  9, .bus =  9, .port_name = "HEVC"),
+	PORT_DESC(.port_id = 10, .bus = 10, .port_name = "DEVICE"),
+	/* start of each vge */
+	PORT_DESC(.port_id =  3, .sub_id =  0, .bus =  6, .port_name = "CVE"),
+	PORT_DESC(.port_id =  3, .sub_id =  1, .bus =  6, .port_name = "GE2D"),
+	PORT_DESC(.port_id =  3, .sub_id =  2, .bus =  6, .port_name = "OPP"),
+	/* start of each dos */
+	PORT_DESC(.port_id =  8, .sub_id =  0, .bus =  3, .port_name = "HCODEC"),
+	PORT_DESC(.port_id =  8, .sub_id =  1, .bus =  3, .port_name = "TAHOE"),
+	/* start of each device */
+	PORT_DESC(.port_id = 10, .sub_id = 32, .bus = 10, .port_name = "DMA"),
+	PORT_DESC(.port_id = 10, .sub_id = 49, .bus = 10, .port_name = "SDIOA"),
+	PORT_DESC(.port_id = 10, .sub_id = 35, .bus = 10, .port_name = "SDIOB"),
+	PORT_DESC(.port_id = 10, .sub_id = 36, .bus = 10, .port_name = "SD_EMMC"),
+	PORT_DESC(.port_id = 10, .sub_id = 33, .bus = 10, .port_name = "USB2H"),
+	PORT_DESC(.port_id = 10, .sub_id = 48, .bus = 10, .port_name = "SPICC"),
+	PORT_DESC(.port_id = 10, .sub_id = 34, .bus = 10, .port_name = "ETH"),
+	PORT_DESC(.port_id = 10, .sub_id = 37, .bus = 10, .port_name = "USB3DRD"),
+	PORT_DESC(.port_id = 10, .sub_id = 21, .bus = 10, .port_name = "AMFC"),
+	PORT_DESC(.port_id = 10, .sub_id = 38, .bus = 10, .port_name = "AUDIO"),
+	PORT_DESC(.port_id = 10, .sub_id = 39, .bus = 10, .port_name = "PP_DMA"),
+	PORT_DESC(.port_id = 10, .sub_id = 40, .bus = 10, .port_name = "PCIE")
+};
+
 static struct ddr_port_desc *chip_ddr_port;
 static unsigned int chip_ddr_port_num __initdata;
 static struct ddr_port_desc *ddr_port_src __initdata;
@@ -1664,6 +1727,15 @@ int __init ddr_find_port_desc_type(int cpu_type, struct ddr_port_desc **desc, in
 		} else {
 			*desc = ddr_port_desc_a9_prot;
 			desc_size = ARRAY_SIZE(ddr_port_desc_a9_prot);
+		}
+		break;
+	case DMC_TYPE_C5:
+		if (type) {
+			*desc = ddr_port_desc_c5_mon;
+			desc_size = ARRAY_SIZE(ddr_port_desc_c5_mon);
+		} else {
+			*desc = ddr_port_desc_c5_prot;
+			desc_size = ARRAY_SIZE(ddr_port_desc_c5_prot);
 		}
 		break;
 #endif

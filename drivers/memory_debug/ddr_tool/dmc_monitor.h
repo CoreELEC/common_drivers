@@ -238,6 +238,9 @@ extern struct dmc_mon_ops c4_dmc_mon_ops;
 #ifdef CONFIG_AMLOGIC_DMC_MONITOR_A9
 extern struct dmc_mon_ops a9_dmc_mon_ops;
 #endif
+#ifdef CONFIG_AMLOGIC_DMC_MONITOR_C5
+extern struct dmc_mon_ops c5_dmc_mon_ops;
+#endif
 
 #ifdef CONFIG_AMLOGIC_DMC_MONITOR
 int __init dmc_monitor_init(void);

@@ -1948,8 +1948,8 @@
 	};
 
 	ddr_bandwidth {
-		compatible = "amlogic,ddr-bandwidth-s6";
-		status = "disabled";
+		compatible = "amlogic,ddr-bandwidth-c5";
+		status = "okay";
 		reg = <0x0 0xfe036000 0x0 0x1000
 		       0x0 0xfe036ca8 0x0 0x4>;
 		interrupts = <0 78 IRQ_TYPE_EDGE_RISING>;
@@ -1957,8 +1957,8 @@
 	};
 
 	dmc_monitor {
-		compatible = "amlogic,dmc_monitor-s6";
-		status = "disabled";
+		compatible = "amlogic,dmc_monitor-c5";
+		status = "okay";
 		memory-region = <&dmc_reserved>;
 		reg = <0x0 0xfe036000 0x0 0x400>;
 		reg_base = <0xfe036000>;
