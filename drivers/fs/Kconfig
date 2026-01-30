@@ -7,4 +7,10 @@ config AMLOGIC_INCFS_FIX
 	help
 	  skip incfs invalid data which is pos > size.
 
+config AMLOGIC_EXT4_FIX
+	bool "EXT4 i_state_flags issue fix"
+	depends on EXT4_FS
+	default n
+	help
+	  EXT4 i_state_flags issue fix.
 endmenu
