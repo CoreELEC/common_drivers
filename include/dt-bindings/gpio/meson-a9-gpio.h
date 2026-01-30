@@ -115,8 +115,8 @@
 #define GPIOM_7			93
 
 /* USB CC */
-#define GPIOCC_0		94
-#define GPIOCC_1		95
+#define GPIOCC_1		94
+#define GPIOCC_2		95
 
 /* GPIOD (AO DOMAIN) */
 #define GPIOD_0			0
@@ -136,30 +136,31 @@
 #define GPIOD_14		14
 #define GPIOD_15		15
 #define GPIOD_16		16
+#define GPIOD_17		17
 
 /* GPIO_AO (AO DOMAIN) */
-#define GPIOAO_0		17
-#define GPIOAO_1		18
-#define GPIOAO_2		19
-#define GPIOAO_3		20
-#define GPIOAO_4		21
-#define GPIOAO_5		22
-#define GPIOAO_6		23
-#define GPIOAO_7		24
-#define GPIOAO_8		25
-#define GPIOAO_9		26
-#define GPIOAO_10		27
-#define GPIOAO_11		28
-#define GPIOAO_12		29
+#define GPIOAO_0		18
+#define GPIOAO_1		19
+#define GPIOAO_2		20
+#define GPIOAO_3		21
+#define GPIOAO_4		22
+#define GPIOAO_5		23
+#define GPIOAO_6		24
+#define GPIOAO_7		25
+#define GPIOAO_8		26
+#define GPIOAO_9		27
+#define GPIOAO_10		28
+#define GPIOAO_11		29
+#define GPIOAO_12		30
 
 /* GPIO_C (AO DOMAIN) */
-#define GPIOC_0			30
-#define GPIOC_1			31
-#define GPIOC_2			32
-#define GPIOC_3			33
-#define GPIOC_4			34
-#define GPIOC_5			35
-#define GPIOC_6			36
+#define GPIOC_0			31
+#define GPIOC_1			32
+#define GPIOC_2			33
+#define GPIOC_3			34
+#define GPIOC_4			35
+#define GPIOC_5			36
+#define GPIOC_6			37
 
 /* TEST_N (AO DOMAIN) */
 #define GPIO_TEST_N		0

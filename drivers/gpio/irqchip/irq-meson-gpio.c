@@ -392,7 +392,7 @@ static const struct meson_gpio_irq_params a9_params = {
 };
 
 static const struct meson_gpio_irq_params a9_ao_params = {
-	INIT_MESON_A9_AO_COMMON_DATA(38)
+	INIT_MESON_A9_AO_COMMON_DATA(39)
 };
 #endif //end of CONFIG_AMLOGIC_MODIFY
 
