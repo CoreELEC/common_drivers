@@ -2258,6 +2258,7 @@ static int vpp_set_filters_internal
 			if (!(vpp_flags & VPP_FLAG_FORCE_NO_SRC_CROP)) {
 				s32 src_crop_top = 0, src_crop_left = 0;
 				s32 src_crop_right = 0, src_crop_bottom = 0;
+				bool mif_input = 0;
 
 				if (is_src_crop_valid(input->src_crop)) {
 					if (cur_super_debug)
@@ -2272,6 +2273,13 @@ static int vpp_set_filters_internal
 					} else {
 						src_crop_top = vf->src_crop.top;
 						src_crop_left = vf->src_crop.left;
+						mif_input = 1;
+					}
+					/* need use src right/bottom crop for dpss chips */
+					if (mif_input &&
+					    cur_dev->display_module == T6W_DISPLAY_MODULE) {
+						src_crop_right = vf->src_crop.right;
+						src_crop_bottom = vf->src_crop.bottom;
 					}
 				}
 				video_source_crop_top += src_crop_top;
