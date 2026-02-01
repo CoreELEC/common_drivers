@@ -21,6 +21,8 @@
 #include <linux/sizes.h>
 #include <linux/slab.h>
 #include <linux/spi/flash.h>
+#include <linux/mtd/partitions.h>
+#include <linux/amlogic/aml_storage.h>
 
 #include "core.h"
 
@@ -435,6 +437,8 @@ int spi_nor_read_id(struct spi_nor *nor, u8 naddr, u8 ndummy, u8 *id,
 		ret = nor->controller_ops->read_reg(nor, SPINOR_OP_RDID, id,
 						    SPI_NOR_MAX_ID_LEN);
 	}
+	pr_err("spinor id 0x%x 0x%x 0x%x 0x%x\n", id[0], id[1], id[2], id[3]);
+
 	return ret;
 }
 
@@ -2489,6 +2493,7 @@ spi_nor_select_uniform_erase(struct spi_nor_erase_map *map)
 		 * If the current erase size is the 4k one, stop here,
 		 * we have found the right uniform Sector Erase command.
 		 */
+		#define CONFIG_AMLOGIC_MTD_SPI_NOR_USE_4K_SECTORS 1
 		if (IS_ENABLED(CONFIG_AMLOGIC_MTD_SPI_NOR_USE_4K_SECTORS) &&
 		    tested_erase->size == SZ_4K) {
 			erase = tested_erase;
@@ -3649,7 +3654,7 @@ static int spi_nor_probe(struct spi_mem *spimem)
 	if (ret)
 		return ret;
 
-	spi_nor_debugfs_register(nor);
+	//spi_nor_debugfs_register(nor);
 
 	/*
 	 * None of the existing parts have > 512B pages, but let's play safe
@@ -3674,10 +3679,16 @@ static int spi_nor_probe(struct spi_mem *spimem)
 	if (ret)
 		return ret;
 
-	nor->mtd.name = AML_MTD_NAME;
-
-	return mtd_device_register(&nor->mtd, data ? data->parts : NULL,
+	nor->mtd.name = "aml-mtd";
+	if (meson_add_mtd_partitions(&nor->mtd)) {
+		/* default_mtd_part_types to parse register */
+		ret = mtd_device_register(&nor->mtd, data ? data->parts : NULL,
 				   data ? data->nr_parts : 0);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
 }
 
 static int spi_nor_remove(struct spi_mem *spimem)
@@ -3792,7 +3803,7 @@ module_init(spi_nor_module_init);
 static void __exit spi_nor_module_exit(void)
 {
 	spi_mem_driver_unregister(&spi_nor_driver);
-	spi_nor_debugfs_shutdown();
+	//spi_nor_debugfs_shutdown();
 }
 module_exit(spi_nor_module_exit);
 

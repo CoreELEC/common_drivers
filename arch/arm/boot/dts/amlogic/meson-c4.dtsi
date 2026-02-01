@@ -274,19 +274,18 @@
 			//power-domains = <&pwrdm PDID_C3_EMMC>;
 		};
 
-		spifc: spi@fe056000 {
-			compatible = "amlogic,meson-spifc-v2";
+		spi_nfc: spi@fe08d000 {
+			compatible = "amlogic,spi-nfc";
 			status = "disabled";
-			reg = <0xfe056000 0x290>;
-			ahb-addr = <0xf1000000 0x0>;
-			//clocks = <&clkc CLKID_SPIFC>;
-			//clock-names = "spifc_gate";
-			//assigned-clocks = <&clkc CLKID_SPIFC_MUX>;
-			//assigned-clock-parents = <&clkc CLKID_FCLK_DIV2>;
+			reg = <0xfe08d000 0x200>,
+				  <0xfe08c000 0xc>,
+				  <0xfe010180 0x4>;
+			clocks = <&clkc CLKID_SYS_SD_EMMC_C>,
+					<&clkc CLKID_FCLK_DIV2>;
+			clock-names = "gate", "fdiv2pll";
+			nand_clk_ctrl = <0xfe08c000>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			info_version = <2>;
-			//power-domains = <&pwrdm PDID_CX_SPIFC>;
 		};
 
 		apb4: apb4@fe000000 {
@@ -2455,17 +2454,16 @@
 		};
 	};
 
-	spifc_pins: spifc_pins {
+	spinf_pins:spinf_pins {
 		mux {
-			groups = "spif_mo",
-				 "spif_mi",
-				 "spif_clk",
-				 "spif_cs",
-				 "spif_hold",
-				 "spif_wp",
-				 "spif_clk_loop";
-			function = "spif";
-			drive-strength-microamp = <4000>;
+			groups = "spinf_mo_d0",
+				"spinf_mi_d1",
+				"spinf_wp_d2",
+				"spinf_hold_d3",
+				"spinf_clk",
+				"spinf_cs0";
+			function = "spinf";
+			drive-strength-microamp = <3000>;
 		};
 	};
 

@@ -5,6 +5,7 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
+#include <linux/io.h>
 #include <linux/of.h>
 #include <linux/mtd/mtd.h>
 #include <linux/slab.h>
@@ -12,6 +13,23 @@
 #include <linux/amlogic/aml_rsv.h>
 #include <linux/amlogic/aml_mtd_nand.h>
 #include <linux/amlogic/nand_encryption.h>
+
+struct storage_part {
+	char name[16];
+	unsigned int offset;
+	unsigned int size;
+	unsigned char flags;
+};
+
+struct storage_parts {
+#define STORAGE_PART_MAGIC "STO_PART"
+	char magic[8];
+	unsigned char version;
+	unsigned char reserved[3];
+	unsigned int count;
+#define STORAGE_PART_OFFSET (16)
+	struct storage_part *parts;
+};
 
 static u32 skip_bad_block;
 
@@ -28,6 +46,93 @@ void meson_nand_set_skip_bad_block(u32 skip)
 	skip_bad_block = skip;
 }
 EXPORT_SYMBOL_GPL(meson_nand_set_skip_bad_block);
+
+static int parse_meson_fastboot_partitions(struct mtd_info *master,
+				  const struct mtd_partition **pparts,
+				  struct mtd_part_parser_data *data)
+{
+	struct mtd_partition *parts;
+	struct device_node *mtd_node;
+	u32 param_sram_addr, param_sram_size;
+	struct storage_parts *part_info;
+	struct storage_part *part;
+	void __iomem *param_sram;
+	int ret = 0;
+	u8 nr_parts, boot_parts = 0, i, j;
+	u8 *buf;
+
+	/* Pull of_node from the master device node */
+	mtd_node = mtd_get_of_node(master);
+	if (!mtd_node)
+		return 0;
+
+	ret = of_property_read_u32(mtd_node, "param_sram_addr", &param_sram_addr);
+	if (ret) {
+		pr_err("%s %d, no find para item param_sram_addr in dts!\n",
+				__func__, __LINE__);
+		return ret;
+	}
+
+	ret = of_property_read_u32(mtd_node, "param_sram_size", &param_sram_size);
+	if (ret) {
+		pr_err("%s %d, no find para item param_sram_size in dts!\n",
+				__func__, __LINE__);
+		return ret;
+	}
+
+	param_sram = ioremap(param_sram_addr, param_sram_size);
+	if (!param_sram) {
+		pr_err("%s %d, map sram addr failed!\n",
+				__func__, __LINE__);
+		return ret;
+	}
+
+	buf = kmalloc(param_sram_size, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	memcpy((void *)buf, (void *)param_sram, param_sram_size);
+	part_info = (struct storage_parts *)buf;
+
+	if (master->type == MTD_NORFLASH)
+		boot_parts = 1;
+
+	nr_parts = part_info->count;
+	parts = kcalloc(nr_parts + boot_parts, sizeof(struct mtd_partition), GFP_KERNEL);
+	if (!parts)
+		goto part_fail;
+
+	part = (void *)part_info + STORAGE_PART_OFFSET;
+	for (i = boot_parts, j = 0; j < nr_parts; i++, j++) {
+		parts[i].offset = part[j].offset;
+		if (j == (nr_parts - 1))
+			parts[i].size = master->size - parts[i].offset;
+		else
+			parts[i].size = part[j].size;
+		parts[i].of_node = mtd_node;
+		parts[i].name = kstrdup(part[j].name, GFP_KERNEL);
+	}
+
+	if (master->type == MTD_NORFLASH) {
+		parts[0].name = "bl2";
+		parts[0].offset = 0;
+		parts[0].size = parts[boot_parts].offset;
+		parts[0].of_node = mtd_node;
+	}
+
+	*pparts = parts;
+	kfree(buf);
+	return nr_parts + boot_parts;
+
+part_fail:
+	kfree(buf);
+	return -EINVAL;
+}
+
+struct mtd_part_parser meson_fast_parser = {
+	.parse_fn = parse_meson_fastboot_partitions,
+	.name = "meson-fastboot-partitions",
+};
 
 static int meson_nand_partition_relocate(struct mtd_info *master, u8 nr_parts,
 			      struct mtd_partition *parts)
@@ -246,15 +351,16 @@ part_none:
 	return ret;
 }
 
-static const char * const meson_mtd_types[] = {
-	"cmdlinepart",
-	"meson_ofpartitions",
-	NULL
-};
-
 struct mtd_part_parser meson_parts_parser = {
 	.parse_fn = meson_parse_partitions,
 	.name = "meson_ofpartitions",
+};
+
+static const char * const meson_mtd_types[] = {
+	"cmdlinepart",
+	"meson_ofpartitions",
+	"meson-fastboot-partitions",
+	NULL
 };
 
 #ifdef CONFIG_NAND_ENCRYPTION
@@ -282,6 +388,7 @@ static void meson_nand_register_mtd_parser(void)
 	if (had_register)
 		return;
 
+	register_mtd_parser(&meson_fast_parser);
 	register_mtd_parser(&meson_parts_parser);
 	had_register = true;
 }
