@@ -543,7 +543,8 @@ struct frc_state_s {
 	bool win_size_zero_flag;
 	bool used_seq_vfm;
 	bool phs_swth;
-	u8 check_fallback;
+	u8 check_fallback;//0:init 1:start force 2:maintain state 3:end
+	u8 dae0_available_cnt;
 	u8 detect_threshold;
 	u8 dae0_bypass_mode;
 	u8 dst_buf_th;

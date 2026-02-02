@@ -1126,6 +1126,7 @@ static void frc_state_init(void)
 	state_st->mc_phase0_rdma = false;
 	state_st->mc_link_available = false;
 	state_st->phs_swth = false;
+	state_st->dae0_available_cnt = 0;
 	if (state_st->force_n2m == 0)
 		memset(&state_st->n2m_status, 0, sizeof(state_st->n2m_status));
 	memset(&state_st->me_pcn_st, 0, sizeof(state_st->me_pcn_st));
@@ -2849,10 +2850,8 @@ int pvpp_display_frc(struct vframe_s *vfm,
 	if (!state_st->dpss_reg || !state_st->dpe_ready ||
 			!enable_mc_link || state_st->need_disable_mc_link ||
 			(state_st->unformat_bypass && state_st->special_format == 1) ||
-			dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt) {
-		state_st->is_frc_vpp_link = 0;
-		return ret;
-	}
+			dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt)
+		goto exit;
 
 	is_vd1_link = is_vd1_link_state();
 
@@ -2877,6 +2876,7 @@ int pvpp_display_frc(struct vframe_s *vfm,
 			state_st->have_update_vfcd = 0;
 			state_st->check_fallback = 0;
 			state_st->mc_link_available = false;
+			state_st->dae0_available_cnt = 0;
 			dbg_f1("bypass frc\n");
 		}
 		if (is_vd1_link)
@@ -2919,6 +2919,20 @@ int pvpp_display_frc(struct vframe_s *vfm,
 	check_readback_reg(BIT_3);
 	check_readback_reg(BIT_4);
 	return ret;
+
+exit:
+	if (state_st->is_frc_vpp_link) {
+		state_st->is_frc_vpp_link = 0;
+		state_st->have_update_vfcd = 0;
+		state_st->check_fallback = 0;
+		state_st->mc_link_available = false;
+		state_st->dae0_available_cnt = 0;
+		dbg_f2("reg=%d,dpe_ready=%d,enable_mc_link=%d,disable_mc_link=%d,unformat=%d,%d",
+			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
+			state_st->need_disable_mc_link, state_st->unformat_bypass,
+			state_st->special_format);
+	}
+	return 0;
 }
 
 int frclink_vpp_check_vf(struct vframe_s *vfm)

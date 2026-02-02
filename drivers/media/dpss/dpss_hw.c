@@ -1984,6 +1984,7 @@ void irq_pre_vs(void)
 	u8 mc_bypass_st;
 	u8 mc_phase_st;
 	u8 fallback_st;
+	u8 vd1_link_st;
 	struct display_buffer_info_s *display_buf_info;
 
 	pchip_st = dpss_get_frc_st();
@@ -2146,15 +2147,16 @@ void irq_pre_vs(void)
 		state_st->mc_phase0_rdma = false;
 
 	mc_phase_st = rd(DPSS_DPE_MC_PHASE) & 0xff;
+	vd1_link_st = is_vd1_link_state();
 	dbg_f2("phase0=(%d,%3d,%d), mc_phase=%3d, obuf_rdy=%d, display_ready=%d, pre_vs_cnt=%d\n",
 			state_st->mc_set_phase0, state_st->dpe_intp_phs, state_st->mc_phase0_rdma,
 			mc_phase_st, src0_disp_obuf_rdy, display_ready, frc_int_st->pre_vsync_cnt);
 	dbg_f2("mc_bypass=%d,bypass_cnt=%d,fallback=%d,bypass_chg=%d,trig_pos_chg=%d,mc_link=%d\n",
 		state_st->mc_bypass, state_st->mc_bypass_cnt, fallback_st,
 		state_st->bypass_chg, state_st->trig_pos_chg, state_st->is_frc_vpp_link);
-	dbg_h2("hw_proc_st:nr_dae=%d,nr_dpe=%d,frc_inp=%d,frc_dae=%d,mc_bypass_st=%d\n",
+	dbg_h2("hw_proc_st:nr_dae=%d,nr_dpe=%d,frc_inp=%d,frc_dae=%d,mc_byp_st=%d,vd1_link=%d\n",
 			nr_proc_st >> 16 & 7, nr_proc_st & 7,
-			frc_proc_st >> 16 & 7, frc_proc_st >> 8 & 7, mc_bypass_st);
+			frc_proc_st >> 16 & 7, frc_proc_st >> 8 & 7, mc_bypass_st, vd1_link_st);
 	//don't add  logic after triggle function,add by fxj
 	if (!state_st->trig_pos_chg)
 		hw_cfg_dpss_mc_pre_triggle();
@@ -2813,6 +2815,12 @@ void irq_dae0(void)
 			state_st->me_pcn_st.p = state_st->me_pcn_st.c;
 			state_st->me_pcn_st.c = state_st->me_pcn_st.n;
 			state_st->me_pcn_st.n = nxt_fid;
+		}
+
+		if (!state_st->mc_link_available) {
+			state_st->dae0_available_cnt++;
+			if (state_st->dae0_available_cnt == DAE0_FREEZE_CNT)
+				state_st->mc_link_available = true;
 		}
 	}
 	dbg_h2("phs_swth=%d,pre_fid = %d,cur_fid = %d,nxt_fid= %d\r\n",

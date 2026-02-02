@@ -14,6 +14,8 @@
 #define FRC_IPLG_FUNC   0x13
 #define FRC_MELG_FUNC   0x14
 
+#define DAE0_FREEZE_CNT    2
+
 // #define DPSS_FRC_FW_VER			"20250816 dpss_frc_driver update release"
 // #define DPSS_FRC_KERDRV_VER		1000
 void dpss_h_update_frc(struct vframe_s *vfm);
