@@ -502,6 +502,7 @@ struct frc_state_s {
 	bool dpss_reg;
 	bool frc_en;//dpss mode include frc
 	bool frc_init;
+	bool need_chg_trig_pos;
 	bool trig_pos_chg;
 	bool check_frc_status_en;
 	bool unformat_bypass;

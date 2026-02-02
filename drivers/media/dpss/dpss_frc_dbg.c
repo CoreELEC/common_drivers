@@ -79,8 +79,10 @@ void dpss_frc_status(void)
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
 			!state_st->need_disable_mc_link, !state_st->disable_mc_link_intf,
 			!state_st->unformat_bypass);
-	pr_frc(0, "mc_bypass\t= %d, pre_vs_offset\t= %d\n",
-			rd(FRC_MC_HW_CTRL0) & 0x3, rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
+	pr_frc(0, "pre_vsync_offset\t= %d\n",
+			rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
+	pr_frc(0, "mc_bypass=%d   compr_sel_st=%d\n",
+		rd(FRC_MC_HW_CTRL0) & 0x3, state_st->compr_sel);
 	pr_frc(0, "eos enable\t= %d\n", state_st->enable_last_drop);
 	pr_frc(0, "game_n2m\t= %d, game_film\t= %d\n",
 		game_st->game_n2m, game_st->game_film);

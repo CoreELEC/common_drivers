@@ -719,7 +719,6 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 		} else if (pdata->mdata->ic_id == IC_ID_T6X) {
 			frc_st.chip = ID_T6X;
 			// dpss_light_chg = 0;
-			dpss_light_chg = 0;
 			frc_st.encl_frc_ctrl = ENCL_FRC_CTRL_T6X;
 			frc_st.venc_vrr_ctrl = VENC_VRR_CTRL_T6X;
 			frc_st.venc_vrr_adj_lmt = VENC_VRR_ADJ_LMT_T6X;
@@ -1101,6 +1100,7 @@ static void frc_state_init(void)
 	state_st = &pchip_st->state_st;
 
 	state_st->frc_init = true;
+	state_st->need_chg_trig_pos = false;
 	state_st->trig_pos_chg = false;
 	state_st->frc_src = FROM_DEC;
 	state_st->src0_disp_obuf_rdy = 0;
@@ -4688,7 +4688,6 @@ int dpss_frc_fpp_memc_set_level(u8 level, u8 num)
 
 static struct dpss_frc_vf_s frc_vf_s[DPSS_DPS_NUB];
 static struct vframe_s get_frc_vf_s[DPSS_DPS_NUB];
-static unsigned int pre_cur_idx;
 static unsigned int inp_vfm_cnt;
 static struct frc_vf_ctrl_s frc_vf_ctrl;
 static unsigned int reset_path_skip_cnt;
@@ -4790,24 +4789,19 @@ struct vframe_s *frc_get_vfm(void)
 	state_st = &pchip_st->state_st;
 	ro_disp_info_0 = rd(FRC_DPSS_DISP_BUFF_INFO_0);
 	cur_idx = state_st->mc_disp_st.wr_cur_idx;
-	if (!state_st->src0_disp_obuf_rdy) {
-		cur_idx = pre_cur_idx; // used last idx
-	} else {
-		if (state_st->used_seq_vfm)
-			cur_idx = frc_vf_ctrl_update_rd(cur_idx,
-				&seq_id, &reuse_last);
-		else
-			cur_idx = state_st->mc_disp_st.wr_cur_idx % DPSS_DPS_NUB;
-	}
+
+	if (state_st->used_seq_vfm)
+		cur_idx = frc_vf_ctrl_update_rd(cur_idx,
+			&seq_id, &reuse_last);
+	else
+		cur_idx = state_st->mc_disp_st.wr_cur_idx % DPSS_DPS_NUB;
 
 	get_frc_vf_s[cur_idx] = frc_vf_s[cur_idx].vfm;
 	vfm = &get_frc_vf_s[cur_idx];
 
-	pre_cur_idx = cur_idx;
-
-	dbg_h2("cur_idx:%d nr_buf_id:%d, vfm(w,h)=(%d,%d) vf:%p pre_idx:%d\n",
+	dbg_h2("cur_idx:%d nr_buf_id:%d, vfm(w,h)=(%d,%d) vf:%p\n",
 		cur_idx, vfm->nr_buf_id,
-		vfm->compWidth, vfm->compHeight, vfm, pre_cur_idx);
+		vfm->compWidth, vfm->compHeight, vfm);
 
 	return vfm;
 }
@@ -4849,7 +4843,6 @@ void *put_vfm_to_frc(struct vframe_s *vfm)
 			vfm->nr_buf_id);
 		// frc_init_vfm_s();
 		inp_vfm_cnt = 0;
-		pre_cur_idx = 0;
 		state_st->first_put_vfm = false;
 		frc_vf_ctrl_reset();
 		for (i = 0; i < DPSS_DPS_NUB; i++) {
@@ -4875,17 +4868,23 @@ void *put_vfm_to_frc(struct vframe_s *vfm)
 
 void update_frc_state(void)
 {
-	struct vframe_s *vfs = frc_get_vfm();
+	bool not_use_vf_flag = false;
+	u32 cur_idx;
+	struct vframe_s *vfs;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
 	struct AA_PPS_TOP_TYPE *pps = &g_nr_pps_cfg;
+	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 
-	if (!pchip_st || !vfs)
+	if (!pchip_st || !prm_top)
 		return;
 
 	state_st = &pchip_st->state_st;
 	state_st->pps_frc = pps->pps_en ? true : false;
 	pps->trig_pps = 0;
+
+	cur_idx = state_st->mc_disp_st.wr_cur_idx % DPSS_DPS_NUB;
+	vfs = &get_frc_vf_s[cur_idx];
 
 	if (VFM_IS_COMP_MODE(vfs->type))
 		if (VFM_IS_COMP_AFRC(vfs->type_ext))
@@ -4894,6 +4893,14 @@ void update_frc_state(void)
 			state_st->compr_sel = DDR_AFBC;
 	else
 		state_st->compr_sel = DDR_MIF;
+
+	if (prm_top->nro_fs_fmt.src_cmpr == CMPR_UN && state_st->compr_sel != DDR_MIF) {
+		state_st->compr_sel = DDR_MIF;
+		not_use_vf_flag = true;
+	} else if (prm_top->nro_fs_fmt.src_cmpr == CMPR_AFRC && state_st->compr_sel != DDR_AFRC) {
+		state_st->compr_sel = DDR_AFRC;
+		not_use_vf_flag = true;
+	}
 
 	if (VFM_IS_FMT_420(vfs->type))
 		state_st->big_fmt = YUV420;
@@ -4908,8 +4915,9 @@ void update_frc_state(void)
 		state_st->big_bits = BIT_008;
 
 	state_st->big_plane = vfs->plane_num;
-	dbg_h2("%s update frc state done, compr_sel:%d,frc_pps:%d\n",
-		__func__, state_st->compr_sel, state_st->pps_frc);
+
+	dbg_h2("update frc state done, compr_sel:%d-%d(flag),frc_pps:%d\n",
+		state_st->compr_sel, not_use_vf_flag, state_st->pps_frc);
 }
 
 //call function only eos
@@ -4934,7 +4942,6 @@ void get_eos_from_dp(bool en)
 
 void mc_res_switch_begin(void)
 {
-	bool is_vd1_link;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	struct frc_chip_st *pchip_st;
 	struct frc_state_s *state_st;
@@ -4945,8 +4952,7 @@ void mc_res_switch_begin(void)
 		return;
 
 	state_st = &pchip_st->state_st;
-	is_vd1_link = is_vd1_link_state();
-	if (prm_top->trig_byp_mc && !is_vd1_link) {
+	if (prm_top->trig_byp_mc) {
 		if (state_st->mc_disp_st.wr_cur_idx ==
 			(prm_top->idx_done + 1) % DPSS_DPS_NUB) {
 			prm_top->trig_byp_mc = false;

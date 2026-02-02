@@ -1023,6 +1023,12 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 		return false;
 
 	state_st = &pchip_st->state_st;
+	if (state_st->mc_disp_st.step == 0) {
+		state_st->mc_disp_st.step = 1;
+	} else {
+		state_st->mc_disp_st.disp_pre_idx = state_st->mc_disp_st.wr_pre_idx;
+		state_st->mc_disp_st.disp_cur_idx = state_st->mc_disp_st.wr_cur_idx;
+	}
 
 	if (!obuf_rdy &&
 		(state_st->force_disable_check_fallback || state_st->check_fallback != 1)) {
@@ -1143,12 +1149,6 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 		state_st->mc_last_ready = true;
 	state_st->dpe_intp_phs = dpe_intp_phs;
 
-	if (state_st->mc_disp_st.step == 0) {
-		state_st->mc_disp_st.step = 1;
-	} else {
-		state_st->mc_disp_st.disp_pre_idx = state_st->mc_disp_st.wr_pre_idx;
-		state_st->mc_disp_st.disp_cur_idx = state_st->mc_disp_st.wr_cur_idx;
-	}
 	state_st->mc_disp_st.wr_pre_idx = dpe_pre_pixl_buf;
 	state_st->mc_disp_st.wr_cur_idx = dpe_cur_pixl_buf;
 

@@ -2068,7 +2068,7 @@ void irq_pre_vs(void)
 		state_st->enable_last_drop = true;
 	else
 		state_st->enable_last_drop = false;
-	if (state_st->force_disable_drop_last)
+	if (state_st->force_disable_drop_last || prm_top->trig_byp_mc)
 		state_st->enable_last_drop = false;
 
 	display_ready = hw_dpss_dpe_info_cfg(prm_top, src0_disp_obuf_rdy);
@@ -2103,18 +2103,23 @@ void irq_pre_vs(void)
 		}
 	}
 
+	if (state_st->need_chg_trig_pos)
+		state_st->trig_pos_chg = true;
+
 	if (state_st->mc_byp_switch_on) {
 		frc_set_mc_bypass_rdma(3);
 		state_st->bypass_chg = true;
 		state_st->use_phase0_done = false;
+		state_st->need_chg_trig_pos = true;
 		dbg_h2("trig byp mc cur\n");
 	}
 
 	if (state_st->src_chg) {
+		if (mc_bypass_st != 3)
+			DBG_WARN("mc not bypass\n");
 		state_st->mc_byp_switch_on = false;
-		state_st->trig_pos_chg = true;
 		state_st->enable_mc_cnt = dpss_dbg_dae0_byp_cnt + 10;
-
+		state_st->need_chg_trig_pos = false;
 		if (pps_out_w) {
 			frc_top->hsize = prm_top->is_pps ? pps_out_w : prm_top->frm_hsize;
 			frc_top->vsize = prm_top->is_pps ? pps_out_h : prm_top->frm_vsize;
