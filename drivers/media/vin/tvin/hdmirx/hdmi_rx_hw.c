@@ -5481,6 +5481,8 @@ void rx_get_avi_params(u8 port)
 			data8_up = hdmirx_rd_cor(AVIRX_DBYTE13_DP2_IVCRX, port);
 			rx[port].cur.bar_start_right = (data8_lo | (data8_up << 8));
 		}
+		rx[port].cur.add_ext_colorimetry =
+			(hdmirx_rd_cor(AVIRX_DBYTE14_DP2_IVCRX, port) & MSK(4, 4)) >> 4;
 		rx[port].cur.rid = hdmirx_rd_cor(AVIRX_DBYTE15_DP2_IVCRX, port) & 0x3f;
 	} else {
 		rx[port].cur.hw_vic =

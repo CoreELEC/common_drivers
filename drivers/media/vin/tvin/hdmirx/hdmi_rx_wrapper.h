@@ -87,7 +87,8 @@
 /* 2026.1.30 modify frl signal flow */
 /* 2026.2.02 remove htotal detect */
 /* 2026.3.02 do pcs reset when fdet abnormal */
-#define RX_WRAPPER_VER "ver.2026/3/02"
+/* 2026.03.09 add additional extension colorimetry parsing */
+#define RX_WRAPPER_VER "ver.2026/03/09"
 
 struct freq_ref_s {
 	bool interlace;

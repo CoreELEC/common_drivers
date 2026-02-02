@@ -603,6 +603,7 @@ struct rx_video_info {
 	u8 colorimetry;
 	u8 picture_ratio;
 	u8 ext_colorimetry;
+	u8 add_ext_colorimetry;
 	u8 n_uniform_scale;
 	u32 bar_end_top;
 	u32 bar_start_bottom;

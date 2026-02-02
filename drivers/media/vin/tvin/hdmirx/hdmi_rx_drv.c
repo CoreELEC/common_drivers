@@ -2047,7 +2047,25 @@ void hdmirx_get_hdr_info(struct tvin_frontend_s *fe, struct tvin_sig_property_s 
 void hdmirx_get_avi_ext_colorimetry(struct tvin_sig_property_s *prop, u8 port)
 {
 	prop->avi_colorimetry = rx[port].cur.colorimetry;
-	prop->avi_ext_colorimetry = rx[port].cur.ext_colorimetry;
+	if (rx[port].cur.colorimetry == E_EXTENDED_VALID) {
+		if (rx[port].cur.ext_colorimetry != MSK(3, 0)) {
+			prop->avi_ext_colorimetry = rx[port].cur.ext_colorimetry;
+		} else {
+			switch (rx[port].cur.add_ext_colorimetry) {
+			case HDMIRX_AVI_ADDITIONAL_COLORIMETRY_DCI_P3_D65:
+				prop->avi_ext_colorimetry = E_SMPTE_ST_2113_P3D65RGB;
+				break;
+			case HDMIRX_AVI_ADDITIONAL_COLORIMETRY_DCI_P3_THEATER:
+				prop->avi_ext_colorimetry = E_SMPTE_ST_2113_P3DCIRGB;
+				break;
+			case HDMIRX_AVI_ADDITIONAL_COLORIMETRY_BT2100:
+				prop->avi_ext_colorimetry = E_BT_2100;
+				break;
+			default:
+				break;
+			}
+		}
+	}
 
 	/*
 	 *if (rx[port].cur.colorimetry != E_EXTENDED_VALID) {
