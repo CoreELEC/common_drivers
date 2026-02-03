@@ -16,6 +16,7 @@
 #include "../dpss_s.h"
 #include "../dpss_sys.h"
 #include "../dpss_rdma_frc.h"
+#include "../dpss_hw_frc.h"
 #include "../dpss_s_frc.h"
 #include "../dpss_func.h"
 
@@ -38,15 +39,20 @@ void cfg_dpss_mc_ini(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr)
 {
 	struct frc_chip_st *pchip = dpss_get_frc_st();
 	struct DPSS_MC0_TYPE *prm_mc;
+	struct frc_cut_win_s *frc_win;
 
 	if (!pchip) {
 		dbg_h2("%s pchip is null\n", __func__);
 		return;
 	}
 	prm_mc = &pchip->prm_mc;
+	frc_win = &pchip->win_st;
+	frc_win->win_hbgn = 0;
+	frc_win->win_hend = 0;
+	frc_win->win_vbgn = 0;
+	frc_win->win_vend = 0;
 	cfg_dpss_mc0(prm_top, src_from_nr, prm_mc);
 	cfg_dpss_mc_intf(prm_top, prm_mc);
-
 }
 
 void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc)
@@ -228,77 +234,7 @@ void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc
 		}
 	}
 
-	// u32 x_scl = prm_top->dpe_dw_dsx;
-	// u32 y_scl = prm_top->dpe_dw_dsy;
-	// u32 pre_logo_rmif_bits = 1;
-	// u32 cur_logo_rmif_bits = 1;
-	// u32 mv_rmif_bits = 64;
-	// u32 me_logo_rmif_bits  = 1;
-
-	// u32 pre_logo_hsize = prm_top->frm_hsize >> x_scl;
-	// u32 cur_logo_hsize = prm_top->frm_hsize >> x_scl;
-	// u32 mv_hsize	   = pre_logo_hsize >> 2;
-	// u32 me_logo_hsize  = pre_logo_hsize >> 2;
-	// struct PRM_INTF_TYPE *pre_logo_rmif = &pchip->pre_logo_rmif;
-	// struct PRM_INTF_TYPE *cur_logo_rmif = &pchip->cur_logo_rmif;
-	// struct PRM_INTF_TYPE *mv_rmif = &pchip->mv_rmif;
-	// struct PRM_INTF_TYPE *me_logo_rmif = &pchip->me_logo_rmif;
-
-	// memset((void *)(pre_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
-	// memset((void *)(cur_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
-	// memset((void *)(mv_rmif), 0, sizeof(struct PRM_INTF_TYPE));
-	// memset((void *)(me_logo_rmif), 0, sizeof(struct PRM_INTF_TYPE));
-
-	// pre_logo_rmif->burst_len = 2;
-	// cur_logo_rmif->burst_len = 2;
-	// mv_rmif->burst_len		= 2;
-	// me_logo_rmif->burst_len	= 2;
-	// if (cut_win_en) {
-	// pre_logo_rmif->bits_mode = 12;
-	// cur_logo_rmif->bits_mode = 12;
-	// mv_rmif->bits_mode		= 4;
-	// me_logo_rmif->bits_mode	= 12;
-
-	// pre_logo_rmif->pack_mode = 4;
-	// cur_logo_rmif->pack_mode = 4;
-	// mv_rmif->pack_mode		= 4;
-	// me_logo_rmif->pack_mode	= 0;
-
-	// pre_logo_rmif->slc_x_st[0] = prm_top->prm_cut_win.win_hbgn >> x_scl;
-	// pre_logo_rmif->slc_x_ed[0] = prm_top->prm_cut_win.win_hend >> x_scl;
-	// pre_logo_rmif->slc_y_st[0] = prm_top->prm_cut_win.win_vbgn >> y_scl;
-	// pre_logo_rmif->slc_y_ed[0] = prm_top->prm_cut_win.win_vend >> y_scl;
-
-	// cur_logo_rmif->slc_x_st[0] = prm_top->prm_cut_win.win_hbgn >> x_scl;
-	// cur_logo_rmif->slc_x_ed[0] = prm_top->prm_cut_win.win_hend >> x_scl;
-	// cur_logo_rmif->slc_y_st[0] = prm_top->prm_cut_win.win_vbgn >> y_scl;
-	// cur_logo_rmif->slc_y_ed[0] = prm_top->prm_cut_win.win_vend >> y_scl;
-
-	// mv_rmif->slc_x_st[0] = pre_logo_rmif->slc_x_st[0] >> 2;
-	// mv_rmif->slc_x_ed[0] = pre_logo_rmif->slc_x_ed[0] >> 2;
-	// mv_rmif->slc_y_st[0] = pre_logo_rmif->slc_y_st[0] >> 2;
-	// mv_rmif->slc_y_ed[0] = pre_logo_rmif->slc_y_ed[0] >> 2;
-
-	// me_logo_rmif->slc_x_st[0] = pre_logo_rmif->slc_x_st[0] >> 2;
-	// me_logo_rmif->slc_x_ed[0] = pre_logo_rmif->slc_x_ed[0] >> 2;
-	// me_logo_rmif->slc_y_st[0] = pre_logo_rmif->slc_y_st[0] >> 2;
-	// me_logo_rmif->slc_y_ed[0] = pre_logo_rmif->slc_y_ed[0] >> 2;
-
-	// pre_logo_rmif->stride = (((pre_logo_hsize * pre_logo_rmif_bits + 127) >>
-	// 7) + 3) >> 2 << 2;
-	// cur_logo_rmif->stride = (((cur_logo_hsize * cur_logo_rmif_bits + 127) >>
-	// 7) + 3) >> 2 << 2;
-	// mv_rmif->stride = (((mv_hsize * mv_rmif_bits + 127) >> 7) + 3) >> 2 << 2;
-	// me_logo_rmif->stride = (((me_logo_hsize * me_logo_rmif_bits + 127) >>
-	// 7) + 3) >> 2 << 2;
-
-	// cfg_mc_sub_rdmif(pre_logo_rmif, 0, 0);
-	// cfg_mc_sub_rdmif(cur_logo_rmif, 1, 0);
-	// cfg_mc_sub_rdmif(mv_rmif, 2, 0);
-	// cfg_mc_sub_rdmif(me_logo_rmif, 3, 0);
-
-	// w_reg_bit(DPSS_DPE_MC_MIF_CTRL0, 0xf, 3, 4);
-	// }
+	frc_me_cut(prm_top);
 }
 
 //cfg @pre_go_field

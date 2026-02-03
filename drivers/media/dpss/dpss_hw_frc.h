@@ -6,6 +6,7 @@
 #ifndef __DPSS_HW_FRC_H__
 #define __DPSS_HW_FRC_H__
 
+void frc_me_cut(struct PRM_DPSS_TOP *prm_top);
 void hw_cfg_dpss_mc_ini(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr);
 void hw_cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc);
 void hw_cfg_dpss_mc0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr, struct DPSS_MC0_TYPE *prm_mc);

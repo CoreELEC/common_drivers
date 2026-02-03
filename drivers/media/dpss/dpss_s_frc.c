@@ -2046,7 +2046,10 @@ void detect_crop_change(struct frc_win_s *vpp_win, struct vframe_s *vfm)
 		cut_win_chg = false;
 
 	frc_win->cut_win_chg = cut_win_chg;
-	dbg_f2("cut_win_chg=%d\n", frc_win->cut_win_chg);
+	dbg_f2("cut_win_chg=%d sizes[(%d,%d) (%d,%d)]\n",
+		frc_win->cut_win_chg,
+		vpp_win->x_size, vpp_win->y_size,
+		src_width, src_height);
 }
 
 void frc_cut_win_chk_2_step(struct frc_win_s *vpp_win, struct vframe_s *vfm)
