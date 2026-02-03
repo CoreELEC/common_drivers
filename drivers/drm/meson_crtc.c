@@ -101,6 +101,7 @@ static struct drm_crtc_state *meson_crtc_duplicate_state(struct drm_crtc *crtc)
 	strncpy(new_state->brr_mode, cur_state->brr_mode, DRM_DISPLAY_MODE_LEN);
 	new_state->crtc_bgcolor_flag = cur_state->crtc_bgcolor_flag;
 	new_state->crtc_bgcolor = cur_state->crtc_bgcolor;
+	new_state->outfence_ctrl = cur_state->outfence_ctrl;
 	new_state->viu_mux = VIU_MUX_INVALID;
 	/*reset dynamic info.*/
 
@@ -311,6 +312,9 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 	} else if (property == meson_crtc->vpu_clk_property) {
 		*val = vpu_clk_get();
 		return 0;
+	} else if (property == meson_crtc->outfence_ctrl_property) {
+		*val = crtc_state->outfence_ctrl;
+		return 0;
 	}
 
 	return ret;
@@ -357,6 +361,9 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 	} else if (property == meson_crtc->game_rate_property) {
 		crtc_state->game_rate = val;
 		return 0;
+	} else if (property == meson_crtc->outfence_ctrl_property) {
+		crtc_state->outfence_ctrl = val;
+		return 0;
 	}
 
 	return ret;
@@ -402,6 +409,7 @@ static void meson_crtc_atomic_print_state(struct drm_printer *p,
 	drm_printf(p, "\t\tseamless=%d\n", cstate->seamless);
 	drm_printf(p, "\t\tforce_output=%d\n", cstate->force_output_type);
 	drm_printf(p, "\t\tuboot_mode_init=%u\n", cstate->uboot_mode_init);
+	drm_printf(p, "\t\toutfence_ctrl=%u\n", cstate->outfence_ctrl);
 	drm_printf(p, "\t\tcrtc_hdr_policy:[%u,%u]\n",
 		cstate->crtc_hdr_process_policy,
 		cstate->crtc_eotf_type);
@@ -850,6 +858,22 @@ static void am_meson_crtc_atomic_begin(struct drm_crtc *crtc,
 {
 }
 
+static void meson_drm_crtc_arm_vblank_event(struct drm_crtc *crtc,
+			       struct drm_pending_vblank_event *e, bool outfence_ctrl)
+{
+	struct drm_device *dev = crtc->dev;
+	unsigned int pipe = drm_crtc_index(crtc);
+	int add;
+
+	assert_spin_locked(&dev->event_lock);
+
+	add = outfence_ctrl ? VBLANK_STEP_2 : VBLANK_STEP_1;
+
+	e->pipe = pipe;
+	e->sequence = drm_crtc_accurate_vblank_count(crtc) + add;
+	list_add_tail(&e->base.link, &dev->vblank_event_list);
+}
+
 static void am_meson_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct drm_atomic_state *old_atomic_state)
 {
@@ -938,7 +962,8 @@ static void am_meson_crtc_atomic_flush(struct drm_crtc *crtc,
 	spin_lock_irqsave(&crtc->dev->event_lock, flags);
 	if (crtc->state->event) {
 		if (drm_crtc_vblank_get(crtc) == 0)
-			drm_crtc_arm_vblank_event(crtc, crtc->state->event);
+			meson_drm_crtc_arm_vblank_event(crtc, crtc->state->event,
+			meson_crtc_state->outfence_ctrl);
 		else
 			amcrtc->event = crtc->state->event;
 
@@ -1067,6 +1092,20 @@ static void meson_crtc_init_dv_enable_property(struct drm_device *drm_dev,
 		drm_object_attach_property(&amcrtc->base.base, prop, 0);
 	} else {
 		DRM_ERROR("Failed to dv_enable property\n");
+	}
+}
+
+static void meson_crtc_init_outfence_ctrl_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_bool(drm_dev, 0, "outfence_ctrl");
+	if (prop) {
+		amcrtc->outfence_ctrl_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to outfence_ctrl property\n");
 	}
 }
 
@@ -1390,6 +1429,7 @@ struct am_meson_crtc *meson_crtc_bind(struct meson_drm *priv, int idx)
 	meson_crtc_add_max_out_property(priv->drm, amcrtc);
 	meson_crtc_init_vrr_type_property(priv->drm, amcrtc);
 	meson_crtc_init_game_rate_property(priv->drm, amcrtc);
+	meson_crtc_init_outfence_ctrl_property(priv->drm, amcrtc);
 
 	priv->crtcs[priv->num_crtcs++] = amcrtc;
 

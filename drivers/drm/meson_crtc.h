@@ -24,6 +24,11 @@ enum {
 };
 
 enum {
+	VBLANK_STEP_1 = 1,
+	VBLANK_STEP_2 = 2,
+};
+
+enum {
 	HDMI_EOTF_MESON_DOLBYVISION = (HDMI_EOTF_BT_2100_HLG + 0xf),
 	HDMI_EOTF_MESON_DOLBYVISION_LL,
 };
@@ -91,6 +96,8 @@ struct am_meson_crtc_state {
 	bool seamless;
 	unsigned int frac;
 	unsigned int viu_mux;
+	/* when set val to true, the signal outfence is delayed by one vsync */
+	bool outfence_ctrl;
 };
 
 struct am_meson_crtc {
@@ -107,6 +114,7 @@ struct am_meson_crtc {
 
 	struct drm_property *hdr_policy;
 	struct drm_property *dv_enable_property;
+	struct drm_property *outfence_ctrl_property;
 	struct drm_property *brr_update_property;
 	struct drm_property *dv_mode_property;
 	struct drm_property *bgcolor_property;
