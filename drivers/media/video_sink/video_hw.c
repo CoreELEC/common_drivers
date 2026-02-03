@@ -97,6 +97,8 @@
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #include <linux/amlogic/media/dpss/frc_common_x.h>
 #endif
+#include <linux/amlogic/media/di/dpss_interface.h>
+
 #ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
 #include <linux/amlogic/media/resource_mgr/resourcemanage.h>
 #endif
@@ -13783,6 +13785,8 @@ static bool is_vframe_changed
 	    (new_vf->type_ext & VIDTYPE_EXT_HIGH_BANDWIDTH) ||
 	    (cur_vf->type_ext & VIDTYPE_EXT_FRC_LINK) !=
 	    (new_vf->type_ext & VIDTYPE_EXT_FRC_LINK) ||
+	    (cur_vf->dpss_flg & DPSS_FLG_ROTATE_DONE) !=
+	    (new_vf->dpss_flg & DPSS_FLG_ROTATE_DONE) ||
 	     cur_vf->bufWidth != new_vf->bufWidth ||
 	     cur_vf->width != new_vf->width ||
 	     cur_vf->height != new_vf->height ||

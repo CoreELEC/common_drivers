@@ -775,7 +775,7 @@ static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file 
 	dst_vf->flag |= VFRAME_FLAG_VIDEO_LINEAR;
 	dst_vf->bitdepth = (BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8);
 	dst_vf->type = (VIDTYPE_PROGRESSIVE | VIDTYPE_VIU_FIELD | VIDTYPE_VIU_NV21);
-	dst_vf->dpss_flg |= 0x10;
+	dst_vf->dpss_flg |= DPSS_FLG_ROTATE_DONE;
 	dst_vf->width = dpss_rotate_width;
 	dst_vf->height = dpss_rotate_height;
 	dst_vf->canvas0Addr = -1;
@@ -1040,7 +1040,6 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	pp_info->src_file = src_file;
 	pp_info->status = DPSS_INPUT_VF_IN_DPSS;
 	pp_info->dpss_flag = vf->dpss_flg;
-
 	dpss_in_buf->vf.pp_info = (void *)pp_info;
 	dpss_in_buf->vf.dpss_data = NULL;
 
@@ -1670,6 +1669,9 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 
 	if (pp_info->dpss_flag & DPSS_FLG_HIGH_BANDWIDTH)
 		vf->dpss_flg |= DPSS_FLG_HIGH_BANDWIDTH;
+
+	if (pp_info->dpss_flag & DPSS_FLG_ROTATE_DONE)
+		vf->dpss_flg |= DPSS_FLG_ROTATE_DONE;
 
 	private_data->vf = *vf;
 	private_data->vf_p = vf;
@@ -4130,11 +4132,7 @@ static int dpss_process_probe(struct platform_device *pdev)
 		goto error1;
 	}
 
-	ret = of_property_read_u32(pdev->dev.of_node, "di_backend_support_en", &di_backend_support);
-	if (di_backend_support)
-		set_di_proc_enable(1);
-
-	ret = of_property_read_u32(pdev->dev.of_node, "di_backend_support_en", &di_backend_support);
+	of_property_read_u32(pdev->dev.of_node, "di_backend_support_en", &di_backend_support);
 	if (di_backend_support)
 		set_di_proc_enable(1);
 

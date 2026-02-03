@@ -2509,7 +2509,7 @@ static int di_process_probe(struct platform_device *pdev)
 		goto error1;
 	}
 
-	ret = of_property_read_u32(pdev->dev.of_node, "di_backend_support_en", &di_backend_support);
+	of_property_read_u32(pdev->dev.of_node, "di_backend_support_en", &di_backend_support);
 	if (di_backend_support)
 		set_di_proc_enable(1);
 

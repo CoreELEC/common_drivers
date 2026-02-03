@@ -42,6 +42,8 @@
 #endif
 #include "../common/uvm_process/meson_uvm_nn_processor.h"
 #include <linux/amlogic/media/dpss/dpss_frc.h>
+#include <linux/amlogic/media/di/dpss_interface.h>
+
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include "video_priv.h"
 #include "vpp_pq.h"
@@ -7000,7 +7002,8 @@ RERTY:
 
 	if (((vf->flag & VFRAME_FLAG_COMPOSER_DONE) &&
 		!(vf->type_ext & VIDTYPE_EXT_SCALER)) ||
-		vf->source_type == VFRAME_SOURCE_TYPE_HWC) {
+		vf->source_type == VFRAME_SOURCE_TYPE_HWC ||
+		(vf->dpss_flg & DPSS_FLG_ROTATE_DONE)) {
 		wide_mode = VIDEO_WIDEOPTION_FULL_STRETCH;
 		local_input.crop_top = vf->crop[0];
 		local_input.crop_left = vf->crop[1];
