@@ -198,6 +198,8 @@ struct tcon_mem_map_table_s {
 	//unsigned char init_load;
 	unsigned char data_complete;
 	unsigned char bin_path_valid;
+	unsigned char effect_id;
+	unsigned char effect_type;
 
 	unsigned int lut_valid_flag;
 
@@ -406,6 +408,7 @@ void lcd_tcon_init_data_version_update(struct tcon_core_reg_info_s *core_info,
 		char *data_buf);
 void lcd_tcon_data_block_regen_crc(unsigned char *data);
 int lcd_tcon_init_data_update(char *data_buf, struct lcd_detail_timing_s *ptiming);
+int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *mm_table);
 int lcd_tcon_data_load(struct aml_lcd_drv_s *pdrv, unsigned char *data_buf, int index);
 void lcd_tcon_complete_data_load(struct aml_lcd_drv_s *pdrv);
 void lcd_tcon_reg_table_print(struct tcon_core_reg_info_s *core_reg_info);

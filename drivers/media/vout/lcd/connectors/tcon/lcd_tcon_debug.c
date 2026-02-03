@@ -1954,6 +1954,7 @@ long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned lon
 	char *str = NULL, name[32];
 	int index = 0;
 	int ret = 0;
+	unsigned long flags;
 
 	if (!pdrv)
 		return -EFAULT;
@@ -2119,6 +2120,36 @@ set_tcon_bin_error_break:
 		break;
 	case LCD_IOC_SET_TCON_BIN_DATA_FINISH:
 		lcd_tcon_complete_data_load(pdrv);
+		ret = 0;
+		break;
+	case TCON_IOC_SET_DATA_EFFECT:
+	case TCON_IOC_SET_DATA_EFFECT_TYPE:
+		ret = -EINVAL;
+		if (!mm_table || !mm_table->data_mem_vaddr)
+			break;
+		if (mm_table->version == 0 || mm_table->version == 0xff)
+			break;
+		if (copy_from_user(&temp, argp, sizeof(unsigned int)))
+			break;
+
+		if ((pdrv->status & LCD_STATUS_TCON_RDY) == 0)
+			break;
+		if (mcd_nr == TCON_IOC_SET_DATA_EFFECT) {
+			if ((temp & 0xff) == 0xff)
+				mm_table->effect_id = 0xff;
+			else if (temp < mm_table->block_cnt)
+				mm_table->effect_id = temp;
+			else
+				break;
+		} else {
+			mm_table->effect_type = temp;
+		}
+
+		spin_lock_irqsave(&pdrv->isr_lock, flags);
+		lcd_tcon_data_set(pdrv, mm_table);
+		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
+		mm_table->effect_id = 0xff;
+		mm_table->effect_type = 0xff;
 		ret = 0;
 		break;
 	case TCON_IOC_SET_DCCD:
@@ -2327,7 +2358,7 @@ static long lcd_tcon_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 #ifdef CONFIG_COMPAT
 static long lcd_tcon_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = lcd_tcon_ioctl(file, cmd, arg);

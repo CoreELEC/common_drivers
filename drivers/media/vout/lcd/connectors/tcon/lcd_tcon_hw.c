@@ -1277,7 +1277,7 @@ lcd_tcon_data_common_parse_set_err_size:
 	return -1;
 }
 
-static int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *mm_table)
+int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *mm_table)
 {
 	struct lcd_tcon_config_s *tcon_conf = get_lcd_tcon_config();
 	struct lcd_tcon_data_block_header_s *block_header;
@@ -1293,6 +1293,8 @@ static int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_tab
 	}
 
 	for (i = 0; i < mm_table->block_cnt; i++) {
+		if (mm_table->effect_id < mm_table->block_cnt && mm_table->effect_id != i)
+			continue;
 		if (!mm_table->data_mem_vaddr[i]) {
 			LCDERR("%s: data_mem_vaddr[%d] is null\n", __func__, i);
 			continue;
@@ -1322,6 +1324,9 @@ static int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_tab
 			      block_header->block_ctrl);
 		}
 
+		if (mm_table->effect_type != 0xff &&
+		    mm_table->effect_type != block_header->block_type)
+			continue;
 		/* apply data */
 		switch (block_header->block_type) {
 		case LCD_TCON_DATA_BLOCK_TYPE_BASIC_INIT:

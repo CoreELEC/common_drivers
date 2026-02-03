@@ -163,6 +163,8 @@ struct aml_lcd_tcon_ctrl_s {
  */
 #define TCON_IOC_SET_CTRL         0x30
 #define TCON_IOC_GET_CTRL         0x31
+#define TCON_IOC_SET_DATA_EFFECT      0x32
+#define TCON_IOC_SET_DATA_EFFECT_TYPE 0x33
 
 #define LCD_IOC_CMD_GET_HDR_INFO   \
 	_IOR(LCD_IOC_TYPE, LCD_IOC_NR_GET_HDR_INFO, struct lcd_optical_info_s)
@@ -219,6 +221,10 @@ struct aml_lcd_tcon_ctrl_s {
 	_IOW(LCD_IOC_TYPE, TCON_IOC_SET_CTRL, struct aml_lcd_tcon_lut_ctrl_s)
 #define TCON_IOC_CMD_GET_CTRL \
 	_IOR(LCD_IOC_TYPE, TCON_IOC_GET_CTRL, struct aml_lcd_tcon_lut_ctrl_s)
+#define TCON_IOC_CMD_SET_DATA_EFFECT   \
+	_IOW(LCD_IOC_TYPE, TCON_IOC_SET_DATA_EFFECT, unsigned int)
+#define TCON_IOC_CMD_SET_DATA_EFFECT_TYPE   \
+	_IOW(LCD_IOC_TYPE, TCON_IOC_SET_DATA_TYPE, unsigned int)
 
 /* **********************************
  * lcd_extern IOCTL define

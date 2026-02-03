@@ -67,6 +67,8 @@ static struct tcon_mem_map_table_s tcon_mm_table = {
 	.block_cnt = 0,
 	.data_complete = 0,
 	.bin_path_valid = 0,
+	.effect_id = 0xff,
+	.effect_type = 0xff,
 
 	.lut_valid_flag = 0,
 };
@@ -1322,10 +1324,15 @@ int lcd_tcon_data_multi_init_check(struct aml_lcd_drv_s *pdrv, unsigned short bl
 #endif
 	unsigned int data_byte, data_cnt, min = 0, max = 0, hsize = 0, vsize = 0;
 	unsigned int j, k = 0;
+	struct tcon_mem_map_table_s *mm_table = get_lcd_tcon_mm_table();
 
 	if (!ctrl_part)
 		return -1;
 
+	if (mm_table && mm_table->effect_id < mm_table->block_cnt) {
+		lcd_tcon_data_multi_current_set(&tcon_mm_table, block_type, data_index);
+		return 0;
+	}
 	data_byte = ctrl_part->data_byte_width;
 	data_cnt = ctrl_part->data_cnt;
 	frame_rate = pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate;
@@ -2256,6 +2263,8 @@ static int lcd_tcon_mm_table_config(void)
 	unsigned char *mem_vaddr;
 	unsigned int cnt, data_size, n, i;
 
+	tcon_mm_table.effect_id = 0xff;
+	tcon_mm_table.effect_type = 0xff;
 	if (tcon_mm_table.block_cnt > TCON_DATA_CNT_MAX) {
 		LCDERR("%s: tcon data block_cnt %d invalid\n",
 		       __func__, tcon_mm_table.block_cnt);
