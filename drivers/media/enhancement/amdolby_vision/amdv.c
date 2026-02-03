@@ -11577,9 +11577,8 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 
 		/*video priority only valid in sink-led,set to graphic pri when in other mode*/
 		if (dst_format != FORMAT_DOVI ||
-		    (dst_format == FORMAT_DOVI &&
 		    (dolby_vision_ll_policy >= DOLBY_VISION_LL_YUV422 ||
-		    (dolby_vision_flags & FLAG_FORCE_DV_LL))))
+		    (dolby_vision_flags & FLAG_FORCE_DV_LL)))
 			pri_mode = G_PRIORITY;
 	}
 
@@ -12194,7 +12193,7 @@ int amdv_wait_metadata_v1(struct vframe_s *vf)
 	}
 	if (is_dovi_dual_layer_frame(vf)) {
 		el_vf = dvel_vf_peek();
-		while (el_vf) {
+		while (vf && el_vf) {
 			pr_d_log(0x2, "=== peek bl(%p-%lld) with el(%p-%lld) ===\n",
 				     vf, vf->pts_us64,
 				     el_vf, el_vf->pts_us64);
@@ -12223,7 +12222,7 @@ int amdv_wait_metadata_v1(struct vframe_s *vf)
 			}
 		}
 		/* need wait el */
-		if (!el_vf) {
+		if (vf && !el_vf) {
 			pr_d_log(0x2, "=== bl wait el(%p-%lld) ===\n",
 					     vf, vf->pts_us64);
 			ret = 1;
@@ -12236,7 +12235,7 @@ int amdv_wait_metadata_v1(struct vframe_s *vf)
 		ret = is_amdv_frame(vf);
 		if (ret) {
 			/* STB hdmi LL input as HDR */
-			if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI &&
+			if (vf && vf->source_type == VFRAME_SOURCE_TYPE_HDMI &&
 			    ret == 2 && hdmi_to_stb_policy &&
 			    (is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
 				hdmi_source_led_as_hdr10)

@@ -3424,8 +3424,8 @@ int amdolby_vision_process_hw5(struct vframe_s *vf_top1,
 	static struct vframe_s *last_vf;
 	struct vframe_s *vf;
 	bool pr_done = false;
-	u32 h_ori;
-	u32 v_ori;
+	u32 h_ori = h_size;
+	u32 v_ori = v_size;
 	struct vd_proc_info_t *vd_proc_info = NULL;
 	unsigned int reg_value = 0;
 	bool enable_detunnel = false;

@@ -1276,7 +1276,7 @@ static void dolby5_top1_ini(struct prm_dolby_top *prm_dolby,
 		p_reg_top1b = (u32 *)top1b_reg;
 		top1b_ahb_num = TOP1B_REG_NUM;
 	}
-	if (py_enabled)
+	if (py_enabled && p_reg_top1 && p_reg_top1b)
 		check_pr_enabled_in_reg(p_reg_top1, p_reg_top1b);
 
 	/*config core1/1b_ahb_reg before top reg*/
