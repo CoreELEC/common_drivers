@@ -4818,6 +4818,12 @@ void rx_fsm_print_handler(struct work_struct *work)
 	rx_pr("%s\n", fsm_pr_buff[dd->port]);
 }
 
+static bool is_arc_port_not_set_hpd(u8 port)
+{
+	return rx[port].var.vic_check_en &&
+		port != rx_info.main_port &&
+		port == rx_info.arc_port;
+}
 /*
  * FUNC: rx_main_state_machine
  * signal detection main process
@@ -6575,6 +6581,8 @@ void rx_port2_main_state_machine(void)
 					if (rx[port].var.vic_check_en &&
 						rx[port].var.sig_stable_cnt < sig_unnormal_max)
 						break;
+					if (is_arc_port_not_set_hpd(port))
+						break;
 					if (rx[port].var.vic_check_en) {
 						/* hdmi_rx_top_edid_update(); */
 						hdmirx_hw_config(port);
@@ -7260,6 +7268,8 @@ void rx_port3_main_state_machine(void)
 				if (vic_status != FMT_VIC_OK) {
 					if (rx[port].var.vic_check_en &&
 						rx[port].var.sig_stable_cnt < sig_unnormal_max)
+						break;
+					if (is_arc_port_not_set_hpd(port))
 						break;
 					if (rx[port].var.vic_check_en) {
 						/* hdmi_rx_top_edid_update(); */

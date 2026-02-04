@@ -6338,15 +6338,20 @@ bool is_earc_hpd_low(void)
 
 void rx_earc_hpd_handler(struct work_struct *work)
 {
-	earc_hpd_low_flag = true;
-	usleep_range(30000, 40000);
-	cancel_delayed_work(&eq_dwork);
-	skip_frame(2, rx_info.main_port, "earc skip");
-	rx_pr("earc call hpd\n");
-	rx_set_port_hpd(rx_info.arc_port, 0);
-	usleep_range(600000, 650000);
-	rx_set_port_hpd(rx_info.arc_port, 1);
-	earc_hpd_low_flag = false;
+	if (rx_info.chip_id >= CHIP_ID_T6X) {
+		rx_pr("earc call hpd\n");
+		rx_set_ext_state(rx_info.arc_port, FSM_HPD_LOW);
+	} else {
+		earc_hpd_low_flag = true;
+		usleep_range(30000, 40000);
+		cancel_delayed_work(&eq_dwork);
+		skip_frame(2, rx_info.arc_port, "earc skip");
+		rx_pr("earc call hpd\n");
+		rx_set_port_hpd(rx_info.arc_port, 0);
+		usleep_range(600000, 650000);
+		rx_set_port_hpd(rx_info.arc_port, 1);
+		earc_hpd_low_flag = false;
+	}
 }
 
 static const u32 wr_only_register[] = {

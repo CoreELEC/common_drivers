@@ -88,7 +88,8 @@
 /* 2026.2.02 remove htotal detect */
 /* 2026.3.02 do pcs reset when fdet abnormal */
 /* 2026.03.09 add additional extension colorimetry parsing */
-#define RX_WRAPPER_VER "ver.2026/03/09"
+/* 2026.03.13 fix eacr no sound */
+#define RX_WRAPPER_VER "ver.2026/03/13"
 
 struct freq_ref_s {
 	bool interlace;
