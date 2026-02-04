@@ -127,7 +127,7 @@ int frl_lock_det_max = 10;
 //for rs err test
 int rs_err_chk;
 int err_cnt = 50;
-bool cts_ced_err_test;
+int cts_ced_err_test;
 int edid_seg_flag[4];
 int hpd_wait_dbg;
 int dump_aud_max = 1;
@@ -3444,6 +3444,7 @@ void rx_get_global_variable(const char *buf)
 	pr_var(valid_m_stable_max, i++);
 	pr_var(valid_m_slow_max, i++);
 	pr_var(valid_m_fast_max, i++);
+	pr_var(dsc_update_en, i++);
 	pr_var(rx[E_PORT0].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT1].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT2].var.clk_stable_cnt, i++);
@@ -3927,6 +3928,9 @@ int rx_set_global_variable(const char *buf, int size)
 	if (set_pr_var(tmpbuf, var_to_str(valid_m_fast_max),
 		&valid_m_fast_max, value))
 		return pr_var(valid_m_fast_max, index);
+	if (set_pr_var(tmpbuf, var_to_str(dsc_update_en),
+		&dsc_update_en, value))
+		return pr_var(dsc_update_en, index);
 	//fsm var
 	if (set_pr_var(tmpbuf, var_to_str(rx[E_PORT0].var.dbg_ve),
 		&rx[E_PORT0].var.dbg_ve, value))

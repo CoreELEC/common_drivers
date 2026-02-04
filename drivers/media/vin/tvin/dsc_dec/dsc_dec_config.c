@@ -961,7 +961,7 @@ void dsc_clk_config(struct aml_dsc_dec_drv_s *dsc_dec_drv)
 		tmp = 1;
 
 	clk = pps_data->pixel_clk / (pps_data->bits_per_pixel / tmp) * 192;
-
+	DSC_DEC_PR("pixel clk = %d, bits_per_pixel = %d\n", clk, pps_data->bits_per_pixel);
 	if (dsc_dec_drv->data->chip_type == DSC_DEC_CHIP_T3X) {
 		dsc_dec_config_fix_pll_clk(DSC_CLK_BAND0);
 		if ((pps_data->pic_width == 3840 && pps_data->pic_height == 2160) ||
@@ -1194,10 +1194,20 @@ void dsc_dec_config_init(struct aml_dsc_dec_drv_s *dsc_dec_drv)
 	set_dsc_dec_en(1);
 }
 
-void dsc_update_vstart(int vstart, int vend, int odd)
+void dsc_update_info(int vstart, int vend, int odd)
 {
 	int vcnt;
+	struct aml_dsc_dec_drv_s *dsc_dec_drv;
+	struct hdmi_dsc_pps_data_s *pps_data;
+	u32 tmp;
+	u32 clk;
 
+	dsc_dec_drv = dsc_dec_drv_get();
+	if (!dsc_dec_drv)
+		return;
+	pps_data = &dsc_dec_drv->pps_data;
+	if (dsc_dec_drv->data->chip_type != DSC_DEC_CHIP_T6X)
+		return;
 	vcnt = R_DSC_DEC_BIT(DSC_ASIC_CTRL15,
 		DBG_DE_BEGIN_VCNT, DBG_DE_BEGIN_VCNT_WID);
 	if ((vstart - vcnt) == 1) {
@@ -1221,6 +1231,44 @@ void dsc_update_vstart(int vstart, int vend, int odd)
 					TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
 			W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vend + 1,
 				TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
+		}
+	}
+
+	if (pps_data->native_420 == 1 || pps_data->native_422 == 1)
+		tmp = 2;
+	else
+		tmp = 1;
+	clk = pps_data->pixel_clk / (pps_data->bits_per_pixel / tmp) * 192;
+	if (clk > PIX_BAND0 || pps_data->dsc_force_4ppc) {
+		dsc_dec_drv->pix_per_clk = 2;
+		if (dsc_dec_drv->pix_per_clk !=
+			R_DSC_DEC_BIT(DSC_ASIC_CTRL0, PIX_PER_CLK, PIX_PER_CLK_WID)) {
+			W_DSC_DEC_BIT(DSC_ASIC_CTRL0, dsc_dec_drv->pix_per_clk,
+				PIX_PER_CLK, PIX_PER_CLK_WID);
+			if (clk <= PIX_BAND2) {
+				dsc_dec_config_fix_pll_clk(DSC_CLK_BAND2);
+			} else if (clk <= PIX_BAND3) {
+				dsc_dec_config_fix_pll_clk(DSC_CLK_BAND4);
+			} else {
+				//now only 1080p700 use dsc clk 431M
+				if (pps_data->pic_width == 1920 &&
+					pps_data->pic_height == 1080)
+					dsc_dec_config_fix_pll_clk(DSC_CLK_BAND5);
+				else
+					dsc_dec_config_fix_pll_clk(DSC_CLK_BAND4);
+			}
+			//need vpu clk enhance
+			set_dsc_clk_cntl(DSC_PIX_PLL, clk);
+			wr_bits(0, VPU_VDIN_HDMI0_CTRL1_T6X, 1, 30, 1);
+			wr_bits(0, VPU_VDIN_HDMI0_CTRL1_T6X, 1, 29, 1);
+		}
+	} else {
+		dsc_dec_drv->pix_per_clk = 1;
+		if (dsc_dec_drv->pix_per_clk !=
+			R_DSC_DEC_BIT(DSC_ASIC_CTRL0, PIX_PER_CLK, PIX_PER_CLK_WID)) {
+			W_DSC_DEC_BIT(DSC_ASIC_CTRL0, dsc_dec_drv->pix_per_clk,
+			PIX_PER_CLK, PIX_PER_CLK_WID);
+			set_dsc_clk_cntl(FPLL_DIV3, clk);
 		}
 	}
 }

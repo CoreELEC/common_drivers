@@ -170,9 +170,10 @@ struct tasklet_struct rx_tasklet;
 u32 *pd_fifo_buf_a;
 u32 *pd_fifo_buf_b;
 u32 top_irq_tab[IRQ_TYPE_CNT];
-bool ee_voltage_en;
+int ee_voltage_en;
 int force_dsc_4ppc;
 bool update_vrr_en;
+int dsc_update_en = 1;
 module_param(update_vrr_en, bool, 0664);
 MODULE_PARM_DESC(update_vrr_en, "update_vrr_en");
 
@@ -1761,7 +1762,7 @@ void hdmirx_get_spd_info(struct tvin_frontend_s *fe,
 	memcpy(&prop->spd_data, &rx_pkt[port].spd_info, sizeof(struct tvin_spd_data_s));
 }
 
-void __weak dsc_update_vstart(int vstart, int vend, int odd)
+void __weak dsc_update_info(int vstart, int vend, int odd)
 {
 }
 
@@ -1832,16 +1833,16 @@ void hdmirx_get_pps_info(struct tvin_sig_property_s *prop, u8 port)//todo)
 	else
 		prop->pps_data.htotal = rx[port].cur.htotal;
 	prop->pps_data.hactive = rx[port].cur.hactive;
-
 	prop->pps_data.vbegin = rx[port].cur.vbegin;
 	prop->pps_data.vend =  rx[port].cur.vend;
-	dsc_update_vstart(prop->pps_data.vbegin, prop->pps_data.vend, rx[port].is_htotal_odd);
 	prop->pps_data.fps = (rx[port].cur.frame_rate + 99) / 100;
 	prop->pps_data.color_depth = rx[port].cur.colordepth;
 	prop->pps_data.color_fmt = rx[port].cur.colorspace;
 	prop->pps_data.pixel_clk = rx[port].clk.pixel_clk;
 	prop->pps_data.hw_vic = rx[port].cur.hw_vic;
 	prop->pps_data.dsc_force_4ppc = force_dsc_4ppc;
+	if (dsc_update_en && rx[port].dsc_flag)
+		dsc_update_info(prop->pps_data.vbegin, prop->pps_data.vend, rx[port].is_htotal_odd);
 }
 
 /*
