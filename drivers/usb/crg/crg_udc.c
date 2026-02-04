@@ -38,6 +38,7 @@
 #include <linux/configfs.h>
 #include <linux/suspend.h>
 #include <linux/device/driver.h>
+#include <linux/amlogic/gki_module.h>
 
 #include <base.h>
 
@@ -394,6 +395,7 @@ struct crg_gadget_dev {
 	int recovery;
 	int reinit_count;
 	struct delayed_work	reset_udc;
+	bool reset_udc_init;
 };
 
 static inline bool crg_udc_suspend_reinit(struct crg_gadget_dev *crg_udc)
@@ -507,6 +509,25 @@ do {									\
 #endif
 
 #define CRG_ERROR(fmt...) pr_err(fmt)
+
+/* For Virtual Machine USB Host which triggers recovery during normal connection.
+ * Bypass err recovery. Try disconnect reset instead.
+ * Default false.
+ */
+static bool crg_udc_discon_recover;
+module_param(crg_udc_discon_recover, bool, 0644);
+static int crg_udc_get_discon_recover(char *str)
+{
+	int ret;
+
+	ret = kstrtobool(str, &crg_udc_discon_recover);
+	if (ret)
+		return ret;
+
+	return 1;
+}
+__setup("crg_udc_discon_recover=", crg_udc_get_discon_recover);
+
 int crg_rewrite_otg_write_UDC(void);
 
 static struct usb_endpoint_descriptor crg_udc_ep0_desc = {
@@ -3831,7 +3852,8 @@ void crg_handle_setup_pkt(struct crg_gadget_dev *crg_udc,
 				crg_udc->setup_status = WAIT_FOR_SETUP;
 				return;
 			}
-			crg_udc->recovery++;
+			if (!crg_udc_discon_recover)
+				crg_udc->recovery++;
 			setaddressrequest(crg_udc, wValue, wIndex, wLength);
 			return;
 		case USB_REQ_SET_SEL:
@@ -3880,7 +3902,9 @@ void crg_handle_setup_pkt(struct crg_gadget_dev *crg_udc,
 				 */
 			CRG_DEBUG("USB_REQ_SET_CONFIGURATION\n");
 			CRG_DEBUG("CONFIGURATION wValue=%d\n", wValue);
-			crg_udc->recovery = 0;
+
+			if (!crg_udc_discon_recover)
+				crg_udc->recovery = 0;
 			if (setconfigurationrequest(crg_udc, wValue)) {
 				/* Get here if request has been processed.
 				 * Or error happens
@@ -4384,9 +4408,19 @@ int crg_handle_port_status(struct crg_gadget_dev *crg_udc, unsigned long flags)
 					//crg_udc->device_state = USB_STATE_NOTATTACHED;
 				}
 				spin_lock_irqsave(&crg_udc->udc_lock, flags);
+				if (crg_udc_discon_recover) {
+					crg_udc_reset(crg_udc, flags);
+					reset_data_struct(crg_udc);
+					crg_udc->connected = 0;
+					init_ep0(crg_udc);
+					crg_udc_start(crg_udc);
+				}
 			}
 		}
 	}
+
+	if (crg_udc_discon_recover)
+		goto end_recovery;
 
 	if ((portsc_val & CRG_U3DC_PORTSC_PEC) && !(portsc_val & CRG_U3DC_PORTSC_PED)) {
 		if (crg_udc->recovery) {
@@ -4405,6 +4439,8 @@ int crg_handle_port_status(struct crg_gadget_dev *crg_udc, unsigned long flags)
 			queue_delayed_work(system_long_wq,
 								&crg_udc->reset_udc, 100);
 	}
+
+end_recovery:
 
 	return 0;
 }
@@ -4798,6 +4834,7 @@ static void crg_udc_cleanup(struct crg_gadget_dev *crg_udc)
 	crg_udc->phy_id = 0;
 
 	crg_udc->recovery = 0;
+	crg_udc->reinit_count = 0;
 }
 
 static int crg_udc_probe(struct platform_device *pdev)
@@ -5048,7 +5085,10 @@ static int crg_udc_probe(struct platform_device *pdev)
 	//g_device_phy_id = phy_id;
 	crg_udc_probe_state = 1;
 	crg_udc->recovery = 0;
-	INIT_DELAYED_WORK(&crg_udc->reset_udc, crg_rewrite_udc_for_error);
+	if (!crg_udc->reset_udc_init) {
+		INIT_DELAYED_WORK(&crg_udc->reset_udc, crg_rewrite_udc_for_error);
+		crg_udc->reset_udc_init = true;
+	}
 	return ret;
 
 	/* TODO: add error resources release. */
@@ -5073,6 +5113,8 @@ static void crg_udc_remove(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto err;
 	}
+
+	cancel_delayed_work_sync(&crg_udc->reset_udc);
 
 	uccr = crg_udc->uccr;
 	crg_vbus_detect(crg_udc, 0);
@@ -5145,6 +5187,8 @@ static void crg_udc_shutdown(struct platform_device *pdev)
 	struct crg_gadget_dev *crg_udc = &crg_udc_dev;
 
 	CRG_DEBUG("%s %d called\n", __func__, __LINE__);
+
+	cancel_delayed_work_sync(&crg_udc->reset_udc);
 
 	crg_udc->device_state = USB_STATE_ATTACHED;
 	crg_vbus_detect(crg_udc, 0);
