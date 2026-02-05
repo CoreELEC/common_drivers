@@ -24,7 +24,6 @@
 		linux,initrd-end = <0x0   0xd000000>;
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000
 			debug initcall_debug=0 loglevel=7
-			initcall_blacklist=secmon_main_init,debug_main_init
 			module_blacklist=amlogic_wireless clk_ignore_unused";
 	};
 
