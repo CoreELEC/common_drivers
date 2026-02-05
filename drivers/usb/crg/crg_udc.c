@@ -778,6 +778,10 @@ static void req_done(struct crg_udc_ep *udc_ep,
 	}
 
 	if (udc_req->usb_req.complete) {
+		if (!atomic_read(&udc_req->used)) {
+			pr_err("req queue is empty, use=%d\n", atomic_read(&udc_req->used));
+			return;
+		}
 		spin_unlock_irqrestore(&crg_udc->udc_lock, flags);
 		udc_req->usb_req.complete(&udc_ep->usb_ep, &udc_req->usb_req);
 		spin_lock_irqsave(&crg_udc->udc_lock, flags);
@@ -792,7 +796,6 @@ static void nuke(struct crg_udc_ep *udc_ep, int status, unsigned long flags)
 		req = list_entry(udc_ep->queue.next,
 				struct crg_udc_request,
 				queue);
-
 		req_done(udc_ep, req, status, flags);
 	}
 }
