@@ -1357,6 +1357,14 @@ void set_rdma_channel_enable(u8 rdma_en)
 }
 EXPORT_SYMBOL(set_rdma_channel_enable);
 
+void force_config_once(void)
+{
+	int i;
+
+	for (i = 0; i < RDMA_NUM; i++)
+		force_rdma_config[i] = 1;
+}
+
 struct rdma_op_s *get_rdma_ops(int rdma_type)
 {
 	if (has_multi_vpp) {

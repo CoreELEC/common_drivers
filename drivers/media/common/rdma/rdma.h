@@ -114,6 +114,7 @@ u32 rdma_part_read_reg(int tbl_index, int handle, u32 adr);
 int rdma_part_write_reg_bits(int tbl_index, int handle, u32 adr, u32 val, u32 start, u32 len);
 int rdma_part_write_reg(int tbl_index, int handle, u32 adr, u32 val);
 inline int rdma_part_write_reg_simple(int tbl_index, int handle, u32 adr, u32 val);
+void force_config_once(void);
 //extern int vsync_rdma_handle[5];
 u32 VCBUS_RD_MPEG_REG(u32 adr);
 int VCBUS_WR_MPEG_REG(u32 adr, u32 val);

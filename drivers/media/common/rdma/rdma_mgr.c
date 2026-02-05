@@ -4609,6 +4609,9 @@ static int rdma_suspend(struct device *dev)
 
 static int rdma_resume(struct device *dev)
 {
+	/* force configuration once to avoid overflow due to missing configuration. */
+	force_config_once();
+
 	set_rdma_channel_enable(1);
 	return 0;
 }
