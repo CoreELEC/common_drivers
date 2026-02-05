@@ -4788,6 +4788,7 @@ void cor_init(u8 port)
 
 	data8 = 0;
 	data8 |= 1 << 4;
+	data8 |= 1 << 6; //scdc write irq
 	hdmirx_wr_cor(RX_INTR10_MASK_AON_AON_IVCRX, data8, port);//for frl rate change
 	//-------------------
 	//  vp core config

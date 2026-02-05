@@ -1695,8 +1695,9 @@ irqreturn_t irq2_handler(int irq, void *params)
 		hdmirx_wr_cor(RX_INTR9_AON_AON_IVCRX, 0xff, E_PORT2);
 	if (hdmirx_top_intr_stat & top_irq_tab[IRQ_AON_CTL]) {
 		tmp = hdmirx_rd_cor(RX_INTR10_AON_AON_IVCRX, E_PORT2);
-		if (tmp & 0x10) {
+		if (tmp)
 			hdmirx_wr_cor(RX_INTR10_AON_AON_IVCRX, 0xff, E_PORT2);
+		if (tmp & 0x10) {
 			rx[E_PORT2].var.frl_rate =
 				hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, E_PORT2) & 0xf;
 			if (log_level & FRL_LOG)
@@ -1705,7 +1706,20 @@ irqreturn_t irq2_handler(int irq, void *params)
 				frate_flg = rx[E_PORT2].var.frl_rate;
 				if (log_level & FRL_LOG)
 					rx_pr("port2 frl rate change\n");
-				rx[E_PORT2].state = FSM_FRL_FLT_READY;
+				rx_set_ext_state(E_PORT2, FSM_FRL_FLT_READY);
+			}
+		}
+		if (tmp & _BIT(6)) { //SCDC write
+			tmp = hdmirx_rd_cor(SCDCS_SRC_WADDR_STAT_SCDC_IVCRX, E_PORT2);
+			if (log_level & FRL_LOG)
+				rx_pr("scdc write reg = 0x%x\n", tmp);
+			if (tmp == SCDC_FRL_RATE_ADDR) {
+				rx[E_PORT2].var.frl_rate =
+					hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, E_PORT2) & 0xf;
+				if (rx[E_PORT2].var.frl_rate)
+					rx_set_ext_state(E_PORT2, FSM_FRL_FLT_READY);
+				if (log_level & FRL_LOG)
+					rx_pr("port2 frate %d\n", rx[E_PORT2].var.frl_rate);
 			}
 		}
 	}
@@ -1894,8 +1908,9 @@ irqreturn_t irq3_handler(int irq, void *params)
 		//rx_pr("ced flag 0x%x\n", hdmirx_rd_cor(SCDCS_UPD_FLAGS_SCDC_IVCRX, E_PORT3));
 	if (hdmirx_top_intr_stat & top_irq_tab[IRQ_AON_CTL]) {
 		tmp = hdmirx_rd_cor(RX_INTR10_AON_AON_IVCRX, E_PORT3);
-		if (tmp & 0x10) {
+		if (tmp)
 			hdmirx_wr_cor(RX_INTR10_AON_AON_IVCRX, 0xff, E_PORT3);
+		if (tmp & 0x10) {
 			rx[E_PORT3].var.frl_rate =
 				hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, E_PORT3) & 0xf;
 			if (log_level & FRL_LOG)
@@ -1904,7 +1919,20 @@ irqreturn_t irq3_handler(int irq, void *params)
 				frate_flg1 = rx[E_PORT3].var.frl_rate;
 				if (log_level & FRL_LOG)
 					rx_pr("port3 frl rate change\n");
-				rx[E_PORT3].state = FSM_FRL_FLT_READY;
+				rx_set_ext_state(E_PORT3, FSM_FRL_FLT_READY);
+			}
+		}
+		if (tmp & _BIT(6)) { //SCDC write
+			tmp = hdmirx_rd_cor(SCDCS_SRC_WADDR_STAT_SCDC_IVCRX, E_PORT3);
+			if (log_level & FRL_LOG)
+				rx_pr("scdc write reg = 0x%x\n", tmp);
+			if (tmp == SCDC_FRL_RATE_ADDR) {
+				rx[E_PORT3].var.frl_rate =
+					hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, E_PORT3) & 0xf;
+				if (rx[E_PORT3].var.frl_rate)
+					rx_set_ext_state(E_PORT3, FSM_FRL_FLT_READY);
+				if (log_level & FRL_LOG)
+					rx_pr("port3 frate %d\n", rx[E_PORT3].var.frl_rate);
 			}
 		}
 	}

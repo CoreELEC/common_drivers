@@ -10,6 +10,8 @@
 #define H_FPLL_DIV3 2
 #define H_DSC_PIX_PLL 3
 #define H_HDMI 4
+#define FRL_CH_LOCK 0xe
+#define SCDC_FRL_RATE_ADDR 0x31
 
 void rx_lts_2_flt_ready(u8 port);
 int rx_lts_p_syn_detect(u8 frl_rate, u8 port);

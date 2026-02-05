@@ -34,7 +34,6 @@
 #define HPD_WAIT_21 110
 #define HPD_WAIT_512 110
 #define FRL_UNREADY_MAX 200
-#define FRL_CH_LOCK 0xe
 /* 2024.07.02 optimize suspend flow */
 /* 2024.07.19 optimize cts flow */
 /* 2024.08.22 Fix the issue of flashing green screen at the end of SDR playback */
@@ -90,7 +89,8 @@
 /* 2026.03.09 add additional extension colorimetry parsing */
 /* 2026.03.13 fix eacr no sound */
 /* 2026.03.16 add dsc check for mac */
-#define RX_WRAPPER_VER "ver.2026/03/16"
+/* 2026.03.23 add scdc frl rate monitor */
+#define RX_WRAPPER_VER "ver.2026/03/23"
 
 struct freq_ref_s {
 	bool interlace;
