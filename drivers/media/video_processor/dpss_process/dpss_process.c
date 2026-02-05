@@ -1948,25 +1948,51 @@ static int dpss_process_uninit(struct dpss_process_dev *dev)
 	return ret;
 }
 
+static bool is_dd_vframe(struct dpss_process_dev *dev, struct vframe_s *vf)
+{
+	bool ret = false;
+
+	if (IS_ERR_OR_NULL(vf)) {
+		dp_print(dev->index, PRINT_ERROR, "%s: NULL param.\n", __func__);
+		return -1;
+	}
+
+	if (!is_amdv_enable())
+		return false;
+
+	if (vf->signal_type & (1 << 30) || is_amdv_frame(vf))
+		ret = true;
+
+	return ret;
+}
+
 static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf,
 	bool rotate_en)
 {
 	bool need_do_dpss = true;
+	int used_vf_with = 0, used_vf_height = 0;
 
 	if (!dev || !vf) {
 		pr_err("%s: param is invalid.\n", __func__);
 		return need_do_dpss;
 	}
 
+	if (vf->type & VIDTYPE_COMPRESS) {
+		used_vf_with = vf->compWidth;
+		used_vf_height = vf->compHeight;
+	} else {
+		used_vf_with = vf->width;
+		used_vf_height = vf->height;
+	}
+
 	/*4090*2160 no need do dpss*/
-	if (vf->compWidth > 3840 || vf->width > 3840) {
+	if (used_vf_with > 3840) {
 		dp_print(dev->index, PRINT_OTHER, "over 3840, no need do dpss.\n");
 		need_do_dpss = false;
 	}
 
 	/*4k interlace no need do dpss*/
-	if (vf->type & VIDTYPE_INTERLACE &&
-		((vf->type & VIDTYPE_COMPRESS) ? vf->compWidth : vf->width) == 3840) {
+	if (vf->type & VIDTYPE_INTERLACE && used_vf_with == 3840) {
 		dp_print(dev->index, PRINT_OTHER, "4k interlace, no need do dpss.\n");
 		need_do_dpss = false;
 	}
@@ -1995,6 +2021,12 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		/*input fps more than output fps*/
 		dp_print(dev->index, PRINT_OTHER,
 			"input fps more than output, no need do dpss.\n");
+		need_do_dpss = false;
+	}
+
+	/*dd input*/
+	if (is_dd_vframe(dev, vf) && used_vf_with > 1920 && !IS_ALIGNED(used_vf_with, 16)) {
+		dp_print(dev->index, PRINT_OTHER, "special dd frame bypass dpss.\n");
 		need_do_dpss = false;
 	}
 
