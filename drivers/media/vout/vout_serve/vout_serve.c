@@ -1190,7 +1190,7 @@ static void aml_vout_get_dt_info(struct platform_device *pdev)
 
 	vsync_irq = platform_get_irq_byname(pdev, "vsync");
 	if (vsync_irq < 0) {
-		VOUTERR("%s: can't get vsync irq\n", __func__);
+		VOUTPR("%s: can't get vsync irq\n", __func__);
 	} else {
 		if (request_irq(vsync_irq, vout_vsync_irq_handler, IRQF_SHARED,
 				"vout_vsync", (void *)&vsync_irq)) {
