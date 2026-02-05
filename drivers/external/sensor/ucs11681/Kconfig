@@ -1,8 +1,7 @@
-# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-
-config LIGHT_UCS11681
- tristate "light ucs11681 and proximity sensor"
- default n
- help
-   Say Y here if you want to use the light sensor.
+config SEI_UCS11681_LIGHT
+	tristate "Support for light sensor function"
+	depends on I2C && LEDS_CLASS
+	default m
+	help
+		Say Y here if you want to use the light sensor depends on I2C && LEDS_CLASS.
 

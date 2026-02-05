@@ -4,24 +4,27 @@ load("//common_drivers:amlogic_utils.bzl", "m_k_files", "kernel_select")
 m_k_files()
 
 ddk_module(
-    name = "ucs11681",
-    srcs = glob([
-        "**/*.h",
-    ]),
-    conditional_srcs = {
-        "CONFIG_LIGHT_UCS11681": {
-            True: ["ucs11681.c"],
-        },
-    },
-    hdrs = [
-    ],
-    local_defines = ["pr_fmt(fmt)=\"[i2c]: \" fmt"],
-    out = "ucs11681.ko",
-    kernel_build = kernel_select(),
-    visibility = ["//visibility:public"],
-    deps = [
-        "//common_drivers/drivers/gki_tool:amlogic-gkitool",
-        "//common_drivers/drivers/debug:amlogic-debug-iotrace",
-        "//common_drivers/drivers/debug:amlogic-debug",
-    ],
+	name = "sei_ucs11681_light",
+	srcs = glob([
+		"**/*.h",
+	]),
+	conditional_srcs = {
+		"CONFIG_SEI_UCS11681_LIGHT": {
+			True: [
+				"ucs11681_light.c",
+			],
+		},
+	},
+	hdrs = [
+	],
+
+	local_defines = [
+		"pr_fmt(fmt)=\"[sei_ucs11681_light]: \" fmt",
+	],
+	out = "sei_ucs11681_light.ko",
+	kernel_build = kernel_select(),
+	visibility = ["//visibility:public"],
+	deps = [
+		"//common_drivers/drivers/gki_tool:amlogic-gkitool",
+	],
 )

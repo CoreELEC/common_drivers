@@ -712,6 +712,12 @@
 	pinctrl-0=<&i2c4_pins1>;
 	clock-frequency = <300000>;
 
+	ucs11681@38 {
+		compatible = "sei,ucs11681";
+		reg = <0x38>;
+		status = "okay";
+	};
+
 	ntp8918_codec: ntp8918_codec@2a {
 		compatible = "NTP, ntp8918";
 		#sound-dai-cells = <0>;
