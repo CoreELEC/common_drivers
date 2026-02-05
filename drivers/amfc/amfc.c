@@ -2168,7 +2168,6 @@ static const struct of_device_id amfc_match[] = {
 #endif
 
 static struct platform_driver amfc_driver = {
-	.probe = amfc_probe,
 	.driver = {
 		.name  = "amfc",
 		.owner = THIS_MODULE,
@@ -2182,9 +2181,6 @@ static struct platform_driver amfc_driver = {
 int __init amfc_init(void)
 {
 	int ret;
-
-	if (!amfc_supported())
-		return -ENODEV;
 
 	ret = platform_driver_register(&amfc_driver);
 	return ret;
