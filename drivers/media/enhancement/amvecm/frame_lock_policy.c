@@ -18,6 +18,7 @@
 #include "vlock.h"
 #include <linux/amlogic/media/vout/lcd/aml_ldim.h>
 #include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/dpss/frc_common_x.h>
 #include "../../vrr/vrr_drv.h"
 #ifdef CONFIG_AMLOGIC_LCD
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
@@ -724,7 +725,7 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 
 	frame_sts.vrr_frame_cur = frame_lock_check_input_hz(vf);
 
-	if (vf->vf_vrr_param.game_frc) {
+	if (vf->vf_vrr_param.game_frc || get_dpss_game_frc_locked()) {
 		ret = FRAMELOCK_GAMEFRC;
 		vrr_skip_frame_cnt = 15;
 		hdr_low_latency = 0;

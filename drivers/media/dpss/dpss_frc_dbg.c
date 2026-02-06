@@ -2381,6 +2381,10 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 	len +=
 		sprintf(buf + len, "game_st->vdin_buf_num\t=%d\n", game_st->vdin_buf_num);
 	len +=
+		sprintf(buf + len, "game_st->inp_ctrl\t=%d\n", game_st->inp_ctrl);
+	len +=
+		sprintf(buf + len, "game_st->game_deblur\t=%d\n", game_st->game_deblur);
+	len +=
 		sprintf(buf + len, "ENCL_FRC_CTRL\t=%#X\n", rd_vc(encl_frc_ctrl));
 	len +=
 		sprintf(buf + len, "VENC_VRR_CTRL\t=%#X\n", rd_vc(venc_vrr_ctrl));
@@ -2388,7 +2392,6 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 		sprintf(buf + len, "VENC_VRR_ADJ_LMT\t=%#X\n", rd_vc(venc_vrr_adj_lmt));
 	len +=
 		sprintf(buf + len, "VENC_VRR_CTRL1\t=%#X\n", rd_vc(venc_vrr_ctrl_1));
-
 	return len;
 }
 
@@ -2467,6 +2470,20 @@ void dpss_frc_debug_game_if(const char *buf, size_t count)
 			frc_top->game_mode = val1;
 		game_st->game_n2m = frc_top->game_mode & 0x1;
 		game_st->game_film = (frc_top->game_mode >> 1) & 0x1;
+	} else if (!strcmp(parm[0], "inp_ctrl")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			game_st->inp_ctrl = val1;
+	} else if (!strcmp(parm[0], "game_deblur")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0) {
+			if (val1 <= 0x40)
+				game_st->game_deblur = val1;
+			else
+				pr_frc(0, "err: mc phase between 0 and 0x40 when game mode\n");
+		}
 	}
 
 exit:

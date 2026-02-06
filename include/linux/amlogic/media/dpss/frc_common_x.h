@@ -242,5 +242,6 @@ inline u32 ceil_rx(u32 ix, u32 rs);
 inline s32  negative_convert(s32 data, u32 fbits);
 inline void frc_config_reg_value(u32 need_val, u32 mask, u32 *reg_val);
 void vdin_game_frc_notify(struct game_frc_s *frc_data);
+bool get_dpss_game_frc_locked(void);
 
 #endif

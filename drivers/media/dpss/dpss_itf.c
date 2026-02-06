@@ -34,7 +34,7 @@ module_param_named(dpss_bypass_all, dpss_bypass_all, bool, 0664);
 
 /*game frc*/
 #define GAME_RES_LIST_MAX 3
-#define GAME_N2M_LIST_MAX 5
+#define GAME_N2M_LIST_MAX 4
 #define DPSS_FRC_RATIO_1_1  0
 #define DPSS_FRC_RATIO_1_2  1
 // #define DPSS_FRC_RATIO_1_4  2
@@ -49,7 +49,7 @@ static struct dpss_frc_game_res_t frc_res_list[GAME_RES_LIST_MAX] = {
 static struct dpss_game_n2m_t frc_n2m_list[GAME_N2M_LIST_MAX] = {
 	// {25,  50},
 	// {30,  60},
-	{60,  60},
+	// {60,  60},
 	{50,  100},
 	{60,  120},
 	{100, 100},

@@ -307,5 +307,6 @@ void dpss_frc_rdma_unreg(void);
 //frc game
 int dpss_get_game_lock_st(struct dpss_status *state);
 void venc_vrr_vdin(void);
+void vsync_signal_to_game_frc(void);
 
 #endif	/*__DPSS_FUNC_H__*/

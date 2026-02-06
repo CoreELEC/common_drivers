@@ -223,6 +223,17 @@ unsigned int get_vdin_buffer_num(void)
 }
 EXPORT_SYMBOL(get_vdin_buffer_num);
 
+unsigned int get_vdin_buffer_num_frc(void)
+{
+	struct vdin_dev_s *vdin0_devp = vdin_devp[0];
+
+	if (vdin0_devp)
+		return vdin0_devp->frame_buff_num; //for frc game
+	else
+		return 0;
+}
+EXPORT_SYMBOL(get_vdin_buffer_num_frc);
+
 unsigned int get_vdin_status(bool stop_en)
 {
 	unsigned int flags = 0;

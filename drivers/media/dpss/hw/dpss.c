@@ -640,7 +640,10 @@ void hw_cfg_dpss_tbc_frc(struct PRM_DPSS_TOP *prm_top,
 	w_reg_bit(FRC_AUTO_MODE_ENABLE, tbc_auto_mode, 0, 1);
 	//reg_tbc_auto_mode
 	w_reg_bit(FRC_AUTO_MODE_ENABLE, inp_ofrm_idx_sel, 4, 1);
-	w_reg_bit(FRC_AUTO_MODE_ENABLE, 0, 12, 1); //reg_inp_ofrm_wren_sel
+	if (dpss_mode == DPSS_FRC_MODE) //reg_inp_ofrm_wren_sel
+		w_reg_bit(FRC_AUTO_MODE_ENABLE, 1, 12, 1);
+	else
+		w_reg_bit(FRC_AUTO_MODE_ENABLE, 0, 12, 1);
 	w_reg_bit(DPSS_TOP_INT_MODE_CTRL, 0, 0, 16); //inp use frm_reset int
 	w_reg_bit(DPSS_FRC_FRM_DONE_SEL, 0, 0, 1); //inp vld flag by hw
 //#ifndef DPSS_FPGA_DRV

@@ -234,6 +234,7 @@ static inline int adc_get_status(enum adc_sel module_sel)
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_VDIN
 unsigned int get_vdin_buffer_num(void);
+unsigned int get_vdin_buffer_num_frc(void);
 unsigned int get_vdin_status(bool stop_en);
 //#else
 //unsigned int get_vdin_buffer_num(void)

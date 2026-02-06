@@ -1513,11 +1513,13 @@ void hw_dpss_dpe_game_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 
 	if (!pchip_st || !obuf_rdy)
 		return;
 
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 
 	data32		  = rd(DPSS_FRC_MC_IUFF_STATUS);
 	mc_ibuf_vld	  = (data32 >> 4) & 0x1;
@@ -1685,7 +1687,10 @@ void hw_dpss_dpe_game_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 		w_reg_bit(DPSS_DPE_MC_DIN_FRM_IDX0, dpe_image_cur_frm_idx, 4, 4);
 		w_reg_bit(DPSS_DPE_MC_DIN_FRM_IDX0, dpe_mv_cur_frm_idx, 0, 4);
 		// w_reg_bit(DPSS_DPE_MC_CTRL0,dpe_intp_phs,20,8);
-		w_reg_bit(DPSS_DPE_MC_PHASE, dpe_intp_phs, 0, 8);
+		if (dpe_intp_phs == 0x0)
+			w_reg_bit(DPSS_DPE_MC_PHASE, dpe_intp_phs, 0, 8);
+		else if (dpe_intp_phs == 0x40) // for game frc deblur
+			w_reg_bit(DPSS_DPE_MC_PHASE, game_st->game_deblur, 0, 8);
 
 		dpss_dpe_dbg_cfg();
 	} else {

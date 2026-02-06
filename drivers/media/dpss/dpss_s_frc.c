@@ -35,6 +35,7 @@
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#include <linux/amlogic/media/vrr/vrr.h>
 #include "dpss_base.h"
 #include "dpss_s.h"
 #include "dpss_sys.h"
@@ -697,8 +698,11 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	dly_st->vmax_num_adj = 50;
 	game_st->vrr_drop_cnt = 10;
 	game_st->video_mute_cnt = 15;
+	game_st->game_deblur = 0x40;
+	game_st->delay_enable_cnt = 2;
 	game_st->mc_link_en = true;
 	game_st->game_vrr_en = true;
+	game_st->inp_ctrl = true;
 
 	frc_dbg(DPSS_FRC_TOP, "%s init_version_20250905\n", __func__);
 	if (pdata && pdata->mdata) {
@@ -1297,12 +1301,14 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 	struct PRM_DPSS_DAE *prm_dae = prm_dpss_dae;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 
 	if (!pchip_st) {
 		DBG_ERR("%s: pchip_st is null\n", __func__);
 		return;
 	}
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 
 	if (prm_top->sw_tbc_ctrl_en == 1) {
 		//split inp->nrdi
@@ -1349,8 +1355,11 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 2, 0, 5);
 		w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);
 	}
-	venc_vrr_vdin();
 
+	if (game_st->inp_ctrl) // reback inp start value
+		w_reg_bit(FRC_INP_HOLD_CTRL, 0, 24, 1);
+
+	venc_vrr_vdin();
 	// prm_dpss_top.badedit_en == 0/1
 	// w_reg_bit(DPSS_REG_LOOP_PHASE_ADJ, 3/0, 4, 2);
 	if (prm_top->me_mc_link_en == 1 || prm_top->game_mode_n2m == 1 ||
@@ -1376,6 +1385,9 @@ void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 
 	w_reg_bit(DPSS_REG_DAE_WRPT_FULL_NUM, dae_wrpt_full_num, 0, 4);
 	w_reg_bit(FRC_REG_CURSOR, 0, 0, 3); //cancel dae force mix
+
+	// nr+frc restore game frc rst mode
+	w_reg_bit(FRC_REG_INP_FRM_RST_CTRL, 0, 0, 1);
 
 	frc_set_mc_bypass(3);
 
@@ -1839,18 +1851,20 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 
 		w_reg_bit(FRC_REG_BLK_SCALE, 0, 0, 2);	//phase gain chg form badedit to normal mode
 		w_reg_bit(VPU_DAE_WRAP_CTRL, 0, 0, 1);	//change frc me frm_start to hold-lint mode
-		if (prm_top->game_mode_n2m == 1) {
+		//if (prm_top->game_mode_n2m == 1) {
 			// wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883088);	//tbc mux, vdin->me->mc->vpp
 			//w_reg_bit(FRC_REG_TOP_CTRL7, 0x40000,0,20); //todo 1:2
-			w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
-		} else {
-			w_reg_bit_vc(VDIN_TOP_MISC, 0, 10, 2);  // game film
-		}
+			//w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2);
+		//} else {
+			// game film ((vdin done chg index)
+			//w_reg_bit_vc(VDIN_TOP_MISC, 0, 10, 2);
+		//}
+		w_reg_bit_vc(VDIN_TOP_MISC, 2, 10, 2); //vdin isr start chg index
 		wr(FRC_DPSS_TBC_MUX_DOUT_SEL, 0x88883180); //tbc mux, vdin->inp->me->mc->vpp
 		cfg_dpss_gmd_phs_lut(prm_top->frc_ratio, 1);	//set phase ini
 
 		//change inp-tbc-ctrl frm_start from auto-config to reg-config
-		if (prm_top->sw_buf_rls_en == 1)
+		if (prm_top->sw_buf_rls_en == 1 || game_st->inp_ctrl)
 			w_reg_bit(FRC_INP_HOLD_CTRL, 1, 24, 1);
 
 		dpss_frc_set_dejudder(10);
@@ -1864,13 +1878,14 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 		prm_top->badedit_en = 0;
 		frc_top->badedit_en = 0;
 		w_reg_bit(FRC_REG_INP_FRM_CTRL, 0, 4, 1); //game mode used auto frm_start mode
+		w_reg_bit(FRC_REG_INP_FRM_RST_CTRL, 1, 0, 1);
 	} else {
 		w_reg_bit(FRC_DPSS_SRC_BUFF_RLS_CTRL, 1, 0, 1);//release in order=1, 0:disorder
 		w_reg_bit(FRC_DAE_FRM_DLY_NUM, 2, 0, 5);	//reg_dae_frm_dly_num
 		w_reg_bit(FRC_ME_TOP_CTRL, 0, 29, 1);	//reg_me_mode_ctrl
 	}
 
-	game_st->vdin_buf_num = get_vdin_buffer_num();
+	game_st->vdin_buf_num = get_vdin_buffer_num_frc();
 	w_reg_bit(FRC_AUTO_MODE_BUFF_NUM,
 		game_st->vdin_buf_num, 0, 5); //set vdin buf num 1.29 from tao.yao
 
@@ -1886,7 +1901,8 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 	if (prm_top->me_mc_link_en == 1 ||
 			prm_top->game_mode_n2m == 1 ||
 			prm_top->game_mode_film == 1)
-		w_reg_bit(DPSS_DAE_TOP_ARB_MODE, 2, 0, 2); //reg_dae_top_arb_mode
+		// w_reg_bit(DPSS_DAE_TOP_ARB_MODE, 2, 0, 2); //reg_dae_top_arb_mode
+		w_reg_bit(DPSS_DAE_TOP_ARB_MODE, 0, 0, 2); //reg_dae_top_arb_mode
 	else
 		w_reg_bit(DPSS_DAE_TOP_ARB_MODE, 1, 0, 2);	//reg_dae_top_arb_mode
 	// hw_config_top_post(prm_top);
@@ -3341,6 +3357,11 @@ void dpss_frc_set_deblur(u8 deblur_level)
 {
 	struct dpss_frc_fw_data_s *pfw_data;
 	struct dpss_frc_top_type_s *frc_top;
+	struct dpss_game_state_s *game_st;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st)
+		return;
 
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 	if (pfw_data) {
@@ -3350,6 +3371,11 @@ void dpss_frc_set_deblur(u8 deblur_level)
 		return;	// add abnormal case
 	}
 	pr_frc(1, "ext_ctrl: deblur_level:%d\n", deblur_level);
+	if (frc_top->game_mode && !is_vd1_link_state()) {
+		game_st = &pchip_st->game_st;
+		game_st->game_deblur = (64 * deblur_level) / 10;
+		return;
+	}
 	if (deblur_level != pfw_data->frc_top_type.frc_deblur_level) {
 		pfw_data->frc_top_type.frc_deblur_level = deblur_level;
 		if (pfw_data->frc_memc_level)
@@ -5046,6 +5072,9 @@ int dpss_get_game_lock_st(struct dpss_status *state)
 	return 0;
 }
 
+unsigned int dpss_dbg_off_vrr_in_vdin;
+module_param_named(dpss_dbg_off_vrr_in_vdin, dpss_dbg_off_vrr_in_vdin, uint, 0664);
+
 void vdin_game_frc_notify(struct game_frc_s *frc_data)
 {
 	struct dpss_frc_top_type_s *frc_top;
@@ -5062,11 +5091,48 @@ void vdin_game_frc_notify(struct game_frc_s *frc_data)
 	game_st = &pchip_st->game_st;
 	frc_top = &pfw_data->frc_top_type;
 
-	if (!frc_data->vdin_stop_dec) {
+	if (!frc_data->vdin_stop_dec && dpss_dbg_off_vrr_in_vdin) {
 		dbg_h0("vdin stop dec\n");
 		if (frc_top->game_mode) {
 			game_st->off_game_mode = true;
 			venc_vrr_vdin();
+		}
+	}
+}
+
+bool get_dpss_game_frc_locked(void)
+{
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+
+	if (!pchip_st)
+		return false;
+
+	game_st = &pchip_st->game_st;
+	return game_st->do_game_frc;
+}
+
+void vsync_signal_to_game_frc(void)
+{
+	// static int delay_cnt;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+
+	if (!pchip_st)
+		return;
+
+	game_st = &pchip_st->game_st;
+
+	if (game_st->delay_enable_game_frc) {
+		if (aml_vrr_state())
+			return;
+		if (game_st->delay_enable_cnt > 0)
+			game_st->delay_enable_cnt--;
+
+		if (game_st->delay_enable_cnt == 0) {
+			venc_vrr_vdin();
+			game_st->delay_enable_game_frc = false;
+			dbg_h0("delay enable game frc ok\n");
 		}
 	}
 }

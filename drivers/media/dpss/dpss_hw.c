@@ -18,6 +18,7 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #endif
 #include <linux/amlogic/media/dpss/frc_common_x.h>
+#include <linux/amlogic/media/vrr/vrr.h>
 #include "dpss_base.h"
 #include "dpss_s.h"
 #include "dpss_sys.h"
@@ -163,6 +164,9 @@ module_param_named(dpss_dpe1_link0, dpss_dpe1_link0, bool, 0664);
 //cfg_at_inp_site
 unsigned int dpss_dbg_cfg_at_inp_site = 1;// = 1920; //
 module_param_named(dpss_dbg_cfg_at_inp_site, dpss_dbg_cfg_at_inp_site, uint, 0664);
+
+unsigned int dpss_dbg_delay_cnt = 2;
+module_param_named(dpss_dbg_delay_cnt, dpss_dbg_delay_cnt, uint, 0664);
 
 bool dpss_get_h_bypass(void)
 {
@@ -2370,6 +2374,7 @@ void irq_inp(void)
 	struct dpss_frc_top_type_s *frc_top;
 	struct frc_chip_st *pchip_st;
 	struct frc_interrupt_s *frc_int_st;
+	struct dpss_game_state_s *game_st;
 	u8 frc_fw_working = 0;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	u64 timestamp = sched_clock();
@@ -2383,13 +2388,16 @@ void irq_inp(void)
 	if (!pchip_st)
 		return;
 
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1)
-		dbg_h2("irq_inp: yline_sync: %#X, cline_sync:%#X\r\n",
+	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+		w_reg_bit(FRC_REG_INP_FRM_RST_CTRL, 1, 4, 1); //rst auto W1T
+		dbg_h2("auto irq inp: yline_sync: %#X, cline_sync:%#X\r\n",
 			rd(FRC_INP_RD_YLINE_CNT), rd(FRC_INP_RD_CLINE_CNT));
+	}
 
 	frc_top = &pfw_data->frc_top_type;
 	frc_fw_working = frc_top->frc_fw_working;
 	frc_int_st = &pchip_st->state_st.frc_int_st;
+	game_st = &pchip_st->game_st;
 
 	/*update inp_irq time*/
 	timestamp = div64_u64(timestamp, 1000);
@@ -2566,6 +2574,9 @@ void irq_inp(void)
 		}
 		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1) != 1)
 			dpss_input_q_update_status(prm_top->in_q, inp_ofrm_vld, prm_top->is_i);
+	} else if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+		if (game_st->inp_ctrl)
+			w_reg_bit(FRC_INP_HOLD_CTRL, 1, 31, 1);
 	}
 	// dbg_h2("\t frame %02d done\n",dpss_inp_frm_cnt);
 	//don't add  logic after triggle function,add by fxj
@@ -4746,6 +4757,11 @@ void venc_vrr_vdin(void)
 	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
 		if (enable == 1)
 			return;
+		if (aml_vrr_state()) { // vrr enable, delay enable game frc
+			game_st->delay_enable_game_frc = true;
+			game_st->delay_enable_cnt = dpss_dbg_delay_cnt;
+			return;
+		}
 		enable = 1;
 		vtotal = vinfo->vtotal;
 		dly_st->vtotal = vtotal;

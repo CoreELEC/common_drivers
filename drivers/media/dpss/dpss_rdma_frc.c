@@ -498,6 +498,8 @@ void post_vsync_signal_to_dpss_rdma(void)
 	struct dpss_rdma_info *rdma_info_p;
 	struct rdma_regadr_s *rdma_regadr;
 
+	vsync_signal_to_game_frc(); // for game frc
+
 	if (!rdma_enable())
 		return;
 	rdma_info_p = &rdma_info[RDMA_IRQ_VSYNC];

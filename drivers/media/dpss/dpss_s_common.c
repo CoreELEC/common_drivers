@@ -3219,7 +3219,7 @@ void dpss_s2_recycle_back(struct dpss_ch_s *pch)
 	}
 }
 
-unsigned int dpss_dbg_back_frm_cnt = 2;
+unsigned int dpss_dbg_back_frm_cnt = 3;
 module_param_named(dpss_dbg_back_frm_cnt, dpss_dbg_back_frm_cnt, uint, 0664);
 
 void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
@@ -3270,6 +3270,14 @@ void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
 		//dbg_h2("%s type:%d, frc:%d)\n", __func__,
 			//type, DPSS_VF_OWNER_FRC);
 	}
+
+	dbg_h2("frc only release buf addr:<%lx,%lx> <%lx,%lx> <0x%x,0x%x>\n",
+		(ulong)vfm->afrc_info.luma_head_addr,
+		(ulong)vfm->afrc_info.luma_body_addr,
+		(ulong)vfm->afrc_info.chrm_head_addr,
+		(ulong)vfm->afrc_info.chrm_body_addr,
+		vfm->afrc_info.mmu_baddr0,
+		vfm->afrc_info.mmu_baddr1);
 
 	state_st->phs_swth = false;
 

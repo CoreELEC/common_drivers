@@ -481,9 +481,13 @@ struct dpss_game_state_s {
 	bool video_mute_en;
 	bool do_game_frc;
 	bool off_game_mode;
+	bool inp_ctrl;
+	bool delay_enable_game_frc;
 	u32 vrr_drop_cnt;
 	u32 video_mute_cnt;
 	u32 vdin_buf_num;
+	u32 game_deblur;
+	u32 delay_enable_cnt;
 
 	struct dpss_game_dly_s dly_st;
 };
