@@ -2542,7 +2542,7 @@ static ssize_t dmabuf_manage_config_store(const struct class *class,
 
 	ret = configs_set_prefix_path_valonpath(CONFIG_PREFIX, buf);
 	if (ret < 0)
-		pr_err("set config failed %s\n", buf);
+		pr_info("Unsupported config %s\n", buf);
 
 	return size;
 }
