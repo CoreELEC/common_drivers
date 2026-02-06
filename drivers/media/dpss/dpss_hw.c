@@ -2328,7 +2328,7 @@ void irq_display(void)
 	}
 	prev_is_vd1_link = is_vd1_link;
 	prev_is_vd1_link_valid = true;
-	if (state_st->src_chg && !is_vd1_link) {
+	if (state_st->src_chg) {
 		cfg_dpss_mc_ini(prm_top, 1);
 		state_st->src_chg = 0;
 		state_st->mc_ini_rdma_done = true;

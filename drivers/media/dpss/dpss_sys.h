@@ -533,6 +533,7 @@ struct frc_state_s {
 	bool mc_ini_rdma_done;
 	bool use_phase0_done;
 	bool first_put_vfm;
+	bool force_not_send_frc_vf;
 	bool force_disable_dpe_mix;
 	bool force_disable_check_fallback;
 	bool is_dos;

@@ -4787,6 +4787,8 @@ struct vframe_s *frc_get_vfm(void)
 	}
 
 	state_st = &pchip_st->state_st;
+	if (state_st->force_not_send_frc_vf)
+		return NULL;
 	ro_disp_info_0 = rd(FRC_DPSS_DISP_BUFF_INFO_0);
 	cur_idx = state_st->mc_disp_st.wr_cur_idx;
 

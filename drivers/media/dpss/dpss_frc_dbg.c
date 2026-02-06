@@ -196,6 +196,9 @@ static ssize_t dpss_frc_debug_if_help(char *buf)
 		sprintf(buf + len, "force_disable_dpe_mix\t=%d\n",
 			state_st->force_disable_dpe_mix);
 	len +=
+		sprintf(buf + len, "force_not_send_frc_vf\t=%d\n",
+			state_st->force_not_send_frc_vf);
+	len +=
 		sprintf(buf + len, "disable_io_ctrl\t=%d\n",
 			dbg_st->ctrl_dbg.disable_io_ctrl);
 	len +=
@@ -409,6 +412,11 @@ static void dpss_frc_debug_if(const char *buf, size_t count)
 			goto exit;
 		if (kstrtoint(parm[1], 10, &val1) == 0)
 			state_st->force_disable_dpe_mix = val1;
+	} else if (!strcmp(parm[0], "force_not_send_frc_vf")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			state_st->force_not_send_frc_vf = val1;
 	} else if (!strcmp(parm[0], "disable_io_ctrl")) {
 		if (!parm[1])
 			goto exit;

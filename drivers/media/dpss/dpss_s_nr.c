@@ -2319,7 +2319,6 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	struct AA_PPS_TOP_TYPE *pps;
 	unsigned char last_idx_done;
 	bool light_chg = false;
-	bool is_vd1_link;
 	unsigned int val;
 	unsigned int me_size_tmp;
 	struct PRM_INTF_TYPE *dae_yuv;
@@ -2340,12 +2339,10 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	bool is_4k, is_fhd_high_fps;
 	//release: to-do;
 
-	is_vd1_link = is_vd1_link_state();
 	if (pch->d->nr_reset &&
 	    !VFM_IS_I_SRC(vf->type) &&
 	    (dpss_light_chg & C_BIT0) &&
-		!VFM_IS_HDMI_SRC(vf->source_type) &&
-		!is_vd1_link) {
+		!VFM_IS_HDMI_SRC(vf->source_type)) {
 		//not support i / p
 		light_chg = true;
 	}

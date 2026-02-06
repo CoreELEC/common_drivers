@@ -1881,7 +1881,6 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 	unsigned int timeout_ms = 1000;
 	ktime_t start, now;
 	s64 elapsed_ms;
-	bool is_vd1_link;
 	bool light_chg = false;
 	//=============================================
 	//peek:
@@ -1988,12 +1987,10 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 	}
 
 	if (nr_i->chg) {
-		is_vd1_link = is_vd1_link_state();
 		if ((dpss_light_chg & C_BIT0) &&
 		     pch->d->nr_reset &&
 		     !VFM_IS_I_SRC(vfm->type) &&
-			 !VFM_IS_HDMI_SRC(vfm->source_type) &&
-			 !is_vd1_link)
+			 !VFM_IS_HDMI_SRC(vfm->source_type))
 			light_chg = true;
 
 		if (pch->c.ch == 0 && pch->d->frc_link &&

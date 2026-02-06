@@ -63,6 +63,7 @@ void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc
 	//    u32 bit  = prm_mc.pix_bit == BIT_8  ? 0 : prm_mc.pix_bit == BIT_10 ? 1 : 2 ;
 	u32 regs_ofst;
 	bool cut_win_en = prm_top->cut_win_en;
+	bool is_vd1_link;
 	//bool mc_cut_position = prm_top->cut_win_position;
 	u32  mc_skip_mode = prm_top->mc_skip_mode;
 	//u32 frm_hsize = (mc_skip_mode > 0) ? prm_top->frm_hsize : prm_mc->frm_hsize;
@@ -77,13 +78,14 @@ void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc
 	struct VFCD_t *vfcd;
 
 	if (!pchip) {
-		dbg_h2("%s pchip is null\n", __func__);
+		dbg_h2("pchip is null\n");
 		return;
 	}
 	pix_rmif = &pchip->mc_pix_rmif;
 	vfcd = &pchip->mc_vfcd;
+	is_vd1_link = is_vd1_link_state();
 
-	dbg_h2("%s fmt444_out = %d, h_skip:%d, v_skip:%d\n", __func__,
+	dbg_h2("fmt444_out = %d, h_skip:%d, v_skip:%d\n",
 			fmt444_out, mc_skip_mode_h, mc_skip_mode_v);
 	pchip->fmt444_out = fmt444_out;
 	pix_rmif->src_fmt	= prm_mc->pix_fmt;	  // YUV444/YUV422/YUV420/RGB
@@ -141,7 +143,7 @@ void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc
 	dbg_h2("%s src_bit %d pix_bit %d\n", __func__, pix_rmif->src_bit, prm_mc->pix_bit);
 	//cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, 0);
 	//cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, 0);
-	if (prm_top->is_dpss_init_done)
+	if (!is_vd1_link)
 		frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, fmt444_out);
 	frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, fmt444_out);
 	if (mc_skip_mode_h) {
@@ -214,11 +216,11 @@ void cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc
 	dbg_h2("%s pix_rmif.slc_x:(%d,%d), .slc_y:(%d,%d)\n", __func__, vfcd->win_bgn_h[0],
 		   vfcd->win_end_h[0], vfcd->win_bgn_v[0], vfcd->win_end_v[0]);
 
-	if (prm_top->is_dpss_init_done)
+	if (!is_vd1_link)
 		frc_cfg_vfcd_dec(4, vfcd);	 // mc0
 	frc_cfg_vfcd_dec(5, vfcd);	 // mc1
 
-	if (prm_top->is_dpss_init_done) {
+	if (!is_vd1_link) {
 		// mc din vfcd mode
 		if (prm_mc->src_cmpr == CMPR_AFBC) {
 			frc_cfg_vfcd_cmpr_enable(4, 1);	  // vfcd_chose cur_afbc
