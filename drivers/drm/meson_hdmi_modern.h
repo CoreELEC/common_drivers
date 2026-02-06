@@ -17,14 +17,6 @@
 #include "meson_tx_helper.h"
 
 enum {
-	HDCP_STATE_START = 0,
-	HDCP_STATE_SUCCESS,
-	HDCP_STATE_FAIL,
-	HDCP_STATE_STOP,
-	HDCP_STATE_DISCONNECT,
-};
-
-enum {
 	MESON_PREF_DV = 0,
 	MESON_PREF_HDR,
 	MESON_PREF_SDR,
@@ -61,9 +53,13 @@ struct am_hdmi_tx {
 	int hdcp_mode;
 	/*hdcp auth result, HDCP_AUTH_UNKNOWN means havenot finished auth.*/
 	int hdcp_state;
+	bool hdcp_content_type0_pri :1;
+	bool hdcp_force :1;
 	int hdcp_rx_type;
 
 	int hdmitx_on;
+	/* used to specify the usage scenario of the android hdcp synopsys ip */
+	int user_state;
 
 	int min_vfreq;
 	int max_vfreq;
@@ -138,6 +134,10 @@ struct am_hdmi_tx {
 	int hdmi_type;
 	struct drm_property *static_meta_prop;
 	struct drm_property *scan_info_prop;
+	/* used in non-modeseting flows, specifies the priority of hdcp_mode authentication */
+	struct drm_property *hdcp_content_type0_pri_prop;
+	/* used in modeseting flows, specifies the priority of hdcp_mode authentication */
+	struct drm_property *hdcp_content_type0_pri_store_prop;
 
 #ifdef CONFIG_CEC_NOTIFIER
 	struct cec_notifier	*cec_notifier;
@@ -170,6 +170,7 @@ struct am_hdmitx_connector_state {
 	bool avmute : 1;
 	bool ready : 1;
 	bool frac_rate_policy : 1;
+	bool hdcp_force : 1;
 	int allm_mode;
 	struct drm_property_blob *metadata;
 };
