@@ -63,7 +63,7 @@ struct display_queue display_buf_q;
 int enable_mc_link = 1;
 int frc_delay_dbg; // for avsync debug
 
-#define N2M_LIST 28
+#define N2M_LIST 29
 #define DPSS_FRC_RESET_PATH_SKIP_CNT 5
 
 const char *vid_src_fmt_str[] = {
@@ -115,6 +115,7 @@ struct n2m_lut_s n2m_table[N2M_LIST] = {
 	{12, 48, DPSS_FRC_RATIO_1_4},
 	{12, 60, DPSS_FRC_RATIO_1_5},
 	{12, 120, DPSS_FRC_RATIO_1_10},
+	{15, 120, DPSS_FRC_RATIO_1_8},
 	{24, 48, DPSS_FRC_RATIO_1_2},
 	{24, 60, DPSS_FRC_RATIO_2_5},
 	{24, 120, DPSS_FRC_RATIO_1_5},
