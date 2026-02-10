@@ -579,16 +579,16 @@ void hw_cfg_dpss_tbc_frc(struct PRM_DPSS_TOP *prm_top,
 	bool inp_byp_mode = frc_byp_mode;
 
 	if (dpss_mode == DPSS_FRC_MODE) {
-		inp_ibuf_num = 16;//10-2025-4-17
-		inp_obuf_num = 16;
+		inp_ibuf_num = DPSS_SML_FRC_NUB; //16;//10-2025-4-17
+		inp_obuf_num = DPSS_SML_FRC_NUB; //16;
 		nr_dae_ibuf_num = DPSS_HW_LOOP_IN_OUT_BUF_NUB;//6;
 		nr_aepe_buf_num = nr_aepe_buf_num_dbg;//?
 		nr_dpe_obuf_num = DPSS_HW_LOOP_IN_OUT_BUF_NUB;//6;
 		num_dblk = nr_dpe_obuf_num;
 		num_wrbk = nr_dpe_obuf_num;
-		frc_dae_ibuf_num = 16;
-		frc_dae_obuf_num = 6;
-		frc_dpe_obuf_num = 16;
+		frc_dae_ibuf_num = DPSS_SML_FRC_NUB; //16;
+		frc_dae_obuf_num = DPSS_SML_FRC_NUB; //6;
+		frc_dpe_obuf_num = DPSS_SML_FRC_NUB; //16;
 	} else {
 		inp_ibuf_num = prm_top->num_in;//DPSS_HW_LOOP_IN_OUT_BUF_NUB;
 		inp_obuf_num = prm_top->num_in;//DPSS_HW_LOOP_IN_OUT_BUF_NUB;
@@ -693,8 +693,8 @@ void hw_cfg_dpss_tbc_frc(struct PRM_DPSS_TOP *prm_top,
 	wr(FRC_FRAME_BUFFER_NUM,
 		((2 & 0x1f) << 16)
 		| //reg_mero_fb_num//nr_frc_0113
-		((16 & 0x1f) << 8) | //reg_logo_fb_num
-		((16 & 0x1f) << 0));//reg_frc_fb_num
+		((8 & 0x1f) << 8) | //reg_logo_fb_num
+		((8 & 0x1f) << 0));//reg_frc_fb_num
 
 	w_reg_bit(DPSS_REG_NRDI_WRPT_FULL_NUM,
 		(num_nrdi_wrpt & 0xf), 0, 4); //reg_nrdi_wrpt_full_num
