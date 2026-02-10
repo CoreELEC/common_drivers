@@ -2112,18 +2112,19 @@ static struct bus_dev_priority bus_dev_t6x[] __initdata = {
 static struct demod_priority demod_t6x __initdata = {
 	.port_id = 46,
 	.allow_access = 0,
-	.reg_base = 0xfe31f000,
-	.mode_reg1 = (0x3c00 << 2),
+	.reg_base = 0xfe310000,
+	.mode_reg1 = 0xf000 + (0x00 << 2),
 	.dtmb_mode_bit = 0,
 	.isdbt_mode_bit = 1,
-	.mode_reg2 = (0x3c0c << 2),
+	.mode_reg2 = 0xf000 + (0x0c << 2),
 	.dvb_t2_mode_bit = 16,
 	.isdbt_name = "ISDBT",
-	.isdbt_reg = (0x0802 << 2),
+	.isdbt_reg = 0x800 + (0x02 << 2),
+	.isdbt_bit = 17,
 	.dvb_t2_select_reg = 0xf040,
 	.dvb_t2_select_mode = 0x182,
-	.dvb_t2_reg = (0xd84 << 2),
-	.dvb_t2_bit = 31,
+	.dvb_t2_reg = 0x3613, //byte rw
+	.dvb_t2_bit = 7,
 	.dvb_t2_name = "DVB_T2",
 	.dtmb_reg = (0x47 << 2),
 	.dtmb_bit = 21,
@@ -3028,6 +3029,30 @@ static int reg_access(unsigned int reg, char sec, char rw, unsigned int *value)
 	return 0;
 }
 
+static int reg_access_byte(unsigned int reg, char sec, char rw, unsigned int *value)
+{
+	if (sec) {
+		if (rw == READ)
+			*value = dmc_rw(reg, 0, DMC_READ);
+		else
+			dmc_rw(reg, *value, DMC_WRITE);
+	} else {
+		void __iomem *vaddr;
+
+		vaddr = ioremap(reg, 0x1);
+		if (!vaddr) {
+			pr_err("reg_addr %x ioremap failed\n", reg);
+			return -EINVAL;
+		}
+		if (rw == READ)
+			*value = readb_relaxed(vaddr);
+		else
+			writeb_relaxed(*value, vaddr);
+		iounmap(vaddr);
+	}
+	return 0;
+}
+
 static char *get_name_by_port_id(unsigned char port_id)
 {
 	int i;
@@ -3158,7 +3183,7 @@ static int get_demod_priority_info(char *buf)
 	if (value & BIT(dm->dvb_t2_mode_bit)) {
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, READ, &dvb_t2_mode);
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, WRITE, &dm->dvb_t2_select_mode);
-		reg_access(dm->reg_base + dm->dvb_t2_reg, 0, READ, &value);
+		reg_access_byte(dm->reg_base + dm->dvb_t2_reg, 0, READ, &value);
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, WRITE, &dvb_t2_mode);
 		priority = !!(value & BIT(dm->dvb_t2_bit));
 		s += sprintf(buf + s, DEV_PRIORITY_PRE "%x:%x %x:%x\t\t\t%x:%x %s\n",
@@ -4473,8 +4498,8 @@ EXPORT_SYMBOL(set_vpu_sub_dev_priority);
 
 int set_demod_priority(unsigned char priority)
 {
-	unsigned int value;
-	unsigned int dvb_t2_mode;
+	unsigned int value = 0, value1 = 0;
+	unsigned int dvb_t2_mode = 0;
 	struct ddr_priority_v2 *v2;
 	struct demod_priority *dm;
 
@@ -4495,12 +4520,14 @@ int set_demod_priority(unsigned char priority)
 	}
 
 	reg_access(dm->reg_base + dm->mode_reg1, 0, READ, &value);
+	reg_access(dm->reg_base + dm->mode_reg2, 0, READ, &value1);
 	if (value & BIT(dm->dtmb_mode_bit)) {
 		reg_access(dm->reg_base + dm->dtmb_reg, 0, READ, &value);
 		value &= ~BIT(dm->dtmb_bit);
 		if (priority)
 			value |= BIT(dm->dtmb_bit);
 		reg_access(dm->reg_base + dm->dtmb_reg, 0, WRITE, &value);
+		pr_err("set DTMB priority(%d)(reg 0x%x)\n", priority, value);
 		return 0;
 	} else if (value & BIT(dm->isdbt_mode_bit)) {
 		reg_access(dm->reg_base + dm->isdbt_reg, 0, READ, &value);
@@ -4508,25 +4535,24 @@ int set_demod_priority(unsigned char priority)
 		if (priority)
 			value |= BIT(dm->isdbt_bit);
 		reg_access(dm->reg_base + dm->isdbt_reg, 0, WRITE, &value);
+		pr_err("set ISDBT priority(%d)(reg 0x%x)\n", priority, value);
 		return 0;
-	}
-
-	reg_access(dm->reg_base + dm->mode_reg2, 0, READ, &value);
-	if (value & BIT(dm->dvb_t2_mode_bit)) {
+	} else if (value1 & BIT(dm->dvb_t2_mode_bit)) {
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, READ, &dvb_t2_mode);
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, WRITE, &dm->dvb_t2_select_mode);
-		reg_access(dm->reg_base + dm->dvb_t2_reg, 0, READ, &value);
-		value &= ~BIT(dm->dvb_t2_bit);
+		reg_access_byte(dm->reg_base + dm->dvb_t2_reg, 0, READ, &value1);
+		value1 &= ~BIT(dm->dvb_t2_bit);
 		if (priority)
-			value |= BIT(dm->dvb_t2_bit);
-		reg_access(dm->reg_base + dm->dvb_t2_reg, 0, WRITE, &value);
+			value1 |= BIT(dm->dvb_t2_bit);
+		reg_access_byte(dm->reg_base + dm->dvb_t2_reg, 0, WRITE, &value1);
 		reg_access(dm->reg_base + dm->dvb_t2_select_reg, 0, WRITE, &dvb_t2_mode);
+		pr_err("set DVB-T2 priority(%d)(reg 0x%x)\n", priority, value1);
 		return 0;
-	}
-
+	} else {
 #define DEMOD_CANT_SET_PRIORITY_MSG \
 	"the demod can only set its corresponding priority when operating in ISDB-T, DVB-T2, or DTMB mode"
-	pr_err("%s\n", DEMOD_CANT_SET_PRIORITY_MSG);
+		pr_err("%s\n", DEMOD_CANT_SET_PRIORITY_MSG);
+	}
 
 	return -EINVAL;
 }
