@@ -1438,6 +1438,13 @@
 				iv_swap = /bits/ 8 <0x0>;
 				/*power-domains = <&pwrdm PDID_CX_DMA>;*/
 		};
+		aml_sha {
+				compatible = "amlogic,sha_dma";
+				dev_name = "aml_sha_dma";
+				status = "okay";
+				hw_ctx_sz = /bits/ 32 <0x28>;
+				/*power-domains = <&pwrdm PDID_CX_DMA>;*/
+		};
 		aml_tdes {
 				compatible = "amlogic,des_dma,tdes_dma";
 				dev_name = "aml_tdes_dma";
