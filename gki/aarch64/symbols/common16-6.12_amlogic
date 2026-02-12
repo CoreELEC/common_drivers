@@ -120,3 +120,9 @@
  i3c_master_register
  i3c_master_set_info
  i3c_master_unregister
+
+#amlogic-phy-debug.ko
+ class_dev_iter_exit
+ class_dev_iter_init
+ class_dev_iter_next
+ device_match_name
