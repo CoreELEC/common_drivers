@@ -1587,6 +1587,18 @@
 				status = "okay";
 				/*power-domains = <&pwrdm PDID_CX_DMA>;*/
 		};
+		crypto {
+				compatible = "amlogic,crypto_sc2";
+				dev_name = "aml_crypto_dev";
+				status = "okay";
+				// Use thread 1.
+				// Since there is no bl31 running on c4, no chance
+				// to set thread 5 to DMA SEC register.
+				thread = /bits/ 8 <0x1>;
+				// Adjust IRQ number to 25 for thread 1.
+				interrupts = <0 25 1>;
+				/*power-domains = <&pwrdm PDID_CX_DMA>;*/
+		};
 	};
 
 	rng{
