@@ -1587,6 +1587,7 @@
 		reg = <0xfe0368a8 0x4>;
 		reg-names = "freq-addr";
 		freq-mask = <0 16>;
+		version = "v3";
 		status = "okay";
 		ddr {
 			condition-type = <DDR_THERMAL>;

@@ -1599,6 +1599,7 @@
 		sip-mask = <24 8>;
 		type-mask = <8 8>;
 		freq-mask = <0 16>;
+		version = "v1";
 		status = "okay";
 		ddr4_nosip {
 			particle = <DDR4_NOSIP_PARTICLE>;

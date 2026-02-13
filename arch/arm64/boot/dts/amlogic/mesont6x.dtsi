@@ -1972,6 +1972,7 @@
 		sip-mask = <24 8>;
 		type-mask = <8 8>;
 		freq-mask = <0 16>;
+		version = "v1";
 		status = "okay";
 		ddr3_nosip {
 			particle = <DDR3_NOSIP_PARTICLE>;

@@ -429,6 +429,7 @@
 			    "freq-addr";
 		sip-mask = <19 1>;
 		freq-mask = <0 16>;
+		version = "v1";
 		status = "okay";
 
 		sip {

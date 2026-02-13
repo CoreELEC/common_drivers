@@ -1874,6 +1874,7 @@
 			    "freq-addr";
 		type-mask = <8 8>;
 		freq-mask = <0 16>;
+		version = "v1";
 		status = "okay";
 
 		ddr3 {

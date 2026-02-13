@@ -1962,6 +1962,7 @@
 			    "freq-addr";
 		sip-mask = <24 8>;
 		freq-mask = <0 16>;
+		version = "v3";
 		status = "okay";
 		sip {
 			particle = <SIP_PARTICLE>;
