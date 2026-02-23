@@ -2191,12 +2191,22 @@ static const struct snd_soc_component_driver aml_tdm_component = {
 };
 
 static void set_aud_param_ch_status(struct iec958_chsts *chsts,
-	struct aud_para *aud_param)
+	struct aud_para *aud_param, enum aud_codec_types codec_type)
 {
-	aud_param->status[0] = chsts->chstat0_l & 0xff;
-	aud_param->status[1] = (chsts->chstat0_l >> 8) & 0xff;
-	aud_param->status[2] = chsts->chstat1_l & 0xff;
-	aud_param->status[3] = (chsts->chstat1_l >> 8) & 0xff;
+	switch (codec_type) {
+		case AUD_CODEC_TYPE_MULTI_LPCM:
+			aud_param->status[0] = 0x15;
+			aud_param->status[1] = 0x55;
+			aud_param->status[2] = 0xfa;
+			aud_param->status[3] = 0x32;
+			break;
+		default:
+			aud_param->status[0] = chsts->chstat0_l & 0xff;
+			aud_param->status[1] = (chsts->chstat0_l >> 8) & 0xff;
+			aud_param->status[2] = chsts->chstat1_l & 0xff;
+			aud_param->status[3] = (chsts->chstat1_l >> 8) & 0xff;
+			break;
+	}
 }
 
 static int aml_dai_tdm_chmap_ctl_tlv(struct snd_kcontrol *kcontrol, int op_flag,
@@ -2442,7 +2452,7 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 				event_type = AOUT_EVENT_IEC_60958_PCM;
 			iec_get_channel_status_info(&chsts, codec_type,
 				runtime->rate, bit_depth, 0, 0);
-			set_aud_param_ch_status(&chsts, &aud_param);
+			set_aud_param_ch_status(&chsts, &aud_param, codec_type);
 #if (defined(CONFIG_AMLOGIC_HDMITX) || defined(CONFIG_AMLOGIC_HDMITX21))
 			aout_notifier_call_chain(event_type, &aud_param);
 #endif
