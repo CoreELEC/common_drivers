@@ -1260,9 +1260,11 @@ void hdmirx_set_timing_info(struct tvin_sig_property_s *prop, u8 port)
 		     sig_fmt == TVIN_SIG_FMT_HDMI_3840_2160_00HZ))
 			tmp_ve_flag = 1;
 	}
+	if (rx[port].dsc_flag && rx[port].cur.vfront < 4)
+		tmp_ve_flag = 1;
 
 	if (tmp_ve_flag)
-		prop->ve = tmp_ve_flag;
+		prop->ve = 2;//dpss requires need even value
 	else
 		prop->ve = 0;
 

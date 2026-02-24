@@ -5349,8 +5349,10 @@ void vdin_get_hv_shrink(struct vdin_dev_s *devp)
 		devp->h_shrink_times = 1;
 		devp->v_shrink_times = 1;
 	}
-	devp->h_shrink_out = devp->h_active / devp->h_shrink_times;
-	devp->v_shrink_out = devp->v_active / devp->v_shrink_times;
+	devp->h_shrink_out = (devp->h_active + devp->h_shrink_times - 1) /
+				devp->h_shrink_times;
+	devp->v_shrink_out = (devp->v_active + devp->v_shrink_times - 1) /
+					devp->v_shrink_times;
 
 	if (devp->dv_hw5.hw5_ctl & BIT0) {
 		devp->h_shrink_out = devp->prop.scaling4w;
@@ -5370,7 +5372,7 @@ static void vdin_set_h_aa_ds(struct vdin_dev_s *devp)
 		offset = offset + VDIN0_AA_DS_REG_OFFSET_T6X;
 
 	if (dst_w)
-		aa_ds_x_rate = src_w / dst_w;
+		aa_ds_x_rate = (src_w + dst_w - 1) / dst_w;
 
 	/* check legality, valid is 1,2,4,8 */
 	switch (aa_ds_x_rate) {
@@ -5449,7 +5451,7 @@ static void vdin_set_h_shrink(struct vdin_dev_s *devp)
 	}
 
 	if (dst_w)
-		hshrk_mode = src_w / dst_w;
+		hshrk_mode = (src_w + dst_w - 1) / dst_w;
 
 	/*check maximum value*/
 	if (hshrk_mode < 2 || hshrk_mode > 64) {
@@ -5505,7 +5507,7 @@ static void vdin_set_v_aa_ds(struct vdin_dev_s *devp)
 		offset = offset + VDIN0_AA_DS_REG_OFFSET_T6X;
 
 	if (dst_h)
-		aa_ds_y_rate = src_h / dst_h;
+		aa_ds_y_rate = (src_h + dst_h - 1) / dst_h;
 
 	/* check legality, valid is 1,2,4,8 */
 	switch (aa_ds_y_rate) {
@@ -5600,7 +5602,7 @@ static void vdin_set_v_shrink(struct vdin_dev_s *devp)
 	}
 
 	if (devp->v_shrink_out)
-		vshrk_mode = src_h / devp->v_shrink_out;
+		vshrk_mode = (src_h + devp->v_shrink_out - 1) / devp->v_shrink_out;
 
 	if (vshrk_mode < 2) {
 		pr_info("vdin.%d v shrink: out > in/2,return\n", devp->index);
