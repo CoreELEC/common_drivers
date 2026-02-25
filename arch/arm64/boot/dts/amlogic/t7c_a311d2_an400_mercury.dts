@@ -1281,7 +1281,7 @@
 	pinctrl-names="default", "sleep";
 	clock-frequency = <400000>; /* default 100k */
 	amlsens_0: sensor0@1a {
-		compatible = "amlogic, sensor-csi-a", "amlogic, sensor";
+		compatible = "amlogic, sensor";
 		index = <0>;
 		reg = <0x1a>;
 		reg-addr-type = <2>;
@@ -1359,7 +1359,7 @@
 	pinctrl-names="default", "sleep";
 	clock-frequency = <100000>; /* default 100k */
 	amlsens_2: sensor2@1a {
-		compatible = "amlogic, sensor-csi-b", "amlogic, sensor";
+		compatible = "amlogic, sensor-rtos";
 		index = <2>;
 		reg = <0x1a>;
 		reg-addr-type = <2>;
@@ -1605,6 +1605,10 @@
 
 &camera0 {
 	compatible = "amlogic, yuvcamera";
+};
+
+&camera2 {
+	compatible = "amlogic, camera-rtos";
 };
 
 &spifc {
