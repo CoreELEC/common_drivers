@@ -446,7 +446,7 @@ static void _prm_top_init_light(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_
 		bit = (dpss_dbg_in_fmt) & 0xff;
 		dbg_h1("in:fmt:%d,%d,%d", fmt, plan, bit);
 	}
-	dbg_h2("is_ex_di = %d, i_p = %d, plan=%d, bit=%d.\n", is_ex_di, i_p, plan, bit);
+	dbg_h2("is_ex_di = %d, i_p = %d, plan=%d, bit=%d\n", is_ex_di, i_p, plan, bit);
 	prm_top->src_fs_fmt	= fmt_cfg(fmt, plan, bit, cmpr, i_p);
 	//ds fmt:
 	if (vf && pch->d->is_afbcd) {
@@ -2585,6 +2585,11 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	} else {
 		prm_top->is_amdv_frame = false;
 	}
+	if (prm_top->is_amdv_frame && (vf->type & VIDTYPE_VIU_444) &&
+		_IS_VDIN_SRC(vfs->source_type))
+		dpss_en_dct = 0;
+	else
+		dpss_en_dct = 1;
 #endif
 	if (vfs->type & VIDTYPE_COMB_MODE)
 		pch->d->fmt444_comb = 1;
@@ -3015,6 +3020,9 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 			prm_dpe->dcntr_slc.ds_fmt = YUV422;
 			if (vfs->plane_num == 1)
 				prm_dpe->dcntr_slc.ds_plane = PLANAR_X1;
+		} else if (vfs->type & VIDTYPE_VIU_444) {
+			prm_dpe->dcntr_slc.ds_fmt = YUV444;
+			prm_dpe->dcntr_slc.ds_plane = PLANAR_X1;
 		} else {
 			prm_dpe->dcntr_slc.ds_fmt = YUV420;
 		}
