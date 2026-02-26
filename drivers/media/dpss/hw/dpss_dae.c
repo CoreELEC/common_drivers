@@ -771,6 +771,7 @@ void hw_cfg_dpss_dae_frc(enum DPSS_WORK_MODE  dae_mode,
 	prm_dae->prm_size         = *prm_size_ext;
 	dbg_h2("%s:prm_dpss_dae: update prm_size\n", __func__);
 
+	cfg_dae_secure(dae_mode, prm_top, prm_dae); //secure
 	//==============================================================//
 	// dae_size
 	//==============================================================//
@@ -1326,6 +1327,7 @@ void hw_cfg_dpss_dae0_frc(enum DPSS_WORK_MODE  dae_mode,
 		dbg_h2("me size chg\n");
 	}
 
+	cfg_dae_secure(dae_mode, prm_top, prm_dae); //secure
 	//==============================================================//
 	// dae_size
 	//==============================================================//
@@ -2460,9 +2462,14 @@ static void cfg_dae_secure(unsigned int dae_mode,
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 12, 1);
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 16, 1);
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 24, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_SEL0, 0, 21, 1);
 			set = 1;
-		} else {
+		} else if (dae_mode == DAE_FRC_MODE) {
 			//frc: to-do
+			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 12, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 16, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 0, 24, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_SEL0, 0, 21, 1);
 			set = 3;
 		}
 	} else {
@@ -2472,19 +2479,23 @@ static void cfg_dae_secure(unsigned int dae_mode,
 		    dae_mode == DAE_DV_SRC0_MODE) {
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 16, 1);
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 24, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_SEL0, 1, 21, 1);
 			set = 11;
 		} else if (dae_mode == DAE_VDI_MODE	||
 			   dae_mode == DAE_NRDI_MODE) {
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 12, 1);
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 16, 1);
 			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 24, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_SEL0, 1, 21, 1);
 			set = 12;
-		} else {
+		} else if (dae_mode == DAE_FRC_MODE) {
 		//frc: to-do
+			w_reg_bit(VPU_DAE_WRAP_SW_INFO, 1, 24, 1);
+			w_reg_bit(VPU_DAE_WRAP_SW_SEL0, 1, 21, 1);
 			set = 13;
 		}
 	}
-	dbg_h2("%s:%d\n", __func__, set);
+	dbg_h2("set dae secure:%d\n", set);
 }
 
 //extern volatile Vpu_queue glb_motQ;

@@ -6,9 +6,22 @@
 #include "define.h"
 #include "dpss_inp.h"
 
+static void cfg_inp_secure(struct PRM_DPSS_TOP *prm_top)
+{
+	if (!prm_top->is_secure) {
+		w_reg_bit(FRC_INP_DIN_SW_SEL, 0, 13, 1);
+		w_reg_bit(FRC_INP_SW_FRM_INFO, 0, 4, 2);
+	} else {
+		w_reg_bit(FRC_INP_DIN_SW_SEL, 1, 13, 1);
+		w_reg_bit(FRC_INP_SW_FRM_INFO, 1, 4, 2);
+	}
+
+	dbg_h2("set inp secure:%d\n", prm_top->is_secure);
+}
+
 static void _cfg_dpss_inp(struct PRM_DPSS_TOP *prm_top,
-			  struct PRM_DPSS_INP prm_inp,
-			  struct PRM_INTF_TYPE *inp_yuv_rdmif)
+			struct PRM_DPSS_INP prm_inp,
+			struct PRM_INTF_TYPE *inp_yuv_rdmif)
 {
 	struct AA_PPS_TOP_TYPE *pps = &g_nr_pps_cfg;
 	u32 frm_hsize = pps->di2pps_en ? prm_top->dpe_mc_size.frm_hsize : prm_top->frm_hsize;
@@ -25,6 +38,7 @@ static void _cfg_dpss_inp(struct PRM_DPSS_TOP *prm_top,
 	u32 org_hsize;
 	u32 org_vsize;
 
+	cfg_inp_secure(prm_top);//inp secure
 	if (prm_top->auto_alig_en && prm_top->org_hsize != 0xffff) {
 		org_hsize = pps->di2pps_en ? prm_top->dpe_mc_size.frm_hsize : prm_top->org_hsize;
 		org_vsize = pps->di2pps_en ? prm_top->dpe_mc_size.frm_vsize : prm_top->org_vsize;
