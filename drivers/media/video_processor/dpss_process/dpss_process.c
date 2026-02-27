@@ -2145,6 +2145,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	u32 max_width_new = 0, max_width_last = 0;
 	bool ip_switch = false, tvp_switch = false, rotate180_switch = false;
 	bool need_do_dummy = false, rotate_en = false;
+	bool vf_from_vdin = false;
 	struct dp_buf_mgr_t *cur_buf_mgr;
 	struct dpss_status dpss_state;
 	char do_dpss_type = 0;
@@ -2225,6 +2226,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	if (!dev->last_buf_mgr) {
 		dev->last_buf_mgr = cur_buf_mgr;
 		dev->is_first_frame = true;
+		atomic_set(&input_eos_enabled, 0);
 		dp_print(dev->index, PRINT_OTHER,
 			"new stream is on, first frame is set\n");
 	} else if (cur_buf_mgr != dev->last_buf_mgr) {
@@ -2373,7 +2375,12 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	else
 		frame_info->is_tvp = false;
 
-	if (atomic_read(&input_eos_enabled) == 1) {
+	if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
+		vf->source_type == VFRAME_SOURCE_TYPE_CVBS ||
+		vf->source_type == VFRAME_SOURCE_TYPE_TUNER)
+		vf_from_vdin = true;
+
+	if (atomic_read(&input_eos_enabled) == 1 && !vf_from_vdin) {
 		if (last_instance_frame_index < vf->frame_index) {
 			atomic_set(&input_eos_enabled, 0);
 			dp_print(dev->index, PRINT_OTHER, "frame_index exceeded, eos canceled\n");
