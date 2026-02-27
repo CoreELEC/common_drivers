@@ -56,6 +56,7 @@ int video_display_setframe(int layer_index, struct video_display_frame_info_t *f
 	frames_info.frame_info[layer_index].type = frame_info->type;
 	frames_info.frame_info[layer_index].bitdepth = frame_info->bitdepth;
 	frames_info.frame_info[layer_index].rotation = frame_info->rotation;
+	frames_info.frame_info[layer_index].private_flag = frame_info->private_flag;
 	return vd_set_frames(layer_index, &frames_info);
 }
 EXPORT_SYMBOL(video_display_setframe);

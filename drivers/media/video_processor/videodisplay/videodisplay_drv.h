@@ -71,7 +71,8 @@ struct frame_info_t {
 	u32 buf_stride_w;
 	u32 buf_stride_h;
 	u32 buf_format;
-	u32 reserved[10];
+	u32 private_flag;
+	u32 reserved[9];
 };
 
 struct frames_info_t {

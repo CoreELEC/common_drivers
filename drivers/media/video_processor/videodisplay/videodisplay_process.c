@@ -3425,6 +3425,8 @@ static void vframe_display(struct videodisplay_dev *dev,
 		vf->bitdepth = frame_info->bitdepth;
 	}
 
+	if (frame_info->private_flag & 0x1)
+		vf->source_type = VFRAME_SOURCE_TYPE_HWC;
 	vd_print(dev->index, PRINT_AXIS, "=========dst frame info:==========\n");
 	vd_print(dev->index, PRINT_AXIS, "frame_index=%d.\n", vf->frame_index);
 	vd_print(dev->index, PRINT_AXIS,
@@ -4108,12 +4110,13 @@ static struct vframe_s *vd_vf_get(void *op_arg)
 			 vf->duration);
 
 		vd_print(dev->index, PRINT_OTHER,
-			"%s: prelink_en=%d, vf=%px(%px), frame_index=%d, vf_type=0x%x, vf_flag=0x%x, vf->timestamp: %lld.di_flag=%x, dpss_flg:%x\n",
+			"%s: prelink_en=%d, vf=%px(%px), frame_index=%d, vf->source_type=0x%x, vf_type=0x%x, vf_flag=0x%x, vf->timestamp: %lld.di_flag=%x, dpss_flg:%x\n",
 			__func__,
 			enable_prelink,
 			vf,
 			vf->vf_ext,
 			vf->frame_index,
+			vf->source_type,
 			vf->type,
 			vf->flag,
 			div_u64(vf->timestamp, 1000000000),
@@ -4657,13 +4660,14 @@ int vd_set_frames(int index, struct frames_info_t *frames_info)
 		frames_info->frame_info[index].crop_w,
 		frames_info->frame_info[index].crop_h);
 	vd_print(dev->index, PRINT_AXIS,
-		"%s: option: z:%d, signal_fmt:%d, type:0x%x, bitdepth:%d, rotation:%d.\n",
+		"%s: option: z:%d, signal_fmt:%d, type:0x%x, bitdepth:%d, rotation:%d, pri_flag:%x.\n",
 		__func__,
 		frames_info->frame_info[index].zorder,
 		frames_info->frame_info[index].signal_fmt,
 		frames_info->frame_info[index].type,
 		frames_info->frame_info[index].bitdepth,
-		frames_info->frame_info[index].rotation);
+		frames_info->frame_info[index].rotation,
+		frames_info->frame_info[index].private_flag);
 	vd_print(dev->index, PRINT_AXIS, "***********************************.\n");
 
 	num = get_unused_received_frames_num(dev);

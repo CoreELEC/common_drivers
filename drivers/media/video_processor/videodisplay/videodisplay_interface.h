@@ -43,7 +43,12 @@ struct video_display_frame_info_t {
 	u32 type;
 	u32 bitdepth;
 	u32 rotation;
-	u32 reserved[10];
+	/*
+	 * private_flag: for private parameters outside of the DRM framework, such as hwc
+	 * bit0: is hwc create black frame
+	 */
+	u32 private_flag;
+	u32 reserved[9];
 };
 
 struct mbp_buffer_info_t {
