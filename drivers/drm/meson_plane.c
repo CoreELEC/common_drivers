@@ -1431,6 +1431,8 @@ static int meson_video_plane_atomic_get_property(struct drm_plane *plane,
 
 	if (property == video_plane->signal_fmt_property) {
 		*val = plane_state->signal_fmt;
+	} else if (property == video_plane->frame_flag_prop) {
+		*val = 0;
 	} else if (property == video_plane->video_cap_property) {
 		*val = mvv->video_cap;
 	} else if (property == video_plane->video_src_min_size_property) {
@@ -1462,6 +1464,9 @@ static int meson_video_plane_atomic_set_property(struct drm_plane *plane,
 
 	if (property == video_plane->signal_fmt_property) {
 		plane_state->signal_fmt = val;
+		return 0;
+	} else if (property == video_plane->frame_flag_prop) {
+		plane_state->frame_flag = val;
 		return 0;
 	} else if (property == video_plane->async_in_fence_property) {
 		if (plane_state->async_in_fence)
@@ -2305,6 +2310,7 @@ static int meson_video_plane_atomic_check(struct drm_plane *plane,
 
 	plane_state = to_am_meson_video_plane_state(state);
 	plane_info->signal_fmt = plane_state->signal_fmt;
+	plane_info->frame_flag = plane_state->frame_flag;
 	plane_info->in_fence = plane_state->async_in_fence;
 
 	mvps->video_plane_index[video_plane->plane_index] = video_plane->plane_index;
@@ -3107,6 +3113,21 @@ static void meson_video_create_video_release_fence_property(struct drm_device *d
 	}
 }
 
+static void meson_video_create_frame_flag_property(struct drm_device *drm_dev,
+		struct am_video_plane *video_plane)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0,
+			"video_frame_flag", 0, UINT_MAX);
+	if (prop) {
+		video_plane->frame_flag_prop = prop;
+		drm_object_attach_property(&video_plane->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to create video_frame_flag property\n");
+	}
+}
+
 static int meson_plane_create_dimm_ctrl_property(struct am_osd_plane *osd_plane,
 				   unsigned int bgcolor,
 				   unsigned int min, unsigned int max)
@@ -3338,6 +3359,7 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 				BIT(SIGNAL_FMT_HDR10) |
 				BIT(SIGNAL_FMT_HDR10PRIME) |
 				BIT(SIGNAL_FMT_CUVA_HDR));
+	meson_video_create_frame_flag_property(priv->drm, video_plane);
 
 	drm_plane_helper_add(plane, &am_video_helper_funcs);
 

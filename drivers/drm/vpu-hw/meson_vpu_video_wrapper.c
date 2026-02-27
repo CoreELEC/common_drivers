@@ -67,6 +67,7 @@ static void video_vfm_convert_to_vfminfo(struct meson_vpu_video_state *mvvs,
 	vf_info->zorder = mvvs->zorder;
 	vf_info->byte_stride = mvvs->byte_stride;
 	vf_info->signal_fmt = mvvs->signal_fmt;
+	vf_info->private_flag = mvvs->frame_flag;
 	vf_info->rotation = mvvs->rotation;
 }
 
@@ -237,6 +238,7 @@ static int video_check_state(struct meson_vpu_block *vblk,
 	mvvs->crtc_index = plane_info->crtc_index;
 	mvvs->rotation = plane_info->rotation;
 	mvvs->signal_fmt = video_signal_fmt_cov(plane_info->signal_fmt);
+	mvvs->frame_flag = plane_info->frame_flag;
 	mvvs->in_fence = plane_info->in_fence;
 
 	MESON_DRM_BLOCK("video->dmabuf-[%px %px], plane_info->dmabuf-[%px %px]\n",
@@ -482,9 +484,10 @@ static void video_set_state(struct meson_vpu_block *vblk,
 		mvvs->src_x, mvvs->src_y, mvvs->src_w, mvvs->src_h,
 		mvvs->dst_x, mvvs->dst_y, mvvs->dst_w, mvvs->dst_h);
 
-	MESON_DRM_BLOCK("plane_index=%d,HW-video=%d,stride=%d,rotate=%d,zorder=%d,signal_fmt=%d\n",
+	MESON_DRM_BLOCK("plane_index=%d,HW-video=%d,stride=%d,rotate=%d,zorder=%d,\n"
+			"signal_fmt=%d,frame_flag=%u\n",
 		  mvvs->plane_index, vblk->index, mvvs->byte_stride,
-		  mvvs->rotation, mvvs->zorder, mvvs->signal_fmt);
+		  mvvs->rotation, mvvs->zorder, mvvs->signal_fmt, mvvs->frame_flag);
 	MESON_DRM_BLOCK("phy_addr=(0x%llx,0x%llx),phy_addr2=(0x%llx,0x%llx),repeat_frame=%d\n",
 		  phy_addr, vf_info.phy_addr[0], phy_addr2, vf_info.phy_addr[1],
 		  mvvs->repeat_frame);

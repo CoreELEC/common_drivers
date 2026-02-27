@@ -45,6 +45,7 @@ struct drm_video_release_fence_state {
 struct am_meson_video_plane_state {
 	struct drm_plane_state base;
 	u32 signal_fmt;
+	u32 frame_flag;
 	struct dma_fence *async_in_fence;
 	struct drm_video_present_fence_state video_present_fence_state;
 	struct drm_video_release_fence_state video_release_fence_state;
@@ -138,6 +139,8 @@ struct am_video_plane {
 	struct drm_property *async_in_fence_property;
 	struct drm_property *video_present_fence_property;
 	struct drm_property *video_release_fence_property;
+
+	struct drm_property *frame_flag_prop;
 
 	struct meson_vpu_pipeline *pipeline;
 	spinlock_t lock; //used for video plane dma_fence

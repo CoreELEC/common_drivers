@@ -402,6 +402,7 @@ struct meson_vpu_video_layer_info {
 	u32 status_changed;
 	int sec_en;
 	u32 signal_fmt;
+	u32 frame_flag;
 };
 
 struct meson_vpu_disable_work {
@@ -488,6 +489,7 @@ struct meson_vpu_video_state {
 	bool is_uvm;
 	int sec_en;
 	u32 signal_fmt;
+	u32 frame_flag;
 };
 
 struct meson_vpu_afbc {
