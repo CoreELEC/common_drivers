@@ -496,6 +496,7 @@ struct dpss_game_state_s {
 struct frc_state_s {
 	bool is_frc_vpp_link;
 	bool need_disable_mc_link;
+	bool disable_mc_link_intf;
 	bool mc_link_available;
 	bool have_update_vfcd;
 	bool dpss_reg;

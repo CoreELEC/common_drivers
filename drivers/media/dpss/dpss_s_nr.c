@@ -1144,7 +1144,6 @@ void dpss_val_user(struct dpss_ch_s *pch,
 					pch->c.case_id = TST_CASE_IDX_0107;
 				else
 					pch->c.case_id = TST_CASE_IDX_0000;
-				enable_mc_link = 0; //tmp
 			}
 		} else if (src) {
 			//src 1:
@@ -1160,13 +1159,11 @@ void dpss_val_user(struct dpss_ch_s *pch,
 					pch->c.case_id = TST_CASE_IDX_0157;
 				else
 					pch->c.case_id = TST_CASE_IDX_0102;
-				//enable_mc_link = 1; //tmp
 			} else {
 				if (VFM_IS_I_SRC(vfs->type))
 					pch->c.case_id = TST_CASE_IDX_0107;
 				else
 					pch->c.case_id = TST_CASE_IDX_0000;
-				enable_mc_link = 0; //tmp
 			}
 		}
 	}
@@ -4538,10 +4535,8 @@ void dpss_val_user_frc(struct dpss_ch_s *pch,
 	if (dpss_dbg_tst_case) {
 		pch->c.case_id = dpss_dbg_tst_case;
 	} else {
-		if (pch->c.parm.dps_work_mode == DPSS_WORK_MODE_FRC) {
+		if (pch->c.parm.dps_work_mode == DPSS_WORK_MODE_FRC)
 			pch->c.case_id = TST_CASE_IDX_0002;
-			enable_mc_link = 1; //tmp
-		}
 	}
 	dbg_i0("%s:tst case:%d\n", __func__, pch->c.case_id);
 	//dpss_en_dct = 0;  // only frc set

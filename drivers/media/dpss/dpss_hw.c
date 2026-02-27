@@ -2064,7 +2064,7 @@ void irq_pre_vs(void)
 	src0_disp_obuf_rdy = disp_obuf_trigger(FRC_DST_DONE);
 	state_st->src0_disp_obuf_rdy = src0_disp_obuf_rdy;
 	frc_ocnt_status = src0_disp_obuf_rdy;
-	if (state_st->need_drop_dd || state_st->is_seek_bar)
+	if ((state_st->need_drop_dd || state_st->is_seek_bar) && state_st->dpe_ready)
 		state_st->enable_last_drop = true;
 	else
 		state_st->enable_last_drop = false;
@@ -2371,9 +2371,8 @@ void irq_inp(void)
 	unsigned int inp_in = 0;
 	unsigned int inp_out = 0;
 	unsigned int ro_fd_glb_mot_all = 0;
-	unsigned int ro_inp_status = 0;
-	unsigned int ro_dae_status = 0;
-	unsigned int ro_dpss_proc_status = 0;
+	unsigned int ro_inp_ibuf = 0;
+	unsigned int ro_dae_ibuf = 0;
 	unsigned int ro_fd_glb_mot_all_film = 0;
 	u32 inp_obuf_info;	// = rd(DPSS_FRC_INP_OBUF_WDATA);
 	u32 inp_ibuf_idx;	// = (inp_obuf_info>>4)&0xf;
@@ -2388,10 +2387,8 @@ void irq_inp(void)
 	u64 timestamp = sched_clock();
 
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
-	if (!pfw_data) {
-		dbg_h2("inp pfw_data is null\n");
+	if (!pfw_data)
 		return;
-	}
 	pchip_st = dpss_get_frc_st();
 	if (!pchip_st)
 		return;
@@ -2433,17 +2430,13 @@ void irq_inp(void)
 
 	ro_fd_glb_mot_all = rd(FRC_FD_DIF_GL);
 	ro_fd_glb_mot_all_film = rd(FRC_FD_DIF_GL_FILM);
-	ro_inp_status = rd(DPSS_FRC_INP_BUF_STATUS) & 0xff;
-	ro_dae_status = rd(DPSS_FRC_DAE_BUF_STATUS) & 0xff;
-	ro_dpss_proc_status = rd(DPSS_FRC_PROC_STATUS) >> 8;
+	ro_inp_ibuf = rd(DPSS_FRC_INP_BUF_STATUS) & 0xff;
+	ro_dae_ibuf = rd(DPSS_FRC_DAE_BUF_STATUS) & 0xff;
 
-	// unsigned int frc_reg_top_reserve0 = rd(FRC_REG_TOP_RESERVE0);
 	unsigned int badedit_en = prm_top->badedit_en;
-	// frc_reg_top_reserve0&0x1;
-	// unsigned int inp_done_int     = (frc_reg_top_reserve0>>2)&0x1;
-
 	unsigned int inp_film_phs;
-	enum DPSS_FILM_MODE inp_film_mode;	// = (enum DPSS_FILM_MODE)((inp_film_info>>8)&0xff);
+
+	enum DPSS_FILM_MODE inp_film_mode;
 	unsigned int force_film_mode = rd(FRC_REG_TOP_RESERVE1);
 
 	int i = 0;
@@ -2462,12 +2455,10 @@ void irq_inp(void)
 		dbg_h2("det_film_phs = %d det_filmmode_chg = %d\n",
 		       det_film_phs, det_filmmode_chg);
 	}
-	// printf("inp_irq inp_film_mode=%d, inp_film_phs=%d\n", inp_film_mode, inp_film_phs);
 	nr_dpe_obuf_num = rd(DPSS_FBUF_BUF_CTRL) & 0x1f;
 
 	if (fnr_dpe_obuf_rls_ini == 0 && prm_top->sw_tbc_ctrl_en == 1) {
-		dbg_h2("initial nr_dpe_obuf_fifo when INP_CNT: %d\r\n",
-		       inp_cnt);
+		dbg_h2("initial nr_dpe_obuf_fifo when INP_CNT: %d\n", inp_cnt);
 		fnr_dpe_obuf_rls_ini = 1;
 		for (i = 0; i < nr_dpe_obuf_num; i++) {
 			w_reg_bit(DPSS_FNR_SW_DRV_CTRL1, i & 0xf, 4, 4);	//fnr dpe obuf wrpt
@@ -2502,10 +2493,6 @@ void irq_inp(void)
 		}
 	} else {
 		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) &  0x1) && prm_top->inp_done_int == 1) {
-//			if (prm_dpss_top.sw_tbc_ctrl_en == 0) {
-//				inp_ofrm_vld = config_inp_loop_tab(inp_film_mode,inp_film_phs,0);
-//				config_dae_loop_tab(prm_dpss_top.frc_ratio, inp_film_mode, 1);
-//			}
 			dbg_h2("inp irq 1st frame\n");
 		} else {
 			if (det_filmmode_chg == 1) {
@@ -2553,7 +2540,7 @@ void irq_inp(void)
 
 	if (prm_top->sw_buf_rls_en == 1 && inp_ofrm_vld == 0) {
 		vpu_enqueue(&inp_bufQ, inp_ibuf_idx);
-		dbg_h2("[INP INTR] recyling buf_idx: %#x\n", inp_ibuf_idx);
+		dbg_h2("recyling buf_idx: %#x\n", inp_ibuf_idx);
 	}
 
 	if (prm_top->sw_tbc_ctrl_en == 1 && inp_ofrm_vld == 1) {
@@ -2567,11 +2554,10 @@ void irq_inp(void)
 	}
 
 	dpss_inp_reg_monitor();
-	dbg_h2("INP (stats:%d,inp_cnt(8101):%d, org_in:%d, INP_in:%d, INP_out:%d, sw_int_cnt:%d)\n",
-		ro_inp_status, inp_cnt, inp_org_in, inp_in, inp_out, dpss_inp_frm_cnt);
-	dbg_h2("DAE (stats:%d, glb_mot:%8d, glb_mot_film:%8d, proc_stats:%#8x, film_mode:%2d)\n",
-		ro_dae_status, ro_fd_glb_mot_all, ro_fd_glb_mot_all_film,
-		ro_dpss_proc_status, inp_film_mode);
+	dbg_h2("inp_ibuf:%d, dae_ibuf:%d, sw_int_cnt:%d\n",
+		ro_inp_ibuf, ro_dae_ibuf, dpss_inp_frm_cnt);
+	dbg_h2("glb_mot:%8d, glb_mot_film:%8d, film_mode:%2d, inp_ofrm_vld:%d\n",
+		ro_fd_glb_mot_all, ro_fd_glb_mot_all_film, inp_film_mode, inp_ofrm_vld);
 
 	dpss_inp_frm_cnt++;
 
@@ -2586,7 +2572,7 @@ void irq_inp(void)
 		if (game_st->inp_ctrl)
 			w_reg_bit(FRC_INP_HOLD_CTRL, 1, 31, 1);
 	}
-	// dbg_h2("\t frame %02d done\n",dpss_inp_frm_cnt);
+
 	//don't add  logic after triggle function,add by fxj
 	if (badedit_en) {	////write inp frmae valid flag by fw
 		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1) == 1) {	//1st frame
@@ -2661,23 +2647,8 @@ void dae0_game(void)
 	// frc_int_st->dae0_int_cnt++;
 
 	// u32 frc_stats = rd(DPSS_FRC_PROC_STATUS);
-	dbg_h2("irq_dae0: yline_sync: %#X, cline_sync:%#X\r\n",
+	dbg_h2("yline_sync: %#X, cline_sync:%#X\r\n",
 		rd(VPU_DAE_WRAP_LLM_RO), rd(VPU_DAE_WRAP_LLM_R1));
-
-	if (state_st->mc_bypass_always && state_st->dae0_bypass_mode == 1) {
-		if (frc_int_st->dae0_int_cnt <= 30 && dae_film_mode != DPSS_VIDEO)
-			state_st->dae0_bypass_mode = 0;
-		if (frc_int_st->dae0_int_cnt > 30 && dae_film_mode == DPSS_VIDEO)
-			state_st->dae0_bypass_mode = 2;
-		dbg_f2("irq_dae0: dae0_bypass_mode=%d\n", state_st->dae0_bypass_mode);
-	}
-
-	if (frc_top->memc_enable == 0 || state_st->need_drop_dd)
-		state_st->enable_last_drop = true;
-	else
-		state_st->enable_last_drop = false;
-	if (state_st->force_disable_drop_last)
-		state_st->enable_last_drop = false;
 
 	pre_fid = (dae_out_fid >> 16) & 0xf;
 	cur_fid = (dae_out_fid >> 12) & 0xf;
@@ -2733,7 +2704,6 @@ void irq_dae0(void)
 	// unsigned int frc_reg_top_reserve0 = rd(FRC_REG_TOP_RESERVE0);
 	//unsigned int badedit_en = frc_reg_top_reserve0&0x1;
 	//unsigned int memc_link_en = (frc_reg_top_reserve0>>1)&0x1;
-	unsigned int inp_cnt = rd(FRC_REG_INPUT_FUL_IDX);
 	u32 dae_out_fid = rd(FRC_REG_OUT_FID);
 	u32 pre_fid;
 	u32 cur_fid;
@@ -2823,24 +2793,13 @@ void irq_dae0(void)
 				state_st->mc_link_available = true;
 		}
 	}
-	dbg_h2("phs_swth=%d,pre_fid = %d,cur_fid = %d,nxt_fid= %d\r\n",
+	dbg_h2("phs_swth=%d,pre_fid = %d,cur_fid = %d,nxt_fid= %d\n",
 	       phs_swth, pre_fid, cur_fid, nxt_fid);
-
-	dbg_h2("inp_cnt = %d frc_dae_cnt = %d dpss_dae_frm_cnt_src0 = %d\n",
-			inp_cnt, frc_int_st->dae0_int_cnt, dpss_dae_frm_cnt_src0);
-
-	dbg_h2("DAE (dae_in_idx(80a3):%d,dae_idx(80a4):%d,fbuf_dae_idx(83e8):%d,sw_dae_cnt:%d)\n",
-		rd(FRC_DAE_IN_FRM_IDX), rd(FRC_DAE_FRM_IDX),
-		rd(DPSS_FBUF_DAE_FRM_IDX), frc_int_st->dae0_int_cnt);
-	dbg_h2("DAE (stats:%d, film:%d)\n",
-		rd(DPSS_FRC_DAE_BUF_STATUS), dae_film_mode);
+	dbg_h2("dae_film_mode:%d, sw_dae_cnt:%d\n",
+		dae_film_mode, frc_int_st->dae0_int_cnt);
 	dpss_dae_frm_cnt_src0++;
 	prm_top->frame_count = dpss_dae_frm_cnt_src0;
 
-	dbg_h2("trig_byp_flag:%d, pre_org_size(%d,%d), top_org_size(%d,%d)\n",
-		prm_top->trig_byp_dae0,
-		pre_org_hsize, pre_org_vsize,
-		prm_top->org_hsize, prm_top->org_vsize);
 	if (prm_top->trig_byp_dae0) {
 		prm_top->frc_me_en = 0;
 		pre_org_hsize = prm_top->org_hsize;
@@ -2853,7 +2812,8 @@ void irq_dae0(void)
 		//w_reg_bit(VPU_DAE_WRAP_MIF_MASK, 1, 9, 1);  // dae ro 11.11 from yaotao
 		wr(VPU_DAE_WRAP_GCLK_CTRL0, 0xaaaaaaaa); // dae clk 11.13 from yaotao
 		wr(VPU_DAE_WRAP_GCLK_CTRL1, 0xaaaaaaaa); // dae clk 11.13 from yaotao
-		dbg_h2("trig byp dae0\n");
+		dbg_h2("trig byp dae0,top_org_size(%d,%d)\n",
+			prm_top->org_hsize, prm_top->org_vsize);
 	} else if (dae0_byp_cnt) {
 		dae0_byp_cnt--;
 		dbg_h2("trig byp dae0 cnt:%d\n", dae0_byp_cnt);

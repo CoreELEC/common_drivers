@@ -34,8 +34,9 @@
 // dpss:20251028 set io_ctrl enable by self
 // dpss:20251125 add frc bypass when dpss reset
 // dpss:20260106 pre vsync rdma
+// dpss:20260208 add game memc
 
-#define DPSS_FRC_FW_VER			"20260208 add game memc"
+#define DPSS_FRC_FW_VER			"20260227 refine frc sw execution flow"
 #define DPSS_FRC_KERDRV_VER                  1000
 
 //#define DPSS_FRC_DEVNO		1

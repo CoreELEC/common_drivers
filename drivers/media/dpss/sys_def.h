@@ -161,7 +161,6 @@ extern unsigned int dpss_dct_en;
 extern unsigned int dpss_cfr_en;
 extern unsigned int dpss_cue_en;
 extern unsigned int dpss_pq_en;
-extern int enable_mc_link;
 extern unsigned int dpss_frc_bypass;
 extern unsigned int dpss_me_en;
 extern unsigned int dpss_xlr_en;

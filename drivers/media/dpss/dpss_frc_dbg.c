@@ -71,17 +71,18 @@ void dpss_frc_status(void)
 	pr_frc(0, "memc_level\t= [dejudder:%d(%d), deblur:%d]\n",
 			frc_top->frc_memc_level, frc_top->frc_memc_level_1,
 			frc_top->frc_deblur_level);
-	pr_frc(0, "ratio_n2m\t= [%d : %d]\n", frc_top->frc_input_n,
-			frc_top->frc_output_m);
-	pr_frc(0, "film\t= %d\n", (rd(FRC_REG_PHS_TABLE) >> 8) & 0xFF);
+	pr_frc(0, "ratio_n2m\t= [%d : %d]\tfilm\t= %d\n", frc_top->frc_input_n,
+			frc_top->frc_output_m, (rd(FRC_REG_PHS_TABLE) >> 8) & 0xFF);
 	pr_frc(0, "mc_link_enable\t= [dpss:%2d, vd1_mc:%2d]\n", rd(FRC_DPSS_VPP_LINK) & 0x1,
 			!is_vd1_link_state());
-	pr_frc(0, "mc_link_ctrl\t= [%2d,%2d,%2d,%2d,%2d]\n",
+	pr_frc(0, "mc_link_ctrl\t= [%2d,%2d,%2d,%2d,%2d,%2d]\n",
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
-			state_st->need_disable_mc_link, state_st->unformat_bypass);
+			!state_st->need_disable_mc_link, !state_st->disable_mc_link_intf,
+			!state_st->unformat_bypass);
 	pr_frc(0, "pre_vsync_offset\t= %d\n",
 			rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
 	pr_frc(0, "mc_bypass\t= %d\n", rd(FRC_MC_HW_CTRL0) & 0x3);
+	pr_frc(0, "eos enable\t= %d\n", state_st->enable_last_drop);
 	pr_frc(0, "game_n2m = %d, game_film= %d\n",
 		game_st->game_n2m, game_st->game_film);
 
@@ -1995,8 +1996,6 @@ ssize_t dpss_frc_debug_param_if_help(char *buf)
 			dbg_st->ctrl_dbg.mc_rdmif_err_reset_en);
 	len += sprintf(buf + len, "check_reg_status\t= %d\n",
 			dbg_st->ctrl_dbg.check_reg_status);
-	len += sprintf(buf + len, "enable_last_drop\t=%d\n",
-			state_st->enable_last_drop);
 	len += sprintf(buf + len, "need_disable_mc_link\t= %d\n",
 			state_st->need_disable_mc_link);
 	return len;

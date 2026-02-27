@@ -811,9 +811,6 @@ u32 config_inp_loop_tab(enum DPSS_FILM_MODE film_mode, u32 film_phs,
 	inp_ofrm_vld = (inp_ofrm_loop_tab >> film_phs) & 0x1;//done
 	config_inp_ofrm_flg(inp_ofrm_vld);
 
-	dbg_h2("film_mode: %x film_phs: %x tab: %x inp_ofrm_vld: %x\n",
-	       film_mode, film_phs, inp_ofrm_loop_tab, inp_ofrm_vld);
-
 	if (badedit_en) {
 		//inp_ofrm_vld = (inp_ofrm_loop_tab>>film_phs)&0x1;//done
 		//config_inp_ofrm_flg(inp_ofrm_vld);

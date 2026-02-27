@@ -1254,7 +1254,7 @@ void hw_cfg_dpss_dae0_frc(enum DPSS_WORK_MODE  dae_mode,
 
 	w_reg_bit(VPU_DAE_WRAP_CTRL, src_is_byps, 31, 1);//reg_dae_byps
 	if (src_is_byps) {
-		dbg_f2("dae0 bypass\n");
+		dbg_f2("irq_dae0:dae0 bypass\n");
 		return;
 	}
 
@@ -1317,14 +1317,7 @@ void hw_cfg_dpss_dae0_frc(enum DPSS_WORK_MODE  dae_mode,
 		ini_cfg_frc_dae = 0;
 		pre_me_hsize = me_hsize;
 		pre_me_vsize = me_vsize;
-		dbg_h2("me size chg\n");
-	}
-
-	if (pre_me_hsize != me_hsize || pre_me_vsize != me_vsize) {
-		ini_cfg_frc_dae = 0;
-		pre_me_hsize = me_hsize;
-		pre_me_vsize = me_vsize;
-		dbg_h2("me size chg\n");
+		dbg_h2("irq_dae0:me size chg\n");
 	}
 
 	cfg_dae_secure(dae_mode, prm_top, prm_dae); //secure
@@ -1390,8 +1383,7 @@ void hw_cfg_dpss_dae0_frc(enum DPSS_WORK_MODE  dae_mode,
 	u32 chrm_raddr = chrm_baddr_x16[cur_rd_idx] << 5;
 
 	if (dae_sw_en == 0 && prm_top->fnr_sw_mode == 0) { //ary ? need set?? for auto mode
-		dbg_h2("%s:y_addr = 0x%x, uv_addr = 0x%x\n", __func__, luma_raddr, chrm_raddr);
-		dbg_h2("%s: DAE_WRAP_SW_ADDR11 <= 0x%x, next_y_addr?\n", __func__, luma_raddr);
+		dbg_h2("irq_dae0:y_addr = 0x%x, uv_addr = 0x%x\n", luma_raddr, chrm_raddr);
 		wr(VPU_DAE_WRAP_SW_ADDR11, luma_raddr);//nxt_luma_addr
 		wr(VPU_DAE_WRAP_SW_ADDR12, chrm_raddr);//nxt_chrm_addr
 	}

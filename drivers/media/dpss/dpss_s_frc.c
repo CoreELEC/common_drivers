@@ -491,6 +491,8 @@ void dpss_frc_check_undone_stats(void)
 		mc_reset_cnt,
 		g_frc_work_stats.undone_stats.frc_mc_undone_vcnt,
 		g_frc_work_stats.undone_stats.frc_mc);
+	PR_FRC("undone cnt[mc:%d  inp:%d  me:%d  vp:%d]\n",
+		mc_undone_cnt, inp_undone_cnt, me_undone_cnt, vp_undone_cnt);
 }
 
 void check_dpss_frc_status(void)
@@ -1285,13 +1287,10 @@ void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch)
 	}
 	if (state_st->unformat_bypass) {
 		if (prm_top->frm_vsize * 100 / prm_top->frm_hsize > 124 &&
-				prm_top->frm_hsize < 1300) {
+				prm_top->frm_hsize < 1300)
 			state_st->special_format = 1;
-			dpss_enable_mc_link(0);
-		} else {
+		else
 			state_st->special_format = 0;
-			// dpss_enable_mc_link(1);
-		}
 	}
 }
 
@@ -2847,10 +2846,10 @@ int pvpp_display_frc(struct vframe_s *vfm,
 		return ret;
 	}
 
-	if (!state_st->dpss_reg || !state_st->dpe_ready ||
-			!enable_mc_link || state_st->need_disable_mc_link ||
-			(state_st->unformat_bypass && state_st->special_format == 1) ||
-			dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt)
+	if (!state_st->dpss_reg || !state_st->dpe_ready || !enable_mc_link ||
+		state_st->need_disable_mc_link || state_st->disable_mc_link_intf ||
+		(state_st->unformat_bypass && state_st->special_format == 1) ||
+		dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt)
 		goto exit;
 
 	is_vd1_link = is_vd1_link_state();
@@ -2927,10 +2926,11 @@ exit:
 		state_st->check_fallback = 0;
 		state_st->mc_link_available = false;
 		state_st->dae0_available_cnt = 0;
-		dbg_f2("reg=%d,dpe_ready=%d,enable_mc_link=%d,disable_mc_link=%d,unformat=%d,%d",
+
+		dbg_f2("reg=%d,dpe_ready=%d,enable_mc_link=%d,dis_mc_link=%d,%d,unformat=%d,%d",
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
-			state_st->need_disable_mc_link, state_st->unformat_bypass,
-			state_st->special_format);
+			state_st->need_disable_mc_link, state_st->disable_mc_link_intf,
+			state_st->unformat_bypass, state_st->special_format);
 	}
 	return 0;
 }
@@ -3007,8 +3007,8 @@ bool get_mc_link_property_change(void)
 		return false;
 	state_st = &pchip_st->state_st;
 	is_vd1_link = is_vd1_link_state();
-	if (!is_vd1_link || !state_st->dpss_reg ||
-		!enable_mc_link || state_st->need_disable_mc_link)
+	if (!is_vd1_link || !state_st->dpss_reg || !enable_mc_link ||
+		state_st->need_disable_mc_link || state_st->disable_mc_link_intf)
 		return false;
 	dbg_f2("notify vpp enable mc link\n");
 	return true;
@@ -3020,16 +3020,12 @@ void dpss_enable_mc_link(bool enable)
 	struct frc_state_s *state_st;
 
 	pchip_st = dpss_get_frc_st();
-	state_st = pchip_st ? &pchip_st->state_st : NULL;
-
-	if (state_st &&
-		state_st->unformat_bypass == 1 &&
-		state_st->special_format == 1) {
-		dbg_f1("%s switch to vd1\n", __func__);
+	if (!pchip_st)
 		return;
-	}
-	enable_mc_link = enable;
-	dbg_f1("%s enable mc link:%d\n", __func__, enable_mc_link);
+	state_st = &pchip_st->state_st;
+
+	state_st->disable_mc_link_intf = !enable;
+	dbg_f1("disable_mc_link_intf=%d\n", state_st->disable_mc_link_intf);
 }
 
 void frc_unreg_hw(u32 ch)
@@ -3748,6 +3744,7 @@ void dpss_frc_check_reg_stats(void)
 	frm_width = (frm_size >> 16) & 0x1FFF;
 	src_height = src_size & 0x1FFF;
 	src_width = (src_size >> 16) & 0x1FFF;
+	PR_FRC("mc cut enable:%d\n", rd(DPSS_DPE_MC_MIF_CTRL0) >> 8 & 0x1);
 	PR_FRC("cut posi after mc\t[%d, %d], [%d, %d]\n",
 		frm_height, src_height, frm_width, src_width);
 	PR_FRC("cut size after mc\t[%d, %d]\n",
@@ -4373,7 +4370,7 @@ int dpss_frc_get_video_latency_for_gd(void)
 	frc_ratio = state_st->n2m_status.frc_ratio;
 	is_mc_link = !is_vd1_link_state();
 
-	if (enable_mc_link && is_mc_link) {
+	if (is_mc_link) {
 		if (frm_rate == 0)
 			return -1;
 		else if (frc_ratio == DPSS_FRC_RATIO_1_1 &&
@@ -4432,7 +4429,7 @@ int dpss_frc_get_video_latency_for_gd1(void)
 	frc_ratio = state_st->n2m_status.frc_ratio;
 	is_mc_link = !is_vd1_link_state();
 
-	if (enable_mc_link && is_mc_link) {
+	if (is_mc_link) {
 		if (frm_rate == 0)
 			return -1;
 		else if (frc_ratio == DPSS_FRC_RATIO_1_1 &&
@@ -4563,7 +4560,7 @@ int dpss_frc_get_video_latency(void)
 	if (frc_top->memc_enable != 1) {
 		delay_time = 0;
 		// dbg_f2("delay_time=0, memc_enable:%d", frc_top->memc_enable);
-	} else if (enable_mc_link && is_mc_link) {
+	} else if (is_mc_link) {
 		memc_bypass = rd(FRC_MC_HW_CTRL0) & 0x1;
 		// if (memc_bypass == 1) {
 		//	delay_time = 0;
@@ -4629,7 +4626,7 @@ int dpss_frc_get_video_latency_new(u32 input_fps, u32 output_fps)
 	if (frc_top->memc_enable != 1) {
 		delay_time = 0;
 		// dbg_f2("delay_time=0, memc_enable:%d", frc_top->memc_enable);
-	} else if (enable_mc_link && is_mc_link) {
+	} else if (is_mc_link) {
 		memc_bypass = rd(FRC_MC_HW_CTRL0) & 0x1;
 		// if (memc_bypass == 1) {
 		//	delay_time = 0;
