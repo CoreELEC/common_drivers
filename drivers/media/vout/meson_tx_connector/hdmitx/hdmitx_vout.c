@@ -148,6 +148,7 @@ static void update_vinfo_from_format_para(struct hdmitx_common *tx_comm)
 	fmtpara = &tx_comm->fmt_para;
 	/* update vinfo for out device */
 	calc_vinfo_from_hdmi_timing(tx_comm, &fmtpara->timing, vinfo);
+	vinfo->vout_device = tx_comm->vdev;
 	/*
 	 * vinfo->info_3d = NON_3D;
 	 * if (fmtpara->flag_3dfp)
@@ -227,6 +228,7 @@ static enum vmode_e hdmitx_validate_vmode(char *_mode, unsigned int frac, void *
 	struct hdmitx_common *tx_comm = tx_dev_to_hdmitx_common(tx_dev);
 	struct vinfo_s *vinfo = NULL;
 	const struct tx_timing *timing = 0;
+	struct tx_timing t;
 	char conv_name[32] = {0};
 	char *mode = _mode;
 
@@ -244,15 +246,49 @@ static enum vmode_e hdmitx_validate_vmode(char *_mode, unsigned int frac, void *
 		mode = conv_name;
 	}
 	timing = meson_tx_mode_match_timing_name(mode);
+	t = *timing;
+	if (frac)
+		meson_tx_mode_update_timing(&t, frac);
 	if (hdmitx_common_validate_vic(tx_comm, timing->vic) == 0) {
 		/* probe will check valid mode, there needn't update vinfo */
-		calc_vinfo_from_hdmi_timing(tx_comm, timing, vinfo);
+		calc_vinfo_from_hdmi_timing(tx_comm, &t, vinfo);
 		vinfo->vout_device = tx_comm->vdev;
 		return VMODE_HDMI;
 	}
 
 	HDMITX_ERROR("%s validate %s fail\n", __func__, _mode);
 	return VMODE_MAX;
+}
+
+static unsigned int hdmitx_get_viu_mux(char *_mode, void *data)
+{
+	struct hdmitx_common *tx_comm = (struct hdmitx_common *)data;
+	const struct tx_timing *timing = 0;
+	char conv_name[32] = {0};
+	char *mode = _mode;
+	unsigned int viu_mux;
+
+	/* vout validate vmode only used to confirm the mode is
+	 * supported by this server. And don't check with edid,
+	 * maybe we don't have edid when this function called.
+	 */
+	if (hdmitx_is_mode_name_frac(mode)) {
+		hdmitx_convert_name_frac2int(mode, conv_name);
+		mode = conv_name;
+	}
+	timing = meson_tx_mode_match_timing_name(mode);
+
+	if (hdmitx_common_validate_vic(tx_comm, timing->vic) == 0) {
+		viu_mux = timing->pi_mode ? VIU_MUX_ENCP : VIU_MUX_ENCI;
+		/* 1080i use the ENCP, not ENCI */
+		if (timing->name && strstr(timing->name, "1080i"))
+			viu_mux = VIU_MUX_ENCP;
+		viu_mux |= tx_comm->enc_idx << 4;
+		return viu_mux;
+	}
+
+	HDMITX_ERROR("%s validate %s fail\n", __func__, _mode);
+	return 0;
 }
 
 static int hdmitx_vmode_is_supported(enum vmode_e mode, void *data)
@@ -296,6 +332,7 @@ void hdmitx_vout_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *tx
 		.set_vframe_rate_hint = NULL,
 		.get_vframe_rate_hint = NULL,
 		.set_bist = NULL,
+		.get_viu_mux = hdmitx_get_viu_mux,
 		.vout_suspend = NULL,
 		.vout_resume = NULL,
 	};

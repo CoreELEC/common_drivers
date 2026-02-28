@@ -3565,50 +3565,6 @@ unsigned int hdmitx_common_get_scdc_ln2_ln3_ltp(struct hdmitx_common *tx_comm)
 }
 EXPORT_SYMBOL(hdmitx_common_get_scdc_ln2_ln3_ltp);
 
-int hdmitx_get_connector(void)
-{
-	int i = 0;
-	int j = 0;
-	static const char * const hdmi_types[] = {
-		/* venc0 */
-		"HDMI-A-A",
-		/* venc1 */
-		"HDMI-A-B",
-		/* venc2 */
-		"HDMI-A-C",
-	};
-	char *conn_types[3] = {};
-	char *type;
-
-	conn_types[0] = get_uboot_connector0_type();
-#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-	conn_types[1] = get_uboot_connector1_type();
-#endif
-#ifdef CONFIG_AMLOGIC_VOUT3_SERVE
-	conn_types[2] = get_uboot_connector2_type();
-#endif
-	if (conn_types[0])
-		HDMITX_INFO("%s[%d] %s\n", __func__, __LINE__, conn_types[0]);
-	if (conn_types[1])
-		HDMITX_INFO("%s[%d] %s\n", __func__, __LINE__, conn_types[1]);
-	if (conn_types[2])
-		HDMITX_INFO("%s[%d] %s\n", __func__, __LINE__, conn_types[2]);
-
-	for (j = 0; j < ARRAY_SIZE(conn_types); j++) {
-		type = conn_types[j];
-		if (!type)
-			continue;
-		for (i = 0; i < ARRAY_SIZE(hdmi_types); i++) {
-			if (strncmp(type, hdmi_types[i], strlen(hdmi_types[i])) == 0)
-				return i;
-		}
-	}
-	if (i < ARRAY_SIZE(hdmi_types))
-		return i;
-
-	return 0;
-}
-
 struct tx_mode_name {
 	char *integer_name;
 	char *frac_name;

@@ -162,7 +162,7 @@ unsigned int hdmitx_rd_reg_g12a(unsigned int addr)
 {
 	unsigned int large_offset = addr >> 24;
 	unsigned int small_offset = addr & ((1 << 24)  - 1);
-	unsigned long hdmitx_addr = 0;
+	unsigned int hdmitx_addr = 0;
 	unsigned int val;
 
 	switch  (large_offset) {
@@ -225,7 +225,7 @@ void hdmitx_wr_reg_g12a(unsigned int addr, unsigned int data)
 {
 	unsigned int large_offset = addr >> 24;
 	unsigned int small_offset = addr & ((1 << 24)  - 1);
-	unsigned long hdmitx_addr = 0;
+	unsigned int hdmitx_addr = 0;
 
 	switch (large_offset) {
 	case 0x10:

@@ -38,8 +38,7 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 		HDMITX_ERROR("%s current hpd_state/suspend (%d,%d), exit\n",
 			__func__, tx_comm->base.hpd_state, tx_comm->suspend_flag);
 		meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_SKIP);
-		mutex_unlock(&tx_comm->base.valid_mode_mutex);
-		return -1;
+		tx_comm->skip_phy_setting = true;
 	}
 
 	memcpy(&tx_comm->fmt_para, para, sizeof(struct meson_tx_format_para));
@@ -80,8 +79,7 @@ static int hdmitx_common_enable_mode(struct hdmitx_common *tx_comm,
 		HDMITX_ERROR("[%s]: invalid input\n", __func__);
 		return -EINVAL;
 	}
-	hdmitx_hw_cntl(tx_comm->tx_hw, MODE_FLOW_ENABLE_MODE, NULL, NULL);
-	return 0;
+	return hdmitx_hw_cntl(tx_comm->tx_hw, MODE_FLOW_ENABLE_MODE, NULL, NULL);
 }
 
 static int hdmitx_common_post_enable_mode(struct hdmitx_common *tx_comm,
@@ -148,17 +146,18 @@ int hdmitx_common_do_mode_setting(struct hdmitx_common *tx_comm,
 	mutex_lock(&tx_comm->base.set_mode_mutex);
 	if (new_state->sequence_id != tx_comm->base.hw_sequence_id) {
 		HDMITX_ERROR("sequence_id failed %lld\n", new_state->sequence_id);
-		goto fail;
+		tx_comm->skip_phy_setting = true;
 	}
 	ret = hdmitx_common_pre_enable_mode(tx_comm, new_para);
 	if (ret < 0) {
 		HDMITX_ERROR("pre mode enable fail\n");
-		goto fail;
+		tx_comm->skip_phy_setting = true;
 	}
 
 	ret = hdmitx_common_enable_mode(tx_comm, new_para);
 	if (ret < 0) {
 		HDMITX_ERROR("mode enable fail\n");
+		tx_comm->skip_phy_setting = false;
 		goto fail;
 	}
 

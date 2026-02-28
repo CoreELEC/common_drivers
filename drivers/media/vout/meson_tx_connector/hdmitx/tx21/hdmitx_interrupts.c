@@ -550,6 +550,22 @@ static irqreturn_t vsync_intr_handler(int irq, void *dev)
 		hdev->tx_comm.tx_hw->tmds_phy_op = TMDS_PHY_NONE;
 	}
 
+	if (hdev->tx_comm.hdr_state->csc_config_in_next_frame) {
+		/*
+		 * avi infoframe takes effect on the next frame, so it needs
+		 * to be updated one frame in advance
+		 */
+		if (hdev->tx_comm.hdr_state->csc_delay_frame == CSC_DELAY_FRAME - 1)
+			hdmitx21_csc_update_avi_infoframe(hdev,
+				hdev->tx_comm.hdr_state->output_color_format);
+		/* after csc is configured, the frame takes effect */
+		if (hdev->tx_comm.hdr_state->csc_delay_frame == CSC_DELAY_FRAME) {
+			hdev->tx_comm.hdr_state->csc_config_in_next_frame = false;
+			hdmitx21_color_convert(hdev, hdev->tx_comm.hdr_state->output_color_format);
+		}
+		hdev->tx_comm.hdr_state->csc_delay_frame += 1;
+	}
+
 	return IRQ_HANDLED;
 }
 

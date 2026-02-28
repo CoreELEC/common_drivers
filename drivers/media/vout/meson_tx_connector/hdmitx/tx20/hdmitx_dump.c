@@ -1645,9 +1645,9 @@ static const struct proc_ops dump_hdmirx_info_pops = {
 static int dump_clkmsr_show(struct seq_file *s, void *v)
 {
 	struct hdmitx_common *tx_comm = s->private;
-	char buf[1024];
+	char buf[1000];
 
-	tx_comm->tx_hw->get_clk(buf, 1024);
+	tx_comm->tx_hw->get_clk(buf, 1000);
 	seq_printf(s, "%s\n", buf);
 	return 0;
 }

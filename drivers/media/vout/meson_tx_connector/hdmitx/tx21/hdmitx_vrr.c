@@ -728,9 +728,11 @@ static const struct mvrr_const_val *search_vrrconf_mconst(enum hdmi_vic brr_vic,
 		}
 	}
 
-	if (!table_val)
+	if (!table_val) {
 		HDMITX_DEBUG_QMS("%s[%d] not find brr_vic: %d duration: %d\n",
 			__func__, __LINE__, brr_vic, duration);
+		return NULL;
+	}
 
 	return *table_val;
 }

@@ -317,8 +317,10 @@ static void hdmitx21_disable_hdcp(void *hdcptx_instance)
 	cancel_delayed_work(&p_hdcp->work_start_hdcp);
 	if (hdcp_comm->hdcp_mode != 0) {
 		hdcptx_cancel_works(p_hdcp);
-		hdcp_comm->hdcp_mode = 0;
 		hdcptx_mode_set(p_hdcp, 0);
+		/* need to update hdcp auth result */
+		get_hdcptx_result(hdcp_comm, hdcp_comm->hdcp_mode);
+		hdcp_comm->hdcp_mode = 0;
 		mdelay(10);
 		hdmitx21_ctrl_hdcp_gate(hdcp_comm->chip_type, 0, false);
 	}

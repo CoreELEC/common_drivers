@@ -463,8 +463,13 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 		ret = hw_comm->chip_data->hdmitx_ops->init_reg_map(pdev);
 		if (ret < 0)
 			HDMITX_ERROR("ERROR: hdmitx io_remap fail!\n");
+		ret = of_property_read_u32(pdev->dev.of_node,
+					   "enc_idx", &val);
+		if (!ret && val == 2)
+			tx_comm->enc_idx = 2;
+		else
+			tx_comm->enc_idx = 0;
 
-		tx_comm->enc_idx = hdmitx_get_connector();
 		HDMITX_INFO("enc_idx %d\n", tx_comm->enc_idx);
 	}
 #else
@@ -809,7 +814,9 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	hdmitx_common_init_bootup_format_para(tx_comm, &tx_comm->fmt_para);
 	/* load init hdr state from HW info */
 	hdmitx_hdr_load_hw_state(tx_comm);
-	hdmitx_bootup_post_process(tx_comm);
+	/* only when hpd is high does it need to update vinfo and send the div40 signal */
+	if (hpd_state)
+		hdmitx_bootup_post_process(tx_comm);
 
 	/* after unlock, now can take actions of bottom half of hpd irq */
 	mutex_unlock(&tx_comm->base.set_mode_mutex);

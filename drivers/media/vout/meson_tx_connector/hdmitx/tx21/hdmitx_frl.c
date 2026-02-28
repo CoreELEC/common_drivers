@@ -452,7 +452,7 @@ tx_lts_3:
 		if (!p->flt_running)
 			return;
 		HDMITX_INFO("FRL: %s\n", flt_tx_string[FLT_TX_LTS_3]);
-		hdmitx_soft_reset(BIT(0));
+		hdmitx_soft_reset(RESET_18OR10TO20);
 		/* LTS:3 Source conducts Link Training for the specified FRL_Rate */
 		frl_tx_pattern_init(0x8765);
 

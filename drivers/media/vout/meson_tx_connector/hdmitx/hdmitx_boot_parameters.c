@@ -208,7 +208,7 @@ static int parse_hdmitx_hdr_priority(char *str)
 
 	err = kstrtou32(str, 10, &value);
 	if (err) {
-		HDMITX_ERROR("%s fail\n", __func__);
+		HDMITX_INFO("can't get hdr_priority\n");
 		tx_params.hdr_mask = 0;
 		return err;
 	}

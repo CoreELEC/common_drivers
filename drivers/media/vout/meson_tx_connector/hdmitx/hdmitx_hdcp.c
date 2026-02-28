@@ -155,10 +155,9 @@ int hdmitx_hdcp_stat_monitor_task(void *data)
 				tx_comm->hdcptx_comm.hdcp_mode, auth_stat);
 
 			/* status update, only collect the metric when hdmi is plugged in. */
-			if (tx_comm->base.hpd_state == 1) {
+			if (tx_comm->base.hpd_state == 1)
 				hdmitx_current_status(tx_comm, auth_stat ?
 					TX_HDCP_AUTH_SUCCESS : TX_HDCP_AUTH_FAILURE);
-			}
 
 			/* notify hdcp result to drm */
 			if (tx_comm->hdcptx_comm.hdcp_ctl_lvl > 0)

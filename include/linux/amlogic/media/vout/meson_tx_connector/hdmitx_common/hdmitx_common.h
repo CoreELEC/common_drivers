@@ -29,9 +29,11 @@
 #define HDMITX21 21
 #define DEVICE_NAME "amhdmitx"
 
-#define HDMI_TX_POOL_NUM  6
+#define HDMI_TX_POOL_NUM	6
 #define HDMI_TX_RESOURCE_NUM 4
 #define HDMI_TX_PWR_CTRL_NUM	6
+/* this value must be >= 1 */
+#define CSC_DELAY_FRAME		2
 
 typedef void (*audio_en_callback)(bool enable);
 typedef int (*audio_st_callback)(void);
@@ -258,6 +260,9 @@ struct meson_tx_hdr {
 	u32 hdr_8bit_en;
 	/* enable flag for color space conversion */
 	bool config_csc_en;
+	u32 output_color_format;
+	bool csc_config_in_next_frame;
+	u8 csc_delay_frame;
 
 	/* hdr10plus flag */
 	unsigned int hdr10plus_feature;
@@ -399,6 +404,11 @@ struct hdmitx_common {
 	struct vpu_dev_s *hdmi_vpu_dev;
 	struct vpu_dev_s *hdmitx_vpu_clk_gate_dev;
 #endif
+	/* when the mode setting fails, it is necessary to ensure
+	 * that vsync is enabled so that subsequent actions are not
+	 * blocked. Phy cannot be enabled to avoid affecting TV
+	 */
+	bool skip_phy_setting;
 	u8 scan_info;
 
 	/* 7. audio mode related */
@@ -612,7 +622,6 @@ int drm_hdmitx_common_register_hdcp_notify(struct hdmitx_common *tx_comm,
 					   struct connector_hdcp_cb *cb);
 int drm_hdmitx_common_get_dw_hdcp_topo_info(struct hdmitx_common *tx_comm);
 
-int hdmitx_get_connector(void);
 void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *cmd_str);
 /*******************************hdmitx common api end*******************************/
 

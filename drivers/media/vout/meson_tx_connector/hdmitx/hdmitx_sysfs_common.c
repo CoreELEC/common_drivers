@@ -992,7 +992,7 @@ static ssize_t vesa_cap_show(struct device *dev,
 	enum hdmi_vic *vesa_t = &tx_comm->base.rxcap.vesa_timing[0];
 	int pos = 0;
 
-	for (i = 0; vesa_t[i] && i < VESA_MAX_TIMING; i++) {
+	for (i = 0; i < VESA_MAX_TIMING && vesa_t[i]; i++) {
 		const struct tx_timing *timing = meson_tx_mode_vic_to_timing(vesa_t[i]);
 
 		if (timing && timing->vic >= HDMITX_VESA_OFFSET)

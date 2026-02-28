@@ -34,6 +34,14 @@
 
 #define HDCPTX_IOOPR		0x820000ab
 
+/* hdmitx soft reset */
+#define RESET_18OR10TO20		0x01
+#define RESET_SOFTWARE_LOGIC	0x02
+#define RESET_CIPHER_ENGINE		0x04
+#define RESET_HW_TPI			0x08
+#define RESET_HDCP2X_LOGIC		0x10
+#define RESET_PFIFO				0x20
+
 /* 1. interrupts struct */
 struct intr_t;
 typedef void(*hdmi_intr_cb)(struct intr_t *, void *);

@@ -704,6 +704,8 @@ static void hdmitx20_private_data_init(struct hdmitx20_dev *hdev)
 	/* not capable of DSC/FRL */
 	hdev->hw_comm.hdmi_tx_cap.dsc_capable = false;
 	hdev->hw_comm.hdmi_tx_cap.tx_max_frl_rate = FRL_NONE;
+	/* hdmitx20 does not support qms, so the qms capability in edid needs to be masked */
+	hdev->tx_comm.edid_mask_qms = 1;
 
 	if (hdev->hw_comm.chip_data->chip_type == MESON_CPU_ID_TM2 ||
 		hdev->hw_comm.chip_data->chip_type == MESON_CPU_ID_TM2B) {
@@ -890,9 +892,432 @@ next:
 	return IRQ_HANDLED;
 }
 
+/* 1: negative, 0: positive */
+static unsigned int is_sync_polarity_negative(unsigned int vic)
+{
+	unsigned int ret = 0;
+
+	if (vic >= 1 && vic <= 3)
+		ret = 1;
+	else if (vic >= 6 && vic <= 15)
+		ret = 1;
+	else if (vic >= 17 && vic <= 18)
+		ret = 1;
+	else if (vic >= 21 && vic <= 30)
+		ret = 1;
+	else if (vic >= 35 && vic <= 38)
+		ret = 1;
+	else if (vic >= 42 && vic <= 45)
+		ret = 1;
+	else if (vic >= 48 && vic <= 59)
+		ret = 1;
+	else
+		ret = 0;
+	return ret;
+}
+
+static void hdmitx_dith_ctrl(struct hdmitx20_dev *hdev)
+{
+	unsigned int hs_flag = 0;
+
+	switch (hdev->tx_comm.fmt_para.cd) {
+	case COLORDEPTH_30B:
+	case COLORDEPTH_36B:
+	case COLORDEPTH_48B:
+		if (hdev->tx_comm.tx_hw->chip_data->chip_type >= MESON_CPU_ID_GXM) {
+			/* 12-10 dithering on */
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
+			/* hsync/vsync not invert */
+			/* hs_flag = (hd_read_reg(P_VPU_HDMI_SETTING) >> 2) & 0x3; */
+			/* force to config sync pol of VPU_HDMI_SETTING
+			 * and VPU_HDMI_DITH_CNTL
+			 */
+			if (is_sync_polarity_negative(hdev->tx_comm.hw_fmt_para.vic))
+				hs_flag = 0x0;
+			else
+				hs_flag = 0x3;
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 2, 2);
+			/* 12-10 rounding off */
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 10, 1);
+			/* 10-8 dithering off (2x2 old dither) */
+			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 0, 4, 1);
+			/* set hsync/vsync */
+			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, hs_flag, 2, 2);
+		} else {
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 10, 1);
+		}
+		break;
+	default:
+		if (hdev->tx_comm.tx_hw->chip_data->chip_type >= MESON_CPU_ID_GXM) {
+			/* 12-10 dithering off */
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
+			/* 12-10 rounding on */
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 10, 1);
+			/* 10-8 dithering on (2x2 old dither) */
+			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 1, 4, 1);
+			/* set hsync/vsync as default 0 */
+			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 0, 2, 2);
+		} else {
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
+			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 10, 1);
+		}
+		break;
+	}
+}
+
+static void hdmitx_in_vid_map(enum hdmi_vic vic,
+	unsigned char color_depth,
+	unsigned char input_color_format,
+	unsigned char output_color_format)
+{
+	unsigned long data32;
+	unsigned char vid_map;
+
+	/* Configure video */
+	if (input_color_format == HDMI_COLORSPACE_RGB) {
+		if (color_depth == COLORDEPTH_24B)
+			vid_map = 0x01;
+		else if (color_depth == COLORDEPTH_30B)
+			vid_map = 0x03;
+		else if (color_depth == COLORDEPTH_36B)
+			vid_map = 0x05;
+		else
+			vid_map = 0x07;
+	} else if (((input_color_format == HDMI_COLORSPACE_YUV444) ||
+		(input_color_format == HDMI_COLORSPACE_YUV420)) &&
+		(output_color_format != HDMI_COLORSPACE_YUV422)) {
+		if (color_depth == COLORDEPTH_24B)
+			vid_map = 0x09;
+		else if (color_depth == COLORDEPTH_30B)
+			vid_map = 0x0b;
+		else if (color_depth == COLORDEPTH_36B)
+			vid_map = 0x0d;
+		else
+			vid_map = 0x0f;
+	} else {
+		if (color_depth == COLORDEPTH_24B)
+			vid_map = 0x16;
+		else if (color_depth == COLORDEPTH_30B)
+			vid_map = 0x14;
+		else
+			vid_map = 0x12;
+	}
+
+	switch (vic) {
+	case HDMI_6_720x480i60_4x3:
+	case HDMI_7_720x480i60_16x9:
+	case HDMI_10_2880x480i60_4x3:
+	case HDMI_11_2880x480i60_16x9:
+	case HDMI_21_720x576i50_4x3:
+	case HDMI_22_720x576i50_16x9:
+	case HDMI_25_2880x576i50_4x3:
+	case HDMI_26_2880x576i50_16x9:
+	case HDMI_44_720x576i100_4x3:
+	case HDMI_45_720x576i100_16x9:
+	case HDMI_50_720x480i120_4x3:
+	case HDMI_51_720x480i120_16x9:
+	case HDMI_54_720x576i200_4x3:
+	case HDMI_55_720x576i200_16x9:
+	case HDMI_58_720x480i240_4x3:
+	case HDMI_59_720x480i240_16x9:
+		if (output_color_format == HDMI_COLORSPACE_YUV422) {
+			if (color_depth == COLORDEPTH_24B)
+				vid_map = 0x09;
+			if (color_depth == COLORDEPTH_30B)
+				vid_map = 0x0b;
+			if (color_depth == COLORDEPTH_36B)
+				vid_map = 0x0d;
+		}
+		break;
+	default:
+		break;
+	}
+
+	data32	= 0;
+	data32 |= (0 << 7);
+	data32 |= (vid_map << 0);
+	hdmitx_wr_reg(HDMITX_DWC_TX_INVID0, data32);
+}
+
+static void hdmitx_vp_conf(unsigned char color_depth, unsigned char output_color_format)
+{
+	u32 data32	= 0;
+	u32 tmp = 0;
+
+	data32 |= (((color_depth == COLORDEPTH_30B) ? 1 :
+		(color_depth == COLORDEPTH_36B) ? 2 : 0) << 0);
+	hdmitx_wr_reg(HDMITX_DWC_VP_REMAP, data32);
+	if (output_color_format == HDMI_COLORSPACE_YUV422) {
+		switch (color_depth) {
+		case COLORDEPTH_36B:
+			tmp = 2;
+			break;
+		case COLORDEPTH_30B:
+			tmp = 1;
+			break;
+		case COLORDEPTH_24B:
+			tmp = 0;
+			break;
+		}
+	}
+	/* [1:0] ycc422_size */
+	hdmitx_set_reg_bits(HDMITX_DWC_VP_REMAP, tmp, 0, 2);
+
+	/* Video Packet configuration */
+	data32	= 0;
+	data32 |= ((((output_color_format != HDMI_COLORSPACE_YUV422) &&
+		 (color_depth == COLORDEPTH_24B)) ? 1 : 0) << 6);
+	data32 |= ((((output_color_format == HDMI_COLORSPACE_YUV422) ||
+		 (color_depth == COLORDEPTH_24B)) ? 0 : 1) << 5);
+	data32 |= (0 << 4);
+	data32 |= (((output_color_format == HDMI_COLORSPACE_YUV422) ? 1 : 0)
+		<< 3);
+	data32 |= (1 << 2);
+	data32 |= (((output_color_format == HDMI_COLORSPACE_YUV422) ? 1 :
+		(color_depth == COLORDEPTH_24B) ? 2 : 0) << 0);
+	hdmitx_wr_reg(HDMITX_DWC_VP_CONF, data32);
+}
+
+static void hdmitx_config_avi_cs(unsigned char output_color_format)
+{
+	unsigned char rgb_ycc_indicator;
+
+	/* set rgb_ycc indicator */
+	switch (output_color_format) {
+	case HDMI_COLORSPACE_RGB:
+		rgb_ycc_indicator = 0x0;
+		break;
+	case HDMI_COLORSPACE_YUV422:
+		rgb_ycc_indicator = 0x1;
+		break;
+	case HDMI_COLORSPACE_YUV420:
+		rgb_ycc_indicator = 0x3;
+		break;
+	case HDMI_COLORSPACE_YUV444:
+	default:
+		rgb_ycc_indicator = 0x2;
+		break;
+	}
+	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0,
+			    ((rgb_ycc_indicator & 0x4) >> 2), 7, 1);
+	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0,
+			    (rgb_ycc_indicator & 0x3), 0, 2);
+}
+
+static void hdmitx_pure_csc_config(unsigned char input_color_format,
+			      unsigned char output_color_format,
+			      unsigned char color_depth)
+{
+	unsigned char conv_en;
+	unsigned char csc_scale;
+	unsigned long csc_coeff_a1, csc_coeff_a2, csc_coeff_a3, csc_coeff_a4;
+	unsigned long csc_coeff_b1, csc_coeff_b2, csc_coeff_b3, csc_coeff_b4;
+	unsigned long csc_coeff_c1, csc_coeff_c2, csc_coeff_c3, csc_coeff_c4;
+	unsigned long data32;
+
+	conv_en = (((input_color_format  == HDMI_COLORSPACE_RGB) ||
+		(output_color_format == HDMI_COLORSPACE_RGB)) &&
+		(input_color_format  != output_color_format)) ? 1 : 0;
+
+	if (conv_en) {
+		if (output_color_format == HDMI_COLORSPACE_RGB) {
+			csc_coeff_a1 = 0x2000;
+			csc_coeff_a2 = 0x6926;
+			csc_coeff_a3 = 0x74fd;
+			csc_coeff_a4 = (color_depth == COLORDEPTH_24B) ?
+				0x010e :
+			(color_depth == COLORDEPTH_30B) ? 0x043b :
+			(color_depth == COLORDEPTH_36B) ? 0x10ee :
+			(color_depth == COLORDEPTH_48B) ? 0x10ee : 0x010e;
+		csc_coeff_b1 = 0x2000;
+		csc_coeff_b2 = 0x2cdd;
+		csc_coeff_b3 = 0x0000;
+		csc_coeff_b4 = (color_depth == COLORDEPTH_24B) ? 0x7e9a :
+			(color_depth == COLORDEPTH_30B) ? 0x7a65 :
+			(color_depth == COLORDEPTH_36B) ? 0x6992 :
+			(color_depth == COLORDEPTH_48B) ? 0x6992 : 0x7e9a;
+		csc_coeff_c1 = 0x2000;
+		csc_coeff_c2 = 0x0000;
+		csc_coeff_c3 = 0x38b4;
+		csc_coeff_c4 = (color_depth == COLORDEPTH_24B) ? 0x7e3b :
+			(color_depth == COLORDEPTH_30B) ? 0x78ea :
+			(color_depth == COLORDEPTH_36B) ? 0x63a6 :
+			(color_depth == COLORDEPTH_48B) ? 0x63a6 : 0x7e3b;
+		csc_scale = 1;
+	} else { /* input_color_format == COLORSPACE_RGB444 */
+		csc_coeff_a1 = 0x2591;
+		csc_coeff_a2 = 0x1322;
+		csc_coeff_a3 = 0x074b;
+		csc_coeff_a4 = 0x0000;
+		csc_coeff_b1 = 0x6535;
+		csc_coeff_b2 = 0x2000;
+		csc_coeff_b3 = 0x7acc;
+		csc_coeff_b4 = (color_depth == COLORDEPTH_24B) ? 0x0200 :
+			(color_depth == COLORDEPTH_30B) ? 0x0800 :
+			(color_depth == COLORDEPTH_36B) ? 0x2000 :
+			(color_depth == COLORDEPTH_48B) ? 0x2000 : 0x0200;
+		csc_coeff_c1 = 0x6acd;
+		csc_coeff_c2 = 0x7534;
+		csc_coeff_c3 = 0x2000;
+		csc_coeff_c4 = (color_depth == COLORDEPTH_24B) ? 0x0200 :
+			(color_depth == COLORDEPTH_30B) ? 0x0800 :
+			(color_depth == COLORDEPTH_36B) ? 0x2000 :
+			(color_depth == COLORDEPTH_48B) ? 0x2000 : 0x0200;
+		csc_scale = 0;
+	}
+	} else {
+		csc_coeff_a1 = 0x2000;
+		csc_coeff_a2 = 0x0000;
+		csc_coeff_a3 = 0x0000;
+		csc_coeff_a4 = 0x0000;
+		csc_coeff_b1 = 0x0000;
+		csc_coeff_b2 = 0x2000;
+		csc_coeff_b3 = 0x0000;
+		csc_coeff_b4 = 0x0000;
+		csc_coeff_c1 = 0x0000;
+		csc_coeff_c2 = 0x0000;
+		csc_coeff_c3 = 0x2000;
+		csc_coeff_c4 = 0x0000;
+		csc_scale = 1;
+	}
+
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A1_MSB, (csc_coeff_a1 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A1_LSB, csc_coeff_a1 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A2_MSB, (csc_coeff_a2 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A2_LSB, csc_coeff_a2 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A3_MSB, (csc_coeff_a3 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A3_LSB, csc_coeff_a3 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A4_MSB, (csc_coeff_a4 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A4_LSB, csc_coeff_a4 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B1_MSB, (csc_coeff_b1 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B1_LSB, csc_coeff_b1 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B2_MSB, (csc_coeff_b2 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B2_LSB, csc_coeff_b2 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B3_MSB, (csc_coeff_b3 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B3_LSB, csc_coeff_b3 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B4_MSB, (csc_coeff_b4 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B4_LSB, csc_coeff_b4 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C1_MSB, (csc_coeff_c1 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C1_LSB, csc_coeff_c1 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C2_MSB, (csc_coeff_c2 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C2_LSB, csc_coeff_c2 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C3_MSB, (csc_coeff_c3 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C3_LSB, csc_coeff_c3 & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C4_MSB, (csc_coeff_c4 >> 8) & 0xff);
+	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C4_LSB, csc_coeff_c4 & 0xff);
+
+	data32 = 0;
+	data32 |= (color_depth  << 4);  /* [7:4] csc_color_depth */
+	data32 |= (csc_scale << 0);  /* [1:0] cscscale */
+	hdmitx_wr_reg(HDMITX_DWC_CSC_SCALE, data32);
+
+	/* set csc in video path */
+	hdmitx_wr_reg(HDMITX_DWC_MC_FLOWCTRL, (conv_en == 1) ? 0x1 : 0x0);
+}
+
+static void hdmitx20_color_convert(struct hdmitx20_dev *hdev, u32 output_color_format)
+{
+	struct hdmitx_common *tx_comm = &hdev->tx_comm;
+
+	/* Y422,12bit to Y444,8bit */
+	if ((output_color_format & 0xF) == CSC_Y444_8BIT) {
+		/* 1.vpu->encp */
+		hd_set_reg_bits(P_VPU_HDMI_SETTING, 4, 5, 3);
+		if (is_sync_polarity_negative(tx_comm->hw_fmt_para.vic))
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x0, 2, 2);
+		else
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x3, 2, 2);
+
+		/* 2.1 encp no conversion HDMI format */
+		hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 0, 2);
+		/* 2.2 dithering control */
+		hdmitx_dith_ctrl(hdev);
+
+		/* 3.vid input remap */
+		hdmitx_in_vid_map(tx_comm->hw_fmt_para.vic, COLORDEPTH_24B,
+			HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_YUV444);
+
+		/* 4.Video Packet YCC color remapping/configure */
+		hdmitx_vp_conf(COLORDEPTH_24B, HDMI_COLORSPACE_YUV444);
+
+		/* 6.update csc and output avi cs */
+		hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444,
+			HDMI_COLORSPACE_YUV444,
+			COLORDEPTH_24B);
+	} else if ((output_color_format & 0xF) == CSC_Y422_12BIT) {
+		/* 1.vpu->encp */
+		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 5, 3);
+		/* sync pol is configured in hdmitx_dith_ctrl() */
+
+		/* 2.1 encp no conversion HDMI format */
+		hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 0, 2);
+		/* 2.2dithering control */
+		hdmitx_dith_ctrl(hdev);
+
+		/* 3.vid input remap */
+		hdmitx_in_vid_map(tx_comm->hw_fmt_para.vic, COLORDEPTH_36B,
+			HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_YUV422);
+
+		/* 4.Video Packet YCC color remapping/configure */
+		hdmitx_vp_conf(COLORDEPTH_36B, HDMI_COLORSPACE_YUV422);
+
+		/* 6.update csc and output avi cs */
+		hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444,
+			HDMI_COLORSPACE_YUV422,
+			COLORDEPTH_36B);
+	} else if ((output_color_format & 0xF) == CSC_RGB_8BIT) {
+		/* 1.vpu->encp */
+		hd_set_reg_bits(P_VPU_HDMI_SETTING, 4, 5, 3);
+		if (is_sync_polarity_negative(tx_comm->hw_fmt_para.vic))
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x0, 2, 2);
+		else
+			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x3, 2, 2);
+
+		/* 2.1 encp no conversion HDMI format */
+		hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 0, 2);
+		/* 2.2 dithering control */
+		hdmitx_dith_ctrl(hdev);
+
+		/* 3.vid input remap */
+		hdmitx_in_vid_map(tx_comm->hw_fmt_para.vic, COLORDEPTH_24B,
+		HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_RGB);
+
+		/* 4.Video Packet YCC color remapping/configure */
+		hdmitx_vp_conf(COLORDEPTH_24B, HDMI_COLORSPACE_RGB);
+
+		/* 6.update csc and output avi cs */
+		hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_RGB,
+			COLORDEPTH_24B);
+	} else {
+		HDMITX_INFO("csc not support/implemented yet\n");
+	}
+}
+
+static void hdmitx20_csc_update_avi_infoframe(u32 output_color_format)
+{
+	/* Y422,12bit to Y444,8bit */
+	if ((output_color_format & 0xF) == CSC_Y444_8BIT) {
+		/* 5.whether update AVI colorspace */
+		if (output_color_format & CSC_UPDATE_AVI_CS)
+			hdmitx_config_avi_cs(HDMI_COLORSPACE_YUV444);
+	} else if ((output_color_format & 0xF) == CSC_Y422_12BIT) {
+		/* 5.whether update AVI colorspace */
+		if (output_color_format & CSC_UPDATE_AVI_CS)
+			hdmitx_config_avi_cs(HDMI_COLORSPACE_YUV422);
+	} else if ((output_color_format & 0xF) == CSC_RGB_8BIT) {
+		/* 5.whether update AVI colorspace */
+		if (output_color_format & CSC_UPDATE_AVI_CS)
+			hdmitx_config_avi_cs(HDMI_COLORSPACE_RGB);
+	} else {
+		HDMITX_INFO("avi not support/implemented yet\n");
+	}
+}
+
 static irqreturn_t vsync_intr_handler(int irq, void *dev)
 {
 	struct hdmitx20_dev *hdev = (struct hdmitx20_dev *)dev;
+	struct hdmitx_common *tx_comm = &hdev->tx_comm;
 	u32 arg;
 
 	if (hdev->tx_comm.hdr_state->vid_mute_op != VIDEO_NONE_OP) {
@@ -907,6 +1332,21 @@ static irqreturn_t vsync_intr_handler(int irq, void *dev)
 		hdmitx20_hw_cntl(&hdev->hw_comm,
 			PLATFORM_PHY_OP, (void *)&arg, NULL);
 		hdev->tx_comm.tx_hw->tmds_phy_op = TMDS_PHY_NONE;
+	}
+
+	if (hdev->tx_comm.hdr_state->csc_config_in_next_frame) {
+		/*
+		 * avi infoframe takes effect on the next frame, so it needs
+		 * to be updated one frame in advance
+		 */
+		if (hdev->tx_comm.hdr_state->csc_delay_frame == CSC_DELAY_FRAME - 1)
+			hdmitx20_csc_update_avi_infoframe(tx_comm->hdr_state->output_color_format);
+		/* after csc is configured, the frame takes effect */
+		if (hdev->tx_comm.hdr_state->csc_delay_frame == CSC_DELAY_FRAME) {
+			hdev->tx_comm.hdr_state->csc_config_in_next_frame = false;
+			hdmitx20_color_convert(hdev, hdev->tx_comm.hdr_state->output_color_format);
+		}
+		hdev->tx_comm.hdr_state->csc_delay_frame += 1;
 	}
 
 	return IRQ_HANDLED;
@@ -2381,6 +2821,13 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct meson_tx_f
 		break;
 	}
 	HDMITX_DEBUG("adjust decouple fifo\n");
+	/* when the mode setting fails, it is necessary to ensure
+	 * that vsync is enabled so that subsequent actions are not
+	 * blocked. Phy cannot be enabled to avoid affecting TV
+	 */
+	if (hdev->tx_comm.skip_phy_setting)
+		return -1;
+
 	/* For 3D, enable phy by SystemControl at last step */
 	if (!para->flag_3dfp && !para->flag_3dtb && !para->flag_3dss)
 		hdmitx_set_phy(hdev);
@@ -4327,12 +4774,14 @@ static void hdcptx_events_handle(struct timer_list *t)
 	static unsigned int st_flag = -1;
 	static unsigned int hdcpobs3_1;
 	unsigned int hdcpobs3_2;
-	struct hdcprp14_topo *topo14 = &hdev->tx_comm.topo_info->topo.topo14;
+	struct hdcprp14_topo *topo14 = NULL;
 	int bstatus0 = 0;
 	int bstatus1 = 0;
 
 	if (hdev->tx_comm.rxsense_policy && !hdmitx_tmds_rxsense())
 		return;
+	if (hdev->tx_comm.topo_info)
+		topo14 = &hdev->tx_comm.topo_info->topo.topo14;
 	if (hdev->hdcp_max_exceed_cnt == 0) {
 		hdcpobs3_1 = 0;
 		bcaps_5_ksvfifoready = 0;
@@ -4352,7 +4801,7 @@ static void hdcptx_events_handle(struct timer_list *t)
 		hdev->hdcp_max_exceed_cnt++;
 	if (bcaps_6_rp && bcaps_5_ksvfifoready) {
 		if (hdev->hdcp_max_exceed_cnt > hdev->max_exceed &&
-		    !ksv_sha_matched) {
+		    !ksv_sha_matched && topo14) {
 			topo14->max_devs_exceeded = 1;
 			topo14->max_cascade_exceeded = 1;
 			hdev->hdcp_max_exceed_state = 1;
@@ -4517,331 +4966,6 @@ static int hdmitx_get_hdmi_dvi_config(struct hdmitx20_dev *hdev)
 	int value = hdmitx_rd_reg(HDMITX_DWC_FC_INVIDCONF) & 0x8;
 
 	return (value == 0) ? DVI_MODE : HDMI_MODE;
-}
-
-/* 1: negative, 0: positive */
-static unsigned int is_sync_polarity_negative(unsigned int vic)
-{
-	unsigned int ret = 0;
-
-	if (vic >= 1 && vic <= 3)
-		ret = 1;
-	else if (vic >= 6 && vic <= 15)
-		ret = 1;
-	else if (vic >= 17 && vic <= 18)
-		ret = 1;
-	else if (vic >= 21 && vic <= 30)
-		ret = 1;
-	else if (vic >= 35 && vic <= 38)
-		ret = 1;
-	else if (vic >= 42 && vic <= 45)
-		ret = 1;
-	else if (vic >= 48 && vic <= 59)
-		ret = 1;
-	else
-		ret = 0;
-	return ret;
-}
-
-static void hdmitx_dith_ctrl(struct hdmitx20_dev *hdev)
-{
-	unsigned int hs_flag = 0;
-	enum hdmi_vic vic = hdev->tx_comm.fmt_para.tx_hw_para.hdmitx_hw_para.vic;
-
-	switch (hdev->tx_comm.fmt_para.cd) {
-	case COLORDEPTH_30B:
-	case COLORDEPTH_36B:
-	case COLORDEPTH_48B:
-		if (hdev->tx_comm.tx_hw->chip_data->chip_type >= MESON_CPU_ID_GXM) {
-			/* 12-10 dithering on */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
-			/* hsync/vsync not invert */
-			/* hs_flag = (hd_read_reg(P_VPU_HDMI_SETTING) >> 2) & 0x3; */
-			/* force to config sync pol of VPU_HDMI_SETTING
-			 * and VPU_HDMI_DITH_CNTL
-			 */
-			if (is_sync_polarity_negative(vic))
-				hs_flag = 0x0;
-			else
-				hs_flag = 0x3;
-			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 2, 2);
-			/* 12-10 rounding off */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 10, 1);
-			/* 10-8 dithering off (2x2 old dither) */
-			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 0, 4, 1);
-			/* set hsync/vsync */
-			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, hs_flag, 2, 2);
-		} else {
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 10, 1);
-		}
-		break;
-	default:
-		if (hdev->tx_comm.tx_hw->chip_data->chip_type >= MESON_CPU_ID_GXM) {
-			/* 12-10 dithering off */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
-			/* 12-10 rounding on */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 10, 1);
-			/* 10-8 dithering on (2x2 old dither) */
-			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 1, 4, 1);
-			/* set hsync/vsync as default 0 */
-			hd_set_reg_bits(P_VPU_HDMI_DITH_CNTL, 0, 2, 2);
-		} else {
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 4, 1);
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 10, 1);
-		}
-		break;
-	}
-}
-
-static void hdmitx_in_vid_map(enum hdmi_vic vic,
-	unsigned char color_depth,
-	unsigned char input_color_format,
-	unsigned char output_color_format)
-{
-	unsigned long data32;
-	unsigned char vid_map;
-
-	/* Configure video */
-	if (input_color_format == HDMI_COLORSPACE_RGB) {
-		if (color_depth == COLORDEPTH_24B)
-			vid_map = 0x01;
-		else if (color_depth == COLORDEPTH_30B)
-			vid_map = 0x03;
-		else if (color_depth == COLORDEPTH_36B)
-			vid_map = 0x05;
-		else
-			vid_map = 0x07;
-	} else if (((input_color_format == HDMI_COLORSPACE_YUV444) ||
-		(input_color_format == HDMI_COLORSPACE_YUV420)) &&
-		(output_color_format != HDMI_COLORSPACE_YUV422)) {
-		if (color_depth == COLORDEPTH_24B)
-			vid_map = 0x09;
-		else if (color_depth == COLORDEPTH_30B)
-			vid_map = 0x0b;
-		else if (color_depth == COLORDEPTH_36B)
-			vid_map = 0x0d;
-		else
-			vid_map = 0x0f;
-	} else {
-		if (color_depth == COLORDEPTH_24B)
-			vid_map = 0x16;
-		else if (color_depth == COLORDEPTH_30B)
-			vid_map = 0x14;
-		else
-			vid_map = 0x12;
-	}
-
-	switch (vic) {
-	case HDMI_6_720x480i60_4x3:
-	case HDMI_7_720x480i60_16x9:
-	case HDMI_10_2880x480i60_4x3:
-	case HDMI_11_2880x480i60_16x9:
-	case HDMI_21_720x576i50_4x3:
-	case HDMI_22_720x576i50_16x9:
-	case HDMI_25_2880x576i50_4x3:
-	case HDMI_26_2880x576i50_16x9:
-	case HDMI_44_720x576i100_4x3:
-	case HDMI_45_720x576i100_16x9:
-	case HDMI_50_720x480i120_4x3:
-	case HDMI_51_720x480i120_16x9:
-	case HDMI_54_720x576i200_4x3:
-	case HDMI_55_720x576i200_16x9:
-	case HDMI_58_720x480i240_4x3:
-	case HDMI_59_720x480i240_16x9:
-		if (output_color_format == HDMI_COLORSPACE_YUV422) {
-			if (color_depth == COLORDEPTH_24B)
-				vid_map = 0x09;
-			if (color_depth == COLORDEPTH_30B)
-				vid_map = 0x0b;
-			if (color_depth == COLORDEPTH_36B)
-				vid_map = 0x0d;
-		}
-		break;
-	default:
-		break;
-	}
-
-	data32	= 0;
-	data32 |= (0 << 7);
-	data32 |= (vid_map << 0);
-	hdmitx_wr_reg(HDMITX_DWC_TX_INVID0, data32);
-}
-
-static void hdmitx_vp_conf(unsigned char color_depth, unsigned char output_color_format)
-{
-	u32 data32	= 0;
-	u32 tmp = 0;
-
-	data32 |= (((color_depth == COLORDEPTH_30B) ? 1 :
-		(color_depth == COLORDEPTH_36B) ? 2 : 0) << 0);
-	hdmitx_wr_reg(HDMITX_DWC_VP_REMAP, data32);
-	if (output_color_format == HDMI_COLORSPACE_YUV422) {
-		switch (color_depth) {
-		case COLORDEPTH_36B:
-			tmp = 2;
-			break;
-		case COLORDEPTH_30B:
-			tmp = 1;
-			break;
-		case COLORDEPTH_24B:
-			tmp = 0;
-			break;
-		}
-	}
-	/* [1:0] ycc422_size */
-	hdmitx_set_reg_bits(HDMITX_DWC_VP_REMAP, tmp, 0, 2);
-
-	/* Video Packet configuration */
-	data32	= 0;
-	data32 |= ((((output_color_format != HDMI_COLORSPACE_YUV422) &&
-		 (color_depth == COLORDEPTH_24B)) ? 1 : 0) << 6);
-	data32 |= ((((output_color_format == HDMI_COLORSPACE_YUV422) ||
-		 (color_depth == COLORDEPTH_24B)) ? 0 : 1) << 5);
-	data32 |= (0 << 4);
-	data32 |= (((output_color_format == HDMI_COLORSPACE_YUV422) ? 1 : 0)
-		<< 3);
-	data32 |= (1 << 2);
-	data32 |= (((output_color_format == HDMI_COLORSPACE_YUV422) ? 1 :
-		(color_depth == COLORDEPTH_24B) ? 2 : 0) << 0);
-	hdmitx_wr_reg(HDMITX_DWC_VP_CONF, data32);
-}
-
-static void hdmitx_config_avi_cs(unsigned char output_color_format)
-{
-	unsigned char rgb_ycc_indicator;
-
-	/* set rgb_ycc indicator */
-	switch (output_color_format) {
-	case HDMI_COLORSPACE_RGB:
-		rgb_ycc_indicator = 0x0;
-		break;
-	case HDMI_COLORSPACE_YUV422:
-		rgb_ycc_indicator = 0x1;
-		break;
-	case HDMI_COLORSPACE_YUV420:
-		rgb_ycc_indicator = 0x3;
-		break;
-	case HDMI_COLORSPACE_YUV444:
-	default:
-		rgb_ycc_indicator = 0x2;
-		break;
-	}
-	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0,
-			    ((rgb_ycc_indicator & 0x4) >> 2), 7, 1);
-	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0,
-			    (rgb_ycc_indicator & 0x3), 0, 2);
-}
-
-static void hdmitx_pure_csc_config(unsigned char input_color_format,
-			      unsigned char output_color_format,
-			      unsigned char color_depth)
-{
-	unsigned char conv_en;
-	unsigned char csc_scale;
-	unsigned long csc_coeff_a1, csc_coeff_a2, csc_coeff_a3, csc_coeff_a4;
-	unsigned long csc_coeff_b1, csc_coeff_b2, csc_coeff_b3, csc_coeff_b4;
-	unsigned long csc_coeff_c1, csc_coeff_c2, csc_coeff_c3, csc_coeff_c4;
-	unsigned long data32;
-
-	conv_en = (((input_color_format  == HDMI_COLORSPACE_RGB) ||
-		(output_color_format == HDMI_COLORSPACE_RGB)) &&
-		(input_color_format != output_color_format)) ? 1 : 0;
-
-	if (conv_en) {
-		if (output_color_format == HDMI_COLORSPACE_RGB) {
-			csc_coeff_a1 = 0x1000;
-			csc_coeff_a2 = 0xf883;
-			csc_coeff_a3 = 0xfd01;
-			csc_coeff_a4 = (color_depth == COLORDEPTH_24B) ? 0x0053 :
-				(color_depth == COLORDEPTH_30B) ? 0x014f :
-				(color_depth == COLORDEPTH_36B) ? 0x053e :
-				(color_depth == COLORDEPTH_48B) ? 0x053e : 0x0053;
-			csc_coeff_b1 = 0x1000;
-			csc_coeff_b2 = 0x1932;
-			csc_coeff_b3 = 0x0000;
-			csc_coeff_b4 = (color_depth == COLORDEPTH_24B) ? 0xff37 :
-				(color_depth == COLORDEPTH_30B) ? 0xfcda :
-				(color_depth == COLORDEPTH_36B) ? 0xf367 :
-				(color_depth == COLORDEPTH_48B) ? 0xf367 : 0xff37;
-			csc_coeff_c1 = 0x1000;
-			csc_coeff_c2 = 0x0000;
-			csc_coeff_c3 = 0x1db0;
-			csc_coeff_c4 = (color_depth == COLORDEPTH_24B) ? 0xff13 :
-				(color_depth == COLORDEPTH_30B) ? 0xfc4a :
-				(color_depth == COLORDEPTH_36B) ? 0xf128 :
-				(color_depth == COLORDEPTH_48B) ? 0xf128 : 0xff13;
-			csc_scale = 2;
-		} else {
-			/* input_color_format == COLORSPACE_RGB444 */
-			csc_coeff_a1 = 0x2591;
-			csc_coeff_a2 = 0x1322;
-			csc_coeff_a3 = 0x074b;
-			csc_coeff_a4 = 0x0000;
-			csc_coeff_b1 = 0x6535;
-			csc_coeff_b2 = 0x2000;
-			csc_coeff_b3 = 0x7acc;
-			csc_coeff_b4 = (color_depth == COLORDEPTH_24B) ? 0x0200 :
-				(color_depth == COLORDEPTH_30B) ? 0x0800 :
-				(color_depth == COLORDEPTH_36B) ? 0x2000 :
-				(color_depth == COLORDEPTH_48B) ? 0x2000 : 0x0200;
-			csc_coeff_c1 = 0x6acd;
-			csc_coeff_c2 = 0x7534;
-			csc_coeff_c3 = 0x2000;
-			csc_coeff_c4 = (color_depth == COLORDEPTH_24B) ? 0x0200 :
-				(color_depth == COLORDEPTH_30B) ? 0x0800 :
-				(color_depth == COLORDEPTH_36B) ? 0x2000 :
-				(color_depth == COLORDEPTH_48B) ? 0x2000 : 0x0200;
-			csc_scale = 0;
-		}
-	} else {
-		csc_coeff_a1 = 0x2000;
-		csc_coeff_a2 = 0x0000;
-		csc_coeff_a3 = 0x0000;
-		csc_coeff_a4 = 0x0000;
-		csc_coeff_b1 = 0x0000;
-		csc_coeff_b2 = 0x2000;
-		csc_coeff_b3 = 0x0000;
-		csc_coeff_b4 = 0x0000;
-		csc_coeff_c1 = 0x0000;
-		csc_coeff_c2 = 0x0000;
-		csc_coeff_c3 = 0x2000;
-		csc_coeff_c4 = 0x0000;
-		csc_scale = 1;
-	}
-
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A1_MSB, (csc_coeff_a1 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A1_LSB, csc_coeff_a1 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A2_MSB, (csc_coeff_a2 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A2_LSB, csc_coeff_a2 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A3_MSB, (csc_coeff_a3 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A3_LSB, csc_coeff_a3 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A4_MSB, (csc_coeff_a4 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_A4_LSB, csc_coeff_a4 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B1_MSB, (csc_coeff_b1 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B1_LSB, csc_coeff_b1 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B2_MSB, (csc_coeff_b2 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B2_LSB, csc_coeff_b2 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B3_MSB, (csc_coeff_b3 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B3_LSB, csc_coeff_b3 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B4_MSB, (csc_coeff_b4 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_B4_LSB, csc_coeff_b4 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C1_MSB, (csc_coeff_c1 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C1_LSB, csc_coeff_c1 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C2_MSB, (csc_coeff_c2 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C2_LSB, csc_coeff_c2 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C3_MSB, (csc_coeff_c3 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C3_LSB, csc_coeff_c3 & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C4_MSB, (csc_coeff_c4 >> 8) & 0xff);
-	hdmitx_wr_reg(HDMITX_DWC_CSC_COEF_C4_LSB, csc_coeff_c4 & 0xff);
-
-	data32 = 0;
-	data32 |= (color_depth  << 4);  /* [7:4] csc_color_depth */
-	data32 |= (csc_scale << 0);  /* [1:0] cscscale */
-	hdmitx_wr_reg(HDMITX_DWC_CSC_SCALE, data32);
-
-	/* set csc in video path */
-	hdmitx_wr_reg(HDMITX_DWC_MC_FLOWCTRL, (conv_en == 1) ? 0x1 : 0x0);
 }
 
 static int hdmitx20_check_input_argv(u32 cmd, void *input_argv)
@@ -5773,7 +5897,6 @@ static int hdmitx20_hw_cntl_vpu(struct hdmitx_hw_common *tx_hw, unsigned int cmd
 {
 	struct hdmitx20_dev *hdev = container_of(tx_hw, struct hdmitx20_dev, hw_comm);
 	struct hdmitx_common *tx_comm = &hdev->tx_comm;
-	enum hdmi_vic vic = tx_comm->fmt_para.tx_hw_para.hdmitx_hw_para.vic;
 	enum amhdmitx_chip_e chip_id = hdev->tx_comm.tx_hw->chip_data->chip_type;
 	u32 arg;
 	int ret = 0;
@@ -5815,96 +5938,18 @@ static int hdmitx20_hw_cntl_vpu(struct hdmitx_hw_common *tx_hw, unsigned int cmd
 			tx_comm->hdr_state->config_csc_en = false;
 		break;
 	case VPU_CONFIG_CSC:
-		if (!tx_comm->hdr_state->config_csc_en)
+		if (!tx_comm->hdr_state->config_csc_en) {
+			tx_comm->hdr_state->csc_config_in_next_frame = false;
 			break;
+		}
 		ret = hdmitx20_check_input_argv(cmd, input_argv);
 		if (ret < 0)
 			break;
 		arg = *((u32 *)input_argv);
-		/* Y422,12bit to Y444,8bit */
-		if ((arg & 0xF) == CSC_Y444_8BIT) {
-			/* 1.vpu->encp */
-			hd_set_reg_bits(P_VPU_HDMI_SETTING, 4, 5, 3);
-			if (is_sync_polarity_negative(vic))
-				hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x0, 2, 2);
-			else
-				hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x3, 2, 2);
-
-			/* 2.1 encp no conversion HDMI format */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 0, 2);
-			/* 2.2dithering control */
-			hdmitx_dith_ctrl(hdev);
-
-			/* 3.vid input remap */
-			hdmitx_in_vid_map(tx_comm->fmt_para.tx_hw_para.hdmitx_hw_para.vic,
-				COLORDEPTH_24B,	HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_YUV444);
-
-			/* 4.Video Packet YCC color remapping/configure */
-			hdmitx_vp_conf(COLORDEPTH_24B, HDMI_COLORSPACE_YUV444);
-
-			/* 5.whether update AVI colorspace */
-			if (arg & CSC_UPDATE_AVI_CS)
-				hdmitx_config_avi_cs(HDMI_COLORSPACE_YUV444);
-
-			/* 6.update csc and output avi cs */
-			hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444,
-				HDMI_COLORSPACE_YUV444,
-				COLORDEPTH_24B);
-		} else if ((arg & 0xF) == CSC_Y422_12BIT) {
-			/* 1.vpu->encp */
-			hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 5, 3);
-			/* sync pol is configured in hdmitx_dith_ctrl() */
-
-			/* 2.1 encp no conversion HDMI format */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 1, 0, 2);
-			/* 2.2dithering control */
-			hdmitx_dith_ctrl(hdev);
-
-			/* 3.vid input remap */
-			hdmitx_in_vid_map(vic, COLORDEPTH_36B,
-				HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_YUV422);
-
-			/* 4.Video Packet YCC color remapping/configure */
-			hdmitx_vp_conf(COLORDEPTH_36B, HDMI_COLORSPACE_YUV422);
-
-			/* 5.whether update AVI colorspace */
-			if (arg & CSC_UPDATE_AVI_CS)
-				hdmitx_config_avi_cs(HDMI_COLORSPACE_YUV422);
-
-			/* 6.update csc and output avi cs */
-			hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444,
-				HDMI_COLORSPACE_YUV422,
-				COLORDEPTH_36B);
-		} else if ((arg & 0xF) == CSC_RGB_8BIT) {
-			/* 1.vpu->encp */
-			hd_set_reg_bits(P_VPU_HDMI_SETTING, 4, 5, 3);
-			if (is_sync_polarity_negative(vic))
-				hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x0, 2, 2);
-			else
-				hd_set_reg_bits(P_VPU_HDMI_SETTING, 0x3, 2, 2);
-
-			/* 2.1 encp no conversion HDMI format */
-			hd_set_reg_bits(P_VPU_HDMI_FMT_CTRL, 0, 0, 2);
-			/* 2.2 dithering control */
-			hdmitx_dith_ctrl(hdev);
-
-			/* 3.vid input remap */
-			hdmitx_in_vid_map(vic, COLORDEPTH_24B,
-				HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_RGB);
-
-			/* 4.Video Packet YCC color remapping/configure */
-			hdmitx_vp_conf(COLORDEPTH_24B, HDMI_COLORSPACE_RGB);
-
-			/* 5.whether update AVI colorspace */
-			if (arg & CSC_UPDATE_AVI_CS)
-				hdmitx_config_avi_cs(HDMI_COLORSPACE_RGB);
-
-			/* 6.update csc and output avi cs */
-			hdmitx_pure_csc_config(HDMI_COLORSPACE_YUV444, HDMI_COLORSPACE_RGB,
-				COLORDEPTH_24B);
-		} else {
-			HDMITX_INFO("csc not support/implemented yet\n");
-		}
+		/* the csc process is executed in the vsync interrupt */
+		tx_comm->hdr_state->csc_config_in_next_frame = true;
+		tx_comm->hdr_state->csc_delay_frame = 0;
+		tx_comm->hdr_state->output_color_format = arg;
 		break;
 	case VPU_CONFIG_DITHER:
 		break;
@@ -5971,7 +6016,7 @@ static int hdmitx20_hw_cntl(struct hdmitx_hw_common *tx_hw, unsigned int cmd,
 	case CMD_MODE_FLOW_MISC_OFFSET:
 		switch (cmd) {
 		case MODE_FLOW_ENABLE_MODE:
-			hdmitx20_enable_mode(tx_comm);
+			ret = hdmitx20_enable_mode(tx_comm);
 			break;
 		case MODE_FLOW_HPD_IRQ_TOP_HALF:
 			ret = hdmitx20_check_input_argv(cmd, input_argv);
@@ -7156,7 +7201,7 @@ struct hdmitx20_dev *get_hdmitx20_device(void)
 
 static int hdmitx20_enable_mode(struct hdmitx_common *tx_comm)
 {
-	int ret;
+	int ret = 0;
 
 	/* if vic is HDMI_UNKNOWN, hdmitx_set_display will disable HDMI */
 	ret = hdmitx_set_display(tx_comm, tx_comm->fmt_para.tx_hw_para.hdmitx_hw_para.vic);
@@ -7164,7 +7209,7 @@ static int hdmitx20_enable_mode(struct hdmitx_common *tx_comm)
 	if (tx_comm->tx_hw->set_aud_mode)
 		tx_comm->tx_hw->set_aud_mode(tx_comm->tx_hw, &tx_comm->cur_audio_param);
 
-	return 0;
+	return ret;
 }
 
 static void hdmitx20_disable_hdcp(struct hdmitx_common *tx_comm)
@@ -7177,6 +7222,8 @@ static void hdmitx20_disable_hdcp(struct hdmitx_common *tx_comm)
 	hdmitx20_hw_cntl(tx_hw_base, HDCP_MUX_INIT, (void *)&arg, NULL);
 	arg = HDCP14_OFF;
 	hdmitx20_hw_cntl(tx_hw_base, HDCP_MODE_OP, (void *)&arg, NULL);
+	/* need to update hdcp auth result */
+	hdmitx20_hw_cntl(tx_hw_base, HDCP_GET_AUTH_RESULT, NULL, NULL);
 	tx_comm->hdcptx_comm.hdcp_mode = 0;
 	tx_comm->hdcptx_comm.hdcp_bcaps_repeater = 0;
 }

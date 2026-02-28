@@ -273,7 +273,7 @@ void hdmitx21_wr_reg(u32 addr, u32 val)
 	spin_unlock_irqrestore(&reg_lock, flags);
 }
 
-void hdmitx21_reset_reg_bit(u32 addr, u32 bit_nr)
+void hdmitx21_set_reset_reg_bit(u32 addr, u32 bit_nr)
 {
 	if (bit_nr > 31)
 		return;
