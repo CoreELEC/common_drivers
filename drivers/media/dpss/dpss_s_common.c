@@ -7,6 +7,7 @@
 //#include "define.h"
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/amlogic/tee.h>
 #ifdef RUN_ON_ARM
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -599,6 +600,10 @@ void dpss_s_resume(struct dpss_dev_s *dpss_pdev)
 
 	dpss_irq_set_affinity_hint(dpss_pdev);
 
+	tee_write_reg_bits(((DPSS_INP_WR_SEC_SEL << 2) + 0xff850000), 1, 0, 1);
+	tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 1, 8, 1);
+	tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 0, 0, 1);
+
 	dbg_s1("cur dpe clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dpe));
 	dbg_s1("cur dae clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dae));
 	dbg_s1("%s ok\n", __func__);
@@ -645,6 +650,9 @@ void dpss_s_restore(struct dpss_dev_s *dpss_pdev)
 
 	dpss_irq_set_affinity_hint(dpss_pdev);
 
+	tee_write_reg_bits(((DPSS_INP_WR_SEC_SEL << 2) + 0xff850000), 1, 0, 1);
+	tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 1, 8, 1);
+	tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 0, 0, 1);
 	dbg_s1("cur dpe clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dpe));
 	dbg_s1("cur dae clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dae));
 	dbg_s1("%s ok\n", __func__);

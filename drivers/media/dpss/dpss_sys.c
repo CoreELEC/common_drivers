@@ -7,6 +7,7 @@
 //#include "define.h"
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/amlogic/tee.h>
 
 #ifdef RUN_ON_ARM
 
@@ -1487,6 +1488,28 @@ int dpss_probe(struct platform_device *pdev)
 		clk_set_rate(devp->vpu_clk_dpe, 50000000);
 		devp->clk_status |= (1 << 1);
 	}
+
+	int ret2 = tee_write_reg_bits(((DPSS_INP_WR_SEC_SEL << 2) + 0xff850000), 1, 0, 1);
+
+	if (ret2 == 0)
+		dbg_h1("8993 wr bit0 success\n");
+	else
+		DBG_WARN("8993 bit0 %d\n", ret2);
+
+	int ret3 = tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 1, 8, 1);
+
+	if (ret3 == 0)
+		dbg_h1("AE6F wr bit8 success\n");
+	else
+		DBG_WARN("AE6F bit8 %d\n", ret3);
+
+	int ret4 = tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 0, 0, 1);
+
+	if (ret4 == 0)
+		dbg_h1("AE6F wr bit0 success\n");
+	else
+		DBG_WARN("AE6F bit0 %d\n", ret4);
+
 	dpss_cfg_top_dts(devp);
 	dpss_mem_prob(devp);
 
