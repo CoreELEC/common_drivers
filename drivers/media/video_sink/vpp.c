@@ -833,8 +833,9 @@ static bool is_video_output_4k120hz(int freq_ratio,
 static bool is_4k1k120hz_out(const struct vinfo_s *vinfo)
 {
 	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
-		(((vinfo->sync_duration_num / vinfo->sync_duration_den) > 115) &&
-		((vinfo->sync_duration_num / vinfo->sync_duration_den) < 125)))
+		(vinfo->brr_duration == 120 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 115 &&
+		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 125)))
 		return true;
 	else
 		return false;
@@ -843,8 +844,9 @@ static bool is_4k1k120hz_out(const struct vinfo_s *vinfo)
 static bool is_4k1k144hz_out(const struct vinfo_s *vinfo)
 {
 	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
-		((vinfo->sync_duration_num / vinfo->sync_duration_den) > 140) &&
-		((vinfo->sync_duration_num / vinfo->sync_duration_den) < 148))
+		(vinfo->brr_duration == 144 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 140 &&
+		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 148)))
 		return true;
 	else
 		return false;
@@ -864,8 +866,9 @@ static bool is_4k1k150hz_out(const struct vinfo_s *vinfo)
 static bool is_4k1k165hz_out(const struct vinfo_s *vinfo)
 {
 	if (vinfo->width >= 3840 && vinfo->height >= 1080 &&
-		((vinfo->sync_duration_num / vinfo->sync_duration_den) > 162 &&
-		(vinfo->sync_duration_num / vinfo->sync_duration_den) < 168))
+		(vinfo->brr_duration == 165 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 162 &&
+		 (vinfo->sync_duration_num / vinfo->sync_duration_den) < 168)))
 		return true;
 	else
 		return false;
@@ -1376,7 +1379,7 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 		} else if (is_4k1k120hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1484, 1250);
 			*cur_vpp_speed_factor =
-				div_u64((u64)vpp_speed_factor * 0x10a, 0x110);
+				div_u64((u64)vpp_speed_factor * 0x109, 0x110);
 		} else {
 			*min_ratio_1000 = round_div(min_skip_ratio, 2700, 1250);
 			*cur_vpp_speed_factor =
