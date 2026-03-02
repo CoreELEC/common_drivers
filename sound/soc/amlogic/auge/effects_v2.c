@@ -22,7 +22,7 @@
 #include "ddr_mngr.h"
 #include "regs.h"
 #include "iomap.h"
-#include "sound_init.h"
+#include "../sound_init.h"
 #define DRV_NAME "Effects"
 //#define DEBUG
 #define AED_REG_NUM_V5	8
