@@ -1224,10 +1224,10 @@ static void dpss_frc_tool_dbg_store(const char *buf)
 	struct tool_debug_s *tool_dbg;
 	struct frc_chip_st *pchip_st;
 
+	buf_orig = kstrdup(buf, GFP_KERNEL);
 	pchip_st = dpss_get_frc_st();
 
-	buf_orig = kstrdup(buf, GFP_KERNEL);
-	if (!buf_orig)
+	if (!buf_orig || !pchip_st)
 		return;
 
 	tool_dbg = &pchip_st->dbg_st.tool_dbg;
@@ -1782,13 +1782,11 @@ void dpss_frc_dump_reg_table_if(const char *buf)
 		return;
 
 	pst_chip = dpss_get_frc_st();
-	dbg_st = &pst_chip->dbg_st;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
-	if (!buf_orig)
+	if (!buf_orig || !pst_chip)
 		return;
 
-	// pst_chip = devp->pchip_st;
-
+	dbg_st = &pst_chip->dbg_st;
 	dpss_frc_debug_parse_param(buf_orig, (char **)&parm);
 
 	if (!strcmp(parm[0], "vfcd_tab")) {
@@ -2114,7 +2112,7 @@ void dpss_frc_debug_param_if(const char *buf, size_t count)
 		if (kstrtoint(parm[1], 10, &val1) == 0)
 			frc_top->src_uv_swap = (u32)val1;
 		pr_frc(2, "src_uv_swap= %d\n", frc_top->src_uv_swap);
-	} else if (!strcmp(parm[0], "src_uv_swap")) {
+	} else if (!strcmp(parm[0], "src_swap_64")) {
 		if (!parm[1])
 			goto exit;
 		if (kstrtoint(parm[1], 10, &val1) == 0)
@@ -2706,7 +2704,7 @@ void frc_dbg_table_print(struct work_struct *work)
 	devp = dpss_get_devp();
 	pst_chip = dpss_get_frc_st();
 
-	if (unlikely(!devp)) {
+	if (unlikely(!devp) || !pst_chip) {
 		PR_ERR("%s err, devp is NULL\n", __func__);
 		return;
 	}
@@ -2716,7 +2714,7 @@ void frc_dbg_table_print(struct work_struct *work)
 	// if (!pst_chip->power_on_flag)
 	// return;
 
-	pr_info("t6w print reg table\n");
+	pr_info("t6w/x print reg table\n");
 	// tmp_num = pst_chip->attr_st->drv_regs_num;
 	tmp_num = FW_REG_NUM;
 	for (i = 0; i < tmp_num; i++) {

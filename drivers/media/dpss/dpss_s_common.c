@@ -3216,9 +3216,11 @@ void dpss_s2_recycle_back(struct dpss_ch_s *pch)
 	//back to nr or frc:
 	for (i = 0; i < len; i++) {
 		vfm = dpss_q_out_vfm(pch, EDPSS_Q_CH_BACK);
-		nr_i = lk_get_nr_i(vfm);
 		type = lk_owner_get(vfm);
 		if (type == DPSS_VF_OWNER_NR) {
+			nr_i = lk_get_nr_i(vfm);
+			if (!nr_i)
+				continue;
 			vfm->dpss_flg = 0;
 			memset(&nr_i->sub_vf_in, 0, sizeof(nr_i->sub_vf_in));
 			dpss_q_in_vfm(&pch->d->q_ch[EDPSS_Q_CH_IDLE_NR], vfm);
@@ -3259,26 +3261,30 @@ void dpss_s2_recycle_back_frc(struct dpss_ch_s *pch)
 	if (dpss_dae_frm_cnt_src0 <= 3)
 		return;
 
-	dbg_h2("back_frc vpp return num:%d\n", len);
+	dbg_h2("recycle_back_frc vpp return num: %d\n", len);
 
 	if (len < dpss_dbg_back_frm_cnt)
 		return;
 
 	vfm = dpss_q_out_vfm(pch, EDPSS_Q_CH_BACK);
-	frc_i = lk_get_frc_i(vfm);
+	if (vfm)
+		frc_i = lk_get_frc_i(vfm);
+	if (!vfm || !frc_i)
+		return;
+
 	//if (frc_i->inp_idx != rls_idx)
-		//dbg_h2("%s buffer id don't match(%d, %d)\n", __func__,
-			//frc_i->inp_idx, rls_idx);
+	//	dbg_h2("%s buffer id don't match(%d, %d)\n", __func__,
+	//		frc_i->inp_idx, rls_idx);
 	//else
-		//dbg_h2("%s rls buffer id (%d,%d)\n", __func__,
-			//frc_i->inp_idx, rls_idx);
+	//	dbg_h2("%s rls buffer id (%d,%d)\n", __func__,
+	//		frc_i->inp_idx, rls_idx);
 	type = lk_owner_get(vfm);
 	if (type == DPSS_VF_OWNER_FRC) {
 		if (frc_i->in_vfm) //recycle input vfm:
 		//recycle input vfm:
 			dpss_q_in_vfm(&pch->d->q_ch[EDPSS_Q_CH_IN_RECYCLE], vfm);
-		//dbg_h2("%s type:%d, frc:%d)\n", __func__,
-			//type, DPSS_VF_OWNER_FRC);
+		dbg_h2("%s type:%d, frc:%d)\n", __func__,
+			type, DPSS_VF_OWNER_FRC);
 	}
 
 	dbg_h2("frc only release buf addr:<%lx,%lx> <%lx,%lx> <0x%x,0x%x>\n",

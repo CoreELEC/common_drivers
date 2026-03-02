@@ -808,19 +808,13 @@ void hw_init_part1(struct vframe_s *vfrm)
 	u32 out_4k2k_120_up_flag;
 
 	pchip_st = dpss_get_frc_st();
-	state_st = &pchip_st->state_st;
-	if (!pchip_st) {
-		DBG_ERR("%s pchip_st is null\n", __func__);
+	if (!pchip_st || !vinfo) {
+		DBG_ERR("%s pchip_st or vinfo is null\n", "hw_init_part");
 		return;
 	}
 
 	if (pchip_st->encl_frc_ctrl == 0) {
 		DBG_ERR("%s encl_frc_ctrl reg null\n", __func__);
-		return;
-	}
-
-	if (!vinfo) {
-		DBG_ERR("%s vinfo is null\n", __func__);
 		return;
 	}
 
@@ -833,6 +827,7 @@ void hw_init_part1(struct vframe_s *vfrm)
 	//	real_vtotal = rd_vc(ENCL_VIDEO_MAX_LNCNT);
 	//else
 	//	real_vtotal = 0x466;
+	state_st = &pchip_st->state_st;
 	real_vtotal = vinfo->vtotal;
 	vsync_lines = vinfo->vtotal / 2;
 	dbg_f1("%s:real_vtotal %d, out_frm_rate:%d\n",
@@ -1413,12 +1408,11 @@ void frc_prm_top_init_vfm(struct dpss_ch_s *pch,
 	struct dpss_frc_top_type_s *frc_top;
 	struct vinfo_s *vinfo = get_current_vinfo();
 
-	if (!prm_top || !vfms) {
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!prm_top || !vfms || !pfw_data) {
 		DBG_ERR("%s is_ex_di:%d\n", __func__, is_ex_di);
 		return;
 	}
-
-	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 
 	frc_top = &pfw_data->frc_top_type;
 	prm_top->frm_hsize = vfms->width;

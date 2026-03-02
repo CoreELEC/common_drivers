@@ -3725,8 +3725,8 @@ void hw_tbc_src0_input(struct PRM_DPSS_TOP *prm_top, unsigned int inp_src_idx)
 		dbg_h2("== inp_src_idx: %d ==\n", inp_src_idx);
 
 		u32 reg_src_frm_mif_opt = rd(FRC_SRC_FRM_MIF_OPT) & 0x3;//[1:0]
-		u64 inp_info = 0x800 << 20 |
-			(inp_src_idx & 0xf) << 8 |
+		u64 inp_info = 0x800LL << 20 |
+			((u64)inp_src_idx & 0xf) << 8 |
 			(inp_src_idx & 0xf) << 4 |
 			(reg_src_frm_mif_opt << 2) | 0;
 
@@ -3856,10 +3856,11 @@ void hw_tbc_process_dae1_frm_done(struct PRM_DPSS_TOP *prm_top, struct PRM_DPSS_
 
 		dae_fifo_idx = fnr_dpe_din_idx % reg_fnr_dae_obuf_num;
 		u64 dae_info0 = fnr_dae_fifo[dae_fifo_idx];
-		u64 dae_info1 = (dae_src_idx << (42 - 32)) |
-		    (dae_byp_mode << (41 - 32)) |
-		    (dae_frm_phs << (40 - 32)) |
-		    (dae_obuf_wrpt << (36 - 32)) | (dae_obuf_wrpt << (32 - 32));
+		u64 dae_info1 = ((u64)dae_src_idx << (42 - 32)) |
+			((u64)dae_byp_mode << (41 - 32)) |
+			((u64)dae_frm_phs << (40 - 32)) |
+			((u64)dae_obuf_wrpt << (36 - 32)) |
+			((u64)dae_obuf_wrpt << (32 - 32));
 		dpss_dbg_fifo_pt(2);
 
 		u64 dae_info = (dae_info1 << 32) | (dae_info0 & 0xffffffff);
@@ -4697,17 +4698,16 @@ void venc_vrr_vdin(void)
 	static u32 enable;
 	u32 vtotal, vmin_num, vmax_num, out_frm_rate;
 	u32 encl_frc_ctrl, venc_vrr_ctrl, venc_vrr_adj_lmt, venc_vrr_ctrl_1;
-	struct vinfo_s *vinfo;
-	struct dpss_game_state_s *game_st;
-	struct dpss_game_dly_s *dly_st;
 	struct dpss_frc_fw_data_s *pfw_data;
+	struct vinfo_s *vinfo;
+	struct dpss_game_dly_s *dly_st;
+	struct dpss_game_state_s *game_st;
 	struct dpss_frc_top_type_s *frc_top;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
-
-	if (!pfw_data)
+	if (!pfw_data || !pchip_st)
 		return;
 
 	game_st = &pchip_st->game_st;

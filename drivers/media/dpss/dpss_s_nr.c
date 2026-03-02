@@ -3441,7 +3441,10 @@ void tst_auto_nr_only_set(struct dpss_ch_s *pch)
 		}
 
 		vfm_in = vf_s1->in_vfm;
-
+		if (!vfm_in) {
+			DBG_ERR("%s:no in\n", "tst_auto_nr_only_set");
+			continue;
+		}
 		dpss_vfm_2_subvf(&vf_s1->sub_vf_in, vfm_in);
 		chg = dpss_sub_vf_check(pch, &vf_s1->sub_vf_in);
 		if (chg)
@@ -3456,19 +3459,23 @@ void tst_auto_nr_only_set(struct dpss_ch_s *pch)
 		dpss_q_in_idx(&pch->d->q_ch[EDPSS_Q_CH_NR_DOING],
 			      vf_s1->hd->idx);
 	}
+	// Null - checking [vfm_in] suggests that it may be null
+	// but it has already been dereferenced at line 3401
+	// in function[_prm_top_input_buffer_set].
 	//hw setting:
 	if (!vfm_in) {
 		DBG_ERR("%s:no in\n", __func__);
 		return;
 	}
-	//only for debug:
+	// only for debug
 	for (i = len; i < 15; i++)
 		_prm_top_input_buffer_set(prm_top, src, i, vfm_in);
 
 	hw_cfg_dpss_top(prm_top);
 	hw_cfg_dpss_inp(prm_top, prm_dpss_inp);
 	hw_cfg_dpss_dae(DAE_NR_MODE, prm_top, prm_dae);
-	hw_cfg_dpss_dpe(DPE_NR_MODE, prm_top, prm_dpe, &g_nr_pps_cfg);	//DPE_NR_MODE //DPE_NR_BYPS
+	hw_cfg_dpss_dpe(DPE_NR_MODE, prm_top, prm_dpe, &g_nr_pps_cfg);
+	//DPE_NR_MODE //DPE_NR_BYPS
 }
 #endif
 #ifdef DBG_TEST_CREATE
