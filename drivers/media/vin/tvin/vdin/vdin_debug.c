@@ -272,7 +272,7 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 	int ret = 0;
 	struct device *dev = kobj_to_dev(kobj);
 	struct vdin_dev_s *devp = dev_get_drvdata(dev);
-	struct dump_info_s *info = &devp->debug.dump_info_mif;
+	struct dump_info_s *info;
 	u32 sizeimage;
 	size_t to_copy = 0;
 	unsigned int span = 0;
@@ -282,10 +282,17 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 	bool is_data_end;
 	size_t remaining_bytes;
 
+	if (!devp) {
+		ret = -1;
+		goto error;
+	}
+
+	info = &devp->debug.dump_info_mif;
+
 	if (!info->vir_addr && off == 0) {
 		ret = mutex_lock_interruptible(&info->mutex);
 		if (ret < 0) {
-			ret = -1;
+			ret = -2;
 			goto error;
 		}
 
@@ -331,7 +338,7 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 			info->vir_addr = vdin_vmap(map_addr, info->map_size);
 			if (!info->vir_addr) {
 				mutex_unlock(&info->mutex);
-				ret = -2;
+				ret = -3;
 				goto error;
 
 			}
@@ -362,7 +369,7 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 	} else {
 		if (!info->vir_addr) {
 			mutex_unlock(&info->mutex);
-			ret = -3;
+			ret = -4;
 			goto error;
 
 		}
@@ -373,20 +380,149 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 	is_data_end = (off + to_copy) >= info->sizeimage;
 
 	if (is_data_end) {
-		info->vir_addr = NULL;
 		pr_info("dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
 			devp->index, devp->curr_wr_vfe->vf.width,
 			devp->curr_wr_vfe->vf.height, devp->canvas_w,
 			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth_dw);
 		if (info->highmem_flag)
 			vdin_unmap_phyaddr(info->vir_addr);
+		info->vir_addr = NULL;
 		mutex_unlock(&info->mutex);
 	}
 
 	return to_copy;
 
 error:
-	pr_err("dump vdin%d mif error: %d\n", devp->index, ret);
+	pr_err("dump vdin mif error: %d\n", ret);
+	return ret;
+}
+
+static ssize_t dump_vdin_sct_body_show(struct kobject *kobj,
+			char *buf, loff_t off, size_t count)
+{
+	int ret = 0;
+	struct device *dev = kobj_to_dev(kobj);
+	struct vdin_dev_s *devp = dev_get_drvdata(dev);
+	struct dump_info_s *info;
+	u32 sizeimage;
+	size_t to_copy = 0;
+	bool is_data_end;
+	struct codec_mm_scatter *sc;
+	struct vdin_mmu_box *box = NULL;
+	size_t sct_page_idx = 0;
+	size_t sct_page_offset = 0;
+
+	if (!devp || devp->mem_type != VDIN_MEM_TYPE_SCT) {
+		ret = -1;
+		goto error;
+	}
+
+	info = &devp->debug.dump_info_sct_body;
+
+	if (!info->vir_addr && off == 0) {
+		ret = mutex_lock_interruptible(&info->mutex);
+		if (ret < 0) {
+			ret = -2;
+			goto error;
+		}
+
+		box = devp->msct_top.box;
+		if (!box) {
+			mutex_unlock(&info->mutex);
+			ret = -3;
+			goto error;
+		}
+
+		info->sc = vdin_mmu_box_get_sc_from_idx(box, 0);
+		if (!info->sc) {
+			mutex_unlock(&info->mutex);
+			ret = -4;
+			goto error;
+		}
+		info->sizeimage = devp->msct_top.mmu_4k_number * PAGE_SIZE;
+		info->sc_page_cnt = info->sc->page_cnt;
+	}
+
+	sizeimage = info->sizeimage;
+	sc = info->sc;
+
+	if (off >= sizeimage) {
+		mutex_unlock(&info->mutex);
+		return 0;
+	}
+
+	if (!info->sc) {
+		mutex_unlock(&info->mutex);
+		ret = -5;
+		goto error;
+	}
+
+	sct_page_idx = off / PAGE_SIZE;
+	sct_page_offset = off % PAGE_SIZE;
+
+	if (sc && sct_page_idx < info->sc_page_cnt) {
+		info->phy_addr = vdin_sct_get_page_addr(sc, sct_page_idx);
+		info->highmem_flag = PageHighMem(phys_to_page(info->phy_addr));
+
+		if (info->highmem_flag) {
+			info->vir_addr = vdin_vmap(info->phy_addr, PAGE_SIZE);
+		} else {
+			if ((devp->cma_config_flag & 0xfff) == 0x101)
+				info->vir_addr = codec_mm_phys_to_virt(info->phy_addr);
+			else
+				info->vir_addr = phys_to_virt(info->phy_addr);
+		}
+		if (!info->vir_addr) {
+			mutex_unlock(&info->mutex);
+			ret = -6;
+			goto error;
+		}
+
+		vdin_dma_flush(devp, info->vir_addr, PAGE_SIZE, DMA_FROM_DEVICE);
+
+		to_copy = min_t(size_t, count, PAGE_SIZE - sct_page_offset);
+		memcpy(buf, info->vir_addr + sct_page_offset, to_copy);
+
+		if (devp->debug.vdin_dbg_en & DBG_VDIN_DUMP)
+			pr_info("sct page id:%zu (%u %d), paddr:0x%lx, mem:%d",
+				sct_page_idx, info->sc_page_cnt, devp->msct_top.mmu_4k_number,
+				(unsigned long)info->phy_addr, info->highmem_flag);
+
+		if (info->highmem_flag)
+			vdin_unmap_phyaddr(info->vir_addr);
+	}
+
+	if (sc && sct_page_idx >= info->sc_page_cnt &&
+		sct_page_idx < devp->msct_top.mmu_4k_number) {
+		if (!info->vir_addr) {
+			mutex_unlock(&info->mutex);
+			ret = -7;
+			goto error;
+		}
+
+		to_copy = min_t(size_t, count, PAGE_SIZE - sct_page_offset);
+		memset(buf, 0, to_copy);
+
+		if (devp->debug.vdin_dbg_en & DBG_VDIN_DUMP)
+			pr_info("sct 4k page id:%zu (%u %d), paddr:0x%lx, mem:%d",
+				sct_page_idx, info->sc_page_cnt,  devp->msct_top.mmu_4k_number,
+				(unsigned long)info->phy_addr, info->highmem_flag);
+	}
+
+	is_data_end = (off + to_copy) >= info->sizeimage;
+
+	if (is_data_end) {
+		pr_info("dump vdin%d sct body ok %dx%d %s %d bit addr:0x0 sct:%d\n",
+			devp->index, devp->h_active, devp->v_active,
+			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
+			devp->mem_type);
+		info->vir_addr = NULL;
+		mutex_unlock(&info->mutex);
+	}
+
+	return to_copy;
+error:
+	pr_err("dump vdin sct body error: %d\n", ret);
 	return ret;
 }
 
@@ -397,15 +533,22 @@ static ssize_t dump_vdin_afbc_head_show(struct file *filp, struct kobject *kobj,
 	int ret = 0;
 	struct device *dev = kobj_to_dev(kobj);
 	struct vdin_dev_s *devp = dev_get_drvdata(dev);
-	struct dump_info_s *info = &devp->debug.dump_info_afbc_head;
+	struct dump_info_s *info;
 	u32 sizeimage;
 	u8 *vir_addr;
 	size_t to_copy;
 
+	if (!devp || !devp->double_wr) {
+		ret = -1;
+		goto error;
+	}
+
+	info = &devp->debug.dump_info_afbc_head;
+
 	if (!info->vir_addr && off == 0) {
 		ret = mutex_lock_interruptible(&info->mutex);
 		if (ret < 0) {
-			ret = -1;
+			ret = -2;
 			goto error;
 		}
 
@@ -426,7 +569,7 @@ static ssize_t dump_vdin_afbc_head_show(struct file *filp, struct kobject *kobj,
 
 		if (!info->vir_addr) {
 			mutex_unlock(&info->mutex);
-			ret = -2;
+			ret = -3;
 			goto error;
 
 		}
@@ -435,15 +578,15 @@ static ssize_t dump_vdin_afbc_head_show(struct file *filp, struct kobject *kobj,
 	sizeimage = info->sizeimage;
 	vir_addr = info->vir_addr;
 
-	if (!vir_addr) {
-		mutex_unlock(&info->mutex);
-		ret = -3;
-		goto error;
-	}
-
 	if (off >= sizeimage) {
 		mutex_unlock(&info->mutex);
 		return 0;
+	}
+
+	if (!vir_addr) {
+		mutex_unlock(&info->mutex);
+		ret = -4;
+		goto error;
 	}
 
 	vdin_dma_flush(devp, vir_addr, sizeimage, DMA_FROM_DEVICE);
@@ -463,7 +606,7 @@ static ssize_t dump_vdin_afbc_head_show(struct file *filp, struct kobject *kobj,
 
 	return to_copy;
 error:
-	pr_err("dump vdin%d afbc head error: %d\n", devp->index, ret);
+	pr_err("dump vdin afbc head error: %d\n", ret);
 	return ret;
 }
 
@@ -474,15 +617,22 @@ static ssize_t dump_vdin_afbc_table_show(struct file *filp, struct kobject *kobj
 	int ret = 0;
 	struct device *dev = kobj_to_dev(kobj);
 	struct vdin_dev_s *devp = dev_get_drvdata(dev);
-	struct dump_info_s *info = &devp->debug.dump_info_afbc_table;
+	struct dump_info_s *info;
 	u32 sizeimage;
 	u8 *vir_addr;
 	size_t to_copy;
 
+	if (!devp || !devp->double_wr) {
+		ret = -1;
+		goto error;
+	}
+
+	info = &devp->debug.dump_info_afbc_table;
+
 	if (!info->vir_addr && off == 0) {
 		ret = mutex_lock_interruptible(&info->mutex);
 		if (ret < 0) {
-			ret = -1;
+			ret = -2;
 			goto error;
 		}
 
@@ -503,7 +653,7 @@ static ssize_t dump_vdin_afbc_table_show(struct file *filp, struct kobject *kobj
 
 		if (!info->vir_addr) {
 			mutex_unlock(&info->mutex);
-			ret = -2;
+			ret = -3;
 			goto error;
 
 		}
@@ -512,15 +662,15 @@ static ssize_t dump_vdin_afbc_table_show(struct file *filp, struct kobject *kobj
 	sizeimage = info->sizeimage;
 	vir_addr = info->vir_addr;
 
-	if (!vir_addr) {
-		mutex_unlock(&info->mutex);
-		ret = -3;
-		goto error;
-	}
-
 	if (off >= sizeimage) {
 		mutex_unlock(&info->mutex);
 		return 0;
+	}
+
+	if (!vir_addr) {
+		mutex_unlock(&info->mutex);
+		ret = -4;
+		goto error;
 	}
 
 	vdin_dma_flush(devp, vir_addr, sizeimage, DMA_FROM_DEVICE);
@@ -540,7 +690,7 @@ static ssize_t dump_vdin_afbc_table_show(struct file *filp, struct kobject *kobj
 
 	return to_copy;
 error:
-	pr_err("dump vdin%d afbc table error: %d\n", devp->index, ret);
+	pr_err("dump vdin afbc table error: %d\n", ret);
 	return ret;
 }
 
@@ -551,10 +701,10 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	int ret = 0;
 	struct device *dev = kobj_to_dev(kobj);
 	struct vdin_dev_s *devp = dev_get_drvdata(dev);
-	struct dump_info_s *info = &devp->debug.dump_info_afbc_body;
+	struct dump_info_s *info;
 	u32 sizeimage;
 	u8 *vir_addr;
-	size_t to_copy;
+	size_t to_copy = 0;
 	u64 map_addr;
 	unsigned int span = SZ_1M;
 	loff_t block_idx = off / span;
@@ -562,17 +712,29 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	bool is_block_end;
 	bool is_data_end;
 
+	if (!devp || !devp->double_wr) {
+		ret = -1;
+		goto error;
+	}
+
+	info = &devp->debug.dump_info_afbc_body;
+
+	if (devp->mem_type == VDIN_MEM_TYPE_SCT) {
+		info->sizeimage = devp->msct_top.mmu_4k_number * PAGE_SIZE;
+		to_copy = dump_vdin_sct_body_show(kobj, buf, off, count);
+		return to_copy;
+	}
+
 	if (!info->vir_addr && off == 0) {
 		ret = mutex_lock_interruptible(&info->mutex);
 		if (ret < 0) {
-			ret = -1;
+			ret = -2;
 			goto error;
 		}
 
 		info->phy_addr = devp->afbce_info->fm_body_paddr[0];
 		info->sizeimage = devp->afbce_info->frame_body_size;
-		info->highmem_flag = PageHighMem(phys_to_page(devp->afbce_info->fm_body_paddr[0]));
-
+		info->highmem_flag = PageHighMem(phys_to_page(info->phy_addr));
 		if (info->highmem_flag == 0) {
 			if ((devp->cma_config_flag & 0xfff) == 0x101)
 				info->vir_addr = codec_mm_phys_to_virt(info->phy_addr);
@@ -595,7 +757,7 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 			info->vir_addr = vdin_vmap(info->map_addr, info->map_size);
 			if (!info->vir_addr) {
 				mutex_unlock(&info->mutex);
-				ret = -2;
+				ret = -3;
 				goto error;
 			}
 			vdin_dma_flush(devp, info->vir_addr, info->map_size, DMA_FROM_DEVICE);
@@ -603,16 +765,16 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	}
 
 	sizeimage = info->sizeimage;
-	vir_addr = info->vir_addr;
-	if (!vir_addr) {
-		mutex_unlock(&info->mutex);
-		ret = -3;
-		goto error;
-	}
-
 	if (off >= sizeimage) {
 		mutex_unlock(&info->mutex);
 		return 0;
+	}
+
+	vir_addr = info->vir_addr;
+	if (!vir_addr) {
+		mutex_unlock(&info->mutex);
+		ret = -4;
+		goto error;
 	}
 
 	if (info->highmem_flag) {
@@ -629,7 +791,7 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 			info->vir_addr = vdin_vmap(info->map_addr, info->map_size);
 			if (!info->vir_addr) {
 				mutex_unlock(&info->mutex);
-				ret = -4;
+				ret = -5;
 				goto error;
 			}
 			vdin_dma_flush(devp, info->vir_addr, info->map_size, DMA_FROM_DEVICE);
@@ -655,19 +817,19 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	is_data_end = (off + to_copy) >= info->sizeimage;
 
 	if (is_data_end) {
-		pr_info("dump vdin%d afbc body ok %dx%d %s %d bit afbc:0x%x 0x%lx sct:%d\n",
+		pr_info("dump vdin%d afbc body ok %dx%d %s %d bit afbc:0x%x 0x%lx\n",
 			devp->index, devp->h_active, devp->v_active,
 			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
-			devp->afbce_flag, devp->afbce_info->fm_body_paddr[0], devp->mem_type);
-		info->vir_addr = NULL;
+			devp->afbce_flag, devp->afbce_info->fm_body_paddr[0]);
 		if (info->highmem_flag)
 			vdin_unmap_phyaddr(info->vir_addr);
+		info->vir_addr = NULL;
 		mutex_unlock(&info->mutex);
 	}
 
 	return to_copy;
 error:
-	pr_err("dump vdin%d afbc body error: %d\n", devp->index, ret);
+	pr_err("dump vdin afbc body error: %d\n", ret);
 	return ret;
 }
 
@@ -965,10 +1127,11 @@ void *output_body_ptr, struct vdin_dev_s *devp, unsigned int buf_num)
 			vdin_unmap_phyaddr(virt_buf);
 		}
 	}
-	pr_info("user dump vdin%d afbc buffer ok %dx%d %s %d bit afbc:0x%x 0x%lx sct:%d\n",
+	pr_info("user dump vdin%d afbc buffer ok %dx%d %s %d bit afbc:0x%x 0x%lx %d sct:%d\n",
 		devp->index, devp->h_active, devp->v_active,
 		vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
-		devp->afbce_flag, devp->afbce_info->fm_body_paddr[0], devp->mem_type);
+		devp->afbce_flag, devp->afbce_info->fm_body_paddr[0],
+		devp->afbce_info->frame_body_size, devp->mem_type);
 	return;
 error:
 	pr_info("user dump afbc buffer error: %d\n", ret);

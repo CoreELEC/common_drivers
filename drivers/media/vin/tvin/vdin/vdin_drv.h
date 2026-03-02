@@ -658,6 +658,8 @@ struct dump_info_s {
 	u64 map_size;
 	void *vir_addr;
 	struct mutex mutex;/*for dump finish then user layer to dq*/
+	struct codec_mm_scatter *sc;
+	u32 sc_page_cnt;
 };
 
 /*******for debug **********/
@@ -667,6 +669,7 @@ struct vdin_debug_s {
 	struct dump_info_s dump_info_afbc_head;
 	struct dump_info_s dump_info_afbc_table;
 	struct dump_info_s dump_info_afbc_body;
+	struct dump_info_s dump_info_sct_body;
 	struct dump_info_s dump_info_mif;
 	unsigned int vdin_recycle_num;/* debug for vdin recycle frame by self */
 	unsigned int dbg_print_cntl;/* debug for vdin print control */
