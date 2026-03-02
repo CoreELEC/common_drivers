@@ -5177,6 +5177,13 @@ start_chk:
 			err = -EINVAL;
 			goto error;
 		}
+	} else if (!strcmp(parm[0], "game_frc_mute_time")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			devp->game_frc_mute_time = temp; //ms
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
 	}
 #endif
 	else if (!strcmp(parm[0], "state")) {

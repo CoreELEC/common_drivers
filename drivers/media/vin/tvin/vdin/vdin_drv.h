@@ -1410,6 +1410,7 @@ struct vdin_dev_s {
 	unsigned int vdin_game_frc;
 	unsigned int yuv422_2plane_en;
 	unsigned int get_vdin_mem_size_flag;
+	unsigned int game_frc_mute_time;
 };
 
 extern unsigned int max_ignore_frame_cnt;

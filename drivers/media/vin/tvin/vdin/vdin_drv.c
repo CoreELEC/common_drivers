@@ -36,6 +36,8 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/dma-map-ops.h>
 #include <linux/sched/clock.h>
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 /*#include <linux/amlogic/iomap.h>*/
 /*#include <linux/amlogic/media/registers/register_map.h>*/
 #include <linux/fdtable.h>
@@ -162,6 +164,9 @@ MODULE_PARM_DESC(vdin_game_mode_dly, "vdin_game_mode_dly");
 
 static unsigned int panel_reverse;
 struct vdin_hist_s vdin1_hist;
+
+//for game frc mute
+static struct hrtimer vdin_game_frc_hrtimer;
 
 int irq_max_count;
 
@@ -579,6 +584,23 @@ void vdin_frame_lock_check(struct vdin_dev_s *devp, int state)
 		devp->vrr_data.frame_lock_vrr_en = false;
 	}
 }
+
+#ifdef CONFIG_AMLOGIC_LCD
+static enum hrtimer_restart vdin_game_frc_timer_callback(struct hrtimer *timer)
+{
+	// struct vdin_dev_s *devp =
+	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
+
+	if (!pdrv)
+		return HRTIMER_NORESTART;
+
+	lcd_mute_set(pdrv, 0);
+	// if (devp->debug.vdin_dbg_en)
+	// pr_info("%s lcd unmute done\n", __func__);
+
+	return HRTIMER_NORESTART;
+}
+#endif
 
 void vdin_game_frc_check(struct vdin_dev_s *devp, int state)
 {
@@ -5325,6 +5347,9 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	void __user *user_body_ptr = NULL;
 	void __user *user_buf = NULL;
 #endif
+#ifdef CONFIG_AMLOGIC_LCD
+	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
+#endif
 	/* Get the per-device structure that contains this cdev */
 	devp = file->private_data;
 	if (!devp)
@@ -6393,6 +6418,14 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (devp->debug.bypass_game_frc)
 			break;
 		if (devp->vdin_game_frc != tmp) {
+#ifdef CONFIG_AMLOGIC_LCD
+			lcd_mute_set(pdrv, 1);
+			vdin_game_frc_hrtimer.function = vdin_game_frc_timer_callback;
+			if (!devp->game_frc_mute_time)
+				devp->game_frc_mute_time = 1000;
+			hrtimer_start(&vdin_game_frc_hrtimer,
+				ms_to_ktime(devp->game_frc_mute_time), HRTIMER_MODE_REL);
+#endif
 			mutex_lock(&devp->fe_lock);
 			if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
 				devp->flags & VDIN_FLAG_DEC_STARTED) {
@@ -8271,6 +8304,8 @@ int __init vdin_drv_init(void)
 		goto fail_pdrv_register;
 	}
 
+	hrtimer_init(&vdin_game_frc_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	/*register vdin for v4l2 interface*/
 	if (vdin_reg_v4l2(&vdin_4v4l2_ops))
@@ -8298,6 +8333,7 @@ void __exit vdin_drv_exit(void)
 	class_destroy(vdin_class);
 	unregister_chrdev_region(vdin_devno, VDIN_MAX_DEVS);
 	platform_driver_unregister(&vdin_driver);
+	hrtimer_cancel(&vdin_game_frc_hrtimer);
 }
 
 static int vdin_mem_device_init(struct reserved_mem *rmem, struct device *dev)
