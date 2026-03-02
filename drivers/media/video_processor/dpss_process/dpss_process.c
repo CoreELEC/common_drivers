@@ -1661,8 +1661,10 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	struct dpss_cmd_a_s dpss_para;
 	bool is_interlace = false;
 	bool is_high_fps = false;
+	bool is_4k = false;
 	bool need_enable_direct_mode = false;
 	u32 duration = 0;
+	u32 src_w, src_h;
 
 	if (!dev || !vf) {
 		pr_err("dp:[0]:%s:NULL param.\n", __func__);
@@ -1681,7 +1683,12 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	if (duration >= 667 && duration < 1600)
 		is_high_fps = true;
 
-	need_enable_direct_mode = is_high_fps || is_dual_channel_enabled || temperature_control_en;
+	src_w = (vf->type & VIDTYPE_COMPRESS) ? vf->compWidth : vf->width;
+	src_h = (vf->type & VIDTYPE_COMPRESS) ? vf->compHeight : vf->height;
+	is_4k = (src_w > 2560 || src_h > 1440);
+
+	need_enable_direct_mode = (is_4k && is_high_fps) || is_dual_channel_enabled ||
+		temperature_control_en;
 
 	if (force_direct_mode == DIRECT_MODE_FORCED_ENABLE)
 		direct_mode_flag = 1;
