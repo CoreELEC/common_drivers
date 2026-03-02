@@ -27,6 +27,8 @@
 #define COMPACT_STEP_SIZE_4K (4UL * SZ_1M) /* 4MB */
 #define COMPACT_STEP_SIZE_2K (1UL * SZ_1M) /* 1MB */
 
+#define COMPACT_DEFAULT_SIZE (64) /* 64MB */
+
 enum cma_compact_state {
 	CMA_COMPACT_STOP = 0,
 	CMA_COMPACT_RUN = 1,
@@ -46,7 +48,7 @@ static int once_sleep_time = 100;
 module_param(once_sleep_time, int, 0644);
 static int loop_sleep_time = 2000;
 module_param(loop_sleep_time, int, 0644);
-static int compact_size;
+static int compact_size = COMPACT_DEFAULT_SIZE;
 module_param(compact_size, int, 0644);
 static int print_debug;
 module_param(print_debug, int, 0644);
@@ -102,7 +104,7 @@ void codec_mm_compact_unlock(void)
 	mutex_unlock(&ctrl->compact_lock);
 }
 
-static inline void codec_mm_compact_range(struct cma *cma, unsigned long base_pfn,
+static void __nocfi codec_mm_compact_range(struct cma *cma, unsigned long base_pfn,
 	unsigned long end_pfn)
 {
 	unsigned long i;
@@ -190,7 +192,10 @@ int codec_mm_compaction_thread(void *data)
 
 		/* Enter the main compaction loop */
 		while (atomic_read(&ctrl->state) == CMA_COMPACT_RUN) {
-			cma_size = compact_size ? (compact_size * SZ_1M) : cma_get_size(cma);
+			cma_size = cma_get_size(cma);
+			if (compact_size && compact_size * SZ_1M < cma_size)
+				cma_size = compact_size * SZ_1M;
+
 			step = compact_step_size ? (compact_step_size * SZ_1M) : ctrl->compact_step;
 			count = 0;
 			for (pos = cma_base; pos < cma_base + cma_size; pos += step) {
@@ -248,6 +253,7 @@ void codec_mm_compaction_init(void *data)
 	task = kthread_run(codec_mm_compaction_thread, data, "cma_compaction");
 	if (!IS_ERR(task)) {
 		set_user_nice(task, -1);
+		codec_mm_compaction_start(-1);
 		pr_debug("create codec_mm compaction task %p\n", task);
 	} else {
 		pr_err("create codec_mm compaction task fail:%p\n", task);
