@@ -160,7 +160,7 @@ void dtmb_all_reset(struct aml_dtvdemod *demod)
 		/*delay fec lock & make fec lost faster
 		 *to prevent eq is confused by signal
 		 */
-		dtmb_write_reg(DTMB_FRONT_DEBUG_CFG, 0x5480000);
+		dtmb_write_reg(DTMB_FRONT_DEBUG_CFG, 0x5580000);
 		/*reduce fec lost timeout*/
 		dtmb_write_reg(DTMB_FRONT_19_CONFIG, 0x30);
 
