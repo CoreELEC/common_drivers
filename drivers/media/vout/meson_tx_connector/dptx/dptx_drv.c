@@ -27,6 +27,64 @@
 #define DEVICE_NAME "dptx"
 #define DPTX_DEV_COUNT 4
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+static void dptx_early_suspend(struct early_suspend *es)
+{
+	struct dptx_common *tx_comm = NULL;
+
+	if (!es)
+		return;
+
+	tx_comm = es->param;
+	DPTX_DEBUG("early suspend %s\n", dev_name(tx_comm->base.dev));
+}
+
+static void dptx_late_resume(struct early_suspend *es)
+{
+	struct dptx_common *tx_comm = NULL;
+
+	if (!es)
+		return;
+
+	tx_comm = es->param;
+	DPTX_DEBUG("late resume %s\n", dev_name(tx_comm->base.dev));
+}
+#endif
+
+#ifdef CONFIG_PM
+static int dptx_pm_suspend(struct device *dev)
+{
+	if (!dev)
+		return -EINVAL;
+
+	DPTX_DEBUG("suspend %s\n", dev_name(dev));
+
+	return 0;
+}
+
+static int dptx_pm_resume(struct device *dev)
+{
+	if (!dev)
+		return -EINVAL;
+
+	DPTX_DEBUG("resume %s\n", dev_name(dev));
+
+	return 0;
+}
+
+static int dptx_pm_restore(struct device *dev)
+{
+	return 0;
+}
+
+const struct dev_pm_ops dptx_pm = {
+	.suspend	= dptx_pm_suspend,
+	.resume		= dptx_pm_resume,
+	/* no application for now */
+	.restore    = dptx_pm_restore,
+};
+#endif
+
 static int dptx_bind_drm(struct device *dev, struct device *master,
 			   void *data)
 {
@@ -323,6 +381,19 @@ static int dptx_probe(struct platform_device *pdev)
 	INIT_WORK(&tx_comm->hw_comm->work_dptxhdcp, start_hdcp_work_func);
 	dev_set_drvdata(device, tx_comm);
 
+	/* In multiple DPTX scenarios, the probe will be executed multiple times,
+	 * so a global handle cannot be used for registration here.
+	 */
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	tx_comm->es.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10;
+	tx_comm->es.suspend = dptx_early_suspend;
+	tx_comm->es.resume  = dptx_late_resume;
+	tx_comm->es.param   = tx_comm;
+
+	register_early_suspend(&tx_comm->es);
+	tx_comm->es_registered = true;
+#endif
+
 	component_add(device, &dptx_bind_ops);
 
 	DPTX_INFO("%s for dev_index[%d]\n", __func__, tx_comm->dev_idx);
@@ -342,6 +413,14 @@ static void dptx_remove(struct platform_device *pdev)
 		return;
 
 	component_del(device, &dptx_bind_ops);
+
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	if (tx_comm->es_registered) {
+		unregister_early_suspend(&tx_comm->es);
+		tx_comm->es_registered = false;
+	}
+#endif
+
 	dev_set_drvdata(device, NULL);
 
 	dptx_common_uninit(tx_comm);
@@ -388,6 +467,9 @@ static struct platform_driver dptx_driver = {
 		.name = DEVICE_NAME,
 		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(dptx_of_match),
+#ifdef CONFIG_PM
+		.pm = &dptx_pm,
+#endif
 	}
 };
 

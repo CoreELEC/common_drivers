@@ -8,6 +8,10 @@
 
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_dev.h>
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
+#endif
+
 struct dptx_hw_common;
 
 struct meson_dp_aux_msg {
@@ -95,6 +99,10 @@ struct dptx_common {
 	unsigned char link_sink_status[6];
 	/* enc index: dp/edp device */
 	u32 enc_idx;
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	struct early_suspend es;
+	bool es_registered;
+#endif
 };
 
 #define to_dptx_common(x)	container_of(x, struct dptx_common, base)
