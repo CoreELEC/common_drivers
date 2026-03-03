@@ -347,7 +347,7 @@ long dsm_ioctl(struct file *filp, unsigned int cmd, unsigned long userdata)
 	long retval = 0;
 	struct dev_session *dev = NULL;
 	union dsm_para __user *argp = (void __user *)userdata;
-	union dsm_para para;
+	union dsm_para *ppara;
 
 	if (_IOC_TYPE(cmd) != DSM_IOC_MAGIC)
 		return -EINVAL;
@@ -356,38 +356,45 @@ long dsm_ioctl(struct file *filp, unsigned int cmd, unsigned long userdata)
 	if (!dev)
 		return -EINVAL;
 
-	if (copy_from_user((void *)&para, argp, sizeof(para)))
-		return -EINVAL;
+	ppara = kzalloc(sizeof(*ppara), GFP_KERNEL);
+	if (!ppara)
+		return -ENOMEM;
 
+	if (copy_from_user((void *)ppara, argp, sizeof(*ppara))) {
+		kfree(ppara);
+		return -EINVAL;
+	}
 	switch (cmd) {
 	case DSM_IOC_OPEN_SESSION:
-		retval = dsm_open_session(dev, &para);
+		retval = dsm_open_session(dev, ppara);
 		break;
 	case DSM_IOC_ADD_KEYSLOT:
-		retval = dsm_add_keyslot(dev, &para);
+		retval = dsm_add_keyslot(dev, ppara);
 		break;
 	case DSM_IOC_DEL_KEYSLOT:
-		retval = dsm_del_keyslot(dev, &para);
+		retval = dsm_del_keyslot(dev, ppara);
 		break;
 	case DSM_IOC_SET_TOKEN:
-		retval = dsm_set_token(dev, &para);
+		retval = dsm_set_token(dev, ppara);
 		break;
 	case DSM_IOC_GET_KEYSLOT_LIST:
-		retval = dsm_get_keyslot_list(dev, &para);
+		retval = dsm_get_keyslot_list(dev, ppara);
 		break;
 	case DSM_IOC_SET_PROPERTY:
-		retval = dsm_set_property(dev, &para);
+		retval = dsm_set_property(dev, ppara);
 		break;
 	case DSM_IOC_GET_PROPERTY:
-		retval = dsm_get_property(dev, &para);
+		retval = dsm_get_property(dev, ppara);
 		break;
 	default:
 		retval = -EINVAL;
 		break;
 	}
-	if (copy_to_user((void *)argp, &para, sizeof(para)))
+	if (copy_to_user((void *)argp, ppara, sizeof(*ppara))) {
+		kfree(ppara);
 		return -EFAULT;
-
+	}
+	kfree(ppara);
 	return retval;
 }
 
