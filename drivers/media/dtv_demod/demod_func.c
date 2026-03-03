@@ -2568,7 +2568,7 @@ int demod_set_sys(struct aml_dtvdemod *demod, struct aml_demod_sys *demod_sys)
 
 void demod_set_top_frontend(struct aml_dtvdemod *demod, enum fe_delivery_system delsys)
 {
-	PR_DBG("delsys %d use top frontend\n", delsys);
+	PR_INFO("delsys %d use top frontend\n", delsys);
 	switch (delsys) {
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_ISDBT
 	case SYS_ISDBT:
@@ -2786,6 +2786,7 @@ void demod_set_top_frontend(struct aml_dtvdemod *demod, enum fe_delivery_system 
 		}
 		break;
 	default:
+		PR_INFO("cur sys not support\n");
 		break;
 	}
 }

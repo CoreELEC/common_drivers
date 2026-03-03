@@ -532,10 +532,10 @@ static void dtv_dmd_parse_param(char *buf_orig, char **parm)
 
 static void wait_capture(int cap_cur_addr, int depth_MB, int start)
 {
-	int readfirst;
-	int tmp;
+	unsigned long readfirst;
+	unsigned long tmp;
 	int time_out;
-	int last = 0x1000000;
+	unsigned long last = 0x1000000;
 
 	time_out = 0;
 	tmp = depth_MB << 20;
@@ -545,8 +545,8 @@ static void wait_capture(int cap_cur_addr, int depth_MB, int start)
 		time_out = time_out + 1;
 		usleep_range(1000, 2000);
 		readfirst = front_read_reg(cap_cur_addr);
-		PR_INFO("%s: cap_cur_addr:0x%x", __func__, readfirst);
-		if ((last - readfirst) > 0)
+		PR_INFO("%s: cap_cur_addr:0x%lx", __func__, readfirst);
+		if (last > readfirst)
 			tmp = 0;
 		else
 			last = readfirst;

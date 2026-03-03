@@ -680,13 +680,14 @@ void dvbc_reg_initial(struct aml_dtvdemod *demod, struct dvb_frontend *fe)
 		default:
 			break;
 		}
-		if (!dvbc_top_fe_enable && !demod_chip_after_eq(DTVDEMOD_HW_T6D))
+		if (!dvbc_top_fe_enable || !demod_chip_after_eq(DTVDEMOD_HW_T6D) ||
+			demod->demod_status.delsys == SYS_DVBC_ANNEX_B)
 			qam_auto_scan(demod, 1);
 	}
 
 	/* use top frontend */
 	if (dvbc_top_fe_enable && demod_chip_after_eq(DTVDEMOD_HW_T6D))
-		demod_set_top_frontend(demod, SYS_DVBC_ANNEX_A);
+		demod_set_top_frontend(demod, demod->demod_status.delsys);
 
 	qam_write_reg(demod, 0x65, 0x700c); // offset
 	qam_write_reg(demod, 0xb4, 0x32030);
@@ -819,7 +820,8 @@ void dvbc_cfg_sr_cnt(struct aml_dtvdemod *demod, enum dvbc_sym_speed spd)
 
 void dvbc_cfg_sr_scan_speed(struct aml_dtvdemod *demod, enum dvbc_sym_speed spd)
 {
-	if (dvbc_top_fe_enable && demod_chip_after_eq(DTVDEMOD_HW_T6D)) {
+	if (dvbc_top_fe_enable && demod_chip_after_eq(DTVDEMOD_HW_T6D) &&
+		demod->demod_status.delsys != SYS_DVBC_ANNEX_B) {
 		switch (spd) {
 		case SYM_SPEED_MIDDLE:
 			front_write_reg(0x2c, 0x0b042264);
@@ -853,7 +855,8 @@ void dvbc_cfg_sr_scan_speed(struct aml_dtvdemod *demod, enum dvbc_sym_speed spd)
 
 void dvbc_cfg_tim_sweep_range(struct aml_dtvdemod *demod, enum dvbc_sym_speed spd)
 {
-	if (dvbc_top_fe_enable && demod_chip_after_eq(DTVDEMOD_HW_T6D)) {
+	if (dvbc_top_fe_enable && demod_chip_after_eq(DTVDEMOD_HW_T6D) &&
+		demod->demod_status.delsys != SYS_DVBC_ANNEX_B) {
 		switch (spd) {
 		case SYM_SPEED_MIDDLE:
 			front_write_reg(0x2e, 0x220000);
