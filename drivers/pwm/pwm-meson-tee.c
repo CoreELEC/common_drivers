@@ -121,7 +121,8 @@ static int meson_pwm_tee_calc(struct meson_pwm_tee *meson, struct pwm_device *pw
 
 	dev_dbg(&meson->chip->dev, "fin_freq: %lu Hz\n", fin_freq);
 	channel->pre_div = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period, NSEC_PER_SEC * 0xffffLL);
-	cnt = DIV64_U64_ROUND_CLOSEST(fin_freq * period, NSEC_PER_SEC * (channel->pre_div + 1));
+	cnt = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period,
+			NSEC_PER_SEC * (channel->pre_div + 1));
 	if (cnt > 0xffff) {
 		dev_err(&meson->chip->dev, "unable to get period cnt\n");
 		return -EINVAL;
@@ -191,9 +192,12 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 
 	set_clk /= (channel->pre_div + 1);
 	err = clk_set_rate(channel->clk, set_clk);
-	if (err)
+	if (err) {
 		pr_err("%s: error in setting pwm clk rate!\n", __func__);
+		return;
+	}
 	channel->clk_div = channel->pre_div;
+	channel->rate = set_clk;
 }
 
 static void meson_pwm_tee_disable(struct meson_pwm_tee *meson, struct pwm_device *pwm)
