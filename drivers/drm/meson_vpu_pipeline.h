@@ -445,6 +445,8 @@ struct meson_vpu_video {
 	 * returned in format "width<< 16 | height"
 	 */
 	u32 src_max_size;
+
+	u64 frame_cnt;
 };
 
 struct meson_vpu_video_state {

@@ -417,6 +417,7 @@ static void video_set_state(struct meson_vpu_block *vblk,
 							DMA_RESV_USAGE_WRITE);
 
 			dma_resv_unlock(vf_info.dmabuf->resv);
+			video->frame_cnt++;
 		}
 
 		MESON_DRM_FENCE("dmabuf(%px), in-%px, release_fence(%px-%d)\n",
@@ -462,6 +463,7 @@ static void video_set_state(struct meson_vpu_block *vblk,
 							DMA_RESV_USAGE_WRITE);
 
 			dma_resv_unlock(vf_info.dmabuf->resv);
+			video->frame_cnt++;
 		}
 		MESON_DRM_FENCE("dmabuf(%px), in-%px, release_fence(%px-%d)\n",
 				vf_info.dmabuf, vf_info.input_fence, vf_info.release_fence,
@@ -485,12 +487,13 @@ static void video_set_state(struct meson_vpu_block *vblk,
 		mvvs->dst_x, mvvs->dst_y, mvvs->dst_w, mvvs->dst_h);
 
 	MESON_DRM_BLOCK("plane_index=%d,HW-video=%d,stride=%d,rotate=%d,zorder=%d,\n"
-			"signal_fmt=%d,frame_flag=%u\n",
+		"signal_fmt=%d,frame_flag=%u\n",
 		  mvvs->plane_index, vblk->index, mvvs->byte_stride,
 		  mvvs->rotation, mvvs->zorder, mvvs->signal_fmt, mvvs->frame_flag);
-	MESON_DRM_BLOCK("phy_addr=(0x%llx,0x%llx),phy_addr2=(0x%llx,0x%llx),repeat_frame=%d\n",
+	MESON_DRM_BLOCK("phy_addr=(0x%llx,0x%llx),phy_addr2=(0x%llx,0x%llx),\n"
+		"repeat_frame=%d,frame_cnt=%llu\n",
 		  phy_addr, vf_info.phy_addr[0], phy_addr2, vf_info.phy_addr[1],
-		  mvvs->repeat_frame);
+		  mvvs->repeat_frame, video->frame_cnt);
 	MESON_DRM_BLOCK("%s set_state done.\n", video->base.name);
 }
 
@@ -564,10 +567,11 @@ static void video_hw_disable(struct meson_vpu_block *vblk,
 		return;
 	}
 
-	DRM_INFO("%s dmabuf(%px %px), release_fence(%px), present_fence(%px), video_name(%s)\n",
-		__func__, video->dmabuf[0], video->dmabuf[1], video->fence,
-		video->present_fence, video->base.name);
-
+	DRM_INFO("dmabuf(%px %px),release_fence(%px),present_fence(%px),\n"
+		"video_name(%s),frame_cnt(%llu)\n",
+		video->dmabuf[0], video->dmabuf[1], video->fence,
+		video->present_fence, video->base.name, video->frame_cnt);
+	video->frame_cnt = 0;
 	priv = video->base.pipeline->priv;
 
 	if (video->dmabuf[0])
