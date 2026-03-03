@@ -20,10 +20,10 @@ extern unsigned int log_lev;
 #define vpq_pr_dbg(lev, fmt, args...)\
 do {\
 	if ((lev) <= log_lev)\
-		pr_debug("vpq: %s " fmt, __func__, ## args);\
+		pr_debug("vpq: " fmt, ##args);\
 } while (0)
 
-#define vpq_pr_err(fmt, args ...)   pr_err("vpq: %s " fmt, __func__, ##args)
-#define vpq_pr_info(fmt, args ...)  pr_info("vpq: %s " fmt, __func__, ##args)
+#define vpq_pr_err(fmt, args ...)   pr_err("vpq: " fmt, ##args)
+#define vpq_pr_info(fmt, args ...)  pr_info("vpq: " fmt, ##args)
 
 #endif // __VPQ_PRINTK_H__

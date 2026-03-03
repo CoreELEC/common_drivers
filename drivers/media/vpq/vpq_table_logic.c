@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-//#define DEBUG
+#define DEBUG
 #include <linux/amlogic/media/vpp/vpp_drv.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/dpss/dpss_frc.h>
@@ -13,8 +13,8 @@
 #include <linux/amlogic/media/amdolbyvision/dolby_vision_ext.h>
 #endif
 #include "vpq_table_logic.h"
-#include "vpq_common.h"
 #include "vpq_printk.h"
+#include "vpq_common.h"
 #include "vpq_vfm.h"
 #include "modules/vpq_module_cm.h"
 #include "modules/vpq_module_timing.h"
@@ -79,7 +79,6 @@ void vpq_table_init(struct vpq_dev_s *pdev)
 
 void vpq_table_deinit(void)
 {
-	//vpq_pr_info("start\n");
 	_buffer_free();
 }
 
@@ -124,16 +123,11 @@ int vpq_set_default_pq_table(struct vpq_table_bin_param_s *pdata)
 int vpq_set_nonstandard_timing_map(unsigned char value,
 	struct vpq_nonstandard_timing_map_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpq_module_timing_set_nonstandard_map(value,
+	return vpq_module_timing_set_nonstandard_map(value,
 			(struct nonstandard_timing_map_s *)pdata);
-	vpq_pr_info("ret:%d\n", ret);
-
-	return ret;
 }
 
 /*
@@ -141,8 +135,6 @@ int vpq_set_nonstandard_timing_map(unsigned char value,
  */
 int vpq_set_pq_module_cfg(struct vpq_pq_module_cfg_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
@@ -174,10 +166,7 @@ int vpq_set_pq_module_cfg(struct vpq_pq_module_cfg_s *pdata)
 		}
 	};
 
-	ret = vpp_pq_mgr_set_status(&state);
-	vpq_pr_info("ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_status(&state);
 }
 
 /*
@@ -217,12 +206,7 @@ void vpq_get_pq_module_status(struct vpq_pq_state_s *pdata)
  */
 int vpq_set_pq_module_status(enum vpq_module_e module, int status)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_module_status((enum vpp_module_e)module, (bool)status);
-	vpq_pr_dbg(lev_tab, "ret:%d module:%d status:%d\n", ret, module, status);
-
-	return ret;
+	return vpp_pq_mgr_set_module_status((enum vpp_module_e)module, (bool)status);
 }
 
 /*
@@ -252,8 +236,6 @@ int vpq_set_brightness(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_brightness(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
-
 	if (ret == 0)
 		pq_setting_val[PQ_BRIG] = value;
 
@@ -268,8 +250,6 @@ int vpq_set_contrast(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_contrast(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
-
 	if (ret == 0)
 		pq_setting_val[PQ_CONT] = value;
 
@@ -284,8 +264,6 @@ int vpq_set_saturation(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_saturation(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
-
 	if (ret == 0)
 		pq_setting_val[PQ_SAT] = value;
 
@@ -300,8 +278,6 @@ int vpq_set_hue(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_hue(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
-
 	if (ret == 0)
 		pq_setting_val[PQ_HUE] = value;
 
@@ -316,8 +292,6 @@ int vpq_set_sharpness(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_sharpness(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
-
 	if (ret == 0)
 		pq_setting_val[PQ_SHARPNESS] = value;
 
@@ -332,7 +306,6 @@ int vpq_set_brightness_post(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_brightness_post(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
 
 	return ret;
 }
@@ -345,7 +318,6 @@ int vpq_set_contrast_post(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_contrast_post(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
 
 	return ret;
 }
@@ -358,7 +330,6 @@ int vpq_set_saturation_post(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_saturation_post(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
 
 	return ret;
 }
@@ -371,7 +342,6 @@ int vpq_set_hue_post(int value)
 		return REF_CFG_DISABLED;
 
 	ret = vpp_pq_mgr_set_hue_post(value);
-	vpq_pr_dbg(lev_tab, "ret:%d value:%d\n", ret, value);
 
 	return ret;
 }
@@ -395,20 +365,16 @@ int vpq_set_gamma_table(struct vpq_gamma_table_s *pdata)
 	if (!pq_module_cfg.gamma_en)
 		return REF_CFG_DISABLED;
 
-	if (!pdata || !pdata->r_data || !pdata->g_data || !pdata->b_data) {
-		vpq_pr_dbg(lev_tab, "null input parameter\n");
+	if (!pdata || !pdata->r_data || !pdata->g_data || !pdata->b_data)
 		return RET_NULL_POINT;
-	}
 
 	gma_buf = sizeof(unsigned int) * gma_point;
-
 	gma_table.r_data = kmalloc(gma_buf, GFP_KERNEL);
 	gma_table.g_data = kmalloc(gma_buf, GFP_KERNEL);
 	gma_table.b_data = kmalloc(gma_buf, GFP_KERNEL);
 	if (!gma_table.r_data || !gma_table.g_data || !gma_table.b_data) {
-		vpq_pr_dbg(lev_tab, "fail to malloc memory\n");
 		ret = -ENOMEM;
-		goto cleanup;
+		goto exit;
 	}
 
 	for (i = 0; i < gma_point; i++) {
@@ -416,15 +382,12 @@ int vpq_set_gamma_table(struct vpq_gamma_table_s *pdata)
 		gma_table.g_data[i] = (unsigned int)pdata->g_data[i];
 		gma_table.b_data[i] = (unsigned int)pdata->b_data[i];
 	}
-
 	ret = vpp_pq_mgr_set_gamma_table(&gma_table);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
 
-cleanup:
+exit:
 	kfree(gma_table.r_data);
 	kfree(gma_table.g_data);
 	kfree(gma_table.b_data);
-
 	return ret;
 }
 
@@ -436,13 +399,11 @@ int vpq_set_rgb_ogo(struct vpq_rgb_ogo_s *pdata)
 		return REF_CFG_DISABLED;
 
 	if (memcmp(pdata, &rgb_ogo, sizeof(struct vpq_rgb_ogo_s)) == 0) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "rgb ogo same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	ret = vpp_pq_mgr_set_whitebalance((struct vpp_white_balance_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0)
 		memcpy(&rgb_ogo, pdata, sizeof(struct vpq_rgb_ogo_s));
 
@@ -451,15 +412,10 @@ int vpq_set_rgb_ogo(struct vpq_rgb_ogo_s *pdata)
 
 int vpq_set_matrix_param(struct vpq_mtrx_info_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_matrix_param((struct vpp_mtrx_info_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_matrix_param((struct vpp_mtrx_info_s *)pdata);
 }
 
 static int set_color_curves(struct pq_cm_base_param_s *param)
@@ -533,27 +489,21 @@ int vpq_set_color_base(unsigned char value)
 	if (!pq_module_cfg.cm_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_CM2);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get CM table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_CM2] &&
 		value == pq_setting_val[PQ_CM]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "color base same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	param = &pq_table_param.cm_base_table[index][(enum pq_table_level_e)value];
 	ret = set_color_curves(param);
-	vpq_pr_dbg(lev_tab, "ret:%d, value:%d\n", ret, value);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_CM] = value;
 		pq_table_idx[PQ_INDEX_CM2] = index;
@@ -608,7 +558,6 @@ static int config_adj_param(struct vpq_cms_s *pdata, struct color_adj_param_s *p
 
 static int apply_saturation_adjustment(struct color_adj_param_s *param, int *curve)
 {
-	int ret = 0;
 	int i = 0;
 
 	param->curve_type = EN_COLOR_ADJ_CURVE_SAT;
@@ -622,14 +571,11 @@ static int apply_saturation_adjustment(struct color_adj_param_s *param, int *cur
 		curve_sat_by_hs[i + CURVE_LEN_SAT_BY_HS * 2] =
 			pcm_base_data->sat_by_hs_2[i] + curve[i];
 	}
-	ret = vpp_pq_mgr_set_cm_curve(EN_CM_SAT, curve_sat_by_hs);
-
-	return ret;
+	return vpp_pq_mgr_set_cm_curve(EN_CM_SAT, curve_sat_by_hs);
 }
 
 static int apply_hue_adjustment(struct color_adj_param_s *param, int *curve)
 {
-	int ret = 0;
 	int i = 0;
 
 	param->curve_type = EN_COLOR_ADJ_CURVE_HUE;
@@ -637,14 +583,11 @@ static int apply_hue_adjustment(struct color_adj_param_s *param, int *curve)
 
 	for (i = 0; i < CURVE_LEN_HUE_BY_HUE; i++)
 		curve_hue_by_hue[i] = pcm_base_data->hue_by_hue_0[i] + curve[i];
-	ret = vpp_pq_mgr_set_cm_curve(EN_CM_HUE, curve_hue_by_hue);
-
-	return ret;
+	return vpp_pq_mgr_set_cm_curve(EN_CM_HUE, curve_hue_by_hue);
 }
 
 static int apply_luma_adjustment(struct color_adj_param_s *param, int *curve)
 {
-	int ret = 0;
 	int i = 0;
 
 	param->curve_type = EN_COLOR_ADJ_CURVE_LUMA;
@@ -652,9 +595,7 @@ static int apply_luma_adjustment(struct color_adj_param_s *param, int *curve)
 
 	for (i = 0; i < CURVE_LEN_LUMA_BY_HUE; i++)
 		curve_luma_by_hue[i] = pcm_base_data->luma_by_hue_0[i] + curve[i];
-	ret = vpp_pq_mgr_set_cm_curve(EN_CM_LUMA, curve_luma_by_hue);
-
-	return ret;
+	return vpp_pq_mgr_set_cm_curve(EN_CM_LUMA, curve_luma_by_hue);
 }
 
 int vpq_set_color_customize(struct vpq_cms_s *pdata)
@@ -663,24 +604,13 @@ int vpq_set_color_customize(struct vpq_cms_s *pdata)
 	int color_custom_curve[CURVE_LEN_CM] = {0};
 	struct color_adj_param_s adj_param = {0};
 
-	if (!pdata) {
-		vpq_pr_dbg(lev_tab, "null input parameter\n");
+	if (!pdata || !pcm_base_data)
 		return RET_NULL_POINT;
-	}
-
-	if (!pcm_base_data) {
-		vpq_pr_dbg(lev_tab, "base table not loaded\n");
-		return RET_NULL_POINT;
-	}
 
 	if (memcmp(pdata, &cms_param, sizeof(struct vpq_cms_s)) == 0) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "color customize same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
-
-	vpq_pr_dbg(lev_tab, "pdata:%d %d %d %d %d\n",
-		pdata->color_type, pdata->color_9, pdata->color_14,
-		pdata->cms_type, pdata->value);
 
 	ret = config_adj_param(pdata, &adj_param);
 
@@ -695,10 +625,8 @@ int vpq_set_color_customize(struct vpq_cms_s *pdata)
 		ret = apply_luma_adjustment(&adj_param, color_custom_curve);
 		break;
 	default:
-		vpq_pr_dbg(lev_tab, "unsupported CMS type:%d\n", pdata->cms_type);
 		return RET_INVALID_INPUT;
 	}
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
 
 	if (ret == 0)
 		memcpy(&cms_param, pdata, sizeof(struct vpq_cms_s));
@@ -715,27 +643,21 @@ int vpq_set_dnlp_mode(unsigned char value)
 	if (!pq_module_cfg.dnlp_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_DNLP);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get DNLP table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_DNLP] &&
 		value == pq_setting_val[PQ_DNLP]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "dnlp same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.dnlp_table[index][value].param;
 	ret = vpp_pq_mgr_set_dnlp_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d, value:%d\n", ret, value);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_DNLP] = value;
 		pq_table_idx[PQ_INDEX_DNLP] = index;
@@ -746,35 +668,20 @@ int vpq_set_dnlp_mode(unsigned char value)
 
 int vpq_set_csc_type(int value)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_csc_type(value);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_csc_type(value);
 }
 
 int vpq_get_csc_type(void)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_get_csc_type();
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_get_csc_type();
 }
 
 int vpq_set_3dlut_data(struct vpq_lut3d_table_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_3dlut_data((struct vpp_lut3d_table_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_3dlut_data((struct vpp_lut3d_table_s *)pdata);
 }
 
 int vpq_get_hist_avg(struct vpq_hist_ave_s *pdata)
@@ -817,20 +724,16 @@ int vpq_set_lc_mode(unsigned char value)
 	if (!pq_module_cfg.lc_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_LC);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get LC table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_LC] &&
 		value == pq_setting_val[PQ_LC]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "lc same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
@@ -839,8 +742,6 @@ int vpq_set_lc_mode(unsigned char value)
 
 	plc_param = &pq_table_param.lc_table[index][value].param;
 	ret |= vpp_pq_mgr_set_lc_param(plc_param);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_LC] = value;
 		pq_table_idx[PQ_INDEX_LC] = index;
@@ -855,27 +756,21 @@ int vpq_set_hdr_tmo_mode(unsigned char value)
 	unsigned char index = 0;
 	struct vpp_tmo_param_s *pdata;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_HDR_TMO);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get HDR TMO table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_HDR_TMO] &&
 		value == pq_setting_val[PQ_HDR_TMO]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "hdr tmo same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.tmo_table[index][value].param;
 	ret = vpp_pq_mgr_set_hdr_tmo_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_HDR_TMO] = value;
 		pq_table_idx[PQ_INDEX_HDR_TMO] = index;
@@ -886,54 +781,34 @@ int vpq_set_hdr_tmo_mode(unsigned char value)
 
 int vpq_set_hdr_tmo(struct vpq_hdr_lut_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_hdr_tmo_curve((struct vpp_hdr_lut_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_hdr_tmo_curve((struct vpp_hdr_lut_s *)pdata);
 }
 
 int vpq_set_hdr_oetf(struct vpq_hdr_lut_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_hdr_oetf_curve((struct vpp_hdr_lut_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_hdr_oetf_curve((struct vpp_hdr_lut_s *)pdata);
 }
 
 int vpq_set_hdr_eotf(struct vpq_hdr_lut_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_hdr_eotf_curve((struct vpp_hdr_lut_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_hdr_eotf_curve((struct vpp_hdr_lut_s *)pdata);
 }
 
 int vpq_set_hdr_cgain(struct vpq_hdr_lut_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_hdr_cgain_curve((struct vpp_hdr_lut_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_hdr_cgain_curve((struct vpp_hdr_lut_s *)pdata);
 }
 
 int vpq_set_aipq_mode(unsigned char value)
@@ -943,27 +818,21 @@ int vpq_set_aipq_mode(unsigned char value)
 	struct vpp_aipq_table_s table = {0};
 
 	index = vpq_module_timing_table_index(PQ_INDEX_AIPQ);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get AIPQ table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_AIPQ]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "aipq same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	table.height = pq_table_param.aipq_table[index].size.height;
 	table.width = pq_table_param.aipq_table[index].size.width;
 	table.table_ptr = (void *)pq_table_param.aipq_table[index].aipq_table;
-	if (!table.table_ptr) {
-		vpq_pr_dbg(lev_tab, "fail to get aipq table pointer\n");
+	if (!table.table_ptr)
 		return RET_NULL_POINT;
-	}
 
 	ret = vpp_pq_mgr_set_aipq_data(&table);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_AIPQ] = value;
 		pq_table_idx[PQ_INDEX_AIPQ] = index;
@@ -1002,20 +871,16 @@ int vpq_set_black_stretch(unsigned char value)
 	if (!pq_module_cfg.black_ext_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_BLK);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get BLACK_EXT table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_BLK] &&
 		value == pq_setting_val[PQ_BLK]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "black stretch same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
@@ -1036,20 +901,16 @@ int vpq_set_blue_stretch(unsigned char value)
 	if (!pq_module_cfg.blue_stretch_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_BLS);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get BLUE_STR table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_BLS] &&
 		value == pq_setting_val[PQ_BLS]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "blue stretch same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
@@ -1070,20 +931,16 @@ int vpq_set_chroma_coring(unsigned char value)
 	if (!pq_module_cfg.chroma_cor_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_CCORING);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get CCORING table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_CCORING] &&
 		value == pq_setting_val[PQ_CCORING]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "chroma coring same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
@@ -1098,84 +955,49 @@ int vpq_set_chroma_coring(unsigned char value)
 
 int vpq_set_eys_protect(struct vpq_eye_protect_s *pdata)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_eye_protect((struct vpp_eye_protect_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_eye_protect((struct vpp_eye_protect_s *)pdata);
 }
 
 int vpq_set_cabc(void)
 {
-	int ret = 0;
 	struct vpp_cabc_param_s param = {0};
 
-	ret = vpp_pq_mgr_set_cabc_param(&param);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_cabc_param(&param);
 }
 
 int vpq_set_add(void)
 {
-	int ret = 0;
 	struct vpp_aad_param_s param = {0};
 
-	ret = vpp_pq_mgr_set_aad_param(&param);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_aad_param(&param);
 }
 
 int vpq_set_overscan_data(unsigned int length, struct vpq_overscan_data_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = vpp_pq_mgr_set_overscan_table(length, (struct vpp_overscan_table_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_overscan_table(length, (struct vpp_overscan_table_s *)pdata);
 }
 
 int vpq_set_pc_mode(int value)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_pc_mode(value);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_pc_mode(value);
 }
 
 int vpq_get_pc_mode(void)
 {
 	return vpp_pq_mgr_get_pc_mode();
-
-	return 0;
 }
 
 int vpq_set_color_primary_status(int value)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_color_primary_status(value);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_color_primary_status(value);
 }
 
 int vpq_set_color_primary(struct vpq_color_primary_s *pdata)
 {
-	int ret = 0;
-
-	ret = vpp_pq_mgr_set_color_primary((struct vpp_color_primary_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return vpp_pq_mgr_set_color_primary((struct vpp_color_primary_s *)pdata);
 }
 
 /*
@@ -1190,27 +1012,21 @@ int vpq_set_nr(unsigned char value)
 	if (!pq_module_cfg.nr_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_5) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_5)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_NR);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get NR table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_NR] &&
 		value == pq_setting_val[PQ_NR]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "nr same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.nr_table[index][value].param;
 	ret = di_pq_mgr_dnr_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_NR] = value;
 		pq_table_idx[PQ_INDEX_NR] = index;
@@ -1228,27 +1044,21 @@ int vpq_set_deblock(unsigned char value)
 	if (!pq_module_cfg.deblock_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_DEBLOCK);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get DEBLOCK table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_DEBLOCK] &&
 		value == pq_setting_val[PQ_DEBLOCK]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "deblock same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.dblk_table[index][value].param;
 	ret = di_pq_mgr_dblk_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_DEBLOCK] = value;
 		pq_table_idx[PQ_INDEX_DEBLOCK] = index;
@@ -1266,27 +1076,21 @@ int vpq_set_demosquito(unsigned char value)
 	if (!pq_module_cfg.demosquito_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_DEMOSQUITO);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get DEMOS table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_DEMOSQUITO] &&
 		value == pq_setting_val[PQ_DEMOSQUITO]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "demosquito same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.demos_table[index][value].param;
 	ret = di_pq_mgr_demosquito_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_DEMOSQUITO] = value;
 		pq_table_idx[PQ_INDEX_DEMOSQUITO] = index;
@@ -1304,27 +1108,21 @@ int vpq_set_smoothplus_mode(unsigned char value)
 	if (!pq_module_cfg.smoothplus_en)
 		return REF_CFG_DISABLED;
 
-	if (value > PQ_TABLE_LV_4) {
-		vpq_pr_dbg(lev_tab, "invalid input value:%d\n", value);
+	if (value > PQ_TABLE_LV_4)
 		return RET_INVALID_INPUT;
-	}
 
 	index = vpq_module_timing_table_index(PQ_INDEX_SMOOTHPLUS);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get DECONTOUR table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_SMOOTHPLUS] &&
 		value == pq_setting_val[PQ_SMOOTHPLUS]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "smoothplus same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.dct_table[index][value].param;
 	ret = di_pq_mgr_dct_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0) {
 		pq_setting_val[PQ_SMOOTHPLUS] = value;
 		pq_table_idx[PQ_INDEX_SMOOTHPLUS] = index;
@@ -1343,20 +1141,16 @@ int vpq_set_di_param(void)
 		return REF_CFG_DISABLED;
 
 	index = vpq_module_timing_table_index(PQ_INDEX_DI);
-	if (index == PQ_TABLE_INVALID) {
-		vpq_pr_dbg(lev_tab, "fail to get DI table index\n");
+	if (index == PQ_TABLE_INVALID)
 		return RET_TAB_ERROR;
-	}
 
 	if (index == pq_table_idx[PQ_INDEX_DI]) {
-		vpq_pr_dbg(lev_tab, "same setting, skip update\n");
+		vpq_pr_dbg(lev_tab, "di same setting, skip update\n");
 		return RET_SAME_SETTING;
 	}
 
 	pdata = &pq_table_param.di_table[index].param;
 	ret = di_pq_mgr_xlr_param(pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
 	if (ret == 0)
 		pq_table_idx[PQ_INDEX_DI] = index;
 
@@ -1366,67 +1160,42 @@ int vpq_set_di_param(void)
 /* DPSS Start */
 int vpq_set_nr_dpss(struct vpq_dnr_param_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = di_pq_mgr_dnr_param((struct di_dnr_param_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return di_pq_mgr_dnr_param((struct di_dnr_param_s *)pdata);
 }
 
 int vpq_set_deblock_dpss(struct vpq_dblk_param_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = di_pq_mgr_dblk_param((struct di_dblk_param_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return di_pq_mgr_dblk_param((struct di_dblk_param_s *)pdata);
 }
 
 int vpq_set_demosquito_dpss(struct vpq_demosquito_param_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = di_pq_mgr_demosquito_param((struct di_demosquito_param_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return di_pq_mgr_demosquito_param((struct di_demosquito_param_s *)pdata);
 }
 
 int vpq_set_smoothplus_dpss(struct vpq_dct_param_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = di_pq_mgr_dct_param((struct di_dct_param_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return di_pq_mgr_dct_param((struct di_dct_param_s *)pdata);
 }
 
 int vpq_set_xlr_dpss(struct vpq_xlr_param_s *pdata)
 {
-	int ret = 0;
-
 	if (!pdata)
 		return RET_NULL_POINT;
 
-	ret = di_pq_mgr_xlr_param((struct di_xlr_param_s *)pdata);
-	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
-
-	return ret;
+	return di_pq_mgr_xlr_param((struct di_xlr_param_s *)pdata);
 }
 
 /* DPSS End */
@@ -1560,6 +1329,7 @@ int vpq_set_vdin_cvd(void)
  */
 void vpq_set_pq_effect(void)
 {
+	int ret = 0;
 	unsigned int is_amdv;
 
 	vpq_vfm_get_is_amdv(&is_amdv);
@@ -1586,33 +1356,35 @@ void vpq_set_pq_effect(void)
 		pq_setting_val[PQ_HDR_TMO],   pq_setting_val[PQ_CM],
 		pq_setting_val[PQ_AIPQ],      pq_setting_val[PQ_AISR]);
 
-	vpq_set_sharpness(pq_setting_val[PQ_SHARPNESS]);
-	vpq_set_dnlp_mode(pq_setting_val[PQ_DNLP]);
-	vpq_set_lc_mode(pq_setting_val[PQ_LC]);
-	vpq_set_black_stretch(pq_setting_val[PQ_BLK]);
-	vpq_set_blue_stretch(pq_setting_val[PQ_BLS]);
-	vpq_set_chroma_coring(pq_setting_val[PQ_CCORING]);
-	vpq_set_hdr_tmo_mode(pq_setting_val[PQ_HDR_TMO]);
-	vpq_set_color_base(pq_setting_val[PQ_CM]);
-	vpq_set_aipq_mode(pq_setting_val[PQ_AIPQ]);
-	vpq_set_aisr_mode(pq_setting_val[PQ_AISR]);
+	ret = vpq_set_sharpness(pq_setting_val[PQ_SHARPNESS]);
+	ret |= vpq_set_dnlp_mode(pq_setting_val[PQ_DNLP]);
+	ret |= vpq_set_lc_mode(pq_setting_val[PQ_LC]);
+	ret |= vpq_set_black_stretch(pq_setting_val[PQ_BLK]);
+	ret |= vpq_set_blue_stretch(pq_setting_val[PQ_BLS]);
+	ret |= vpq_set_chroma_coring(pq_setting_val[PQ_CCORING]);
+	ret |= vpq_set_hdr_tmo_mode(pq_setting_val[PQ_HDR_TMO]);
+	ret |= vpq_set_color_base(pq_setting_val[PQ_CM]);
+	ret |= vpq_set_aipq_mode(pq_setting_val[PQ_AIPQ]);
+	ret |= vpq_set_aisr_mode(pq_setting_val[PQ_AISR]);
 
 	vpq_pr_dbg(lev_tab, "load di pq\n"
 		"nr:%d, deblock:%d, demos:%d, dect:%d\n",
 		pq_setting_val[PQ_NR],         pq_setting_val[PQ_DEBLOCK],
 		pq_setting_val[PQ_DEMOSQUITO], pq_setting_val[PQ_SMOOTHPLUS]);
 
-	vpq_set_nr(pq_setting_val[PQ_NR]);
-	vpq_set_deblock(pq_setting_val[PQ_DEBLOCK]);
-	vpq_set_demosquito(pq_setting_val[PQ_DEMOSQUITO]);
-	vpq_set_smoothplus_mode(pq_setting_val[PQ_SMOOTHPLUS]);
-	vpq_set_di_param();
+	ret |= vpq_set_nr(pq_setting_val[PQ_NR]);
+	ret |= vpq_set_deblock(pq_setting_val[PQ_DEBLOCK]);
+	ret |= vpq_set_demosquito(pq_setting_val[PQ_DEMOSQUITO]);
+	ret |= vpq_set_smoothplus_mode(pq_setting_val[PQ_SMOOTHPLUS]);
+	ret |= vpq_set_di_param();
+
+	vpq_pr_dbg(lev_tab, "ret:%d\n", ret);
 }
 
 int vpq_set_frame_status(enum vpq_frame_status_e status)
 {
 	if (status == VPQ_VFRAME_STOP) {
-		vpq_pr_info("reset local memory\n");
+		//vpq_pr_info("reset local memory\n");
 		//int i = 0;
 
 		//for (i = 0; i < PQ_SETTING_MAX; i++)
@@ -1649,7 +1421,6 @@ void vpq_get_signal_info(struct vpq_signal_info_s *pdata)
 	unsigned int fps;
 
 	src_type = vpq_vfm_get_source_type();
-	vpq_pr_dbg(lev_tab, "src_type:%d\n", src_type);
 	switch (src_type) {
 	default:
 	case VFRAME_SOURCE_TYPE_OTHERS:
@@ -1667,7 +1438,6 @@ void vpq_get_signal_info(struct vpq_signal_info_s *pdata)
 	}
 
 	src_port = vpq_vfm_get_source_port();
-	vpq_pr_dbg(lev_tab, "src_port:0x%x\n", src_port);
 	switch (src_port) {
 	case TVIN_PORT_HDMI0:
 		pdata->hdmi_port = VPQ_HDMI_PORT_0;
@@ -1687,43 +1457,33 @@ void vpq_get_signal_info(struct vpq_signal_info_s *pdata)
 	}
 
 	src_mode = vpq_vfm_get_source_mode();
-	vpq_pr_dbg(lev_tab, "src_mode:%d\n", src_mode);
 	pdata->sig_mode = (enum vpq_sig_mode_e)src_mode;
 
 	hdr_type = vpq_vfm_get_hdr_type();
-	vpq_pr_dbg(lev_tab, "hdr_type:%d\n", hdr_type);
 	pdata->hdr_type = (enum vpq_hdr_type_e)hdr_type;
 
 	vpq_vfm_get_is_amdv(&is_amdv);
-	vpq_pr_dbg(lev_tab, "is_amdv:%d\n", is_amdv);
 	pdata->is_amdv = is_amdv;
 
 	vpq_vfm_get_is_game(&is_game);
-	vpq_pr_dbg(lev_tab, "is_game:%d\n", is_game);
 	pdata->is_game = is_game;
 
 	vpq_vfm_get_is_pc(&is_pc);
-	vpq_pr_dbg(lev_tab, "is_pc:%d\n", is_pc);
 	pdata->is_pc = is_pc;
 
 	scan_mode = vpq_vfm_get_signal_scan_mode();
-	vpq_pr_dbg(lev_tab, "scan_mode:%d\n", scan_mode);
 	pdata->scan_mode = (enum vpq_scan_mode_e)scan_mode;
 
 	sig_fmt = vpq_vfm_get_signal_format();
-	vpq_pr_dbg(lev_tab, "sig_fmt:%d(0x%x)\n", sig_fmt, sig_fmt);
 	pdata->sig_fmt = (unsigned int)sig_fmt;
 
 	trans_fmt = vpq_vfm_get_trans_format();
-	vpq_pr_dbg(lev_tab, "trans_fmt:%d\n", trans_fmt);
 	pdata->trans_fmt = (unsigned int)trans_fmt;
 
 	vpq_vfm_get_height_width(&height, &width);
-	vpq_pr_dbg(lev_tab, "height:%d width:%d\n", height, width);
 	pdata->height = height;
 	pdata->width = width;
 
 	vpq_frm_get_fps(&fps);
-	vpq_pr_dbg(lev_tab, "fps:%d\n", fps);
 	pdata->fps = fps;
 }

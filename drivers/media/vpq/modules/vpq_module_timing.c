@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-//#define DEBUG
+#define DEBUG
 #include <linux/kernel.h>
 #include "vpq_module_timing.h"
 #include "../vpq_printk.h"
@@ -359,16 +359,14 @@ static enum pq_source_timing_e check_nonstandard_timing(unsigned int height,
 // get timing index
 unsigned char vpq_module_timing_table_index(enum pq_table_module_index_e module)
 {
-	unsigned char tab_index = 255;
-	unsigned int height = 0, width = 0;
-	vpq_vfm_source_type_e src_type = VFRAME_SOURCE_TYPE_OTHERS;
-	vpq_vfm_source_mode_e src_mode = VFRAME_SOURCE_MODE_OTHERS;
-	enum vpq_vfm_scan_mode_e scan_mode = VPQ_VFM_SCAN_MODE_NULL;
-	enum vpq_vfm_hdr_type_e hdr_type = VPQ_VFM_HDR_TYPE_SDR;
-	enum pq_source_timing_e timing_index = PQ_SRC_INDEX_MAX;
+	unsigned char tab_index;
+	unsigned int height, width;
+	vpq_vfm_source_type_e src_type;
+	vpq_vfm_source_mode_e src_mode;
+	enum vpq_vfm_scan_mode_e scan_mode;
+	enum vpq_vfm_hdr_type_e hdr_type;
+	enum pq_source_timing_e timing_index;
 	struct sig_info_t cur_sig_info;
-
-	vpq_pr_dbg(lev_mod, "module:%d\n", module);
 
 	// get current vframe signal info
 	src_type = vpq_vfm_get_source_type();
@@ -405,7 +403,7 @@ unsigned char vpq_module_timing_table_index(enum pq_table_module_index_e module)
 get_table_index:
 	// get pq table index
 	tab_index = pq_table_param.pq_index_table0[timing_index][module];
-	vpq_pr_dbg(lev_mod, "final table index:%d\n", tab_index);
+	vpq_pr_dbg(lev_mod, "module:%d final table index:%d\n", module, tab_index);
 
 	return tab_index;
 }

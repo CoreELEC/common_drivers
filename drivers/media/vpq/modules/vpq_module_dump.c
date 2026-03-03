@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-//#define DEBUG
+#define DEBUG
 #include "vpq_module_dump.h"
 #include "../vpq_printk.h"
 #include "../vpq_common.h"
@@ -53,8 +53,6 @@ static void dump_dnlp_table(int value, int index)
 	for (i = 0; i < VPQ_DNLP_PARAM_MAX; i++)
 		vpq_pr_dbg(lev_mod, "reg_trend_wht_expand_lut8[%d]:%d\n", i,
 			pq_table_param.dnlp_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump dnlp end\n");
 }
 
 static void dump_hdrtmo_table(int value, int index)
@@ -62,75 +60,6 @@ static void dump_hdrtmo_table(int value, int index)
 	vpq_pr_dbg(lev_mod, "dump hdr tmo value:%d index:%d start\n", value, index);
 	if (index == 255)
 		return;
-
-	vpq_pr_dbg(lev_mod, "tmo_en:%d\n",
-		pq_table_param.tmo_table[index][value].param.tmo_en);
-	vpq_pr_dbg(lev_mod, "reg_highlight:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_highlight);
-	vpq_pr_dbg(lev_mod, "reg_hist_th:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_hist_th);
-	vpq_pr_dbg(lev_mod, "reg_light_th:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_light_th);
-	vpq_pr_dbg(lev_mod, "reg_highlight_th1:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_highlight_th1);
-	vpq_pr_dbg(lev_mod, "reg_highlight_th2:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_highlight_th2);
-	vpq_pr_dbg(lev_mod, "reg_display_e:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_display_e);
-	vpq_pr_dbg(lev_mod, "reg_middle_a:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_middle_a);
-	vpq_pr_dbg(lev_mod, "reg_middle_a_adj:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_middle_a_adj);
-	vpq_pr_dbg(lev_mod, "reg_middle_b:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_middle_b);
-	vpq_pr_dbg(lev_mod, "reg_middle_s:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_middle_s);
-	vpq_pr_dbg(lev_mod, "reg_max_th1:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_max_th1);
-	vpq_pr_dbg(lev_mod, "reg_middle_th:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_middle_th);
-	vpq_pr_dbg(lev_mod, "reg_thold1:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_thold1);
-	vpq_pr_dbg(lev_mod, "reg_thold2:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_thold2);
-	vpq_pr_dbg(lev_mod, "reg_thold3:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_thold3);
-	vpq_pr_dbg(lev_mod, "reg_thold4:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_thold4);
-	vpq_pr_dbg(lev_mod, "reg_max_th2:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_max_th2);
-	vpq_pr_dbg(lev_mod, "reg_pnum_th:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_pnum_th);
-	vpq_pr_dbg(lev_mod, "reg_hl0:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_hl0);
-	vpq_pr_dbg(lev_mod, "reg_hl1:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_hl1);
-	vpq_pr_dbg(lev_mod, "reg_hl2:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_hl2);
-	vpq_pr_dbg(lev_mod, "reg_hl3:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_hl3);
-	vpq_pr_dbg(lev_mod, "reg_display_adj:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_display_adj);
-	vpq_pr_dbg(lev_mod, "reg_avg_th:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_avg_th);
-	vpq_pr_dbg(lev_mod, "reg_avg_adj:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_avg_adj);
-	vpq_pr_dbg(lev_mod, "reg_low_adj:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_low_adj);
-	vpq_pr_dbg(lev_mod, "reg_high_en:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_high_en);
-	vpq_pr_dbg(lev_mod, "reg_high_adj1:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_high_adj1);
-	vpq_pr_dbg(lev_mod, "reg_high_adj2:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_high_adj2);
-	vpq_pr_dbg(lev_mod, "reg_high_maxdiff:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_high_maxdiff);
-	vpq_pr_dbg(lev_mod, "reg_high_mindiff:%d\n",
-		pq_table_param.tmo_table[index][value].param.reg_high_mindiff);
-	vpq_pr_dbg(lev_mod, "alpha:%d\n",
-		pq_table_param.tmo_table[index][value].param.alpha);
-
-	vpq_pr_dbg(lev_mod, "dump hdr tmo end\n");
 }
 
 static void dump_aipq_table(int index)
@@ -151,8 +80,6 @@ static void dump_aipq_table(int index)
 				pq_table_param.aipq_table[index].aipq_table[i][j]);
 		}
 	}
-
-	vpq_pr_dbg(lev_mod, "dump aipq end\n");
 }
 
 static void dump_lc_table(int value, int index)
@@ -180,8 +107,6 @@ static void dump_lc_table(int value, int index)
 	for (i = 0; i < 18; i++)
 		vpq_pr_dbg(lev_mod, "param.param[%d]:%d\n", i,
 			pq_table_param.lc_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump lc end\n");
 }
 
 static void dump_ccoring_table(int value, int index)
@@ -195,8 +120,6 @@ static void dump_ccoring_table(int value, int index)
 	for (i = 0; i < VPQ_CCORING_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.ccoring_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump chroma coring end\n");
 }
 
 static void dump_blackext_table(int value, int index)
@@ -210,8 +133,6 @@ static void dump_blackext_table(int value, int index)
 	for (i = 0; i < VPQ_BLKEXT_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.blkext_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump blackext end\n");
 }
 
 static void dump_blue_stretch_table(int value, int index)
@@ -225,8 +146,6 @@ static void dump_blue_stretch_table(int value, int index)
 	for (i = 0; i < VPQ_BLUE_STRETCH_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.bls_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump blue stretch end\n");
 }
 
 static void dump_cm_table(int value, int index)
@@ -276,8 +195,6 @@ static void dump_cm_table(int value, int index)
 			pq_table_param.cm_base_table[index][value].sat_by_hy_3[i],
 			pq_table_param.cm_base_table[index][value].sat_by_hy_4[i]);
 	}
-
-	vpq_pr_dbg(lev_mod, "dump cm end\n");
 }
 
 static void dump_nr_table(int value, int index)
@@ -291,8 +208,6 @@ static void dump_nr_table(int value, int index)
 	for (i = 0; i < VPQ_REG_DNR_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.nr_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump nr end\n");
 }
 
 static void dump_deblock_table(int value, int index)
@@ -306,8 +221,6 @@ static void dump_deblock_table(int value, int index)
 	for (i = 0; i < VPQ_REG_DBLK_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.dblk_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump deblock end\n");
 }
 
 static void dump_demosquito_table(int value, int index)
@@ -321,8 +234,6 @@ static void dump_demosquito_table(int value, int index)
 	for (i = 0; i < VPQ_REG_DM_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.demos_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump demosquito end\n");
 }
 
 static void dump_decontour_table(int value, int index)
@@ -336,8 +247,6 @@ static void dump_decontour_table(int value, int index)
 	for (i = 0; i < VPQ_REG_DCT_MAX; i++)
 		vpq_pr_dbg(lev_mod, "param[%d]:%d\n", i,
 			pq_table_param.dct_table[index][value].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump decontour end\n");
 }
 
 static void dump_di_table(int index)
@@ -351,14 +260,10 @@ static void dump_di_table(int index)
 	for (i = 0; i < VPQ_REG_XLR_MAX; i++)
 		vpq_pr_dbg(lev_mod, "di xlr param[%d]:%d\n", i,
 			pq_table_param.di_table[index].param.param[i]);
-
-	vpq_pr_dbg(lev_mod, "dump di end\n");
 }
 
 int vpq_module_dump_pq_table(int module)
 {
-	vpq_pr_dbg(lev_mod, "module:%d\n", module);
-
 	switch (module) {
 	case 0:
 		dump_dnlp_table(pq_setting_val[PQ_DNLP], pq_table_idx[PQ_INDEX_DNLP]);
@@ -403,7 +308,7 @@ int vpq_module_dump_pq_table(int module)
 		dump_di_table(pq_table_idx[PQ_INDEX_DI]);
 		break;
 	default:
-		vpq_pr_dbg(lev_mod, "unknown module:%d, skip dump table\n", module);
+		vpq_pr_dbg(lev_mod, "unknown module:%d\n", module);
 		break;
 	}
 

@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-//#define DEBUG
+#define DEBUG
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #else
@@ -203,7 +203,7 @@ static void _vpq_vfm_update_fps(unsigned int duration)
 
 static void print_signal_info(const char *string, int scr_type, int sig_info[])
 {
-	vpq_pr_info("%s src:%d, port:0x%x, fmt:0x%x, w-h:%d %d, hdr:%d, amdv:%d, game:%d, pc:%d\n",
+	vpq_pr_dbg(lev_vfm, "%s src:%d, port:0x%x, fmt:0x%x, w-h:%d %d, hdr:%d, amdv:%d, game:%d, pc:%d\n",
 		string, scr_type,
 		sig_info[SIG_PORT], sig_info[SIG_FMT],  sig_info[SIG_WIDTH], sig_info[SIG_HEIGHT],
 		sig_info[SIG_HDR],  sig_info[SIG_AMDV], sig_info[SIG_GAME],  sig_info[SIG_PC]);
@@ -236,7 +236,7 @@ static void _vpq_vfm_update_pq_effect(void)
 
 			if (cur_sig[cur_src_type][SIG_HEIGHT] != 0 &&
 				cur_sig[cur_src_type][SIG_WIDTH]  != 0) {
-				//vpq_pr_info("trigger hdmi pq update and event\n");
+				vpq_pr_info("trigger hdmi pq update and event\n");
 				vpq_set_pq_effect();
 				vpq_vfm_send_event(VPQ_VFM_EVENT_SIG_INFO_CHANGE);
 			}
@@ -265,7 +265,7 @@ static void _vpq_vfm_update_pq_effect(void)
 
 			if (cur_sig[cur_src_type][SIG_HEIGHT] != 0 &&
 				cur_sig[cur_src_type][SIG_WIDTH]  != 0) {
-				//vpq_pr_info("trigger mpeg pq update and event\n");
+				vpq_pr_info("trigger mpeg pq update and event\n");
 				vpq_set_pq_effect();
 				vpq_vfm_send_event(VPQ_VFM_EVENT_SIG_INFO_CHANGE);
 			}
@@ -409,7 +409,7 @@ void vpq_frm_get_fps(unsigned int *fps)
 
 void vpq_vfm_send_event(enum vpq_vfm_event_info_e event_info)
 {
-	vpq_pr_info("start event_info:%d\n", event_info);
+	vpq_pr_dbg(lev_vfm, "start event_info:%d\n", event_info);
 
 	struct vpq_dev_s *vpq_devp = get_vpq_dev();
 
@@ -424,7 +424,7 @@ enum vpq_vfm_event_info_e vpq_vfm_get_event_info(void)
 {
 	struct vpq_dev_s *vpq_devp = get_vpq_dev();
 
-	vpq_pr_info("vpq_devp->event_info:%d\n", vpq_devp->event_info);
+	vpq_pr_dbg(lev_vfm, "vpq_devp->event_info:%d\n", vpq_devp->event_info);
 
 	return (enum vpq_vfm_event_info_e)vpq_devp->event_info;
 }

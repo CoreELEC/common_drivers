@@ -214,7 +214,7 @@ static int vpq_probe(struct platform_device *pdev)
 
 	vpq_dev = kzalloc(sizeof(*vpq_dev), GFP_KERNEL);
 	if (!vpq_dev) {
-		//vpq_pr_info("vpq dev kzalloc error\n");
+		//vpq_pr_info("dev kzalloc error\n");
 
 		ret = -1;
 		goto fail_alloc_dev;
@@ -224,14 +224,14 @@ static int vpq_probe(struct platform_device *pdev)
 
 	ret = alloc_chrdev_region(&vpq_devp->devno, 0, VPQ_DEVNO, VPQ_NAME);
 	if (ret < 0) {
-		vpq_pr_err("vpq devno alloc failed\n");
+		vpq_pr_err("devno alloc failed\n");
 
 		goto fail_alloc_region;
 	}
 
 	vpq_devp->clsp = class_create(/*THIS_MODULE, */VPQ_CLS_NAME);
 	if (IS_ERR(vpq_devp->clsp)) {
-		vpq_pr_err("vpq class create failed\n");
+		vpq_pr_err("class create failed\n");
 
 		ret = -1;
 		goto fail_create_class;
@@ -240,7 +240,7 @@ static int vpq_probe(struct platform_device *pdev)
 	for (i = 0; vpq_class_attr[i].attr.name; i++) {
 		ret = class_create_file(vpq_devp->clsp, &vpq_class_attr[i]);
 		if (ret < 0) {
-			vpq_pr_err("vpq class create file failed\n");
+			vpq_pr_err("class create file failed\n");
 
 			goto fail_create_class_file;
 		}
@@ -252,14 +252,14 @@ static int vpq_probe(struct platform_device *pdev)
 	vpq_devp->vpq_cdev.owner = THIS_MODULE;
 	ret = cdev_add(&vpq_devp->vpq_cdev, vpq_devp->devno, VPQ_DEVNO);
 	if (ret < 0) {
-		vpq_pr_err("vpq add cdev failed\n");
+		vpq_pr_err("add cdev failed\n");
 
 		goto fail_add_cdev;
 	}
 
 	vpq_devp->dev = device_create(vpq_devp->clsp, NULL, vpq_devp->devno, vpq_devp, VPQ_NAME);
 	if (!vpq_devp->dev) {
-		vpq_pr_err("vpq device_create failed\n");
+		vpq_pr_err("device_create failed\n");
 
 		ret = -1;
 		goto fail_create_dev;

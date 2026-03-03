@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-//#define DEBUG
+#define DEBUG
 #include "vpq_debug.h"
 #include "vpq_printk.h"
 #include "vpq_common.h"
@@ -18,11 +18,11 @@ static void parse_param(char *pbuf, char **param)
 {
 	char *ps, *token;
 	unsigned int n = 0;
-	char delim1[3] = " ";
+	char delim1[5] = " ";  /* space、\n 、\0 */
 	char delim2[2] = "\n";
 
 	ps = pbuf;
-	strcat(delim1, delim2);
+	strncat(delim1, delim2, sizeof(delim1) - strlen(delim1) - 1);
 	while (1) {
 		token = strsep(&ps, delim1);
 		if (!token)
@@ -64,8 +64,7 @@ ssize_t vpq_log_lev_show(const struct class *class,
 			const struct class_attribute *attr,
 			char *buf)
 {
-	vpq_pr_dbg(lev_dbg, "show log_lev: %d\n", log_lev);
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
+	vpq_pr_dbg(lev_dbg, "current log_lev: %d\n", log_lev);
 
 	return 0;
 }
@@ -89,14 +88,10 @@ ssize_t vpq_log_lev_store(const struct class *class,
 			goto free_buf;
 
 		vpq_pr_dbg(lev_dbg, "log_lev %d\n", log_lev);
-	} else {
-		vpq_pr_dbg(lev_dbg, "cmd error\n");
-		goto free_buf;
 	}
 
 free_buf:
 	kfree(buf_org);
-
 	return count;
 }
 
@@ -139,10 +134,10 @@ ssize_t vpq_chip_infor_show(const struct class *class,
 	__maybe_unused enum vpq_chip_class_e chip_type = vpq_get_chip_type();
 	__maybe_unused enum vpq_chip_e chip_id = vpq_get_chip_id();
 
-	vpq_pr_dbg(lev_dbg, "current chip information:\n");
-	vpq_pr_dbg(lev_dbg, "  type:%s\n", chip_type_tostring(chip_type));
-	vpq_pr_dbg(lev_dbg, "  id:%s\n", chip_id_tostring(chip_id));
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
+	vpq_pr_dbg(lev_dbg, "current chip infor:\n"
+		"  type:%s\n"
+		"  id:%s\n",
+		chip_type_tostring(chip_type), chip_id_tostring(chip_id));
 
 	return 0;
 }
@@ -159,13 +154,15 @@ ssize_t vpq_reg_table_ver_show(const struct class *class,
 			const struct class_attribute *attr,
 			char *buf)
 {
-	vpq_pr_dbg(lev_dbg, "current pq table ver information\n");
-	vpq_pr_dbg(lev_dbg, "  project_version :%s\n", pq_table_ver.project_version);
-	vpq_pr_dbg(lev_dbg, "  chip_version    :%s\n", pq_table_ver.chip_version);
-	vpq_pr_dbg(lev_dbg, "  table_version   :%s\n", pq_table_ver.table_version);
-	vpq_pr_dbg(lev_dbg, "  oem_model       :%s\n", pq_table_ver.oem_model);
-	vpq_pr_dbg(lev_dbg, "  panel_index     :%s\n", pq_table_ver.panel_index);
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
+	vpq_pr_dbg(lev_dbg, "current pq table ver infor\n"
+		" project_version :%s\n"
+		" chip_version    :%s\n"
+		" table_version   :%s\n"
+		" oem_model       :%s\n"
+		" panel_index     :%s\n",
+		pq_table_ver.project_version, pq_table_ver.chip_version,
+		pq_table_ver.table_version, pq_table_ver.oem_model,
+		pq_table_ver.panel_index);
 
 	return 0;
 }
@@ -370,12 +367,11 @@ ssize_t vpq_pq_setting_store(const struct class *class,
 
 		vpq_set_memc_demo_mode(value);
 	} else {
-		vpq_pr_dbg(lev_dbg, "cmd error\n");
+		//vpq_pr_dbg(lev_dbg, "cmd error\n");
 	}
 
 free_buf:
 	kfree(buf_org);
-
 	return count;
 }
 
@@ -383,69 +379,68 @@ ssize_t vpq_pq_module_cfg_show(const struct class *class,
 			const struct class_attribute *attr,
 			char *buf)
 {
-	vpq_pr_dbg(lev_dbg, "show pq modules cfg:\n");
-	vpq_pr_dbg(lev_dbg, " pq_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.pq_en));
-	vpq_pr_dbg(lev_dbg, " vadj1_en        :%s\n",
-		STATE_AS_STRING(pq_module_cfg.vadj1_en));
-	vpq_pr_dbg(lev_dbg, " vd1_ctrst_en    :%s\n",
-		STATE_AS_STRING(pq_module_cfg.vd1_ctrst_en));
-	vpq_pr_dbg(lev_dbg, " vadj2_en        :%s\n",
-		STATE_AS_STRING(pq_module_cfg.vadj2_en));
-	vpq_pr_dbg(lev_dbg, " post_ctrst_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.post_ctrst_en));
-	vpq_pr_dbg(lev_dbg, " pregamma_en     :%s\n",
-		STATE_AS_STRING(pq_module_cfg.pregamma_en));
-	vpq_pr_dbg(lev_dbg, " gamma_en        :%s\n",
-		STATE_AS_STRING(pq_module_cfg.gamma_en));
-	vpq_pr_dbg(lev_dbg, " wb_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.wb_en));
-	vpq_pr_dbg(lev_dbg, " dnlp_en         :%s\n",
-		STATE_AS_STRING(pq_module_cfg.dnlp_en));
-	vpq_pr_dbg(lev_dbg, " lc_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.lc_en));
-	vpq_pr_dbg(lev_dbg, " black_ext_en    :%s\n",
-		STATE_AS_STRING(pq_module_cfg.black_ext_en));
-	vpq_pr_dbg(lev_dbg, " blue_stretch_en :%s\n",
-		STATE_AS_STRING(pq_module_cfg.blue_stretch_en));
-	vpq_pr_dbg(lev_dbg, " chroma_cor_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.chroma_cor_en));
-	vpq_pr_dbg(lev_dbg, " sharpness0_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.sharpness0_en));
-	vpq_pr_dbg(lev_dbg, " sharpness1_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.sharpness1_en));
-	vpq_pr_dbg(lev_dbg, " cm_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.cm_en));
-	vpq_pr_dbg(lev_dbg, " lut3d_en        :%s\n",
-		STATE_AS_STRING(pq_module_cfg.lut3d_en));
-	vpq_pr_dbg(lev_dbg, " dejaggy_sr0_en  :%s\n",
-		STATE_AS_STRING(pq_module_cfg.dejaggy_sr0_en));
-	vpq_pr_dbg(lev_dbg, " dejaggy_sr1_en  :%s\n",
-		STATE_AS_STRING(pq_module_cfg.dejaggy_sr1_en));
-	vpq_pr_dbg(lev_dbg, " dering_sr0_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.dering_sr0_en));
-	vpq_pr_dbg(lev_dbg, " dering_sr1_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.dering_sr1_en));
-	vpq_pr_dbg(lev_dbg, " di_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.di_en));
-	vpq_pr_dbg(lev_dbg, " mcdi_en         :%s\n",
-		STATE_AS_STRING(pq_module_cfg.mcdi_en));
-	vpq_pr_dbg(lev_dbg, " deblock_en      :%s\n",
-		STATE_AS_STRING(pq_module_cfg.deblock_en));
-	vpq_pr_dbg(lev_dbg, " demosquito_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.demosquito_en));
-	vpq_pr_dbg(lev_dbg, " smoothplus_en   :%s\n",
-		STATE_AS_STRING(pq_module_cfg.smoothplus_en));
-	vpq_pr_dbg(lev_dbg, " nr_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.nr_en));
-	vpq_pr_dbg(lev_dbg, " hdrtmo_en       :%s\n",
-		STATE_AS_STRING(pq_module_cfg.hdrtmo_en));
-	vpq_pr_dbg(lev_dbg, " ai_en           :%s\n",
-		STATE_AS_STRING(pq_module_cfg.ai_en));
-	vpq_pr_dbg(lev_dbg, " aisr_en         :%s\n",
+	vpq_pr_dbg(lev_dbg,
+		"show hal pq modules cfg:\n"
+		" pq_en           :%s\n"
+		" vadj1_en        :%s\n"
+		" vd1_ctrst_en    :%s\n"
+		" vadj2_en        :%s\n"
+		" post_ctrst_en   :%s\n"
+		" pregamma_en     :%s\n"
+		" gamma_en        :%s\n"
+		" wb_en           :%s\n"
+		" dnlp_en         :%s\n"
+		" lc_en           :%s\n"
+		" black_ext_en    :%s\n"
+		" blue_stretch_en :%s\n"
+		" chroma_cor_en   :%s\n"
+		" sharpness0_en   :%s\n"
+		" sharpness1_en   :%s\n"
+		" cm_en           :%s\n"
+		" lut3d_en        :%s\n"
+		" dejaggy_sr0_en  :%s\n"
+		" dejaggy_sr1_en  :%s\n"
+		" dering_sr0_en   :%s\n"
+		" dering_sr1_en   :%s\n"
+		" di_en           :%s\n"
+		" mcdi_en         :%s\n"
+		" deblock_en      :%s\n"
+		" demosquito_en   :%s\n"
+		" smoothplus_en   :%s\n"
+		" nr_en           :%s\n"
+		" hdrtmo_en       :%s\n"
+		" ai_en           :%s\n"
+		" aisr_en         :%s\n",
+		STATE_AS_STRING(pq_module_cfg.pq_en),
+		STATE_AS_STRING(pq_module_cfg.vadj1_en),
+		STATE_AS_STRING(pq_module_cfg.vd1_ctrst_en),
+		STATE_AS_STRING(pq_module_cfg.vadj2_en),
+		STATE_AS_STRING(pq_module_cfg.post_ctrst_en),
+		STATE_AS_STRING(pq_module_cfg.pregamma_en),
+		STATE_AS_STRING(pq_module_cfg.gamma_en),
+		STATE_AS_STRING(pq_module_cfg.wb_en),
+		STATE_AS_STRING(pq_module_cfg.dnlp_en),
+		STATE_AS_STRING(pq_module_cfg.lc_en),
+		STATE_AS_STRING(pq_module_cfg.black_ext_en),
+		STATE_AS_STRING(pq_module_cfg.blue_stretch_en),
+		STATE_AS_STRING(pq_module_cfg.chroma_cor_en),
+		STATE_AS_STRING(pq_module_cfg.sharpness0_en),
+		STATE_AS_STRING(pq_module_cfg.sharpness1_en),
+		STATE_AS_STRING(pq_module_cfg.cm_en),
+		STATE_AS_STRING(pq_module_cfg.lut3d_en),
+		STATE_AS_STRING(pq_module_cfg.dejaggy_sr0_en),
+		STATE_AS_STRING(pq_module_cfg.dejaggy_sr1_en),
+		STATE_AS_STRING(pq_module_cfg.dering_sr0_en),
+		STATE_AS_STRING(pq_module_cfg.dering_sr1_en),
+		STATE_AS_STRING(pq_module_cfg.di_en),
+		STATE_AS_STRING(pq_module_cfg.mcdi_en),
+		STATE_AS_STRING(pq_module_cfg.deblock_en),
+		STATE_AS_STRING(pq_module_cfg.demosquito_en),
+		STATE_AS_STRING(pq_module_cfg.smoothplus_en),
+		STATE_AS_STRING(pq_module_cfg.nr_en),
+		STATE_AS_STRING(pq_module_cfg.hdrtmo_en),
+		STATE_AS_STRING(pq_module_cfg.ai_en),
 		STATE_AS_STRING(pq_module_cfg.aisr_en));
-
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
 
 	return 0;
 }
@@ -466,52 +461,50 @@ ssize_t vpq_pq_module_status_show(const struct class *class,
 
 	vpq_get_pq_module_status(&pq_state);
 
-	vpq_pr_dbg(lev_dbg, "show vpp pq module status:\n");
-	vpq_pr_dbg(lev_dbg, " pq           :%s\n",
-		STATE_AS_STRING(pq_state.pq_en));
-	vpq_pr_dbg(lev_dbg, " vadj1        :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.vadj1_en));
-	vpq_pr_dbg(lev_dbg, " vd1_ctrst    :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.vd1_ctrst_en));
-	vpq_pr_dbg(lev_dbg, " vadj2        :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.vadj2_en));
-	vpq_pr_dbg(lev_dbg, " post_ctrst   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.post_ctrst_en));
-	vpq_pr_dbg(lev_dbg, " pregamma     :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.pregamma_en));
-	vpq_pr_dbg(lev_dbg, " gamma        :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.gamma_en));
-	vpq_pr_dbg(lev_dbg, " wb           :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.wb_en));
-	vpq_pr_dbg(lev_dbg, " dnlp         :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.dnlp_en));
-	vpq_pr_dbg(lev_dbg, " lc           :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.lc_en));
-	vpq_pr_dbg(lev_dbg, " black_ext    :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.black_ext_en));
-	vpq_pr_dbg(lev_dbg, " blue_stretch :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.blue_stretch_en));
-	vpq_pr_dbg(lev_dbg, " chroma_cor   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.chroma_cor_en));
-	vpq_pr_dbg(lev_dbg, " sharpness0   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.sharpness0_en));
-	vpq_pr_dbg(lev_dbg, " sharpness1   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.sharpness1_en));
-	vpq_pr_dbg(lev_dbg, " cm           :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.cm_en));
-	vpq_pr_dbg(lev_dbg, " lut3d        :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.lut3d_en));
-	vpq_pr_dbg(lev_dbg, " dejaggy_sr0  :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.dejaggy_sr0_en));
-	vpq_pr_dbg(lev_dbg, " dejaggy_sr1  :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.dejaggy_sr0_en));
-	vpq_pr_dbg(lev_dbg, " dering_sr0   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.dering_sr0_en));
-	vpq_pr_dbg(lev_dbg, " dering_sr1   :%s\n",
-		STATE_AS_STRING(pq_state.pq_cfg.dering_sr0_en));
-
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
-	vpq_pr_dbg(lev_dbg, "\n");
+	vpq_pr_dbg(lev_dbg,
+		"show vpp module status:\n"
+		" pq           :%s\n"
+		" vadj1        :%s\n"
+		" vd1_ctrst    :%s\n"
+		" vadj2        :%s\n"
+		" post_ctrst   :%s\n"
+		" pregamma     :%s\n"
+		" gamma        :%s\n"
+		" wb           :%s\n"
+		" dnlp         :%s\n"
+		" lc           :%s\n"
+		" black_ext    :%s\n"
+		" blue_stretch :%s\n"
+		" chroma_cor   :%s\n"
+		" sharpness0   :%s\n"
+		" sharpness1   :%s\n"
+		" cm           :%s\n"
+		" lut3d        :%s\n"
+		" dejaggy_sr0  :%s\n"
+		" dejaggy_sr1  :%s\n"
+		" dering_sr0   :%s\n"
+		" dering_sr1   :%s\n",
+		STATE_AS_STRING(pq_state.pq_en),
+		STATE_AS_STRING(pq_state.pq_cfg.vadj1_en),
+		STATE_AS_STRING(pq_state.pq_cfg.vd1_ctrst_en),
+		STATE_AS_STRING(pq_state.pq_cfg.vadj2_en),
+		STATE_AS_STRING(pq_state.pq_cfg.post_ctrst_en),
+		STATE_AS_STRING(pq_state.pq_cfg.pregamma_en),
+		STATE_AS_STRING(pq_state.pq_cfg.gamma_en),
+		STATE_AS_STRING(pq_state.pq_cfg.wb_en),
+		STATE_AS_STRING(pq_state.pq_cfg.dnlp_en),
+		STATE_AS_STRING(pq_state.pq_cfg.lc_en),
+		STATE_AS_STRING(pq_state.pq_cfg.black_ext_en),
+		STATE_AS_STRING(pq_state.pq_cfg.blue_stretch_en),
+		STATE_AS_STRING(pq_state.pq_cfg.chroma_cor_en),
+		STATE_AS_STRING(pq_state.pq_cfg.sharpness0_en),
+		STATE_AS_STRING(pq_state.pq_cfg.sharpness1_en),
+		STATE_AS_STRING(pq_state.pq_cfg.cm_en),
+		STATE_AS_STRING(pq_state.pq_cfg.lut3d_en),
+		STATE_AS_STRING(pq_state.pq_cfg.dejaggy_sr0_en),
+		STATE_AS_STRING(pq_state.pq_cfg.dejaggy_sr1_en),
+		STATE_AS_STRING(pq_state.pq_cfg.dering_sr0_en),
+		STATE_AS_STRING(pq_state.pq_cfg.dering_sr1_en));
 
 	return 0;
 }
@@ -584,7 +577,6 @@ ssize_t vpq_pq_module_status_store(const struct class *class,
 
 free_buf:
 	kfree(buf_org);
-
 	return count;
 }
 
@@ -644,22 +636,33 @@ ssize_t vpq_src_infor_show(const struct class *class,
 
 	vpq_get_signal_info(&sig_info);
 
-	vpq_pr_dbg(lev_dbg, "current signal information:\n");
-	vpq_pr_dbg(lev_dbg, " source              :%s\n", src_type_tostring(sig_info.src_type));
-	vpq_pr_dbg(lev_dbg, " hdmi port           :%s\n", port_type_tostring(sig_info.hdmi_port));
-	vpq_pr_dbg(lev_dbg, " signal fmt(vdin)    :0x%x\n", sig_info.sig_fmt);
-	vpq_pr_dbg(lev_dbg, " trans fmt(vdin)     :%d\n", sig_info.trans_fmt);
-	vpq_pr_dbg(lev_dbg, " height              :%d\n", sig_info.height);
-	vpq_pr_dbg(lev_dbg, " width               :%d\n", sig_info.width);
-	vpq_pr_dbg(lev_dbg, " fps                 :%dhz\n", sig_info.fps);
-	vpq_pr_dbg(lev_dbg, " hdr type            :%s\n", hdr_type_tostring(sig_info.hdr_type));
-	vpq_pr_dbg(lev_dbg, " dv                  :%d\n", sig_info.is_amdv);
-	vpq_pr_dbg(lev_dbg, " game                :%d\n", sig_info.is_game);
-	vpq_pr_dbg(lev_dbg, " pc                  :%d\n", sig_info.is_pc);
-	vpq_pr_dbg(lev_dbg, " scan_mode           :%s\n",
-				(sig_info.scan_mode == VPQ_SCAN_MODE_PROGRESSIVE) ? "P" :
-				((sig_info.scan_mode == VPQ_SCAN_MODE_INTERLACED) ? "I" : "NULL"));
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
+	vpq_pr_dbg(lev_dbg,
+		"current signal infor:\n"
+		" source              :%s\n"
+		" hdmi port           :%s\n"
+		" signal fmt(vdin)    :0x%x\n"
+		" trans fmt(vdin)     :%d\n"
+		" height              :%d\n"
+		" width               :%d\n"
+		" fps                 :%dhz\n"
+		" hdr type            :%s\n"
+		" dv                  :%d\n"
+		" game                :%d\n"
+		" pc                  :%d\n"
+		" scan_mode           :%s\n",
+		src_type_tostring(sig_info.src_type),
+		port_type_tostring(sig_info.hdmi_port),
+		sig_info.sig_fmt,
+		sig_info.trans_fmt,
+		sig_info.height,
+		sig_info.width,
+		sig_info.fps,
+		hdr_type_tostring(sig_info.hdr_type),
+		sig_info.is_amdv,
+		sig_info.is_game,
+		sig_info.is_pc,
+		(sig_info.scan_mode == VPQ_SCAN_MODE_PROGRESSIVE) ? "P" :
+		((sig_info.scan_mode == VPQ_SCAN_MODE_INTERLACED) ? "I" : "NULL"));
 
 	return 0;
 }
@@ -741,12 +744,12 @@ ssize_t vpq_hist_avg_show(const struct class *class,
 	struct vpq_hist_ave_s hist_avg = {0};
 
 	vpq_get_hist_avg(&hist_avg);
-	vpq_pr_dbg(lev_dbg, "current hist avg:\n");
-	vpq_pr_dbg(lev_dbg, " sum    :%d\n", hist_avg.sum);
-	vpq_pr_dbg(lev_dbg, " height :%d\n", hist_avg.height);
-	vpq_pr_dbg(lev_dbg, " width  :%d\n", hist_avg.width);
-	vpq_pr_dbg(lev_dbg, " ave    :%d\n", hist_avg.ave);
-	vpq_pr_dbg(lev_dbg, "--------------------------------\n");
+	vpq_pr_dbg(lev_dbg, "current hist avg:\n"
+		" sum    :%d\n"
+		" height :%d\n"
+		" width  :%d\n"
+		" ave    :%d\n",
+		hist_avg.sum, hist_avg.height, hist_avg.width, hist_avg.ave);
 
 	return 0;
 }
@@ -787,13 +790,9 @@ ssize_t vpq_dump_store(const struct class *class,
 
 		vpq_pr_dbg(lev_dbg, "dump_module %d\n", value);
 		vpq_module_dump_pq_table(value);
-	} else {
-		vpq_pr_dbg(lev_dbg, "cmd error\n");
-		goto free_buf;
 	}
 
 free_buf:
 	kfree(buf_org);
-
 	return count;
 }
