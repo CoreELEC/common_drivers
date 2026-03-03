@@ -640,7 +640,7 @@ static int dvb_ca_en50221_read_data(struct dvb_ca_private *ca, int slot,
 	struct dvb_ca_slot *sl = &ca->slot_info[slot];
 	int bytes_read;
 	int status;
-	u8 buf[HOST_LINK_BUF_SIZE];
+	u8 *pbuf = NULL;
 	int i;
 
 	dprintk("%s\n", __func__);
@@ -662,15 +662,18 @@ static int dvb_ca_en50221_read_data(struct dvb_ca_private *ca, int slot,
 		}
 	}
 
+	pbuf = vmalloc(HOST_LINK_BUF_SIZE);
+	if (!pbuf)
+		return -ENOMEM;
 	if (ca->pub->read_data &&
 	    (sl->slot_state != DVB_CA_SLOTSTATE_LINKINIT)) {
 		if (!ebuf)
-			status = ca->pub->read_data(ca->pub, slot, buf,
-						    sizeof(buf));
+			status = ca->pub->read_data(ca->pub, slot, pbuf,
+						    HOST_LINK_BUF_SIZE);
 		else
-			status = ca->pub->read_data(ca->pub, slot, buf, ecount);
+			status = ca->pub->read_data(ca->pub, slot, pbuf, ecount);
 		if (status < 0)
-			return status;
+			goto exit;
 		bytes_read =  status;
 		if (status == 0)
 			goto exit;
@@ -733,7 +736,7 @@ static int dvb_ca_en50221_read_data(struct dvb_ca_private *ca, int slot,
 				goto exit;
 
 			/* OK, store it in the buffer */
-			buf[i] = status;
+			pbuf[i] = status;
 		}
 
 		/* check for read error (RE should now be 0) */
@@ -757,21 +760,22 @@ static int dvb_ca_en50221_read_data(struct dvb_ca_private *ca, int slot,
 			status = -EIO;
 			goto exit;
 		}
-		dvb_ringbuffer_pkt_write(&sl->rx_buffer, buf, bytes_read);
+		dvb_ringbuffer_pkt_write(&sl->rx_buffer, pbuf, bytes_read);
 	} else {
-		memcpy(ebuf, buf, bytes_read);
+		memcpy(ebuf, pbuf, bytes_read);
 	}
 
 	dprintk("Received CA packet for slot %i connection id 0x%x last_frag:%i size:0x%x\n", slot,
-		buf[0], (buf[1] & 0x80) == 0, bytes_read);
+		pbuf[0], (pbuf[1] & 0x80) == 0, bytes_read);
 
 	/* wake up readers when a last_fragment is received */
-	if ((buf[1] & 0x80) == 0x00)
+	if ((pbuf[1] & 0x80) == 0x00)
 		wake_up_interruptible(&ca->wait_queue);
 
 	status = bytes_read;
 
 exit:
+	vfree(pbuf);
 	return status;
 }
 
@@ -1452,7 +1456,7 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file,
 	struct dvb_ca_slot *sl;
 	u8 slot, connection_id;
 	int status;
-	u8 fragbuf[HOST_LINK_BUF_SIZE];
+	u8 *pfragbuf = NULL;
 	int fragpos = 0;
 	int fraglen;
 	unsigned long timeout;
@@ -1484,6 +1488,10 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file,
 	if (sl->slot_state != DVB_CA_SLOTSTATE_RUNNING)
 		return -EINVAL;
 
+	pfragbuf = vmalloc(HOST_LINK_BUF_SIZE);
+	if (!pfragbuf)
+		return -ENOMEM;
+
 	/* fragment the packets & store in the buffer */
 	while (fragpos < count) {
 		fraglen = sl->link_buf_size - 2;
@@ -1494,9 +1502,9 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file,
 		if ((count - fragpos) < fraglen)
 			fraglen = count - fragpos;
 
-		fragbuf[0] = connection_id;
-		fragbuf[1] = ((fragpos + fraglen) < count) ? 0x80 : 0x00;
-		status = copy_from_user(fragbuf + 2, buf + fragpos, fraglen);
+		pfragbuf[0] = connection_id;
+		pfragbuf[1] = ((fragpos + fraglen) < count) ? 0x80 : 0x00;
+		status = copy_from_user(pfragbuf + 2, buf + fragpos, fraglen);
 		if (status) {
 			status = -EFAULT;
 			goto exit;
@@ -1515,7 +1523,7 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file,
 			}
 
 			mutex_lock(&sl->slot_lock);
-			status = dvb_ca_en50221_write_data(ca, slot, fragbuf,
+			status = dvb_ca_en50221_write_data(ca, slot, pfragbuf,
 							   fraglen + 2, 0);
 			mutex_unlock(&sl->slot_lock);
 			if (status == (fraglen + 2)) {
@@ -1537,6 +1545,7 @@ static ssize_t dvb_ca_en50221_io_write(struct file *file,
 	status = count + 2;
 
 exit:
+	vfree(pfragbuf);
 	return status;
 }
 
