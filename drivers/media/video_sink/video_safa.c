@@ -783,7 +783,8 @@ static void set_cfg_pi_safa(struct vsr_setting_s *vsr)
 				vsr_top->pi_safa_hsc_ini_integer_luma = 0x1f;
 				vsr_top->pi_safa_hsc_ini_phase_luma = (hsc_ini_phase / 2) * 2;
 				vsr_top->pi_safa_hsc_ini_integer_chrm = 0x1f;
-				vsr_top->pi_safa_hsc_ini_phase_chrm  = hsc_ini_phase;
+				vsr_top->pi_safa_hsc_ini_phase_chrm  =
+					vsr_top->pi_safa_hsc_ini_phase_luma;
 			} else {
 				vsr_top->pi_safa_hsc_ini_integer_luma = 0x1f;
 				vsr_top->pi_safa_hsc_ini_phase_luma = hsc_ini_phase;
@@ -795,13 +796,14 @@ static void set_cfg_pi_safa(struct vsr_setting_s *vsr)
 				hsize_out) - (1 << 16)) / 2) >> 16;
 			hsc_ini_phase = (div_u64((u64)pre_hsize << 16,
 				hsize_out) - (1 << 16)) / 2 -
-				(vsr_top->pi_safa_hsc_ini_integer << 16);
+				(hsc_ini_integer << 16);
 
 			if (vsr_top->input_422_en) {
 				vsr_top->pi_safa_hsc_ini_integer_luma = hsc_ini_integer;
 				vsr_top->pi_safa_hsc_ini_phase_luma = (hsc_ini_phase / 2) * 2;
 				vsr_top->pi_safa_hsc_ini_integer_chrm = hsc_ini_integer / 2;
-				vsr_top->pi_safa_hsc_ini_phase_chrm = hsc_ini_phase / 2;
+				vsr_top->pi_safa_hsc_ini_phase_chrm =
+					vsr_top->pi_safa_hsc_ini_phase_luma;
 			} else {
 				vsr_top->pi_safa_hsc_ini_integer_luma = hsc_ini_integer;
 				vsr_top->pi_safa_hsc_ini_phase_luma = hsc_ini_phase;
