@@ -64,9 +64,9 @@ static void sw_record_write_v1(u32 sw_type, u32 val1, u32 val2)
 	record_v1.sw_stream1.reserved = val1;
 	record_v1.stream2 = val2;
 
-	writel(record_v1.stream2,
+	__raw_writel(record_v1.stream2,
 		iotm.cssys_base + SW_DATA_STREAM0);
-	writel(record_v1.stream1 | SW_DATA_STREAM1_WRITE,
+	__raw_writel(record_v1.stream1 | SW_DATA_STREAM1_WRITE,
 		iotm.cssys_base + SW_DATA_STREAM1);
 }
 
@@ -252,9 +252,9 @@ static void boot_timer_setup_v1(void)
 
 static void boot_time_record_v1(u64 pct, u64 ns_time)
 {
-	writel((pct >> 4) & MAX_TS, iotm.cssys_base + ADDR_RANGE5_END);
-	writel((u32)(ns_time >> 32), iotm.cssys_base + ADDR_RANGE6_BEGIN);
-	writel((u32)ns_time, iotm.cssys_base + ADDR_RANGE6_END);
+	__raw_writel((pct >> 4) & MAX_TS, iotm.cssys_base + ADDR_RANGE5_END);
+	__raw_writel((u32)(ns_time >> 32), iotm.cssys_base + ADDR_RANGE6_BEGIN);
+	__raw_writel((u32)ns_time, iotm.cssys_base + ADDR_RANGE6_END);
 }
 
 static void ddr_range_get_v1(u32 *reg_base, void *buf, int *pos)

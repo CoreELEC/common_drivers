@@ -43,9 +43,9 @@ static void sw_record_write_v2(u32 sw_type, u32 val1, u32 val2)
 	record_v2.sw_stream2.reserved = val1;
 	record_v2.stream3 = val2;
 
-	writel(record_v2.stream3,
+	__raw_writel(record_v2.stream3,
 		iotm.cssys_base + SW_DATA_STREAM0);
-	writel(record_v2.stream2 | SW_DATA_STREAM1_WRITE,
+	__raw_writel(record_v2.stream2 | SW_DATA_STREAM1_WRITE,
 	iotm.cssys_base + SW_DATA_STREAM1);
 }
 
