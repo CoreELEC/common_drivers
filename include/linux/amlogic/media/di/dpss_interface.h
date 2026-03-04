@@ -112,7 +112,8 @@ enum DPSS_BUF_STATE {
 #define DPSS_CMD_ASY_2_WORKMODE	(2) // weak mode, not cause resolution change
 #define DPSS_CMD_ENABLE_FRC	(3)
 
-//...
+/*vf->dpss_flg*/
+#define VFRAME_DPSS_FLAG_BYPASS		1
 #define DPSS_FLG_BYPASS	          (0x00001) //this flag is set on input vframe
 #define DPSS_FLG_DDD	          (0x00002)
 #define DPSS_FLG_HDR	          (0x00004)
@@ -121,8 +122,12 @@ enum DPSS_BUF_STATE {
 #define DPSS_FLG_MODULE_BYPASS    (0x00020) //this flag is set in pipeline means bypass dpss module
 #define DPSS_FLG_SET_DPSS_PROCESS (0x00040) //this flag is set in dpss_process means receive the vf
 #define DPSS_FLG_HDR_CHG          (0x00080)
-#define DPSS_FLG_FRONT	(0x00100)
-#define DPSS_FLG_NEW_TRIG	      (0x10000) //trig re-setting by input
+#define DPSS_FLG_FRONT            (0x00100)
+#define DPSS_FLG_NEED_SKIP        (0x00200) //nr need skip 4k1k
+#define DPSS_FLG_USE_DW           (0x00400) //nr need use dw
+#define DPSS_FLG_PPS_SKIP         (0x00800) //nr need bypass pps
+#define DPSS_FLG_NEW_TRIG         (0x10000) //trig re-setting by input
+
 /************************************************/
 
 struct dpss_in_vf_info {
@@ -190,13 +195,11 @@ struct pp_info_t {
 	bool queued;
 	bool dropped;
 	bool dummy;
+	u32 dpss_flag;
 	struct file *src_file;
 	u32 status;
 	u32 main_index;  /*for dpss in, make sure increment*/
 };
-
-/*vf->dpss_flg*/
-#define VFRAME_DPSS_FLAG_BYPASS		1
 
 struct dpss_operations_s {
 	/*The input data has been processed and returned to the caller*/

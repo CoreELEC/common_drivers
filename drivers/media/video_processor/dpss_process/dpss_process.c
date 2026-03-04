@@ -81,6 +81,8 @@ static u32 force_num_to_vd1;
 static atomic_t input_eos_enabled = ATOMIC_INIT(0);
 static u32 hdr_state_flag; /*0:normal 1:need send flag to force pq unmute*/
 static u32 last_instance_frame_index;
+static u32 dpss_out_axis[4];
+static u32 display_scaling_factor[4] = {20, 48, 84, 200};
 static DEFINE_MUTEX(dpss_process_mutex);
 
 static int dp_print(int index, int debug_flag, const char *fmt, ...)
@@ -780,9 +782,9 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	pp_info->dummy = dummy;
 	pp_info->src_file = src_file;
 	pp_info->status = DPSS_INPUT_VF_IN_DPSS;
+	pp_info->dpss_flag = vf->dpss_flg;
 
 	dpss_in_buf->vf.pp_info = (void *)pp_info;
-	dpss_in_buf->vf.dpss_flg = 0;
 	dpss_in_buf->vf.dpss_data = NULL;
 
 	dp_print(dev->index, PRINT_OTHER,
@@ -876,6 +878,61 @@ static enum DPSS_ERRORTYPE queue_outbuf_to_dpss(struct dpss_process_dev *dev, st
 	return ret;
 }
 
+static void check_window_config(struct dpss_process_dev *dev, struct vframe_s *vf,
+	struct received_frame_t *received_frame)
+{
+	int axis[4] = {0, 0, 0, 0};
+	int used_vf_with = 0, used_vf_height = 0;
+
+	if (!dev || !vf || !received_frame) {
+		pr_err("window_config: param is invalid.\n");
+		return;
+	}
+
+	if (vf->type & VIDTYPE_COMPRESS) {
+		used_vf_with = vf->compWidth;
+		used_vf_height = vf->compHeight;
+	} else {
+		used_vf_with = vf->width;
+		used_vf_height = vf->height;
+	}
+
+	if (dpss_out_axis[3]) {
+		dp_print(dev->index, PRINT_OTHER, "window_config:use debug mode param.\n");
+		axis[0] = dpss_out_axis[0];
+		axis[1] = dpss_out_axis[1];
+		axis[2] = dpss_out_axis[2];
+		axis[3] = dpss_out_axis[3];
+	} else {
+		axis[0] = received_frame->dst_x;
+		axis[1] = received_frame->dst_y;
+		axis[2] = received_frame->dst_w;
+		axis[3] = received_frame->dst_h;
+	}
+
+	if (axis[3] * 100 > display_scaling_factor[1] * used_vf_height &&
+		axis[3] * 100 < display_scaling_factor[2] * used_vf_height) {
+		dp_print(dev->index, PRINT_OTHER, "window_config: nr need skip.\n");
+		vf->dpss_flg |= DPSS_FLG_NEED_SKIP | DPSS_FLG_PPS_SKIP;
+	} else if (axis[3] * 100 > display_scaling_factor[0] * used_vf_height &&
+		axis[3] * 100 <= display_scaling_factor[1] * used_vf_height) {
+		dp_print(dev->index, PRINT_OTHER, "window_config: nr need use dw.\n");
+		vf->type &= ~VIDTYPE_COMPRESS;
+		vf->dpss_flg |= DPSS_FLG_USE_DW;
+		vf->bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
+		if (vf->height & 1) {
+			dp_print(dev->index, PRINT_OTHER, "height not 2 aligned.\n");
+			vf->height -= 1;
+		}
+	} else {
+		dp_print(dev->index, PRINT_OTHER, "window_config:normal dpss flow.\n");
+		if (axis[3] * 100 < display_scaling_factor[3] * used_vf_height) {
+			dp_print(dev->index, PRINT_OTHER, "need bypass pps.\n");
+			vf->dpss_flg |= DPSS_FLG_PPS_SKIP;
+		}
+	}
+}
+
 static void dpss_process_task(struct dpss_process_dev *dev)
 {
 	struct vframe_s *vf = NULL;
@@ -895,6 +952,7 @@ static void dpss_process_task(struct dpss_process_dev *dev)
 	bool dummy;
 	struct vframe_s *enhance_vf = NULL;
 	struct uvm_lcevc_frame_info *lcevc_data;
+	bool is_tv_path = false;
 
 	while (kfifo_len(&dev->dpss_out_free_q) > 0) {
 		if (kfifo_get(&dev->dpss_out_free_q, &vf)) {
@@ -935,6 +993,13 @@ static void dpss_process_task(struct dpss_process_dev *dev)
 		dp_print(dev->index, PRINT_ERROR, "file_vf is NULL\n");
 
 	is_i_frame = vf->type & VIDTYPE_INTERLACE_TOP;
+
+	if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
+		vf->source_type == VFRAME_SOURCE_TYPE_CVBS ||
+		vf->source_type == VFRAME_SOURCE_TYPE_TUNER)
+		is_tv_path = true;
+	if (!is_tv_path)
+		check_window_config(dev, vf, received_frame);
 
 	if (dummy) {
 		drop_count = 0;
@@ -998,6 +1063,11 @@ static void dpss_process_task(struct dpss_process_dev *dev)
 	received_frame->file_vf = NULL;
 	received_frame->vf = NULL;
 	received_frame->dummy = false;
+	received_frame->transform = 0;
+	received_frame->dst_x = 0;
+	received_frame->dst_y = 0;
+	received_frame->dst_w = 0;
+	received_frame->dst_h = 0;
 	atomic_set(&received_frame->on_use, false);
 
 	if (!dummy) {
@@ -1099,7 +1169,7 @@ static enum DPSS_ERRORTYPE dp_empty_input_done(void *arg, struct vframe_s *vf)
 			enhance_vf->height);
 		free_enhance_vf_pointer(dev, enhance_vf);
 	}
-	if (vf->dpss_flg & VFRAME_DPSS_FLAG_BYPASS) {
+	if (vf->dpss_flg & DPSS_FLG_BYPASS) {
 		dp_print(dev->index, PRINT_OTHER, "%s: dpss driver bypass\n", __func__);
 		/*need release fence*/
 		/*need copy vf*/
@@ -1273,6 +1343,16 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 		vf->dpss_flg |= DPSS_FLG_OUT_BYPASS | DPSS_FLG_SET_DPSS_PROCESS;
 	else
 		vf->dpss_flg |= DPSS_FLG_OUT_DONE;
+
+	if (pp_info->dpss_flag & DPSS_FLG_NEED_SKIP)
+		vf->dpss_flg |= DPSS_FLG_NEED_SKIP;
+
+	if (pp_info->dpss_flag & DPSS_FLG_USE_DW)
+		vf->dpss_flg |= DPSS_FLG_USE_DW;
+
+	if (pp_info->dpss_flag | DPSS_FLG_PPS_SKIP)
+		vf->dpss_flg |= DPSS_FLG_PPS_SKIP;
+
 	private_data->vf = *vf;
 	private_data->vf_p = vf;
 	private_data->vf.vf_ext2 = &private_data->vf_ext;
@@ -2563,6 +2643,11 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dev->received_frame[i].file_vf = file_vf;
 		dev->received_frame[i].vf = vf;
 		dev->received_frame[i].dummy = false;
+		dev->received_frame[i].transform = frame_info->transform;
+		dev->received_frame[i].dst_x = frame_info->dst_x;
+		dev->received_frame[i].dst_y = frame_info->dst_y;
+		dev->received_frame[i].dst_w = frame_info->dst_w;
+		dev->received_frame[i].dst_h = frame_info->dst_h;
 
 		atomic_set(&dev->received_frame[i].on_use, true);
 
@@ -2686,6 +2771,48 @@ static int dpss_process_q_output(struct dpss_process_dev *dev, u32 fd)
 	fput(file_vf);
 	total_put_count++;
 	return 0;
+}
+
+static int parse_param(const char *para, int para_num, int *result)
+{
+	char *token = NULL;
+	char *params, *params_base;
+	int *out = result;
+	int len = 0, count = 0;
+	int res = 0;
+	int ret = 0;
+
+	if (!para)
+		return 0;
+
+	params = kstrdup(para, GFP_KERNEL);
+	params_base = params;
+	token = params;
+	if (token) {
+		len = strlen(token);
+		do {
+			token = strsep(&params, " ");
+			if (!token)
+				break;
+			while (token &&
+			       (isspace(*token) ||
+				!isgraph(*token)) && len) {
+				token++;
+				len--;
+			}
+			if (len == 0)
+				break;
+			ret = kstrtoint(token, 0, &res);
+			if (ret < 0)
+				break;
+			len = strlen(token);
+			*out++ = res;
+			count++;
+		} while ((count < para_num) && (len > 0));
+	}
+
+	kfree(params_base);
+	return count;
 }
 
 static long dpss_process_ioctl(struct file *file,
@@ -3304,6 +3431,57 @@ static ssize_t force_num_to_vd1_store(const struct class *cla,
 	return count;
 }
 
+static ssize_t dpss_out_axis_show(const struct class *cla, const struct class_attribute *attr,
+	char *buf)
+{
+	return snprintf(buf, 40, "%d %d %d %d\n",
+		dpss_out_axis[0], dpss_out_axis[1], dpss_out_axis[2], dpss_out_axis[3]);
+}
+
+static ssize_t dpss_out_axis_store(const struct class *cla,
+	const struct class_attribute *attr, const char *buf, size_t count)
+{
+	int axis[4];
+
+	if (likely(parse_param(buf, 4, axis) == 4)) {
+		pr_info("set dpss out axis: x:%d,y:%d,w:%d,h:%d.\n ",
+			axis[0], axis[1], axis[2], axis[3]);
+		dpss_out_axis[0] = axis[0];
+		dpss_out_axis[1] = axis[1];
+		dpss_out_axis[2] = axis[2];
+		dpss_out_axis[3] = axis[3];
+	}
+
+	return strnlen(buf, count);
+}
+
+static ssize_t display_scaling_factor_show(const struct class *cla,
+	const struct class_attribute *attr, char *buf)
+{
+	return snprintf(buf, 40, "display_scaling_factor:%d %d %d %d.\n",
+		display_scaling_factor[0],
+		display_scaling_factor[1],
+		display_scaling_factor[2],
+		display_scaling_factor[3]);
+}
+
+static ssize_t display_scaling_factor_store(const struct class *cla,
+	const struct class_attribute *attr, const char *buf, size_t count)
+{
+	int temp[4];
+
+	if (likely(parse_param(buf, 4, temp) == 4)) {
+		pr_info("set display_scaling_factor: %d %d %d %d.\n ",
+			temp[0], temp[1], temp[2], temp[3]);
+		display_scaling_factor[0] = temp[0];
+		display_scaling_factor[1] = temp[1];
+		display_scaling_factor[2] = temp[2];
+		display_scaling_factor[3] = temp[3];
+	}
+
+	return strnlen(buf, count);
+}
+
 static CLASS_ATTR_RW(print_flag);
 static CLASS_ATTR_RO(total_get_count);
 static CLASS_ATTR_RO(total_put_count);
@@ -3327,6 +3505,8 @@ static CLASS_ATTR_RW(continue_dump_bottom_num);
 static CLASS_ATTR_RW(force_direct_mode);
 static CLASS_ATTR_RW(temperature_control_en);
 static CLASS_ATTR_RW(force_num_to_vd1);
+static CLASS_ATTR_RW(dpss_out_axis);
+static CLASS_ATTR_RW(display_scaling_factor);
 
 static struct attribute *dpss_process_class_attrs[] = {
 	&class_attr_print_flag.attr,
@@ -3352,6 +3532,8 @@ static struct attribute *dpss_process_class_attrs[] = {
 	&class_attr_force_direct_mode.attr,
 	&class_attr_temperature_control_en.attr,
 	&class_attr_force_num_to_vd1.attr,
+	&class_attr_dpss_out_axis.attr,
+	&class_attr_display_scaling_factor.attr,
 	NULL
 };
 

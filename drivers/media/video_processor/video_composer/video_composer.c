@@ -41,6 +41,7 @@
 #include <linux/amlogic/media/di/di_interface.h>
 #include <linux/amlogic/media/di/di.h>
 #endif
+#include <linux/amlogic/media/di/dpss_interface.h>
 #include "videodisplay.h"
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VRR
@@ -4003,11 +4004,26 @@ static int config_crop_param(struct composer_dev *dev,
 		return -1;
 
 	vc_print(dev->index, PRINT_AXIS,
-		"frame_info crop: x y w h %d %d %d %d\n",
+		"frame_info crop: x y w h %d %d %d %d, pps:x y %d %d.\n",
 		frame_info->crop_x,
 		frame_info->crop_y,
 		frame_info->crop_w,
-		frame_info->crop_h);
+		frame_info->crop_h,
+		vf->dpss_pps_dsx,
+		vf->dpss_pps_dsy);
+
+	if (vf->dpss_flg & DPSS_FLG_USE_DW) {
+		frame_info->crop_w <<= 2;
+		frame_info->crop_h <<= 2;
+	}
+
+	if (is_src_crop_valid(vf->src_crop))
+		vc_print(dev->index, PRINT_AXIS,
+			"src_crop: %d %d %d %d\n",
+			vf->src_crop.top,
+			vf->src_crop.left,
+			vf->src_crop.bottom,
+			vf->src_crop.right);
 
 	detect_vf_type(frame_info, file_vf, &is_dec_vf, &is_v4l_vf);
 	if (is_dec_vf || is_v4l_vf) {

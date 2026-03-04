@@ -1439,7 +1439,7 @@ void nr_dpe_dw_cfg(struct PRM_DPSS_TOP *prm_top)
 }
 
 void nr_dpe_pps_para(struct dpss_ch_s *pch,
-	unsigned int width, unsigned int height)
+	unsigned int width, unsigned int height, bool use_dw)
 {
 	struct AA_PPS_TOP_TYPE *pps;
 	struct frc_chip_st *pchip_st = NULL;
@@ -1500,7 +1500,7 @@ void nr_dpe_pps_para(struct dpss_ch_s *pch,
 	}
 	if ((vinfo && vinfo->height == 1080 &&
 		vinfo->width == 3840) || width >= 1920 || height >= 1080 ||
-		(width % 2) || (height % 2)) {
+		(width % 2) || (height % 2) || use_dw) {
 		pch->c.prm_top.pps_dsx = 0;
 		pch->c.prm_top.pps_dsy = 0;
 		pch->c.prm_top.is_pps = 0;
@@ -1510,17 +1510,18 @@ void nr_dpe_pps_para(struct dpss_ch_s *pch,
 	pps->pps_en = pch->c.prm_top.is_pps;
 	pps->di2pps_en = pch->c.prm_top.is_di2pps;
 
-	dbg_h2("%s:0is_pps dsx ch= %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", __func__,
+	dbg_h2("%s:0is_pps dsx ch= %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", __func__,
 		pch->c.prm_top.ch, pch->c.prm_top.pps_dsx,
 		pch->c.prm_top.pps_dsy, width, height,
 		pch->d->is_i, pch->c.prm_top.is_pps,
-		pch->c.prm_top.is_di2pps, pps->pps_en, vinfo->height);
+		pch->c.prm_top.is_di2pps, pps->pps_en, vinfo->height, use_dw);
 }
 
 void nr_dpe_pps_cfg(struct PRM_DPSS_TOP *prm_top, struct dpss_ch_s *pch,
 		struct dpss_sub_vf_s *vfms)
 {
 	struct PRM_DPSS_DPE *prm_dpe = &pch->c.prm_dpe;
+	bool use_dw = false;
 
 	if (!prm_top)
 		return;
@@ -1528,7 +1529,10 @@ void nr_dpe_pps_cfg(struct PRM_DPSS_TOP *prm_top, struct dpss_ch_s *pch,
 		pch->d->is_i = 1;
 	else
 		pch->d->is_i = 0;
-	nr_dpe_pps_para(pch, vfms->width, vfms->height);
+
+	if (vfms->dpss_flag & DPSS_FLG_USE_DW || vfms->dpss_flag & DPSS_FLG_PPS_SKIP)
+		use_dw = true;
+	nr_dpe_pps_para(pch, vfms->width, vfms->height, use_dw);
 
 	if (pch->c.prm_top.is_pps) {
 		w_reg_bit(DPSS_DPE_INTF_CTRL2, 3, 4, 2); //open pps path
@@ -2882,6 +2886,10 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	//cfg_dpss_size_nr(prm_top);//test for me setting todo//test
 	fpga_ucode_1217(prm_top, dpss_dbg_top_cfg0);//part of HW_Initialize 12-17
 	dbg_h2("%s:aa pps_dsx = %d,\n", __func__, prm_top->frm_vsize);
+	if (vf->dpss_flg & DPSS_FLG_USE_DW)
+		vfs->dpss_flag |= DPSS_FLG_USE_DW;
+	if (vf->dpss_flg & DPSS_FLG_PPS_SKIP)
+		vfs->dpss_flag |= DPSS_FLG_PPS_SKIP;
 	nr_dpe_pps_cfg(prm_top, pch, vfs);
 	if (!light_chg) {
 		_prm_top_init_buffer(prm_top, pch, src);

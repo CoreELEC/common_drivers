@@ -293,7 +293,7 @@ void _prm_top_init_buffer(struct PRM_DPSS_TOP *prm_top,
 void _prm_top_init_vfm(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 				struct dpss_sub_vf_s *vfms, bool is_ex_di);	//user case
 void nr_dpe_pps_para(struct dpss_ch_s *pch,
-	unsigned int width, unsigned int height);
+	unsigned int width, unsigned int height, bool use_dw);
 void nr_dpe_pps_cfg(struct PRM_DPSS_TOP *prm_top, struct dpss_ch_s *pch,
 	struct dpss_sub_vf_s *vfms);
 inline u32 update_reg_val(u32 reg_val, u32 val, u8 start, u8 len);

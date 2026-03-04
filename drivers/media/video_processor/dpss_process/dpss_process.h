@@ -43,7 +43,11 @@ struct frame_info_t {
 	u32 need_bypass;
 	u32 is_tvp;
 	u32 transform;
-	u32 reserved[13];
+	u32 dst_x;
+	u32 dst_y;
+	u32 dst_w;
+	u32 dst_h;
+	u32 reserved[9];
 };
 
 struct received_frame_t {
@@ -52,6 +56,11 @@ struct received_frame_t {
 	struct vframe_s *vf;
 	struct file *file_vf;
 	bool dummy;
+	u32 transform;
+	u32 dst_x;
+	u32 dst_y;
+	u32 dst_w;
+	u32 dst_h;
 };
 
 struct dpss_in_buf_t {

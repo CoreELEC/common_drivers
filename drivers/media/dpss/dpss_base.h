@@ -320,6 +320,7 @@ struct dpss_sub_vf_s {		//dsub_vf_s
 	unsigned int bitdepth_dw;
 	unsigned int flag;
 	unsigned int di_flag;	//new
+	unsigned int dpss_flag;
 	void *decontour_pre;
 	unsigned int source_type;
 

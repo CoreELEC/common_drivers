@@ -205,6 +205,7 @@ bool dpss_vfm_2_subvf(struct dpss_sub_vf_s *vfms, struct vframe_s *vfm)
 	vfms->bitdepth_dw = vfm->bitdepth_dw;
 	vfms->decontour_pre = vfm->decontour_pre;
 	vfms->flag = vfm->flag;
+	vfms->dpss_flag = vfm->dpss_flg;
 	vfms->source_type = vfm->source_type;
 	vfms->video_angle = vfm->video_angle;
 	vfms->signal_type = vfm->signal_type;
@@ -4096,7 +4097,7 @@ static void dpss_buf_alloc(struct dpss_ch_s *pch)
 	else
 		pch->d->is_i = 0;
 	nr_dpe_pps_para(pch, pch->c.parm.di_parm.width,
-		pch->c.parm.di_parm.height);
+		pch->c.parm.di_parm.height, false);
 
 	if (dpss_nr_debug == 1 || dpss_en_afbc_force & C_BIT2)
 		need_afrc = false;

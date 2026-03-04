@@ -113,7 +113,7 @@ enum DPSS_ERRORTYPE dpss_empty_input_buffer(int index, struct vframe_s *vfm)
 	vfm->dpss_flg = 0;
 	if (dpss_bypass) {
 		pp_info = (struct pp_info_t *)vfm->pp_info;
-		vfm->dpss_flg |= VFRAME_DPSS_FLAG_BYPASS;
+		vfm->dpss_flg |= DPSS_FLG_BYPASS;
 		dev.init_parm.ops.empty_input_done(dev.init_parm.ops.arg, vfm);
 	} else {
 		if (vfm->type & VIDTYPE_INTERLACE) {
