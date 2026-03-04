@@ -124,6 +124,7 @@ struct amlogic_saradc_priv {
 	struct mutex lock;
 	bool apply_workaround;
 	struct reset_control *resets;
+	bool hw_dis;
 };
 
 static const char * const test_voltage[] = {
@@ -246,6 +247,12 @@ static int amlogic_saradc_get_sample_once(struct iio_dev *indio_dev,
 	int raw;
 
 	mutex_lock(&priv->lock);
+
+	/* After the driver suspends, no controller operations are permitted. */
+	if (priv->hw_dis) {
+		mutex_unlock(&priv->lock);
+		return -EINVAL;
+	}
 
 	/* Configure the averaging mode of the channels we use */
 	amlogic_saradc_set_averaging(priv, chan->address,
@@ -504,6 +511,8 @@ static int amlogic_saradc_hw_enable(struct iio_dev *indio_dev)
 
 	amlogic_saradc_clear_fifo(priv);
 
+	priv->hw_dis = false;
+
 	mutex_unlock(&priv->lock);
 
 	return 0;
@@ -535,6 +544,8 @@ static int amlogic_saradc_hw_disable(struct iio_dev *indio_dev)
 
 	clk_disable_unprepare(priv->clk_gate);
 	clk_disable_unprepare(priv->clk_core);
+
+	priv->hw_dis = true;
 
 	mutex_unlock(&priv->lock);
 

@@ -462,6 +462,12 @@ static int meson_sar_adc_get_sample(struct iio_dev *indio_dev,
 		}
 	}
 
+	/* After the driver suspends, no controller operations are permitted. */
+	if (priv->hw_dis) {
+		meson_sar_adc_unlock(indio_dev);
+		return -EINVAL;
+	}
+
 	/* clear the FIFO to make sure we're not reading old values */
 	meson_sar_adc_clear_fifo(indio_dev);
 
@@ -877,6 +883,8 @@ static int meson_sar_adc_hw_enable_unlock(struct iio_dev *indio_dev)
 		goto err_adc_clk;
 	}
 
+	priv->hw_dis = false;
+
 	return 0;
 
 err_adc_clk:
@@ -919,6 +927,8 @@ static int meson_sar_adc_hw_disable_unlock(struct iio_dev *indio_dev)
 
 	if (priv->vref)
 		regulator_disable(priv->vref);
+
+	priv->hw_dis = true;
 
 	return 0;
 }
@@ -1725,6 +1735,7 @@ static int __maybe_unused meson_sar_adc_suspend(struct device *dev)
 {
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct meson_sar_adc_priv *priv = iio_priv(indio_dev);
+	int ret;
 
 #if defined(CONFIG_IIO_KFIFO_BUF)
 	if (iio_buffer_enabled(indio_dev))
@@ -1732,7 +1743,13 @@ static int __maybe_unused meson_sar_adc_suspend(struct device *dev)
 #endif
 
 	if (meson_sar_adc_pm_runtime_supported(indio_dev)) {
+		ret = meson_sar_adc_lock(indio_dev);
+		if (ret)
+			return ret;
+
 		pm_runtime_force_suspend(indio_dev->dev.parent);
+
+		meson_sar_adc_unlock(indio_dev);
 
 		clk_prepare_enable(priv->core_clk);
 		return 0;
@@ -1748,9 +1765,15 @@ static int __maybe_unused meson_sar_adc_resume(struct device *dev)
 	int ret;
 
 	if (meson_sar_adc_pm_runtime_supported(indio_dev)) {
-		clk_disable_unprepare(priv->core_clk);
+		ret = meson_sar_adc_lock(indio_dev);
+		if (ret)
+			return ret;
 
 		pm_runtime_force_resume(indio_dev->dev.parent);
+
+		meson_sar_adc_unlock(indio_dev);
+
+		clk_disable_unprepare(priv->core_clk);
 	} else {
 		ret = meson_sar_adc_hw_enable(indio_dev);
 		if (ret)

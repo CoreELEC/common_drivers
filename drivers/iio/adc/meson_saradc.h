@@ -131,6 +131,7 @@ struct meson_sar_adc_priv {
 	struct completion			done;
 	u32					*continuous_sample_buffer;
 	u8					calib_ready;
+	bool					hw_dis;
 };
 
 extern const struct meson_sar_adc_param meson_sar_adc_meson8_param __initconst;
