@@ -333,6 +333,7 @@ struct dpss_sub_vf_s {		//dsub_vf_s
 	u32 duration;
 	bool fgs_valid;
 	ulong fgs_table_adr;
+	u32 dpss_flg;
 //      u32 dpss_id;
 	/*******************************/
 	/* */
@@ -345,6 +346,7 @@ struct dpss_sub_vf_s {		//dsub_vf_s
 	bool duration_overflow; //0808
 	unsigned int cvs_h;	//tmp;
 	struct afrc_frame_info_t afrc_info;
+	bool is_4k1k;
 };
 
 struct dpss_vinfo_s {		//di_vinfo_s
@@ -358,6 +360,7 @@ struct dpss_vinfo_s {		//di_vinfo_s
 	bool duration_overflow; //0808
 	bool fg;
 	unsigned int bitdepth;
+	u32 dpss_flg;
 	struct canvas_config_s canvas0_config[2];
 };
 

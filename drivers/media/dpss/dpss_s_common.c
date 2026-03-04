@@ -214,6 +214,8 @@ bool dpss_vfm_2_subvf(struct dpss_sub_vf_s *vfms, struct vframe_s *vfm)
 	vfms->duration = vfm->duration;
 	vfms->fgs_valid = vfm->fgs_valid;
 	vfms->fgs_table_adr = vfm->fgs_table_adr;
+	vfms->dpss_flg = vfm->dpss_flg;
+	dbg_h0("%s dpss_flag :0x%x/n", __func__, vfms->dpss_flg);
 //      vfms->dpss_id           = vfm->dpss_id;
 	/*****************************************/
 	if (vfms->width > 3840 || vfms->height > 2160)
@@ -377,6 +379,7 @@ static void sub_vf_2_vinfo(struct dpss_vinfo_s *vt, struct dpss_sub_vf_s *vfms)
 	vt->v = vfms->height;
 	vt->duration_overflow = vfms->duration_overflow;
 	vt->bitdepth = vfms->bitdepth;
+	vt->dpss_flg = vfms->dpss_flg;
 	if (vfms->fgs_valid && vfms->fgs_table_adr)
 		vt->fg = true;
 	else
@@ -465,6 +468,8 @@ static unsigned int dpss_is_vinfo_chg(struct dpss_vinfo_s *v1,	/* new */
 		ret = 3;
 	} else if (v1->fg != v2->fg) {
 		ret = 4;
+	} else if (v1->dpss_flg != v2->dpss_flg) {
+		ret = 5;
 	}
 	return ret;
 }
@@ -1714,7 +1719,7 @@ void dpss_s2_parser_input_new(struct dpss_ch_s *pch)
 	vfm_in = nr_i->in_vfm;
 	//copy and back
 	dpss_vfm_cp(vfm, vfm_in);
-	vfm->dpss_flg = vfm_in->dpss_flg & DPSS_FLG_NEW_TRIG; //keep input
+	vfm->dpss_flg = (vfm_in->dpss_flg) & (DPSS_FLG_NEW_TRIG | DPSS_FLG_NEED_SKIP); //keep input
 	w_mode = dpss_work_mode_count(pch, vfm);
 
 	chg = dpss_m_chg_count(pch, vfm);
@@ -2014,7 +2019,6 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 		}
 		if (pch->c.ch == 0 && !light_chg)
 			resolution_switch_count++;
-
 		if (!light_chg) {
 			dpss_h_b_int(pch);
 			nr_only_int(pch, &nr_i->sub_vf_in, nr_i->in_vfm);
