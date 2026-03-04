@@ -1319,9 +1319,9 @@ static int hdmitx21_status_check(void *data)
 		if (!clk[0] || !clk[1]) {
 			clk[0] = meson_clk_measure(idx[0]);
 			if (clk[0] >= 340000000)
-				arg = 1;
+				arg = SET_SCDC_DIV40_SCRAMB;
 			else
-				arg = 0;
+				arg = CLEAR_SCDC_DIV40_SCRAMB;
 			hdmitx21_hw_cntl(hw_comm, DDC_SCDC_DIV40_SCRAMB, (void *)&arg, NULL);
 		}
 	}
@@ -3561,6 +3561,18 @@ static void hdmitx_debug(struct hdmitx_hw_common *tx_hw, const char *buf)
 		hdmitx21_wr_reg(VP_CMS_CSC0_PIXCAP_IN__LINE__IVCTX, line_low);
 		hdmitx21_wr_reg(VP_CMS_CSC0_PIXCAP_IN__LINE__IVCTX + 1, line_high);
 		pix_capture_dump(hdev);
+	} else if (strncmp(tmpbuf, "hdcp_off", 8) == 0) {
+		/* disable hdcp for debug */
+		hdev->tx_comm.hdcptx_comm.hdcp_lstore = 0x10;
+	} else if (strncmp(tmpbuf, "scdc_enable", 11) == 0) {
+		if (hdev->tx_comm.rxcap.scdc_present)
+			queue_delayed_work(hdev->tx_comm.cedst_wq, &hdev->tx_comm.work_cedst, 0);
+	} else if (strncmp(tmpbuf, "scdc_disable", 12) == 0) {
+		cancel_delayed_work(&hdev->tx_comm.work_cedst);
+	} else if (strncmp(tmpbuf, "aud_mute_enable", 15) == 0) {
+		hdmitx_ext_set_audio_output(0);
+	} else if (strncmp(tmpbuf, "aud_mute_disable", 16) == 0) {
+		hdmitx_ext_set_audio_output(1);
 	}
 }
 
@@ -4341,18 +4353,18 @@ static int hdmitx21_hw_cntl_ddc(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		if (ret < 0)
 			break;
 		arg = *((u32 *)input_argv);
-		if (arg == 1) {
-			hdmitx_set_scdc_div40(1);
-		} else if (arg == 0) {
+		if (arg == SET_SCDC_DIV40_SCRAMB) {
+			hdmitx_set_scdc_div40(arg);
+		} else if (arg == CLEAR_SCDC_DIV40_SCRAMB) {
 			if (tx_comm->rxcap.scdc_present)
-				hdmitx_set_scdc_div40(0);
+				hdmitx_set_scdc_div40(arg);
 			else
 				HDMITX_INFO("SCDC not present, should not send 1:10\n");
 		} else {
 			/* force send 1:10 tmds bit clk ratio, for echo 2 > div40 */
-			hdmitx_set_scdc_div40(0);
+			hdmitx_set_scdc_div40(CLEAR_SCDC_DIV40_SCRAMB);
 		}
-		tx_comm->tx_hw->pre_tmds_clk_div40 = (arg == 1);
+		tx_comm->tx_hw->pre_tmds_clk_div40 = (arg == SET_SCDC_DIV40_SCRAMB);
 		break;
 	case DDC_GET_CEDST:
 		return hdmitx_tmds_cedst(hdev);

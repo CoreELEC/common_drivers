@@ -566,7 +566,7 @@ static void hdmitx_early_suspend(struct early_suspend *h)
 	hdmitx_set_uevent(tx_comm, HDMITX_AUDIO_EVENT, 0);
 
 	if (need_rst_ratio) {
-		arg = 0;
+		arg = CLEAR_SCDC_DIV40_SCRAMB;
 		hdmitx_hw_cntl(tx_comm->tx_hw, DDC_SCDC_DIV40_SCRAMB, (void *)&arg, NULL);
 	}
 	mutex_unlock(&tx_comm->hdmimode_mutex);

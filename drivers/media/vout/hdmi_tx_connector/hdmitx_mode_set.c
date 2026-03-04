@@ -511,7 +511,7 @@ static bool hdmitx_check_bootup_output_ready(struct hdmitx_common *tx_comm)
 void hdmitx_bootup_post_process(struct hdmitx_common *tx_comm)
 {
 	int frl_rate = FRL_NONE;
-	u32 arg = 1;
+	u32 arg = SET_SCDC_DIV40_SCRAMB;
 
 	tx_comm->ready = hdmitx_check_bootup_output_ready(tx_comm);
 

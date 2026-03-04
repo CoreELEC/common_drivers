@@ -265,6 +265,7 @@ void hdmitx_top_intr_handler(struct work_struct *work)
 		struct hdmitx_common, work_internal_intr);
 	struct hdmitx21_dev *hdev = container_of(tx_comm, struct hdmitx21_dev, tx_comm);
 	bool ret;
+	u32 arg = SET_SCDC_DIV40_SCRAMB;
 
 	if (pint->st_data) {
 		u32 dat_top;
@@ -291,6 +292,23 @@ void hdmitx_top_intr_handler(struct work_struct *work)
 		}
 		if ((dat_top & 0x6) && hdev->hw_comm.debug_hpd_lock) {
 			HDMITX_INFO("HDMI hpd locked\n");
+			if (gpio_get_value(hdev->hw_comm.hdmitx_gpios_hpd)) {
+				if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S5) {
+					hdev->frl_rate = hdmitx_hw_cntl(hdev->tx_comm.tx_hw,
+							FRL_GET_MODE, NULL, NULL);
+					if (hdev->frl_rate)
+						frl_tx_training_handler(hdev);
+					else if (hdev->tx_comm.fmt_para.tmds_clk_div40)
+						/* if current mode is TMDS/nonFRL, send_div40 */
+						hdmitx_hw_cntl(hdev->tx_comm.tx_hw,
+							DDC_SCDC_DIV40_SCRAMB, (void *)&arg, NULL);
+				} else {
+					/* if current mode is TMDS/nonFRL, then resend_div40 */
+					if (hdev->tx_comm.fmt_para.tmds_clk_div40)
+						hdmitx_hw_cntl(hdev->tx_comm.tx_hw,
+							DDC_SCDC_DIV40_SCRAMB, (void *)&arg, NULL);
+				}
+			}
 			goto next;
 		}
 		/* HPD rising */

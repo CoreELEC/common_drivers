@@ -789,6 +789,7 @@ static irqreturn_t intr_handler(int irq, void *dev)
 	unsigned int dat_dwc = hdmitx_rd_reg(HDMITX_DWC_HDCP22REG_STAT);
 	struct hdmitx20_dev *hdev = (struct hdmitx20_dev *)dev;
 	bool ret;
+	u32 arg = SET_SCDC_DIV40_SCRAMB;
 
 	/* ack INTERNAL_INTR or else we stuck with no interrupts at all */
 	hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, ~0);
@@ -808,6 +809,12 @@ static irqreturn_t intr_handler(int irq, void *dev)
 
 	if (hdev->hw_comm.debug_hpd_lock == 1) {
 		HDMITX_INFO("HDMI hpd locked\n");
+		if (gpio_get_value(hdev->hw_comm.hdmitx_gpios_hpd)) {
+			/* if current mode is TMDS/nonFRL, then resend_div40 */
+			if (hdev->tx_comm.fmt_para.tmds_clk_div40)
+				hdmitx_hw_cntl(hdev->tx_comm.tx_hw, DDC_SCDC_DIV40_SCRAMB,
+						(void *)&arg, NULL);
+		}
 		goto next;
 	}
 	/* check HPD status */
@@ -3615,6 +3622,18 @@ static void hdmitx_debug(struct hdmitx_hw_common *tx_hw, const char *buf)
 			hdev->tx_comm.poll_rx_status_mtd = 0;
 		else
 			hdev->tx_comm.poll_rx_status_mtd = 1;
+	} else if (strncmp(tmpbuf, "hdcp_off", 8) == 0) {
+		/* disable hdcp for debug */
+		hdev->tx_comm.hdcptx_comm.hdcp_lstore = 0x10;
+	} else if (strncmp(tmpbuf, "aud_mute_enable", 15) == 0) {
+		hdmitx_ext_set_audio_output(0);
+	} else if (strncmp(tmpbuf, "aud_mute_disable", 16) == 0) {
+		hdmitx_ext_set_audio_output(1);
+	} else if (strncmp(tmpbuf, "scdc_enable", 11) == 0) {
+		if (hdev->tx_comm.rxcap.scdc_present)
+			queue_delayed_work(hdev->tx_comm.cedst_wq, &hdev->tx_comm.work_cedst, 0);
+	} else if (strncmp(tmpbuf, "scdc_disable", 12) == 0) {
+		cancel_delayed_work(&hdev->tx_comm.work_cedst);
 	}
 }
 
@@ -5009,11 +5028,11 @@ static int hdmitx20_hw_cntl_ddc(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		if (ret < 0)
 			break;
 		arg = *((u32 *)input_argv);
-		if (arg == 1) {
+		if (arg == SET_SCDC_DIV40_SCRAMB) {
 			scdc_wr_sink(TMDS_CFG, 0x3); /* TMDS 1/40 & Scramble */
 			scdc_wr_sink(TMDS_CFG, 0x3); /* TMDS 1/40 & Scramble */
 			hdmitx_wr_reg(HDMITX_DWC_FC_SCRAMBLER_CTRL, 1);
-		} else if (arg == 0) {
+		} else if (arg == CLEAR_SCDC_DIV40_SCRAMB) {
 			if (hdev->tx_comm.rxcap.scdc_present ||
 				hdev->tx_comm.tx_hw->pre_tmds_clk_div40) {
 				scdc_wr_sink(TMDS_CFG, 0x0); /* TMDS 1/10 & Scramble */

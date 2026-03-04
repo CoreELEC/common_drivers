@@ -1370,7 +1370,10 @@ static ssize_t debug_store(struct device *dev,
 	/* Compatible with the original commonly used debug cmd */
 	} else if ((strncmp(buf, "bist", 4) == 0) ||
 		(strncmp(buf, "hpd_lock", 8) == 0) ||
-		(strncmp(buf, "set_div40", 9) == 0)) {
+		(strncmp(buf, "set_div40", 9) == 0) ||
+		(strncmp(buf, "hdcp_off", 8) == 0) ||
+		(strncmp(buf, "aud_mute", 8) == 0) ||
+		(strncmp(buf, "scdc", 4) == 0)) {
 		tx_hw->debug_func(tx_hw, buf);
 	}
 	return count;
