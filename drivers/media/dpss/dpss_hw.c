@@ -2392,7 +2392,10 @@ void irq_dae0(void)
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 	if (!pfw_data)
 		return;
-
+	if (!(dpss_get_hw()->ch_act & C_BIT0)) {
+		DBG_WARN("%s:ch0 not work\n", "dae0");
+		return;
+	}
 	state_st = &pchip_st->state_st;
 	frc_int_st = &state_st->frc_int_st;
 	frc_top = &pfw_data->frc_top_type;

@@ -696,14 +696,14 @@ irqreturn_t dpss_irq_pre_vs(int irq, void *dev_instance)
 
 irqreturn_t dpss_irq_buf_rls1(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "rls1");
+	dbg_irq0("irq:%s:\n", "rls1");
 	hw_vdi_rls_int();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_buf_rls0(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "rls0");
+	dbg_irq0("irq:%s:\n", "rls0");
 	hw_rls0_irq();
 
 	return IRQ_HANDLED;
@@ -711,42 +711,42 @@ irqreturn_t dpss_irq_buf_rls0(int irq, void *dev_instance)
 
 irqreturn_t dpss_irq_inp(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "inp");
+	dbg_irq1("irq:%s:\n", "inp");
 	irq_inp();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_dae2(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "dae2");
+	dbg_irq0("irq:%s:\n", "dae2");
 	irq_dae2();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_dae1(int irq, void *dev_instance)	//
 {
-	dbg_w2("irq:%s:\n", "dae1");
+	dbg_irq0("irq:%s:\n", "dae1");
 	irq_dae1();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_dae0(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "dae0");
+	dbg_irq1("irq:%s:\n", "dae0");
 	irq_dae0();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_dpe2(int irq, void *dev_instance)
 {
-	dbg_w2("irq:%s:\n", "dpe2");
+	dbg_irq0("irq:%s:\n", "dpe2");
 	irq_dpe2();
 	return IRQ_HANDLED;
 }
 
 irqreturn_t dpss_irq_dpe1(int irq, void *dev_instance)	//
 {
-	dbg_w2("irq:%s:\n", "dpe1");
+	dbg_irq0("irq:%s:\n", "dpe1");
 	irq_dpe1();
 	return IRQ_HANDLED;
 }
