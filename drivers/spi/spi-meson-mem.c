@@ -14,6 +14,8 @@
 #define SPI_MEM_MAX_BUSWIDTH		8
 
 u8 xfer_flag;
+static struct spi_transfer xfers[4];
+static struct spi_message msg;
 
 static bool spi_mem_buswidth_is_valid(u8 buswidth)
 {
@@ -151,8 +153,6 @@ int meson_spi_mem_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 {
 	unsigned int tmpbufsize, xferpos = 0, totalxferlen = 0;
 	struct spi_controller *ctlr = mem->spi->controller;
-	struct spi_transfer xfers[4] = { };
-	struct spi_message msg;
 	u8 *tmpbuf;
 	int ret;
 
@@ -197,6 +197,7 @@ int meson_spi_mem_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 		return -ENOMEM;
 
 	spi_message_init(&msg);
+	memset(xfers, 0, sizeof(xfers));
 
 	tmpbuf[0] = op->cmd.opcode;
 	/* use rx_nbits to ident cmd stage */
