@@ -415,6 +415,7 @@ struct PRM_DPSS_TOP {
 	u32        lcevc_en;
 	struct PRM_DPSS_LCEVC lcevc;
 	u32        dpe_dw_off;
+	bool			dlg_stats;
 	bool			game_mode_n2m;
 	bool			game_mode_film;
 	//frc

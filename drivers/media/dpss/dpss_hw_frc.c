@@ -396,7 +396,8 @@ void hw_cfg_dpss_mc0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr, struct DPSS_
 	frm_vsize = cut_win_en ? win_vsize : mc_size_sel ?
 		prm_top->dpe_mc_size.frm_vsize : prm_top->frm_vsize;
 
-	dbg_h2("pps ch=%d,mc_size_sel%d,%d\n", prm_top->ch, mc_size_sel, pps->pps_en);
+	dbg_h2("pps ch=%d,mc_size_sel=%d,pps=%d, frm_hsize=%d\n",
+		prm_top->ch, mc_size_sel, pps->pps_en, frm_hsize);
 
 	//if (mc_cut_position && cut_win_en) {
 	//	frm_hsize = prm_top->frm_hsize;
@@ -455,6 +456,13 @@ void hw_cfg_dpss_mc0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr, struct DPSS_
 		dbg_h2("me_dsx/dsy set fault!!\n");
 	}
 
+	if (me_dsx == 2 && prm_top->dlg_stats == 1) {
+		frm_hsize = (frm_hsize + 15) & (~0xf);
+		prm_mc->pad_hmode = 1;
+	} else if (frm_hsize <= 1920 || frm_vsize < 1080) {
+		prm_mc->pad_hmode  = 0;
+	}
+
 	// enum vid_src_fmt pix_fmt, pix_bit, pix_plan, pix_cmpr;
 	enum vid_src_fmt pix_fmt, pix_fmt_src, pix_bit, pix_plan, pix_cmpr;
 
@@ -473,7 +481,8 @@ void hw_cfg_dpss_mc0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr, struct DPSS_
 		pix_plan = prm_top->src_fs_fmt.src_plan;
 		pix_cmpr = prm_top->src_fs_fmt.src_cmpr;
 	}
-	dbg_h2("src_from_nr = %d pix_bit = %d\n", src_from_nr, pix_bit);
+	dbg_h2("src_from_nr= %d, pix_bit= %d, pad_hmode= %d\n",
+			src_from_nr, pix_bit, prm_mc->pad_hmode);
 	w_reg_bit(DPSS_DPE_MC_CTRL0, 0, 0, 2);			   // reg_mc_gcb_bypass_mc_en
 	w_reg_bit(DPSS_DPE_MC_CTRL0, blk_xscale, 8, 3);	   // reg_mc_blksize_xscale
 	w_reg_bit(DPSS_DPE_MC_CTRL0, blk_yscale, 4, 3);	   // reg_mc_blksize_yscale
@@ -498,7 +507,8 @@ void hw_cfg_dpss_mc0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr, struct DPSS_
 	// u32 gcb_bypass  = 0;
 
 	//============================//
-
+	dbg_h2("debug frm_size= [%d, %d], src_size= [%d, %d]\n",
+			frm_hsize, frm_vsize, src_hsize, src_vsize);
 	wr(DPSS_DPE_MC_TOP_FSIZE, (frm_hsize << 16) | frm_vsize);
 	wr(DPSS_DPE_MC_SRC_FSIZE, (src_hsize << 16) | src_vsize);
 

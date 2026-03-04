@@ -869,8 +869,9 @@ void cfg_vfcd_rdmif_2ch(enum dpss_mif_e mif_index, struct PRM_INTF_TYPE *prm_mif
 
 	u32 index = regs_ofst / (256);	//ary addr change *4: //regs_ofst/(256*4)
 
-	dbg_h2("intf index is%0x, pad_ydout_vsize=%d, pad_cdout_vsize=%d\n",
-		index, pad_ydout_vsize, pad_cdout_vsize);
+	dbg_h2("intf idx=%d, pad_y_size=[%d, %d], pad_c_size=[%d, %d]\n",
+		index, pad_ydout_hsize, pad_ydout_vsize,
+		pad_cdout_hsize, pad_cdout_vsize);
 	switch (index) {
 	case 0:
 		wr_vc((regs_ofst + VFCD_PAD_DUMY_DATA),
@@ -1468,8 +1469,10 @@ void frc_cfg_vfcd_rdmif_2ch(enum dpss_mif_e mif_index, struct PRM_INTF_TYPE *prm
 
 	u32 index = regs_ofst / (256);
 
-	dbg_h2("intf index is%0x, pad_ydout_vsize=%d, pad_cdout_vsize=%d\n",
-		index, pad_ydout_vsize, pad_cdout_vsize);
+	dbg_h2("intf idx=%0x, pad_ysize=[%d, %d], pad_csize=[%d, %d]\n",
+		index, pad_ydout_hsize, pad_ydout_vsize,
+		pad_cdout_hsize, pad_cdout_vsize);
+
 	switch (index) {
 	case 0:
 		VSYNC_WR_VIDEO_TABLE_REG((regs_ofst + VFCD_PAD_DUMY_DATA),

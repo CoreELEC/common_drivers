@@ -1419,8 +1419,15 @@ void nr_dpe_dw_cfg(struct PRM_DPSS_TOP *prm_top)
 	if (prm_top->frc_dae_div4 == 1 && vout_fr > 199 && prm_top->frm_vsize >= 1080) {
 		prm_top->dpe_dw_dsx = 2;
 		prm_top->dpe_dw_dsy = 2;
+		prm_top->dlg_stats = 1;
+		//prm_top->frm_hsize = (prm_top->org_hsize + 15) & (~0xf);
+		//prm_top->alig_hmode = 1;
+		//if (prm_top->org_hsize != prm_top->frm_hsize)
+		//	prm_top->nr_src_align = true;
+		dbg_h2("adj_dlg:org_hsize=%d, frm_hsize=%d, align=%d\n",
+			prm_top->org_hsize, prm_top->frm_hsize,
+			prm_top->alig_hmode);
 	}
-
 	dbg_h2("%s:dpe_dw_dsx = %d,%d,%d, div4:%d\n", __func__, prm_top->dpe_dw_dsx,
 		prm_top->dpe_dw_dsy, prm_top->frm_vsize, prm_top->frc_dae_div4);
 }
