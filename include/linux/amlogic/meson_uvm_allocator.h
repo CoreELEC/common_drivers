@@ -155,6 +155,11 @@ struct uvm_fd_data {
 	int data;
 };
 
+struct uvm_mesondisplay_data {
+	int fd;
+	int tunnel_id;
+};
+
 struct uvm_usage_data {
 	int fd;
 	int uvm_data_usage;
@@ -192,6 +197,7 @@ union uvm_ioctl_arg {
 	struct uvm_meta_data meta_data;
 	struct uvm_hook_data hook_data;
 	struct uvm_decoder_para decode_para;
+	struct uvm_mesondisplay_data mesondisplay_data;
 };
 
 #define UVM_IOC_MAGIC 'U'
@@ -223,6 +229,10 @@ union uvm_ioctl_arg {
 				struct uvm_decoder_para)
 #define UVM_IOC_GET_DECODER_PARA _IOWR(UVM_IOC_MAGIC, 13, \
 				struct uvm_decoder_para)
+#define UVM_IOC_SET_MESONDISPLAY_DATA _IOWR(UVM_IOC_MAGIC, 15, \
+				struct uvm_mesondisplay_data)
+#define UVM_IOC_GET_MESONDISPLAY_DATA _IOWR(UVM_IOC_MAGIC, 16, \
+				struct uvm_mesondisplay_data)
 
 size_t mua_calc_real_dmabuf_size(unsigned int align, unsigned int byte_stride,
 			   unsigned int height);

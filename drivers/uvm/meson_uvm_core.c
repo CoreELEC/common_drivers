@@ -478,6 +478,7 @@ static struct uvm_handle *uvm_handle_alloc(size_t len, size_t align,
 	if (!handle)
 		return ERR_PTR(-ENOMEM);
 
+	handle->commit_tunnel_id = -1;
 	kref_init(&handle->ref);
 	mutex_init(&handle->lock);
 	handle->size = len;

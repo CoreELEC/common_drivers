@@ -65,6 +65,7 @@ enum uvm_debug_mask {
  * @n_mod_attached:	num of attached module
  * @mod_attached_mask:	mask of attached module
  * @usage:	    buffer usage
+ * @commit_tunnel_id	tunnel_id for mesondisplay
  */
 struct uvm_handle {
 	struct kref ref;
@@ -87,6 +88,7 @@ struct uvm_handle {
 	size_t n_mod_attached;
 	unsigned long mod_attached_mask;
 	size_t usage;
+	int commit_tunnel_id;
 };
 
 /**

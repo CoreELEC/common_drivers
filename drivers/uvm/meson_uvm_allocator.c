@@ -1342,6 +1342,38 @@ static int mua_set_commit_display(struct dma_buf *dmabuf, int commit_display)
 	return 0;
 }
 
+static int mua_set_mesondisplay_data(struct dma_buf *dmabuf, int tunnel_id)
+{
+	struct uvm_handle *handle;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return -EINVAL;
+
+	handle = dmabuf->priv;
+	if (IS_ERR_OR_NULL(handle))
+		return -EINVAL;
+
+	handle->commit_tunnel_id = tunnel_id;
+	MUA_PRINTK(MUA_INFO, "set mesondisplay tunnel_id = %d\n", handle->commit_tunnel_id);
+	return 0;
+}
+
+static int mua_get_mesondisplay_data(struct dma_buf *dmabuf, int *tunnel_id)
+{
+	struct uvm_handle *handle;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return -EINVAL;
+
+	handle = dmabuf->priv;
+	if (IS_ERR_OR_NULL(handle))
+		return -EINVAL;
+
+	*tunnel_id = handle->commit_tunnel_id;
+	MUA_PRINTK(MUA_INFO, "get mesondisplay tunnel_id = %d\n", *tunnel_id);
+	return 0;
+}
+
 static int mua_get_meta_data(struct dma_buf *dmabuf, int fd, ulong arg)
 {
 	struct vframe_s *vf;
@@ -1700,6 +1732,32 @@ static long mua_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	case UVM_IOC_GET_DECODER_PARA:
 		ret = mua_get_decoder_para(&data.decode_para);
+		if (copy_to_user((void __user *)arg, &data, _IOC_SIZE(cmd)))
+			return -EFAULT;
+		break;
+	case UVM_IOC_SET_MESONDISPLAY_DATA:
+		fd = data.mesondisplay_data.fd;
+		if (!mua_is_valid_dmabuf(fd))
+			return -EINVAL;
+		dmabuf = dma_buf_get(fd);
+		ret = mua_set_mesondisplay_data(dmabuf, data.mesondisplay_data.tunnel_id);
+		dma_buf_put(dmabuf);
+		if (ret < 0) {
+			MUA_PRINTK(MUA_INFO, "mesondisplay data set fail\n");
+			return -EINVAL;
+		}
+		break;
+	case UVM_IOC_GET_MESONDISPLAY_DATA:
+		fd = data.mesondisplay_data.fd;
+		if (!mua_is_valid_dmabuf(fd))
+			return -EINVAL;
+		dmabuf = dma_buf_get(fd);
+		ret = mua_get_mesondisplay_data(dmabuf, &data.mesondisplay_data.tunnel_id);
+		dma_buf_put(dmabuf);
+		if (ret < 0) {
+			MUA_PRINTK(MUA_INFO, "mesondisplay data get fail\n");
+			return -EINVAL;
+		}
 		if (copy_to_user((void __user *)arg, &data, _IOC_SIZE(cmd)))
 			return -EFAULT;
 		break;
