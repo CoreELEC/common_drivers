@@ -5,6 +5,7 @@
 / {
 	model = "Ugoos AM9";
 	coreelec-dt-id = "s6_s905x5_ugoos_am9";
+	amlogic-dt-id = "s6_s905x5_umx5yks";
 
 	// 4gb
 	memory@00000000 {
