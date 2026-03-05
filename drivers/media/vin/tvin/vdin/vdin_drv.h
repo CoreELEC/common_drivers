@@ -1409,6 +1409,7 @@ struct vdin_dev_s {
 	bool work_mode_simple;
 	struct reg_handle reg_hnd;
 	unsigned int vdin_game_frc;
+	unsigned int vdin_game_frc_config;
 	unsigned int yuv422_2plane_en;
 	unsigned int get_vdin_mem_size_flag;
 	unsigned int game_frc_mute_time;

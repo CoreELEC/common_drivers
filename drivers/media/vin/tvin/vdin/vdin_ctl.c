@@ -8795,6 +8795,24 @@ bool vdin_is_auto_game_mode(struct vdin_dev_s *devp)
 		return false;
 }
 
+void vdin_set_game_frc_on_off(struct vdin_dev_s *devp, bool on_off)
+{
+	if (devp->debug.vdin_dbg_en & VDIN_DBG_CNTL_IOCTL)
+		pr_info("game_frc:%d, on_off:%d\n", devp->vdin_game_frc, on_off);
+	if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
+	    devp->flags & VDIN_FLAG_DEC_STARTED) {
+		devp->vdin_game_frc = on_off;
+		//for support VRR will default to enabling VRR,
+		//VRR and Game FRC are mutually exclusive and will stop/start vdin.
+		devp->self_stop_start = 1;
+		vdin_self_stop_dec(devp);
+		vdin_self_start_dec(devp);
+		devp->self_stop_start = 0;
+	} else {
+		devp->vdin_game_frc = on_off;
+	}
+}
+
 /*
  * return value:
  *	true: is pc mode

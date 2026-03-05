@@ -709,11 +709,18 @@ static void vdin_game_mode_check(struct vdin_dev_s *devp)
 
 	if (vdin_force_game_mode)
 		devp->game_mode = vdin_force_game_mode;
+	if (!(devp->flags & VDIN_FLAG_DEC_STARTED)) {
+		if (!vdin_is_dolby_signal_in(devp) && devp->game_mode &&
+		    devp->vdin_game_frc_config)
+			devp->vdin_game_frc = 1;
+		else
+			devp->vdin_game_frc = 0;
+	}
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_GAME)
-		pr_info("%s: game_mode_cfg=0x%x;cur:%#x,force mode:0x%x,fps:%d,vout:%d\n",
+		pr_info("%s: game_mode_cfg=0x%x;cur:%#x,force mode:0x%x,fps:%d,vout:%d,frc:%d\n",
 			__func__, game_mode, devp->game_mode,
 			vdin_force_game_mode, devp->vdin_std_duration,
-			devp->vinfo_std_duration);
+			devp->vinfo_std_duration, devp->vdin_game_frc);
 }
 
 static inline void vdin_game_mode_dynamic_check(struct vdin_dev_s *devp)
@@ -970,7 +977,7 @@ static void vdin_handle_game_mode_chg(struct vdin_dev_s *devp)
 
 	game_mode_pre = devp->game_mode;
 
-	if (devp->vdin_function_sel & VDIN_AUTO_GAME_MODE) {
+	if (devp->vdin_function_sel & VDIN_AUTO_GAME_MODE && !devp->vdin_game_frc) {
 		tmp = vdin_is_auto_game_mode(devp);
 		if (tmp != devp->auto_game_mode_val) {
 			devp->auto_game_flag = true;
@@ -5865,6 +5872,8 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		game_mode_cfg = tmp;
 		game_mode = tmp;
 		devp->auto_game_flag = false;
+		if (!tmp && devp->vdin_game_frc)
+			vdin_set_game_frc_on_off(devp, 0);
 		mutex_unlock(&devp->fe_lock);
 		break;
 	}
@@ -6415,9 +6424,10 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (devp->debug.vdin_dbg_en)
 			pr_info("TVIN_IOC_S_GAME_FRC_ON_OFF(cur:%d->%d)\n",
 				devp->vdin_game_frc, tmp);
-
-		if (devp->debug.bypass_game_frc)
+		if (devp->debug.bypass_game_frc || (tmp && !devp->game_mode) ||
+		    (tmp && vdin_is_dolby_signal_in(devp)))
 			break;
+		devp->vdin_game_frc_config = tmp;
 		if (devp->vdin_game_frc != tmp) {
 			// frc vpp mute
 			set_video_mute(FRC_MUTE_SET, true);
@@ -6428,21 +6438,10 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				ms_to_ktime(devp->game_frc_mute_time), HRTIMER_MODE_REL);
 
 			mutex_lock(&devp->fe_lock);
-			if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
-				devp->flags & VDIN_FLAG_DEC_STARTED) {
-				devp->vdin_game_frc = tmp;
-				//for support VRR will default to enabling VRR,
-				//VRR and Game FRC are mutually exclusive and will stop/start vdin.
-				devp->self_stop_start = 1;
-				vdin_self_stop_dec(devp);
-				vdin_self_start_dec(devp);
-				devp->self_stop_start = 0;
-			} else {
-				devp->vdin_game_frc = tmp;
-			}
+			vdin_set_game_frc_on_off(devp, tmp);
 			if (devp->debug.vdin_dbg_en)
-				pr_info("(update_game_frc:%d->%d)\n",
-					devp->vdin_game_frc, tmp);
+				pr_info("(update_game_frc:%d,%d), game_frc_config:%d\n",
+					devp->vdin_game_frc, tmp, devp->vdin_game_frc_config);
 			mutex_unlock(&devp->fe_lock);
 		}
 		break;
