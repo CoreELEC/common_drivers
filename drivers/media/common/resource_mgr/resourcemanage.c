@@ -857,7 +857,7 @@ static bool resman_counter_preempt(struct resman_session *curr,
 		sess = node->session_ptr;
 		if (sess->status == RESMAN_STATUS_PREEMPTED && sess->prio >= curr->prio) {
 			selected = node;
-			dprintk(2, "preempt prio%d\n",  sess->prio);
+			dprintk(2, "%d preempt prio%d\n", sess->id, sess->prio);
 			break;
 		}
 	}
@@ -884,9 +884,9 @@ static bool resman_counter_preempt(struct resman_session *curr,
 		}
 	}
 	if (!selected)
-		dprintk(2, "fail to find node to preempt\n");
+		dprintk(2, "%d fail to find node to preempt\n", sess->id);
 	else
-		dprintk(2, "preempt node prio:%d\n", lowestprio);
+		dprintk(2, "%d preempt node prio:%d\n", sess->id, lowestprio);
 
 	if (resman_preempt_session(curr, selected))
 		ret = true;
@@ -1231,17 +1231,17 @@ static bool resman_codec_mm_preempt(struct resman_session *curr,
 				sess = node->session_ptr;
 				if (sess->status == RESMAN_STATUS_ACQUIRED &&
 					sess->prio == lowestprio) {
-					dprintk(2, "preempt prio:%d\n",  sess->prio);
+					dprintk(2, "%d preempt prio:%d\n", sess->id, sess->prio);
 					selected = node;
 					break;
 				}
 			}
 		}
 		if (!selected) {
-			dprintk(2, "fail to find node to preempt\n");
+			dprintk(2, "%d fail to find node to preempt\n", sess->id);
 			break;
 		}
-		dprintk(2, "preempt node prio:%d\n", lowestprio);
+		dprintk(2, "%d preempt node prio:%d\n", sess->id, lowestprio);
 		if (resman_preempt_session(curr, selected)) {
 			new_score -= selected->s.codec_mm.score;
 			lowestprio = curr->prio;
@@ -1305,7 +1305,7 @@ static bool resman_codec_mm_acquire(struct resman_session *sess,
 	while ((opt = strsep(&arg, ","))) {
 		if (!strncmp(opt, "size", 4)) {
 			if (!resman_parser_kv(opt, "size", &score))
-				dprintk(1, "default fhd size\n");
+				dprintk(1, "%d default fhd size\n", sess->id);
 		}
 		else if (!strcmp(opt, "single"))
 		/*single mode, 64M codec mm size is enough*/
@@ -1334,7 +1334,8 @@ static bool resman_codec_mm_acquire(struct resman_session *sess,
 			dprintk(1, "%d acquire wait\n", sess->id);
 			max_attempts = timeout / slicetimeout;
 			while (attempt < max_attempts) {
-				dprintk(1, "max_attempts %d attempt %d\n", max_attempts, attempt);
+				dprintk(1, "%d max_attempts %d attempt %d\n",
+					sess->id, max_attempts, attempt);
 				remain = wait_event_interruptible_timeout(resource->wq_release,
 					resman_codec_mm_enough(sess, resource,
 							score,
@@ -2302,7 +2303,7 @@ static long resman_ioctl_load_res(struct resman_session *sess,
 	item.name[sizeof(item.name) - 1] = '\0';
 	item.arg[sizeof(item.arg) - 1] = '\0';
 	if (copy_from_user((void *)&item, argp, sizeof(item))) {
-		dprintk(1, "load res FAIL!!\n");
+		dprintk(1, "%d load res FAIL!!\n", sess->id);
 	} else {
 		item.name[sizeof(item.name) - 1] = '\0';
 		item.arg[sizeof(item.arg) - 1] = '\0';
@@ -2496,11 +2497,12 @@ int resman_register_query_ops_by_name(const char *device_name,
 	struct resman_query_cb_ops *ops;
 	size_t len;
 	int ret = 0;
+	char *null_pos = NULL;
 
 	if (!device_name || !fn)
 		return -EINVAL;
-
-	len = strnlen(device_name, RESMAN_LEN);
+	null_pos = memchr(device_name, '\0', RESMAN_LEN);
+	len = (null_pos) ? (null_pos - device_name) : RESMAN_LEN;
 	if (len == 0 || len >= RESMAN_LEN)
 		return -EINVAL;
 
@@ -2539,11 +2541,12 @@ static int resman_session_query_resource_by_name(struct resman_session *sess,
 	struct resman_query_cb_ops *ops;
 	int ret = -ENOENT;
 	size_t len;
+	char *null_pos = NULL;
 
 	if (!sess || !device_name)
 		return -EINVAL;
-
-	len = strnlen(device_name, strlen(device_name));
+	null_pos = memchr(device_name, '\0', RESMAN_LEN);
+	len = (null_pos) ? (null_pos - device_name) : RESMAN_LEN;
 	if (len == 0 || len >= RESMAN_LEN)
 		return -EINVAL;
 
@@ -2812,12 +2815,12 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 						  RESMAN_DEV_VDEC,
 						  resman_cb_q);
 		if (r_bytes > RESMAN_BYTES_MAX) {
-			dprintk(0, "bytes too large: %d\n", r_bytes);
+			dprintk(0, "%d bytes too large: %d\n", sess->id, r_bytes);
 			r_bytes = RESMAN_BYTES_MAX;
 		}
 		if (r_bytes >= 0)
 			r = r_bytes / (1024 * 1024);
-		if (r == 0)
+		if (r <= 0)
 			r = RESMAN_DEFAULIT_MIN_SIZE_FOR_VDEC;
 		dprintk(4, "%d min size %d\n", sess->id, r);
 		mutex_unlock(&sess->lock);
@@ -2864,7 +2867,8 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 			sess->id, w, h, dw, format, margin, dpb, is_interlace, bitdepth, total);
 		if (total > (margin + dpb)) {
 			margin = total - dpb;
-			dprintk(5, "adjust margin %d dpb %d total %d\n", margin, dpb, total);
+			dprintk(5, "%d adjust margin %d dpb %d total %d\n", sess->id,
+				margin, dpb, total);
 		}
 		memset(&resman_cb_q, 0, sizeof(resman_cb_q));
 		resman_cb_q.size = sizeof(resman_cb_q);
@@ -2887,7 +2891,7 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 			r_bytes = resman_session_query_resource_by_name(sess,
 						RESMAN_DEV_VDEC, resman_cb_q);
 			if (r_bytes > RESMAN_BYTES_MAX) {
-				dprintk(0, "bytes too large: %d\n", r_bytes);
+				dprintk(0, "%d bytes too large: %d\n", sess->id, r_bytes);
 				r_bytes = RESMAN_BYTES_MAX;
 			}
 			if (r_bytes >= 0)
@@ -2927,7 +2931,7 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 			r_bytes = resman_session_query_resource_by_name(sess,
 						RESMAN_DEV_VDEC, resman_cb_q);
 			if (r_bytes > RESMAN_BYTES_MAX) {
-				dprintk(0, "bytes too large: %d\n", r_bytes);
+				dprintk(0, "%d bytes too large: %d\n", sess->id, r_bytes);
 				r_bytes = RESMAN_BYTES_MAX;
 			}
 			if (r_bytes >= 0)

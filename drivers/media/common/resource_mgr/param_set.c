@@ -154,8 +154,18 @@ static inline int fill_meta(struct resman_param_item *item,
 
 	if (!item)
 		return 0;
-	len = strnlen(module_name, RESMAN_ITEM_LEN);
-	memcpy(item->module_name, module_name, len);
+	if (module_name) {
+		len = strnlen(module_name, RESMAN_ITEM_LEN);
+		if (len == 0) {
+			pr_err("resman: invalid module_name\n");
+			return 0;
+		}
+		len = (len >= RESMAN_ITEM_LEN) ? (RESMAN_ITEM_LEN - 1) : len;
+		memcpy(item->module_name, module_name, len);
+		item->module_name[len] = '\0';
+	} else {
+		item->module_name[0] = '\0';
+	}
 	item->domain      = dom;
 	item->sub_domain  = sub;
 	item->instance_id = inst;
@@ -176,6 +186,11 @@ static int update_meta(struct resman_param_item *item,
 		return 0;
 	if (module_name) {
 		len = strnlen(module_name, RESMAN_ITEM_LEN);
+		if (len == 0) {
+			pr_err("resman: invalid module_name\n");
+			return 0;
+		}
+		len = (len >= RESMAN_ITEM_LEN) ? (RESMAN_ITEM_LEN - 1) : len;
 		memcpy(item->module_name, module_name, len);
 		item->module_name[len] = '\0';
 	} else {
@@ -231,7 +246,7 @@ static int param_set_add_int(struct resman_param_set *set, const char *name,
 	if (set->size >= set->capacity)
 		return 0;
 
-	item = &set->items[set->size++];
+	item = &set->items[set->size];
 	memset(item, 0, sizeof(*item));
 	len = strnlen(name, RESMAN_ITEM_LEN);
 	memcpy(item->name, name, len);
@@ -243,6 +258,7 @@ static int param_set_add_int(struct resman_param_set *set, const char *name,
 	item->value.i = value;
 	len = strnlen(desc, RESMAN_ITEM_LEN);
 	memcpy(item->desc, desc, len);
+	set->size++;
 	return 1;
 }
 
