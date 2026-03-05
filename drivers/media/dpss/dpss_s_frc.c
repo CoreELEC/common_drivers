@@ -3619,6 +3619,8 @@ void dpss_h_update_frc(struct vframe_s *vfm)
 	is_dos = !VFM_IS_VDIN_SRC(vfm->source_type);
 	src_w = (vfm->type & VIDTYPE_COMPRESS) ? vfm->compWidth : vfm->width;
 	src_h = (vfm->type & VIDTYPE_COMPRESS) ? vfm->compHeight : vfm->height;
+	state_st->src_frm_height = src_h;
+	state_st->src_frm_width = src_w;
 
 	is_4k2k = (src_w > 1920 && src_h > 1088);
 	state_st->is_dos = is_dos;
@@ -3646,16 +3648,136 @@ void dpss_h_update_frc(struct vframe_s *vfm)
 		state_st->is_seek_bar = false;
 }
 
+static void frc_parse_vfcd_format(u32 format_value,
+		unsigned int *fmt, unsigned int *bit, unsigned int *plan)
+{
+	unsigned int tmp;
+
+	tmp = (format_value >> 8) & 0x3;
+	if (tmp == 0)
+		*bit = BIT_008;
+	else if (tmp == 1)
+		*bit = BIT_010;
+	else
+		*bit = BIT_012;
+
+	tmp = (format_value >> 6) & 0x3;
+	if (tmp == 0)
+		*fmt = YUV444;
+	else if (tmp == 1)
+		*fmt = YUV422;
+	else
+		*fmt = YUV420;
+
+	tmp = (format_value >> 4) & 0x3;
+	if (tmp == 0)
+		*plan = PLANAR_X1;
+	else if (tmp == 1)
+		*plan = PLANAR_X2;
+	else
+		*plan = PLANAR_X3;
+}
+
+static unsigned int frc_parse_compression(u32 format_value)
+{
+	unsigned int tmp = (format_value >> 16) & 0x3;
+
+	if (tmp == 1)
+		return CMPR_AFBC;
+	else if (tmp == 3)
+		return CMPR_AFRC;
+	else
+		return CMPR_UN;
+}
+
+static void frc_display_vfcd_info(u32 rmif_id, const char *name)
+{
+	u32 regs_ofst, format_value, vfcd_ro_stats;
+	unsigned int cur_fmt, cur_plan, cur_bit, cur_cmpr;
+	u32 frm_size, src_size, pad_en;
+	u32 frm_width, frm_height, src_width, src_height;
+
+	regs_ofst = get_vfcd_regs_ofst(rmif_id);
+
+	format_value = rd_vc(RMIF_TOP_CTRL + regs_ofst);
+	frc_parse_vfcd_format(format_value, &cur_fmt, &cur_bit, &cur_plan);
+
+	format_value = rd_vc(VFCD_TOP_CTRL0 + regs_ofst);
+	cur_cmpr = frc_parse_compression(format_value);
+
+	vfcd_ro_stats = rd_vc(RMIF_RO_STAT + regs_ofst);
+	PR_FRC("vfcd_%s fmt= %s, bit= %s, plane= %s, cmpr= %s, rmif_stat= %#x\n",
+			name, vid_src_fmt_str[cur_fmt], vid_src_fmt_str[cur_bit],
+			vid_src_fmt_str[cur_plan], vid_src_fmt_str[cur_cmpr],
+			vfcd_ro_stats);
+
+	// LUMA rmif size
+	frm_size = rd_vc(LUMA_RMIF_SCOPE_X + regs_ofst);
+	src_size = rd_vc(LUMA_RMIF_SCOPE_Y + regs_ofst);
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+	PR_FRC("%s_luma_rmif_start [%d, %d], end [%d, %d]\n",
+		name, frm_width, src_width, frm_height, src_height);
+
+	// CHRM rmif size
+	frm_size = rd_vc(CHRM_RMIF_SCOPE_X + regs_ofst);
+	src_size = rd_vc(CHRM_RMIF_SCOPE_Y + regs_ofst);
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+	PR_FRC("%s_chrm_rmif_start [%d, %d], end [%d, %d]\n",
+		name, frm_width, src_width, frm_height, src_height);
+
+	// LUMA pic size
+	frm_size = rd_vc(VFCD_LUMA_PIC_XPOS + regs_ofst);
+	src_size = rd_vc(VFCD_LUMA_PIC_YPOS + regs_ofst);
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+	PR_FRC("%s_luma_pic_start [%d, %d], end [%d, %d]\n",
+		name, frm_height, src_height, frm_width, src_width);
+
+	// CHRM pic size
+	frm_size = rd_vc(VFCD_CHRM_PIC_XPOS + regs_ofst);
+	src_size = rd_vc(VFCD_CHRM_PIC_YPOS + regs_ofst);
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+	PR_FRC("%s_chrm_pic_start [%d, %d], end [%d, %d]\n",
+		name, frm_height, src_height, frm_width, src_width);
+
+	// PAD info
+	frm_size = rd_vc(VFCD_LUMA_PAD_SIZE + regs_ofst);
+	src_size = rd_vc(VFCD_CHRM_PAD_SIZE + regs_ofst);
+	pad_en = (frm_size >> 29) & 0x1;
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+	PR_FRC("%s_pad_en %d pad_luma_size [%d, %d], pad_chrm_size [%d, %d]\n",
+		name, pad_en, frm_width, frm_height, src_width, src_height);
+
+	//reverse
+	frm_size = rd_vc(RMIF_TOP_CTRL + regs_ofst) & 0x3;
+	src_size = (rd_vc(VFCD_AFBC_MODE + regs_ofst) >> 26) & 3;
+	PR_FRC("%s_reverse [mif:%2d, compr:%2d]\n", name, frm_size, src_size);
+}
+
 void dpss_frc_check_reg_stats(void)
 {
-	u32 frm_size, src_size, det_size, frm_offset;
+	u32 frm_size, src_size, det_size;
 	u32 frm_height, frm_width, src_height, src_width;
-	u32 frm_hofst, frm_vofst, pad_en, det_height, det_width;
-	u32 format_value, mc_tmp_stats, nr_tmp_stats, di_tmp_stats;
-	unsigned int cur_fmt, cur_plan, cur_bit, cur_cmpr, tmp;
-	u32 regs_ofst, vfcd_ro_stats;
+	u32 det_height, det_width, frm_hofst;
+	u32 mc_tmp_stats, nr_tmp_stats, di_tmp_stats;
 	u32 frc_stats, nr_stats, di_stats;
+	const char *dae_type;
 
+	// read basic info
 	frm_size = rd(FRC_INP_SW_FRM_ALIGNED_SIZE);
 	frm_height = frm_size & 0x1FFF;
 	frm_width = (frm_size >> 16) & 0x1FFF;
@@ -3665,305 +3787,93 @@ void dpss_frc_check_reg_stats(void)
 	det_size = rd(FRC_INP_SW_DETECT_SIZE);
 	det_height = det_size & 0x1FFF;
 	det_width = (det_size >> 16) & 0x1FFF;
-	PR_FRC("inp_size frm [%d, %d], src [%d, %d], det [%d, %d]\n",
+
+	PR_FRC("inp_size frm= [%d,%d], src= [%d,%d], det= [%d,%d]\n",
 		frm_width, frm_height, src_width, src_height,
 		det_width, det_height);
 
-	// dae inp size
+	// read proc status
 	frc_stats = rd(DPSS_FRC_PROC_STATUS);
 	nr_stats = rd(DPSS_FBUF_PROC_STATUS);
 	di_stats = rd(DPSS_FBUF_PROC_STATUS + (0x86 - 0x83) * 256);
-	PR_FRC("frc_status: inp= %s, dae0= %s, dpe= %s\n",
+
+	PR_FRC("frc_status\t: inp= %s, dae0= %s, dpe= %s\n",
 		stats_fmt_str[(frc_stats >> 16) & 0x7],
 		stats_fmt_str[(frc_stats >> 8) & 0x7],
 		stats_fmt_str[frc_stats & 0x7]);
-	PR_FRC("nr__status: dae= %s, dpe= %s\n",
+	PR_FRC("nr__status\t: dae= %s, dpe= %s\n",
 		stats_fmt_str[(nr_stats >> 16) & 0x7],
 		stats_fmt_str[nr_stats & 0x7]);
-	PR_FRC("di__status: dae= %s, dpe= %s\n",
+	PR_FRC("di__status\t: dae= %s, dpe= %s\n",
 		stats_fmt_str[(di_stats >> 16) & 0x7],
 		stats_fmt_str[di_stats & 0x7]);
 
+	// gat dae info
 	mc_tmp_stats = (frc_stats >> 8) & 0x7;
 	nr_tmp_stats = (nr_stats >> 16) & 0x7;
 	di_tmp_stats = (di_stats >> 16) & 0x7;
-	if (mc_tmp_stats == 0x3) {
-		frm_size = rd(VPU_DAE_WRAP_SW_SIZE0);
-		frm_width = frm_size & 0x1FFF;
-		frm_height = (frm_size >> 16) & 0x1FFF;
-		// dae me size
-		src_size = rd(VPU_DAE_WRAP_SW_SIZE1);
-		src_width = src_size & 0x1FFF;
-		src_height = (src_size >> 16) & 0x1FFF;
-		PR_FRC("frc_dae inp_size\t[%d, %d], me_size [%d, %d]\n",
-			frm_width, frm_height, src_width, src_height);
-	} else if (nr_tmp_stats == 0x3) {
-		frm_size = rd(VPU_DAE_WRAP_SW_SIZE0);
-		frm_width = frm_size & 0x1FFF;
-		frm_height = (frm_size >> 16) & 0x1FFF;
-		// dae me size
-		src_size = rd(VPU_DAE_WRAP_SW_SIZE1);
-		src_width = src_size & 0x1FFF;
-		src_height = (src_size >> 16) & 0x1FFF;
-		PR_FRC("nr_dae inp_size\t[%d, %d], me_size [%d, %d]\n",
-			frm_width, frm_height, src_width, src_height);
-	} else if (di_tmp_stats == 0x3) {
-		frm_size = rd(VPU_DAE_WRAP_SW_SIZE0);
-		frm_width = frm_size & 0x1FFF;
-		frm_height = (frm_size >> 16) & 0x1FFF;
-		// dae me size
-		src_size = rd(VPU_DAE_WRAP_SW_SIZE1);
-		src_width = src_size & 0x1FFF;
-		src_height = (src_size >> 16) & 0x1FFF;
-		PR_FRC("di_dae inp_size\t[%d, %d], me_size [%d, %d]\n",
-			frm_width, frm_height, src_width, src_height);
-	} else {
-		frm_size = rd(VPU_DAE_WRAP_SW_SIZE0);
-		frm_width = frm_size & 0x1FFF;
-		frm_height = (frm_size >> 16) & 0x1FFF;
-		// dae me size
-		src_size = rd(VPU_DAE_WRAP_SW_SIZE1);
-		src_width = src_size & 0x1FFF;
-		src_height = (src_size >> 16) & 0x1FFF;
-		PR_FRC("comm_dae inp_size\t[%d, %d], me_size [%d, %d]\n",
-			frm_width, frm_height, src_width, src_height);
-	}
-	// mc size
+
+	frm_size = rd(VPU_DAE_WRAP_SW_SIZE0);
+	frm_width = frm_size & 0x1FFF;
+	frm_height = (frm_size >> 16) & 0x1FFF;
+	src_size = rd(VPU_DAE_WRAP_SW_SIZE1);
+	src_width = src_size & 0x1FFF;
+	src_height = (src_size >> 16) & 0x1FFF;
+
+	if (mc_tmp_stats == 0x3)
+		dae_type = "frc_dae";
+	else if (nr_tmp_stats == 0x3)
+		dae_type = "nr_dae";
+	else if (di_tmp_stats == 0x3)
+		dae_type = "di_dae";
+	else
+		dae_type = "com_dae";
+
+	PR_FRC("%s inp_size\t= [%d, %d], me_size [%d, %d]\n",
+		dae_type, frm_width, frm_height, src_width, src_height);
+
+	// MC size
 	frm_size = rd(DPSS_DPE_MC_TOP_FSIZE);
 	src_size = rd(DPSS_DPE_MC_SRC_FSIZE);
 	frm_height = frm_size & 0x1FFF;
 	frm_width = (frm_size >> 16) & 0x1FFF;
 	src_height = src_size & 0x1FFF;
 	src_width = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc_frm size\t[%d, %d], src_size [%d, %d]\n",
+	PR_FRC("mc_size frame\t= [%d, %d], src= [%d, %d]\n",
 		frm_width, frm_height, src_width, src_height);
-	// out size
+
+	// cut info
 	frm_size = rd(DPSS_DPE_MC_WIN_CUT_H);
 	src_size = rd(DPSS_DPE_MC_WIN_CUT_V);
 	frm_height = frm_size & 0x1FFF;
 	frm_width = (frm_size >> 16) & 0x1FFF;
 	src_height = src_size & 0x1FFF;
 	src_width = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc cut enable:%d\n", rd(DPSS_DPE_MC_MIF_CTRL0) >> 8 & 0x1);
-	PR_FRC("cut posi after mc\t[%d, %d], [%d, %d]\n",
+	PR_FRC("mc cut enable\t= %d\n", (rd(DPSS_DPE_MC_MIF_CTRL0) >> 8) & 0x1);
+	PR_FRC("cut posi after mc\t= [%d, %d], [%d, %d]\n",
 		frm_height, src_height, frm_width, src_width);
-	PR_FRC("cut size after mc\t[%d, %d]\n",
+	PR_FRC("cut size after mc\t= [%d, %d]\n",
 		frm_width - frm_height + 1, src_width - src_height + 1);
 
-	// vfcd
-	regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC0);
-	format_value = rd_vc(RMIF_TOP_CTRL + regs_ofst);
-	tmp = (format_value >> 8) & 0x3;
-	if (tmp == 0)
-		cur_bit = BIT_008;
-	else if (tmp == 1)
-		cur_bit = BIT_010;
-	else // if (tmp == 2)
-		cur_bit = BIT_012;
-	tmp = (format_value >> 6) & 0x3;
-	if (tmp == 0)
-		cur_fmt = YUV444;
-	else if (tmp == 1)
-		cur_fmt = YUV422;
-	else // if (tmp == 2)
-		cur_fmt = YUV420;
-	tmp = (format_value >> 4) & 0x3;
-	if (tmp == 0)
-		cur_plan = PLANAR_X1;
-	else if (tmp == 1)
-		cur_plan = PLANAR_X2;
-	else // if (tmp == 2)
-		cur_plan = PLANAR_X3;
-	format_value = rd_vc(VFCD_TOP_CTRL0 + regs_ofst);
-	tmp = (format_value >> 16) & 0x3;
-	if (tmp == 1)
-		cur_cmpr = CMPR_AFBC;
-	else if (tmp == 3)
-		cur_cmpr = CMPR_AFRC;
-	else // 2
-		cur_cmpr = CMPR_UN;
-	vfcd_ro_stats = rd_vc(RMIF_RO_STAT + regs_ofst);
-	PR_FRC("vfcd_mc0 fmt= %s, bit= %s, plane= %s, cmpr= %s, rmif_stat= %#x\n",
-			vid_src_fmt_str[cur_fmt],
-			vid_src_fmt_str[cur_bit],
-			vid_src_fmt_str[cur_plan],
-			vid_src_fmt_str[cur_cmpr],
-			vfcd_ro_stats);
-	regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC1);
-	format_value = rd_vc(RMIF_TOP_CTRL + regs_ofst);
-	tmp = (format_value >> 8) & 0x3;
-	if (tmp == 0)
-		cur_bit = BIT_008;
-	else if (tmp == 1)
-		cur_bit = BIT_010;
-	else // if (tmp == 2)
-		cur_bit = BIT_012;
-	tmp = (format_value >> 6) & 0x3;
-	if (tmp == 0)
-		cur_fmt = YUV444;
-	else if (tmp == 1)
-		cur_fmt = YUV422;
-	else // if (tmp == 2)
-		cur_fmt = YUV420;
-	tmp = (format_value >> 4) & 0x3;
-	if (tmp == 0)
-		cur_plan = PLANAR_X1;
-	else if (tmp == 1)
-		cur_plan = PLANAR_X2;
-	else // if (tmp == 2)
-		cur_plan = PLANAR_X3;
-	format_value = rd_vc(VFCD_TOP_CTRL0 + regs_ofst);
-	tmp = (format_value >> 16) & 0x3;
-	if (tmp == 1)
-		cur_cmpr = CMPR_AFBC;
-	else if (tmp == 3)
-		cur_cmpr = CMPR_AFRC;
-	else // 2
-		cur_cmpr = CMPR_UN;
-	vfcd_ro_stats = rd_vc(RMIF_RO_STAT + regs_ofst);
-	PR_FRC("vfcd mc1 fmt= %s, bit= %s, plane= %s, cmpr= %s, rmif_stat= %#x\n",
-			vid_src_fmt_str[cur_fmt],
-			vid_src_fmt_str[cur_bit],
-			vid_src_fmt_str[cur_plan],
-			vid_src_fmt_str[cur_cmpr],
-			vfcd_ro_stats);
+	// VFCD MC0   MC1 info
+	frc_display_vfcd_info(DPSS_RMIF_MC0, "mc0");
+	frc_display_vfcd_info(DPSS_RMIF_MC1, "mc1");
 
-	regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC0);
-
-	frm_size = rd_vc(LUMA_RMIF_SCOPE_X + regs_ofst);
-	src_size = rd_vc(LUMA_RMIF_SCOPE_Y + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc0_luma_rmif_start [%d, %d], end [%d, %d]\n",
-		frm_width, src_width, frm_height, src_height);
-	frm_size = rd_vc(CHRM_RMIF_SCOPE_X + regs_ofst);
-	src_size = rd_vc(CHRM_RMIF_SCOPE_Y + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc0_chrm_rmif_start [%d, %d], end [%d, %d]\n",
-		frm_width, src_width, frm_height, src_height);
-
-	frm_size = rd_vc(VFCD_LUMA_PIC_XPOS + regs_ofst);
-	src_size = rd_vc(VFCD_LUMA_PIC_YPOS + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc0_luma_pic_start [%d, %d], end [%d, %d]\n",
-		frm_height, src_height, frm_width, src_width);
-	frm_size = rd_vc(VFCD_CHRM_PIC_XPOS + regs_ofst);
-	src_size = rd_vc(VFCD_CHRM_PIC_YPOS + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc0_chrm_pic_start [%d, %d], end [%d, %d]\n",
-		frm_height, src_height, frm_width, src_width);
-
-	frm_size = rd_vc(VFCD_LUMA_PAD_SIZE + regs_ofst);
-	src_size = rd_vc(VFCD_CHRM_PAD_SIZE + regs_ofst);
-	pad_en = (frm_size >> 29) & 0x1;
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc0_pad_en %d pad_luma_size [%d, %d], pad_chrm_size [%d, %d]\n",
-		pad_en, frm_width, frm_height, src_width, src_height);
-	frm_offset = rd_vc(VFCD_LUMA_PAD_OFST + regs_ofst);
-	frm_hofst = frm_offset & 0x1FFF;
-	frm_vofst = (frm_offset >> 16) & 0x1FFF;
-	PR_FRC("mc0_pad_luma_ofst [%d, %d]\n",
-		frm_hofst, frm_vofst);
-	frm_offset = rd_vc(VFCD_CHRM_PAD_OFST + regs_ofst);
-	frm_hofst = frm_offset & 0x1FFF;
-	frm_vofst = (frm_offset >> 16) & 0x1FFF;
-	PR_FRC("mc0_pad_chrm_ofst [%d, %d]\n",
-		frm_hofst, frm_vofst);
-	frm_offset = rd_vc(RMIF_TOP_CTRL + regs_ofst);
-	frm_vofst = frm_offset & 0x3;
-	src_size = rd_vc(VFCD_AFBC_MODE + regs_ofst);
-	pad_en = (src_size >> 26) & 0x3;
-	PR_FRC("mc0_reverse [mif:%2d, comp:%2d]\n", frm_vofst, pad_en);
-
-	/////////////////////////////////////////////////////////
-	regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC1);
-	frm_size = rd_vc(LUMA_RMIF_SCOPE_X + regs_ofst);
-	src_size = rd_vc(LUMA_RMIF_SCOPE_Y + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc1_luma_rmif_start [%d, %d], end [%d, %d]\n",
-		frm_width, src_width, frm_height, src_height);
-	frm_size = rd_vc(CHRM_RMIF_SCOPE_X + regs_ofst);
-	src_size = rd_vc(CHRM_RMIF_SCOPE_Y + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc1_chrm_rmif_start [%d, %d], end [%d, %d]\n",
-		frm_width, src_width, frm_height, src_height);
-
-	frm_size = rd_vc(VFCD_LUMA_PIC_XPOS + regs_ofst);
-	src_size = rd_vc(VFCD_LUMA_PIC_YPOS + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc1_luma_pic_start [%d, %d], end [%d, %d]\n",
-		frm_height, src_height, frm_width, src_width);
-	frm_size = rd_vc(VFCD_CHRM_PIC_XPOS + regs_ofst);
-	src_size = rd_vc(VFCD_CHRM_PIC_YPOS + regs_ofst);
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc1_chrm_pic_start [%d, %d], end [%d, %d]\n",
-		frm_height, src_height, frm_width, src_width);
-
-	frm_size = rd_vc(VFCD_LUMA_PAD_SIZE + regs_ofst);
-	src_size = rd_vc(VFCD_CHRM_PAD_SIZE + regs_ofst);
-	pad_en = (frm_size >> 29) & 0x1;
-	frm_width = frm_size & 0x1FFF;
-	frm_height = (frm_size >> 16) & 0x1FFF;
-	src_width = src_size & 0x1FFF;
-	src_height = (src_size >> 16) & 0x1FFF;
-	PR_FRC("mc1_pad_en %d pad_luma_size [%d, %d], pad_chrm_size [%d, %d]\n",
-		pad_en, frm_width, frm_height, src_width, src_height);
-	frm_offset = rd_vc(VFCD_LUMA_PAD_OFST + regs_ofst);
-	frm_hofst = frm_offset & 0x1FFF;
-	frm_vofst = (frm_offset >> 16) & 0x1FFF;
-	PR_FRC("mc1_pad_luma_ofst [%d, %d]\n",
-		frm_hofst, frm_vofst);
-	frm_offset = rd_vc(VFCD_CHRM_PAD_OFST + regs_ofst);
-	frm_hofst = frm_offset & 0x1FFF;
-	frm_vofst = (frm_offset >> 16) & 0x1FFF;
-	PR_FRC("mc1_pad_chrm_ofst [%d, %d]\n",
-		frm_hofst, frm_vofst);
-	frm_offset = rd_vc(RMIF_TOP_CTRL + regs_ofst);
-	frm_vofst = frm_offset & 0x3;
-	src_size = rd_vc(VFCD_AFBC_MODE + regs_ofst);
-	pad_en = (src_size >> 26) & 0x3;
-	PR_FRC("mc1_reverse [mif:%2d, comp:%2d]\n", frm_vofst, pad_en);
-
-	/////////////////////////////////////////
+	// VPU NR post info
 	frm_width = rd(VPU_POST_NR_SLC_ACT_HSIZE_0);
 	frm_hofst = rd(VPU_POST_NR_SLC_ACT_HSIZE_1);
-	PR_FRC("vpu_nr_post_slc_hor_size [%d, %d, %d, %d]\n",
+	PR_FRC("vpu_nr_post_slc_hor_size\t= [%d, %d, %d, %d]\n",
 		frm_width & 0xFFFF, (frm_width >> 16) & 0xFFFF,
 		frm_hofst & 0xFFFF, (frm_hofst >> 16) & 0xFFFF);
-	frm_vofst = rd(VPU_POST_NR_SLC_OVLP_SIZE);
-	PR_FRC("vpu_nr_post_slc_ovlp_size [%d, %d, %d, %d]\n",
-		frm_vofst & 0xFF, (frm_vofst >> 8) & 0xFF,
-		(frm_vofst >> 16) & 0xFF, (frm_vofst >> 24) & 0xFF);
-	frm_height = rd(VPU_NR_OUT_CROP);
-	PR_FRC("vpu_nr_out_crop [%d, %d, %d, %d]\n",
-		(frm_height >> 16) & 0xFF, (frm_height >> 24) & 0xFF,
-		frm_height & 0xFF, (frm_height >> 8) & 0xFF);
+
+	//frm_vofst = rd(VPU_POST_NR_SLC_OVLP_SIZE);
+	//PR_FRC("vpu_nr_post_slc_ovlp_size\t= [%d, %d, %d, %d]\n",
+	//	frm_vofst & 0xFF, (frm_vofst >> 8) & 0xFF,
+	//	(frm_vofst >> 16) & 0xFF, (frm_vofst >> 24) & 0xFF);
+	//frm_height = rd(VPU_NR_OUT_CROP);
+	//PR_FRC("vpu_nr_out_crop\t= [%d, %d, %d, %d]\n",
+	//	(frm_height >> 16) & 0xFF, (frm_height >> 24) & 0xFF,
+	//	frm_height & 0xFF, (frm_height >> 8) & 0xFF);
 }
 
 void dpss_frc_set_memc_enable(u8 function, u8 enable)

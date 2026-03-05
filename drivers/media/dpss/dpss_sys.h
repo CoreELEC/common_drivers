@@ -562,6 +562,9 @@ struct frc_state_s {
 	u32 cur_fw_pause;
 	u32 cur_frc_me_en;
 	u32 dpe_intp_phs;
+	u32 src_frm_width;
+	u32 src_frm_height;
+
 	unsigned int put_frame_cnt;
 	enum compress_fmt_s compr_sel;
 	unsigned int pre_idx;

@@ -71,7 +71,7 @@ void dpss_frc_status(void)
 	pr_frc(0, "memc_level\t= [dejudder:%d(%d), deblur:%d]\n",
 			frc_top->frc_memc_level, frc_top->frc_memc_level_1,
 			frc_top->frc_deblur_level);
-	pr_frc(0, "ratio_n2m\t= [%d : %d]\tfilm\t= %d\n", frc_top->frc_input_n,
+	pr_frc(0, "ratio_n2m\t= [%d:%d]\tfilm\t= %d\n", frc_top->frc_input_n,
 			frc_top->frc_output_m, (rd(FRC_REG_PHS_TABLE) >> 8) & 0xFF);
 	pr_frc(0, "mc_link_enable\t= [dpss:%2d, vd1_mc:%2d]\n", rd(FRC_DPSS_VPP_LINK) & 0x1,
 			!is_vd1_link_state());
@@ -79,16 +79,14 @@ void dpss_frc_status(void)
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
 			!state_st->need_disable_mc_link, !state_st->disable_mc_link_intf,
 			!state_st->unformat_bypass);
-	pr_frc(0, "pre_vsync_offset\t= %d\n",
-			rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
-	pr_frc(0, "mc_bypass\t= %d\n", rd(FRC_MC_HW_CTRL0) & 0x3);
+	pr_frc(0, "mc_bypass\t= %d, pre_vs_offset\t= %d\n",
+			rd(FRC_MC_HW_CTRL0) & 0x3, rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
 	pr_frc(0, "eos enable\t= %d\n", state_st->enable_last_drop);
-	pr_frc(0, "game_n2m = %d, game_film= %d\n",
+	pr_frc(0, "game_n2m\t= %d, game_film\t= %d\n",
 		game_st->game_n2m, game_st->game_film);
-
-//	pr_frc(0, "secure_mode= %d, buf secured= %d\n",
-//			state_st->frc_sts.secure_mode, pst_chip->buf_st->secured);
-	pr_frc(0, "frame_rate= [%3d Hz  to  %3d Hz] (in_duration= %d)\n",
+	//	pr_frc(0, "secure_mode= %d, buf secured= %d\n",
+	//			state_st->frc_sts.secure_mode, pst_chip->buf_st->secured);
+	pr_frc(0, "frame_rate= [%3d Hz to %3d Hz] (in_duration= %d)\n",
 			state_st->n2m_status.input_framerate,
 			state_st->n2m_status.output_framerate,
 			state_st->n2m_status.duration);
@@ -107,18 +105,17 @@ void dpss_frc_status(void)
 			rd(DPSS_INP_FRM_INT_CNT),
 			frc_int_st->inp_duration,
 			(ulong)frc_int_st->inp_timestamp);
-	pr_frc(0, "irq_inp\t min_duration= %dus max_duration= %dus\n",
-			frc_int_st->inp_min_duration,
-			frc_int_st->inp_max_duration);
+	//pr_frc(0, "irq_inp\t min_duration= %dus max_duration= %dus\n",
+	//		frc_int_st->inp_min_duration,
+	//		frc_int_st->inp_max_duration);
 	pr_frc(0, "irq_dae0\t cnt= %8d[%d] duration= %dus stamp= %ld\n",
 			frc_int_st->dae0_int_cnt,
 			rd(DPSS_DAE0_FRM_INT_CNT),
 			frc_int_st->dae0_duration,
 			(ulong)frc_int_st->dae0_timestamp);
-	pr_frc(0, "irq_chk_err_cnt=%d\n", frc_int_st->irq_chk_err_cnt);
-
-//	pr_frc(0, "vpu_vd hsize= %d, vsize= %d\n", state_st->vd_sts.vd_h_size,
-//	       state_st->vd_sts.vd_v_size);
+	pr_frc(0, "irq_chk_err_cnt\t= %d\n", frc_int_st->irq_chk_err_cnt);
+	pr_frc(0, "src_frm_size\t= [%d, %d]\n", state_st->src_frm_width,
+			state_st->src_frm_height);
 
 //	pr_frc(0, "frc_out isr lost tsk_cnt:%d, err_cnt= (me:%d,mc:%d,vp:%d)\n",
 //	       state_st->out_sts.lost_tsk_cnt, state_st->frc_sts.me_undone_cnt,
@@ -220,6 +217,10 @@ static ssize_t dpss_frc_debug_if_help(char *buf)
 	len +=
 		sprintf(buf + len, "frc_dae_div4\t=%d\n",
 			dbg_st->ctrl_dbg.frc_dae_div4);
+	len +=
+		sprintf(buf + len, "frc_get_crop\t= [%d,%d,%d,%d]\n",
+			frc_top->crop_top, frc_top->crop_left,
+			frc_top->crop_bottom, frc_top->crop_right);
 	return len;
 }
 
