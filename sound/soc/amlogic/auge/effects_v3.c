@@ -21,6 +21,10 @@
 #include "regs.h"
 #include "iomap.h"
 
+#define AED_EQ_COEFF_TOTAL_ELEM  (EQ_V3_BAND * (AED_FILTER_PARAM_SIZE + 1) + AED_EQ_FILTER_SIZE_CH)
+#define AED_UINT_BYTE            (sizeof(unsigned int))
+static DEFINE_MUTEX(aed_eq_coeff_lock);
+
 void aed_v3_set_filter_data(void)
 {
 	unsigned int *p;
@@ -121,48 +125,96 @@ static int mixer_set_EQ_params(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	unsigned int tmp_data[AED_FILTER_PARAM_SIZE + 1] = {0};
-	unsigned int *p_data = &tmp_data[0];
-	char tmp_string[AED_FILTER_PARAM_BYTE];
-	char *p_string = &tmp_string[0];
-	unsigned int *p = &AED_EQ_COEFF[0];
+	char tmp_string[AED_FILTER_PARAM_BYTE + 1] = {0};
+	unsigned int *p_data = tmp_data;
+	char *p_string = tmp_string;
+	unsigned int *p = NULL;
+	size_t base_offset = 0;
+	size_t copy_byte_len = AED_FILTER_PARAM_SIZE * AED_UINT_BYTE;
+	bool stack_dirty = false;
 	int num, band_id;
-	char *val = (char *)ucontrol->value.bytes.data;
+
 	int version = check_aed_version();
+	char *val = (char *)ucontrol->value.bytes.data;
 
 	if (version < 0) {
-		pr_err("Failed to obtain version: %d\n", version);
-		return 0;
+		pr_debug("Failed to obtain version: %d\n", version);
+		return -EINVAL;
 	}
 
-	if (!val)
-		return -ENOMEM;
+	if (!kcontrol || !ucontrol || !val) {
+		pr_debug("Invalid input pointer: kcontrol=%p, ucontrol=%p, val=%p\n",
+				kcontrol, ucontrol, val);
+		return -EINVAL;
+	}
+
+	if (!virt_addr_valid(val)) {
+		pr_debug("Invalid kernel address: %p\n", val);
+		return -EFAULT;
+	}
 	memcpy(p_string, val, AED_FILTER_PARAM_BYTE);
+	stack_dirty = true;
 
 	num = str2int(p_string, p_data, AED_FILTER_PARAM_BYTE);
+	if (num < 0 || num != (AED_FILTER_PARAM_SIZE + 1)) {
+		pr_debug("Invalid param num: %d (expected: %d)\n", num, AED_FILTER_PARAM_SIZE + 1);
+		goto  err_clean;
+	}
+
 	band_id = tmp_data[0];
-	if (num != (AED_FILTER_PARAM_SIZE + 1) || band_id >= EQ_V3_BAND) {
-		pr_err("Error: parma_num = %d, band_id = %d\n",
-			num, tmp_data[0]);
-		return 0;
+	if (band_id < 0 || band_id >= EQ_V3_BAND) {
+		pr_debug("Invalid band_id: %d (max: %d)\n", band_id, EQ_V3_BAND - 1);
+		goto  err_clean;
 	}
 	if (band_id > 13 && version == VERSION5)
-		return 0;
+		goto  err_clean;
+
 	p_data = &tmp_data[1];
-	p = &AED_EQ_COEFF[band_id * (AED_FILTER_PARAM_SIZE + 1)];
-	memcpy(p, p_data, AED_FILTER_PARAM_SIZE * UNSIGNED_INT_SIZE);
-	memcpy(p + AED_EQ_FILTER_SIZE_CH, p_data, AED_FILTER_PARAM_SIZE * UNSIGNED_INT_SIZE);
+	base_offset = band_id * (AED_FILTER_PARAM_SIZE + 1);
+	if (base_offset + AED_FILTER_PARAM_SIZE >= AED_EQ_COEFF_TOTAL_ELEM) {
+		pr_debug("base_offset %zu out of range, total elem: %d\n",
+				base_offset, AED_EQ_COEFF_TOTAL_ELEM);
+		goto err_clean;
+	}
+	if (base_offset + AED_EQ_FILTER_SIZE_CH + AED_FILTER_PARAM_SIZE >=
+							AED_EQ_COEFF_TOTAL_ELEM) {
+		pr_debug("offset with FILTER_SIZE_CH out of range: %zu\n",
+				base_offset + AED_EQ_FILTER_SIZE_CH);
+		goto err_clean;
+	}
 
-	p = &AED_EQ_COEFF[band_id * (AED_FILTER_PARAM_SIZE + 1)];
-	aed_v3_set_ram_coeff((AED_EQ_FILTER_RAM_ADD +
-		band_id * (AED_FILTER_PARAM_SIZE + 1)),
-		AED_FILTER_PARAM_SIZE + 1, p);
+	mutex_lock(&aed_eq_coeff_lock);
 
-	p = &AED_EQ_COEFF[band_id * (AED_FILTER_PARAM_SIZE + 1) + AED_EQ_FILTER_SIZE_CH];
-	aed_v3_set_ram_coeff((AED_EQ_FILTER_RAM_ADD +
-		AED_EQ_FILTER_SIZE_CH + band_id * (AED_FILTER_PARAM_SIZE + 1)),
-		AED_FILTER_PARAM_SIZE + 1, p);
+	/* base coeff */
+	p = &AED_EQ_COEFF[base_offset];
+	memcpy(p, p_data, copy_byte_len);
 
+	/* FILTER_SIZE_CH coeff */
+	p = &AED_EQ_COEFF[base_offset + AED_EQ_FILTER_SIZE_CH];
+	memcpy(p, p_data, copy_byte_len);
+
+	p = &AED_EQ_COEFF[base_offset];
+	if (p) {
+		aed_v3_set_ram_coeff(AED_EQ_FILTER_RAM_ADD + base_offset,
+								AED_FILTER_PARAM_SIZE + 1, p);
+	}
+
+	p = &AED_EQ_COEFF[base_offset + AED_EQ_FILTER_SIZE_CH];
+	if (p) {
+		aed_v3_set_ram_coeff(AED_EQ_FILTER_RAM_ADD + AED_EQ_FILTER_SIZE_CH + base_offset,
+						AED_FILTER_PARAM_SIZE + 1, p);
+	}
+
+	mutex_unlock(&aed_eq_coeff_lock);
+	stack_dirty = false;
+	pr_debug("EQ params set success: band_id=%d, version=%d\n", band_id, version);
 	return 0;
+err_clean:
+	if (stack_dirty) {
+		memset(tmp_data, 0, sizeof(tmp_data));
+		memset(tmp_string, 0, sizeof(tmp_string));
+	}
+	return -EINVAL;
 }
 
 static int mixer_get_post_EQ_params(struct snd_kcontrol *kcontrol,
