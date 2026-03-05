@@ -20,11 +20,12 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
-		linux,initrd-start = <0x0 0xc000000>;
-		linux,initrd-end = <0x0   0xd000000>;
+		linux,initrd-start = <0x0 0xd000000>;
+		linux,initrd-end = <0x0   0xe000000>;
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000
 			debug initcall_debug=0 loglevel=7
-			module_blacklist=amlogic_wireless clk_ignore_unused";
+			module_blacklist=amlogic_wireless clk_ignore_unused
+			init=/sbin/init root=/dev/ram";
 	};
 
 	memory@0 {
