@@ -385,9 +385,16 @@ static struct dma_buf *meson_cma_heap_allocate(struct dma_heap *heap,
 		align = CONFIG_CMA_ALIGNMENT;
 
 #if CONFIG_AMLOGIC_KERNEL_VERSION >= 14515
-	cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align, GFP_KERNEL | __GFP_NOWARN);
+	if (strstr(dma_heap_get_name(heap), "heap-gfx"))
+		cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align,
+				      GFP_KERNEL | __GFP_NOWARN);
+	else
+		cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align, GFP_KERNEL);
 #else
-	cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align, true);
+	if (strstr(dma_heap_get_name(heap), "heap-gfx"))
+		cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align, true);
+	else
+		cma_pages = cma_alloc(meson_cma_heap->cma, pagecount, align, false);
 #endif
 	if (!cma_pages)
 		goto free_buffer;
