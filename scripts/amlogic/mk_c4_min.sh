@@ -9,18 +9,18 @@ ARCH=arm
 #CROSS_COMPILE_TOOL=${ROOT_DIR}/prebuilts/gcc/linux-x86/host/x86_64-arm-10.3-2021.07/bin/arm-none-linux-gnueabihf-
 
 OPTION_PARAM="$*"
-if [[ "${OPTION_PARAM}" =~ "--c3_debug" ]]; then
-	echo "make meson64_a32_C3_mini_defconfig & C3_debug_defconfig"
+if [[ "${OPTION_PARAM}" =~ "--c4_debug" ]]; then
+	echo "make meson64_a32_C4_mini_defconfig & C3_debug_defconfig"
 	DEBUG=1
-	OPTION_PARAM=${OPTION_PARAM//--c3_debug/}
-	DEFCONFIG=meson64_a32_C3_mini_merge_defconfig
+	OPTION_PARAM=${OPTION_PARAM//--c4_debug/}
+	DEFCONFIG=meson64_a32_C4_mini_merge_defconfig
 	CONFIG_DIR=${ROOT_DIR}/common_drivers/arch/${ARCH}/configs
 	KCONFIG_CONFIG=${CONFIG_DIR}/${DEFCONFIG} ${ROOT_DIR}/common/scripts/kconfig/merge_config.sh -m -r \
-		${CONFIG_DIR}/meson64_a32_C3_mini_defconfig \
+		${CONFIG_DIR}/meson64_a32_C4_mini_defconfig \
 		${CONFIG_DIR}/C3_debug_defconfig
 else
-	echo "make meson64_a32_C3_mini_defconfig"
-	DEFCONFIG=meson64_a32_C3_mini_defconfig
+	echo "make meson64_a32_C4_mini_defconfig"
+	DEFCONFIG=meson64_a32_C4_mini_defconfig
 fi
 
 source ${ROOT_DIR}/common_drivers/scripts/amlogic/mk_smarthome_common.sh ${OPTION_PARAM}
