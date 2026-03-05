@@ -186,6 +186,10 @@ struct lcd_timing_s {
 	unsigned short vfreq_panel_min; //min of all timings
 	unsigned short vfreq_panel_max; //max of all timings
 
+	unsigned short frame_rate;  //driver change for internal usage
+	unsigned short frac;  //driver change for internal usage
+	unsigned int sync_duration_num;  //driver change for internal usage
+	unsigned int sync_duration_den;  //driver change for internal usage
 
 	unsigned int enc_clk;
 	unsigned long long bit_rate; /* Hz */
@@ -864,8 +868,6 @@ struct aml_sw_vrr_s {
 	signed char dma_dly_tg;
 	unsigned int tg_fr;
 	unsigned int cur_fr;
-	unsigned int base_duration_num;
-	unsigned int base_duration_den;
 	spinlock_t set_lock;//
 };
 

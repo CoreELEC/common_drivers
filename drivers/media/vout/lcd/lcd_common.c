@@ -1545,6 +1545,12 @@ void lcd_base_to_act_timing_init_config(struct aml_lcd_drv_s *pdrv)
 	if (pdrv->curr_dev->dev_cfg.timing.ppc == 0)
 		pdrv->curr_dev->dev_cfg.timing.ppc = 1;
 
+	//save target frame rate
+	pdrv->curr_dev->dev_cfg.timing.sync_duration_num = ptiming->sync_duration_num;
+	pdrv->curr_dev->dev_cfg.timing.sync_duration_den = ptiming->sync_duration_den;
+	pdrv->curr_dev->dev_cfg.timing.frac = ptiming->frac;
+	pdrv->curr_dev->dev_cfg.timing.frame_rate = ptiming->frame_rate;
+
 	lcd_enc_timing_init_config(pdrv);
 
 #ifdef CONFIG_AMLOGIC_LCD_TCON
@@ -1669,8 +1675,9 @@ static int lcd_timing_fr_update(struct aml_lcd_drv_s *pdrv)
 	unsigned char type = pconf->timing.act_timing.fr_adjust_type;
 	unsigned int pclk_min = pconf->timing.act_timing.pclk_min;
 	unsigned int pclk_max = pconf->timing.act_timing.pclk_max;
-	unsigned int duration_num = pconf->timing.act_timing.sync_duration_num;
-	unsigned int duration_den = pconf->timing.act_timing.sync_duration_den;
+	/* use target value as condition */
+	unsigned int duration_num = pconf->timing.sync_duration_num;
+	unsigned int duration_den = pconf->timing.sync_duration_den;
 	unsigned long long temp;
 	unsigned int clk_change = 0;
 	char str[100];
@@ -1827,6 +1834,11 @@ static int lcd_timing_fr_update(struct aml_lcd_drv_s *pdrv)
 		clk_change |= (LCD_CLK_PLL_CHANGE | LCD_CLK_PLL_RESET);
 	pconf->timing.clk_change = clk_change;
 
+	pconf->timing.act_timing.sync_duration_num = duration_num;
+	pconf->timing.act_timing.sync_duration_den = duration_den;
+	pconf->timing.act_timing.frac = pconf->timing.frac;
+	pconf->timing.act_timing.frame_rate = pconf->timing.frame_rate;
+
 	memset(str, 0, 100);
 	if (pconf->timing.act_timing.v_period != v_period) {
 		len += sprintf(str + len, "v_period %u->%u",
@@ -1861,7 +1873,7 @@ static int lcd_timing_fr_update(struct aml_lcd_drv_s *pdrv)
 	}
 	if (len > 0) {
 		lcd_scanning_time_calc(&pconf->timing.act_timing);
-		LCD_DBG(pdrv, "%s: fr_adj_type: %d, sync_duration: %d/%d, %s", __func__, type,
+		LCD_DBG(pdrv, "fr_update: fr_adj_type: %d, sync_duration: %d/%d, %s", type,
 			pconf->timing.act_timing.sync_duration_num,
 			pconf->timing.act_timing.sync_duration_den, str);
 	}
@@ -1871,26 +1883,42 @@ static int lcd_timing_fr_update(struct aml_lcd_drv_s *pdrv)
 
 void lcd_frame_rate_change(struct aml_lcd_drv_s *pdrv)
 {
+	struct lcd_config_s *pconf;
 	struct vinfo_s *info;
 
-	/* update vinfo */
-	info = &pdrv->vinfo;
-	info->sync_duration_num = pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_num;
-	info->sync_duration_den = pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_den;
-	info->frac = pdrv->curr_dev->dev_cfg.timing.act_timing.frac;
-	info->std_duration = pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate;
+	if (!pdrv || !pdrv->curr_dev)
+		return;
+
+	pconf = &pdrv->curr_dev->dev_cfg;
+	if (pconf->timing.frame_rate > pconf->timing.act_timing.frame_rate_max ||
+	    pconf->timing.frame_rate < pconf->timing.act_timing.frame_rate_min) {
+		LCDERR("[%d]: fr_change: %d out of fr range [%d~%d]\n",
+			pdrv->index, pconf->timing.frame_rate,
+			pconf->timing.act_timing.frame_rate_min,
+			pconf->timing.act_timing.frame_rate_max);
+		return;
+	}
 
 	/* update clk & timing config */
 	lcd_timing_fr_update(pdrv);
-	info->video_clk = pdrv->curr_dev->dev_cfg.timing.enc_clk;
-	info->htotal = pdrv->curr_dev->dev_cfg.timing.act_timing.h_period;
-	info->vtotal = pdrv->curr_dev->dev_cfg.timing.act_timing.v_period;
-
 	lcd_act_timing_dbg_print(pdrv);
+
+	/* update vinfo */
+	info = &pdrv->vinfo;
+	info->sync_duration_num = pconf->timing.act_timing.sync_duration_num;
+	info->sync_duration_den = pconf->timing.act_timing.sync_duration_den;
+	info->frac = pconf->timing.act_timing.frac;
+	info->std_duration = pconf->timing.act_timing.frame_rate;
+	info->video_clk = pconf->timing.enc_clk;
+	info->htotal = pconf->timing.act_timing.h_period;
+	info->vtotal = pconf->timing.act_timing.v_period;
 }
 
 void lcd_if_enable_retry(struct aml_lcd_drv_s *pdrv)
 {
+	if (!pdrv || !pdrv->curr_dev)
+		return;
+
 	pdrv->curr_dev->dev_cfg.retry_enable_cnt = 0;
 	while (pdrv->curr_dev->dev_cfg.retry_enable_flag) {
 		if (pdrv->curr_dev->dev_cfg.retry_enable_cnt++ >= LCD_ENABLE_RETRY_MAX)

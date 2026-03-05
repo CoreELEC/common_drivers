@@ -583,16 +583,15 @@ void lcd_sw_vrr_proc(struct aml_lcd_drv_s *pdrv)
 	struct lcd_detail_timing_s *pt;
 	unsigned int fr, duration_num, duration_den;
 
-	if (!pdrv)
+	if (!pdrv || !pdrv->curr_dev)
 		return;
 	pt = &pdrv->curr_dev->dev_cfg.timing.act_timing;
 	spin_lock_irqsave(&pdrv->sw_vrr.set_lock, flags);
+	if (pdrv->vmode_switch) { //bypass when vmode_switch
+		spin_unlock_irqrestore(&pdrv->sw_vrr.set_lock, flags);
+		return;
+	}
 	if (pdrv->sw_vrr.en) {
-		if (pdrv->sw_vrr.sta == 0) {
-			pdrv->sw_vrr.base_duration_num = pt->sync_duration_num;
-			pdrv->sw_vrr.base_duration_den = pt->sync_duration_den;
-		}
-
 		pdrv->sw_vrr.sta = 1;
 		fr = lcd_get_sw_vrr_target_fr(pdrv->index);
 		if (fr == 0 || fr == pt->sync_duration_num * 100 / pt->sync_duration_den) {
@@ -608,10 +607,33 @@ void lcd_sw_vrr_proc(struct aml_lcd_drv_s *pdrv)
 
 	} else if (!pdrv->sw_vrr.en && pdrv->sw_vrr.sta) {
 		// recovery frame rate
-		duration_num = pdrv->sw_vrr.base_duration_num;
-		duration_den = pdrv->sw_vrr.base_duration_den;
+		duration_num = pdrv->curr_dev->dev_cfg.timing.sync_duration_num;
+		duration_den = pdrv->curr_dev->dev_cfg.timing.sync_duration_den;
 		lcd_sw_vrr_update(pdrv, duration_num, duration_den);
 		pdrv->sw_vrr.sta = 0;
 	}
 	spin_unlock_irqrestore(&pdrv->sw_vrr.set_lock, flags);
+}
+
+//for vmode_switch, need disable vrr, and reset vrr parameters to new timing
+//    Notice: sw_vrr must enable manually after vmode_switch !!
+void lcd_sw_vrr_disable_reset(struct aml_lcd_drv_s *pdrv)
+{
+	struct lcd_detail_timing_s *pt;
+	int dbg_print = 0;
+	unsigned long flags = 0;
+
+	if (!pdrv || !pdrv->curr_dev)
+		return;
+
+	pt = &pdrv->curr_dev->dev_cfg.timing.act_timing;
+	spin_lock_irqsave(&pdrv->sw_vrr.set_lock, flags);
+	if (pdrv->sw_vrr.en)
+		dbg_print = 1;
+	pdrv->sw_vrr.en = 0;
+	pdrv->sw_vrr.sta = 0;
+	pdrv->sw_vrr.tg_fr = 0;
+	spin_unlock_irqrestore(&pdrv->sw_vrr.set_lock, flags);
+	if (dbg_print)
+		LCDPR("sw_vrr disable_reset\n");
 }

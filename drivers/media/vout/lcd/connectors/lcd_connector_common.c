@@ -304,21 +304,26 @@ void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv)
 /* sync_duration is real_value * 100 */
 void lcd_connector_frame_rate_adjust(struct aml_lcd_drv_s *pdrv, int duration)
 {
+	struct lcd_config_s *pconf;
+
+	if (!pdrv || !pdrv->curr_dev)
+		return;
+	pconf = &pdrv->curr_dev->dev_cfg;
+
 	LCD_PR(pdrv, "%s: sync_duration=%d", __func__, duration);
 
 	lcd_vout_notify_mode_change_pre(pdrv);
 
-	/* update frame rate */
-	pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate = duration / 100;
-	pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_num = duration;
-	pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_den = 100;
-	pdrv->curr_dev->dev_cfg.timing.act_timing.frac =
-		lcd_fr_is_frac(pdrv, pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate);
+	/* update target frame rate */
+	pconf->timing.frame_rate = duration / 100;
+	pconf->timing.sync_duration_num = duration;
+	pconf->timing.sync_duration_den = 100;
+	pconf->timing.frac = lcd_fr_is_frac(pdrv, pconf->timing.act_timing.frame_rate);
 
 	/* update interface timing */
 	lcd_frame_rate_change(pdrv);
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
-	if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_VBYONE)
+	if (pconf->basic.lcd_type == LCD_VBYONE)
 		lcd_vbyone_interrupt_enable(pdrv, 0);
 #endif
 
@@ -327,7 +332,7 @@ void lcd_connector_frame_rate_adjust(struct aml_lcd_drv_s *pdrv, int duration)
 	lcd_venc_change(pdrv);
 
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
-	if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_VBYONE) {
+	if (pconf->basic.lcd_type == LCD_VBYONE) {
 		lcd_vbyone_wait_stable(pdrv);
 		lcd_vbyone_interrupt_enable(pdrv, 1);
 	}

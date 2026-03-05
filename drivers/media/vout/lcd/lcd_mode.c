@@ -214,33 +214,39 @@ int lcd_vmode_remove_all(struct aml_lcd_drv_s *pdrv)
 	return 0;
 }
 
-int lcd_mode_timing_switch_update(struct aml_lcd_drv_s *pdrv)
+static int lcd_mode_timing_switch_update(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_detail_timing_s *ptiming;
 	unsigned int pre_pclk;
 	unsigned char switch_type, switch_type_pre;
+	unsigned long flags = 0;
 
 	if (!pdrv->curr_dev || !pdrv->curr_dev->dev_cfg.timing.base_timing)
 		return -1;
 	switch_type_pre = pdrv->curr_dev->dev_cfg.timing.act_timing.switch_type;
 	/* clear clk_change flag */
 	pdrv->curr_dev->dev_cfg.timing.clk_change &= ~(LCD_CLK_PLL_RESET);
-	if (pdrv->vmode_mgr.next_vmode_info) {
-		pre_pclk = pdrv->curr_dev->dev_cfg.timing.base_timing->pixel_clk;
-		pdrv->vmode_mgr.cur_vmode_info = pdrv->vmode_mgr.next_vmode_info;
-		pdrv->vmode_mgr.next_vmode_info = NULL;
+	if (!pdrv->vmode_mgr.next_vmode_info)
+		return 0;
 
-		pdrv->std_duration = pdrv->vmode_mgr.cur_vmode_info->duration;
-		ptiming = pdrv->vmode_mgr.cur_vmode_info->dft_timing;
-		pdrv->curr_dev->dev_cfg.timing.base_timing = ptiming;
+	spin_lock_irqsave(&pdrv->sw_vrr.set_lock, flags);
+	pdrv->vmode_switch = 1;
+	spin_unlock_irqrestore(&pdrv->sw_vrr.set_lock, flags);
 
-		lcd_base_to_act_timing_init_config(pdrv);
-		if (pdrv->curr_dev->dev_cfg.timing.base_timing->pixel_clk != pre_pclk) {
-			pdrv->curr_dev->dev_cfg.timing.clk_change |=
-				(LCD_CLK_PLL_RESET | LCD_CLK_PLL_CHANGE);
-			lcd_clk_generate_parameter(pdrv);
-		}
-		pdrv->vmode_switch = 1;
+	pre_pclk = pdrv->curr_dev->dev_cfg.timing.base_timing->pixel_clk;
+	pdrv->vmode_mgr.cur_vmode_info = pdrv->vmode_mgr.next_vmode_info;
+	pdrv->vmode_mgr.next_vmode_info = NULL;
+
+	pdrv->std_duration = pdrv->vmode_mgr.cur_vmode_info->duration;
+	ptiming = pdrv->vmode_mgr.cur_vmode_info->dft_timing;
+	pdrv->curr_dev->dev_cfg.timing.base_timing = ptiming;
+
+	lcd_base_to_act_timing_init_config(pdrv);
+	lcd_sw_vrr_disable_reset(pdrv);
+	if (pdrv->curr_dev->dev_cfg.timing.base_timing->pixel_clk != pre_pclk) {
+		pdrv->curr_dev->dev_cfg.timing.clk_change |=
+			(LCD_CLK_PLL_RESET | LCD_CLK_PLL_CHANGE);
+		lcd_clk_generate_parameter(pdrv);
 	}
 
 	switch_type = pdrv->curr_dev->dev_cfg.timing.act_timing.switch_type;
@@ -298,7 +304,7 @@ int lcd_mode_timing_switch_update(struct aml_lcd_drv_s *pdrv)
 	return 0;
 }
 
-void lcd_mode_vmode_switch(struct aml_lcd_drv_s *pdrv)
+static void lcd_mode_vmode_switch(struct aml_lcd_drv_s *pdrv)
 {
 	unsigned long long local_time[2];
 	unsigned long flags = 0;
@@ -332,7 +338,7 @@ void lcd_mode_vmode_switch(struct aml_lcd_drv_s *pdrv)
 }
 
 //consider merge with lcd_connector_frame_rate_adjust
-int lcd_mode_framerate_automation_set_mode(struct aml_lcd_drv_s *pdrv)
+static int lcd_mode_framerate_automation_set_mode(struct aml_lcd_drv_s *pdrv)
 {
 	unsigned int clk_change = 0;
 
@@ -535,13 +541,14 @@ static int lcd_framerate_support_check(struct aml_lcd_drv_s *pdrv, int duration)
 int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 {
 	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
+	struct lcd_config_s *pconf;
 	struct vinfo_s *info;
 	unsigned int duration_num = 60, duration_den = 1, duration_frac = 0;
 	struct lcd_duration_s *set_dur;
 	u8 find, duration_in_range;
 	unsigned int frame_rate;
 
-	if (!pdrv)
+	if (!pdrv || !pdrv->curr_dev)
 		return -1;
 	if (pdrv->probe_done == 0)
 		return -1;
@@ -555,11 +562,12 @@ int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 		return -1;
 	}
 
+	pconf = &pdrv->curr_dev->dev_cfg;
 	if (lcd_fr_is_fixed(pdrv)) {
 		LCD_PR(pdrv, "fr hint: fixed timing");
 		return -1;
 	}
-	if (pdrv->curr_dev->dev_cfg.fr_auto_flag == 0) {
+	if (pconf->fr_auto_flag == 0) {
 		LCD_PR(pdrv, "fr hint: fr_auto_flag = 0");
 		return 0;
 	}
@@ -570,7 +578,7 @@ int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 
 	if (duration == 0) { /* end hint */
 		LCD_PR(pdrv, "fr hint: return mode: %s, fr_adj_type: %d",
-			info->name, pdrv->curr_dev->dev_cfg.timing.act_timing.fr_adjust_type);
+			info->name, pconf->timing.act_timing.fr_adjust_type);
 
 		pdrv->fr_duration = 0;
 		if (pdrv->fr_mode == 0) {
@@ -579,16 +587,14 @@ int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 			return 0;
 		}
 
-		/* update frame rate */
-		if (pdrv->curr_dev->dev_cfg.timing.base_timing) {
-			pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate =
-				pdrv->curr_dev->dev_cfg.timing.base_timing->frame_rate;
-			pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_num =
-				pdrv->curr_dev->dev_cfg.timing.base_timing->sync_duration_num;
-			pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_den =
-				pdrv->curr_dev->dev_cfg.timing.base_timing->sync_duration_den;
-			pdrv->curr_dev->dev_cfg.timing.act_timing.frac =
-				pdrv->curr_dev->dev_cfg.timing.base_timing->frac;
+		/* update target frame rate */
+		if (pconf->timing.base_timing) {
+			pconf->timing.frame_rate = pconf->timing.base_timing->frame_rate;
+			pconf->timing.sync_duration_num =
+				pconf->timing.base_timing->sync_duration_num;
+			pconf->timing.sync_duration_den =
+				pconf->timing.base_timing->sync_duration_den;
+			pconf->timing.frac = pconf->timing.base_timing->frac;
 			pdrv->fr_mode = 0;
 		}
 	} else {
@@ -626,22 +632,22 @@ int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 
 		LCD_PR(pdrv, "fr hint: duration=%d frame_rate=%d fr_adj_type=%d",
 		      duration, duration / 100,
-		      pdrv->curr_dev->dev_cfg.timing.act_timing.fr_adjust_type);
+		      pconf->timing.act_timing.fr_adjust_type);
 
 		pdrv->fr_duration = duration;
 		/* if the sync_duration is same as current */
-		if (duration_num == pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_num &&
-		    duration_den == pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_den) {
+		if (duration_num == pconf->timing.act_timing.sync_duration_num &&
+		    duration_den == pconf->timing.act_timing.sync_duration_den) {
 			LCD_ERR(pdrv, "fr hint: sync_duration is same");
 			mutex_unlock(&lcd_vout_mutex);
 			return 0;
 		}
 
-		/* update frame rate */
-		pdrv->curr_dev->dev_cfg.timing.act_timing.frame_rate = frame_rate;
-		pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_num = duration_num;
-		pdrv->curr_dev->dev_cfg.timing.act_timing.sync_duration_den = duration_den;
-		pdrv->curr_dev->dev_cfg.timing.act_timing.frac = duration_frac;
+		/* update target frame rate */
+		pconf->timing.frame_rate = frame_rate;
+		pconf->timing.sync_duration_num = duration_num;
+		pconf->timing.sync_duration_den = duration_den;
+		pconf->timing.frac = duration_frac;
 		pdrv->fr_mode = 1;
 	}
 
@@ -652,12 +658,10 @@ int lcd_mode_set_vframe_rate_hint(int duration, void *data)
 }
 
 // * act_timing to pdrv->vinfo (lcd_config_init)
-void lcd_act_timing_update_to_vinfo(struct aml_lcd_drv_s *pdrv)
+static void lcd_act_timing_update_to_vinfo(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_detail_timing_s *ptiming;
 
-	if (!pdrv)
-		return;
 	if (!pdrv->vmode_mgr.cur_vmode_info)
 		return;
 	ptiming = &pdrv->curr_dev->dev_cfg.timing.act_timing;
@@ -793,7 +797,7 @@ void lcd_mode_dft_timing_update_vinfo(struct aml_lcd_drv_s *pdrv)
 	}
 }
 
-void lcd_timing_update_vmode(struct aml_lcd_drv_s *pdrv)
+static void lcd_timing_update_vmode(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_detail_timing_s *ptiming;
 	int dur_index, ret;
@@ -809,22 +813,29 @@ void lcd_timing_update_vmode(struct aml_lcd_drv_s *pdrv)
 
 	dur_index = pdrv->vmode_mgr.cur_vmode_info->duration_index;
 
+	/* update target frame rate */
 	ptiming = &pdrv->curr_dev->dev_cfg.timing.act_timing;
 	if (pdrv->mode == LCD_MODE_TABLET && dur_index == 0xff) {
-		ptiming->sync_duration_num = pdrv->vmode_mgr.cur_vmode_info->base_fr;
-		ptiming->sync_duration_den = 1;
-		ptiming->frac = 0;
-		ptiming->frame_rate = pdrv->vmode_mgr.cur_vmode_info->base_fr;
+		pdrv->curr_dev->dev_cfg.timing.sync_duration_num =
+			pdrv->vmode_mgr.cur_vmode_info->base_fr;
+		pdrv->curr_dev->dev_cfg.timing.sync_duration_den = 1;
+		pdrv->curr_dev->dev_cfg.timing.frac = 0;
+		pdrv->curr_dev->dev_cfg.timing.frame_rate =
+			pdrv->vmode_mgr.cur_vmode_info->base_fr;
 	} else {
-		ptiming->sync_duration_num = pdrv->std_duration[dur_index].duration_num;
-		ptiming->sync_duration_den = pdrv->std_duration[dur_index].duration_den;
-		ptiming->frac = pdrv->std_duration[dur_index].duration_num %
+		pdrv->curr_dev->dev_cfg.timing.sync_duration_num =
+			pdrv->std_duration[dur_index].duration_num;
+		pdrv->curr_dev->dev_cfg.timing.sync_duration_den =
+			pdrv->std_duration[dur_index].duration_den;
+		pdrv->curr_dev->dev_cfg.timing.frac =
+			pdrv->std_duration[dur_index].duration_num %
 			pdrv->std_duration[dur_index].duration_den ? 1 : 0;
-		ptiming->frame_rate = pdrv->std_duration[dur_index].frame_rate;
+		pdrv->curr_dev->dev_cfg.timing.frame_rate =
+			pdrv->std_duration[dur_index].frame_rate;
 	}
 	lcd_frame_rate_change(pdrv);
 
-	LCD_DBG(pdrv, "%s: %dx%dp%dhz, duration=%d:%d, dur_index=%d, clk_change=0x%x", __func__,
+	LCD_DBG(pdrv, "update_vmode: %dx%dp%dhz, duration=%d:%d, dur_index=%d, clk_change=0x%x",
 		ptiming->h_active, ptiming->v_active, ptiming->frame_rate,
 		ptiming->sync_duration_num, ptiming->sync_duration_den,
 		dur_index, pdrv->curr_dev->dev_cfg.timing.clk_change);
@@ -835,7 +846,7 @@ int lcd_mode_timing_set_next(struct aml_lcd_drv_s *pdrv, enum vmode_e vmode)
 	unsigned long long local_time[2];
 	int ret = 0;
 
-	if (!pdrv)
+	if (!pdrv || !pdrv->curr_dev)
 		return -1;
 
 	LCD_DBG(pdrv, "mode timing set: mode=0x%x", vmode);
@@ -911,7 +922,7 @@ int lcd_mode_timing_set_next(struct aml_lcd_drv_s *pdrv, enum vmode_e vmode)
 	return ret;
 }
 
-void lcd_mode_viu_init(struct aml_lcd_drv_s *pdrv)
+static void lcd_mode_viu_init(struct aml_lcd_drv_s *pdrv)
 {
 	char *curr_vout_connector, *curr_vout_mode;
 	char lcd_connector[10];
@@ -1195,14 +1206,20 @@ void lcd_mode_vout_server_remove(struct aml_lcd_drv_s *pdrv)
 
 void lcd_mode_config_init(struct aml_lcd_drv_s *pdrv)
 {
+	if (!pdrv || !pdrv->curr_dev)
+		return;
+
+	mutex_lock(&lcd_vout_mutex);
 	lcd_base_to_act_timing_init_config(pdrv);
 	lcd_clk_config_parameter_init(pdrv);
+	mutex_unlock(&lcd_vout_mutex);
 
 	lcd_mode_viu_init(pdrv);
-	lcd_frame_rate_change(pdrv);
 
-	lcd_clk_generate_parameter(pdrv);
+	mutex_lock(&lcd_vout_mutex);
+	lcd_frame_rate_change(pdrv);
 	pdrv->curr_dev->dev_cfg.timing.clk_change = 0; /* clear clk_change flag */
+	mutex_unlock(&lcd_vout_mutex);
 }
 
 int lcd_mode_init(struct aml_lcd_drv_s *pdrv)

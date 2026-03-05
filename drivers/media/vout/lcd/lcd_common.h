@@ -25,7 +25,8 @@
 /* 20251113: support ip27 */
 /* 20260131: merge tv &tablet */
 /* 20260203: optimize t6 phy & dphy init flow */
-#define LCD_DRV_VERSION    "20260203"
+/* 20260306: sw_vrr protect when vmode_switch */
+#define LCD_DRV_VERSION    "20260306"
 
 #define CTYPE_MASK           0xf0
 #define CTYPE_RGB            0x00
@@ -144,6 +145,7 @@ void lcd_fr_lock_init(struct aml_lcd_drv_s *pdrv);
 void lcd_fr_lock_deinit(struct aml_lcd_drv_s *pdrv);
 void lcd_fr_lock(struct aml_lcd_drv_s *pdrv);
 void lcd_sw_vrr_proc(struct aml_lcd_drv_s *pdrv);
+void lcd_sw_vrr_disable_reset(struct aml_lcd_drv_s *pdrv);
 
 void lcd_queue_work(struct work_struct *work);
 inline void lcd_queue_delayed_work(struct delayed_work *delayed_work, int ms);
@@ -279,17 +281,12 @@ void lcd_device_switch(struct aml_lcd_drv_s *pdrv, unsigned char target_dev_idx)
 void lcd_device_list(struct aml_lcd_drv_s *pdrv);
 
 int lcd_vmode_remove_all(struct aml_lcd_drv_s *pdrv);
-int lcd_mode_timing_switch_update(struct aml_lcd_drv_s *pdrv);
-void lcd_mode_vmode_switch(struct aml_lcd_drv_s *pdrv);
-int lcd_mode_framerate_automation_set_mode(struct aml_lcd_drv_s *pdrv);
-void lcd_act_timing_update_to_vinfo(struct aml_lcd_drv_s *pdrv);
 int lcd_mode_timing_set_next(struct aml_lcd_drv_s *pdrv, enum vmode_e vmode);
 void lcd_mode_vout_server_init(struct aml_lcd_drv_s *pdrv);
 void lcd_mode_vout_server_remove(struct aml_lcd_drv_s *pdrv);
 int lcd_mode_init(struct aml_lcd_drv_s *pdrv);
 int lcd_mode_remove(struct aml_lcd_drv_s *pdrv);
 void lcd_mode_add_device_vmode(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p);
-void lcd_timing_update_vmode(struct aml_lcd_drv_s *pdrv);
 void lcd_mode_dft_timing_update_vinfo(struct aml_lcd_drv_s *pdrv);
 
 /* lcd driver */
