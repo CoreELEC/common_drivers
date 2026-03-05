@@ -372,6 +372,7 @@ int meson_u2phy_exit(struct amlogic_usb_v2 *phy)
 	return ret;
 }
 
+/* FIXME: phy power on don't need to control vbus power. */
 int meson_u2phy_power_on(struct amlogic_usb_v2 *phy)
 {
 	meson_u2phy_set_vbus_power(phy, 1);
@@ -715,6 +716,7 @@ int meson_u2phy_set_mode(struct amlogic_usb_v2 *phy, enum meson_uphy_mode mode)
 		//reg0.b.DRVVBUS0 = 1;
 		writel(reg0.d32, &phy->u2p_aml_regs[0]->r0);
 		phy->current_mode = MESON_USB_MODE_HOST;
+		meson_u2phy_set_vbus_power(phy, 1);
 		break;
 	case MESON_USB_MODE_DEVICE:
 		reg0.d32 = readl(&phy->u2p_aml_regs[0]->r0);
@@ -724,6 +726,7 @@ int meson_u2phy_set_mode(struct amlogic_usb_v2 *phy, enum meson_uphy_mode mode)
 		//reg0.b.DRVVBUS0 = 1;
 		writel(reg0.d32, &phy->u2p_aml_regs[0]->r0);
 		phy->current_mode = MESON_USB_MODE_DEVICE;
+		meson_u2phy_set_vbus_power(phy, 0);
 		break;
 	case MESON_USB_MODE_OTG:
 		reg0.d32 = readl(&phy->u2p_aml_regs[0]->r0);

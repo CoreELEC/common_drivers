@@ -1025,12 +1025,12 @@ void aml_dwc3_debugfs_init(struct aml_dwc3 *dwc)
 	debugfs_create_regset32("regdump", 0444, root, dwc->regset);
 	debugfs_create_file("lsp_dump", 0644, root, dwc, &dwc3_lsp_fops);
 
-	if (IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE))
+	if (IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE))
 		debugfs_create_file("mode", 0644, root, dwc,
 				    &dwc3_mode_fops);
 
-	if (IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE) ||
-			IS_ENABLED(CONFIG_USB_DWC3_GADGET)) {
+	if (IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE) ||
+			IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_GADGET)) {
 		debugfs_create_file("testmode", 0644, root, dwc,
 				&dwc3_testmode_fops);
 		debugfs_create_file("link_state", 0644, root, dwc,

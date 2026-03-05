@@ -18,6 +18,7 @@
 #include <linux/notifier.h>
 #include <linux/suspend.h>
 #include <linux/amlogic/usbtype.h>
+#include <linux/amlogic/usb-v2.h>
 #include <linux/usb/role.h>
 
 #include "phy-meson-usb.h"

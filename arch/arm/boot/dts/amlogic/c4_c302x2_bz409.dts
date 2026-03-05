@@ -617,30 +617,20 @@
 	status = "okay";
 };
 
-&crg_udc_2 {
-	status = "disabled";
+&usbphya {
+	status = "okay";
+	u2p@0 {
+		status = "okay";
+	};
 };
 
-&crg20_otg {
-	status = "disabled";
+&dwc3otg {
+	status = "disable";
 	controller-type = <1>;
 };
 
-&crg2_drd {
-	compatible = "amlogic, crg-drd";
-	status = "disabled";
-};
-
-&crg_phy_20 {
-	status = "disabled";
-	portnum = <1>;
-	/* gpio-vbus-power = "GPIOA_2"; */
-	/* gpios = <&gpio GPIOA_2 GPIO_ACTIVE_HIGH>; */
-};
-
-&crg3_phy_20 {
-	status = "disabled";
-	portnum = <0>;
+&dwc3a {
+	status = "okay";
 };
 
 &i2c2 {

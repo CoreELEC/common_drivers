@@ -48,10 +48,14 @@ ddk_module(
                 "dwc3_amlogic/host-meson.c",
             ],
         },
-        "CONFIG_AMLOGIC_USB_DWC3_GADGET_AND_EP0": {
+        "CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE": {
             True: [
+             	"dwc3_amlogic/core-meson.c",
+            	"dwc3_amlogic/host-meson.c",
                 "dwc3_amlogic/gadget-meson.c",
                 "dwc3_amlogic/ep0-meson.c",
+                "dwc3_amlogic/drd-meson.c",
+                "dwc3_amlogic/trace-meson.c",
             ],
         },
         "CONFIG_AMLOGIC_BC": {
@@ -80,9 +84,9 @@ ddk_module(
                 "crgdrdphy/phy-aml-m31-usb3.c",
             ],
         },
-        "CONFIG_USB_DWC3": {
+        "CONFIG_AMLOGIC_USB_DWC3": {
             True: [
-                "dwc3_amlogic/core-meson.c",
+                "dwc3_amlogic/dwc3-otg.c",
             ],
         },
         "CONFIG_AMLOGIC_USB_DWC3_DRD": {
@@ -123,7 +127,7 @@ ddk_module(
                 "phy_meson_usb/socs/phy-meson-a5-usb.c",
                 "phy_meson_usb/socs/phy-meson-s5-usb.c",
                 "phy_meson_usb/socs/phy-meson-t5m-usb.c",
-                 "phy_meson_usb/socs/phy-meson-a4-usb.c",
+                "phy_meson_usb/socs/phy-meson-a4-usb.c",
                 "phy_meson_usb/socs/phy-meson-txhd2-usb.c",
                 "phy_meson_usb/socs/phy-meson-s7-usb.c",
                 "phy_meson_usb/socs/phy-meson-s7d-usb.c",
@@ -131,6 +135,7 @@ ddk_module(
                 "phy_meson_usb/socs/phy-meson-t6d-usb.c",
                 "phy_meson_usb/socs/phy-meson-t6w-usb.c",
                 "phy_meson_usb/socs/phy-meson-t6x-usb.c",
+                "phy_meson_usb/socs/phy-meson-c4-usb.c",
             ],
         },
         "CONFIG_AMLOGIC_USB2PHY": {
@@ -187,6 +192,7 @@ ddk_module(
         "../../../common/drivers/usb/host",
         "../../../common/drivers/base",
         "xhci_amlogic",
+        "dwc3_amlogic",
     ],
     out = "amlogic-usb.ko",
     kernel_build = kernel_select(),

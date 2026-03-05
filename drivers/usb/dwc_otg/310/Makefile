@@ -24,7 +24,7 @@ KBUILD_CPPFLAGS		+= $(CFI)
 KBUILD_CPPFLAGS		+= $(BUS_INTERFACE)
 #KBUILD_CPPFLAGS	+= -DDWC_DEV_SRPCAP
 
-
+ifneq ($(CONFIG_AMLOGIC_USB_DWC_OTG_HCD), )
 $(MODULE_NAME)-y	+= dwc_otg/310/dwc_otg_driver.o dwc_otg/310/dwc_otg_attr.o
 $(MODULE_NAME)-y	+= dwc_otg/310/dwc_otg_cil.o dwc_otg/310/dwc_otg_cil_intr.o
 $(MODULE_NAME)-y	+= dwc_otg/310/dwc_otg_pcd_linux.o dwc_otg/310/dwc_otg_pcd.o dwc_otg/310/dwc_otg_pcd_intr.o
@@ -33,4 +33,5 @@ $(MODULE_NAME)-y	+= dwc_otg/310/dwc_otg_adp.o
 $(MODULE_NAME)-y	+= dwc_otg/310/usbphy.o
 $(MODULE_NAME)-y	+= dwc_otg/310/dwc_otg_cfi.o
 $(MODULE_NAME)-y	+= dwc_otg/310/$(COMMON_PORT)/dwc_common_linux.o
+endif
 

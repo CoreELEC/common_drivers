@@ -624,32 +624,6 @@
 	status = "okay";
 };
 
-&crg_udc_2 {
-	status = "disabled";
-};
-
-&crg20_otg {
-	status = "disabled";
-	controller-type = <1>;
-};
-
-&crg2_drd {
-	compatible = "amlogic, crg-drd";
-	status = "disabled";
-};
-
-&crg_phy_20 {
-	status = "disabled";
-	portnum = <1>;
-	/* gpio-vbus-power = "GPIOA_2"; */
-	/* gpios = <&gpio GPIOA_2 GPIO_ACTIVE_HIGH>; */
-};
-
-&crg3_phy_20 {
-	status = "disabled";
-	portnum = <0>;
-};
-
 &i2c2 {
 	status = "disabled";
 	pinctrl-names = "default", "sleep";

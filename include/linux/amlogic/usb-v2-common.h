@@ -42,6 +42,7 @@ struct meson_uphy_configure_opts {
 };
 
 struct amlogic_otg_helper {
+	struct u2p_aml_regs_m_v2 __iomem *u2p_aml_regs;
 	struct delayed_work     work;
 	struct delayed_work     set_mode_work;
 	struct delayed_work		id_gpio_work;

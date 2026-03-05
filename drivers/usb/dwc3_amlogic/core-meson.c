@@ -701,7 +701,8 @@ static void dwc3_cache_hwparams(struct aml_dwc3 *dwc)
 	parms->hwparams4 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS4);
 	parms->hwparams5 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS5);
 	parms->hwparams6 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS6);
-	parms->hwparams7 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS7);
+	//parms->hwparams7 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS7);
+	parms->hwparams7 = 512;
 	parms->hwparams8 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS8);
 
 	if (DWC3_IP_IS(DWC32))
@@ -1731,6 +1732,9 @@ static void dwc3_get_software_properties(struct aml_dwc3 *dwc)
 {
 	struct device *tmpdev;
 	u16 gsbuscfg0_reqinfo;
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	enum usb_dr_mode dr_mode;
+#endif
 	int ret;
 
 	dwc->gsbuscfg0_reqinfo = DWC3_GSBUSCFG0_REQINFO_UNSPECIFIED;
@@ -1745,7 +1749,18 @@ static void dwc3_get_software_properties(struct aml_dwc3 *dwc)
 					       &gsbuscfg0_reqinfo);
 		if (!ret)
 			dwc->gsbuscfg0_reqinfo = gsbuscfg0_reqinfo;
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		dr_mode = usb_get_role_switch_default_mode(tmpdev);
+		if (dr_mode != USB_DR_MODE_UNKNOWN)
+			dwc->role_switch_default_mode = dr_mode;
+#endif
 	}
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	if (dwc->role_switch_default_mode != USB_DR_MODE_HOST &&
+			dwc->role_switch_default_mode != USB_DR_MODE_PERIPHERAL)
+		dev_err(dwc->dev,
+			"role_switch_default_mode configuration err.\n");
+#endif
 }
 
 static void dwc3_get_properties(struct aml_dwc3 *dwc)

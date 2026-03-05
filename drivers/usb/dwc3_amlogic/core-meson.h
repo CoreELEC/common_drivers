@@ -33,6 +33,22 @@
 
 #include <linux/power_supply.h>
 
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_HOST)
+#define CONFIG_USB_DWC3_HOST 1
+#endif
+
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_GADGET)
+#define CONFIG_USB_DWC3_GADGET 1
+#endif
+
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE)
+#define CONFIG_USB_DWC3_DUAL_ROLE 1
+#endif
+
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_ULPI)
+#define CONFIG_USB_DWC3_ULPI 1
+#endif
+
 /*
  * DWC3 Multiport controllers support up to 15 High-Speed PHYs
  * and 4 SuperSpeed PHYs.
@@ -1606,7 +1622,7 @@ void aml_dwc3_event_buffers_cleanup(struct aml_dwc3 *dwc);
 int aml_dwc3_core_soft_reset(struct aml_dwc3 *dwc);
 void dwc3_enable_susphy(struct aml_dwc3 *dwc, bool enable);
 
-#if IS_ENABLED(CONFIG_USB_DWC3_HOST) || IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE)
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_HOST) || IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE)
 int aml_dwc3_host_init(struct aml_dwc3 *dwc);
 void aml_dwc3_host_exit(struct aml_dwc3 *dwc);
 #else
@@ -1616,7 +1632,7 @@ static inline void aml_dwc3_host_exit(struct aml_dwc3 *dwc)
 { }
 #endif
 
-#if IS_ENABLED(CONFIG_USB_DWC3_GADGET) || IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE)
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_GADGET) || IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE)
 int aml_dwc3_gadget_init(struct aml_dwc3 *dwc);
 void aml_dwc3_gadget_exit(struct aml_dwc3 *dwc);
 int aml_dwc3_gadget_set_test_mode(struct aml_dwc3 *dwc, int mode);
@@ -1651,7 +1667,7 @@ static inline void aml_dwc3_gadget_clear_tx_fifos(struct aml_dwc3 *dwc)
 { }
 #endif
 
-#if IS_ENABLED(CONFIG_USB_DWC3_DUAL_ROLE)
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE)
 int aml_dwc3_drd_init(struct aml_dwc3 *dwc);
 void aml_dwc3_drd_exit(struct aml_dwc3 *dwc);
 void aml_dwc3_dwc3_otg_init(struct aml_dwc3 *dwc);
@@ -1674,7 +1690,7 @@ static inline void aml_dwc3_otg_host_init(struct aml_dwc3 *dwc)
 #endif
 
 /* power management interface */
-#if !IS_ENABLED(CONFIG_USB_DWC3_HOST)
+#if !IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_HOST)
 int aml_dwc3_gadget_suspend(struct aml_dwc3 *dwc);
 int aml_dwc3_gadget_resume(struct aml_dwc3 *dwc);
 void aml_dwc3_gadget_process_pending_events(struct aml_dwc3 *dwc);
@@ -1694,7 +1710,7 @@ static inline void aml_dwc3_gadget_process_pending_events(struct aml_dwc3 *dwc)
 }
 #endif /* !IS_ENABLED(CONFIG_USB_DWC3_HOST) */
 
-#if IS_ENABLED(CONFIG_USB_DWC3_ULPI)
+#if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_ULPI)
 int aml_dwc3_ulpi_init(struct aml_dwc3 *dwc);
 void aml_dwc3_ulpi_exit(struct aml_dwc3 *dwc);
 #else

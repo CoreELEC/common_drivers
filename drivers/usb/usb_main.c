@@ -79,6 +79,7 @@ static int __init usb_main_init(void)
 	call_sub_init(aml_xhci_hcd_init);
 	call_sub_init(aml_xhci_plat_init);
 	call_sub_init(aml_dwc3_init);
+	call_sub_init(dwc3_otg_init);
 
 #ifndef AML_USBPHY_REMOVE_LEGACY
 	call_sub_init(amlogic_crg_init);		//crg/amlogic_usb_crg.ko
@@ -105,6 +106,7 @@ static void __exit usb_main_exit(void)
 	pr_debug("### %s() start\n", __func__);
 	call_sub_exit(dwc_otg_exit);
 	call_sub_exit(amlogic_crg_host_driver_exit);
+	call_sub_exit(dwc3_otg_exit);
 	call_sub_exit(aml_dwc3_exit);
 	call_sub_exit(aml_xhci_plat_exit);
 	call_sub_exit(aml_xhci_hcd_fini);

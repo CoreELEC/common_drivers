@@ -501,7 +501,13 @@ static int dwc3_setup_role_switch(struct aml_dwc3 *dwc)
 	struct usb_role_switch_desc dwc3_role_switch = {NULL};
 	u32 mode;
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	if (!dwc->role_switch_default_mode)
+		dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
+#else
 	dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
+#endif
+
 	if (dwc->role_switch_default_mode == USB_DR_MODE_HOST) {
 		mode = DWC3_GCTL_PRTCAP_HOST;
 	} else {
