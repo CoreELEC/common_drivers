@@ -35,7 +35,7 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 		HDMITX_ERROR("Should run disable_mode before enable new mode.\n");
 
 	if (tx_comm->base.hpd_state == 0 || tx_comm->suspend_flag) {
-		HDMITX_ERROR("%s current hpd_state/suspend (%d,%d), exit\n",
+		HDMITX_WARNING("%s current hpd_state/suspend (%d,%d), skip phy setting\n",
 			__func__, tx_comm->base.hpd_state, tx_comm->suspend_flag);
 		meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_SKIP);
 		tx_comm->skip_phy_setting = true;
@@ -133,7 +133,8 @@ int hdmitx_common_do_mode_setting(struct hdmitx_common *tx_comm,
 	new_para = &new_state->para;
 
 	if (new_state->mode & VMODE_INIT_BIT_MASK) {
-		HDMITX_INFO("skip real mode setting for uboot init\n");
+		HDMITX_INFO("skip real mode setting for uboot init and update vinfo\n");
+		hdmitx_update_vinfo_duration(tx_comm);
 		/* note that for bootup, hdmitx_common_post_enable_mode()
 		 * action will be done in hdmitx_set_current_vmode()
 		 * when vout probe, it's earlier than drm to
@@ -156,7 +157,10 @@ int hdmitx_common_do_mode_setting(struct hdmitx_common *tx_comm,
 
 	ret = hdmitx_common_enable_mode(tx_comm, new_para);
 	if (ret < 0) {
-		HDMITX_ERROR("mode enable fail\n");
+		if (!tx_comm->skip_phy_setting) {
+			HDMITX_ERROR("mode enable fail\n");
+			meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_ERROR);
+		}
 		tx_comm->skip_phy_setting = false;
 		goto fail;
 	}
@@ -164,14 +168,13 @@ int hdmitx_common_do_mode_setting(struct hdmitx_common *tx_comm,
 	ret = hdmitx_common_post_enable_mode(tx_comm, new_para);
 	if (ret < 0) {
 		HDMITX_ERROR("post mode enable fail\n");
+		meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_ERROR);
 		goto fail;
 	}
 
 	meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_ENABLE_OUTPUT);
 
 fail:
-	if (ret < 0)
-		meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_ERROR);
 
 	mutex_unlock(&tx_comm->base.set_mode_mutex);
 	return ret;
@@ -571,7 +574,10 @@ int hdmitx_set_display(struct hdmitx_common *tx_comm, enum hdmi_vic video_code)
 		hdmitx_hw_cntl(hw_comm, AUX_PKT_SET_SPD_INFO, NULL, NULL);
 		ret = 0;
 	} else {
-		HDMITX_ERROR("%s set video mode fail\n", __func__);
+		if (tx_comm->skip_phy_setting)
+			HDMITX_INFO("skip phy setting\n");
+		else
+			HDMITX_ERROR("set video mode fail\n");
 	}
 
 	return ret;

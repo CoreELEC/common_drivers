@@ -14,7 +14,11 @@ struct edid_venddat_t {
 
 static struct edid_venddat_t vendor_6g[] = {
 	/* SAMSUNG UA55KS7300JXXZ */
-	{ {0x4c, 0x2d, 0x3b, 0x0d, 0x00, 0x06, 0x00, 0x01, 0x01, 0x1a} }
+	{ {0x4c, 0x2d, 0x3b, 0x0d, 0x00, 0x06, 0x00, 0x01, 0x01, 0x1a} },
+	/* DENON DENON AVR-X1400H */
+	{ {0x11, 0xEE, 0x70, 0x00, 0x01, 0x01, 0x01, 0x01, 0x00, 0x1F} },
+	/* DENON DENON AVR-X2600H */
+	{ {0x11, 0xEE, 0x65, 0x00, 0x01, 0x01, 0x01, 0x01, 0x00, 0x1D} }
 	/* Add new vendor data here */
 };
 
@@ -52,6 +56,12 @@ static struct edid_venddat_t vendor_audio_ddp_pop_tv[] = {
 	/* Sony 65x8566e */
 	{ {0x4d, 0xd9, 0x03, 0xf9, 0x01, 0x01, 0x01, 0x01, 0x01, 0x1b} },
 	{ {0x4d, 0xd9, 0x03, 0xf3, 0x01, 0x01, 0x01, 0x01, 0x01, 0x1a} }
+	/* Add new vendor data here */
+};
+
+static struct edid_venddat_t vendor_audio_delay[] = {
+	/* TCL: 32L8H */
+	{ {0x50, 0x6c, 0x20, 0x09, 0x01, 0x00, 0x00, 0x00, 0x14, 0x1c} }
 	/* Add new vendor data here */
 };
 
@@ -249,6 +259,22 @@ bool hdmitx_find_vendor_scan_non_std(unsigned char *edid_buf)
 	for (i = 0; i < ARRAY_SIZE(vendor_scan_non_std); i++) {
 		if (memcmp(&edid_buf[8], vendor_scan_non_std[i].data,
 		    sizeof(vendor_scan_non_std[i].data)) == 0)
+			return true;
+	}
+	return false;
+}
+
+/* On TCL-32L8H, need more time switch dd to pcm */
+bool hdmitx_find_vendor_audio_delay(unsigned char *edid_buf)
+{
+	int i;
+
+	if (!edid_buf)
+		return false;
+
+	for (i = 0; i < ARRAY_SIZE(vendor_audio_delay); i++) {
+		if (memcmp(&edid_buf[8], vendor_audio_delay[i].data,
+		    sizeof(vendor_audio_delay[i].data)) == 0)
 			return true;
 	}
 	return false;

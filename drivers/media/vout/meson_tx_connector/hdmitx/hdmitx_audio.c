@@ -681,7 +681,6 @@ static int hdmitx_audio_notify_callback(struct notifier_block *block,
 		cmd, n_rate, n_size, aud_param->chs,
 		aud_param->i2s_ch_mask, aud_param->aud_src_if);
 	/* no need check audio parameters changing, update hdmitx audio hw */
-	hdmitx_set_i2s_mask(tx_aud_param, aud_param->chs, aud_param->i2s_ch_mask);
 
 	tx_aud_param->rate = n_rate;
 	tx_aud_param->type = cmd;

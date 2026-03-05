@@ -1116,27 +1116,35 @@ void meson_hdmitx_atomic_print_state(struct drm_printer *p,
 	drm_printf(p, "\tdrm hdmitx state:\n");
 	drm_printf(p, "\t\t android_path:[%d]\n", am_hdmi->android_path);
 	drm_printf(p, "\t\t VRR_CAP:[%u]\n", hdmitx_common_get_vrr_cap(tx_comm));
-	drm_printf(p, "\t\t hdr_cap:[%d]\n", get_hdr_info(am_hdmi, tx_comm));
-	drm_printf(p, "\t\t dv_cap:[%d]\n", get_dv_info(am_hdmi, tx_comm));
-	drm_printf(p, "\t\t contenttype_cap:[%d]\n",
-		   hdmitx_common_get_content_types(tx_comm));
-
-	drm_printf(p, "\t\t avmute:[%d]\n", hdmitx_state->avmute);
-	drm_printf(p, "\t\t hdmi_hdr_status:[%d]\n",
-		   hdmitx_common_get_hdr_status(tx_comm));
 	drm_printf(p, "\t\t hdr_policy[%d]\n", hdmitx_state->pref_hdr_policy);
-	drm_printf(p, "\t\t allm_mode:[%d]\n", hdmitx_state->allm_mode);
-
-	drm_printf(p, "\t\t hdcp_ver:[%d]\n", hdcp_rx_ver(am_hdmi));
-	drm_printf(p, "\t\t hdcp_mode:[%d]\n", get_hdcp_mode(am_hdmi));
 	drm_printf(p, "\t\t hdcp_state:[%d]\n", am_hdmi->hdcp_state);
-
-	drm_printf(p, "\t\t drm raw property:\n");
+	drm_printf(p, "\t\t update:[%d]\n", hdmitx_state->update);
 	drm_printf(p, "\t\t\t cs: [%d], cd: [%d], hdr_priority: [%d]\n",
 		   hdmitx_state->color_attr_para.colorformat,
 		   hdmitx_state->color_attr_para.bitdepth,
 		   hdmitx_state->hdr_priority);
-
+	drm_printf(p, "\t\t avmute:[%d]\n", hdmitx_state->avmute);
+	drm_printf(p, "\t\t hdmi_hdr_status:[%d]\n",
+		   hdmitx_common_get_hdr_status(tx_comm));
+	drm_printf(p, "\t\t hdr_cap:[%d]\n", get_hdr_info(am_hdmi, tx_comm));
+	drm_printf(p, "\t\t hdr_cap_rx:[%d]\n", get_hdr_info_rx(tx_comm));
+	drm_printf(p, "\t\t dv_cap:[%d]\n", get_dv_info(am_hdmi, tx_comm));
+	drm_printf(p, "\t\t dv_cap_rx:[%d]\n", get_dv_info_rx(tx_comm));
+	drm_printf(p, "\t\t hdcp_ver:[%d]\n", hdcp_rx_ver(am_hdmi));
+	drm_printf(p, "\t\t hdcp_mode:[%d]\n", get_hdcp_mode(am_hdmi));
+	drm_printf(p, "\t\t hdcp_topo:[%d]\n", drm_hdmitx_common_get_dw_hdcp_topo_info(tx_comm));
+	drm_printf(p, "\t\t contenttype_cap:[%d]\n",
+		   hdmitx_common_get_content_types(tx_comm));
+	drm_printf(p, "\t\t allm_mode:[%d]\n", hdmitx_state->allm_mode);
+	drm_printf(p, "\t\t hdr_priority:[%d]\n", hdmitx_state->hdr_priority);
+	drm_printf(p, "\t\t ready:[%d]\n", hdmitx_common_get_ready_state(tx_comm));
+	drm_printf(p, "\t\t hdmi_type:[%d]\n", am_hdmi->hdmi_type);
+	drm_printf(p, "\t\t edid_valid:[%d]\n", hdmitx_common_get_edid_valid_state(tx_comm));
+	drm_printf(p, "\t\t hdmi_user:[%d]\n", hdmitx_common_get_hdcp_user_state(tx_comm));
+	drm_printf(p, "\t\t sink_type:[%d]\n", get_sink_type(tx_comm));
+	drm_printf(p, "\t\t allm_cap:[%d]\n", get_allm_cap(tx_comm));
+	drm_printf(p, "\t\t dc_cap:[%d]\n", get_dc_cap(tx_comm));
+	drm_printf(p, "\t\t scan_info:[%d]\n", hdmitx_common_get_scan_info(tx_comm));
 	drm_printf(p, "\t\t drm to hdmitx timing state:\n");
 	drm_printf(p, "\t\t\t vic:[%d], cs:[%d], cd:[%d], name:[%s]\n",
 		   hdmitx_state->hcs.para.tx_hw_para.hdmitx_hw_para.vic, hdmitx_state->hcs.para.cs,
@@ -1896,6 +1904,11 @@ void meson_hdmitx_encoder_atomic_enable(struct drm_encoder *encoder,
 	else
 		vrr_info.frac_mode = false;
 
+	if (meson_crtc_state->uboot_mode_init == 1 &&
+		meson_conn_state->update != 1)
+		vmode |= VMODE_INIT_BIT_MASK;
+
+	meson_conn_state->hcs.mode = vmode;
 	if (!am_hdmi->android_path)
 		meson_hdmitx_encoder_pre_enable(meson_crtc_state, old_am_crtc_state);
 	if (meson_crtc_state->seamless) {
@@ -1911,13 +1924,10 @@ void meson_hdmitx_encoder_atomic_enable(struct drm_encoder *encoder,
 		}
 
 		DRM_INFO("%s, set frame rate: %d\n", __func__, dst_vrefresh);
-		hdmitx_common_set_vframe_rate_hint(tx_comm, dst_vrefresh, &vrr_info);
+		hdmitx_common_set_vframe_rate_hint(tx_comm, &meson_conn_state->hcs,
+			dst_vrefresh, &vrr_info);
 		return;
 	}
-
-	if (meson_crtc_state->uboot_mode_init == 1 &&
-		meson_conn_state->update != 1)
-		vmode |= VMODE_INIT_BIT_MASK;
 
 	if (!meson_crtc_state->seamless) {
 		hdmitx_set_hdr_priority(tx_comm,
@@ -1927,7 +1937,6 @@ void meson_hdmitx_encoder_atomic_enable(struct drm_encoder *encoder,
 
 		meson_vout_notify_mode_change(amcrtc->vout_index,
 					      vmode, EVENT_MODE_SET_START);
-		meson_conn_state->hcs.mode = vmode;
 		hdmitx_common_do_mode_setting(tx_comm,
 					      &meson_conn_state->hcs,
 					      &old_meson_conn_state->hcs);
@@ -1954,12 +1963,13 @@ void meson_hdmitx_encoder_atomic_enable(struct drm_encoder *encoder,
 			vrr_info.type = T_VRR_GAME;
 		}
 
-		hdmitx_common_set_vframe_rate_hint(tx_comm, dst_vrefresh, &vrr_info);
+		hdmitx_common_set_vframe_rate_hint(tx_comm, &meson_conn_state->hcs,
+					dst_vrefresh, &vrr_info);
 		DRM_INFO("%s, vrr set rate hint, %d\n", __func__,
 			 dst_vrefresh);
 	} else {
 		vrr_info.type = T_VRR_NONE;
-		hdmitx_common_set_vframe_rate_hint(tx_comm, 0, &vrr_info);
+		hdmitx_common_set_vframe_rate_hint(tx_comm, &meson_conn_state->hcs, 0, &vrr_info);
 		DRM_INFO("%s, disable vrr\n", __func__);
 	}
 }
@@ -2155,6 +2165,7 @@ static int meson_hdmitx_encoder_atomic_check(struct drm_encoder *encoder,
 	DRM_DEBUG("[%d]: enter\n", __LINE__);
 
 	if (meson_crtc_state->uboot_mode_init == 1) {
+		common->fmt_para.frac_mode = hdmitx_state->hcs.para.frac_mode;
 		DRM_INFO("%s[%d] uboot get: %d\n", __func__, __LINE__, common->fmt_para.frac_mode);
 		hdmitx_get_init_state(common, &hdmitx_state->hcs);
 		attr->colorformat = hdmitx_state->hcs.para.cs;

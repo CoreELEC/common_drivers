@@ -459,7 +459,7 @@ int hdmirx_info_show(struct seq_file *s, void *v)
 	seq_puts(s, "\n");
 
 	seq_puts(s, "\nedid_parsing:");
-	if (meson_tx_edid_check_valid(tx_comm->base.rxcap.edid_check,
+	if (meson_tx_edid_check_valid(&tx_comm->base.rxcap,
 		tx_comm->base.edid_buf))
 		seq_puts(s, "ok\n");
 	else

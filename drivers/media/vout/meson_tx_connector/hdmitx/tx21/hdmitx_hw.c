@@ -2755,7 +2755,7 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 	/* audio asynchronous sample clock, for spdif */
 	hdmitx21_set_audioclk(true);
 
-	HDMITX_INFO("audio: audio_param->chs = %d\n", audio_param->chs);
+	HDMITX_DEBUG_AUDIO("audio: audio_param->chs = %d\n", audio_param->chs);
 	hdmitx21_set_reg_bits(SPDIF_SSMPL2_IVCTX, 0, 5, 1);
 
 	/*
@@ -2765,7 +2765,7 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 	 */
 	hdmitx21_set_reg_bits(HDMITX_TOP_CLK_CNTL, 1 - audio_param->aud_src_if, 13, 1);
 
-	HDMITX_INFO("audio: aud_src_if = %d\n", audio_param->aud_src_if);
+	HDMITX_DEBUG_AUDIO("audio: aud_src_if = %d\n", audio_param->aud_src_if);
 
 	/*
 	 * config I2S
@@ -2904,6 +2904,10 @@ static int hdmitx_set_audmode(struct hdmitx_hw_common *tx_hw, struct aud_para *a
 		hdmitx21_hw_cntl(tx_hw, AUDIO_RESET, NULL, NULL);
 	hdmitx21_set_reg_bits(AIP_RST_IVCTX, 0, 0, 1);
 	mutex_unlock(&aud_mutex);
+	if (hdmitx_find_vendor_audio_delay(hdev->tx_comm.base.edid_buf)) {
+		HDMITX_INFO("special tv need more time when set audio mode\n");
+		msleep_interruptible(10);
+	}
 	audio_mute_op(audio_param->aud_output_en);
 	return 0;
 }
@@ -4012,6 +4016,7 @@ static void hdmitx_construct_avi_packet(struct hdmitx21_dev *hdev)
 	struct meson_tx_format_para *para = &hdev->tx_comm.fmt_para;
 	struct rx_cap *prxcap = &hdev->tx_comm.base.rxcap;
 	enum hdmi_scan_mode scan_mode = HDMI_SCAN_MODE_UNDERSCAN;
+	enum hdmi_picture_aspect pic_ar = meson_tx_mode_get_vic_aspect_ratio(para->timing.vic);
 
 	hdmi_avi_infoframe_init(info);
 	info->version = 2;
@@ -4020,7 +4025,12 @@ static void hdmitx_construct_avi_packet(struct hdmitx21_dev *hdev)
 		info->colorimetry = HDMI_COLORIMETRY_ITU_601;
 	else
 		info->colorimetry = HDMI_COLORIMETRY_ITU_709;
-	info->picture_aspect = HDMI_PICTURE_ASPECT_16_9;
+	if (pic_ar == HDMI_PICTURE_ASPECT_4_3)
+		info->picture_aspect = HDMI_PICTURE_ASPECT_4_3;
+	else if (pic_ar == HDMI_PICTURE_ASPECT_NONE)
+		info->picture_aspect = HDMI_PICTURE_ASPECT_NONE;
+	else
+		info->picture_aspect = HDMI_PICTURE_ASPECT_16_9;
 	info->active_aspect = HDMI_ACTIVE_ASPECT_PICTURE;
 	info->itc = 0;
 	info->extended_colorimetry = HDMI_EXTENDED_COLORIMETRY_XV_YCC_601;

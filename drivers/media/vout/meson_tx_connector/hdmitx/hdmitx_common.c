@@ -1315,7 +1315,7 @@ int hdmitx_common_get_edid(struct hdmitx_common *tx_comm)
 		hdmitx_hw_cntl(tx_hw_base, DDC_EDID_READ_DATA, NULL, NULL);
 	}
 	/* If EDID is not correct at first time, then retry */
-	if (meson_tx_edid_check_valid(tx_comm->base.rxcap.edid_check,
+	if (meson_tx_edid_check_valid(&tx_comm->base.rxcap,
 		tx_comm->base.edid_buf) == false) {
 		struct timespec64 kts;
 		struct rtc_time tm;
@@ -1825,53 +1825,61 @@ static int hdmitx_update_ced_en(struct hdmitx_common *tx_comm)
 	return 0;
 }
 
+/*
+ * Connect the HDMI cable and power on.
+ * The boot flag is true, and drm_parse_part is false.
+ *
+ * Connect the HDMI cable after power on is a two-step process.
+ * step1: set the boot flag to false and drm_parse_part to false.
+ * step2: set the boot flag to false and drm_parse_part to true
+ */
 void hdmitx_edid_process(struct hdmitx_common *tx_comm, bool boot_flag, bool drm_parse_part)
 {
 	unsigned long flags = 0;
-	bool edid_valid = false;
+	struct rx_cap *prxcap = NULL;
 
 	if (!tx_comm) {
 		HDMITX_ERROR("%s: invalid param\n", __func__);
 		return;
 	}
 	spin_lock_irqsave(&tx_comm->edid_spinlock, flags);
-
-	edid_valid = meson_tx_edid_check_valid(tx_comm->base.rxcap.edid_check,
-		tx_comm->base.edid_buf);
+	prxcap = &tx_comm->base.rxcap;
 
 	if (boot_flag || tx_comm->edid_parse_dbg) {
-		meson_tx_clear_rx_cap(&tx_comm->base.rxcap);
+		meson_tx_clear_rx_cap(prxcap);
+		prxcap->edid_parsing = meson_tx_edid_check_valid(prxcap, tx_comm->base.edid_buf);
 		/* if edid is valid, parse edid, otherwise set fallback mode */
-		if (edid_valid) {
-			meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
+		if (prxcap->edid_parsing) {
+			meson_tx_edid_parse(prxcap, tx_comm->base.edid_buf,
 				tx_comm->base.edid_parse_mask);
 			hdmitx_update_ced_en(tx_comm);
 			/* parse cec phy addr and audio data block */
-			meson_tx_edid_phy_addr_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf);
-			meson_tx_edid_audio_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf);
+			meson_tx_edid_phy_addr_parse(prxcap, tx_comm->base.edid_buf);
+			meson_tx_edid_audio_parse(prxcap, tx_comm->base.edid_buf);
 		} else {
-			edid_set_fallback_mode(&tx_comm->base.rxcap);
+			edid_set_fallback_mode(prxcap);
 		}
-		hdmitx_common_edid_tracer_post_proc(tx_comm, &tx_comm->base.rxcap);
+		hdmitx_common_edid_tracer_post_proc(tx_comm, prxcap);
 	} else if (!drm_parse_part) {
-		meson_tx_clear_rx_cap(&tx_comm->base.rxcap);
+		meson_tx_clear_rx_cap(prxcap);
+		prxcap->edid_parsing = meson_tx_edid_check_valid(prxcap, tx_comm->base.edid_buf);
 		/* step1: hdmitx parse part */
-		if (edid_valid) {
+		if (prxcap->edid_parsing) {
 			/* parse cec phy addr and audio data block */
-			meson_tx_edid_phy_addr_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf);
-			meson_tx_edid_audio_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf);
+			meson_tx_edid_phy_addr_parse(prxcap, tx_comm->base.edid_buf);
+			meson_tx_edid_audio_parse(prxcap, tx_comm->base.edid_buf);
 		} else {
-			edid_set_fallback_mode(&tx_comm->base.rxcap);
+			edid_set_fallback_mode(prxcap);
 		}
 		HDMITX_DEBUG_EDID("parse phy_addr/audio on hdmi side\n");
 	} else {
 		/* step2: drm parse part */
-		if (edid_valid) {
-			meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
+		if (prxcap->edid_parsing) {
+			meson_tx_edid_parse(prxcap, tx_comm->base.edid_buf,
 				tx_comm->base.edid_parse_mask);
 			hdmitx_update_ced_en(tx_comm);
 		}
-		hdmitx_common_edid_tracer_post_proc(tx_comm, &tx_comm->base.rxcap);
+		hdmitx_common_edid_tracer_post_proc(tx_comm, prxcap);
 		HDMITX_DEBUG_EDID("parse most parts on drm side\n");
 	}
 
@@ -2753,11 +2761,17 @@ int hdmitx_common_get_vrr_mode_group(struct hdmitx_common *tx_comm,
 }
 EXPORT_SYMBOL(hdmitx_common_get_vrr_mode_group);
 
-int hdmitx_common_set_vframe_rate_hint(struct hdmitx_common *tx_comm, int rate, void *data)
+int hdmitx_common_set_vframe_rate_hint(struct hdmitx_common *tx_comm,
+		struct meson_tx_state *new_state, int rate, void *data)
 {
 	if (!tx_comm) {
 		HDMITX_ERROR("%s: invalid param\n", __func__);
 		return -EINVAL;
+	}
+
+	if (new_state->mode & VMODE_INIT_BIT_MASK) {
+		HDMITX_INFO("skip real vrr rate setting for uboot init\n");
+		return 0;
 	}
 	return hdmitx_hw_set_vrr_rate(tx_comm->tx_hw, rate, data);
 }

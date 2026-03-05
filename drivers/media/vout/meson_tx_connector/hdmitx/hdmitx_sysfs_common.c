@@ -204,9 +204,61 @@ int meson_tx_edid_print_rx_cap(const struct rx_cap *prxcap,
 		pos += snprintf(buffer + pos, buffer_len - pos, " %d\n",
 			prxcap->i_aLatency);
 
-	if (prxcap->video_capability_data)
+	if (prxcap->video_capability_data) {
 		pos += snprintf(buffer + pos, buffer_len - pos,
 				"Video_Capability_Data: 0x%x\n", prxcap->video_capability_data);
+
+		pos += snprintf(buffer + pos, buffer_len - pos, "PT over/underscan\n");
+		switch (prxcap->video_capability_data & 0x30) {
+		case PT_VIDEO_FORMAT_NO_DATA:
+			pos += snprintf(buffer + pos, buffer_len - pos, " refer to S_CE or S_IT\n");
+			break;
+		case PT_VIDEO_FORMAT_ALWAYS_OVERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always overscan\n");
+			break;
+		case PT_VIDEO_FORMAT_ALWAYS_UNDERSCANSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always underscan\n");
+			break;
+		case PT_VIDEO_FORMAT_BOTH_OVER_UNDERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos,
+					" both over-and underscan\n");
+			break;
+		}
+
+		pos += snprintf(buffer + pos, buffer_len - pos, "IT over/underscan\n");
+		switch (prxcap->video_capability_data & 0xC) {
+		case IT_VIDEO_FORMAT_NOT_SUPPORT:
+			pos += snprintf(buffer + pos, buffer_len - pos, " IT not support\n");
+			break;
+		case IT_VIDEO_FORMAT_ALWAYS_OVERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always overscan\n");
+			break;
+		case IT_VIDEO_FORMAT_ALWAYS_UNDERSCANSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always underscan\n");
+			break;
+		case IT_VIDEO_FORMAT_BOTH_OVER_UNDERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos,
+					" both over-and underscan\n");
+			break;
+		}
+
+		pos += snprintf(buffer + pos, buffer_len - pos, "CT over/underscan\n");
+		switch (prxcap->video_capability_data & 0x3) {
+		case CE_VIDEO_FORMAT_NOT_SUPPORT:
+			pos += snprintf(buffer + pos, buffer_len - pos, " CE not support\n");
+			break;
+		case CE_VIDEO_FORMAT_ALWAYS_OVERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always overscan\n");
+			break;
+		case CE_VIDEO_FORMAT_ALWAYS_UNDERSCANSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos, " always underscan\n");
+			break;
+		case CE_VIDEO_FORMAT_BOTH_OVER_UNDERSCAN:
+			pos += snprintf(buffer + pos, buffer_len - pos,
+					" both over-and underscan\n");
+			break;
+		}
+	}
 	if (prxcap->colorimetry_data)
 		pos += snprintf(buffer + pos, buffer_len - pos,
 			"ColorMetry: 0x%x\n", prxcap->colorimetry_data);

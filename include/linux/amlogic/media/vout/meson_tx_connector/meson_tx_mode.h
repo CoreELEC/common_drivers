@@ -351,6 +351,5 @@ int meson_tx_mode_update_timing(struct tx_timing *t, bool to_frac_mode);
 const char *meson_tx_mode_get_timing_name(enum hdmi_vic vic);
 const struct tx_timing *meson_tx_mode_index_to_timing(u32 idx);
 int meson_tx_get_timing_vrefresh(const struct tx_timing *t);
-/* if vic is an aspect ratio of 64:27, return true */
-bool meson_tx_mode_aspect_ratio_is_64_27_vic(enum hdmi_vic vic);
+enum hdmi_picture_aspect meson_tx_mode_get_vic_aspect_ratio(enum hdmi_vic vic);
 #endif

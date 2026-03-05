@@ -651,7 +651,7 @@ struct rx_cap {
 
 /*edid is good return 0, otherwise return < 0.*/
 bool meson_tx_edid_is_all_zeros(unsigned char *rawedid);
-bool meson_tx_edid_check_valid(u8 edid_check, unsigned char *buf);
+bool meson_tx_edid_check_valid(struct rx_cap *prxcap, unsigned char *buf);
 int meson_tx_edid_parse(struct rx_cap *prxcap, u8 *edid_buf, u8 edid_parse_mask);
 unsigned int meson_tx_edid_valid_block_num(unsigned char *edid_buf);
 void meson_tx_edid_raw_data_print(u8 *edid_buf);

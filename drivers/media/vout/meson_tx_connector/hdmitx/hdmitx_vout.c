@@ -201,6 +201,38 @@ void hdmitx_reset_vinfo(struct vinfo_s *tx_vinfo)
 	edidinfo_detach_to_vinfo(tx_vinfo);
 }
 
+/*
+ * only bootup and update vinfo;
+ * mode setting will not update here, will update vinfo in post enable mode setting
+ */
+void hdmitx_update_vinfo_duration(struct hdmitx_common *tx_comm)
+{
+	struct vinfo_s *vinfo = &tx_comm->hdmitx_vinfo;
+	const struct tx_timing *timing = 0;
+	struct tx_timing t;
+
+	if (!tx_comm || !tx_comm->tx_hw)
+		return;
+
+	timing = meson_tx_mode_vic_to_timing(tx_comm->hw_fmt_para.vic);
+	if (!timing) {
+		HDMITX_ERROR("%s Invalid VIC %d\n", __func__, tx_comm->hw_fmt_para.vic);
+		return;
+	}
+
+	t = *timing;
+	if (tx_comm->fmt_para.frac_mode)
+		meson_tx_mode_update_timing(&t, true);
+
+	if (t.v_freq % 1000 == 0) {
+		vinfo->sync_duration_num = t.v_freq / 1000;
+		vinfo->sync_duration_den = 1;
+	} else {
+		vinfo->sync_duration_num = t.v_freq;
+		vinfo->sync_duration_den = 1000;
+	}
+}
+
 #ifdef CONFIG_AMLOGIC_VOUT_SERVE
 struct vinfo_s *hdmitx_get_current_vinfo(void *data)
 {

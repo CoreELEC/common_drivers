@@ -709,7 +709,8 @@ bool hdmitx_common_get_sink_device_type(struct hdmitx_common *tx_comm);
 int hdmitx_common_get_vrr_mode_group(struct hdmitx_common *tx_comm,
 				     struct hdmitx_vrr_mode_group *group,
 				     int max_group);
-int hdmitx_common_set_vframe_rate_hint(struct hdmitx_common *tx_comm, int rate, void *data);
+int hdmitx_common_set_vframe_rate_hint(struct hdmitx_common *tx_comm,
+		struct meson_tx_state *tx_state, int rate, void *data);
 /* hdmitx diagnostic system api */
 unsigned char *hdmitx_common_get_resolution(struct hdmitx_common *tx_comm);
 int hdmitx_common_get_rxsense(struct hdmitx_common *tx_comm);
