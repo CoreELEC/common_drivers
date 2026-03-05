@@ -12,12 +12,13 @@
 #include "gamut_convert.h"
 #include "../set_hdr2_v0.h"
 #include "../s5_set_hdr2_v0.h"
+#include "am_hdr10_tmo_fw.h"
 
 uint pr_sbtm_en;
 
-#define pr_sbtm_dbg(fmt, args...)\
+#define pr_sbtm_dbg(lvl, fmt, args...)\
 	do {\
-		if (pr_sbtm_en)\
+		if (pr_sbtm_en & (lvl))\
 			pr_info("SBTM: " fmt, ##args);\
 	} while (0)
 
@@ -109,79 +110,97 @@ static u16 linear_e_to_o_sbtm[504] = {
 	9723, 9815, 9907, 10000
 };
 
-/* SDR convert to 310 gain=512*310/10000 lumin HDR, 512 as 1.0 */
-int oo_y_lut_sdr_hdr_300_sbtm[HDR2_OOTF_LUT_SIZE] = {
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16
-};
-
-/* SDR convert to 1000 gain=512*1000/10000 lumin HDR, 512 as 1.0 */
-int oo_y_lut_sdr_hdr_1000_sbtm[HDR2_OOTF_LUT_SIZE] = {
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51, 51,
-	51, 51, 51, 51, 51
-};
-
-int oo_y_lut_bypass_sbtm[HDR2_OOTF_LUT_SIZE] = {
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512,
-	512, 512, 512, 512, 512, 512
-};
-
 static u32 oo_lut[HDR2_OOTF_LUT_SIZE] = {0};
+static u32 cgain_lut[HDR2_CGAIN_LUT_SIZE] = {0};
+
+/* 3847->1000  knee = 600 */
 int oo_y_lut_sbtm[HDR2_OOTF_LUT_SIZE] = {
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600,
-	1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1600, 1532,
-	1440, 1287, 1165, 1065, 982, 911, 850, 798, 752, 675,
-	613, 563, 520, 484, 454, 427, 403, 364, 332, 306,
-	283, 265, 248, 234, 221, 199, 182, 167, 154, 144,
-	134, 126, 119, 113, 107, 102, 97, 93, 89, 86,
-	82, 79, 77, 74, 72, 69, 67, 65, 64
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096,
+	3951, 3565, 3261, 3007, 2800, 2625, 2471, 2341, 2228, 2035, 1882, 1756,
+	1653, 1564, 1488, 1422, 1366, 1269, 1194, 1130, 1079, 1034, 997, 963,
+	935, 909, 887, 867, 849, 832, 818, 804, 791, 780, 769, 759,
+	750, 742, 734, 726, 719
 };
 
 int oo_y_lut_sbtm_osd[HDR2_OOTF_LUT_SIZE] = {
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
-	16, 16, 16, 16, 16
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+	128, 128, 128, 128, 128
+};
+
+static int num_oo_y_lut_dbg = HDR2_OOTF_LUT_SIZE;
+int oo_y_lut_dbg[HDR2_OOTF_LUT_SIZE] = {
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410, 410,
+	410, 410, 410, 410, 410
+};
+module_param_array(oo_y_lut_dbg, int, &num_oo_y_lut_dbg, 0664);
+MODULE_PARM_DESC(oo_y_lut_dbg, "\n oo_y_lut_dbg\n");
+
+static int num_oo_y_lut_sdr_hdr_def = HDR2_OOTF_LUT_SIZE;
+int oo_y_lut_sdr_hdr_def[HDR2_OOTF_LUT_SIZE] = {
+	68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68, 68,
+	68, 68, 68, 68, 68, 68, 68, 68, 70, 76, 80, 83,
+	86, 89, 91, 93, 94, 95, 100, 106, 111, 118, 123, 126,
+	129, 139, 147, 152, 156, 167, 175, 181, 185, 188, 191, 193,
+	195, 196, 198, 199, 200, 202, 203, 204, 205, 206, 206, 207,
+	208, 208, 209, 210, 210, 210, 211, 211, 211, 212, 212, 212,
+	213, 213, 213, 213, 213, 213, 214, 214, 214, 214, 214, 214,
+	214, 214, 214, 214, 214, 214, 215, 215, 215, 215, 215, 215,
+	215, 215, 215, 215, 215, 215, 215, 215, 215, 215, 215, 215,
+	215, 215, 215, 215, 215, 215, 215, 215, 215, 215, 215, 215,
+	215, 217, 218, 220, 221, 223, 225, 226, 229, 232, 235, 238,
+	240, 243, 245, 248, 250, 252, 255, 258, 260, 262, 266, 270,
+	274, 280, 292, 325, 409
+};
+module_param_array(oo_y_lut_sdr_hdr_def, int, &num_oo_y_lut_sdr_hdr_def, 0664);
+MODULE_PARM_DESC(oo_y_lut_sdr_hdr_def, "\n oo_y_lut_sdr_hdr_def\n");
+
+int cgain_sbtm[HDR2_CGAIN_LUT_SIZE] = {
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023
+};
+
+int cgain_sbtm_osd[HDR2_CGAIN_LUT_SIZE] = {
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
+	1023, 1023
 };
 
 static unsigned int eo_lut_28_sbtm[143] = {
@@ -206,59 +225,27 @@ static unsigned int eo_lut_28_sbtm[143] = {
 	231309901, 249155666, 268435456
 };
 
-int init_lut_sbtm[13] = {
-	0, 128, 256, 384, 512, 576, 640, 704, 768, 832, 896, 960, 1024
-};
+int init_sbtm_pbpct[5] = { 0 };
+int init_sbtm_pbnits[5] = { 0 };
+int sbtm_adj_y_arr[12] = { 4096 };
 
-/*
- * static struct aml_tmo_reg_sw_hdr tmo_reg_sbtm_hdrfunc = {
- * .pre_hdr10_tmo_alg = NULL,
- * };
- */
-
-static struct aml_tmo_reg_sw tmo_reg_sbtm = {
+struct aml_tmo_hdr_hdr_reg_sw tmo_hdr_hdr_reg = {
 	.tmo_en = 1,
-	.tmo_highlight = 185,
-	.tmo_light_th = 110,
-	.tmo_hist_th = 120,
-	.tmo_highlight_th1 = 70,
-	.tmo_highlight_th2 = 12,
-	.tmo_display_e = 700,
-	.tmo_middle_a = 102,
-	.tmo_middle_a_adj = 315,
-	.tmo_middle_b = 27,
-	.tmo_middle_s = 64,
-	.tmo_max_th1 = 50,
-	.tmo_middle_th = 500,
-	.tmo_thold1 = 300,
-	.tmo_thold2 = 30,
-	.tmo_thold3 = 100,
-	.tmo_thold4 = 250,
-	.tmo_max_th2 = 18,
-	.tmo_pnum_th = 5000,
-	.tmo_hl0 = 60,
-	.tmo_hl1 = 38,
-	.tmo_hl2 = 102,
-	.tmo_hl3 = 80,
-	.tmo_display_adj = 115,
-	.tmo_low_adj = 38,
-	.tmo_high_en = 2,
-	.tmo_high_adj1 = 13,
-	.tmo_high_adj2 = 77,
-	.tmo_high_maxdiff = 64,
-	.tmo_high_mindiff = 8,
-	.tmo_avg_th = 0,
-	.tmo_avg_adj = 150,
-	.tmo_alpha = 250,
-	.tmo_ratio = 870,
-	.tmo_max_th3 = -200,
-	.tmo_eo_lut = eo_lut_28_sbtm,
-	.tmo_oo_init_lut = init_lut_sbtm,
+	.tmo_highlight = 524,
+	.tmo_sc_hist_th = 682,
+	.tmo_oo_init_lut = eo_lut_28_sbtm,
+	.sbtm_pbpct = init_sbtm_pbpct,
+	.sbtm_pbnits = init_sbtm_pbnits,
+	.sbtm_numpb = 0,
+	.sbtm_frmpblimit = 0,
+	.signal_limit = 1,
+	.sbtm_pst_adj_en = 1,
+	.sbtm_pst_adj_thr = 500,
+	.sbtm_adj_point_y_arr = sbtm_adj_y_arr,
 
 	/*param for alg func*/
-	.w = 3840,
-	.h = 2160,
-	.pre_hdr10_tmo_alg = NULL,
+	.hdr_ogain_shift = 12,
+	.hdr_hist_sel = 0
 };
 
 static struct sbtm_info sbtmdb_reg = {
@@ -268,7 +255,7 @@ static struct sbtm_info sbtmdb_reg = {
 	.drdm_ind = 1,
 	.hgig_cat_drdm_sel = 0,
 	.use_hgig_drdm = 0,
-	.maxrgb = 1,
+	.maxrgb = 0,
 	.gamut = 0,
 	.red_x = 0x8a48,
 	.red_y = 0x3908,
@@ -295,7 +282,7 @@ static struct sbtm_info sbtmdb_reg = {
 };
 
 struct sbtmdb_tgt_parm sbtmdb_reg_tgt = {
-	{{0, 0}, {0, 0}, {0, 0}, {0, 0}}, 1000,
+	{{0, 0}, {0, 0}, {0, 0}, {0, 0}},
 	{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0},
 	0, 1000, 0};
 
@@ -308,33 +295,136 @@ struct vtem_sbtm_st sbtmem_reg = {
 	.frmpblimitint = 0x0,
 };
 
-u8 sbtm_hdr_process;
+/*sbtm params*/
+uint sbtm_max_display;  /* max_display for debug*/
 uint sbtmdb_auto_update = 1;/* sbtmdb update use edid info */
-uint sbtm_tmo_static;/* sbtm_tmo_static 0/1 dynamic/static */
-uint sbtm_en;/* sbtm_en enable/disable */
-uint cur_sbtm_mode = SBTM_MODE_OFF;
-uint sbtm_mode = SBTM_MODE_OFF;
-unsigned int hdr10_tmo_debug_sbtm;
-unsigned int tmo_alpha = 250;
+uint sbtm_sdr_hdr_scheme = SBTM_PROC_DTMO;  /* sbtm sdr2hdr scheme*/
+uint sbtm_hdr_hdr_scheme = SBTM_PROC_DTMO;  /* sbtm hdr2hdr scheme*/
 
-void sbtm_set_sbtm_enable(unsigned int enable)
+unsigned int user_sbtm_flag = 1;
+unsigned int user_sbtm_get(void)
 {
-	sbtm_en = enable;
+	return user_sbtm_flag;
 }
-EXPORT_SYMBOL(sbtm_set_sbtm_enable);
+
+void user_sbtm_set(unsigned int enable)
+{
+	user_sbtm_flag = enable;
+}
+
+uint sbtm_en;/* sbtm support 0:disable  1:grdm  2:drdm  3:grdm and drdm */
+module_param(sbtm_en, uint, 0664);
+MODULE_PARM_DESC(sbtm_en, "\n sbtm_en\n");
+
+unsigned int sbtm_mode_support_get(void)
+{
+	return sbtm_en;
+}
+
+void sbtm_mode_support_update(struct sbtm_info *sbtmdb_info)
+{
+	sbtm_en = SBTM_MODE_OFF;
+
+	if (sbtmdb_info->sbtm_support) {
+		if (sbtmdb_info->grdm_support && sbtmdb_info->drdm_ind)
+			sbtm_en = SBTM_MODE_ALL;
+		else if (sbtmdb_info->grdm_support)
+			sbtm_en = SBTM_MODE_GRDM;
+		else if (sbtmdb_info->drdm_ind)
+			sbtm_en = SBTM_MODE_DRDM;
+		else
+			sbtm_en = SBTM_MODE_OFF;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_en  update to %d\n", sbtm_en);
+	}
+}
+
+uint cur_sbtm_mode[VD_PATH_MAX];
+uint sbtm_mode = SBTM_MODE_OFF;
+
+unsigned int sbtm_mode_get(void)
+{
+	return sbtm_mode;
+}
 
 void sbtm_mode_set(uint mode)
 {
-	if (!sbtmdb_reg.drdm_ind && !sbtmdb_reg.grdm_support)
-		sbtm_mode = SBTM_MODE_OFF;
-	else if (sbtmdb_reg.drdm_ind && !sbtmdb_reg.grdm_support)
-		sbtm_mode = SBTM_MODE_DRDM;
-	else if (!sbtmdb_reg.drdm_ind && sbtmdb_reg.grdm_support)
-		sbtm_mode = SBTM_MODE_GRDM;
-	else
+	if (sbtm_en == SBTM_MODE_ALL ||
+		sbtm_en == mode ||
+		mode == SBTM_MODE_OFF) {
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "set sbtm mode from %d to %d\n", sbtm_mode, mode);
 		sbtm_mode = mode;
+	} else {
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "set sbtm mode fail, sbtm support %d but set %d\n",
+			sbtm_en, mode);
+	}
 }
-EXPORT_SYMBOL(sbtm_mode_set);
+
+void sbtm_mode_update(void)
+{
+	if (user_sbtm_flag) {
+		if (sbtm_en == SBTM_MODE_ALL || sbtm_en == SBTM_MODE_DRDM)
+			sbtm_mode = SBTM_MODE_DRDM;
+		else if (sbtm_en == SBTM_MODE_GRDM)
+			sbtm_mode = SBTM_MODE_GRDM;
+		else
+			sbtm_mode = SBTM_MODE_OFF;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm mode update to %d\n", sbtm_mode);
+	} else {
+		sbtm_mode = SBTM_MODE_OFF;
+	}
+}
+
+unsigned int alpha_change;
+unsigned int tmo_debug_sbtm;
+unsigned int sbtmdb_change[VD_PATH_MAX];
+
+unsigned int sbtmdb_change_get(enum vd_path_e vd_path)
+{
+	return sbtmdb_change[vd_path];
+}
+
+void sbtmdb_change_set(enum vd_path_e vd_path, unsigned int change)
+{
+	sbtmdb_change[vd_path] = change;
+}
+
+struct aml_tmo_hdr_hdr_reg_sw *tmo_hdr_hdr_reg_get(void)
+{
+	return &tmo_hdr_hdr_reg;
+}
+
+enum sbtm_hdr_proc_scheme sbtm_sdr_hdr_scheme_get(void)
+{
+	return sbtm_sdr_hdr_scheme;
+}
+
+void sbtm_sdr_hdr_scheme_set(enum sbtm_hdr_proc_scheme scheme)
+{
+	sbtm_sdr_hdr_scheme = scheme;
+}
+
+enum sbtm_hdr_proc_scheme sbtm_hdr_hdr_scheme_get(void)
+{
+	return sbtm_hdr_hdr_scheme;
+}
+
+void sbtm_hdr_hdr_scheme_set(enum sbtm_hdr_proc_scheme scheme)
+{
+	sbtm_hdr_hdr_scheme = scheme;
+}
+
+bool is_sbtm_tmo_dynamic(enum hdr_type_e source_format)
+{
+	bool ret = false;
+
+	if ((source_format == SDR_SOURCE &&
+		sbtm_sdr_hdr_scheme_get() == SBTM_PROC_DTMO) ||
+		source_format == HDR10_SOURCE){
+		ret = true;
+	}
+
+	return ret;
+}
 
 static int _get_maxl_e(int maxl)
 {
@@ -342,7 +432,7 @@ static int _get_maxl_e(int maxl)
 	int maxl_e = 0;
 
 	if (maxl > 10000) {
-		pr_sbtm_dbg("maxl over 10000. invalid maxl\n");
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "maxl over 10000. invalid maxl\n");
 		maxl_e = 1023;
 		return maxl_e;
 	}
@@ -354,81 +444,100 @@ static int _get_maxl_e(int maxl)
 		}
 	}
 
-	/* pr_sbtm_dbg("maxl = %d, maxl_e = %d\n", maxl, maxl_e);*/
+	/* pr_sbtm_dbg(PR_SBTM_EN_INFO, "maxl = %d, maxl_e = %d\n", maxl, maxl_e);*/
 
 	return maxl_e;
 }
 
-static int _get_maxl_8b(int maxl_e_8bit)
+static s64 _pqeotf(s64 e, unsigned int *eo_lut)
 {
-	int idx;
-	int maxl = 0;
+	int x = 0;
+	int e_mid = 0;
+	s64 o;
 
-	if (maxl_e_8bit < 130) {
-		pr_sbtm_dbg("maxl lower than 100, use 100 nits.\n");
-		maxl  = 100;
-		return maxl;
+	e_mid = e >> 6; //12bit
+
+	if (e_mid == 4096) {
+		o = eo_lut[142];
+	} else if (e_mid > 64) {
+		x = (e_mid >> 5) + 14; //to find e in which interval
+		if (x > 141)
+			x = 141;
+		e_mid = (e_mid >> 5) << 11 ;  //18bit
+		o = eo_lut[x] + ((((e - e_mid) * (eo_lut[x + 1] - eo_lut[x]) >> 5) + 32) >> 6);
+	} else {
+		x = e_mid >> 2; //to find e in which interval
+		e_mid = (e_mid >> 2) << 8;
+		o = eo_lut[x] + ((((e - e_mid) * (eo_lut[x + 1] - eo_lut[x]) >> 2) + 32) >> 6);
 	}
+	return o;
+}
 
-	idx = (maxl_e_8bit << 2) - 520;
-	if (idx >= 504)
-		idx = 504 - 1;
+static s64 _pqeo_multiply(unsigned int e)
+{
+	s64 o;
+	s64 o_out;
 
-	maxl = linear_e_to_o_sbtm[idx];
+	o = _pqeotf(e << 6, eo_lut_28_sbtm) >> 16;
+	o_out = o * 10000 * 1000 >> 12;
 
-	return maxl;
+	return o_out;
 }
 
 void sbtm_dest_primary_update(void)
 {
 	int i, j;
 	u8 gamut_type;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
+	unsigned int sbtm_mode = sbtm_mode_get();
 
 	if (sbtm_mode == SBTM_MODE_GRDM) {
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < 2; j++) {
-				sbtmdb_reg_tgt.dest_primary[i][j] =
+				tgt_parm->dest_primary[i][j] =
 					std_bt2020_prmy[(i + 2) % 3][j];
-				sbtmdb_reg_tgt.dest_primary[3][j] =
+				tgt_parm->dest_primary[3][j] =
 					std_bt2020_white_point[j];
 			}
 	} else if (sbtm_mode == SBTM_MODE_DRDM) {
-		gamut_type = sbtmdb_reg.gamut;
+		gamut_type = sbtmdb->gamut;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "gamut type = %d\n", sbtmdb->gamut);
 		switch (gamut_type) {
 		case SBTM_DRDM_GAMUT_SPECIFIED:
-			sbtmdb_reg_tgt.dest_primary[0][0] = sbtmdb_reg.red_x;
-			sbtmdb_reg_tgt.dest_primary[0][1] = sbtmdb_reg.red_y;
-			sbtmdb_reg_tgt.dest_primary[1][0] = sbtmdb_reg.green_x;
-			sbtmdb_reg_tgt.dest_primary[1][1] = sbtmdb_reg.green_y;
-			sbtmdb_reg_tgt.dest_primary[2][0] = sbtmdb_reg.blue_x;
-			sbtmdb_reg_tgt.dest_primary[2][1] = sbtmdb_reg.blue_y;
-			sbtmdb_reg_tgt.dest_primary[3][0] = sbtmdb_reg.white_x;
-			sbtmdb_reg_tgt.dest_primary[3][1] = sbtmdb_reg.white_y;
+			tgt_parm->dest_primary[0][0] = sbtmdb->red_x;
+			tgt_parm->dest_primary[0][1] = sbtmdb->red_y;
+			tgt_parm->dest_primary[1][0] = sbtmdb->green_x;
+			tgt_parm->dest_primary[1][1] = sbtmdb->green_y;
+			tgt_parm->dest_primary[2][0] = sbtmdb->blue_x;
+			tgt_parm->dest_primary[2][1] = sbtmdb->blue_y;
+			tgt_parm->dest_primary[3][0] = sbtmdb->white_x;
+			tgt_parm->dest_primary[3][1] = sbtmdb->white_y;
 			break;
 		case SBTM_DRDM_GAMUT_709:
 			for (i = 0; i < 3; i++)
 				for (j = 0; j < 2; j++) {
-					sbtmdb_reg_tgt.dest_primary[i][j] =
+					tgt_parm->dest_primary[i][j] =
 						std_bt709_prmy[(i + 2) % 3][j];
-					sbtmdb_reg_tgt.dest_primary[3][j] =
+					tgt_parm->dest_primary[3][j] =
 						std_bt709_white_point[j];
 				}
 			break;
 		case SBTM_DRDM_GAMUT_P3:
 			for (i = 0; i < 3; i++)
 				for (j = 0; j < 2; j++) {
-					sbtmdb_reg_tgt.dest_primary[i][j] =
+					tgt_parm->dest_primary[i][j] =
 						std_p3_primaries[(i + 2) % 3][j];
-					sbtmdb_reg_tgt.dest_primary[3][j] =
+					tgt_parm->dest_primary[3][j] =
 						std_p3_white_point[j];
 				}
 			break;
 		case SBTM_DRDM_GAMUT_2020:
 			for (i = 0; i < 3; i++)
 				for (j = 0; j < 2; j++) {
-					sbtmdb_reg_tgt.dest_primary[i][j] =
+					tgt_parm->dest_primary[i][j] =
 						std_bt2020_prmy[(i + 2) % 3][j];
-					sbtmdb_reg_tgt.dest_primary[3][j] =
+					tgt_parm->dest_primary[3][j] =
 						std_bt2020_white_point[j];
 				}
 			break;
@@ -436,22 +545,23 @@ void sbtm_dest_primary_update(void)
 			break;
 		}
 	}
-	pr_sbtm_dbg("%s: gamut type = %d.\n", __func__, sbtmdb_reg.gamut);
 }
 
 void sbtm_grdm_peaklum_update(void)
 {
-	if (sbtmdb_reg.grdm_support == SBTM_GRDM_SDR)
-		sbtmdb_reg_tgt.tgt_maxl = 300;
-	else if (sbtmdb_reg.grdm_support == SBTM_GRDM_HDR)
-		sbtmdb_reg_tgt.tgt_maxl = 1000;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
+
+	if (sbtmdb->grdm_support == SBTM_GRDM_SDR)
+		tgt_parm->frmpblimit = 300;
+	else if (sbtmdb->grdm_support == SBTM_GRDM_HDR)
+		tgt_parm->frmpblimit = 1000;
 	else
-		sbtmdb_reg_tgt.tgt_maxl = 300;
-	tmo_reg_sbtm.tmo_display_e = _get_maxl_e(sbtmdb_reg_tgt.tgt_maxl);
-/*
- * pr_sbtm_dbg("%s:tgt_maxl = %d, reg_display_e = %d\n",
- * __func__, sbtmdb_reg_tgt.tgt_maxl, tmo_reg_sbtm.tmo_display_e);
- */
+		tgt_parm->frmpblimit = 300;
+
+	if (sbtm_max_display)
+		tgt_parm->frmpblimit = sbtm_max_display;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "tgt_maxl = %d\n", tgt_parm->frmpblimit);
 }
 
 u32 sbtm_cal_pbpct(u32 p_exp, u32 p_mant)
@@ -477,140 +587,167 @@ u32 sbtm_cal_pbpct(u32 p_exp, u32 p_mant)
 
 void sbtm_pb_pct_nits_update(void)
 {
+	u8 use_hgig;
 	u8 hgig_sel;
 	int i;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
+	struct aml_tmo_hdr_hdr_reg_sw *sbtm_hdr_tmo_reg = tmo_hdr_hdr_reg_get();
 
-	if (sbtmdb_reg.use_hgig_drdm) {
-		hgig_sel = sbtmdb_reg.hgig_cat_drdm_sel;
+	use_hgig = sbtmdb->use_hgig_drdm;
+	hgig_sel = sbtmdb->hgig_cat_drdm_sel;
+
+	if (use_hgig) {
 		switch (hgig_sel) {
 		case SBTM_DRDM_HGIG_SEL_0:
-			sbtmdb_reg_tgt.numpb = 4;
-			sbtmdb_reg_tgt.pbpct[0] = sbtm_cal_pbpct(1, 0x08);
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(0xc0);
-			sbtmdb_reg_tgt.pbpct[1] = sbtm_cal_pbpct(1, 0x20);
-			sbtmdb_reg_tgt.pbnits[1] = _get_maxl_8b(0xb8);
-			sbtmdb_reg_tgt.pbpct[2] = sbtm_cal_pbpct(0, 0x08);
-			sbtmdb_reg_tgt.pbnits[2] = _get_maxl_8b(0xa7);
-			sbtmdb_reg_tgt.pbpct[3] = sbtm_cal_pbpct(0, 0x10);
-			sbtmdb_reg_tgt.pbnits[3] = _get_maxl_8b(0x9f);
-			sbtmdb_reg_tgt.pbpct[4] = 10000;
-			sbtmdb_reg_tgt.pbnits[4] = _get_maxl_8b(0x94);
-			sbtmdb_reg_tgt.minnits = 0;
+			tgt_parm->numpb = 4;
+			tgt_parm->pbpct[0] = sbtm_cal_pbpct(1, 0x08);
+			tgt_parm->pbnits[0] = div64_s64(_pqeo_multiply(0xc0 << 4), 1000);
+			tgt_parm->pbpct[1] = sbtm_cal_pbpct(1, 0x20);
+			tgt_parm->pbnits[1] = div64_s64(_pqeo_multiply(0xb8 << 4), 1000);
+			tgt_parm->pbpct[2] = sbtm_cal_pbpct(0, 0x08);
+			tgt_parm->pbnits[2] = div64_s64(_pqeo_multiply(0xa7 << 4), 1000);
+			tgt_parm->pbpct[3] = sbtm_cal_pbpct(0, 0x10);
+			tgt_parm->pbnits[3] = div64_s64(_pqeo_multiply(0x9f << 4), 1000);
+			tgt_parm->pbpct[4] = 10000;
+			tgt_parm->pbnits[4] = div64_s64(_pqeo_multiply(0x94 << 4), 1000);
+			tgt_parm->minnits = 0;
 			break;
 		case SBTM_DRDM_HGIG_SEL_1:
-			sbtmdb_reg_tgt.numpb = 0;
-			sbtmdb_reg_tgt.pbpct[0] = 10000;
-			sbtmdb_reg_tgt.pbnits[0] = 600;
+			tgt_parm->numpb = 0;
+			tgt_parm->pbpct[0] = 10000;
+			tgt_parm->pbnits[0] = 600;
 			for (i = 1; i < 5; i++) {
-				sbtmdb_reg_tgt.pbpct[i] = 0;
-				sbtmdb_reg_tgt.pbnits[i] = 0;
+				tgt_parm->pbpct[i] = 0;
+				tgt_parm->pbnits[i] = 0;
 			}
-			sbtmdb_reg_tgt.minnits = 16;
+			tgt_parm->minnits = 100; // 0.1 nit * 1000
 			break;
 		case SBTM_DRDM_HGIG_SEL_2:
-			sbtmdb_reg_tgt.numpb = 1;
-			sbtmdb_reg_tgt.pbpct[0] = 1000;
-			sbtmdb_reg_tgt.pbnits[0] = 1000;
-			sbtmdb_reg_tgt.pbpct[1] = 10000;
-			sbtmdb_reg_tgt.pbnits[1] = 600;
+			tgt_parm->numpb = 1;
+			tgt_parm->pbpct[0] = 1000;
+			tgt_parm->pbnits[0] = 1000;
+			tgt_parm->pbpct[1] = 10000;
+			tgt_parm->pbnits[1] = 600;
 			for (i = 2; i < 5; i++) {
-				sbtmdb_reg_tgt.pbpct[i] = 0;
-				sbtmdb_reg_tgt.pbnits[i] = 0;
+				tgt_parm->pbpct[i] = 0;
+				tgt_parm->pbnits[i] = 0;
 			}
-			sbtmdb_reg_tgt.minnits = 16;
+			tgt_parm->minnits = 100; // 0.1 nit * 1000
 			break;
 		case SBTM_DRDM_HGIG_SEL_3:
-			sbtmdb_reg_tgt.numpb = 1;
-			sbtmdb_reg_tgt.pbpct[0] = 1000;
-			sbtmdb_reg_tgt.pbnits[0] = 4000;
-			sbtmdb_reg_tgt.pbpct[1] = 10000;
-			sbtmdb_reg_tgt.pbnits[1] = 600;
+			tgt_parm->numpb = 1;
+			tgt_parm->pbpct[0] = 1000;
+			tgt_parm->pbnits[0] = 4000;
+			tgt_parm->pbpct[1] = 10000;
+			tgt_parm->pbnits[1] = 600;
 			for (i = 2; i < 5; i++) {
-				sbtmdb_reg_tgt.pbpct[i] = 0;
-				sbtmdb_reg_tgt.pbnits[i] = 0;
+				tgt_parm->pbpct[i] = 0;
+				tgt_parm->pbnits[i] = 0;
 			}
-			sbtmdb_reg_tgt.minnits = 16;
+			tgt_parm->minnits = 100; // 0.1 nit * 1000
 			break;
 		case SBTM_DRDM_HGIG_SEL_4:
-			sbtmdb_reg_tgt.numpb = 1;
-			sbtmdb_reg_tgt.pbpct[0] = 1000;
-			sbtmdb_reg_tgt.pbnits[0] = 10000;
-			sbtmdb_reg_tgt.pbpct[1] = 10000;
-			sbtmdb_reg_tgt.pbnits[1] = 600;
+			tgt_parm->numpb = 1;
+			tgt_parm->pbpct[0] = 1000;
+			tgt_parm->pbnits[0] = 10000;
+			tgt_parm->pbpct[1] = 10000;
+			tgt_parm->pbnits[1] = 600;
 			for (i = 2; i < 5; i++) {
-				sbtmdb_reg_tgt.pbpct[i] = 0;
-				sbtmdb_reg_tgt.pbnits[i] = 0;
+				tgt_parm->pbpct[i] = 0;
+				tgt_parm->pbnits[i] = 0;
 			}
-			sbtmdb_reg_tgt.minnits = 0;
+			tgt_parm->minnits = 0;
 			break;
 		}
 	} else {
-		if (sbtmdb_reg.p0_exp == 0 &&
-			sbtmdb_reg.p0_mant == 0 &&
-			sbtmdb_reg.peak_bright_p0 == 0) {
-			sbtmdb_reg_tgt.numpb = 0;
-			sbtmdb_reg_tgt.pbpct[0] = 10000;
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(sbtmdb_reg.peak_bright_100);
-			sbtmdb_reg_tgt.minnits = 16;
-		} else if (sbtmdb_reg.p1_exp == 0 &&
-			sbtmdb_reg.p1_mant == 0 &&
-			sbtmdb_reg.peak_bright_p1 == 0) {
-			sbtmdb_reg_tgt.numpb = 1;
-			sbtmdb_reg_tgt.pbpct[0] =
-				sbtm_cal_pbpct(sbtmdb_reg.p0_exp, sbtmdb_reg.p0_mant);
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(sbtmdb_reg.peak_bright_p0);
-			sbtmdb_reg_tgt.pbpct[1] = 10000;
-			sbtmdb_reg_tgt.pbnits[1] = _get_maxl_8b(sbtmdb_reg.peak_bright_100);
-			sbtmdb_reg_tgt.minnits = sbtmdb_reg.min_bright_10;
-		} else if (sbtmdb_reg.p2_exp == 0 &&
-			sbtmdb_reg.p2_mant == 0 &&
-			sbtmdb_reg.peak_bright_p2 == 0) {
-			sbtmdb_reg_tgt.numpb = 2;
-			sbtmdb_reg_tgt.pbpct[0] =
-				sbtm_cal_pbpct(sbtmdb_reg.p1_exp, sbtmdb_reg.p1_mant);
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(sbtmdb_reg.peak_bright_p1);
-			sbtmdb_reg_tgt.pbpct[1] =
-				sbtm_cal_pbpct(sbtmdb_reg.p0_exp, sbtmdb_reg.p0_mant);
-			sbtmdb_reg_tgt.pbnits[1] = _get_maxl_8b(sbtmdb_reg.peak_bright_p0);
-			sbtmdb_reg_tgt.pbpct[2] = 10000;
-			sbtmdb_reg_tgt.pbnits[2] = _get_maxl_8b(sbtmdb_reg.peak_bright_100);
-			sbtmdb_reg_tgt.minnits = sbtmdb_reg.min_bright_10;
-		} else if (sbtmdb_reg.p3_exp == 0 &&
-			sbtmdb_reg.p3_mant == 0 &&
-			sbtmdb_reg.peak_bright_p3 == 0) {
-			sbtmdb_reg_tgt.numpb = 3;
-			sbtmdb_reg_tgt.pbpct[0] =
-				sbtm_cal_pbpct(sbtmdb_reg.p2_exp, sbtmdb_reg.p2_mant);
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(sbtmdb_reg.peak_bright_p2);
-			sbtmdb_reg_tgt.pbpct[1] =
-				sbtm_cal_pbpct(sbtmdb_reg.p1_exp, sbtmdb_reg.p1_mant);
-			sbtmdb_reg_tgt.pbnits[1] = _get_maxl_8b(sbtmdb_reg.peak_bright_p1);
-			sbtmdb_reg_tgt.pbpct[2] =
-				sbtm_cal_pbpct(sbtmdb_reg.p0_exp, sbtmdb_reg.p0_mant);
-			sbtmdb_reg_tgt.pbnits[2] = _get_maxl_8b(sbtmdb_reg.peak_bright_p0);
-			sbtmdb_reg_tgt.pbpct[3] = 10000;
-			sbtmdb_reg_tgt.pbnits[3] = _get_maxl_8b(sbtmdb_reg.peak_bright_100);
-			sbtmdb_reg_tgt.minnits = sbtmdb_reg.min_bright_10;
-		} else {
-			sbtmdb_reg_tgt.numpb = 4;
-			sbtmdb_reg_tgt.pbpct[0] =
-				sbtm_cal_pbpct(sbtmdb_reg.p3_exp, sbtmdb_reg.p3_mant);
-			sbtmdb_reg_tgt.pbnits[0] = _get_maxl_8b(sbtmdb_reg.peak_bright_p3);
-			sbtmdb_reg_tgt.pbpct[1] =
-				sbtm_cal_pbpct(sbtmdb_reg.p2_exp, sbtmdb_reg.p2_mant);
-			sbtmdb_reg_tgt.pbnits[1] = _get_maxl_8b(sbtmdb_reg.peak_bright_p2);
-			sbtmdb_reg_tgt.pbpct[2] =
-				sbtm_cal_pbpct(sbtmdb_reg.p1_exp, sbtmdb_reg.p1_mant);
-			sbtmdb_reg_tgt.pbnits[2] = _get_maxl_8b(sbtmdb_reg.peak_bright_p1);
-			sbtmdb_reg_tgt.pbpct[3] =
-				sbtm_cal_pbpct(sbtmdb_reg.p0_exp, sbtmdb_reg.p0_mant);
-			sbtmdb_reg_tgt.pbnits[3] = _get_maxl_8b(sbtmdb_reg.peak_bright_p0);
-			sbtmdb_reg_tgt.pbpct[4] = 10000;
-			sbtmdb_reg_tgt.pbnits[4] = _get_maxl_8b(sbtmdb_reg.peak_bright_100);
-			sbtmdb_reg_tgt.minnits = sbtmdb_reg.min_bright_10;
+		for (i = 0; i < 5; i++) {
+			tgt_parm->pbpct[i] = 0;
+			tgt_parm->pbnits[i] = 0;
 		}
+		if (sbtmdb->p0_exp == 0 &&
+			sbtmdb->p0_mant == 0 &&
+			sbtmdb->peak_bright_p0 == 0) {
+			tgt_parm->numpb = 0;
+			tgt_parm->pbpct[0] = 10000;
+			tgt_parm->pbnits[0] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_100 << 4), 1000);
+		} else if (sbtmdb->p1_exp == 0 &&
+			sbtmdb->p1_mant == 0 &&
+			sbtmdb->peak_bright_p1 == 0) {
+			tgt_parm->numpb = 1;
+			tgt_parm->pbpct[0] =
+				sbtm_cal_pbpct(sbtmdb->p0_exp, sbtmdb->p0_mant);
+			tgt_parm->pbnits[0] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p0 << 4), 1000);
+			tgt_parm->pbpct[1] = 10000;
+			tgt_parm->pbnits[1] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_100 << 4), 1000);
+		} else if (sbtmdb->p2_exp == 0 &&
+			sbtmdb->p2_mant == 0 &&
+			sbtmdb->peak_bright_p2 == 0) {
+			tgt_parm->numpb = 2;
+			tgt_parm->pbpct[0] =
+				sbtm_cal_pbpct(sbtmdb->p1_exp, sbtmdb->p1_mant);
+			tgt_parm->pbnits[0] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p1 << 4), 1000);
+			tgt_parm->pbpct[1] =
+				sbtm_cal_pbpct(sbtmdb->p0_exp, sbtmdb->p0_mant);
+			tgt_parm->pbnits[1] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p0 << 4), 1000);
+			tgt_parm->pbpct[2] = 10000;
+			tgt_parm->pbnits[2] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_100 << 4), 1000);
+		} else if (sbtmdb->p3_exp == 0 &&
+			sbtmdb->p3_mant == 0 &&
+			sbtmdb->peak_bright_p3 == 0) {
+			tgt_parm->numpb = 3;
+			tgt_parm->pbpct[0] =
+				sbtm_cal_pbpct(sbtmdb->p2_exp, sbtmdb->p2_mant);
+			tgt_parm->pbnits[0] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p2 << 4), 1000);
+			tgt_parm->pbpct[1] =
+				sbtm_cal_pbpct(sbtmdb->p1_exp, sbtmdb->p1_mant);
+			tgt_parm->pbnits[1] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p1 << 4), 1000);
+			tgt_parm->pbpct[2] =
+				sbtm_cal_pbpct(sbtmdb->p0_exp, sbtmdb->p0_mant);
+			tgt_parm->pbnits[2] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p0 << 4), 1000);
+			tgt_parm->pbpct[3] = 10000;
+			tgt_parm->pbnits[3] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_100 << 4), 1000);
+		} else {
+			tgt_parm->numpb = 4;
+			tgt_parm->pbpct[0] =
+				sbtm_cal_pbpct(sbtmdb->p3_exp, sbtmdb->p3_mant);
+			tgt_parm->pbnits[0] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p3 << 4), 1000);
+			tgt_parm->pbpct[1] =
+				sbtm_cal_pbpct(sbtmdb->p2_exp, sbtmdb->p2_mant);
+			tgt_parm->pbnits[1] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p2 << 4), 1000);
+			tgt_parm->pbpct[2] =
+				sbtm_cal_pbpct(sbtmdb->p1_exp, sbtmdb->p1_mant);
+			tgt_parm->pbnits[2] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p1 << 4), 1000);
+			tgt_parm->pbpct[3] =
+				sbtm_cal_pbpct(sbtmdb->p0_exp, sbtmdb->p0_mant);
+			tgt_parm->pbnits[3] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_p0 << 4), 1000);
+			tgt_parm->pbpct[4] = 10000;
+			tgt_parm->pbnits[4] =
+				div64_s64(_pqeo_multiply(sbtmdb->peak_bright_100 << 4), 1000);
+		}
+		tgt_parm->minnits = _pqeo_multiply(sbtmdb->min_bright_10);
 	}
-	pr_sbtm_dbg("%s: sbtmdb_reg_tgt.numpb = %d\n", __func__, sbtmdb_reg_tgt.numpb);
+
+	sbtm_hdr_tmo_reg->sbtm_numpb = tgt_parm->numpb;
+	for (i = 0; i <= tgt_parm->numpb; i++) {
+		sbtm_hdr_tmo_reg->sbtm_pbpct[i] = tgt_parm->pbpct[i];
+		sbtm_hdr_tmo_reg->sbtm_pbnits[i] = tgt_parm->pbnits[i];
+	}
+	//pr_sbtm_dbg(PR_SBTM_EN_INFO, "numpb = %d\n",tgt_parm->numpb);
 }
 
 u32 sbtm_cal_frmpblimit(s32 pbright, s32 *pbpct, s32 *pbnits, u8 numpb)
@@ -620,7 +757,7 @@ u32 sbtm_cal_frmpblimit(s32 pbright, s32 *pbpct, s32 *pbnits, u8 numpb)
 	s64 frmpblilit = 0;
 	u32 frmpblilitint = 0;
 
-	if (pbright < pbpct[0]) {
+	if (pbright < pbpct[0] || numpb == 0) {
 		frmpblilit = pbnits[0];
 	} else {
 		for (pbidx = 1; pbidx <= numpb; pbidx++)
@@ -637,94 +774,162 @@ u32 sbtm_cal_frmpblimit(s32 pbright, s32 *pbpct, s32 *pbnits, u8 numpb)
 	return frmpblilitint;
 }
 
-u32 sbtm_cal_pbright(u32 *hist, u32 pb_numpb)
+u32 sbtm_cal_pbright(u32 *hist, int peak_bright_100)
 {
 	u32 pbright = 10000;
 	int pb_th;
-	int i, thidx;
+	int i;
+	int pb_pos = 0;
+	u64 el_ofst = 0;
 	u64 sum_light = 0;
 	u64 exceedlight = 0;
+	int peak_100 = peak_bright_100 << 2; //10bit e val
 
 	if (!hist) {
-		pr_sbtm_dbg("%s: HDR hist is NULL, pbright is pct 100.\n", __func__);
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS,
+			"%s: HDR hist is NULL, pbright is pct 100.\n", __func__);
 		return pbright;
 	}
 
-	pb_th = _get_maxl_e(pb_numpb);
-	thidx = pb_th >> 3;
+	pb_th = peak_100; //10bit e val
+	if (tmo_debug_sbtm)
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "%s: pb_th = %d\n", __func__, pb_th);
+	if (!sbtm_use_max_rgb() && get_cur_signal_type_limited()) {
+		// sel 1 means y hist at e domain
+		pb_th = pb_th * (940 - 64) / 1023 + 64; // 10bit e val limited
+		pb_th = (pb_th > 1023) ? 1023 : pb_th;
+	}
 
-	for (i = 0; i < 128; i++) {
+	for (i = 127; i >= 0; i--) {
 		sum_light += hist[i];
-		if (i > thidx)
+		if (i * 8 > pb_th) {
 			exceedlight += hist[i];
+			pb_pos = i;
 		}
-	pbright = (u32)div64_u64(exceedlight * 10000 + (sum_light >> 1), sum_light);
-
-	if (hdr10_tmo_debug_sbtm)
-		pr_sbtm_dbg("%s: pbright = %d, sum_light = %lld, exceedlight = %lld.\n",
-			__func__, pbright, sum_light, exceedlight);
+	}
+	el_ofst = pb_pos > 0 ? (((u64)hist[pb_pos - 1] * (pb_pos * 8 - pb_th)) >> 3) : 0;
+	pbright = (u32)div64_u64((exceedlight + el_ofst) * 10000 + (sum_light >> 1), sum_light);
+	if (tmo_debug_sbtm)
+		pr_sbtm_dbg(PR_SBTM_EN_INFO,
+			"%s:peak_100=%d,pb_th=%d,pbright=%u,sum_light=%lld,exceedlight=%lld,el_ofst=%lld,pb_pos=%d\n",
+			__func__, peak_100, pb_th, pbright,
+			sum_light, exceedlight, el_ofst, pb_pos);
 
 	return pbright;
 }
 
-void sbtm_drdm_frmpblimit_update(void)
+u32 sbtm_drdm_frmpblimit_cal(void)
 {
-	u32 frmpblilit;
-	u32 pbright = 10;
+	u32 frmlimit;
+	u32 pbright;
+	s32 *pbpct;
+	s32 *pbnits;
+	u8 numpb;
+	int peak_bright_100;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
 
-	if (sbtm_hdr_process) {
-		pbright = sbtm_cal_pbright(hdr_hist[15],
-			sbtmdb_reg_tgt.pbnits[sbtmdb_reg_tgt.numpb]);
-/* todo
- *		frmpblilit = sbtm_cal_frmpblimit(pbright, &sbtmdb_reg_tgt.pbpct[0],
- *		&sbtmdb_reg_tgt.pbnits[0], sbtmdb_reg_tgt.numpb);
- */
-		frmpblilit = sbtmdb_reg_tgt.pbnits[0];
-		if (hdr10_tmo_debug_sbtm)
-			pr_sbtm_dbg("%s: frmpblimit = %d.\n", __func__, frmpblilit);
-	} else {
-		frmpblilit = sbtmdb_reg_tgt.pbnits[0];
-	}
+	peak_bright_100 = sbtmdb->peak_bright_100;
+	pbpct = tgt_parm->pbpct;
+	pbnits = tgt_parm->pbnits;
+	numpb = tgt_parm->numpb;
+	pbright = sbtm_cal_pbright(hdr_hist[15], peak_bright_100);
+	frmlimit = sbtm_cal_frmpblimit(pbright, pbpct, pbnits, numpb);
 
-	sbtmdb_reg_tgt.frmpblimit = frmpblilit;
-	tmo_reg_sbtm.tmo_display_e = _get_maxl_e(sbtmdb_reg_tgt.frmpblimit);
+	if (sbtm_max_display)
+		frmlimit = sbtm_max_display;
+
+	pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "frmlimit=%d\n", frmlimit);
+
+	return frmlimit;
 }
 
-void sbtm_peak_lum_update(void)
+void sbtm_drdm_frmpblimit_update(void)
 {
-	if (sbtm_mode == SBTM_MODE_GRDM) {
-		sbtm_grdm_peaklum_update();
-	} else if (sbtm_mode == SBTM_MODE_DRDM) {
-		sbtm_drdm_frmpblimit_update();
-	} else {
-		sbtmdb_reg_tgt.tgt_maxl = 0;
-		sbtmdb_reg_tgt.frmpblimit = 0;
-		tmo_reg_sbtm.tmo_display_e = _get_maxl_e(1000);
-	}
+	u32 frmpblimit;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+	enum sbtm_hdr_proc_scheme hdr_scheme = sbtm_hdr_hdr_scheme_get();
+	struct aml_tmo_hdr_hdr_reg_sw *sbtm_hdr_tmo_reg = tmo_hdr_hdr_reg_get();
+
+	if (hdr_scheme == SBTM_PROC_DTMO)
+		frmpblimit = sbtm_hdr_tmo_reg->sbtm_frmpblimit;
+	else
+		frmpblimit = sbtm_drdm_frmpblimit_cal();
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "hdr_scheme=%d,frmpblimit=%d\n", hdr_scheme, frmpblimit);
+
+	tgt_parm->frmpblimit = frmpblimit;
 }
 
 void sbtm_tgt_param_update(void)
 {
 	sbtm_dest_primary_update();
 	sbtm_pb_pct_nits_update();
-	sbtm_peak_lum_update();
+}
+
+void sbtm_sbtmdb_print(struct sbtm_info *sbtmdb_info)
+{
+	if (!sbtmdb_info) {
+		pr_sbtm_dbg(PR_SBTM_EN_ERRORS, "sbtmdb_info is NULL\n");
+		return;
+	}
+
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_support = %d\n", sbtmdb_info->sbtm_support);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "max_sbtm_ver = %d\n", sbtmdb_info->max_sbtm_ver);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "grdm_support = %d\n", sbtmdb_info->grdm_support);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "drdm_ind = %d\n", sbtmdb_info->drdm_ind);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "hgig_cat_drdm_sel = %d\n", sbtmdb_info->hgig_cat_drdm_sel);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "use_hgig_drdm = %d\n", sbtmdb_info->use_hgig_drdm);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "maxrgb = %d\n", sbtmdb_info->maxrgb);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "gamut = %d\n", sbtmdb_info->gamut);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_x = %d\n", sbtmdb_info->red_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_y = %d\n", sbtmdb_info->red_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_x = %d\n", sbtmdb_info->green_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_y = %d\n", sbtmdb_info->green_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_x = %d\n", sbtmdb_info->blue_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_y = %d\n", sbtmdb_info->blue_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_x = %d\n", sbtmdb_info->white_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_y = %d\n", sbtmdb_info->white_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "min_bright_10 = %d\n", sbtmdb_info->min_bright_10);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_100 = %d\n", sbtmdb_info->peak_bright_100);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_exp = %d\n", sbtmdb_info->p0_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_mant = %d\n", sbtmdb_info->p0_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p0 = %d\n", sbtmdb_info->peak_bright_p0);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_exp = %d\n", sbtmdb_info->p1_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_mant = %d\n", sbtmdb_info->p1_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p1 = %d\n", sbtmdb_info->peak_bright_p1);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_exp = %d\n", sbtmdb_info->p2_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_mant = %d\n", sbtmdb_info->p2_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p2 = %d\n", sbtmdb_info->peak_bright_p2);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_exp = %d\n", sbtmdb_info->p3_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_mant = %d\n", sbtmdb_info->p3_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p3 = %d\n", sbtmdb_info->peak_bright_p3);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "drdm_ind = %d\n", sbtmdb_info->drdm_ind);
 }
 
 void sbtm_sbtmdb_reg_set(struct sbtm_info *sbtmdb_info)
 {
 	if (!sbtmdb_info) {
-		pr_sbtm_dbg("sbtmdb_info is NULL\n");
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "sbtmdb_info is NULL\n");
 		return;
 	}
+	if (pr_sbtm_en & PR_SBTM_EN_DEBUG)
+		sbtm_sbtmdb_print(sbtmdb_info);
 
-	if (sbtmdb_info->sbtm_support == 0) {
-		sbtm_en = 0;
-		sbtm_mode = SBTM_MODE_OFF;
-		sbtmdb_reg.sbtm_support = 0;
-		return;
+	if (sbtmdb_reg.sbtm_support != sbtmdb_info->sbtm_support) {
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_support(%d,%d)\n",
+			sbtmdb_reg.sbtm_support, sbtmdb_info->sbtm_support);
+		sbtm_mode_support_update(sbtmdb_info);
+		//sbtm_mode_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
+
+		if (sbtmdb_info->sbtm_support == 0) {
+			pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "sbtm_support is 0\n");
+			sbtmdb_reg.sbtm_support = 0;
+			return;
+		}
 	}
 
-	sbtm_en = 1;
 	if (sbtmdb_reg.sbtm_support != sbtmdb_info->sbtm_support ||
 		sbtmdb_reg.max_sbtm_ver != sbtmdb_info->max_sbtm_ver ||
 		sbtmdb_reg.grdm_support != sbtmdb_info->grdm_support ||
@@ -755,38 +960,7 @@ void sbtm_sbtmdb_reg_set(struct sbtm_info *sbtmdb_info)
 		sbtmdb_reg.p3_exp != sbtmdb_info->p3_exp ||
 		sbtmdb_reg.p3_mant != sbtmdb_info->p3_mant ||
 		sbtmdb_reg.peak_bright_p3 != sbtmdb_info->peak_bright_p3) {
-		pr_sbtm_dbg("sbtm_support = %d\n", sbtmdb_info->sbtm_support);
-		pr_sbtm_dbg("max_sbtm_ver = %d\n", sbtmdb_info->max_sbtm_ver);
-		pr_sbtm_dbg("grdm_support = %d\n", sbtmdb_info->grdm_support);
-		pr_sbtm_dbg("drdm_ind = %d\n", sbtmdb_info->drdm_ind);
-		pr_sbtm_dbg("hgig_cat_drdm_sel = %d\n", sbtmdb_info->hgig_cat_drdm_sel);
-		pr_sbtm_dbg("use_hgig_drdm = %d\n", sbtmdb_info->use_hgig_drdm);
-		pr_sbtm_dbg("maxrgb = %d\n", sbtmdb_info->maxrgb);
-		pr_sbtm_dbg("gamut = %d\n", sbtmdb_info->gamut);
-		pr_sbtm_dbg("red_x = %d\n", sbtmdb_info->red_x);
-		pr_sbtm_dbg("red_y = %d\n", sbtmdb_info->red_y);
-		pr_sbtm_dbg("green_x = %d\n", sbtmdb_info->green_x);
-		pr_sbtm_dbg("green_y = %d\n", sbtmdb_info->green_y);
-		pr_sbtm_dbg("blue_x = %d\n", sbtmdb_info->blue_x);
-		pr_sbtm_dbg("blue_y = %d\n", sbtmdb_info->blue_y);
-		pr_sbtm_dbg("white_x = %d\n", sbtmdb_info->white_x);
-		pr_sbtm_dbg("white_y = %d\n", sbtmdb_info->white_y);
-		pr_sbtm_dbg("min_bright_10 = %d\n", sbtmdb_info->min_bright_10);
-		pr_sbtm_dbg("peak_bright_100 = %d\n", sbtmdb_info->peak_bright_100);
-		pr_sbtm_dbg("p0_exp = %d\n", sbtmdb_info->p0_exp);
-		pr_sbtm_dbg("p0_mant = %d\n", sbtmdb_info->p0_mant);
-		pr_sbtm_dbg("peak_bright_p0 = %d\n", sbtmdb_info->peak_bright_p0);
-		pr_sbtm_dbg("p1_exp = %d\n", sbtmdb_info->p1_exp);
-		pr_sbtm_dbg("p1_mant = %d\n", sbtmdb_info->p1_mant);
-		pr_sbtm_dbg("peak_bright_p1 = %d\n", sbtmdb_info->peak_bright_p1);
-		pr_sbtm_dbg("p2_exp = %d\n", sbtmdb_info->p2_exp);
-		pr_sbtm_dbg("p2_mant = %d\n", sbtmdb_info->p2_mant);
-		pr_sbtm_dbg("peak_bright_p2 = %d\n", sbtmdb_info->peak_bright_p2);
-		pr_sbtm_dbg("p3_exp = %d\n", sbtmdb_info->p3_exp);
-		pr_sbtm_dbg("p3_mant = %d\n", sbtmdb_info->p3_mant);
-		pr_sbtm_dbg("peak_bright_p3 = %d\n", sbtmdb_info->peak_bright_p3);
-		pr_sbtm_dbg("drdm_ind = %d\n", sbtmdb_info->drdm_ind);
-
+		sbtm_sbtmdb_print(sbtmdb_info);
 		sbtmdb_reg.sbtm_support = sbtmdb_info->sbtm_support;
 		sbtmdb_reg.max_sbtm_ver = sbtmdb_info->max_sbtm_ver;
 		sbtmdb_reg.grdm_support = sbtmdb_info->grdm_support;
@@ -819,8 +993,8 @@ void sbtm_sbtmdb_reg_set(struct sbtm_info *sbtmdb_info)
 		sbtmdb_reg.peak_bright_p3 = sbtmdb_info->peak_bright_p3;
 
 		sbtm_tgt_param_update();
-	} else {
-		sbtm_peak_lum_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	}
 }
 
@@ -830,12 +1004,50 @@ void sbtm_sbtmdb_set(struct vinfo_s *vinfo)
 
 	sbtmdb = &vinfo->hdr_info.sbtm_info;
 	if (!sbtmdb) {
-		pr_sbtm_dbg("sbtm_info is NULL\n");
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "sbtmdb_info is NULL\n");
 		return;
 	}
 
 	if (sbtmdb_auto_update)
 		sbtm_sbtmdb_reg_set(sbtmdb);
+}
+
+struct sbtm_info *sbtm_sbtmdb_reg_get(void)
+{
+	return &sbtmdb_reg;
+}
+
+struct sbtmdb_tgt_parm *sbtm_sbtmdb_tgt_get(void)
+{
+	return &sbtmdb_reg_tgt;
+}
+
+bool sbtm_use_max_rgb(void)
+{
+	bool ret = false;
+
+	if (sbtm_mode_get() == SBTM_MODE_DRDM && sbtmdb_reg.maxrgb) {
+		ret = true;
+		pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "max_rgb is %d\n", ret);
+	}
+
+	return ret;
+}
+
+bool sbtm_min_limited(void)
+{
+	bool ret = true;
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
+	unsigned int sbtm_mode = sbtm_mode_get();
+
+	if ((sbtm_mode == SBTM_MODE_GRDM && sbtmdb->grdm_support == 1) ||
+		(sbtm_mode == SBTM_MODE_DRDM && sbtmdb->drdm_ind &&
+		sbtmdb->use_hgig_drdm == 1 && sbtmdb->hgig_cat_drdm_sel == 4) ||
+		(sbtm_mode == SBTM_MODE_DRDM && sbtmdb->drdm_ind &&
+		sbtmdb->use_hgig_drdm == 0 && sbtmdb->min_bright_10 < 0xff))
+		ret = false;
+
+	return ret;
 }
 
 /* -1: invalid osd index
@@ -895,24 +1107,36 @@ void unregister_osd_status_cb(void)
 }
 EXPORT_SYMBOL(unregister_osd_status_cb);
 
-void sbtm_send_sbtmem_pkt(struct vinfo_s *vinfo)
+void sbtm_send_sbtmem_pkt(struct vinfo_s *vinfo, int clear)
 {
 	struct vtem_sbtm_st *sbtmem = &sbtmem_reg;
+	struct sbtm_info *sbtmdb = sbtm_sbtmdb_reg_get();
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
 
-	if (!sbtm_en)
+	if (!sbtm_mode_support_get() && !clear)
 		return;
 
-	sbtmem->sbtm_mode = sbtm_mode;
-	if (sbtm_mode == SBTM_MODE_GRDM) {
-		sbtmem->grdm_min = sbtmdb_reg.grdm_support;
-		sbtmem->grdm_lum = sbtmdb_reg.grdm_support;
+	if (clear) {
+		memset(sbtmem, 0, sizeof(struct vtem_sbtm_st));
+		if (vinfo && vinfo->vout_device &&
+			vinfo->vout_device->fresh_tx_sbtm_pkt)
+			vinfo->vout_device->fresh_tx_sbtm_pkt(vinfo->vout_device->tx_instance,
+			NULL);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "fresh_tx_sbtm_pkt, NULL\n");
+		return;
+	}
+
+	sbtmem->sbtm_mode = sbtm_mode_get();
+	if (sbtmem->sbtm_mode == SBTM_MODE_GRDM) {
+		sbtmem->grdm_min = sbtmdb->grdm_support;
+		sbtmem->grdm_lum = sbtmdb->grdm_support;
 	} else {
 		sbtmem->grdm_min = 0;
 		sbtmem->grdm_lum = 0;
 	}
 
-	if (sbtm_mode == SBTM_MODE_DRDM)
-		sbtmem->frmpblimitint = sbtmdb_reg_tgt.frmpblimit;
+	if (sbtmem->sbtm_mode == SBTM_MODE_DRDM)
+		sbtmem->frmpblimitint = tgt_parm->frmpblimit;
 	else
 		sbtmem->frmpblimitint = 0;
 
@@ -922,41 +1146,163 @@ void sbtm_send_sbtmem_pkt(struct vinfo_s *vinfo)
 		vinfo->vout_device->fresh_tx_sbtm_pkt)
 		vinfo->vout_device->fresh_tx_sbtm_pkt(vinfo->vout_device->tx_instance, sbtmem);
 
-	/*pr_sbtm_dbg("%s: fresh_tx_sbtm_pkt.\n", __func__);*/
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "fresh_tx_sbtm_pkt\n");
 }
 EXPORT_SYMBOL(sbtm_send_sbtmem_pkt);
 
-/*
- * struct aml_tmo_reg_sw_hdr *sbtm_tmo_param_get(void)
- * {
- * return &tmo_reg_sbtm_hdrfunc;
- * };
- * EXPORT_SYMBOL(sbtm_tmo_param_get);
- * void sbtm_hdr10_tmo_gen_data(int metadata_lum_e, u32 *oo_gain)
- * {
- * struct aml_tmo_reg_sw_hdr *pre_tmo_reg;
- * pre_tmo_reg = sbtm_tmo_param_get();
- * if (!pre_tmo_reg->pre_hdr10_tmo_alg)
- * pr_sbtm_dbg("%s: hdr10_tmo alg func is NULL\n", __func__);
- * else
- * tmo_reg_sbtm_hdrfunc.pre_hdr10_tmo_alg(&tmo_reg_sbtm,
- * oo_gain, hdr_hist[15], metadata_lum_e);
- * }
- */
-
-void sbtm_tmo_alg_sdr2hdr(uint lum_tgr, int *oolut)
+int scene_change_detect(int *hdr_hist, u32 sc_th)
 {
-	int i = 0;
+	int i;
+	u32 hist_diff;
+	u32 diff;
+	u32 sum = 0;
+	int sumshft;
+	int norm14;
+	int ret; /*ret=1: scn change; ret=0: blend*/
+	static int pre_hist[128] = {0};
+	u32 sc_hist_th = sc_th;
 
-	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
-		oo_lut[i] = (512 * lum_tgr + (10000 >> 1)) / 10000;
-	memcpy(oolut, oo_lut, sizeof(int) * HDR2_OOTF_LUT_SIZE);
+	if (!hdr_hist) {
+		if (tmo_debug_sbtm)
+			pr_info("hdr hist null.\n");
+		return 0;
+	}
+
+	hist_diff = 0;
+	for (i = 0; i < 128; i++) {
+		sum += hdr_hist[i];
+		diff = (hdr_hist[i] > pre_hist[i]) ? (hdr_hist[i] - pre_hist[i]) :
+			(pre_hist[i] - hdr_hist[i]);
+		hist_diff += diff;
+
+		pre_hist[i] = hdr_hist[i];
+	}
+
+	if (sum == 0) {
+		if (tmo_debug_sbtm)
+			pr_info("sum = 0, no hist\n");
+		return 0;
+	}
+
+	sumshft =
+		(sum >= (1 << 24)) ? 8 :
+		(sum >= (1 << 22)) ? 6 :
+		(sum >= (1 << 20)) ? 4 :
+		(sum >= (1 << 18)) ? 2 :
+		(sum >= (1 << 16)) ? 0 :
+		(sum >= (1 << 14)) ? -2 :
+		(sum >= (1 << 12)) ? -4 :
+		(sum >= (1 << 10)) ? -6 :
+		(sum >= (1 << 8)) ? -8 :
+		(sum >= (1 << 6)) ? -10 :
+		(sum >= (1 << 4)) ? -12 : -16;
+
+	if (sumshft >= 0)
+		norm14 = (1 << 30) / (sum >> sumshft);
+	else if (sumshft > -16)
+		norm14 = (1 << (30 + sumshft)) / sum;
+	else
+		norm14 = 1 << 14;
+
+	if (sumshft >= 0)
+		hist_diff = ((hist_diff >> sumshft) * norm14 + (1 << 13)) >> 14;
+	else
+		hist_diff = (((hist_diff << (-sumshft)) * norm14) + (1 << 13)) >> 14;
+
+	/*normalize to 10bit*/
+	hist_diff >>= 6;
+	if (hist_diff > sc_hist_th)
+		ret = 1;
+	else
+		ret = 0;
+
+	if (tmo_debug_sbtm)
+		pr_info("sum=0x%x, hist_diff=%d, sc_hist_th=%d, ret=%d\n",
+			sum, hist_diff, sc_hist_th, ret);
+
+	memcpy(pre_hist, hdr_hist, sizeof(int) * 128);
+
+	return ret;
 }
 
-void sbtm_tmo_alg_hdr2hdr_static(struct vinfo_s *vinfo, uint lum_tgr, int *oolut)
+void tmo_alg_sdr2hdr_static(uint lum_tgr, int *oolut)
 {
 	int i = 0;
-	int metadate_maxl = 1000;
+	int maxl = 10000;
+	u32 lum = lum_tgr;
+
+	/* liner gain */
+	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+		oolut[i] = (OO_COEF * lum + (maxl >> 1)) / maxl;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "lum = %d, oo_lut[10] = %d\n", lum, oolut[10]);
+}
+
+void tmo_alg_sdr2hdr_dynamic(int *oolut, int *cgain, int hist_flag)
+{
+	struct aml_tmo_reg_sw *pre_tmo_reg;
+	u32 oo_lut1[HDR2_OOTF_LUT_SIZE];
+
+	pre_tmo_reg = tmo_fw_param_get();
+	if (pre_tmo_reg->pre_hdr10_tmo_alg)
+		hdr10_tmo_gen(oo_lut, cgain_lut, oo_lut1, HDR_MODE_SDR2HDR10_SR_MODE, hist_flag);
+	else
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "pre_hdr10_tmo_alg is NULL\n");
+
+	memcpy(oolut, oo_lut, sizeof(int) * HDR2_OOTF_LUT_SIZE);
+	memcpy(cgain, cgain_lut, sizeof(int) * HDR2_CGAIN_LUT_SIZE);
+}
+
+void sbtm_tmo_sdr2hdr_proc(int *oolut, int *cgain, int hist_flag)
+{
+	int i = 0;
+	u32 tgt_lum;
+	enum sbtm_hdr_proc_scheme scheme = sbtm_sdr_hdr_scheme_get();
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+
+	if (hist_flag) {
+		tgt_lum = sbtm_drdm_frmpblimit_cal();
+		tgt_parm->frmpblimit = tgt_lum;
+		pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "cal tgt_lum=%d\n", tgt_lum);
+	} else {
+		tgt_lum = tgt_parm->frmpblimit;
+		pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "get tgt_lum=%d\n", tgt_lum);
+	}
+	switch (scheme) {
+	case SBTM_PROC_LINER:
+		/* scheme 0 liner */
+		tmo_alg_sdr2hdr_static(tgt_lum, oolut);
+		break;
+	case SBTM_PROC_DTMO:
+		/* scheme 1 dynamic */
+		tmo_alg_sdr2hdr_dynamic(oolut, cgain, hist_flag);
+		break;
+	case SBTM_PROC_SPECIFIC:
+		/* scheme 2  Y adjust*/
+		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+			oolut[i] = oo_y_lut_sdr_hdr_def[i];
+		break;
+	case SBTM_PROC_DEBUG:
+		/* scheme 3 force lut*/
+		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+			oolut[i] = oo_y_lut_dbg[i];
+		break;
+	default:
+		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+			oolut[i] = oo_y_lut_sdr_hdr_def[i];
+		break;
+	}
+
+	if (scheme != SBTM_PROC_DTMO)
+		for (i = 0; i < HDR2_CGAIN_LUT_SIZE; i++)
+			cgain[i] = 1023;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "scheme=%d. tgt_lum=%u\n", scheme, tgt_lum);
+}
+
+void tmo_alg_hdr2hdr_static(struct vinfo_s *vinfo, u32 lum_tgt, int *oolut)
+{
+	int i = 0;
+	u32 metadate_maxl = 1000;
+
 	struct master_display_info_s *p = NULL;
 
 	if (vinfo->master_display_info.present_flag) {
@@ -965,154 +1311,142 @@ void sbtm_tmo_alg_hdr2hdr_static(struct vinfo_s *vinfo, uint lum_tgr, int *oolut
 	}
 
 	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
-		oo_lut[i] = (64 * lum_tgr + (metadate_maxl >> 1)) / metadate_maxl;
-	pr_sbtm_dbg("%s: hdr2hdr_tmo convert OK.  metadate_maxl = %d, lum_tgr = %d, oo_lut[10] = %d\n",
-		__func__, metadate_maxl, lum_tgr, oo_lut[10]);
-
+		oo_lut[i] = (OO_COEF * lum_tgt + (metadate_maxl >> 1)) / metadate_maxl;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "hdr2hdr_tmo convert OK.lum_tgt=%d\n", lum_tgt);
 	memcpy(oolut, oo_lut, sizeof(int) * HDR2_OOTF_LUT_SIZE);
 }
 
-static s64 _pqeotf(s64 e, unsigned int *eo_lut)
+void tmo_alg_hdr2hdr_dynamic(int *oolut, int *cgain, int hist_flag)
 {
-	int x = 0;
-	int e_mid = 0;
-	s64 o;
+	struct aml_tmo_reg_sw *pre_tmo_reg;
+	u32 oo_lut1[HDR2_OOTF_LUT_SIZE];
 
-	e_mid = e >> 6; //12bit
+	pre_tmo_reg = tmo_fw_param_get();
+	if (pre_tmo_reg->pre_hdr10_tmo_alg)
+		hdr10_tmo_gen(oo_lut, cgain_lut, oo_lut1, HDR_MODE_HDR102HDR10_SR_MODE, hist_flag);
+	else
+		pr_sbtm_dbg(PR_SBTM_EN_WARNINGS, "pre_hdr10_tmo_alg is NULL\n");
 
-	if (e_mid == 4096) {
-		o = eo_lut[142];
-	} else if (e_mid > 64) {
-		x = (e_mid >> 5) + 14; //to find e in which interval
-		if (x > 141)
-			x = 141;
-		e_mid = (e_mid >> 5) << 11 ;  //18bit
-		o = eo_lut[x] + ((((e - e_mid) * (eo_lut[x + 1] - eo_lut[x]) >> 5) + 32) >> 6);
-	} else {
-		x = e_mid >> 2; //to find e in which interval
-		e_mid = (e_mid >> 2) << 8;
-		o = eo_lut[x] + ((((e - e_mid) * (eo_lut[x + 1] - eo_lut[x]) >> 2) + 32) >> 6);
-	}
-	return o;
+	memcpy(oolut, oo_lut, sizeof(int) * HDR2_OOTF_LUT_SIZE);
+	memcpy(cgain, cgain_lut, sizeof(int) * HDR2_CGAIN_LUT_SIZE);
 }
 
-void tmo_hdr_dynamic(struct aml_hdr_prm_s *hdr_prm_st,
-			struct aml_tmo_reg_sw *reg_tmo,
-			int w, int h, int *hist,
-			int protect_lum_e)
+void alg_hdr2hdr_dynamic_liner(struct aml_hdr_prm_s *hdr_prm_st,
+			struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
+			int *hist, u32 tgt_lum)
 {
 	s64 pix_num = 0;
 	s64 display_e;
 	s64 display_o;
-	s64 high_light_num_o;
 	s64 display_o_l;
-	s64 high_light_num_o_l;
-	s64 protect_e;
-	s64 protect_lum_o;
-	s64 protect_lum_o_l;
-	int i;
 	s64 high_light_num = 1020;
+	s64 high_light_num_o;
+	s64 high_light_num_o_l;
+	int i;
+	s64 hist_sum = 0;
+
+	for (i = 0; i < 128; i++)
+		hist_sum += hist[i];
 
 	for (i = 127; i >= 0; i--) {
-		if (pix_num < ((s64)w * h * reg_tmo->tmo_highlight >> 14)) {/*1% percent*/
-			if (hist[i] > (reg_tmo->tmo_hist_th << 10) && i > reg_tmo->tmo_light_th) {
-				high_light_num = high_light_num - 8;
-			} else {
-				pix_num = pix_num + hist[i];
-				high_light_num = high_light_num - 8;
-			}
+		pix_num = pix_num + hist[i];
+		if (pix_num < (hist_sum * hdr_reg_tmo->tmo_highlight >> 17)) {
+			 /*0.4% percent*/
+			high_light_num = high_light_num - 8;
 		}
 	}
 	if (high_light_num < 8)
 		high_light_num = 8;
+	if (tmo_debug_sbtm)
+		pr_info("high_light_num = %lld, hist_sum = %lld, highlight_th = %d\n",
+			high_light_num, hist_sum, hdr_reg_tmo->tmo_highlight);
 
-	protect_e = protect_lum_e;
-	high_light_num_o = _pqeotf((high_light_num << 8), reg_tmo->tmo_eo_lut) >> 16;
-	high_light_num_o_l = high_light_num_o * 10000 >> 12;
-	protect_lum_o =  _pqeotf((protect_e << 8), reg_tmo->tmo_eo_lut) >> 16;
-	protect_lum_o_l = protect_lum_o * 10000 >> 12;
-
-	if (hdr10_tmo_debug_sbtm) {
-		pr_info("high_light_num = %lld, high_light_num_o = %lld, high_light_num_o_l = %lld\n",
-			high_light_num, high_light_num_o, high_light_num_o_l);
-		pr_info("protect_lum_e = %lld, protect_lum_o = %lld, protect_lum_o_l = %lld\n",
-			protect_e, protect_lum_o, protect_lum_o_l);
+	if (!sbtm_use_max_rgb() && get_cur_signal_type_limited()) {
+		// case hdr_hist_select == 1  need limited->full
+		high_light_num = div64_s64((high_light_num - 64) * 1023, (940 - 64));
+		high_light_num = (high_light_num > 1023) ? 1023 : high_light_num;
 	}
+	if (tmo_debug_sbtm)
+		pr_info("high_light_num = %lld, max_rgb = %d, signal_limited=%d\n",
+			high_light_num, sbtm_use_max_rgb(), get_cur_signal_type_limited());
 
-	if (high_light_num < protect_e)
-		high_light_num = protect_e;
-
-	display_e = reg_tmo->tmo_display_e;
-	display_o = _pqeotf((display_e << 8), reg_tmo->tmo_eo_lut) >> 16;
-	high_light_num_o = _pqeotf((high_light_num << 8), reg_tmo->tmo_eo_lut) >> 16;
-
-	display_o_l = display_o * 10000 >> 12;
+	display_o_l = tgt_lum;
+	display_e = _get_maxl_e(tgt_lum);
+	display_o = div64_s64((display_o_l << 28) + (10000 >> 1), 10000) >> 16; //28bit>> 16bit
+	if (high_light_num < display_e)
+		high_light_num = display_e; /* do nothing source below target lum */
+	high_light_num_o = _pqeotf((high_light_num << 8), eo_lut_28_sbtm) >> 16;
 	high_light_num_o_l = high_light_num_o * 10000 >> 12;
-	if (hdr10_tmo_debug_sbtm) {
-		pr_info("final: high_light_num = %lld, high_light_num_o = %lld, high_light_num_o_l = %lld\n",
-			high_light_num, high_light_num_o, high_light_num_o_l);
-		pr_info("final: display_e = %lld, display_o = %lld, display_o_l = %lld\n",
-			display_e, display_o, display_o_l);
+	if (tmo_debug_sbtm) {
+		pr_info("high_light_num = %lld, high_light_num_o = %lld, high_light_num_o_l = %lld\n",
+			high_light_num, high_light_num_o >> 2, high_light_num_o_l);
+		pr_info("display_e = %lld, display_o = %lld, display_o_l = %lld\n",
+			display_e, display_o >> 2, display_o_l);
 	}
 
 	/* linear gain*/
-	for (i = 1; i < 149; i++)
+	for (i = 1; i < HDR2_OOTF_LUT_SIZE; i++) {
 		hdr_prm_st->hdr_ogain_lut[i] =
-			div64_s64(64 * display_o_l + (high_light_num_o_l >> 1), high_light_num_o_l);
+			div64_s64(OO_COEF * display_o, high_light_num_o);
+	}
+	hdr_prm_st->hdr_ogain_lut[0] = hdr_prm_st->hdr_ogain_lut[1];
 }
 
-void tmo_gen_hdr_dynamic(struct aml_tmo_reg_sw *reg_tmo,
-	u32 *oo_gain, int *hdr_hist, int protect_lum_e)
+void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
+	u32 *oo_gain)
 {
 	int i;
-	int w = reg_tmo->w;
-	int h = reg_tmo->h;
-	static int tmo_en_chg = 1;
 	struct aml_hdr_prm_s gain_tbl;
 	static int first_frame = 1;
-	static unsigned int blend_gain[149];
+	static unsigned int blend_gain[HDR2_OOTF_LUT_SIZE];
+	int alpha = 250;
+	int sc_flag = 0;
+	u32 tgt_lum;
+	u32 sc_th;
+	int *hist;
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
 
-	if (hdr10_tmo_debug_sbtm) {
+	if (chip_type_id == chip_s5)
+		hist = &s5_hdr_hist[15][0];
+	else
+		hist = &hdr_hist[15][0];
+
+	if (tmo_debug_sbtm) {
 		pr_info("%s --------hdr hist[128]---------\n", __func__);
 		for (i = 0; i < 8; i++)
 			pr_info("%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d,\n",
-			hdr_hist[i * 16 + 0], hdr_hist[i * 16 + 1],
-			hdr_hist[i * 16 + 2], hdr_hist[i * 16 + 3],
-			hdr_hist[i * 16 + 4], hdr_hist[i * 16 + 5],
-			hdr_hist[i * 16 + 6], hdr_hist[i * 16 + 7],
-			hdr_hist[i * 16 + 8], hdr_hist[i * 16 + 9],
-			hdr_hist[i * 16 + 10], hdr_hist[i * 16 + 11],
-			hdr_hist[i * 16 + 12], hdr_hist[i * 16 + 13],
-			hdr_hist[i * 16 + 14], hdr_hist[i * 16 + 15]);
+			hist[i * 16 + 0], hist[i * 16 + 1], hist[i * 16 + 2],
+			hist[i * 16 + 3], hist[i * 16 + 4], hist[i * 16 + 5],
+			hist[i * 16 + 6], hist[i * 16 + 7], hist[i * 16 + 8],
+			hist[i * 16 + 9], hist[i * 16 + 10], hist[i * 16 + 11],
+			hist[i * 16 + 12], hist[i * 16 + 13],
+			hist[i * 16 + 14], hist[i * 16 + 15]);
 	}
 
-	tmo_hdr_dynamic(&gain_tbl, reg_tmo, w, h, hdr_hist, protect_lum_e);
+	tgt_lum = tgt_parm->frmpblimit;
+	alg_hdr2hdr_dynamic_liner(&gain_tbl, hdr_reg_tmo, hist, tgt_lum);
 
 	if (first_frame)
 		memcpy(blend_gain, gain_tbl.hdr_ogain_lut, sizeof(int) * 149);
 
-	if (tmo_en_chg != reg_tmo->tmo_en) {
-		memcpy(blend_gain, gain_tbl.hdr_ogain_lut, sizeof(int) * 149);
-		tmo_en_chg = reg_tmo->tmo_en;
-		if (tmo_en_chg == 2)
-			tmo_alpha = 0;
-		else if (tmo_en_chg == 1)
-			tmo_alpha = reg_tmo->tmo_alpha;
-		pr_info("%s tmo_en_chg = %d\n", __func__, tmo_en_chg);
+	if (tmo_debug_sbtm)
+		pr_info("alpha = %d\n", alpha);
+	sc_th = hdr_reg_tmo->tmo_sc_hist_th;
+	sc_flag = scene_change_detect(hist, sc_th);
+	if (sc_flag || alpha_change) {
+		alpha = 0;
+		alpha_change  = 0;
 	}
+	if (tmo_debug_sbtm)
+		pr_info("sc_flag=%d, alpha_change=%d, alpha=%d\n", sc_flag, alpha_change, alpha);
 
-	for (i = 0; i < 149; i++) {
-		if (gain_tbl.hdr_ogain_lut[i] > 4095)
-			gain_tbl.hdr_ogain_lut[i] = 4095;
-		blend_gain[i] = (blend_gain[i] * tmo_alpha +
-			((1 << 8) - tmo_alpha) * gain_tbl.hdr_ogain_lut[i]) >> 8;
-		if (blend_gain[i] > 4095)
-			blend_gain[i] = 4095;
+	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++) {
+		blend_gain[i] = (blend_gain[i] * alpha +
+			((1 << 8) - alpha) * gain_tbl.hdr_ogain_lut[i]) >> 8;
 	}
-
 	memcpy(oo_gain, blend_gain, sizeof(int) * 149);
 
-	if (hdr10_tmo_debug_sbtm) {
+	if (tmo_debug_sbtm) {
 		pr_info("%s -----------ogain lut[149]----------\n", __func__);
 		for (i = 0; i < 14; i++)
 			pr_info("%d, %d, %d, %d, %d, %d, %d, %d, %d, %d,\n",
@@ -1140,67 +1474,68 @@ void tmo_gen_hdr_dynamic(struct aml_tmo_reg_sw *reg_tmo,
 			blend_gain[140], blend_gain[141], blend_gain[142],
 			blend_gain[143], blend_gain[144], blend_gain[145],
 			blend_gain[146], blend_gain[147], blend_gain[148]);
-		hdr10_tmo_debug_sbtm--;
+		tmo_debug_sbtm--;
 	}
 
 	first_frame = 0;
 }
 
-void tmo_alg_hdr_dynamic(struct aml_tmo_reg_sw *tmo_reg,
-	u32 *oo_gain, int *hist, int metadata_lum_e)
+void sbtm_tmo_hdr2hdr_proc(struct vinfo_s *vinfo, int *oolut, int *cgain)
 {
-	if (tmo_reg && tmo_reg->tmo_en)
-		tmo_gen_hdr_dynamic(tmo_reg, oo_gain, hist, metadata_lum_e);
-	else
-		pr_info("hdr10_tmo tmo_en is 0\n");
-}
+	int i = 0;
+	u32 tgt_lum;
+	struct aml_tmo_hdr_hdr_reg_sw *sbtm_hdr_tmo_reg = tmo_hdr_hdr_reg_get();
+	enum sbtm_hdr_proc_scheme scheme = sbtm_hdr_hdr_scheme_get();
+	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
 
-void sbtm_tmo_alg_hdr2hdr_dynamic(struct vinfo_s *vinfo, int *oolut)
-{
-	int metadata_l_e;
-	int *hist;
-
-/*
- * int metadate_l = 1000;
- * struct master_display_info_s *p = NULL;
- * if (vinfo->master_display_info.present_flag) {
- *     p = &vinfo->master_display_info;
- *     metadate_l = p->luminance[1];
- * }
- * metadata_l_e = sbtm_get_maxl_e(metadate_l);
- */
-
-	if (chip_type_id == chip_s5)
-		hist = &s5_hdr_hist[15][0];
-	else
-		hist = &hdr_hist[15][0];
-
-	metadata_l_e = _get_maxl_e(500);
-	tmo_alg_hdr_dynamic(&tmo_reg_sbtm, oo_lut, hist, metadata_l_e);
-	memcpy(oolut, oo_lut, sizeof(int) * HDR2_OOTF_LUT_SIZE);
+	tgt_lum = tgt_parm->frmpblimit;
+	switch (scheme) {
+	case SBTM_PROC_LINER:
+		/* scheme 0 static */
+		tmo_alg_hdr2hdr_static(vinfo, tgt_lum, oolut);
+		break;
+	case SBTM_PROC_DTMO:
+		/* scheme 1 dynamic */
+		tmo_alg_hdr2hdr_dynamic(oolut, cgain, 1);
+		break;
+	case SBTM_PROC_SPECIFIC:
+		/* scheme 2  */
+		tmo_alg_hdr2hdr_dynamic_liner(sbtm_hdr_tmo_reg, oolut);
+		break;
+	case SBTM_PROC_DEBUG:
+		/* scheme 3 force lut*/
+		for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++)
+			oolut[i] = oo_y_lut_dbg[i];
+		break;
+	default:
+		tmo_alg_hdr2hdr_dynamic_liner(sbtm_hdr_tmo_reg, oolut);
+		break;
+	}
+	if (scheme != SBTM_PROC_DTMO)
+		for (i = 0; i < HDR2_CGAIN_LUT_SIZE; i++)
+			cgain[i] = 1023;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "scheme=%d. tgt_lum=%u\n", scheme, tgt_lum);
 }
 
 int sbtm_grdm_tmo_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 			  struct vinfo_s *vinfo)
 {
 	int ret = 0;
+	int hist_flag = 1;
 
 	switch (sbtm_proc_sel) {
 	case SBTM_OSD_PROC:
+		hist_flag = 0;
+		sbtm_tmo_sdr2hdr_proc(oo_y_lut_sbtm_osd, cgain_sbtm_osd, hist_flag);
+		break;
 	case SBTM_SDR_HDR_PROC:
-		if (sbtmdb_reg.grdm_support == SBTM_GRDM_HDR)
-			memcpy(oo_y_lut_sbtm, oo_y_lut_sdr_hdr_1000_sbtm,
-				sizeof(int) * HDR2_OOTF_LUT_SIZE);
-		else
-			memcpy(oo_y_lut_sbtm, oo_y_lut_sdr_hdr_300_sbtm,
-				sizeof(int) * HDR2_OOTF_LUT_SIZE);
+		sbtm_grdm_peaklum_update();
+		sbtm_tmo_sdr2hdr_proc(oo_y_lut_sbtm, cgain_sbtm, hist_flag);
 		break;
 	case SBTM_HDR_HDR_PROC:
-		if (sbtm_tmo_static)
-			sbtm_tmo_alg_hdr2hdr_static(vinfo, sbtmdb_reg_tgt.tgt_maxl, oo_y_lut_sbtm);
-		else
-			sbtm_tmo_alg_hdr2hdr_dynamic(vinfo, oo_y_lut_sbtm);
-		sbtm_tmo_alg_sdr2hdr(sbtmdb_reg_tgt.tgt_maxl, oo_y_lut_sbtm_osd);
+		sbtm_grdm_peaklum_update();
+		sbtm_tmo_hdr2hdr_proc(vinfo, oo_y_lut_sbtm, cgain_sbtm);
+		//sbtm_tmo_sdr2hdr_proc(oo_y_lut_sbtm_osd, cgain_sbtm, 0);
 		break;
 	default:
 		break;
@@ -1212,28 +1547,24 @@ int sbtm_drdm_tmo_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 			  struct vinfo_s *vinfo)
 {
 	int ret = 0;
+	int hist_flag = 1;
 
 	switch (sbtm_proc_sel) {
 	case SBTM_OSD_PROC:
-		sbtm_drdm_frmpblimit_update();
-		sbtm_tmo_alg_sdr2hdr(sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm);
+		hist_flag = 0;
+		sbtm_tmo_sdr2hdr_proc(oo_y_lut_sbtm_osd, cgain_sbtm_osd, hist_flag);
 		break;
 	case SBTM_SDR_HDR_PROC:
-		sbtm_hdr_process = 0;
 		sbtm_drdm_frmpblimit_update();
-		sbtm_tmo_alg_sdr2hdr(sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm);
+		sbtm_tmo_sdr2hdr_proc(oo_y_lut_sbtm, cgain_sbtm, hist_flag);
 		break;
 	case SBTM_HDR_HDR_PROC:
-		sbtm_hdr_process = 1;
-		sbtm_drdm_frmpblimit_update();
-		if (sbtm_tmo_static)
-			sbtm_tmo_alg_hdr2hdr_static(vinfo,
-				sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm);
-		else
-			sbtm_tmo_alg_hdr2hdr_dynamic(vinfo, oo_y_lut_sbtm);
-		sbtm_tmo_alg_sdr2hdr(sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm_osd);
-		/*pr_sbtm_dbg("%s:lum_tgr = %d, oo_lut[80] = %d\n", */
-			/*__func__, sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm_osd[80]); */
+		if (sbtm_hdr_hdr_scheme_get() != SBTM_PROC_DTMO)
+			sbtm_drdm_frmpblimit_update();
+		sbtm_tmo_hdr2hdr_proc(vinfo, oo_y_lut_sbtm, cgain_sbtm);
+		//sbtm_tmo_alg_sdr2hdr(sbtmdb_reg_tgt.frmpblimit, oo_y_lut_sbtm_osd, 0);
+		if (sbtm_hdr_hdr_scheme_get() == SBTM_PROC_DTMO)
+			sbtm_drdm_frmpblimit_update();
 		break;
 	default:
 		break;
@@ -1241,15 +1572,14 @@ int sbtm_drdm_tmo_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 	return ret;
 }
 
-int sbtm_tmo_hdr2hdr_process(struct vinfo_s *vinfo)
+int sbtm_tmo_dynamic_process(struct vinfo_s *vinfo, enum sbtm_hdr_proc_sel sbtm_proc_sel)
 {
 	if (sbtm_mode == SBTM_MODE_DRDM)
-		sbtm_drdm_tmo_convert_proc(SBTM_HDR_HDR_PROC, vinfo);
+		sbtm_drdm_tmo_convert_proc(sbtm_proc_sel, vinfo);
 	else
-		sbtm_grdm_tmo_convert_proc(SBTM_HDR_HDR_PROC, vinfo);
+		sbtm_grdm_tmo_convert_proc(sbtm_proc_sel, vinfo);
 	return 0;
 }
-EXPORT_SYMBOL(sbtm_tmo_hdr2hdr_process);
 
 int sbtm_gamut_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 			  struct matrix_s *mtx,
@@ -1258,12 +1588,6 @@ int sbtm_gamut_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 	int i, j, ret;
 	s64 src_prmy[4][2];
 	s64 dest_prmy[4][2];
-
-	if (sbtm_mode == SBTM_MODE_OFF) {
-		mtx = NULL;
-		pr_sbtm_dbg("%s: mtx use NULL.\n", __func__);
-		return 0;
-	}
 
 	/*default 11bit*/
 	if (mtx_depth == 0)
@@ -1302,337 +1626,129 @@ int sbtm_gamut_convert_proc(enum sbtm_hdr_proc_sel sbtm_proc_sel,
 }
 
 int sbtm_convert_process(enum sbtm_hdr_proc_sel sbtm_proc_sel,
+			  enum hdr_type_e src_format,
 			  struct vinfo_s *vinfo,
 			  struct matrix_s *mtx,
 			  int mtx_depth)
 {
-	if (cur_sbtm_mode != sbtm_mode) {
-		cur_sbtm_mode = sbtm_mode;
-		sbtm_tgt_param_update();
-	}
-
-	pr_sbtm_dbg("%s: sbtm_proc_sel = %x, sbtm_mode = %d.\n",
-		__func__, sbtm_proc_sel, sbtm_mode);
+	if (sbtm_mode != SBTM_MODE_OFF)
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_proc_sel=%x,sbtm_mode=%d\n",
+			sbtm_proc_sel, sbtm_mode);
 
 	sbtm_gamut_convert_proc(sbtm_proc_sel, mtx, mtx_depth);
 
 	if (sbtm_mode == SBTM_MODE_DRDM) {
-		if (sbtm_proc_sel == SBTM_HDR_HDR_PROC &&
-			!sbtm_tmo_static)
-			pr_sbtm_dbg("DRDM HDR_HDR tmo_dynamic.\n");
+		if (sbtmdb_auto_update) {
+			sbtm_sdr_hdr_scheme_set(SBTM_PROC_DTMO);
+			sbtm_hdr_hdr_scheme_set(SBTM_PROC_DTMO);
+		}
+		if (is_sbtm_tmo_dynamic(src_format))
+			pr_sbtm_dbg(PR_SBTM_EN_INFO, "DRDM  tmo_dynamic.\n");
 		else
 			sbtm_drdm_tmo_convert_proc(sbtm_proc_sel, vinfo);
-	} else {
-		if (sbtm_proc_sel == SBTM_HDR_HDR_PROC &&
-			!sbtm_tmo_static)
-			pr_sbtm_dbg("GRDM HDR_HDR tmo_dynamic.\n");
+	} else if (sbtm_mode == SBTM_MODE_GRDM) {
+		if (sbtmdb_auto_update) {
+			sbtm_sdr_hdr_scheme_set(SBTM_PROC_DTMO);
+			sbtm_hdr_hdr_scheme_set(SBTM_PROC_DTMO);
+		}
+		if (is_sbtm_tmo_dynamic(src_format))
+			pr_sbtm_dbg(PR_SBTM_EN_INFO, "GRDM  tmo_dynamic.\n");
 		else
 			sbtm_grdm_tmo_convert_proc(sbtm_proc_sel, vinfo);
+	} else {
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_mode  off or invalid .\n");
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(sbtm_convert_process);
 
-void sbtm_tmo_change_param(int val)
+bool is_sbtm_on(void)
 {
-	if (val == 0 || val == 1) {
-		tmo_reg_sbtm.tmo_highlight = 185;
-		tmo_reg_sbtm.tmo_middle_a = 102;
-		tmo_reg_sbtm.tmo_low_adj = 38;
-		tmo_reg_sbtm.tmo_hl0 = 60;
-		tmo_reg_sbtm.tmo_hl1 = 38;
-		tmo_reg_sbtm.tmo_hl2 = 102;
-		tmo_reg_sbtm.tmo_hl3 = 80;
-	} else if (val == 2) {
-		tmo_reg_sbtm.tmo_highlight = 832;
-		tmo_reg_sbtm.tmo_middle_a = 80;
-		tmo_reg_sbtm.tmo_low_adj = 30;
-		tmo_reg_sbtm.tmo_hl0 = 40;
-		tmo_reg_sbtm.tmo_hl1 = 60;
-		tmo_reg_sbtm.tmo_hl2 = 80;
-		tmo_reg_sbtm.tmo_hl3 = 90;
-	}
-	pr_info("tmo_reg_sbtm changed from %d to %d\n", tmo_reg_sbtm.tmo_en, val);
+	bool ret = false;
+
+	if (sbtm_en && sbtm_mode)
+		ret = true;
+	//pr_sbtm_dbg(PR_SBTM_EN_DEBUG, "sbtm_en=%d, sbtm_mode=%d\n", sbtm_en, sbtm_mode);
+	return ret;
+}
+EXPORT_SYMBOL(is_sbtm_on);
+
+void sbtm_tmo_hdr_hdr_param_show(void)
+{
+	struct aml_tmo_hdr_hdr_reg_sw *hdr_hdr_reg = tmo_hdr_hdr_reg_get();
+	int i = 0;
+
+	pr_info("tmo_en = %d\n", hdr_hdr_reg->tmo_en);
+	pr_info("tmo_highlight = %d\n", hdr_hdr_reg->tmo_highlight);
+	pr_info("tmo_sc_hist_th = %d\n", hdr_hdr_reg->tmo_sc_hist_th);
+	pr_info("sbtm_pbpct = %d  %d  %d  %d  %d\n",
+		hdr_hdr_reg->sbtm_pbpct[0], hdr_hdr_reg->sbtm_pbpct[1],
+		hdr_hdr_reg->sbtm_pbpct[2], hdr_hdr_reg->sbtm_pbpct[3],
+		hdr_hdr_reg->sbtm_pbpct[4]);
+	pr_info("sbtm_pbnits = %d  %d  %d  %d  %d\n",
+		hdr_hdr_reg->sbtm_pbnits[0], hdr_hdr_reg->sbtm_pbnits[1],
+		hdr_hdr_reg->sbtm_pbnits[2], hdr_hdr_reg->sbtm_pbnits[3],
+		hdr_hdr_reg->sbtm_pbnits[4]);
+	pr_info("sbtm_numpb = %d\n", hdr_hdr_reg->sbtm_numpb);
+	pr_info("sbtm_frmpblimit = %d\n", hdr_hdr_reg->sbtm_frmpblimit);
+	pr_info("hdr_hist_sel = %d\n", hdr_hdr_reg->hdr_hist_sel);
+	pr_info("signal_limit = %d\n", hdr_hdr_reg->signal_limit);
+	pr_info("sbtm_pst_adj_en = %d\n", hdr_hdr_reg->sbtm_pst_adj_en);
+	pr_info("sbtm_pst_adj_thr = %d\n", hdr_hdr_reg->sbtm_pst_adj_thr);
+	for (i = 0; i < 12; i++)
+		pr_info("sbtm_adj_point_y_arr[%d] = %d\n",
+			i, hdr_hdr_reg->sbtm_adj_point_y_arr[i]);
 }
 
-void sbtm_hdr10_tmo_parm_show(void)
-{
-	pr_info("tmo_en = %d\n", tmo_reg_sbtm.tmo_en);
-	pr_info("reg_highlight = %d\n", tmo_reg_sbtm.tmo_highlight);
-	pr_info("reg_light_th = %d\n", tmo_reg_sbtm.tmo_light_th);
-	pr_info("reg_hist_th = %d\n", tmo_reg_sbtm.tmo_hist_th);
-	pr_info("reg_highlight_th1 = %d\n", tmo_reg_sbtm.tmo_highlight_th1);
-	pr_info("reg_highlight_th2 = %d\n", tmo_reg_sbtm.tmo_highlight_th2);
-	pr_info("reg_display_e = %d\n", tmo_reg_sbtm.tmo_display_e);
-	pr_info("reg_middle_a = %d\n", tmo_reg_sbtm.tmo_middle_a);
-	pr_info("reg_middle_a_adj = %d\n", tmo_reg_sbtm.tmo_middle_a_adj);
-	pr_info("reg_middle_b = %d\n", tmo_reg_sbtm.tmo_middle_b);
-	pr_info("reg_middle_s = %d\n", tmo_reg_sbtm.tmo_middle_s);
-	pr_info("reg_max_th1 = %d\n", tmo_reg_sbtm.tmo_max_th1);
-	pr_info("reg_middle_th = %d\n", tmo_reg_sbtm.tmo_middle_th);
-	pr_info("reg_thold2 = %d\n", tmo_reg_sbtm.tmo_thold2);
-	pr_info("reg_thold3 = %d\n", tmo_reg_sbtm.tmo_thold3);
-	pr_info("reg_thold4 = %d\n", tmo_reg_sbtm.tmo_thold4);
-	pr_info("reg_thold1 = %d\n", tmo_reg_sbtm.tmo_thold1);
-	pr_info("reg_max_th2 = %d\n", tmo_reg_sbtm.tmo_max_th2);
-	pr_info("reg_pnum_th = %d\n", tmo_reg_sbtm.tmo_pnum_th);
-	pr_info("reg_hl0 = %d\n", tmo_reg_sbtm.tmo_hl0);
-	pr_info("reg_hl1 = %d\n", tmo_reg_sbtm.tmo_hl1);
-	pr_info("reg_hl2 = %d\n", tmo_reg_sbtm.tmo_hl2);
-	pr_info("reg_hl3 = %d\n", tmo_reg_sbtm.tmo_hl3);
-	pr_info("reg_display_adj = %d\n", tmo_reg_sbtm.tmo_display_adj);
-	pr_info("reg_low_adj = %d\n", tmo_reg_sbtm.tmo_low_adj);
-	pr_info("reg_high_en = %d\n", tmo_reg_sbtm.tmo_high_en);
-	pr_info("reg_high_adj1 = %d\n", tmo_reg_sbtm.tmo_high_adj1);
-	pr_info("reg_high_adj2 = %d\n", tmo_reg_sbtm.tmo_high_adj2);
-	pr_info("reg_high_maxdiff = %d\n", tmo_reg_sbtm.tmo_high_maxdiff);
-	pr_info("reg_high_mindiff = %d\n", tmo_reg_sbtm.tmo_high_mindiff);
-	pr_info("reg_avg_th = %d\n", tmo_reg_sbtm.tmo_avg_th);
-	pr_info("reg_avg_adj = %d\n", tmo_reg_sbtm.tmo_avg_adj);
-	pr_info("tmo_alpha = %d\n", tmo_reg_sbtm.tmo_alpha);
-	pr_info("reg_ratio = %d\n", tmo_reg_sbtm.tmo_ratio);
-	pr_info("reg_max_th3 = %d\n", tmo_reg_sbtm.tmo_max_th3);
-	pr_info("tmo_oo_init_lut = %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
-		tmo_reg_sbtm.tmo_oo_init_lut[0], tmo_reg_sbtm.tmo_oo_init_lut[1],
-		tmo_reg_sbtm.tmo_oo_init_lut[2], tmo_reg_sbtm.tmo_oo_init_lut[3],
-		tmo_reg_sbtm.tmo_oo_init_lut[4], tmo_reg_sbtm.tmo_oo_init_lut[5],
-		tmo_reg_sbtm.tmo_oo_init_lut[6], tmo_reg_sbtm.tmo_oo_init_lut[7],
-		tmo_reg_sbtm.tmo_oo_init_lut[8], tmo_reg_sbtm.tmo_oo_init_lut[9],
-		tmo_reg_sbtm.tmo_oo_init_lut[10], tmo_reg_sbtm.tmo_oo_init_lut[11],
-		tmo_reg_sbtm.tmo_oo_init_lut[12]);
-}
-
-int sbtm_hdr10_tmo_dbg(char **parm)
+int sbtm_tmo_hdr_hdr_param_dbg(char **parm)
 {
 	long val = 0;
 	int idx = 0;
+	struct aml_tmo_hdr_hdr_reg_sw *hdr_hdr_reg = tmo_hdr_hdr_reg_get();
 
 	if (!strcmp(parm[1], "tmo_en"))  {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
-		if (tmo_reg_sbtm.tmo_en != (int)val)
-			sbtm_tmo_change_param((int)val);
-		tmo_reg_sbtm.tmo_en = (int)val;
-		pr_sbtm_dbg("tmo_en = %d\n", (int)val);
+		hdr_hdr_reg->tmo_en = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "tmo_en = %d\n", (int)val);
 		pr_info("\n");
 	} else if (!strcmp(parm[1], "highlight")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
-		tmo_reg_sbtm.tmo_highlight = (int)val;
-		pr_sbtm_dbg("reg_highlight = %d\n", (int)val);
+		hdr_hdr_reg->tmo_highlight = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "reg_highlight = %d\n", (int)val);
 		pr_info("\n");
-	} else if (!strcmp(parm[1], "light_th")) {
+	} else if (!strcmp(parm[1], "sc_hist_th")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
-		tmo_reg_sbtm.tmo_light_th = (int)val;
-		pr_sbtm_dbg("reg_light_th = %d\n", (int)val);
+		hdr_hdr_reg->tmo_sc_hist_th = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sc_hist_th = %d\n", (int)val);
 		pr_info("\n");
-	} else if (!strcmp(parm[1], "hist_th")) {
+	} else if (!strcmp(parm[1], "sbtm_pst_adj_en")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
-		tmo_reg_sbtm.tmo_hist_th = (int)val;
-		pr_sbtm_dbg("reg_hist_th = %d\n", (int)val);
+		hdr_hdr_reg->sbtm_pst_adj_en = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_pst_adj_en = %d\n", (int)val);
 		pr_info("\n");
-	} else if (!strcmp(parm[1], "highlight_th1")) {
+	} else if (!strcmp(parm[1], "sbtm_pst_adj_thr")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
-		tmo_reg_sbtm.tmo_highlight_th1 = (int)val;
-		pr_sbtm_dbg("reg_highlight_th1 = %d\n", (int)val);
+		hdr_hdr_reg->sbtm_pst_adj_thr = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_pst_adj_thr = %d\n", (int)val);
 		pr_info("\n");
-	} else if (!strcmp(parm[1], "highlight_th2")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_highlight_th2 = (int)val;
-		pr_sbtm_dbg("reg_highlight_th2 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "display_e")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_display_e = (int)val;
-		pr_sbtm_dbg("reg_display_e = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "middle_a")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_middle_a = (int)val;
-		pr_sbtm_dbg("reg_middle_a = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "middle_a_adj")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_middle_a_adj = (int)val;
-		pr_sbtm_dbg("reg_middle_a_adj = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "middle_b")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_middle_b = (int)val;
-		pr_sbtm_dbg("reg_middle_b = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "middle_s")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_middle_s = (int)val;
-		pr_sbtm_dbg("reg_middle_s = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "max_th1")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_max_th1 = (int)val;
-		pr_sbtm_dbg("reg_max_th1 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "max_th2")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_max_th2 = (int)val;
-		pr_sbtm_dbg("reg_max_th2 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "middle_th")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_middle_th = (int)val;
-		pr_sbtm_dbg("reg_middle_th = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "thold1")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_thold1 = (int)val;
-		pr_sbtm_dbg("reg_thold1 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "thold2")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_thold2 = (int)val;
-		pr_sbtm_dbg("reg_thold2 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "thold3")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_thold3 = (int)val;
-		pr_sbtm_dbg("reg_thold3 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "thold4")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_thold4 = (int)val;
-		pr_sbtm_dbg("reg_thold4 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "pnum_th")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_pnum_th = (int)val;
-		pr_sbtm_dbg("reg_pnum_th = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "hl0")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_hl0 = (int)val;
-		pr_sbtm_dbg("reg_hl0 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "hl1")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_hl1 = (int)val;
-		pr_sbtm_dbg("reg_hl1 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "hl2")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_hl2 = (int)val;
-		pr_sbtm_dbg("reg_hl2 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "hl3")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_hl3 = (int)val;
-		pr_sbtm_dbg("reg_hl3 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "display_adj")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_display_adj = (int)val;
-		pr_sbtm_dbg("reg_display_adj = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "low_adj")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_low_adj = (int)val;
-		pr_sbtm_dbg("reg_low_adj = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "high_en")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_high_en = (int)val;
-		pr_sbtm_dbg("reg_high_en = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "high_adj1")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_high_adj1 = (int)val;
-		pr_sbtm_dbg("reg_high_adj1 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "high_adj2")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_high_adj2 = (int)val;
-		pr_sbtm_dbg("reg_high_adj2 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "high_maxdiff")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_high_maxdiff = (int)val;
-		pr_sbtm_dbg("reg_high_maxdiff = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "high_mindiff")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_high_mindiff = (int)val;
-		pr_sbtm_dbg("reg_high_mindiff = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "avg_th")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_avg_th = (int)val;
-		pr_sbtm_dbg("reg_avg_th = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "avg_adj")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_avg_adj = (int)val;
-		pr_sbtm_dbg("reg_avg_adj = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "tmo_alpha")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_alpha = (int)val;
-		pr_sbtm_dbg("tmo_alpha = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "ratio")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_ratio = (int)val;
-		pr_sbtm_dbg("reg_ratio = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "max_th3")) {
-		if (kstrtol(parm[2], 10, &val) < 0)
-			goto error;
-		tmo_reg_sbtm.tmo_max_th3 = (int)val;
-		pr_sbtm_dbg("reg_max_th3 = %d\n", (int)val);
-		pr_info("\n");
-	} else if (!strcmp(parm[1], "tmo_oo_init_lut")) {
-		if (kstrtoul(parm[2], 10, &val) < 0)
+	} else if (!strcmp(parm[0], "sbtm_adj_point_y_arr")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
 			goto error;
 		idx = (int)val;
-		if (kstrtoul(parm[3], 10, &val) < 0)
+		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		if (idx > 12)
 			goto error;
-		tmo_reg_sbtm.tmo_oo_init_lut[idx] = (int)val;
-		pr_sbtm_dbg("tmo_oo_init_lut[%d] = %d\n", idx, (int)val);
+		hdr_hdr_reg->sbtm_adj_point_y_arr[idx] = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_adj_point_y_arr[%d] = %d\n", idx, (int)val);
 		pr_info("\n");
 	} else if (!strcmp(parm[1], "read_param")) {
-		sbtm_hdr10_tmo_parm_show();
+		sbtm_tmo_hdr_hdr_param_show();
 	}
 
 	return 0;
@@ -1648,59 +1764,58 @@ void sbtm_reg_show(void)
 	struct sbtmdb_tgt_parm *sbtmdb_tgt = &sbtmdb_reg_tgt;
 	struct vtem_sbtm_st *sbtmem_info = &sbtmem_reg;
 
-	pr_sbtm_dbg("SBTMDB info.\n");
-	pr_sbtm_dbg("sbtm_support = %d\n", sbtmdb_info->sbtm_support);
-	pr_sbtm_dbg("max_sbtm_ver = %d\n", sbtmdb_info->max_sbtm_ver);
-	pr_sbtm_dbg("grdm_support = %d\n", sbtmdb_info->grdm_support);
-	pr_sbtm_dbg("drdm_ind = %d\n", sbtmdb_info->drdm_ind);
-	pr_sbtm_dbg("hgig_cat_drdm_sel = %d\n", sbtmdb_info->hgig_cat_drdm_sel);
-	pr_sbtm_dbg("use_hgig_drdm = %d\n", sbtmdb_info->use_hgig_drdm);
-	pr_sbtm_dbg("maxrgb = %d\n", sbtmdb_info->maxrgb);
-	pr_sbtm_dbg("gamut = %d\n", sbtmdb_info->gamut);
-	pr_sbtm_dbg("red_x = %d\n", sbtmdb_info->red_x);
-	pr_sbtm_dbg("red_y = %d\n", sbtmdb_info->red_y);
-	pr_sbtm_dbg("green_x = %d\n", sbtmdb_info->green_x);
-	pr_sbtm_dbg("green_y = %d\n", sbtmdb_info->green_y);
-	pr_sbtm_dbg("blue_x = %d\n", sbtmdb_info->blue_x);
-	pr_sbtm_dbg("blue_y = %d\n", sbtmdb_info->blue_y);
-	pr_sbtm_dbg("white_x = %d\n", sbtmdb_info->white_x);
-	pr_sbtm_dbg("white_y = %d\n", sbtmdb_info->white_y);
-	pr_sbtm_dbg("min_bright_10 = %d\n", sbtmdb_info->min_bright_10);
-	pr_sbtm_dbg("peak_bright_100 = %d\n", sbtmdb_info->peak_bright_100);
-	pr_sbtm_dbg("p0_exp = %d\n", sbtmdb_info->p0_exp);
-	pr_sbtm_dbg("p0_mant = %d\n", sbtmdb_info->p0_mant);
-	pr_sbtm_dbg("peak_bright_p0 = %d\n", sbtmdb_info->peak_bright_p0);
-	pr_sbtm_dbg("p1_exp = %d\n", sbtmdb_info->p1_exp);
-	pr_sbtm_dbg("p1_mant = %d\n", sbtmdb_info->p1_mant);
-	pr_sbtm_dbg("peak_bright_p1 = %d\n", sbtmdb_info->peak_bright_p1);
-	pr_sbtm_dbg("p2_exp = %d\n", sbtmdb_info->p2_exp);
-	pr_sbtm_dbg("p2_mant = %d\n", sbtmdb_info->p2_mant);
-	pr_sbtm_dbg("peak_bright_p2 = %d\n", sbtmdb_info->peak_bright_p2);
-	pr_sbtm_dbg("p3_exp = %d\n", sbtmdb_info->p3_exp);
-	pr_sbtm_dbg("p3_mant = %d\n", sbtmdb_info->p3_mant);
-	pr_sbtm_dbg("peak_bright_p3 = %d\n", sbtmdb_info->peak_bright_p3);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "SBTMDB info.\n");
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_support = %d\n", sbtmdb_info->sbtm_support);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "max_sbtm_ver = %d\n", sbtmdb_info->max_sbtm_ver);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "grdm_support = %d\n", sbtmdb_info->grdm_support);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "drdm_ind = %d\n", sbtmdb_info->drdm_ind);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "hgig_cat_drdm_sel = %d\n", sbtmdb_info->hgig_cat_drdm_sel);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "use_hgig_drdm = %d\n", sbtmdb_info->use_hgig_drdm);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "maxrgb = %d\n", sbtmdb_info->maxrgb);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "gamut = %d\n", sbtmdb_info->gamut);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_x = %d\n", sbtmdb_info->red_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_y = %d\n", sbtmdb_info->red_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_x = %d\n", sbtmdb_info->green_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_y = %d\n", sbtmdb_info->green_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_x = %d\n", sbtmdb_info->blue_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_y = %d\n", sbtmdb_info->blue_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_x = %d\n", sbtmdb_info->white_x);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_y = %d\n", sbtmdb_info->white_y);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "min_bright_10 = %d\n", sbtmdb_info->min_bright_10);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_100 = %d\n", sbtmdb_info->peak_bright_100);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_exp = %d\n", sbtmdb_info->p0_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_mant = %d\n", sbtmdb_info->p0_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p0 = %d\n", sbtmdb_info->peak_bright_p0);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_exp = %d\n", sbtmdb_info->p1_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_mant = %d\n", sbtmdb_info->p1_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p1 = %d\n", sbtmdb_info->peak_bright_p1);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_exp = %d\n", sbtmdb_info->p2_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_mant = %d\n", sbtmdb_info->p2_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p2 = %d\n", sbtmdb_info->peak_bright_p2);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_exp = %d\n", sbtmdb_info->p3_exp);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_mant = %d\n", sbtmdb_info->p3_mant);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p3 = %d\n", sbtmdb_info->peak_bright_p3);
 
-	pr_sbtm_dbg("\nSBTMDB target info.\n");
-	pr_sbtm_dbg("tgt_maxl = %d\n", sbtmdb_tgt->tgt_maxl);
-	pr_sbtm_dbg("target_paimary: %d, %d, %d, %d, %d, %d, %d, %d\n",
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "\nSBTMDB target info.\n");
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "target_paimary: %d, %d, %d, %d, %d, %d, %d, %d\n",
 		sbtmdb_tgt->dest_primary[0][0], sbtmdb_tgt->dest_primary[0][1],
 		sbtmdb_tgt->dest_primary[1][0], sbtmdb_tgt->dest_primary[1][1],
 		sbtmdb_tgt->dest_primary[2][0], sbtmdb_tgt->dest_primary[2][1],
 		sbtmdb_tgt->dest_primary[3][0], sbtmdb_tgt->dest_primary[3][1]);
 	for (i = 0; i < 5; i++)
-		pr_sbtm_dbg("pbpct[%d] = %d, pbnits[%d] = %d\n",
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "pbpct[%d] = %d, pbnits[%d] = %d\n",
 			i, sbtmdb_tgt->pbpct[i], i, sbtmdb_tgt->pbnits[i]);
-	pr_sbtm_dbg("numpb = %d\n", sbtmdb_tgt->numpb);
-	pr_sbtm_dbg("frmpblimit = %d\n", sbtmdb_tgt->frmpblimit);
-	pr_sbtm_dbg("minnits = %d\n", sbtmdb_tgt->minnits);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "numpb = %d\n", sbtmdb_tgt->numpb);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "frmpblimit = %d\n", sbtmdb_tgt->frmpblimit);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "minnits = %d\n", sbtmdb_tgt->minnits);
 
-	pr_sbtm_dbg("\nSBTMEM info.\n");
-	pr_sbtm_dbg("sbtm_ver = %d\n", sbtmem_info->sbtm_ver);
-	pr_sbtm_dbg("sbtm_mode = %d\n", sbtmem_info->sbtm_mode);
-	pr_sbtm_dbg("sbtm_type = %d\n", sbtmem_info->sbtm_type);
-	pr_sbtm_dbg("grdm_min = %d\n", sbtmem_info->grdm_min);
-	pr_sbtm_dbg("grdm_lum = %d\n", sbtmem_info->grdm_lum);
-	pr_sbtm_dbg("frmpblimitint = %d\n", sbtmem_info->frmpblimitint);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "\nSBTMEM info.\n");
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_ver = %d\n", sbtmem_info->sbtm_ver);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_mode = %d\n", sbtmem_info->sbtm_mode);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_type = %d\n", sbtmem_info->sbtm_type);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "grdm_min = %d\n", sbtmem_info->grdm_min);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "grdm_lum = %d\n", sbtmem_info->grdm_lum);
+	pr_sbtm_dbg(PR_SBTM_EN_INFO, "frmpblimitint = %d\n", sbtmem_info->frmpblimitint);
 }
 
 int sbtm_sbtmdb_reg_dbg(char **parm)
@@ -1711,216 +1826,306 @@ int sbtm_sbtmdb_reg_dbg(char **parm)
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.sbtm_support = (int)val;
-		pr_sbtm_dbg("sbtm_support = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_support = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "max_sbtm_ver")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.max_sbtm_ver = (int)val;
-		pr_sbtm_dbg("max_sbtm_ver = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "max_sbtm_ver = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "grdm_support")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
+		if (sbtmdb_reg.grdm_support != (int)val &&
+			sbtm_hdr_hdr_scheme_get() == SBTM_PROC_SPECIFIC)
+			alpha_change = 1;
 		sbtmdb_reg.grdm_support = (int)val;
-		pr_sbtm_dbg("grdm_support = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "grdm_support = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "drdm_ind")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.drdm_ind = (int)val;
-		pr_sbtm_dbg("drdm_ind = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "drdm_ind = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "hgig_cat_drdm_sel")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.hgig_cat_drdm_sel = (int)val;
-		pr_sbtm_dbg("hgig_cat_drdm_sel = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "hgig_cat_drdm_sel = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "use_hgig_drdm")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.use_hgig_drdm = (int)val;
-		pr_sbtm_dbg("use_hgig_drdm = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "use_hgig_drdm = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "maxrgb")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.maxrgb = (int)val;
-		pr_sbtm_dbg("maxrgb = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "maxrgb = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "gamut")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.gamut = (int)val;
-		pr_sbtm_dbg("gamut = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "gamut = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "red_x")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.red_x = (int)val;
-		pr_sbtm_dbg("red_x = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_x = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "red_y")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.red_y = (int)val;
-		pr_sbtm_dbg("red_y = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "red_y = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "green_x")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.green_x = (int)val;
-		pr_sbtm_dbg("green_x = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_x = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "green_y")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.green_y = (int)val;
-		pr_sbtm_dbg("green_y = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "green_y = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "blue_x")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.blue_x = (int)val;
-		pr_sbtm_dbg("blue_x = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_x = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "blue_y")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.blue_y = (int)val;
-		pr_sbtm_dbg("blue_y = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "blue_y = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "white_x")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.white_x = (int)val;
-		pr_sbtm_dbg("white_x = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_x = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "white_y")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.white_y = (int)val;
-		pr_sbtm_dbg("white_y = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "white_y = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "min_bright_10")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.min_bright_10 = (int)val;
-		pr_sbtm_dbg("min_bright_10 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "min_bright_10 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "peak_bright_100")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.peak_bright_100 = (int)val;
-		pr_sbtm_dbg("peak_bright_100 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_100 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p0_exp")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p0_exp = (int)val;
-		pr_sbtm_dbg("p0_exp = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_exp = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p0_mant")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p0_mant = (int)val;
-		pr_sbtm_dbg("p0_mant = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p0_mant = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "peak_bright_p0")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.peak_bright_p0 = (int)val;
-		pr_sbtm_dbg("peak_bright_p0 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p0 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p1_exp")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p1_exp = (int)val;
-		pr_sbtm_dbg("p1_exp = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_exp = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p1_mant")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p1_mant = (int)val;
-		pr_sbtm_dbg("p1_mant = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p1_mant = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "peak_bright_p1")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.peak_bright_p1 = (int)val;
-		pr_sbtm_dbg("peak_bright_p1 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p1 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p2_exp")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p2_exp = (int)val;
-		pr_sbtm_dbg("p2_exp = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_exp = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p2_mant")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p2_mant = (int)val;
-		pr_sbtm_dbg("p2_mant = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p2_mant = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "peak_bright_p2")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.peak_bright_p2 = (int)val;
-		pr_sbtm_dbg("peak_bright_p2 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p2 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p3_exp")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p3_exp = (int)val;
-		pr_sbtm_dbg("p3_exp = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_exp = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "p3_mant")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.p3_mant = (int)val;
-		pr_sbtm_dbg("p3_mant = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "p3_mant = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "peak_bright_p3")) {
 		if (kstrtoul(parm[2], 10, &val) < 0)
 			goto error;
 		sbtmdb_reg.peak_bright_p3 = (int)val;
-		pr_sbtm_dbg("peak_bright_p3 = %d\n", (int)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "peak_bright_p3 = %d\n", (int)val);
 		pr_info("\n");
-		sbtm_tgt_param_update();
+		sbtmdb_change_set(VD1_PATH, 1);
+		sbtmdb_change_set(VD2_PATH, 1);
 	} else if (!strcmp(parm[1], "reg_dump")) {
 		sbtm_reg_show();
 	}
 
+	return 0;
+
+error:
+	return -1;
+}
+
+int sbtm_param_dbg(char **parm)
+{
+	long val = 0;
+
+	if (!strcmp(parm[1], "sbtm_max_display"))  {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		sbtm_max_display = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_max_display set to %d\n", (int)val);
+	} else if (!strcmp(parm[1], "sbtm_sdr_hdr_scheme"))  {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		sbtm_sdr_hdr_scheme_set((enum sbtm_hdr_proc_scheme)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_sdr_hdr_scheme set to %d\n", (int)val);
+	} else if (!strcmp(parm[1], "sbtm_hdr_hdr_scheme"))  {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		sbtm_hdr_hdr_scheme_set((enum sbtm_hdr_proc_scheme)val);
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtm_hdr_hdr_scheme set to %d\n", (int)val);
+	} else if (!strcmp(parm[1], "sbtmdb_auto_update"))  {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		sbtmdb_auto_update = (int)val;
+		pr_sbtm_dbg(PR_SBTM_EN_INFO, "sbtmdb_auto_update set to %d\n", (int)val);
+	} else if (!strcmp(parm[1], "mode")) {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		sbtm_mode_set(val);
+	} else if (!strcmp(parm[1], "en")) {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		user_sbtm_set(val);
+	} else if (!strcmp(parm[1], "tmo_debug_sbtm")) {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		tmo_debug_sbtm = val;
+	} else if (!strcmp(parm[1], "pr_sbtm_en")) {
+		if (kstrtoul(parm[2], 10, &val) < 0)
+			goto error;
+		pr_sbtm_en = val;
+	} else if (!strcmp(parm[1], "param_r")) {
+		pr_info("sbtm_en = %d\n", sbtm_en);
+		pr_info("sbtm_mode = %d\n", sbtm_mode);
+		pr_info("sbtm_max_display = %d\n", sbtm_max_display);
+		pr_info("sbtm_sdr_hdr_scheme = %d\n", sbtm_sdr_hdr_scheme);
+		pr_info("sbtm_hdr_hdr_scheme = %d\n", sbtm_hdr_hdr_scheme);
+		pr_info("sbtmdb_auto_update = %d\n", sbtmdb_auto_update);
+		pr_info("user_sbtm_flag = %d\n", user_sbtm_flag);
+		pr_info("tmo_debug_sbtm = %d\n", tmo_debug_sbtm);
+		pr_info("pr_sbtm_en = %d\n", pr_sbtm_en);
+	}
 	return 0;
 
 error:

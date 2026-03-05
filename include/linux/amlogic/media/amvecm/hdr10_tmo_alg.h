@@ -15,6 +15,10 @@
 #ifndef HDR10_TMO
 #define HDR10_TMO
 
+#define HDR_MODE_HDR102SDR_SR_MODE  0
+#define HDR_MODE_SDR2HDR10_SR_MODE  24
+#define HDR_MODE_HDR102HDR10_SR_MODE  25
+
 #ifndef MAX
 #define MAX(a, b) ({ \
 			const typeof(a) _a = a; \
@@ -133,6 +137,27 @@ struct aml_special_pattern_s {
 	int special_pattern_status;
 };
 
+struct aml_tmo_hdr_hdr_reg_sw {
+	int tmo_en;
+	int tmo_highlight;
+	int tmo_sc_hist_th;
+	int *tmo_oo_init_lut;
+	u32 *sbtm_pbpct;                /*pct * 10000*/
+	u32 *sbtm_pbnits;               /*lum*/
+	u32 sbtm_numpb;
+	u32 sbtm_frmpblimit;
+	u32 signal_limit;
+	u32 sbtm_pst_adj_en;
+	u32 sbtm_pst_adj_thr;
+	u32 *sbtm_adj_point_y_arr;
+
+	/*param for tmo alg*/
+	int w;
+	int h;
+	int hdr_ogain_shift;
+	int hdr_hist_sel;
+};
+
 struct aml_tmo_reg_sw {
 	int tmo_en;                             //u1
 	int tmo_display_e;                      //u10
@@ -242,8 +267,10 @@ struct aml_tmo_reg_sw {
 	int hdr_hist_sel;
 	void (*pre_hdr10_tmo_alg)(struct aml_hdr_prm_s *hdr_reg,
 		struct aml_tmo_reg_sw *tmo_reg,
+		struct aml_tmo_hdr_hdr_reg_sw *tmo_hdr_hdr_reg,
 		int *hdr_hist,
-		unsigned short *vpp_hist);
+		unsigned short *vpp_hist,
+		unsigned short hdr_convert_mode);
 	int (*fw_tmo_dbg)(char **parm);
 	int (*fw_tmo_dbg_show)(char *str);
 };

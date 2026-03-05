@@ -895,4 +895,8 @@ struct hdr_parameter_reg_s {
 #define AMDI_IOC_SET_DIM_CFG    _IOW(_DI_, 0xb5, unsigned char)
 #define AMDI_IOC_GET_DIM_CFG    _IOW(_DI_, 0xb6, unsigned char)
 
+/*SBTM MODE IOCTL command list*/
+#define AMVECM_IOC_G_SBTM_MODE			_IOR(_VE_CM, 0xb7, int)
+#define AMVECM_IOC_S_SBTM_MODE			_IOW(_VE_CM, 0xb8, int)
+#define AMVECM_IOC_S_SBTM_EN			_IOW(_VE_CM, 0xb9, int)
 #endif

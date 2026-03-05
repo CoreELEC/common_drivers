@@ -31,6 +31,7 @@
 static enum output_format_e target_format[VD_PATH_MAX];
 static enum hdr_type_e cur_source_format[VD_PATH_MAX];
 enum output_format_e output_format;
+uint sbtm_pkt_clear;
 
 /*bit4: force mode; bit 0-3 slice num */
 uint slice_set = 0x14;
@@ -2252,8 +2253,23 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 			}
 		}
 	} else if (cur_hdr_policy == 2 &&
-		   is_amdv_enable()) {
-		if (vd_path == VD1_PATH && !is_amdv_on()) {
+		is_amdv_enable()) {
+		pr_csc(1, "vd%d policy 2 && dv_enable, sbtm(%d), src_fmt:%d\n",
+			vd_path, is_sbtm_on(), source_format[vd_path]);
+		if (is_sbtm_on() && source_format[vd_path] != HDRTYPE_DOVI) {
+			sdr_process_mode[vd_path] = PROC_SDR_TO_HDR;
+			hdr_process_mode[vd_path] = PROC_BYPASS;
+			hdr10_plus_process_mode[vd_path] = PROC_HDRP_TO_HDR;
+			cuva_hdr_process_mode[vd_path] = PROC_CUVA_TO_HDR;
+			cuva_hlg_process_mode[vd_path] = PROC_CUVAHLG_TO_HDR;
+			//set_hdr_module_status(vd_path, HDR_MODULE_ON);
+			target_format[vd_path] = BT2020_PQ;
+			amdv_set_toggle_flag(0);
+			pr_csc(1, "sbtm mode use hdr core\n");
+		} else if (!is_sbtm_on() && cur_sbtm_mode[vd_path] && !is_amdv_on()) {
+			amdv_set_toggle_flag(1);
+			pr_csc(1, "sbtm mode off use dv core\n");
+		} else if (vd_path == VD1_PATH && !is_amdv_on()) {
 			if (source_format[vd_path] == HDRTYPE_DOVI ||
 			    ((source_format[vd_path] == HDRTYPE_HDR10 ||
 			    source_format[vd_path] == HDRTYPE_HDR10_709) &&
@@ -2378,6 +2394,7 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 		} else if (vd_path == VD2_PATH && is_amdv_on() && is_amdv_stb_mode()) {
 			if (!support_multi_core1()) {
 				/* vd2 *->ipt when vd1 dolby on */
+				pr_csc(1, "vd2 *->ipt when vd1 dolby on\n");
 				hdr_process_mode[vd_path] = PROC_MATCH;
 				hlg_process_mode[vd_path] = PROC_MATCH;
 				sdr_process_mode[vd_path] = PROC_MATCH;
@@ -2853,7 +2870,8 @@ out:
 	    is_amdv_stb_mode() &&
 	    vd_path == VD2_PATH &&
 	    is_video_layer_on(VD2_PATH) &&
-	    target_format[vd_path] != BT2100_IPT) {
+	    target_format[vd_path] != BT2100_IPT &&
+	   !is_sbtm_on()) {
 		if (!support_multi_core1()) {
 			pr_csc(4, "am_vecm: vd%d output mode not match to dolby %s.\n",
 			       vd_path + 1,
@@ -2917,6 +2935,8 @@ static void prepare_hdr_info(struct master_display_info_s *hdr_data,
 			     enum vd_path_e vd_path,
 			     enum hdr_type_e *source_type)
 {
+	struct sbtmdb_tgt_parm *tgt_parm = NULL;
+
 	hdr_data->present_flag = 0;
 	memset(hdr_data->primaries, 0, sizeof(hdr_data->primaries));
 	if (((hdr_data->features >> 16) & 0xff) == 9) {
@@ -2954,6 +2974,16 @@ static void prepare_hdr_info(struct master_display_info_s *hdr_data,
 			hdr_data->max_frame_average = 0;
 			hdr_data->luminance[0] = hdr_data->luminance[0] / 10000;
 			hdr_data->present_flag = 1;
+		}
+		if (is_sbtm_on() &&
+			(source_type[vd_path] == HDRTYPE_SDR ||
+			source_type[vd_path] == HDRTYPE_HDR10)) {
+			tgt_parm = sbtm_sbtmdb_tgt_get();
+			hdr_data->luminance[0] = tgt_parm->frmpblimit;
+			hdr_data->luminance[1] = tgt_parm->minnits * 10; /*step 0.0001*/
+			pr_csc(16, "lum max,min (%08x, %08x)\n",
+				hdr_data->luminance[0],
+				hdr_data->luminance[1]);
 		}
 	}
 }
@@ -3003,7 +3033,7 @@ void hdmi_packet_process(int signal_change_flag,
 			 enum hdr_type_e *source_type, enum vpp_index_e vpp_index)
 {
 	struct vout_device_s *vdev = NULL;
-	struct master_display_info_s send_info;
+	struct master_display_info_s send_info = {0};
 	enum output_format_e cur_output_format = output_format;
 	void (*f_h10)(void *tx_instance, unsigned int flag,
 		      struct hdr10plus_para *data);
@@ -3088,12 +3118,17 @@ void hdmi_packet_process(int signal_change_flag,
 	       sink_hdr_support(vinfo));
 
 	/*sbtm*/
-	/* if (vinfo->hdr_info.sbtm_info.sbtm_support) */
-	if (sbtm_en && sbtm_mode &&
+	if (sbtm_mode_support_get() && sbtm_mode_get() &&
 		(src_type[vd_path] == HDR10_SOURCE ||
-	    src_type[vd_path] == SDR_SOURCE) &&
-	    target_format[vd_path] == BT2020_PQ)
-		sbtm_send_sbtmem_pkt(vinfo);
+		src_type[vd_path] == SDR_SOURCE) &&
+		target_format[vd_path] == BT2020_PQ){
+		sbtm_send_sbtmem_pkt(vinfo, 0);
+		sbtm_pkt_clear = 1;
+		pr_csc(1, "fresh_tx_sbtm_pkt\n");
+	} else if (sbtm_pkt_clear) {
+		sbtm_send_sbtmem_pkt(vinfo, 1);
+		sbtm_pkt_clear = 0;
+	}
 
 	if (target_format[vd_path] == cur_output_format &&
 		cur_output_format != BT2020_PQ_DYNAMIC &&
@@ -3104,7 +3139,13 @@ void hdmi_packet_process(int signal_change_flag,
 		(cur_output_format == BT2020_PQ ||
 		cur_output_format == BT2020 ||
 		cur_output_format == BT709 ||
-		cur_output_format == BT_BYPASS))
+		cur_output_format == BT_BYPASS) &&
+		!(signal_change_flag & SIG_SRC_OUTPUT_CHG) &&
+		(!is_sbtm_on() ||
+		(is_sbtm_on() &&
+		src_type[vd_path] != HDR10_SOURCE &&
+		src_type[vd_path] != SDR_SOURCE)) &&
+		(cur_src_type[vd_path] == src_type[vd_path]))
 		return;
 
 	/* clean hdr10plus packet when switch to others */
@@ -3123,11 +3164,17 @@ void hdmi_packet_process(int signal_change_flag,
 	}
 
 	/* clean cuva packet when switch to others */
-	if (target_format[vd_path] != BT2020_PQ &&
-		target_format[vd_path] != BT2020YUV_BT2020RGB_CUVA &&
+	/* src levea cuva or monitor/receiver exit*/
+	if ((target_format[vd_path] != BT2020YUV_BT2020RGB_CUVA &&
+		cur_output_format == BT2020YUV_BT2020RGB_CUVA) ||
+		((cur_src_type[vd_path] == CUVA_HDR_SOURCE ||
+		cur_src_type[vd_path] == CUVA_HLG_SOURCE) &&
+		(src_type[vd_path] != CUVA_HDR_SOURCE &&
+		src_type[vd_path] != CUVA_HLG_SOURCE)) ||
+		((src_type[vd_path] == CUVA_HDR_SOURCE ||
+		src_type[vd_path] == CUVA_HLG_SOURCE) &&
 		cur_output_format == BT2020_PQ &&
-		(cur_src_type[vd_path] == CUVA_HDR_SOURCE ||
-		cur_src_type[vd_path] == CUVA_HLG_SOURCE)) {
+		target_format[vd_path] != BT2020_PQ))  {
 		if (get_cuva_pkt_delay()) {
 			update_cuva_pkt(false,
 				(void *)NULL,
@@ -3398,7 +3445,7 @@ void video_post_process_t7(struct vframe_s *vf,
 
 int get_s5_slice_mode(void)
 {
-	int slice_number = 1;
+	int slice_number;
 
 	if (is_meson_t3x_cpu())
 		return get_slice_num(0);
@@ -3553,6 +3600,7 @@ void video_post_process(struct vframe_s *vf,
 	unsigned int eo_sel = 0;
 	enum mtx_csc_e mtx_csc = MATRIX_NULL;
 	int s5_silce_mode = get_s5_slice_mode();
+	struct matrix_s *mtx = NULL;
 	struct matrix_s m = {
 		{0, 0, 0},
 		{
@@ -3627,92 +3675,91 @@ void video_post_process(struct vframe_s *vf,
 			hdr_proc(vf, OSD2_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
 			hdr_proc(vf, OSD3_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
 		} else if (get_prime_sl_hdr_process_policy(vf) == PRIME_SL_HDR_MODE_709_TO_2020) {
-			if (sbtm_en && sbtm_mode) {
-				pr_csc(12, "sbtm: vd_path = %d,PROC_SDR_TO_HDR.\n", vd_path);
-				sbtm_convert_process(SBTM_SDR_HDR_PROC, vinfo, &m, 11);
+			gamut_src_format = HDRTYPE_HDR10;
+			if (chip_cls_id == TV_CHIP) {
+				/*for tv chip need sd2hdr function*/
+				if (gamut_conv_enable) {
+					gamut_convert_process(vinfo, source_type,
+						vd_path, &m, 11, DEST_NONE);
+					bypass_gamut_wrapper = 1;
+				}
 				if (vd_path == VD1_PATH)
-					hdr_proc_multi_slices(vf, VD1_HDR, HDR_HDR, /* unsure */
-						vinfo, &m, s5_silce_mode, vpp_index);
+					hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
+						vinfo, gamut_conv_enable ? &m : NULL,
+						s5_silce_mode, vpp_index);
 				else
-					hdr_proc(vf, get_hdr_module(vd_path), HDR_HDR,
-						vinfo, &m, vpp_index);
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					if (!osd_gamut_conv_type) {
-						hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-					}
-				} else {
-					pr_csc(12, "sbtm: OSD, PROC_SDR_TO_HDR.\n");
-					sbtm_convert_process(SBTM_OSD_PROC,  vinfo, &m, 11);
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, &m, vpp_index);
+					hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
+						vinfo, gamut_conv_enable ? &m : NULL,
+						vpp_index);
+				if (!osd_gamut_conv_type) {
+					hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
+					hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
+					hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
 				}
 			} else {
-				gamut_src_format = HDRTYPE_HDR10;
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					if (gamut_conv_enable) {
-						gamut_convert_process(vinfo, source_type,
-							vd_path, &m, 11, DEST_NONE);
-						bypass_gamut_wrapper = 1;
+				if (sbtm_mode_support_get() && sbtm_mode_get()) {
+					pr_csc(12, "sbtm:vd%d,PROC_SDR_TO_HDR\n", vd_path + 1);
+					sbtm_convert_process(SBTM_SDR_HDR_PROC,
+						source_type[vd_path], vinfo, &m, 11);
+					mtx = &m;
+				} else  {
+					mtx = NULL;
+				}
+				if (vd_path == VD1_PATH)
+					hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
+						vinfo, mtx, s5_silce_mode, vpp_index);
+				else
+					hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
+						vinfo, mtx, vpp_index);
+				if (vd_path == VD1_PATH ||
+					(vd_path == VD2_PATH &&
+					is_video_layer_on(VD2_PATH) &&
+					!is_video_layer_on(VD1_PATH))) {
+					if (sbtm_mode_support_get() && sbtm_mode_get()) {
+						pr_csc(12, "sbtm:OSD,PROC_SDR_TO_HDR\n");
+						sbtm_convert_process(SBTM_OSD_PROC,
+							source_type[vd_path], vinfo, &m, 11);
+						mtx = &m;
+					} else {
+						mtx = NULL;
 					}
-					if (vd_path == VD1_PATH)
-						hdr_proc_multi_slices(vf, VD1_HDR, HDR_HDR,
-							vinfo, gamut_conv_enable ? &m : NULL,
-							s5_silce_mode, vpp_index);
-					else
-						hdr_proc(vf, get_hdr_module(vd_path), HDR_HDR,
-							vinfo, gamut_conv_enable ? &m : NULL,
-							vpp_index);
-
-					if (!osd_gamut_conv_type) {
-						hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-					}
-				} else {
-					if (vd_path == VD1_PATH)
-						hdr_proc_multi_slices(vf, VD1_HDR, HDR_HDR,
-							vinfo, NULL, s5_silce_mode, vpp_index);
-					else
-						hdr_proc(vf, get_hdr_module(vd_path), HDR_HDR,
-							vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, NULL, vpp_index);
+					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, mtx, vpp_index);
 				}
 			}
 		} else if (get_prime_sl_hdr_process_policy(vf) == PRIME_SL_HDR_MODE_BYPASS_2020) {
-			if (sbtm_en && sbtm_mode) {
-				pr_csc(12, "sbtm:vd_path = %d,PROC_BYPASS--HDR_HDR_PROC\n",
-					vd_path);
-				sbtm_convert_process(SBTM_HDR_HDR_PROC, vinfo, &m, 11);
+			if (sbtm_mode_support_get()) {
+				if (sbtm_mode_get()) {
+					pr_csc(12, "sbtm:vd_path=%d, --HDR_HDR_PROC\n",
+						vd_path);
+					sbtm_convert_process(SBTM_HDR_HDR_PROC,
+						source_type[vd_path], vinfo, &m, 11);
+				}
 				if (vd_path == VD1_PATH)
 					hdr_proc_multi_slices(vf, VD1_HDR, HDR_HDR,
 						vinfo, &m, s5_silce_mode, vpp_index);
 				else
 					hdr_proc(vf, get_hdr_module(vd_path), HDR_HDR,
 						vinfo, &m, vpp_index);
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					hdr_proc(vf, OSD1_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD2_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD3_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-				} else {
-					pr_csc(12, "sbtm: OSD, PROC_BYPASS--HDR_HDR_PROC\n");
-					sbtm_convert_process(SBTM_OSD_PROC, vinfo, &m, 11);
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, &m, vpp_index);
+				if (vd_path == VD1_PATH ||
+					(vd_path == VD2_PATH &&
+					is_video_layer_on(VD2_PATH) &&
+					!is_video_layer_on(VD1_PATH))) {
+					if (sbtm_mode_get()) {
+						pr_csc(12, "sbtm:OSD, video HDR_HDR_PROC\n");
+						sbtm_convert_process(SBTM_OSD_PROC,
+							source_type[vd_path], vinfo, &m, 11);
+						mtx = &m;
+					} else {
+						mtx = NULL;
+					}
+					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, mtx, vpp_index);
 				}
 			}  else {
 				gamut_src_format = src_format;
@@ -3767,7 +3814,7 @@ void video_post_process(struct vframe_s *vf,
 #endif
 		break;
 	case HDRTYPE_SDR:
-		if (vd_path == VD2_PATH &&
+		if (!is_sbtm_on() && vd_path == VD2_PATH &&
 		    is_amdv_on() && !support_multi_core1() &&
 		    is_amdv_stb_mode()) {
 			hdr_proc(vf, VD2_HDR, SDR_IPT, vinfo, NULL, vpp_index);
@@ -3835,69 +3882,60 @@ void video_post_process(struct vframe_s *vf,
 					 vpp_index);
 			}
 		} else if (sdr_process_mode[vd_path] == PROC_SDR_TO_HDR) {
-			if (sbtm_en && sbtm_mode) {
-				pr_csc(12, "sbtm: vd_path = %d,PROC_SDR_TO_HDR.\n", vd_path);
-				sbtm_convert_process(SBTM_SDR_HDR_PROC, vinfo, &m, 11);
+			gamut_src_format = HDRTYPE_HDR10;
+			bypass_gamut_wrapper = 1;
+			if (chip_cls_id == TV_CHIP) {
+				/*for tv chip need sd2hdr function*/
+				if (gamut_conv_enable) {
+					gamut_convert_process(vinfo, source_type,
+						vd_path, &m, 11, DEST_NONE);
+				}
 				if (vd_path == VD1_PATH)
 					hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-						vinfo, &m, s5_silce_mode, vpp_index);
+						vinfo, gamut_conv_enable ? &m : NULL,
+						s5_silce_mode, vpp_index);
 				else
 					hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
-						vinfo, &m, vpp_index);
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					if (!osd_gamut_conv_type) {
-						hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
+						vinfo, gamut_conv_enable ? &m : NULL,
+						vpp_index);
+				if (!osd_gamut_conv_type) {
+					hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
+					hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
+					hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
+						vinfo, NULL, vpp_index);
 					}
-				} else {
-					pr_csc(12, "sbtm: OSD, PROC_SDR_TO_HDR.\n");
-					sbtm_convert_process(SBTM_OSD_PROC,  vinfo, &m, 11);
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, &m, vpp_index);
-				}
 			} else {
-				gamut_src_format = HDRTYPE_HDR10;
-				bypass_gamut_wrapper = 1;
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					if (gamut_conv_enable) {
-						gamut_convert_process(vinfo, source_type,
-							vd_path, &m, 11, DEST_NONE);
-					}
-					if (vd_path == VD1_PATH)
-						hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-							vinfo, gamut_conv_enable ? &m : NULL,
-							s5_silce_mode, vpp_index);
-					else
-						hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
-							vinfo, gamut_conv_enable ? &m : NULL,
-							vpp_index);
-
-					if (!osd_gamut_conv_type) {
-						hdr_proc(vf, OSD1_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD2_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-						hdr_proc(vf, OSD3_HDR, HDR_BYPASS,
-							vinfo, NULL, vpp_index);
-					}
+				if (sbtm_mode_support_get() && sbtm_mode_get()) {
+					pr_csc(12, "sbtm:vd%d PROC_SDR_TO_HDR\n", vd_path + 1);
+					sbtm_convert_process(SBTM_SDR_HDR_PROC,
+						source_type[vd_path], vinfo, &m, 11);
+					mtx = &m;
 				} else {
-					if (vd_path == VD1_PATH)
-						hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-							vinfo, NULL, s5_silce_mode, vpp_index);
-					else
-						hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
-							vinfo, NULL, vpp_index);
-
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, NULL, vpp_index);
+					mtx = NULL;
+				}
+				if (vd_path == VD1_PATH)
+					hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
+						vinfo, mtx, s5_silce_mode, vpp_index);
+				else
+					hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
+						vinfo, mtx, vpp_index);
+				if (vd_path == VD1_PATH ||
+					(vd_path == VD2_PATH &&
+					is_video_layer_on(VD2_PATH) &&
+					!is_video_layer_on(VD1_PATH))) {
+					if (sbtm_mode_support_get() && sbtm_mode_get()) {
+						pr_csc(12, "sbtm:OSD,PROC_SDR_TO_HDR\n");
+						sbtm_convert_process(SBTM_OSD_PROC,
+							source_type[vd_path], vinfo, &m, 11);
+						mtx = &m;
+					} else {
+						mtx = NULL;
+					}
+					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, mtx, vpp_index);
 				}
 			}
 		} else if (sdr_process_mode[vd_path] == PROC_SDR_TO_HLG) {
@@ -4048,23 +4086,44 @@ void video_post_process(struct vframe_s *vf,
 		} else if (sdr_process_mode[vd_path] == PROC_SDR_TO_HDR) {
 			gamut_src_format = HDRTYPE_HDR10;
 			bypass_gamut_wrapper = 1;
-			gamut_convert_process(vinfo, source_type,
-				vd_path, &m, 11, DEST_HDR10);
+			if (sbtm_mode_support_get() && sbtm_mode_get()) {
+				pr_csc(12, "sbtm:vd%d PROC_SDR_TO_HDR\n", vd_path + 1);
+				sbtm_convert_process(SBTM_SDR_HDR_PROC,
+					source_type[vd_path], vinfo, &m, 11);
+				mtx = &m;
+			} else {
+				gamut_convert_process(vinfo, source_type,
+					vd_path, &m, 11, DEST_HDR10);
+				mtx = &m;
+			}
 			if (vd_path == VD1_PATH)
 				hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-					vinfo, &m, s5_silce_mode, vpp_index);
+					vinfo, mtx, s5_silce_mode, vpp_index);
 			else
 				hdr_proc(vf, get_hdr_module(vd_path), SDR_HDR,
-					vinfo, &m, vpp_index);
+					vinfo, mtx, vpp_index);
 			if (chip_cls_id == TV_CHIP) {
 				/*for tv chip need sd2hdr function*/
 				hdr_proc(vf, OSD1_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
 				hdr_proc(vf, OSD2_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
 				hdr_proc(vf, OSD3_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
 			} else {
-				hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-				hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, NULL, vpp_index);
-				hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, NULL, vpp_index);
+				if (vd_path == VD1_PATH ||
+					(vd_path == VD2_PATH &&
+					is_video_layer_on(VD2_PATH) &&
+					!is_video_layer_on(VD1_PATH))) {
+					if (sbtm_mode_support_get() && sbtm_mode_get()) {
+						pr_csc(12, "sbtm:OSD,PROC_SDR_TO_HDR\n");
+						sbtm_convert_process(SBTM_OSD_PROC,
+							source_type[vd_path], vinfo, &m, 11);
+						mtx = &m;
+					} else {
+						mtx = NULL;
+					}
+					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+				}
 			}
 		} else if (sdr_process_mode[vd_path] == PROC_SDR_TO_HLG) {
 			gamut_src_format = HDRTYPE_HLG;
@@ -4116,28 +4175,34 @@ void video_post_process(struct vframe_s *vf,
 		if (vd_path == VD2_PATH && is_amdv_on() && is_amdv_stb_mode()) {
 			hdr_proc(vf, VD2_HDR, HDR_IPT, vinfo, NULL, vpp_index);
 		} else if (hdr_process_mode[vd_path] == PROC_BYPASS) {
-			if (sbtm_en && sbtm_mode) {
-				pr_csc(12, "sbtm:vd_path = %d,PROC_BYPASS--HDR_HDR_PROC\n",
-					vd_path);
-				sbtm_convert_process(SBTM_HDR_HDR_PROC, vinfo, &m, 11);
+			if (sbtm_mode_support_get()) {
+				if (sbtm_mode_get()) {
+					pr_csc(12, "sbtm:vd_path=%d, --HDR_HDR_PROC\n",
+						vd_path);
+					sbtm_convert_process(SBTM_HDR_HDR_PROC,
+						source_type[vd_path], vinfo, &m, 11);
+				}
 				if (vd_path == VD1_PATH)
 					hdr_proc_multi_slices(vf, VD1_HDR, HDR_HDR,
 						vinfo, &m, s5_silce_mode, vpp_index);
 				else
 					hdr_proc(vf, get_hdr_module(vd_path), HDR_HDR,
 						vinfo, &m, vpp_index);
-
-				if (chip_cls_id == TV_CHIP) {
-					/*for tv chip need sd2hdr function*/
-					hdr_proc(vf, OSD1_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD2_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-					hdr_proc(vf, OSD3_HDR, HDR_BYPASS, vinfo, NULL, vpp_index);
-				} else {
-					pr_csc(12, "sbtm: OSD, PROC_BYPASS--HDR_HDR_PROC\n");
-					sbtm_convert_process(SBTM_OSD_PROC, vinfo, &m, 11);
-					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, &m, vpp_index);
-					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, &m, vpp_index);
+				if (vd_path == VD1_PATH ||
+					(vd_path == VD2_PATH &&
+					is_video_layer_on(VD2_PATH) &&
+					!is_video_layer_on(VD1_PATH))) {
+					if (sbtm_mode_get()) {
+						pr_csc(12, "sbtm:OSD, video HDR_HDR_PROC\n");
+						sbtm_convert_process(SBTM_OSD_PROC,
+							source_type[vd_path], vinfo, &m, 11);
+						mtx = &m;
+					} else {
+						mtx = NULL;
+					}
+					hdr_proc(vf, OSD1_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD2_HDR, SDR_HDR, vinfo, mtx, vpp_index);
+					hdr_proc(vf, OSD3_HDR, SDR_HDR, vinfo, mtx, vpp_index);
 				}
 			} else {
 				gamut_src_format = src_format;

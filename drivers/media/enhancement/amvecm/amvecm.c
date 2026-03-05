@@ -6531,6 +6531,31 @@ static long amvecm_ioctl(struct file *file,
 			pr_amvecm_dbg("AMVECM_IOC_G_HDR_ON fail\n");
 		}
 		break;
+	case AMVECM_IOC_G_SBTM_MODE:
+		argp = (void __user *)arg;
+		tmp = sbtm_mode_support_get();
+		if (copy_to_user(argp, &tmp, sizeof(int)))
+			ret = -EFAULT;
+		pr_amvecm_dbg("AMVECM_IOC_G_SBTM_MODE %d\n", tmp);
+		break;
+	case AMVECM_IOC_S_SBTM_MODE:
+		if (copy_from_user(&tmp, (void __user *)arg, sizeof(int))) {
+			ret = -EFAULT;
+		} else {
+			sbtm_mode_set(tmp);
+			pr_amvecm_dbg("AMVECM_IOC_S_SBTM_MODE %d\n", tmp);
+		}
+		break;
+	case AMVECM_IOC_S_SBTM_EN:
+			if (copy_from_user(&tmp, (void __user *)arg, sizeof(int))) {
+				ret = -EFAULT;
+			} else {
+				user_sbtm_set(tmp);
+				sbtm_mode_update();
+				pr_amvecm_dbg("AMVECM_IOC_S_SBTM_EN %d\n", tmp);
+			}
+		break;
+
 #endif
 	default:
 		ret = -EINVAL;
@@ -8470,6 +8495,45 @@ static ssize_t set_hdr_289lut_store(const struct class *cls,
 	return count;
 }
 
+int cts_pos_x[19];
+int amvecm_probe_output_cts(int width, int height, int offset)
+{
+	int i;
+	int val_x, val_y, reg_val;
+	int val1 = 0, val2 = 0;
+	int cts_pos_y;
+	int w, h;
+
+	w = width;
+	h = height;
+	cts_pos_y = (h / 2 - offset);
+	for (i = 0; i < 19; ++i)
+		cts_pos_x[i] = (i * w / 19) + w / 38;
+
+	for (i = 0; i < 19; i++) {
+		/*set position (x,y)*/
+		val_x = cts_pos_x[i] & 0x1fff;
+		val_y = cts_pos_y & 0x1fff;
+
+		reg_val = READ_VPP_REG(VPP_MATRIX_PROBE_POS);
+		reg_val = reg_val & 0xe000e000;
+		reg_val = reg_val | (val_x << 16) | val_y;
+
+		WRITE_VPP_REG(VPP_MATRIX_PROBE_POS, reg_val);
+		msleep(50);
+		/*get data*/
+		val1 = READ_VPP_REG(VPP_MATRIX_PROBE_COLOR);
+		val2 = READ_VPP_REG(VPP_MATRIX_PROBE_COLOR1);
+		pr_info("  %d  %d  %d  %d  %d  %d  %d  %d  %d\n", i + 1, val_x, val_y,
+		((val2 & 0xf) << 8) | ((val1 >> 24) & 0xff),
+		(val1 >> 12) & 0xfff, val1 & 0xfff,
+		(((val2 & 0xf) << 8) | ((val1 >> 24) & 0xff)) >> 2,
+		((val1 >> 12) & 0xfff) >> 2,
+		(val1 & 0xfff) >> 2);
+	}
+	return 1;
+}
+
 static ssize_t amvecm_dump_output_show(const struct class *cla,
 	const struct class_attribute *attr,
 	char *buf)
@@ -9198,8 +9262,9 @@ static ssize_t amvecm_hdr_dbg_store(const struct class *cla,
 			s5_hdr_reg_dump(val);
 		}
 	} else if (!strcmp(parm[0], "sbtm")) {
-		sbtm_hdr10_tmo_dbg(parm);
+		sbtm_tmo_hdr_hdr_param_dbg(parm);
 		sbtm_sbtmdb_reg_dbg(parm);
+		sbtm_param_dbg(parm);
 	} else if (!strncmp(parm[0], "emds_pkt_idx", 12)) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			goto free_buf;
@@ -14663,6 +14728,14 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 			goto free_buf;
 		p->min_mc = val;
 		pr_info("min_mc = %d\n", p->min_mc);
+	} else if (!strcmp(parm[0], "cts_output")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		if (kstrtoul(parm[2], 10, &val2) < 0)
+			goto free_buf;
+		if (kstrtoint(parm[2], 10, &temp) < 0)
+			goto free_buf;
+		amvecm_probe_output_cts(val, val2, temp);
 	} else if (!strcmp(parm[0], "g_hdr_set_on")) {
 		pr_info("hdr_set_on: %d\n", hdr_set_on);
 	} else if (!strcmp(parm[0], "s_hdr_set_on")) {
