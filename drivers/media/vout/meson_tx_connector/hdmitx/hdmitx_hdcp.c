@@ -8,6 +8,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/hdmitx_common/hdmitx_common.h>
 #include "hdmitx_log.h"
 #include "meson_tx_event_mgr.h"
+#include "../hdcp/hdmitx_hdcp.h"
 
 static int hdmi_authenticated;
 MODULE_PARM_DESC(hdmi_authenticated, "\n hdmi_authenticated\n");
@@ -63,12 +64,8 @@ unsigned int hdcptx_get_rx_version(struct hdmitx_common *tx_comm)
 	return hdcprx_cap;
 }
 
-/* 40 * 200ms = 8s */
-#define HDCP_AUTH_TIMEOUT (40)
-
 static void hdcptx_result_notify_drm(struct hdmitx_common *tx_comm, int auth)
 {
-	int hdcp_auth_result = HDCP_AUTH_UNKNOWN;
 	void *cb_data = NULL;
 
 	if (!tx_comm) {
@@ -76,38 +73,23 @@ static void hdcptx_result_notify_drm(struct hdmitx_common *tx_comm, int auth)
 		return;
 	}
 
+	HDMITX_DEBUG_HDCP("HDCP cb %d\n", auth);
+
 	cb_data = tx_comm->hdcptx_comm.tx_hdcp_cb.data;
 
-	if (tx_comm->hdcptx_comm.hdcp_mode &&
-		tx_comm->hdcptx_comm.hdcp_auth_result == HDCP_AUTH_UNKNOWN) {
-		if (auth == 1) {
-			hdcp_auth_result = HDCP_AUTH_OK;
-		} else if (auth == 0) {
-			tx_comm->hdcptx_comm.hdcp_fail_cnt++;
-
-			if (tx_comm->hdcptx_comm.hdcp_fail_cnt > HDCP_AUTH_TIMEOUT)
-				hdcp_auth_result = HDCP_AUTH_FAIL;
-		}
-
-		HDMITX_DEBUG_HDCP("HDCP cb %d vs %d\n",
-			tx_comm->hdcptx_comm.hdcp_auth_result, auth);
-
-		if (hdcp_auth_result != tx_comm->hdcptx_comm.hdcp_auth_result) {
-			tx_comm->hdcptx_comm.hdcp_auth_result = hdcp_auth_result;
-			if (tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify)
-				tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify(cb_data,
-					tx_comm->hdcptx_comm.hdcp_mode,
-					tx_comm->hdcptx_comm.hdcp_auth_result);
-		}
-	}
+	if (tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify)
+		tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify(cb_data,
+			tx_comm->hdcptx_comm.hdcp_mode,
+			auth);
 }
+
+/* 40 * 200ms = 8s */
+#define HDCP_AUTH_TIMEOUT (40)
 
 /* hdcp monitor task, check hdcp auth status every 200ms */
 int hdmitx_hdcp_stat_monitor_task(void *data)
 {
 	static int auth_stat;
-	static int cnt;
-	int filter_period;
 	struct hdmitx_common *tx_comm = (struct hdmitx_common *)data;
 
 	if (!tx_comm) {
@@ -115,53 +97,38 @@ int hdmitx_hdcp_stat_monitor_task(void *data)
 		return -1;
 	}
 
-	filter_period = tx_comm->hdcptx_comm.filter_hdcp_off_period * 10;
 	while (!kthread_should_stop() && tx_comm->hpd_event != 0xff) {
 		hdmi_authenticated = hdmitx_hw_cntl(tx_comm->tx_hw,
 			HDCP_GET_AUTH_RESULT, NULL, NULL);
+		/* uevent report */
+		hdmitx_set_uevent(tx_comm, TX_HDCP_EVENT, hdmi_authenticated);
+		/* status update, only collect the metric when hdmi is plugged in. */
+		if (tx_comm->base.hpd_state == 1)
+			hdmitx_current_status(tx_comm, auth_stat ?
+				TX_HDCP_AUTH_SUCCESS : TX_HDCP_AUTH_FAILURE);
+		tx_comm->hdcptx_comm.hdcp_auth_result = auth_stat;
+		hdcptx_result_notify_drm(tx_comm, auth_stat);
 		if (auth_stat != hdmi_authenticated) {
-			/* hdcp fail uevent filter for special application */
-			if (hdmi_authenticated == 0 && tx_comm->hdcptx_comm.need_filter_hdcp_off) {
-				for (cnt = 0; cnt < filter_period; cnt++) {
-					if (!tx_comm->hdcptx_comm.need_filter_hdcp_off) {
-						HDMITX_HDCP_INFO("exit filter, mode %d auth: %d\n",
-							tx_comm->hdcptx_comm.hdcp_mode,
-							hdmi_authenticated);
-						break;
-					}
-					msleep_interruptible(100);
-					hdmi_authenticated = hdmitx_hw_cntl(tx_comm->tx_hw,
-						HDCP_GET_AUTH_RESULT, NULL, NULL);
-					if (hdmi_authenticated)
-						break;
-				}
-				HDMITX_HDCP_INFO("%d, after filtering auth is: %d, time:%dms\n",
-					tx_comm->hdcptx_comm.hdcp_mode,
-					hdmi_authenticated, cnt * 100);
-				if (hdmi_authenticated &&
-					tx_comm->hdcptx_comm.need_filter_hdcp_off) {
-					tx_comm->hdcptx_comm.need_filter_hdcp_off = false;
-					continue;
-				}
-			}
-			/* self cleared after filter period expired */
-			tx_comm->hdcptx_comm.need_filter_hdcp_off = false;
-			/* hdcp fail uevent filter end */
-
-			/* uevent report */
-			hdmitx_set_uevent(tx_comm, TX_HDCP_EVENT, hdmi_authenticated);
 			auth_stat = hdmi_authenticated;
 			HDMITX_HDCP_INFO("mode %d, auth: %d\n",
 				tx_comm->hdcptx_comm.hdcp_mode, auth_stat);
-
-			/* status update, only collect the metric when hdmi is plugged in. */
-			if (tx_comm->base.hpd_state == 1)
-				hdmitx_current_status(tx_comm, auth_stat ?
-					TX_HDCP_AUTH_SUCCESS : TX_HDCP_AUTH_FAILURE);
-
-			/* notify hdcp result to drm */
-			if (tx_comm->hdcptx_comm.hdcp_ctl_lvl > 0)
-				hdcptx_result_notify_drm(tx_comm, auth_stat);
+			if (auth_stat == 1) {
+				tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
+				tx_comm->hdcptx_comm.hdcp_mode_fallback_state =
+				HDCP_FALLBACK_LOCKED;
+				tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_RESULT_SUCCESS;
+			}
+		}
+		if (hdmi_authenticated == 0 && tx_comm->hdcptx_comm.hdcp_mode == 2 &&
+			tx_comm->hdcptx_comm.hdcp_mode_fallback_state == HDCP_FALLBACK_NONE) {
+			tx_comm->hdcptx_comm.hdcp_fail_cnt++;
+			if (tx_comm->hdcptx_comm.hdcp_fail_cnt > HDCP_AUTH_TIMEOUT) {
+				tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP1X;
+				hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_ENABLE, NULL, NULL);
+				tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
+				tx_comm->hdcptx_comm.hdcp_mode_fallback_state =
+					HDCP_FALLBACK_LOCKED;
+			}
 		}
 		msleep_interruptible(200);
 	}
@@ -222,6 +189,10 @@ int drm_hdmitx_common_hdcp_disable(struct hdmitx_common *tx_comm)
 		HDMITX_ERROR("%s NULL tx_comm instance!\n", __func__);
 		return -EINVAL;
 	}
+	if (tx_comm->hdcptx_comm.hdcp_state_mode == HDCP_STATE_DISCONNECT ||
+		tx_comm->hdcptx_comm.hdcp_state_mode == HDCP_STATE_STOP)
+		return 0;
+	tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_STATE_STOP;
 
 	if (tx_comm->hdcptx_comm.drm_hdcp_disable) {
 		tx_comm->hdcptx_comm.drm_hdcp_disable(tx_comm);
@@ -238,6 +209,11 @@ int drm_hdmitx_common_hdcp_disconnect(struct hdmitx_common *tx_comm)
 		return -EINVAL;
 	}
 
+	if (tx_comm->hdcptx_comm.hdcp_state_mode == HDCP_STATE_DISCONNECT ||
+		tx_comm->hdcptx_comm.hdcp_state_mode == HDCP_STATE_STOP)
+		return 0;
+
+	tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_STATE_DISCONNECT;
 	if (tx_comm->hdcptx_comm.drm_hdcp_disconnect) {
 		tx_comm->hdcptx_comm.drm_hdcp_disconnect(tx_comm);
 		return 0;
@@ -336,10 +312,10 @@ void tee_comm_dev_unreg(struct miscdevice *hdcp_misc_dev)
 	misc_deregister(hdcp_misc_dev);
 }
 
-void hdmitx_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *buf)
+void hdmitx_set_hdcp_mode(struct hdmitx_common *tx_comm)
 {
 	if (tx_comm && tx_comm->hdcptx_comm.set_hdcp_mode)
-		tx_comm->hdcptx_comm.set_hdcp_mode(tx_comm, buf);
+		tx_comm->hdcptx_comm.set_hdcp_mode(tx_comm);
 }
 
 int hdmitx_get_hdcp_ver(struct hdmitx_common *tx_comm, char *buf, int len)

@@ -42,6 +42,23 @@ struct meson_tx_event_mgr;
 enum tx_trace_log_bits;
 enum meson_tx_event;
 
+enum hdcp_state {
+	HDCP_STATE_START = 0,
+	HDCP_RESULT_SUCCESS,
+	HDCP_RESULT_FAIL,
+	HDCP_STATE_STOP,
+	HDCP_STATE_DISCONNECT,
+	HDCP_FORCE,
+	HDCP_KEY_READY,
+};
+
+enum hdcptx_start_type_t {
+	HDCP_START_NONE,
+	HDCP_START_HDCP1X,
+	HDCP_START_HDCP2X,
+	HDCP_START_AUTO,
+};
+
 struct hdcptx_api {
 	bool (*get_hdcptx_lstore)(struct hdcptx_common *hdcptx_comm, int hdcp_type);
 	bool (*get_hdcptx_result)(struct hdcptx_common *hdcptx_comm, int hdcp_type);
@@ -60,6 +77,24 @@ struct hdcptx_api {
 	void (*hdcptx14_get_bksv)(struct hdcptx_common *hdcptx_comm, u8 *p_bksv, u8 b);
 	u16 (*hdcptx14_get_ri)(void);
 	int (*hdcptx_validate_key)(struct hdcptx_common *hdcptx_comm, int hdcp_type);
+};
+
+enum hdcp_fallback_status {
+	/*
+	 * Default state:
+	 * Initial state for HDCP 2.2 authentication.
+	 * Failures in this state increment the failure counter.
+	 */
+	HDCP_FALLBACK_NONE = 0,
+
+	/*
+	 * Locked state:
+	 * 1. HDCP 2.2 authentication succeeded. The system is locked into 2.2 mode,
+	 * preventing future fallbacks even if later re-authentications fail.
+	 * 2. HDCP 2.2 failed at first auth, and failure lasted over 8s.
+	 * DRM has stopped 2.2 and forced HDCP 1.4.
+	 */
+	HDCP_FALLBACK_LOCKED = 1,
 };
 
 struct hdcptx_common {
@@ -125,7 +160,11 @@ struct hdcptx_common {
 	bool not_restart_hdcp;
 	/* linux/drm fallback */
 	int hdcp_auth_result;
+	/* HDCP 2.2 failure limit: 40 times (40*200ms=8s) */
 	int hdcp_fail_cnt;
+	/* Record the status of HDCP executing the fallback strategy */
+	enum hdcp_fallback_status hdcp_mode_fallback_state;
+	enum hdcp_state hdcp_state_mode;
 	/* hdcp result callback for drm */
 	struct connector_hdcp_cb tx_hdcp_cb;
 	u32 hdcp_debug_delay;
@@ -135,7 +174,7 @@ struct hdcptx_common {
 	bool hdcp14_key_loaded;
 
 	/* diff hw20/hw21, for sysfs operation */
-	void (*set_hdcp_mode)(struct hdmitx_common *tx_comm, const char *buf);
+	void (*set_hdcp_mode)(struct hdmitx_common *tx_comm);
 	int (*get_hdcp_ver)(struct hdmitx_common *tx_comm, char *buf, int len);
 	int (*get_tx_hdcp_cap)(struct hdmitx_common *tx_comm);
 
@@ -161,6 +200,7 @@ struct hdcptx_common {
 	bool (*ddcm_write)(u8 seg_index, u8 slave_addr, u8 reg_addr, u8 data);
 	/* provided to external api */
 	struct hdcptx_api *hdcptx_api;
+	enum hdcptx_start_type_t hdcptx_start_type;
 };
 
 struct hdmitx_clk_tree_s {
@@ -610,7 +650,7 @@ int set_disp_mode_debug(struct hdmitx_common *tx_comm, const char *mode, char *f
 int hdmitx_set_display(struct hdmitx_common *tx_comm, enum hdmi_vic video_code);
 
 /* hdcp api*/
-void hdmitx_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *buf);
+void hdmitx_set_hdcp_mode(struct hdmitx_common *tx_comm);
 int hdmitx_get_hdcp_ver(struct hdmitx_common *tx_comm, char *buf, int len);
 
 /* drm hdcp api */
@@ -765,6 +805,10 @@ unsigned int hdmitx_common_get_hdcp_bksv(struct hdmitx_common *tx_comm, u8 *bksv
 unsigned int hdmitx_common_get_hdcp_bstatus(struct hdmitx_common *tx_comm, u8 *bstatus);
 unsigned int hdmitx_common_get_hdcp_bcaps(struct hdmitx_common *tx_comm);
 unsigned int hdmitx_common_get_hdcp_ri(struct hdmitx_common *tx_comm);
+unsigned int hdmitx_common_get_hdcp_mode(struct hdmitx_common *tx_comm);
+int hdmitx_common_set_hdcp_mode(struct hdmitx_common *tx_comm, u8 hdcp_mode,
+	enum hdcp_state hdcp_state);
+
 unsigned int hdmitx_common_get_key_store(struct hdmitx_common *tx_comm);
 unsigned int hdmitx_common_get_vsif_ieeeoui(struct hdmitx_common *tx_comm);
 unsigned int hdmitx_common_get_vsif_vic(struct hdmitx_common *tx_comm);

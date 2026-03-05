@@ -98,13 +98,6 @@ struct hdcp_work {
 	struct delayed_work dwork;
 };
 
-enum hdcptx_start_type_t {
-	HDCP_START_NONE,
-	HDCP_START_HDCP1X,
-	HDCP_START_HDCP2X,
-	HDCP_START_AUTO,
-};
-
 /* hw21 core private hdcp struct */
 struct hdcptx21_core {
 	/* device which communicate with hdcp_tx22 daemon and tee_hdcp

@@ -292,7 +292,7 @@ out:
 	return error;
 }
 
-static void hdmitx20_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *buf)
+static void hdmitx20_set_hdcp_mode(struct hdmitx_common *tx_comm)
 {
 	enum hdmi_vic vic =
 		hdmitx_hw_cntl(tx_comm->tx_hw, AUX_PKT_GET_AVI_VIC, NULL, NULL);
@@ -309,22 +309,24 @@ static void hdmitx20_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *bu
 	 */
 	mutex_lock(&tx_comm->base.set_mode_mutex);
 	if (!tx_comm->ready) {
-		HDMITX_INFO("hdmi signal not ready, should not set hdcp mode %s\n", buf);
+		HDMITX_INFO("hdmi signal not ready, should not set hdcp mode %d\n",
+			tx_comm->hdcptx_comm.hdcptx_start_type);
 		mutex_unlock(&tx_comm->base.set_mode_mutex);
 		return;
 	}
-	HDMITX_INFO(SYS "hdcp: set mode as %s\n", buf);
+	HDMITX_INFO(SYS "hdcp: set mode as %d\n", tx_comm->hdcptx_comm.hdcptx_start_type);
 	arg = 1;
 	hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_MUX_INIT, (void *)&arg, NULL);
 	hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_GET_AUTH_RESULT, NULL, NULL);
-	if (strncmp(buf, "0", 1) == 0) {
+	tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_NONE) {
 		tx_comm->hdcptx_comm.hdcp_mode = 0;
 		arg = HDCP14_OFF;
 		hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_MODE_OP, (void *)&arg, NULL);
 		hdmitx_hdcp_do_work(tx_comm);
 		hdmitx_current_status(tx_comm, TX_HDCP_NOT_ENABLED);
 	}
-	if (strncmp(buf, "1", 1) == 0) {
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_HDCP1X) {
 		if (vic == HDMI_17_720x576p50_4x3 || vic == HDMI_18_720x576p50_16x9)
 			usleep_range(500000, 500010);
 		tx_comm->hdcptx_comm.hdcp_mode = 1;
@@ -333,7 +335,7 @@ static void hdmitx20_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *bu
 		hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_MODE_OP, (void *)&arg, NULL);
 		hdmitx_current_status(tx_comm, TX_HDCP_HDCP_1_ENABLED);
 	}
-	if (strncmp(buf, "2", 1) == 0) {
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_HDCP2X) {
 		if (tx_comm->hdcptx_comm.efuse_dis_hdcp_tx22) {
 			HDMITX_ERROR("warning, efuse disable hdcptx22\n");
 			mutex_unlock(&tx_comm->base.set_mode_mutex);
@@ -411,8 +413,6 @@ static void drm_hdmitx_hdcp_disable(struct hdmitx_common *tx_comm)
 		HDMITX_ERROR("%s NULL tx_comm instance\n", __func__);
 		return;
 	}
-	if (tx_comm->hdcptx_comm.hdcp_ctl_lvl == 0)
-		return;
 	if (!tx_comm->hdcptx_priv) {
 		HDMITX_ERROR("%s NULL hdcp_private instance\n", __func__);
 		return;
@@ -531,7 +531,7 @@ static void drm_hdmitx_hdcp_enable(struct hdmitx_common *tx_comm, int hdcp_type)
 	hdcptx_comm->hdcp_fail_cnt = 0;
 	hdcptx_comm->hdcp_auth_result = HDCP_AUTH_UNKNOWN;
 
-	if (p_hdcp->hdcp_execute_type == HDCP_MODE22) {
+	if (p_hdcp->hdcp_execute_type & HDCP_MODE22) {
 		if (p_hdcp->hdcp22_daemon_state != HDCP22_DAEMON_DONE) {
 			HDMITX_INFO("[%s]: hdcp_tx22 not ready, delay hdcp auth\n", __func__);
 			return;
@@ -540,7 +540,7 @@ static void drm_hdmitx_hdcp_enable(struct hdmitx_common *tx_comm, int hdcp_type)
 		p_hdcp->hdcp_report = HDCP_TX22_START;
 		msleep(50);
 		wake_up(&p_hdcp->hdcp_comm_queue);
-	} else if (p_hdcp->hdcp_execute_type == HDCP_MODE14) {
+	} else if (p_hdcp->hdcp_execute_type & HDCP_MODE14) {
 		drm_hdmitx_enable_hdcp_mode(1);
 	}
 	HDMITX_INFO("[%s]: report=%d, execute=%u\n",

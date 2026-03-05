@@ -331,6 +331,7 @@ static void hdmitx21_disable_hdcp(void *hdcptx_instance)
 		mdelay(10);
 		hdmitx21_ctrl_hdcp_gate(hdcp_comm->chip_type, 0, false);
 	}
+	hdcp_comm->hdcp_fail_cnt = 0;
 	mutex_unlock(&p_hdcp->hdcptx_auth_mutex);
 }
 
@@ -2254,6 +2255,7 @@ static void hdmitx_start_hdcp_handler(struct work_struct *work)
 		return;
 	}
 	hdcptx_comm = p_hdcp->bind_hdcptx_comm;
+	hdcptx_comm->hdcp_fail_cnt = 0;
 
 	if (hdcptx_need_ctrl_by_upstream(hdcptx_comm->hdcp_rpt_en)) {
 		/* move is_passthrough_switch to p_hdcp */
@@ -2481,7 +2483,6 @@ static long hdcp_communicate_ioctl(struct file *file,
 	u8 hdcp_key_store = 0;
 	int key_valid;
 	int hdcp_key = 0;
-	int hdcprx_ver = 0;
 	struct hdcptx21_core *p_hdcp = file->private_data;
 	void __user *argp = (void __user *)arg;
 	void *cb_data;
@@ -2502,30 +2503,11 @@ static long hdcp_communicate_ioctl(struct file *file,
 		if (get_hdcptx_lstore(p_hdcp->bind_hdcptx_comm, HDCP_VER_HDCP1X))
 			hdcp_key_store |= BIT(0);
 		HDMITX_HDCP_INFO("tee load hdcp key ready: 0x%x\n", hdcp_key_store);
-		/* for linux platform, notify hdcp key load ready to drm side */
-		if (p_hdcp->bind_hdcptx_comm->hdcp_ctl_lvl > 0) {
-			if (p_hdcp->bind_hdcptx_comm->tx_hdcp_cb.hdcp_notify) {
-				p_hdcp->bind_hdcptx_comm->tx_hdcp_cb.hdcp_notify(cb_data,
-					HDCP_KEY_UPDATE, HDCP_AUTH_UNKNOWN);
-				HDMITX_DEBUG("notify hdcp key load done to drm\n");
-			}
-			return ret;
-		}
-		if (p_hdcp->bind_hdcptx_comm->hpd_state == 1 &&
-			p_hdcp->bind_hdcptx_comm->ready &&
-			hdmitx21_get_hdcptx_mode(p_hdcp) == 0) {
-			HDMITX_HDCP_INFO("hdmi ready but hdcp not enabled, enable now\n");
-			if (hdcptx_need_ctrl_by_upstream(p_hdcp->bind_hdcptx_comm->hdcp_rpt_en)) {
-				HDMITX_HDCP_INFO("currently hdcp should started by upstream\n");
-			} else {
-				if (hdcp_key_store & BIT(1)) {
-					hdcprx_ver =
-						hdcptx_get_hdcprx_ver(p_hdcp->bind_hdcptx_comm);
-					p_hdcp->bind_hdcptx_comm->dw_hdcp22_cap =
-						(hdcprx_ver == 2) ? true : false;
-				}
-				hdmitx21_enable_hdcp(p_hdcp);
-			}
+		/* notify hdcp key load ready to drm side */
+		if (p_hdcp->bind_hdcptx_comm->tx_hdcp_cb.hdcp_notify) {
+			p_hdcp->bind_hdcptx_comm->tx_hdcp_cb.hdcp_notify(cb_data,
+				HDCP_KEY_UPDATE, HDCP_AUTH_UNKNOWN);
+			HDMITX_DEBUG("notify hdcp key load done to drm\n");
 		}
 		break;
 	case TEE_HDCP_IOC_VALIDATE_KEY:

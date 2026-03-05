@@ -4483,6 +4483,18 @@ static int hdmitx21_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		if (hdcptx_api->hdcptx_disable)
 			hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
 		break;
+	case HDCP_ENABLE:
+		if (tx_comm->hdcptx_comm.hdcp_ctl_lvl == 0) {
+			if (hdcptx_api->hdcptx_enable)
+				hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv,
+				tx_comm->hdcptx_comm.hdcptx_start_type, 0);
+		} else {
+			/* for drm stop/disconnect state judgment*/
+			tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_STATE_START;
+			drm_hdmitx_common_hdcp_enable(tx_comm,
+				tx_comm->hdcptx_comm.hdcptx_start_type);
+		}
+		break;
 	default:
 		break;
 	}
@@ -7394,14 +7406,14 @@ static int hdmitx21_post_enable_mode(struct hdmitx_common *tx_comm)
 			 * 0: for hdmitx driver control hdcp
 			 * 1/2: drm driver or app control hdcp
 			 */
-			if (hdcptx_comm->hdcp_ctl_lvl == 0) {
-				if (hdmitx_find_vendor_hdcp_delay(tx_comm->base.edid_buf))
-					hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv,
-						HDCP_START_AUTO, msecs_to_jiffies(750));
-				else
-					hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv,
-						HDCP_START_AUTO, msecs_to_jiffies(500));
-			}
+			if (hdmitx_find_vendor_hdcp_delay(tx_comm->base.edid_buf))
+				hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv,
+					tx_comm->hdcptx_comm.hdcptx_start_type,
+					msecs_to_jiffies(750));
+			else
+				hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv,
+					tx_comm->hdcptx_comm.hdcptx_start_type,
+					msecs_to_jiffies(500));
 		}
 	}
 #endif
@@ -7464,7 +7476,7 @@ void hdmitx21_video_mute_op(struct hdmitx_hw_common *hw_comm, u32 flag, unsigned
 #ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 
 /* TODO, no mutex */
-static void hdmitx21_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *buf)
+static void hdmitx21_set_hdcp_mode(struct hdmitx_common *tx_comm)
 {
 	struct hdcptx_common *hdcptx_comm = NULL;
 
@@ -7474,15 +7486,15 @@ static void hdmitx21_set_hdcp_mode(struct hdmitx_common *tx_comm, const char *bu
 	}
 	hdcptx_comm = &tx_comm->hdcptx_comm;
 
-	if (strncmp(buf, "f1", 2) == 0) {
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_NONE) {
 		if (hdcptx_comm->hdcptx_api->hdcptx_enable)
 			hdcptx_comm->hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv, 1, 0);
 	}
-	if (strncmp(buf, "f2", 2) == 0) {
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_HDCP1X) {
 		if (hdcptx_comm->hdcptx_api->hdcptx_enable)
 			hdcptx_comm->hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv, 2, 0);
 	}
-	if (buf[0] == '0') {
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_HDCP2X) {
 		if (hdcptx_comm->hdcptx_api->hdcptx_enable)
 			hdcptx_comm->hdcptx_api->hdcptx_enable(tx_comm->hdcptx_priv, 0, 0);
 	}

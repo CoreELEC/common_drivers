@@ -5322,6 +5322,16 @@ static int hdmitx20_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 	case HDCP_DISABLE:
 		hdmitx20_disable_hdcp(tx_comm);
 		break;
+	case HDCP_ENABLE:
+		if (tx_comm->hdcptx_comm.hdcp_ctl_lvl == 0) {
+			tx_comm->hdcptx_comm.set_hdcp_mode(tx_comm);
+		} else {
+			tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_STATE_START;
+			drm_hdmitx_common_hdcp_enable(tx_comm,
+				tx_comm->hdcptx_comm.hdcptx_start_type);
+		}
+
+		break;
 	case HDCP_PARAM_RESET:
 	case HDCP14_KEY_LOAD:
 	case HDCP_REQ_AUTH:
@@ -7260,6 +7270,9 @@ static int hdmitx20_enable_mode(struct hdmitx_common *tx_comm)
 	if (tx_comm->tx_hw->set_aud_mode)
 		tx_comm->tx_hw->set_aud_mode(tx_comm->tx_hw, &tx_comm->cur_audio_param);
 
+	if (tx_comm->hdcptx_comm.hdcp_ctl_lvl != 0)
+		hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_ENABLE, NULL, NULL);
+
 	return ret;
 }
 
@@ -7279,6 +7292,7 @@ static void hdmitx20_disable_hdcp(struct hdmitx_common *tx_comm)
 	hdmitx20_hw_cntl(tx_hw_base, HDCP_GET_AUTH_RESULT, NULL, NULL);
 	tx_comm->hdcptx_comm.hdcp_mode = 0;
 	tx_comm->hdcptx_comm.hdcp_bcaps_repeater = 0;
+	tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
 }
 
 void hdmitx20_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)

@@ -1867,7 +1867,14 @@ static ssize_t hdcp_mode_store(struct device *dev,
 {
 	struct hdmitx_common *tx_comm = dev_get_drvdata(dev);
 
-	hdmitx_set_hdcp_mode(tx_comm, buf);
+	if (strncmp(buf, "0", 1) == 0)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_NONE;
+	else if (strncmp(buf, "1", 1) == 0)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP1X;
+	else if (strncmp(buf, "2", 1) == 0)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP2X;
+
+	hdmitx_set_hdcp_mode(tx_comm);
 	return count;
 }
 

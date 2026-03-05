@@ -245,6 +245,7 @@ int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *h
 		tx_comm->hdcptx_comm.hdcp_user = 0;
 	tx_comm->hdcptx_comm.hdcp_rpt_en = 0;
 	tx_comm->hdcptx_comm.hdcp_mode = 0;
+	tx_comm->hdcptx_comm.hdcp_state_mode = HDCP_STATE_DISCONNECT;
 
 	/* no RxSense by default */
 	tx_comm->rxsense_policy = 0;
@@ -3577,6 +3578,76 @@ unsigned int hdmitx_common_get_scdc_ln2_ln3_ltp(struct hdmitx_common *tx_comm)
 	return ln2_ln3_ltp;
 }
 EXPORT_SYMBOL(hdmitx_common_get_scdc_ln2_ln3_ltp);
+
+unsigned int hdmitx_common_get_hdcp_mode(struct hdmitx_common *tx_comm)
+{
+	unsigned int hdcp_mode_flag = 0;
+
+	if (tx_comm->hdcptx_comm.hdcp_mode) {
+		hdcp_mode_flag |= tx_comm->hdcptx_comm.hdcp_mode;
+		if (tx_comm->hdcptx_comm.hdcp_auth_result == HDCP_AUTH_OK)
+			hdcp_mode_flag |= 1 << 3;
+		else if (tx_comm->hdcptx_comm.hdcp_auth_result == HDCP_AUTH_FAIL)
+			hdcp_mode_flag |= 0 << 3;
+	} else {
+		return 0;
+	}
+	return hdcp_mode_flag;
+}
+EXPORT_SYMBOL(hdmitx_common_get_hdcp_mode);
+
+int hdmitx_common_set_hdcp_mode(struct hdmitx_common *tx_comm, u8 hdcp_mode,
+	enum hdcp_state hdcp_state)
+{
+	struct hdmitx_hw_common *tx_hw = NULL;
+
+	HDMITX_INFO("%s set hdcp_mode: %d, hdcp_state:%d\n", __func__, hdcp_mode, hdcp_state);
+	if (!tx_comm) {
+		HDMITX_ERROR("NULL tx_comm instance\n");
+		return -EINVAL;
+	}
+	tx_hw = tx_comm->tx_hw;
+	if ((hdcp_mode & HDCP_MODE22) && (hdcp_mode & HDCP_MODE14))
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_AUTO;
+	else if (hdcp_mode & HDCP_MODE22)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP2X;
+	else if (hdcp_mode & HDCP_MODE14)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP1X;
+	else
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_NONE;
+
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_AUTO)
+		tx_comm->hdcptx_comm.hdcp_mode_fallback_state = HDCP_FALLBACK_NONE;
+	else
+		tx_comm->hdcptx_comm.hdcp_mode_fallback_state = HDCP_FALLBACK_LOCKED;
+
+	switch (hdcp_state) {
+	case HDCP_STATE_DISCONNECT:
+		if (tx_comm->hdcptx_comm.hdcp_ctl_lvl != 0)
+			drm_hdmitx_common_hdcp_disconnect(tx_comm);
+		break;
+	case HDCP_STATE_STOP:
+		if (tx_comm->hdcptx_comm.hdcp_ctl_lvl != 0)
+			drm_hdmitx_common_hdcp_disable(tx_comm);
+		break;
+	case HDCP_FORCE:
+		hdmitx_common_avmute_locked(tx_comm, SET_AVMUTE, AVMUTE_PATH_HDMITX);
+		msleep(100);
+		hdmitx_hw_cntl(tx_hw, HDCP_DISABLE, NULL, NULL);
+		hdmitx_common_avmute_locked(tx_comm, CLR_AVMUTE, AVMUTE_PATH_HDMITX);
+		hdmitx_hw_cntl(tx_hw, HDCP_ENABLE, NULL, NULL);
+		break;
+	case HDCP_KEY_READY:
+		hdmitx_hw_cntl(tx_hw, HDCP_DISABLE, NULL, NULL);
+		hdmitx_hw_cntl(tx_hw, HDCP_ENABLE, NULL, NULL);
+		break;
+	default:
+		HDMITX_DEBUG("%s don't use hdcp_state:%d\n", __func__, hdcp_state);
+		break;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(hdmitx_common_set_hdcp_mode);
 
 struct tx_mode_name {
 	char *integer_name;
