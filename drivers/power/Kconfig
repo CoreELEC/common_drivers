@@ -17,4 +17,5 @@ config AMLOGIC_POWER_EE
 
 
 source "$(COMMON_DRIVERS_DIR)/drivers/power/meson_pmic6b/Kconfig"
-
+source "$(COMMON_DRIVERS_DIR)/drivers/power/charger/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/power/battery/Kconfig"

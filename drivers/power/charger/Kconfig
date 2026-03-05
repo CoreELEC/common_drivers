@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+if AMLOGIC_POWER
+
+config AMLOGIC_CHARGER_SGM415XX
+	tristate "sgm415xx charger driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here to enable support for getting battery and charger
+	  information and altering charger configurations from the SGM415xx
+          charger IC.
+endif

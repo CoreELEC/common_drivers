@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+if AMLOGIC_POWER
+
+config AMLOGIC_BATTERY_CW2015
+	tristate "cw2015 driver"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you want to use the cw2015 driver.
+endif

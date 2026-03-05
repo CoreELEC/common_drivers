@@ -14,3 +14,5 @@ PR_FMT_DEFINE="-Dpr_fmt(fmt)= \"[$(PR_FMT)]: \" fmt"
 ccflags-y += $(PR_FMT_DEFINE)
 
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/power/meson_pmic6b/Makefile
+include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/power/charger/Makefile
+include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/power/battery/Makefile

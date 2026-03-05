@@ -30,6 +30,8 @@ static int __init domain_main_init(void)
 	call_sub_init(sec_power_domain_init);
 	call_sub_init(power_ee_domain_init);
 	call_sub_init(meson_pmic6b_bat_init);
+	call_sub_init(sgm415xx_charger_init);
+	call_sub_init(cw2015_battery_init);
 	pr_debug("### %s() end\n", __func__);
 
 	return 0;
@@ -40,6 +42,8 @@ static void __exit domain_main_exit(void)
 	sec_power_domain_exit();
 	power_ee_domain_exit();
 	meson_pmic6b_bat_exit();
+	sgm415xx_charger_exit();
+	cw2015_battery_exit();
 }
 
 module_init(domain_main_init);

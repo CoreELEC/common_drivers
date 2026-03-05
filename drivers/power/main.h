@@ -48,4 +48,32 @@ static inline void meson_pmic6b_bat_exit(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_AMLOGIC_CHARGER_SGM415XX)
+int sgm415xx_charger_init(void);
+void sgm415xx_charger_exit(void);
+#else
+static inline int sgm415xx_charger_init(void)
+{
+	return 0;
+}
+
+static inline void sgm415xx_charger_exit(void)
+{
+}
+#endif //CONFIG_AMLOGIC_CHARGER_SGM415XX
+
+#if IS_ENABLED(CONFIG_AMLOGIC_BATTERY_CW2015)
+int cw2015_battery_init(void);
+void cw2015_battery_exit(void);
+#else
+static inline int cw2015_battery_init(void)
+{
+	return 0;
+}
+
+static inline void cw2015_battery_exit(void)
+{
+}
+#endif //CONFIG_AMLOGIC_BATTERY_CW2015
+
 #endif /* _DOMAIN_MAIN_H__ */

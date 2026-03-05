@@ -264,7 +264,7 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c2_master_pins1>;
 	pinctrl-1 = <&i2c2_master_sleep_pins1>;
