@@ -1,0 +1,11 @@
+#include "s6_s905x5_ugoos_am9.dts"
+
+/ {
+	model = "Ugoos AM9 Pro";
+	coreelec-dt-id = "s6_s905x5_ugoos_am9_pro";
+	amlogic-dt-id = "s6_s905x5_umx5jyks";
+
+	led {
+		mosi-gpios = <&gpio GPIOA_9 GPIO_ACTIVE_LOW>;
+	};
+};
