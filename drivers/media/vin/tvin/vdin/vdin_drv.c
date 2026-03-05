@@ -5331,6 +5331,30 @@ static int vdin_cmd_check(struct vdin_dev_s *devp, unsigned int cmd)
 	return 0;
 }
 
+/*
+ * prop.frame_rate is prop.fps-Hz (x100). When VTEM next_tfr is absent but QMS+M_const
+ * is on, frame_rate assign to nextfr
+ */
+static bool vdin_qms_next_tfr_valid(u32 next_tfr)
+{
+	return next_tfr && next_tfr >= 23976 && next_tfr <= 120000;
+}
+
+static u32 vdin_qms_next_tfr_config(u32 fr_rate)
+{
+	if (fr_rate >= 2390 && fr_rate < 2400)
+		return 23976;
+	if (fr_rate >= 2990 && fr_rate < 3000)
+		return 29970;
+	if (fr_rate >= 4790 && fr_rate < 4800)
+		return 47952;
+	if (fr_rate >= 5990 && fr_rate < 6000)
+		return 59940;
+	if (fr_rate >= 11980 && fr_rate < 12000)
+		return 119880;
+	return fr_rate * 10;
+}
+
 /* vdin ioctl cmd:
  *	TVIN_IOC_OPEN /TVIN_IOC_CLOSE
  *	TVIN_IOC_START_DEC /TVIN_IOC_STOP_DEC
@@ -5360,6 +5384,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct vdin_qms_param_s vdin_qms_status;
 	unsigned int tmp = 0;
 	unsigned int vdin_need_mem_size = 0;
+	u32 next_tfr = 0;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	struct vdin_dump_buf_arg dump_arg;
 	struct vdin_dump_afbc_buf_arg dump_afbc_arg;
@@ -5940,19 +5965,31 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				devp->pre_prop.spd_data.data[5]);
 		break;
 	case TVIN_IOC_G_QMS_STATUS:
+		memset(&vdin_qms_status, 0, sizeof(vdin_qms_status));
+		next_tfr = devp->pre_prop.vtem_data.next_tfr;
 		vdin_qms_status.qms_en = devp->pre_prop.vtem_data.qms_en;
-		vdin_qms_status.qms_fr = devp->pre_prop.vtem_data.next_tfr;
-		vdin_qms_status.qms_base_fr = devp->pre_prop.vtem_data.base_framerate;
+		if (vdin_qms_status.qms_en && devp->pre_prop.vtem_data.m_const &&
+		    vdin_qms_next_tfr_valid(next_tfr)) {
+			vdin_qms_status.qms_fr = next_tfr;
+		} else if (vdin_qms_status.qms_en && !next_tfr) {
+			vdin_qms_status.qms_fr =
+				vdin_qms_next_tfr_config(devp->prop.frame_rate);
+		} else {
+			vdin_qms_status.qms_en = 0;
+		}
+		vdin_qms_status.qms_base_fr = devp->parm.info.fps;
 		vdin_qms_status.qms_plus_en = devp->prop.qms_plus_flag;
+
 		if (copy_to_user(argp, &vdin_qms_status, sizeof(vdin_qms_status))) {
 			pr_info("vdin_qms_status copy fail\n");
 			ret = -EFAULT;
 			break;
 		}
 
-		pr_info("vdin%d,TVIN_IOC_G_QMS_STATUS qms_en:%d,qms_fr:%d, qms+:%d\n\n",
-			devp->index, vdin_qms_status.qms_en, vdin_qms_status.qms_fr,
-			devp->prop.qms_plus_flag);
+		pr_info("vdin%d G_QMS qms_en:%d ntfr:%d qms_fr:%d qms+:%d fr:%d mc:%d\n",
+			devp->index, vdin_qms_status.qms_en, next_tfr,
+			vdin_qms_status.qms_fr, devp->prop.qms_plus_flag,
+			devp->prop.frame_rate, devp->prop.vtem_data.m_const);
 		break;
 	case TVIN_IOC_GET_COLOR_RANGE:
 		if (copy_to_user(argp, &color_range_force,
