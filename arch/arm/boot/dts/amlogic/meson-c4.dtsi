@@ -298,7 +298,7 @@
 
 		tsensor: tsensor@fe020000 {
 			compatible = "amlogic, r1p1-tsensor";
-			status = "disabled";
+			status = "okay";
 			reg = <0xfe020000 0x50>;
 			tsensor_id = <1>;
 			cal_type = <0x11>;
@@ -308,7 +308,8 @@
 			clocks = <&clkc CLKID_TS>;
 			clock-names = "ts_comp";
 			#thermal-sensor-cells = <1>;
-			cust_governor = "power_allocator";
+			reset-names = "ts_rst";
+			resets = <&reset RESET_TS_PLL>;
 		};
 
 		sd_emmc_c: mmc@fe08c000 {
@@ -1075,7 +1076,7 @@
 			cooling-maps {
 				cpufreq_cooling_map {
 					trip = <&pcontrol>;
-					cooling-device = <&cpu0 0 8>;
+					cooling-device = <&cpu0 0 3>;
 					contribution = <1024>;
 				};
 			};
