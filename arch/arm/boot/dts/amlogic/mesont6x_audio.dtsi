@@ -133,6 +133,7 @@
 				compatible = "amlogic, t6w-snd-earc";
 				#sound-dai-cells = <0>;
 				suspend-clk-off = <1>;
+				hpd-reset-special = <1>;
 
 				status = "okay";
 

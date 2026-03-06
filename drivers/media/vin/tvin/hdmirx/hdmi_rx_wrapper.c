@@ -104,7 +104,7 @@ int pix_limit = 400;
 static int frate_flg = 0xf;
 static int frate_flg1 = 0xf;
 char fsm_pr_buff[E_PORT_NUM][100];
-typedef void (*pf_callback)(int earc_port, bool st);
+typedef void (*pf_callback)(int earc_port, int st);
 static pf_callback earc_hdmirx_hpdst;
 static cec_callback cec_hdmirx5v_update;
 

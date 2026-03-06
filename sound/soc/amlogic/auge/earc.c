@@ -228,6 +228,8 @@ struct earc {
 	int rx_state;
 	int rx_pointer;
 	int tx_mute_late;
+	/* for hdmi rx special flow when reset hpd */
+	int hpd_reset_special;
 
 	/* audio codec type for tx */
 	enum audio_coding_types tx_audio_coding_type;
@@ -3349,12 +3351,27 @@ static void send_uevent_work_func(struct work_struct *p_work)
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-static void earc_hdmirx_hpdst(int earc_port, bool st)
+void earc_hdmirx_hpdst(int earc_port, int st)
 {
 	struct earc *p_earc = s_earc;
 
 	if (!p_earc)
 		return;
+
+	if (p_earc->hpd_reset_special) {
+		dev_info(p_earc->dev, "HDMIRX cable port:%d st %d\n", earc_port, st);
+
+		/* st: 3, it is for before hpd flow
+		 * st: 4, it is for after hpd flow
+		 */
+		if (st == 3) {
+			earctx_set_for_hpd(p_earc->tx_top_map, p_earc->chipinfo, true);
+			return;
+		} else if (st == 4) {
+			earctx_set_for_hpd(p_earc->tx_top_map, p_earc->chipinfo, false);
+			return;
+		}
+	}
 
 	dev_info(p_earc->dev, "HDMIRX cable port:%d is %s\n",
 		 earc_port,
@@ -3657,6 +3674,10 @@ static int earc_platform_probe(struct platform_device *pdev)
 			dev_info(dev, "%s, irq_earc_tx:%d\n", __func__, p_earc->irq_earc_tx);
 		earc_dai[0].playback = pcm_stream;
 		p_earc->earctx_port = -1;
+
+		ret = of_property_read_u32(node, "hpd-reset-special", &p_earc->hpd_reset_special);
+		if (ret < 0)
+			dev_dbg(&pdev->dev, "Can't retrieve hpd-reset-special\n");
 	}
 
 	ret = of_property_read_u32(node, "suspend-clk-off", &p_earc->suspend_clk_off);

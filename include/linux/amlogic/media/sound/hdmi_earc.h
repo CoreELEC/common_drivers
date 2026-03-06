@@ -8,7 +8,7 @@
 
 int register_earcrx_callback(void (*callback)(bool st));
 void unregister_earcrx_callback(void);
-int register_earctx_callback(void (*callback)(int earc_port, bool st));
+int register_earctx_callback(void (*callback)(int earc_port, int st));
 void unregister_earctx_callback(void);
 
 #endif

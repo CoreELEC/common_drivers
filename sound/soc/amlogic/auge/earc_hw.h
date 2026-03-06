@@ -298,6 +298,7 @@ void earcrx_enable(struct regmap *cmdc_map,
 void earctx_cmdc_int_mask(struct regmap *top_map);
 void earctx_enable_d2a(struct regmap *top_map, int enable);
 void earctx_enable_rterm_on(struct regmap *top_map);
+void earctx_set_for_hpd(struct regmap *top_map, struct earc_chipinfo *chipinfo, bool hpd);
 void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chipinfo);
 void earctx_cmdc_set_timeout(struct regmap *cmdc_map, int no_timeout);
 void earctx_cmdc_arc_connect(struct regmap *cmdc_map, bool init);

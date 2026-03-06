@@ -907,6 +907,26 @@ void earctx_enable_rterm_on(struct regmap *top_map)
 	mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1 << 17, 0x1 << 17);
 }
 
+void earctx_set_for_hpd(struct regmap *top_map, struct earc_chipinfo *chipinfo, bool hpd)
+{
+	if (hpd) {
+		earctx_enable_d2a(top_map, true);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1f << 19, 0x10 << 19);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1 << 17,  0);
+		mmio_update_bits(top_map, EARCTX_TOP_CTRL0, 0x3, 0x3);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL1, 0x1 << 20, 0x1 << 20);
+	} else {
+		u8 idr_trim = 0x10;
+
+		if (chipinfo->idr_trim_val > 0)
+			idr_trim = chipinfo->idr_trim_val;
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1f << 19, idr_trim << 19);
+		earctx_enable_rterm_on(top_map);
+		mmio_update_bits(top_map, EARCTX_TOP_CTRL0, 0x3, 0);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL1, 0x1 << 20, 0);
+	}
+}
+
 void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chipinfo)
 {
 	/* always set bit[16] = 0 from T5M for Txs */
