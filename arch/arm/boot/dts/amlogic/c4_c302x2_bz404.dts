@@ -13,6 +13,11 @@
 
 	aliases {
 		serial0 = &uart_B;
+		serial1 = &uart_E;
+		serial2 = &uart_A;
+		serial3 = &uart_C;
+		serial4 = &uart_D;
+		serial5 = &uart_F;
 		i2c2 = &i2c2;
 		spi0 = &spi_nfc;
 		tsensor0 = &tsensor;

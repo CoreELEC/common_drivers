@@ -557,10 +557,24 @@
 				status = "disabled";
 			};
 
+			uart_A: serial@78000 {
+				compatible = "amlogic,meson-uart";
+				reg = <0x78000 0x18>;
+				interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+				status = "disabled";
+				clocks = <&xtal
+					&clkc CLKID_SYS_UART_A>;
+				clock-names = "clk_uart", "clk_gate";
+				xtal_tick_en = <2>;
+				fifosize = < 64 >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&a_uart_pins1>;
+			};
+
 			uart_B: serial@7a000 {
 				compatible = "amlogic,meson-uart";
 				reg = <0x7a000 0x18>;
-				interrupts = <0 169 1>;
+				interrupts = <GIC_SPI 169 IRQ_TYPE_EDGE_RISING>;
 				status = "okay";
 				clocks = <&xtal>;
 				clock-names = "clk_uart";
@@ -569,6 +583,58 @@
 				//pinctrl-names = "default";
 				/*pinctrl-0 = <&ao_uart_pins>;*/
 				support-sysrq = <1>;
+			};
+
+			uart_C: serial@7c000 {
+				compatible = "amlogic,meson-uart";
+				reg = <0x7c000 0x18>;
+				interrupts = <GIC_SPI 170 IRQ_TYPE_EDGE_RISING>;
+				status = "disabled";
+				clocks = <&xtal
+					&clkc CLKID_SYS_UART_C>;
+				clock-names = "clk_uart", "clk_gate";
+				fifosize = < 64 >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&c_uart_pins1>;
+			};
+
+			uart_D: serial@7e000 {
+				compatible = "amlogic,meson-uart";
+				reg = <0x7e000 0x18>;
+				interrupts = <GIC_SPI 171 IRQ_TYPE_EDGE_RISING>;
+				status = "disabled";
+				clocks = <&xtal
+					&clkc CLKID_SYS_UART_D>;
+				clock-names = "clk_uart", "clk_gate";
+				fifosize = < 64 >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&d_uart_pins1>;
+			};
+
+			uart_E: serial@80000 {
+				compatible = "amlogic,meson-uart";
+				reg = <0x80000 0x18>;
+				interrupts = <GIC_SPI 172 IRQ_TYPE_EDGE_RISING>;
+				status = "disabled";
+				clocks = <&xtal
+					&clkc CLKID_SYS_UART_E>;
+				clock-names = "clk_uart", "clk_gate";
+				fifosize = < 64 >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&e_uart_pins1>;
+			};
+
+			uart_F: serial@82000 {
+				compatible = "amlogic,meson-uart";
+				reg = <0x82000 0x18>;
+				interrupts = <GIC_SPI 173 IRQ_TYPE_EDGE_RISING>;
+				status = "disabled";
+				clocks = <&xtal
+					&clkc CLKID_SYS_UART_F>;
+				clock-names = "clk_uart", "clk_gate";
+				fifosize = < 64 >;
+				pinctrl-names = "default";
+				pinctrl-0 = <&f_uart_pins1>;
 			};
 
 			watchdog {
@@ -1761,9 +1827,7 @@
 	a_uart_pins1:a_uart1 {
 		mux {
 			groups = "uart_a_tx_b",
-				"uart_a_rx_b",
-				"uart_a_cts_b",
-				"uart_a_rts_b";
+				"uart_a_rx_b";
 			function = "uart_a";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
@@ -1782,8 +1846,8 @@
 
 	a_uart_pins3:a_uart3 {
 		mux {
-			groups = "uart_a_tx_d",
-				"uart_a_rx_d";
+			groups = "uart_a_tx",
+				"uart_a_rx";
 			function = "uart_a";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
@@ -1800,10 +1864,20 @@
 		};
 	};
 
+	a_uart_pins5:a_uart5 {
+		mux {
+			groups = "uart_a_tx_m",
+				"uart_a_rx_m";
+			function = "uart_a";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
 	b_uart_pins1:b_uart1 {
 		mux {
-			groups = "uart_b_tx_c",
-				"uart_b_rx_c";
+			groups = "uart_b_tx",
+				"uart_b_rx";
 			function = "uart_b";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
@@ -1842,39 +1916,39 @@
 
 	c_uart_pins3:c_uart3 {
 		mux {
-			groups = "uart_c_tx_d",
-				"uart_c_rx_d";
+			groups = "uart_c_tx",
+				"uart_c_rx";
 			function = "uart_c";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	d_uart_pins1:d_uart1 {
+	c_uart_pins4:c_uart4 {
 		mux {
-			groups = "uart_d_tx_b",
-				"uart_d_rx_b";
-			function = "uart_d";
+			groups = "uart_c_tx_m",
+				"uart_c_rx_m";
+			function = "uart_c";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	d_uart_pins2:d_uart2 {
+	c_uart_pins5:c_uart5 {
 		mux {
-			groups = "uart_d_tx_d",
-				"uart_d_rx_d";
-			function = "uart_d";
+			groups = "uart_c_tx_m2",
+				"uart_c_rx_m3";
+			function = "uart_c";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	d_uart_pins3:d_uart3 {
+	c_uart_pins6:c_uart6 {
 		mux {
-			groups = "uart_d_tx_x",
-				"uart_d_rx_x";
-			function = "uart_d";
+			groups = "uart_c_tx_b",
+				"uart_c_rx_b";
+			function = "uart_c";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
@@ -1882,8 +1956,8 @@
 
 	e_uart_pins1:e_uart1 {
 		mux {
-			groups = "uart_e_tx_x",
-				"uart_e_rx_x",
+			groups = "uart_e_tx",
+				"uart_e_rx",
 				"uart_e_rts",
 				"uart_e_cts";
 			function = "uart_e";
@@ -1892,20 +1966,10 @@
 		};
 	};
 
-	e_uart_pins2:e_uart2 {
-		mux {
-			groups = "uart_e_tx_a",
-				"uart_e_rx_a";
-			function = "uart_e";
-			bias-pull-up;
-			drive-strength-microamp = <3000>;
-		};
-	};
-
 	f_uart_pins1:f_uart1 {
 		mux {
-			groups = "uart_f_tx_a",
-				"uart_f_rx_a";
+			groups = "uart_f_tx",
+				"uart_f_rx";
 			function = "uart_f";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
@@ -2611,4 +2675,45 @@
 		};
 	};
 
+	d_uart_pins1:d_uart1 {
+		mux {
+			groups = "uart_d_rx",
+				"uart_d_tx";
+			function = "uart_d_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	e_uart_pins2:e_uart2 {
+		mux {
+			groups = "uart_e_rx_ao1",
+				"uart_e_tx_ao0";
+			function = "uart_e_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	e_uart_pins3:e_uart3 {
+		mux {
+			groups = "uart_e_rx_ao11",
+				"uart_e_tx_ao10",
+				"uart_e_cts_ao12",
+				"uart_e_rts_ao13";
+			function = "uart_e_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	f_uart_pins2:f_uart2 {
+		mux {
+			groups = "uart_f_rx_ao3",
+				"uart_f_tx_ao2";
+			function = "uart_f_ao";
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+	};
 };
