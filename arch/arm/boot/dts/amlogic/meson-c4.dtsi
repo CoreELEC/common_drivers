@@ -1127,6 +1127,13 @@
 		#clock-cells = <0>;
 	};
 
+	xtal_32k: xtal-32k-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32768>;
+		clock-output-names = "xtal_32k";
+		#clock-cells = <0>;
+	};
+
 	optee {
 		compatible = "linaro,optee-tz";
 		method = "smc";
@@ -1338,16 +1345,15 @@
 		};
 	};
 
-/*
 	rtc: rtc@fe430000 {
 		compatible = "amlogic,meson-rtc";
 		reg = <0xfe430000 0x38>;
 		interrupts = <GIC_SPI 201 IRQ_TYPE_EDGE_RISING>;
-		osc_freq = <OSC_32KHZ>;
 		time-storage-format-gray;
-		status = "disabled";
+		clocks = <&xtal_32k>, <&clkc CLKID_SYS_RTC>;
+		clock-names = "osc", "sys";
+		status = "okay";
 	};
-*/
 
 	jpegenc {
 		compatible = "amlogic, jpegenc";

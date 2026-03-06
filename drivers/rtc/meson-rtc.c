@@ -465,12 +465,12 @@ static int aml_rtc_probe(struct platform_device *pdev)
 	else
 		rtc->rtc_virtual = false;
 
-	rtc->mbox_chan = aml_mbox_request_channel_byidx(&pdev->dev, 0);
-	if (IS_ERR_OR_NULL(rtc->mbox_chan))
-		return dev_err_probe(&pdev->dev, PTR_ERR(rtc->mbox_chan),
-				     "failed to get mbox chan\n");
-
-	if (!rtc->rtc_virtual) {
+	if (rtc->rtc_virtual) {
+		rtc->mbox_chan = aml_mbox_request_channel_byidx(&pdev->dev, 0);
+		if (IS_ERR_OR_NULL(rtc->mbox_chan))
+			return dev_err_probe(&pdev->dev, PTR_ERR(rtc->mbox_chan),
+					     "failed to get mbox chan\n");
+	} else {
 		rtc->rtc_clk = devm_clk_get(&pdev->dev, "osc");
 		if (IS_ERR(rtc->rtc_clk))
 			return dev_err_probe(&pdev->dev, PTR_ERR(rtc->rtc_clk),
@@ -491,14 +491,20 @@ static int aml_rtc_probe(struct platform_device *pdev)
 
 		aml_rtc_init(&pdev->dev, rtc);
 
-		ret = aml_mbox_transfer_data(rtc->mbox_chan, MBOX_CMD_GET_RTC,
-			NULL, 0, &rtc_time, sizeof(rtc_time), MBOX_SYNC);
-		if (ret < 0) {
-			dev_err_probe(&pdev->dev, ret, "Fail to get rtc init time\n");
-			goto err_clk;
+		rtc->mbox_chan = aml_mbox_request_channel_byidx(&pdev->dev, 0);
+		if (!IS_ERR_OR_NULL(rtc->mbox_chan)) {
+			ret = aml_mbox_transfer_data(rtc->mbox_chan, MBOX_CMD_GET_RTC,
+				NULL, 0, &rtc_time, sizeof(rtc_time), MBOX_SYNC);
+			if (ret < 0) {
+				dev_err_probe(&pdev->dev, ret, "Fail to get rtc init time\n");
+				goto err_clk;
+			}
+			dev_dbg(&pdev->dev, "Successfully restored rtc time %u\n", rtc_time);
+			meson_set_time(rtc, rtc_time);
+		} else {
+			dev_info(&pdev->dev, "No need mailbox channel\n");
+			rtc->mbox_chan = NULL;
 		}
-		dev_dbg(&pdev->dev, "Successfully restored rtc time %u\n", rtc_time);
-		meson_set_time(rtc, rtc_time);
 	}
 
 	rtc->irq = platform_get_irq(pdev, 0);
@@ -545,7 +551,7 @@ err_clk:
 	return ret;
 }
 
-static int aml_rtc_suspend(struct device *dev)
+static int __maybe_unused aml_rtc_suspend(struct device *dev)
 {
 	struct aml_rtc_data *rtc = dev_get_drvdata(dev);
 	int ret = 0;
@@ -559,7 +565,7 @@ static int aml_rtc_suspend(struct device *dev)
 	return ret;
 }
 
-static int aml_rtc_resume(struct device *dev)
+static int __maybe_unused aml_rtc_resume(struct device *dev)
 {
 	struct aml_rtc_data *rtc = dev_get_drvdata(dev);
 	int ret = 0;

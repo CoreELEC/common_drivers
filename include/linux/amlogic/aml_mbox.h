@@ -110,6 +110,7 @@ static inline void mbox_receive_callback(struct mbox_client *cl, void *mssg)
  * @name: mbox chan index
  * Return: The mbox channel if success
  */
+#ifdef CONFIG_AMLOGIC_MHU_MBOX
 static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *dev, int idx)
 {
 	struct mbox_client *mbox_client;
@@ -129,6 +130,12 @@ static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *de
 	}
 	return mbox_chan;
 }
+#else
+static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *dev, int idx)
+{
+	return NULL;
+}
+#endif
 
 /**
  * aml_mbox_request_channel_byname - Request mbox by name
@@ -136,6 +143,7 @@ static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *de
  * @name: mbox chan name
  * Return: The mbox channel if success
  */
+#ifdef CONFIG_AMLOGIC_MHU_MBOX
 static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *dev, char *name)
 {
 	struct mbox_client *mbox_client;
@@ -155,6 +163,12 @@ static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *d
 	}
 	return mbox_chan;
 }
+#else
+static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *dev, char *name)
+{
+	return NULL;
+}
+#endif
 
 /*
  * Check if the aocpu is alive
@@ -193,6 +207,7 @@ static inline int check_aocpu_status(void __iomem *sts_addr)
  * @rxsize:               Mbox receive data size
  * @sync                  Mbox Sync info
  */
+#ifdef CONFIG_AMLOGIC_MHU_MBOX
 static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 					 void *txbuf, u32 txsize, void *rxbuf, u32 rxsize,
 					 enum aml_mbox_sync sync)
@@ -234,5 +249,13 @@ static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 		ret = wait_for_completion_killable(&aml_data.complete);
 	return ret;
 }
+#else
+static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
+					 void *txbuf, u32 txsize, void *rxbuf, u32 rxsize,
+					 enum aml_mbox_sync sync)
+{
+	return 0;
+}
+#endif
 
 #endif
