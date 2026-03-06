@@ -157,7 +157,7 @@ void hdcptx1_ds_aksv_read(u8 *p_aksv, u8 ksv_bytes)
 	hdmitx21_seq_rd_reg(AKSV_1_IVCTX, p_aksv, ksv_bytes);
 }
 
-void hdcptx1_ds_bksv_read(u8 *p_bksv, u8 ksv_bytes)
+void hdcptx1_ds_bksv_read(struct hdcptx_common *hdcptx_comm, u8 *p_bksv, u8 ksv_bytes)
 {
 	hdmitx21_seq_rd_reg(TPI_WR_BKSV_1_IVCTX, p_bksv, ksv_bytes);
 }

@@ -29,6 +29,154 @@
 #include "dptx_hw_gtc.h"
 #include "dptx_hdcp_hw.h"
 
+static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para);
+
+static struct dptx_intr dptx_all_intr = {
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
+	.cp2tx_intr0 = {
+		.intr_mask_reg = DP_CP2TX_INTR0_MASK_IVCTX,
+		.intr_st_reg = DP_CP2TX_INTR0_IVCTX,
+		.intr_clr_reg = DP_CP2TX_INTR0_IVCTX,
+		.intr_top_bit = BIT(0),
+		.mask_data = 0xFF,
+		.callback = dptx_hdcp2x_intr_handler,
+	},
+	.cp2tx_intr1 = {
+		.intr_mask_reg = DP_CP2TX_INTR1_MASK_IVCTX,
+		.intr_st_reg = DP_CP2TX_INTR1_IVCTX,
+		.intr_clr_reg = DP_CP2TX_INTR1_IVCTX,
+		.intr_top_bit = BIT(0),
+		.mask_data = 0xFF,
+		.callback = dptx_hdcp2x_intr_handler,
+	},
+	.cp2tx_intr2 = {
+		.intr_mask_reg = DP_CP2TX_INTR2_MASK_IVCTX,
+		.intr_st_reg = DP_CP2TX_INTR2_IVCTX,
+		.intr_clr_reg = DP_CP2TX_INTR2_IVCTX,
+		.intr_top_bit = BIT(0),
+		.mask_data = 0xFF,
+		.callback = dptx_hdcp2x_intr_handler,
+	},
+	.cp2tx_intr3 = {
+		.intr_mask_reg = DP_CP2TX_INTR3_MASK_IVCTX,
+		.intr_st_reg = DP_CP2TX_INTR3_IVCTX,
+		.intr_clr_reg = DP_CP2TX_INTR3_IVCTX,
+		.intr_top_bit = BIT(0),
+		.mask_data = BIT(2) | BIT(3),
+		.callback = dptx_hdcp2x_intr_handler,
+	},
+#endif
+};
+
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
+void dptx_intr_status_save_clr_cp2txs(u8 regs[])
+{
+	regs[0] = dptx_all_intr.cp2tx_intr0.st_data;
+	regs[1] = dptx_all_intr.cp2tx_intr1.st_data;
+	regs[2] = dptx_all_intr.cp2tx_intr2.st_data;
+	regs[3] = dptx_all_intr.cp2tx_intr3.st_data;
+	dptx_all_intr.cp2tx_intr0.st_data = 0;
+	dptx_all_intr.cp2tx_intr1.st_data = 0;
+	dptx_all_intr.cp2tx_intr2.st_data = 0;
+	dptx_all_intr.cp2tx_intr3.st_data = 0;
+}
+
+static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para)
+{
+	u8 hdcp2_intr_reg[4];
+	struct dptx_common *tx_comm = (struct dptx_common *)intr_para;
+	struct hdcptx21_core *p_hdcp;
+
+	if (!tx_comm || !tx_comm->hdcptx_priv) {
+		DPTX_ERROR("NULL tx_comm or NULL hdcp_private instance\n");
+		return;
+	}
+	p_hdcp = tx_comm->hdcptx_priv;
+
+	dptx_intr_status_save_clr_cp2txs(hdcp2_intr_reg);
+	dptx_hdcp2x_process_intr(p_hdcp, hdcp2_intr_reg);
+}
+#endif
+
+void dptx_core_intr_process(struct dptx_common *tx_comm)
+{
+	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
+	struct dp_intr_t *pint = (struct dp_intr_t *)&dptx_all_intr;
+	u32 val;
+	int i;
+
+	if (!tx_comm)
+		return;
+
+	/* note: the callback sequence is as the member sequence of
+	 * struct hdmitx_intr, instead of the sequence of dptx_all_intr
+	 */
+	for (i = 1; i < sizeof(struct dptx_intr) / sizeof(struct dp_intr_t); i++) {
+		pint++;
+		/* DPTX_INFO("-----i = %d, pint->st_data = 0x%x\n", i, pint->st_data); */
+		/* only process the enabled interrupt */
+		if ((dptx20_reg_read(hw_comm, CORE_LEVEL, pint->intr_st_reg) & pint->mask_data) &&
+			(pint->st_data & pint->mask_data)) {
+			val = pint->st_data;
+			/* clear st_data asap in callback function */
+			if (pint->callback)
+				pint->callback(pint, (void *)tx_comm);
+		} else {
+			pint->st_data = 0;
+		}
+	}
+}
+
+/* there may be such case: after plugout interrupt come and save its
+ * interrupt state in st_data, before execute its bottom handle, there's
+ * another INTR5 come, then will do RE_ISR in intr_handler(), it will read
+ * plugin/out interrupt state and over-write the previous saved plug
+ * interrupt state in st_data. when execute the bottom handle of interrupt,
+ * and find that the plug interrupt is cleared, so won't do plug process
+ */
+static void dptx_intr_status_save_and_clear(struct dptx_common *tx_comm)
+{
+	struct dp_intr_t *pint = (struct dp_intr_t *)&dptx_all_intr;
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
+	u32 gate_status = dptx_get_gate_status(tx_comm->hw_comm);
+#endif
+	int i;
+	u32 tmp;
+
+	for (i = 0; i < sizeof(struct dptx_intr) / sizeof(struct dp_intr_t); i++, pint++) {
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
+		if (!(gate_status & BIT_DPTX_TOP_CLK_GATE_HDCP2X)) {
+			if (pint->intr_st_reg == DP_CP2TX_INTR0_IVCTX ||
+				pint->intr_st_reg == DP_CP2TX_INTR1_IVCTX ||
+				pint->intr_st_reg == DP_CP2TX_INTR2_IVCTX ||
+				pint->intr_st_reg == DP_CP2TX_INTR3_IVCTX) {
+				continue;
+			}
+		}
+#endif
+		/* if last bottom half of interrupt is not finished, should keep
+		 * the interrupt state, only clear it after it is already
+		 * used in bottom half of interrupt handle
+		 */
+		tmp = dptx20_reg_read(tx_comm->hw_comm, CORE_LEVEL, pint->intr_st_reg);
+		pint->st_data |= tmp;
+		/* clear interrupts */
+		dptx20_reg_write(tx_comm->hw_comm, CORE_LEVEL, pint->intr_clr_reg, pint->st_data);
+	}
+}
+
+static irqreturn_t dptx_hdcp22_intr_handler(int irq, void *dev)
+{
+	struct dptx_common *tx_comm = (struct dptx_common *)dev;
+	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
+	struct dptx20_hw *tx20_hw = to_dptx20_hw(hw_comm);
+
+	dptx_intr_status_save_and_clear(tx_comm);
+	tx_task_mgr_queue_task(tx20_hw->task_mgr, HDCP_INTR_TASK, 0);
+
+	return IRQ_HANDLED;
+}
+
 /*
  * Function: dptx20_hw_calc_mst_reg
  *
@@ -250,7 +398,8 @@ void dptx_hw_get_mnvid_clock(struct dptx_hw_common *hw_comm, u8 vc_id,
 /* timer interrupt bottom handler */
 static void dptx_timer_irq_process(void *para)
 {
-	struct dptx_hw_common *hw_comm = (struct dptx_hw_common *)para;
+	struct dptx_common *tx_comm = (struct dptx_common *)para;
+	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
 	struct dptx20_hw *tx20_hw = NULL;
 
 	if (!hw_comm) {
@@ -279,7 +428,8 @@ static void dptx_timer_irq_process(void *para)
 /* sendfifo_irq interrupt bottom handler */
 static void dptx_irq_sendfifo_process(void *para)
 {
-	struct dptx_hw_common *hw_comm = (struct dptx_hw_common *)para;
+	struct dptx_common *tx_comm = (struct dptx_common *)para;
+	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
 
 	if (!hw_comm) {
 		DPTX_ERROR("%s NULL hw_comm pointer\n", __func__);
@@ -287,6 +437,17 @@ static void dptx_irq_sendfifo_process(void *para)
 	}
 
 	dptx_hdcp2_sndfifo_intr_handler(hw_comm);
+}
+
+static void dptx_hdcp22_core_intr_handler(void *para)
+{
+	struct dptx_common *tx_comm = (struct dptx_common *)para;
+
+	if (!tx_comm) {
+		DPTX_ERROR("NULL tx_comm pointer\n");
+		return;
+	}
+	dptx_core_intr_process(tx_comm);
 }
 
 static struct tx_task_info dptx20_task_infos[] = {
@@ -309,29 +470,38 @@ static struct tx_task_info dptx20_task_infos[] = {
 		.init_queue_name = "irq_snedfifo",
 		.queue_name = "irq_snedfifo",
 		.queue_flag = WQ_HIGHPRI | WQ_CPU_INTENSIVE,
+	},
+	{
+		.name = "hdcp_intr_task",
+		.fn = dptx_hdcp22_core_intr_handler,
+		.type = HDCP_INTR_TASK,
+		.queue_type = TASK_QUEUE_HDCP,
+		.flag = TASK_FLAG_DELAY_WORK,
+		.queue_name = "dptx_hdcp22_core",
+		.queue_flag = WQ_HIGHPRI | WQ_CPU_INTENSIVE,
 	}
 };
 
 /* task init for dptx20 */
-static int dptx20_task_init(struct dptx_hw_common *hw_comm)
+static int dptx20_task_init(struct dptx_common *tx_comm)
 {
 	int i;
 	int ret = 0;
 	struct dptx20_hw *tx20_hw = NULL;
 
-	if (!hw_comm) {
-		DPTX_ERROR("%s NULL hw_comm pointer\n", __func__);
+	if (!tx_comm || !tx_comm->hw_comm) {
+		DPTX_ERROR("NULL tx_comm hw_comm pointer\n");
 		return -EINVAL;
 	}
-	tx20_hw = to_dptx20_hw(hw_comm);
+	tx20_hw = to_dptx20_hw(tx_comm->hw_comm);
 	tx20_hw->task_mgr = tx_task_mgr_init();
 	if (!tx20_hw->task_mgr)
 		return -ENOMEM;
 
 	for (i = 0; i < ARRAY_SIZE(dptx20_task_infos); i++) {
-		sprintf(dptx20_task_infos[i].queue_name, "dptx%d_%s", hw_comm->dev_idx,
+		sprintf(dptx20_task_infos[i].queue_name, "dptx%d_%s", tx_comm->hw_comm->dev_idx,
 			dptx20_task_infos[i].init_queue_name);
-		ret = tx_task_mgr_setup_task(tx20_hw->task_mgr, &dptx20_task_infos[i], hw_comm);
+		ret = tx_task_mgr_setup_task(tx20_hw->task_mgr, &dptx20_task_infos[i], tx_comm);
 		if (ret)
 			DPTX_ERROR("%s setup task[%s] failed\n",
 				__func__, dptx20_task_infos[i].name);
@@ -453,23 +623,37 @@ static const char *const intr_name[] = {
 };
 
 /* assume different instance have different irq number */
-static int dptx_setup_irq(struct dptx_hw_common *hw_comm)
+static int dptx_setup_irq(struct dptx_common *tx_comm)
 {
 	int ret = 0;
+	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
+	const char *const hdcp_intr_name[] = {
+		"dptx0_hdcp",
+		"dptx1_hdcp",
+		"dptx2_hdcp",
+		"dptx3_hdcp",
+	};
 
 	if (!hw_comm)
 		return -1;
 	ret = request_irq(hw_comm->dptx_irq_id, &dptx_intr_handler,
 		IRQF_SHARED, intr_name[hw_comm->dev_idx], (void *)hw_comm);
+
+	if (!hw_comm->is_edp)
+		ret = request_irq(hw_comm->hdcp2tx_irq_id, &dptx_hdcp22_intr_handler,
+			IRQF_SHARED, hdcp_intr_name[hw_comm->dev_idx], (void *)tx_comm);
+
 	return ret;
 }
 
-static void dptx_free_irq(struct dptx_hw_common *hw_comm)
+static void dptx_free_irq(struct dptx_common *tx_comm)
 {
-	if (!hw_comm)
+	if (!tx_comm)
 		return;
 
-	free_irq(hw_comm->dptx_irq_id, (void *)hw_comm);
+	free_irq(tx_comm->hw_comm->dptx_irq_id, (void *)tx_comm->hw_comm);
+	if (!tx_comm->hw_comm->is_edp)
+		free_irq(tx_comm->hw_comm->hdcp2tx_irq_id, (void *)tx_comm);
 }
 
 /*
@@ -833,7 +1017,7 @@ void dptx_hw_core_init(struct dptx_hw_common *hw_comm)
  * write 0 enable interrupt; write 1 disable interrupt
  * here write 1 will disable the interrupt; other bits will enable interrupt
  */
-static void dptx_hw_intr_init(struct dptx_hw_common *hw_comm)
+static void dptx_hw_intr_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm)
 {
 	struct dptx20_hw *tx20_hw = NULL;
 	u32 intr_mask = INTERRUPT_MASK_SRC0_OVF_EVENT |
@@ -864,7 +1048,7 @@ static void dptx_hw_intr_init(struct dptx_hw_common *hw_comm)
 			INTERRUPT_MASK_REPLY_TIMEOUT_EVENT);
 	/* core level intr unmask: enable core intr */
 	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, intr_mask);
-	dptx_setup_irq(hw_comm);
+	dptx_setup_irq(tx_comm);
 }
 
 /*
@@ -888,19 +1072,32 @@ void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
 	dptx20_reg_write(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, isr_mask);
 }
 
+static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
+{
+	if (hdcptx_comm->hdcp_mode == 2) {
+		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
+					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr0, en);
+		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
+					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr1, en);
+		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
+					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr2, en);
+	}
+}
+
 /* #2.1 dptx task */
-static void dptx_hw_dptx_task_init(struct dptx_hw_common *hw_comm)
+static void dptx_hw_dptx_task_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm)
 {
 	dptx_platform_hw_init(hw_comm);
 	dptx_hw_phy_init(hw_comm->hw_base.tx_phy);
 	dptx_hw_core_init(hw_comm);
-	dptx_hw_intr_init(hw_comm);
+	dptx_hw_intr_init(tx_comm, hw_comm);
 }
 
 /* #2.2 Initialize HDCP task */
-static void dptx_hw_hdcp2_task_init(struct dptx_hw_common *hw_comm)
+static void dptx_hw_hdcp2_task_init(struct dptx_common *tx_comm)
 {
 	/* TODO */
+	dptx_hdcp_enable_intr(&tx_comm->hdcptx_comm, true);
 }
 
 /* #2.4 mst task */
@@ -917,10 +1114,10 @@ static void dptx_hw_mst_task_init(struct dptx_hw_common *hw_comm)
  * hw_init#2 init each hw function block, including hw init/state machine init
  * and interrupt register for each sub function block
  */
-static void dptx_hw_task_init(struct dptx_hw_common *hw_comm)
+static void dptx_hw_task_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm)
 {
-	dptx_hw_dptx_task_init(hw_comm);
-	dptx_hw_hdcp2_task_init(hw_comm);
+	dptx_hw_dptx_task_init(tx_comm, hw_comm);
+	dptx_hw_hdcp2_task_init(tx_comm);
 	dptx_hw_mst_task_init(hw_comm);
 }
 
@@ -929,7 +1126,7 @@ static void dptx_hw_task_init(struct dptx_hw_common *hw_comm)
  *
  * Main function
  */
-static int dptx20_hw_init(struct meson_tx_hw *tx_hw)
+static int dptx20_hw_init(struct dptx_common *tx_comm, struct meson_tx_hw *tx_hw)
 {
 	struct dptx_hw_common *hw_comm = NULL;
 	int ret;
@@ -941,17 +1138,17 @@ static int dptx20_hw_init(struct meson_tx_hw *tx_hw)
 	hw_comm = to_dptx_hw_common(tx_hw);
 	hw_comm->aux_transfer = dptx_aux_xfer;
 	/* dptx20 device event/task init */
-	ret = dptx20_task_init(hw_comm);
+	ret = dptx20_task_init(tx_comm);
 	if (ret < 0)
 		return ret;
 
 	dptx_hw_inst_data_init(hw_comm);
-	dptx_hw_task_init(hw_comm);
+	dptx_hw_task_init(tx_comm, hw_comm);
 
 	return 0;
 }
 
-static int dptx20_hw_uninit(struct meson_tx_hw *tx_hw)
+static int dptx20_hw_uninit(struct dptx_common *tx_comm, struct meson_tx_hw *tx_hw)
 {
 	struct dptx_hw_common *hw_comm = NULL;
 
@@ -961,7 +1158,7 @@ static int dptx20_hw_uninit(struct meson_tx_hw *tx_hw)
 	DPTX_INFO("%s\n", __func__);
 	hw_comm = to_dptx_hw_common(tx_hw);
 
-	dptx_free_irq(hw_comm);
+	dptx_free_irq(tx_comm);
 	dptx20_task_release(hw_comm);
 
 	return 0;

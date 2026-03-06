@@ -4414,7 +4414,7 @@ static int hdmitx21_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 			break;
 		ksv_byte = (u8 *)output_struct;
 		if (hdcptx_api->hdcptx14_get_bksv)
-			hdcptx_api->hdcptx14_get_bksv(ksv_byte, 5);
+			hdcptx_api->hdcptx14_get_bksv(hdcptx_comm, ksv_byte, 5);
 		break;
 	case HDCP14_GET_AN:
 		ret = hdmitx21_check_output_argv(cmd, output_struct);

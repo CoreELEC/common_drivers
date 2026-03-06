@@ -17,6 +17,7 @@ enum task_type {
 	HDR_TASK,
 	HDR_UNMUTE,
 	IRQ_SENDFIFO_TASK,
+	HDCP_INTR_TASK,
 	MAX_TASK,
 };
 

@@ -566,12 +566,12 @@ static bool hdcptx_query_ds_repeater(struct hdcptx21_core *p_hdcp)
 		return hdcptx1_ds_rptr_capability();
 }
 
-static bool hdcptx_is_bksv_valid(void)
+static bool hdcptx_is_bksv_valid(struct hdcptx21_core *p_hdcp)
 {
 	u8 bksv[KSV_SIZE];
 	u8 i, count = 0;
 
-	hdcptx1_ds_bksv_read(bksv, KSV_SIZE);
+	hdcptx1_ds_bksv_read(p_hdcp->bind_hdcptx_comm, bksv, KSV_SIZE);
 
 	for (i = 0; i < KSV_SIZE; i++) {
 		while (bksv[i] != 0) {
@@ -663,7 +663,7 @@ static void hdcptx_get_ds_bksv_list(struct hdcptx21_core *p_hdcp)
 		return;
 	}
 
-	hdcptx1_ds_bksv_read(p_hdcp->p_ksv_next, KSV_SIZE);
+	hdcptx1_ds_bksv_read(p_hdcp->bind_hdcptx_comm, p_hdcp->p_ksv_next, KSV_SIZE);
 	p_hdcp->p_ksv_next += KSV_SIZE;
 }
 
@@ -2064,7 +2064,7 @@ static void hdcptx_check_bksv_done_whandler(struct work_struct *w)
 
 	if (copp_data1 & 0x02) {
 		hdcptx_stop_work(work);
-		if (hdcptx_is_bksv_valid())
+		if (hdcptx_is_bksv_valid(p_hdcp))
 			hdcptx1_protection_enable(true);
 		else
 			hdcptx_update_failures(p_hdcp, HDCP_FAIL_BKSV_RXID);

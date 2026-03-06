@@ -55,9 +55,9 @@ struct hdcptx_api {
 	void (*hdcptx_uninit)(void *hdcptx_instance);
 	void (*hdcptx_debug)(void *hdcptx_instance, const char *buf);
 	void (*hdcptx14_get_aksv)(u8 *p_aksv, u8 b);
-	void (*hdcptx14_get_bksv)(u8 *p_bksv, u8 b);
 	void (*hdcptx14_get_an)(u8 *p_an, u8 b);
 	void (*hdcptx14_get_bstatus)(u8 *p_bstatus);
+	void (*hdcptx14_get_bksv)(struct hdcptx_common *hdcptx_comm, u8 *p_bksv, u8 b);
 	u16 (*hdcptx14_get_ri)(void);
 	int (*hdcptx_validate_key)(struct hdcptx_common *hdcptx_comm, int hdcp_type);
 };

@@ -3,15 +3,13 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
+#include <linux/delay.h>
 #include "dptx20_reg.h"
 #include "dptx_log.h"
 #include "dptx_aux_helper.h"
 #include "dptx_hw.h"
 #include "dptx_hdcp_hw.h"
 #include "dpcd_reg.h"
-
-#include <linux/delay.h>
-#include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 
 static void dptx_hdcp2msg_copy_to_fifo(struct dptx_hw_common *tx_comm, enum hdcp_msgid id)
 {
@@ -217,7 +215,7 @@ static void dptx_hdcp22_init(struct dptx_hw_common *tx_comm)
 	DPTX_INFO("%s hdcp22 init end\n", __func__);
 }
 
-static ssize_t dptx_hdcp2_msg_read_rxcaps(struct dptx_hw_common *tx_comm)
+ssize_t dptx_hdcp2_msg_read_rxcaps(struct dptx_hw_common *tx_comm)
 {
 	u32 rxcap = 0;
 	int ret = 0;

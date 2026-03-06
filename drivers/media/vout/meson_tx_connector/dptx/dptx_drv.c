@@ -24,7 +24,7 @@
 #include "dptx_hw_opcode.h"
 #include "dp20/dptx_hdcp_hw.h"
 
-#define DEVICE_NAME "dptx"
+#define DEVICE_NAME_DP "dptx"
 #define DPTX_DEV_COUNT 2
 struct dptx_common *global_tx_comm[DPTX_DEV_COUNT] = {NULL};
 
@@ -403,7 +403,7 @@ static int dptx_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto dptx_common_init_fail;
 
-	ret = tx_hw->init_tx_hw(tx_hw);
+	ret = tx_hw->init_tx_hw(tx_comm, tx_hw);
 	if (ret < 0)
 		goto dptx_init_tx_hw_fail;
 
@@ -415,6 +415,12 @@ static int dptx_probe(struct platform_device *pdev)
 	}
 	/* dptx tx hw setup tx_phy */
 	meson_tx_hw_setup_phy(tx_hw, tx_phy);
+
+	/* hdcp init */
+	tx_comm->hdcptx_priv = dptx_hdcp_init(&tx_comm->hdcptx_comm);
+	tx_comm->hdcptx_comm.bind_tx_comm = (void *)tx_comm;
+	//todo use reg api and delete
+	tx_comm->hdcptx_comm.bind_hw_comm = (void *)tx_comm->hw_comm;
 
 	tx_clk = meson_tx_probe_clk(device);
 	if (!tx_clk) {
@@ -448,7 +454,7 @@ static int dptx_probe(struct platform_device *pdev)
 
 meson_tx_probe_clk_fail:
 meson_tx_probe_phy_fail:
-	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm->base.tx_hw_base);
+	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm, tx_comm->base.tx_hw_base);
 dptx_init_tx_hw_fail:
 	dptx_common_uninit(tx_comm);
 dptx_common_init_fail:
@@ -484,7 +490,7 @@ static void dptx_remove(struct platform_device *pdev)
 	dev_set_drvdata(device, NULL);
 
 	dptx_common_uninit(tx_comm);
-	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm->base.tx_hw_base);
+	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm, tx_comm->base.tx_hw_base);
 	plat_data->free_tx_hw(tx_comm->base.tx_hw_base);
 
 	DPTX_INFO("%s for dev_index[%d]\n", __func__, tx_comm->dev_idx);
@@ -553,7 +559,7 @@ static struct platform_driver dptx_driver = {
 	.probe	 = dptx_probe,
 	.remove	 = dptx_remove,
 	.driver	 = {
-		.name = DEVICE_NAME,
+		.name = DEVICE_NAME_DP,
 		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(dptx_of_match),
 #ifdef CONFIG_PM

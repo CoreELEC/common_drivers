@@ -12,6 +12,7 @@
 #include "dptx20_reg.h"
 #include "dptx_hw_opcode.h"
 
+//todo hdcp read/write reg
 /* dptx core register read/write */
 int dptx20_reg_write(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u32 value)
 {
@@ -34,6 +35,16 @@ u32 dptx20_reg_read(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset)
 	return 0;
 
 	/* return readl(tx_comm->hw_base.regs_region[DPTX_COR_REG_IDX].p + offset); */
+}
+
+void dptx20_seq_rd_reg(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u8 *buf, u16 cnt)
+{
+	int i = 0;
+
+	while (cnt--) {
+		buf[i] = dptx20_reg_read(tx_comm, io_type, offset + i);
+		i++;
+	}
 }
 
 void dptx20_set_reg_bits(struct dptx_hw_common *tx_comm, u32 io_type,

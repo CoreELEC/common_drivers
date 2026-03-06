@@ -17,6 +17,7 @@ struct reg_map {
 };
 
 struct tx_task_manager;
+struct dptx_common;
 
 struct meson_hw_event_ops {
 	int (*queue_event)(struct tx_task_manager *mgr, u32 type, u32 delay);
@@ -26,8 +27,8 @@ struct meson_hw_event_ops {
 
 struct meson_tx_hw {
 	int type;
-	int (*init_tx_hw)(struct meson_tx_hw *tx_hw);
-	int (*uninit_tx_hw)(struct meson_tx_hw *tx_hw);
+	int (*init_tx_hw)(struct dptx_common *tx_comm, struct meson_tx_hw *tx_hw);
+	int (*uninit_tx_hw)(struct dptx_common *tx_comm, struct meson_tx_hw *tx_hw);
 	int (*hw_cntl)(struct meson_tx_hw *tx_hw, u32 cmd,
 		void *input_argv, void *output_struct);
 

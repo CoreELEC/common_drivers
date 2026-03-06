@@ -350,6 +350,8 @@ ddk_module(
                 "vout/meson_tx_connector/dptx/dp20/dptx_reg.c",
                 "vout/meson_tx_connector/dptx/dp20/dptx_hw_aux.c",
                 "vout/meson_tx_connector/dptx/dp20/dptx_hdcp.c",
+                "vout/meson_tx_connector/dptx/dp20/dptx_hdcp_hw.c",
+                "vout/meson_tx_connector/dptx/dp20/dptx_hdcp22_interrupts.c",
             ],
         },
         "CONFIG_AMLOGIC_HDMITX_DRIVER_MODERN": {

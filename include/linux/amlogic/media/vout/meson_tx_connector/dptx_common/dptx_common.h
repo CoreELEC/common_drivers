@@ -7,6 +7,8 @@
 #define __DPTX_COMMON_H
 
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_dev.h>
+//todo dp and hdmitx move the same location
+#include <linux/amlogic/media/vout/meson_tx_connector/hdmitx_common/hdmitx_common.h>
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 #include <linux/amlogic/pm.h>
@@ -105,6 +107,12 @@ struct dptx_common {
 	struct early_suspend es;
 	bool es_registered;
 #endif
+
+	/* same as hdmitx hpcp */
+	/* hdcp realted */
+	struct hdcptx_common hdcptx_comm;
+	/* hw private hdcp struct */
+	void *hdcptx_priv;
 };
 
 #define to_dptx_common(x)	container_of(x, struct dptx_common, base)

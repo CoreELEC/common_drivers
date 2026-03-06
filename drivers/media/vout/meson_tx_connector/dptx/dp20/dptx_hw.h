@@ -83,6 +83,7 @@ int dptx20_reg_write(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u3
 u32 dptx20_reg_read(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset);
 void dptx20_set_reg_bits(struct dptx_hw_common *tx_comm, u32 io_type,
 	u32 addr, u32 value, u32 offset, u32 len);
+void dptx20_seq_rd_reg(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u8 *buf, u16 cnt);
 
 u32 dptx20_rd_plt_reg(struct dptx_hw_common *tx_comm, u32 vaddr);
 void dptx20_wr_plt_reg(struct dptx_hw_common *tx_comm, u32 vaddr, u32 val);

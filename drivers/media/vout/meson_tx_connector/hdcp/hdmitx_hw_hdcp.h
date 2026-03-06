@@ -25,7 +25,7 @@ void hdcptx1_ds_aksv_read(u8 *p_aksv, u8 ksv_bytes);
 void hdcptx1_bstatus_get(u8 *p_ds_bstatus);
 void hdcptx1_get_ds_ksvlists(u8 **p_ksv, u8 count);
 bool hdcptx1_load_key(void);
-void hdcptx1_ds_bksv_read(u8 *p_bksv, u8 ksv_bytes);
+void hdcptx1_ds_bksv_read(struct hdcptx_common *hdcptx_comm, u8 *p_bksv, u8 ksv_bytes);
 
 bool hdcptx2_ds_rptr_capability(void);
 void hdcptx2_encryption_update(bool en);
