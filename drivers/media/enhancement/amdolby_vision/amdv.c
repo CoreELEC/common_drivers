@@ -330,7 +330,7 @@ u8 py_id;/*t3x: pyramid buf id; t6w: upscale_buf id*/
 /*64*36*10/8 = 80 64byte align 128*36 = 4608*/
 /*32*18*10/8 = 40 64byte align 64*18 = 1152*/
 /*16*9*10/8 = 20 64byte align 64*9 = 576*/
-u32 py_size[7] = {737280, 184320, 46080, 13824, 4608, 1152, 576};
+u32 py_size[7] = {737280, 184320, 46080, 13824, 4864, 1152, 576};
 
 struct dolby5_top1_md_hist dv5_md_hist;
 bool prl_mode = true;/*driver can only write one set of regs in core2_prl mode*/
@@ -3233,19 +3233,29 @@ void amdv_init_receiver(void *pdev)
 				py_buf_cnt = 2;
 
 			for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
+				alloc_size = py_size[0] + py_size[1] + py_size[2] +
+					py_size[3] + py_size[4] + py_size[5] +
+					py_size[6];
+				py_addr[i].py_vaddr[0] = dma_alloc_coherent(&amdv_pdev->dev,
+					alloc_size,
+					&py_addr[i].top1_py_paddr[0], GFP_KERNEL);
+				if (py_addr[i].py_vaddr[0])
+					memset(py_addr[i].py_vaddr[0], 0, alloc_size);
+				else
+					pr_err("dma alloc top1_py error\n");
+				for (j = 1; j < 7; j++) {
+					py_addr[i].py_vaddr[j] = py_addr[i].py_vaddr[j - 1] +
+						py_size[j - 1];
+					py_addr[i].top1_py_paddr[j] =
+						py_addr[i].top1_py_paddr[j - 1] + py_size[j - 1];
+				}
 				for (j = 0; j < 7; j++) {
 					py_addr[i].top1_py_size[j] = py_size[j];
-					alloc_size = (py_addr[i].top1_py_size[j] +
-								((1 << 6) - 1)) & ~((1 << 6) - 1);
-					py_addr[i].py_vaddr[j] = dma_alloc_coherent(&amdv_pdev->dev,
-						alloc_size,
-						&py_addr[i].top1_py_paddr[j], GFP_KERNEL);
 					if (py_addr[i].py_vaddr[j]) {
-						memset(py_addr[i].py_vaddr[j], 0, alloc_size);
-						//pr_info("pyup_vaddr %px %x, alloc size %d\n",
-						//		py_addr[i].py_vaddr[j],
-						//		py_addr[i].top1_py_paddr[j],
-						//		alloc_size);
+						//pr_info("pyup_vaddr %px %llx, alloc size %d\n",
+							//py_addr[i].py_vaddr[j],
+							//py_addr[i].top1_py_paddr[j],
+							//py_addr[i].top1_py_size[j]);
 					} else {
 						pr_err("dma alloc top1_py error\n");
 					}
