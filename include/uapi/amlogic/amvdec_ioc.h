@@ -338,11 +338,6 @@ struct vdec_info {
 	};
 	__u32 error_count;
 	__u32 status;
-	__u32 dw;
-	__u8 dpb_num;
-	__u8 margin_num;
-	__u8 filed_flag;
-	__u8 bit_depth;
 	__u32 frame_count;
 	__u32 error_frame_count;
 	__u32 drop_frame_count;
@@ -354,6 +349,11 @@ struct vdec_info {
 	};
 	__u32 offset;
 	__u32 ratio_control;
+	__u32 dw;
+	__u8 dpb_num;
+	__u8 margin_num;
+	__u8 filed_flag;
+	__u8 bit_depth;
 	);
 	char reserved[0];
 	struct_group(ipb,
