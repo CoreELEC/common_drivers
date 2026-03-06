@@ -734,7 +734,6 @@
 			#size-cells = <1>;
 			ranges;
 			amlogic,ao-interrupt-controller;
-			status = "disabled";
 
 			ao_gpio: bank@fe430400 {
 				reg = <0xfe430400 0x08>,
@@ -752,7 +751,6 @@
 			#size-cells = <1>;
 			ranges;
 			amlogic,ao-interrupt-controller;
-			status = "disabled";
 
 			testn_gpio: bank@fe430464 {
 				reg = <0xfe430484 0x04>,
@@ -770,8 +768,7 @@
 			reg = <0xfe430440 0x18>;
 			interrupt-controller;
 			#interrupt-cells = <2>;
-			amlogic,channel-interrupts = <196 197 198 199 200 201 202>;
-			status = "disabled";
+			amlogic,channel-interrupts = <192 193 194 195 196 197 198 199 200>;
 		};
 
 		gic: interrupt-controller@fff01000 {

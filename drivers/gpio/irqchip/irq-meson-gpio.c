@@ -195,7 +195,6 @@ struct meson_gpio_irq_params {
 	.both_sel_reg =  0x08,					\
 	.channel_num = 2,
 
-//TODO
 #define INIT_MESON_C4_AO_COMMON_DATA(irqs)			\
 	INIT_MESON_SC2_COMMON(irqs, meson_a1_gpio_irq_init,	\
 			      meson_a1_gpio_irq_sel_pin,	\
@@ -209,7 +208,7 @@ struct meson_gpio_irq_params {
 	.edge_sel_reg = 0x00,					\
 	.pol_low_sel_reg = 0x00,				\
 	.both_sel_reg =  0x08,					\
-	.channel_num = 7,
+	.channel_num = 9,
 
 #endif
 #endif
