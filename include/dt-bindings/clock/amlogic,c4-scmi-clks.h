@@ -14,5 +14,7 @@
 #define CLKID_ACLKM				5
 #define CLKID_SYS_PLL_DIV16			6
 #define CLKID_CPU_CLK_DIV16			7
+#define CLKID_PWM_A				8
+#define CLKID_PWM_B				9
 
 #endif /* __AMLOGIC_C4_SCMI_CLKS_H */

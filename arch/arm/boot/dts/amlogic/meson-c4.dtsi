@@ -421,7 +421,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x58000 0x24>;
 				#pwm-cells = <3>;
-				clocks = <&clkc CLKID_PWM_A>;
+				clocks = <&scmi_clk CLKID_PWM_A>;
 				clock-names = "clkin0";
 				tee_id = <0>;
 				status = "disabled";
@@ -431,7 +431,7 @@
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x58200 0x24>;
 				#pwm-cells = <3>;
-				clocks = <&clkc CLKID_PWM_B>;
+				clocks = <&scmi_clk CLKID_PWM_B>;
 				clock-names = "clkin0";
 				tee_id = <1>;
 				status = "okay";
@@ -700,6 +700,21 @@
 						max-speed = <100>;
 					};
 				};
+			};
+
+			ao_clkc: clock-controller@431000 {
+				compatible = "amlogic,c4-aoclkc";
+				reg = <0x431000 0x20>;
+				reg-names = "basic";
+				#clock-cells = <1>;
+				clocks = <&xtal>,
+					 <&xtal_32k>,
+					 <&osc_32m>,
+					<&scmi_clk CLKID_SYS_CLK>;
+				clock-names = "xtal",
+					      "xtal_32k",
+					      "osc_32m",
+					      "sys_clk";
 			};
 		};
 
@@ -1207,6 +1222,13 @@
 		compatible = "fixed-clock";
 		clock-frequency = <32768>;
 		clock-output-names = "xtal_32k";
+		#clock-cells = <0>;
+	};
+
+	osc_32m: osc-32m-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32000000>;
+		clock-output-names = "osc_32m";
 		#clock-cells = <0>;
 	};
 

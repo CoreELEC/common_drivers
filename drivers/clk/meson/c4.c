@@ -15,9 +15,8 @@
 
 #include "meson-clkc-utils.h"
 #include "clk-pll.h"
-#include "clk-regmap.h"
-#include "clk-cpu-dyndiv.h"
 #include "clk-dualdiv.h"
+#include "clk-regmap.h"
 #include "c4.h"
 #include <dt-bindings/clock/amlogic,c4-clkc.h>
 
@@ -175,7 +174,7 @@ static const struct reg_sequence mclk_pll_init_regs[] = {
 	{ .reg = ANACTRL_MPLL_CTRL1, .def = 0x0480500f },
 	{ .reg = ANACTRL_MPLL_CTRL2, .def = 0x00023001 },
 	{ .reg = ANACTRL_MPLL_CTRL3, .def = 0x18180000 },
-	{ .reg = ANACTRL_MPLL_CTRL4, .def = 0x00180303 }
+	{ .reg = ANACTRL_MPLL_CTRL4, .def = 0x00000202 }
 };
 
 static struct clk_regmap mclk_pll = {
@@ -466,7 +465,7 @@ static struct clk_regmap mclk0_mux = {
 static struct clk_regmap mclk0_div = {
 	.data = &(struct clk_regmap_div_data) {
 		.offset = ANACTRL_MPLL_CTRL4,
-		.shift = 1,
+		.shift = 2,
 		.width = 1,
 		.flags = CLK_DIVIDER_POWER_OF_TWO,
 	},
@@ -520,7 +519,7 @@ static struct clk_regmap mclk1_mux = {
 static struct clk_regmap mclk1_div = {
 	.data = &(struct clk_regmap_div_data) {
 		.offset = ANACTRL_MPLL_CTRL4,
-		.shift = 9,
+		.shift = 10,
 		.width = 1,
 		.flags = CLK_DIVIDER_POWER_OF_TWO,
 	},
@@ -662,7 +661,7 @@ static struct clk_regmap rtc_clk = {
 		.ops = &clk_regmap_mux_ops,
 		.parent_data = rtc_clk_parent_data,
 		.num_parents = ARRAY_SIZE(rtc_clk_parent_data),
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT | CLK_OPS_PARENT_ENABLE,
 	},
 };
 
@@ -770,114 +769,6 @@ static struct clk_regmap nna = {
 		.ops = &clk_regmap_gate_ops,
 		.parent_hws = (const struct clk_hw *[]) {
 			&nna_div.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static const struct clk_parent_data pwm_a_parent_data[] = {
-	{ .fw_name = "oscin" },
-	{ .hw = &fclk_div5.hw },
-	{ .hw = &fclk_div4.hw },
-	{ .hw = &fclk_div3.hw }
-};
-
-static struct clk_regmap pwm_a_mux = {
-	.data = &(struct clk_regmap_mux_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.mask = 0x3,
-		.shift = 9,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_a_mux",
-		.ops = &clk_regmap_mux_ops,
-		.parent_data = pwm_a_parent_data,
-		.num_parents = ARRAY_SIZE(pwm_a_parent_data),
-	},
-};
-
-static struct clk_regmap pwm_a_div = {
-	.data = &(struct clk_regmap_div_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.shift = 0,
-		.width = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_a_div",
-		.ops = &clk_regmap_divider_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&pwm_a_mux.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static struct clk_regmap pwm_a = {
-	.data = &(struct clk_regmap_gate_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.bit_idx = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_a",
-		.ops = &clk_regmap_gate_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&pwm_a_div.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static const struct clk_parent_data pwm_b_parent_data[] = {
-	{ .fw_name = "oscin" },
-	{ .hw = &fclk_div5.hw },
-	{ .hw = &fclk_div4.hw },
-	{ .hw = &fclk_div3.hw }
-};
-
-static struct clk_regmap pwm_b_mux = {
-	.data = &(struct clk_regmap_mux_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.mask = 0x3,
-		.shift = 25,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_b_mux",
-		.ops = &clk_regmap_mux_ops,
-		.parent_data = pwm_b_parent_data,
-		.num_parents = ARRAY_SIZE(pwm_b_parent_data),
-	},
-};
-
-static struct clk_regmap pwm_b_div = {
-	.data = &(struct clk_regmap_div_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.shift = 16,
-		.width = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_b_div",
-		.ops = &clk_regmap_divider_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&pwm_b_mux.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static struct clk_regmap pwm_b = {
-	.data = &(struct clk_regmap_gate_data) {
-		.offset = CLKCTRL_PWM_CLK_AB_CTRL,
-		.bit_idx = 24,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "pwm_b",
-		.ops = &clk_regmap_gate_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&pwm_b_div.hw,
 		},
 		.num_parents = 1,
 		.flags = CLK_SET_RATE_PARENT,
@@ -1989,7 +1880,7 @@ static struct clk_regmap hcodec_1_mux = {
 	.data = &(struct clk_regmap_mux_data) {
 		.offset = CLKCTRL_VDEC3_CLK_CTRL,
 		.mask = 0x7,
-		.shift = 25,
+		.shift = 9,
 	},
 	.hw.init = &(struct clk_init_data) {
 		.name = "hcodec_1_mux",
@@ -2041,7 +1932,7 @@ static struct clk_regmap hcodec = {
 	.data = &(struct clk_regmap_mux_data) {
 		.offset = CLKCTRL_VDEC3_CLK_CTRL,
 		.mask = 0x1,
-		.shift = 31,
+		.shift = 15,
 	},
 	.hw.init = &(struct clk_init_data) {
 		.name = "hcodec",
@@ -2780,12 +2671,6 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&nna_mux,
 	&nna_div,
 	&nna,
-	&pwm_a_mux,
-	&pwm_a_div,
-	&pwm_a,
-	&pwm_b_mux,
-	&pwm_b_div,
-	&pwm_b,
 	&pwm_c_mux,
 	&pwm_c_div,
 	&pwm_c,
@@ -2985,12 +2870,6 @@ static struct clk_hw *c4_hw_clks[] = {
 	[CLKID_NNA_MUX]               = &nna_mux.hw,
 	[CLKID_NNA_DIV]               = &nna_div.hw,
 	[CLKID_NNA]                   = &nna.hw,
-	[CLKID_PWM_A_MUX]             = &pwm_a_mux.hw,
-	[CLKID_PWM_A_DIV]             = &pwm_a_div.hw,
-	[CLKID_PWM_A]                 = &pwm_a.hw,
-	[CLKID_PWM_B_MUX]             = &pwm_b_mux.hw,
-	[CLKID_PWM_B_DIV]             = &pwm_b_div.hw,
-	[CLKID_PWM_B]                 = &pwm_b.hw,
 	[CLKID_PWM_C_MUX]             = &pwm_c_mux.hw,
 	[CLKID_PWM_C_DIV]             = &pwm_c_div.hw,
 	[CLKID_PWM_C]                 = &pwm_c.hw,
@@ -3215,6 +3094,7 @@ static int meson_c4_probe(struct platform_device *pdev)
 		/* array might be sparse */
 		if (!data->hws[i])
 			continue;
+
 		ret = devm_clk_hw_register(dev, data->hws[i]);
 		if (ret) {
 			dev_err(dev, "Clock registration failed\n");
@@ -3252,5 +3132,17 @@ static struct platform_driver c4_driver = {
 	},
 };
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+int __init c4_clk_init(void)
+{
+	return platform_driver_register(&c4_driver);
+}
+
+void __exit c4_clk_exit(void)
+{
+	platform_driver_unregister(&c4_driver);
+}
+#else
 builtin_platform_driver(c4_driver);
 MODULE_LICENSE("GPL v2");
+#endif
