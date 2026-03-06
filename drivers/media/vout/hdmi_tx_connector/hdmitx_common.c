@@ -167,6 +167,7 @@ int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *h
 		tx_comm->tx_hw->hdmi_tx_cap.dsc_policy = boot_param->dsc_policy;
 
 	tx_comm->debug_param.avmute_frame = 0;
+	tx_comm->debug_param.dis_dmc_req = false;
 
 	hdmitx_format_para_reset(para);
 	para->frac_mode = boot_param->fraction_refresh_rate;

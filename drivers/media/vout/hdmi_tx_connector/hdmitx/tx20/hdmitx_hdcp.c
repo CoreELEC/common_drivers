@@ -176,6 +176,54 @@ void hdmitx_hdcp_do_work(struct hdmitx_common *tx_comm)
 	_hdcp_do_work(&hdev->work_do_hdcp.work);
 }
 
+int hdmitx_hdcp_esm_kill(struct hdmitx_common *tx_comm)
+{
+	int ret = 0;
+	int i = 0;
+	/* polling esm kill start 3 times */
+	int polling_max_cnt = 3;
+
+	if (!tx_comm)
+		return -EINVAL;
+
+	/* only for android platform which hdcp controlled by system_control */
+	if (tx_comm->hdcptx_comm.hdcp_ctl_lvl != 0)
+		return -EINVAL;
+
+	if (tx_comm->hdcptx_comm.hdcp_mode == 2) {
+		/* forcely notify hdcp_tx22 daemon to kill esm */
+		tx_comm->hdcp_tst_sig = 1;
+
+		for (i = 0; i < polling_max_cnt; i++) {
+			/* block wait for hdcp_tx22 set hdcp_tst_sig = 0 by hdcp_pwr sysfs node */
+			if (tx_comm->hdcp_tst_sig != 0) {
+				msleep_interruptible(100);
+			} else {
+				/*
+				 * after hdcp_tx22 set hdcp_tst_sig = 0,
+				 * wait 100ms for ESM kill in hdcp_tx22
+				 */
+				msleep_interruptible(100);
+				break;
+			}
+		}
+		if (i == polling_max_cnt) {
+			HDMITX_INFO("warning: hdcp_tx22 daemon not respond to kill esm!");
+			ret = -1;
+		}
+		if (hdmitx_hw_cntl(tx_comm->tx_hw, HDCP22_GET_AXI_DMC_STS, NULL, NULL) == 0) {
+			HDMITX_ERROR("hdcp2.2 esm not killed completely!\n");
+			ret = -1;
+		} else {
+			HDMITX_DEBUG_HDCP("HDMI/HDCP AXI channel free\n");
+			ret = 0;
+		}
+		/* recover not esm kill flag at last */
+		tx_comm->hdcp_tst_sig = 0;
+	}
+	return ret;
+}
+
 static int read_buff(char *p)
 {
 	if (hdcplog_buf.rd_pos == hdcplog_buf.wr_pos)

@@ -39,6 +39,7 @@
 #endif
 #include <linux/amlogic/media/vout/hdmitx_common/hdmitx_common.h>
 #include <linux/amlogic/clk_measure.h>
+#include <linux/amlogic/media/registers/cpu_version.h>
 
 #include "hdmitx_hdcp_type.h"
 #include "hdmitx_mach_reg.h"
@@ -5097,10 +5098,25 @@ static int hdmitx20_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 	}
 	switch (cmd) {
 	case HDCP_RESET:
-		hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 5, 1);
-		usleep_range(9, 11);
-		hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 5, 1);
-		usleep_range(9, 11);
+		ret = hdmitx20_check_input_argv(cmd, input_argv);
+		if (ret < 0)
+			break;
+		arg = *((u32 *)input_argv);
+		if (arg == 0) {
+			/* reset hdcp2.2 */
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 5, 1);
+			usleep_range(9, 11);
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 5, 1);
+			usleep_range(9, 11);
+		} else if (arg == 1) {
+			/* reset hdcp2.2 and axi arbitor */
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 5, 1);
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 8, 1);
+			usleep_range(9, 11);
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 5, 1);
+			hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 8, 1);
+			usleep_range(9, 11);
+		}
 		break;
 	case HDCP_MUX_INIT:
 		ret = hdmitx20_check_input_argv(cmd, input_argv);
@@ -5311,6 +5327,31 @@ static int hdmitx20_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 	case HDCP_PARAM_RESET:
 	case HDCP14_KEY_LOAD:
 	case HDCP_REQ_AUTH:
+		break;
+	case HDCP22_GET_AXI_DMC_STS:
+		/* only valid for SC2/S4/S4D, for other chips return default idle status */
+		if (is_meson_s4_cpu() || is_meson_s4d_cpu())
+			val = P_DMC_CHAN_STS_S4;
+		else if (chip_id == MESON_CPU_ID_SC2)
+			val = P_DMC_CHAN_STS_SC2;
+		else
+			return 1;
+		/* axibus channel bit3, 1:idle, 0:busy */
+		return !!(hd_read_reg(val) & 0x8);
+	case HDCP_ESM_KILL:
+		hdmitx_hdcp_esm_kill(tx_comm);
+		break;
+	case HDCP22_EN_DMC_REQ:
+		if (is_meson_s4_cpu() ||
+			is_meson_s4d_cpu() ||
+			tx_hw->chip_data->chip_type == MESON_CPU_ID_SC2) {
+			ret = hdmitx20_check_input_argv(cmd, input_argv);
+			if (ret < 0)
+				break;
+			arg = *((u32 *)input_argv);
+			/* enable dmc request of axi bus chan 3. HDCP/HDMI */
+			hd_set_reg_bits(P_DMC_REQ_CTRL, !!arg, 3, 1);
+		}
 		break;
 	default:
 		break;
@@ -7185,6 +7226,8 @@ static void hdmitx20_disable_hdcp(struct hdmitx_common *tx_comm)
 {
 	struct hdmitx_hw_common *tx_hw_base = tx_comm->tx_hw;
 	u32 arg;
+
+	hdmitx_hdcp_esm_kill(tx_comm);
 
 	/* HW: mux to hdcp14 & hdcp14 off, DDC free */
 	arg = 1;

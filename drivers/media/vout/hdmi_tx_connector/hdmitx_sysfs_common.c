@@ -1925,12 +1925,14 @@ static ssize_t hdcp_pwr_store(struct device *dev,
 			      const char *buf, size_t count)
 {
 	struct hdmitx_common *tx_comm = dev_get_drvdata(dev);
+	struct hdmitx_hw_common *tx_hw = tx_comm->tx_hw;
 
 	if (tx_comm->hdmi_init == HDMITX20) {
 		if (buf[0] == '1') {
 			tx_comm->hdcp_tst_sig = 1;
-			HDMITX_DEBUG(SYS "set hdcp_pwr 1\n");
+			HDMITX_INFO(SYS "set hdcp_pwr 1\n");
 		}
+		hdmitx_hw_cntl(tx_hw, HDCP_ESM_KILL, NULL, NULL);
 	}
 	return count;
 }
@@ -1947,7 +1949,7 @@ static ssize_t hdcp_pwr_show(struct device *dev,
 			pos += snprintf(buf + pos, PAGE_SIZE, "%d\n",
 				tx_comm->hdcp_tst_sig);
 			tx_comm->hdcp_tst_sig = 0;
-			HDMITX_DEBUG(SYS "restore hdcp_pwr 0\n");
+			HDMITX_INFO(SYS "restore hdcp_pwr 0\n");
 		}
 	}
 

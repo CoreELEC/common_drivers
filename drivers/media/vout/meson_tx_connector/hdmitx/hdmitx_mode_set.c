@@ -282,8 +282,6 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 
 	/* step2: HW: disable hdmitx phy, SW: clear status */
 	if (phy_dis) {
-		tx_comm->ready = 0;
-		tx_comm->hdcptx_comm.ready = 0;
 		arg = TMDS_PHY_DISABLE;
 		hdmitx_hw_cntl(tx_hw, PLATFORM_PHY_OP, (void *)&arg, NULL);
 		meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_KMS_DISABLE_OUTPUT);
@@ -307,6 +305,10 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 	/* step6: SW: cancel ced work in sync to make sure it won't queued again */
 	if (tx_comm->cedst_en)
 		tx_task_mgr_cancel_task(tx_comm->base.task_mgr, CEDST_TASK, true);
+
+	/* step7: SW: clear status */
+	tx_comm->ready = 0;
+	tx_comm->hdcptx_comm.ready = 0;
 }
 
 int hdmitx_common_disable_mode(struct hdmitx_common *tx_comm,

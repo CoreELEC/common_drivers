@@ -78,6 +78,7 @@ void hdmitx20_hdcp_uninit(struct hdmitx20_dev *hdev);
 int hdmitx_hdcp_stat_monitor_task(void *data);
 int esm_init(void);
 void esm_exit(void);
+int hdmitx_hdcp_esm_kill(struct hdmitx_common *tx_comm);
 
 #endif
 

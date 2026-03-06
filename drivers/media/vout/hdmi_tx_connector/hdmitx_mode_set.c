@@ -251,9 +251,8 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 	 */
 	hdmitx_reset_vinfo(&tx_comm->hdmitx_vinfo);
 
-	/* step2: HW: disable hdmitx phy, SW: clear status */
+	/* step2: HW: disable hdmitx phy */
 	if (phy_dis) {
-		tx_comm->ready = 0;
 		arg = TMDS_PHY_DISABLE;
 		hdmitx_hw_cntl(tx_hw_base, PLATFORM_PHY_OP, (void *)&arg, NULL);
 		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_DISABLE_OUTPUT);
@@ -277,6 +276,9 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 	/* step6: SW: cancel ced work in sync to make sure it won't queued again */
 	if (tx_comm->cedst_en)
 		cancel_delayed_work_sync(&tx_comm->work_cedst);
+
+	/* step7: SW: clear status */
+	tx_comm->ready = 0;
 }
 
 int hdmitx_common_disable_mode(struct hdmitx_common *tx_comm,

@@ -878,6 +878,10 @@ void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)
 		ret = kstrtoul(tmpbuf + 13, 10, &value);
 		tx_comm->debug_param.disable_delay_ms = value;
 		HDMITX_INFO("disable_delay_ms = %lu\n", value);
+	} else if (strncmp(tmpbuf, "dis_dmc_req", 11) == 0) {
+		ret = kstrtoul(tmpbuf + 11, 10, &value);
+		tx_comm->debug_param.dis_dmc_req = !!value;
+		HDMITX_INFO("dis_dmc_req = %lu\n", value);
 	} else if (strncmp(tmpbuf, "config_csc_en", 13) == 0) {
 		ret = kstrtoul(tmpbuf + 13, 0, &value);
 		HDMITX_INFO("config_csc_en to %lu\n", value);
@@ -1159,7 +1163,15 @@ static void _amhdmitx_suspend(struct hdmitx_common *tx_comm)
 			return;
 
 		hdmitx_hw_cntl(hw_comm, PLATFORM_DIS_HPLL, NULL, NULL);
-		hdmitx_hw_cntl(hw_comm, HDCP_RESET, NULL, NULL);
+		if (tx_comm->debug_param.dis_dmc_req) {
+			arg = false;
+			hdmitx_hw_cntl(hw_comm, HDCP22_EN_DMC_REQ, (void *)&arg, NULL);
+			arg = true;
+			hdmitx_hw_cntl(hw_comm, HDCP_RESET, (void *)&arg, NULL);
+		} else {
+			arg = false;
+			hdmitx_hw_cntl(hw_comm, HDCP_RESET, (void *)&arg, NULL);
+		}
 		arg = false;
 		hdmitx_hw_cntl(hw_comm, PLATFORM_ESM_CLK_CTRL, (void *)&arg, NULL);
 		HDMITX_INFO("amhdmitx: suspend and reset hdcp\n");
@@ -1234,6 +1246,8 @@ static int amhdmitx_resume(struct platform_device *pdev)
 	if (tx_comm->hdcptx_comm.hdcp_ctl_lvl > 0)
 		return 0;
 	hdmitx_hw_cntl(tx_hw_base, PLATFORM_ESM_CLK_CTRL, (void *)&arg, NULL);
+	if (tx_comm->debug_param.dis_dmc_req)
+		hdmitx_hw_cntl(tx_hw_base, HDCP22_EN_DMC_REQ, (void *)&arg, NULL);
 
 	if (tx_hw_base->chip_data->chip_type < MESON_CPU_ID_G12A)
 		hdmitx_hw_cntl(tx_hw_base, DDC_I2C_RESET, NULL, NULL);
