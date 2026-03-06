@@ -584,6 +584,7 @@ struct tvin_sig_property_s {
 	struct tvin_fmm_s filmmaker;
 	bool imax_flag;
 	bool qms_plus_flag;
+	bool frl_flag;
 	struct tvin_hdr10plus_info_s hdr10p_info;
 	struct tvin_emp_data_s emp_data;
 	struct tvin_vtem_data_s vtem_data;

@@ -73,5 +73,6 @@ void vdin_dump_vs_info(struct vdin_dev_s *devp);
 void vdin_send_event(struct vdin_dev_s *devp, enum tvin_sg_chg_flg sts);
 void vdin_update_prop(struct vdin_dev_s *devp);
 bool vdin_is_cut_win_changed(struct vdin_dev_s *devp);
+int vdin_hdmirx_fps_abn_check(struct vdin_dev_s *devp, unsigned int fps);
 #endif
 

@@ -41,7 +41,7 @@ static int sm_print_prestable;
  */
 static int atv_stable_fmt_check_enable;
 
-static int hdmi_prestable_out_cnt = 3;
+static int hdmi_prestable_out_cnt = 20;
 static int manual_unstable_out_cnt = 20;
 bool manual_flag;
 bool atv_std_flag;
@@ -124,9 +124,9 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 	unsigned int temp;
 	enum tvin_sg_chg_flg signal_chg = TVIN_SIG_CHG_NONE;
 
-	if (!devp) {
+	if (!devp)
 		return signal_chg;
-	}
+
 	if (!devp->frontend) {
 		sm_dev[devp->index].state = TVIN_SM_STATUS_NULL;
 		return signal_chg;
@@ -481,6 +481,19 @@ bool vdin_is_cut_win_changed(struct vdin_dev_s *devp)
 				devp->prop.pre_he, devp->prop.he);
 		return true;
 	}
+	return false;
+}
+
+int vdin_hdmirx_fps_abn_check(struct vdin_dev_s *devp, unsigned int fps)
+{
+	if (!fps)
+		return true;
+	if (devp->prop.frl_flag &&
+	    ((devp->fmt_info_p->h_active >= 3840 &&
+	    devp->fmt_info_p->v_active >= 2160 && fps > 180) ||
+	    (devp->fmt_info_p->h_active >= 1920 &&
+	    devp->fmt_info_p->v_active >= 1080 && fps > 720)))
+		return true;
 	return false;
 }
 
@@ -1033,6 +1046,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 				else
 					sm_p->exit_prestable_cnt = 0;
 			}
+			devp->fmt_info_p = (struct tvin_format_s *)tvin_get_fmt_info(info->fmt);
 			/* spd_data maybe zeros randomly in freesync
 			 * wait hdmi_prestable_out_cnt times for
 			 * spd_data ready
@@ -1042,7 +1056,7 @@ void tvin_smr(struct vdin_dev_s *devp)
 				if (sm_p->exit_prestable_cnt <=
 					hdmi_prestable_out_cnt) {
 					tmp = vdin_get_base_fr(devp);
-					if (!tmp)
+					if (vdin_hdmirx_fps_abn_check(devp, tmp))
 						break;
 				}
 			}
@@ -1052,7 +1066,6 @@ void tvin_smr(struct vdin_dev_s *devp)
 				devp->parm.info.fps = prop->fps;
 			}
 
-			devp->fmt_info_p = (struct tvin_format_s *)tvin_get_fmt_info(info->fmt);
 			if (IS_HDMI_SRC(port)) {
 				/* for tvstart, do not judge VDIN_FLAG_DEC_STARTED */
 				if (/*!(devp->flags & VDIN_FLAG_DEC_STARTED) &&*/
