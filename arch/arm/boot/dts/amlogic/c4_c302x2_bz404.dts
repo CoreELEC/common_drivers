@@ -720,6 +720,20 @@
 	keep-power-in-suspend;
 };
 
+&eth_phy {
+	status = "okay";
+};
+
+&ethmac {
+	status = "okay";
+	phy-handle = <&internal_ephy>;
+	phy-mode = "rmii";
+	mc_val = <0x4be04>;
+	phy-mii-clk-sel = <0x3>;
+	eee-enable = <0>;
+	amlogic,wol-enable;
+};
+
 &aml_wifi {
 	status = "disabled";
 };
