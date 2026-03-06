@@ -1136,6 +1136,15 @@
 		clocks = <&clkc CLKID_CSI_PHY>;
 		clock-names = "mipi_phy_clk";
 		reg-names = "csi_phy0";
+		status = "okay";
+	};
+
+	csiphy1: csiphy1@ff019400 {
+		compatible = "amlogic, csiphy1";
+		reg = <0xff019400 0x700>;
+		reg-names = "csi_phy1";
+		//clocks = <&clkc CLKID_CSI_PHY>;
+		//clock-names = "mipi_phy_clk";
 		status = "disabled";
 	};
 
@@ -1143,21 +1152,27 @@
 		compatible = "amlogic, adapter";
 		reg = <0xff01b000 0x4000>;
 		reg-names = "adapter";
-		interrupts = <0 145 1>,
-				<0 155 1>,
-				<0 144 1>,
-				<0 159 1>;
+		//interrupts = <0 159 1>;
+		status = "okay";
+	};
+
+	adapter1: adapter1@ff018000 {
+		compatible = "amlogic, adapter1";
+		reg = <0xff018000 0x4000>;
+		reg-names = "adapter";
 		status = "disabled";
 	};
 
 	isp0: isp0@ff000000 {
 		compatible = "amlogic, isp";
 		reg = <0xff000000 0x10100>;
-		//power-domains = <&pwrdm PDID_C3_MIPI_ISP_WRAP>;
-		//clocks = <&clkc CLKID_ISP>,
-		//		<&clkc CLKID_VAPB_CLK>;
-		clock-names = "mipi_isp_clk", "vapb_clk";
-		status = "disabled";
+		power-domains = <&pwrdm PDID_C4_MIPI_ISP>,<&pwrdm PDID_C4_OPP>;
+		clocks = <&clkc CLKID_CSI_PHY>, <&clkc CLKID_ISP>, <&clkc CLKID_DEWARP>;
+		clock-names = "mipi_csi_clk", "mipi_isp_clk", "isp_dewarp_clk";
+		interrupts = <0 159 1>,//mipi_isp_irq[15] fe_frm_rst
+				<0 149 1>,//mipi_isp_irq[5] be_done
+				<0 150 1>;//mipi_isp_irq[6] opp_done
+		status = "okay";
 	};
 
 	camera0 {
@@ -1166,7 +1181,7 @@
 		csiphy = <&csiphy0>;
 		adapter = <&adapter0>;
 		isp = <&isp0>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	timer {
