@@ -156,6 +156,7 @@ static inline struct gdc_queue_item_s *find_an_item_from_pool(void)
 		/* hold an item from work_queue */
 		if (!list_empty(&pcontext->work_queue)) {
 			item = pcontext->work_queue.next;
+			list_del_init(item);
 			break;
 		}
 	}
@@ -164,6 +165,7 @@ static inline struct gdc_queue_item_s *find_an_item_from_pool(void)
 		dev_type = ((struct gdc_queue_item_s *)item)->cmd.dev_type;
 		core_id = find_an_idle_core(dev_type);
 		if (core_id < 0) {
+			list_add(item, &pcontext->work_queue);
 			item = NULL;
 			goto unlock;
 		}
@@ -526,9 +528,9 @@ int gdc_wq_add_work(struct gdc_context_s *wq,
 	u32 time_cost;
 	unsigned int block = pitem->cmd.wait_done_flag;
 
-	spin_lock(&wq->lock);
+	spin_lock(&gdc_manager.event.sem_lock);
 	list_move_tail(&pitem->list, &wq->work_queue);
-	spin_unlock(&wq->lock);
+	spin_unlock(&gdc_manager.event.sem_lock);
 	gdc_log(LOG_DEBUG, "gdc add work ok\n");
 	/* only read not need lock */
 	if (gdc_manager.event.cmd_in_sem.count == 0)
