@@ -359,6 +359,7 @@ struct match_data_s {
 #define VDIN_MEM_MEMSET_EN		BIT(23)
 #define VDIN_CROP_SEL			BIT(24) //0-vdin cut win;1-vdin set src_crop in vf
 #define VDIN_AFD_DISABLE		BIT(25) //0-enable AFD;1-disable AFD
+#define VDIN_DISABLE_AUTO_HDCP		BIT(26)
 
 /* vdin_function_sel control bits end */
 
@@ -547,6 +548,13 @@ enum vdin_matrix_sel_e {
 	VDIN_SEL_MATRIX1,
 	VDIN_SEL_MATRIX_HDR,/*after, equal g12a have*/
 	VDIN_SEL_MATRIX_MAX,
+};
+
+enum vdin_secure_en_e {
+	VDIN_SECURE_OFF = 0,
+	VDIN_SECURE_TEE,/* alloc from tee */
+	VDIN_SECURE_FLAGS,/* alloc from codec_mm */
+	VDIN_SECURE_MAX,
 };
 
 static inline const char
@@ -848,6 +856,7 @@ struct vdin_dts_config_s {
 	bool urgent_en;
 	bool v4l_en;
 	bool keystone_sel;
+	bool secure_cfg;
 	unsigned int afbce_flag_cfg;
 	bool dynamic_crop_en;
 	unsigned int canvas_config_mode;
@@ -1024,6 +1033,8 @@ struct vdin_lossy_comp_param_s {
 struct vdin_local_variable_s {
 	bool is_rgba_en;
 	unsigned int base_fr_chg_cnt;
+	unsigned int cur_hdcp_sts;
+	unsigned char hdcp_chg_cnt;
 };
 
 struct vdin_dev_s {
@@ -1048,8 +1059,10 @@ struct vdin_dev_s {
 	struct vdin_event_info pre_event_info;
 	/*struct extcon_dev *extcon_event;*/
 	struct delayed_work event_dwork;
+	struct delayed_work restart_dwork;
 	struct vdin_vrr_s vrr_data;
 	struct vdin_s5_s s5_data;
+	char vdin_name[8];
 
 	 /* 0:from gpio A,1:from csi2 , 2:gpio B*/
 	enum bt_path_e bt_path;
@@ -1098,11 +1111,12 @@ struct vdin_dev_s {
 	unsigned long vf_mem_start[VDIN_CANVAS_MAX_CNT];
 	struct page *vf_venc_pages[VDIN_CANVAS_MAX_CNT];
 	struct codec_mm_s *vf_codec_mem[VDIN_CANVAS_MAX_CNT];
+	struct codec_mm_s *vf_codec_mem_table[VDIN_CANVAS_MAX_CNT];
 
 	/* save secure handle */
 	unsigned int secure_handle;
 	unsigned int secure_type;
-	bool secure_en;
+	enum vdin_secure_en_e secure_en;
 	bool secure_video;
 	bool mem_ta_access;
 	bool support_secure;

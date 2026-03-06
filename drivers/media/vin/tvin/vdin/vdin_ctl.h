@@ -392,4 +392,5 @@ enum vd_format_e vdin_get_tx_format(struct vdin_dev_s *devp);
 bool vdin_select_hdr_matrix(struct vdin_dev_s *devp);
 void vdin_manual_matrix_csc(struct vdin_dev_s *devp, enum vdin_matrix_csc_e *matrix_csc);
 bool vdin_force_format_for_decontour(struct vdin_dev_s *devp);
+void vdin_secure_reg0_cfg(void);
 #endif

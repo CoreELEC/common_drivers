@@ -5180,7 +5180,8 @@ void vdin_enable_module(struct vdin_dev_s *devp, bool enable)
 {
 	unsigned int offset = devp->addr_offset;
 
-	vdin_secure_reg0_cfg();
+	if (!devp->dts_config.secure_cfg)
+		vdin_secure_reg0_cfg();
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (is_meson_s5_cpu()) {
 		vdin_enable_module_s5(devp, enable);
@@ -7934,6 +7935,8 @@ int vdin_package_done_check_state(struct vdin_dev_s *devp)
 			devp->vrr_data.vdin_vrr_en_flag, devp->prop.vtem_data.vrr_en,
 			devp->prop.color_format, devp->pre_prop.color_format,
 			devp->parm.info.status);
+		pr_info("hdcp[%d %d]\n",
+			devp->local_var.cur_hdcp_sts, devp->prop.hdcp_sts);
 	}
 	latency_changed =
 		(devp->pre_prop.latency.cn_type != devp->prop.latency.cn_type) ||
@@ -7943,7 +7946,8 @@ int vdin_package_done_check_state(struct vdin_dev_s *devp)
 	    devp->prop.vdin_hdr_flag != devp->pre_prop.vdin_hdr_flag ||
 	    vdin_is_vrr_state_chg(devp) ||
 	    devp->prop.color_format != devp->pre_prop.color_format ||
-	    devp->parm.info.status != TVIN_SIG_STATUS_STABLE)
+	    devp->parm.info.status != TVIN_SIG_STATUS_STABLE ||
+	    devp->local_var.cur_hdcp_sts != devp->prop.hdcp_sts)
 		ret |= BIT0;
 
 	if (devp->dv_hw5.is_auto_mute_needed) {
@@ -8027,6 +8031,11 @@ void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 			devp->vrr_data.freesync_chg_cnt++;
 		else
 			devp->vrr_data.freesync_chg_cnt = 0;
+
+		if (devp->prop.hdcp_sts != devp->pre_prop.hdcp_sts)
+			devp->local_var.hdcp_chg_cnt++;
+		else
+			devp->local_var.hdcp_chg_cnt = 0;
 
 		if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_FLAG)
 			pr_info("dv:%d, LL:%d hdr st:%d eotf:%d fg:%d allm:%d sty:0x%x spd:0x%x 0x%x\n",

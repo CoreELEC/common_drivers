@@ -1729,7 +1729,9 @@ static void vdin_start_param_init(struct vdin_dev_s *devp)
 	memset(&devp->stats, 0, sizeof(devp->stats));
 	memset(&devp->local_var, 0, sizeof(devp->local_var));
 	devp->afbce_flag = devp->dts_config.afbce_flag_cfg;
-	//todo:more parameter initializations will be move here
+	if (devp->afbce_info)
+		memset(devp->afbce_info, 0, sizeof(struct vdin_afbce_s));
+	devp->vf_mem_size = 0;
 	//TBC
 }
 
@@ -1924,7 +1926,7 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 
 		/* signal maybe change after stabled so not need update here */
 		//vdin_update_prop(devp);
-		pr_info("%s dv:%d hdr:%d allm:0x%x fps:%d sg_type:0x%x ratio:%d,vrr:%d prop_vrr:%d,%d\n",
+		pr_info("%s dv:%d hdr:%d allm:0x%x fps:%d sg_type:0x%x ratio:%d,vrr:%d,%d,%d\n",
 			__func__,
 			devp->dv.dv_flag, devp->prop.vdin_hdr_flag,
 			devp->prop.latency.allm_mode, devp->prop.fps,
@@ -1932,10 +1934,19 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 			devp->parm.info.aspect_ratio,
 			devp->vrr_data.vdin_vrr_en_flag,
 			devp->prop.vtem_data.vrr_en,
-			devp->prop.spd_data.data[5]);
+			devp->prop.hdcp_sts);
 		if ((!(devp->flags & VDIN_FLAG_V4L2_DEBUG) && devp->index) ||
 			devp->work_mode == VDIN_WORK_MD_V4L)
 			devp->parm.info.cfmt = devp->prop.color_format;
+		if (devp->hw_core == VDIN_HW_CORE_NORMAL && devp->dts_config.secure_cfg) {
+			if (devp->prop.hdcp_sts) {
+				devp->secure_en = VDIN_SECURE_FLAGS;
+				devp->local_var.cur_hdcp_sts = devp->prop.hdcp_sts;
+			} else {
+				devp->secure_en = VDIN_SECURE_OFF;
+				devp->local_var.cur_hdcp_sts = 0;
+			}
+		}
 
 		vdin_dv_hw5_init(devp);
 		vdin_scale_and_cutwin_handle(devp);
@@ -2440,6 +2451,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->common_divisor = 0;
 	devp->interlace_drop_bottom = 0;
 	devp->is_need_re_cfg = false;
+	devp->mem_protected = 0;
 	if (devp->auto_game_flag) {//remove auto game mode
 		game_mode = game_mode_cfg;
 		devp->auto_game_flag = false;
@@ -2460,6 +2472,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 		memset(&devp->pre_prop, 0, sizeof(devp->pre_prop));
 		memset(&devp->prop, 0, sizeof(devp->prop));
 		devp->prop.raw_color_fmt = TVIN_COLOR_FMT_MAX;
+		devp->local_var.cur_hdcp_sts = 0;
 	}
 	devp->debug.slt_test.vf_check_result = false;
 	devp->debug.slt_test.vf_pass_cnt = 0;
@@ -3832,6 +3845,11 @@ static void vdin_set_vfe_info(struct vdin_dev_s *devp, struct vf_entry *vfe)
 		vfe->vf.flag_ext |= VDIN_GAME_FRC_FLAG_EN;
 	else
 		vfe->vf.flag_ext &= ~VDIN_GAME_FRC_FLAG_EN;
+
+	if (devp->mem_protected)
+		vfe->vf.flag |= VFRAME_FLAG_VIDEO_SECURE;
+	else
+		vfe->vf.flag &= ~VFRAME_FLAG_VIDEO_SECURE;
 
 	vfe->vf.frame_irq_cnt = devp->irq_cnt;
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_VF)
@@ -7525,6 +7543,24 @@ static const struct of_device_id vdin_dt_match[] = {
 	{}
 };
 
+static void vdin_restart_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct vdin_dev_s *devp =
+		container_of(dwork, struct vdin_dev_s, restart_dwork);
+
+	if (devp->vdin_function_sel & VDIN_DISABLE_AUTO_HDCP)
+		return;
+	mutex_lock(&devp->fe_lock);
+	devp->self_stop_start = 1;
+	vdin_self_stop_dec(devp);
+	vdin_self_start_dec(devp);
+	devp->self_stop_start = 0;
+	mutex_unlock(&devp->fe_lock);
+
+	pr_info("vdin%d restart end\n", devp->index);
+}
+
 static void vdin_event_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
@@ -7708,8 +7744,8 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {
 		devp->double_wr_cfg = of_property_read_bool(pdev->dev.of_node,
 							     "double_write_en");
-		devp->secure_en = of_property_read_bool(pdev->dev.of_node,
-							 "secure_en");
+		devp->dts_config.secure_cfg = of_property_read_bool(pdev->dev.of_node,
+							 "secure_cfg");
 	}
 
 	ret = of_property_read_u32(pdev->dev.of_node, "frame_buff_num",
@@ -7858,6 +7894,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 
 	vdin_devp[devp->index] = devp;
 
+	snprintf(devp->vdin_name, sizeof(devp->vdin_name), "vdin%d", devp->index);
 	/* t7 three screen display RDMA not enough remove vdin1 rdma */
 	devp->rdma_not_register = of_property_read_bool(pdev->dev.of_node,
 					"rdma_not_register");
@@ -8208,6 +8245,9 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&devp->vlock_dwork, vdin_vlock_dwork);
 	/*vdin event*/
 	INIT_DELAYED_WORK(&devp->event_dwork, vdin_event_work);
+	/* vdin restart */
+	INIT_DELAYED_WORK(&devp->restart_dwork, vdin_restart_work);
+
 	/*vdin_extcon_register(pdev, devp);*/
 	/*init queue*/
 	init_waitqueue_head(&devp->queue);
@@ -8260,6 +8300,7 @@ void vdin_drv_remove(struct platform_device *pdev)
 	}
 	ret = cancel_delayed_work(&devp->vlock_dwork);
 	ret = cancel_delayed_work(&devp->event_dwork);
+	ret = cancel_delayed_work(&devp->restart_dwork);
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (!devp->rdma_not_register)
 		rdma_unregister(devp->rdma_handle);

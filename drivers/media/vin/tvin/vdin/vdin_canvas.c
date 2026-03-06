@@ -185,8 +185,8 @@ void vdin_cal_canvas_w(struct vdin_dev_s *devp)
 	}
 	if (devp->double_wr && (devp->dv_hw5.hw5_ctl & BIT3)) {
 		devp->canvas_w = h_active * VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
-		pr_info("%s dw_wrmif_444_10bit,%dx%d;canvas_w:%d\n",
-			__func__, h_active, v_active, devp->canvas_w);
+		pr_info("dw_wrmif_444_10bit,%dx%d;canvas_w:%d\n",
+			h_active, v_active, devp->canvas_w);
 	}
 	/*backup before roundup*/
 	devp->canvas_active_w = devp->canvas_w;
@@ -302,7 +302,7 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 {
 	unsigned int mem_size, h_size, v_size, frame_size = 0, afrc_body_y_size = 0;
 	unsigned int max_buffer_num = devp->dts_config.min_buf_num;
-	unsigned int fix_size = 0, sct_body_size, cpr_body_size;
+	unsigned int sct_body_size, cpr_body_size;
 	unsigned int h_tmp, v_tmp, blk_num;
 
 	if (devp->rdma_enable)
@@ -511,16 +511,16 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 				devp->afbce_info->frame_table_size =
 					devp->afbce_info->frame_body_size / 1024;/* *4/4096 */
 			}
-			if (devp->mem_type == VDIN_MEM_TYPE_SCT) {
-				fix_size = devp->vf_mem_size_small +
-					devp->afbce_info->frame_head_size +
-					devp->afbce_info->frame_table_size;
-			} else {
-				frame_size = devp->vf_mem_size_small +
-					devp->afbce_info->frame_body_size +
-					devp->afbce_info->frame_head_size +
-					devp->afbce_info->frame_table_size;
-			}
+			frame_size = devp->vf_mem_size_small +
+				devp->afbce_info->frame_body_size +
+				devp->afbce_info->frame_head_size +
+				devp->afbce_info->frame_table_size;
+
+			if (devp->secure_en == VDIN_SECURE_FLAGS)
+				frame_size -= devp->afbce_info->frame_table_size;
+
+			if (devp->mem_type == VDIN_MEM_TYPE_SCT)
+				frame_size -= devp->afbce_info->frame_body_size;
 		} else {
 			devp->afbce_info->frame_head_size = 0;
 			devp->afbce_info->frame_table_size = 0;
@@ -537,7 +537,7 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 
 	if (devp->afbce_info && devp->afbce_valid && devp->mem_type == VDIN_MEM_TYPE_SCT) {
 		/* for vdin_cma_alloc calculation use */
-		devp->frame_size = PAGE_ALIGN(fix_size);
+		devp->frame_size = PAGE_ALIGN(frame_size);
 		/* codec_mm_scatter_source_check (0):no secure (1):secure. seurce todo
 		 * codec_mm_scatter_source_check 2:codec_alloc,0/1/3: system_alloc, 4:error
 		 */
@@ -545,12 +545,12 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 			sct_body_size = devp->afbce_info->frame_body_size;
 			/* compression ratio 60% */
 			cpr_body_size = (unsigned int)(sct_body_size  * 3 / 5);
-			mem_size = PAGE_ALIGN(fix_size + sct_body_size) * 3 +
-					PAGE_ALIGN(fix_size + cpr_body_size) * (max_buffer_num - 3);
+			mem_size = PAGE_ALIGN(frame_size + sct_body_size) * 3 +
+				PAGE_ALIGN(frame_size + cpr_body_size) * (max_buffer_num - 3);
 		} else if (codec_mm_scatter_source_check(0) == 0 ||
 			codec_mm_scatter_source_check(0) == 1 ||
 			codec_mm_scatter_source_check(0) == 3) {
-			mem_size = PAGE_ALIGN(fix_size) * max_buffer_num;
+			mem_size = PAGE_ALIGN(frame_size) * max_buffer_num;
 		} else {
 			pr_info("codec_mm_scatter_source_check err:%d/n",
 				codec_mm_scatter_source_check(0));
@@ -573,8 +573,8 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 	devp->mem_size_bak = mem_size;
 	devp->canvas_max_num_bak = max_buffer_num;/* backup */
 
-	pr_info("max_buf: %u frame_size:%#x.fix_size:%#x, mem_size:%#x, codec_sct_src_chk:%d\n",
-		max_buffer_num, frame_size, fix_size, mem_size, codec_mm_scatter_source_check(0));
+	pr_info("max_buf: %u frame_size:%#x.mem_size:%#x, codec_sct_src_chk:%d\n",
+		max_buffer_num, frame_size, mem_size, codec_mm_scatter_source_check(0));
 
 	if (mem_size > devp->cma_mem_size &&
 	    !(devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) &&
@@ -902,7 +902,7 @@ void vdin_mem_memset(struct vdin_dev_s *devp)
 				}
 			}
 			if (devp->debug.vdin_memset_dbg_en == 1 && p) {
-				pr_info("%s:buf[%d], 8 byte\n", __func__, i);
+				pr_info("buf[%d], 8 byte\n", i);
 				for (j = 0; j < 10; j++)
 					pr_info("0x%02X ", p[j]);
 				pr_info("\n");
@@ -922,6 +922,54 @@ void vdin_mem_memset(struct vdin_dev_s *devp)
 /* need to be static for pointer use in codec_mm */
 static char vdin_name[6];
 
+int vdin_alloc_table_mem(struct vdin_dev_s *devp)
+{
+	bool task_pending = false;
+	int i, j;
+	int flags = CODEC_MM_FLAGS_CMA_FIRST | CODEC_MM_FLAGS_CMA_CLEAR |
+		CODEC_MM_FLAGS_DMA;
+	unsigned int table_size;
+	struct codec_mm_s *mem = NULL;
+
+	table_size = devp->afbce_info->frame_table_size;
+
+	if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
+		for (i = 0; i < devp->vf_mem_max_cnt; i++) {
+			/*add for 1g config, codec can't release mem in time*/
+			for (j = 0; j < 20; j++) {
+				if (fatal_signal_pending(current)) {
+					task_pending = true;
+					break;
+				}
+				mem = codec_mm_alloc(devp->vdin_name,
+					table_size, 16, flags, -1);
+				if (mem) {
+					devp->afbce_info->fm_table_paddr[i] = mem->phy_addr;
+				} else {
+					devp->afbce_info->fm_table_paddr[i] = 0;
+					//devp->afbce_info->fm_head_paddr[i] = 0;
+				}
+
+				if (!devp->afbce_info->fm_table_paddr[i]) {
+					msleep(50);
+					pr_err("alloc mem[%d] fail:50*%dms\n", i, j);
+				} else {
+					devp->vf_codec_mem_table[i] = mem;
+					break;
+				}
+			}
+			if (j >= 20 || task_pending) {
+				pr_err("vdin%d buf[%d]codec alloc fail!!!\n",
+					devp->index, i);
+				//todo ;release the already alloced buffers
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+
 /* return val:1: fail;0: ok */
 /* combined canvas and afbce memory */
 unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
@@ -939,8 +987,8 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 	struct codec_mm_s *mem = NULL;
 
 	if (devp->cma_config_en == 0 || devp->cma_mem_alloc == 1) {
-		pr_info("vdin%d %s use_reserved mem or cma already allocated (%d,%d)!!!\n",
-			devp->index, __func__, devp->cma_config_en,
+		pr_info("vdin%d use_reserved mem or cma already allocated (%d,%d)!!!\n",
+			devp->index, devp->cma_config_en,
 			devp->cma_mem_alloc);
 		return 0;
 	}
@@ -950,12 +998,8 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 	max_buffer_num = devp->canvas_max_num_bak;
 	frame_size = devp->frame_size_bak;
 
-	if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
-		if (devp->index == 0)
-			strcpy(vdin_name, "vdin0");
-		else if (devp->index == 1)
-			strcpy(vdin_name, "vdin1");
-	}
+	if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC)
+		snprintf(vdin_name, sizeof(vdin_name), "vdin%d", devp->index);
 
 	if (devp->set_canvas_manual || devp->cfg_dma_buf) {
 		for (i = 0; i < VDIN_CANVAS_MAX_CNT; i++) {
@@ -999,26 +1043,36 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 		devp->vf_mem_max_cnt  = devp->v4l2_req_buf_num;
 		pr_info("vdin%d v4l2 max_buffer_num = %d!\n",
 			devp->index, devp->vf_mem_max_cnt);
-
-#if IS_ENABLED(CONFIG_AMLOGIC_TEE)
-	if (devp->secure_video && devp->mem_registered) {
-		devp->secure_mem_size = devp->secure_mem_size * devp->v4l2_req_buf_num;
-		res = tee_protect_mem_by_type(devp->secure_type,
-						devp->secure_mem_start,
-						devp->secure_mem_size,
-						&devp->secure_handle);
-		if (res)
-			devp->mem_protected = 0;
-		else
-			devp->mem_protected = 1;
-		if (devp->debug.vdin_dbg_en)
-			pr_info("vdin%d v4l2 secure mem protect: %d (addr:0x%lx, size:0x%x)\n",
-				devp->index, devp->mem_protected,
-				devp->secure_mem_start, devp->secure_mem_size);
-	}
-#endif
+	#if IS_ENABLED(CONFIG_AMLOGIC_TEE)
+		if (devp->secure_video && devp->mem_registered) {
+			devp->secure_mem_size = devp->secure_mem_size * devp->v4l2_req_buf_num;
+			res = tee_protect_mem_by_type(devp->secure_type,
+							devp->secure_mem_start,
+							devp->secure_mem_size,
+							&devp->secure_handle);
+			if (res)
+				devp->mem_protected = 0;
+			else
+				devp->mem_protected = 1;
+			if (devp->debug.vdin_dbg_en)
+				pr_info("vdin%d v4l2 secure mem protect: %d (addr:[0x%lx,0x%x]\n",
+					devp->index, devp->mem_protected,
+					devp->secure_mem_start, devp->secure_mem_size);
+		}
+	#endif
 		return 0;
 	}
+
+	if (devp->secure_en == VDIN_SECURE_FLAGS) {
+		devp->mem_protected = 1;
+		if (devp->afbce_valid)
+			vdin_alloc_table_mem(devp);
+
+		flags = CODEC_MM_FLAGS_TVP | CODEC_MM_FLAGS_CMA_CLEAR |
+			CODEC_MM_FLAGS_DMA;
+		pr_info("vdin%d flags = %#x!\n", devp->index, flags);
+	}
+
 	if (devp->cma_config_flag & MEM_ALLOC_DISCRETE) {
 		for (i = 0; i < max_buffer_num; i++) {
 			if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
@@ -1029,7 +1083,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 						break;
 					}
 					mem = codec_mm_alloc(vdin_name,
-						(frame_size / PAGE_SIZE) << PAGE_SHIFT, 0, flags,
+						(frame_size / PAGE_SIZE) << PAGE_SHIFT, 16, flags,
 							-1);
 					if (mem)
 						devp->vf_mem_start[i] = mem->phy_addr;
@@ -1079,7 +1133,7 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 	} else {
 		if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
 			devp->mem_start =
-				codec_mm_alloc_for_dma(vdin_name, mem_size / PAGE_SIZE, 0, flags);
+				codec_mm_alloc_for_dma(vdin_name, mem_size / PAGE_SIZE, 16, flags);
 
 			if (devp->mem_start == 0) {
 				ret = -2;
@@ -1137,15 +1191,14 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 				devp->afbce_info->fm_body_paddr[i] = 0;
 				devp->afbce_info->fm_head_paddr[i] =
 					devp->vf_mem_start[i] + devp->vf_mem_size_small;
-				devp->afbce_info->fm_table_paddr[i] =
-					devp->afbce_info->fm_head_paddr[i] +
-					devp->afbce_info->frame_head_size;
 			} else {
 				devp->afbce_info->fm_body_paddr[i] =
 					devp->vf_mem_start[i] + devp->vf_mem_size_small;
 				devp->afbce_info->fm_head_paddr[i] =
-					devp->afbce_info->fm_body_paddr[i] +
+					devp->vf_mem_start[i] + devp->vf_mem_size_small +
 					devp->afbce_info->frame_body_size;
+			}
+			if (devp->secure_en != VDIN_SECURE_FLAGS) {
 				devp->afbce_info->fm_table_paddr[i] =
 					devp->afbce_info->fm_head_paddr[i] +
 					devp->afbce_info->frame_head_size;
@@ -1244,13 +1297,13 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 				tee_unprotect_mem(devp->secure_handle);
 				devp->mem_protected = 0;
 				if (devp->debug.vdin_dbg_en)
-					pr_info("%s(): vdin%d v4l2 secure mem unprotect\n",
-						__func__, devp->index);
+					pr_info("vdin%d v4l2 secure mem unprotect\n",
+						devp->index);
 			}
 #endif
 		} else {
-			pr_err("vdin%d %s fail for (%d,%d)!!!\n",
-				devp->index, __func__, devp->cma_config_en,
+			pr_err("vdin%d fail for (%d,%d)!!!\n",
+				devp->index, devp->cma_config_en,
 				devp->cma_mem_alloc);
 		}
 		return;
@@ -1269,6 +1322,10 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 			for (i = 0; i < devp->vf_mem_max_cnt; i++) {
 				codec_mm_release(devp->vf_codec_mem[i], vdin_name);
 				devp->vf_codec_mem[i] = NULL;
+				if (devp->secure_en == VDIN_SECURE_FLAGS) {
+					codec_mm_release(devp->vf_codec_mem_table[i], vdin_name);
+					devp->vf_codec_mem_table[i] = NULL;
+				}
 			}
 			pr_info("vdin%d codec cma release ok!\n", devp->index);
 		} else {
@@ -1285,8 +1342,7 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 			tee_unprotect_mem(devp->secure_handle);
 			devp->mem_protected = 0;
 			if (devp->debug.vdin_dbg_en)
-				pr_info("%s(): vdin%d secure mem unprotect\n",
-					__func__, devp->index);
+				pr_info("vdin%d secure mem unprotect\n", devp->index);
 		}
 #endif
 		if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
@@ -1308,7 +1364,6 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 		highmem_flag = PageHighMem(phys_to_page(devp->afbce_info->fm_table_paddr[0]));
 		if (highmem_flag) {
 			/*high mem area*/
-			pr_info("%s high mem area\n", __func__);
 			for (i = 0; i < VDIN_CANVAS_MAX_CNT; i++) {
 				if (devp->afbce_info->fm_table_vir_paddr[i])
 					vdin_unmap_phyaddr(devp->afbce_info->fm_table_vir_paddr[i]);
@@ -1341,8 +1396,8 @@ void vdin_set_mem_protect(struct vdin_dev_s *devp, unsigned int protect)
 		devp->mem_protected = 0;
 	}
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_SECURE)
-		pr_info("%s(): vdin%d secure mem protect:%d\n",
-			__func__, devp->index, devp->mem_protected);
+		pr_info("vdin%d secure mem protect:%d\n",
+			devp->index, devp->mem_protected);
 #endif
 }
 
@@ -1378,7 +1433,7 @@ void vdin_cma_malloc_mode(struct vdin_dev_s *devp)
 		devp->force_yuv444_malloc = 0;
 
 	if (devp->work_mode == VDIN_WORK_MD_V4L) {
-		pr_info("%s vdin v4l2 mode,set force_yuv444_malloc to 0\n", __func__);
+		pr_info("vdin v4l2 mode,set force_yuv444_malloc to 0\n");
 		devp->force_yuv444_malloc = 0;
 	}
 }

@@ -432,13 +432,19 @@ static enum tvin_sg_chg_flg vdin_hdmirx_fmt_chg_detect(struct vdin_dev_s *devp)
 		}
 
 		if (devp->pre_prop.hdcp_sts != devp->prop.hdcp_sts) {
-			signal_chg |= TVIN_SIG_CHG_HDCP_STS;
-			if (signal_chg)
-				pr_info("%s hdcp sts chg:(0x%x->0x%x)\n",
-					__func__,
-					devp->pre_prop.hdcp_sts,
-					devp->prop.hdcp_sts);
-			devp->pre_prop.hdcp_sts = devp->prop.hdcp_sts;
+			if (!(devp->flags & VDIN_FLAG_DEC_STARTED))
+				devp->local_var.hdcp_chg_cnt++;
+			if (devp->local_var.hdcp_chg_cnt > 1) {
+				//trigger restart
+				if (devp->debug.sm_debug_enable)
+					pr_info("vdin%d,hdcp chg %d ---> %d", devp->index,
+						devp->pre_prop.hdcp_sts, devp->prop.hdcp_sts);
+				devp->local_var.hdcp_chg_cnt = 0;
+				signal_chg |= TVIN_SIG_CHG_HDCP_STS;
+				devp->pre_prop.hdcp_sts = devp->prop.hdcp_sts;
+				if (devp->dts_config.secure_cfg)
+					schedule_delayed_work(&devp->restart_dwork, 0);
+			}
 		}
 
 		if (color_range_force)
@@ -535,6 +541,9 @@ void vdin_auto_de_handler(struct vdin_dev_s *devp)
 static inline bool vdin_is_need_send_event(struct vdin_dev_s *devp,
 					struct tvin_info_s *info)
 {
+	if (devp->self_stop_start)
+		return false;
+
 	if (!(devp->flags & VDIN_FLAG_SNOW_FLAG) &&
 	    ((devp->flags & VDIN_FLAG_DEC_STARTED &&
 	      info->status == TVIN_SIG_STATUS_UNSTABLE &&

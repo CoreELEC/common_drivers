@@ -1059,8 +1059,9 @@
 			afbce_bit_mode = <0x0>;
 			chk_wr_done_en;
 			/* urgent_en; */
+			secure_cfg;
 			double_write_en;
-			vdin_function_sel = <0x20000>;
+			vdin_function_sel = <0x20001>;
 			/* vdin v4l2 */
 			v4l_support_en = <0>;
 			v4l_vd_num = <70>;

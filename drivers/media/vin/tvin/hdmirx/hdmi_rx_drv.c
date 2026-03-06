@@ -2173,8 +2173,8 @@ void hdmirx_get_sig_prop(struct tvin_frontend_s *fe,
 			prop->latency.allm_mode, prop->latency.cn_type,
 			prop->latency.it_content, prop->hw_vic, prop->avi_colorimetry,
 			prop->avi_ext_colorimetry, prop->latency.fmm_flag);
-		rx_pr("hdr-eotf:0x%x, dv-tb49:0x%x\n",
-			prop->hdr_info.hdr_data.eotf, prop->dv_unique_drm_flag);
+		rx_pr("hdr-eotf:0x%x, dv-tb49:0x%x,hdcp:%d\n",
+			prop->hdr_info.hdr_data.eotf, prop->dv_unique_drm_flag, prop->hdcp_sts);
 		rx_pr("gaming-vrr:0x%x, qms-vrr:0x%x, qms+:0x%x\n",
 			prop->vtem_data.vrr_en, prop->vtem_data.qms_en, prop->qms_plus_flag);
 	}

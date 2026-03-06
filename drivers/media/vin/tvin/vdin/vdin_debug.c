@@ -2429,7 +2429,8 @@ static void vdin_dump_count(struct vdin_dev_s *devp)
 static void vdin_dump_dts_config(struct vdin_dev_s *devp)
 {
 	pr_info("vdin%d chk_wr_done_en: %d\n", devp->index, devp->dts_config.chk_write_done_en);
-	pr_info("urgent_en: %d\n", devp->dts_config.urgent_en);
+	pr_info("urgent_en: %d,secure_cfg:%d\n",
+		devp->dts_config.urgent_en, devp->dts_config.secure_cfg);
 	pr_info("v4l_en:%d\n", devp->dts_config.v4l_en);
 	pr_info("keystone_sel:%d\n", devp->dts_config.keystone_sel);
 	pr_info("max_buf_num:%d, min_buf_num:%d\n",
@@ -4811,7 +4812,13 @@ start_chk:
 				devp->debug.dbg_reg_bit[i * 4 + 2],
 				devp->debug.dbg_reg_bit[i * 4 + 3]);
 	} else if (!strcmp(parm[0], "self_restart")) {
+		devp->self_stop_start = 1;
 		vdin_self_stop_dec(devp);
+		vdin_self_start_dec(devp);
+		devp->self_stop_start = 0;
+	} else if (!strcmp(parm[0], "self_stop")) {
+		vdin_self_stop_dec(devp);
+	} else if (!strcmp(parm[0], "self_start")) {
 		vdin_self_start_dec(devp);
 	} else if (!strcmp(parm[0], "vdin_function_sel")) {
 		if (parm[1] && (kstrtouint(parm[1], 16, &temp) == 0)) {
@@ -5319,6 +5326,15 @@ start_chk:
 	} else if (!strcmp(parm[0], "game_frc_mute_time")) {
 		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
 			devp->game_frc_mute_time = temp; //ms
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (!strcmp(parm[0], "secure_cfg")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			devp->dts_config.secure_cfg = temp;
+			if (temp & 0x10)
+				vdin_secure_reg0_cfg();
 		} else {
 			err = -EINVAL;
 			goto error;

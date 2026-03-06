@@ -298,7 +298,7 @@ error:
 
 int vdin_sct_init(struct vdin_dev_s *devp)
 {
-	int tvp_flag = 0;
+	int tvp_flag = (devp->secure_en == VDIN_SECURE_FLAGS);
 	int buf_size = devp->dts_config.sct_cache_size;
 	unsigned int need_cache_size;
 	struct vdin_msct_top_s *psct;

@@ -553,16 +553,20 @@ void vdin_afbce_maptable_init(struct vdin_dev_s *devp)
 		} else {
 			virt_addr = (unsigned int *)vdin_vmap(phys_addr,
 				devp->afbce_info->frame_table_size);
-			if (devp->debug.vdin_dbg_en) {
-				pr_err("----vdin vmap v: %p, p: %lx, size: %d\n",
-				       virt_addr, phys_addr,
-				       devp->afbce_info->frame_table_size);
-			}
 			if (!virt_addr) {
 				pr_err("vmap fail, size: %d.\n",
 				       devp->afbce_info->frame_table_size);
 				return;
 			}
+		}
+		if (devp->debug.vdin_dbg_en) {
+			pr_info("----vdin v: %p, p: %lx, flag:%d, size: %d\n",
+			       virt_addr, phys_addr, highmem_flag,
+			       devp->afbce_info->frame_table_size);
+		}
+		if (!virt_addr) {
+			pr_err("virt_addr[%d] == NULL\n", i);
+			continue;
 		}
 
 		p = virt_addr;
