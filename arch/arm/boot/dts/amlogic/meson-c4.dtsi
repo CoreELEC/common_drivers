@@ -1662,8 +1662,8 @@
 
 	i2c1_master_pins1:i2c1_pins1 {
 		mux {
-			groups = "i2c1_sda",
-				"i2c1_scl";
+			groups = "i2cm_b_scl",
+				"i2cm_b_sda";
 			function = "i2c1";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1680,8 +1680,8 @@
 
 	i2c1_master_pins2:i2c1_pins2 {
 		mux {
-			groups = "i2c1_sda_b",
-				"i2c1_scl_b";
+			groups = "i2cm_b_sda_b",
+				"i2cm_b_scl_b";
 			function = "i2c1";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1716,8 +1716,8 @@
 
 	i2c1_master_pins4:i2c1_pins4 {
 		mux {
-			groups = "i2c1_sda_m",
-				"i2c1_scl_m";
+			groups = "i2cm_b_sda_m",
+				"i2cm_b_scl_m";
 			function = "i2c1";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1734,8 +1734,8 @@
 
 	i2c1_master_pins5:i2c1_pins5 {
 		mux {
-			groups = "i2c1_sda_m0",
-				"i2c1_scl_m1";
+			groups = "i2cm_b_sda_m1",
+				"i2cm_b_scl_m0";
 			function = "i2c1";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1752,8 +1752,8 @@
 
 	i2c2_master_pins1:i2c2_pins1 {
 		mux {
-			groups = "i2c2_sda",
-				"i2c2_scl";
+			groups = "i2cm_c_sda",
+				"i2cm_c_scl";
 			function = "i2c2";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1770,8 +1770,8 @@
 
 	i2c3_master_pins1:i2c3_pins1 {
 		mux {
-			groups = "i2c3_sda",
-				"i2c3_scl";
+			groups = "i2cm_d_sda",
+				"i2cm_d_scl";
 			function = "i2c3";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1788,8 +1788,8 @@
 
 	i2c3_master_pins2:i2c3_pins2 {
 		mux {
-			groups = "i2c3_sda_b",
-				"i2c3_scl_b";
+			groups = "i2cm_d_sda_b",
+				"i2cm_d_scl_b";
 			function = "i2c3";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1806,8 +1806,8 @@
 
 	i2c3_master_pins3:i2c3_pins3 {
 		mux {
-			groups = "i2c3_sda_c",
-				"i2c3_scl_c";
+			groups = "i2cm_d_sda_c",
+				"i2cm_d_scl_c";
 			function = "i2c3";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1824,8 +1824,8 @@
 
 	i2c3_master_pins4:i2c3_pins4 {
 		mux {
-			groups = "i2c3_sda_x",
-				"i2c3_scl_x";
+			groups = "i2cm_d_scl_x",
+				"i2cm_d_sda_x";
 			function = "i2c3";
 			bias-disable;
 			drive-strength-microamp = <3000>;
@@ -1842,8 +1842,8 @@
 
 	i2c3_master_pins5:i2c3_pins5 {
 		mux {
-			groups = "i2c3_sda_m",
-				"i2c3_scl_m";
+			groups = "i2cm_d_sda_m",
+				"i2cm_d_scl_m";
 			function = "i2c3";
 			bias-disable;
 			drive-strength-microamp = <3000>;

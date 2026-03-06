@@ -18,7 +18,11 @@
 		serial3 = &uart_C;
 		serial4 = &uart_D;
 		serial5 = &uart_F;
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
 		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
 		spi0 = &spi_nfc;
 		tsensor0 = &tsensor;
 	};
@@ -651,11 +655,19 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&i2c2_master_pins1>;
 	pinctrl-1 = <&i2c2_master_sleep_pins1>;
 	clock-frequency = <100000>; /* default 100k */
+};
+
+&i2c1 {
+	status= "okay";
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&i2c1_master_pins5>;
+	pinctrl-1 = <&i2c1_master_sleep_pins5>;
 };
 
 &adla {
