@@ -662,7 +662,7 @@ int dvel_swap_frame(struct vframe_s *vf)
 		if (dvel_size != new_dvel_w)
 			dvel_changed = true;
 		ret = set_layer_display_canvas
-			(layer, vf, layer->cur_frame_par,
+			(&vd_layer[1], vf, layer->cur_frame_par,
 			layer_info, __LINE__);
 		dvel_status = true;
 	} else if (dvel_status) {
