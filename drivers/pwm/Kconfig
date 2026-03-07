@@ -25,3 +25,9 @@ config AMLOGIC_PWM_MESON_TEE
 	help
 	  The platform driver for Amlogic Meson PWM TEE controller.
 
+config AMLOGIC_PWM_MESON_TEE_NO_SMC
+	bool "Amlogic Meson PWM TEE driver NO SMC "
+	depends on AMLOGIC_PWM
+	depends on AMLOGIC_PWM_MESON_TEE
+	help
+	  The flag means use operat pwm reg in ree environment.

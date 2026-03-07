@@ -72,25 +72,34 @@ static void meson_pwm_tee_free(struct pwm_chip *chip, struct pwm_device *pwm)
 
 static int pwm_constant_enable_tee(struct meson_pwm_tee *meson, struct pwm_device *pwm)
 {
+#ifndef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	struct arm_smccc_res res;
 	struct meson_pwm_tee_channel *channel = &meson->channels[pwm->hwpwm];
 
 	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_CONSTANT_EN, FIELD_PREP(PWM_HIGH_MASK, channel->hi) |
 		FIELD_PREP(PWM_LOW_MASK, channel->lo), 0, 0, 0, &res);
-
+#else
+	writel(readl(meson->base + PWM_MISC_REG) | MISC_CONSTANT,
+		meson->base + PWM_MISC_REG);
+#endif
 	return 0;
 }
 
 static int pwm_constant_disable_tee(struct meson_pwm_tee *meson, struct pwm_device *pwm)
 {
+#ifndef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	struct arm_smccc_res res;
 	struct meson_pwm_tee_channel *channel = &meson->channels[pwm->hwpwm];
 
 	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 			SECID_PWM_CONSTANT_DIS, FIELD_PREP(PWM_HIGH_MASK, channel->hi) |
 		FIELD_PREP(PWM_LOW_MASK, channel->lo), 0, 0, 0, &res);
+#else
+	writel(readl(meson->base + PWM_MISC_REG) & (~MISC_CONSTANT),
+		meson->base + PWM_MISC_REG);
 
+#endif
 	return 0;
 }
 
@@ -155,7 +164,9 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 {
 	struct meson_pwm_tee_channel *channel = &meson->channels[pwm->hwpwm];
 	u32 value;
+#ifndef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	struct arm_smccc_res res;
+#endif
 	unsigned long set_clk;
 	u32 err;
 
@@ -168,19 +179,35 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 #ifdef DOUBLE_CHAN_COMPAT
 	switch (pwm->hwpwm) {
 	case CHANNEL_MAIN:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel(value, meson->base + REG_PWM);
+		writel(readl(meson->base + PWM_MISC_REG) | MISC_EN,
+			meson->base + PWM_MISC_REG);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_MAIN, value, 0, 0, 0, &res);
-		break;
+	#endif
+	break;
 	case CHANNEL_SUB:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel(value, meson->base + REG_PWM_SUB);
+		writel(readl(meson->base + PWM_MISC_REG) | MISC_EN_SUB,
+			meson->base + PWM_MISC_REG);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_SUB, value, 0, 0, 0, &res);
+	#endif
 		break;
 	default:
 		break;
 	}
 #else
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+	writel(value, meson->base + REG_PWM);
+	#else
 	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_MAIN, value, 0, 0, 0, &res);
+	#endif
 #endif
 	/*get_clk_rate()not use in Interrupt context*/
 	if (channel->clk_div == channel->pre_div)
@@ -202,24 +229,41 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 
 static void meson_pwm_tee_disable(struct meson_pwm_tee *meson, struct pwm_device *pwm)
 {
+#ifndef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	struct arm_smccc_res res;
+#endif
 
 #ifdef DOUBLE_CHAN_COMPAT
 	switch (pwm->hwpwm) {
 	case CHANNEL_MAIN:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN),
+			meson->base + PWM_MISC_REG);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_MAIN,  0, 0, 0, 0, &res);
+	#endif
 		break;
 	case CHANNEL_SUB:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN_SUB),
+			meson->base + PWM_MISC_REG);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_SUB,  0, 0, 0, 0, &res);
 		break;
+	#endif
 	default:
 		break;
 	}
 #else
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN),
+			meson->base + PWM_MISC_REG);
+	#else
 	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_MIAN, 0, 0, 0, 0, &res);
+	#endif
 #endif
 }
 

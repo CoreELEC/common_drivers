@@ -166,7 +166,9 @@ EXPORT_SYMBOL_GPL(pwm_set_times);
 int pwm_set_times_tee(struct meson_pwm_tee *meson,
 		  unsigned int index, unsigned int value)
 {
+	#ifndef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	struct arm_smccc_res res;
+	#endif
 
 	if (value > 255) {
 		dev_err(&meson->chip->dev,
@@ -176,12 +178,22 @@ int pwm_set_times_tee(struct meson_pwm_tee *meson,
 
 	switch (index) {
 	case 0:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel((readl(meson->base + REG_TIME) & (~TIME_MASK_MAIN)) | (value << TIME_MAIN),
+			meson->base + REG_TIME);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_TIMES_MAIN, value, 0, 0, 0, &res);
+	#endif
 		break;
 	case 1:
+	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
+		writel((readl(meson->base + REG_TIME) & (~TIME_MASK_SUB)) | (value << TIME_SUB),
+			meson->base + REG_TIME);
+	#else
 		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
 				 SECID_PWM_TIMES_SUB, value, 0, 0, 0, &res);
+		#endif
 		break;
 	default:
 		return -EINVAL;

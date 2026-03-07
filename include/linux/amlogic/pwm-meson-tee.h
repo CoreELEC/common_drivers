@@ -41,9 +41,15 @@ enum sec_pwm {
 #define PWM_HIGH_MASK		GENMASK(31, 16)
 #define PWM_MISC_REG		0x8
 #define MISC_EN			BIT(0)
+#define MISC_EN_SUB			BIT(25)
 #define MISC_CONSTANT		BIT(28)
 #define CHANNEL_MAIN		0
-
+#define REG_TIME			0x10
+#define TIME_MASK_MAIN			0xff000000
+#define TIME_MASK_SUB			0x00ff0000
+#define TIME_MAIN			24
+#define TIME_SUB			16
+#define REG_PWM_SUB			0x14
 #define DOUBLE_CHAN_COMPAT
 #ifdef DOUBLE_CHAN_COMPAT
 #define MESON_NUM_PWMS_TEE		2
