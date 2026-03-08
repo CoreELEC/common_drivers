@@ -86,6 +86,15 @@
 	};
 };
 
+// not ethernet related but sets GPIO to enable USB-C port
+&int_mdio {
+	internal_ephy: ethernet_phy@8 {
+		reset-assert-us = <10000>;
+		reset-deassert-us = <80000>;
+		reset-gpios = <&gpio GPIOH_9 GPIO_ACTIVE_LOW>;
+	};
+};
+
 &vrtc {
 	status = "disabled";
 };
