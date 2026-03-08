@@ -4,10 +4,12 @@
  */
 
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 
 #include "meson_tx_internal.h"
 #include "dptx_internal.h"
+#include "dptx_hw_opcode.h"
 
 #ifdef CONFIG_AMLOGIC_VOUT_SERVE
 struct vinfo_s *dptx_get_current_vinfo(void *data)
@@ -34,7 +36,13 @@ static int dptx_vmode_is_supported(enum vmode_e mode, void *data)
 
 static int dptx_module_disable(enum vmode_e cur_vmod, void *data)
 {
-	//TODO
+	struct meson_tx_dev *tx_dev = (struct meson_tx_dev *)data;
+	u8 en = 0;
+
+	/* disable phy */
+	meson_tx_phy_power_off(tx_dev->tx_hw_base->tx_phy);
+	/* disable core output */
+	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	return 0;
 }
 #endif

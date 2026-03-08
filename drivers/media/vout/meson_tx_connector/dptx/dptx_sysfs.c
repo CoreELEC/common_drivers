@@ -758,6 +758,15 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 			dptx_timer_start(tx_comm->hw_comm, &handlers[addr].cfg);
 		else
 			dptx_timer_stop(tx_comm->hw_comm, &handlers[addr].cfg);
+	} else if (token && strncmp(token, "tx_output", 9) == 0) {
+		u8 en = 0;
+
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &val) < 0)
+			return count;
+		en = val & 0xFF;
+		DPTX_INFO("tx output %s\n", en ? "enable" : "disable");
+		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	}
 	return count;
 }

@@ -32,12 +32,16 @@ struct dptx_common *global_tx_comm[DPTX_DEV_COUNT] = {NULL};
 static void dptx_early_suspend(struct early_suspend *es)
 {
 	struct dptx_common *tx_comm = NULL;
+	u8 en = 0;
 
 	if (!es)
 		return;
 
 	tx_comm = es->param;
 	DPTX_DEBUG("early suspend %s\n", dev_name(tx_comm->base.dev));
+	/* disable phy and core output */
+	meson_tx_phy_power_off(tx_comm->base.tx_hw_base->tx_phy);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 }
 
 static void dptx_late_resume(struct early_suspend *es)

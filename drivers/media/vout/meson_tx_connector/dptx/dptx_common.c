@@ -20,6 +20,7 @@
 #include "meson_tx_task_mgr.h"
 #include "dptx_timer.h"
 #include "dptx_gtc.h"
+#include "dptx_hw_opcode.h"
 
 /*
  * Per dp1.4a spec chapter 5.1.4:
@@ -64,9 +65,13 @@ int dptx_hpd_plugin(struct meson_tx_dev *tx_dev)
 
 int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 {
+	u8 en = 0;
+
 	DPTX_INFO("%s %px\n", __func__, tx_dev);
 	/* DP V1.4a chapter5.1.4, disable the Main-Link as a power-saving measure */
 	meson_tx_phy_power_off(tx_dev->tx_hw_base->tx_phy);
+	/* disable core output */
+	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	return 0;
 }
 
