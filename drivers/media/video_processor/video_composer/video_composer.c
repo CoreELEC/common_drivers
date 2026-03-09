@@ -6868,8 +6868,7 @@ static int video_composer_probe(struct platform_device *pdev)
 		st->class_dev = device_create(&video_composer_class, NULL,
 					      MKDEV(VIDEO_COMPOSER_MAJOR, i),
 					      NULL, ports[i].name);
-		ret = of_property_read_u32(pdev->dev.of_node,
-					   "vpu_dma_mask", &st->vpu_dma_mask);
+		ret = of_property_read_u32(pdev->dev.of_node, "vpu_dma_mask", &st->vpu_dma_mask);
 		if (ret) {
 			pr_debug("video_composer don't find vpu_dma_mask\n");
 			st->vpu_dma_mask = 0;
@@ -6932,13 +6931,8 @@ static struct platform_driver video_composer_driver = {
 
 int __init video_composer_module_init(void)
 {
-	pr_err("video_composer_module_init_1\n");
-
-	if (platform_driver_register(&video_composer_driver)) {
-		pr_err("failed to register video_composer module\n");
-		return -ENODEV;
-	}
-	return 0;
+	pr_debug("video composer module init.\n");
+	return platform_driver_register(&video_composer_driver);
 }
 
 void __exit video_composer_module_exit(void)

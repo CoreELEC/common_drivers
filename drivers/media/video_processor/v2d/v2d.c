@@ -3389,13 +3389,9 @@ static struct platform_driver v2d_driver = {
 
 int __init v2d_module_init(void)
 {
-	pr_err("v2d_module_init_1\n");
+	pr_debug("v2d module init.\n");
 
-	if (platform_driver_register(&v2d_driver)) {
-		pr_err("failed to register video_composer module\n");
-		return -ENODEV;
-	}
-	return 0;
+	return platform_driver_register(&v2d_driver);
 }
 
 void __exit v2d_module_exit(void)

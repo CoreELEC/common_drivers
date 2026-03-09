@@ -8617,17 +8617,17 @@ static int amlvideo2_driver_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "support_4k", &aml2_dev->support_4k_capture);
 	if (ret) {
-		pr_err("no match support_4k for amlvideo2.%d, disable as default\n",
+		pr_debug("no match support_4k for amlvideo2.%d, disable as default\n",
 			aml2_dev->node_id);
 		aml2_dev->support_4k_capture = 0;
 	} else {
-		pr_info("support_4k %d for amlvideo2.%d\n",
+		pr_debug("support_4k %d for amlvideo2.%d\n",
 			aml2_dev->support_4k_capture, aml2_dev->node_id);
 	}
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "vpu_dma_mask", &aml2_dev->vpu_dma_mask);
 	if (ret) {
-		pr_err("amlvideo2 don't find vpu_dma_mask\n");
+		pr_debug("amlvideo2 don't find vpu_dma_mask\n");
 		aml2_dev->vpu_dma_mask = 0;
 	}
 	if (aml2_dev->vpu_dma_mask) {
