@@ -655,7 +655,7 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 		kfree(connector->name);
 		connector->name = kasprintf(GFP_KERNEL, "%s", connector_name);
 		if (!connector->name)
-			DRM_ERROR("[%s]: alloc name failed\n");
+			DRM_ERROR("alloc name failed\n");
 	}
 
 	/* Encoder */
