@@ -19,3 +19,7 @@
 #define PDID_C4_AO_PWM_J  13
 #define PDID_C4_AO_PWM_K  14
 #define PDID_C4_AO_SED    15
+#define PDID_C4_AUDIO_TOP 16
+#define PDID_C4_DMC       17
+#define PDID_C4_AXI_SRAM  18
+#define PDID_C4_DDRPHY	  19

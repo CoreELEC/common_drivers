@@ -1003,6 +1003,14 @@ static struct sec_pm_private_domain c4_pm_domains[] __initdata = {
 					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 	[PDID_C4_AO_SED] = POWER_DOMAIN(ao_sed, PDID_C4_AO_SED,
 					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_AUDIO_TOP] = POWER_DOMAIN(audio_top, PDID_C4_AUDIO_TOP,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_DMC] = POWER_DOMAIN(dmc, PDID_C4_DMC,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_AXI_SRAM] = POWER_DOMAIN(axi_sram, PDID_C4_AXI_SRAM,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C4_DDRPHY] = POWER_DOMAIN(ddrphy, PDID_C4_DDRPHY,
+					 DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 };
 
 static struct sec_pm_domain_data c4_pm_domain_data __initdata = {
