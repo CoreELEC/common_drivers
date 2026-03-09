@@ -660,15 +660,14 @@
 	pinctrl-1 = <&emmc_clk_gate_pins>;
 	pinctrl-2 = <&emmc_pins_sleep>;
 	pinctrl-names = "default", "clk-gate", "sleep";
-	cap-mmc-highspeed;
-	non-removable;
-	//mmc-run-pxp;
-	//mmc-ddr-1_8v;
-	//mmc-hs200-1_8v;
-	//mmc-hs400-1_8v;
-	max-frequency = <200000000>;
-	disable-wp;
 	bus-width = <8>;
+	cap-mmc-highspeed;
+	//mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	max-frequency = <200000000>;
+	non-removable;
+	disable-wp;
 };
 
 &sd_emmc_b {
