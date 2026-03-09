@@ -795,9 +795,10 @@
 		compatible = "spi-nor";
 		status = "okay";
 		reg = <0>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
 		spi-max-frequency = <83000000>;
+		m25p,fast-read;
 		/* partition info sram addr */
 		param_sram_addr = <0xf3c23800>;
 		param_sram_size = <0x400>;
