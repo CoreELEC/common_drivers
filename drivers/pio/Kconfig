@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR MIT)
+
+config	AMLOGIC_PIO
+	tristate "meson pio driver"
+	default n
+	help
+		This option enables support pio setup.
+		Enable this option to allow setup pio.
+		Say Y if you want to enable PIO function
+		or Say N

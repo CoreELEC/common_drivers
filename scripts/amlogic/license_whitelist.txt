@@ -528,3 +528,8 @@ drivers/gpio/pinctrl/pinctrl-meson-axg-pmx.h
 drivers/gpio/pinctrl/pinctrl-meson-axg-pmx.c
 drivers/media/common/codec_mm/secport.c
 drivers/rtc/rtc-meson-vrtc.c
+drivers/pio/pio_helper.c
+include/linux/amlogic/pio/meson_pio.h
+include/linux/amlogic/pio/pio_instructions.h
+include/linux/amlogic/pio/regs-dma.h
+include/linux/amlogic/pio/regs.h

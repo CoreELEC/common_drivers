@@ -1269,6 +1269,20 @@
 				};
 			};
 
+			pio: pio@3a6000 {
+				compatible = "amlogic,pio";
+				reg-names = "pio-regs";
+				reg = <0x0 0x3a6000 0x0 0x160>;
+				status = "disabled";
+				clocks = <&clkc_sys CLKID_SYS_PIO>;
+				clock-names = "pio_clk";
+				amlogic,pio_version = /bits/ 8 <2>;
+				interrupt-names = "pio_irq0", "pio_irq1", "pio_debug";
+				interrupts = <GIC_SPI 150 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 151 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 152 IRQ_TYPE_EDGE_RISING>;
+			};
+
 			pwm_h: pwm@58000 {
 				compatible = "amlogic,meson-pwm-tee";
 				reg = <0x0 0x58000 0x0 0x24>;

@@ -164,6 +164,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-t7",
     "common_drivers/drivers/gpio/amlogic-pinctrl-soc-tm2.ko",
     "//common_drivers/drivers/gpio:amlogic-pinctrl-soc-tm2",
+    "common_drivers/drivers/pio/amlogic-pio.ko",
+    "//common_drivers/drivers/pio:amlogic-pio",
     "common_drivers/drivers/host/amlogic-host.ko",
     "//common_drivers/drivers/host:amlogic-host",
     "common_drivers/drivers/hwspinlock/amlogic-hwspinlock.ko",

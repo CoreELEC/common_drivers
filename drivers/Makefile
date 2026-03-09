@@ -72,6 +72,7 @@ obj-$(CONFIG_AMLOGIC_SECKEY)		+= seckey/
 obj-$(CONFIG_AMLOGIC_USBCAM)		+= dvb_usbci/
 obj-$(CONFIG_AMLOGIC_ENV_ENCRYPT)	+= uboot_env/
 obj-$(CONFIG_AMLOGIC_GLOBAL_TIMER)      += global_timer/
+obj-$(CONFIG_AMLOGIC_PIO)		+= pio/
 
 KBUILD_CFLAGS_MODULE += $(GKI_EXT_KERNEL_MODULE_PREDEFINE)
 all:
