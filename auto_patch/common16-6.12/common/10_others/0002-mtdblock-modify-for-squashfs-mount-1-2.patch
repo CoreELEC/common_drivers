@@ -1,4 +1,4 @@
-From ef5b3097543c381b21114289e76d7a19c42673b6 Mon Sep 17 00:00:00 2001
+From 8509987d6904be33013c2e9df4de9635c2ca5671 Mon Sep 17 00:00:00 2001
 From: Feng Chen <feng.chen@amlogic.com>
 Date: Tue, 21 Mar 2023 10:59:15 +0800
 Subject: [PATCH] mtdblock: modify for squashfs mount [1/2]
@@ -7,6 +7,7 @@ PD#SWPL-116004
 PD#SWPL-157951
 PD#SWPL-168212
 PD#SWPL-169271
+PD#SWPL-257528
 
 Problem:
 1.squashfs don't handle bad block
@@ -22,22 +23,21 @@ Solution:
 3.mtd disk block size set to mtd writesize
 4.correct the decrease size when meet bad block
 5.fix wrong pointer reference
+6.fix wrong spinor block size
 
 Verify:
 s4_aq2432
 BA409-A113L2_SOCKET #10
 C3_C308L_AW419_SOCKET_V01_R05
 s1a_bg201
+C4_BZ404
 
 Change-Id: Icbaec2b6679727ebe0d12fd92bf4d21cc4d5f3fe
 Signed-off-by: Feng Chen <feng.chen@amlogic.com>
 Signed-off-by: zhikui.cui <zhikui.cui@amlogic.com>
----
- drivers/mtd/mtdblock.c | 137 ++++++++++++++++++++++++++++++++++++++++-
- 1 file changed, 134 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/mtd/mtdblock.c b/drivers/mtd/mtdblock.c
-index 9751416c2a91..3026e0aaf5fb 100644
+index 9751416c2a91..6509c8144ec6 100644
 --- a/drivers/mtd/mtdblock.c
 +++ b/drivers/mtd/mtdblock.c
 @@ -31,6 +31,14 @@ struct mtdblk_dev {
@@ -119,30 +119,38 @@ index 9751416c2a91..3026e0aaf5fb 100644
  	if (!sect_size) {
  		ret = mtd_read(mtd, pos, len, &retlen, buf);
  		if (ret && !mtd_is_bitflip(ret))
-@@ -231,7 +275,14 @@ static int mtdblock_readsect(struct mtd_blktrans_dev *dev,
+@@ -231,7 +275,18 @@ static int mtdblock_readsect(struct mtd_blktrans_dev *dev,
  			      unsigned long block, char *buf)
  {
  	struct mtdblk_dev *mtdblk = container_of(dev, struct mtdblk_dev, mbd);
 +
 +#if (IS_ENABLED(CONFIG_AMLOGIC_MTD_NAND) || \
 +			IS_ENABLED(CONFIG_AMLOGIC_MTD_SPI_NAND))
-+	return do_cached_read(mtdblk, block << dev->tr->blkshift,
++	if (dev->mtd->type != MTD_NORFLASH) {
++		return do_cached_read(mtdblk, block << dev->tr->blkshift,
 +							dev->tr->blksize, buf);
++	} else {
++		return do_cached_read(mtdblk, block<<9, 512, buf);
++	}
 +#else
  	return do_cached_read(mtdblk, block<<9, 512, buf);
 +#endif
  }
  
  static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
-@@ -247,12 +298,23 @@ static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
+@@ -247,12 +302,27 @@ static int mtdblock_writesect(struct mtd_blktrans_dev *dev,
  		 * return -EAGAIN sometimes, but why bother?
  		 */
  	}
 +
 +#if (IS_ENABLED(CONFIG_AMLOGIC_MTD_NAND) || \
 +			IS_ENABLED(CONFIG_AMLOGIC_MTD_SPI_NAND))
-+	return do_cached_write(mtdblk, block << dev->tr->blkshift,
++	if (dev->mtd->type != MTD_NORFLASH) {
++		return do_cached_write(mtdblk, block << dev->tr->blkshift,
 +							dev->tr->blksize, buf);
++	} else {
++		return do_cached_write(mtdblk, block<<9, 512, buf);
++	}
 +#else
  	return do_cached_write(mtdblk, block<<9, 512, buf);
 +#endif
@@ -158,7 +166,7 @@ index 9751416c2a91..3026e0aaf5fb 100644
  
  	pr_debug("mtdblock_open\n");
  
-@@ -274,6 +336,35 @@ static int mtdblock_open(struct mtd_blktrans_dev *mbd)
+@@ -274,6 +344,35 @@ static int mtdblock_open(struct mtd_blktrans_dev *mbd)
  		mtdblk->cache_data = NULL;
  	}
  
@@ -194,7 +202,7 @@ index 9751416c2a91..3026e0aaf5fb 100644
  	pr_debug("ok\n");
  
  	return 0;
-@@ -311,27 +402,67 @@ static int mtdblock_flush(struct mtd_blktrans_dev *dev)
+@@ -311,27 +410,71 @@ static int mtdblock_flush(struct mtd_blktrans_dev *dev)
  	ret = write_cached_data(mtdblk);
  	mutex_unlock(&mtdblk->cache_mutex);
  	mtd_sync(dev->mtd);
@@ -228,9 +236,13 @@ index 9751416c2a91..3026e0aaf5fb 100644
  
 +#if (IS_ENABLED(CONFIG_AMLOGIC_MTD_NAND) || \
 +			IS_ENABLED(CONFIG_AMLOGIC_MTD_SPI_NAND))
-+	tr->blksize = mtd->writesize;
-+	tr->blkshift = ffs(tr->blksize) - 1;
-+	dev->mbd.size = mtd->size >> tr->blkshift;
++	if (mtd->type != MTD_NORFLASH) {
++		tr->blksize = mtd->writesize;
++		tr->blkshift = ffs(tr->blksize) - 1;
++		dev->mbd.size = mtd->size >> tr->blkshift;
++	} else {
++		dev->mbd.size = mtd->size >> 9;
++	}
 +#else
  	dev->mbd.size = mtd->size >> 9;
 +#endif
@@ -265,5 +277,5 @@ index 9751416c2a91..3026e0aaf5fb 100644
  
  static void mtdblock_remove_dev(struct mtd_blktrans_dev *dev)
 -- 
-2.47.1
+2.42.0
 
