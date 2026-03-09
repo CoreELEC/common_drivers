@@ -26,8 +26,11 @@ static void __exit gpio_main_exit(void)
 	gpiolib_module_exit();
 	meson_pmic6b_gpio_exit();
 }
-
+#ifndef MODULE
+arch_initcall(gpio_main_init);
+#else
 module_init(gpio_main_init);
+#endif
 module_exit(gpio_main_exit);
 
 MODULE_LICENSE("GPL v2");
