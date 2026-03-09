@@ -114,6 +114,7 @@ struct VFCD_t {
 	u32 mif_burst_len;
 	u32 yc_rst_sep;
 	u32 cut_win_en;
+	u32 hfmt_mode;
 
 	bool src_is_i; //0911
 	struct AFBCD afbcd;

@@ -744,6 +744,7 @@ void cfg_vfcd_afrcd(u32 src_sel, struct AFRCD_TYPE *afrcd)
 
 void cfg_vfcd_dec(u32 index, struct VFCD_t *vfcd)
 {
+	u32 hfmt_mode = vfcd->hfmt_mode;
 	u32 cmpr_sel = vfcd->cmpr_sel;
 	u32 fmt444_out = vfcd->fmt444_out;
 	unsigned int last_h_size_y, idx_last;
@@ -972,7 +973,7 @@ void cfg_vfcd_dec(u32 index, struct VFCD_t *vfcd)
 
 	if (cmpr_sel == 1) {	//afbc
 		cfg_dpss_afbcd(index, hfmt_en, vfmt_en, &vfcd->afbcd);
-		cfg_vfcd_fmtup(2, regs_ofst, fmt_mode, hfmt_en, vfmt_en, 0, 0,
+		cfg_vfcd_fmtup(2, regs_ofst, fmt_mode, hfmt_en, vfmt_en, hfmt_mode, 0,
 			horz_skip_y, vert_skip_y, horz_skip_uv,
 			vert_skip_uv, rev_mode & 0x1, rev_mode & 0x2,
 			vfcd->win_bgn_h[0], vfcd->win_bgn_v[0],
@@ -985,7 +986,7 @@ void cfg_vfcd_dec(u32 index, struct VFCD_t *vfcd)
 		dbg_h2("vfcd_afbc_cfg_done\n");
 	} else if (cmpr_sel == 2) {	//afrc
 		cfg_vfcd_afrcd(regs_ofst, &vfcd->afrcd);
-		cfg_vfcd_fmtup(2, regs_ofst, fmt_mode, hfmt_en, vfmt_en, 0, 0,
+		cfg_vfcd_fmtup(2, regs_ofst, fmt_mode, hfmt_en, vfmt_en, hfmt_mode, 0,
 			horz_skip_y, vert_skip_y, horz_skip_uv,
 			vert_skip_uv, rev_mode & 0x1, rev_mode & 0x2,
 			vfcd->win_bgn_h[0], vfcd->win_bgn_v[0],

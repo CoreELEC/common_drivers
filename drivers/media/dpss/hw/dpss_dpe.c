@@ -1902,6 +1902,13 @@ void hw_cfg_dpss_dpe_intf(struct PRM_DPSS_TOP *prm_top,
 		vfcd0->adj_offset = false;
 		vfcd1->adj_offset = false;
 	}
+	if (prm_top->is_amdv_frame) {
+		vfcd0->hfmt_mode = 1;
+		vfcd1->hfmt_mode = 1;
+	} else {
+		vfcd0->hfmt_mode = 0;
+		vfcd1->hfmt_mode = 0;
+	}
 	if ((dolby_parallel && prm_dpe->dpe_mode == DPE_NR_BYPS) ||
 	    !dolby_parallel)
 		cfg_vfcd_dec(vfcd_idx0, vfcd0);//nr din cur
