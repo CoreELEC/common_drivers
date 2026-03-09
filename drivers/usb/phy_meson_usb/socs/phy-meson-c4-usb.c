@@ -91,6 +91,26 @@ static int meson_usb2phy_c4_cali_disc_squelch
 	return 0;
 }
 
+static int meson_usb2phy_c4_set_mode
+			(struct amlogic_usb_v2 *mphy, enum meson_uphy_mode mode)
+{
+	u32 val = 0;
+	void __iomem *cfg2_reg = mphy->regs;
+
+	val = readl(cfg2_reg + 0x88);
+	if (mode == MESON_USB_MODE_HOST) {
+		val &= ~BIT(25);
+		writel(val, cfg2_reg + 0x88);
+		dev_err(mphy->dev, "set host mode\n");
+	} else {
+		val |= BIT(25);
+		writel(val, cfg2_reg + 0x88);
+		dev_err(mphy->dev, "set device mode\n");
+	}
+
+	return 0;
+}
+
 static void meson_usb2phy_c4_cali(struct amlogic_usb_v2 *mphy)
 {
 	meson_usb2phy_set_calibration_trim(mphy);
@@ -105,6 +125,7 @@ static struct meson_u2phy_priv meson_u2phy_c4_priv = {
 
 static int meson_u2phy_c4_set_mode(void *phy, enum meson_uphy_mode mode)
 {
+	meson_usb2phy_c4_set_mode((struct amlogic_usb_v2 *)phy, mode);
 	return meson_u2phy_set_mode((struct amlogic_usb_v2 *)phy, mode);
 }
 
