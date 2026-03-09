@@ -69,12 +69,92 @@ int dtvdemod_dvbs_read_ber(struct dvb_frontend *fe, u32 *ber)
 	return 0;
 }
 
+static void rt710_get_if_rssi(u32 if_adc_value, s32 *if_rrsi)
+{
+	u32 if_adc = 0;
+	u8 if_index = 0;
+
+	if (demod_chip_after_eq(DTVDEMOD_HW_T6D)) {
+		if (if_adc_value > 54800)
+			if_adc = 54800;
+		//else if(if_adc_value<38200)
+		else if (if_adc_value < 35900 && if_adc_value >= 23000)
+			if_adc = 35900;
+		else
+			if_adc = if_adc_value;
+
+		/*
+		 * if_index=(if_adc-38200)/137;
+		 * if(if_index>121)
+		 *	if_index=121;
+
+		 * *if_rrsi=-(RT710_If_Acc_Gain[if_index]*100);
+		 */
+
+		if (if_adc > 50913) {
+			if_index = (if_adc - 50913) / 130;
+			*if_rrsi = (0 - ((30 - if_index) * 2)) * 100;
+		} else if (if_adc > 46150) {
+			if_index = (if_adc - 46150) / 173;
+			*if_rrsi = (-10 - ((32 - if_index) * 2)) * 100;
+		} else if (if_adc > 40500) {
+			if_index = (if_adc - 40500) / 104;
+			*if_rrsi = (-84 - ((40 - if_index) * 2)) * 100;
+		} else if (if_adc > 35900) {
+			if_index = (if_adc - 35900) / 104;
+			*if_rrsi = (-144 - ((40 - if_index) * 2)) * 100;
+		} else if (if_adc == 35900) {
+			if_index = (if_adc - 35900) / 136;
+			*if_rrsi = (-222 - ((11 - if_index) * 2)) * 100;
+		} else { //if_adc=0
+			if_index = 0;
+			*if_rrsi = (-252 - (11 - if_index) * 2) * 100;
+		}
+	} else { //t5m
+		if (if_adc_value > 54800)
+			if_adc = 54800;
+		//else if(if_adc_value<38200)
+		else if (if_adc_value <= 38200 && if_adc_value >= 28500)
+			if_adc = 38200;
+		else
+			if_adc = if_adc_value;
+
+		/*
+		 * if_index=(if_adc-38200)/137;
+		 * if(if_index>121)
+		 *	if_index=121;
+
+		 * *if_rrsi=-(RT710_If_Acc_Gain[if_index]*100);
+		 */
+
+		if (if_adc > 50913) {
+			if_index = (if_adc - 50913) / 130;
+			*if_rrsi = (0 - ((30 - if_index) * 2)) * 100;
+		} else if (if_adc > 43718) {
+			if_index = (if_adc - 43718) / 173;
+			*if_rrsi = (-60 - ((42 - if_index) * 2)) * 100;
+		} else if (if_adc > 39529) {
+			if_index = (if_adc - 39529) / 104;
+			*if_rrsi = (-144 - ((40 - if_index) * 2)) * 100;
+		} else if (if_adc >= 38200) {
+			if_index = (if_adc - 38200) / 136;
+			*if_rrsi = (-222 - ((11 - if_index) * 2)) * 100;
+		} else if (if_adc > 0) {
+			if_index = 0;
+			*if_rrsi = (-272 - (11 - if_index) * 2) * 100;
+		} else {
+			if_index = 0;
+			*if_rrsi = (-292 - (11 - if_index) * 2) * 100;
+		}
+	}
+}
+
 int dtvdemod_dvbs_read_signal_strength(struct dvb_frontend *fe, s16 *strength)
 {
 	struct aml_dtvdemod *demod = (struct aml_dtvdemod *)fe->demodulator_priv;
 	unsigned int agc_level = 0;
 	unsigned int i = 0, if_agc_value = 0;
-	u16 rf_strength = 0;
+	s32 if_rssi = 0;
 
 	if (tuner_find_by_name(fe, "av2018")) {
 		agc_level = dvbs_rd_byte(DVBS_AGC_LEVEL_ADDR);
@@ -105,12 +185,11 @@ int dtvdemod_dvbs_read_signal_strength(struct dvb_frontend *fe, s16 *strength)
 				(unsigned int)MAKEWORD(dvbs_rd_byte(0x91a), dvbs_rd_byte(0x91b));
 
 		if_agc_value /= 10;
-		rf_strength = (u16)if_agc_value;
-		if (fe->ops.tuner_ops.get_rf_strength)
-			fe->ops.tuner_ops.get_rf_strength(fe, &rf_strength);
 		PR_DBGL("if_agc_code %d\n", if_agc_value);
 
-		*strength = (s16)tuner_get_ch_power(fe);
+		*strength = (s16)tuner_get_ch_power(fe); //rt710 rf rssi is dBmx10
+		rt710_get_if_rssi(if_agc_value, &if_rssi);
+		*strength = (*strength * 100 + if_rssi) / 1000;
 	} else if (tuner_find_by_name(fe, "rda5815m")) {
 		*strength = (s16)tuner_get_ch_power(fe);
 	} else {
