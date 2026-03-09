@@ -8004,6 +8004,11 @@ static bool send_hdmi_pkt
 			(p_hdr->max_frame_avg_light_level_msb << 8)
 			| p_hdr->max_frame_avg_light_level_lsb;
 
+		if (src_format == FORMAT_DOVI) {
+			hdr10_data.max_frame_average = 0;
+			hdr10_data.max_content = 0;
+		}
+
 		if (vinfo && vinfo->vout_device &&
 		    vinfo->vout_device->fresh_tx_hdr_pkt)
 			vinfo->vout_device->fresh_tx_hdr_pkt(vinfo->vout_device->tx_instance,
