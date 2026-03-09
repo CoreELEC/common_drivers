@@ -569,7 +569,7 @@ void vdin_set_top_s5(struct vdin_dev_s *devp, enum tvin_port_e port,
 		break;
 	case TVIN_RGB444:
 		/*RGB mapping*/
-		if (devp->set_canvas_manual || devp->cfg_dma_buf) {
+		if (devp->input_swap ^ devp->debug.input_swap) {
 			vdin_data_bus_0 = VDIN_MAP_RCR;
 			vdin_data_bus_1 = VDIN_MAP_BPB;
 			vdin_data_bus_2 = VDIN_MAP_Y_G;
@@ -737,9 +737,10 @@ void vdin_change_matrix1_s5(u32 offset, u32 matrix_csc)
 /*
  * after, equal g12a have this matrix
  */
-void vdin_change_matrix_hdr_s5(u32 offset, u32 matrix_csc)
+void vdin_change_matrix_hdr_s5(struct vdin_dev_s *devp, u32 matrix_csc)
 {
 	struct vdin_matrix_lup_s *matrix_tbl;
+	u32 offset = devp->addr_offset;
 
 	if (matrix_csc == VDIN_MATRIX_NULL)	{
 		wr_bits(offset, VDIN_PP_TOP_CTRL, 0,
@@ -762,14 +763,22 @@ void vdin_change_matrix_hdr_s5(u32 offset, u32 matrix_csc)
 		wr(offset, VDIN_PP_HDR2_MATRIXI_OFFSET0_1, matrix_tbl->post_offset0_1);
 		wr(offset, VDIN_PP_HDR2_MATRIXI_OFFSET2,   matrix_tbl->post_offset2);
 		wr_bits(offset, VDIN_PP_HDR2_MATRIXI_EN_CTRL, 1, 0, 8);
-		//wr_bits(offset, VDIN_PP_HDR2_CTRL, 1, 16, 1);
-		//wr_bits(offset, VDIN_PP_HDR2_CTRL, 0, 13, 1);//VDIN0_HDR2_top_en
-		//wr_bits(offset, VDIN_MATRIX_CTRL, 0,
-		//	VDIN_MATRIX0_BYPASS_BIT, VDIN_MATRIX0_BYPASS_WID);
+		wr_bits(offset, VDIN_PP_HDR2_CTRL, 1, 13, 1);//VDIN0_HDR2_top_en
 		wr_bits(offset, VDIN_PP_HDR2_CTRL, 1,
 			PP_MATRIXI_TOP_EN_BIT, PP_MATRIXI_TOP_EN_WID);
-		wr_bits(offset, VDIN_PP_HDR2_CTRL, 0,//refer to above
-			PP_HDR2_TOP_EN_BIT, PP_HDR2_TOP_EN_WID);
+		if (vdin_is_convert_to_rgb(devp->format_convert)) {
+			wr_bits(offset, VDIN_PP_HDR2_MATRIXO_EN_CTRL, 0, 0, 1);
+			wr_bits(offset, VDIN_PP_HDR2_CTRL, 1, 17, 1);
+		} else if (vdin_is_convert_to_yuv(devp->format_convert)) {
+			wr_bits(offset, VDIN_PP_HDR2_MATRIXO_EN_CTRL, 1, 0, 1);
+			wr_bits(offset, VDIN_PP_HDR2_CTRL, 0, 17, 1);
+		}
+		if (vdin_is_rgb_input(devp->prop.color_format))
+			wr_bits(offset, VDIN_PP_HDR2_CTRL, 0, 4, 1);
+		else
+			wr_bits(offset, VDIN_PP_HDR2_CTRL, 1, 4, 1);
+		//wr_bits(offset, VDIN_MATRIX_CTRL, 0,
+		//	VDIN_MATRIX0_BYPASS_BIT, VDIN_MATRIX0_BYPASS_WID);
 	}
 }
 
@@ -934,24 +943,30 @@ vdin_set_color_matrix_s5(struct vdin_dev_s *devp, enum vdin_matrix_sel_e matrix_
 		break;
 	}
 
-	//vdin_manual_matrix_csc_s5(&matrix_csc);
+	vdin_manual_matrix_csc(devp, &matrix_csc);
+
+	if (vdin_select_hdr_matrix(devp))
+		matrix_sel = VDIN_SEL_MATRIX_HDR;
+
+	if (devp->debug.matrix_sel < VDIN_SEL_MATRIX_MAX)
+		matrix_sel = devp->debug.matrix_sel;
 
 	if (matrix_sel == VDIN_SEL_MATRIX0)
 		vdin_change_matrix0_s5(devp->addr_offset, matrix_csc);
 	else if (matrix_sel == VDIN_SEL_MATRIX1)
 		vdin_change_matrix1_s5(devp->addr_offset, matrix_csc);
 	else if (matrix_sel == VDIN_SEL_MATRIX_HDR)
-		vdin_change_matrix_hdr_s5(devp->addr_offset, matrix_csc);
+		vdin_change_matrix_hdr_s5(devp, matrix_csc);
 	else
 		matrix_csc = VDIN_MATRIX_NULL;
 
 	if (devp->debug.vdin_ctl_dbg)
-		pr_info("%s() vdin%d fmt=%dx%d(%d), convert=%d, range=%d %d, hdr=%d, csc=%d\n",
-			__func__, devp->index,
+		pr_info("vdin%d set matrix:%d, csc:%d, fmt:%dx%d, m:%d, c:%d, r=%d %d, hdr:%d\n",
+			devp->index, matrix_sel, matrix_csc,
 			fmt_info->h_active, fmt_info->v_active, fmt_info->scan_mode,
 			devp->format_convert,
 			devp->color_range_mode, devp->prop.color_fmt_range,
-			vdin_hdr_flag, matrix_csc);
+			vdin_hdr_flag);
 
 	return matrix_csc;
 }
@@ -964,33 +979,7 @@ void vdin_set_hdr_s5(struct vdin_dev_s *devp)
 		devp->debug.vdin1_set_hdr_bypass)
 		return;
 
-	switch (devp->parm.port) {
-	case TVIN_PORT_VIU1_VIDEO:
-	case TVIN_PORT_VIU1_WB0_VD1:
-	case TVIN_PORT_VIU1_WB0_VD2:
-	case TVIN_PORT_VIU1_WB0_POST_BLEND:
-	case TVIN_PORT_VIU1_WB1_POST_BLEND:
-	case TVIN_PORT_VIU1_WB1_VD1:
-	case TVIN_PORT_VIU1_WB1_VD2:
-	case TVIN_PORT_VIU1_WB0_OSD1:
-	case TVIN_PORT_VIU1_WB0_OSD2:
-	case TVIN_PORT_VIU1_WB1_OSD1:
-	case TVIN_PORT_VIU1_WB1_OSD2:
-		video_format = devp->vd1_fmt;
-		break;
-
-	case TVIN_PORT_VIU1_WB0_VPP:
-	case TVIN_PORT_VIU1_WB1_VPP:
-	case TVIN_PORT_VIU2_ENCL:
-	case TVIN_PORT_VIU2_ENCI:
-	case TVIN_PORT_VIU2_ENCP:
-		video_format = devp->tx_fmt;
-		break;
-
-	default:
-		video_format = devp->tx_fmt;
-		break;
-	}
+	video_format = vdin_get_tx_format(devp);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (for_amdv_certification()) {
@@ -1048,6 +1037,8 @@ void vdin_set_matrix_s5(struct vdin_dev_s *devp)
 	enum vdin_matrix_sel_e matrix_sel;
 
 	if (devp->debug.rgb_info_enable == 0) {
+		//TODO:Kernel panic
+		vdin_set_hdr_s5(devp);
 		/* matrix1 disable */
 //	wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 //		VDIN_MATRIX1_EN_BIT, VDIN_MATRIX1_EN_WID);
@@ -1068,9 +1059,6 @@ void vdin_set_matrix_s5(struct vdin_dev_s *devp)
 		} else {
 			devp->csc_idx = VDIN_MATRIX_NULL;
 		}
-		//TODO:Kernel panic
-		vdin_set_hdr_s5(devp);
-
 //		#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 //		if (vdin_is_dolby_signal_in(devp) ||
 //		    devp->parm.info.fmt == TVIN_SIG_FMT_CVBS_SECAM)
@@ -1313,7 +1301,7 @@ static inline void vdin_set_wr_ctrl_s5(struct vdin_dev_s *devp,
 	//	VDIN_WR_CTRL_REG_PAUSE_BIT, VDIN_WR_CTRL_REG_PAUSE_WID);
 	/*  swap the 2 64bits word in 128 words */
 	/*if (is_meson_gxbb_cpu())*/
-	if ((devp->set_canvas_manual || devp->cfg_dma_buf ||
+	if ((devp->wr_endian || devp->cfg_dma_buf ||
 		devp->work_mode == VDIN_WORK_MD_V4L) ^ devp->dbg_no_swap_en) {
 		/*not swap 2 64bits words in 128 words */
 		wr_bits(offset, VDIN_WRMIF_CTRL, 0, 31, 1);

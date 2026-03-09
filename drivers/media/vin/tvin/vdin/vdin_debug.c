@@ -4249,6 +4249,22 @@ start_chk:
 			err = -EINVAL;
 			goto error;
 		}
+	} else if (!strcmp(parm[0], "input_swap")) {
+		if (parm[1]) {
+			if (kstrtol(parm[1], 0, &val) == 0)
+				devp->debug.input_swap = val;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (!strcmp(parm[0], "wr_endian")) {
+		if (parm[1]) {
+			if (kstrtol(parm[1], 0, &val) == 0)
+				devp->debug.wr_endian = val;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
 	} else if (!strcmp(parm[0], "dbg_stop_dec_delay")) {
 		if (parm[1]) {
 			if (kstrtol(parm[1], 10, &val) == 0)
@@ -4333,7 +4349,7 @@ start_chk:
 				else if (temp == VDIN_SEL_MATRIX1)
 					vdin_change_matrix1(offset, mode);
 				else if (temp == VDIN_SEL_MATRIX_HDR)
-					vdin_change_matrix_hdr(offset, mode);
+					vdin_change_matrix_hdr(devp, mode);
 			}
 		}
 	} else if (!strcmp(parm[0], "wr_frame_en")) {
@@ -4895,6 +4911,13 @@ start_chk:
 	} else if (!strcmp(parm[0], "manual_change_csc")) {
 		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
 			devp->debug.manual_change_csc = temp;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (!strcmp(parm[0], "matrix_sel")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			devp->debug.matrix_sel = temp;
 		} else {
 			err = -EINVAL;
 			goto error;

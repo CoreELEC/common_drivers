@@ -6098,9 +6098,10 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("width:%d height:%d dst_width:%d dst_height:%d\n",
 				vdin_v4l2_param.width, vdin_v4l2_param.height,
 				vdin_v4l2_param.dst_width, vdin_v4l2_param.dst_height);
-			pr_info("fps:%d dst_fmt:%d bit_order:%d mode:%d bit_dep:%d secure:%d\n",
+			pr_info("fps:%d dst_fmt:%d endian:%d, swap:%d, mode:%d bit_dep:%d secure:%d\n",
 				vdin_v4l2_param.fps, vdin_v4l2_param.dst_fmt,
-				vdin_v4l2_param.bit_order, vdin_v4l2_param.mode,
+				vdin_v4l2_param.wr_endian, vdin_v4l2_param.input_swap,
+				vdin_v4l2_param.mode,
 				vdin_v4l2_param.bit_dep, vdin_v4l2_param.secure_memory_en);
 		}
 
@@ -6173,6 +6174,8 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		devp->hist_bar_enable = 1;
 		if (vdin_v4l2_param.secure_memory_en)
 			devp->mem_protected = 1;
+		devp->wr_endian = vdin_v4l2_param.wr_endian;
+		devp->input_swap = vdin_v4l2_param.input_swap;
 		start_tvin_service(devp->index, &param);
 		break;
 	}
@@ -7661,6 +7664,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->debug.vdin_frame_work_mode = VDIN_VF_PUT;
 	devp->debug.sleep_time = 50;
 	devp->debug.port = TVIN_PORT_NULL;
+	devp->debug.matrix_sel = VDIN_SEL_MATRIX_MAX;
 }
 
 static int vdin_drv_probe(struct platform_device *pdev)

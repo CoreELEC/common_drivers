@@ -603,14 +603,10 @@ void vdin_set_top_t3x(struct vdin_dev_s *devp, enum tvin_port_e port,
 		break;
 	case TVIN_RGB444:
 		/*RGB mapping*/
-		if (devp->set_canvas_manual || devp->cfg_dma_buf) {
+		if (devp->input_swap ^ devp->debug.input_swap) {
 			vdin_data_bus_0 = VDIN_MAP_RCR;
 			vdin_data_bus_1 = VDIN_MAP_BPB;
 			vdin_data_bus_2 = VDIN_MAP_Y_G;
-		} else {
-			vdin_data_bus_0 = VDIN_MAP_Y_G;
-			vdin_data_bus_1 = VDIN_MAP_BPB;
-			vdin_data_bus_2 = VDIN_MAP_RCR;
 		}
 		break;
 	default:
@@ -1047,7 +1043,10 @@ vdin_set_color_matrix_t3x(struct vdin_dev_s *devp, enum vdin_matrix_sel_e matrix
 		break;
 	}
 
-	//vdin_manual_matrix_csc_t3x(&matrix_csc);
+	vdin_manual_matrix_csc(devp, &matrix_csc);
+
+	if (devp->debug.matrix_sel < VDIN_SEL_MATRIX_MAX)
+		matrix_sel = devp->debug.matrix_sel;
 
 	if (matrix_sel == VDIN_SEL_MATRIX0)
 		vdin_change_matrix0_t3x(devp->addr_offset, matrix_csc);
@@ -1059,25 +1058,19 @@ vdin_set_color_matrix_t3x(struct vdin_dev_s *devp, enum vdin_matrix_sel_e matrix
 		matrix_csc = VDIN_MATRIX_NULL;
 
 	if (devp->debug.vdin_ctl_dbg)
-		pr_info("%s() vdin%d fmt=%dx%d(%d), convert=%d, range=%d %d, hdr=%d, csc=%d\n",
-			__func__, devp->index,
+		pr_info("vdin%d set matrix:%d, csc:%d, fmt:%dx%d, m:%d, c:%d, r=%d %d, hdr:%d\n",
+			devp->index, matrix_sel, matrix_csc,
 			fmt_info->h_active, fmt_info->v_active, fmt_info->scan_mode,
 			devp->format_convert,
 			devp->color_range_mode, devp->prop.color_fmt_range,
-			vdin_hdr_flag, matrix_csc);
+			vdin_hdr_flag);
 
 	return matrix_csc;
 }
 
-void vdin_set_hdr_t3x(struct vdin_dev_s *devp)
+enum vd_format_e vdin_get_tx_format_t3x(struct vdin_dev_s *devp)
 {
-	enum vd_format_e video_format = SIGNAL_SDR;
-	unsigned int vdin_hdr = VDIN1_HDR;
-
-	if ((devp->hw_core == VDIN_HW_CORE_NORMAL && !devp->dtdata->vdin0_set_hdr) ||
-	    (devp->hw_core == VDIN_HW_CORE_LITE && !devp->dtdata->vdin1_set_hdr) ||
-		devp->debug.vdin1_set_hdr_bypass)
-		return;
+	enum vd_format_e video_format;
 
 	switch (devp->parm.port) {
 	case TVIN_PORT_VIU1_VIDEO:
@@ -1091,7 +1084,7 @@ void vdin_set_hdr_t3x(struct vdin_dev_s *devp)
 	case TVIN_PORT_VIU1_WB0_OSD2:
 	case TVIN_PORT_VIU1_WB1_OSD1:
 	case TVIN_PORT_VIU1_WB1_OSD2:
-		video_format = devp->vd1_fmt;
+		video_format = (enum vd_format_e)(devp->vd1_fmt);
 		break;
 
 	case TVIN_PORT_VIU1_WB0_VPP:
@@ -1099,21 +1092,34 @@ void vdin_set_hdr_t3x(struct vdin_dev_s *devp)
 	case TVIN_PORT_VIU2_ENCL:
 	case TVIN_PORT_VIU2_ENCI:
 	case TVIN_PORT_VIU2_ENCP:
-		video_format = devp->tx_fmt;
+		video_format = (enum vd_format_e)(devp->tx_fmt);
 		break;
 	case TVIN_PORT_HDMI0 ... TVIN_PORT_HDMI7:
-		if (devp->prop.hdr10p_info.hdr10p_on)
-			video_format = SIGNAL_HDR10PLUS;
-		else if (devp->prop.vdin_hdr_flag)
-			video_format = SIGNAL_HDR10;
-		else
-			video_format = SIGNAL_SDR;
-		break;
-
+			if (devp->prop.hdr10p_info.hdr10p_on)
+				video_format = SIGNAL_HDR10PLUS;
+			else if (devp->prop.vdin_hdr_flag)
+				video_format = SIGNAL_HDR10;
+			else
+				video_format = SIGNAL_SDR;
+			break;
 	default:
-		video_format = devp->tx_fmt;
+		video_format = (enum vd_format_e)(devp->tx_fmt);
 		break;
 	}
+	return video_format;
+}
+
+void vdin_set_hdr_t3x(struct vdin_dev_s *devp)
+{
+	enum vd_format_e video_format = SIGNAL_SDR;
+	unsigned int vdin_hdr = VDIN1_HDR;
+
+	if ((devp->hw_core == VDIN_HW_CORE_NORMAL && !devp->dtdata->vdin0_set_hdr) ||
+	    (devp->hw_core == VDIN_HW_CORE_LITE && !devp->dtdata->vdin1_set_hdr) ||
+		devp->debug.vdin1_set_hdr_bypass)
+		return;
+
+	video_format = vdin_get_tx_format_t3x(devp);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (for_amdv_certification()) {
@@ -1611,7 +1617,7 @@ static inline void vdin_set_wr_ctrl_t3x(struct vdin_dev_s *devp,
 	//	VDIN_WR_CTRL_REG_PAUSE_BIT, VDIN_WR_CTRL_REG_PAUSE_WID);
 	/*  swap the 2 64bits word in 128 words */
 	/*if (is_meson_gxbb_cpu())*/
-	if ((devp->set_canvas_manual || devp->cfg_dma_buf ||
+	if ((devp->wr_endian || devp->cfg_dma_buf ||
 		devp->work_mode == VDIN_WORK_MD_V4L) ^ devp->dbg_no_swap_en) {
 		/*not swap 2 64bits words in 128 words */
 		wr_bits(offset, VDIN0_WRMIF_CTRL, 0, 31, 1);

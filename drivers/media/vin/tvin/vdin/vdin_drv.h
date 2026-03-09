@@ -543,6 +543,7 @@ enum vdin_matrix_sel_e {
 	VDIN_SEL_MATRIX0 = 0,
 	VDIN_SEL_MATRIX1,
 	VDIN_SEL_MATRIX_HDR,/*after, equal g12a have*/
+	VDIN_SEL_MATRIX_MAX,
 };
 
 static inline const char
@@ -693,6 +694,8 @@ struct vdin_debug_s {
 	unsigned int hconv_mode;
 	unsigned int v4l2_buff_area;
 	unsigned int matrix_pattern_mode;
+	unsigned int input_swap; /* 0:no swap, 1:swap */
+	unsigned int wr_endian; /* 0:big endian, 1:little endian */
 	unsigned int dbg_force_type;
 	unsigned int rgb_info_x;
 	unsigned int rgb_info_y;
@@ -710,6 +713,7 @@ struct vdin_debug_s {
 	unsigned short dest_cfmt;/* for color fmt conversion */
 	unsigned short vdin1_line_buff;
 	unsigned short manual_change_csc;
+	unsigned short matrix_sel;
 	unsigned short change_get_drm;
 	unsigned char dbg_sel_mat; /* 0x10:mat0,0x11:mat1,0x12:hdr */
 	unsigned char yuv422_10l[5];
@@ -718,8 +722,7 @@ struct vdin_debug_s {
 	unsigned char yuv422_8f[4];
 	unsigned char rgb_8f[3];
 	unsigned char rgb_8l[3];
-	/* vdin1 hdr set bypass */
-	bool vdin1_set_hdr_bypass;
+	bool vdin1_set_hdr_bypass; /* vdin1 hdr set bypass */
 	bool dbg_force_shrink_en;
 	bool bypass_update_prop;
 	bool bypass_pc_mode;//bypass pc mode set
@@ -1095,6 +1098,8 @@ struct vdin_dev_s {
 	bool support_secure;
 	bool mem_protected;
 	bool mem_registered;
+	unsigned int wr_endian; /* 0:big endian, 1:little endian */
+	unsigned int input_swap; /* 0:no swap, 1:swap */
 	unsigned int vf_mem_size;
 	unsigned int vf_mem_size_small;/* double write use */
 	unsigned int frame_size;

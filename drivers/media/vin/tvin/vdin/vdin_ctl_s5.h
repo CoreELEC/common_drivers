@@ -72,7 +72,7 @@ void vdin_set_matrix_color_s5(struct vdin_dev_s *devp);
 
 void vdin_change_matrix0_s5(u32 offset, u32 matrix_csc);
 void vdin_change_matrix1_s5(u32 offset, u32 matrix_csc);
-void vdin_change_matrix_hdr_s5(u32 offset, u32 matrix_csc);
+void vdin_change_matrix_hdr_s5(struct vdin_dev_s *devp, u32 matrix_csc);
 
 void vdin_set_frame_mif_write_addr_s5(struct vdin_dev_s *devp,
 			unsigned int rdma_enable, struct vf_entry *vfe);

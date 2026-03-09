@@ -854,6 +854,25 @@
 
 /*g12a new add begin*/
 #define VDIN_HDR2_CTRL 0x1280
+/* HDR2_CTRL Register Bitfield Definition
+ * Bit(s)   | R/W | Default | Description
+ * 0        | R/W | 0x0     | reg_cgain_enable
+ * 1        | R/W | 0x0     | reg_ogain_enable
+ * 2        | R/W | 0x1     | reg_oe_enable
+ * 3        | R/W | 0x1     | reg_eo_enable
+ * 4        | R/W | 0x1     | reg_in_fmt (0:rgb, 1:yuv)
+ * 5        | R/W | 0x0     | reg_in_shift
+ * 7:6      | R/W | 0x1     | reg_gmut_mode
+ * 12       | R/W | 0x1     | reg_cgain_mode
+ * 13       | R/W | 0x0     | reg_hdr2_top_en (1:hdr)
+ * 14       | R/W | 0x0     | reg_mtrxi_en
+ * 15       | R/W | 0x0     | reg_mtrxo_en
+ * 16       | R/W | 0x0     | reg_only_mat
+ * 17       | R/W | 0x0     | reg_out_rgb  (1:rgb, 0: yuv)
+ * 20:18    | R/W | 0x0     | reg_din_swap
+ * 24       | R/W | 0x0     | reg_rgb_sel_mode
+ */
+
 #define VDIN_HDR2_CLK_GATE 0x1281
 #define VDIN_HDR2_MATRIXI_COEF00_01 0x1282
 #define VDIN_HDR2_MATRIXI_COEF02_10 0x1283

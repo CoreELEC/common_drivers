@@ -605,7 +605,8 @@ struct vdin_v4l2_param_s {
 	enum tvin_color_fmt_e dst_fmt;
 	int dst_width;	/* H scaling down */
 	int dst_height;	/* v scaling down */
-	unsigned int bit_order;	/* raw data bit order(0:none std, 1: std)*/
+	unsigned int wr_endian;	/* 0:big endian, 1:little endian */
+	unsigned int input_swap; /* 0:no swap, 1:swap */
 	enum port_mode mode;	/*0:osd + video 1:video only*/
 	int bit_dep;
 	__u8 secure_memory_en; /* 0:not secure memory 1:secure memory */

@@ -325,6 +325,8 @@ bool vdin_is_convert_to_444(u32 format_convert);
 bool vdin_is_convert_to_422(u32 format_convert);
 bool vdin_is_convert_to_nv21(u32 format_convert);
 bool vdin_is_convert_to_rgb(u32 format_convert);
+bool vdin_is_convert_to_yuv(u32 format_convert);
+bool vdin_is_rgb_input(enum tvin_color_fmt_e color_format);
 bool vdin_is_444_input(enum tvin_color_fmt_e color_format);
 bool vdin_is_8bit_needed(struct vdin_dev_s *devp);
 void vdin_set_matrix_color(struct vdin_dev_s *devp);
@@ -333,7 +335,7 @@ void vdin_set_ip_pattern(struct vdin_dev_s *devp, unsigned int pat);
 
 void vdin_change_matrix0(u32 offset, u32 matrix_csc);
 void vdin_change_matrix1(u32 offset, u32 matrix_csc);
-void vdin_change_matrix_hdr(u32 offset, u32 matrix_csc);
+void vdin_change_matrix_hdr(struct vdin_dev_s *devp, u32 matrix_csc);
 
 void vdin_set_frame_mif_write_addr(struct vdin_dev_s *devp,
 			unsigned int rdma_enable, struct vf_entry *vfe);
@@ -386,4 +388,7 @@ void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 void vdin_dlg_update_hist_hv(unsigned int h, unsigned int v, unsigned int fps);
 void vdin_mute_vpp(struct vdin_dev_s *devp, bool en);
 void vdin_set_game_frc_on_off(struct vdin_dev_s *devp, bool on_off);
+enum vd_format_e vdin_get_tx_format(struct vdin_dev_s *devp);
+bool vdin_select_hdr_matrix(struct vdin_dev_s *devp);
+void vdin_manual_matrix_csc(struct vdin_dev_s *devp, enum vdin_matrix_csc_e *matrix_csc);
 #endif
