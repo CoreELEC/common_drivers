@@ -513,7 +513,7 @@ static int adc_dadc_atv_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->vdac_cntl_0, 0x00418882);
 		adc_wr_hiu(adc_addr->s2_dadc_cntl_2, 0x00000580);
 		adc_wr_hiu(adc_addr->dadc_cntl_4, 0x00000000);
-		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263104);
+		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263105);
 	} else
 #endif
 	if (devp->plat_data->chip_id >= ADC_CHIP_T5) {
@@ -541,7 +541,7 @@ static int adc_dadc_atv_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x00000401);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00101007);
 	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
-		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c0c8);
+		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c048);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00341b83);
 	}
 #endif
@@ -646,7 +646,7 @@ static int adc_dadc_other_dtv_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->vdac_cntl_0, 0x00418882);
 		adc_wr_hiu(adc_addr->s2_dadc_cntl_2, 0x00000580);
 		adc_wr_hiu(adc_addr->dadc_cntl_4, 0x00000000);
-		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263104);
+		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263105);
 	} else {
 		adc_wr_hiu(adc_addr->dadc_cntl, 0x00303044);
 	}
@@ -664,7 +664,7 @@ static int adc_dadc_other_dtv_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x00000401);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00101007);
 	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
-		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c0c8);
+		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c048);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00341b83);
 #endif
 	}
@@ -759,7 +759,7 @@ static int adc_dadc_dvbt_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->vdac_cntl_0, 0x00418882);
 		adc_wr_hiu(adc_addr->s2_dadc_cntl_2, 0x00000580);
 		adc_wr_hiu(adc_addr->dadc_cntl_4, 0x00000000);
-		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263104);
+		adc_wr_hiu(adc_addr->dadc_cntl, 0x06263105);
 	} else
 #endif
 	{
@@ -781,7 +781,7 @@ static int adc_dadc_dvbt_cntl_config(struct tvin_adc_dev *devp)
 		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x00000401);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00101013);
 	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
-		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c0c8);
+		adc_wr_hiu(adc_addr->dadc_cntl_2, 0x0000c048);
 		adc_wr_hiu(adc_addr->dadc_cntl_3, 0x00341b93);
 	}
 #endif
@@ -857,7 +857,7 @@ static void adc_atv_filter_config(struct tvin_adc_dev *devp)
 		adc_wr_afe(AFE_VAFE_CTRL1, 0);
 		adc_wr_afe(AFE_VAFE_CTRL2, 0);
 	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
-		adc_wr_afe(AFE_VAFE_CTRL0, 0x8F0730);
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x870730);
 		adc_wr_afe(AFE_VAFE_CTRL1, 0xe);
 		adc_wr_afe(AFE_VAFE_CTRL2, 0xA0CFD98);
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
@@ -891,7 +891,7 @@ static void adc_other_dtv_filter_config(struct tvin_adc_dev *devp)
 		adc_wr_afe(AFE_VAFE_CTRL1, 0);
 		adc_wr_afe(AFE_VAFE_CTRL2, 0);
 	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
-		adc_wr_afe(AFE_VAFE_CTRL0, 0x8F0730);
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x870730);
 		adc_wr_afe(AFE_VAFE_CTRL1, 0xe);
 		adc_wr_afe(AFE_VAFE_CTRL2, 0xA0CFD98);
 	} else {
@@ -901,8 +901,34 @@ static void adc_other_dtv_filter_config(struct tvin_adc_dev *devp)
 	}
 }
 
-/* config DVBS/S2 DVBST/T2 */
-static void adc_dvb_filter_config(struct tvin_adc_dev *devp)
+/* config DVBST/T2 */
+static void adc_dvbt_filter_config(struct tvin_adc_dev *devp)
+{
+	if (!devp->plat_data->is_tv_chip)
+		return;
+
+	if (devp->plat_data->chip_id == ADC_CHIP_TXHD2) {
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x00490710);
+		adc_wr_afe(AFE_VAFE_CTRL1, 0x100e);
+		adc_wr_afe(AFE_VAFE_CTRL2, 0x1fc09f80);
+	} else if (devp->plat_data->chip_id == ADC_CHIP_T6D ||
+		devp->plat_data->chip_id == ADC_CHIP_T6W) {
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x000e0f1f);
+		adc_wr_afe(AFE_VAFE_CTRL1, 0);
+		adc_wr_afe(AFE_VAFE_CTRL2, 0);
+	} else if (devp->plat_data->chip_id == ADC_CHIP_T6X) {
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x870730);
+		adc_wr_afe(AFE_VAFE_CTRL1, 0xe);
+		adc_wr_afe(AFE_VAFE_CTRL2, 0xA0CFD98);
+	} else {
+		adc_wr_afe(AFE_VAFE_CTRL0, 0x00050710);
+		adc_wr_afe(AFE_VAFE_CTRL1, 0x3000);
+		adc_wr_afe(AFE_VAFE_CTRL2, 0x1fe09e01);
+	}
+}
+
+/* config DVBS/S2 */
+static void adc_dvbs_filter_config(struct tvin_adc_dev *devp)
 {
 	if (!devp->plat_data->is_tv_chip)
 		return;
@@ -977,7 +1003,7 @@ void adc_set_ddemod_default(struct dfe_adcpll_para *adcpll_para)
 			switch (delsys) {
 			case SYS_DVBT:
 			case SYS_DVBT2:
-				adc_dvb_filter_config(devp);
+				adc_dvbt_filter_config(devp);
 				adc_dadc_dvbt_cntl_config(devp);
 				break;
 
@@ -986,7 +1012,7 @@ void adc_set_ddemod_default(struct dfe_adcpll_para *adcpll_para)
 				if (devp->plat_data->chip_id != ADC_CHIP_T6D &&
 					devp->plat_data->chip_id != ADC_CHIP_T6W &&
 					devp->plat_data->chip_id != ADC_CHIP_T6X)
-					adc_dvb_filter_config(devp);
+					adc_dvbs_filter_config(devp);
 				adc_dadc_dvbs_cntl_config(devp);
 				break;
 

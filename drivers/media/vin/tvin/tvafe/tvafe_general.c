@@ -350,11 +350,11 @@ int tvafe_adc_pin_mux(enum tvafe_adc_ch_e adc_ch)
 	} else if (adc_ch == TVAFE_ADC_CH_2) {
 		W_APB_BIT(TVFE_VAFE_CTRL1, 3,
 			  VAFE_IN_SEL_BIT, VAFE_IN_SEL_WID);
-		W_APB_BIT(TVFE_VAFE_CTRL2, 6, 4, 3);
+		//W_APB_BIT(TVFE_VAFE_CTRL2, 6, 4, 3);
 	} else if (adc_ch == TVAFE_ADC_CH_ATV) {
 		/* atv demod data for cvd2 */
 		W_APB_REG(TVFE_ATV_DMD_CLP_CTRL, 0x1300010);
-		W_APB_BIT(TVFE_VAFE_CTRL2, 6, 4, 3);
+		//W_APB_BIT(TVFE_VAFE_CTRL2, 6, 4, 3);
 	} else {
 		tvafe_pr_info("%s set pin mux error!!!!!.\n", __func__);
 		return -1;

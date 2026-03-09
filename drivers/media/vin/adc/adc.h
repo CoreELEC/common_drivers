@@ -25,7 +25,8 @@
 /* 20250609: config t6w dtvdemod isdbt 180M */
 /* 20250617: fix dtvdemod isdbt 180M */
 /* 20251216: update dtvdemod mux s2 config and dvbc pll config*/
-#define ADC_VER "20251216: update dtvdemod mux s2 config and dvbc pll config"
+/* 20260309: update t6x adc config */
+#define ADC_VER "0260309: update t6x adc config"
 
 #define ADC_CLK_24M       24000
 #define ADC_CLK_25M       25000

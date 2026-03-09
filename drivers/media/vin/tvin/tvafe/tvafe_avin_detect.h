@@ -16,7 +16,8 @@
 /* 20250311: reconfig timer when release */
 /* 20250320: update release flow */
 /* 20250604: try format when status in; when status out, report no signal */
-#define AV_DETECT_VER "update release flow"
+/* 20260309: update t6x dc_level_adj */
+#define AV_DETECT_VER "20260309: update t6x dc_level_adj"
 
 /* avin debug control start */
 #define AVIN_NORMAL_DBG				BIT(0)
