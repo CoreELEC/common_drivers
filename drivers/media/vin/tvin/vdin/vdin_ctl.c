@@ -7681,6 +7681,10 @@ int vdin_package_done_check_state(struct vdin_dev_s *devp)
 		}
 	}
 
+	if ((devp->dtdata->hw_ver == VDIN_HW_T6W || devp->dtdata->hw_ver == VDIN_HW_T6X) &&
+	    devp->dv.dv_flag != devp->prop.dolby_vision)
+		ret |= BIT1;
+
 	return ret;
 }
 
