@@ -385,6 +385,19 @@
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
+
+	adc_keypad {
+		compatible = "amlogic, adc_keypad";
+		status = "okay";
+		key_name = "update", "vol-", "vol+", "ok";
+		key_num = <4>;
+		io-channels = <&saradc SARADC_CH2>;
+		io-channel-names = "key-chan-2";
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2 SARADC_CH2>;
+		key_code = <KEY_SETUP KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_ENTER>;
+		key_val = <0 252 468 684>;	// Unit: millivolt
+		key_tolerance = <70 70 70 70>;	// Unit: millivolt
+	};
 };
 
 /* Audio Related start */
