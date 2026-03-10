@@ -25,10 +25,8 @@ int v2d_get_dewarp_format(int index, struct vframe_s *vf)
 {
 	int format = NV12;
 
-	if (IS_ERR_OR_NULL(vf)) {
-		pr_info("v2d:[%d] %s: vf is NULL.\n", index, __func__);
+	if (IS_ERR_OR_NULL(vf))
 		return -1;
-	}
 
 	if ((vf->type & VIDTYPE_VIU_NV21) ||
 	    (vf->type & VIDTYPE_VIU_NV12))
@@ -65,6 +63,8 @@ static int get_dewarp_rotation_value(int transform)
 
 static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, u32 phy_adr_uv)
 {
+	int err = -1;
+
 #ifdef CONFIG_AMLOGIC_ENABLE_VIDEO_PIPELINE_DUMP_DATA
 	int size = 0;
 	struct file *fp = NULL;
@@ -72,23 +72,23 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	u8 *data;
 
 	if (IS_ERR_OR_NULL(path)) {
-		pr_info("%s: path is NULL.\n", __func__);
-		return -1;
+		err = 1;
+		goto exit;
 	}
 
 	/* open file to write */
 	fp = filp_open(path, O_WRONLY | O_CREAT, 0644);
 	if (IS_ERR(fp)) {
-		pr_info("%s: open file error\n", __func__);
-		return -1;
+		err = 2;
+		goto exit;
 	}
 
 	/* Write buf to file */
 	size = width * height;
 	data = codec_mm_vmap(phy_adr_y, size);
 	if (!data) {
-		pr_info("%s: vmap failed\n", __func__);
-		return -1;
+		err = 3;
+		goto exit;
 	}
 	/* change to KERNEL_DS address limit */
 	kernel_write(fp, data, size, &position);
@@ -97,8 +97,8 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	size = width * height / 2;
 	data = codec_mm_vmap(phy_adr_uv, size);
 	if (!data) {
-		pr_info("%s: vmap failed\n", __func__);
-		return -1;
+		err = 4;
+		goto exit;
 	}
 	/* change to KERNEL_DS address limit */
 	kernel_write(fp, data, size, &position);
@@ -107,12 +107,19 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	filp_close(fp, NULL);
 	return 0;
 #else
-	return -1;
+	err = 5;
+	goto exit;
 #endif
+
+exit:
+	pr_info("dump failed, errno =  %d.\n", err);
+	return -1;
 }
 
 int v2d_load_dewarp_firmware(struct dewarp_composer_para *param)
 {
+	int err = -1;
+
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 	int ret = 0;
 #endif
@@ -122,8 +129,8 @@ int v2d_load_dewarp_firmware(struct dewarp_composer_para *param)
 	int frame_rotation = 0;
 
 	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
-		return -1;
+		err = 1;
+		goto exit;
 	}
 
 	frame_rotation = get_dewarp_rotation_value(param->vf_para->src_vf_angle);
@@ -171,12 +178,12 @@ int v2d_load_dewarp_firmware(struct dewarp_composer_para *param)
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 			ret = load_firmware_by_name(file_name, &param->fw_load);
 			if (ret <= 0) {
-				pr_info("v2d:[%d] %s: load firmware failed.\n",
-					param->index, __func__);
-				return -1;
+				err = 2;
+				goto exit;
 			}
 #else
-			return -1;
+			err = 3;
+			goto exit;
 #endif
 		} else {
 			fw_param.format = NV12;
@@ -188,24 +195,26 @@ int v2d_load_dewarp_firmware(struct dewarp_composer_para *param)
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 			ret = rotation_calc_and_load_firmware(&fw_param, &param->fw_load);
 			if (ret <= 0) {
-				pr_info("v2d:[%d] %s: calc and load firmware failed.\n",
-					param->index, __func__);
-				return -1;
+				err = 4;
+				goto exit;
 			}
 #else
-			return -1;
+			err = 5;
+			goto exit;
 #endif
 		}
 	}
 	return 0;
+
+exit:
+	pr_info("load firmware failed, errno =  %d.\n", err);
+	return -1;
 }
 
 int v2d_unload_dewarp_firmware(struct dewarp_composer_para *param)
 {
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	if (param->fw_load.phys_addr != 0) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
@@ -246,10 +255,8 @@ bool check_dewarp_status(struct vframe_s *input_vf, int count, int work_mode, in
 
 int v2d_init_dewarp_composer(struct dewarp_composer_para *param)
 {
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	if (IS_ERR_OR_NULL(param->context)) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
@@ -258,14 +265,9 @@ int v2d_init_dewarp_composer(struct dewarp_composer_para *param)
 		param->context = NULL;
 #endif
 		if (IS_ERR_OR_NULL(param->context)) {
-			pr_info("v2d:[%d] %s: create dewrap work_queue failed.\n",
-				param->index,
-				__func__);
+			pr_info("v2d[%d]: create dewrap work_queue failed.\n", param->index);
 			return -1;
 		}
-	} else {
-		pr_info("v2d:[%d] %s: dewrap work queue exist.\n",
-			param->index, __func__);
 	}
 
 	return 0;
@@ -275,10 +277,8 @@ int v2d_uninit_dewarp_composer(struct dewarp_composer_para *param)
 {
 	int ret = 0;
 
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	v2d_unload_dewarp_firmware(param);
 
@@ -289,17 +289,9 @@ int v2d_uninit_dewarp_composer(struct dewarp_composer_para *param)
 		ret = -1;
 #endif
 		if (ret != 0) {
-			pr_info("v2d:[%d] %s: destroy dewarp work queue failed.\n",
-				param->index,
-				__func__);
+			pr_info("v2d[%d]: destroy dewarp work queue failed.\n", param->index);
 			return -1;
 		}
-		pr_info("v2d:[%d] %s: destroy dewarp work queue success.\n",
-			param->index, __func__);
-	} else {
-		pr_info("v2d:[%d] %s: dewarp work queue not create.\n",
-			param->index,
-			__func__);
 	}
 
 	param->context = NULL;
@@ -315,10 +307,8 @@ int v2d_config_dewarp_vframe(struct dewarp_vf_para_s *vframe_para,
 	struct pic_s *pic_info_in = &common_para->input_para.pic_info;
 	struct pic_s *pic_info_out = &common_para->output_para.pic_info;
 
-	if (IS_ERR_OR_NULL(vframe_para)) {
-		pr_info("v2d:[%d] %s: vframe_para is null.\n", call_index, __func__);
+	if (IS_ERR_OR_NULL(vframe_para))
 		return -1;
-	}
 
 	if (src_vf) {
 		if (src_vf->canvas0_config[0].phy_addr == 0) {
@@ -326,7 +316,7 @@ int v2d_config_dewarp_vframe(struct dewarp_vf_para_s *vframe_para,
 				src_vf->vf_ext) {
 				vf = src_vf->vf_ext;
 			} else {
-				pr_info("v2d:[%d] %s: vf no yuv data.\n", call_index, __func__);
+				pr_info("v2d:[%d] config: vf no yuv data.\n", call_index);
 				return -1;
 			}
 		} else {
@@ -407,10 +397,8 @@ int v2d_dewarp_data_composer(struct dewarp_composer_para *param, bool is_tvp)
 	struct gdc_phy_setting gdc_config;
 	char dump_name[32];
 
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	memset(&gdc_config, 0, sizeof(struct gdc_phy_setting));
 	gdc_config.format = param->vf_para->src_vf_format;
@@ -457,7 +445,7 @@ int v2d_dewarp_data_composer(struct dewarp_composer_para *param, bool is_tvp)
 	ret = -1;
 #endif
 	if (ret < 0) {
-		pr_info("v2d:[%d] %s: dewrap process failed.\n", param->index, __func__);
+		pr_info("v2d[%d]: dewarp composer failed.\n", param->index);
 	} else {
 		if (dewarp_com_dump != dewarp_com_dump_last) {
 			sprintf(dump_name, "/data/src_%d.yuv", dewarp_com_dump);
@@ -477,8 +465,8 @@ int v2d_dewarp_data_composer(struct dewarp_composer_para *param, bool is_tvp)
 		}
 	}
 	if (dewarp_print)
-		pr_info("v2d:[%d] %s:dst addr0:%lx addr1:%lx stride0:%d stride1:%d\n",
-			param->index, __func__,
+		pr_info("v2d[%d]: composer:dst addr0:%lx addr1:%lx stride0:%d stride1:%d\n",
+			param->index,
 			gdc_config.out_paddr[0], gdc_config.out_paddr[1],
 			gdc_config.out_y_stride, gdc_config.out_y_stride);
 	return ret;

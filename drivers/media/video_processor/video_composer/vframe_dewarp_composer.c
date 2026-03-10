@@ -34,10 +34,8 @@ int get_dewarp_format(int vc_index, struct vframe_s *vf)
 {
 	int format = NV12;
 
-	if (IS_ERR_OR_NULL(vf)) {
-		pr_info("vc:[%d] %s: vf is NULL.\n", vc_index, __func__);
+	if (IS_ERR_OR_NULL(vf))
 		return -1;
-	}
 
 	if ((vf->type & VIDTYPE_VIU_NV21) ||
 	    (vf->type & VIDTYPE_VIU_NV12))
@@ -70,6 +68,8 @@ static int get_dewarp_rotation_value(int vc_transform)
 
 static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, u32 phy_adr_uv)
 {
+	int err = -1;
+
 #ifdef CONFIG_AMLOGIC_ENABLE_VIDEO_PIPELINE_DUMP_DATA
 	int size = 0;
 	struct file *fp = NULL;
@@ -77,23 +77,23 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	u8 *data;
 
 	if (IS_ERR_OR_NULL(path)) {
-		pr_info("%s: path is NULL.\n", __func__);
-		return -1;
+		err = 1;
+		goto exit;
 	}
 
 	/* open file to write */
 	fp = filp_open(path, O_WRONLY | O_CREAT, 0644);
 	if (IS_ERR(fp)) {
-		pr_info("%s: open file error\n", __func__);
-		return -1;
+		err = 2;
+		goto exit;
 	}
 
 	/* Write buf to file */
 	size = width * height;
 	data = codec_mm_vmap(phy_adr_y, size);
 	if (!data) {
-		pr_info("%s: vmap failed\n", __func__);
-		return -1;
+		err = 3;
+		goto exit;
 	}
 	/* change to KERNEL_DS address limit */
 	kernel_write(fp, data, size, &position);
@@ -102,8 +102,8 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	size = width * height / 2;
 	data = codec_mm_vmap(phy_adr_uv, size);
 	if (!data) {
-		pr_info("%s: vmap failed\n", __func__);
-		return -1;
+		err = 4;
+		goto exit;
 	}
 	/* change to KERNEL_DS address limit */
 	kernel_write(fp, data, size, &position);
@@ -112,12 +112,20 @@ static int dump_dewarp_vframe(char *path, int width, int height, u32 phy_adr_y, 
 	filp_close(fp, NULL);
 	return 0;
 #else
-	return -1;
+	err = 5;
+	goto exit;
 #endif
+
+exit:
+	pr_info("dump failed, errno =  %d.\n", err);
+	return -1;
+
 }
 
 int load_dewarp_firmware(struct dewarp_composer_para *param)
 {
+	int err = -1;
+
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 	int ret = 0;
 #endif
@@ -127,8 +135,8 @@ int load_dewarp_firmware(struct dewarp_composer_para *param)
 	int frame_rotation = 0;
 
 	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
-		return -1;
+		err = 1;
+		goto exit;
 	}
 
 	frame_rotation = get_dewarp_rotation_value(param->vf_para->src_vf_angle);
@@ -147,24 +155,24 @@ int load_dewarp_firmware(struct dewarp_composer_para *param)
 	}
 
 	if (dewarp_print) {
-		pr_info("vc:[%d] need load firmware: %d.\n", param->vc_index, is_need_load);
-		pr_info("vc:[%d] src_vf, w:%d, h:%d, fromat:%d, rotation:%d.\n",
+		pr_info("vc[%d]: need load firmware: %d.\n", param->vc_index, is_need_load);
+		pr_info("vc[%d]: src_vf, w:%d, h:%d, fromat:%d, rotation:%d.\n",
 			param->vc_index,
 			param->vf_para->src_vf_width,
 			param->vf_para->src_vf_height,
 			param->vf_para->src_vf_format,
 			param->vf_para->src_vf_angle);
-		pr_info("vc:[%d] src_buf, w0:%d, w1:%d.\n", param->vc_index,
+		pr_info("vc[%d]: src_buf, w0:%d, w1:%d.\n", param->vc_index,
 			param->vf_para->src_buf_stride0, param->vf_para->src_buf_stride1);
-		pr_info("vc:[%d] dst_vf, w:%d, h:%d.\n", param->vc_index,
+		pr_info("vc[%d]: dst_vf, w:%d, h:%d.\n", param->vc_index,
 			param->vf_para->dst_vf_width, param->vf_para->dst_vf_height);
-		pr_info("vc:[%d] dst_buf, w:%d.\n", param->vc_index,
+		pr_info("vc[%d]: dst_buf, w:%d.\n", param->vc_index,
 			param->vf_para->dst_buf_stride);
 	}
 
 	if (param->fw_load.phys_addr == 0 || is_need_load) {
 		unload_dewarp_firmware(param);
-		pr_info("vc:[%d] start load firmware.\n", param->vc_index);
+		pr_info("vc[%d]: start load firmware.\n", param->vc_index);
 		if (dewarp_load_flag) {
 			memset(file_name, 0, 64);
 			sprintf(file_name, "%dx%d-%dx%d-%d_nv12.bin",
@@ -176,12 +184,12 @@ int load_dewarp_firmware(struct dewarp_composer_para *param)
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 			ret = load_firmware_by_name(file_name, &param->fw_load);
 			if (ret <= 0) {
-				pr_info("vc:[%d] %s: load firmware failed.\n", param->vc_index,
-					__func__);
-				return -1;
+				err = 2;
+				goto exit;
 			}
 #else
-			return -1;
+			err = 3;
+			goto exit;
 #endif
 		} else {
 			fw_param.format = NV12;
@@ -193,24 +201,26 @@ int load_dewarp_firmware(struct dewarp_composer_para *param)
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 			ret = rotation_calc_and_load_firmware(&fw_param, &param->fw_load);
 			if (ret <= 0) {
-				pr_info("vc:[%d] %s: calc and load firmware failed.\n",
-					param->vc_index, __func__);
-				return -1;
+				err = 4;
+				goto exit;
 			}
 #else
-			return -1;
+			err = 5;
+			goto exit;
 #endif
 		}
 	}
 	return 0;
+
+exit:
+	pr_info("load firmware failed, errno = %d.\n", err);
+	return -1;
 }
 
 int unload_dewarp_firmware(struct dewarp_composer_para *param)
 {
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	if (param->fw_load.phys_addr != 0) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
@@ -234,16 +244,12 @@ bool is_dewarp_supported(int vc_index, struct composer_vf_para *vf_param)
 	if (!is_aml_gdc_supported())
 		return false;
 
-	if (IS_ERR_OR_NULL(vf_param)) {
-		pr_info("vc:[%d] %s: NULL param, please check.\n",
-			vc_index,
-			__func__);
+	if (IS_ERR_OR_NULL(vf_param))
 		return false;
-	}
+
 	if (dewarp_print) {
-		pr_info("vc:[%d] %s: src:w:%d h:%d format:%d, dst:w:%d h:%d, angle:%d.\n",
+		pr_info("vc[%d]: is_support: src:w:%d h:%d format:%d, dst:w:%d h:%d, angle:%d.\n",
 			vc_index,
-			__func__,
 			vf_param->src_vf_width,
 			vf_param->src_vf_height,
 			vf_param->src_vf_format,
@@ -272,10 +278,7 @@ bool is_dewarp_supported(int vc_index, struct composer_vf_para *vf_param)
 #ifdef CONFIG_AMLOGIC_ENABLE_MEDIA_FILE
 		ret = vfs_stat(file_name, &stat);
 		if (ret < 0) {
-			pr_info("vc:[%d] %s: %s don't exist.\n",
-				vc_index,
-				__func__,
-				file_name);
+			pr_info("vc[%d]: %s don't exist.\n", vc_index, file_name);
 			return false;
 		}
 		return true;
@@ -290,10 +293,8 @@ bool is_dewarp_supported(int vc_index, struct composer_vf_para *vf_param)
 
 int init_dewarp_composer(struct dewarp_composer_para *param)
 {
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	if (IS_ERR_OR_NULL(param->context)) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
@@ -302,19 +303,9 @@ int init_dewarp_composer(struct dewarp_composer_para *param)
 		param->context = NULL;
 #endif
 		if (IS_ERR_OR_NULL(param->context)) {
-			pr_info("vc:[%d] %s: create dewrap work_queue failed.\n",
-				param->vc_index,
-				__func__);
+			pr_info("vc[%d]: create dewrap work_queue failed.\n", param->vc_index);
 			return -1;
-		} else {
-			pr_info("vc:[%d] %s: create dewrap work_queue success.\n",
-				param->vc_index,
-				__func__);
 		}
-	} else {
-		pr_info("vc:[%d] %s: dewrap work queue exist.\n",
-			param->vc_index,
-			__func__);
 	}
 
 	return 0;
@@ -324,10 +315,8 @@ int uninit_dewarp_composer(struct dewarp_composer_para *param)
 {
 	int ret = 0;
 
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	unload_dewarp_firmware(param);
 
@@ -338,19 +327,9 @@ int uninit_dewarp_composer(struct dewarp_composer_para *param)
 		ret = -1;
 #endif
 		if (ret != 0) {
-			pr_info("vc:[%d] %s: destroy dewarp work queue failed.\n",
-				param->vc_index,
-				__func__);
+			pr_info("vc[%d]: destroy dewarp work queue failed.\n", param->vc_index);
 			return -1;
-		} else {
-			pr_info("vc:[%d] %s: destroy dewarp work queue success.\n",
-				param->vc_index,
-				__func__);
 		}
-	} else {
-		pr_info("vc:[%d] %s: dewarp work queue not create.\n",
-			param->vc_index,
-			__func__);
 	}
 
 	param->context = NULL;
@@ -366,10 +345,8 @@ int config_dewarp_vframe(struct composer_vf_para *vframe_para,
 	struct pic_struct_t *pic_info_in = &common_para->input_para.pic_info;
 	struct pic_struct_t *pic_info_out = &common_para->output_para.pic_info;
 
-	if (IS_ERR_OR_NULL(vframe_para)) {
-		pr_info("vc:[%d] %s: vframe_para is null.\n", call_index, __func__);
+	if (IS_ERR_OR_NULL(vframe_para))
 		return -1;
-	}
 
 	if (src_vf) {
 		if (src_vf->canvas0_config[0].phy_addr == 0) {
@@ -377,7 +354,7 @@ int config_dewarp_vframe(struct composer_vf_para *vframe_para,
 				src_vf->vf_ext) {
 				vf = src_vf->vf_ext;
 			} else {
-				pr_info("vc:[%d] %s: vf no yuv data.\n", call_index, __func__);
+				pr_info("vc[%d]: vf no yuv data.\n", call_index);
 				return -1;
 			}
 		} else {
@@ -437,18 +414,19 @@ int config_dewarp_vframe(struct composer_vf_para *vframe_para,
 	}
 
 	if (dewarp_print) {
-		pr_info("vc:[%d]: src_vf: addr0:0x%lx, addr1:0x%lx, width:%d, height:%d, format:%d ",
+		pr_info("vc[%d]: src_vf: addr0:0x%lx, addr1:0x%lx, width:%d, height:%d, format:%d ",
 			call_index,
 			vframe_para->src_buf_addr0,
 			vframe_para->src_buf_addr1,
 			vframe_para->src_vf_width,
 			vframe_para->src_vf_height,
 			vframe_para->src_vf_format);
-		pr_info("angle:%d stride_y:%d, stride_uv:%d.\n",
+		pr_info("vc[%d]: angle:%d stride_y:%d, stride_uv:%d.\n",
+			call_index,
 			vframe_para->src_vf_angle,
 			vframe_para->src_buf_stride0,
 			vframe_para->src_buf_stride1);
-		pr_info("vc:[%d]: dst_vf: width:%d, height:%d stride:%d.\n",
+		pr_info("vc[%d]: dst_vf: width:%d, height:%d stride:%d.\n",
 			call_index,
 			vframe_para->dst_vf_width,
 			vframe_para->dst_vf_height,
@@ -463,10 +441,8 @@ int dewarp_data_composer(struct dewarp_composer_para *param, bool is_tvp)
 	struct gdc_phy_setting gdc_config;
 	char dump_name[32];
 
-	if (IS_ERR_OR_NULL(param)) {
-		pr_info("%s: NULL param, please check.\n", __func__);
+	if (IS_ERR_OR_NULL(param))
 		return -1;
-	}
 
 	memset(&gdc_config, 0, sizeof(struct gdc_phy_setting));
 	gdc_config.format = param->vf_para->src_vf_format;
@@ -513,7 +489,7 @@ int dewarp_data_composer(struct dewarp_composer_para *param, bool is_tvp)
 	ret = -1;
 #endif
 	if (ret < 0) {
-		pr_info("vc:[%d] %s: dewrap process failed.\n", param->vc_index, __func__);
+		pr_info("vc[%d]: dewrap process failed.\n", param->vc_index);
 	} else {
 		if (dewarp_com_dump != dewarp_com_dump_last) {
 			sprintf(dump_name, "/data/src_%d.yuv", dewarp_com_dump);
