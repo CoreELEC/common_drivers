@@ -4002,6 +4002,8 @@ static bool vdin_dyn_output_fmt(struct vdin_dev_s *devp)
 		if (devp->put_frame_cnt >= devp->game_mode_dly) {
 			vdin_get_format_convert(devp);
 			if (devp->csc_cfg) {
+				devp->pre_prop.color_format = devp->prop.color_format;
+				devp->pre_prop.color_fmt_range = devp->prop.color_fmt_range;
 				devp->csc_cfg = 0;
 				vdin_set_matrix(devp);
 			}
