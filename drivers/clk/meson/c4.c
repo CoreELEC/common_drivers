@@ -2588,6 +2588,7 @@ MESON_CLK_GATE_HW(sys_pwm_c, CLKCTRL_SYS_CLK_EN0_REG1, 5, sys_pwm_a.hw);
 MESON_CLK_GATE_HW(sys_pwm_d, CLKCTRL_SYS_CLK_EN0_REG1, 6, sys_pwm_a.hw);
 MESON_CLK_GATE_HW(sys_pwm_e, CLKCTRL_SYS_CLK_EN0_REG1, 7, sys_pwm_a.hw);
 MESON_CLK_GATE_HW(sys_pwm_f, CLKCTRL_SYS_CLK_EN0_REG1, 8, sys_pwm_a.hw);
+MESON_CLK_GATE_SYS_CLK(sys_pio_core, CLKCTRL_SYS_CLK_EN0_REG1, 9);
 MESON_CLK_GATE_SYS_CLK(sys_spicc, CLKCTRL_SYS_CLK_EN0_REG1, 10);
 MESON_CLK_GATE_SYS_CLK(sys_uart_a, CLKCTRL_SYS_CLK_EN0_REG1, 11);
 MESON_CLK_GATE_SYS_CLK(sys_uart_b, CLKCTRL_SYS_CLK_EN0_REG1, 12);
@@ -2599,12 +2600,12 @@ MESON_CLK_GATE_HW(sys_i2c_m_b, CLKCTRL_SYS_CLK_EN0_REG1, 17, sys_i2c_m_a.hw);
 MESON_CLK_GATE_HW(sys_i2c_m_c, CLKCTRL_SYS_CLK_EN0_REG1, 18, sys_i2c_m_a.hw);
 MESON_CLK_GATE_HW(sys_i2c_m_d, CLKCTRL_SYS_CLK_EN0_REG1, 19, sys_i2c_m_a.hw);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_s_a, CLKCTRL_SYS_CLK_EN0_REG1, 20);
-MESON_CLK_GATE_SYS_CLK(sys_rtc, CLKCTRL_SYS_CLK_EN0_REG1, 21);
 MESON_CLK_GATE_SYS_CLK(sys_eth_phy, CLKCTRL_SYS_CLK_EN0_REG1, 28);
 MESON_CLK_GATE_SYS_CLK(sys_acodec, CLKCTRL_SYS_CLK_EN0_REG1, 29);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_n, CLKCTRL_SYS_CLK_EN0_REG1, 30);
 MESON_CLK_GATE_SYS_CLK(sys_dos, CLKCTRL_SYS_CLK_EN0_REG1, 31);
 MESON_CLK_GATE_SYS_CLK(sys_cve, CLKCTRL_SYS_CLK_EN0_REG2, 0);
+MESON_CLK_GATE_SYS_CLK(sys_isp_capu, CLKCTRL_SYS_CLK_EN0_REG2, 1);
 MESON_CLK_GATE_SYS_CLK(sys_tahoe, CLKCTRL_SYS_CLK_EN0_REG2, 2);
 MESON_CLK_GATE_SYS_CLK(sys_cve_intr, CLKCTRL_SYS_CLK_EN0_REG2, 3);
 MESON_CLK_GATE_SYS_CLK(sys_sd_emmc_b, CLKCTRL_SYS_CLK_EN0_REG2, 4);
@@ -2633,7 +2634,6 @@ struct clk_regmap _name = {                                           \
 	},                                                            \
 }
 
-MESON_CLK_GATE_AXI_CLK(axi_audio_sed, CLKCTRL_AXI_CLK_EN0, 0);
 MESON_CLK_GATE_AXI_CLK(axi_sys_nic, CLKCTRL_AXI_CLK_EN0, 2);
 MESON_CLK_GATE_AXI_CLK(axi_rama, CLKCTRL_AXI_CLK_EN0, 6);
 MESON_CLK_GATE_AXI_CLK(axi_mux_nic, CLKCTRL_AXI_CLK_EN0, 10);
@@ -2800,6 +2800,7 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_pwm_d,
 	&sys_pwm_e,
 	&sys_pwm_f,
+	&sys_pio_core,
 	&sys_spicc,
 	&sys_uart_a,
 	&sys_uart_b,
@@ -2811,12 +2812,12 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_i2c_m_c,
 	&sys_i2c_m_d,
 	&sys_i2c_s_a,
-	&sys_rtc,
 	&sys_eth_phy,
 	&sys_acodec,
 	&sys_pwm_n,
 	&sys_dos,
 	&sys_cve,
+	&sys_isp_capu,
 	&sys_tahoe,
 	&sys_cve_intr,
 	&sys_sd_emmc_b,
@@ -2827,7 +2828,6 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&sys_pwm_k,
 	&sys_pwm_l,
 	&sys_pwm_m,
-	&axi_audio_sed,
 	&axi_sys_nic,
 	&axi_rama,
 	&axi_mux_nic,
@@ -3001,6 +3001,7 @@ static struct clk_hw *c4_hw_clks[] = {
 	[CLKID_SYS_PWM_D]             = &sys_pwm_d.hw,
 	[CLKID_SYS_PWM_E]             = &sys_pwm_e.hw,
 	[CLKID_SYS_PWM_F]             = &sys_pwm_f.hw,
+	[CLKID_SYS_PIO_CORE]          = &sys_pio_core.hw,
 	[CLKID_SYS_SPICC]             = &sys_spicc.hw,
 	[CLKID_SYS_UART_A]            = &sys_uart_a.hw,
 	[CLKID_SYS_UART_B]            = &sys_uart_b.hw,
@@ -3012,12 +3013,12 @@ static struct clk_hw *c4_hw_clks[] = {
 	[CLKID_SYS_I2C_M_C]           = &sys_i2c_m_c.hw,
 	[CLKID_SYS_I2C_M_D]           = &sys_i2c_m_d.hw,
 	[CLKID_SYS_I2C_S_A]           = &sys_i2c_s_a.hw,
-	[CLKID_SYS_RTC]               = &sys_rtc.hw,
 	[CLKID_SYS_ETH_PHY]           = &sys_eth_phy.hw,
 	[CLKID_SYS_ACODEC]            = &sys_acodec.hw,
 	[CLKID_SYS_PWM_N]             = &sys_pwm_n.hw,
 	[CLKID_SYS_DOS]               = &sys_dos.hw,
 	[CLKID_SYS_CVE]               = &sys_cve.hw,
+	[CLKID_SYS_ISP_CAPU]          = &sys_isp_capu.hw,
 	[CLKID_SYS_TAHOE]             = &sys_tahoe.hw,
 	[CLKID_SYS_CVE_INTR]          = &sys_cve_intr.hw,
 	[CLKID_SYS_SD_EMMC_B]         = &sys_sd_emmc_b.hw,
@@ -3028,7 +3029,6 @@ static struct clk_hw *c4_hw_clks[] = {
 	[CLKID_SYS_PWM_K]             = &sys_pwm_k.hw,
 	[CLKID_SYS_PWM_L]             = &sys_pwm_l.hw,
 	[CLKID_SYS_PWM_M]             = &sys_pwm_m.hw,
-	[CLKID_AXI_AUDIO_SED]         = &axi_audio_sed.hw,
 	[CLKID_AXI_SYS_NIC]           = &axi_sys_nic.hw,
 	[CLKID_AXI_RAMA]              = &axi_rama.hw,
 	[CLKID_AXI_MUX_NIC]           = &axi_mux_nic.hw,
