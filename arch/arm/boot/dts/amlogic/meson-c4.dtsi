@@ -19,6 +19,7 @@
 #include <dt-bindings/power/c4-pd.h>
 #include <dt-bindings/mailbox/amlogic,mbox.h>
 #include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/thermal/ddr-params.h>
 
 / {
 	compatible = "amlogic,c1";
@@ -1085,6 +1086,36 @@
 					contribution = <1024>;
 				};
 			};
+		};
+	};
+
+	ddr_control: ddr_control {
+		compatible = "amlogic, ddr-control";
+		reg = <0xfe0368a8 0x4>;
+		reg-names = "freq-addr";
+		freq-mask = <0 16>;
+		version = "v1";
+		status = "okay";
+		ddr {
+			condition-type = <DDR_THERMAL>;
+			zone-name = "thermal";
+			caddr = <0xfe0364b4>,
+				<0xfe0365b4>;
+			caddr-mask = <0 16>,
+				     <0 16>;
+			cstep-val = <70000 75000 80000 85000 90000>,
+				    <95000 100000 105000 110000 115000 120000>;
+			caddr-val = <7800 3900>,
+				    <6240 3120>,
+				    <4875 2438>,
+				    <4875 2438>,
+				    <3900 1950>,
+				    <3120 1560>,
+				    <2437 1219>,
+				    <1950 975>,
+				    <975 488>,
+				    <650 325>,
+				    <488 244>;
 		};
 	};
 
