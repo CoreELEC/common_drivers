@@ -47,6 +47,7 @@ void meson_nand_set_skip_bad_block(u32 skip)
 }
 EXPORT_SYMBOL_GPL(meson_nand_set_skip_bad_block);
 
+#define MTD_ALIGN_SIZE	(4096)
 static int parse_meson_fastboot_partitions(struct mtd_info *master,
 				  const struct mtd_partition **pparts,
 				  struct mtd_part_parser_data *data)
@@ -95,7 +96,7 @@ static int parse_meson_fastboot_partitions(struct mtd_info *master,
 	part_info = (struct storage_parts *)buf;
 
 	if (master->type == MTD_NORFLASH)
-		boot_parts = 1;
+		boot_parts = 2;
 
 	nr_parts = part_info->count;
 	parts = kcalloc(nr_parts + boot_parts, sizeof(struct mtd_partition), GFP_KERNEL);
@@ -116,8 +117,12 @@ static int parse_meson_fastboot_partitions(struct mtd_info *master,
 	if (master->type == MTD_NORFLASH) {
 		parts[0].name = "bl2";
 		parts[0].offset = 0;
-		parts[0].size = parts[boot_parts].offset;
+		parts[0].size = parts[boot_parts].offset - MTD_ALIGN_SIZE;
 		parts[0].of_node = mtd_node;
+		parts[1].name = "fwhdr";
+		parts[1].offset = parts[0].size;
+		parts[1].size = MTD_ALIGN_SIZE;
+		parts[1].of_node = mtd_node;
 	}
 
 	*pparts = parts;
