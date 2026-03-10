@@ -3739,12 +3739,19 @@
 		memory-region = <&pcie_dma_ops_mm>;
 	};
 
-	codec_mm {
+	codec_mm: codec_mm {
 		compatible = "amlogic, codec, mm";
 		memory-region = <&codec_mm_cma &codec_mm_reserved &secure_vdec_reserved>;
 		dev_name = "codec_mm";
 		random_access = <1>;
 		status = "okay";
+		/*
+		 * scatter_alloc_mode: the mode of scatter memory allocation
+		 * 0: default mode, alloc from system and cma
+		 * 1: only alloc from system
+		 * 2: only alloc from cma
+		 */
+		scatter_alloc_mode = <1>;
 	};
 
 	unifykey{

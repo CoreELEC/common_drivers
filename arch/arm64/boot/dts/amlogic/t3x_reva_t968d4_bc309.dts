@@ -279,14 +279,6 @@
 		memory-region = <&pcie_dma_ops_mm>;
 	};
 
-	codec_mm {
-		compatible = "amlogic, codec, mm";
-		memory-region = <&codec_mm_cma &codec_mm_reserved &secure_vdec_reserved>;
-		dev_name = "codec_mm";
-		random_access = <1>;
-		status = "okay";
-	};
-
 	cvbsout {
 		compatible = "amlogic, cvbsout-sc2";
 		status = "disabled";

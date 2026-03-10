@@ -2273,6 +2273,22 @@
 		status = "okay";
 	};
 
+	codec_mm: codec_mm {
+		compatible = "amlogic, codec, mm";
+		memory-region = <&codec_mm_cma &codec_mm_reserved &secure_vdec_reserved>;
+		dev_name = "codec_mm";
+		status = "okay";
+		/* secure memory controller para <switch  align_2n> */
+		secure_ctrl_para = <1 16>;
+		/*
+		 * scatter_alloc_mode: the mode of scatter memory allocation
+		 * 0: default mode, alloc from system and cma
+		 * 1: only alloc from system
+		 * 2: only alloc from cma
+		 */
+		scatter_alloc_mode = <1>;
+	};
+
 	aml_kt {
 		compatible = "amlogic,aml_kt";
 		reg = <0x0 0xfe440500 0x0 0xa0>;

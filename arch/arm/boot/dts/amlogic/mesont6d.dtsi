@@ -1892,7 +1892,7 @@
 		status = "okay";
 	};
 
-	codec_mm {
+	codec_mm: codec_mm {
 		compatible = "amlogic, codec, mm";
 		memory-region = <&codec_mm_cma &secure_vdec_reserved>;
 		dev_name = "codec_mm";
@@ -1903,6 +1903,7 @@
 		 * scatter_alloc_mode: the mode of scatter memory allocation
 		 * 0: default mode, alloc from system and cma
 		 * 1: only alloc from system
+		 * 2: only alloc from cma
 		 */
 		scatter_alloc_mode = <1>;
 	};

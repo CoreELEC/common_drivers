@@ -825,13 +825,3 @@
 	memory-region = <&vdin1_cma_reserved>;
 	status = "okay";
 };
-
-&codec_mm {
-		/*
-		 * scatter_alloc_mode: the mode of scatter memory allocation
-		 * 0: default mode, alloc from system and cma
-		 * 1: only alloc from system
-		 * 2: only alloc from cma
-		 */
-		scatter_alloc_mode = <1>;
-};

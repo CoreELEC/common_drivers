@@ -259,15 +259,6 @@
 		};
 	};
 
-	codec_mm {
-		compatible = "amlogic, codec, mm";
-		memory-region = <&codec_mm_cma &codec_mm_reserved &secure_vdec_reserved>;
-		dev_name = "codec_mm";
-		status = "okay";
-		/* secure memory controller para <switch  align_2n> */
-		secure_ctrl_para = <1 16>;
-	};
-
 	ionvideo {
 		compatible = "amlogic, ionvideo";
 		dev_name = "ionvideo";

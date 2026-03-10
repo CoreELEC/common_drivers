@@ -754,15 +754,6 @@
 	};
 };
 
-&codec_mm {
-	/*
-	 * scatter_alloc_mode: the mode of scatter memory allocation
-	 * 0: default mode, alloc from system and cma
-	 * 1: only alloc from system
-	 */
-	scatter_alloc_mode = <1>;
-};
-
 &hdmirx {
 	status = "disabled";
 	pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux

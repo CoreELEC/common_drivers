@@ -220,12 +220,7 @@
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
 	};
-	codec_mm {
-		compatible = "amlogic, codec, mm";
-		memory-region = <&codec_mm_cma &codec_mm_reserved>;
-		dev_name = "codec_mm";
-		status = "okay";
-	};
+
 	amdolby_vision {
 		compatible = "amlogic, dolby_vision_sc2";
 		dev_name = "aml_amdolby_vision_driver";
@@ -1239,6 +1234,10 @@
 &amlogic_codec {
 	tocodec_inout = <1>;
 	tdmout_index = <1>;
+};
+
+&codec_mm {
+	memory-region = <&codec_mm_cma &codec_mm_reserved>;
 };
 
 &amlvecm {

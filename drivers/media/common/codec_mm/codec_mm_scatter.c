@@ -3719,7 +3719,7 @@ static u32 codec_mm_get_scatter_alloc_mode(struct codec_mm_scatter_mgt *smgt)
 		codec_mm_get_property_from_dts("scatter_alloc_mode");
 
 	if (alloc_mode < 0)
-		alloc_mode = SCATTER_ALLOC_FROM_DEFAULT;
+		alloc_mode = SCATTER_ALLOC_FROM_SYS;
 
 	return alloc_mode;
 }

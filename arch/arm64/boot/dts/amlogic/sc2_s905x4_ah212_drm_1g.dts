@@ -616,15 +616,6 @@
 	};/* Audio Related end */
 };
 
-&codec_mm {
-  /*
-   * scatter_alloc_mode: the mode of scatter memory allocation
-   * 0: default mode, alloc from system and cma
-   * 1: only alloc from system
-   */
-	scatter_alloc_mode = <1>;
-};
-
 &amlvideo2_1 {
 	/delete-property/ codec_mm_alloc;
 };
