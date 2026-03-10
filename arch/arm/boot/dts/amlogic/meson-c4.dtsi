@@ -787,20 +787,17 @@
 			};
 
 			saradc: adc@26000 {
-				compatible = "amlogic,meson-c2-saradc",
-					"amlogic,meson-saradc";
+				compatible = "amlogic,meson-s7-saradc",
+					     "amlogic,meson-saradc";
 				reg = <0x26000 0xf0>;
 				#io-channel-cells = <1>;
-				//power-domains = <&pwrdm PDID_CX_I2C>;
 				interrupts = <GIC_SPI 181 IRQ_TYPE_EDGE_RISING>;
 				clocks = <&scmi_clk CLKID_OSC>,
-					<&clkc CLKID_SYS_SAR_ADC>,
-					<&clkc CLKID_SAR_ADC>,
-					<&clkc CLKID_SAR_ADC_MUX>;
-				clock-names = "clkin", "core",
-					"adc_clk", "adc_sel";
+					 <&clkc CLKID_SYS_SAR_ADC>,
+					 <&clkc CLKID_SAR_ADC>,
+					 <&clkc CLKID_SAR_ADC_MUX>;
+				clock-names = "clkin", "core", "adc_clk", "adc_sel";
 				status = "disabled";
-				//amlogic,enable-continuous-sampling;
 			};
 
 			eth_phy: mdio-multiplexer@300000 {
