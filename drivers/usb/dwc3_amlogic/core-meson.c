@@ -283,7 +283,6 @@ void aml_dwc3_set_mode(struct aml_dwc3 *dwc, u32 mode)
 
 	if (dwc->dr_mode != USB_DR_MODE_OTG)
 		return;
-
 	spin_lock_irqsave(&dwc->lock, flags);
 	dwc->desired_dr_role = mode;
 	spin_unlock_irqrestore(&dwc->lock, flags);
@@ -363,7 +362,60 @@ done:
 	return 0;
 }
 #else
-int aml_dwc3_core_soft_reset(struct aml_dwc3 *dwc)
+static int aml_dwc3_core_soft_reset_new(struct aml_dwc3 *dwc)
+{
+	u32		reg;
+	int		retries = 1000;
+
+	/*
+	 * We're resetting only the device side because, if we're in host mode,
+	 * XHCI driver will reset the host block. If dwc3 was configured for
+	 * host-only mode, then we can return early.
+	 */
+	if (dwc->current_dr_role == DWC3_GCTL_PRTCAP_HOST)
+		return 0;
+
+	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+	reg |= DWC3_DCTL_CSFTRST;
+	reg &= ~DWC3_DCTL_RUN_STOP;
+	dwc3_gadget_dctl_write_safe(dwc, reg);
+
+	/*
+	 * For DWC_usb31 controller 1.90a and later, the DCTL.CSFRST bit
+	 * is cleared only after all the clocks are synchronized. This can
+	 * take a little more than 50ms. Set the polling rate at 20ms
+	 * for 10 times instead.
+	 */
+	if (DWC3_VER_IS_WITHIN(DWC31, 190A, ANY) || DWC3_IP_IS(DWC32))
+		retries = 10;
+
+	do {
+		reg = dwc3_readl(dwc->regs, DWC3_DCTL);
+		if (!(reg & DWC3_DCTL_CSFTRST))
+			goto done;
+
+		if (DWC3_VER_IS_WITHIN(DWC31, 190A, ANY) || DWC3_IP_IS(DWC32))
+			msleep(20);
+		else
+			udelay(1);
+	} while (--retries);
+
+	dev_warn(dwc->dev, "DWC3 controller soft reset failed.\n");
+	return -ETIMEDOUT;
+
+done:
+	/*
+	 * For DWC_usb31 controller 1.80a and prior, once DCTL.CSFRST bit
+	 * is cleared, we must wait at least 50ms before accessing the PHY
+	 * domain (synchronization delay).
+	 */
+	if (DWC3_VER_IS_WITHIN(DWC31, ANY, 180A))
+		msleep(50);
+
+	return 0;
+}
+
+int aml_dwc3_core_soft_reset_old(struct aml_dwc3 *dwc)
 {
 	u32		reg;
 	int		ret;
@@ -447,6 +499,14 @@ int aml_dwc3_core_soft_reset(struct aml_dwc3 *dwc)
 err_exit_ulpi:
 	aml_dwc3_ulpi_exit(dwc);
 	return ret;
+}
+
+int aml_dwc3_core_soft_reset(struct aml_dwc3 *dwc)
+{
+	if (DWC3_IP_IS(DWC3) && dwc->revision <= DWC3_REVISION_330A)
+		return aml_dwc3_core_soft_reset_old(dwc);
+	else
+		return aml_dwc3_core_soft_reset_new(dwc);
 }
 #endif
 
@@ -1437,10 +1497,17 @@ static int dwc3_core_init(struct aml_dwc3 *dwc)
 			goto err_exit_ulpi;
 		dwc->phys_ready = true;
 	}
-#if !IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	if (DWC3_IP_IS(DWC3) && dwc->revision > DWC3_REVISION_330A) {
+		ret = dwc3_phy_init(dwc);
+		if (ret)
+			goto err_exit_ulpi;
+	}
+#else
 	ret = dwc3_phy_init(dwc);
-	if (ret)
-		goto err_exit_ulpi;
+		if (ret)
+			goto err_exit_ulpi;
 #endif
 
 	ret = aml_dwc3_core_soft_reset(dwc);
@@ -1732,9 +1799,6 @@ static void dwc3_get_software_properties(struct aml_dwc3 *dwc)
 {
 	struct device *tmpdev;
 	u16 gsbuscfg0_reqinfo;
-#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
-	enum usb_dr_mode dr_mode;
-#endif
 	int ret;
 
 	dwc->gsbuscfg0_reqinfo = DWC3_GSBUSCFG0_REQINFO_UNSPECIFIED;
@@ -1749,18 +1813,8 @@ static void dwc3_get_software_properties(struct aml_dwc3 *dwc)
 					       &gsbuscfg0_reqinfo);
 		if (!ret)
 			dwc->gsbuscfg0_reqinfo = gsbuscfg0_reqinfo;
-#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
-		dr_mode = usb_get_role_switch_default_mode(tmpdev);
-		if (dr_mode != USB_DR_MODE_UNKNOWN)
-			dwc->role_switch_default_mode = dr_mode;
-#endif
+
 	}
-#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
-	if (dwc->role_switch_default_mode != USB_DR_MODE_HOST &&
-			dwc->role_switch_default_mode != USB_DR_MODE_PERIPHERAL)
-		dev_err(dwc->dev,
-			"role_switch_default_mode configuration err.\n");
-#endif
 }
 
 static void dwc3_get_properties(struct aml_dwc3 *dwc)

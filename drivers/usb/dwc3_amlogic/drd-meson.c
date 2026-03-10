@@ -16,6 +16,10 @@
 #include "core-meson.h"
 #include "gadget-meson.h"
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+#include "../usb_main.h"
+#endif
+
 static void dwc3_otg_disable_events(struct aml_dwc3 *dwc, u32 disable_mask)
 {
 	u32 reg = dwc3_readl(dwc->regs, DWC3_OEVTEN);
@@ -499,11 +503,16 @@ static enum usb_role dwc3_usb_role_switch_get(struct usb_role_switch *sw)
 static int dwc3_setup_role_switch(struct aml_dwc3 *dwc)
 {
 	struct usb_role_switch_desc dwc3_role_switch = {NULL};
-	u32 mode;
+	u32 mode, force_mode;
 
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
-	if (!dwc->role_switch_default_mode)
-		dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
+	if (!dwc->role_switch_default_mode) {
+		force_mode = get_otg_mode();
+		if (force_mode == 1)
+			dwc->role_switch_default_mode = USB_DR_MODE_PERIPHERAL;
+		else
+			dwc->role_switch_default_mode = USB_DR_MODE_HOST;
+	}
 #else
 	dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
 #endif
@@ -516,6 +525,9 @@ static int dwc3_setup_role_switch(struct aml_dwc3 *dwc)
 	}
 	aml_dwc3_set_mode(dwc, mode);
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	dwc3_role_switch.allow_userspace_control = true;
+#endif
 	dwc3_role_switch.fwnode = dev_fwnode(dwc->dev);
 	dwc3_role_switch.set = dwc3_usb_role_switch_set;
 	dwc3_role_switch.get = dwc3_usb_role_switch_get;

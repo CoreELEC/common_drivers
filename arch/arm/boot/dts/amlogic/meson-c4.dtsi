@@ -1311,7 +1311,6 @@
 		phys = <&u2paport0>;
 		phy-names = "usb2-phy";
 		interrupts = <GIC_SPI 129 IRQ_TYPE_EDGE_RISING>;
-		dr_mode = "otg";
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -1329,8 +1328,8 @@
 		status = "disable";
 		compatible = "snps,dwc3-meson";
 		maximum-speed = "high-speed";
-		//dr_mode = "host";
-		dr_mode = "peripheral";
+		dr_mode = "otg"; /*using role control mode, this must be otg*/
+		//dr_mode = "peripheral";
 		phy_type = "utmi";
 		reg = <0xf4000000 0x10000>;
 		interrupts = <GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>;

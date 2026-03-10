@@ -332,15 +332,9 @@ static int dwc3_otg_mode_configure(struct dwc3_otg	*dwc3_otg)
 static int dwc3_otg_probe(struct platform_device *pdev)
 {
 	struct device		*dev = &pdev->dev;
-	struct device_node	*node = dev->of_node;
 	struct dwc3_otg	*dwc3_otg;
 	struct amlogic_otg_helper	*otg;
 	int			ret;
-
-	if (!node) {
-		dev_err(dev, "device node not found\n");
-		return -EINVAL;
-	}
 
 	dwc3_otg = devm_kzalloc(dev, sizeof(*dwc3_otg), GFP_KERNEL);
 	if (!dwc3_otg)
@@ -447,7 +441,7 @@ static struct platform_driver dwc3_otg_driver = {
 	.probe		= dwc3_otg_probe,
 	.remove_new	= dwc3_otg_remove,
 	.driver		= {
-		.name	= "meson-dwc3",
+		.name	= "meson-dwc3-otg",
 		.pm	= pm_ptr(&dwc3_otg_dev_pm_ops),
 		.of_match_table	= dwc3_otg_of_match,
 	},

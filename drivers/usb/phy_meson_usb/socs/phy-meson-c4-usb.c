@@ -101,12 +101,13 @@ static int meson_usb2phy_c4_set_mode
 	if (mode == MESON_USB_MODE_HOST) {
 		val &= ~BIT(25);
 		writel(val, cfg2_reg + 0x88);
-		dev_err(mphy->dev, "set host mode\n");
+		dev_info(mphy->dev, "set host mode\n");
 	} else {
 		val |= BIT(25);
 		writel(val, cfg2_reg + 0x88);
-		dev_err(mphy->dev, "set device mode\n");
+		dev_info(mphy->dev, "set device mode\n");
 	}
+	usleep_range(20, 30);
 
 	return 0;
 }

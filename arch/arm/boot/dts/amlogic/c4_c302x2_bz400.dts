@@ -388,8 +388,9 @@
 };
 
 &dwc3otg {
-	status = "disable";
-	controller-type = <1>;
+	status = "disabled";
+	dr_mode = "otg"; /*otg, host,peripheral */
+	controller-type = <1>; /*3:otg, 1: host,2:peripheral */
 };
 
 &dwc3a {
