@@ -1257,7 +1257,7 @@
 		dev_name = "adla";
 		status = "okay";
 		reg = <0xfe04a000 0x2000
-			0xf3C00000 0x20000
+			0xf3C05000 0x20000
 			>;
 		reg-names = "adla_reg\0adla_sram";
 		interrupt-names = "adla";
@@ -1267,6 +1267,7 @@
 		power-domains=<&pwrdm PDID_C4_NNA>;
 		nn_hw_version="r0p1";
 		adla_core_clk_rate = <800000000>;
+		adla_smc_cmd = <0x820000b2>;
 		//memory-region = <&nna_cma_reserved>;
 	};
 	pwrdm: power-domains {
