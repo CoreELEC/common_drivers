@@ -81,6 +81,7 @@ struct meson_pwm_tee {
 	struct meson_pwm_variant_n variant;
 	void __iomem *base;
 	u32 tee_id;
+	u32 smc_id;
 	/*
 	 * Protects register (write) access to the PWM_MISC_REG register
 	 * that is shared between the two PWMs.

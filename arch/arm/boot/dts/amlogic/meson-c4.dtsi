@@ -661,7 +661,7 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_K>;
 				clock-names = "clkin0";
-				tee_id = <8>;
+				tee_id = <10>;
 				status = "disabled";
 			};
 
@@ -671,7 +671,7 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_L>;
 				clock-names = "clkin0";
-				tee_id = <9>;
+				tee_id = <11>;
 				status = "disabled";
 			};
 
@@ -681,7 +681,7 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_M>;
 				clock-names = "clkin0";
-				tee_id = <8>;
+				tee_id = <12>;
 				status = "disabled";
 			};
 
@@ -691,7 +691,7 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_N>;
 				clock-names = "clkin0";
-				tee_id = <9>;
+				tee_id = <13>;
 				status = "disabled";
 			};
 

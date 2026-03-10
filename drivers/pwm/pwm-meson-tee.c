@@ -76,7 +76,7 @@ static int pwm_constant_enable_tee(struct meson_pwm_tee *meson, struct pwm_devic
 	struct arm_smccc_res res;
 	struct meson_pwm_tee_channel *channel = &meson->channels[pwm->hwpwm];
 
-	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+	arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_CONSTANT_EN, FIELD_PREP(PWM_HIGH_MASK, channel->hi) |
 		FIELD_PREP(PWM_LOW_MASK, channel->lo), 0, 0, 0, &res);
 #else
@@ -92,7 +92,7 @@ static int pwm_constant_disable_tee(struct meson_pwm_tee *meson, struct pwm_devi
 	struct arm_smccc_res res;
 	struct meson_pwm_tee_channel *channel = &meson->channels[pwm->hwpwm];
 
-	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+	arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 			SECID_PWM_CONSTANT_DIS, FIELD_PREP(PWM_HIGH_MASK, channel->hi) |
 		FIELD_PREP(PWM_LOW_MASK, channel->lo), 0, 0, 0, &res);
 #else
@@ -184,7 +184,7 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 		writel(readl(meson->base + PWM_MISC_REG) | MISC_EN,
 			meson->base + PWM_MISC_REG);
 	#else
-		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+		arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_MAIN, value, 0, 0, 0, &res);
 	#endif
 	break;
@@ -194,7 +194,7 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 		writel(readl(meson->base + PWM_MISC_REG) | MISC_EN_SUB,
 			meson->base + PWM_MISC_REG);
 	#else
-		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+		arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_SUB, value, 0, 0, 0, &res);
 	#endif
 		break;
@@ -205,7 +205,7 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 	#ifdef CONFIG_AMLOGIC_PWM_MESON_TEE_NO_SMC
 	writel(value, meson->base + REG_PWM);
 	#else
-	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+	arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_ENABLE_MAIN, value, 0, 0, 0, &res);
 	#endif
 #endif
@@ -240,7 +240,7 @@ static void meson_pwm_tee_disable(struct meson_pwm_tee *meson, struct pwm_device
 		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN),
 			meson->base + PWM_MISC_REG);
 	#else
-		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+		arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_MAIN,  0, 0, 0, 0, &res);
 	#endif
 		break;
@@ -249,7 +249,7 @@ static void meson_pwm_tee_disable(struct meson_pwm_tee *meson, struct pwm_device
 		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN_SUB),
 			meson->base + PWM_MISC_REG);
 	#else
-		arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+		arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_SUB,  0, 0, 0, 0, &res);
 		break;
 	#endif
@@ -261,7 +261,7 @@ static void meson_pwm_tee_disable(struct meson_pwm_tee *meson, struct pwm_device
 		writel(readl(meson->base + PWM_MISC_REG) & (~MISC_EN),
 			meson->base + PWM_MISC_REG);
 	#else
-	arm_smccc_smc(SECURE_PWM_I2C, SECID_PWM, meson->tee_id,
+	arm_smccc_smc(meson->smc_id, SECID_PWM, meson->tee_id,
 				 SECID_PWM_DISABLE_MIAN, 0, 0, 0, 0, &res);
 	#endif
 #endif
@@ -435,6 +435,8 @@ static int meson_pwm_tee_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "not config tee_id\n");
 		return err;
 	}
+	if (of_property_read_u32(pdev->dev.of_node, "arm,smc-id", &meson->smc_id))
+		meson->smc_id = SECURE_PWM_I2C;
 	// meson->base = devm_platform_ioremap_resource(pdev, 0);
 
 	spin_lock_init(&meson->lock);
