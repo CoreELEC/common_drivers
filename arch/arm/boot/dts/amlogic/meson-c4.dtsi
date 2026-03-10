@@ -776,13 +776,14 @@
 				pinctrl-0 = <&f_uart_pins1>;
 			};
 
-			watchdog {
-				compatible = "arm,smc-wdt";
-				arm,smc-id = <0x8200004f>;
+			watchdog@2100 {
+				compatible = "amlogic,meson-a4-wdt";
+				status = "okay";
 				/* 0:userspace, 1:kernel */
 				amlogic,feed_watchdog_mode = <1>;
-				timeout-sec = <60>;
-				status = "disabled";
+				reg = <0x2100 0x10>, <0x2124 0x04>;
+				interrupts = <GIC_SPI 9 IRQ_TYPE_EDGE_RISING>;
+				clocks = <&scmi_clk CLKID_OSC>;
 			};
 
 			saradc: adc@26000 {
