@@ -1127,7 +1127,7 @@ static const char * const spi_a_groups[] = {
 	"spi_a_ss0_x",  "spi_a_ss1_c",  "spi_a_ss1_x",  "spi_a_ss2_x",
 	"spi_a_miso_c", "spi_a_miso_m", "spi_a_miso_x", "spi_a_mosi_c",
 	"spi_a_mosi_m", "spi_a_mosi_x", "spi_a_sclk_c", "spi_a_sclk_m",
-	"spi_a_sclk_x"
+	"spi_a_sclk_x", "spi_a_miso_m4", "spi_a_mosi_m5"
 };
 
 static const char * const spi_b_groups[] = {

@@ -24,6 +24,8 @@
 		i2c3 = &i2c3;
 		i2c4 = &i2c4;
 		spi0 = &spi_nfc;
+		spi1 = &spicc0;
+		spi2 = &spicc1;
 		tsensor0 = &tsensor;
 	};
 
@@ -827,4 +829,16 @@
 
 &freertos {
 	status = "disabled";
+};
+
+&spicc0 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc0_pins_m>;
+};
+
+&spicc1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc1_pins_d>;
 };
