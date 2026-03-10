@@ -4045,10 +4045,10 @@ static int config_crop_param(struct composer_dev *dev,
 		} else {
 			vf->crop[0] = frame_info->crop_y;
 			vf->crop[1] = frame_info->crop_x;
-			vf->crop[2] = pic_h
+			vf->crop[2] = (pic_h >> vf->dpss_pps_dsy)
 				- frame_info->crop_h
 				- frame_info->crop_y;
-			vf->crop[3] = pic_w
+			vf->crop[3] = (pic_w >> vf->dpss_pps_dsx)
 				- frame_info->crop_w
 				- frame_info->crop_x;
 			vc_print(dev->index, PRINT_AXIS,

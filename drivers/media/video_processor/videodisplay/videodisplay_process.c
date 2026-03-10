@@ -3282,8 +3282,8 @@ static void vframe_display(struct videodisplay_dev *dev,
 	}
 	vf->crop[0] = frame_info->crop_y;
 	vf->crop[1] = frame_info->crop_x;
-	vf->crop[2] = pic_h - (frame_info->crop_h << vf->dpss_pps_dsy) - frame_info->crop_y;
-	vf->crop[3] = pic_w - (frame_info->crop_w << vf->dpss_pps_dsx) - frame_info->crop_x;
+	vf->crop[2] = (pic_h >> vf->dpss_pps_dsy) - frame_info->crop_h - frame_info->crop_y;
+	vf->crop[3] = (pic_w >> vf->dpss_pps_dsx) - frame_info->crop_w - frame_info->crop_x;
 	vf->zorder = frame_info->zorder;
 	vf->flag |= VFRAME_FLAG_VIDEO_COMPOSER | VFRAME_FLAG_VIDEO_COMPOSER_BYPASS;
 	if (frame_info->rotation == VC_TRANSFORM_ROT_180) {
