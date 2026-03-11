@@ -362,18 +362,21 @@
 			reg = <0xfe088000 0x800>,
 			      <0xfe000168 0x4>,
 			      <0xfe00400c 0x4>;
-				status = "disabled";
+			status = "disabled";
 			interrupts = <GIC_SPI 176 IRQ_TYPE_EDGE_RISING>;
 			clocks = <&clkc CLKID_SYS_SD_EMMC_A>,
 				<&clkc CLKID_SD_EMMC_A_MUX>,
 				<&clkc CLKID_SD_EMMC_A>,
 				<&scmi_clk CLKID_OSC>,
 				<&clkc CLKID_FCLK_DIV2>;
-				clock-names = "core", "mux0", "mux1",
-						"clkin0", "clkin1";
+				clock-names = "core", "mux0", "mux1", "clkin0", "clkin1";
 			card_type = <3>;
 			mmc_debug_flag;
 			auto-clock-sdio;
+			cap-sdio-irq;
+			keep-power-in-suspend;
+			no-mmc;
+			no-sd;
 			// resets = <&reset RESET_SD_EMMC_A>;
 		};
 
@@ -735,7 +738,7 @@
 				clock-names = "clk_uart", "clk_gate";
 				fifosize = < 64 >;
 				pinctrl-names = "default";
-				pinctrl-0 = <&c_uart_pins1>;
+				pinctrl-0 = <&c_uart_pins5>;
 			};
 
 			uart_D: serial@7e000 {
@@ -1383,23 +1386,19 @@
 	aml_wifi: aml_wifi {
 		compatible = "amlogic, aml-wifi";
 		status = "disabled";
+		wifi_pwm_tee;
 		irq_trigger_type = "IRQF_TRIGGER_LOW";
 		//power_on-gpios = <&gpio       GPIOM_6       GPIO_ACTIVE_HIGH>;
 		//interrupt-gpios = <&gpio       GPIOM_7       GPIO_ACTIVE_HIGH>;
-		wifi_static_buf = <0>; //if use bcm wifi, config dhd_static_buf
-		pwm_config = <&wifi_pwm_conf>;
-	};
-
-	wifi_pwm_conf:wifi_pwm_conf{
 		pwm_channel1_conf {
-			// pwms = <&pwm_ef MESON_PWM_0 30541 0>;
+			pwms = <&pwm_n 0 30541 0>;
 			duty-cycle = <15270>;
-			times = <10>;
+			times = <40>;
 		};
 		pwm_channel2_conf {
-			// pwms = <&pwm_ef MESON_PWM_2 30500 0>;
-			duty-cycle = <15250>;
-			times = <12>;
+			pwms = <&pwm_n 1 30600 0>;
+			duty-cycle = <15300>;
+			times = <10>;
 		};
 	};
 
@@ -2030,7 +2029,9 @@
 	c_uart_pins5:c_uart5 {
 		mux {
 			groups = "uart_c_tx_m2",
-				"uart_c_rx_m3";
+				"uart_c_rx_m3",
+				"uart_c_cts_m4",
+				"uart_c_rts_m5";
 			function = "uart_c";
 			bias-pull-up;
 			drive-strength-microamp = <3000>;

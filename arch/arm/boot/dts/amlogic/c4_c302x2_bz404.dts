@@ -13,9 +13,9 @@
 
 	aliases {
 		serial0 = &uart_B;
-		serial1 = &uart_E;
+		serial1 = &uart_C;
 		serial2 = &uart_A;
-		serial3 = &uart_C;
+		serial3 = &uart_E;
 		serial4 = &uart_D;
 		serial5 = &uart_F;
 		i2c0 = &i2c0;
@@ -466,7 +466,7 @@
 };
 
 &sd_emmc_a {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&sdio_m_pins>;
 	pinctrl-1 = <&sdio_m_clk_gate_pins>;
 	pinctrl-names = "default", "clk-gate";
@@ -476,8 +476,6 @@
 	non-removable;
 	max-frequency = <200000000>;
 	disable-wp;
-	cap-sdio-irq;
-	keep-power-in-suspend;
 };
 
 &eth_phy {
@@ -494,12 +492,24 @@
 	amlogic,wol-enable;
 };
 
+&pwm_n {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm_n_ao_pins1>;
+};
+
 &aml_wifi {
-	status = "disabled";
+	status = "okay";
+	interrupt-gpios = <&ao_gpio  GPIOAO_10  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&ao_gpio   GPIOAO_2  GPIO_ACTIVE_HIGH>;
 };
 
 &aml_bt {
-	status = "disabled";
+	status = "okay";
+};
+
+&uart_C {
+	status = "okay";
 };
 
 &mtd_nand {
