@@ -11608,6 +11608,8 @@ void vd1_dpss_switch_proc(struct vframe_s *vf,
 #endif
 			set_dpss_mode(0);
 			p->path_mux = PATH_VD1;
+			p->delink_status = LINK_ON;
+			muxio_ready_flag = 0;
 			if (p->mute_cnt) {
 				set_video_mute(PATH_SW_MUTE_SET, false);
 				p->mute_cnt = 0;
