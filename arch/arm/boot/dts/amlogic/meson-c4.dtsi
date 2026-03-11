@@ -9,7 +9,6 @@
 #include <dt-bindings/clock/amlogic,c4-scmi-clks.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-c4-gpio.h>
-#include <dt-bindings/clock/amlogic,c3-audio-clk.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include <dt-bindings/reset/amlogic,meson-c4-reset.h>
@@ -1020,41 +1019,6 @@
 					<700000 100>;
 			status = "okay";
 		};
-
-		/* Audio Related start */
-		clkaudio: audio_clocks {
-			compatible = "amlogic, c3-audio-clocks";
-			#clock-cells = <1>;
-			reg = <0xFE330000 0xb0>;
-			status = "disabled";
-		};
-		audiobus: audiobus@FE330000 {
-			compatible = "amlogic, audio-controller", "simple-bus";
-			#address-cells = <1>;
-			#size-cells = <1>;
-			reg = <0xFE330000 0x3000>;
-			ranges = <0x0 0xFE330000 0x3000>;
-			status = "disabled";
-			//power-domains = <&pwrdm PDID_CX_AUDIO>;
-
-			ddr_manager {
-				compatible = "amlogic, c3-audio-ddr-manager";
-				interrupts = <
-					GIC_SPI 32 IRQ_TYPE_EDGE_RISING
-					GIC_SPI 33 IRQ_TYPE_EDGE_RISING
-					GIC_SPI 36 IRQ_TYPE_EDGE_RISING
-					GIC_SPI 37 IRQ_TYPE_EDGE_RISING
-					GIC_SPI 38 IRQ_TYPE_EDGE_RISING
-				>;
-				interrupt-names =
-					"toddr_a", "toddr_b",
-					"frddr_a", "frddr_b", "frddr_c";
-			};
-
-			pinctrl_audio: pinctrl {
-				compatible = "amlogic, audio-pinctrl";
-			};
-		};/* end of audiobus*/
 	};
 
 	meson_cooldev: meson-cooldev@0 {
