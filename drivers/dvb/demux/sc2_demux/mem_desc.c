@@ -419,8 +419,10 @@ static int dmc_range_init(struct dmc_range *range, int sec_level)
 	}
 	pr_dbg_mem("dmc mem init phy:0x%lx, virt:0x%lx, len:%d\n",
 		buf_start, buf_start_virt, len);
-	memset((char *)buf_start_virt, 0, len);
-	codec_mm_dma_flush((void *)buf_start_virt, len, DMA_TO_DEVICE);
+	if (debug_mem_desc == 2) {
+		memset((char *)buf_start_virt, 0, len);
+		codec_mm_dma_flush((void *)buf_start_virt, len, DMA_TO_DEVICE);
+	}
 	range->level = sec_level;
 	if (sec_level) {
 		sec_level = sec_level == 1 ? 0 : sec_level;
@@ -1048,7 +1050,7 @@ int _alloc_buff(unsigned int len, int sec_level,
 success_handle:
 	pr_dbg_mem("alloc buf, phy:0x%lx, virt:0x%lx, len:%d, alloc_pos:%d\n",
 		buf_start, buf_start_virt, len, alloc_pos);
-	if (!sec_level)
+	if (!sec_level && debug_mem_desc == 2)
 		memset((char *)buf_start_virt, 0xa5, len);
 	*vir_mem = buf_start_virt;
 	*phy_mem = buf_start;
