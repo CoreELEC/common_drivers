@@ -2523,36 +2523,32 @@ static void nr_ctrl_regs_init(struct NR_CTRL_REGS_s *pnr_regs)
 
 void nr_drv_uninit(struct device *dev)
 {
-	if (nr_param.pnr4_parm) {
-		vfree(nr_param.pnr4_parm);
-		nr_param.pnr4_parm = NULL;
-	}
-	if (nr_param.pnr_regs) {
-		vfree(nr_param.pnr_regs);
-		nr_param.pnr_regs = NULL;
-	}
-	if (nr_param.pcue_parm) {
-		vfree(nr_param.pcue_parm);
-		nr_param.pcue_parm = NULL;
-	}
-	if (nr_param.pnr4_neparm) {
-		vfree(nr_param.pnr4_neparm);
-		nr_param.pnr4_neparm = NULL;
-	}
-	if (nr_param.pautonr_parm) {
-		vfree(nr_param.pautonr_parm);
-		nr_param.pautonr_parm = NULL;
-	}
+	kfree(nr_param.pnr4_parm);
+	nr_param.pnr4_parm = NULL;
+
+	kfree(nr_param.pnr_regs);
+	nr_param.pnr_regs = NULL;
+
+	kfree(nr_param.pcue_parm);
+	nr_param.pcue_parm = NULL;
+
+	kfree(nr_param.pnr4_neparm);
+	nr_param.pnr4_neparm = NULL;
+
+	kfree(nr_param.pautonr_parm);
+	nr_param.pautonr_parm = NULL;
+
 	device_remove_file(dev, &dev_attr_nr4_param);
 	device_remove_file(dev, &dev_attr_dnr_param);
 	device_remove_file(dev, &dev_attr_nr_debug);
 	device_remove_file(dev, &dev_attr_secam);
 	device_remove_file(dev, &dev_attr_autonr_param);
 }
+
 void nr_drv_init(struct device *dev)
 {
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
-		nr_param.pnr4_parm = vmalloc(sizeof(struct NR4_PARM_s));
+		nr_param.pnr4_parm = kmalloc(sizeof(*nr_param.pnr4_parm), GFP_KERNEL);
 		if (IS_ERR(nr_param.pnr4_parm))
 			pr_err("%s allocate nr4 parm error.\n", __func__);
 		else {
@@ -2561,13 +2557,13 @@ void nr_drv_init(struct device *dev)
 			device_create_file(dev, &dev_attr_nr4_param);
 		}
 	}
-	nr_param.pnr_regs = vmalloc(sizeof(struct NR_CTRL_REGS_s));
+	nr_param.pnr_regs = kmalloc(sizeof(*nr_param.pnr_regs), GFP_KERNEL);
 	if (IS_ERR(nr_param.pnr_regs))
 		pr_err("%s allocate ctrl regs error.\n", __func__);
 	else
 		nr_ctrl_regs_init(nr_param.pnr_regs);
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX)) {
-		nr_param.pcue_parm = vmalloc(sizeof(struct CUE_PARM_s));
+		nr_param.pcue_parm = kmalloc(sizeof(*nr_param.pcue_parm), GFP_KERNEL);
 		if (IS_ERR(nr_param.pcue_parm))
 			pr_err("%s allocate cue parm error.\n", __func__);
 		else
@@ -2575,15 +2571,16 @@ void nr_drv_init(struct device *dev)
 	}
 
 	if (IS_IC(dil_get_cpuver_flag(), T3) && nr4ne_en) {
-		nr_param.pnr4_neparm = vmalloc(sizeof(struct NR4_NEPARM_S));
+		nr_param.pnr4_neparm = kmalloc(sizeof(*nr_param.pnr4_neparm), GFP_KERNEL);
 		if (IS_ERR(nr_param.pnr4_neparm))
 			pr_err("%s allocate ne parm error.\n", __func__);
 		else
 			nr4_neparam_init(nr_param.pnr4_neparm);
 	}
+
 	if (((IS_IC_EF(dil_get_cpuver_flag(), T3)) ||
 	     IS_IC(dil_get_cpuver_flag(), T5DB)) && autonr_en) {
-		nr_param.pautonr_parm = vmalloc(sizeof(*nr_param.pautonr_parm));
+		nr_param.pautonr_parm = kmalloc(sizeof(*nr_param.pautonr_parm), GFP_KERNEL);
 		if (IS_ERR(nr_param.pautonr_parm)) {
 			pr_err("%s allocate autonr parm error.\n", __func__);
 		} else {

@@ -12173,13 +12173,13 @@ static struct di_pq_parm_s *di_pq_parm_create(struct am_pq_parm_s *pq_parm_p)
 	struct am_reg_s *am_reg_p = NULL;
 	size_t mem_size = 0;
 
-	pq_ptr = vzalloc(sizeof(*pq_ptr));
+	pq_ptr = kmalloc(sizeof(*pq_ptr), GFP_KERNEL);
 	mem_size = sizeof(struct am_pq_parm_s);
 	memcpy(&pq_ptr->pq_parm, pq_parm_p, mem_size);
 	mem_size = sizeof(struct am_reg_s) * pq_parm_p->table_len;
-	am_reg_p = vzalloc(mem_size);
+	am_reg_p = kmalloc(mem_size, GFP_KERNEL);
 	if (!am_reg_p) {
-		vfree(pq_ptr);
+		kfree(pq_ptr);
 		PR_ERR("alloc pq table memory errors\n");
 		return NULL;
 	}
@@ -12194,8 +12194,8 @@ static void di_pq_parm_destroy(struct di_pq_parm_s *pq_ptr)
 		PR_ERR("%s pq parm pointer null.\n", __func__);
 		return;
 	}
-	vfree(pq_ptr->regs);
-	vfree(pq_ptr);
+	kfree(pq_ptr->regs);
+	kfree(pq_ptr);
 }
 
 /*move from ioctrl*/
