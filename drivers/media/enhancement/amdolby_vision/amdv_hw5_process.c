@@ -2090,7 +2090,7 @@ int amdv_parse_metadata_hw5(struct vframe_s *vf,
 		if (prm_dolby.vds_4k1k_en)
 			h = h >> 1;
 
-		if (enable_top1) {
+		if (enable_top1 || check_cfg_enabled_top1()) {
 			if (vf->src_fmt.py_level != last_top2_level) {
 				if (debug_dolby & 0x80000)
 					pr_dv_dbg("top2 py_level chg %s->%s\n",
