@@ -1463,8 +1463,14 @@ bool rx_edid_set_aud_sad(u_char *sad, u_char len)
 	}
 	hdmi_rx_top_edid_update(rx_info.main_port);
 	if (rx_info.main_port_open && rx_info.main_port != rx_info.arc_port) {
-		if (atmos_edid_update_hpd_en)
+		if (atmos_edid_update_hpd_en) {
+			if (rx_info.main_port_open &&
+				rx[rx_info.main_port].state == FSM_SIG_READY) {
+				hdmirx_mute_vpp(true, rx_info.main_port);
+				rx[rx_info.main_port].vpp_mute_cnt = vpp_mute_cnt;
+			}
 			rx_send_hpd_pulse(rx_info.main_port);
+		}
 		if (log_level & AUDIO_LOG)
 			rx_pr("*update aud SAD len: %d*\n", len);
 	} else {

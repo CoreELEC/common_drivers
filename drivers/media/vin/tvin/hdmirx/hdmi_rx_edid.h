@@ -22,7 +22,8 @@
 //2025.11.04 fix VRR range, update Freesync range
 //2025.11.24 fix DTD offset error
 //2025.12.15 update vrr range once
-#define RX_EDID_H_VER "ver.2025/12/15"
+//2026.04.01 add mute before update edid
+#define RX_EDID_H_VER "ver.2026/04/01"
 
 #define EDID_EXT_BLK_OFF	128
 #define EDID_BLK_SIZE		128
