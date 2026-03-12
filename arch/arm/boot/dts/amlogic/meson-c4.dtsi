@@ -1621,6 +1621,15 @@
 		kt_host_key_max_len = <32>;
 		status = "okay";
 	};
+
+	jtag {
+		compatible = "amlogic, jtag";
+		status = "okay";
+		select = "disable"; /* disable/jtag_a/jtag_b */
+		pinctrl-names="jtag_a_pins", "jtag_b_pins";
+		pinctrl-0=<&jtag_a_pins>;
+		pinctrl-1=<&jtag_b_pins>;
+	};
 };
 
 /* add pin mux here */
