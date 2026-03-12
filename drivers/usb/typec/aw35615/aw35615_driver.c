@@ -18,6 +18,10 @@
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/of_device.h>
+#ifdef MESON_AW
+#include <linux/usb/role.h>
+#include "typec-aw35615-trace.h"
+#endif
 #include <linux/usb/typec.h>
 #include <linux/extcon-provider.h>
 #include <linux/interrupt.h>
@@ -93,6 +97,11 @@ static void aw35615_init_delay_work(struct work_struct *work)
 		if (!chip->queued) {
 			chip->queued = AW_TRUE;
 			AW_LOG("Plug-in typec power-on interrupt detection\n");
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_queue_sm, "%s queue sm_worker.\n",
+				__func__);
+			//AW_LOG("queue sm_worker.\n");
+#endif
 			queue_work(chip->highpri_wq, &chip->sm_worker);
 		}
 	}
@@ -286,6 +295,17 @@ const struct typec_operations typec_ops = {
 	.port_type_set = aw35615_typec_port_type_set,
 };
 
+#ifdef MESON_AW
+static struct fwnode_handle *aw35615_fwnode_get(struct device *dev)
+{
+	struct fwnode_handle *fwnode;
+
+	fwnode = device_get_named_child_node(dev, "connector");
+
+	return fwnode;
+}
+#endif
+
 #ifdef AW_KERNEL_VER_OVER_6_6_0
 static int aw35615_probe(struct i2c_client *client)
 #else
@@ -388,6 +408,12 @@ static int aw35615_probe(struct i2c_client *client, const struct i2c_device_id *
 	INIT_DELAYED_WORK(&chip->init_delay_work, aw35615_init_delay_work);
 	schedule_delayed_work(&chip->init_delay_work, msecs_to_jiffies(3000));
 
+#ifdef MESON_AW
+	/* not in the android abi list. */
+	//typec_get_fw_cap(&chip->typec_caps, aw35615_fwnode_get(&client->dev));
+	chip->typec_caps.fwnode = aw35615_fwnode_get(&client->dev);
+#endif
+
 	chip->typec_caps.type = TYPEC_PORT_DRP;
 	chip->typec_caps.data = TYPEC_PORT_DRD;
 	chip->typec_caps.revision = 0x0130;
@@ -395,6 +421,16 @@ static int aw35615_probe(struct i2c_client *client, const struct i2c_device_id *
 	chip->typec_caps.ops = &typec_ops;
 	chip->typec_caps.driver_data = chip;
 	chip->partner_desc.identity = &chip->partner_identity;
+
+#ifdef MESON_AW
+	chip->role_sw = usb_role_switch_get(&client->dev);
+	if (!chip->role_sw)
+		chip->role_sw = fwnode_usb_role_switch_get(aw35615_fwnode_get(&client->dev));
+	if (IS_ERR(chip->role_sw)) {
+		AW_LOG("could not find usb_role_switch.\n");
+		return PTR_ERR(chip->role_sw);
+	}
+#endif
 
 	chip->typec_port = typec_register_port(chip->dev, &chip->typec_caps);
 	if (IS_ERR(chip->typec_port)) {

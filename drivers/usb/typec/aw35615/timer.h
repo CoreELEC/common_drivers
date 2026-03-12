@@ -18,6 +18,9 @@
 
 /* Struct object to contain the timer related members */
 struct TimerObj {
+#ifdef MESON_AW
+	const char *name;
+#endif
 	AW_U64 starttime_;           /* Time-stamp when timer started */
 	AW_U32 period_;              /* Timer period */
 	AW_U8  disablecount_;        /* Auto-disable timers if they keep getting*/

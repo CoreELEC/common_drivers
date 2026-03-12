@@ -151,6 +151,12 @@
   wakeup_source_create
   wakeup_source_destroy
   wakeup_source_remove
+  device_get_named_child_node
+  fwnode_usb_role_switch_get
+  typec_mux_set
+  typec_set_mode
+  typec_set_orientation
+  usb_role_switch_get
 
 #amlogic-realtek.ko
   devm_clk_get_optional_enabled

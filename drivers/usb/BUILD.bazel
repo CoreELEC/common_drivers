@@ -233,6 +233,8 @@ ddk_module(
                 "typec/aw35615/vdm/vdm.c",
                 "typec/aw35615/vdm/vdm_callbacks.c",
                 "typec/aw35615/vdm/DisplayPort/dp.c",
+                "typec/aw35615/typec-aw35615-dbg.c",
+                "typec/aw35615/typec-aw35615-trace.c",
             ],
         },
         "CONFIG_TYPEC_AW35615_TCPM": {
@@ -242,6 +244,7 @@ ddk_module(
         },
     },
     hdrs = [
+	"//common:drivers/usb/typec/class.h",
     ],
     local_defines = [
         "AW_HAVE_SNK",
@@ -257,15 +260,18 @@ ddk_module(
 	"MESON_AW",
     ],
     linux_includes = [
+	# tell define_trace.h where to find the typec-aw35615 trace header
         "typec/aw35615/",
         "typec/aw35615/modules/",
         "typec/aw35615/vdm/",
         "typec/aw35615/vdm/DisplayPort",
+        "../../../common/drivers/usb/typec",
     ],
     out = "typec-aw35615.ko",
     kernel_build = kernel_select(),
     visibility = ["//visibility:public"],
     deps = [
+        "//common_drivers/drivers/gki_tool:amlogic-gkitool",
         "//common_drivers/drivers/i2c/busses:amlogic-i2c",
         "//common_drivers/drivers/usb:amlogic-usb",
     ]

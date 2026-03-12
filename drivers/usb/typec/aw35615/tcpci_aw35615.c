@@ -705,15 +705,34 @@ static int tcpm_set_vbus(struct tcpc_dev *dev, bool on, bool charge)
 	if (chip->vbus_on == on) {
 		aw35615_log(chip, "vbus is already %s", on ? "On" : "Off");
 	} else {
+#ifdef MESON_AW
+		if (chip->vbus_gpio) {
+			if (on)
+				gpiod_set_value(chip->vbus_gpio, 1);
+			else
+				gpiod_set_value(chip->vbus_gpio, 0);
+		} else {
+			if (on)
+				ret = regulator_enable(chip->vbus);
+			else
+				ret = regulator_disable(chip->vbus);
+			if (ret < 0) {
+				aw35615_log(chip, "cannot %s vbus regulator, ret=%d",
+					on ? "enable" : "disable", ret);
+				goto done;
+			}
+		}
+#else
 		if (on)
 			ret = regulator_enable(chip->vbus);
 		else
 			ret = regulator_disable(chip->vbus);
 		if (ret < 0) {
 			aw35615_log(chip, "cannot %s vbus regulator, ret=%d",
-				    on ? "enable" : "disable", ret);
+				on ? "enable" : "disable", ret);
 			goto done;
 		}
+#endif
 		chip->vbus_on = on;
 		aw35615_log(chip, "vbus := %s", on ? "On" : "Off");
 	}
@@ -1822,6 +1841,12 @@ static int aw35615_probe(struct i2c_client *client)
 	chip->vbus = devm_regulator_get(chip->dev, "vbus");
 	if (IS_ERR(chip->vbus))
 		return PTR_ERR(chip->vbus);
+
+#ifdef MESON_AW
+	chip->vbus_gpio = devm_gpiod_get_index(dev, NULL, 0, GPIOD_OUT_LOW);
+	if (IS_ERR(chip->vbus_gpio))
+		chip->vbus_gpio = NULL;
+#endif
 
 	chip->wq = create_singlethread_workqueue(dev_name(chip->dev));
 	if (!chip->wq)

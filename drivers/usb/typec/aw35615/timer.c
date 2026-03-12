@@ -10,6 +10,9 @@
  ******************************************************************************/
 #include "platform_helpers.h"
 #include "timer.h"
+#ifdef MESON_AW
+#include "typec-aw35615-trace.h"
+#endif
 
 void TimerStart(struct TimerObj *obj, AW_U32 time)
 {
@@ -24,6 +27,9 @@ void TimerStart(struct TimerObj *obj, AW_U32 time)
 		if (obj->period_ == 0)
 			obj->period_ = 1;
 	}
+#ifdef MESON_AW
+	trace_aw35615_timer_start(obj);
+#endif
 }
 
 void TimerRestart(struct TimerObj *obj)
@@ -31,6 +37,9 @@ void TimerRestart(struct TimerObj *obj)
 	/* Grab the current time stamp for the next period. */
 	if (obj != NULL)
 		obj->starttime_ = get_system_time_ms();
+#ifdef MESON_AW
+	trace_aw35615_timer_restart(obj);
+#endif
 }
 
 void TimerDisable(struct TimerObj *obj)
@@ -40,6 +49,9 @@ void TimerDisable(struct TimerObj *obj)
 		obj->starttime_ = obj->period_ = 0;
 		obj->disablecount_ = 0;
 	}
+#ifdef MESON_AW
+	trace_aw35615_timer_disable(obj);
+#endif
 }
 
 AW_BOOL TimerDisabled(struct TimerObj *obj)
@@ -47,6 +59,10 @@ AW_BOOL TimerDisabled(struct TimerObj *obj)
 	/* Zero means disabled */
 	if (obj == NULL)
 		return AW_FALSE;
+
+#ifdef MESON_AW
+	trace_aw35615_timer_disabled(obj, (obj->period_ == 0) ? AW_TRUE : AW_FALSE);
+#endif
 
 	return (obj->period_ == 0) ? AW_TRUE : AW_FALSE;
 }
@@ -73,13 +89,41 @@ AW_BOOL TimerExpired(struct TimerObj *obj)
 		if (obj->disablecount_-- == 0)
 			TimerDisable(obj);
 
+#ifdef MESON_AW
+	trace_aw35615_timer_expired(obj, result);
+#endif
+
 	return result;
 }
 
 AW_U32 TimerRemaining(struct TimerObj *obj)
 {
 	AW_U64 currenttime = get_system_time_ms();
+#ifdef MESON_AW
+	AW_U32 remaining = 0;
 
+	if (!obj) {
+		remaining = 0;
+		goto exit;
+	}
+
+	if (TimerDisabled(obj)) {
+		remaining = 0;
+		goto exit;
+	}
+
+	/* If expired before it could be handled, return a minimum delay. */
+	if (TimerExpired(obj)) {
+		remaining = 1;
+		goto exit;
+	}
+
+	/* Timer hasn't expired, so this should return a valid time left. */
+	remaining = (AW_U32)(obj->starttime_ + obj->period_ - currenttime);
+exit:
+	trace_aw35615_timer_remaining(obj, remaining);
+	return remaining;
+#else
 	if (obj == NULL)
 		return 0;
 
@@ -92,5 +136,6 @@ AW_U32 TimerRemaining(struct TimerObj *obj)
 
 	/* Timer hasn't expired, so this should return a valid time left. */
 	return (AW_U32)(obj->starttime_ + obj->period_ - currenttime);
+#endif
 }
 

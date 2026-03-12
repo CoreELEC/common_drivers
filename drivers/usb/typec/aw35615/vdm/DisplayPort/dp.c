@@ -44,6 +44,10 @@ void DP_Initialize(Port_t *port)
 	if (cap->DfpDCapable)
 		port->DisplayPortData.DpStatus.Connection |= DP_MODE_DFP_D;
 
+#ifdef MESON_AW
+	port->data.status = 0;
+	port->data.conf = 0;
+#endif
 }
 
 void DP_RequestPartnerStatus(struct Port *port)
@@ -72,6 +76,13 @@ void DP_RequestPartnerConfig(struct Port *port, DisplayPortConfig_t in)
 	doDataObject_t svdmh = { 0 };
 	AW_U32 length = 0;
 	AW_U32 arr[2] = { 0 };
+
+#ifdef MESON_AW
+	/* DP Altmode spec 5.4 Figure 5-3. Place Re-purposed USB SuperSpeed Signals
+	 * in the Safe State before sending DP_CONFIG Command.
+	 */
+	platform_dp_enable_pins(port->PortID, AW_FALSE, (AW_U32)(-1));
+#endif
 
 	svdmh.SVDM.SVID = DP_SID;
 	svdmh.SVDM.VDMType = STRUCTURED_VDM;
@@ -134,7 +145,11 @@ static AW_BOOL DP_SelectPinAssignment(struct Port *port)
 	config = &port->DisplayPortData.DpPpConfig;
 
 	/* Plug indicates connections receptacle must use */
+#ifdef MESON_AW
+	config->PinAssign = AW_DP_PIN_ASSIGN_NS;
+#else
 	config->PinAssign = DP_PIN_ASSIGN_NS;
+#endif
 	if (config->Mode == DP_CONF_UFP_D) {
 		/* Configuring as display port sink */
 		if (dpPartnerCap->ReceptacleIndication == DP_Plug)
@@ -159,6 +174,20 @@ static AW_BOOL DP_SelectPinAssignment(struct Port *port)
 
 	/* Match pins assignment C, D, E in order of preference. Lets start with*/
 	/* lowest preference available and then move up */
+#ifdef MESON_AW
+	config->PinAssign = ((DisplayPort_UFP_PinAssign_Start <= 'E') &&
+				(dp_pin_match & AW_DP_PIN_ASSIGN_E)) ?
+				AW_DP_PIN_ASSIGN_E : AW_DP_PIN_ASSIGN_NS;
+	config->PinAssign = ((DisplayPort_UFP_PinAssign_Start <= 'D') &&
+				(dp_pin_match & AW_DP_PIN_ASSIGN_D)) ?
+				AW_DP_PIN_ASSIGN_D : config->PinAssign;
+	config->PinAssign = ((DisplayPort_UFP_PinAssign_Start <= 'C') &&
+				(dp_pin_match & AW_DP_PIN_ASSIGN_C)) ?
+				AW_DP_PIN_ASSIGN_C : config->PinAssign;
+
+	if (config->PinAssign == AW_DP_PIN_ASSIGN_NS)
+		return AW_FALSE;
+#else
 	config->PinAssign = ((DisplayPort_UFP_PinAssign_Start <= 'E') &&
 				(dp_pin_match & DP_PIN_ASSIGN_E)) ?
 				DP_PIN_ASSIGN_E : DP_PIN_ASSIGN_NS;
@@ -171,6 +200,8 @@ static AW_BOOL DP_SelectPinAssignment(struct Port *port)
 
 	if (config->PinAssign == DP_PIN_ASSIGN_NS)
 		return AW_FALSE;
+
+#endif
 
 	return AW_TRUE;
 }
@@ -347,8 +378,13 @@ void DP_SendPortConfig(struct Port *port, doDataObject_t svdmh_in, AW_BOOL succe
 	AW_U32 length_out = 0;
 	AW_U32 arr_out[2] = {0};
 
+#ifndef MESON_AW
+	/* Don't set to USB safe state before ACKing the configure command.
+	 * Spec Doesn't say that.
+	 */
 	/* a callback to platform to put all dp pins to safe state */
 	platform_dp_enable_pins(port->PortID, AW_FALSE, 0);
+#endif
 
 	/*  Reflect most fields */
 	svdmh_out.object = svdmh_in.object;
@@ -465,6 +501,11 @@ void DP_ProcessConfigResponse(struct Port *port, AW_BOOL success)
 			platform_dp_enable_pins(port->PortID, AW_TRUE, port->DisplayPortData.DpPpConfig.word);
 		}
 	}
+#ifdef MESON_AW
+	/* If the CONFIGURE CMD is NAK-ed, back to USB state. */
+	else
+		platform_dp_enable_pins(port->PortID, AW_TRUE, (AW_U32)(-1));
+#endif
 }
 
 /**

@@ -18,6 +18,9 @@
 #include "TypeC.h"
 #include "PDPolicy.h"
 #include "PDProtocol.h"
+#ifdef MESON_AW
+#include "typec-aw35615-trace.h"
+#endif
 
 void StateMachineTypeC(Port_t *port)
 {
@@ -30,6 +33,10 @@ void StateMachineTypeC(Port_t *port)
 	}
 
 	do {
+#ifdef MESON_AW
+		trace_aw35615_sm_loop_head(port);
+#endif
+
 		if (!port->SMEnabled)
 			return;
 
@@ -40,6 +47,12 @@ void StateMachineTypeC(Port_t *port)
 			/* interrupt registers.*/
 			DeviceRead(port, regInterrupta, 5, &port->Registers.Status.byte[2]);
 
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_irq, "ia 0x%02x ib 0x%02x i 0x%02x.\n",
+				port->Registers.Status.byte[2],
+				port->Registers.Status.byte[3],
+				port->Registers.Status.byte[6]);
+#endif
 			// for (int i = 2; i < 7; i++) {
 			// 	AW_LOG("port->Registers.Status.byte[%d] = %#x\n",
 			// 	i, port->Registers.Status.byte[i]);
@@ -49,9 +62,27 @@ void StateMachineTypeC(Port_t *port)
 		if (port->USBPDActive) {
 			port->PEIdle = AW_FALSE;
 
+#ifdef MESON_AW
+			if (port->ProtocolState != port->old_protocol_state) {
+				aw35615_dbg_trace(trace_aw35615_protocol_state_change,
+					"Port%d PROTO_ST %s->%s\n",
+					port->PortID, PRL_STATE_TBL[port->old_protocol_state],
+					PRL_STATE_TBL[port->ProtocolState]);
+				port->old_protocol_state = port->ProtocolState;
+			}
+#endif
 			/* Protocol operations */
 			USBPDProtocol(port);
 
+#ifdef MESON_AW
+			if (port->PolicyState != port->old_policy_state_trace) {
+				aw35615_dbg_trace(trace_aw35615_pe_state_change,
+					"Port%d PE_ST %s->%s\n",
+					port->PortID, PE_STATE_TBL[port->old_policy_state_trace],
+					PE_STATE_TBL[port->PolicyState]);
+				port->old_policy_state_trace = port->PolicyState;
+			}
+#endif
 			/* Policy Engine operations */
 			USBPDPolicyEngine(port);
 
@@ -65,6 +96,11 @@ void StateMachineTypeC(Port_t *port)
 
 		if (port->ConnState != port->old_ConnState) {
 			AW_LOG("Port%d TC_ST=%s\n", port->PortID, TYPEC_STATE_TBL[port->ConnState]);
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_tc_state_change, "Port%d TC_ST %s->%s\n",
+				port->PortID, TYPEC_STATE_TBL[port->old_ConnState],
+				TYPEC_STATE_TBL[port->ConnState]);
+#endif
 			port->old_ConnState = port->ConnState;
 		}
 
@@ -156,6 +192,9 @@ void StateMachineTypeC(Port_t *port)
 		port->Registers.Status.Interrupt1 = 0;
 		port->Registers.Status.InterruptAdv = 0;
 
+#ifdef MESON_AW
+		trace_aw35615_sm_loop_tail(port);
+#endif
 	} while (port->TCIdle == AW_FALSE || port->PEIdle == AW_FALSE);
 
 	/* AW_LOG("exit\n"); */
@@ -441,6 +480,10 @@ void StateMachineAttachWaitSource(Port_t *port)
 	/* Checking pins can cause extra COMP interrupts. */
 	platform_delay_10us(12);
 	DeviceRead(port, regInterrupt, 1, &port->Registers.Status.Interrupt1);
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_irq,
+		"%s clear extra COMP  interrupt.\n", __func__);
+#endif
 
 	debounceCC(port);
 
@@ -721,6 +764,10 @@ void StateMachineDebugAccessorySource(Port_t *port)
 	/* Checking pins can cause extra COMP interrupts. */
 	platform_delay_10us(12);
 	DeviceRead(port, regInterrupt, 1, &port->Registers.Status.Interrupt1);
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_irq,
+		"%s clear extra COMP  interrupt.\n", __func__);
+#endif
 
 	debounceCC(port);
 
@@ -777,6 +824,10 @@ void StateMachineAttachWaitAccessory(Port_t *port)
 	/* Checking pins can cause extra COMP interrupts. */
 	platform_delay_10us(12);
 	DeviceRead(port, regInterrupt, 1, &port->Registers.Status.Interrupt1);
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_irq,
+		"%s clear extra COMP  interrupt.\n", __func__);
+#endif
 
 	debounceCC(port);
 
@@ -1703,6 +1754,13 @@ CCTermType DecodeCCTerminationSource(Port_t *port)
 	if (port->Registers.Status.COMP == 1) {
 		/* Open voltage */
 		Termination = CCTypeOpen;
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_cc_termination, "source cc %s%s term 0x%x.\n",
+			port->Registers.Switches.MEAS_CC1 ? "cc1" : "",
+			port->Registers.Switches.MEAS_CC2 ? "cc2" : "",
+			Termination);
+#endif
+
 		return Termination;
 	} else if ((port->Registers.Switches.MEAS_CC1 && (port->CCPin == CC1)) ||
 			(port->Registers.Switches.MEAS_CC2 && (port->CCPin == CC2))) {
@@ -1722,6 +1780,14 @@ CCTermType DecodeCCTerminationSource(Port_t *port)
 		case 0x0:
 			break;
 		}
+#ifdef MESON_AW
+		if (port->ConnState != AudioAccessory)
+			aw35615_dbg_trace(trace_aw35615_cc_termination,
+				"source cc %s%s term 0x%x.\n",
+				port->Registers.Switches.MEAS_CC1 ? "cc1" : "",
+				port->Registers.Switches.MEAS_CC2 ? "cc2" : "",
+				Termination);
+#endif
 		if (port->ConnState != AudioAccessory)
 			return Termination;
 	}
@@ -1758,6 +1824,13 @@ CCTermType DecodeCCTerminationSource(Port_t *port)
 	port->Registers.Measure = saved_measure;
 	DeviceWrite(port, regMeasure, 1, &port->Registers.Measure.byte);
 
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_cc_termination, "source cc %s%s term 0x%x.\n",
+		port->Registers.Switches.MEAS_CC1 ? "cc1" : "",
+		port->Registers.Switches.MEAS_CC2 ? "cc2" : "",
+		Termination);
+#endif
+
 	return Termination;
 }
 
@@ -1782,6 +1855,13 @@ AW_BOOL IsCCPinRa(Port_t *port)
 	/* Restore Measure register */
 	port->Registers.Measure = saved_measure;
 	DeviceWrite(port, regMeasure, 1, &port->Registers.Measure.byte);
+
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_cc_termination, "ccpin %s%s is_ra %d.\n",
+		port->Registers.Switches.MEAS_CC1 ? "cc1" : "",
+		port->Registers.Switches.MEAS_CC2 ? "cc2" : "",
+		isRa);
+#endif
 
 	return isRa;
 }
@@ -1816,6 +1896,13 @@ CCTermType DecodeCCTerminationSink(Port_t *port)
 		Termination = CCTypeRd3p0;
 		break;
 	}
+
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_cc_termination, "sink cc %s%s term 0x%x.\n",
+		port->Registers.Switches.MEAS_CC1 ? "cc1" : "",
+		port->Registers.Switches.MEAS_CC2 ? "cc2" : "",
+		Termination);
+#endif
 
 	return Termination;
 }
@@ -1904,6 +1991,11 @@ AW_BOOL isVBUSOverVoltage(Port_t *port, AW_U16 vbus_mv)
 		DeviceWrite(port, regMeasure, 1, &port->Registers.Measure.byte);
 	}
 
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_vbus,
+		"%s %d: %d.\n", __func__, vbus_mv, ret);
+#endif
+
 	return ret;
 }
 
@@ -1923,6 +2015,9 @@ void DetectCCPinSource(Port_t *port)
 
 	if ((CCTerm >= CCTypeRdUSB) && (CCTerm < CCTypeUndefined)) {
 		port->CCPin = CC1;
+#ifdef MESON_AW
+		trace_aw35615_cc_state(port);
+#endif
 		return;
 	} else if (CCTerm == CCTypeRa) {
 		CC1IsRa = AW_TRUE;
@@ -1937,6 +2032,9 @@ void DetectCCPinSource(Port_t *port)
 
 	if ((CCTerm >= CCTypeRdUSB) && (CCTerm < CCTypeUndefined)) {
 		port->CCPin = CC2;
+#ifdef MESON_AW
+		trace_aw35615_cc_state(port);
+#endif
 		return;
 	}
 
@@ -1944,6 +2042,9 @@ void DetectCCPinSource(Port_t *port)
 	/* This supports correct dangling Ra cable behavior. */
 
 	port->CCPin = CC1IsRa ? CC1 : (CCTerm == CCTypeRa) ? CC2 : CCNone;
+#ifdef MESON_AW
+	trace_aw35615_cc_state(port);
+#endif
 }
 
 void DetectCCPinSink(Port_t *port)
@@ -1957,6 +2058,9 @@ void DetectCCPinSink(Port_t *port)
 
 	if ((CCTerm > CCTypeRa) && (CCTerm < CCTypeUndefined)) {
 		port->CCPin = CC1;
+#ifdef MESON_AW
+		trace_aw35615_cc_state(port);
+#endif
 		return;
 	}
 
@@ -1967,6 +2071,9 @@ void DetectCCPinSink(Port_t *port)
 
 	if ((CCTerm > CCTypeRa) && (CCTerm < CCTypeUndefined)) {
 		port->CCPin = CC2;
+#ifdef MESON_AW
+		trace_aw35615_cc_state(port);
+#endif
 		return;
 	}
 }
@@ -2009,6 +2116,9 @@ void debounceCC(Port_t *port)
 		/* AW_LOG("PDDebounceTimer over\n"); */
 		/* Update the CC de-bounced values */
 		port->CCTermPDDebounce = port->CCTerm;
+#ifdef MESON_AW
+		trace_aw35615_cc_debounced_state(port);
+#endif
 		TimerDisable(&port->PDDebounceTimer);
 	}
 
@@ -2023,6 +2133,9 @@ void debounceCC(Port_t *port)
 		TimerStart(&port->CCDebounceTimer, tCCDebounce - tPDDebounce);
 
 		/* Set CC de-bounce values to undefined while it is being de-bounced */
+#ifdef MESON_AW
+		trace_aw35615_cc_debounced_state(port);
+#endif
 		port->CCTermCCDebounce = CCTypeUndefined;
 	}
 
@@ -2030,6 +2143,9 @@ void debounceCC(Port_t *port)
 		/* AW_LOG("port->CCDebounceTimer over\n"); */
 		/* Update the CC de-bounced values */
 		port->CCTermCCDebounce = port->CCTermPDDebouncePrevious;
+#ifdef MESON_AW
+		trace_aw35615_cc_debounced_state(port);
+#endif
 		TimerDisable(&port->CCDebounceTimer);
 	}
 }
@@ -2086,6 +2202,21 @@ void setStateSource(Port_t *port, AW_BOOL vconn)
 
 	updateVCONNSource(port);
 
+#ifdef MESON_AW
+	/*
+	 * USB Type-C specification, version 1.2,
+	 * chapter 4.5.2.2.8.1 (Attached.SRC Requirements)
+	 * Enable VCONN only if the non-RD port is set to RA.
+	 */
+	if (vconn && Type_C_Sources_VCONN && port->VCONNTerm == CCTypeRa) {
+		if (port->CCPin == CC1)
+			port->Registers.Switches.VCONN_CC2 = 1;
+		else
+			port->Registers.Switches.VCONN_CC1 = 1;
+
+		DeviceWrite(port, regSwitches0, 1, &port->Registers.Switches.byte[0]);
+	}
+#else
 	/* Turn on VConn after checking the VConn termination */
 	if (vconn && Type_C_Sources_VCONN) {
 		if (port->CCPin == CC1)
@@ -2095,7 +2226,7 @@ void setStateSource(Port_t *port, AW_BOOL vconn)
 
 		DeviceWrite(port, regSwitches0, 1, &port->Registers.Switches.byte[0]);
 	}
-
+#endif
 	port->SinkCurrent = utccNone;
 
 	TimerDisable(&port->PDDebounceTimer);

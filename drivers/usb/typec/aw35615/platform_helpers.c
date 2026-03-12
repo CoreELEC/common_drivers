@@ -18,6 +18,15 @@
 #include <linux/extcon-provider.h>
 #include <linux/power_supply.h>
 #include <linux/regulator/consumer.h>
+#ifdef MESON_AW
+#include <linux/usb/typec_dp.h>
+#include <linux/usb/typec_mux.h>
+#include <linux/usb/role.h>
+#include <class.h>
+#include "typec-aw35615-trace.h"
+#include <linux/trace_events.h>
+#include <linux/trace.h>
+#endif
 
 #include "aw35615_global.h"
 
@@ -85,6 +94,49 @@ const AW_U8 aw35615_reg_access[AW35615_REG_MAX] = {
 	[regInterrupt] = (REG_RD_ACCESS),
 	[regFIFO] = (REG_RD_ACCESS | REG_WR_ACCESS),
 };
+
+#ifdef MESON_AW
+static bool aw35615_trace_enable;
+
+static const char *aw35615_default_tr_events[25] = {
+	"aw35615_protocol_state_change",
+	"aw35615_protocol_state_reset",
+	"aw35615_protocol_state_change",
+	"aw35615_protocol_state_reset",
+	"aw35615_protocol_getrxpacket",
+	"aw35615_protocol_transmit_message",
+	"aw35615_protocol_send_cablereset",
+	"aw35615_protocol_send_goodcrc",
+	"aw35615_protocol_requested_tx_state",
+	"aw35615_protocol_processed_tx_state",
+	"aw35615_protocol_received_rx_state",
+	"aw35615_protocol_processed_rx_state",
+	"aw35615_pe_state_change",
+	"aw35615_tc_state_change",
+	"aw35615_irq",
+	"aw35615_queue_sm",
+	"aw35615_device_read",
+	"aw35615_device_write",
+	"aw35615_cc_debounced_state",
+	"aw35615_cc_termination",
+	"aw35615_cc_state",
+	"aw35615_vbus",
+	"aw35615_dp_platform_update",
+};
+
+static int aw35615_trace_set(char *str)
+{
+	int ret;
+
+	ret = kstrtobool(str, &aw35615_trace_enable);
+	if (ret)
+		return ret;
+
+	return 1;
+}
+
+__setup("aw35615_trace=", aw35615_trace_set);
+#endif
 
 AW_S32 aw_parse_dts(struct aw35615_chip *chip)
 {
@@ -354,6 +406,10 @@ int DeviceWrite(Port_t *port, AW_U8 reg_addr, AW_U8 length, AW_U8 *buf)
 	wdbuf[0] = reg_addr;
 	memcpy(&wdbuf[1], buf, length);
 
+#ifdef MESON_AW
+	trace_aw35615_device_write(reg_addr, length, buf);
+#endif
+
 	while (cnt++ < AW_I2C_RETRIES) {
 		ret = i2c_master_send(chip->client, wdbuf, length + 1);
 		if (ret < 0)
@@ -388,8 +444,17 @@ int DeviceRead(Port_t *port, AW_U8 reg_addr, AW_U8 length, AW_U8 *buf)
 		},
 	};
 
+#ifdef MESON_AW
+		if (!chip->client->adapter) {
+			pr_err("%s: no adapter\n", __func__);
+			return	-ENOENT;
+		}
+#endif
 	rdbuf = kmalloc(length, GFP_KERNEL);
 	if (rdbuf == NULL) {
+#ifdef MESON_AW
+		pr_err("%s: can not allocate memory\n", __func__);
+#endif
 		/* pr_err("%s: can not allocate memory\n", __func__); */
 		return  -ENOMEM;
 	}
@@ -407,6 +472,10 @@ int DeviceRead(Port_t *port, AW_U8 reg_addr, AW_U8 length, AW_U8 *buf)
 	if (buf != NULL)
 		memcpy(buf, rdbuf, length);
 	kfree(rdbuf);
+
+#ifdef MESON_AW
+	trace_aw35615_device_read(reg_addr, length, buf);
+#endif
 
 	return ret;
 }
@@ -478,11 +547,48 @@ static int aw_set_vbus(struct aw35615_chip *chip, AW_BOOL on)
 		}
 	}
 
+#ifdef MESON_AW
+	if (!chip->vbus_gpio) {
+		chip->vbus_gpio = devm_gpiod_get_index(&chip->client->dev, NULL, 0, GPIOD_OUT_LOW);
+		if (IS_ERR(chip->vbus_gpio))
+			chip->vbus_gpio = NULL;
+	}
+#endif
+
+#ifdef MESON_AW
+	if (chip->vbus_gpio) {
+		if (on)
+			gpiod_set_value(chip->vbus_gpio, 1);
+		else
+			gpiod_set_value(chip->vbus_gpio, 0);
+	} else {
+		if (on) {
+			if (!regulator_is_enabled(chip->vbus)) {
+				ret = regulator_enable(chip->vbus);
+				if (ret)  {
+					dev_err(&chip->client->dev,
+						"cannot enable vbus regulator, ret=%d\n", ret);
+					return ret;
+				}
+			}
+		} else {
+			if (regulator_is_enabled(chip->vbus)) {
+				ret = regulator_disable(chip->vbus);
+				if (ret)  {
+					dev_err(&chip->client->dev,
+						"cannot disable vbus regulator, ret=%d\n", ret);
+					return ret;
+				}
+			}
+		}
+	}
+#else
 	if (on) {
 		if (!regulator_is_enabled(chip->vbus)) {
 			ret = regulator_enable(chip->vbus);
 			if (ret)  {
-				dev_err(&chip->client->dev, "cannot enable vbus regulator, ret=%d\n", ret);
+				dev_err(&chip->client->dev,
+					"cannot enable vbus regulator, ret=%d\n", ret);
 				return ret;
 			}
 		}
@@ -490,11 +596,13 @@ static int aw_set_vbus(struct aw35615_chip *chip, AW_BOOL on)
 		if (regulator_is_enabled(chip->vbus)) {
 			ret = regulator_disable(chip->vbus);
 			if (ret)  {
-				dev_err(&chip->client->dev, "cannot disable vbus regulator, ret=%d\n", ret);
+				dev_err(&chip->client->dev,
+					"cannot disable vbus regulator, ret=%d\n", ret);
 				return ret;
 			}
 		}
 	}
+#endif
 
 	AW_LOG("vbus := %s", on ? "On" : "Off");
 	return 0;
@@ -525,13 +633,165 @@ void platform_set_pps_current(AW_U8 port, AW_U32 ma)
 }
 
 #ifdef AW_HAVE_DP
+#ifdef MESON_AW
+struct typec_altmode aw35615_meson_dp_altmode = {
+	.svid = USB_TYPEC_DP_SID,
+};
+#endif
 AW_BOOL platform_dp_enable_pins(AW_U8 port, AW_BOOL enable, AW_U32 config)
 {
+#ifdef MESON_AW
+	struct aw35615_chip *chip = aw35615_GetChip(port);
+	u8 pin;
+	unsigned long conf;
+	struct typec_mux_state state;
+	int ret;
+
+	aw35615_dbg_trace(trace_aw35615_dp_platform_update,
+		"%s enable %d config 0x%x.\n", __func__,
+		enable, config);
+
+	if (!chip->typec_port || !chip->typec_port->mux) {
+		pr_err("%s err no typec mux!\n", __func__);
+		return AW_FALSE;
+	}
+
+	/* enter mode/exit mode should not pass altmode info. */
+	if (!config) {
+		if (enable)
+			conf = TYPEC_STATE_USB;
+		else
+			conf = TYPEC_STATE_SAFE;
+
+		state.alt = NULL;
+		state.mode = conf;
+		state.data = NULL;
+
+		ret = typec_mux_set(chip->typec_port->mux, &state);
+
+		return ret ? AW_FALSE : AW_TRUE;
+	}
+
+	/* 0xfffffff is never valid. It is used to represent
+	 * setting USB_SAFE & passing altmode info when sending
+	 * configure cmd.
+	 */
+	if (config !=  (AW_U32)(-1))
+		chip->port.data.conf = config;
+
+	if (chip->port.data.conf) {
+		pin = get_count_order(DP_CONF_GET_PIN_ASSIGN(chip->port.data.conf));
+		conf = TYPEC_MODAL_STATE(pin);
+	} else if (enable) {
+		conf = TYPEC_STATE_USB;
+	} else {
+		conf = TYPEC_STATE_SAFE;
+	}
+
+	/* Configured now. Send pending hpd/irq_hpd. */
+	if (chip->port.pending_hpd) {
+		/* prevent overwritten. */
+		chip->port.data.status |= DP_STATUS_HPD_STATE;
+		chip->port.pending_hpd = false;
+		aw35615_dbg_trace(trace_aw35615_dp_platform_update,
+			"%s update pending_hpd.\n", __func__);
+	}
+
+	if (chip->port.pending_irq_hpd) {
+		WARN_ON(!(DP_STATUS_HPD_STATE & chip->port.data.status) &&
+			!chip->port.pending_hpd);
+		/* prevent overwritten. */
+		chip->port.data.status |= DP_STATUS_IRQ_HPD;
+		chip->port.pending_irq_hpd = false;
+		aw35615_dbg_trace(trace_aw35615_dp_platform_update,
+			"%s update pending_irq_hpd.\n", __func__);
+	}
+
+	state.alt = &aw35615_meson_dp_altmode;
+	state.mode = conf;
+	state.data = &chip->port.data;
+
+	ret = typec_mux_set(chip->typec_port->mux, &state);
+
+	return ret ? AW_FALSE : AW_TRUE;
+#else
 	return 0;
+#endif
 }
 
 void platform_dp_status_update(AW_U8 port, AW_U32 status)
 {
+#ifdef MESON_AW
+	struct aw35615_chip *chip = aw35615_GetChip(port);
+	bool configured;
+	bool hpd;
+	bool irq_hpd;
+	DisplayPortStatus_t diff;
+	bool enable = true;
+	int ret;
+
+	aw35615_dbg_trace(trace_aw35615_dp_platform_update,
+		"%s status 0x%x.\n", __func__, status);
+
+	/* Compare which bits has changed. Bits that are changed is set to 1 */
+	diff.word = (chip->port.DisplayPortData.DpPpStatus.word ^ status);
+
+	chip->port.data.status = status;
+
+	/* mode exit clears DpModeEntered but not DpConfigured. */
+	configured = chip->port.DisplayPortData.DpModeEntered &&
+		chip->port.DisplayPortData.DpConfigured;
+	hpd = !!(chip->port.data.status & DP_STATUS_HPD_STATE);
+	irq_hpd = !!(chip->port.data.status & DP_STATUS_IRQ_HPD);
+
+	if (configured && (chip->port.data.status & DP_STATUS_SWITCH_TO_USB)) {
+		/* Spec 5.4 Figure 5-5. But rely on vdm to send configure command. */
+		enable = false;
+		/* AW driver does not handle this. */
+		//dp->state = dp->plug_prime ? DP_STATE_CONFIGURE_PRIME :
+					     //DP_STATE_CONFIGURE;
+	} else if (chip->port.data.status & DP_STATUS_EXIT_DP_MODE) {
+		/* PD spec 6.4.4.3.5 Figure 6.24. Place Re-purposed USB SuperSpeed Signals
+		 * in the Safe State before sending Exit Mode Command.
+		 */
+		enable = false;
+		/* AW driver will call requestExitMode(). */
+		//dp->state = DP_STATE_EXIT;
+	}
+	/* Prevent switching mux to dp mode before (re)configuration.
+	 * Don't just use "configured" here as possible reconfiguration
+	 * just update DP_CONF_CURRENTLY field.
+	 */
+	else if (!configured || diff.Connection) {
+		/* AW driver call DP_RequestPartnerConfig(). */
+		//dp->state = dp->plug_prime ? DP_STATE_CONFIGURE_PRIME :
+		//				    DP_STATE_CONFIGURE;
+		if (chip->port.hpd != hpd) {
+			chip->port.hpd = hpd;
+			chip->port.pending_hpd = true;
+		}
+		if (chip->port.hpd && chip->port.pending_hpd && irq_hpd)
+			chip->port.pending_irq_hpd = true;
+
+		aw35615_dbg_trace(trace_aw35615_dp_platform_update,
+			"%s pending hpd %d irq_hpd %d.\n", __func__,
+			chip->port.pending_hpd,
+			chip->port.pending_irq_hpd);
+
+		goto exit;
+	} else {
+		chip->port.hpd = hpd;
+	}
+
+	if (!configured)
+		pr_err("%s update status when not configured.\n", __func__);
+
+	ret = platform_dp_enable_pins(port, enable, chip->port.data.conf);
+	if (!ret)
+		pr_err("%s call platform_dp_enable_pins failed.\n", __func__);
+exit:
+	return;
+#endif
 }
 #endif
 
@@ -1276,6 +1536,24 @@ void aw_InitializeCore(struct aw35615_chip *chip)
 	chip->lpd_check_timer = 5000; /* unit ms */
 	chip->lpd_check_num = chip->lpd_check_num_bak;
 	chip->toggle_check_num = chip->lpd_check_num_bak;
+
+	pr_err("typec-aw35615: trace event enable %d\n", aw35615_trace_enable);
+
+	if (aw35615_trace_enable) {
+		int i = 0, ret;
+
+		while (aw35615_default_tr_events[i]) {
+			ret = trace_set_clr_event("typec-aw35615",
+				aw35615_default_tr_events[i], true);
+			if (ret)
+				pr_err("typec-aw35615: trace event %s not enabled\n",
+					aw35615_default_tr_events[i]);
+			i++;
+		}
+
+		pr_info("typec-aw35615: trace event enabled via module param\n");
+	}
+
 	AW_LOG(" Core is initialized!\n");
 }
 
@@ -1458,11 +1736,20 @@ static irqreturn_t _aw_isr_intn(AW_S32 irq, void *dev_id)
 
 	aw_StopTimer(&chip->alarmtimer);
 
+#ifdef MESON_AW
+	aw35615_dbg_trace(trace_aw35615_irq, "%s triggered.\n", __func__);
+#endif
+
 	/* Schedule the process to handle the state machine processing */
 	if (!chip->queued) {
 		chip->queued = AW_TRUE;
 		pm_wakeup_event(&chip->client->dev, 1500);
 		/* cpu_latency_qos_update_request(&chip->pm_gos_request, 175); */
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_queue_sm, "%s queue sm_worker.\n",
+			__func__);
+		//AW_LOG("queue sm_worker.\n");
+#endif
 		queue_work(chip->highpri_wq, &chip->sm_worker);
 	}
 
@@ -1483,6 +1770,11 @@ static enum alarmtimer_restart aw_sm_timer_callback(struct alarm *alarm, ktime_t
 		chip->queued = AW_TRUE;
 		pm_wakeup_event(&chip->client->dev, 1500);
 		/* cpu_latency_qos_update_request(&chip->pm_gos_request, 175); */
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_queue_sm, "%s queue sm_worker.\n",
+			__func__);
+		//AW_LOG("queue sm_worker.\n");
+#endif
 		queue_work(chip->highpri_wq, &chip->sm_worker);
 	}
 
@@ -1532,6 +1824,11 @@ static void work_function(struct work_struct *work)
 
 	/* Double check the interrupt line before exiting */
 	if (platform_get_device_irq_state(chip->port.PortID)) {
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_queue_sm, "%s pending irq queue sm_worker.\n",
+			__func__);
+		chip->queued = AW_TRUE;
+#endif
 		queue_work(chip->highpri_wq, &chip->sm_worker);
 	} else {
 		/* Scan through the timers to see if we need a timer callback */
@@ -1541,6 +1838,12 @@ static void work_function(struct work_struct *work)
 				/* A value of 1 indicates that a timer has expired
 				 * or is about to expire and needs further processing.
 				 */
+#ifdef MESON_AW
+				aw35615_dbg_trace(trace_aw35615_queue_sm,
+					"%s expired timer queue sm_worker.\n",
+					__func__);
+				chip->queued = AW_TRUE;
+#endif
 				queue_work(chip->highpri_wq, &chip->sm_worker);
 			} else {
 				/* A non-zero time requires a future timer interrupt */
@@ -1576,6 +1879,15 @@ void stop_usb_host(struct aw35615_chip *chip)
 	ret = regulator_disable(chip->vbus);
 	chip->is_vbus_present = AW_FALSE;
 	extcon_set_state_sync(chip->extcon, EXTCON_USB_HOST, false);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_NONE);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+
+	typec_set_mode(chip->typec_port, TYPEC_STATE_SAFE);
+#endif
 }
 
 void stop_otg_vbus(struct aw35615_chip *chip)
@@ -1601,14 +1913,36 @@ void start_usb_host(struct aw35615_chip *chip)
 						&chip->partner_desc);
 	}
 	extcon_set_state_sync(chip->extcon, EXTCON_USB_HOST, true);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_HOST);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+
+	typec_set_mode(chip->typec_port, TYPEC_STATE_USB);
+#endif
 }
 void stop_usb_peripheral(struct aw35615_chip *chip)
 {
+#ifdef MESON_AW
+	int ret;
+#endif
+
 	pr_err("aw35615 - stop_usb_peripheral\n");
 	kobject_uevent(&chip->dev->kobj, KOBJ_CHANGE);
 	typec_unregister_partner(chip->partner);
 	chip->partner = NULL;
 	extcon_set_state_sync(chip->extcon, EXTCON_USB, false);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_NONE);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+
+	typec_set_mode(chip->typec_port, TYPEC_STATE_SAFE);
+#endif
 }
 
 void stop_acc_audio(struct aw35615_chip *chip)
@@ -1666,6 +2000,15 @@ void start_usb_peripheral(struct aw35615_chip *chip)
 						&chip->partner_desc);
 	}
 	extcon_set_state_sync(chip->extcon, EXTCON_USB, true);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_DEVICE);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+
+	typec_set_mode(chip->typec_port, TYPEC_STATE_USB);
+#endif
 }
 
 #ifdef AW_HAVE_VBUS_ONLY
@@ -1710,6 +2053,15 @@ void start_usb_vbus_only(struct aw35615_chip *chip)
 						&chip->partner_desc);
 	}
 	extcon_set_state_sync(chip->extcon, EXTCON_USB, true);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_DEVICE);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+
+	typec_set_mode(chip->typec_port, TYPEC_STATE_USB);
+#endif
 }
 #endif /* AW_HAVE_VBUS_ONLY */
 
@@ -1754,6 +2106,13 @@ void start_usb_rp_rp(struct aw35615_chip *chip)
 						&chip->partner_desc);
 	}
 	extcon_set_state_sync(chip->extcon, EXTCON_USB, true);
+#ifdef MESON_AW
+	if (chip->role_sw) {
+		ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_DEVICE);
+		if (ret)
+			pr_err("aw35615 - %s usb_role ret %d\n", __func__, ret);
+	}
+#endif
 }
 
 void start_acc_audio(struct aw35615_chip *chip)
@@ -1775,11 +2134,18 @@ void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx)
 {
 	static int usb_state;
 	struct aw35615_chip *chip = aw35615_GetChip(portId);
+#ifdef MESON_AW
+	int ret;
+#endif
 
 	if (!chip) {
 		AW_LOG("aw35615 - Error: Chip structure is NULL!\n");
 		return;
 	}
+
+#ifdef MESON_AW
+	trace_aw35615_core_event(event, portId);
+#endif
 
 	switch (event) {
 	case CC1_ORIENT:
@@ -1791,6 +2157,13 @@ void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx)
 				else
 					chip->tcpc->typec_polarity = true;
 		*/
+#ifdef MESON_AW
+		ret = typec_set_orientation(chip->typec_port, event == CC1_ORIENT ?
+			TYPEC_ORIENTATION_NORMAL : TYPEC_ORIENTATION_REVERSE);
+		if (ret)
+			pr_err("typec_set_orientation %d err %d\n",
+					event, ret);
+#endif
 		if (chip->port.sourceOrSink == SINK) {
 			start_usb_peripheral(chip);
 			usb_state = 1;
@@ -1821,6 +2194,7 @@ void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx)
 	case CC_NO_ORIENT:
 		AW_LOG("CC_NO_ORIENT=0x%x\n", event);
 		//chip->tcpc->pd_port.pe_data.pe_ready = AW_FALSE;
+		typec_set_orientation(chip->typec_port, TYPEC_ORIENTATION_NONE);
 		if (usb_state == 1) {
 			stop_usb_peripheral(chip);
 			usb_state = 0;
@@ -1832,6 +2206,17 @@ void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx)
 			AW_LOG("stop_usb_host,event=0x%x,usb_state=%d\n",
 					event, usb_state);
 		}
+#ifdef MESON_AW
+		else if (usb_state == 0) {
+			/* For port initial init when no partner is attached. */
+			typec_set_mode(chip->typec_port, TYPEC_STATE_SAFE);
+			if (chip->role_sw) {
+				ret = usb_role_switch_set_role(chip->role_sw, USB_ROLE_DEVICE);
+				if (ret)
+					pr_err("aw35615 - CC_NO_ORIENT usb_role ret %d\n", ret);
+			}
+		}
+#endif
 		break;
 	case CC_AUDIO_OPEN:
 		AW_LOG("CC_AUDIO_OPEN=0x%x\n", event);
@@ -1846,9 +2231,21 @@ void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx)
 					chip->port.USBPDContract.FVRDO.ObjectPosition,
 				chip->port.SrcCapsReceived[
 					chip->port.USBPDContract.FVRDO.ObjectPosition - 1].object);
+
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_pe_state_change,
+				"SinkReady req_obj=0x%x, sel_src_caps=0x%x\n",
+				chip->port.USBPDContract.FVRDO.ObjectPosition,
+				chip->port.SrcCapsReceived
+				[chip->port.USBPDContract.FVRDO.ObjectPosition - 1].object);
+#endif
 		} else if (chip->port.PolicyState == peSourceReady &&
 				chip->port.PolicyHasContract == AW_TRUE) {
 			AW_LOG("peSourceReady\n");
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_pe_state_change,
+				"SourceReady: %d", chip->port.PolicyHasContract);
+#endif
 		}
 		break;
 	case PD_NO_CONTRACT:

@@ -235,6 +235,9 @@ struct aw35615_chip {
 	struct tcpc_dev tcpc_dev;
 
 	struct regulator *vbus;
+#ifdef MESON_AW
+	struct gpio_desc *vbus_gpio;
+#endif
 
 	spinlock_t irq_lock;
 	struct work_struct irq_work;

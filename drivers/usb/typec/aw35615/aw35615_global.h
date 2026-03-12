@@ -23,6 +23,10 @@
 #include <linux/debugfs.h>
 #endif // AW_DEBUG
 
+#ifdef MESON_AW
+#include <linux/amlogic/gki_module.h>
+#endif
+
 #define TICK_SCALE_TO_MS			(1)
 #define AW35615FSlaveAddr			(0x24)
 #define AW35615_VENDOR_ID			(0x344f)
@@ -40,6 +44,9 @@ struct aw35615_chip {
 	struct device *dev;
 	struct regulator *vbus;
 	const char *vbus_name;
+#ifdef MESON_AW
+	struct gpio_desc *vbus_gpio;
+#endif
 	struct power_supply *usb_psy;
 
 	struct usb_pd_identity partner_identity;
@@ -47,6 +54,9 @@ struct aw35615_chip {
 	struct typec_partner *partner;
 	struct typec_capability typec_caps;
 	struct typec_port *typec_port;
+#ifdef MESON_AW
+	struct usb_role_switch *role_sw;
+#endif
 	struct tcpc_device *tcpc;
 	struct tcpc_desc *tcpc_desc;
 

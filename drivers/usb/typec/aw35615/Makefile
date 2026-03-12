@@ -15,6 +15,10 @@ ccflags-y += \
 
 obj-$(CONFIG_TYPEC_AW35615) += typec-aw35615.o
 
+ccflags-y += -I$(srctree)/drivers/usb/typec/
+# tell define_trace.h where to find the typec-aw35615 trace header
+CFLAGS_typec-aw35615-trace.o := -I$(src)
+
 typec-aw35615-$(CONFIG_TYPEC_AW35615_WHOLE) := \
 	aw35615_driver.o \
 	aw35615_global.o \
@@ -32,6 +36,8 @@ typec-aw35615-$(CONFIG_TYPEC_AW35615_WHOLE) := \
 	vdm/bitfield_translators.o \
 	vdm/vdm.o \
 	vdm/vdm_callbacks.o \
-	vdm/DisplayPort/dp.o
+	vdm/DisplayPort/dp.o \
+	typec-aw35615-dbg.o \
+	typec-aw35615-trace.o
 
 typec-aw35615-$(CONFIG_TYPEC_AW35615_TCPM) := tcpci_aw35615.o

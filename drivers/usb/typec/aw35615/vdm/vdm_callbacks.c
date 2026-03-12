@@ -117,15 +117,29 @@ AW_BOOL vdmModeExitRequest(Port_t *port, AW_U16 svid, AW_U32 mode_index)
 	if (port->mode_entered && (svid == port->my_svid) && (mode_index == 1)) {
 		port->mode_entered = AW_FALSE;
 
+#ifdef MESON_AW
+		/* PD spec 6.4.4.3.5:
+		 * The Responder Shall exit its Active Mode before sending the response Message.
+		 * The Responder Shall Not return a BUSY acknowledgment and Shall only return a
+		 * NAK acknowledgment to a request not containing an Active Mode
+		 * (i.e., Invalid object position).
+		 * Set to USB/USB Safe State.
+		 */
+		platform_dp_enable_pins(port->PortID, AW_TRUE, 0);
+#endif
+
 #ifdef AW_HAVE_DP
 		if (port->DisplayPortData.DpModeEntered &&
 			(port->DisplayPortData.DpModeEntered == mode_index) &&
 			(svid == DP_SID)) {
 			port->DisplayPortData.DpModeEntered = 0;
+#ifndef MESON_AW
 			platform_dp_enable_pins(port->PortID, AW_FALSE, 0);
+#else
+			port->hpd = false;
+#endif
 		}
 #endif /* AW_HAVE_DP */
-
 		return AW_TRUE;
 	}
 	return AW_FALSE;
@@ -143,6 +157,11 @@ AW_BOOL vdmEnterModeResult(Port_t *port, AW_BOOL success, AW_U16 svid, AW_U32 mo
 			port->DisplayPortData.DpModeEntered = mode_index;
 #endif /* AW_HAVE_DP */
 	}
+#ifdef MESON_AW
+	else
+		/* PD spec 6.4.4.3.4 Figure 6.23. Back to USB Operation after Enter Mode NAK. */
+		platform_dp_enable_pins(port->PortID, AW_TRUE, 0);
+#endif
 	return AW_TRUE;
 }
 
@@ -154,6 +173,17 @@ void vdmExitModeResult(Port_t *port, AW_BOOL success, AW_U16 svid, AW_U32 mode_i
 	if (svid == DP_SID && port->DisplayPortData.DpModeEntered == mode_index)
 		port->DisplayPortData.DpModeEntered = 0;
 #endif /* AW_HAVE_DP */
+
+#ifdef MESON_AW
+	/* PD spec 6.4.4.3.5 Back to USB Operation after Exit Mode.
+	 * The Initiator Shall exit its Active Mode when it receives the ACK.
+	 * An Initiator which fails to receive an ACK within tVDMWaitModeExit
+	 * or receives a NAK or BUSY response Shall exit its Active Mode.
+	 */
+	 platform_dp_enable_pins(port->PortID, AW_TRUE, 0);
+	if (svid == DP_SID && port->DisplayPortData.DpModeEntered == mode_index)
+		port->hpd = false;
+#endif
 }
 
 void vdmInformIdentity(Port_t *port, AW_BOOL success, SopType sop, Identity id)

@@ -23,6 +23,10 @@
 #include "modules/dpm.h"
 #include "timer.h"
 
+#ifdef MESON_AW
+#include <linux/usb/typec_dp.h>
+#endif
+
 /* Size of Rx/Tx FIFO protocol buffers */
 #define AW_PROTOCOL_BUFFER_SIZE 64
 
@@ -73,10 +77,17 @@ struct Port {
 	AW_U32                 src_pdo_cur[7];
 	AW_U32                 src_pps_vol[12];
 	AW_U32                 src_pps_cur[6];
+#ifdef MESON_AW
+	AW_U32                 snk_pdo_size;
+	AW_U32                 snk_pps_size;
+	AW_U32                 src_pdo_size;
+	AW_U32                 src_pps_size;
+#else
 	AW_U16                 snk_pdo_size;
 	AW_U16                 snk_pps_size;
 	AW_U16                 src_pdo_size;
 	AW_U16                 src_pps_size;
+#endif
 	AW_U16                 toggle_check_num;
 	AW_U16                 try_wait_vbus;
 	AW_U16                 DetachThreshold; /* TypeC detach level */
@@ -92,6 +103,10 @@ struct Port {
 	AW_U8                  old_pe_state;
 	AW_U8                  old_policy_state;
 	AW_U8                  old_ConnState;
+#ifdef MESON_AW
+	AW_U8                  old_protocol_state;
+	AW_U8                  old_policy_state_trace;
+#endif
 
 	AW_U8                  SINK_Flag;
 	AW_BOOL                sink_timer;
@@ -236,6 +251,18 @@ struct Port {
 
 #ifdef AW_HAVE_DP
 	DisplayPortData_t       DisplayPortData;
+#ifdef MESON_AW
+	struct typec_displayport_data data;
+	bool hpd;
+	bool pending_hpd;
+	u32 irq_hpd_count;
+	/*
+	 * hpd is mandatory for irq_hpd assertion, so irq_hpd also needs its own pending flag if
+	 * both hpd and irq_hpd are asserted in the first Status Update before the pin assignment
+	 * is configured.
+	 */
+	bool pending_irq_hpd;
+#endif /*MESON_AW*/
 #endif /* AW_HAVE_DP */
 };
 
@@ -270,6 +297,10 @@ void SetTypeCState(Port_t *port, ConnectionState state);
  * @return None
  */
 void SetPEState(Port_t *port, PolicyState_t state);
+
+#ifdef MESON_AW
+void set_proto_state(Port_t *port, ProtocolState_t state);
+#endif
 
 /**
  * @brief Revert the ports current setting to the configured value.

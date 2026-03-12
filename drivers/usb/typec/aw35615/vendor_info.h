@@ -45,7 +45,12 @@
 #define BC_1_2_Support 0
 
 /* General PD Settings Tab */
+#ifdef MESON_AW
+/* vdm code is still implemented as version 1 which is PD Rev 2.0 */
+#define PD_Specification_Revision 1         /* Revision 2.0 */
+#else
 #define PD_Specification_Revision 2         /* Revision 3.0 */
+#endif
 #define SOP_Capable YES                     /* Always YES */
 #define SOP_P_Capable NO
 #define SOP_PP_Capable NO
@@ -81,7 +86,11 @@
 #define Type_C_Battery_Powered NO           /* Not Controlled by this driver */
 #define Type_C_Port_On_Hub NO               /* Not Controlled by this driver */
 #define Captive_Cable NO
+#ifdef MESON_AW
+#define Type_C_Sources_VCONN YES
+#else
 #define Type_C_Sources_VCONN NO
+#endif
 
 /* Source Tab */
 #define PD_Power_as_Source 5000
@@ -149,7 +158,11 @@
 
 /* Sink Tab */
 #define PD_Power_as_Sink 10000                //; 10W
+#ifdef MESON_AW
+#define No_USB_Suspend_May_Be_Set YES
+#else
 #define No_USB_Suspend_May_Be_Set NO
+#endif
 #define GiveBack_May_Be_Set NO
 #define Higher_Capability_Set NO
 
@@ -217,10 +230,20 @@
 #define Data_Capable_as_USB_Device_SOP YES
 #define Product_Type_UFP_SOP 2                  //; 0: Undefined
 #define Product_Type_DFP_SOP 2                  //; 0: Undefined
+/* Set to YES if host platform dp could be used as UFP_D. */
 #define Modal_Operation_Supported_SOP NO
 #define Connector_Type 2
+#ifdef MESON_AW
+#define USB_VID_SOP 0x1B8E
+#else
 #define USB_VID_SOP 0x344f
+#endif
+
+#ifdef MESON_AW
+#define PID_SOP 0x4e25
+#else
 #define PID_SOP 0x0000
+#endif
 #define bcdDevice_SOP 0x0000
 
 /* SOP Discovery - Part Two Tab */
@@ -228,7 +251,11 @@
 #define Num_SVIDs_min_SOP 1
 #define Num_SVIDs_max_SOP 1                 /* Currently Implements Up To 1 */
 
+#ifdef MESON_AW
+#define SVID1_SOP 0xFF01
+#else
 #define SVID1_SOP 0x344f
+#endif
 #define SVID1_modes_fixed_SOP YES
 #define SVID1_num_modes_min_SOP 1
 #define SVID1_num_modes_max_SOP 1           /* Currently Implements Up To 1 */
@@ -252,17 +279,31 @@
 /* Display port related configuration */
 
 /* Automatically enter display port mode if found, Auto VDM required */
+#ifdef MESON_AW
+#define DisplayPort_Auto_Mode_Entry      YES
+#define DisplayPort_Enabled              YES
+#else
 #define DisplayPort_Auto_Mode_Entry      NO
 #define DisplayPort_Enabled              NO
+#endif
 /* Prefer to be sink when DFP_D & UFP_D capable device attached */
 #define DisplayPort_Preferred_Snk        NO
+#ifdef MESON_AW
+#define DisplayPort_UFP_Capable          NO  /* DP Sink */
+#else
 #define DisplayPort_UFP_Capable          YES  /* DP Sink */
+#endif
 #define DisplayPort_DFP_Capable          YES  /* DP Source */
 #define DisplayPort_Signaling            YES  /* YES == 0x1, DP Standard signaling */
 #define DisplayPort_Receptacle           1    /* DP is presented in Type-C 0 plug, 1 - Receptacle */
 #define DisplayPort_USBr2p0Signal_Req    NO   /* USB r2.0 signaling required */
 /* Only Pin Assignment C,D,E supported */
+#ifdef MESON_AW
+#define DisplayPort_DFP_Pin_Mask (AW_DP_PIN_ASSIGN_C | AW_DP_PIN_ASSIGN_D | AW_DP_PIN_ASSIGN_E)
+#define DisplayPort_UFP_Pin_Mask         AW_DP_PIN_ASSIGN_NS
+#else
 #define DisplayPort_DFP_Pin_Mask         (DP_PIN_ASSIGN_C | DP_PIN_ASSIGN_D | DP_PIN_ASSIGN_E)
 #define DisplayPort_UFP_Pin_Mask         DP_PIN_ASSIGN_NS
+#endif
 #define DisplayPort_UFP_PinAssign_Start  'C'
 #endif /* VENDOR_INFO_H */

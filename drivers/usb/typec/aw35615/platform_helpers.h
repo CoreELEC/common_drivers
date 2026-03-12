@@ -238,4 +238,8 @@ void start_usb_host(struct aw35615_chip *chip);
 void stop_usb_peripheral(struct aw35615_chip *chip);
 void start_usb_peripheral(struct aw35615_chip *chip);
 void handle_core_event(AW_U32 event, AW_U8 portId, void *usr_ctx);
+#ifdef MESON_AW
+void aw35615_dbg_trace(void (*trace)(struct va_format *),
+			const char *fmt, ...);
+#endif
 #endif  // __AW_PLATFORM_HELPERS_H_

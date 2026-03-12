@@ -934,6 +934,13 @@ AW_S32 requestEnterMode(Port_t *port, SopType sop, AW_U16 svid, AW_U32 mode_inde
 	if ((port->PolicyState != peSinkReady) && (port->PolicyState != peSourceReady))
 		return 1;
 
+#ifdef MESON_AW
+	/* PD spec 6.4.4.3.4 Figure 6.22. Place Re-purposed USB SuperSpeed Signals
+	 * in the Safe State before sending Enter Mode Command.
+	 */
+	platform_dp_enable_pins(port->PortID, AW_FALSE, 0);
+#endif
+
 	port->originalPolicyState = port->PolicyState;
 	n_pe = peDfpVdmModeEntryRequest;
 
@@ -971,6 +978,13 @@ AW_S32 requestExitMode(Port_t *port, SopType sop, AW_U16 svid, AW_U32 mode_index
 
 	if ((port->PolicyState != peSinkReady) && (port->PolicyState != peSourceReady))
 		return 1;
+
+#ifdef MESON_AW
+	/* PD spec 6.4.4.3.5 Figure 6.24. Place Re-purposed USB SuperSpeed Signals
+	 * in the Safe State before sending Exit Mode Command.
+	 */
+	platform_dp_enable_pins(port->PortID, AW_FALSE, 0);
+#endif
 
 	port->originalPolicyState = port->PolicyState;
 	n_pe = peDfpVdmModeExitRequest;

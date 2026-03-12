@@ -86,10 +86,17 @@ typedef enum {
 } DpConfSignaling_t;
 
 typedef enum {
+#ifdef MESON_AW
+	AW_DP_PIN_ASSIGN_NS = 0, /* Not selected */
+	AW_DP_PIN_ASSIGN_C = 4,
+	AW_DP_PIN_ASSIGN_D = 8,
+	AW_DP_PIN_ASSIGN_E = 16,
+#else
 	DP_PIN_ASSIGN_NS = 0, /* Not selected */
 	DP_PIN_ASSIGN_C = 4,
 	DP_PIN_ASSIGN_D = 8,
 	DP_PIN_ASSIGN_E = 16,
+#endif
 } DisplayPortPinAssign_t;
 
 typedef union {

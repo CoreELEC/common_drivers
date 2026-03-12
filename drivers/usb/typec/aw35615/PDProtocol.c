@@ -23,6 +23,11 @@
 #include "vdm/bitfield_translators.h"
 #endif /* AW_HAVE_VDM */
 
+#ifdef MESON_AW
+#include <linux/usb/role.h>
+#include "typec-aw35615-trace.h"
+#endif
+
 /* USB PD Protocol Layer Routines */
 void USBPDProtocol(Port_t *port)
 {
@@ -47,7 +52,14 @@ void USBPDProtocol(Port_t *port)
 			/* Sending a hard reset. */
 			ProtocolSendHardReset(port);
 			port->PDTxStatus = txWait;
+#ifdef MESON_AW
+			trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+#ifdef MESON_AW
+			set_proto_state(port, PRLResetWait);
+#else
 			port->ProtocolState = PRLResetWait;
+#endif
 			break;
 		case PRLResetWait:
 			/* Wait on hard reset signaling */
@@ -81,6 +93,11 @@ void ProtocolSendCableReset(Port_t *port)
 	port->ProtocolTxBuffer[port->ProtocolTxBytes++] = RESET1;
 	port->ProtocolTxBuffer[port->ProtocolTxBytes++] = SYNC3_TOKEN;
 	port->ProtocolTxBuffer[port->ProtocolTxBytes++] = TXOFF;
+
+#ifdef MESON_AW
+	trace_aw35615_protocol_send_cablereset(port);
+#endif
+
 	DeviceWrite(port, regFIFO, port->ProtocolTxBytes, &port->ProtocolTxBuffer[0]);
 
 	port->Registers.Control.TX_START = 1;
@@ -93,10 +110,18 @@ void ProtocolSendCableReset(Port_t *port)
 void ProtocolIdle(Port_t *port)
 {
 	if (port->PDTxStatus == txReset) {
+#ifdef MESON_AW
+		set_proto_state(port, PRLReset);
+#else
 		port->ProtocolState = PRLReset;/* Need to send a reset? */
+#endif
 	} else if (port->ProtocolMsgRxPending || port->Registers.Status.I_GCRCSENT) {
 	/* else if (port->Registers.Status.I_CRC_CHK || port->ProtocolMsgRxPending || */
     /* port->Registers.Status.I_GCRCSENT) */
+#ifdef MESON_AW
+		trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
+
 		/* Using the CRC CHK interrupt as part of the GSCE workaround. */
 		if (port->DoTxFlush) {
 			ProtocolFlushTxFIFO(port);
@@ -110,28 +135,54 @@ void ProtocolIdle(Port_t *port)
 		} else {
 			/* Otherwise make a note to handle it later. */
 			port->ProtocolMsgRxPending = AW_TRUE;
+#ifdef MESON_AW
+			trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 		}
 
 		//port->Registers.Status.I_CRC_CHK = 0;
 		port->Registers.Status.I_GCRCSENT = 0;
 	} else if (port->PDTxStatus == txSend) {
 		/* Have a message to send? */
+#ifdef MESON_AW
+		if (port->ProtocolMsgRx || port->ProtocolMsgRxPending) {
+			port->PDTxStatus = txAbort;
+			trace_aw35615_protocol_processed_tx_state(port, 0);
+		} else {
+			ProtocolTransmitMessage(port);
+		}
+#else
 		if (port->ProtocolMsgRx || port->ProtocolMsgRxPending)
 			port->PDTxStatus = txAbort;
 		else
 			ProtocolTransmitMessage(port);
+#endif
 	}
 #ifdef AW_HAVE_EXT_MSG
+#ifdef MESON_AW
+	else if (port->ExtTxOrRx != NoXfer && port->ExtWaitTxRx == AW_FALSE) {
+		port->PDTxStatus = txSend;
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+	}
+#else
 	else if (port->ExtTxOrRx != NoXfer && port->ExtWaitTxRx == AW_FALSE)
 		port->PDTxStatus = txSend;
+#endif
 #endif /* AW_HAVE_EXT_MSG */
 }
 
 void ProtocolResetWait(Port_t *port)
 {
 	if (port->Registers.Status.I_HARDSENT) {
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 		port->PDTxStatus = txSuccess;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
 	}
 }
 
@@ -150,7 +201,14 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 
 	/* AW_LOG("regStatus1 = 0x%x\n", port->Registers.Status.byte[5]); */
 	if (port->Registers.Status.RX_EMPTY == 1)
+#ifdef MESON_AW
+	{
+		trace_aw35615_protocol_processed_rx_state(port, 0);
 		return;/* Nothing to see here... */
+	}
+#else
+		return;/* Nothing to see here... */
+#endif
 
 	if (HeaderReceived == AW_FALSE) {
 		/* Read the Rx token and two header bytes */
@@ -160,6 +218,10 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 
 		/* Figure out what SOP* the data came in on */
 		port->ProtocolMsgRxSop = TokenToSopType(data[0]);
+
+#ifdef MESON_AW
+		trace_aw35615_protocol_getrxpacket(data, 3, true, false);
+#endif
 	} else {
 		/* PolicyRxHeader, ProtocolMsgRxSop already set */
 	}
@@ -199,6 +261,9 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		/* SOP result can be corrupted in rare cases, or possibly if */
 		/* the FIFO reads get out of sync. */
 		/* TODO - Flush? */
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_rx_state(port, 0);
+#endif
 		return;
 	}
 
@@ -208,9 +273,15 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		port->MessageIDCounter[port->ProtocolMsgRxSop] = 0;
 		port->MessageID[port->ProtocolMsgRxSop] = 0xFF;
 		port->ProtocolMsgRx = AW_TRUE;
+#ifdef MESON_AW
+		trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 	} else if (port->PolicyRxHeader.MessageID != port->MessageID[port->ProtocolMsgRxSop]) {
 		port->MessageID[port->ProtocolMsgRxSop] = port->PolicyRxHeader.MessageID;
 		port->ProtocolMsgRx = AW_TRUE;
+#ifdef MESON_AW
+		trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 	}
 
 	/* AW_LOG("num = %d Type =%d\n", port->PolicyRxHeader.NumDataObjects, */
@@ -223,17 +294,37 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		/* Read out the 4 CRC bytes to move the address to the next packet */
 		DeviceRead(port, regFIFO, 4, data);
 
+#ifdef MESON_AW
+		trace_aw35615_protocol_getrxpacket(data, 4, false, true);
+#endif
+
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 		port->PDTxStatus = txSuccess;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+
 		port->ProtocolMsgRx = AW_FALSE;
 
 		ProtocolGetRxPacket(port, AW_FALSE);
 
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_rx_state(port, 0);
+#endif
 		return;
 	} else if (port->PolicyRxHeader.NumDataObjects > 0) {
 		/* Data message - Grab the data from the FIFO, including 4 byte CRC */
 		DeviceRead(port, regFIFO, ((port->PolicyRxHeader.NumDataObjects << 2) + 4),
 				&port->ProtocolRxBuffer[0]);
+
+#ifdef MESON_AW
+		trace_aw35615_protocol_getrxpacket(port->ProtocolRxBuffer,
+			((port->PolicyRxHeader.NumDataObjects << 2) + 4), false, false);
+#endif
 
 #ifdef AW_HAVE_EXT_MSG
 		if (port->PolicyRxHeader.Extended == 1) {
@@ -295,6 +386,9 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 					port->ExtTxOrRx = NoXfer;
 					port->ProtocolMsgRx = AW_TRUE;
 				}
+#ifdef MESON_AW
+				trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 			} else if (port->ExtRxHeader.ReqChunk == 1 &&
 					port->ExtChunkOffset < port->ExtTxHeader.DataSize) {
 				port->ExtWaitTxRx = AW_FALSE;
@@ -308,6 +402,9 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		/* Command message */
 		/* Read out the 4 CRC bytes to move the address to the next packet */
 		DeviceRead(port, regFIFO, 4, data);
+#ifdef MESON_AW
+		trace_aw35615_protocol_getrxpacket(data, 4, false, true);
+#endif
 	}
 	/* Special VDM use case where a second message appears too quickly */
 	if ((port->PolicyRxHeader.NumDataObjects != 0) &&
@@ -322,6 +419,11 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		DeviceRead(port, regInterruptb, 3,
 				   &port->Registers.Status.byte[3]);
 
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_irq,
+			"%s 2nd vdm message clear regInterruptb.\n", __func__);
+#endif
+
 		if (port->Registers.Status.I_GCRCSENT && !port->Registers.Status.RX_EMPTY) {
 			/* Get the next message - overwriting the current message */
 			ProtocolGetRxPacket(port, AW_FALSE);
@@ -335,16 +437,32 @@ void ProtocolGetRxPacket(Port_t *port, AW_BOOL HeaderReceived)
 		if (!port->Registers.Status.ACTIVITY && !port->Registers.Status.RX_EMPTY) {
 			platform_delay_10us(50);
 			DeviceRead(port, regStatus0, 2, &port->Registers.Status.byte[4]);
+#ifdef MESON_AW
+			if (!port->Registers.Status.ACTIVITY && !port->Registers.Status.RX_EMPTY) {
+				port->ProtocolMsgRxPending = AW_TRUE;
+				aw35615_dbg_trace(trace_aw35615_irq,
+					"%s 2nd message but no interrupt.\n", __func__);
+				trace_aw35615_protocol_received_rx_state(port, 0);
+			}
+#else
 			if (!port->Registers.Status.ACTIVITY && !port->Registers.Status.RX_EMPTY)
 				port->ProtocolMsgRxPending = AW_TRUE;
+#endif
 		}
 	}
 
 	/* If a message has been received during an attempt to transmit,
 	 * abort and handle the received message before trying again.
 	 */
+#ifdef MESON_AW
+	if (port->ProtocolMsgRx && (port->PDTxStatus == txSend)) {
+		port->PDTxStatus = txAbort;
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+	}
+#else
 	if (port->ProtocolMsgRx && (port->PDTxStatus == txSend))
 		port->PDTxStatus = txAbort;
+#endif
 }
 
 void ProtocolTransmitMessage(Port_t *port)
@@ -452,6 +570,10 @@ void ProtocolTransmitMessage(Port_t *port)
 	/* Load the CRC, EOP and stop sequence */
 	ProtocolLoadEOP(port);
 
+#ifdef MESON_AW
+	trace_aw35615_protocol_transmit_message(port);
+#endif
+
 	port->Registers.Control.N_RETRIES = DPM_Retries(port, port->ProtocolMsgTxSop);
 	port->Registers.Control.AUTO_RETRY = 1;
 	port->Registers.Control.SEND_HARDRESET = 0;
@@ -464,6 +586,10 @@ void ProtocolTransmitMessage(Port_t *port)
 		/* the transaction will NAK and will need to be discarded. */
 		port->DoTxFlush = AW_TRUE;
 		port->PDTxStatus = txAbort;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+
 		return;
 	}
 
@@ -473,7 +599,15 @@ void ProtocolTransmitMessage(Port_t *port)
 
 	/* Set the transmitter status to busy */
 	port->PDTxStatus = txBusy;
+#ifdef MESON_AW
+	trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+
+#ifdef MESON_AW
+	set_proto_state(port, PRLTxSendingMessage);
+#else
 	port->ProtocolState = PRLTxSendingMessage;
+#endif
 
 	/* Timeout specifically for chunked messages, but used with each transmit */
 	/* to prevent a theoretical protocol hang. */
@@ -492,11 +626,26 @@ void ProtocolSendingMessage(Port_t *port)
 	} else if (port->Registers.Status.I_COLLISION) {
 		port->Registers.Status.I_COLLISION = 0;
 		port->PDTxStatus = txCollision;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 		if ((port->PolicyState == peSinkGiveSinkCap) || (port->PolicyState == peSourceGiveSinkCaps)) {
 			AW_LOG("I_COLLISION good crc err\n");
+#ifdef MESON_AW
+			set_proto_state(port, PRLTxSendingMessage);
+#else
 			port->ProtocolState = PRLTxSendingMessage;
+#endif
 			port->PDTxStatus = txBusy;
+#ifdef MESON_AW
+			trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
 		}
 	} else if (port->Registers.Status.I_RETRYFAIL) {
 		if (((port->old_policy_state == peSinkGiveSinkCap) || (port->old_policy_state == peSourceGiveSinkCaps)) &&
@@ -506,12 +655,29 @@ void ProtocolSendingMessage(Port_t *port)
 		}
 		port->Registers.Status.I_RETRYFAIL = 0;
 		port->PDTxStatus = txError;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 	} else if (port->Registers.Status.I_GCRCSENT) {
 		/* Interruption */
 		port->PDTxStatus = txError;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 		port->ProtocolMsgRxPending = AW_TRUE;
+#ifdef MESON_AW
+		trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 		port->Registers.Status.I_GCRCSENT = 0;
 	}
 
@@ -528,6 +694,9 @@ void ProtocolVerifyGoodCRC(Port_t *port)
 	sopMainHeader_t header;
 	SopType sop;
 
+#ifdef MESON_AW
+	trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 	/* Read the Rx token and two header bytes */
 	DeviceRead(port, regFIFO, 3, &data[0]);
 	header.byte[0] = data[1];
@@ -535,6 +704,10 @@ void ProtocolVerifyGoodCRC(Port_t *port)
 
 	/* Figure out what SOP* the data came in on */
 	sop = TokenToSopType(data[0]);
+
+#ifdef MESON_AW
+	trace_aw35615_protocol_getrxpacket(data, 3, true, false);
+#endif
 
 	if ((header.NumDataObjects == 0) && (header.MessageType == CMTGoodCRC)) {
 		AW_U8 MIDcompare;
@@ -553,11 +726,21 @@ void ProtocolVerifyGoodCRC(Port_t *port)
 		if (header.MessageID != MIDcompare) {
 			/* Read out the 4 CRC bytes to move the addr to the next packet */
 			DeviceRead(port, regFIFO, 4, data);
+#ifdef MESON_AW
+			trace_aw35615_protocol_getrxpacket(data, 4, false, true);
+#endif
 			DeviceRead(port, regStatus0a, 1, &regStatus);
 			if (regStatus & 0x10) {
 				AW_LOG("RETRYFAIL\n");
 				port->PDTxStatus = txError;
+#ifdef MESON_AW
+				trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
+#ifdef MESON_AW
+				set_proto_state(port, PRLIdle);
+#else
 				port->ProtocolState = PRLIdle;
+#endif
 			}
 		} else {
 #ifdef MESON_AW
@@ -580,15 +763,32 @@ void ProtocolVerifyGoodCRC(Port_t *port)
 				}
 #endif /* AW_HAVE_EXT_MSG */
 			}
+#ifdef MESON_AW
+			set_proto_state(port, PRLIdle);
+#else
 			port->ProtocolState = PRLIdle;
+#endif
 			port->PDTxStatus = txSuccess;
+#ifdef MESON_AW
+			trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
 
 			/* Read out the 4 CRC bytes to move the addr to the next packet */
 			DeviceRead(port, regFIFO, 4, data);
+#ifdef MESON_AW
+			trace_aw35615_protocol_getrxpacket(data, 4, false, true);
+#endif
 		}
 	} else {
+#ifdef MESON_AW
+		set_proto_state(port, PRLIdle);
+#else
 		port->ProtocolState = PRLIdle;
+#endif
 		port->PDTxStatus = txError;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
 		AW_LOG("tx err\n");
 
 		/* Pass header and SOP* on to GetRxPacket */
@@ -596,12 +796,23 @@ void ProtocolVerifyGoodCRC(Port_t *port)
 		port->ProtocolMsgRxSop = sop;
 
 		if ((port->PolicyState == peSinkGiveSinkCap) || (port->PolicyState == peSourceGiveSinkCaps)) {
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_protocol_state_change,
+				"port %d msg Rx-ed but flushed.\n", port->PortID);
+#endif
 			ProtocolFlushRxFIFO(port);
 		} else {
+#ifdef MESON_AW
+			aw35615_dbg_trace(trace_aw35615_protocol_state_change,
+				"port %d msg preempts GoodCRC.\n", port->PortID);
+#endif
 			/* Rare case, next received message preempts GoodCRC */
 			ProtocolGetRxPacket(port, AW_TRUE);
 		}
 		port->ProtocolMsgRx = AW_FALSE;
+#ifdef MESON_AW
+		trace_aw35615_protocol_processed_rx_state(port, 0);
+#endif
 	}
 }
 
@@ -631,6 +842,11 @@ void ProtocolSendGoodCRC(Port_t *port, SopType sop)
 	port->ProtocolTxBuffer[port->ProtocolTxBytes++] =
 					port->PolicyTxHeader.byte[1];
 	ProtocolLoadEOP(port);
+
+#ifdef MESON_AW
+	trace_aw35615_protocol_send_goodcrc(port);
+#endif
+
 	DeviceWrite(port, regFIFO, port->ProtocolTxBytes,
 					&port->ProtocolTxBuffer[0]);
 }
@@ -703,7 +919,12 @@ void ResetProtocolLayer(Port_t *port, AW_BOOL ResetPDLogic)
 	if (ResetPDLogic)
 		DeviceWrite(port, regReset, 1, &data);
 
+#ifdef MESON_AW
+	set_proto_state(port, PRLIdle);
+#else
 	port->ProtocolState = PRLIdle;
+#endif
+
 	port->PDTxStatus = txIdle;
 
 	port->WaitingOnHR = AW_FALSE;
@@ -730,6 +951,10 @@ void ResetProtocolLayer(Port_t *port, AW_BOOL ResetPDLogic)
 	port->USBPDTxFlag = AW_FALSE;
 	port->PolicyHasContract = AW_FALSE;
 	port->USBPDContract.object = 0;
+
+#ifdef MESON_AW
+	trace_aw35615_protocol_state_reset(port, 0);
+#endif
 
 	port->SrcCapsHeaderReceived.word = 0;
 	port->SnkCapsHeaderReceived.word = 0;

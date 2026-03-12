@@ -28,6 +28,10 @@
 #include "vdm/DisplayPort/dp.h"
 #endif /* AW_HAVE_VDM */
 
+#ifdef MESON_AW
+#include "typec-aw35615-trace.h"
+#endif
+
 /* USB PD Enable / Disable Routines */
 void USBPDEnable(Port_t *port, AW_BOOL DeviceUpdate, SourceOrSink TypeCDFP)
 {
@@ -131,7 +135,11 @@ void USBPDDisable(Port_t *port, AW_BOOL DeviceUpdate)
 	port->src_support_pps = AW_FALSE;
 	port->usb_commcapable = AW_FALSE;
 	port->bist_doing = AW_FALSE;
+#ifdef MESON_AW
+	set_proto_state(port, PRLDisabled);
+#else
 	port->ProtocolState = PRLDisabled;
+#endif
 	port->old_policy_state = peDisabled;
 	SetPEState(port, peDisabled);
 	port->PolicyIsSource = AW_FALSE;
@@ -411,6 +419,8 @@ void USBPDPolicyEngine(Port_t *port)
 			PolicyInvalidState(port);/* Invalid state, reset */
 		break;
 	}
+
+	//trace_aw35615_protocol_processed_rx_state(port, 0);
 }
 
 void PolicyErrorRecovery(Port_t *port)
@@ -1145,11 +1155,19 @@ void PolicySourceReady(Port_t *port)
 		SetPEState(port, peSourceSendVCONNSwap);
 	}
 #ifdef AW_HAVE_VDM
+#ifdef MESON_AW
+	else if (port->PolicyIsDFP && (port->AutoVdmState != AUTO_VDM_DONE)) {
+		autoVdmDiscovery(port);
+	} else if (port->cblRstState > CBL_RST_DISABLED) {
+		processCableResetState(port);
+	}
+#else
 //	else if (port->PolicyIsDFP && (port->AutoVdmState != AUTO_VDM_DONE)) {
 //		autoVdmDiscovery(port);
 //	} else if (port->cblRstState > CBL_RST_DISABLED) {
 //		processCableResetState(port);
 //	}
+#endif
 #endif /* AW_HAVE_VDM */
 	else {
 		port->PEIdle = AW_TRUE;
@@ -2628,6 +2646,9 @@ void PolicySinkReady(Port_t *port)
 				if (port->vdm_flag) {
 					port->vdm_flag = AW_FALSE;
 					port->ProtocolMsgRx = AW_TRUE;
+#ifdef MESON_AW
+					trace_aw35615_protocol_received_rx_state(port, 0);
+#endif
 					TimerStart(&port->PolicyStateTimer, 3);
 					platform_delay_10us(200);
 					break;
@@ -3647,7 +3668,11 @@ AW_U8 PolicySendCommand(Port_t *port, AW_U8 Command, PolicyState_t nextState,
 		/* Waiting for GoodCRC or timeout of the protocol */
 		if (TimerExpired(&port->ProtocolTimer)) {
 			TimerDisable(&port->ProtocolTimer);
+#ifdef MESON_AW
+			set_proto_state(port, PRLIdle);
+#else
 			port->ProtocolState = PRLIdle;
+#endif
 			port->PDTxStatus = txIdle;
 
 			/* Jumping to the next state might not be appropriate error
@@ -3714,6 +3739,9 @@ AW_U8 PolicySendCommand(Port_t *port, AW_U8 Command, PolicyState_t nextState,
 		Status = STAT_ERROR;
 		break;
 	}
+#ifdef MESON_AW
+	trace_aw35615_protocol_requested_tx_state(port, Status);
+#endif
 	return Status;
 }
 
@@ -3788,7 +3816,11 @@ AW_U8 PolicySendData(Port_t *port, AW_U8 MessageType, void *data,
 		/* Waiting for GoodCRC or timeout of the protocol */
 		if (TimerExpired(&port->ProtocolTimer)) {
 			TimerDisable(&port->ProtocolTimer);
+#ifdef MESON_AW
+			set_proto_state(port, PRLIdle);
+#else
 			port->ProtocolState = PRLIdle;
+#endif
 			port->PDTxStatus = txIdle;
 
 			/* Jumping to the next state might not be appropriate error
@@ -3877,6 +3909,10 @@ AW_U8 PolicySendData(Port_t *port, AW_U8 MessageType, void *data,
 		Status = STAT_ERROR;
 		break;
 	}
+
+#ifdef MESON_AW
+	trace_aw35615_protocol_requested_tx_state(port, Status);
+#endif
 
 	return Status;
 }
@@ -3973,7 +4009,7 @@ void PolicyGetPPSStatus(Port_t *port)
 void PolicyGivePPSStatus(Port_t *port)
 {
 #ifdef MESON_AW
-	PPSStatus_t ppsstatus = {0};
+	static PPSStatus_t ppsstatus;
 #else
 	PPSStatus_t ppsstatus;
 #endif
@@ -4412,7 +4448,11 @@ void processDMTBIST(Port_t *port)
 				port->USBPDContract.FVRDO.ObjectPosition - 1].FPDOSupply.Voltage
 				== 100) {
 			SetPEState(port, PE_BIST_Carrier_Mode_2);
+#ifdef MESON_AW
+			set_proto_state(port, PRLIdle);
+#else
 			port->ProtocolState = PRLIdle;
+#endif
 		}
 
 		/* Don't idle here - mode setup in next state */
@@ -4455,7 +4495,11 @@ void processDMTBIST(Port_t *port)
 
 			SetPEState(port, PE_BIST_Test_Data);
 			/* Disable Protocol layer so we don't read FIFO */
+#ifdef MESON_AW
+			set_proto_state(port, PRLDisabled);
+#else
 			port->ProtocolState = PRLDisabled;
+#endif
 		}
 
 		port->PEIdle = AW_TRUE;

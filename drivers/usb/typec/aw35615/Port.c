@@ -19,6 +19,11 @@
 #include "vdm/vdm_callbacks.h"
 #endif /* AW_HAVE_VDM */
 
+#ifdef MESON_AW
+#include "sysfs_header.h"
+#include "typec-aw35615-trace.h"
+#endif
+
 void PortInit(Port_t *port)
 {
 	AW_U8 i;
@@ -44,6 +49,19 @@ void PortInit(Port_t *port)
 	port->Timers[8] = &port->VBusPollTimer;
 	port->Timers[9] = &port->VdmTimer;
 
+#ifdef MESON_AW
+	port->PDDebounceTimer.name = "PDDebounceTimer";
+	port->CCDebounceTimer.name = "CCDebounceTimer";
+	port->StateTimer.name = "StateTimer";
+	port->LoopCountTimer.name = "LoopCountTimer";
+	port->PolicyStateTimer.name = "PolicyStateTimer";
+	port->ProtocolTimer.name = "ProtocolTimer";
+	port->SwapSourceStartTimer.name = "SwapSourceStartTimer";
+	port->PpsTimer.name = "PpsTimer";
+	port->VBusPollTimer.name = "VBusPollTimer";
+	port->VdmTimer.name = "VdmTimer";
+#endif
+
 	for (i = 0; i < AW_NUM_TIMERS; ++i)
 		TimerDisable(port->Timers[i]);
 }
@@ -52,6 +70,14 @@ void SetTypeCState(Port_t *port, ConnectionState state)
 {
 	port->ConnState = state;
 	port->TypeCSubState = 0;
+
+#ifdef MESON_AW
+	if (port->ConnState != port->old_ConnState)
+		aw35615_dbg_trace(trace_aw35615_tc_state_change,
+			"port %d pending %s->%s\n", port->PortID,
+			TYPEC_STATE_TBL[port->old_ConnState],
+			TYPEC_STATE_TBL[port->ConnState]);
+#endif
 }
 
 void SetPEState(Port_t *port, PolicyState_t state)
@@ -60,13 +86,36 @@ void SetPEState(Port_t *port, PolicyState_t state)
 	port->PolicySubIndex = 0;
 
 	port->PDTxStatus = txIdle;
+#ifdef MESON_AW
+	trace_aw35615_protocol_processed_tx_state(port, 0);
+#endif
 	port->WaitingOnHR = AW_FALSE;
 	port->WaitInSReady = AW_FALSE;
 	if (port->PolicyState != port->old_pe_state) {
+#ifdef MESON_AW
+		aw35615_dbg_trace(trace_aw35615_pe_state_change,
+			"port %d pending %s->%s\n", port->PortID,
+			PE_STATE_TBL[port->old_pe_state],
+			PE_STATE_TBL[port->PolicyState]);
+#endif
 		port->old_pe_state = port->PolicyState;
 		notify_observers(PD_STATE_CHANGED, port->PortID);
 	}
 }
+
+#ifdef MESON_AW
+void set_proto_state(Port_t *port, ProtocolState_t state)
+{
+	port->ProtocolState = state;
+
+	if (port->ProtocolState != port->old_protocol_state) {
+		aw35615_dbg_trace(trace_aw35615_protocol_state_change,
+			"port %d pending %s->%s\n", port->PortID,
+			PRL_STATE_TBL[port->old_protocol_state],
+			PRL_STATE_TBL[port->ProtocolState]);
+	}
+}
+#endif
 
 /**
  * Initalize port policy variables to default. These are changed later by
