@@ -1218,6 +1218,7 @@ void lcd_mode_config_init(struct aml_lcd_drv_s *pdrv)
 
 	mutex_lock(&lcd_vout_mutex);
 	lcd_frame_rate_change(pdrv);
+	lcd_clk_generate_parameter(pdrv);
 	pdrv->curr_dev->dev_cfg.timing.clk_change = 0; /* clear clk_change flag */
 	mutex_unlock(&lcd_vout_mutex);
 }
