@@ -2121,20 +2121,20 @@ int vdin_v4l2_probe(struct platform_device *pl_dev,
 
 	/*device node need attach device tree vdin dts tree*/
 	video_dev->dev.of_node = pl_dev->dev.of_node;
-	ret = of_reserved_mem_device_init(&video_dev->dev);
-	if (ret) {
-		ret = -5;
-		goto error;
+	if (!(devp->cma_config_flag & MEM_ALLOC_FROM_CODEC)) {
+		ret = of_reserved_mem_device_init(&video_dev->dev);
+		if (ret)
+			pr_debug("vdin%d v4l2 reserved_mem not defined\n", devp->index);
 	}
 
 	vdin_v4l2_init(devp, pl_dev);
 
-	dprintk(1, "vdin[%d] probe ok, node:%s (/dev/video%d)\n",
+	dprintk(0, "vdin[%d] probe ok, node:%s (/dev/video%d)\n",
 		devp->index, video_device_node_name(video_dev), v4l_vd_num);
 
 	return 0;
 error:
-	dprintk(1, "v4l2 probe error:%d\n", ret);
+	dprintk(0, "v4l2 probe error:%d\n", ret);
 	return ret;
 }
 
