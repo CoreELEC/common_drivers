@@ -1026,6 +1026,7 @@ extern u8 vsync_isr_cpuid;
 extern bool force_scaler_all;
 extern struct video_lcevc_s video_lcevc;
 extern bool lcevc_en;
+extern bool lcevc_smallwindow_enable;
 extern u32 lcevc_ctrl;
 extern u32 lcevc_coef_demo;
 extern uint int_hv_phase;

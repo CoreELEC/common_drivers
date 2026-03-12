@@ -1521,11 +1521,17 @@ void pipx_swap_frame(struct video_layer_s *layer, struct vframe_s *vf,
 		crop[2] = vf->crop[2];
 		crop[3] = vf->crop[3];
 		if (layer_id == 1 && video_lcevc.vd2_vd1_shared_vf) {
+			u32 vskip_cnt = 0, hskip_cnt = 0;
+
 			/* vd2 is base frame, scaler up to vd1 source size */
+			if (lcevc_smallwindow_enable && vd_layer[0].next_frame_par) {
+				vskip_cnt = vd_layer[0].next_frame_par->vscale_skip_count;
+				hskip_cnt = vd_layer[0].next_frame_par->hscale_skip_count;
+			}
 			axis[0] = 0;
 			axis[1] = 0;
-			axis[2] = video_lcevc.vd1_src_width - 1;
-			axis[3] = video_lcevc.vd1_src_height - 1;
+			axis[2] = (video_lcevc.vd1_src_width >> hskip_cnt) - 1;
+			axis[3] = (video_lcevc.vd1_src_height >> vskip_cnt) - 1;
 			/* crop todo */
 		}
 		_set_video_window(layer_info, axis);
@@ -4430,11 +4436,17 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 		crop[2] = vd_layer[layer_id].dispbuf->crop[2];
 		crop[3] = vd_layer[layer_id].dispbuf->crop[3];
 		if (layer_id == 1 && video_lcevc.vd2_vd1_shared_vf) {
+			u32 vskip_cnt = 0, hskip_cnt = 0;
+
+			if (lcevc_smallwindow_enable && vd_layer[0].next_frame_par) {
+				vskip_cnt = vd_layer[0].next_frame_par->vscale_skip_count;
+				hskip_cnt = vd_layer[0].next_frame_par->hscale_skip_count;
+			}
 			/* vd2 is base frame, scaler up to vd1 source size */
 			axis[0] = 0;
 			axis[1] = 0;
-			axis[2] = video_lcevc.vd1_src_width - 1;
-			axis[3] = video_lcevc.vd1_src_height - 1;
+			axis[2] = (video_lcevc.vd1_src_width >> hskip_cnt) - 1;
+			axis[3] = (video_lcevc.vd1_src_height >> vskip_cnt) - 1;
 			/* crop todo */
 		}
 		_set_video_window(&glayer_info[layer_id], axis);

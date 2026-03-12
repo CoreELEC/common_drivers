@@ -354,6 +354,7 @@ bool force_scaler_all;
 bool lcevc_en;
 u32 lcevc_ctrl;
 u32 lcevc_coef_demo = 1;
+bool lcevc_smallwindow_enable;
 
 /*********************************************************/
 /* #define DUR2PTS(x) ((x) - ((x) >> 4)) */

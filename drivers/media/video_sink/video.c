@@ -646,6 +646,7 @@ u32 safa_super_resolution = 0x3;
 u32 safa_sharpness = 0x3;
 bool vsr_top_en;
 bool lcevc_en;
+bool lcevc_smallwindow_enable;
 u32 lcevc_ctrl;
 u32 lcevc_coef_demo = 1;
 u32 vsr_debug_mode;
@@ -14293,6 +14294,36 @@ static ssize_t frc_delay_enable_store(const struct class *cla,
 	return count;
 }
 
+static ssize_t lcevc_smallwindow_enable_show(const struct class *cla,
+				const struct class_attribute *attr,
+				char *buf)
+{
+	return snprintf(buf, 40, "lcevc_smallwindow_enable:%d\n",
+		lcevc_smallwindow_enable);
+}
+
+static ssize_t lcevc_smallwindow_enable_store(const struct class *cla,
+				 const struct class_attribute *attr,
+				 const char *buf, size_t count)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	if (ret) {
+		pr_err("kstrtoint err\n");
+		return -EINVAL;
+	}
+
+	if (res != lcevc_smallwindow_enable) {
+		lcevc_smallwindow_enable = res;
+		vd_layer[0].property_changed = true;
+		vd_layer[1].property_changed = true;
+		force_vpp_blend_update = true;
+	}
+	return count;
+}
+
 static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR(axis,
 	       0664,
@@ -14963,6 +14994,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 		0664,
 		frc_delay_enable_show,
 		frc_delay_enable_store),
+	__ATTR(lcevc_smallwindow_en,
+		0664,
+		lcevc_smallwindow_enable_show,
+		lcevc_smallwindow_enable_store),
 };
 
 static struct class_attribute amvideo_poll_class_attrs[] = {

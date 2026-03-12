@@ -15597,7 +15597,8 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 			op_flag);
 		if (layer_id == 0 &&
 			video_lcevc.vd2_vd1_shared_vf &&
-			(layer->next_frame_par->vscale_skip_count >= 1 ||
+			((!lcevc_smallwindow_enable &&
+			layer->next_frame_par->vscale_skip_count >= 1) ||
 			is_layer_cropped(layer))) {
 			/* switch vf to vd2 vf, disable vd2, disable lcevc */
 			layer->switch_vd2_vf = true;
