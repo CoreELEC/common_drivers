@@ -2008,12 +2008,9 @@ unsigned char  dpss_is_bypass(struct vframe_s *vf)
 			(vf->width < DPSS_BYPASS_WIDTH ||
 			vf->height < DPSS_BYPASS_HEIGHT))) {
 		reason = 0xa;/*input height less than 120, not do dpss*/
-	//} else if (VFM_IS_I_SRC(vf->type) &&
-			//(vf->height > 0 && vf->height % 4)) {
-		//reason = 0xb;/*v 4 align*/
-	//} else if (!VFM_IS_I_SRC(vf->type) &&
-		//(vf->height > 0 && vf->height % 2)) {
-		//reason = 0xc;/*v 2 align*/
+	} else if (VFM_IS_I_SRC(vf->type) &&
+			vf->height > 1080) {
+		reason = 0xb;/*> 1920*1080*/
 	} else {
 		reason = 0x0;
 	}

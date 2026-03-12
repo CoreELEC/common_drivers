@@ -143,6 +143,9 @@ module_param_named(dpss_o_mode, dpss_o_mode, uint, 0664);
 bool nr_4k1k_en;
 module_param_named(nr_4k1k_en, nr_4k1k_en, bool, 0664);
 
+unsigned int nr_dae_xy;
+module_param_named(nr_dae_xy, nr_dae_xy, uint, 0664);
+
 unsigned int dpss_dbg_step;
 module_param_named(dpss_dbg_step, dpss_dbg_step, uint, 0664);
 
@@ -2728,11 +2731,15 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 			} else if (vf->width > 960) {
 				prm_top->dae_dsx_scale = 1;
 				prm_top->size_as_in = 1;
+			} else if (vf->height > 1080) {
+				prm_top->dae_dsx_scale = 2;
+				prm_top->dae_dsy_scale = 2;
+				prm_top->size_as_in = 1;
 			}
-			if (vf->width >> prm_top->dae_dsx_scale * vf->height > 960 * 540) {
+			if ((vf->width >> prm_top->dae_dsx_scale) * vf->height > 960 * 540) {
 				prm_top->dae_dsy_scale = 1;
-				if (vf->width >> prm_top->dae_dsx_scale *
-						vf->height >> 1 > 960 * 540)
+				if ((vf->width >> prm_top->dae_dsx_scale) *
+						(vf->height >> 1) > 960 * 540)
 					prm_top->dae_dsy_scale = 2;
 			}
 		} else if ((vf->width + 8) >= vf->compWidth && pch->d->is_afbcd) {
@@ -2752,6 +2759,10 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 						vf->height >> 1  > 960 * 540)
 					prm_top->dae_dsy_scale = 2;
 			}
+		}
+		if (nr_dae_xy) {
+			prm_top->dae_dsy_scale = nr_dae_xy >> 16;
+			prm_top->dae_dsx_scale = nr_dae_xy & 0xffff;
 		}
 		dbg_i0("%s:dsx = %d,dsy = %d\n", __func__,
 			prm_top->dae_dsx_scale, prm_top->dae_dsy_scale);
