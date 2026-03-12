@@ -1136,6 +1136,8 @@ static void frc_state_init(void)
 	state_st->mc_link_available = false;
 	state_st->phs_swth = false;
 	state_st->dae0_available_cnt = 0;
+	state_st->fast_pat_set_n2m = false;
+	state_st->fast_pat_set_phase0 = false;
 	if (state_st->force_n2m == 0)
 		memset(&state_st->n2m_status, 0, sizeof(state_st->n2m_status));
 	memset(&state_st->me_pcn_st, 0, sizeof(state_st->me_pcn_st));
@@ -3519,12 +3521,15 @@ bool  frc_dynamic_detect_play_speed(void)
 void dp_dynamic_detect_play_speed(bool en)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
 
 	if (!pchip_st)
 		return;
 
-	pchip_st->state_st.fast_pat_set_n2m = en;
-	dbg_f1("fast_pat_set_n2m=%d\n", en);
+	state_st = &pchip_st->state_st;
+	state_st->fast_pat_set_n2m = en;
+	state_st->fast_pat_set_phase0 = en;
+	dbg_f1("fast_pat_set=%d\n", en);
 }
 
 enum hdr_fmt_s {

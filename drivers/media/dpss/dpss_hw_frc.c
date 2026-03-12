@@ -1103,12 +1103,6 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	if (display_buf_q.disp_idx == display_buf_q.mc_idx)
 		state_st->mc_last_ready = false;
 
-	if (pchip_st && (pchip_st->state_st.mc_bypass || pchip_st->state_st.force_mc_phase0))
-		dpe_intp_phs = 0;
-
-	if (state_st->check_fallback != 1)
-		state_st->mc_link_available = true;
-
 	pr_frc(1, "is_pause_state=%d, %d\n", is_pause_state, state_st->is_pause_state_last_frmae);
 
 	if (is_pause_state) {
@@ -1147,6 +1141,8 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	state_st->dpe_ready = true;
 	if (display_buf_q.disp_idx != display_buf_q.mc_idx)
 		state_st->mc_last_ready = true;
+	if (state_st->fast_pat_set_phase0 || state_st->mc_bypass || state_st->force_mc_phase0)
+		dpe_intp_phs = 0;
 	state_st->dpe_intp_phs = dpe_intp_phs;
 
 	state_st->mc_disp_st.wr_pre_idx = dpe_pre_pixl_buf;
@@ -1160,9 +1156,9 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	pr_frc(1, "mc_last_idx=%d, display_mc_idx=%d, dpe_pre=%d, dpe_cur=%d, pause_st_last=%d\n",
 		state_st->mc_last_idx, display_mc_idx, dpe_pre_pixl_buf, dpe_cur_pixl_buf,
 		state_st->is_pause_state_last_frmae);
-	pr_frc(1, "mc:pc=%d,%d, logo=%d,%d, mv=%d, mc_phs=%3d\n",
+	pr_frc(1, "mc:pc=%d,%d, logo=%d,%d, mv=%d, mc_phs=%3d, fast_pat=%d\n",
 		dpe_pre_pixl_buf, dpe_cur_pixl_buf, dpe_plogo_buf,
-		dpe_clogo_buf, dpe_mvlogo_buf, dpe_intp_phs);
+		dpe_clogo_buf, dpe_mvlogo_buf, dpe_intp_phs, state_st->fast_pat_set_phase0);
 
 	data32 = rd(FRC_DPSS_DISP_BUFF_INFO_0);
 	data32_1 = rd(FRC_DPSS_DISP_BUFF_INFO_1);

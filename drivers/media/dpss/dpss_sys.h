@@ -512,6 +512,7 @@ struct frc_state_s {
 	bool ui_set_n2m;
 	bool dbg_set_n2m;
 	bool fast_pat_set_n2m;
+	bool fast_pat_set_phase0;
 	bool n2m_property_change;
 	bool is_first_frame;
 	bool src0_disp_obuf_rdy;

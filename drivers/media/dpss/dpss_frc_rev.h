@@ -35,8 +35,10 @@
 // dpss:20251125 add frc bypass when dpss reset
 // dpss:20260106 pre vsync rdma
 // dpss:20260208 add game memc
+// dpss:20260227 refine frc sw execution flow
+// dpss:20260407 add hdr flag
 
-#define DPSS_FRC_FW_VER			"20260227 refine frc sw execution flow"
+#define DPSS_FRC_FW_VER			"20260407 frc set fast pat mode"
 #define DPSS_FRC_KERDRV_VER                  1000
 
 //#define DPSS_FRC_DEVNO		1
