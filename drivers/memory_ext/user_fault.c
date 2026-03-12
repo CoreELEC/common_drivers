@@ -841,7 +841,6 @@ EXPORT_SYMBOL(set_dump_dmc_func);
 
 void _dump_dmc_reg(void)
 {
-
 	if (!dmc_cb)
 		return;
 	dmc_cb();
