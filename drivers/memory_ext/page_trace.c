@@ -26,9 +26,7 @@
 #include <linux/cma.h>
 #include <cma.h>
 #include <linux/amlogic/page_trace.h>
-#if IS_ENABLED(CONFIG_AMLOGIC_CMA)
 #include <linux/amlogic/aml_cma.h>
-#endif
 #include <asm/stacktrace.h>
 #include <asm/sections.h>
 #include <linux/moduleparam.h>
