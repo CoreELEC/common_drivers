@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config TYPEC_MUX_MESON
+	tristate "Amlogic Typec Switch driver"
+	depends on REGMAP_MMIO
+	help
+	  Driver for the Meson Typec Switch, which provides support for muxing
+	  USB3 and DP on a common USB Type-C connector.
+	  If compiled as a module, the module will be named typec-mux-meson.

@@ -209,6 +209,31 @@ ddk_module(
 )
 
 ddk_module(
+    name = "typec-mux-meson",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_TYPEC_MUX_MESON": {
+            True: [
+                "typec/mux/typec-mux-meson.c",
+            ],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = [
+    ],
+    linux_includes = [
+    ],
+    out = "typec-mux-meson.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+    ]
+)
+
+ddk_module(
     name = "typec-aw35615",
     srcs = glob([
         "**/*.h",
@@ -274,5 +299,6 @@ ddk_module(
         "//common_drivers/drivers/gki_tool:amlogic-gkitool",
         "//common_drivers/drivers/i2c/busses:amlogic-i2c",
         "//common_drivers/drivers/usb:amlogic-usb",
+        "//common_drivers/drivers/usb:typec-mux-meson",
     ]
 )
