@@ -60,7 +60,7 @@
 #include <linux/amlogic/secmon.h>
 #endif
 
-#include <dmc_monitor.h>
+#include <linux/amlogic/page_trace.h>
 
 #ifndef CONFIG_RISCV
 #ifndef CONFIG_ARM64
@@ -258,7 +258,7 @@ static void show_regs_pfn(struct pt_regs *regs)
 			if (page)
 				pr_info("R%-2d : %016llx, PFN:%5lx L, f: %ps\n",
 					i, regs->regs[i], virt_to_pfn((void *)regs->regs[i]),
-					(void *)dmc_get_page_trace(page));
+					(void *)get_page_trace(page));
 			else
 				pr_info("R%-2d : %016llx, PFN:%5lx L\n",
 					i, regs->regs[i], virt_to_pfn((void *)regs->regs[i]));
@@ -267,7 +267,7 @@ static void show_regs_pfn(struct pt_regs *regs)
 			if (page)
 				pr_info("R%-2d : %016llx, PFN:%5lx V, f: %ps\n",
 					i, regs->regs[i], page_to_pfn(page),
-					(void *)dmc_get_page_trace(page));
+					(void *)get_page_trace(page));
 			else
 				pr_info("R%-2d : %016llx, PFN:***** V\n", i, regs->regs[i]);
 		}
@@ -832,7 +832,7 @@ void show_all_pfn(struct task_struct *task, struct pt_regs *regs)
 
 #endif
 
-static int (*dmc_cb)(char *);
+static int (*dmc_cb)(void);
 void set_dump_dmc_func(void *f)
 {
 	dmc_cb =  (void *)f;
@@ -841,13 +841,10 @@ EXPORT_SYMBOL(set_dump_dmc_func);
 
 void _dump_dmc_reg(void)
 {
-	char *buf = kzalloc(1024, GFP_KERNEL);
 
-	if (!buf || !dmc_cb)
+	if (!dmc_cb)
 		return;
-	dmc_cb(buf);
-	pr_crit("%s\n", buf);
-	kfree(buf);
+	dmc_cb();
 }
 
 void show_user_fault_info(struct pt_regs *regs, u64 lr, u64 sp)
@@ -875,6 +872,7 @@ void show_user_fault_info(struct pt_regs *regs, u64 lr, u64 sp)
 		show_regs_pfn(regs);
 	}
 #elif defined CONFIG_ARM
+	_dump_dmc_reg();
 	if (user_mode(regs)) {
 		int read_locked;
 

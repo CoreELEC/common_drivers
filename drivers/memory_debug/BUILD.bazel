@@ -185,5 +185,6 @@ ddk_module(
         "//common_drivers/drivers/memory_ext:page_trace",
         "//common_drivers/drivers/debug:amlogic-debug-iotrace",
         "//common_drivers/drivers/debug:amlogic-debug",
+	"//common_drivers/drivers/memory_ext:user_fault",
     ],
 )

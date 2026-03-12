@@ -246,21 +246,6 @@ static inline void dmc_monitor_exit(void)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_AMLOGIC_PAGE_TRACE)
-struct page_trace *dmc_find_page_base(struct page *page);
-unsigned long dmc_get_page_trace(struct page *page);
-#else
-static inline struct page_trace *dmc_find_page_base(struct page *page)
-{
-	return NULL;
-}
-
-static inline unsigned long dmc_get_page_trace(struct page *page)
-{
-	return 0;
-}
-#endif
-
 #if IS_ENABLED(CONFIG_AMLOGIC_DMC_DEV_ACCESS)
 void dmc_dev_access(unsigned char id, unsigned long addr, unsigned long size);
 int show_dmc_notifier_list(char *buf);

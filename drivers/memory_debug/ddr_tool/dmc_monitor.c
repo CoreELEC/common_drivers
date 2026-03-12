@@ -39,6 +39,7 @@
 #include <linux/mmzone.h>
 #include <trace/hooks/traps.h>
 #include <linux/amlogic/aml_ddr_tool.h>
+#include <linux/amlogic/user_fault.h>
 #include <linux/sched/cputime.h>
 #include <linux/sched/clock.h>
 #include <linux/string.h>
@@ -47,7 +48,7 @@
 #include "dmc_trace.h"
 
 // #define DEBUG
-#define DMC_VERSION		"1.11.4"
+#define DMC_VERSION		"1.11.5"
 
 #define IRQ_CHECK		0
 #define IRQ_CLEAR		1
@@ -190,7 +191,6 @@ static int dmc_filter_remove(char *p)
 				memmove(&dmc_mon->filter.dev[i],
 					&dmc_mon->filter.dev[i + 1],
 					size);
-				dmc_mon->filter.dev[i].status = 0;
 				del_num++;
 			}
 		}
@@ -383,7 +383,6 @@ static unsigned long dmc_unpack_ip(struct page_trace *trace)
 	return unpack_ip(trace);
 }
 #endif
-EXPORT_SYMBOL(dmc_get_page_trace);
 
 /* Return a pointer to the bitmap storing bits affecting a block of pages */
 static inline unsigned long *get_pageblock_bitmap(const struct page *page,
@@ -807,6 +806,8 @@ int dmc_violation_ignore(char *title, void *data, unsigned long vio_bit)
 
 	/* ignore black dev or symbol filter */
 	for (i = 0; i < dmc_mon->filter.num; i++) {
+		if (!dmc_mon->filter.dev[i].status)
+			continue;
 		if (mon_comm->port.name) {
 			if (strstr(mon_comm->port.name, dmc_mon->filter.dev[i].name)) {
 				is_ignore = 1;
@@ -1052,6 +1053,14 @@ static void dmc_sec_reg_check(char *info, unsigned char index)
 		pr_emerg("%s", buf);
 }
 
+#ifdef ARM
+static int dmc_sec_dump_arm(void)
+{
+	dmc_sec_reg_check("FROM ARM32 -- ", 0xff);
+	return 0;
+}
+#endif
+
 static irqreturn_t __nocfi dmc_sec_irq_handler(int irq, void *dev_instance)
 {
 	unsigned char index = (struct dmc_mon_comm *)dev_instance - dmc_mon->mon_comm;
@@ -1239,6 +1248,8 @@ int dmc_set_monitor(unsigned long start, unsigned long end,
 	set_dmc_filter(default_filter_dev, 1);
 	set_dmc_filter(default_filter_sym, 1);
 	set_dmc_filter(exception_filter_sym, 1);
+	if (strlen(dmc_filter_early_buf))
+		set_dmc_filter(dmc_filter_early_buf, 0);
 
 	dmc_mon->addr_start = start;
 	dmc_mon->addr_end   = end;
@@ -1848,9 +1859,7 @@ static void __init get_dmc_ops(int chip, struct dmc_monitor *mon)
 	}
 }
 
-#if IS_ENABLED(CONFIG_AMLOGIC_USER_FAULT) && \
-	defined(CONFIG_ANDROID_VENDOR_HOOKS)
-
+#if IS_ENABLED(CONFIG_ANDROID_VENDOR_HOOKS)
 #if CONFIG_AMLOGIC_KERNEL_VERSION >= 14515
 /* Asynchronous Serror*/
 static void arm64_serror_panic(void *data, struct pt_regs *regs, unsigned long esr)
@@ -1969,17 +1978,17 @@ static int __init dmc_monitor_probe(struct platform_device *pdev)
 				init_end_addr, init_dev_mask, DMC_MODE_NORMAL, 1);
 	}
 
-	if (strlen(dmc_filter_early_buf))
-		set_dmc_filter(dmc_filter_early_buf, 0);
-
-#if IS_ENABLED(CONFIG_AMLOGIC_USER_FAULT) && \
-	defined(CONFIG_ANDROID_VENDOR_HOOKS)
+#if IS_ENABLED(CONFIG_ANDROID_VENDOR_HOOKS)
 #if CONFIG_AMLOGIC_KERNEL_VERSION >= 14515
 	register_trace_android_rvh_arm64_serror_panic(arm64_serror_panic, NULL);
 	register_trace_android_rvh_do_sea(do_sea, NULL);
 #else
 	register_trace_android_rvh_do_serror(do_serror, NULL);
 #endif
+#endif
+
+#ifdef ARM
+	set_dump_dmc_func(&dmc_sec_dump_arm);
 #endif
 	/* clear prot vio reg */
 	for (i = 0; i < dmc_mon->mon_number; i++) {
