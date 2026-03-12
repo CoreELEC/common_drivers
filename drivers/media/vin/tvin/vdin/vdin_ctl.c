@@ -1472,6 +1472,16 @@ void vdin_cfg_cutwin_regs(struct vdin_dev_s *devp,
 	//TODO:update afbce
 }
 
+void vdin_set_dw_scaling(struct vdin_dev_s *devp)
+{
+	vdin_get_hv_shrink(devp);
+	if (vdin_is_afbce_enabled(devp) && (devp->h_active % (devp->h_shrink_times * 2))) {
+		devp->prop.scaling4w = rounddown(devp->h_active, devp->h_shrink_times * 2);
+		pr_info("vdin%d,h:%d,h_srk:%d,scaling4w=%d\n", devp->index,
+			devp->h_active, devp->h_shrink_times, devp->prop.scaling4w);
+	}
+}
+
 void vdin_set_cutwin(struct vdin_dev_s *devp, unsigned int rdma_enable)
 {
 	struct tvin_cutwin_s cutwin_s;
@@ -5715,6 +5725,7 @@ void vdin_set_hv_scale(struct vdin_dev_s *devp)
 	if (K_FORCE_HV_SHRINK)
 		goto set_hv_shrink;
 
+	vdin_set_dw_scaling(devp);
 	vdin_scaling_adjust(devp);
 
 	if (devp->debug.vdin_dbg_en)
