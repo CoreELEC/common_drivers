@@ -1410,9 +1410,12 @@
 		reg = <0xfe430000 0x38>;
 		interrupts = <GIC_SPI 201 IRQ_TYPE_EDGE_RISING>;
 		time-storage-format-gray;
-		clocks = <&xtal_32k>, <&clkc CLKID_SYS_RTC>;
+		clocks = <&ao_clkc CLKID_AO_OSCIN32K_CLK>,
+			 <&ao_clkc CLKID_AO_SYS_RTC_DIG>;
 		clock-names = "osc", "sys";
 		status = "okay";
+		assigned-clocks = <&ao_clkc CLKID_AO_OSCIN32K_CLK>;
+		assigned-clock-parents = <&xtal_32k>;
 	};
 
 	jpegenc {
