@@ -207,3 +207,66 @@ ddk_module(
         "//common_drivers/drivers/cpu_info:amlogic-cpuinfo",
     ]
 )
+
+ddk_module(
+    name = "typec-aw35615",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_TYPEC_AW35615_WHOLE": {
+            True: [
+                "typec/aw35615/aw35615_driver.c",
+                "typec/aw35615/aw35615_global.c",
+                "typec/aw35615/platform_helpers.c",
+                "typec/aw35615/dfs.c",
+                "typec/aw35615/core.c",
+                "typec/aw35615/PDPolicy.c",
+                "typec/aw35615/timer.c",
+                "typec/aw35615/PDProtocol.c",
+                "typec/aw35615/TypeC.c",
+                "typec/aw35615/Port.c",
+                "typec/aw35615/vendor_info.c",
+                "typec/aw35615/modules/dpm.c",
+                "typec/aw35615/modules/observer.c",
+                "typec/aw35615/vdm/bitfield_translators.c",
+                "typec/aw35615/vdm/vdm.c",
+                "typec/aw35615/vdm/vdm_callbacks.c",
+                "typec/aw35615/vdm/DisplayPort/dp.c",
+            ],
+        },
+        "CONFIG_TYPEC_AW35615_TCPM": {
+            True: [
+                "typec/aw35615/tcpci_aw35615.c",
+            ],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = [
+        "AW_HAVE_SNK",
+        "AW_HAVE_SRC",
+        "AW_HAVE_DRP",
+        "AW_HAVE_VBUS_ONLY",
+        "AW_HAVE_ACCMODE",
+        "AW_HAVE_EXT_MSG",
+        "AW_HAVE_VDM",
+        "AW_DEBUG_CODE",
+        "AW_HAVE_DP",
+        "AW_HAVE_PD",
+	"MESON_AW",
+    ],
+    linux_includes = [
+        "typec/aw35615/",
+        "typec/aw35615/modules/",
+        "typec/aw35615/vdm/",
+        "typec/aw35615/vdm/DisplayPort",
+    ],
+    out = "typec-aw35615.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common_drivers/drivers/i2c/busses:amlogic-i2c",
+        "//common_drivers/drivers/usb:amlogic-usb",
+    ]
+)

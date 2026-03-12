@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#
+# awinic aw35615 pd controller driver configuration
+#
+
+config TYPEC_AW35615
+	tristate "Awinic Pd"
+	depends on I2C
+	help
+		this option enables support for the AW35615 PD connected
+		through I2C.
+
+		To compile this driver as a module, choose M here: the
+		module will be called typec-aw35615.
+
+choice
+    prompt "AW35615 Working Mode"
+    depends on TYPEC_AW35615
+    default TYPEC_AW35615_WHOLE
+
+config TYPEC_AW35615_WHOLE
+	bool "Awinic Aw35615 Built-in PD Policy mode"
+	help
+		This option enables support for the AW35615 PD connected
+		through I2C based on vendor-implemented PD protocol stack.
+
+config TYPEC_AW35615_TCPM
+	bool "Awinic Aw35615 TCPM mode"
+	depends on TYPEC_TCPM
+	help
+		This option enables support for the AW35615 PD connected
+		through I2C based on USB Type-C Port Manager(TCPM).
+endchoice
+

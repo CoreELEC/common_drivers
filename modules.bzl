@@ -242,6 +242,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/thermal:amlogic-thermal",
     "common_drivers/drivers/usb/amlogic-usb.ko",
     "//common_drivers/drivers/usb:amlogic-usb",
+    "common_drivers/drivers/usb/typec/aw35615/typec-aw35615.ko",
+    "//common_drivers/drivers/usb:typec-aw35615",
     "common_drivers/drivers/watchdog/amlogic-watchdog.ko",
     "//common_drivers/drivers/watchdog:amlogic-watchdog",
     "common_drivers/drivers/wireless/amlogic-wireless.ko",

@@ -130,3 +130,24 @@
   class_dev_iter_init
   class_dev_iter_next
   device_match_name
+
+#typec-aw35615.ko
+  alarm_cancel
+  alarm_init
+  alarm_start_relative
+  cpu_latency_qos_add_request
+  cpu_latency_qos_remove_request
+  cpu_latency_qos_request_active
+  cpu_latency_qos_update_request
+  extcon_set_property_capability
+  power_supply_changed
+  power_supply_get_property
+  typec_register_partner
+  typec_register_port
+  typec_set_data_role
+  typec_set_pwr_role
+  typec_unregister_partner
+  wakeup_source_add
+  wakeup_source_create
+  wakeup_source_destroy
+  wakeup_source_remove

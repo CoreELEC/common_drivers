@@ -56,6 +56,7 @@ RAMDISK_MODULES_LOAD_LIST=(
 VENDOR_MODULES_LOAD_FIRST_LIST=(
 	amlogic-crypto-dma
 	amlogic-usb.ko
+	typec-aw35615.ko
 	amlogic-wireless.ko
 )
 
@@ -66,6 +67,7 @@ VENDOR_MODULES_LOAD_LAST_LIST=(
 
 RECOVERY_MODULES_LOAD_LIST=(
 	i2c-dev.ko
+	typec-aw35615.ko
 )
 
 COMMON_GKI_MODULES_LIST=(

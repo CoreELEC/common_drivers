@@ -313,6 +313,7 @@ drivers/usb/xhci_amlogic/pci-quirks-meson.c
 drivers/usb/xhci_amlogic/xhci-ext-caps-meson.h
 drivers/usb/xhci_amlogic/xhci-trace-meson.c
 drivers/usb/xhci_amlogic/xhci-ext-caps-meson.c
+drivers/usb/typec/aw35615/
 drivers/usb/dwc_otg/310/dwc_otg_pcd.h
 drivers/usb/dwc_otg/310/dwc_otg_adp.h
 drivers/usb/dwc_otg/310/dwc_otg_adp.c

@@ -59,6 +59,11 @@ config MESON_USBPHY
 	  Amlogic USB 3.0 PHY and implements Amlogic USB otg functions.
 
 	  For which socs this driver supports, check the files in the driver directory.
+if TYPEC
+
+source "$(COMMON_DRIVERS_DIR)/drivers/usb/typec/aw35615/Kconfig"
+
+endif # TYPEC
 
 config AMLOGIC_USBPHY
 	bool "Amlogic USB PHY Driver"
