@@ -1499,7 +1499,10 @@
 		reg-names = "cve";
 		interrupts = <GIC_SPI 133 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "cve";
-		//power-domains = <&pwrdm PDID_C3_CVE>;
+		clocks = <&clkc CLKID_CVE>, <&clkc CLKID_CVE_ARB>, <&clkc CLKID_SYS_CVE>;
+		clock-names = "clk_cve", "clk_cve_arb", "clk_sys_cve";
+		//clk-rate = <666000000>;
+		power-domains = <&pwrdm PDID_C4_CVE>;
 		status = "okay";
 	};
 
