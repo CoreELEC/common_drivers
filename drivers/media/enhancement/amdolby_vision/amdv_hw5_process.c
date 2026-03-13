@@ -408,22 +408,10 @@ static void get_top1_vd_info(struct vframe_s *vf,
 	}
 }
 
-void update_num_downsamplers(u32 w, u32 h)
+bool update_num_downsamplers(u32 w, u32 h)
 {
-	u8 dw = 0;
-
-	if (enable_top1) {/*todo, update according decoder dw*/
-		if (w <= 512 && h <= 288)
-			num_downsamplers = 1;
-		else if (w <= 512 && h <= 576)
-			num_downsamplers = 1;
-		else if (w <= 1024 && h <= 288)
-			num_downsamplers = 1;
-		else
-			num_downsamplers = 2;
-	} else {
-		num_downsamplers = 2;
-	}
+	u8 dw = 4;/*default*/
+	bool ret = true;
 
 	if ((w == top1_vd_info.width * 4 && h == top1_vd_info.height * 4) ||
 		((((w + 7) >> 3) << 3) == top1_vd_info.width * 4 &&
@@ -440,7 +428,15 @@ void update_num_downsamplers(u32 w, u32 h)
 		(((h + 7) >> 3) << 3) == top1_vd_info.height)) {
 		num_downsamplers = 0;
 		dw = 0;/*no dw*/
+	} else {
+		/*top2 size is not a multiple of top1 size*/
+		num_downsamplers = 2;
+		/*ret = false;*/
 	}
+	if (debug_dolby & 0x80000)
+		pr_info("dw %d,set num_ds %d,size %d %d %d %d\n", dw, num_downsamplers,
+		w, h, top1_vd_info.width, top1_vd_info.height);
+
 	if (debug_dolby & 0x80000)
 		pr_info("dw %d,set num_ds %d\n", dw, num_downsamplers);
 	if (top1_scale) {
@@ -453,12 +449,13 @@ void update_num_downsamplers(u32 w, u32 h)
 		if (debug_dolby & 0x80000)
 			pr_info("top1 scaler, update num_ds to %d\n", num_downsamplers);
 	}
+	return ret;
 }
 
 /*return true: need top1 rdmif scale, false: no scale*/
 bool check_top1_scale(u32 w, u32 h)
 {
-	u32 decoder_scale = 0;
+	u8 decoder_scale = 2;/*default*/
 	bool scale = false;
 
 	if (!enable_top1_scale)
@@ -484,7 +481,8 @@ bool check_top1_scale(u32 w, u32 h)
 		/*1. T3X:Some special res, pyramid start line too large top2 stuck at level7*/
 		/*need work with level6, so need downscaler once more*/
 		scale = true;
-	} else if (decoder_scale == 0 && top1_vd_info.width > 512) {
+	} else if (decoder_scale == 0 && top1_vd_info.width > 512 &&
+		top1_vd_info.width <= 1024) {
 		/*2. For 1024 >= width > 512, ko force pyramid setting with level 6*/
 		/*if dw is 1:1,need top1 scale*/
 		scale = true;
@@ -551,9 +549,10 @@ void update_top1_onoff(struct vframe_s *vf)
 			} else {
 				top1_scale = 0;
 			}
-			update_num_downsamplers(w, h);
-			vf->src_fmt.downsamplers = num_downsamplers;
 			enable_top1 = true;/*cur cfg enable pyramid*/
+			if (!update_num_downsamplers(w, h))
+				enable_top1 = false;/*size not align, disable enable_top1*/
+			vf->src_fmt.downsamplers = num_downsamplers;
 		} else {
 			enable_top1 = false;
 		}
@@ -608,6 +607,14 @@ void update_top1_onoff(struct vframe_s *vf)
 				/*hw bug, need disable top1 when w>1920 && w<=h*/
 				vf->src_fmt.py_level = PY_NO_LEVEL;
 				enable_top1 = false;
+			}
+			/*make sure not odd res for top2*/
+			if (ori_h % 2 || ori_w % 2) {
+				vf->src_fmt.py_level = PY_NO_LEVEL;
+				enable_top1 = false;
+				if (debug_dolby & 0x80000)
+					pr_dv_dbg("top2 size %dx%d odd, bypass pd\n",
+					ori_w, ori_h);
 			}
 		} else {
 			vf->src_fmt.py_level = PY_NO_LEVEL;
