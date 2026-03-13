@@ -2212,8 +2212,6 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 		return;
 	}
 #endif
-	if (IS_HDMI_SRC(devp->parm.port))
-		vdin_mute_vpp(devp, true);
 
 	vdin_game_frc_check(devp, 0);//check game frc status
 	disable_irq(devp->irq);
@@ -2368,9 +2366,6 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	}
 	devp->debug.slt_test.vf_check_result = false;
 	devp->debug.slt_test.vf_pass_cnt = 0;
-
-	if (IS_HDMI_SRC(devp->parm.port))
-		vdin_mute_vpp(devp, false);
 
 	if (devp->debug.vdin_time_en)
 		pr_info("vdin.%d stop time %ums,run time:%ums.\n",
