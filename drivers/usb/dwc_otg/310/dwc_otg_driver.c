@@ -691,7 +691,7 @@ static void amlogic_device_detect_work(struct work_struct *work)
 	if (sof_cnt_pre == dsts.b.soffn) {
 		sofstop_flag++;
 		if (sofstop_flag == 2) {
-			DWC_PRINTF("usbplug out,stop pcd!\n");
+			DWC_INFO("usbplug out,stop pcd!\n");
 			if (pcd_cb->stop)
 				pcd_cb->stop(otgdev->pcd);
 			if (dwc_otg_gadget_lock.wakesrc)
@@ -1839,7 +1839,6 @@ int __init dwc_otg_init(void)
 {
 	int ret;
 
-	DWC_DEBUG("dwc2_a init\n");
 	dwc2_driver_lock();
 	if (dwc2_driver_state != 0) {
 		DWC_ERROR("dwc2_a already registered. exit\n");
@@ -1862,7 +1861,6 @@ exit:
 //late_initcall(dwc_otg_init);
 void __exit dwc_otg_exit(void)
 {
-	DWC_DEBUG("dwc2_a exit\n");
 	dwc2_driver_lock();
 	if (dwc2_driver_state != 1) {
 		pr_info("dwc2_a not registered. exit\n");

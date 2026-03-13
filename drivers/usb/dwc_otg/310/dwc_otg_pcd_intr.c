@@ -852,7 +852,7 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	core_if->lx_state = DWC_OTG_L0;
 	core_if->otg_sts = 0;
 
-	DWC_PRINTF("USB RESET\n");
+	DWC_INFO("USB RESET\n");
 
 #ifdef DWC_EN_ISOC
 	for (i = 1; i < 16; ++i) {

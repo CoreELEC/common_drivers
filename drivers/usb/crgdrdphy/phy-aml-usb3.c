@@ -440,7 +440,7 @@ static int aml_usb3_phy_probe(struct platform_device *pdev)
 		return ret;
 
 	if (!portnum) {
-		dev_err(dev, "This usb phy has no port.\n");
+		dev_info(dev, "This usb phy has no port.\n");
 			goto no_port;
 	}
 
