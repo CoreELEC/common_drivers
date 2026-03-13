@@ -1443,6 +1443,7 @@ static int videoqueue_unreg_provider(struct video_queue_dev *dev)
 	mutex_lock(&dev->mutex_reg);
 	if (!dev->vq_reg_flag) {
 		vq_print(dev->inst, P_ERROR, "unreg: vq is not reg.\n");
+		mutex_unlock(&dev->mutex_reg);
 		return 0;
 	}
 	dev->vq_reg_flag  = 0;
