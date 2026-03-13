@@ -310,6 +310,7 @@ ddk_module(
                 "vout/meson_tx_connector/meson_tx_task_mgr_linux.c",
                 "vout/meson_tx_connector/cea861.c",
                 "vout/meson_tx_connector/meson_tx_dev.c",
+                "vout/meson_tx_connector/meson_tx_audio.c",
                 "vout/meson_tx_connector/meson_tx_hw.c",
                 "vout/meson_tx_connector/meson_tx_log.c",
                 "vout/meson_tx_connector/meson_tx_edid_parse.c",

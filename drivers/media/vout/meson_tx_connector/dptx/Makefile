@@ -12,6 +12,7 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_DPTX) += \
 						vout/meson_tx_connector/dptx/dptx_hw_common.o \
 						vout/meson_tx_connector/dptx/dptx_infoframe.o \
 						vout/meson_tx_connector/dptx/dptx_link.o \
+						vout/meson_tx_connector/dptx/dptx_audio.o \
 						vout/meson_tx_connector/dptx/dptx_timer.o \
 						vout/meson_tx_connector/dptx/dptx_gtc.o \
 						vout/meson_tx_connector/dptx/dptx_log.o \

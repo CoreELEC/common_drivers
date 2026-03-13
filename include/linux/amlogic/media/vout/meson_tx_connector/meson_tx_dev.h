@@ -27,6 +27,7 @@ struct meson_tx_helper_ops;
 struct tx_task_manager;
 struct meson_tx_event_mgr;
 struct meson_tx_tracer;
+struct meson_tx_audio;
 
 struct meson_tx_state {
 	enum vmode_e mode;
@@ -38,6 +39,7 @@ struct meson_tx_state {
 
 struct meson_tx_dev {
 	struct meson_connector_dev conn_dev;
+	struct meson_tx_audio *tx_aud;
 	/* connector device */
 	struct device *pdev;
 	/* drm connector kdev */

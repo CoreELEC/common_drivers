@@ -8,6 +8,7 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_TX_CONNECTOR_COMMON_MODERN) += \
 							vout/meson_tx_connector/cea861.o \
 							vout/meson_tx_connector/meson_tx_task_mgr_linux.o \
 							vout/meson_tx_connector/meson_tx_dev.o \
+							vout/meson_tx_connector/meson_tx_audio.o \
 							vout/meson_tx_connector/meson_tx_hw.o \
 							vout/meson_tx_connector/meson_tx_log.o \
 							vout/meson_tx_connector/meson_tx_edid_parse.o \

@@ -13,6 +13,7 @@
 #define MESON_CONNECTOR_TYPE_PROP_NAME "meson.connector_type"
 
 struct vout_server_s;
+struct meson_tx_audio_ops;
 
 enum {
 	MESON_DRM_CONNECTOR_V10 = 0,
