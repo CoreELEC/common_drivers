@@ -530,6 +530,7 @@
 				reg-names = "basic", "pll";
 				clocks = <&xtal>;
 				clock-names = "xtal";
+				gp0-spread-spectrum = <0>; /* 500,1000,1500...*/
 				status = "okay";
 			};
 

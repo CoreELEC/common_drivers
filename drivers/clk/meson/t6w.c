@@ -5097,7 +5097,7 @@ static int meson_t6w_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct regmap *basic_map, *pll_map;
-	int ret, i;
+	int ret, i, ssc_size = 0;
 
 	/* Get regmap for different clock area */
 	basic_map = meson_clk_regmap_resource(pdev, dev, 0);
@@ -5142,6 +5142,13 @@ static int meson_t6w_probe(struct platform_device *pdev)
 		}
 #endif
 	}
+
+	/* set gp0 emmc spread spectrum, Bits [26:23] of ANACTRL_GP0_PLL_CNTL2 control the size. */
+	ret = of_property_read_u32(dev->of_node, "gp0-spread-spectrum", &ssc_size);
+	if (ret)
+		ssc_size = 0;
+
+	regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, 0xf << 23, (ssc_size / 500) << 23);
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
 					   &t6w_hw_onecell_data);

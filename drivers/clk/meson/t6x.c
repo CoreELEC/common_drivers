@@ -6065,7 +6065,7 @@ static int meson_t6x_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct regmap *basic_map, *pll_map;
-	int ret, i;
+	int ret, i, ssc_size = 0;
 
 	/* Get regmap for different clock area */
 	basic_map = meson_clk_regmap_resource(pdev, dev, 0);
@@ -6115,6 +6115,19 @@ static int meson_t6x_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register vpu clk notifier\n");
 		return ret;
+	}
+
+	/* set gp0 emmc spread spectrum, Bits [7:4] of ANACTRL_GP0_PLL_CNTL2 control the size. */
+	ret = of_property_read_u32(dev->of_node, "gp0-spread-spectrum", &ssc_size);
+	if (ret)
+		ssc_size = 0;
+
+	if (ssc_size > 0) {
+		regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, BIT(8), BIT(8));
+		regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, 0xf << 4, (ssc_size / 500) << 4);
+	} else {
+		regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, BIT(8), 0);
+		regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, 0xf << 4, 0);
 	}
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
