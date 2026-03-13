@@ -147,6 +147,9 @@ struct am_hdmi_tx {
 
 	struct hdr_info hdr_info;
 	struct dv_info dv_info;
+	/* update content protection property */
+	struct work_struct hdcp_update_work;
+	int content_protection;
 };
 
 struct am_hdmitx_connector_state {

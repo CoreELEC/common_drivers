@@ -1177,20 +1177,25 @@ static bool meson_hdmitx_is_hdcp_running(struct am_hdmi_tx *am_hdmi)
 	return true;
 }
 
+static void meson_hdmitx_hdcp_work_func(struct work_struct *work)
+{
+	struct am_hdmi_tx *am_hdmi = container_of(work, struct am_hdmi_tx, hdcp_update_work);
+	struct drm_connector *connector = &am_hdmi->base.connector;
+	struct drm_modeset_lock *mode_lock = &connector->dev->mode_config.connection_mutex;
+
+	drm_modeset_lock(mode_lock, NULL);
+	drm_hdcp_update_content_protection(connector, am_hdmi->content_protection);
+	drm_modeset_unlock(mode_lock);
+}
+
 static void meson_hdmitx_set_hdcp_result(struct am_hdmi_tx *am_hdmi, int result)
 {
 	struct drm_connector *connector = &am_hdmi->base.connector;
-	struct drm_modeset_lock *mode_lock =
-		&connector->dev->mode_config.connection_mutex;
-	bool locked_outer = drm_modeset_is_locked(mode_lock);
 
 	if (result == HDCP_AUTH_OK) {
 		am_hdmi->hdcp_state = HDCP_STATE_SUCCESS;
-		if (!locked_outer)
-			drm_modeset_lock(mode_lock, NULL);
-		drm_hdcp_update_content_protection(connector, DRM_MODE_CONTENT_PROTECTION_ENABLED);
-		if (!locked_outer)
-			drm_modeset_unlock(mode_lock);
+		am_hdmi->content_protection = DRM_MODE_CONTENT_PROTECTION_ENABLED;
+		schedule_work(&am_hdmi->hdcp_update_work);
 		DRM_DEBUG("hdcp [%d] set result ok.\n", am_hdmi->hdcp_mode);
 	} else if (result == HDCP_AUTH_FAIL) {
 		am_hdmi->hdcp_state = HDCP_STATE_FAIL;
@@ -1201,12 +1206,8 @@ static void meson_hdmitx_set_hdcp_result(struct am_hdmi_tx *am_hdmi, int result)
 		if (connector->state &&
 			connector->state->content_protection ==
 			DRM_MODE_CONTENT_PROTECTION_ENABLED) {
-			if (!locked_outer)
-				drm_modeset_lock(mode_lock, NULL);
-			drm_hdcp_update_content_protection(connector,
-				DRM_MODE_CONTENT_PROTECTION_DESIRED);
-			if (!locked_outer)
-				drm_modeset_unlock(mode_lock);
+			am_hdmi->content_protection = DRM_MODE_CONTENT_PROTECTION_DESIRED;
+			schedule_work(&am_hdmi->hdcp_update_work);
 		}
 	}
 }
@@ -1419,10 +1420,8 @@ static void meson_hdmitx_hdcp_notify(void *data, int type, int result)
 	struct hdmitx_common *tx_comm = to_hdmitx_common(am_hdmi->hdmitx_dev);
 	struct drm_modeset_lock *mode_lock =
 		&connector->dev->mode_config.connection_mutex;
-	bool locked_outer = drm_modeset_is_locked(mode_lock);
 
-	if (!locked_outer)
-		drm_modeset_lock(mode_lock, NULL);
+	drm_modeset_lock(mode_lock, NULL);
 
 	if (type == HDCP_KEY_UPDATE && result == HDCP_AUTH_UNKNOWN) {
 		DRM_INFO("HDCP statue changed, need re-run hdcp\n");
@@ -1461,8 +1460,7 @@ static void meson_hdmitx_hdcp_notify(void *data, int type, int result)
 		DRM_ERROR("HDCP report unknown result [%d-%d]\n", type, result);
 	}
 end:
-	if (!locked_outer)
-		drm_modeset_unlock(mode_lock);
+	drm_modeset_unlock(mode_lock);
 }
 
 static const struct drm_connector_helper_funcs am_hdmi_connector_helper_funcs = {
@@ -2519,6 +2517,7 @@ int meson_hdmitx_dev_bind(struct drm_device *drm,
 	connector = &am_hdmi->base.connector;
 	intf->conn = connector;
 	am_hdmi->hdmi_type = type;
+	INIT_WORK(&am_hdmi->hdcp_update_work, meson_hdmitx_hdcp_work_func);
 
 	switch (type) {
 	case DRM_MODE_CONNECTOR_MESON_HDMIA_A:
@@ -2667,6 +2666,7 @@ int meson_hdmitx_dev_unbind(struct drm_device *drm,
 
 	am_hdmi->base.connector.funcs->destroy(connector);
 	am_hdmi->encoder.funcs->destroy(&am_hdmi->encoder);
+	cancel_work_sync(&am_hdmi->hdcp_update_work);
 
 	return 0;
 }
