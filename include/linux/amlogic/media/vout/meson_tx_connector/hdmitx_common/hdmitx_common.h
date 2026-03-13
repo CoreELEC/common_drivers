@@ -177,6 +177,7 @@ struct hdmitx_clk_tree_s {
 
 struct st_debug_param {
 	unsigned int avmute_frame;
+	unsigned int disable_delay_ms;
 };
 
 /* 0: VESA DSC 1.2a is not supported

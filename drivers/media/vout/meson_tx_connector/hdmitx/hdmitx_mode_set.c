@@ -6,6 +6,7 @@
 #include <linux/errno.h>
 #include <linux/mm.h>
 #include <linux/printk.h>
+#include <linux/delay.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/hdmitx_common/hdmitx_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_edid.h>
 #include <linux/amlogic/media/vout/hdmi_tx_repeater.h>
@@ -20,6 +21,7 @@
 #include "meson_tx_internal.h"
 
 #include "tx21/hdmitx_packet.h"
+#include "hdmitx_compliance.h"
 
 const struct tx_timing *meson_tx_mode_match_timing_name(const char *name);
 
@@ -332,6 +334,15 @@ int hdmitx_common_disable_mode(struct hdmitx_common *tx_comm,
 	hdmitx_hw_cntl(tx_comm->tx_hw, VRR_REGISTER, (void *)&arg, NULL);
 	memset(&tx_comm->ced_cnt, 0, sizeof(tx_comm->ced_cnt));
 	memset(&tx_comm->ch_locked_st, 0, sizeof(tx_comm->ch_locked_st));
+
+	if (tx_comm->debug_param.disable_delay_ms > 0) {
+		msleep_interruptible(tx_comm->debug_param.disable_delay_ms);
+		HDMITX_INFO("%s disable output and delay %d ms\n", __func__,
+			tx_comm->debug_param.disable_delay_ms);
+	} else if (hdmitx_find_vendor_disable_delay(tx_comm->base.edid_buf)) {
+		msleep_interruptible(500);
+		HDMITX_INFO("%s disable output and delay 500 ms\n", __func__);
+	}
 	mutex_unlock(&tx_comm->base.set_mode_mutex);
 
 	return 0;

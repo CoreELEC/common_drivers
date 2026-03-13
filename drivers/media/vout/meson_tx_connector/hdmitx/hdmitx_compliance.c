@@ -91,6 +91,12 @@ static struct edid_venddat_t vendor_scan_non_std[] = {
 	/* Add new vendor data here */
 };
 
+static struct edid_venddat_t vendor_disable_delay[] = {
+	/* TCL 50EP660 */
+	{ {0x63, 0x18, 0x51, 0x28, 0x00, 0x00, 0x01, 0x00, 0x14, 0x1d} }
+	/* Add new vendor data here */
+};
+
 /* HDMIPLL_CTRL3/4 under 4k50/60hz 6G mode should use the setting
  * witch is used under 4k59.94hz, specially for SAMSUNG UA55KS7300JXXZ
  * flash screen/no signal issue on SM1/SC2
@@ -279,3 +285,21 @@ bool hdmitx_find_vendor_audio_delay(unsigned char *edid_buf)
 	}
 	return false;
 }
+
+/* On TCL 50EP660 TV, need to add delay after disable output,
+ * otherwise it may take long time to recover display after switch mode
+ */
+bool hdmitx_find_vendor_disable_delay(unsigned char *edid_buf)
+{
+	int i;
+
+	if (!edid_buf)
+		return false;
+	for (i = 0; i < ARRAY_SIZE(vendor_disable_delay); i++) {
+		if (memcmp(&edid_buf[8], vendor_disable_delay[i].data,
+			sizeof(vendor_disable_delay[i].data)) == 0)
+			return true;
+	}
+	return false;
+}
+

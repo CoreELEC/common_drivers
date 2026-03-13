@@ -891,6 +891,10 @@ void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)
 		ret = kstrtoul(tmpbuf + 12, 10, &value);
 		tx_comm->debug_param.avmute_frame = value;
 		HDMITX_INFO("avmute_frame = %lu\n", value);
+	} else if (strncmp(tmpbuf, "disable_delay", 13) == 0) {
+		ret = kstrtoul(tmpbuf + 13, 10, &value);
+		tx_comm->debug_param.disable_delay_ms = value;
+		HDMITX_INFO("disable_delay_ms = %lu\n", value);
 	} else if (strncmp(tmpbuf, "config_csc_en", 13) == 0) {
 		ret = kstrtoul(tmpbuf + 13, 0, &value);
 		HDMITX_INFO("config_csc_en to %lu\n", value);
