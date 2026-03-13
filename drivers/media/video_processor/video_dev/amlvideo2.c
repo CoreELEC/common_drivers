@@ -6953,6 +6953,12 @@ static int start_send_normal_frame(struct amlvideo2_fh *fh)
 	else
 		fh->quantization_range = 0;
 
+	if (fh->secure_data.secure_capture_type ==
+		V4L2_EXT_AMLVIDEO2_SECURE_TEE_ONE_BUFFER)
+		para.support_secure = true;
+	else
+		para.support_secure = false;
+
 	if (amlvideo2_dbg_en) {
 		pr_info("para.h_active: %d, para.v_active: %d,",
 			para.h_active, para.v_active);
@@ -6966,6 +6972,8 @@ static int start_send_normal_frame(struct amlvideo2_fh *fh)
 			node->vdin_device_num, para.is_one_buffer);
 		pr_info("crop:top %d left %d width %d height %d\n",
 			para.crop[0], para.crop[1], para.crop[2], para.crop[3]);
+		pr_info("quantization_range %d, vdin_support_secure: %d,",
+			para.quantization_range, para.support_secure);
 	}
 	if (IS_ERR_OR_NULL(vops)) {
 		if (node->r_type == AML_RECEIVER_NONE)
