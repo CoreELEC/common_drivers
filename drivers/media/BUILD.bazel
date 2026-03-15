@@ -452,6 +452,7 @@ ddk_module(
                 "vout/lcd/lcd_vout.c",
                 "vout/lcd/lcd_reg.c",
                 "vout/lcd/lcd_common.c",
+                "vout/lcd/lcd_pinctrl.c",
                 "vout/lcd/lcd_config.c",
                 "vout/lcd/lcd_cus_ctrl.c",
                 "vout/lcd/lcd_notify.c",

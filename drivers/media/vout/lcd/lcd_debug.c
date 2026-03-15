@@ -464,7 +464,7 @@ static int lcd_info_basic_print(struct aml_lcd_drv_s *pdrv, char *buf, int offse
 		"sw_vrr: en: %d, sta: %d, tg_fr: %d(to %d), range: %d~%d\n"
 		"fr_mode: %d, fr_duration: %d, frame_rate: %d(msr: %d.%03d)\n"
 		"mute_state: %d(real %d), test_flag: 0x%x\n"
-		"config_load: %d, cus_pinmux: %d\n\n",
+		"config_load: %d, cus_pinmux: %s\n\n",
 		pdrv->index, LCD_DRV_VERSION,
 		pdrv->config_check_glb, pconf->basic.config_check, pdrv->config_check_en,
 		pdrv->curr_dev->dev_propname, pdrv->data->chip_type,
@@ -477,7 +477,7 @@ static int lcd_info_basic_print(struct aml_lcd_drv_s *pdrv, char *buf, int offse
 		pdrv->fr_mode, pdrv->fr_duration, pconf->timing.act_timing.frame_rate,
 		vs_val / 1000, vs_val % 1000,
 		pdrv->mute_flag, mute_state, pdrv->test_flag,
-		pdrv->config_load, pconf->custom_pinmux);
+		pdrv->config_load, pconf->cus_pinmux_name);
 
 	n = lcd_debug_info_len(len + offset);
 	len += snprintf((buf + len), n,

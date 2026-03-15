@@ -49,7 +49,14 @@ struct aml_lcd_device_s *lcd_device_append_new(struct aml_lcd_drv_s *pdrv, char 
 		return NULL;
 	}
 
+	/* default config */
 	strscpy(dev_p->dev_propname, device_cfg_name, 24);
+	dev_p->dev_cfg.basic.lcd_type = LCD_TYPE_MAX;
+	dev_p->dev_cfg.power.power_on_step[0].type = LCD_POWER_TYPE_MAX;
+	dev_p->dev_cfg.power.power_off_step[0].type = LCD_POWER_TYPE_MAX;
+	strscpy(dev_p->dev_cfg.cus_pinmux_name, "null", CUS_PINMUX_NAME_MAX);
+	dev_p->dev_cfg.backlight_index = 0xff;
+
 	ret = lcd_load_device_config(pdrv, dev_p, device_cfg_name);
 	if (ret) {
 		LCD_DEV_ERR(pdrv, i, "device load config[%s] failed", device_cfg_name);

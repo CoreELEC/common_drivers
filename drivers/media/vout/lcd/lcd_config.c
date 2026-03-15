@@ -234,16 +234,16 @@ void lcd_config_load_print(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *
 			i += sprintf(pr_buf + i, "pre_de:%d,%d, ",
 					pconf->timing.pre_de_h, pconf->timing.pre_de_v);
 		}
-		i += sprintf(pr_buf + i, "cfg_chk:0x%x, cus_pinmux:%d, afr_cus:0x%x",
-			pconf->basic.config_check, pconf->custom_pinmux, pconf->fr_auto_cus);
+		i += sprintf(pr_buf + i, "cfg_chk:0x%x, afr_cus:0x%x, cus_pinmux:%s",
+			pconf->basic.config_check, pconf->fr_auto_cus, pconf->cus_pinmux_name);
 
 		LCD_PR(pdrv, "%s", pr_buf);
 		kfree(pr_buf);
 		return;
 	}
 
-	i += sprintf(pr_buf + i, " (pll_flag = %d custom_pinmux = %d fr_auto_cus = 0x%x)",
-		pconf->timing.pll_flag, pconf->custom_pinmux, pconf->fr_auto_cus);
+	i += sprintf(pr_buf + i, " (pll_flag = %d fr_auto_cus = 0x%x custom_pinmux = %s)",
+		pconf->timing.pll_flag, pconf->fr_auto_cus, pconf->cus_pinmux_name);
 	LCD_DEV_PR(pdrv, dev_p->idx, "%s", pr_buf);
 
 	LCD_DEV_PR(pdrv, dev_p->idx, "config timings:");
@@ -941,11 +941,17 @@ static int lcd_config_load_from_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 	if (ret) {
 		ret = of_property_read_u32(child, "customer_pinmux", &val);
 		if (ret)
-			pconf->custom_pinmux = 0;
-		else
-			pconf->custom_pinmux = val;
-	} else {
-		pconf->custom_pinmux = val;
+			val = 0;
+	}
+	if (val) {
+		if (val == CUS_PINMUX_MODE_MODEL_NAME) {
+			strscpy(pconf->cus_pinmux_name, pconf->basic.model_name,
+				CUS_PINMUX_NAME_MAX);
+		} else {
+			ret = of_property_read_string(child, "custom_pinmux_name", &str);
+			if (ret == 0)
+				strscpy(pconf->cus_pinmux_name, str, CUS_PINMUX_NAME_MAX);
+		}
 	}
 
 	ret = of_property_read_u32(child, "fr_auto_disable", &val);
@@ -1330,6 +1336,7 @@ static int lcd_panel_parse_basic(struct json_parse_s *jsp,
 	struct json_s *json, *child;
 	const char *str = NULL;
 	struct lcd_basic_s *cfg = &dev_p->dev_cfg.basic;
+	unsigned char custom_pinmux;
 
 	json = json_path_to_node(jsp, jsp->root, "/basic");
 	if (!json) {
@@ -1345,7 +1352,17 @@ static int lcd_panel_parse_basic(struct json_parse_s *jsp,
 
 	cfg->config_check = json_get_obj_u32(jsp, json, "config_check", 0xff);
 	cfg->config_check = cfg->config_check == 0xff ? 0x0 : cfg->config_check ? 0x3 : 0x2;
-	dev_p->dev_cfg.custom_pinmux = json_get_obj_u32(jsp, json, "custom_pinmux", 0);
+	custom_pinmux = json_get_obj_u32(jsp, json, "custom_pinmux", 0);
+	if (custom_pinmux) {
+		if (custom_pinmux == CUS_PINMUX_MODE_MODEL_NAME) {
+			strscpy(dev_p->dev_cfg.cus_pinmux_name, cfg->model_name,
+				CUS_PINMUX_NAME_MAX);
+		} else {
+			str = json_get_obj_str(jsp, json, "custom_pinmux_name", NULL);
+			if (str)
+				strscpy(dev_p->dev_cfg.cus_pinmux_name, str, CUS_PINMUX_NAME_MAX);
+		}
+	}
 
 	child = json_get_object_child(jsp, json, "screen_size");
 	cfg->screen_width = json_get_arr_u32(jsp, child, 0, 16);
@@ -2416,7 +2433,7 @@ static int lcd_config_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 	struct phy_config_s *phy_cfg = &dev_p->dev_cfg.phy_cfg;
 	struct phy_attr_s *phy = NULL;
 	void *inip, *psec;
-	unsigned char version;
+	unsigned char version, custom_pinmux;
 	const char *str;
 	unsigned int lcd_bits, temp;
 	int ret;
@@ -2490,7 +2507,17 @@ static int lcd_config_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 	ptiming->frame_rate_max = lcd_ini_get_val(inip, psec, "frame_rate_max", 0);
 
 	pconf->timing.ppc = lcd_ini_get_val(inip, psec, "ppc_mode", 1);
-	pconf->custom_pinmux = lcd_ini_get_val(inip, psec, "custom_pinmux", 0);
+	custom_pinmux = lcd_ini_get_val(inip, psec, "custom_pinmux", 0);
+	if (custom_pinmux) {
+		if (custom_pinmux == CUS_PINMUX_MODE_MODEL_NAME) {
+			strscpy(pconf->cus_pinmux_name, pconf->basic.model_name,
+				CUS_PINMUX_NAME_MAX);
+		} else {
+			str = lcd_ini_get_str(inip, psec, "custom_pinmux_name", NULL);
+			if (str)
+				strscpy(pconf->cus_pinmux_name, str, CUS_PINMUX_NAME_MAX);
+		}
+	}
 
 	pconf->fr_auto_cus = lcd_ini_get_val(inip, psec, "fr_auto_custom", 0);
 	ptiming->switch_type = LCD_VMODE_SWITCH_NONE;

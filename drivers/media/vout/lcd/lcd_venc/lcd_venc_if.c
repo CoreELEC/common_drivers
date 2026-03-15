@@ -254,7 +254,6 @@ int lcd_get_venc_init_config(struct aml_lcd_drv_s *pdrv)
 		LCD_DBG_ADV(pdrv, "%s: load boot_ctrl from regs:\n"
 			"\tlcd_type        : %d\n"
 			"\tadvanced_flag   : %d\n"
-			"\tcustom_pinmux   : %d\n"
 			"\tdccd_flag       : %d\n"
 			"\tmute_flag       : %d\n"
 			"\tppc             : %d\n"
@@ -266,7 +265,6 @@ int lcd_get_venc_init_config(struct aml_lcd_drv_s *pdrv)
 			__func__,
 			boot_ctrl->lcd_type,
 			boot_ctrl->advanced_flag,
-			boot_ctrl->custom_pinmux,
 			boot_ctrl->dccd_flag,
 			boot_ctrl->mute_flag,
 			boot_ctrl->ppc,

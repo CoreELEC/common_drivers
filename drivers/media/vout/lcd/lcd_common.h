@@ -95,20 +95,7 @@ int lcd_phy_attr_print(struct phy_attr_s *phy, u32 lane_num, char *buf, int offs
 void lcd_cpu_gpio_probe(struct aml_lcd_drv_s *pdrv, unsigned int index);
 void lcd_cpu_gpio_set(struct aml_lcd_drv_s *pdrv, unsigned int index, int value);
 unsigned int lcd_cpu_gpio_get(struct aml_lcd_drv_s *pdrv, unsigned int index);
-#ifdef CONFIG_AMLOGIC_LCD_DPI
-void lcd_rgb_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-void lcd_bt_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
-void lcd_vbyone_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_TCON
-void lcd_mlvds_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-void lcd_p2p_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
-void lcd_mipi_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
-#endif
+void lcd_pinmux_set(struct aml_lcd_drv_s *pdrv, int status);
 
 void lcd_act_timing_dbg_print(struct aml_lcd_drv_s *pdrv);
 unsigned int lcd_config_timing_check(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p,

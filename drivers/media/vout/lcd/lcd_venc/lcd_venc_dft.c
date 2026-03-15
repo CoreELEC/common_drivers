@@ -358,7 +358,6 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 		boot_ctrl->lcd_type = val & 0xf;
 		boot_ctrl->clk_mode = (val >> 4) & 0xf;
 		boot_ctrl->ppc = (val >> 8) & 0x3;
-		boot_ctrl->custom_pinmux = (val >> 10) & 0x1;
 		boot_ctrl->bl_state = (val >> 11) & 0x1;
 
 		val = lcd_vcbus_read(L_STH1_VE_ADDR);

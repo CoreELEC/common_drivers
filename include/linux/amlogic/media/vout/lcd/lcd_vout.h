@@ -163,7 +163,7 @@ enum lcd_chip_e {
 	LCD_CHIP_MAX,
 };
 
-#define MOD_LEN_MAX        30
+#define MOD_LEN_MAX        48
 struct lcd_basic_s {
 	char model_name[MOD_LEN_MAX];
 	enum lcd_type_e lcd_type;
@@ -687,12 +687,12 @@ struct lcd_power_ctrl_s {
 #define LCD_VENC_4PPC                 2
 
 /*
- * bit[31:24] : base frame rate
+ * bit[31:24] : frame rate bit[7:0]
  * bit[23:22] : clk mode
  * bit[21:20] : ppc
  * bit[19:18] : lcd_init_level
  * bit[17] : dccd flag
- * bit[16] : custom pinmux flag
+ * bit[16] : frame_rate bit[8]
  * bit[15:8] : advanced flag(p2p_type when lcd_type=p2p)
  * bit[7:4] : lcd bits
  * bit[3:0] : lcd_type
@@ -704,7 +704,7 @@ struct lcd_boot_ctrl_s {
 	unsigned char mute_flag;
 	unsigned char ppc;
 	unsigned char clk_mode;
-	unsigned char custom_pinmux;
+	unsigned char reserved;
 	unsigned char init_level;
 	unsigned short advanced_flag;
 	unsigned short frame_rate;
@@ -905,6 +905,10 @@ struct aml_vrr_test_s {
 #define PANEL_FILE_INI      1
 #define PANEL_FILE_JSON     2
 
+#define CUS_PINMUX_NAME_MAX           44
+#define CUS_PINMUX_MODE_MODEL_NAME    1
+#define CUS_PINMUX_MODE_CUSTOM_NAME   2
+
 struct lcd_config_s {
 	unsigned int backlight_index;
 	struct lcd_basic_s basic;
@@ -919,7 +923,7 @@ struct lcd_config_s {
 	unsigned char change_flag;
 	unsigned char retry_enable_flag;
 	unsigned char retry_enable_cnt;
-	unsigned char custom_pinmux;
+	char cus_pinmux_name[CUS_PINMUX_NAME_MAX];
 	unsigned char fr_auto_cus;  //0=follow global setting, 0xff=disable
 	unsigned char fr_auto_flag; //final fr_auto policy
 	unsigned int customer_sw_pdf;

@@ -134,14 +134,6 @@ static struct aml_lcd_drv_s *lcd_driver_add(int index)
 
 	pdrv->index = index;
 
-	/* default config */
-	// strcpy(pdrv->curr_dev->dev_propname, lcd_propname[index]);
-	// pdrv->curr_dev->dev_cfg.basic.lcd_type = LCD_TYPE_MAX;
-	// pdrv->curr_dev->dev_cfg.power.power_on_step[0].type = LCD_POWER_TYPE_MAX;
-	// pdrv->curr_dev->dev_cfg.power.power_off_step[0].type = LCD_POWER_TYPE_MAX;
-	// pdrv->curr_dev->dev_cfg.pinmux_flag = 0xff;
-	// pdrv->curr_dev->dev_cfg.backlight_index = 0xff;
-
 	/* default vinfo */
 	pdrv->vinfo.mode = VMODE_LCD;
 	pdrv->vinfo.frac = 0;
@@ -2493,43 +2485,15 @@ static int lcd_config_probe(struct aml_lcd_drv_s *pdrv, struct platform_device *
 
 	/* lock pinmux as earlier as possible if lcd in on */
 	if (pdrv->status & LCD_STATUS_IF_ON) {
+		lcd_pinmux_set(pdrv, 1);
 		switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
-#ifdef CONFIG_AMLOGIC_LCD_DPI
-		case LCD_RGB:
-			lcd_rgb_pinmux_set(pdrv, 1);
-			break;
-		case LCD_BT656:
-		case LCD_BT1120:
-			lcd_bt_pinmux_set(pdrv, 1);
-			break;
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_LVDS
 		case LCD_LVDS:
-			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
-			break;
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
 		case LCD_VBYONE:
-			lcd_vbyone_pinmux_set(pdrv, 1);
-			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
-			break;
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_TCON
 		case LCD_MLVDS:
-			lcd_mlvds_pinmux_set(pdrv, 1);
-			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
-			break;
 		case LCD_P2P:
-			lcd_p2p_pinmux_set(pdrv, 1);
-			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
-			break;
-#endif
-#ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 		case LCD_MIPI:
-			lcd_mipi_pinmux_set(pdrv, 1);
 			pdrv->curr_dev->dev_cfg.phy_cfg.state = 1;
 			break;
-#endif
 		default:
 			break;
 		}
@@ -3197,12 +3161,11 @@ static int lcd_boot_str_setup(unsigned char idx, char *str)
 	boot_ctrl->lcd_type = data32 & 0xf;
 	boot_ctrl->lcd_bits = (data32 >> 4) & 0xf;
 	boot_ctrl->advanced_flag = (data32 >> 8) & 0xff;
-	boot_ctrl->custom_pinmux = (data32 >> 16) & 0x1;
 	boot_ctrl->dccd_flag = (data32 >> 17) & 0x1;
 	boot_ctrl->init_level = (data32 >> 18) & 0x3;
 	boot_ctrl->ppc = (data32 >> 20) & 0x3;
 	boot_ctrl->clk_mode = (data32 >> 22) & 0x3;
-	boot_ctrl->frame_rate = (data32 >> 24) & 0xff;
+	boot_ctrl->frame_rate = ((data32 >> 24) & 0xff) | (((data32 >> 16) & 0x1) << 8);
 
 	lcd_boot_ctrl_dft_prepare(boot_ctrl);
 
