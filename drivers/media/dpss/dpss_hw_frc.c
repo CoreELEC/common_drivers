@@ -1274,7 +1274,7 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 			}
 			dbg_pps0("pps frc di s1 0x%x,0x%x\n", mc_inp_body_ybuf_addr[0] << 5,
 				mc_inp_body_ybuf_addr[1] << 5);
-		} else if (pps->trig_pps == 2) {
+		} else if (pps->trig_pps == 2 || pps->trig_pps == 5) {
 			if (prm_top->fbuf_is_pps[dpe_pixl_buf_idx0]) {
 				mc_inp_body_ybuf_addr[0] =
 					prm_top->src0_diopps_fbuf_yaddr[dpe_pixl_buf_idx0];
@@ -1287,7 +1287,7 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 				mc_inp_body_cbuf_addr[1] =
 					prm_top->src0_diopps_fbuf_caddr[dpe_pixl_buf_idx1];
 			}
-			dbg_pps0("pps frc di s2 0x%x,0x%x\n", mc_inp_body_ybuf_addr[0] << 5,
+			dbg_pps0("pps frc di s2_5 0x%x,0x%x\n", mc_inp_body_ybuf_addr[0] << 5,
 				mc_inp_body_ybuf_addr[1] << 5);
 		} else {
 			dbg_pps0("no pps frc di 0x%x,0x%x,%d\n", mc_inp_body_ybuf_addr[0] << 5,
