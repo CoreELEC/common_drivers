@@ -11,11 +11,8 @@
 #include <linux/mdio.h>
 #include <linux/timer.h>
 #include <linux/netdevice.h>
-#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
-#include <linux/amlogic/aml_phy_debug.h>
-#endif
 
-#define MAXIO_PHY_VER					"v1.8.1.2"
+#define MAXIO_PHY_VER					"v1.8.1.4"
 #define MAXIO_PAGE_SELECT				0x1f
 #define MAXIO_MAE0621A_WORK_STATUS_REG	0x1d
 #define MAXIO_MAE0621A_CLK_MODE_REG		0x02
@@ -102,7 +99,7 @@ static int maxio_self_check(struct phy_device *phydev, int checknum)
 		if (ret != 0) {
 			maxio_write_paged(phydev, 0x0, 0x0, 0x1940);
 			PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0x0);
-			msleep(20);
+			msleep(10);
 			maxio_write_paged(phydev, 0x0, 0x0, 0x1140);
 			maxio_write_paged(phydev, 0x0, 0x0, 0x9140);
 		}
@@ -245,11 +242,47 @@ static void maxio_mae0621a_remove(struct phy_device *phydev)
 	phydev->priv = NULL;
 }
 
+static int maxio_mae0621a_clk_init(struct phy_device *phydev)
+{
+	u32 workmode, clkmode, oldpage;
+
+	oldpage = PHY_READ(phydev, MAXIO_PAGE_SELECT);
+	if (oldpage == 0xffff)
+		oldpage = PHY_READ(phydev, MAXIO_PAGE_SELECT);
+
+	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0x0);
+	PHY_WRITE(phydev, MII_BMCR, 0x9140);
+
+	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0xa43);
+	workmode = PHY_READ(phydev, MAXIO_MAE0621A_WORK_STATUS_REG);
+
+	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0xd92);
+	clkmode = PHY_READ(phydev, MAXIO_MAE0621A_CLK_MODE_REG);
+
+	if (!(workmode & BIT(5))) {
+		if (!(clkmode & BIT(8))) {
+			PHY_WRITE(phydev, MAXIO_MAE0621A_CLK_MODE_REG, clkmode | BIT(8));
+			pr_debug("%s: clkmode 0x210a PHY_ID: 0x%x\n", __func__, phydev->phy_id);
+		} else {
+			PHY_WRITE(phydev, MAXIO_MAE0621A_CLK_MODE_REG, clkmode & ~BIT(8));
+			pr_debug("%s: clkmode 0x200a PHY_ID: 0x%x\n", __func__, phydev->phy_id);
+		}
+	}
+
+	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0x0);
+	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, oldpage);
+	msleep(1000);
+
+	return 0;
+}
+
 static int maxio_mae0621a_config_init(struct phy_device *phydev)
 {
 	int ret = 0;
 
 	pr_debug("MAXIO_PHY_VER: %s\n", MAXIO_PHY_VER);
+
+	maxio_mae0621a_clk_init(phydev);
 
 	ret |= maxio_write_paged(phydev, 0xda0, 0x10, 0xc13);
 	ret |= maxio_write_paged(phydev, 0x0, 0xd, 0x7);
@@ -290,7 +323,7 @@ static int maxio_mae0621a_probe(struct phy_device *phydev)
 		return -ENOMEM;
 	phydev->priv = paras;
 
-	pr_debug("%s: clkmode(oscillator) PHY_ID: 0x%x\n", __func__, phydev->phy_id);
+	maxio_mae0621a_clk_init(phydev);
 	PHY_WRITE(phydev, MAXIO_PAGE_SELECT, 0x0);
 	mdelay(100);
 
@@ -345,7 +378,7 @@ static int maxio_mae0621aq3ci_config_init(struct phy_device *phydev)
 	return 0;
 }
 
-int maxio_mae0621aq3ci_resume(struct phy_device *phydev)
+static int maxio_mae0621aq3ci_resume(struct phy_device *phydev)
 {
 	int ret = 0;
 
@@ -357,7 +390,7 @@ int maxio_mae0621aq3ci_resume(struct phy_device *phydev)
 	return ret;
 }
 
-int maxio_mae0621aq3ci_suspend(struct phy_device *phydev)
+static int maxio_mae0621aq3ci_suspend(struct phy_device *phydev)
 {
 	int ret = 0;
 
@@ -371,127 +404,6 @@ int maxio_mae0621aq3ci_suspend(struct phy_device *phydev)
 
 	return ret;
 }
-
-#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
-#define SUPPORT_PMEB_WOL
-int mae0621a_suspend(struct phy_device *phydev)
-{
-	int value = 0;
-	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
-#if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	/* When a wake source exists, the PHY must remain in working state. */
-	if (eth_priv->wol_ready)
-		return 0;
-#endif
-
-	if (eth_priv->support_gpio_wol) {
-		mutex_lock(&phydev->lock);
-		/* config mac address for wol */
-		if (phydev->attached_dev) {
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd8c);
-			if (eth_priv->exphy_mdns_wkup) {
-				/* multicast: 01:00:5e:00:00:fb */
-				phy_write(phydev, 0x10, 0x0001);
-				phy_write(phydev, 0x11, 0x005e);
-				phy_write(phydev, 0x12, 0xfb00);
-			} else {
-				phy_write(phydev, 0x10, phydev->attached_dev->dev_addr[0] |
-						(phydev->attached_dev->dev_addr[1] << 8));
-				phy_write(phydev, 0x11, phydev->attached_dev->dev_addr[2] |
-						(phydev->attached_dev->dev_addr[3] << 8));
-				phy_write(phydev, 0x12, phydev->attached_dev->dev_addr[4] |
-						(phydev->attached_dev->dev_addr[5] << 8));
-			}
-		}
-
-		if (eth_priv->exphy_mdns_wkup) {
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd8a);
-			/* set max packet length */
-			phy_write(phydev, 0x11, 0x9fff);
-			/* enable wakeup frame 0 event */
-			phy_write(phydev, 0x10, 0x0001);
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd80);
-			phy_write(phydev, 0x10, 0x0000);
-			phy_write(phydev, 0x11, 0x0080);
-			phy_write(phydev, 0x12, 0x103c);
-			phy_write(phydev, 0x13, 0x0000);
-			phy_write(phydev, 0x14, 0x0000);
-			phy_write(phydev, 0x15, 0x0000);
-			phy_write(phydev, 0x16, 0x0000);
-			phy_write(phydev, 0x17, 0x0000);
-			/* set wakeup frame 0 crc */
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd88);
-			phy_write(phydev, 0x10, 0xe442);
-			/* pad isolation */
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd8a);
-		} else {
-			phy_write(phydev, MAXIO_PAGE_SELECT, 0xd8a);
-			/* enable magic packet event */
-			phy_write(phydev, 0x10, 0x1000);
-			/* set max packet length */
-			phy_write(phydev, 0x11, 0x9fff);
-		}
-	#ifdef SUPPORT_PMEB_WOL
-		/* enable pulse low and set pulse width 84ms */
-		phy_write(phydev, 0x13, 0x1);
-	#endif
-		/* select PMEB/INTB Pin */
-	#ifdef SUPPORT_PMEB_WOL
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0xd40);
-		value = phy_read(phydev, 0x16);
-		phy_write(phydev, 0x16, value | (0x1 << 5)); // select PMEB mode
-	#else
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0xa42);
-		value = phy_read(phydev, 0x12);
-		phy_write(phydev, 0x12, value | (0x1 << 7)); // enable PME interrupt
-	#endif
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0);
-
-		mutex_unlock(&phydev->lock);
-	} else {
-		// genphy_suspend(phydev);
-		maxio_mae0621aq3ci_suspend(phydev);
-	}
-
-	return 0;
-}
-
-int mae0621a_resume(struct phy_device *phydev)
-{
-	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
-#if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	if (eth_priv->wol_ready)
-		return 0;
-#endif
-
-	if (eth_priv->support_gpio_wol) {
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0xd8a);
-
-		// mutex_lock(&phydev->lock);
-		/* disable wol */
-		phy_write(phydev, 0x10, 0x0);
-		/* reset wol */
-		phy_write(phydev, 0x11, 0x0);
-	#ifdef SUPPORT_PMEB_WOL
-		/* disable pulse low */
-		phy_write(phydev, 0x13, 0x2);
-	#else
-		/* read wol interrupt */
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0xa43);
-		phy_read(phydev, 0x1d);
-	#endif
-
-		phy_write(phydev, MAXIO_PAGE_SELECT, 0);
-		// mutex_unlock(&phydev->lock);
-		pr_debug("%s %d\n", __func__, __LINE__);
-	} else {
-		// genphy_resume(phydev);
-		maxio_mae0621aq3ci_resume(phydev);
-	}
-
-	return 0;
-}
-#endif
 
 static struct phy_driver maxio_nc_drvs[] = {
 	{
@@ -516,13 +428,8 @@ static struct phy_driver maxio_nc_drvs[] = {
 		.config_aneg	=	&genphy_config_aneg,
 		.config_init	=	maxio_mae0621aq3ci_config_init,
 		.read_status	=	&maxio_mae0621a_status,
-	#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
-		.suspend	=	mae0621a_suspend,
-		.resume		=	mae0621a_resume,
-	#else
 		.suspend	=	maxio_mae0621aq3ci_suspend,
 		.resume		=	maxio_mae0621aq3ci_resume,
-	#endif
 		.remove		=	maxio_mae0621a_remove,
 	},
 };
