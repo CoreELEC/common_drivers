@@ -148,6 +148,7 @@ struct amlogic_usb_v2 {
 	u32 u3_companinon:1;
 	u32 otg_phy_index;
 	u32 reset_level;
+	u32 reset_initcount;
 	struct clk_bulk_data clks[AML_USB_PHY_MAX_CLK_NUMBER];
 	int clk_num;
 	/* TODO: Remove all clk stuffs. */

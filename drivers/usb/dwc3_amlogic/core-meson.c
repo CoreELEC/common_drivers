@@ -2613,6 +2613,12 @@ static int dwc3_resume_common(struct aml_dwc3 *dwc, pm_message_t msg)
 			return ret;
 
 		aml_dwc3_set_prtcap(dwc, DWC3_GCTL_PRTCAP_DEVICE);
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		if (dwc->usb2_phy)
+			otg_set_vbus(dwc->usb2_phy->otg, false);
+		phy_set_mode(dwc->usb2_generic_phy[0], PHY_MODE_USB_DEVICE);
+		phy_set_mode(dwc->usb3_generic_phy[0], PHY_MODE_USB_DEVICE);
+#endif
 		aml_dwc3_gadget_resume(dwc);
 		break;
 	case DWC3_GCTL_PRTCAP_HOST:
@@ -2776,7 +2782,6 @@ static int dwc3_resume(struct device *dev)
 	}
 
 	pm_runtime_enable(dev);
-
 	return 0;
 }
 

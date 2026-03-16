@@ -137,7 +137,31 @@ static int meson_u2phy_c4_init(void *phy)
 
 static int meson_u2phy_c4_exit(void *phy)
 {
-	return meson_u2phy_exit((struct amlogic_usb_v2 *)phy);
+	struct amlogic_usb_v2 *mphy = (struct amlogic_usb_v2 *)phy;
+	int ret = 0;
+
+	if (mphy->suspend_flag) {
+		dev_err(mphy->dev, "%s excessive exit\n", __func__);
+		return -EBUSY;
+	}
+
+	meson_u2phy_usb_hold_reset(mphy, false);
+	ret = meson_u2phy_hold_reset(mphy, false);
+	/* Only t6w & t6d have reg_reset. */
+	ret = meson_u2phy_reg_hold_reset(mphy, false);
+
+	/* Apb reset is proposed after c4 t6x. */
+	ret = meson_u2phy_apb_hold_reset(mphy, false);
+	ret = meson_u2phy_comb_hold_reset(mphy, false);
+
+	if (mphy->suspend_flag == 0)
+		clk_bulk_disable_unprepare(mphy->clk_num, mphy->clks);
+
+	mphy->reset_initcount = 0;
+	mphy->suspend_flag = 1;
+
+	return ret;
+	//return meson_u2phy_exit((struct amlogic_usb_v2 *)phy);
 }
 
 //static int meson_u2phy_c4_power_on(void *phy)

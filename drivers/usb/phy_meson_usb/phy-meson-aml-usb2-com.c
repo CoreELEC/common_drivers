@@ -27,8 +27,6 @@ __setup("usb2t_mode=", meson_u2phy_get_speed);
 /* Reset usb controller. */
 int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 {
-	static int	init_count;
-
 	if (phy->usb_reset_bit == -1U)
 		return 0;
 
@@ -39,8 +37,8 @@ int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 
 	dev_dbg(phy->dev, "%s initial: 0x%x.\n", __func__,
 				readl(phy->reset_regs + phy->reset_level));
-	if (!init_count) {
-		init_count++;
+	if (!phy->reset_initcount) {
+		phy->reset_initcount++;
 		if (phy->usb_reset_bit == 2)
 			writel((readl(phy->reset_regs) |
 				(0x1 << phy->usb_reset_bit)), phy->reset_regs);
@@ -52,7 +50,7 @@ int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 	return 0;
 }
 
-static int __maybe_unused meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on)
+int __maybe_unused meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on)
 {
 	u32 val = 0;
 	size_t mask = 0;
@@ -91,7 +89,7 @@ static int __maybe_unused meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy,
 }
 
 /* comb reset. Reset phy comb(phy mode, idpin detect etc.). */
-static int meson_u2phy_comb_hold_reset(struct amlogic_usb_v2 *phy, bool on)
+int meson_u2phy_comb_hold_reset(struct amlogic_usb_v2 *phy, bool on)
 {
 	u32 val = 0;
 	size_t mask = 0;
@@ -360,13 +358,15 @@ int meson_u2phy_exit(struct amlogic_usb_v2 *phy)
 	ret = meson_u2phy_hold_reset(phy, false);
 	/* Only t6w & t6d have reg_reset. */
 	ret = meson_u2phy_reg_hold_reset(phy, false);
-	//ret = meson_u2phy_comb_hold_reset(phy, false);
-	/* Apb reset is proposed after t6x. */
+
+	/* Apb reset is proposed after c4 t6x. */
 	ret = meson_u2phy_apb_hold_reset(phy, false);
+	//ret = meson_u2phy_comb_hold_reset(phy, false);
 
 	if (phy->suspend_flag == 0)
 		clk_bulk_disable_unprepare(phy->clk_num, phy->clks);
 
+	//phy->reset_initcount = 0;
 	phy->suspend_flag = 1;
 
 	return ret;
@@ -806,7 +806,7 @@ int meson_u2phy_aml_init(struct amlogic_usb_v2 *phy, struct meson_u2phy_priv *pr
 	usleep_range(49, 50);
 	meson_u2phy_comb_hold_reset(phy, true);
 	usleep_range(50, 100);
-	//meson_u2phy_reset_comb(phy);
+	meson_u2phy_apb_reset(phy);
 
 	dev_dbg(phy->dev, "init r0~r2 0x%x 0x%x 0x%x.\n",
 			readl(&phy->u2p_aml_regs[0]->r0),
@@ -822,7 +822,7 @@ int meson_u2phy_aml_init(struct amlogic_usb_v2 *phy, struct meson_u2phy_priv *pr
 
 	priv->cali(phy);
 
-	ret = meson_usb2phy_wait_ready(phy, 200);
+	ret = meson_usb2phy_wait_ready(phy, 500);
 	if (ret)
 		dev_err(phy->dev, " wait for ready timeout.\n");
 

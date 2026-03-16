@@ -1303,6 +1303,7 @@
 			clocks = <&clkc CLKID_SYS_USB>;
 			clock-names = "sys_usb";
 			interrupts = <GIC_SPI 129 IRQ_TYPE_EDGE_RISING>;
+			power-domains = <&pwrdm PDID_C4_U2DRD>;
 		};
 	};
 

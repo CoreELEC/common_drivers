@@ -144,6 +144,8 @@ int meson_u2phy_reset_phycfg(struct amlogic_usb_v2 *phy);
 int meson_u2phy_reg_reset(struct amlogic_usb_v2 *phy);
 int meson_u2phy_reg_hold_reset(struct amlogic_usb_v2 *phy, bool on);
 int meson_u2phy_apb_hold_reset(struct amlogic_usb_v2 *phy, bool on);
+int meson_u2phy_comb_hold_reset(struct amlogic_usb_v2 *phy, bool on);
+int __maybe_unused meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on);
 int meson_u2phy_apb_reset(struct amlogic_usb_v2 *phy);
 void meson_u2phy_set_vbus_power(struct amlogic_usb_v2 *phy, bool is_power_on);
 void meson_u2phy_phy_legacy_device_tuning(struct amlogic_usb_v2 *phy, bool tune);
