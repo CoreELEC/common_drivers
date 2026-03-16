@@ -3290,7 +3290,8 @@ static void vframe_display(struct videodisplay_dev *dev,
 		vd_print(dev->index, PRINT_AXIS, "%s: need rotate 180.\n", __func__);
 		vf->flag |= (VFRAME_FLAG_MIRROR_H | VFRAME_FLAG_MIRROR_V);
 	}
-	vf->pts_us64 = time_us64;
+	if (!is_repeat_vf)
+		vf->pts_us64 = time_us64;
 	vf->disp_pts = 0;
 
 	vd_print(dev->index, PRINT_AXIS,

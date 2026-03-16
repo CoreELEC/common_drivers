@@ -5547,6 +5547,17 @@ static struct vframe_s *amlvideo2_vf_peek(void *op_arg)
 		return NULL;
 	if (amlvideo2_dbg_en & 8)
 		pr_info("amlvideo2 vf peek .\n");
+
+	if (node->vid == 0 &&
+		strcmp(node->sub_recv->name, "video_render.0") == 0) {
+		node->provide_ready = 1;
+		if (amlvideo2_dbg_en & 8)
+			pr_info("provider : node->recv.name = %s\n",
+				node->recv.name);
+		if (vf_peek(node->recv.name))
+			wake_up_interruptible(&node->vidq.wq);
+	}
+
 	return vfq_peek(&node->q_ready);
 }
 
