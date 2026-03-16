@@ -681,6 +681,7 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	state_st->enable_frclink_cnt = 2;
 	state_st->first_put_vfm = true;
 	state_st->frc_only_rst = 0x3;
+	state_st->frc_off_delay_vs_cnt = 1;
 	frc_top->memc_enable = 2;
 	frc_top->frc_memc_level = 10;
 	frc_top->frc_deblur_level = 10;
@@ -3034,6 +3035,7 @@ void frc_unreg_hw(u32 ch)
 	struct frc_state_s *state_st;
 	unsigned int wait_cnt = 0, vout_hz = 0, vsync_us = 0, wait_cnt_max = 200;
 	struct vinfo_s *vinfo;
+	u32 delay_us = 0;
 
 	if (!pchip_st || ch)
 		return;
@@ -3056,8 +3058,24 @@ void frc_unreg_hw(u32 ch)
 		usleep_range(500, 600);
 		wait_cnt++;
 	}
-	dbg_h1("frc unreg wait_cnt:%d(%dms), wait_cnt_max:%d\n",
-		wait_cnt, wait_cnt * 500 / 1000, wait_cnt_max);
+
+	w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1); //off frc hw
+	/* wait fixed vsync frames before release buf*/
+	if (vsync_us && state_st->frc_off_delay_vs_cnt) {
+		delay_us = vsync_us * state_st->frc_off_delay_vs_cnt;
+		if (delay_us > 2000000)
+			delay_us = 2000000;
+
+		if (delay_us >= 20000) {
+			msleep(DIV_ROUND_UP((unsigned int)delay_us, 1000));
+		} else {
+			usleep_range((unsigned int)delay_us,
+						(unsigned int)delay_us + 100);
+		}
+	}
+
+	dbg_h1("frc unreg wait_cnt:%d(%dms), wait_cnt_max:%d wait frc stop(%dms)\n",
+		wait_cnt, wait_cnt * 500 / 1000, wait_cnt_max, delay_us / 1000);
 }
 
 void frc_unreg_clear_state(u32 ch)

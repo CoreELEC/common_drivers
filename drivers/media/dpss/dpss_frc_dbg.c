@@ -2263,6 +2263,13 @@ void dpss_frc_debug_param_if(const char *buf, size_t count)
 			goto exit;
 		if (kstrtoint(parm[1], 10, &val1) == 0)
 			state_st->frc_only_rst = val1;
+	} else if (!strcmp(parm[0], "frc_off_delay_vs_cnt")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0) {
+			if (val1 < 200)
+				state_st->frc_off_delay_vs_cnt = val1;
+		}
 	}
 
 exit:
