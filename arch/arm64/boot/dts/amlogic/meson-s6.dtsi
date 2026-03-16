@@ -328,7 +328,7 @@
 	};
 
 	vddcpu0_board2: pwm_f_board2-regulator {
-		compatible = "pwm-regulator";
+		compatible = "amlogic, pwm-regulator";
 		pwms = <&pwm_f MESON_PWM_0 1512 0>;
 		regulator-name = "vddcpu0_board2";
 		regulator-min-microvolt = <669000>;
@@ -379,7 +379,7 @@
 	};
 
 	vddcpu0_board0: pwm_f_board0-regulator {
-		compatible = "pwm-regulator";
+		compatible = "amlogic, pwm-regulator";
 		pwms = <&pwm_f MESON_PWM_0 1260 0>;
 		regulator-name = "vddcpu0_board0";
 		regulator-min-microvolt = <679000>;

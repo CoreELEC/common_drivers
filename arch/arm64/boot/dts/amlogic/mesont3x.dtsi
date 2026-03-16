@@ -557,7 +557,7 @@
 	};
 
 	vddcpua: pwm_ab-regulator {
-		compatible = "pwm-regulator";
+		compatible = "amlogic, pwm-regulator";
 		pwms = <&pwm_ab MESON_PWM_1 1500 0>;
 		regulator-name = "VDDCPU_A55";
 		regulator-min-microvolt = <689000>;
@@ -606,7 +606,7 @@
 	};
 
 	vddcpub: pwm_ef-regulator {
-		compatible = "pwm-regulator";
+		compatible = "amlogic, pwm-regulator";
 		pwms = <&pwm_ef MESON_PWM_0 1500 0>;
 		regulator-name = "VDDCPU_A76";
 		regulator-min-microvolt = <689000>;

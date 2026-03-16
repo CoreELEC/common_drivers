@@ -421,7 +421,7 @@
 	};
 
 	vddcpu0: pwm_b-regulator {
-		compatible = "pwm-regulator";
+		compatible = "amlogic, pwm-regulator";
 		pwms = <&pwm_b MESON_PWM_0 1512 0>;
 		regulator-name = "VDD_CPU";
 		regulator-min-microvolt = <689000>;

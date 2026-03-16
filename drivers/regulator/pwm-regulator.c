@@ -515,14 +515,14 @@ static int pwm_regulator_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id __maybe_unused pwm_of_match[] = {
-	{ .compatible = "pwm-regulator" },
+	{ .compatible = "amlogic, pwm-regulator" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, pwm_of_match);
 
 static struct platform_driver pwm_regulator_driver = {
 	.driver = {
-		.name		= "pwm-regulator",
+		.name		= "amlogic-pwm-regulator",
 		.probe_type	= PROBE_PREFER_ASYNCHRONOUS,
 		.of_match_table = of_match_ptr(pwm_of_match),
 	},
