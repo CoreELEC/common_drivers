@@ -2165,7 +2165,8 @@ void rx_21_eq_cfg_t6x(int f_rate, u8 port)
 		rx_21_eq_adjust(port);
 	if (rx_info.aml_phy_21.vga_tune &&
 		(rx[port].var.frl_rate == FRL_12G_4LANE ||
-		rx[port].var.frl_rate == FRL_10G_4LANE))
+		rx[port].var.frl_rate == FRL_10G_4LANE ||
+		rx[port].var.frl_rate == FRL_8G_4LANE))
 		hdmirx_vga_gain_tuning_t6x(port);
 	hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_CDR, CDR_LKDET_EN, 0x1, port);
 	hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_CDR, MUX_EYE_EN, 0x0, port);
@@ -4696,14 +4697,14 @@ void hdmirx_vga_gain_tuning_t6x(u8 port)
 			}
 			tap0_2_def = hdmirx_rd_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE,
 			MSK(4, 8), port);
-			if ((dfe2_tap0 < (vga_tuning_min + 5)) && !tap0_2_done) {
+			if (dfe2_tap0 < vga_tuning_min && !tap0_2_done) {
 				tap0_2_dec = graytodecimal_t6x(tap0_2_def);
 				tap0_2_dec += 1;
 				hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, MSK(4, 8),
 				    decimaltogray_t6x(tap0_2_dec), port);
 				if (tap0_2_dec == 15)
 					tap0_2_done = 1;
-			} else if ((dfe2_tap0 > (vga_tuning_max + 5)) && !tap0_2_done) {
+			} else if ((dfe2_tap0 > vga_tuning_max) && !tap0_2_done) {
 				tap0_2_dec = graytodecimal_t6x(tap0_2_def);
 				tap0_2_dec -= 1;
 				hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE,
@@ -4719,14 +4720,14 @@ void hdmirx_vga_gain_tuning_t6x(u8 port)
 			}
 			tap0_3_def = hdmirx_rd_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE,
 			MSK(4, 12), port);
-			if ((dfe3_tap0 < (vga_tuning_min + 5)) && !tap0_3_done) {
+			if (dfe3_tap0 < vga_tuning_min && !tap0_3_done) {
 				tap0_3_dec = graytodecimal_t6x(tap0_3_def);
 				tap0_3_dec += 1;
 				hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, MSK(4, 12),
 					decimaltogray_t6x(tap0_3_dec), port);
 				if (tap0_3_dec == 15)
 					tap0_3_done = 1;
-			} else if ((dfe3_tap0 > (vga_tuning_max + 5)) && !tap0_3_done) {
+			} else if ((dfe3_tap0 > vga_tuning_max) && !tap0_3_done) {
 				tap0_3_dec = graytodecimal_t6x(tap0_3_def);
 				tap0_3_dec -= 1;
 				hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, MSK(4, 12),

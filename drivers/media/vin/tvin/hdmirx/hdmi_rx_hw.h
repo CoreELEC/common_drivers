@@ -68,8 +68,9 @@
 /* 2025.12.30 remove gb check for dvi */
 /* 2025.12.30 fix cts 2-106 fail issue */
 /* 2026.01.16 fix hdcp 1.4 err */
-/* 2025.01.20 add edid intr to clear segment when edid do not read done*/
-#define RX_HW_VER "ver.2026/01/20"
+/* 2026.01.20 add edid intr to clear segment when edid do not read done*/
+/* 2026.04.08 open vga tune for 8g4l and modify vga tune*/
+#define RX_HW_VER "ver.2026/04/08"
 
 #define K_TEST_CHK_ERR_CNT
 
