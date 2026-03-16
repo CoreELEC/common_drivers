@@ -6686,6 +6686,13 @@ void rx_port2_main_state_machine(void)
 				rx[port].var.mute_cnt = 0;
 				rx[port].last_sw_vic = rx[port].pre.sw_vic;
 				rx[port].frl_check = 0;
+				if (rx_info.chip_id == CHIP_ID_T6X && rx[port].dsc_flag) {
+					if (rx[port].cur.hactive >
+						hdmirx_get_dsc_hactive(port) / 2) {
+						rx[port].state = FSM_HPD_LOW;
+						break;
+					}
+				}
 				if (rx_info.chip_id == CHIP_ID_T3X &&
 					rx[port].var.frl_rate && !rx[port].dsc_flag)
 					rx[port].state = FSM_SIG_FRL_CHECK;
@@ -7375,6 +7382,13 @@ void rx_port3_main_state_machine(void)
 				rx[port].var.mute_cnt = 0;
 				rx[port].last_sw_vic = rx[port].pre.sw_vic;
 				rx[port].frl_check = 0;
+				if (rx_info.chip_id == CHIP_ID_T6X && rx[port].dsc_flag) {
+					if (rx[port].cur.hactive >
+						hdmirx_get_dsc_hactive(port) / 2) {
+						rx[port].state = FSM_HPD_LOW;
+						break;
+					}
+				}
 				if (rx_info.chip_id == CHIP_ID_T3X &&
 					rx[port].var.frl_rate && !rx[port].dsc_flag)
 					rx[port].state = FSM_SIG_FRL_CHECK;

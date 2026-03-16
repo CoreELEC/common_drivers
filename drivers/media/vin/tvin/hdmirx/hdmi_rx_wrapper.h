@@ -89,7 +89,8 @@
 /* 2026.3.02 do pcs reset when fdet abnormal */
 /* 2026.03.09 add additional extension colorimetry parsing */
 /* 2026.03.13 fix eacr no sound */
-#define RX_WRAPPER_VER "ver.2026/03/13"
+/* 2026.03.16 add dsc check for mac */
+#define RX_WRAPPER_VER "ver.2026/03/16"
 
 struct freq_ref_s {
 	bool interlace;
