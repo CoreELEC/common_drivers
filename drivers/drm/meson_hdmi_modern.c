@@ -397,6 +397,7 @@ int meson_hdmitx_get_modes(struct drm_connector *connector)
 {
 	u32 vrr_cap = 0;
 	struct edid *edid;
+	unsigned char *raw_edid = NULL;
 	int count = 0, count_qms = 0;
 	struct drm_display_mode *mode;
 	struct am_hdmi_tx *am_hdmitx = connector_to_am_hdmi(connector);
@@ -411,7 +412,11 @@ int meson_hdmitx_get_modes(struct drm_connector *connector)
 	}
 
 	sequence_id = am_hdmitx->sequence_id;
-	edid = (struct edid *)meson_tx_get_raw_edid(&tx_comm->base);
+	raw_edid = meson_tx_get_raw_edid(&tx_comm->base);
+	if (raw_edid) {
+		edid = (struct edid *)raw_edid;
+		drm_connector_update_edid_property(connector, edid);
+	}
 
 	am_hdmitx->sequence_id = meson_tx_get_hpd_hw_sequence_id(&tx_comm->base);
 	/*
@@ -422,7 +427,6 @@ int meson_hdmitx_get_modes(struct drm_connector *connector)
 	 */
 	if (sequence_id != am_hdmitx->sequence_id)
 		hdmitx_edid_process(tx_comm, false, true);
-	drm_connector_update_edid_property(connector, edid);
 
 	/* get vrr capability */
 	vrr_cap = hdmitx_common_get_vrr_cap(tx_comm);
@@ -2419,6 +2423,7 @@ static void meson_hdmitx_hpd_cb(void *data)
 		&connector->dev->mode_config.connection_mutex;
 #ifdef CONFIG_CEC_NOTIFIER
 	struct edid *pedid;
+	unsigned char *raw_edid = NULL;
 #endif
 
 	DRM_INFO("drm hdmitx hpd notify\n");
@@ -2438,9 +2443,12 @@ static void meson_hdmitx_hpd_cb(void *data)
 #ifdef CONFIG_CEC_NOTIFIER
 	if (meson_tx_get_hpd_state(&tx_comm->base)) {
 		DRM_DEBUG("[%d]\n", __LINE__);
-		pedid = (struct edid *)meson_tx_get_raw_edid(&tx_comm->base);
-		cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
+		raw_edid = meson_tx_get_raw_edid(&tx_comm->base);
+		if (raw_edid) {
+			pedid = (struct edid *)raw_edid;
+			cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
 						     pedid);
+		}
 	} else {
 		DRM_DEBUG("[%d]\n", __LINE__);
 		cec_notifier_set_phys_addr(am_hdmi->cec_notifier,
@@ -2467,6 +2475,7 @@ int meson_hdmitx_dev_bind(struct drm_device *drm,
 	struct drm_property *type_prop = NULL;
 #ifdef CONFIG_CEC_NOTIFIER
 	struct edid *pedid;
+	unsigned char *raw_edid = NULL;
 #endif
 	struct connector_hdcp_cb hdcp_cb;
 	int hdcp_ctl_lvl;
@@ -2622,9 +2631,12 @@ int meson_hdmitx_dev_bind(struct drm_device *drm,
 #ifdef CONFIG_CEC_NOTIFIER
 	if (meson_tx_get_hpd_state(&tx_comm->base)) {
 		DRM_DEBUG("[%d]\n", __LINE__);
-		pedid = (struct edid *)meson_tx_get_raw_edid(&tx_comm->base);
-		cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
+		raw_edid = meson_tx_get_raw_edid(&tx_comm->base);
+		if (raw_edid) {
+			pedid = (struct edid *)raw_edid;
+			cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
 						     pedid);
+		}
 	} else {
 		cec_notifier_set_phys_addr(am_hdmi->cec_notifier,
 					   CEC_PHYS_ADDR_INVALID);

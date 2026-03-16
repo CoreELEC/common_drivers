@@ -439,7 +439,10 @@ EXPORT_SYMBOL(hdmitx_get_hpd_state);
 /* TODO: no mutex */
 unsigned char *hdmitx_get_raw_edid(struct hdmitx_common *tx_comm)
 {
-	return tx_comm->edid_buf;
+	if (tx_comm->rxcap.edid_parsing)
+		return tx_comm->edid_buf;
+	else
+		return NULL;
 }
 EXPORT_SYMBOL(hdmitx_get_raw_edid);
 

@@ -279,7 +279,10 @@ unsigned char *meson_tx_get_raw_edid(struct meson_tx_dev *tx_dev)
 		pr_err("[%s]: invalid input param\n", __func__);
 		return NULL;
 	}
-	return tx_dev->edid_buf;
+	if (tx_dev->rxcap.edid_parsing)
+		return tx_dev->edid_buf;
+	else
+		return NULL;
 }
 EXPORT_SYMBOL(meson_tx_get_raw_edid);
 

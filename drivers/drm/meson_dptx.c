@@ -65,6 +65,7 @@ static int meson_dptx_mode_probed_add(int count, struct tx_timing *timings,
 static int meson_dptx_get_modes(struct drm_connector *connector)
 {
 	struct edid *edid;
+	unsigned char *raw_edid = NULL;
 	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
 	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
 	struct meson_dptx_connector_state *dptx_state =
@@ -76,8 +77,11 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 	if (!meson_dptx || !meson_dptx->dptx_dev || !tx_comm)
 		return count;
 
-	edid = (struct edid *)meson_tx_get_raw_edid(&tx_comm->base);
-	drm_connector_update_edid_property(connector, edid);
+	raw_edid = meson_tx_get_raw_edid(&tx_comm->base);
+	if (raw_edid) {
+		edid = (struct edid *)raw_edid;
+		drm_connector_update_edid_property(connector, edid);
+	}
 
 	sequence_id = dptx_state->base_state.sequence_id;
 	new_sequence_id = meson_tx_get_hpd_hw_sequence_id(&tx_comm->base);
