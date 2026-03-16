@@ -106,7 +106,7 @@
 		       0xfe000000 0x400>;
 		interrupts = <0 90 IRQ_TYPE_EDGE_RISING
 			      0 91 IRQ_TYPE_EDGE_RISING>;
-		//power-domains = <&pwrdm PDID_C4_AMFC>;
+		power-domains = <&pwrdm PDID_C4_AMFC>;
 		interrupt-names = "amfc0", "amfc1";
 		clocks = <&clkc CLKID_AMFC>;
 		assigned-clocks = <&clkc CLKID_AMFC>;
