@@ -5084,9 +5084,7 @@ static void dpss_buf_release(struct dpss_ch_s *pch)
 		//blk_idle_put(d_dd, blk);
 		pch->c.blk_sml_nr = NULL;
 		//addr:
-		memset(&pch->c.addr_sml[0][0], 0,
-		       sizeof(unsigned long) * DPSS_SML_NUB *
-		       DPPS_SML_BUF_IDX_NUB);
+		memset(pch->c.addr_sml, 0, sizeof(pch->c.addr_sml));
 	}
 
 	//release rdma =======================
