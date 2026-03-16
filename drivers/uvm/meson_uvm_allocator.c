@@ -289,7 +289,12 @@ static void mua_realloc_buffer_bind(struct dma_buf *idmabuf,
 	struct mua_realloc_buffer_list *entry, *tmp;
 
 	obj = dmabuf_get_uvm_buf_obj(fake_dmabuf);
+	if (IS_ERR_OR_NULL(obj))
+		return;
 	buffer = container_of(obj, struct mua_buffer, base);
+	if (!buffer)
+		return;
+
 	for (i = 0; i < MAX_PIPE_LINE; i++) {
 		if (mua_dev->mua_rec_buf_list[i].slot_id == slot_id)
 			break;
@@ -396,10 +401,8 @@ static struct vframe_s *mua_dmabuf_get_vframe(struct dma_buf *dmabuf)
 	is_dec_vf = is_valid_mod_type(dmabuf, VF_SRC_DECODER);
 	if (is_dec_vf) {
 		vf = dmabuf_get_vframe(dmabuf);
-		if (vf->vf_ext && (vf->flag & VFRAME_FLAG_CONTAIN_POST_FRAME)) {
-			if (vf->type & VIDTYPE_INTERLACE)
-				vf = vf->vf_ext;
-		}
+		if (vf)
+			MUA_PRINTK(MUA_INFO, "vf_type=0x%x, vf_flag=0x%x\n", vf->type, vf->flag);
 		dmabuf_put_vframe(dmabuf);
 	}
 
@@ -450,7 +453,7 @@ size_t mua_calc_real_dmabuf_size(unsigned int align, unsigned int byte_stride,
 	size_t size = 0;
 	int align_height = ALIGN(height, align);
 
-	size = byte_stride * align_height * 3 / 2;
+	size = (size_t)byte_stride * (size_t)align_height * 3 / 2;
 	MUA_PRINTK(MUA_INFO,
 		"calc size: align=%d byte_stride=%d height=%d align_height=%d size:%zu\n",
 		align, byte_stride, height, align_height, size);
@@ -641,7 +644,7 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 	return ret;
 }
 
-int meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, void *vaddr)
+void meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, void *vaddr)
 {
 	struct v4l_data_t val_data;
 	size_t buf_size = 0;
@@ -666,11 +669,9 @@ int meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, vo
 		buffer->byte_stride, buffer->align, buffer->idmabuf[1]->size);
 
 	AMLOGIC_V4LVIDEO_data_copy(&val_data, dmabuf, buffer->align);
-
-	return 0;
 }
 
-static int mua_screencap_filldata(struct mua_buffer *buffer, struct dma_buf *dmabuf,
+static void mua_screencap_filldata(struct mua_buffer *buffer, struct dma_buf *dmabuf,
 			void *vaddr, struct vframe_s *vf, bool skip_fill_buf)
 {
 	size_t buf_size = 0;
@@ -740,10 +741,10 @@ static int mua_screencap_filldata(struct mua_buffer *buffer, struct dma_buf *dma
 	default:
 		MUA_PRINTK(MUA_ERROR, "mua_filldata_policy is error\n");
 	}
+
 	if (ret < 0)
 		MUA_PRINTK(MUA_ERROR, "screencap filldata fail\n");
-
-	return 0;
+	return;
 }
 
 static void realloc_buffer_pool_alloc_worker(struct work_struct *work)
@@ -754,25 +755,23 @@ static void realloc_buffer_pool_alloc_worker(struct work_struct *work)
 	int ret = 0;
 
 	data = container_of(work, struct realloc_buffer_work_data, work);
+	if (!data)
+		return;
 	realloc_heap = dma_heap_find(CODECMM_HEAP_NAME);
 	if (!realloc_heap)
-		goto free_data;
+		return;
 
 	realloc_idmabuf = dma_heap_buffer_alloc(realloc_heap,
 		data->size, O_RDWR, DMA_HEAP_VALID_HEAP_FLAGS);
-	if (IS_ERR(realloc_idmabuf))
-		goto free_data;
+	if (IS_ERR_OR_NULL(realloc_idmabuf))
+		return;
 	MUA_PRINTK(MUA_INFO, "realloc_idmabuf(%px) alloc success\n", realloc_idmabuf);
 
 	ret = mua_realloc_buffer_insert(realloc_idmabuf,
 		data->width, data->height, data->slot_id);
-	if (ret) {
+	if (ret)
 		MUA_PRINTK(MUA_ERROR, "insert rec_buf fail\n");
-		goto free_data;
-	}
-
-free_data:
-	kfree(data);
+	return;
 }
 
 static int submit_realloc_buffer_pool_task(size_t size, u32 width, u32 height, u32 slot_id)
@@ -908,7 +907,7 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 				MUA_PRINTK(MUA_INFO, "idmabuf is NULL/all used\n");
 				idmabuf = dma_heap_buffer_alloc(heap, new_size,
 					O_RDWR, DMA_HEAP_VALID_HEAP_FLAGS);
-				if (IS_ERR(idmabuf))
+				if (IS_ERR_OR_NULL(idmabuf))
 					return -ENOMEM;
 				MUA_PRINTK(MUA_INFO, "idmabuf(%px) alloc success\n", idmabuf);
 
@@ -949,7 +948,7 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 			MUA_PRINTK(MUA_ERROR, "idmabuf is NULL\n");
 			idmabuf = dma_heap_buffer_alloc(heap, new_size,
 				O_RDWR, DMA_HEAP_VALID_HEAP_FLAGS);
-			if (IS_ERR(idmabuf))
+			if (IS_ERR_OR_NULL(idmabuf))
 				return -ENOMEM;
 			MUA_PRINTK(MUA_INFO, "idmabuf(%px) alloc success\n", idmabuf);
 
@@ -990,7 +989,7 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 		if (!buffer->idmabuf[1]) {
 			idmabuf = dma_heap_buffer_alloc(heap, new_size,
 				O_RDWR, DMA_HEAP_VALID_HEAP_FLAGS);
-			if (IS_ERR(idmabuf))
+			if (IS_ERR_OR_NULL(idmabuf))
 				return -ENOMEM;
 			MUA_PRINTK(MUA_INFO, "idmabuf(%px) alloc success\n", idmabuf);
 
@@ -1047,8 +1046,13 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 	src_sgt = buffer->sg_table;
 	num_pages = PAGE_ALIGN(new_size) / PAGE_SIZE;
 	tmp = vmalloc(sizeof(struct page *) * num_pages);
-	if (!tmp)
+	if (!tmp) {
+		if (src_sgt && attachment) {
+			dma_buf_unmap_attachment(attachment, src_sgt, DMA_BIDIRECTIONAL);
+			dma_buf_detach(idmabuf, attachment);
+		}
 		return -ENOMEM;
+	}
 	page_array = tmp;
 	pgprot = pgprot_writecombine(PAGE_KERNEL);
 
@@ -1129,7 +1133,7 @@ static int mua_process_delay_alloc(struct dma_buf *dmabuf,
 
 	idmabuf = dma_heap_buffer_alloc(heap, dmabuf->size, O_RDWR,
 		DMA_HEAP_VALID_HEAP_FLAGS);
-	if (IS_ERR(idmabuf))
+	if (IS_ERR_OR_NULL(idmabuf))
 		return -ENOMEM;
 
 	attachment = dma_buf_attach(idmabuf, dma_heap_get_dev(heap));
@@ -1156,8 +1160,13 @@ static int mua_process_delay_alloc(struct dma_buf *dmabuf,
 	src_sgt = buffer->sg_table;
 	num_pages = PAGE_ALIGN(buffer->size) / PAGE_SIZE;
 	tmp = vmalloc(sizeof(struct page *) * num_pages);
-	if (!tmp)
+	if (!tmp) {
+		if (src_sgt && attachment) {
+			dma_buf_unmap_attachment(attachment, src_sgt, DMA_BIDIRECTIONAL);
+			dma_buf_detach(idmabuf, attachment);
+		}
 		return -ENOMEM;
+	}
 	page_array = tmp;
 	pgprot = pgprot_writecombine(PAGE_KERNEL);
 
@@ -1329,6 +1338,9 @@ static int mua_set_commit_display(struct dma_buf *dmabuf, int commit_display)
 {
 	struct uvm_buf_obj *obj;
 	struct mua_buffer *buffer;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return -EINVAL;
 
 	obj = dmabuf_get_uvm_buf_obj(dmabuf);
 	if (IS_ERR_OR_NULL(obj))
@@ -1537,8 +1549,7 @@ static long mua_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		MUA_PRINTK(MUA_INFO, "mua_ioctl_detach: shared_fd=%d, mode_type=%d\n",
 			fd, data.hook_data.mode_type);
 		dmabuf = dma_buf_get(fd);
-		ret = mua_detach(dmabuf,
-				 data.hook_data.mode_type);
+		ret = mua_detach(dmabuf, data.hook_data.mode_type);
 		dma_buf_put(dmabuf);
 		if (ret < 0) {
 			MUA_PRINTK(MUA_INFO, "mua_detach fail\n");

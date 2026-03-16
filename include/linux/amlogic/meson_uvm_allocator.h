@@ -236,7 +236,7 @@ union uvm_ioctl_arg {
 
 size_t mua_calc_real_dmabuf_size(unsigned int align, unsigned int byte_stride,
 			   unsigned int height);
-int meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, void *vaddr);
+void meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, void *vaddr);
 struct mua_device *meson_uvm_get_mua_dev(void);
 
 #endif
