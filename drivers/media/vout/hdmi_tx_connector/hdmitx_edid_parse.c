@@ -589,8 +589,12 @@ static void edid_receiverproductnameparse(struct rx_cap *prxcap,
 
 	if (!prxcap || !data)
 		return;
-	/* some Display Product name end with 0x20, not 0x0a */
-	while ((i < 13) && (data[i] != 0x0a) && (data[i] != 0x20)) {
+	/*
+	 * ASCII coded monitor name (13 bytes max)
+	 * if name < 13 bytes, terminate name with 0x0A
+	 * and fill remainder of 13 bytes with 0x20
+	 */
+	while ((i < 13) && (data[i] != 0x0a)) {
 		prxcap->ReceiverProductName[i] = data[i];
 		i++;
 	}
