@@ -1620,7 +1620,7 @@ int aml_dwc3_event_buffers_setup(struct aml_dwc3 *dwc);
 void aml_dwc3_event_buffers_cleanup(struct aml_dwc3 *dwc);
 
 int aml_dwc3_core_soft_reset(struct aml_dwc3 *dwc);
-void dwc3_enable_susphy(struct aml_dwc3 *dwc, bool enable);
+void aml_dwc3_enable_susphy(struct aml_dwc3 *dwc, bool enable);
 
 #if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_HOST) || IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE)
 int aml_dwc3_host_init(struct aml_dwc3 *dwc);

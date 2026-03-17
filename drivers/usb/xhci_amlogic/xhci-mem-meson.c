@@ -589,7 +589,7 @@ struct aml_xhci_ring *aml_xhci_dma_to_transfer_ring(
  * the number of streams the driver wants to use.  This is because the number of
  * stream context array entries must be a power of two.
  */
-struct aml_xhci_stream_info *xhci_alloc_stream_info(struct aml_xhci_hcd *xhci,
+struct aml_xhci_stream_info *aml_xhci_alloc_stream_info(struct aml_xhci_hcd *xhci,
 		unsigned int num_stream_ctxs,
 		unsigned int num_streams,
 		unsigned int max_packet, gfp_t mem_flags)
@@ -2575,7 +2575,7 @@ aml_xhci_create_secondary_interrupter(struct usb_hcd *hcd, unsigned int segs,
 		return NULL;
 	}
 
-	err = xhci_set_interrupter_moderation(ir, imod_interval);
+	err = aml_xhci_set_interrupter_moderation(ir, imod_interval);
 	if (err)
 		aml_xhci_warn(xhci, "Failed to set interrupter %d moderation to %uns\n",
 			  i, imod_interval);

@@ -372,7 +372,7 @@ static int xhci_disable_interrupter(struct aml_xhci_interrupter *ir)
 }
 
 /* interrupt moderation interval imod_interval in nanoseconds */
-int xhci_set_interrupter_moderation(struct aml_xhci_interrupter *ir,
+int aml_xhci_set_interrupter_moderation(struct aml_xhci_interrupter *ir,
 				    u32 imod_interval)
 {
 	u32 imod;
@@ -592,7 +592,7 @@ int aml_xhci_run(struct usb_hcd *hcd)
 	aml_xhci_dbg_trace(xhci, trace_aml_xhci_dbg_init,
 			"ERST deq = 64'h%0lx", (long unsigned int) temp_64);
 
-	xhci_set_interrupter_moderation(ir, xhci->imod_interval);
+	aml_xhci_set_interrupter_moderation(ir, xhci->imod_interval);
 
 	if (xhci->quirks & XHCI_NEC_HOST) {
 		struct aml_xhci_command *command;
@@ -3747,7 +3747,7 @@ static int xhci_alloc_streams(struct usb_hcd *hcd, struct usb_device *udev,
 	for (i = 0; i < num_eps; i++) {
 		ep_index = aml_xhci_get_endpoint_index(&eps[i]->desc);
 		max_packet = usb_endpoint_maxp(&eps[i]->desc);
-		vdev->eps[ep_index].stream_info = xhci_alloc_stream_info(xhci,
+		vdev->eps[ep_index].stream_info = aml_xhci_alloc_stream_info(xhci,
 				num_stream_ctxs,
 				num_streams,
 				max_packet, mem_flags);
@@ -5051,7 +5051,7 @@ static int xhci_update_device(struct usb_hcd *hcd, struct usb_device *udev)
 	if (hcd->speed >= HCD_USB3 && !udev->parent->parent) {
 		port = xhci->usb3_rhub.ports[udev->portnum - 1];
 
-		udev->tunnel_mode = xhci_port_is_tunneled(xhci, port);
+		udev->tunnel_mode = aml_xhci_port_is_tunneled(xhci, port);
 		if (udev->tunnel_mode == USB_LINK_UNKNOWN)
 			dev_dbg(&udev->dev, "link tunnel state unknown\n");
 		else if (udev->tunnel_mode == USB_LINK_TUNNELED)

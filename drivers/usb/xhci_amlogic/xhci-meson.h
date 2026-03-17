@@ -1849,7 +1849,7 @@ void aml_xhci_initialize_ring_info(struct aml_xhci_ring *ring,
 void aml_xhci_free_endpoint_ring(struct aml_xhci_hcd *xhci,
 		struct aml_xhci_virt_device *virt_dev,
 		unsigned int ep_index);
-struct aml_xhci_stream_info *xhci_alloc_stream_info(struct aml_xhci_hcd *xhci,
+struct aml_xhci_stream_info *aml_xhci_alloc_stream_info(struct aml_xhci_hcd *xhci,
 		unsigned int num_stream_ctxs,
 		unsigned int num_streams,
 		unsigned int max_packet, gfp_t flags);
@@ -1918,7 +1918,7 @@ int aml_xhci_alloc_tt_info(struct aml_xhci_hcd *xhci,
 		struct aml_xhci_virt_device *virt_dev,
 		struct usb_device *hdev,
 		struct usb_tt *tt, gfp_t mem_flags);
-int xhci_set_interrupter_moderation(struct aml_xhci_interrupter *ir,
+int aml_xhci_set_interrupter_moderation(struct aml_xhci_interrupter *ir,
 				    u32 imod_interval);
 
 /* xHCI ring, segment, TRB, and TD functions */
@@ -1974,7 +1974,7 @@ int aml_xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue, u16 wInde
 int aml_xhci_hub_status_data(struct usb_hcd *hcd, char *buf);
 int aml_xhci_find_raw_port_number(struct usb_hcd *hcd, int port1);
 struct aml_xhci_hub *aml_xhci_get_rhub(struct usb_hcd *hcd);
-enum usb_link_tunnel_mode xhci_port_is_tunneled(struct aml_xhci_hcd *xhci,
+enum usb_link_tunnel_mode aml_xhci_port_is_tunneled(struct aml_xhci_hcd *xhci,
 						struct aml_xhci_port *port);
 void aml_xhci_hc_died(struct aml_xhci_hcd *xhci);
 

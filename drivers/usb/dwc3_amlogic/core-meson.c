@@ -113,7 +113,7 @@ static int dwc3_get_dr_mode(struct aml_dwc3 *dwc)
 	return 0;
 }
 
-void dwc3_enable_susphy(struct aml_dwc3 *dwc, bool enable)
+void aml_dwc3_enable_susphy(struct aml_dwc3 *dwc, bool enable)
 {
 	u32 reg;
 	int i;

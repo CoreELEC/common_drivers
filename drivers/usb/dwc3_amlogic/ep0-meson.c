@@ -648,7 +648,7 @@ static int dwc3_ep0_set_config(struct aml_dwc3 *dwc, struct usb_ctrlrequest *ctr
 		return -EINVAL;
 
 	case USB_STATE_ADDRESS:
-		dwc3_gadget_start_config(dwc, 2);
+		aml_dwc3_gadget_start_config(dwc, 2);
 		aml_dwc3_gadget_clear_tx_fifos(dwc);
 
 		ret = dwc3_ep0_delegate_req(dwc, ctrl);

@@ -229,15 +229,15 @@ static inline void __exit aml_dwc3_exit(void)
 #endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_USB_DWC3_OTG)
-int __init dwc3_otg_init(void);
-void __exit dwc3_otg_exit(void);
+int __init meson_dwc3_otg_switch_init(void);
+void __exit meson_dwc3_otg_switch_exit(void);
 #else
-static inline int __init dwc3_otg_init(void)
+static inline int __init meson_dwc3_otg_switch_init(void)
 {
 	return -1;
 }
 
-static inline void __exit dwc3_otg_exit(void)
+static inline void __exit meson_dwc3_otg_switch_exit(void)
 {
 }
 #endif

@@ -78,7 +78,7 @@ static void dwc3_xhci_plat_start(struct usb_hcd *hcd)
 	pdev = to_platform_device(hcd->self.controller);
 	dwc = dev_get_drvdata(pdev->dev.parent);
 
-	dwc3_enable_susphy(dwc, true);
+	aml_dwc3_enable_susphy(dwc, true);
 }
 
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
@@ -256,7 +256,7 @@ void aml_dwc3_host_exit(struct aml_dwc3 *dwc)
 	if (dwc->sys_wakeup)
 		device_init_wakeup(&dwc->xhci->dev, false);
 
-	dwc3_enable_susphy(dwc, false);
+	aml_dwc3_enable_susphy(dwc, false);
 	platform_device_unregister(dwc->xhci);
 	dwc->xhci = NULL;
 }

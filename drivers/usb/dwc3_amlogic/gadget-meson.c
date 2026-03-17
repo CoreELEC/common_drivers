@@ -531,7 +531,7 @@ static int dwc3_gadget_set_xfer_resource(struct aml_dwc3_ep *dep)
 }
 
 /**
- * dwc3_gadget_start_config - reset endpoint resources
+ * aml_dwc3_gadget_start_config - reset endpoint resources
  * @dwc: pointer to the DWC3 context
  * @resource_index: DEPSTARTCFG.XferRscIdx value (must be 0 or 2)
  *
@@ -541,7 +541,7 @@ static int dwc3_gadget_set_xfer_resource(struct aml_dwc3_ep *dep)
  * Set resource_index=2 to reset only non-control endpoints' resources. Do this
  * on receiving the SET_CONFIGURATION request or hibernation resume.
  */
-int dwc3_gadget_start_config(struct aml_dwc3 *dwc, unsigned int resource_index)
+int aml_dwc3_gadget_start_config(struct aml_dwc3 *dwc, unsigned int resource_index)
 {
 	struct aml_dwc3_gadget_ep_cmd_params params;
 	u32			cmd;
@@ -2885,7 +2885,7 @@ static int __dwc3_gadget_start(struct aml_dwc3 *dwc)
 	/* Start with SuperSpeed Default */
 	dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 
-	ret = dwc3_gadget_start_config(dwc, 0);
+	ret = aml_dwc3_gadget_start_config(dwc, 0);
 	if (ret) {
 		dev_err(dwc->dev, "failed to config endpoints\n");
 		return ret;
@@ -2915,7 +2915,7 @@ static int __dwc3_gadget_start(struct aml_dwc3 *dwc)
 	aml_dwc3_ep0_out_start(dwc);
 
 	dwc3_gadget_enable_irq(dwc);
-	dwc3_enable_susphy(dwc, true);
+	aml_dwc3_enable_susphy(dwc, true);
 
 	return 0;
 
@@ -4682,7 +4682,7 @@ void aml_dwc3_gadget_exit(struct aml_dwc3 *dwc)
 	if (!dwc->gadget)
 		return;
 
-	dwc3_enable_susphy(dwc, false);
+	aml_dwc3_enable_susphy(dwc, false);
 	usb_del_gadget(dwc->gadget);
 	dwc3_gadget_free_endpoints(dwc);
 	usb_put_gadget(dwc->gadget);

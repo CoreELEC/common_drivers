@@ -763,7 +763,7 @@ static int xhci_exit_test_mode(struct aml_xhci_hcd *xhci)
 }
 
 /**
- * xhci_port_is_tunneled() - Check if USB3 connection is tunneled over USB4
+ * aml_xhci_port_is_tunneled() - Check if USB3 connection is tunneled over USB4
  * @xhci: xhci host controller
  * @port: USB3 port to be checked.
  *
@@ -777,7 +777,7 @@ static int xhci_exit_test_mode(struct aml_xhci_hcd *xhci)
  * detecting USB3 over USB4 tunnels. USB_LINK_NATIVE or USB_LINK_TUNNELED
  * otherwise.
  */
-enum usb_link_tunnel_mode xhci_port_is_tunneled(struct aml_xhci_hcd *xhci,
+enum usb_link_tunnel_mode aml_xhci_port_is_tunneled(struct aml_xhci_hcd *xhci,
 						struct aml_xhci_port *port)
 {
 	void __iomem *base;

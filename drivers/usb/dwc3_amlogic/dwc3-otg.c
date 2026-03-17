@@ -447,12 +447,12 @@ static struct platform_driver dwc3_otg_driver = {
 	},
 };
 
-int __init dwc3_otg_init(void)
+int __init meson_dwc3_otg_switch_init(void)
 {
 	return platform_driver_register(&dwc3_otg_driver);
 }
 
-void __exit dwc3_otg_exit(void)
+void __exit meson_dwc3_otg_switch_exit(void)
 {
 	platform_driver_unregister(&dwc3_otg_driver);
 }
