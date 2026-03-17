@@ -76,21 +76,6 @@ void hdr_unmute_work_func(void *para)
 	}
 }
 
-void hdr_work_func(void *para)
-{
-	struct hdmitx_common *tx_comm = (struct hdmitx_common *)para;
-	struct meson_tx_hdr *tx_hdr = tx_comm->hdr_state;
-
-	if (tx_hdr->hdmi_current_hdr_mode != 0)
-		/* SDR -> HDR */
-		meson_tx_event_mgr_send_uevent(tx_hdr->bind_instance->base.event_mgr,
-				TX_HDR_EVENT, 1, false);
-	else if (tx_hdr->hdmi_current_hdr_mode == 0)
-		/* HDR -> SDR */
-		meson_tx_event_mgr_send_uevent(tx_hdr->bind_instance->base.event_mgr,
-				TX_HDR_EVENT, 0, false);
-}
-
 /* Need to be called in edid_spinlock */
 static void hdmitx_set_sdr_pkt(struct hdmitx_common *tx_comm)
 {
@@ -140,6 +125,22 @@ static void hdmitx_set_sdr_pkt(struct hdmitx_common *tx_comm)
 		tx_hdr->hdmi_current_hdr_mode = 0;
 		tx_hdr->hdmi_last_hdr_mode = tx_hdr->hdmi_current_hdr_mode;
 	}
+}
+
+void hdr_work_func(void *para)
+{
+	struct hdmitx_common *tx_comm = (struct hdmitx_common *)para;
+	struct meson_tx_hdr *tx_hdr = tx_comm->hdr_state;
+
+	hdmitx_set_sdr_pkt(tx_comm);
+	if (tx_hdr->hdmi_current_hdr_mode != 0)
+		/* SDR -> HDR */
+		meson_tx_event_mgr_send_uevent(tx_hdr->bind_instance->base.event_mgr,
+				TX_HDR_EVENT, 1, false);
+	else if (tx_hdr->hdmi_current_hdr_mode == 0)
+		/* HDR -> SDR */
+		meson_tx_event_mgr_send_uevent(tx_hdr->bind_instance->base.event_mgr,
+				TX_HDR_EVENT, 0, false);
 }
 
 #define GET_LOW8BIT(a)	((a) & 0xff)
@@ -220,7 +221,6 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			tx_hdr->hdr_transfer_feature = T_BT709;
 			tx_hdr->hdr_color_feature = C_BT709;
 			tx_hdr->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			tx_task_mgr_queue_task(tx_comm->base.task_mgr, HDR_TASK, 0);
 			meson_tx_tracer_write_event(tx_comm->base.tx_tracer,
 					TX_HDR_MODE_SDR);
@@ -285,7 +285,6 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			else
 				HDMITX_INFO("hdr: [%s]: HLG->SDR\n", __func__);
 			tx_hdr->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			tx_task_mgr_queue_task(tx_comm->base.task_mgr, HDR_TASK, 0);
 			meson_tx_tracer_write_event(tx_comm->base.tx_tracer, TX_HDR_MODE_SDR);
 			buffer[4] = 0;
@@ -541,7 +540,6 @@ void hdmitx_set_hdr10plus_pkt(void *tx_instance, unsigned int flag, struct hdr10
 			tx_hdr->hdr_transfer_feature = T_BT709;
 			tx_hdr->hdr_color_feature = C_BT709;
 			tx_hdr->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			tx_task_mgr_queue_task(tx_comm->base.task_mgr, HDR_TASK, 0);
 			return;
 		}

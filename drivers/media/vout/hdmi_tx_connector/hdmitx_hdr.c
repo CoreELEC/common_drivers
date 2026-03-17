@@ -88,14 +88,6 @@ void hdr_unmute_work_func(struct work_struct *work)
 	}
 }
 
-void hdr_work_func(struct work_struct *work)
-{
-	struct hdmitx_common *tx_comm = container_of(work, struct hdmitx_common,
-			work_hdr);
-
-	hdmitx_sdr_hdr_uevent(tx_comm);
-}
-
 /* Need to be called in edid_spinlock */
 static void hdmitx_set_sdr_pkt(struct hdmitx_common *tx_comm)
 {
@@ -141,6 +133,15 @@ static void hdmitx_set_sdr_pkt(struct hdmitx_common *tx_comm)
 		tx_comm->hdmi_current_hdr_mode = 0;
 		tx_comm->hdmi_last_hdr_mode = tx_comm->hdmi_current_hdr_mode;
 	}
+}
+
+void hdr_work_func(struct work_struct *work)
+{
+	struct hdmitx_common *tx_comm = container_of(work, struct hdmitx_common,
+			work_hdr);
+
+	hdmitx_set_sdr_pkt(tx_comm);
+	hdmitx_sdr_hdr_uevent(tx_comm);
 }
 
 #define GET_LOW8BIT(a)	((a) & 0xff)
@@ -219,7 +220,6 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			tx_comm->hdr_transfer_feature = T_BT709;
 			tx_comm->hdr_color_feature = C_BT709;
 			tx_comm->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			schedule_work(&tx_comm->work_hdr);
 			hdmitx_tracer_write_event(tx_comm->tx_tracer,
 					HDMITX_HDR_MODE_SDR);
@@ -284,7 +284,6 @@ void hdmitx_set_drm_pkt(void *tx_instance, struct master_display_info_s *data)
 			else
 				HDMITX_INFO("hdr: [%s]: HLG->SDR\n", __func__);
 			tx_comm->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			schedule_work(&tx_comm->work_hdr);
 			hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_HDR_MODE_SDR);
 			buffer[4] = 0;
@@ -538,7 +537,6 @@ void hdmitx_set_hdr10plus_pkt(void *tx_instance, unsigned int flag, struct hdr10
 			tx_comm->hdr_transfer_feature = T_BT709;
 			tx_comm->hdr_color_feature = C_BT709;
 			tx_comm->colormetry = 0;
-			hdmitx_set_sdr_pkt(tx_comm);
 			schedule_work(&tx_comm->work_hdr);
 			return;
 		}
