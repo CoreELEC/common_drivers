@@ -144,13 +144,17 @@ static void t6x_bus_width_init(struct ddr_bandwidth *db)
 	unsigned int val;
 
 	for (i = 0; i < db->dmc_number; i++) {
+		db->bus_width[i] = 0;
 		if (db->bus_width_reg[i].io_addr) {
 			val = readl(db->bus_width_reg[i].io_addr);
-			val = val & 0xf;
-			if (val)
-				db->bus_width[i] = 16;
-			else
-				db->bus_width[i] = 32;
+			if (val & 0xf0000000)
+				db->bus_width[i] += 16;
+			if (val & 0x0f000000)
+				db->bus_width[i] += 16;
+			if (val & 0x00f00000)
+				db->bus_width[i] += 16;
+			if (val & 0x000f0000)
+				db->bus_width[i] += 16;
 		}
 		pr_debug("dmc%d bus width is %d\n", i, db->bus_width[i]);
 	}
