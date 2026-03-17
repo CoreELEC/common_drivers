@@ -5553,11 +5553,14 @@ void rx_port0_main_state_machine(void)
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 			break;
 		}
-		if ((port != rx_info.main_port && port != rx_info.sub_port) ||
-			(port == rx_info.main_port && !rx_info.main_port_open) ||
-			(port == rx_info.sub_port && !rx_info.pip_on))
-			break;
-		rx[port].state = FSM_SIG_STABLE;
+		if (rx_info.chip_id == CHIP_ID_T3X) {
+			if (port == rx_info.main_port && rx_info.main_port_open)
+				rx[port].state = FSM_SIG_STABLE;
+			if (port == rx_info.sub_port && rx_info.pip_on)
+				rx[port].state = FSM_SIG_STABLE;
+		} else {
+			rx[port].state = FSM_SIG_STABLE;
+		}
 		break;
 	case FSM_SIG_STABLE:
 		if (!rx[port].cableclk_stb_flg) {
@@ -5568,7 +5571,8 @@ void rx_port0_main_state_machine(void)
 		rx_get_video_info(port);
 		if (rx_is_timing_stable(port)) {
 			if (++rx[port].var.sig_stable_cnt >= sig_stable_max) {
-				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
+				if (rx_info.chip_id != CHIP_ID_T3X &&
+					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					rx[port].min_time_detect_done)
 					break;
 				if (port == rx_info.main_port) {
@@ -5638,7 +5642,8 @@ void rx_port0_main_state_machine(void)
 					detect_time_min) &&
 					rx[port].min_time_en)
 					break;
-				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
+				if (rx_info.chip_id != CHIP_ID_T3X &&
+					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					!rx[port].min_time_detect_done) {
 					rx[port].state = FSM_SIG_STABLE;
 					rx[port].min_time_detect_done = true;
@@ -6008,11 +6013,14 @@ void rx_port1_main_state_machine(void)
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 			break;
 		}
-		if ((port != rx_info.main_port && port != rx_info.sub_port) ||
-			(port == rx_info.main_port && !rx_info.main_port_open) ||
-			(port == rx_info.sub_port && !rx_info.pip_on))
-			break;
-		rx[port].state = FSM_SIG_STABLE;
+		if (rx_info.chip_id == CHIP_ID_T3X) {
+			if (port == rx_info.main_port && rx_info.main_port_open)
+				rx[port].state = FSM_SIG_STABLE;
+			if (port == rx_info.sub_port && rx_info.pip_on)
+				rx[port].state = FSM_SIG_STABLE;
+		} else {
+			rx[port].state = FSM_SIG_STABLE;
+		}
 		break;
 	case FSM_SIG_STABLE:
 		if (!rx[port].cableclk_stb_flg) {
@@ -6023,7 +6031,8 @@ void rx_port1_main_state_machine(void)
 		rx_get_video_info(port);
 		if (rx_is_timing_stable(port)) {
 			if (++rx[port].var.sig_stable_cnt >= sig_stable_max) {
-				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
+				if (rx_info.chip_id != CHIP_ID_T3X &&
+					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					rx[port].min_time_detect_done)
 					break;
 				if (port == rx_info.main_port) {
@@ -6093,7 +6102,8 @@ void rx_port1_main_state_machine(void)
 					detect_time_min) &&
 					rx[port].min_time_en)
 					break;
-				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
+				if (rx_info.chip_id != CHIP_ID_T3X &&
+					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					!rx[port].min_time_detect_done) {
 					rx[port].state = FSM_SIG_STABLE;
 					rx[port].min_time_detect_done = true;

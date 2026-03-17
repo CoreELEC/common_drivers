@@ -90,7 +90,8 @@
 /* 2026.03.13 fix eacr no sound */
 /* 2026.03.16 add dsc check for mac */
 /* 2026.03.23 add scdc frl rate monitor */
-#define RX_WRAPPER_VER "ver.2026/03/23"
+/* 2026.04.07 fix pip port color unnormal */
+#define RX_WRAPPER_VER "ver.2026/04/07"
 
 struct freq_ref_s {
 	bool interlace;
