@@ -981,8 +981,13 @@ void osd_scaler_config(struct osd_scaler_reg_s *reg,
 		coef_v = osd_scaler_filter_table[scaler_filter_mode -
 			DRM_SCALING_FILTER_BICUBIC_SHARP];
 	} else {
-		coef_h = osd_scaler_filter_table[COEFS_BILINEAR];
-		coef_v = osd_scaler_filter_table[COEFS_BILINEAR];
+		if (scaler->scaler1_position == BEFORE_OSDBLEND) {
+			coef_h = osd_scaler_filter_table[COEFS_BICUBIC];
+			coef_v = osd_scaler_filter_table[COEFS_BICUBIC];
+		} else {
+			coef_h = osd_scaler_filter_table[COEFS_BILINEAR];
+			coef_v = osd_scaler_filter_table[COEFS_BILINEAR];
+		}
 	}
 	if (v_filter_mode_param != -1 &&
 	    v_filter_mode_param < COEFS_MAX)
