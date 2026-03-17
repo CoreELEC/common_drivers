@@ -51,7 +51,6 @@
 		gpio = <&gpio GPIOA_10 GPIO_ACTIVE_LOW>;
 		enable-active-low; //3.3V , high: 0V
 		regulator-boot-on;
-		regulator-always-on;
 	};
 
 	vddio_c: sdcard-1v8_3v3 {
