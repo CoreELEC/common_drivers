@@ -15,7 +15,7 @@ unsigned char dvbc_agc_target = 0xc;
 unsigned char j83b_agc_target = 0xe;
 
 MODULE_PARM_DESC(dvbc_top_fe_enable, "");
-unsigned char dvbc_top_fe_enable = 1;
+unsigned char dvbc_top_fe_enable;
 module_param(dvbc_top_fe_enable, byte, 0644);
 
 static unsigned char dvbc_qam_reg[15] = { 0 };

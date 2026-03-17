@@ -235,6 +235,7 @@
 /*  V4.1.010 fix dvbs2 aft test fail */
 /*  V4.1.011 fix dvbc/j83b flow and adc capture fail */
 /*  V4.1.012 optimize RSSI for rt710 */
+/*  V4.1.013 dvbc switch to inner frontend*/
 /****************************************************/
 /****************************************************************/
 /*               AMLDTVDEMOD_VER  Description:                  */
@@ -251,8 +252,8 @@
 /*->The last four digits indicate the release time              */
 /****************************************************************/
 #define KERNEL_4_9_EN		1
-#define AMLDTVDEMOD_VER "V4.1.012"
-#define DTVDEMOD_VER	"2026/03/12 optimize RSSI for rt710"
+#define AMLDTVDEMOD_VER "V4.1.013"
+#define DTVDEMOD_VER	"2026/03/19 dvbc switch to inner frontend"
 #define AMLDTVDEMOD_T2_FW_VER "v1059.20250521"
 #define DEMOD_DEVICE_NAME  "dtvdemod"
 
