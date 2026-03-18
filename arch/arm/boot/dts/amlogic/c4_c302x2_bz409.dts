@@ -194,8 +194,8 @@
 		clock-names = "mclk_pll", "mclk";
 		clock-frequency = <74250000>;
 		devices-type = <1>;
-		reset-gpios = <&gpio GPIOAO_7 GPIO_ACTIVE_HIGH>;
-		pwdn-gpios = <&gpio GPIOAO_6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&ao_gpio GPIOAO_7 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&ao_gpio GPIOAO_6 GPIO_ACTIVE_HIGH>;
 	};
 
 	pmz_a1_dev {
