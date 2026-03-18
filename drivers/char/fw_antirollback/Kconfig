@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR MIT)
+
+config AMLOGIC_FW_ANTIROLLBACK
+	tristate "Amlogic Meson Firmware Anti-rollback support"
+	default n
+	help
+	  This driver provides kernel-side support for the Firmware Anti-rollback
+	  checked and updated on Amlogic Meson SoCs.
+
+	  To compile this driver as a module, choose M here. the
+	  module will be called meson-fw-antirollback.
+
+	  If unsure, say Y.

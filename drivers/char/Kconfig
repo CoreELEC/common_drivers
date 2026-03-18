@@ -3,5 +3,6 @@
 menu "Character devices"
 
 source "$(COMMON_DRIVERS_DIR)/drivers/char/hw_random/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/char/fw_antirollback/Kconfig"
 
 endmenu

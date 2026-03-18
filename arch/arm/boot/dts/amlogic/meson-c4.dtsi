@@ -1222,6 +1222,14 @@
 		out_base_func = <0x82000021>;
 	};
 
+	fw_antirollback: fw_antirollback {
+		compatible = "amlogic,fw_antirollback";
+		status = "okay";
+		fw_arb_cmd = <0x8200006D>;
+		sub_check_cmd = <0x200>;
+		sub_update_cmd = <0x100>;
+	};
+
 	cpu_info {
 		compatible = "amlogic, cpuinfo";
 		status = "okay";

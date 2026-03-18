@@ -611,3 +611,7 @@
 	pinctrl-0 = <&pdmin>;
 	status = "okay";
 };
+
+&fw_antirollback {
+	status = "disabled";
+	};
