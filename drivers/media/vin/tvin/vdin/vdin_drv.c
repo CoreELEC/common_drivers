@@ -7550,7 +7550,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->dts_config.other_unstable_in_cnt = UNSTABLE_MAX_CNT;
 	devp->dts_config.nosig_in_cnt = NOSIG_MAX_CNT;
 	devp->dts_config.nosig2_unstable_cnt = EXIT_NOSIG_MAX_CNT;
-	devp->dts_config.vdin_dv_chg_cnt = 1;
+	devp->dts_config.vdin_dv_chg_cnt = 5;
 	devp->dts_config.vdin_hdr_chg_cnt = 1;
 	devp->dts_config.vdin_vrr_chg_cnt = 1;
 	devp->dts_config.vdin_qms_chg_cnt = 2;
