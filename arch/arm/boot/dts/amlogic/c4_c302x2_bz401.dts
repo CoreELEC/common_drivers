@@ -598,3 +598,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc1_pins_d>;
 };
+
+&pdma {
+	pinctrl-names = "pdm_pins";
+	pinctrl-0 = <&pdmin>;
+};
+
+/*don't enable alsa config if mbd driver load*/
+&mbd_audio {
+	avout_mute-gpios = <&gpio GPIOM_6 GPIO_ACTIVE_HIGH>;
+	hp_mute-gpios = <&gpio GPIOM_6 GPIO_ACTIVE_HIGH>;
+	pinctrl-names = "mbd_audio_pins";
+	pinctrl-0 = <&pdmin>;
+	status = "okay";
+};
