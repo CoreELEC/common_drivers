@@ -14642,6 +14642,7 @@ static int update_afd_param(u8 id,
 	struct video_layer_s *layer = NULL;
 	int ret;
 	u32 frame_ar;
+	u32 nr_pps_h_scaler_rate = 0, nr_pps_v_scaler_rate = 0;
 
 	if (id >= MAX_VD_LAYER)
 		return -1;
@@ -14664,6 +14665,11 @@ static int update_afd_param(u8 id,
 
 	in_p.video_w = is_comp ? vf->compWidth : vf->width;
 	in_p.video_h = is_comp ? vf->compHeight : vf->height;
+
+	nr_pps_h_scaler_rate = vd_layer[id].nr_pps_h_scaler_rate;
+	nr_pps_v_scaler_rate = vd_layer[id].nr_pps_v_scaler_rate;
+	in_p.video_w = in_p.video_w / (nr_pps_h_scaler_rate + 1);
+	in_p.video_h = in_p.video_h / (nr_pps_v_scaler_rate + 1);
 
 	if (vf->ratio_control & DISP_RATIO_PARSE_BY_AFD) {
 		in_p.source_type = (enum E_AFD_SOURCE_TYPE_T)vf->source_type;
