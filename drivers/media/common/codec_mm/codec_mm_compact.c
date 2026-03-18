@@ -235,14 +235,7 @@ int codec_mm_compaction_thread(void *data)
 void codec_mm_compaction_init(void *data)
 {
 	struct cma_compact_ctrl *ctrl = get_compact_ctrl();
-	struct task_struct *task;
-
-#if IS_BUILTIN(CONFIG_AMLOGIC_CMA)
-	// for gki1.0
-	aml_compact_alloc_f = (int (*)(unsigned long start, unsigned long end,
-		unsigned int migrate_type, gfp_t gfp_mask))get_symbol_addr("aml_compact_alloc");
-	pr_debug("aml_compact_alloc_f: %px\n", aml_compact_alloc_f);
-#endif
+	struct task_struct *task = NULL;
 
 	ctrl->compact_step = COMPACT_STEP_SIZE_4K;
 	if (is_2k_platform())
@@ -250,6 +243,18 @@ void codec_mm_compaction_init(void *data)
 
 	init_waitqueue_head(&ctrl->compact_wq);
 	mutex_init(&ctrl->compact_lock);
+
+#if IS_BUILTIN(CONFIG_AMLOGIC_CMA)
+	// for gki1.0
+	aml_compact_alloc_f = (int (*)(unsigned long start, unsigned long end,
+		unsigned int migrate_type, gfp_t gfp_mask))get_symbol_addr("aml_compact_alloc");
+	pr_debug("aml_compact_alloc_f: %px\n", aml_compact_alloc_f);
+	if (!aml_compact_alloc_f) {
+		pr_info("aml_compact_alloc not found, skip compaction hook!\n");
+		return;
+	}
+#endif
+
 	task = kthread_run(codec_mm_compaction_thread, data, "cma_compaction");
 	if (!IS_ERR(task)) {
 		set_user_nice(task, -1);
