@@ -1414,11 +1414,6 @@
 		&dvfs850_cfg>;
 };
 
-&amlogic_codec {
-	tocodec_inout = <1>;
-	tdmout_index = <1>;
-};
-
 &amlvecm {
 	compatible = "amlogic, vecm";
 	dev_name = "aml_vecm";
