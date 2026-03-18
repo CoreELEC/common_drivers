@@ -41,7 +41,6 @@ struct dpss_rdma_info {
 	ulong rdma_table_phy_addr;
 	u32 *rdma_table_addr;
 	int rdma_table_size;
-	u8 buf_status;
 	u8 is_64bit_addr;
 	u8 rdma_reg;
 	u8 clr_mask_reg;
@@ -51,6 +50,12 @@ struct dpss_rdma_info {
 	u32 *tmp_table;
 	struct rdma_regadr_s *rdma_regadr;
 };
+
+//dbg
+void dpss_rdma_force_chg_st(u32 en);
+void dpss_rdma_dbg_level(u32 level);
+int show_dpss_rdma_dbg_level(void);
+int show_dpss_rdma_buf_alloc_st(void);
 
 void irq_rdma(void);
 int  dpss_rdma_init(void);

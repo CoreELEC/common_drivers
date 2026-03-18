@@ -2297,7 +2297,9 @@ ssize_t dpss_frc_debug_rdma_if_help(char *buf)
 {
 	ssize_t len = 0;
 
-	// len += sprintf(buf + len, "status\t=show frc rdma status\n");
+	len += sprintf(buf + len, "dpss_rdma_en\t= %d\n", rdma_enable());
+	len += sprintf(buf + len, "rdma_dbg_en\t= %d\n", show_dpss_rdma_dbg_level());
+	len += sprintf(buf + len, "buf_alloced\t= %d\n", show_dpss_rdma_buf_alloc_st());
 
 	return len;
 }
@@ -2345,6 +2347,16 @@ void dpss_frc_debug_rdma_if(const char *buf, size_t count)
 		DPSS_RDMA_WR_PRE_VS(val1, val2);
 	} else if (!strcmp(parm[0], "auto_tri")) {
 		dpss_rdma_auto_wr_tri(1);
+	} else if (!strcmp(parm[0], "dpss_rdma_en")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			dpss_rdma_force_chg_st(val1);
+	} else if (!strcmp(parm[0], "rdma_dbg_en")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			dpss_rdma_dbg_level(val1);
 	}
 
 exit:

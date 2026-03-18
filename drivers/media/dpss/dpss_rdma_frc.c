@@ -31,7 +31,6 @@ static struct rdma_irq_reg_s irq_status;
 static unsigned int rdma_ctrl;
 
 static unsigned int dpss_rdma_en;
-module_param_named(dpss_rdma_en, dpss_rdma_en, uint, 0664);
 static unsigned int buf_alloced;
 static struct dpss_rdma_info rdma_info[RDMA_CHANNEL]; // 0: man 1:pre vsync 2:vsync
 
@@ -42,12 +41,41 @@ static unsigned int rdma_handle_irq_vs = 0x1; //vs tri bit:0 update 25/11/12
 static unsigned int frc_pv_rdma_err_cnt;
 static unsigned int frc_vs_rdma_err_cnt;
 
+//dbg
+static unsigned int rdma_dbg_en;
+
+#define pr_rdma(level, fmt, arg...)			\
+	do {						\
+		if (rdma_dbg_en >= (level))	\
+			pr_info("dpss_rdma: " fmt, ## arg);	\
+	} while (0)
+
+void dpss_rdma_dbg_level(u32 level)
+{
+	rdma_dbg_en = level;
+}
+
+int show_dpss_rdma_dbg_level(void)
+{
+	return rdma_dbg_en;
+}
+
+void dpss_rdma_force_chg_st(u32 en)
+{
+	dpss_rdma_en = en;
+}
+
 int rdma_enable(void)
 {
 	if (dpss_rdma_en)
 		return 1;
 	else
 		return 0;
+}
+
+int show_dpss_rdma_buf_alloc_st(void)
+{
+	return buf_alloced;
 }
 
 static struct rdma_regadr_s rdma_regadr_t6w[RDMA_CHANNEL] = {
@@ -92,12 +120,12 @@ void dpss_rdma_man_wr_test(unsigned int addr, unsigned int val)
 {
 	unsigned int i;
 
-	dbg_a1("%s addr:%#x, val:%#x\n", __func__, addr, val);
+	pr_rdma(1, "%s addr:%#x, val:%#x\n", "man", addr, val);
 
 	i = rdma_info[0].rdma_item_count;
 
 	if ((i + 1) * 8 > rdma_info->rdma_table_size) {
-		dbg_a1("dpss rdma in buffer overflow\n");
+		pr_rdma(1, "dpss rdma in buffer overflow\n");
 		return;
 	}
 
@@ -112,7 +140,7 @@ void dpss_rdma_man_wr_tri(void)
 	// unsigned int i;
 	struct rdma_regadr_s *rdma_regadr;
 
-	dbg_a1("%s man count:%d\n", __func__, rdma_info[0].rdma_item_count);
+	pr_rdma(1, "%s man count:%d\n", "man", rdma_info[0].rdma_item_count);
 
 	rdma_regadr = (struct rdma_regadr_s *)rdma_info[0].rdma_regadr;
 
@@ -147,12 +175,12 @@ void dpss_rdma_man_wr_tri(void)
 		wr(rdma_regadr->trigger_mask_reg,
 			rd(rdma_regadr->trigger_mask_reg) | 1);
 
-		dbg_a1("config manual write done\n");
+		pr_rdma(1, "config manual write done\n");
 		rdma_info[0].rdma_item_count = 0;
 	}
 }
 
-int rdma_find_table_adr_pre_vs(u32 addr)
+static int rdma_find_table_adr_pre_vs(u32 addr)
 {
 	int i;
 	int index = -1;
@@ -162,25 +190,17 @@ int rdma_find_table_adr_pre_vs(u32 addr)
 	if (rdma_info_pre_vs->rdma_item_count == 0)
 		return index;
 
-	dbg_a1("rdma_item_count:%d addr:%x\n",
-		rdma_info_pre_vs->rdma_item_count, addr);
 	for (i = (rdma_info_pre_vs->rdma_item_count - 1) * 2; i >= 0; i -= 2) {
 		if (rdma_info_pre_vs->tmp_table[i] == addr) {
-			//value = rdma_info_pre_vs->rdma_table_addr[i + 1];
-			// index = i / 2 + 1;
 			index = i;
-			dbg_a1("index:%d, table_addr[%d]=%x, table_value[%d]=%x",
-				index, i, rdma_info_pre_vs->tmp_table[i], i + 1,
-				rdma_info_pre_vs->tmp_table[i + 1]);
 			break;
 		}
 	}
 
-	// dbg_a1("%s index:%d\n", __func__, index);
 	return index;
 }
 
-int rdma_find_table_adr_vs(u32 addr)
+static int rdma_find_table_adr_vs(u32 addr)
 {
 	int i;
 	int index = -1;
@@ -191,37 +211,27 @@ int rdma_find_table_adr_vs(u32 addr)
 	if (rdma_info_vs->rdma_item_count == 0)
 		return index;
 
-	dbg_a1("rdma_item_count:%d addr:%x\n",
-		rdma_info_vs->rdma_item_count, addr);
-
 	for (i = (rdma_info_vs->rdma_item_count - 1) * 2; i >= 0; i -= 2) {
 		if (rdma_info_vs->tmp_table[i] == addr) {
-			//value = rdma_info_vs->rdma_table_addr[i + 1];
-			// index = i / 2 + 1;
 			index = i;
-			dbg_a1("index:%d, table_addr[%d]=%x, table_value[%d]=%x",
-				index, i, rdma_info_vs->tmp_table[i], i + 1,
-				rdma_info_vs->tmp_table[i + 1]);
 			break;
 		}
 	}
-	// dbg_a1("%s index:%d\n", __func__, index);
+
 	return index;
 }
 
 // pre_vs
-void dpss_rdma_pre_vs_table_config(unsigned int addr, unsigned int val)
+static void dpss_rdma_pre_vs_table_config(unsigned int addr, unsigned int val)
 {
 	unsigned int i;
 	struct dpss_rdma_info *rdma_info_pre_vs;
-
-	// dbg_a1("%s addr:%#x, val:%#x\n", __func__, addr, val);
 
 	rdma_info_pre_vs = &rdma_info[RDMA_IRQ_PRE_VSYNC];
 	i = rdma_info_pre_vs->rdma_item_count; // pre_vs
 
 	if ((i + 1) * 8 > rdma_info_pre_vs->rdma_table_size) {
-		dbg_a1("dpss rdma in buffer overflow\n");
+		pr_rdma(1, "dpss rdma in buffer overflow\n");
 		i = 0;
 		rdma_info_pre_vs->rdma_item_count = 0;
 	}
@@ -233,17 +243,16 @@ void dpss_rdma_pre_vs_table_config(unsigned int addr, unsigned int val)
 }
 
 // vsync
-void dpss_rdma_vs_table_config(unsigned int addr, unsigned int val)
+static void dpss_rdma_vs_table_config(unsigned int addr, unsigned int val)
 {
 	unsigned int i;
 	struct dpss_rdma_info *rdma_info_vs;
 
-	// dbg_a1("%s addr:%#x, val:%#x\n", __func__, addr, val);
 	rdma_info_vs = &rdma_info[RDMA_IRQ_VSYNC];
 	i = rdma_info_vs->rdma_item_count; // vs
 
 	if ((i + 1) * 8 > rdma_info_vs->rdma_table_size) {
-		dbg_a1("dpss rdma in buffer overflow\n");
+		pr_rdma(1, "dpss rdma in buffer overflow\n");
 		i = 0;
 		rdma_info_vs->rdma_item_count = 0;
 	}
@@ -254,49 +263,49 @@ void dpss_rdma_vs_table_config(unsigned int addr, unsigned int val)
 	rdma_info_vs->rdma_item_count++;
 }
 
-int _dpss_rdma_wr_reg_pre_vs(u32 addr, u32 val)
+static int _dpss_rdma_wr_reg_pre_vs(u32 addr, u32 val)
 {
 	// if (get_frc_devp()->power_on_flag == 0)
 	// return 0;
 
 	if (rdma_enable()) {
 		dpss_rdma_pre_vs_table_config(addr, val);
-		dbg_a2("pv:rdma on, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "pre vsync(rdma), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	} else {
 		wr(addr, val);
-		dbg_a2("pv:rdma off, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "pre vsync(cpu), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	}
 
 	return 0;
 }
 
-int _dpss_rdma_wr_reg_vs(u32 addr, u32 val)
+static int _dpss_rdma_wr_reg_vs(u32 addr, u32 val)
 {
 	// if (get_frc_devp()->power_on_flag == 0)
 	// return 0;
 
 	if (rdma_enable()) {
 		dpss_rdma_vs_table_config(addr, val);
-		dbg_a2("vs:rdma on, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "vsync(rdma), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	} else {
 		wr(addr, val);
-		dbg_a2("vs:rdma off, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "vsync(cpu), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	}
 
 	return 0;
 }
 
-int _dpss_rdma_wr_bit_reg_pre_vs(u32 addr, u32 val, u32 start, u32 len)
+static int _dpss_rdma_wr_bit_reg_pre_vs(u32 addr, u32 val, u32 start, u32 len)
 {
 	int index = -1;
 	u32 read_val, write_val, mask;
 
 	if (rdma_enable()) {
-		dbg_a2("addr:%x, val:%d, start:%d, len:%d\n",
+		pr_rdma(2, "pre vsync(rdma), addr:%x, val:%d, start:%d, len:%d\n",
 			addr, val, start, len);
 		index = rdma_find_table_adr_pre_vs(addr);
 		if (index == -1) {
@@ -312,24 +321,24 @@ int _dpss_rdma_wr_bit_reg_pre_vs(u32 addr, u32 val, u32 start, u32 len)
 			write_val  = read_val & ~mask;
 			write_val |= (val << start) & mask;
 			rdma_info[RDMA_IRQ_PRE_VSYNC].tmp_table[index + 1] = write_val;
-			dbg_a2("update bits:addr:0x%04x, reg_val<0x%08x->0x%08x>\n",
-				addr, read_val, write_val);
 		}
+		pr_rdma(2, "pre vsync update bits:addr:0x%04x, reg_val<0x%08x->0x%08x>\n",
+				addr, read_val, write_val);
 	} else {
 		w_reg_bit(addr, val, start, len);
-		dbg_a2("rdma off, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "pre vsync(cpu), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	}
 	return 0;
 }
 
-int _dpss_rdma_wr_bit_reg_vs(u32 addr, u32 val, u32 start, u32 len)
+static int _dpss_rdma_wr_bit_reg_vs(u32 addr, u32 val, u32 start, u32 len)
 {
 	int index = -1;
 	u32 read_val, write_val, mask;
 
 	if (rdma_enable()) {
-		dbg_a2("addr:%x, val:%d, start:%d, len:%d\n",
+		pr_rdma(2, "vsync(rdma), addr:%x, val:%d, start:%d, len:%d\n",
 			addr, val, start, len);
 		index = rdma_find_table_adr_vs(addr);
 		if (index == -1) {
@@ -345,12 +354,12 @@ int _dpss_rdma_wr_bit_reg_vs(u32 addr, u32 val, u32 start, u32 len)
 			write_val  = read_val & ~mask;
 			write_val |= (val << start) & mask;
 			rdma_info[RDMA_IRQ_VSYNC].tmp_table[index + 1] = write_val;
-			dbg_a2("update bits:addr:0x%04x, reg_val<0x%08x->0x%08x>\n",
-				addr, read_val, write_val);
 		}
+		pr_rdma(2, "vsync update bits:addr:0x%04x, reg_val<0x%08x->0x%08x>\n",
+				addr, read_val, write_val);
 	} else {
 		w_reg_bit(addr, val, start, len);
-		dbg_a2("rdma off, channel in addr:0x%04x, val:0x%08x\n",
+		pr_rdma(2, "vsync(cpu), addr:0x%04x, val:0x%08x\n",
 			addr, val);
 	}
 	return 0;
@@ -406,14 +415,14 @@ void irq_rdma(void)
 
 	rdma_status = rd(irq_status.reg);
 
-	dbg_a1("rdma status[0x%x]\n", rdma_status);
+	pr_rdma(1, "rdma status[0x%x]\n", rdma_status);
 
 	for (i = 0; i < RDMA_CHANNEL; i++) {
 		info_regadr = (struct rdma_regadr_s *)rdma_info[i].rdma_regadr;
 		if (rdma_status & (0x1 << (i + irq_status.start))) {
 			wr(rdma_ctrl,
 				0x1 << info_regadr->clear_irq_bitpos);
-			dbg_a1("channel:%d rdma irq done\n", i);
+			pr_rdma(1, "channel:%d rdma irq done\n", i);
 			break;
 		}
 	}
@@ -433,7 +442,7 @@ static void dpss_frc_rdma_irq_src_clear(u8 ch)
 		return;
 	wr(rdma_regadr->trigger_mask_reg, 0);
 	rdma_info_p->rdma_reg = 0;
-	dbg_a2("frc rdma ch:%d clear done\n", ch);
+	pr_rdma(2, "frc rdma ch:%d clear done\n", ch);
 }
 
 void dpss_frc_rdma_unreg(void)
@@ -481,7 +490,7 @@ void pre_vsync_signal_to_dpss_rdma(void)
 		rdma_info_p->index_flag = read_cnt;
 	if (read_cnt != rdma_info_p->index_flag) {
 		frc_pv_rdma_err_cnt++;
-		dbg_a0("pv rdma abnormal:%d,%d,%d\n",
+		pr_rdma(1, "pre vsync rdma abnormal:%d,%d,%d\n",
 			read_cnt, rdma_info_p->index_flag, frc_pv_rdma_err_cnt);
 		return;
 	}
@@ -523,7 +532,7 @@ void post_vsync_signal_to_dpss_rdma(void)
 		rdma_info_p->index_flag = read_cnt;
 	if (read_cnt != rdma_info_p->index_flag) {
 		frc_vs_rdma_err_cnt++;
-		dbg_a0("vsync rdma abnormal:%d,%d,%d\n",
+		pr_rdma(1, "vsync rdma abnormal:%d,%d,%d\n",
 			read_cnt, rdma_info_p->index_flag, frc_vs_rdma_err_cnt);
 		return;
 	}
@@ -537,6 +546,7 @@ void post_vsync_signal_to_dpss_rdma(void)
 void dpss_rdma_auto_wr_tri(u32 handle)
 {
 	unsigned int handle_irq = 0x2;
+	unsigned int handle_irq_rd = 0;
 	unsigned int table_size;
 	struct rdma_regadr_s *rdma_regadr;
 	struct dpss_rdma_info *rdma_info_p;
@@ -588,24 +598,23 @@ void dpss_rdma_auto_wr_tri(u32 handle)
 		// w_reg_bit(rdma_regadr->trigger_mask_reg, rdma_handle_irq,
 		// rdma_regadr->trigger_mask_reg_bitpos, 31);
 		wr(rdma_regadr->trigger_mask_reg, handle_irq);
+		handle_irq_rd = rd(rdma_regadr->trigger_mask_reg);
 
-		dbg_a2("config auto done rdma_handle_irq:%x,count:%d\n",
-			handle_irq, rdma_info_p->rdma_item_count);
+		pr_rdma(2, "config auto done rdma_handle_irq:%d,%d,count:%d\n",
+			handle_irq_rd, handle_irq, rdma_info_p->rdma_item_count);
 		rdma_info_p->rdma_item_count = 0;
 	}
 }
 
-void rdma_alloc_buf(struct dpss_dev_s *de_devp)
+static void rdma_alloc_buf(struct dpss_dev_s *de_devp)
 {
 	int i;
 	phys_addr_t dma_handle;
 	// struct platform_device *pdev;
 	// struct frc_rdma_info *rdma_info;
 
-	if (!de_devp) {
-		DBG_ERR("%s rdma alloc buf failed\n", __func__);
+	if (!de_devp)
 		return;
-	}
 
 	buf_alloced = 1;
 
@@ -614,35 +623,46 @@ void rdma_alloc_buf(struct dpss_dev_s *de_devp)
 	// pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
 
 	for (i = 0; i < RDMA_CHANNEL; i++) {
-		if (!rdma_info[i].buf_status) {
-			rdma_info[i].rdma_table_addr =
-				dma_alloc_coherent(&de_devp->pdev->dev,
-				rdma_info[i].rdma_table_size, &dma_handle, 0);
-			rdma_info[i].rdma_table_phy_addr = dma_handle;
-			rdma_info[i].buf_status = 1;
-		}
+		rdma_info[i].rdma_table_addr =
+			dma_alloc_coherent(&de_devp->pdev->dev,
+			rdma_info[i].rdma_table_size, &dma_handle, 0);
+
+		if (!rdma_info[i].rdma_table_addr)
+			goto buf_err;
+
+		rdma_info[i].rdma_table_phy_addr = dma_handle;
 		if (sizeof(rdma_info[i].rdma_table_phy_addr) > 4)
 			rdma_info[i].is_64bit_addr = 1; // 64bit addr
 		else
 			rdma_info[i].is_64bit_addr = 0;
 
-		if (rdma_info[i].buf_status) {
-			rdma_info[i].tmp_table = vmalloc(rdma_info[i].rdma_table_size);
-			if (!rdma_info[i].tmp_table)
-				rdma_info[i].buf_status = 0;
+		rdma_info[i].tmp_table = vmalloc(rdma_info[i].rdma_table_size);
+
+		if (!rdma_info[i].tmp_table)
+			goto buf_err;
+	}
+
+	return;
+
+buf_err:
+	while (i-- >= 0) {
+		if (rdma_info[i].tmp_table) {
+			vfree(rdma_info[i].tmp_table);
+			rdma_info[i].tmp_table = NULL;
 		}
 
-		if (!rdma_info[i].buf_status)
-			buf_alloced = 0;
-
-		dbg_a2("%s channel:%d rdma_table_addr: %lx phy:%lx size:%x\n",
-			__func__, i, (ulong)rdma_info[i].rdma_table_addr,
-			(ulong)rdma_info[i].rdma_table_phy_addr,
-			rdma_info[i].rdma_table_size);
+		if (rdma_info[i].rdma_table_addr) {
+			dma_free_coherent(&de_devp->pdev->dev,
+				rdma_info[i].rdma_table_size, rdma_info[i].rdma_table_addr,
+				(dma_addr_t)rdma_info[i].rdma_table_phy_addr);
+			rdma_info[i].rdma_table_addr = NULL;
+		}
 	}
+	buf_alloced = 0;
+	DBG_ERR("dpss frc rdma buf alloc fail\n");
 }
 
-void rdma_release_buf(void)
+static void rdma_release_buf(void)
 {
 	int i;
 	struct dpss_dev_s *de_devp = dpss_get_devp();
@@ -650,29 +670,20 @@ void rdma_release_buf(void)
 	if (!de_devp)
 		return;
 
-	if (!buf_alloced) {
-		DBG_ERR("%s buf alread released\n", __func__);
+	if (!buf_alloced)
 		return;
-	}
 
 	for (i = 0; i < RDMA_CHANNEL; i++) {
-		if (rdma_info[i].buf_status) {
-			if (rdma_info[i].tmp_table) {
-				vfree(rdma_info[i].tmp_table);
-				rdma_info[i].tmp_table = NULL;
-			}
-			dma_free_coherent(&de_devp->pdev->dev,
+		if (rdma_info[i].tmp_table)
+			vfree(rdma_info[i].tmp_table);
+		dma_free_coherent(&de_devp->pdev->dev,
 			rdma_info[i].rdma_table_size, rdma_info[i].rdma_table_addr,
 			(dma_addr_t)rdma_info[i].rdma_table_phy_addr);
-			rdma_info[i].buf_status = 0;
-		}
 	}
 	buf_alloced = 0;
-
-	dbg_a2("%s rdma buf released done, buf_alloced:%d\n", __func__, buf_alloced);
 }
 
-void dpss_rdma_info_init(void)
+static void dpss_rdma_info_init(void)
 {
 	int i;
 
@@ -681,7 +692,6 @@ void dpss_rdma_info_init(void)
 		rdma_info[i].rdma_table_size = DPSS_RDMA_SIZE / 16;
 		//if (i > 2) // dbg, rdma read
 			//rdma_info[i].rdma_table_size = DPSS_RDMA_SIZE / 16;
-		rdma_info[i].buf_status = 0;
 		rdma_info[i].is_64bit_addr = 0;
 		rdma_info[i].rdma_reg = 0;
 		rdma_info[i].clr_mask_reg = 0;
@@ -695,22 +705,10 @@ void dpss_rdma_info_init(void)
 int dpss_rdma_init(void)
 {
 	u32 i, data32;
-	// enum chip_id chip;
-	// struct frc_dev_s *devp;
-	// struct frc_fw_data_s *fw_data;
 	struct dpss_dev_s *de_devp = dpss_get_devp();
-	// struct frc_rdma_s *frc_rdma;
 
-	// devp = get_frc_devp();
-	// chip = get_chip_type();
-	// frc_rdma = get_frc_rdma();
-	//fw_data = (struct frc_fw_data_s *)devp->fw_data;
-
-	dpss_rdma_info_init();
 	// init frc rdma
-	// for (i = 0; i < RDMA_CHANNEL; i++)
-		// rdma_info[i] = &rdma_info[i];
-
+	dpss_rdma_info_init();
 	// alloc buf
 	rdma_alloc_buf(de_devp);
 
@@ -746,7 +744,7 @@ int dpss_rdma_init(void)
 	// w_reg_bit(FRC_RDMA_SYNC_CTRL, 1, 6, 1);
 	// rdma config
 	wr(rdma_ctrl, data32);
-	dbg_a2("%s dpss rdma init done\n", __func__);
+	pr_rdma(2, "dpss rdma init done\n");
 	return 1;
 }
 
@@ -763,5 +761,5 @@ void dpss_rdma_exit(void)
 	rdma_release_buf();
 	dpss_rdma_en = 0;
 
-	dbg_a2("%s dpss rdma exit\n", __func__);
+	pr_rdma(2, "dpss rdma exit\n");
 }
