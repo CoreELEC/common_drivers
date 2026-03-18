@@ -1,0 +1,38 @@
+From 37c9175bc450fe76a6f0ec3e1316ffb1962ed689 Mon Sep 17 00:00:00 2001
+From: "pengzhao.liu" <pengzhao.liu@amlogic.com>
+Date: Wed, 18 Mar 2026 09:47:58 +0800
+Subject: [PATCH] kernel: c4 needs to be increased in module size [1/1]
+
+PD#SWPL-257440
+
+Problem:
+Installation of ko failed, reporting an "unable to allocate memory" error
+
+Solution:
+increased in module size
+
+Verify:
+c4
+
+Change-Id: I09dca4ee073a2b5fb8c09e271dfee59b8dcadec5
+Signed-off-by: pengzhao.liu <pengzhao.liu@amlogic.com>
+---
+ arch/arm/include/asm/memory.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/include/asm/memory.h b/arch/arm/include/asm/memory.h
+index 06e15aee9ae4..067a158f2cad 100644
+--- a/arch/arm/include/asm/memory.h
++++ b/arch/arm/include/asm/memory.h
+@@ -67,6 +67,8 @@
+  */
+ #if defined(CONFIG_AMLOGIC_VMAP)
+ #define MODULES_VADDR		(PAGE_OFFSET - SZ_64M)
++#elif defined(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++#define MODULES_VADDR           (PAGE_OFFSET - SZ_8M - SZ_2M)
+ #else
+ #ifndef CONFIG_THUMB2_KERNEL
+ #define MODULES_VADDR		(PAGE_OFFSET - SZ_16M)
+--
+2.52.0
+
