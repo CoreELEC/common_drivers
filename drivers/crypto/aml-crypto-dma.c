@@ -223,6 +223,7 @@ u32 aml_dma_do_hw_crypto(struct aml_dma_dev *dd,
 
 	spin_lock_irqsave(&dd->dma_lock, dd->irq_flags);
 	dd->dma_busy |= dma_flags;
+	reinit_completion(&dd->done);
 	spin_unlock_irqrestore(&dd->dma_lock, dd->irq_flags);
 	aml_write_crypto_reg(dd, dd->status, 0xffff);
 	aml_write_crypto_reg(dd, dd->thread, (uintptr_t)dsc_addr | 2);
@@ -230,7 +231,6 @@ u32 aml_dma_do_hw_crypto(struct aml_dma_dev *dd,
 		while (aml_read_crypto_reg(dd->status) == 0)
 			;
 	} else {
-		reinit_completion(&dd->done);
 		wait_for_completion(&dd->done);
 	}
 	status = aml_read_crypto_reg(dd->status);
