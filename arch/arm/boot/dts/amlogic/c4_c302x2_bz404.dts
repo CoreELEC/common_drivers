@@ -34,9 +34,9 @@
 		linux,initrd-start = <0x0 0xd000000>;
 		linux,initrd-end = <0x0   0xe000000>;
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000
-			debug initcall_debug=0 loglevel=7
+			debug initcall_debug=1 loglevel=7
 			module_blacklist=amlogic_wireless clk_ignore_unused
-			init=/sbin/init root=/dev/ram";
+			ramdisk_size=8192 init=/sbin/init root=/dev/ram  otg_device=1";
 	};
 
 	memory@0 {
@@ -74,6 +74,7 @@
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
 			//alloc-ranges = <0x70000000 0x18000000>;
+			reg = <0x2000000 0x1000000>;
 			size = <0x1000000>;
 			alignment = <0x400000>;
 			reusable;
@@ -102,9 +103,18 @@
 
 		rtos_reserved:linux,rtos_reserved {
 			compatible = "amlogic, aml_rtos_memory";
-			status = "disabled";
-			reg = <0x4800000 0x200000>;
+			status = "okay";
+			size = <0x1F00000>;
+			alignment = <0x100000>;
+			reg = <0x4C00000 0x1F00000>;
 			no-map;
+		};
+		autocap_reserved:linux,autocap_reserved {
+			compatible = "amlogic, aml_autocap_memory";
+			status = "okay";
+			reg = <0x6B00000 0xC00000>;
+			venc_bsb_addr = <0x7500000>;
+			venc_bsb_size = <0x200000>;
 		};
 
 		dsp_fw_reserved:linux,dsp_fw {
@@ -145,20 +155,20 @@
 
 		pmz_cma_a1_reserved:anonymous {
 			compatible = "shared-dma-pool";
-			//reusable;
 			no-map;
-			size = <0x4000000>;
-			alignment = <0x400000>;
+			size = <0x8000000>;
+			alignment = <0x100000>;
 			status = "okay";
+			reg = <0xF700000 0x8000000>;
 		};
 
 		pmz_cma_a2_reserved:user_pmz {
 			compatible = "shared-dma-pool";
 			//reusable;
 			no-map;
-			size = <0x1000000>;
-			alignment = <0x400000>;
-			status = "disabled";
+			alignment = <0x100000>;
+			status = "okay";
+			reg = <0xB700000 0x4000000>;
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {
@@ -595,7 +605,7 @@
 };
 
 &freertos {
-	status = "disabled";
+	status = "okay";
 };
 
 &spicc0 {
