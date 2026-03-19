@@ -287,6 +287,11 @@ struct v4l2_ext_amlvideo2_get_video_data {
 	unsigned int input_h;
 };
 
+struct v4l2_ext_amlvideo2_get_vinfo_data {
+	unsigned int width;
+	unsigned int height;
+};
+
 struct v4l2_ext_amlvideo2_set_secure_data {
 	__u64 secure_phy_addr;
 	unsigned int secure_buffer_size;

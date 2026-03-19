@@ -541,7 +541,6 @@ struct amlvideo2_fh {
 	enum v4l2_field field;
 	struct mutex mutex;/*for judge if screencap doing */
 	unsigned int is_streamed_on;
-
 	suseconds_t frm_save_time_us; /* us */
 	unsigned int f_flags;
 	enum v4l2_buf_type type;
@@ -550,6 +549,7 @@ struct amlvideo2_fh {
 	struct v4l2_ext_amlvideo2_output_data ext_output_data;
 	struct v4l2_ext_amlvideo2_get_video_data video_data;
 	struct v4l2_ext_amlvideo2_set_secure_data secure_data;
+	struct v4l2_ext_amlvideo2_get_vinfo_data vinfo_data;
 	enum aml_quantization_range quantization_range;
 };
 
@@ -597,26 +597,30 @@ struct vinfo_s *amlvideo2_get_vinfo(struct amlvideo2_node *node)
 	if (!node)
 		return NULL;
 
-	if (node->vdin_port_ext == PORT_VPP0_OSD_VIDEO ||
-		node->vdin_port_ext == PORT_VPP0_OSD_VIDEO_NO_PQ ||
-		node->vdin_port_ext == PORT_VPP0_VIDEO_ONLY ||
-		node->vdin_port_ext == PORT_VPP0_VIDEO_ONLY_NO_PQ ||
-		node->vdin_port_ext == PORT_VPP0_OSD1_ONLY ||
-		node->vdin_port_ext == PORT_VPP0_OSD2_ONLY) {
+	if (node->vid == 0) {
 		vinfo = get_current_vinfo();
-	} else if (node->vdin_port_ext == PORT_VPP1_VIDEO_ONLY ||
-		node->vdin_port_ext == PORT_VPP1_OSD_VIDEO ||
-		node->vdin_port_ext == PORT_VPP1_OSD1_ONLY) {
+	} else {
+		if (node->vdin_port_ext == PORT_VPP0_OSD_VIDEO ||
+			node->vdin_port_ext == PORT_VPP0_OSD_VIDEO_NO_PQ ||
+			node->vdin_port_ext == PORT_VPP0_VIDEO_ONLY ||
+			node->vdin_port_ext == PORT_VPP0_VIDEO_ONLY_NO_PQ ||
+			node->vdin_port_ext == PORT_VPP0_OSD1_ONLY ||
+			node->vdin_port_ext == PORT_VPP0_OSD2_ONLY) {
+			vinfo = get_current_vinfo();
+		} else if (node->vdin_port_ext == PORT_VPP1_VIDEO_ONLY ||
+			node->vdin_port_ext == PORT_VPP1_OSD_VIDEO ||
+			node->vdin_port_ext == PORT_VPP1_OSD1_ONLY) {
 #ifdef CONFIG_AMLOGIC_VOUT2_SERVE
-		vinfo = get_current_vinfo2();
+			vinfo = get_current_vinfo2();
 #else
-		vinfo = NULL;
-		pr_err("amlvideo2: not support vinfo2");
+			vinfo = NULL;
+			pr_err("amlvideo2: not support vinfo2");
 
 #endif
-	} else {
-		vinfo = get_current_vinfo();
-		pr_err("amlvideo2: unsupport vdin_port %d\n", node->vdin_port_ext);
+		} else {
+			vinfo = get_current_vinfo();
+			pr_err("amlvideo2: unsupport vdin_port %d\n", node->vdin_port_ext);
+		}
 	}
 
 	return vinfo;
@@ -2485,6 +2489,7 @@ int amlvideo2_ge2d_interlace_one_canvasaddr_process(struct vframe_s *vf,
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
+	struct amlvideo2_fh *fh = node->fh;
 	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
@@ -2514,57 +2519,51 @@ int amlvideo2_ge2d_interlace_one_canvasaddr_process(struct vframe_s *vf,
 		is_tvp = true;
 		amlvideo2_secure_aipq_flag = 1;
 	}
-	if (node->crop_info.capture_crop_enable == 1) {
+	if (node->crop_info.capture_crop_enable == 1 && node->vid == 0) {
 		if (node->crop_info.source_top_crop > 0 &&
-		    node->crop_info.source_top_crop < vf->height)
+			node->crop_info.source_top_crop < fh->vinfo_data.height)
 			src_top = node->crop_info.source_top_crop;
 		else
 			src_top = 0;
 
 		if (node->crop_info.source_left_crop > 0 &&
-		    node->crop_info.source_left_crop < vf->width)
+			node->crop_info.source_left_crop < fh->vinfo_data.width)
 			src_left = node->crop_info.source_left_crop;
 		else
 			src_left = 0;
 
 		if (node->crop_info.source_width_crop > 0 &&
-		    node->crop_info.source_width_crop < (vf->width - src_left))
+			(node->crop_info.source_width_crop <
+			 (fh->vinfo_data.width - src_left)))
 			src_width = node->crop_info.source_width_crop;
 		else
-			src_width = vf->width - src_left;
+			src_width = fh->vinfo_data.width - src_left;
 
 		if (node->crop_info.source_height_crop > 0 &&
-		    node->crop_info.source_height_crop < (vf->height - src_top))
+			(node->crop_info.source_height_crop <
+			 (fh->vinfo_data.height - src_top)))
 			src_height = node->crop_info.source_height_crop;
 		else
-			src_height = vf->height - src_top;
-	} else {
-		if (node->has_amvideo_node) {
-			src_axis_adjust(&src_top, &src_left,
-					&src_width, &src_height, output);
-		}
-		if (amlvideo2_dbg_en & 4) {
-			pr_info("src_width = %d, src_left = %d\n",
-				src_width, src_left);
-			pr_info("src_height = %d, src_top = %d\n",
-				src_height, src_top);
-		}
-		if ((src_width + src_left) > vf->width ||
-		    (src_height + src_top) > vf->height ||
-		    src_top < 0 || src_left < 0 ||
-		    src_width <= 0 || src_height <= 0) {
-			if (amlvideo2_dbg_en & 4)
-				pr_info("%s: parameters is not match.\n", __func__);
-			src_width = vf->width;
-			src_height = vf->height;
-			src_top = 0;
-			src_left = 0;
-		}
-		src_top = src_top & 0xfffffffe;
-		src_left = src_left & 0xfffffffe;
-		src_width = src_width & 0xfffffffe;
-		src_height = src_height & 0xfffffffe;
+			src_height = fh->vinfo_data.height - src_top;
 	}
+
+	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
+	if (node->vid == 0) {
+		src_top = src_top * vf->height / fh->vinfo_data.height;
+		src_left = src_left * vf->width / fh->vinfo_data.width;
+		src_width = src_width * vf->width / fh->vinfo_data.width;
+		src_height = src_height * vf->height / fh->vinfo_data.height;
+	} else if (node->vid == 1) {
+		src_top = 0;
+		src_left = 0;
+		src_width = vf->width;
+		src_height = vf->height;
+	}
+
+	if (amlvideo2_dbg_en & 4)
+		pr_info("src_top=%d, src_left=%d, src_width=%d, src_height=%d, crop_enable=%d\n",
+			src_top, src_left, src_width, src_height,
+			node->crop_info.capture_crop_enable);
 
 	dst_top = 0;
 	dst_left = 0;
@@ -2987,6 +2986,7 @@ int amlvideo2_ge2d_interlace_dtv_process(struct vframe_s *vf,
 	int src_top, src_left, src_width, src_height;
 	int dst_top, dst_left, dst_width, dst_height;
 	struct canvas_s cs0, cs1, cs2, cd;
+	struct amlvideo2_fh *fh = node->fh;
 	int current_mirror;
 	int cur_angle = 0;
 	int output_canvas = output->canvas_id;
@@ -3018,56 +3018,51 @@ int amlvideo2_ge2d_interlace_dtv_process(struct vframe_s *vf,
 		amlvideo2_secure_aipq_flag = 1;
 	}
 
-	if (node->crop_info.capture_crop_enable == 1) {
+	if (node->crop_info.capture_crop_enable == 1 && node->vid == 0) {
 		if (node->crop_info.source_top_crop > 0 &&
-		    node->crop_info.source_top_crop < vf->height)
+			node->crop_info.source_top_crop < fh->vinfo_data.height)
 			src_top = node->crop_info.source_top_crop;
 		else
 			src_top = 0;
 
 		if (node->crop_info.source_left_crop > 0 &&
-		    node->crop_info.source_left_crop < vf->width)
+			node->crop_info.source_left_crop < fh->vinfo_data.width)
 			src_left = node->crop_info.source_left_crop;
 		else
 			src_left = 0;
 
 		if (node->crop_info.source_width_crop > 0 &&
-		    node->crop_info.source_width_crop < (vf->width - src_left))
+			(node->crop_info.source_width_crop <
+			 (fh->vinfo_data.width - src_left)))
 			src_width = node->crop_info.source_width_crop;
 		else
-			src_width = vf->width - src_left;
+			src_width = fh->vinfo_data.width - src_left;
 
 		if (node->crop_info.source_height_crop > 0 &&
-		    node->crop_info.source_height_crop < (vf->height - src_top))
+			(node->crop_info.source_height_crop <
+			 (fh->vinfo_data.height - src_top)))
 			src_height = node->crop_info.source_height_crop;
 		else
-			src_height = vf->height - src_top;
-	} else {
-		if (node->has_amvideo_node) {
-			src_axis_adjust(&src_top, &src_left,
-					&src_width, &src_height, output);
-		}
-		if (amlvideo2_dbg_en & 4) {
-			pr_info("src_width = %d, src_left = %d\n",
-				src_width, src_left);
-			pr_info("src_height = %d, src_top = %d\n",
-				src_height, src_top);
-		}
-		if ((src_width + src_left) > vf->width ||
-		    (src_height + src_top) > vf->height ||
-		    src_top < 0 || src_left < 0 ||
-		    src_width <= 0 || src_height <= 0) {
-			pr_info("amlvideo2:parameters is not match\n");
-			src_width = vf->width;
-			src_height = vf->height;
-			src_top = 0;
-			src_left = 0;
-		}
-		src_top = src_top & 0xfffffffe;
-		src_left = src_left & 0xfffffffe;
-		src_width = src_width & 0xfffffffe;
-		src_height = src_height & 0xfffffffe;
+			src_height = fh->vinfo_data.height - src_top;
 	}
+
+	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
+	if (node->vid == 0) {
+		src_top = src_top * vf->height / fh->vinfo_data.height;
+		src_left = src_left * vf->width / fh->vinfo_data.width;
+		src_width = src_width * vf->width / fh->vinfo_data.width;
+		src_height = src_height * vf->height / fh->vinfo_data.height;
+	} else if (node->vid == 1) {
+		src_top = 0;
+		src_left = 0;
+		src_width = vf->width;
+		src_height = vf->height;
+	}
+
+	if (amlvideo2_dbg_en & 4)
+		pr_info("src_top=%d, src_left=%d, src_width=%d, src_height=%d, crop_enable=%d\n",
+			src_top, src_left, src_width, src_height,
+			node->crop_info.capture_crop_enable);
 
 	dst_top = 0;
 	dst_left = 0;
@@ -3778,10 +3773,47 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 		amlvideo2_secure_aipq_flag = 1;
 	}
 
-	src_top = 0;
-	src_left = 0;
-	src_width = vf->width;
-	src_height = vf->height;
+	if (node->crop_info.capture_crop_enable == 1 && node->vid == 0) {
+		if (node->crop_info.source_top_crop > 0 &&
+			node->crop_info.source_top_crop < fh->vinfo_data.height)
+			src_top = node->crop_info.source_top_crop;
+		else
+			src_top = 0;
+
+		if (node->crop_info.source_left_crop > 0 &&
+			node->crop_info.source_left_crop < fh->vinfo_data.width)
+			src_left = node->crop_info.source_left_crop;
+		else
+			src_left = 0;
+
+		if (node->crop_info.source_width_crop > 0 &&
+			(node->crop_info.source_width_crop <
+			 (fh->vinfo_data.width - src_left)))
+			src_width = node->crop_info.source_width_crop;
+		else
+			src_width = fh->vinfo_data.width - src_left;
+
+		if (node->crop_info.source_height_crop > 0 &&
+			(node->crop_info.source_height_crop <
+			 (fh->vinfo_data.height - src_top)))
+			src_height = node->crop_info.source_height_crop;
+		else
+			src_height = fh->vinfo_data.height - src_top;
+	}
+
+	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
+	if (node->vid == 0) {
+		src_top = src_top * vf->height / fh->vinfo_data.height;
+		src_left = src_left * vf->width / fh->vinfo_data.width;
+		src_width = src_width * vf->width / fh->vinfo_data.width;
+		src_height = src_height * vf->height / fh->vinfo_data.height;
+	} else if (node->vid == 1) {
+		src_top = 0;
+		src_left = 0;
+		src_width = vf->width;
+		src_height = vf->height;
+	}
+
 	if (amlvideo2_dbg_en & 4)
 		pr_info("src_top=%d, src_left=%d, src_width=%d, src_height=%d, crop_enable=%d\n",
 			src_top, src_left, src_width, src_height,
@@ -6485,6 +6517,21 @@ static int amlvideo2_vidioc_g_cid_video_info(struct amlvideo2_fh *fh,
 	return 0;
 }
 
+//V4L2_CID_EXT_CAPTURE_AMLVIDEO2_GET_DISPLAY_INFO
+static int amlvideo2_vidioc_g_cid_display_info(struct amlvideo2_fh *fh,
+	struct v4l2_ext_control *ctrl)
+{
+	if (ctrl->size == sizeof(struct v4l2_ext_amlvideo2_get_vinfo_data)) {
+		if (copy_to_user(ctrl->ptr, &fh->vinfo_data,
+			sizeof(struct v4l2_ext_amlvideo2_get_vinfo_data)))
+			return -EFAULT;
+	} else {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
 	int ret;
@@ -6494,20 +6541,23 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 	struct amlvideo2_node_dmaqueue *dma_q = &node->vidq;
 	struct amlvideo2_device *aml2_dev = node->aml2_dev;
 	struct video_input_info video_input_parms;
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN
-	struct vdin_v4l2_ops_s *vops = &node->vops;
-	struct vdin_parm_s para;
 	const struct vinfo_s *vinfo;
-	int angle;
-	int axis[4];
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN
+		struct vdin_v4l2_ops_s *vops = &node->vops;
+		struct vdin_parm_s para;
+		int angle;
+		int axis[4];
 
-	if (node->qctl_regs[0] == 0)
-		node->qctl_regs[0] = amlvideo2_angle;
+		if (node->qctl_regs[0] == 0)
+			node->qctl_regs[0] = amlvideo2_angle;
 
-	angle = node->qctl_regs[0];
+		angle = node->qctl_regs[0];
+#endif
 
 	vinfo = amlvideo2_get_vinfo(node);
-#endif
+	fh->vinfo_data.width = vinfo->width;
+	fh->vinfo_data.height = vinfo->height;
+
 	if (!amlvideo2_secure_paddr)
 		amlvideo2_secure_paddr = fh->secure_data.secure_phy_addr;
 	if (!fh->secure_data.secure_buffer_size)
@@ -7374,6 +7424,9 @@ static int vidioc_g_ext_ctrls(struct file *file, void *fh1,
 		case V4L2_CID_EXT_CAPTURE_AMLVIDEO2_GET_VIDEO_INFO:
 			ret = amlvideo2_vidioc_g_cid_video_info(fh, ctrl);
 			break;
+		case V4L2_CID_EXT_CAPTURE_AMLVIDEO2_GET_DISPLAY_INFO:
+			ret = amlvideo2_vidioc_g_cid_display_info(fh, ctrl);
+			break;
 		default:
 			break;
 		}
@@ -7391,6 +7444,10 @@ static int vidioc_g_ext_ctrls(struct file *file, void *fh1,
 		pr_info("amlvideo2:g_ext video input %d %d\n",
 		fh->video_data.input_w,
 		fh->video_data.input_h);
+
+		pr_info("amlvideo2:g_ext display info %d %d\n",
+		fh->vinfo_data.width,
+		fh->vinfo_data.height);
 	}
 
 	return ret;

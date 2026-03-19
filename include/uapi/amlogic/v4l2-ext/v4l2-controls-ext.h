@@ -598,6 +598,9 @@ enum v4l2_ext_adc_calibration_type {
 #define V4L2_CID_EXT_CAPTURE_AMLVIDEO2_SET_SECURE_INFO                         \
 	(V4L2_CID_USER_EXT_CAPTURE_BASE + 11)
 
+#define V4L2_CID_EXT_CAPTURE_AMLVIDEO2_GET_DISPLAY_INFO                         \
+	(V4L2_CID_USER_EXT_CAPTURE_BASE + 12)
+
 /* Capture class subscription IDs */
 #define V4L2_CID_EXT_CAPTURE_SUBSCRIBE_FRAME_READY                             \
 	(V4L2_CID_USER_EXT_CAPTURE_BASE + 30)
