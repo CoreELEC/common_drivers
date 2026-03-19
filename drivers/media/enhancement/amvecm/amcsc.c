@@ -10205,9 +10205,11 @@ int amvecm_matrix_process(struct vframe_s *vf,
 				       0,
 				       size);
 				fake_frame_flag[vd_path] = 1;
+				if (vd_path == VD1_PATH)
+					fake_frame_set_vd1_delink_flag(LINK_ON);
 				vpp_matrix_update(&fake_vframe, vinfo,
-						  CSC_FLAG_TOGGLE_FRAME | CSC_FLAG_FORCE_SIGNAL,
-						  vd_path, vpp_index);
+					CSC_FLAG_TOGGLE_FRAME | CSC_FLAG_FORCE_SIGNAL,
+					vd_path, vpp_index);
 				fake_frame_flag[vd_path] = 0;
 				last_vf[vd_path] = NULL;
 				null_vf_cnt[vd_path] = null_vf_max + 1;
@@ -11540,6 +11542,22 @@ const char *dh_proc_str[3] = {
 	"D_DD",
 	"D_HDR"
 };
+
+void fake_frame_set_vd1_delink_flag(unsigned int en)
+{
+	struct hdr_path_mux_sel_s *p = &h_p_s;
+
+	if (chip_type_id != chip_t6w && chip_type_id != chip_t6x)
+		return;
+
+	if (en)
+		p->delink_status = DELINK;
+	else
+		p->delink_status = LINK_ON;
+
+	pr_csc(0x400, "fake frame, set hdr %s for one frame\n",
+		p->delink_status ? "delink" : "link vd1");
+}
 
 void vd1_dpss_switch_proc(struct vframe_s *vf,
 	struct vframe_s *rpt_vf,

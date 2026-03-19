@@ -509,6 +509,7 @@ void update_link_state(struct vframe_s *vf,
 	enum vpp_index_e vpp_index);
 u32 get_cur_signal_type_limited(void);
 void reset_hdr_path_cfg(void);
+void fake_frame_set_vd1_delink_flag(unsigned int en);
 extern int gamut_dma_case;
 extern int hdr_hist_test_module;
 extern int hdr_hist_test_cnt;
