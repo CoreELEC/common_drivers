@@ -1859,7 +1859,7 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 
 	if (!hw_comm)
 		return -1;
-	if ((cmd & DP_TRAINING_CMD) != DP_TRAINING_CMD) {
+	if ((cmd & CMD_TYPE_MASK) != CMD_LINK_TRAINING_OFFSET) {
 		DPTX_ERROR("%s cmd[0x%x] wrong cmd type\n", __func__, cmd);
 		return -1;
 	}
@@ -2425,12 +2425,23 @@ static int dptx20_enable_mode(struct dptx_hw_common *hw_comm, struct meson_tx_fo
 	return 0;
 }
 
+static void start_hdcp_work_func(struct work_struct *work)
+{
+	struct dptx_hw_common *hw_comm =
+		container_of(work, struct dptx_hw_common, work_dptx_hdcp);
+
+	DPTX_INFO("start hdcp mode: %d\n", hw_comm->hdcp_sec_en);
+	if (hw_comm->hdcp_sec_en == 2)
+		dptx_hdcp22_proc(hw_comm);
+	else if (hw_comm->hdcp_sec_en == 1)
+		dptx_hdcp1x_proc(hw_comm);
+	else
+		DPTX_ERROR("invalid hdcp mode: %d\n", hw_comm->hdcp_sec_en);
+}
+
 static int dptx20_post_enable_mode(struct dptx_hw_common *tx_comm)
 {
-	DPTX_INFO("%s TODO for hdcp auth\n", __func__);
-	//todo for enable hdcp
-	//dptx_hdcp22_proc(tx_comm);
-	schedule_work(&tx_comm->work_dptxhdcp);
+	schedule_work(&tx_comm->work_dptx_hdcp);
 	return 0;
 }
 
@@ -2471,6 +2482,7 @@ static int dptx20_hw_cntl_aux(struct meson_tx_hw *tx_hw, u32 cmd,
 		if (!input_argv) {
 			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
 			ret = -1;
+			break;
 		}
 		tx20_hw->aux_block_mode = !!((unsigned int *)input_argv);
 		break;
@@ -2480,6 +2492,48 @@ static int dptx20_hw_cntl_aux(struct meson_tx_hw *tx_hw, u32 cmd,
 
 	return ret;
 }
+
+static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
+				  void *input_argv, void *output_struct)
+{
+	struct dptx_hw_common *hw_comm = to_dptx_hw_common(tx_hw);
+	int ret = 0;
+	struct dptx_common *tx_comm = NULL;
+
+	if (!hw_comm)
+		return -1;
+	if ((cmd & CMD_TYPE_MASK) != CMD_HDCP_OFFSET) {
+		DPTX_ERROR("%s cmd[0x%x] wrong cmd type\n", __func__, cmd);
+		return -1;
+	}
+
+	switch (cmd) {
+	case DP_HDCP_INIT:
+		if (!input_argv) {
+			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+
+		tx_comm->hdcptx_priv = dptx20_hdcp2x_init(&tx_comm->hdcptx_comm);
+		tx_comm->hdcptx_comm.bind_tx_comm = (void *)tx_comm;
+		tx_comm->hdcptx_comm.bind_hw_comm = (void *)tx_comm->hw_comm;
+		hw_comm->dptx_hdcp1x_inst = dptx20_hdcp1x_init();
+		INIT_WORK(&tx_comm->hw_comm->work_dptx_hdcp, start_hdcp_work_func);
+		break;
+	case DP_HDCP_UNINIT:
+		dptx_hdcp1x_uninit(hw_comm->dptx_hdcp1x_inst);
+		/* for hdcp2.2 */
+		if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit)
+			tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit(tx_comm->hdcptx_priv);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
 static int dptx20_hw_cntl_platform(struct meson_tx_hw *tx_hw, u32 cmd,
 				  void *input_argv, void *output_struct)
 {
@@ -2572,7 +2626,7 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 
 	if (!hw_comm)
 		return -1;
-	if ((cmd & CMD_AUX_PKT_OFFSET) != CMD_AUX_PKT_OFFSET) {
+	if ((cmd & CMD_TYPE_MASK) != CMD_AUX_PKT_OFFSET) {
 		DPTX_ERROR("%s cmd[0x%x] wrong cmd type\n", __func__, cmd);
 		return -1;
 	}
@@ -2626,7 +2680,7 @@ static int dptx20_hw_cntl_adaptive_sync(struct meson_tx_hw *tx_hw, u32 cmd,
 
 	if (!hw_comm)
 		return -1;
-	if ((cmd & CMD_VRR_OFFSET) != CMD_VRR_OFFSET) {
+	if ((cmd & CMD_TYPE_MASK) != CMD_VRR_OFFSET) {
 		DPTX_ERROR("%s cmd[0x%x] wrong cmd type\n", __func__, cmd);
 		return -1;
 	}
@@ -3196,6 +3250,9 @@ static int dptx20_hw_cntl(struct meson_tx_hw *tx_hw, u32 cmd,
 	switch (cmd_type) {
 	case CMD_DDC_AUX_OFFSET:
 		dptx20_hw_cntl_aux(tx_hw, cmd, input_argv, output_struct);
+		break;
+	case CMD_HDCP_OFFSET:
+		dptx20_hw_cntl_hdcp(tx_hw, cmd, input_argv, output_struct);
 		break;
 	case CMD_LINK_TRAINING_OFFSET:
 		ret = dptx20_hw_cntl_linkconf(hw_comm, cmd, input_argv, output_struct);

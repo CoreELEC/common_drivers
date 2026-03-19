@@ -767,6 +767,17 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 		en = val & 0xFF;
 		DPTX_INFO("tx output %s\n", en ? "enable" : "disable");
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
+	} else if (token && strncmp(token, "hdcp_mode", 9) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &val) < 0)
+			return count;
+		if (val > 2) {
+			DPTX_ERROR("invalid hdcp_mode: %d\n", val);
+			return count;
+		}
+		DPTX_INFO("set hdcp_mode: %d, set mode to take effect\n", val);
+		tx_comm->hdcptx_comm.hdcp_mode = val;
+		tx_comm->hw_comm->hdcp_sec_en = val;
 	}
 	return count;
 }

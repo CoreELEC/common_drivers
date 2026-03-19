@@ -17,7 +17,8 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_DPTX) += \
 						vout/meson_tx_connector/dptx/dptx_gtc.o \
 						vout/meson_tx_connector/dptx/dptx_log.o \
 						vout/meson_tx_connector/dptx/dptx_sysfs.o \
-						vout/meson_tx_connector/dptx/dptx_vout.o
+						vout/meson_tx_connector/dptx/dptx_vout.o \
+						vout/meson_tx_connector/dptx/edptx_core_api.o
 
 
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/meson_tx_connector/dptx/dp20/Makefile

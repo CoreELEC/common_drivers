@@ -233,7 +233,7 @@ struct intr_t;
 
 void dptx_hdcp22_proc(struct dptx_hw_common *tx_comm);
 void dptx_hdcp2_sndfifo_intr_handler(struct dptx_hw_common *tx_comm);
-void *dptx_hdcp_init(void *hdcp_data);
+void *dptx20_hdcp2x_init(void *hdcp_data);
 void dptx_core_intr_process(struct dptx_common *tx_comm);
 ssize_t dptx_hdcp2_msg_read_rxcaps(struct dptx_hw_common *tx_comm);
 
@@ -276,5 +276,10 @@ bool dptx_get_hdcptx_result(struct hdcptx_common *hdcptx_comm, int hdcp_type);
 
 bool dptx_hdcptx_ddc_check_busy(void);
 u8 dptx_hdmi_ddc_status_check(void);
+
+/* for dptx hdcp1.x */
+void dptx_hdcp1x_proc(struct dptx_hw_common *hw_comm);
+struct dptx_hdcp1x *dptx20_hdcp1x_init(void);
+void dptx_hdcp1x_uninit(struct dptx_hdcp1x *dptx_hdcp1x_inst);
 
 #endif

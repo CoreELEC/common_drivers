@@ -7,11 +7,9 @@
 #define __MESON_TX_DEV_INTERNAL_H
 
 #include <linux/platform_device.h>
-
-struct meson_tx_dev;
-struct meson_tx_hw;
-struct meson_tx_state;
-struct vout_op_s;
+#include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_dev.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw.h>
+#include <linux/amlogic/media/vout/vout_notify.h>
 
 struct meson_tx_helper_ops {
 	int (*create_sysfs)(struct meson_tx_dev *tx_dev);

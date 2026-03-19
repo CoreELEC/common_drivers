@@ -359,13 +359,14 @@ static struct meson_tx_clk *meson_tx_probe_clk(struct device *dev)
 	return tx_clk;
 }
 
-//todo for hdcp test
-static void start_hdcp_work_func(struct work_struct *work)
+static void dptx_hdcp_init(struct dptx_common *tx_comm)
 {
-	struct dptx_hw_common *tx_comm =
-		container_of(work, struct dptx_hw_common, work_dptxhdcp);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP_INIT, tx_comm, NULL);
+}
 
-	dptx_hdcp22_proc(tx_comm);
+static void dptx_hdcp_uninit(struct dptx_common *tx_comm)
+{
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP_UNINIT, NULL, NULL);
 }
 
 static int dptx_probe(struct platform_device *pdev)
@@ -420,12 +421,6 @@ static int dptx_probe(struct platform_device *pdev)
 	/* dptx tx hw setup tx_phy */
 	meson_tx_hw_setup_phy(tx_hw, tx_phy);
 
-	/* hdcp init */
-	tx_comm->hdcptx_priv = dptx_hdcp_init(&tx_comm->hdcptx_comm);
-	tx_comm->hdcptx_comm.bind_tx_comm = (void *)tx_comm;
-	//todo use reg api and delete
-	tx_comm->hdcptx_comm.bind_hw_comm = (void *)tx_comm->hw_comm;
-
 	tx_clk = meson_tx_probe_clk(device);
 	if (!tx_clk) {
 		ret = -ENODEV;
@@ -433,8 +428,7 @@ static int dptx_probe(struct platform_device *pdev)
 	}
 	meson_tx_hw_setup_clk(tx_hw, tx_clk);
 
-	//todo for hdcp test
-	INIT_WORK(&tx_comm->hw_comm->work_dptxhdcp, start_hdcp_work_func);
+	dptx_hdcp_init(tx_comm);
 	dev_set_drvdata(device, tx_comm);
 
 	/* In multiple DPTX scenarios, the probe will be executed multiple times,
@@ -492,7 +486,7 @@ static void dptx_remove(struct platform_device *pdev)
 #endif
 
 	dev_set_drvdata(device, NULL);
-
+	dptx_hdcp_uninit(tx_comm);
 	dptx_common_uninit(tx_comm);
 	tx_comm->base.tx_hw_base->uninit_tx_hw(tx_comm, tx_comm->base.tx_hw_base);
 	plat_data->free_tx_hw(tx_comm->base.tx_hw_base);

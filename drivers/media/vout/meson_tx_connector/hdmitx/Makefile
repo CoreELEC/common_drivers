@@ -2,7 +2,7 @@
 
 ccflags-y += -I$(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/meson_tx_connector/
 
-$(MEDIA_MODULE_NAME)-$(AMLOGIC_HDMITX_DRIVER_MODERN) += \
+$(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_HDMITX_DRIVER_MODERN) += \
 							vout/meson_tx_connector/hdmitx/hdmitx_boot_parameters.o \
 							vout/meson_tx_connector/hdmitx/hdmitx_common.o \
 							vout/meson_tx_connector/hdmitx/hdmitx_sysfs_common.o \

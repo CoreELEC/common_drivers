@@ -67,14 +67,56 @@ struct dptx_hdcp {
 	/* for irq */
 	struct completion sndfifo_completion;
 	struct completion pairing_available_completion;
-	struct completion havailable_completion;
+	struct completion h_available_completion;
 	struct completion ready_completion;
+};
+
+/* hdcp tx 1.x structure */
+struct dptx_hdcp1x {
+	/* key selection vector */
+	u8 aksv[5];
+	/* 64-bit pseudo-random number */
+	u8 an[8];
+	/* 56-bit value generated from bksv */
+	/* u64 km; */
+	/* receiver key selection vector (read from dpcd) */
+	u8 bksv[5];
+	/* M0 value (calculated with Ks and r0) */
+	/* u64 m0; */
+	/* HDCP status register (read from dpcd) */
+	u8 bstatus;
+	/* HDCP binfo register (read from dpcd) */
+	u16 binfo;
+	/* HDCP ainfo register */
+	u8 ainfo;
+	/* HDCP capabilities (read from dpcd) */
+	u8 bcaps;
+	/* r0 value, generated from km and the cipher block */
+	u32 r0;
+	/* r0-prime value (read from dpcd) */
+	u16 r0_prime;
+	/* device service IRQ */
+	/* u8 dev_svc_irq; */
+	u8 *ksv_lists;
+	u8 blk_v[20];
+	u8 blk_v_prime[20];
+
+	/* timeout period for HW to create r0 */
+	unsigned long intenal_r0_timeout_ms;
+	/* timeout period for DPRX to trigger CP_IRQ and r0' available */
+	u32 rx_r0_timeout_ms;
+	struct completion r0_completion;
+	/* for hdcp1.x repeater, READY for ksv list and V' */
+	unsigned long rpt_ksv_list_rdy_timeout_ms;
+	struct completion ksv_list_completion;
+
+	unsigned long internal_sha_timeout_ms;
 };
 
 struct dptx_hw_common {
 	struct meson_tx_hw hw_base;
 	/* for debug hdcp */
-	struct work_struct work_dptxhdcp;
+	struct work_struct work_dptx_hdcp;
 
 	/* irq id of dptx */
 	u32 dptx_irq_id;
@@ -120,6 +162,7 @@ struct dptx_hw_common {
 
 	/* dptx hdcp */
 	struct dptx_hdcp *dp_hdcp;
+	struct dptx_hdcp1x *dptx_hdcp1x_inst;
 };
 
 #define to_dptx_hw_common(x)	container_of(x, struct dptx_hw_common, hw_base)

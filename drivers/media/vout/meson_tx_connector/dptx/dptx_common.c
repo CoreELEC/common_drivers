@@ -353,6 +353,8 @@ static void dptx_irq_hpd_process(void *para)
 	u8 dprx_esi_buf[14] = {0};
 	u8 sink_count = 0;
 	u8 rxstatus = 0;
+	/* hdcp1.x */
+	u8 bstatus = 0;
 
 	if (!tx_comm) {
 		DPTX_ERROR("%s NULL tx_comm pointer\n", __func__);
@@ -388,55 +390,93 @@ static void dptx_irq_hpd_process(void *para)
 
 	/* cp_irq */
 	if (link_sink_status_buf[1] & DP_CP_IRQ) {
-		ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_HDCP_2_2_REG_RXSTATUS_OFFSET,
+		if (tx_comm->hdcptx_comm.hdcp_mode == 1) {
+			ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_AUX_HDCP_BSTATUS,
+				&bstatus, 1);
+			if (ret != 1) {
+				DPTX_ERROR("bstatus read ret:%d\n", ret);
+				return;
+			}
+			tx_comm->hw_comm->dptx_hdcp1x_inst->bstatus = bstatus;
+			if (bstatus & DP_BSTATUS_READY)
+				complete(&tx_comm->hw_comm->dptx_hdcp1x_inst->ksv_list_completion);
+			if (bstatus & DP_BSTATUS_R0_PRIME_READY)
+				complete(&tx_comm->hw_comm->dptx_hdcp1x_inst->r0_completion);
+			if (bstatus & DP_BSTATUS_LINK_FAILURE) {
+				/* TODO:
+				 * stop hdcp and retry
+				 */
+			}
+			/* only for hdcp repeater */
+			if (bstatus & DP_BSTATUS_REAUTH_REQ) {
+				/* TODO:
+				 * stop hdcp and retry
+				 */
+			}
+		} else if (tx_comm->hdcptx_comm.hdcp_mode == 2) {
+			ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_HDCP_2_2_REG_RXSTATUS_OFFSET,
 					 &rxstatus, sizeof(rxstatus));
-		if (ret < 0) {
-			DPTX_ERROR("%s rxstatus read ret:%d\n", __func__, ret);
-			return;
+			if (ret < 0) {
+				DPTX_ERROR("%s rxstatus read ret:%d\n", __func__, ret);
+				return;
+			}
+			tx_comm->hw_comm->dp_hdcp->rxstatus = rxstatus;
+
+			/*
+			 * When set to one, indicates that loss of
+			 * cipher synchronization was detected at
+			 * the HDCP Receiver during a link integrity check.
+			 * This value must be reset by the HDCP Receiver on
+			 * every new authentication request by the HDCP Transmitter
+			 * as indicated by a write of the AKE_Init message.
+			 */
+			if (rxstatus & DP_RXSTATUS_LINK_INTEGRITY_FAILURE) {
+				//todo
+				//stop hdcp
+				//resend ake_init
+			}
+
+			/* When set to one, indicates that the upstream side
+			 * of the HDCP Repeater has transitioned in to an
+			 * unauthenticated state from State C5, when State C5 is
+			 * implemented in parallel with State C8, or from State
+			 * C6 (See Section 2.10.3). The HDCP Transmitter may
+			 * initiate re-authentication with the HDCP Repeater.
+			 * This value must be reset by the HDCP Receiver on
+			 * every new authentication request by the HDCP Transmitter
+			 * as indicated by a write of the AKE_Init message.
+			 */
+			if (rxstatus & DP_RXSTATUS_REAUTH_REQ) {
+				//todo
+				//stop hdcp
+				//resend ake_init
+			}
+
+			/*
+			 * When set to one, indicates that Ekh(km) is available
+			 * for reading at the HDCP Receiver. This value must be
+			 * reset by the HDCP Receiver as soon as Ekh(km)is read
+			 * by the HDCP Transmitter.
+			 *
+			 * PAIRING_AVAILABLE and read AKE_Send_Pairing_Info,
+			 * 200ms ready, 5ms read done
+			 */
+			if (rxstatus & DP_RXSTATUS_PAIRING_AVAILABLE)
+				complete(&tx_comm->hw_comm->dp_hdcp->pairing_available_completion);
+
+			/* H_AVAILABLE read AKE_Send_H_prime, 1s ake_no_store_km,
+			 * 200ms ake_store_km
+			 */
+			if (rxstatus & DP_RXSTATUS_H_AVAILABLE)
+				complete(&tx_comm->hw_comm->dp_hdcp->h_available_completion);
+
+			/* READY */
+			if (rxstatus & DP_RXSTATUS_READY)
+				complete(&tx_comm->hw_comm->dp_hdcp->ready_completion);
+		} else {
+			DPTX_INFO("should ignore CP_IRQ as hdcp_mode: %d\n",
+				tx_comm->hdcptx_comm.hdcp_mode);
 		}
-		tx_comm->hw_comm->dp_hdcp->rxstatus = rxstatus;
-
-		/*
-		 * When set to one, indicates that loss of cipher synchronization was detected at
-		 * the HDCP Receiver during a link integrity check. This value must be reset by
-		 * the HDCP Receiver on every new authentication request by the HDCP Transmitter
-		 * as indicated by a write of the AKE_Init message.
-		 */
-		if (rxstatus & DP_RXSTATUS_LINK_INTEGRITY_FAILURE) {
-			//todo
-			//stop hdcp
-			//resend ake_init
-		}
-
-		/* When set to one, indicates that the upstream side of the HDCP Repeater has
-		 * transitioned in to an unauthenticated state from State C5, when State C5 is
-		 * implemented in parallel with State C8, or from State C6 (See Section 2.10.3).
-		 * The HDCP Transmitter may initiate re-authentication with the HDCP Repeater.
-		 * This value must be reset by the HDCP Receiver on every new authentication request
-		 * by the HDCP Transmitter as indicated by a write of the AKE_Init message.
-		 */
-		if (rxstatus & DP_RXSTATUS_REAUTH_REQ) {
-			//todo
-			//stop hdcp
-			//resend ake_init
-		}
-
-		/*
-		 * When set to one, indicates that Ekh(km) is available for reading at the
-		 * HDCP Receiver. This value must be reset by the HDCP Receiver as soon as
-		 * Ekh(km)is read by the HDCP Transmitter.
-		 */
-		/* PAIRING_AVAILABLE and read AKE_Send_Pairing_Info, 200ms ready, 5ms read done */
-		if (rxstatus & DP_RXSTATUS_PAIRING_AVAILABLE)
-			complete(&tx_comm->hw_comm->dp_hdcp->pairing_available_completion);
-
-		/* H_AVAILABLE read AKE_Send_H_prime, 1s ake_no_store_km, 200ms ake_store_km */
-		if (rxstatus & DP_RXSTATUS_H_AVAILABLE)
-			complete(&tx_comm->hw_comm->dp_hdcp->havailable_completion);
-
-		/* READY */
-		if (rxstatus & DP_RXSTATUS_READY)
-			complete(&tx_comm->hw_comm->dp_hdcp->ready_completion);
 	}
 
 	/* DEVICE_SERVICE_IRQ_VECTOR: 00201h */
@@ -444,7 +484,7 @@ static void dptx_irq_hpd_process(void *para)
 		DPTX_INFO("%s DOWN_REP_MSG_RDY, TODO for MST\n", __func__);
 		/* TODO for MST
 		 * per chapter 2.11.4.1.3 of dp1.4a, the Sideband DOWN_REP_MSG is read from
-		 * the MST DPRX DOWN_REP DPCD locations. The DPTX device shall clear the
+		 * the MST DP RX DOWN_REP DPCD locations. The DPTX device shall clear the
 		 * DOWN_REP_MSG_RDY bit to 0 when reading of the message is complete
 		 */
 	}
@@ -452,8 +492,8 @@ static void dptx_irq_hpd_process(void *para)
 		DPTX_INFO("%s UP_REQ_MSG_RDY, TODO for MST\n", __func__);
 		/* TODO for MST
 		 * per chapter 2.11.4.1.4 of dp1.4a, the Sideband UP_REQ_MSG is read from
-		 * the MST DPRX UP_REQ DPCD locations. The MST DPTX device shall clear the
-		 UP_REQ_MSG_RDY bit to 0 when reading of the message is complete.
+		 * the MST DP RX UP_REQ DPCD locations. The MST DPTX device shall clear the
+		 * UP_REQ_MSG_RDY bit to 0 when reading of the message is complete.
 		 */
 	}
 

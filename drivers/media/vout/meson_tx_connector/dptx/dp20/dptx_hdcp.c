@@ -195,7 +195,7 @@ static void dptx_irq_nb_init(struct dptx_hw_common *tx_comm)
 
 	init_completion(&tx_hdcp->sndfifo_completion);
 	init_completion(&tx_hdcp->pairing_available_completion);
-	init_completion(&tx_hdcp->havailable_completion);
+	init_completion(&tx_hdcp->h_available_completion);
 	init_completion(&tx_hdcp->ready_completion);
 }
 
@@ -597,7 +597,7 @@ static void dptx_hdcp2_process(struct dptx_hw_common *tx_comm)
 	stat = wait_for_completion_timeout(&tx_hdcp->sndfifo_completion,
 			msecs_to_jiffies(200));
 	/* for H_AVAILABLE */
-	reinit_completion(&tx_hdcp->havailable_completion);
+	reinit_completion(&tx_hdcp->h_available_completion);
 	if (stat == 0) {
 		//todo abnormal handle
 		DPTX_INFO("wait hdcp2 AKE_NO_STORED_EKM or AKE_STORED_EKM msg time out\n");
@@ -612,12 +612,12 @@ static void dptx_hdcp2_process(struct dptx_hw_common *tx_comm)
 	/* wait irq 1s for store_km; 200ms for no_store_km */
 	DPTX_INFO("Wait CP_IRQ to read H prime\n");
 	if (store_type == AKE_NO_STORED_EKM) {
-		stat = wait_for_completion_timeout(&tx_hdcp->havailable_completion,
+		stat = wait_for_completion_timeout(&tx_hdcp->h_available_completion,
 			msecs_to_jiffies(200));
 		/* for AKE_SEND_PAIRING_INFO */
 		reinit_completion(&tx_hdcp->pairing_available_completion);
 	} else if (store_type == AKE_STORED_EKM) {
-		stat = wait_for_completion_timeout(&tx_hdcp->havailable_completion,
+		stat = wait_for_completion_timeout(&tx_hdcp->h_available_completion,
 			msecs_to_jiffies(1000));
 	} else {
 		DPTX_INFO("wrong store_type for AKE_EKM\n");

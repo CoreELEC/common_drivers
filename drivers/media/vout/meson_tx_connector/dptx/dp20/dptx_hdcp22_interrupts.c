@@ -2365,7 +2365,7 @@ static u8 dptx_hdcptx_reauth_request(void *hdcptx_priv, u8 hdcp_version)
 	return 1;
 }
 
-static void dptx_hdcp_uninit(void *hdcptx_instance)
+static void dptx_hdcp22_uninit(void *hdcptx_instance)
 {
 	struct hdcptx21_core *p_hdcp = (struct hdcptx21_core *)hdcptx_instance;
 
@@ -2390,13 +2390,13 @@ static struct hdcptx_api dptx_hdcptx_api_init = {
 	.get_hdcprx_ver = dptx_hdcptx_get_hdcprx_ver,
 	.get_hdcptx_mode = dptx_get_hdcptx_mode,
 	.hdcptx_reauth_req = dptx_hdcptx_reauth_request,
-	.hdcptx_uninit = dptx_hdcp_uninit,
+	.hdcptx_uninit = dptx_hdcp22_uninit,
 	.hdcptx_debug = dptx_hdcptx_debug_func,
 	.hdcptx14_get_bksv = dptx_hdcptx1_ds_bksv_read,
 	.hdcptx_validate_key = dptx_validate_hdcp_key,
 };
 
-void *dptx_hdcp_init(void *hdcp_data)
+void *dptx20_hdcp2x_init(void *hdcp_data)
 {
 	struct hdcptx21_core *p_hdcp = NULL;
 	struct hdcptx_common *hdcptx_comm = (struct hdcptx_common *)hdcp_data;

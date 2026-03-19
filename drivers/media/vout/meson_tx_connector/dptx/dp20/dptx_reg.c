@@ -16,7 +16,7 @@
 /* dptx core register read/write */
 int dptx20_reg_write(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u32 value)
 {
-	if (io_type != CORE_LEVEL || (offset % 4)) {
+	if (io_type != CORE_LEVEL) {
 		DPTX_ERROR("%s check reg 0x%x\n", __func__, offset);
 		return -1;
 	}
@@ -28,7 +28,7 @@ int dptx20_reg_write(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u3
 
 u32 dptx20_reg_read(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset)
 {
-	if (io_type != CORE_LEVEL || (offset % 4)) {
+	if (io_type != CORE_LEVEL) {
 		DPTX_ERROR("%s check reg 0x%x\n", __func__, offset);
 		return -1;
 	}

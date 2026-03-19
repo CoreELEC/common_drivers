@@ -24,6 +24,8 @@ enum cmd_dptx_aux {
 enum cmd_dptx_hdcp {
 	/* dptx hdcp start */
 	DP_HDCP_CMD = CMD_HDCP_OFFSET + CMD_DPTX_OFFSET,
+	DP_HDCP_INIT,
+	DP_HDCP_UNINIT
 };
 
 /* 0x12 packet */
