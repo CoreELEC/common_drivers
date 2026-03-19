@@ -643,7 +643,6 @@ static int gxl_resume(struct phy_device *phydev)
 
 int gxl_resume_internal_registers(struct phy_device *phydev)
 {
-	pr_err("gxl_resume_internal_registers\n");
 	phy_write(phydev, 30, 0x7e);
 	return custom_internal_config(phydev);
 }

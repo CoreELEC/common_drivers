@@ -127,6 +127,7 @@ struct meson8b_dwmac {
 #ifdef CONFIG_PM_SLEEP
 	struct input_dev		*input_dev;
 	struct mbox_chan		*mbox_chan;
+	bool				suspend_no_vddee;
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
 	bool				wol_en;		/* MAC frames are processed in BL30 */
 	bool				wol_ready;
@@ -529,6 +530,7 @@ static int aml_custom_setting(struct platform_device *pdev, struct meson8b_dwmac
 					 &priv->eth_priv.mdns_switch_from_user) == 0)
 			pr_debug("feature mdns_switch_from_user\n");
 	}
+	dwmac->suspend_no_vddee = of_property_read_bool(np, "suspend-no-vddee");
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
 	dwmac->wol_en = of_property_read_bool(np, "amlogic,wol-enable");
 #endif
@@ -869,6 +871,37 @@ static int meson8b_suspend(struct device *dev)
 	return ret;
 }
 
+static int meson8b_restore(struct device *dev)
+{
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct stmmac_priv *priv = netdev_priv(ndev);
+	struct meson8b_dwmac *dwmac = priv->plat->bsp_priv;
+	struct phy_device *phydev = ndev->phydev;
+	int ret;
+
+	if (!phydev)
+		return 0;
+
+	if (dwmac->mc_val)
+		writel(dwmac->mc_val, dwmac->regs + PRG_ETH0);
+	else
+		writel(0x4be04, dwmac->regs + PRG_ETH0);
+
+	if (dwmac->phy_mii_clk_sel)
+		writel(dwmac->phy_mii_clk_sel, dwmac->regs + PRG_ETH_TX_GLITCH_FIX);
+
+	g12a_resume_enable_internal_mdio(priv->eth_priv.mdio_dev);
+	/*our phy not support wol by now*/
+	phydev->irq_suspended = 0;
+	ret = stmmac_resume(dev);
+	gxl_resume_internal_registers(phydev);
+
+	priv->amlogic_task_action = 100;
+	stmmac_trigger_amlogic_task(priv);
+
+	return ret;
+}
+
 static int meson8b_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
@@ -902,6 +935,10 @@ static int meson8b_resume(struct device *dev)
 	}
 #endif
 
+	if (dwmac->suspend_no_vddee) {
+		pr_info("eth resume from no vddee\n");
+		return meson8b_restore(dev);
+	}
 	priv->wolopts = 0;
 	if (priv->eth_priv.wol_switch_from_user && dwmac->without_reset) {
 		ret = stmmac_resume(dev);
@@ -1006,37 +1043,6 @@ static int meson8b_freeze(struct device *dev)
 static int meson8b_thaw(struct device *dev)
 {
 	return 0;
-}
-
-static int meson8b_restore(struct device *dev)
-{
-	struct net_device *ndev = dev_get_drvdata(dev);
-	struct stmmac_priv *priv = netdev_priv(ndev);
-	struct meson8b_dwmac *dwmac = priv->plat->bsp_priv;
-	struct phy_device *phydev = ndev->phydev;
-	int ret;
-
-	if (!phydev)
-		return 0;
-
-	if (dwmac->mc_val)
-		writel(dwmac->mc_val, dwmac->regs + PRG_ETH0);
-	else
-		writel(0x4be04, dwmac->regs + PRG_ETH0);
-
-	if (dwmac->phy_mii_clk_sel)
-		writel(dwmac->phy_mii_clk_sel, dwmac->regs + PRG_ETH_TX_GLITCH_FIX);
-
-	g12a_resume_enable_internal_mdio(priv->eth_priv.mdio_dev);
-	/*our phy not support wol by now*/
-	phydev->irq_suspended = 0;
-	ret = stmmac_resume(dev);
-	gxl_resume_internal_registers(phydev);
-
-	priv->amlogic_task_action = 100;
-	stmmac_trigger_amlogic_task(priv);
-
-	return ret;
 }
 #endif
 

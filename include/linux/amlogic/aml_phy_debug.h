@@ -110,5 +110,6 @@ int gmac_remove_sysfs(struct aml_eth_priv *eth_priv);
 struct aml_eth_priv *aml_get_eth_priv_by_pdev(struct phy_device *phydev);
 struct aml_eth_priv *aml_get_eth_priv_by_ndev(struct device *dev);
 struct device *aml_get_ethmac_dev_by_priv(struct aml_eth_priv *eth_priv);
-
+int g12a_resume_enable_internal_mdio(struct device *mdio_dev);
+int gxl_resume_internal_registers(struct phy_device *phydev);
 #endif

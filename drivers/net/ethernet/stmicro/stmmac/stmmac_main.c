@@ -7986,6 +7986,8 @@ void stmmac_dvr_remove(struct device *dev)
 	pm_runtime_put_noidle(dev);
 }
 EXPORT_SYMBOL_GPL(stmmac_dvr_remove);
+
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 #ifdef CONFIG_PM_SLEEP
 static int phy_poll_aneg_done(struct phy_device *phydev)
 {
@@ -8003,6 +8005,8 @@ static int phy_poll_aneg_done(struct phy_device *phydev)
 	return ret < 0 ? ret : 0;
 }
 #endif
+#endif
+
 /**
  * stmmac_suspend - suspend callback
  * @dev: device pointer
