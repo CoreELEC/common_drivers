@@ -1501,8 +1501,8 @@ void lc_config(int enable,
 			height = lc_vd_info->vd1_in_vsize;
 			width = lc_vd_info->vd1_in_hsize;
 		} else {
-			width = sps_w_in;
-			height = sps_h_in;
+			width = src_h;
+			height = src_w;
 		}
 	} else {
 		in_sel = 4;// 4: vsr_sr_din
