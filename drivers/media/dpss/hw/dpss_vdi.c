@@ -254,6 +254,7 @@ void nr_force_config(struct PRM_DPSS_TOP *prm_top, struct PRM_DPSS_DPE *prm_dpe)
 	if (reg_xlr_en)
 		di_write_data_table(DI_PAGE_MODULE_XLR, 0);
 	di_db_dm[REG_DM_MAX].val = pq_update;
+	di_db_dct[REG_DM_MAX].val = pq_update;
 
 	if (dpss_di_debug || dpss_nr_debug || dpss_force_nr_debug) {
 		wr(VPU_POST_NR_SLC_OVLP_SIZE, (((0x0 & 0xff) << 24) |

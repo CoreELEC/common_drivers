@@ -334,7 +334,7 @@ struct di_pq_table_s di_pq_table[DI_PAGE_MODULE_MAX] = {
 					{0xD716, 1, 0x3, 2, 13},
 					{0xD716, 1, 0x1f, 10, 8},
 					{0xD717, 1, 0x3, 2, 12},
-					{0xD717, 1, 0xfff, 0},
+					{0xD717, 1, 0xfff, 0, 0},
 					{0xD718, 1, 0x1, 1, 31},
 					{0xD718, 1, 0x1, 0, 30},
 					{0xD718, 1, 0x1, 0, 29},
@@ -430,6 +430,8 @@ void di_write_data_table(enum di_page_module_e module,
 
 		if (module == DI_PAGE_MODULE_DMS && i < DPSS_DB_DM_NUM)
 			di_db_dm[i].val = di_pq_table[module].page[index].reg[i].val;
+		if (module == DI_PAGE_MODULE_DCT && i < DPSS_DB_DM_NUM)
+			di_db_dct[i].val = di_pq_table[module].page[index].reg[i].val;
 		tmp = rd(addr);
 		tmp0 = tmp;
 		tmp &= ~(mask << start);

@@ -135,6 +135,7 @@ struct di_db_reg_s {
 };
 
 extern struct di_db_reg_s di_db_dm[DPSS_DB_DM_NUM];//N+6
+extern struct di_db_reg_s di_db_dct[DPSS_DB_DM_NUM];
 
 typedef int (*di_dae_hw_init_out)(struct di_parm_s *pdi_parm, const struct reg_acc *op);
 typedef int (*di_dpe_hw_init_out)(struct di_parm_s *pdi_parm, const struct reg_acc *op);
