@@ -164,7 +164,7 @@
 		extend_resume_reason;
 		reg = <0xfe010288 0x4>, /*SYSCTRL_STATUS_REG2*/
 			<0xfe0102dc 0x4>; /*SYSCTRL_STICKY_REG7*/
-		status = "disabled";
+		status = "okay";
 	};
 
 	uboot_log {
@@ -320,112 +320,162 @@
 		pinctrl-1=<&jtag_b_pins>;
 	};
 
-	//vbat: fixed@vbat {
-	//	compatible = "regulator-fixed";
-	//	regulator-name = "12V";
-	//	regulator-min-microvolt = <12000000>;
-	//	regulator-max-microvolt = <12000000>;
-	//	regulator-boot-on;
-	//	regulator-always-on;
-	//};
+	vbat: fixed@vbat {
+		compatible = "regulator-fixed";
+		regulator-name = "12V";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 
-	//vcc5v_reg: fixed@vcc5v_reg {
-	//	vin-supply = <&vbat>;
-	//	compatible = "regulator-fixed";
-	//	regulator-name = "5V/VCC_5V";
-	//	regulator-min-microvolt = <5000000>;
-	//	regulator-max-microvolt = <5000000>;
-	//	gpio = <&gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
-	//	startup-delay-us = <7000>;
-	//	enable-active-high;
-	//	regulator-boot-on;
-	//	regulator-always-on;
-	//};
+	vcc5v_reg: fixed@vcc5v_reg {
+		vin-supply = <&vbat>;
+		compatible = "regulator-fixed";
+		regulator-name = "5V/VCC_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 
-	//usb_5v_reg: fixed@usb_5v_reg {
-	//	compatible = "regulator-fixed";
-	//	vin-supply = <&vcc5v_reg>;
-	//	regulator-name = "USB_5V/OTG_VCC5V,USBBC_PWR";
-	//	regulator-min-microvolt = <5000000>;
-	//	regulator-max-microvolt = <5000000>;
-	//	regulator-boot-on;
-	//	regulator-always-on;
-	//};
+	usb_5v_reg: fixed@usb_5v_reg {
+		compatible = "regulator-fixed";
+		vin-supply = <&vcc5v_reg>;
+		regulator-name = "USB_5V/OTG_VCC5V,USBBC_PWR";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 
-	//vddq_reg: fixed@vddq_reg {
-	//	compatible = "regulator-fixed";
-	//	vin-supply = <&vbat>;
-	//	regulator-name = "VDDQ";
-	//	regulator-min-microvolt = <1220000>;
-	//	regulator-max-microvolt = <1220000>;
-	//	pinctrl-names = "default";
-	//	gpio = <&gpio GPIOD_4 GPIO_ACTIVE_HIGH>;
-	//	startup-delay-us = <7000>;
-	//	enable-active-high;
-	//	regulator-boot-on;
-	//	regulator-always-on;
-	//};
+	cam_5v_reg: fixed@cam_5v_reg {
+		compatible = "regulator-fixed";
+		vin-supply = <&vcc5v_reg>;
+		regulator-name = "CAM_5V_EN";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		//gpio OD , Default OFF
+		gpio = <&gpio GPIOM_28 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		startup-delay-us = <7000>;
+		enable-active-low;
+		regulator-boot-on;
+		//regulator-always-on;
+	};
 
-	//vddao3v3_reg: fixed@vddao3v3_reg {
-	//	vin-supply = <&vbat>;
-	//	compatible = "regulator-fixed";
-	//	regulator-name = "VDDAO_3.3V";
-	//	regulator-min-microvolt = <3300000>;
-	//	regulator-max-microvolt = <3300000>;
-	//	regulator-boot-on;
-	//	regulator-always-on;
-	//};
+	vddq_reg: fixed@vddq_reg {
+		compatible = "regulator-fixed";
+		vin-supply = <&vbat>;
+		regulator-name = "VDDQ";
+		regulator-min-microvolt = <1220000>;
+		regulator-max-microvolt = <1220000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOD_4 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 
-	//vddcpu0: pwm_b-regulator {
-	//	compatible = "amlogic, pwm-regulator";
-	//	pwms = <&pwm_b MESON_PWM_0 1500 0>;
-	//	regulator-name = "vddcpu0";
-	//	regulator-min-microvolt = <689000>;
-	//	regulator-max-microvolt = <1049000>;
-	//	regulator-always-on;
-	//	max-duty-cycle = <1500>;
-	//	amlogic,vsel-step = <3>;
-	//	amlogic,usleep-time = <200>;
-	//	/* Voltage Duty-Cycle */
-	//	voltage-table = <1049000 0>,
-	//			<1039000 3>,
-	//			<1029000 6>,
-	//			<1019000 9>,
-	//			<1009000 12>,
-	//			<999000 14>,
-	//			<989000 17>,
-	//			<979000 20>,
-	//			<969000 23>,
-	//			<959000 26>,
-	//			<949000 29>,
-	//			<939000 31>,
-	//			<929000 34>,
-	//			<919000 37>,
-	//			<909000 40>,
-	//			<899000 43>,
-	//			<889000 45>,
-	//			<879000 48>,
-	//			<869000 51>,
-	//			<859000 54>,
-	//			<849000 56>,
-	//			<839000 59>,
-	//			<829000 62>,
-	//			<819000 65>,
-	//			<809000 68>,
-	//			<799000 70>,
-	//			<789000 73>,
-	//			<779000 76>,
-	//			<769000 79>,
-	//			<759000 81>,
-	//			<749000 84>,
-	//			<739000 87>,
-	//			<729000 89>,
-	//			<719000 92>,
-	//			<709000 95>,
-	//			<699000 98>,
-	//			<689000 100>;
-	//	status = "okay";
-	//};
+	vddao3v3_reg: fixed@vddao3v3_reg {
+		vin-supply = <&vbat>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDDAO_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddao1v8_reg: fixed@vddao1v8_reg {
+		vin-supply = <&vbat>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDDAO_1V8/VDDIO_B";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd4_2v5_reg: fixed@vdd4_2v5_reg {
+		compatible = "regulator-fixed";
+		vin-supply = <&vddao3v3_reg>;
+		regulator-name = "DDR4_2V5";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddao1v8_ldo_reg: fixed@vddao1v8_ldo_reg {
+		vin-supply = <&vddao3v3_reg>;
+		compatible = "regulator-fixed";
+		// Reserved option
+		regulator-name = "VDDAO_1V8_LDO";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddcpu0: pwm_b-regulator {
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_b MESON_PWM_0 1512 0>;
+		regulator-name = "VDD_CPU";
+		regulator-min-microvolt = <689000>;
+		regulator-max-microvolt = <1049000>;
+		pinctrl-names = "default";
+		gpio = <&gpio GPIOD_14 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-always-on;
+		max-duty-cycle = <1512>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <1049000 0>,
+				<1039000 3>,
+				<1029000 6>,
+				<1019000 8>,
+				<1009000 11>,
+				<999000 14>,
+				<989000 17>,
+				<979000 19>,
+				<969000 22>,
+				<959000 25>,
+				<949000 28>,
+				<939000 31>,
+				<929000 33>,
+				<919000 36>,
+				<909000 39>,
+				<899000 42>,
+				<889000 44>,
+				<879000 47>,
+				<869000 50>,
+				<859000 53>,
+				<849000 56>,
+				<839000 58>,
+				<829000 61>,
+				<819000 64>,
+				<809000 67>,
+				<799000 69>,
+				<789000 72>,
+				<779000 75>,
+				<769000 78>,
+				<759000 81>,
+				<749000 83>,
+				<739000 86>,
+				<729000 89>,
+				<719000 92>,
+				<709000 94>,
+				<699000 97>,
+				<689000 100>;
+		status = "okay";
+	};
 
 	saradc_common: saradc-common@fe026000 {
 		compatible = "amlogic,saradc-common";
@@ -514,6 +564,7 @@
 			};
 
 			watchdog@2100 {
+				status = "okay";
 				compatible = "amlogic,meson-a4-wdt";
 				/* 0:userspace, 1:kernel */
 				amlogic,feed_watchdog_mode = <1>;
@@ -822,7 +873,6 @@
 
 			eth_phy: mdio-multiplexer@380000 {
 				compatible = "amlogic,g12a-mdio-mux";
-				status = "disabled";
 				reg = <0x380000 0xa4>;
 
 				clocks = <&clkc CLKID_SYS_ETHPHY>,
@@ -868,7 +918,6 @@
 		ethmac: ethernet@388000 {
 			compatible = "amlogic,meson-axg-dwmac",
 				     "snps,dwmac-4.00";
-			status = "disabled";
 			reg = <0xfe388000 0x12ec>,
 			      <0xfe384000 0x8>;
 			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
@@ -881,6 +930,7 @@
 			tx-fifo-depth = <2048>;
 			/*1:inphy; 2:exphy;*/
 			internal_phy = <1>;
+			mc_val = <0x4be04>;
 			analog_version = <1>;
 			mboxes = <&mbox_fifo T6W_REE2AO_ETH>;
 
@@ -959,17 +1009,17 @@
 				<&clkc CLKID_SD_EMMC_C_SEL>,
 				<&clkc CLKID_SD_EMMC_C>,
 				<&xtal>,
-				//<&clkc CLKID_GP0_PLL>,
-				<&clkc CLKID_FCLK_DIV2>,
+				<&clkc CLKID_GP0_PLL>,
+				//<&clkc CLKID_FCLK_DIV2>,
 				<&clkc CLKID_GP0_PLL>;
 			clock-names = "core", "mux0", "mux1",
 					"clkin0", "clkin1", "clkin2";
 
 			card_type = <1>;
-			//src_clk_rate = <1152000000>;
+			src_clk_rate = <1152000000>;
 			mmc_debug_flag;
 			ignore_desc_busy;
-			tx_delay = <15>;
+			tx_delay = <19>;
 			cap-mmc-crypto;
 			no-sd;
 			no-sdio;
@@ -1160,7 +1210,7 @@
 	aml_wifi: aml_wifi {
 		compatible = "amlogic, aml-wifi";
 		status = "disabled";
-		irq_trigger_type = "GPIO_IRQ_LOW";
+		irq_trigger_type = "IRQF_TRIGGER_LOW";
 		//dhd_static_buf;
 		pwm_config = <&wifi_pwm_conf>;
 	};
@@ -1206,10 +1256,10 @@
 		pinctrl-4=<&cecb_w17 &cec_default_a>;
 		clocks = <&clkc CLKID_CECB_32K_CLKOUT>;
 		clock-names = "cecb_clk";
-		reg = <0x0 0xfe044000 0x0 0x2000
-		       0x0 0xfe010000 0x0 0x2000
-		       0x0 0xfe000000 0x0 0x2000
-		       0x0 0xfe004000 0x0 0x2000>;
+		reg = <0xfe044000 0x2000
+		       0xfe010000 0x2000
+		       0xfe000000 0x2000
+		       0xfe004000 0x2000>;
 		reg-names = "ao","periphs","clock","pad_reg";
 		mbox-names = "mbox_cec";
 		mboxes = <&mbox_fifo T6W_REE2AO_AOCEC>;
@@ -1353,6 +1403,66 @@
 		};
 	}; /* End unifykey */
 
+	hdmirx {
+		compatible = "amlogic, hdmirx_t6w";
+		#address-cells=<1>;
+		#size-cells=<1>;
+		/*memory-region = <&hdmirx_emp_cma_reserved>;*/
+		status = "okay";
+		pinctrl-names = "hdmirx_pins";
+		pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux
+			&hdmirx_c_mux &hdmirx_d_mux>;
+		repeat = <0>;
+		/*power-domains = <&pwrdm PDIP_T6D_VPU_HDMI>;*/
+		interrupts = <0 57 IRQ_TYPE_LEVEL_HIGH>;
+		clocks =<&clkc CLKID_HDMIRX_CFG>,
+			<&clkc CLKID_HDMIRX_ACR>,
+			<&clkc CLKID_HDMIRX_METER>,
+			<&clkc CLKID_HDMIRX_2M>,
+			<&clkc CLKID_HDMIRX_5M>,
+			<&clkc CLKID_HDMIRX_HDCP>,
+			<&xtal>,
+			<&clkc CLKID_FCLK_DIV4>,
+			<&clkc CLKID_FCLK_DIV5>;
+		clock-names = "hdmirx_cfg_clk",
+				"cts_hdmirx_acr_ref_clk",
+				"cts_hdmirx_meter_clk",
+				"cts_hdmirx_2m_clk",
+				"cts_hdmirx_5m_clk",
+				"cts_hdmirx_hdcp2x_eclk",
+				"xtal",
+				"fclk_div4",
+				"fclk_div5";
+		//power-domains = <&pwrdm 2>;
+		hdmirx_id = <0>;
+		en_4k_2_2k = <0>;
+		hpd_low_cec_off = <1>;
+		arc_port = <0>;
+		/* for 2.2R:0x8, for 5.1R:0x6 */
+		term_lvl = <0x6>;
+		vrr_range_dynamic_update_en = <1>;
+		/* bit4: enable feature, bit3~0: port number */
+		disable_port = <0x0>;
+		/* MAP_ADDR_MODULE_CBUS */
+		/* MAP_ADDR_MODULE_HIU */
+		/* MAP_ADDR_MODULE_HDMIRX_CAPB3 */
+		/* MAP_ADDR_MODULE_SEC_AHB */
+		/* MAP_ADDR_MODULE_SEC_AHB2 */
+		/* MAP_ADDR_MODULE_APB4 */
+		/* MAP_ADDR_MODULE_TOP */
+		/* MAP_ADDR_MODULE_CLK_CTRL */
+		/* MAP_ADDR_MODULE_ANA_CTRL */
+		reg = < 0x0 0x0
+			0x0 0x0
+			0x0 0x0
+			0x0 0x0
+			0x0 0x0
+			0x0 0x0
+			0xfe398000 0x18000
+			0xfe000000 0x2ffff
+			0xfe008000 0x334>;
+	};
+
 	aml_dma {
 		compatible = "amlogic,aml_p1_dma";
 		reg = <0xfe440400 0x48>;
@@ -1399,21 +1509,21 @@
 
 	vclk_serve: vclk_serve {
 		compatible = "amlogic, vclk_serve";
-		status = "disabled";
-		reg = <0xfe008000 0x400    /* ana reg */
-			0xfe000000 0x4a0>; /* clk reg */
+		status = "okay";
+		reg = <0xfe008000 0x2000    /* ana reg */
+			0xfe000000 0x2000>; /* clk reg */
 	};
 
 	vout_mux: vout_mux {
-		compatible = "amlogic, vout_mux-t6d";
-		status = "disabled";
+		compatible = "amlogic, vout_mux-t6w";
+		status = "okay";
 		clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
 		clock-names = "fclk_div5", "vdin_meas_clk";
 	};
 
 	vout: vout {
 		compatible = "amlogic, vout";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 194 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "vsync";
 		vs_meas=<0>;
@@ -1435,12 +1545,12 @@
 
 	vout2: vout2 {
 		compatible = "amlogic, vout2";
-		status = "disabled";
+		status = "okay";
 	};
 
 	dummy_venc: dummy_venc {
-		compatible = "amlogic, dummy_venc_t6d";
-		status = "disabled";
+		compatible = "amlogic, dummy_venc_t6w";
+		status = "okay";
 		dummy_venc_type = <1>; /* 0 dummyl，1 dummyp，2 dummyi */
 		ports {
 			port {
@@ -1454,20 +1564,37 @@
 		};
 	};
 
+	vrr0: vrr0 {
+		compatible = "amlogic, vrr-t6w";
+		status = "okay";
+		index = <0>;
+		line_delay = <600>;
+		interrupts = <0 197 1>;
+		interrupt-names = "vsync";
+	};
+
 	canvas: canvas {
 		compatible = "amlogic, meson, canvas";
 		status = "okay";
 		reg = <0xfe036048 0x2000>;
 	};
 
+	ambilight: ambilight {
+		compatible = "amlogic, ambilight-t6w";
+		status = "disabled";
+		interrupts = <0 197 1>;
+		interrupt-names = "vsync";
+		zone_h_v = <32 20>;
+	};
+
 	meson_uvm {
 		compatible = "amlogic, meson_uvm";
-		status = "disabled";
+		status = "okay";
 	};
 
 	meson_videotunnel{
 		compatible = "amlogic, meson_videotunnel";
-		status = "disabled";
+		status = "okay";
 	};
 
 	rdma {
@@ -1494,7 +1621,8 @@
 			<0xff800000 0x40000>,
 			<0xfe036000 0x2000>,
 			<0x0 0x0>,
-			<0xfe0a8000 0x2000>;
+			<0xfe0a8000 0x2000>,
+			<0xff850000 0x40000>;
 		reg-names = "cbus",
 			    "dosbus",
 			    "hiubus",
@@ -1502,7 +1630,8 @@
 			    "vcbus",
 			    "dmcbus",
 			    "efusebus",
-				"nocbus";
+			    "nocbus",
+			    "dpssbus";
 	};
 
 	ge2d {
@@ -1521,23 +1650,36 @@
 	};
 
 	amlvecm: amlvecm {
-		compatible = "amlogic, vecm-t5m";
-		status = "disabled";
-		dev_name = "aml_vecm";
 		clocks = <&clkc CLKID_VID_LOCK>;
 		clock-names = "cts_vid_lock_clk";
 	};
 
+	aml_primesl {
+		compatible = "amlogic, prime_sl_t6w";
+		dev_name = "amprime_sl";
+		status = "okay";
+	};
+
+	amdolby_vision {
+		compatible = "amlogic, dolby_vision_t6w";
+		dev_name = "aml_amdolby_vision_driver";
+		status = "okay";
+		tv_mode = <1>;/*1:enable ;0:disable*/
+		multi_core1 = <0>;
+		interrupts = <GIC_SPI 198 IRQ_TYPE_EDGE_RISING
+						GIC_SPI 186 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "viu1_dolby_int", "dcntr_grid_int";
+	};
 	mesonstream {
 		compatible = "amlogic, codec, streambuf";
 		dev_name = "mesonstream";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vdec {
 		compatible = "amlogic, vdec-pm-pd";
 		dev_name = "vdec.0";
-		status = "disabled";
+		status = "okay";
 		interrupts = <0 3 1
 			0 23 1
 			0 32 1
@@ -1552,30 +1694,34 @@
 			"mailbox_1",
 			"mailbox_2",
 			"parser_b";
-		//power-domains = <&pwrdm PDID_T6D_DOS_HEVC>,
-		//	<&pwrdm PDID_T6D_DOS_HEVC>;
-		//power-domain-names = "pwrc-hevc",
-		//	"pwrc-dummy";
+		power-domains = <&pwrdm PDID_T6W_DOS_HEVC>,
+			<&pwrdm PDID_T6W_DOS_HEVC>;
+		power-domain-names = "pwrc-hevc",
+			"pwrc-dummy";
+		reset-names = "hevcf_dmc_pipel";
+		resets = <&reset RESET_BRG_HEVCF_DMC_PIPEL>;
 	};
 
 	vcodec_dec {
 		compatible = "amlogic, vcodec-dec";
 		dev_name = "aml-vcodec-dec";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vcodec_dos_dev: vcodec_dos_dev {
-		compatible = "amlogic, cpu-major-id-t6d";
+		compatible = "amlogic, cpu-major-id-t6w";
 		dev_name = "vcodec_dos_dev";
-		status = "disabled";
+		status = "okay";
 		reg = <0xfe320000 0x10000>,
-			<0xfe036000 0x2000>;
+			<0xfe340000 0x10000>,
+			<0xfe010000 0x2000>;
 		reg-names = "dosbus",
-			"dmcbus";
+			"dmcbus",
+			"sysctrl";
 		clocks = <&clkc CLKID_SYS_DOS
 			&clkc CLKID_HEVCB>;
 		clock-names = "vdec",
-			"clk_hevc_mux";
+			"clk_hevcf_mux";
 		assigned-clock-parents = <&clkc CLKID_HEVCB_0>;
 		assigned-clocks = <&clkc CLKID_HEVCB>;
 	};
@@ -1588,9 +1734,18 @@
 		interrupt-names = "vsync";
 	};
 
+	dmx_aucpu: aucpu {
+		compatible = "amlogic, aucpu";
+		dev_name = "aml_aucpu";
+		status = "okay";
+		interrupts = <0 77 1>;
+		interrupt-names = "aucpu_irq";
+		reg = <0xfe09e080 0x100>;
+	};
+
 	vpu_security {
 		compatible = "amlogic, meson-t6d, vpu_security";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 220 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "vpu_security";
 	};
@@ -1698,7 +1853,7 @@
 
 	cpu_tsensor: cpu_tsensor@fe022000 {
 		compatible = "amlogic, r1p1-tsensor";
-		status = "disabled";
+		status = "okay";
 		reg = <0xfe022000 0x50>;
 		tsensor_id = <1>;
 		cal_type = <0x11>;
@@ -1715,7 +1870,7 @@
 
 	top_tsensor: top_tsensor@fe01c000 {
 		compatible = "amlogic, r1p1-tsensor";
-		status = "disabled";
+		status = "okay";
 		reg = <0xfe01c000 0x50>;
 		tsensor_id = <2>;
 		cal_type = <0x11>;
@@ -1730,7 +1885,7 @@
 	};
 
 	meson_cooldev: meson-cooldev@0 {
-		status = "disabled";
+		status = "okay";
 		compatible = "amlogic, meson-cooldev";
 		cooling_devices {
 			gpufreq_cool {
@@ -2015,8 +2170,14 @@
 	};
 
 	lut_dma:lut_dma {
-		compatible = "amlogic, meson-t7, lut_dma";
-		status = "disabled";
+		compatible = "amlogic, meson-s5, lut_dma";
+		status = "okay";
+	};
+
+	ion_dev {
+		compatible = "amlogic, ion_dev";
+		memory-region = <&ion_cma_reserved
+				&ion_fb_reserved>;
 	};
 
 	efusecheck: efusecheck{
@@ -2088,10 +2249,10 @@
 	state_led: state_led {
 		compatible = "amlogic,state-led-aocpu";
 		mboxes = <&mbox_fifo T6W_REE2AO_LED>;
-		status = "disabled";
+		status = "okay";
 	};
 
-	chosen {
+	chosen: chosen {
 		bootargs = "usbcore.autosuspend=-1";
 	};
 
@@ -2785,7 +2946,7 @@
 	lcd_vbyone_a_pins: lcd_vbyone_a_pin {
 		mux {
 			groups = "vx1_a_lockn","vx1_a_htpdn";
-			function = "vx1";
+			function = "vx1_a";
 		};
 	};
 
@@ -2801,7 +2962,7 @@
 		mux {
 			groups = "tcon_1","tcon_2","tcon_3",
 				"tcon_4","tcon_5","tcon_6",
-				"tcon_lock";
+				"tcon_lock_h0";
 			function = "tcon";
 		};
 	};
@@ -2879,9 +3040,8 @@
 	i2c1_pins1:i2c1_pins1 {
 		mux {
 			groups = "i2cm_b_scl_d2",
-				"i2c1_sda_d3";
-			function = "i2c1";
-			drive-strength-microamp = <3000>;
+				"i2cm_b_sda_d3";
+			function = "i2cm_b";
 			bias-disable;
 		};
 	};
@@ -3135,6 +3295,56 @@
 		};
 	};
 
+	b_uart_pins1:b_uart1 {
+		mux {
+			groups = "uart_b_tx_w2",
+				 "uart_b_rx_w3";
+			function = "uart_b";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	b_uart_pins2:b_uart2 {
+		mux {
+			groups = "uart_b_tx_w6",
+				 "uart_b_rx_w7";
+			function = "uart_b";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	b_uart_pins3:b_uart3 {
+		mux {
+			groups = "uart_b_tx_w10",
+				 "uart_b_rx_w11";
+			function = "uart_b";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	b_uart_pins4:b_uart4 {
+		mux {
+			groups = "uart_b_tx_w14",
+				 "uart_b_rx_w15";
+			function = "uart_b";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	b_uart_pins5:b_uart5 {
+		mux {
+			groups = "uart_b_tx_d0",
+				 "uart_b_rx_d1";
+			function = "uart_b";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
 	c_uart_pins1:c_uart1 {
 		mux {
 			groups = "uart_c_tx_d6",
@@ -3158,6 +3368,30 @@
 	};
 
 	c_uart_pins3:c_uart3 {
+		mux {
+			groups = "uart_c_tx_h24",
+				"uart_c_rx_h25",
+				"uart_c_cts_h22",
+				"uart_c_rts_h23";
+			function = "uart_c";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	c_uart_pins4:c_uart4 {
+		mux {
+			groups = "uart_c_tx_h28",
+				"uart_c_rx_h29",
+				"uart_c_cts_h26",
+				"uart_c_rts_h27";
+			function = "uart_c";
+			drive-strength-microamp = <3000>;
+			bias-pull-up;
+		};
+	};
+
+	c_uart_pins5:c_uart5 {
 		mux {
 			groups = "uart_c_tx_m19",
 				"uart_c_rx_m20",
@@ -3534,4 +3768,4 @@
 	};
 };
 
-//#include "mesont6d_cpufreq.dtsi"
+#include "mesont6w_cpufreq.dtsi"

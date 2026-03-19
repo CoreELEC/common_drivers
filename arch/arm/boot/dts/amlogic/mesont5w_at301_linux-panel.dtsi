@@ -17,7 +17,6 @@
 		index = <0>;
 		mode = "tv";
 		fr_auto_policy = <1>; /* 0=disable, 1=enable */
-		key_valid = <0>;
 		assigned-clocks = <&clkc CLKID_CTS_TCON_PLL_CLK_SEL>;
 		assigned-clock-parents = <&clkc CLKID_FCLK_DIV5>;
 		assigned-clock-rates = <0>;
@@ -564,7 +563,6 @@
 			spi_max_frequency = <1000000>; /* unit: hz */
 			spi_mode = <0>; /* mode: 0, 1, 2, 3 */
 			spi_dma_support = <1>;
-			spi_line_n = <50>;/*spi dma trig*/
 			spi_cs_delay = <10  /* hold_high_delay */
 				100>; /* clk_cs_delay (unit: us) */
 			en_gpio_on_off = <0 /* ldim_dev-gpios index */
@@ -710,7 +708,6 @@ panel/tcon/HV650QUB-F70_LDIM/bl_profile.bin";
 			spi_max_frequency = <3000000>; /* unit: hz */
 			spi_mode = <2>; /* mode: 0, 1, 2, 3 */
 			spi_dma_support = <1>;
-			spi_line_n = <50>;/*spi dma trig*/
 			spi_cs_delay = <10  /* hold_high_delay */
 				100>; /* clk_cs_delay (unit: us) */
 			en_gpio_on_off = <0 /* ldim_dev-gpios index */

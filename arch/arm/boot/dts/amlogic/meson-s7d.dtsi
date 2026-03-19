@@ -20,6 +20,7 @@
 #include <dt-bindings/mailbox/s7d-mbox.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/thermal/ddr-params.h>
+#include <dt-bindings/phy/phy.h>
 #include "meson-ir-map.dtsi"
 #include "meson-valhall.dtsi"
 
@@ -596,7 +597,7 @@
 				clocks =  <&scmi_clk CLKID_SCMI_PWM_I>;
 				clock-names = "clkin0";
 				tee_id = <8>;
-				status = "okay";
+				status = "disabled";
 			};
 
 			pwm_j: pwm@59200 {
@@ -720,81 +721,58 @@
 			};
 		};
 
-		usb_phy20: usbphy20@fe358000 {
-			compatible = "amlogic, amlogic-crg-drd-usb2";
-			status = "disable";
-			reg = <0xfe358000 0x10 /* phy_base */
-					0xfe002000 0x100 /* reset_base */
-					0xfe35c000 0x60>; /* phy_cfg_base(s) */
-			pll-setting-1 = <0x244a0030>;
-			pll-setting-2 = <0x03200022>;
-			pll-setting-4 = <0x7e18>;
-			pll-setting-5 = <0x9>;
-			//dis-thred-enhance = <0x2>;
-			pll-version = <3>;
-			phy0-reset-level-bit = <8>;
-			usb-reset-bit = <5>;
-			reset-level = <0x40>;
-			usb-phy-trim-reg = <0xfe010330>;
-			phy-id = <0>;
-			clocks = <&clkc CLKID_SYS_USB>;
-			clock-names = "crg_general";
-		};
-
-		usb_phy21: usbphy21@fe348000 {
-			compatible = "amlogic, amlogic-crg-drd-usb2";
-			status = "disable";
-			reg = <0xfe348000 0x10 /* phy_base */
-					0xfe002000 0x100 /* reset_base */
-					0xfe34c000 0x60>; /* phy_cfg_base(s) */
-			pll-setting-1 = <0x244a0030>;
-			pll-setting-2 = <0x03200022>;
-			pll-setting-4 = <0x7e18>;
-			pll-setting-5 = <0x9>;
-			//dis-thred-enhance = <0x2>;
-			pll-version = <3>;
-			phy0-reset-level-bit = <9>;
-			usb-reset-bit = <4>;
-			reset-level = <0x40>;
-			usb-phy-trim-reg = <0xfe010330>;
-			phy-id = <1>;
-			clocks = <&clkc CLKID_SYS_USB>;
-			clock-names = "crg_general";
-		};
-
-		usb_phy30: usbphy30@fe358080 {
-			compatible = "amlogic, amlogic-crg-drd-usb3";
-			status = "disable";
-			reg = <0xfe358080 0x0>; /* phy3 base */
-			phy1-reg = <0xfe358080>; /* phy3 cfg base */
-			phy1-reg-size = <0x18>;
-			reset-reg = <0xfe002000>;
-			reset-reg-size = <0x100>;
-			phy-id = <0>;
-			portnum = <0>;
-		};
-
-		usb_phy31: usbphy31@fe348080 {
-			compatible = "amlogic, amlogic-crg-drd-usb3";
-			status = "disable";
-			reg = <0xfe348080 0x0>; /* phy3 base */
-			phy1-reg = <0xfe348080>; /* phy3 cfg base */
-			phy1-reg-size = <0x18>;
-			reset-reg = <0xfe002000>;
-			reset-reg-size = <0x100>;
-			phy-id = <1>;
-			portnum = <0>;
-		};
-
-		crg_otg: crgotg@fe358000 {
-			compatible = "amlogic, amlogic-crg-otg";
+		usbphy0: usbphy0@fe358000 {
+			compatible = "amlogic,u2phy-s7d";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//ranges = <0 0 0 0x1000>;
 			status = "disabled";
-			usb2-phy-reg = <0xfe358000>;
-			usb2-phy-reg-size = <0x80>;
-			usb3-phy-reg = <0xfe358080>;
-			usb3-phy-reg-size = <0x20>;
-			interrupts = <0 129 IRQ_TYPE_EDGE_RISING>;
-			udc-name = "0xfe350000.crgudc";
+			u2p0port0: u2p@0 {
+				#phy-cells = <0>;
+				port-speed = <0x0>; /* 0~2: HS HSP SS */
+				reg = <0xfe358000 0x10
+						0xfe002000 0x100
+						0xfe010330 0x4
+						0xfe35c000 0x60>;
+				reset-level = <0x40>;
+				phy-reset-level-bits = <0x8>;
+				usb-reset-bit = <5>;
+				pll-settings = <0x244a0030
+								0x03200022
+								0x0
+								0x7e18
+								0x9>;
+				clocks = <&clkc CLKID_SYS_USB>;
+				clock-names = "crg_general";
+				phy-otg;
+				interrupts = <0 129 IRQ_TYPE_EDGE_RISING>;
+			};
+		};
+
+		usbphy1: usbphy1@fe348000 {
+			compatible = "amlogic,u2phy-s7d";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//ranges = <0 0 0 0x1000>;
+			status = "disabled";
+			u2p1port0: u2p@0 {
+				#phy-cells = <0>;
+				port-speed = <0x0>; /* 0~2: HS HSP SS */
+				reg = <0xfe348000 0x10
+						0xfe002000 0x100
+						0xfe010330 0x4
+						0xfe34c000 0x60>;
+				reset-level = <0x40>;
+				phy-reset-level-bits = <0x9>;
+				usb-reset-bit = <4>;
+				pll-settings = <0x244a0030
+								0x03200022
+								0x0
+								0x7e18
+								0x9>;
+				clocks = <&clkc CLKID_SYS_USB>;
+				clock-names = "crg_general";
+			};
 		};
 
 		crg_drd: crgdrd@fe350000 {
@@ -802,7 +780,8 @@
 			status = "disabled";
 			reg = <0xfe350000 0x8000>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_EDGE_RISING>;
-			usb-phy = <&usb_phy20>, <&usb_phy30>;
+			phys = <&u2p0port0>;
+			phy-names = "usb2-phy";
 			clocks = <&clkc CLKID_SYS_USB>;
 			clock-names = "crg_general";
 			in-nak-rty = <0x5>;
@@ -810,25 +789,24 @@
 
 		crg_udc: crgudc@fe350000 {
 			compatible = "amlogic, crg_udc";
-			status = "disable";
+			status = "disabled";
 			controller-type = <1>; /* 1: aml phy 4: m31 phy */
 			reg = <0xfe350000 0x8000>;
 			interrupts = <0 131 IRQ_TYPE_EDGE_RISING>;
 			port-speed = <3>; /* 0~3: unknown, low, full, high */
-			phy-reg = <0xfe358000>; /* phy2 base*/
-			phy-reg-size = <0x10>;
+			phys = <&u2p0port0>;
 			clocks = <&clkc CLKID_SYS_USB>;
 			clock-names = "usb_general";
-			phy-id = <0>;
 			version = <1>; /* 1: forbid vbus detect */
 		};
 
 		crg: crg@fe340000 {
 			compatible = "amlogic, crg-host-drd";
-			status = "disable";
+			status = "disabled";
 			reg = <0xfe340000 0x8000>;
 			interrupts = <0 130 IRQ_TYPE_EDGE_RISING>;
-			usb-phy = <&usb_phy21>, <&usb_phy31>;
+			phys = <&u2p1port0>;
+			phy-names = "usb2-phy";
 			clocks = <&clkc CLKID_SYS_USB>;
 			clock-names = "crg_general";
 			in-nak-rty = <0x5>;
@@ -838,6 +816,49 @@
 			compatible = "amlogic, dolby_fw";
 			mem_size = <0x100000>;
 			status = "okay";
+		};
+
+		pcie: pcie@f5000000 {
+			compatible = "amlogic, amlogic-pcie-v2", "snps,dw-pcie";
+			reg = <0xf5000000 0x400000
+				0xfe02c000 0x2000
+				0xf5400000 0x200000
+				0xfe02a000 0x2000
+				0xfe002044 0x10>;
+			reg-names = "elbi", "cfg", "config", "phy", "reset";
+			interrupts = <GIC_SPI 141 IRQ_TYPE_EDGE_RISING>;
+			#interrupt-cells = <1>;
+			bus-range = <0x0 0xff>;
+			#address-cells = <3>;
+			#size-cells = <2>;
+			interrupt-map-mask = <0 0 0 0>;
+			interrupt-map = <0 0 0 0 &gic GIC_SPI 143 IRQ_TYPE_EDGE_RISING>;
+			device_type = "pci";
+			ranges = <0x81000000 0 0 0xf5600000 0x0 0x100000
+				/* downstream I/O */
+				0x82000000 0 0xf5700000 0xf5700000 0 0x1900000>;
+				/* non-prefetchable memory */
+			num-lanes = <1>;
+			pcie-num = <1>;
+
+			//clocks = <&clkc CLKID_PCIE_PLL
+			//	&clkc CLKID_PCIE
+			//	&clkc CLKID_PCIE_PHY>;
+			//clock-names = "pcie_refpll",
+			//		"pcie",
+			//		"pcie_phy";
+			/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+			gpio-type = <2>;
+			pcie-apb-rst-bit = <14>;
+			pcie-phy-rst-bit = <13>;
+			pcie-ctrl-a-rst-bit = <12>;
+			pwr-ctl = <0>;
+//			power-domains = <&pwrdm PDID_SC2_PCIE>;
+			pcie-ctrl-sleep-shift = <15>;
+			pcie-hhi-mem-pd-shift = <26>;
+			pcie-hhi-mem-pd-mask = <0xf>;
+			pcie-ctrl-iso-shift = <15>;
+			status = "disabled";
 		};
 
 		sd_emmc_c: mmc@fe08c000 {
@@ -1184,7 +1205,6 @@
 		interrupts = <0 204 4
 			0 197 1>;
 		interrupt-names = "hdmitx_hpd", "hdmitx_vsync";
-		enc_idx = <0>;
 		max_refresh_rate = <120>; /* the max fresh_rate of S7D is upto 120hz */
 		reg =	<0xff000000 0x40000>,
 			<0xfe310000 0x10000>,
@@ -1311,12 +1331,12 @@
 
 	canvas: canvas{
 		compatible = "amlogic, meson, canvas";
-		status = "disabled";
+		status = "okay";
 	};
 
 	codec_io: codec_io {
 		compatible = "amlogic, meson-s7d, codec-io";
-		status = "disabled";
+		status = "okay";
 		#address-cells=<1>;
 		#size-cells=<1>;
 		ranges;
@@ -1362,7 +1382,7 @@
 
 	vpu: vpu {
 		compatible = "amlogic, vpu-s7d";
-		status = "disabled";
+		status = "okay";
 		reg =	<0xfe000000 0x100    /* clk */
 			 0xfe00c000 0x70     /* pwrctrl */
 			 0xff000000 0xf000   /* vcbus */
@@ -1384,7 +1404,7 @@
 
 	rdma {
 		compatible = "amlogic, meson-sc2, rdma";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 215 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "rdma";
 		/* after sc2 */
@@ -1395,7 +1415,7 @@
 	amlvecm: amlvecm {
 		compatible = "amlogic, vecm-s7d";
 		dev_name = "aml_vecm";
-		status = "disabled";
+		status = "okay";
 		gamma_en = <0>;/*1:enable ;0:disable*/
 		wb_en = <0>;/*1:enable ;0:disable*/
 		/*0: 709/601  1: bt2020*/
@@ -1447,7 +1467,7 @@
 
 	vdac: vdac {
 		compatible = "amlogic, vdac-s7D";
-		status = "disabled";
+		status = "okay";
 	};
 
 	vout: vout {
@@ -1728,8 +1748,8 @@
 		interrupt-names = "vsync_int";
 		rdma-irq = <2>;
 		vdin_id = <0>;
-		clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
-		clock-names = "fclk_div5", "vdin_meas_clk";
+		//clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
+		//clock-names = "fclk_div5", "vdin_meas_clk";
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
 		v4l_vd_num = <70>;
@@ -1780,7 +1800,7 @@
 	meson-amvideom {
 		compatible = "amlogic, amvideom-s7d";
 		dev_name = "amvideom";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "vsync";
 	};
@@ -1833,7 +1853,7 @@
 
 	ge2d {
 		compatible = "amlogic, ge2d-s7d";
-		status = "disabled";
+		status = "okay";
 		interrupts = <GIC_SPI 217 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "ge2d";
 		clocks = <&clkc CLKID_VAPB>,
@@ -1958,7 +1978,7 @@
 		status = "okay";
 	};
 
-	chosen {
+	chosen: chosen {
 		bootargs = "usbcore.autosuspend=-1 dm_mod.reserved_bio_based_ios=8";
 	};
 
@@ -1996,7 +2016,7 @@
 	amdolby_vision {
 		compatible = "amlogic, dolby_vision_s7d";
 		dev_name = "aml_amdolby_vision_driver";
-		status = "disabled";
+		status = "okay";
 		tv_mode = <0>;/*1:enable ;0:disable*/
 	};
 
@@ -2166,17 +2186,6 @@
 
 	picdec {
 		compatible = "amlogic, picdec";
-		status = "disabled";
-	};
-
-	audiolocker: locker {
-		compatible = "amlogic, audiolocker";
-		clock-names = "lock_out", "lock_in", "out_src",
-					"in_src", "out_calc", "in_ref";
-		interrupts = <GIC_SPI 1 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "irq";
-		frequency = <49000000>; /* pll */
-		dividor = <49>; /* locker's parent */
 		status = "disabled";
 	};
 };

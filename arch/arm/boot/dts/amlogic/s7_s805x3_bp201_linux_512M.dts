@@ -45,18 +45,8 @@
 		ranges;
 
 		ramdump_bl33z {
-			compatible = "shared-dma-pool";
-			size = <0x01800000>;
-			alignment = <0x00400000>;
-			alloc-ranges = <0x05000000 0x07000000>;
-			linux,contiguous-region;
-			no-map;
+			reg = <0x0 0x1800000>; /* 0 ~ 24M */
 			status = "disabled";
-		};
-
-		ramdump_data@0 {
-			reg = <0x0 0x0>;
-			status = "disabled"; /* disabled as default */
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -378,10 +368,11 @@
 		aml-audio-card,name = "AML-AUGESOUND";
 
 		/*avout mute gpio*/
-		spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
+		avout_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+		av_mute_sleep_time = <700>;
 
 		aml-audio-card,dai-link@0 {
-			format = "dsp_a";
+			format = "dsp_b";
 			mclk-fs = <512>;
 			//continuous-clock;
 			//bitclock-inversion;
@@ -394,7 +385,7 @@
 			 * bitclock-master = <&tdmacodec>;
 			 * frame-master = <&tdmacodec>;
 			 */
-			suffix-name = "alsaPORT-pcm";
+			suffix-name = "alsaPORT-pcm-builtinmic";
 			tdmacpu: cpu {
 				sound-dai = <&tdma>;
 				dai-tdm-slot-tx-mask =
@@ -413,7 +404,6 @@
 		aml-audio-card,dai-link@1 {
 			format = "i2s";//"dsp_a";
 			mclk-fs = <256>;
-			continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
@@ -475,7 +465,6 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
-			continuous-clock;
 			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-spdif";
 			cpu {
@@ -623,6 +612,11 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+};
+
+&codec_mm {
+       /* scatter only alloc from sys */
+	scatter_alloc_mode = <1>;
 };
 
 &amlvideo2_0 {
@@ -936,6 +930,7 @@
 	status = "okay";
 	phy-handle = <&internal_ephy>;
 	phy-mode = "rmii";
+	amlogic,wol-enable;
 };
 
 &ir {
@@ -967,10 +962,6 @@
 	logo_addr = "0x1f800000";
 	mem_alloc = <0>;
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
-};
-
-&drm_subsystem {
-	dummyl_from_hdmitx = /bits/ 8  <1>;
 };
 
 &drm_vpu {
@@ -1065,4 +1056,9 @@
 	wb_en = <0>;/*1:enable ;0:disable*/
 	/*0: 709/601  1: bt2020*/
 	tx_op_color_primary = <0>;
+};
+
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 swiotlb=noforce \
+	dm_mod.reserved_bio_based_ios=8 rodata=off";
 };

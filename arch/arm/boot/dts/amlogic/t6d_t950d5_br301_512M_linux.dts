@@ -315,7 +315,7 @@
 	/* for external keypad */
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "disabled";
+		status = "okay";
 		key_name = "power", "vol-", "vol+", "ok", "menu",
 			   "source", "exit";
 		key_num = <7>;
@@ -993,7 +993,7 @@
 };
 
 &saradc {
-	status = "disabled";
+	status = "okay";
 };
 
 &CPU0 {
@@ -1011,7 +1011,7 @@
 &amlvecm {
 	compatible = "amlogic, vecm-t6d";
 	dev_name = "aml_vecm";
-	status = "disabled";
+	status = "okay";
 	gamma_en = <1>;/*1:enable ;0:disable*/
 	wb_en = <1>;/*1:enable ;0:disable*/
 	cm_en = <1>;/*1:enable ;0:disable*/

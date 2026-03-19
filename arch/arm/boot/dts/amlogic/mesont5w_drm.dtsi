@@ -6,7 +6,7 @@
 #include "mesont5w.dtsi"
 
 / {
-	drm_vpu: drm-vpu@900000  {
+	drm_vpu: drm-vpu@ff900000  {
 		status = "disabled";
 		compatible = "amlogic, meson-t5w-vpu";
 		osd_ver = /bits/ 8 <OSD_V7>;

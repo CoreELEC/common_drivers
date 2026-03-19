@@ -46,18 +46,8 @@
 		ranges;
 
 		ramdump_bl33z {
-			compatible = "shared-dma-pool";
-			size = <0x01800000>;
-			alignment = <0x00400000>;
-			alloc-ranges = <0x05000000 0x07000000>;
-			linux,contiguous-region;
-			no-map;
+			reg = <0x0 0x1800000>; /* 0 ~ 24M */
 			status = "disabled";
-		};
-
-		ramdump_data@0 {
-			reg = <0x0 0x0>;
-			status = "disabled"; /* disabled as default */
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -182,7 +172,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0xd000000>;
+			size = <0x16c00000>;
 			alignment = <0x400000>;
 			alloc-ranges = <0x30000000 0x50000000>;
 			linux,contiguous-region;
@@ -235,10 +225,6 @@
 	gpio_leds {
 		compatible = "gpio-leds";
 		status = "okay";
-		pwr_led {
-			label = "pwr_led";
-			default-state = "on";
-		};
 
 		bt_led {
 			label = "bt_led";
@@ -306,13 +292,15 @@
 		ts2_control = <0x0>;
 		ts2_invert = <0>;
 
+		ts3_sid = <0x7>;
+
 		pinctrl-names = "s_ts0";
 		pinctrl-0 = <&dvb_s_ts0_pins>;
 	};
 
 	multi-di {
 		compatible = "amlogic, dim-s7d";
-		status = "disabled";
+		status = "okay";
 		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
 		flag_cma = <4>;	//<1>;
 		//memory-region = <&di_reserved>;
@@ -581,7 +569,7 @@
 		startup-delay-us = <7000>;
 		enable-active-high;
 		regulator-boot-on;
-		regulator-always-on;
+		//regulator-always-on;
 	};
 
 	vddq_reg: fixed@vddq_reg {
@@ -688,7 +676,8 @@
 		#sound-dai-cells = <0>;
 		reg = <0x2a>;
 		status = "okay";
-		reset_pin = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		vcc5v-supply = <&vcc5v_reg>;
+		reset_pin-gpios = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
 	};
 
 	aw9523: aw9523_led@5b {
@@ -733,22 +722,22 @@
 		};
 	};
 
-	aml_dvb_extern_i2c0: aml_dvb_extern_i2c@1a {
+	aml_dvb_extern_i2c0: aml_dvb_extern_i2c@6c {
+		compatible = "aml_dvb_extern_i2c";
+		dev_name = "cxd2856";
+		reg = <0x6c>;
+		status = "okay";
+	};
+	aml_dvb_extern_i2c1: aml_dvb_extern_i2c@1a {
 		compatible = "aml_dvb_extern_i2c";
 		dev_name = "r836";
 		reg = <0x1a>;
 		status = "okay";
 	};
-	aml_dvb_extern_i2c1: aml_dvb_extern_i2c@62 {
+	aml_dvb_extern_i2c2: aml_dvb_extern_i2c@62 {
 		compatible = "aml_dvb_extern_i2c";
 		dev_name = "av2018";
 		reg = <0x62>;
-		status = "okay";
-	};
-	aml_dvb_extern_i2c2: aml_dvb_extern_i2c@6c {
-		compatible = "aml_dvb_extern_i2c";
-		dev_name = "cxd2856";
-		reg = <0x6c>;
 		status = "okay";
 	};
 };
@@ -780,29 +769,19 @@
 	status = "okay";
 };
 
-&usb_phy20 {
-	portnum = <1>;
+&usbphy0 {
 	status = "okay";
+	u2p@0 {
+		controller-type = <1>; /* 0~3: normal, host, device, otg */
+	};
 };
 
-&usb_phy21 {
-	portnum = <1>;
+&usbphy1 {
 	status = "okay";
-	gpio-vbus-power = "GPIOH_8";
-	gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
-};
-
-&usb_phy30 {
-	status = "okay";
-};
-
-&usb_phy31 {
-	status = "okay";
-};
-
-&crg_otg {
-	status = "okay";
-	controller-type = <1>; /* 0~3: normal, host, device, otg */
+	u2p@0 {
+		gpio-vbus-power = "GPIOH_8";
+		gpios = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &crg_drd {
@@ -961,7 +940,7 @@
 };
 
 &ir {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&remote_pins>;
 	pinctrl-names = "default";
 	/*For linux platforms, use custom_maps_linux to override the default custom_maps in the IR*/
@@ -1068,9 +1047,13 @@
 &amlvecm {
 	compatible = "amlogic, vecm-s7d";
 	dev_name = "aml_vecm";
-	status = "disabled";
+	status = "okay";
 	gamma_en = <0>;/*1:enable ;0:disable*/
 	wb_en = <0>;/*1:enable ;0:disable*/
 	/*0: 709/601  1: bt2020*/
 	tx_op_color_primary = <0>;
+};
+
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 swiotlb=noforce";
 };

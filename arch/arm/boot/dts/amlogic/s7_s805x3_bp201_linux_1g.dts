@@ -45,18 +45,8 @@
 		ranges;
 
 		ramdump_bl33z {
-			compatible = "shared-dma-pool";
-			size = <0x01800000>;
-			alignment = <0x00400000>;
-			alloc-ranges = <0x05000000 0x07000000>;
-			linux,contiguous-region;
-			no-map;
+			reg = <0x0 0x1800000>; /* 0 ~ 24M */
 			status = "disabled";
-		};
-
-		ramdump_data@0 {
-			reg = <0x0 0x0>;
-			status = "disabled"; /* disabled as default */
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -157,7 +147,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* Two-channel 1080i HEVC secure playback requires at least 168MB */
-			size = <0xA800000>;
+			size = <0x9C00000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
 			alloc-ranges = <0x30000000 0x10000000>;
@@ -220,51 +210,67 @@
 	dvb-extern {
 		compatible = "amlogic, dvb-extern";
 		dev_name = "dvb-extern";
-		status = "okay";
+		status = "disabled";
 
-		//dvb hardware main power.
+		/* dvb hardware main power. */
 		dvb_power_gpio = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
-		dvb_power_value = <0>;
-		dvb_power_dir = <0>; //0: out, 1: in.
+		dvb_power_value = <1>;
+		dvb_power_dir = <0>; /* 0: out, 1: in. */
 
-		fe_num = <1>;
-		fe0_demod = "cxd2856";
-		fe0_i2c_adap_id = <&i2c3>;
-		fe0_demod_i2c_addr = <0xD8>;
-		fe0_reset_value = <0>;
-		fe0_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
-		fe0_reset_dir = <0>; //0: out, 1: in.
-		fe0_ant_poweron_value = <0>;
-		fe0_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
-		fe0_ts = <0>;
-		fe0_ts_out_mode = <0>; //0: serial, 1: parallel.
-		fe0_tuner0 = <0>; //T/C
-		fe0_tuner1 = <1>; //S
+		fe_num = <3>; /* internal 2 * dvb-c, extern 1 * dvb-s */
+		fe0_demod = "internal";
+		fe0_tuner0 = <0>; /* use tuner0 */
 
-		fe1_demod = "cxd2856";
-		fe1_i2c_adap_id = <&i2c3>;
-		fe1_demod_i2c_addr = <0xCA>;
-		fe1_reset_value = <0>;
-		fe1_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
-		fe1_reset_dir = <0>; //0: out, 1: in.
-		fe1_ant_poweron_value = <0>;
-		fe1_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
-		fe1_ts = <1>;
-		fe1_ts_out_mode = <0>; //0: serial, 1: parallel.
-		fe1_tuner0 = <0>; //T/C
-		fe1_tuner1 = <1>; //S
+		fe1_demod = "internal";
+		fe1_tuner0 = <1>; /* use tuner1 */
 
-		tuner_num = <2>; //for extern demod use tuner
+		fe2_demod = "cxd2856";
+		fe2_i2c_adap_id = <&i2c4>;
+		fe2_demod_i2c_addr = <0xD8>;
+		fe2_reset_value = <0>;
+		fe2_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
+		fe2_reset_dir = <0>; /* 0: out, 1: in. */
+		fe2_ant_poweron_value = <0>;
+		fe2_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
+		fe2_ts = <0>;
+		fe2_tuner1 = <3>; /* use tuner3, only S. */
+
+		tuner_num = <4>; /* tuner number, multi tuner support */
 		tuner0_name = "r836_tuner";
-		tuner0_i2c_addr = <0x1A>;
-		tuner1_name = "av2018_tuner";
-		tuner1_i2c_addr = <0xC4>;
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x1a>; /* 7bit */
+		tuner0_xtal = <0>; /* 0: 16MHz, 1: 24MHz */
+		tuner0_xtal_mode = <0>;
+					/* NO_SHARE_XTAL(0)
+					 * SLAVE_XTAL_SHARE(3)
+					 */
+		tuner0_xtal_cap = <16>;
+		tuner0_lt_out = <1>;
+
+		tuner1_name = "r836_tuner";
+		tuner1_i2c_adap = <&i2c3>;
+		tuner1_i2c_addr = <0x3a>; /* 7bit */
+		tuner1_xtal = <0>; /* 0: 16MHz, 1: 24MHz */
+		tuner1_xtal_mode = <0>;
+					/* NO_SHARE_XTAL(0)
+					 * SLAVE_XTAL_SHARE(3)
+					 */
+		tuner1_xtal_cap = <16>;
+		tuner1_lt_out = <1>;
+
+		tuner2_name = "av2018_tuner";
+		tuner2_i2c_adap = <&i2c3>;
+		tuner2_i2c_addr = <0xC4>; /* 8bit */
+		tuner2_lt_out = <1>;
+
+		tuner3_name = "av2018_tuner";
+		tuner3_lt_out = <1>;
 	};
 
 	dvb-demux {
 		compatible = "amlogic sc2, dvb-demux";
 		dev_name = "dvb-demux";
-		status = "okay";
+		status = "disabled";
 
 		reg = <0xfe000000 0x480000>;
 
@@ -376,10 +382,11 @@
 		aml-audio-card,name = "AML-AUGESOUND";
 
 		/*avout mute gpio*/
-		spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
+		avout_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+		av_mute_sleep_time = <700>;
 
 		aml-audio-card,dai-link@0 {
-			format = "dsp_a";
+			format = "dsp_b";
 			mclk-fs = <512>;
 			//continuous-clock;
 			//bitclock-inversion;
@@ -392,7 +399,7 @@
 			 * bitclock-master = <&tdmacodec>;
 			 * frame-master = <&tdmacodec>;
 			 */
-			suffix-name = "alsaPORT-pcm";
+			suffix-name = "alsaPORT-pcm-builtinmic";
 			tdmacpu: cpu {
 				sound-dai = <&tdma>;
 				dai-tdm-slot-tx-mask =
@@ -411,7 +418,6 @@
 		aml-audio-card,dai-link@1 {
 			format = "i2s";//"dsp_a";
 			mclk-fs = <256>;
-			continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
@@ -473,7 +479,6 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
-			continuous-clock;
 			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-spdif";
 			cpu {
@@ -623,18 +628,23 @@
 	};
 };
 
+&codec_mm {
+       /* scatter only alloc from sys */
+	scatter_alloc_mode = <1>;
+};
+
 &amlvideo2_0 {
 	/*1:720P_NV21 2:1080P_NV21 3:4K_NV21*/
-	codec_mm_alloc = <2>;
+	codec_mm_alloc = <1>;
 };
 
 &amlvideo2_1 {
 	/*1:720P_NV21 2:1080P_NV21 3:4K_NV21*/
-	codec_mm_alloc = <2>;
+	codec_mm_alloc = <1>;
 };
 
 &i2c3 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default","sleep";
 	pinctrl-0=<&i2c3_pins2>;
 	pinctrl-1 = <&i2c3_pins2_sleep>;
@@ -934,6 +944,7 @@
 	status = "okay";
 	phy-handle = <&internal_ephy>;
 	phy-mode = "rmii";
+	amlogic,wol-enable;
 };
 
 &ir {
@@ -965,10 +976,6 @@
 	logo_addr = "0x1f800000";
 	mem_alloc = <0>;
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
-};
-
-&drm_subsystem {
-	dummyl_from_hdmitx = /bits/ 8  <1>;
 };
 
 &drm_vpu {
@@ -1052,7 +1059,7 @@
 };
 
 &drm_subsystem {
-	fbdev_sizes = <1920 1080 1920 2160 32>;
+	fbdev_sizes = <1280 720 1280 1440 32>;
 };
 
 &amlvecm {
@@ -1063,4 +1070,9 @@
 	wb_en = <0>;/*1:enable ;0:disable*/
 	/*0: 709/601  1: bt2020*/
 	tx_op_color_primary = <0>;
+};
+
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 swiotlb=noforce \
+	dm_mod.reserved_bio_based_ios=8 rodata=off";
 };

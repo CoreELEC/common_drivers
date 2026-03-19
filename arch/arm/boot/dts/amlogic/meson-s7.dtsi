@@ -1580,7 +1580,7 @@
 	vdin0: vdin0 {
 		compatible = "amlogic, vdin-s7";
 		dev_name = "vdin0";
-		status = "okay";
+		status = "disabled";
 		reserve-iomap = "true";
 		flag_cma = <0>;/*1:share with codec_mm;2:cma alone*/
 		/*MByte, if 10bit disable: 64M(YUV422),
@@ -1594,8 +1594,8 @@
 		interrupts = <0 210 1>;
 		interrupt-names = "vsync_int";
 		rdma-irq = <2>;
-		clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
-		clock-names = "fclk_div5", "vdin_meas_clk";
+		//clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
+		//clock-names = "fclk_div5", "vdin_meas_clk";
 		vdin_id = <0>;
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
@@ -1623,7 +1623,7 @@
 		rdma-irq = <4>;
 		vdin_id = <1>;
 		clocks = <&clkc CLKID_FCLK_DIV5>, <&clkc CLKID_VDIN_MEAS>;
-		clock-names = "fclk_div5", "vdin_meas_clk";
+		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
 		v4l_vd_num = <71>;
@@ -1826,7 +1826,7 @@
 		status = "okay";
 	};
 
-	chosen {
+	chosen: chosen {
 		bootargs = "usbcore.autosuspend=-1 dm_mod.reserved_bio_based_ios=8";
 	};
 

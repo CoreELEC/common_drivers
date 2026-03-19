@@ -45,18 +45,8 @@
 		ranges;
 
 		ramdump_bl33z {
-			compatible = "shared-dma-pool";
-			size = <0x01800000>;
-			alignment = <0x00400000>;
-			alloc-ranges = <0x05000000 0x07000000>;
-			linux,contiguous-region;
-			no-map;
+			reg = <0x0 0x1800000>; /* 0 ~ 24M */
 			status = "disabled";
-		};
-
-		ramdump_data@0 {
-			reg = <0x0 0x0>;
-			status = "disabled"; /* disabled as default */
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -454,7 +444,7 @@
 	aml_dtv_demod {
 		compatible = "amlogic, ddemod-t5w";
 		dev_name = "aml_dtv_demod";
-		status = "disabled";
+		status = "okay";
 		diseqc_name = "sgm_41286";
 		pinctrl-names="if_agc_pins", "diseqc_out", "rf_agc_pins";
 		pinctrl-0=<&dtvdemod_if_agc_pins>;
@@ -574,7 +564,7 @@
 	smartcard {
 		compatible = "amlogic,smartcard-sc2";
 		dev_name = "smartcard";
-		status = "disabled";
+		status = "okay";
 
 		reg = <0xffd25000 0x1000>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
@@ -658,30 +648,30 @@
 	 ***************************************************/
 	//clock-range = <334 667>;
 	/***************************************************
-	 * en_4k: disable 4K
+	 * en_4k: t5w support 4k
 	 ***************************************************/
-	en_4k = <0>;
-	//keep_dec_vf = <2>;
-	po_fmt = <0>;
+	en_4k = <1>;
+	keep_dec_vf = <2>;
+	po_fmt = <6>;
 	/***************************************************
 	 * post_nub: default is 11 (T7/T3/SC2/S4 new path)
-	 * local 5*4075520 = 20
-	 * post 9*5222400 = 47
+	 * local 7*4075520 = 28
+	 * post 11*5222400 = 56 //??
 	 ***************************************************/
-	post_nub = <9>;
+	post_nub = <11>;
 	/***************************************************
 	 * 0:not support
 	 * bit 0: for 4k
 	 * bit 1: for 1080p
 	 ***************************************************/
-	alloc_sct = <0>;
-	en_dat = <0>;
+	alloc_sct = <1>;
+	//en_dat = <0>;
 	/***************************************************
 	 * hf: default is 0 (T7/T3/SC2/S4 new path)
 	 * 0:not enable;
 	 * 1: enable
 	 ***************************************************/
-	//hf = <0>;
+	hf = <0>;
 	afbce_loss_en = <1>;
 	/***************************************************
 	 * loss mode for di out (T5w)
@@ -893,7 +883,7 @@
 };
 
 &aml_wifi{
-	status = "disabled";
+	status = "okay";
 	interrupt-gpios = <&gpio  GPIOC_12  GPIO_ACTIVE_HIGH>;
 	power_on-gpios = <&gpio   GPIOC_11  GPIO_ACTIVE_HIGH>;
 };
@@ -1153,4 +1143,8 @@
 
 &aml_vpp {
 	status = "disabled";
+};
+
+&chosen {
+	bootargs = "swiotlb=noforce";
 };
