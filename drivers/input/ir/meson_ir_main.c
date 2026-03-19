@@ -83,6 +83,9 @@ void meson_ir_report_wakeup_event(struct meson_ir_chip *chip, u32 framecode)
 		goto input_report;
 	}
 
+	if (get_resume_method() != REMOTE_WAKEUP)
+		return;
+
 	while (wt[i].frame_code) {
 		if (wt[i].frame_code == framecode)
 			break;
