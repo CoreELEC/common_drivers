@@ -1,4 +1,4 @@
-From 5b8861f9ccf01547cbe17c84f1a21a7538d6b160 Mon Sep 17 00:00:00 2001
+From 7b66a1e0840d751fe5b886765023668f071b5022 Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Tue, 15 Oct 2024 15:51:10 +0800
 Subject: [PATCH] mm: porting CMA optimization from 5.15 [1/2]
