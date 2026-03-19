@@ -1,4 +1,4 @@
-From ebb3dce817f9da1f03f38f2560bc3353568090d6 Mon Sep 17 00:00:00 2001
+From 7b66a1e0840d751fe5b886765023668f071b5022 Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Tue, 15 Oct 2024 15:51:10 +0800
 Subject: [PATCH] mm: porting CMA optimization from 5.15 [1/2]
@@ -30,9 +30,10 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  block/bdev.c              |  4 ++
  drivers/usb/host/xhci.c   |  4 ++
  fs/buffer.c               |  4 ++
- include/linux/gfp_types.h |  9 ++++
+ include/linux/gfp_types.h | 11 +++++
  mm/cma.c                  | 65 ++++++++++++++++++++++++++
  mm/compaction.c           | 96 +++++++++++++++++++++++++++++++++++++++
+ mm/internal.h             |  4 ++
  mm/ksm.c                  | 11 +++++
  mm/memory.c               | 18 ++++++++
  mm/migrate.c              | 44 ++++++++++++++++++
@@ -40,7 +41,7 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  mm/page_alloc.c           | 55 ++++++++++++++++++++++
  mm/readahead.c            |  5 ++
  mm/vmscan.c               | 17 +++++++
- 14 files changed, 343 insertions(+)
+ 15 files changed, 349 insertions(+)
 
 diff --git a/arch/arm/mm/dma-mapping.c b/arch/arm/mm/dma-mapping.c
 index 88c2d68a69c9..86a432868899 100644
@@ -105,20 +106,23 @@ index 79c19ffa4401..6d50f6033517 100644
  }
  EXPORT_SYMBOL(bdev_getblk);
 diff --git a/include/linux/gfp_types.h b/include/linux/gfp_types.h
-index f9f8106d3783..db4369e2ae9c 100644
+index f9f8106d3783..c0a81515a657 100644
 --- a/include/linux/gfp_types.h
 +++ b/include/linux/gfp_types.h
-@@ -52,6 +52,9 @@ enum {
- 	___GFP_SKIP_ZERO_BIT,
- 	___GFP_SKIP_KASAN_BIT,
+@@ -61,7 +61,12 @@ enum {
+ #ifdef CONFIG_CMA
+ 	___GFP_CMA_BIT,
  #endif
 +#ifdef CONFIG_AMLOGIC_CMA
-+	___GFP_NO_CMA_BIT,
++	___GFP_LAST_BIT,
++	___GFP_NO_CMA_BIT = ___GFP_LAST_BIT
++#else
+ 	___GFP_LAST_BIT
 +#endif
- #ifdef CONFIG_LOCKDEP
- 	___GFP_NOLOCKDEP_BIT,
- #endif
-@@ -96,6 +99,9 @@ enum {
+ };
+
+ /* Plain integer GFP bitmasks. Do not use this directly. */
+@@ -96,6 +101,9 @@ enum {
  #define ___GFP_SKIP_ZERO	0
  #define ___GFP_SKIP_KASAN	0
  #endif
@@ -128,7 +132,7 @@ index f9f8106d3783..db4369e2ae9c 100644
  #ifdef CONFIG_LOCKDEP
  #define ___GFP_NOLOCKDEP	BIT(___GFP_NOLOCKDEP_BIT)
  #else
-@@ -303,6 +309,9 @@ enum {
+@@ -303,6 +311,9 @@ enum {
  #define __GFP_COMP	((__force gfp_t)___GFP_COMP)
  #define __GFP_ZERO	((__force gfp_t)___GFP_ZERO)
  #define __GFP_ZEROTAGS	((__force gfp_t)___GFP_ZEROTAGS)
@@ -494,6 +498,22 @@ index 8e14c05cbb8d..00c87b9d8db2 100644
  	count_compact_events(COMPACTMIGRATE_SCANNED, cc->total_migrate_scanned);
  	count_compact_events(COMPACTFREE_SCANNED, cc->total_free_scanned);
  
+diff --git a/mm/internal.h b/mm/internal.h
+index 87547412b0ed..a303d01cf38b 100644
+--- a/mm/internal.h
++++ b/mm/internal.h
+@@ -42,7 +42,11 @@ struct folio_batch;
+ #define GFP_CONSTRAINT_MASK (__GFP_HARDWALL|__GFP_THISNODE)
+
+ /* Do not use these with a slab allocator */
++#ifdef CONFIG_AMLOGIC_CMA
++#define GFP_SLAB_BUG_MASK (__GFP_DMA32|__GFP_HIGHMEM|(~__GFP_BITS_MASK) << 1)
++#else
+ #define GFP_SLAB_BUG_MASK (__GFP_DMA32|__GFP_HIGHMEM|~__GFP_BITS_MASK)
++#endif
+
+ /*
+  * Different from WARN_ON_ONCE(), no warning will be issued
 diff --git a/mm/ksm.c b/mm/ksm.c
 index 17e6c16ab81d..9444aea219ec 100644
 --- a/mm/ksm.c
@@ -878,5 +898,5 @@ index 294acbe258aa..dccbd57ccf82 100644
  }
  
 -- 
-2.50.1
+2.49.0
 
