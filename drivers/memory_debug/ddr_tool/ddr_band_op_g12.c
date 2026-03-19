@@ -31,8 +31,8 @@ static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 
 	/* clear all port mask */
 	if (port < 0) {
-		writel(0, db->ddr_reg1 + rp[channel]);
-		writel(0, db->ddr_reg1 + rs[channel]);
+		writel(0, db->ddr_reg[0] + rp[channel]);
+		writel(0, db->ddr_reg[0] + rs[channel]);
 		return;
 	}
 
@@ -40,17 +40,17 @@ static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 		subport = port - PORT_MAJOR;
 
 	if (subport < 0) {
-		val = readl(db->ddr_reg1 + rp[channel]);
+		val = readl(db->ddr_reg[0] + rp[channel]);
 		val |=  (1 << port);
-		writel(val, db->ddr_reg1 + rp[channel]);
+		writel(val, db->ddr_reg[0] + rp[channel]);
 		val = 0xffff;
-		writel(val, db->ddr_reg1 + rs[channel]);
+		writel(val, db->ddr_reg[0] + rs[channel]);
 	} else {
 		val = (0x1 << 7);	/* select device */
-		writel(val, db->ddr_reg1 + rp[channel]);
-		val = readl(db->ddr_reg1 + rs[channel]);
+		writel(val, db->ddr_reg[0] + rp[channel]);
+		val = readl(db->ddr_reg[0] + rs[channel]);
 		val |= (1 << subport);
-		writel(val, db->ddr_reg1 + rs[channel]);
+		writel(val, db->ddr_reg[0] + rs[channel]);
 	}
 }
 
@@ -118,8 +118,8 @@ static void g12_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	       (0x01 << 20) |	/* use timer  */
 	       (0x0f <<  0);
 
-	val |= (readl(db->ddr_reg1 + DMC_MON_G12_CTRL0) & ~BIT(31));
-	writel(val, db->ddr_reg1 + DMC_MON_G12_CTRL0);
+	val |= (readl(db->ddr_reg[0] + DMC_MON_G12_CTRL0) & ~BIT(31));
+	writel(val, db->ddr_reg[0] + DMC_MON_G12_CTRL0);
 }
 
 static void g12_dmc_bandwidth_init(struct ddr_bandwidth *db)
@@ -127,7 +127,7 @@ static void g12_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	unsigned int i;
 
 	/* set timer trigger clock_cnt */
-	writel(db->clock_count, db->ddr_reg1 + DMC_MON_G12_TIMER);
+	writel(db->clock_count, db->ddr_reg[0] + DMC_MON_G12_TIMER);
 	g12_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
@@ -141,18 +141,18 @@ static int g12_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
 	unsigned int reg, i, val;
 	int ret = -1;
 
-	val = readl(db->ddr_reg1 + DMC_MON_G12_CTRL0);
+	val = readl(db->ddr_reg[0] + DMC_MON_G12_CTRL0);
 	if (val & DMC_QOS_IRQ) {
 		/*
 		 * get total bytes by each channel, each cycle 16 bytes;
 		 */
-		dg->all_grant = readl(db->ddr_reg1 + DMC_MON_G12_ALL_GRANT_CNT);
-		dg->all_req   = readl(db->ddr_reg1 + DMC_MON_G12_ALL_REQ_CNT);
+		dg->all_grant = readl(db->ddr_reg[0] + DMC_MON_G12_ALL_GRANT_CNT);
+		dg->all_req   = readl(db->ddr_reg[0] + DMC_MON_G12_ALL_REQ_CNT);
 		dg->all_grant *= 16;
 		dg->all_req   *= 16;
 		for (i = 0; i < db->channels; i++) {
 			reg = DMC_MON_G12_ONE_GRANT_CNT + (i << 2);
-			dg->channel_grant[i] = readl(db->ddr_reg1 + reg) * 16;
+			dg->channel_grant[i] = readl(db->ddr_reg[0] + reg) * 16;
 		}
 		/* clear irq flags */
 		g12_dmc_bandwidth_enable(db);
@@ -169,22 +169,22 @@ static int g12_dump_reg(struct ddr_bandwidth *db, char *buf)
 	unsigned int r;
 
 	for (i = 0; i < 9; i++) {
-		r  = readl(db->ddr_reg1 + (DMC_MON_G12_CTRL0 + (i << 2)));
+		r  = readl(db->ddr_reg[0] + (DMC_MON_G12_CTRL0 + (i << 2)));
 		s += sprintf(buf + s, "DMC_MON_CTRL%d:        %08x\n", i, r);
 	}
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_ALL_REQ_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_ALL_REQ_CNT);
 	s += sprintf(buf + s, "DMC_MON_ALL_REQ_CNT:  %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_ALL_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_ALL_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_ALL_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_ONE_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_ONE_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_ONE_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_SEC_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_SEC_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_SEC_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_THD_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_THD_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_THD_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_FOR_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_FOR_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_FOR_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_G12_TIMER);
+	r  = readl(db->ddr_reg[0] + DMC_MON_G12_TIMER);
 	s += sprintf(buf + s, "DMC_MON_TIMER:        %08x\n", r);
 
 	return s;

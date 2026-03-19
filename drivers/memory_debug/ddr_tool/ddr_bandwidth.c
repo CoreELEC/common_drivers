@@ -1384,10 +1384,10 @@ void dmc_set_urgent(unsigned int port, unsigned int type)
 	 *bit 17. force this channel all request to be urgent request.
 	 *bit 16. force this channel all request to be non urgent request.
 	 */
-	val = readl(aml_db->ddr_reg1 + addr);
+	val = readl(aml_db->ddr_reg[0] + addr);
 	val &= (~(0x7 << 16));
 	val |= ((type & 0x7) << 16);
-	writel(val, aml_db->ddr_reg1 + addr);
+	writel(val, aml_db->ddr_reg[0] + addr);
 }
 EXPORT_SYMBOL(dmc_set_urgent);
 
@@ -2079,23 +2079,10 @@ int one_dmc_reg_field_access(struct ddr_bandwidth *db, unsigned char dmc, u32 *v
 {
 	void *io;
 
-	switch (dmc) {
-	case 0:
-		io = db->ddr_reg1;
-		break;
-	case 1:
-		io = db->ddr_reg2;
-		break;
-	case 2:
-		io = db->ddr_reg3;
-		break;
-	case 3:
-		io = db->ddr_reg4;
-		break;
-	default:
+	if (dmc >= MAX_DMC_NUM)
 		return -1;
-	}
 
+	io = db->ddr_reg[dmc];
 	return reg_field_access(dmc, io, val, rw, reg, offset, bits_width);
 }
 
@@ -2107,23 +2094,10 @@ int all_dmc_reg_field_access(struct ddr_bandwidth *db, u32 *val, int rw,
 	int ret;
 
 	for (i = 0; i < db->dmc_number; i++) {
-		switch (i) {
-		case 0:
-			io = db->ddr_reg1;
-			break;
-		case 1:
-			io = db->ddr_reg2;
-			break;
-		case 2:
-			io = db->ddr_reg3;
-			break;
-		case 3:
-			io = db->ddr_reg4;
-			break;
-		default:
+		if (i >= MAX_DMC_NUM)
 			return -1;
-		}
 
+		io = db->ddr_reg[i];
 		ret = reg_field_access(i, io, val, rw, reg, offset, bits_width);
 		if (ret < 0)
 			return ret;
@@ -3066,22 +3040,7 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 		res = platform_get_resource(pdev, IORESOURCE_MEM, io_idx);
 		if (res) {
 			base = ioremap(res->start, resource_size(res));
-			switch (i) {
-			case 0:
-				aml_db->ddr_reg1 = base;
-				break;
-			case 1:
-				aml_db->ddr_reg2 = base;
-				break;
-			case 2:
-				aml_db->ddr_reg3 = base;
-				break;
-			case 3:
-				aml_db->ddr_reg4 = base;
-				break;
-			default:
-				break;
-			}
+			aml_db->ddr_reg[i] = base;
 		} else {
 			pr_err("can't get dmc reg base\n");
 			aml_db = NULL;
@@ -3194,10 +3153,13 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 static void ddr_bandwidth_remove(struct platform_device *pdev)
 {
 	if (aml_db) {
+		int i;
+
 		class_destroy(&aml_ddr_class);
 		free_irq(aml_db->irq_num, aml_db);
 		kfree(aml_db->port_desc);
-		iounmap(aml_db->ddr_reg1);
+		for (i = 0; i < aml_db->dmc_number; i++)
+			iounmap(aml_db->ddr_reg[i]);
 		iounmap(aml_db->pll_reg);
 		aml_db = NULL;
 	}

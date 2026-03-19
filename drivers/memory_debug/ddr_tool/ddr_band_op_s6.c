@@ -40,14 +40,14 @@ static void s6_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
 	}
 
-	val = readl(db->ddr_reg1 + DMC_MON_CTRL0);
+	val = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
 	val |= 0xffffff;
-	writel(val,  db->ddr_reg1 + DMC_MON_CTRL0);
+	writel(val,  db->ddr_reg[0] + DMC_MON_CTRL0);
 }
 
 static unsigned long s6_get_dmc_freq_quick(struct ddr_bandwidth *db)
 {
-	if ((readl(db->ddr_reg1 + DDR_TYPE) & 0xff00) == 0x600) {
+	if ((readl(db->ddr_reg[0] + DDR_TYPE) & 0xff00) == 0x600) {
 		db->ddr_type = LPDDR5;
 		db->dmc_freq = (readl(db->pll_reg) & 0xffff) * 1000000;
 		db->ddr_freq = db->dmc_freq;
@@ -65,23 +65,7 @@ static void s6_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	unsigned int i, val;
 
 	for (i = 0; i < db->dmc_number; i++) {
-		switch (i) {
-		case 0:
-			io = db->ddr_reg1;
-			break;
-		case 1:
-			io = db->ddr_reg2;
-			break;
-		case 2:
-			io = db->ddr_reg3;
-			break;
-		case 3:
-			io = db->ddr_reg4;
-			break;
-		default:
-			return;
-		}
-
+		io = db->ddr_reg[i];
 		val = db->mode << 31;
 		val |= (readl(io + DMC_MON_CTRL0) & ~BIT(31));
 		writel(val, io + DMC_MON_CTRL0);
@@ -95,22 +79,7 @@ static void s6_dmc_bandwidth_init(struct ddr_bandwidth *db)
 
 	/* set timer trigger clock_cnt */
 	for (i = 0; i < db->dmc_number; i++) {
-		switch (i) {
-		case 0:
-			io = db->ddr_reg1;
-			break;
-		case 1:
-			io = db->ddr_reg2;
-			break;
-		case 2:
-			io = db->ddr_reg3;
-			break;
-		case 3:
-			io = db->ddr_reg4;
-			break;
-		default:
-			return;
-		}
+		io = db->ddr_reg[i];
 		writel(db->clock_count, io + DMC_MON_TIMER);
 	}
 	s6_dmc_bandwidth_enable(db);
@@ -125,23 +94,7 @@ static int s6_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
 	int ret = -1;
 
 	for (d = 0; d < db->dmc_number; d++) {
-		switch (d) {
-		case 0:
-			io = db->ddr_reg1;
-			break;
-		case 1:
-			io = db->ddr_reg2;
-			break;
-		case 2:
-			io = db->ddr_reg3;
-			break;
-		case 3:
-			io = db->ddr_reg4;
-			break;
-		default:
-			break;
-		}
-
+		io = db->ddr_reg[d];
 		val = readl(io + DMC_MON_CTRL0);
 		if (val & DMC_QOS_IRQ) {
 			/*
@@ -180,23 +133,7 @@ static int s6_dump_reg(struct ddr_bandwidth *db, char *buf)
 	void *io;
 
 	for (d = 0; d < db->dmc_number; d++) {
-		switch (d) {
-		case 0:
-			io = db->ddr_reg1;
-			break;
-		case 1:
-			io = db->ddr_reg2;
-			break;
-		case 2:
-			io = db->ddr_reg3;
-			break;
-		case 3:
-			io = db->ddr_reg4;
-			break;
-		default:
-			break;
-		}
-
+		io = db->ddr_reg[d];
 		s += sprintf(buf + s, "\nDMC%d:\n", d);
 
 		r  = readl(io + DMC_MON_CTRL0);

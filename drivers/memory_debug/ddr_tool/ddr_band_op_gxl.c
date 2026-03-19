@@ -32,11 +32,11 @@ static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 
 	/* clear all port mask */
 	if (port < 0) {
-		writel(0, db->ddr_reg1 + port_reg[channel]);
+		writel(0, db->ddr_reg[0] + port_reg[channel]);
 		return;
 	}
 
-	val = readl(db->ddr_reg1 + port_reg[channel]);
+	val = readl(db->ddr_reg[0] + port_reg[channel]);
 	if (port < 16) {
 		val |= ((1 << (16 + port)) | 0xffff);
 	} else if (subport > 0) {
@@ -46,7 +46,7 @@ static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 		pr_err("port config fail\n");
 		return;
 	}
-	writel(val, db->ddr_reg1 + port_reg[channel]);
+	writel(val, db->ddr_reg[0] + port_reg[channel]);
 }
 
 static unsigned long gxl_get_dmc_freq_quick(struct ddr_bandwidth *db)
@@ -78,8 +78,8 @@ static void gxl_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	       (0x01 << 20) |	/* use timer  */
 	       (0x0f <<  0);
 
-	val |= (readl(db->ddr_reg1 + DMC_MON_CTRL2) & ~BIT(31));
-	writel(val, db->ddr_reg1 + DMC_MON_CTRL2);
+	val |= (readl(db->ddr_reg[0] + DMC_MON_CTRL2) & ~BIT(31));
+	writel(val, db->ddr_reg[0] + DMC_MON_CTRL2);
 }
 
 static void gxl_dmc_bandwidth_init(struct ddr_bandwidth *db)
@@ -87,7 +87,7 @@ static void gxl_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	unsigned int i;
 
 	/* set timer trigger clock_cnt */
-	writel(db->clock_count, db->ddr_reg1 + DMC_MON_CTRL3);
+	writel(db->clock_count, db->ddr_reg[0] + DMC_MON_CTRL3);
 	gxl_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
@@ -101,16 +101,16 @@ static int gxl_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
 	unsigned int reg, i, val;
 	int ret = -1;
 
-	val = readl(db->ddr_reg1 + DMC_MON_CTRL2);
+	val = readl(db->ddr_reg[0] + DMC_MON_CTRL2);
 	if (val & DMC_QOS_IRQ) {
 		/*
 		 * get total bytes by each channel, each cycle 16 bytes;
 		 */
-		dg->all_grant = readl(db->ddr_reg1 + DMC_MON_ALL_GRANT_CNT) * 16;
-		dg->all_req   = readl(db->ddr_reg1 + DMC_MON_ALL_REQ_CNT) * 16;
+		dg->all_grant = readl(db->ddr_reg[0] + DMC_MON_ALL_GRANT_CNT) * 16;
+		dg->all_req   = readl(db->ddr_reg[0] + DMC_MON_ALL_REQ_CNT) * 16;
 		for (i = 0; i < db->channels; i++) {
 			reg = DMC_MON_ONE_GRANT_CNT + (i << 2);
-			dg->channel_grant[i] = readl(db->ddr_reg1 + reg) * 16;
+			dg->channel_grant[i] = readl(db->ddr_reg[0] + reg) * 16;
 		}
 		/* clear irq flags */
 		gxl_dmc_bandwidth_enable(db);
@@ -125,30 +125,30 @@ static int gxl_dump_reg(struct ddr_bandwidth *db, char *buf)
 	int s = 0;
 	unsigned int r;
 
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL1);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL1);
 	s += sprintf(buf + s, "DMC_MON_CTRL1:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL2);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL2);
 	s += sprintf(buf + s, "DMC_MON_CTRL2:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL3);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL3);
 	s += sprintf(buf + s, "DMC_MON_CTRL3:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL4);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL4);
 	s += sprintf(buf + s, "DMC_MON_CTRL4:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL5);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL5);
 	s += sprintf(buf + s, "DMC_MON_CTRL5:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL6);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL6);
 	s += sprintf(buf + s, "DMC_MON_CTRL6:        %08x\n", r);
 
-	r  = readl(db->ddr_reg1 + DMC_MON_ALL_REQ_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ALL_REQ_CNT);
 	s += sprintf(buf + s, "DMC_MON_ALL_REQ_CNT:  %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_ALL_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ALL_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_ALL_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_ONE_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ONE_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_ONE_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_SEC_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_SEC_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_SEC_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_THD_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_THD_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_THD_GRANT_CNT:%08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_FOR_GRANT_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_FOR_GRANT_CNT);
 	s += sprintf(buf + s, "DMC_MON_FOR_GRANT_CNT:%08x\n", r);
 
 	return s;

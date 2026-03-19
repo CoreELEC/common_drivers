@@ -312,11 +312,8 @@ struct ddr_bandwidth {
 	struct ddr_avg_bandwidth avg;
 	struct ddr_data_extern data_extern[MAX_DMC_NUM];
 	struct bandwidth_addr_range range[MAX_CHANNEL];
-	u64	     port[MAX_CHANNEL];
-	void __iomem *ddr_reg1;		/* dmc 1 */
-	void __iomem *ddr_reg2;		/* dmc 2 */
-	void __iomem *ddr_reg3;		/* dmc 3 */
-	void __iomem *ddr_reg4;		/* dmc 4 */
+	u64    port[MAX_CHANNEL];
+	void __iomem *ddr_reg[MAX_DMC_NUM];
 	void __iomem *pll_reg;
 	void __iomem *freq_reg;
 	struct bus_width_reg bus_width_reg[MAX_DMC_NUM];
