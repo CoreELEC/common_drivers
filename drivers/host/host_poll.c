@@ -46,10 +46,6 @@ static bool host_health_hang_check(struct host_module *host)
 		 host->pre_cnt, host->cur_cnt);
 	if (host->cur_cnt == host->pre_cnt) {
 		host->hang = 1;
-		if (strstr(host->host_data->name, "dspboota"))
-			mbox_set_dsp_hang_status(host->hang, DSPA_ID);
-		else if (strstr(host->host_data->name, "dspbootb"))
-			mbox_set_dsp_hang_status(host->hang, DSPB_ID);
 		return true;
 	}
 
@@ -108,11 +104,6 @@ void host_health_monitor_start(struct host_module *host)
 		queue_delayed_work(host->host_wq, &host->host_monitor_work,
 			   msecs_to_jiffies(health_polling_ms));
 	}
-
-	if (strstr(host->host_data->name, "dspboota"))
-		mbox_set_dsp_hang_status(false, DSPA_ID);
-	else if (strstr(host->host_data->name, "dspbootb"))
-		mbox_set_dsp_hang_status(false, DSPB_ID);
 }
 
 void host_health_monitor_stop(struct host_module *host)
@@ -124,10 +115,6 @@ void host_health_monitor_stop(struct host_module *host)
 	flush_workqueue(host->host_wq);
 	destroy_workqueue(host->host_wq);
 	host->host_wq = NULL;
-	if (strstr(host->host_data->name, "dspboota"))
-		mbox_set_dsp_hang_status(true, DSPA_ID);
-	else if (strstr(host->host_data->name, "dspbootb"))
-		mbox_set_dsp_hang_status(true, DSPB_ID);
 }
 
 static u32 get_buff_len(struct ring_buffer *rbuf)

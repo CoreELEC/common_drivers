@@ -63,6 +63,6 @@
 #define T6W_MBOX_NUMS      2
 
 // AOCPU STATUS MBOX CHANNEL ID
-#define T6W_AOCPU_STS_CHAN 4
+#define T6W_MBOX_AO2TEE    4
 
 #endif /* __T6W_MBOX_H__ */

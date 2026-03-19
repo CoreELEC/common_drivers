@@ -286,10 +286,6 @@
 		mboxids = <S4_MBOX_AO2REE>,
 			  <S4_MBOX_REE2AO>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <S4_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -300,6 +296,8 @@
 			     "aocpu2ree";
 		mboxes = <&mbox_fifo S4_REE2AO_DEV>,
 			 <&mbox_fifo S4_AO2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>;
 	};
 
 	vddcpu0: pwm_j-regulator {

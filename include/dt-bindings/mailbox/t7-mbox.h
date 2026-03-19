@@ -109,7 +109,4 @@
 #define T7_MBOX_REE2DSPB  7
 #define T7_MBOX_NUMS      6
 
-/* AOCPU STATUS MBOX CHANNEL ID */
-#define T7_AOCPU_STS_CHAN 4
-
 #endif /* __T7_MBOX_H__ */

@@ -63,7 +63,4 @@
 #define S5_MBOX_REE2AO    3
 #define S5_MBOX_NUMS      2
 
-/* AOCPU STATUS MBOX CHANNEL ID */
-#define S5_AOCPU_STS_CHAN 4
-
 #endif /* __S5_MBOX_H__ */

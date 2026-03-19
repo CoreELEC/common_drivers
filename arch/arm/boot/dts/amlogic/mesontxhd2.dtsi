@@ -294,8 +294,6 @@
 		mbox-nums = <TXHD2_MBOX_NUMS>;
 		mboxids = <TXHD2_MBOX_AO2REE>,
 			  <TXHD2_MBOX_REE2AO>;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
 	};
 
 	mbox_devfs: mbox-devfs@0 {
@@ -306,6 +304,8 @@
 			      "aocpu2ree";
 		mboxes = <&mbox_pl TXHD2_REE2AO_DEV>,
 			    <&mbox_pl TXHD2_AO2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			      <MAILBOX_ARM>;
 	};
 
 	cpuinfo {

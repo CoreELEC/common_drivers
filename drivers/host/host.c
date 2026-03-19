@@ -1025,11 +1025,6 @@ static void host_platform_remove(struct platform_device *pdev)
 
 	host_destroy_debugfs_files(host);
 	host_destroy_device_files(&pdev->dev);
-
-	if (strstr(host->host_data->name, "dspboota"))
-		mbox_set_dsp_hang_status(false, DSPA_ID);
-	else if (strstr(host->host_data->name, "dspbootb"))
-		mbox_set_dsp_hang_status(false, DSPB_ID);
 }
 
 static int host_firmware_reserved_ddr(struct platform_device *pdev, struct reserved_mem *fwmem,
@@ -1267,10 +1262,6 @@ static int host_platform_probe(struct platform_device *pdev)
 
 		host_dsp_ffv_wq_init(host->host_dsp);
 	}
-	if (strstr(host_data->name, "dspboota"))
-		mbox_set_dsp_hang_status(true, DSPA_ID);
-	else if (strstr(host_data->name, "dspbootb"))
-		mbox_set_dsp_hang_status(true, DSPB_ID);
 
 	host_p[host->hostid] = host;
 

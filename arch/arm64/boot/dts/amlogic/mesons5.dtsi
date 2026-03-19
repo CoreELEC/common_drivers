@@ -2791,10 +2791,6 @@
 			  <S5_MBOX_REE2AO>;
 		#mbox-cells = <1>;
 		mbox-wr-same;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <S5_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -2805,6 +2801,8 @@
 			     "aocpu2ree";
 		mboxes = <&mbox_fifo S5_REE2AO_DEV>,
 			 <&mbox_fifo S5_AO2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>;
 	};
 
 	aml_hwspinlock: hwlock {

@@ -237,8 +237,6 @@
 		mboxids = <G12A_MBOX_MF2REE>,
 			  <G12A_MBOX_REE2MF>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_MFA>;
 	};
 
 	mbox_pl0: mbox_pl0@fffe7000 {
@@ -254,7 +252,6 @@
 		mbox-nums = <G12A_MBOX_AO_NUMS>;
 		mboxids = <G12A_MBOX_REE2AO>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_AOCPU>;
 	};
 
 	mbox_devfs {
@@ -263,6 +260,7 @@
 		mbox-nums = <1>;
 		mbox-names = "ree2aocpu";
 		mboxes = <&mbox_pl0 G12A_REE2AO_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>;
 	};
 
 	cpu_iomap {

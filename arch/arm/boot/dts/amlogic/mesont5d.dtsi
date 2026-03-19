@@ -272,8 +272,6 @@
 		mbox-nums = <T5D_MBOX_NUMS>;
 		mboxids = <T5D_MBOX_AO2REE>,
 			  <T5D_MBOX_REE2AO>;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
 	};
 
 	mbox_devfs: mbox-devfs@0 {
@@ -284,6 +282,8 @@
 			  "aocpu2ree";
 		mboxes = <&mbox_pl T5D_REE2AO_DEV>,
 			  <&mbox_pl T5D_AO2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>;
 	};
 
 	cpu_iomap {

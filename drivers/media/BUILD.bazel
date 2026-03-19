@@ -1290,7 +1290,6 @@ ddk_module(
         "//common_drivers/drivers/dvb:amlogic-dvb",
         "//common_drivers/drivers/aml_tee:tee",
         "//common_drivers/drivers/uvm:aml_uvm",
-        "//common_drivers/drivers/mailbox:amlogic-mailbox",
     ],
 )
 

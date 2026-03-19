@@ -1767,11 +1767,6 @@
 			  <C2_MBOX_DSPA2REE>,
 			  <C2_MBOX_REE2SE>,
 			  <C2_MBOX_SE2REE>;
-		mbox-dests = <MAILBOX_DSPA>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_SECPU>,
-			     <MAILBOX_ARM>;
-		dspa-hang-detect;
 	};
 
 	mbox_devfs: mbox-devfs@0 {
@@ -1784,6 +1779,9 @@
 		mboxes = <&mbox_pl C2_REE2DSPA_DEV>,
 			 <&mbox_pl C2_DSPA2REE_DEV>,
 			 <&mbox_pl C2_REE2SE_DEV>;
+		mbox-dests = <MAILBOX_DSP>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
 	};
 
 	rng{

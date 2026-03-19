@@ -362,13 +362,6 @@
 			  <T3_MBOX_REE2AO>;
 		#mbox-cells = <1>;
 		mbox-wr-same;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_DSPA>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
-		dspa-hang-detect;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <T3_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -383,6 +376,10 @@
 			 <&mbox_fifo T3_AO2REE_DEV>,
 			 <&mbox_fifo T3_REE2DSPA_DEV>,
 			 <&mbox_fifo T3_DSPA2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>;
 	};
 
 	vdac: vdac {

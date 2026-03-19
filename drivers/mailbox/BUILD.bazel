@@ -18,7 +18,6 @@ ddk_module(
                 "meson_mbox_pl_v2.c",
                 "meson_mbox_devfs.c",
                 "meson_mbox_sec.c",
-                "meson_mbox_health.c",
             ],
         },
     },

@@ -101,12 +101,13 @@ static int mbox_transfer_data(struct mbox_chan *mbox_chan, void *data)
 	mbox_cmd->cmd = aml_data->cmd;
 
 	if (!aml_chan->tx_chan) {
-		dev_err(mbox_chan->cl->dev, "mbox channel is not tx channel\n");
+		dev_err(mbox_chan->cl->dev, "%s: mbox channel is not tx channel\n",
+			__func__);
 		return -EINVAL;
 	}
 	if (aml_data->txsize > MBOX_DATA_SIZE) {
-		dev_err(mbox_chan->cl->dev, "size %d > %d\n",
-			aml_data->txsize, MBOX_DATA_SIZE);
+		dev_err(mbox_chan->cl->dev, "%s: size %x > %x\n",
+			__func__, aml_data->txsize, MBOX_DATA_SIZE);
 		return -EINVAL;
 	}
 
@@ -386,7 +387,7 @@ static void mbox_add_rx_queue(struct device *dev, int drv_id,
 			up(&mbox_rx_msg->sem);
 		}
 	} else {
-		dev_err(dev, "Error: chan_id %d invalid!\n", chan_id);
+		dev_err(dev, "%s: error: chan_id %d invalid!\n", __func__, chan_id);
 	}
 }
 
@@ -435,16 +436,13 @@ static irqreturn_t mbox_ack_irq_handler(int irq, void *p)
 	struct aml_mbox_chan *aml_chan = p;
 	struct mbox_chan *mbox_chan = container_of(aml_chan->tx_complete,
 						   struct mbox_chan, tx_complete);
-	struct aml_mbox_data *aml_data;
-	unsigned long flags;
+	struct aml_mbox_data *aml_data = mbox_chan->active_req;
 
-	spin_lock_irqsave(&mbox_chan->lock, flags);
-	aml_data = mbox_chan->active_req;
 	if (aml_data && aml_data->sync == MBOX_SYNC) {
 		if (aml_data->rxbuf && aml_data->rxsize) {
 			if (aml_data->rxsize > MBOX_DATA_SIZE) {
-				dev_err(mbox_chan->cl->dev, "rxsize %d > %d\n",
-					aml_data->txsize, MBOX_DATA_SIZE);
+				dev_err(mbox_chan->cl->dev, "%s: rxsize %x > %x\n",
+					__func__, aml_data->txsize, MBOX_DATA_SIZE);
 				aml_data->rxsize = MBOX_DATA_SIZE;
 			}
 			mbox_fifo_read(aml_data->rxbuf,
@@ -452,7 +450,6 @@ static irqreturn_t mbox_ack_irq_handler(int irq, void *p)
 				       aml_data->rxsize);
 		}
 	}
-	spin_unlock_irqrestore(&mbox_chan->lock, flags);
 	mbox_chan_txdone(mbox_chan, 0);
 	return IRQ_HANDLED;
 }
@@ -506,13 +503,6 @@ static int mbox_pl_parse_dt(struct platform_device *pdev, struct aml_chan_priv *
 		aml_chan[idx].mbox_fsts_addr = devm_platform_ioremap_resource(pdev, idx * 4 + 3);
 		if (IS_ERR(aml_chan[idx].mbox_fsts_addr))
 			return PTR_ERR(aml_chan[idx].mbox_fsts_addr);
-
-		err = of_property_read_u32_index(dev->of_node, "mbox-dests",
-				idx, &aml_chan[idx].dest);
-		if (err) {
-			dev_err(dev, "Get mbox chan[%d] dest fail\n", idx);
-			return -ENXIO;
-		}
 
 		mutex_init(&aml_chan[idx].mutex);
 		aml_chan[idx].tx_complete = NULL;

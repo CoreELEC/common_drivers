@@ -359,13 +359,6 @@
 			  <A5_MBOX_AO2REE>,
 			  <A5_MBOX_REE2AO>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_DSPA>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
-		dspa-hang-detect;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <A5_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -380,6 +373,10 @@
 			 <&mbox_fifo A5_AO2REE_DEV>,
 			 <&mbox_fifo A5_REE2DSPA_DEV>,
 			 <&mbox_fifo A5_DSPA2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>;
 	};
 
 	aml_hwlock: aml_hwlock@0 {

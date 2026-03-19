@@ -71,7 +71,4 @@
 /* ARMREE to SECPU client ID */
 #define S1A_REE2SCPU_DEV   S1A_MBOX_REE2SCPU
 
-/* AOCPU STATUS MBOX CHANNEL ID */
-#define S1A_AOCPU_STS_CHAN 4
-
 #endif /* __S1A_MBOX_H__ */

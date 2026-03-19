@@ -3602,16 +3602,6 @@
 			  <T7_MBOX_REE2DSPB>;
 		#mbox-cells = <1>;
 		mbox-wr-same;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_DSPA>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSPB>;
-		dspa-hang-detect;
-		dspb-hang-detect;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <T7_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -3630,6 +3620,12 @@
 			 <&mbox_fifo T7_DSPA2REE_DEV>,
 			 <&mbox_fifo T7_REE2DSPB_DEV>,
 			 <&mbox_fifo T7_DSPB2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>;
 	};
 
 	lut_dma:lut_dma {

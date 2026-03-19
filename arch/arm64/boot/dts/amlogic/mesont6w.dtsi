@@ -288,12 +288,10 @@
 		mbox-nums = <T6W_MBOX_NUMS>;
 		mboxids = <T6W_MBOX_AO2REE>,
 			  <T6W_MBOX_REE2AO>;
+		aocpu_sts_mboxid = <T6W_MBOX_AO2TEE>;
+		ree2aocpu_mboxid = <T6W_MBOX_REE2AO>;
 		#mbox-cells = <1>;
 		mbox-wr-same;
-		mbox-dests = <MAILBOX_ARM>,
-			     <MAILBOX_AOCPU>;
-		aocpu-hang-detect;
-		aocpu-sts-mboxid = <T6W_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -302,6 +300,7 @@
 		mbox-nums = <1>;
 		mbox-names = "ree2aocpu";
 		mboxes = <&mbox_fifo T6W_REE2AO_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>;
 	};
 
 	aml_hwspinlock: hwlock {

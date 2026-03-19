@@ -7,12 +7,10 @@
 #define __AMLOGIC_MBOX_H__
 
 #define MAILBOX_AOCPU  1
-#define MAILBOX_DSPA   2
-#define MAILBOX_DSPB   3
-#define MAILBOX_SECPU  4
-#define MAILBOX_MFA    5
-#define MAILBOX_MFB    6
-#define MAILBOX_ARM    7
+#define MAILBOX_DSP    2
+#define MAILBOX_SECPU  3
+#define MAILBOX_MF     4
+#define MAILBOX_ARM    5
 
 /* Mailbox Driver ID Range Description
  * Direction    ID Range    ID Numbers    Total ID Range    Total ID Numbers

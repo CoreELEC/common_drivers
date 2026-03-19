@@ -784,8 +784,6 @@
 		mboxids = <TM2_MBOX_REE2AO_LOW>,
 			  <TM2_MBOX_REE2AO_HIGH>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_AOCPU>,
-			     <MAILBOX_AOCPU>;
 	};
 
 	mbox_pl1: mbox_pl1@ff680100 {
@@ -818,12 +816,6 @@
 			  <TM2_MBOX_REE2DSPB>,
 			  <TM2_MBOX_DSPB2REE>;
 		#mbox-cells = <1>;
-		mbox-dests = <MAILBOX_DSPA>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSPB>,
-			     <MAILBOX_ARM>;
-		dspa-hang-detect;
-		dspb-hang-detect;
 	};
 
 	mbox_devfs {
@@ -840,6 +832,11 @@
 			 <&mbox_pl1 TM2_DSPA2REE_DEV>,
 			 <&mbox_pl1 TM2_REE2DSPB_DEV>,
 			 <&mbox_pl1 TM2_DSPB2REE_DEV>;
+		mbox-dests = <MAILBOX_AOCPU>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_DSP>,
+			     <MAILBOX_ARM>;
 	};
 
 	efuse: efuse {
