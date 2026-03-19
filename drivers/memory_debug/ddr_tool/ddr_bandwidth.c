@@ -2001,6 +2001,7 @@ static int __init init_chip_config(int cpu, struct ddr_bandwidth *band)
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_C4
 	case DMC_TYPE_C4:
 		band->ops = &c4_ddr_bw_ops;
+		band->soc_feature |= DDR_WIDTH_IS_16BIT;
 		aml_db->channels = 8;
 		aml_db->mali_port[0] = -1;
 		aml_db->mali_port[1] = -1;
