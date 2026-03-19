@@ -662,6 +662,15 @@ static void *create_user_map(struct amfc_cmd_list *acl, void *addr,
 	return page_table;
 }
 
+int amfc_probe_done(void)
+{
+	if (amfc)
+		return amfc->init_done;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(amfc_probe_done);
+
 /*
  * src: source buffer that need decompress
  * dst: destination buffer that need store
@@ -2110,6 +2119,8 @@ static int amfc_probe(struct platform_device *pdev)
 		goto err;
 	}
 	register_syscore_ops(&amfc_syscore_ops);
+	amfc->init_done = 1;
+	pr_info("%s,%d amfc probe done\n", __func__, __LINE__);
 	return 0;
 err:
 	for (num = 0; num < 4; num++) {
@@ -2190,6 +2201,11 @@ void __exit amfc_exit(void)
 {
 	platform_driver_unregister(&amfc_driver);
 }
+
+#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE)
+pure_initcall(amfc_init);
+#else
 module_init(amfc_init);
+#endif
 module_exit(amfc_exit);
 MODULE_LICENSE("GPL");

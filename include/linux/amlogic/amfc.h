@@ -201,6 +201,7 @@ struct amfc {
 	unsigned char chip;
 	unsigned char work_mode;		/* 0: irq mode, 1: poll mode  */
 	unsigned char log;
+	unsigned char init_done;
 };
 #endif
 
@@ -208,6 +209,7 @@ int amfc_init(void);
 int amfc_decompress(void *src, void *dst, ssize_t src_size, ssize_t dst_size, int stream);
 int amfc_compress(void *src, void *dst, ssize_t src_size, ssize_t dst_size);
 struct amfc *get_amfc_instance(void);
+int amfc_probe_done(void);
 
 #ifdef __UNCOMPRESS_IMAGE__
 void cache_clean_flush(unsigned long start, unsigned long end);

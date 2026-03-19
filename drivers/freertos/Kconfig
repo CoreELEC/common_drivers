@@ -77,6 +77,17 @@ config AMLOGIC_FREERTOS_C3
 	help
 	  Say Y here to enable freertos support.
 
+config AMLOGIC_FREERTOS_C4
+	bool "Amlogic Freertos Support with c4"
+	depends on AMLOGIC_FREERTOS
+	select AMLOGIC_FREERTOS_NOFITIER
+	select AMLOGIC_FREERTOS_IS_MAP
+	select AMLOGIC_FREERTOS_MEMORY_FREE
+	select AMLOGIC_FREERTOS_IPI_SEND
+	default n
+	help
+	  Say Y here to enable freertos support.
+
 config AMLOGIC_AUTO_CAPTURE
 	bool "Amlogic camera auto capture"
 	default n
