@@ -18,3 +18,10 @@
 	};
 };
 
+&CPU0 {
+	#cooling-cells = <2>;
+	operating-points-v2 = <&cpu_opp_table0_sip>,
+					<&cpu_opp_table1_sip>,
+					<&cpu_opp_table2_sip>,
+					<&cpu_opp_table3_sip>;
+};
