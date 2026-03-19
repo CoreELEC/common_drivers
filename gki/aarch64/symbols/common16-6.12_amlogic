@@ -77,3 +77,15 @@
   class_dev_iter_init
   class_dev_iter_next
   device_match_name
+
+#amlogic-realtek.ko
+  devm_clk_get_optional_enabled
+  genphy_c45_an_config_aneg
+  genphy_c45_check_and_restart_aneg
+  genphy_c45_pma_read_abilities
+  genphy_c45_pma_resume
+  genphy_c45_pma_setup_forced
+  genphy_c45_pma_suspend
+  genphy_c45_read_status
+  phy_modify_mmd_changed
+  phy_read_mmd
