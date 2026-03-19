@@ -2336,8 +2336,8 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		devp->dv.dv_flag, devp->dv.dv_config, devp->prop.dolby_vision,
 		devp->dv.low_latency, devp->prop.low_latency,
 		devp->vfp->low_latency, devp->pre_prop.latency.allm_mode);
-	pr_info("fmm_flag:%d, fmm_vsif_flag:%d imax_flag:%d\n",
-		devp->prop.filmmaker.fmm_flag, devp->prop.filmmaker.fmm_vsif_flag,
+	pr_info("fmm_avi_flag:%d, fmm_vsif_flag:%d imax_flag:%d\n",
+		devp->prop.filmmaker.fmm_avi_flag, devp->prop.filmmaker.fmm_vsif_flag,
 		devp->prop.imax_flag);
 	pr_info("dv emp size:%d crc_flag:%d\n", devp->prop.emp_data.size,
 		devp->dv.dv_crc_check);

@@ -534,7 +534,7 @@ struct tvin_cuva_vsif_s {
 };
 
 struct tvin_fmm_s {
-	bool fmm_flag;
+	bool fmm_avi_flag;
 	bool fmm_vsif_flag;
 	bool it_content;
 	enum tvin_cn_type_e cn_type;

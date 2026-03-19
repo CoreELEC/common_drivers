@@ -6006,7 +6006,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		if (devp->debug.vdin_dbg_en)
 			pr_info("fmm_flag:%d,fmm_vsif:%d,IT=%d,CN=%d,pkt=%d,%d,%d,%d,subtype:%d\n",
-				devp->prop.filmmaker.fmm_flag,
+				devp->prop.filmmaker.fmm_avi_flag,
 				devp->prop.filmmaker.fmm_vsif_flag,
 				devp->prop.filmmaker.it_content,
 				devp->prop.filmmaker.cn_type,

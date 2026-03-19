@@ -1949,16 +1949,16 @@ void hdmirx_get_fmm_info(struct tvin_sig_property_s *prop, u8 port)
 	 * 2) Vendor Specific InfoFrame 0x1ABBFB & content_type:0x01 & content_subtype:0x0
 	 */
 	if (rx[port].avi_fmm_flag) {
-		prop->filmmaker.fmm_flag = true;
-		prop->filmmaker.it_content = rx[port].cur.it_content;
-		prop->filmmaker.cn_type = rx[port].cur.cn_type;
+		prop->filmmaker.fmm_avi_flag = true;
 	} else if (rx[port].vsif_fmm_flag) {
 		prop->filmmaker.fmm_vsif_flag = true;
 	} else {
-		prop->filmmaker.fmm_flag = false;
+		prop->filmmaker.fmm_avi_flag = false;
 		prop->filmmaker.fmm_vsif_flag = false;
 	}
-	prop->latency.fmm_flag = prop->filmmaker.fmm_flag | prop->filmmaker.fmm_vsif_flag;
+	prop->filmmaker.it_content = rx[port].cur.it_content;
+	prop->filmmaker.cn_type = rx[port].cur.cn_type;
+	prop->latency.fmm_flag = prop->filmmaker.fmm_avi_flag | prop->filmmaker.fmm_vsif_flag;
 }
 
 void hdmirx_get_qms_plus_info(struct tvin_sig_property_s *prop, u8 port)

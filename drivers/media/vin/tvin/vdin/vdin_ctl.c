@@ -7831,7 +7831,7 @@ void vdin_vs_proc_monitor(struct vdin_dev_s *devp)
 			devp->prop.hdr10p_info.hdr10p_check_cnt = 0;
 
 		if (!!devp->prop.latency.allm_mode != !!devp->pre_prop.latency.allm_mode ||
-		    devp->prop.filmmaker.fmm_flag != devp->pre_prop.filmmaker.fmm_flag ||
+		    devp->prop.latency.fmm_flag != devp->pre_prop.latency.fmm_flag ||
 		    devp->prop.imax_flag != devp->pre_prop.imax_flag)
 			devp->dv.allm_chg_cnt++;
 		else
