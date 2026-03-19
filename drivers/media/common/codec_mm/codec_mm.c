@@ -925,6 +925,8 @@ bool alloc_from_cma(struct codec_mm_mgt_s *mgt, struct codec_mm_s *mem,
 		*alloc_trace_mask |= 1 << 4;
 
 	codec_mm_compact_lock();
+	range_conflict_check_wait(mgt->cma, mem->page_count, align_2n - PAGE_SHIFT);
+
 	mem->mem_handle = dma_alloc_from_contiguous(mgt->dev,
 		mem->page_count, align_2n - PAGE_SHIFT, false);
 	codec_mm_compact_unlock();
@@ -1596,6 +1598,8 @@ void *codec_mm_dma_alloc_coherent(ulong *handle,
 	mem->local_id = local_id * 1000000 + (buf_size >> PAGE_SHIFT);
 	ATRACE_ASYNC_BEGIN("codec_mm_alloc", mem->local_id);
 	codec_mm_compact_lock();
+	range_conflict_check_wait(mgt->cma, mem->page_count, 0);
+
 	vaddr = dma_alloc_coherent(mgt->dev, buf_size, &dma_handle, GFP_KERNEL);
 	codec_mm_compact_unlock();
 	mem->end_alloc_time = codec_mm_get_current_us();
@@ -4659,6 +4663,7 @@ int __nocfi get_mte_sync_tags_hook_kprobe(void *data)
 	static DEFINE_MUTEX(lock);
 	struct cma *cma = NULL;
 	struct page *page = NULL;
+	int ret = 0;
 #if defined(CONFIG_ARM64)
 	get_faked_init_mm();
 	aml_mte_sync_tags = (void (*)(pte_t old_pte, pte_t pte))get_symbol_addr("mte_sync_tags");
@@ -4669,28 +4674,34 @@ int __nocfi get_mte_sync_tags_hook_kprobe(void *data)
 	if (!aml_init_mm || !aml_mte_sync_tags || !aml__pte_offset_map) {
 		pr_err("[%s]symbol fix failed, %px %px %px\n",
 			__func__, aml_init_mm, aml_mte_sync_tags, aml__pte_offset_map);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 #endif
 
 	cma = dev_get_cma_area(get_mem_mgt()->dev);
 	if (!cma) {
 		pr_err("CMA:  NO CMA region\n");
-		return -1;
+		ret = -1;
+		goto out;
 	}
 	pr_debug("%s, %s, %lx, %lx\n", __func__, cma_get_name(cma), cma->base_pfn, cma->count);
 	/* spin_lock_irqsave(&cma->lock, flags); */
 	page = cma_alloc(cma, cma->count, 0, 0);
 	if (!page) {
 		pr_err("cma alloc failed.\n");
-		return -1;
+		ret = -1;
+		goto out;
 	}
 	mutex_lock(&lock);
 	tvp_setup_cma_full_pagemap(cma->base_pfn, cma->count);
 	/* spin_unlock_irqrestore(&cma->lock, flags); */
 	mutex_unlock(&lock);
 	cma_release(cma, page, cma->count);
-	return 0;
+
+out:
+	codec_mm_pagemap_done_signal();
+	return ret;
 }
 #endif
 
@@ -4782,17 +4793,19 @@ static void prepare_full_pagemap(struct device_node *of_node)
 	int ret;
 
 	if (!of_node)
-		return;
+		goto signal;
 
 	ret = of_property_read_u32(of_node, "random_access", &random);
 	if (!ret && random) {
 		if (kthread_run(get_mte_sync_tags_hook_kprobe, NULL,
-						"AML_CODEC_MM") == ERR_PTR(-ENOMEM)) {
-			pr_err("Failed to start kernel thread AML_CODEC_MM\n");
-		}
+						"AML_CODEC_MM") != ERR_PTR(-ENOMEM))
+			return; /* kthread started, it will signal when done */
+		pr_err("Failed to start kernel thread AML_CODEC_MM\n");
 	}
 
+signal:
 #endif
+	codec_mm_pagemap_done_signal();
 }
 
 void codec_mm_attach_dma_buf(struct dma_buf *dmabuf, ulong phy)
