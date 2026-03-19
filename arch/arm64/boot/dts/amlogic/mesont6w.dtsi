@@ -1169,12 +1169,14 @@
 
 	videodisplay {
 		compatible = "amlogic, videodisplay";
+		vpu_dma_mask = <1>;  /* 0: <= 4G, 1: > 4G*/
 		dev_name = "videodisplay";
 		status = "okay";
 	};
 
 	video_composer {
 		compatible = "amlogic, video_composer";
+		vpu_dma_mask = <1>;  /* 0: <= 4G, 1: > 4G*/
 		dev_name = "video_composer";
 		status = "okay";
 	};
