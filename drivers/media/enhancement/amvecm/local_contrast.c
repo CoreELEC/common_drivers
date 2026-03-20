@@ -152,6 +152,7 @@ int detect_signal_range_threshold_black = 1600;
 int detect_signal_range_threshold_white = 3200;
 
 static unsigned int input_422_flag = 1;
+int pre_input_422_flag = 0xff;
 
 /*for debug*/
 int lc_dbg_flag;
@@ -1447,7 +1448,8 @@ void lc_config(int enable,
 		sps_h_in_pre == sps_h_in &&
 		width_pre == width &&
 		height_pre == height &&
-		lc_en_chflg && !lc_slice_num_changed) {
+		lc_en_chflg && !lc_slice_num_changed &&
+		input_422_flag == pre_input_422_flag) {
 		/*pr_amlc_dbg("%s: lc_en_chflg = %d\n",*/
 		/*	__func__, lc_en_chflg);*/
 		/*pr_amlc_dbg("%s: lc_slice_num_changed = %d\n",*/
@@ -1463,6 +1465,7 @@ void lc_config(int enable,
 
 	vf_height = src_h;
 	vf_width = src_w;
+	pre_input_422_flag = input_422_flag;
 
 	lc_en_chflg = 0xff;
 
@@ -2953,7 +2956,8 @@ void lc_process(struct vframe_s *vf,
 	}
 
 	if ((vf->type & VIDTYPE_VIU_444) &&
-		((vf->flag & VFRAME_FLAG_PC_MODE) || (vf->type & VIDTYPE_PIC)))
+		((vf->flag & VFRAME_FLAG_PC_MODE) || (vf->type & VIDTYPE_PIC) ||
+		(vf->flag & VFRAME_FLAG_GAME_MODE)))
 		input_422_flag = 0;
 	else
 		input_422_flag = 1;

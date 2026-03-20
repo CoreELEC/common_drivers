@@ -70,6 +70,7 @@ extern int alpha1;
 extern int lc_pattern_detect_log1;
 extern int lc_read_curve_nodes_changed_en;
 extern int lc_change_curve_nodes_en;
+extern int pre_input_422_flag;
 
 void lc_init(int bitdepth);
 void lc_process(struct vframe_s *vf,
