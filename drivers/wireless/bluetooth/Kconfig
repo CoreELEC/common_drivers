@@ -6,3 +6,10 @@ config AMLOGIC_BLUETOOTH
 	default n
 	help
 	  Say Y here if you want to use the BT device.
+
+config AMLOGIC_LINUX_BT
+	bool "Isolate the original GKI net/bluetooth driver code"
+	default n
+	help
+	  Customization and bug fixes for the net/bluetooth driver
+	  based on the Linux system.
