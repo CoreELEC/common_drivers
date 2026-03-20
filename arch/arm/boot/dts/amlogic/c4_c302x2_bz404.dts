@@ -36,7 +36,8 @@
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000
 			debug initcall_debug=1 loglevel=7
 			module_blacklist=amlogic_wireless clk_ignore_unused
-			ramdisk_size=8192 init=/sbin/init root=/dev/ram  otg_device=1";
+			ramdisk_size=8192 init=/sbin/init root=/dev/ram storage_async_load_ramdisk=1
+			otg_device=1";
 	};
 
 	memory@0 {
