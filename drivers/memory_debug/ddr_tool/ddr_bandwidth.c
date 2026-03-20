@@ -2106,6 +2106,104 @@ int all_dmc_reg_field_access(struct ddr_bandwidth *db, u32 *val, int rw,
 	return 0;
 }
 
+int ddr_axi_sts_alloc(struct ddr_bandwidth *db,
+		      unsigned int dmc_chan_sts_offset,
+		      unsigned int *axi_chan_sts_offset,
+		      unsigned int axi_chan_sts_num)
+{
+	unsigned int size;
+
+	size = db->dmc_number * sizeof(unsigned int);
+
+	if (size && dmc_chan_sts_offset) {
+		db->axi_sts.dmc_chan_sts_offset = dmc_chan_sts_offset;
+		db->axi_sts.dmc_chan_sts_value = kzalloc(size, GFP_KERNEL);
+		if (!db->axi_sts.dmc_chan_sts_value) {
+			pr_err("Failed to allocate memory for dmc chan sts\n");
+			return -ENOMEM;
+		}
+	}
+
+	if (axi_chan_sts_offset) {
+		db->axi_sts.axi_chan_sts_num = axi_chan_sts_num;
+		size = axi_chan_sts_num * sizeof(unsigned int);
+		db->axi_sts.axi_chan_sts_offset = kzalloc(size, GFP_KERNEL);
+		if (!db->axi_sts.axi_chan_sts_offset) {
+			pr_err("Failed to allocate memory for axi chan sts offset\n");
+			return -ENOMEM;
+		}
+		memcpy(db->axi_sts.axi_chan_sts_offset, axi_chan_sts_offset, size);
+
+		size = db->axi_sts.axi_chan_sts_num * db->dmc_number * sizeof(unsigned int);
+		db->axi_sts.axi_chan_sts_value = kzalloc(size, GFP_KERNEL);
+		if (!db->axi_sts.axi_chan_sts_value) {
+			pr_err("Failed to allocate memory for axi chan sts value\n");
+			return -ENOMEM;
+		}
+	}
+
+	return 0;
+}
+
+int ddr_axi_sts_init(void)
+{
+	if (!aml_db->ops->axi_sts_init) {
+		pr_err("axi sts is not supported\n");
+		return -EINVAL;
+	}
+
+	return aml_db->ops->axi_sts_init(aml_db);
+}
+
+/* 0: dmc sts, 1: axi sts */
+int ddr_axi_sts_read(struct ddr_bandwidth *db, unsigned int type)
+{
+	int i, j, index, offset;
+	void __iomem *base;
+
+	for (i = 0; i < db->dmc_number; i++) {
+		base = db->ddr_reg[i];
+		if (type) {
+			for (j = 0; j < db->axi_sts.axi_chan_sts_num; j++) {
+				index = i * db->axi_sts.axi_chan_sts_num + j;
+				offset = db->axi_sts.axi_chan_sts_offset[j];
+				db->axi_sts.axi_chan_sts_value[index] = __raw_readl(base + offset);
+			}
+		} else {
+			offset = db->axi_sts.dmc_chan_sts_offset;
+			db->axi_sts.dmc_chan_sts_value[i] = __raw_readl(base + offset);
+		}
+	}
+
+	return 0;
+}
+
+unsigned int *dmc_chan_sts_get(unsigned int *dmc_num)
+{
+	if (!aml_db->axi_sts.dmc_chan_sts_value) {
+		*dmc_num = 0;
+		return NULL;
+	}
+
+	*dmc_num = aml_db->dmc_number;
+	ddr_axi_sts_read(aml_db, 0);
+
+	return aml_db->axi_sts.dmc_chan_sts_value;
+}
+
+unsigned int *axi_chan_sts_get(unsigned int *axi_num)
+{
+	if (!aml_db->axi_sts.axi_chan_sts_value) {
+		*axi_num = 0;
+		return NULL;
+	}
+
+	*axi_num = aml_db->axi_sts.axi_chan_sts_num * aml_db->dmc_number;
+	ddr_axi_sts_read(aml_db, 1);
+
+	return aml_db->axi_sts.axi_chan_sts_value;
+}
+
 static int property_access(u64 *val, enum property_type type, int rw)
 {
 	if (aml_db->ops->property_access) {
@@ -3147,6 +3245,9 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 	}
 	pr_emerg("NOTICE: ddr_ssr node created, registers can be modify\n");
 #endif
+
+	ddr_axi_sts_init();
+
 	return 0;
 }
 

@@ -20,6 +20,9 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0012  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x0036  << 2))
+#define DMC_CHAN_STS_OFFSET_SC2		((0x003c  << 2))  /* SAME C2 */
+
 static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 {
 	unsigned int val;
@@ -274,6 +277,15 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 	return 0;
 }
 
+static int __init g12_axi_sts_init(struct ddr_bandwidth *db)
+{
+	if (db->cpu_type == DMC_TYPE_C2 || db->cpu_type == DMC_TYPE_SC2) {
+		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET_SC2, NULL, 0);
+	} else {
+		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET, NULL, 0);
+	}
+}
+
 struct ddr_bandwidth_ops g12_ddr_bw_ops = {
 	.init             = g12_dmc_bandwidth_init,
 	.config_port      = g12_dmc_port_config,
@@ -285,4 +297,5 @@ struct ddr_bandwidth_ops g12_ddr_bw_ops = {
 #endif
 	.property_access  = property_access,
 	.side_band	  = side_band,
+	.axi_sts_init     = g12_axi_sts_init,
 };

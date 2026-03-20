@@ -75,6 +75,22 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0042  << 2))
 
+#define DMC_CHAN_STS_OFFSET_S7		((0x00cc  << 2))
+static unsigned int axi_chan_sts_offset_s7[] __initdata = {
+	(0xa0 << 2), (0xa1 << 2), (0xa2 << 2), (0xa3 << 2),
+	(0xa4 << 2), (0xa5 << 2), (0xa6 << 2), (0xa7 << 2),
+	(0xb3 << 2), (0xb7 << 2), (0xbb << 2), (0xbf << 2),
+	(0xc3 << 2), (0xc4 << 2)
+};
+
+#define DMC_CHAN_STS_OFFSET_S7D		((0x00cf  << 2))
+static unsigned int axi_chan_sts_offset_s7d[] __initdata = {
+	(0x84 << 2), (0x88 << 2), (0x8d << 2), (0x93 << 2),
+	(0x97 << 2), (0x9c << 2), (0xa3 << 2), (0xa8 << 2),
+	(0xad << 2), (0xb3 << 2), (0xb8 << 2), (0xbd << 2),
+	(0xc3 << 2), (0xc8 << 2), (0xcd << 2)
+};
+
 static void s7_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 {
 	unsigned int val;
@@ -305,6 +321,17 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 	return 0;
 }
 
+static int __init s7_axi_sts_init(struct ddr_bandwidth *db)
+{
+	if (db->cpu_type == DMC_TYPE_S7D) {
+		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET_S7D,
+				 axi_chan_sts_offset_s7d, ARRAY_SIZE(axi_chan_sts_offset_s7d));
+	} else {
+		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET_S7,
+				 axi_chan_sts_offset_s7, ARRAY_SIZE(axi_chan_sts_offset_s7));
+	}
+}
+
 struct ddr_bandwidth_ops s7_ddr_bw_ops = {
 	.init             = s7_dmc_bandwidth_init,
 	.config_port      = s7_dmc_port_config,
@@ -317,4 +344,5 @@ struct ddr_bandwidth_ops s7_ddr_bw_ops = {
 #endif
 	.property_access  = property_access,
 	.side_band	  = side_band,
+	.axi_sts_init     = s7_axi_sts_init,
 };

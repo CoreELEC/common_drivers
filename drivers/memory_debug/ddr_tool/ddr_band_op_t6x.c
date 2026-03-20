@@ -30,6 +30,14 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0043  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x00cf  << 2))
+static unsigned int axi_chan_sts_offset[] __initdata = {
+	(0x84 << 2), (0x88 << 2), (0x8d << 2),
+	(0x93 << 2), (0x98 << 2), (0x9c << 2),
+	(0xa3 << 2), (0xa8 << 2), (0xad << 2),
+	(0xb3 << 2), (0xb8 << 2), (0xbd << 2)
+};
+
 static unsigned int MDC_MON_STA[] = {
 	(0x0418 << 2), (0x041d << 2), (0x0422 << 2), (0x0427 << 2),
 	(0x0444 << 2), (0x0449 << 2), (0x044e << 2), (0x0453 << 2)
@@ -501,7 +509,7 @@ static int t6x_ddr_ssr_enable_set(unsigned char value)
 	return 0;
 }
 
-static int t6x_ddr_ssr_enable_get(void)
+static int __init t6x_ddr_ssr_enable_get(void)
 {
 	unsigned int dmc0_cnt1, dmc1_cnt1;
 
@@ -613,6 +621,12 @@ static int t6x_ddr_ssr_control(unsigned char value, enum ddr_ssr_type type)
 }
 #endif
 
+static int __init t6x_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET,
+				 axi_chan_sts_offset, ARRAY_SIZE(axi_chan_sts_offset));
+}
+
 struct ddr_bandwidth_ops t6x_ddr_bw_ops = {
 	.init             = t6x_bandwidth_init,
 	.config_port      = t6x_port_config,
@@ -631,5 +645,5 @@ struct ddr_bandwidth_ops t6x_ddr_bw_ops = {
 #if IS_ENABLED(CONFIG_AMLOGIC_DDR_SSR)
 	.ddr_ssr_control  = t6x_ddr_ssr_control,
 #endif
-
+	.axi_sts_init     = t6x_axi_sts_init,
 };

@@ -66,6 +66,8 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0042  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x00bc  << 2))
+
 static void t5_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 {
 	unsigned int val;
@@ -338,6 +340,11 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 	return 0;
 }
 
+static int __init t5_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET, NULL, 0);
+}
+
 struct ddr_bandwidth_ops t5_ddr_bw_ops = {
 	.init             = t5_dmc_bandwidth_init,
 	.config_port      = t5_dmc_port_config,
@@ -350,4 +357,5 @@ struct ddr_bandwidth_ops t5_ddr_bw_ops = {
 #endif
 	.property_access  = property_access,
 	.side_band	  = side_band,
+	.axi_sts_init     = t5_axi_sts_init,
 };

@@ -183,6 +183,7 @@ struct ddr_bandwidth_ops {
 #if IS_ENABLED(CONFIG_AMLOGIC_DDR_SSR)
 	int (*ddr_ssr_control)(unsigned char value, enum ddr_ssr_type type);
 #endif
+	int (*axi_sts_init)(struct ddr_bandwidth *db);
 };
 
 struct ddr_bandwidth_sample {
@@ -238,6 +239,14 @@ struct outstanding_level {
 struct ddr_outstanding {
 	struct outstanding_level levels;
 	struct outstanding_reg *regs;
+};
+
+struct ddr_axi_sts {
+	unsigned char axi_chan_sts_num;
+	unsigned int *axi_chan_sts_offset;
+	unsigned int *axi_chan_sts_value;
+	unsigned int dmc_chan_sts_offset;
+	unsigned int *dmc_chan_sts_value;
 };
 
 struct device_id {
@@ -327,6 +336,7 @@ struct ddr_bandwidth {
 	struct ddr_outstanding ost;
 	struct dentry *debugfs;
 	struct mdc_device mdc;
+	struct ddr_axi_sts axi_sts;
 };
 
 extern struct ddr_bandwidth *aml_db;
@@ -403,6 +413,10 @@ int one_dmc_reg_field_access(struct ddr_bandwidth *db, unsigned char dmc, u32 *v
 			     unsigned int reg, unsigned int offset, unsigned int bits_width);
 int all_dmc_reg_field_access(struct ddr_bandwidth *db, u32 *val, int rw,
 			     unsigned int reg, unsigned int offset, unsigned int bits_width);
+int ddr_axi_sts_alloc(struct ddr_bandwidth *db,
+		      unsigned int dmc_chan_sts_offset,
+		      unsigned int *axi_chan_sts_offset,
+		      unsigned int axi_chan_sts_num);
 
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH
 int __init ddr_bandwidth_init(void);

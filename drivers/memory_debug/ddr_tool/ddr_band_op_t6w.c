@@ -73,6 +73,14 @@
 #define DMC_MON6_CTRL1			((0x001e << 2))
 #define DMC_MON7_CTRL1			((0x001f << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x00cf  << 2))
+static unsigned int axi_chan_sts_offset[] __initdata = {
+	(0x84 << 2), (0x88 << 2), (0x8d << 2),
+	(0x93 << 2), (0x98 << 2), (0x9c << 2),
+	(0xa3 << 2), (0xa8 << 2), (0xad << 2),
+	(0xb3 << 2), (0xb8 << 2), (0xbd << 2)
+};
+
 static unsigned int ots_regs_offset[] __initdata = {
 	(0x81 << 2), (0x86 << 2), (0x8b << 2),
 	(0x91 << 2), (0x96 << 2), (0x9b << 2),
@@ -311,6 +319,12 @@ static int outstanding_handle(struct ddr_bandwidth *db, int bus,
 	return ret;
 }
 
+static int __init t6w_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET,
+				 axi_chan_sts_offset, ARRAY_SIZE(axi_chan_sts_offset));
+}
+
 struct ddr_bandwidth_ops t6w_ddr_bw_ops = {
 	.init             = t6w_dmc_bandwidth_init,
 	.config_port      = t6w_dmc_port_config,
@@ -323,4 +337,5 @@ struct ddr_bandwidth_ops t6w_ddr_bw_ops = {
 #if DDR_BANDWIDTH_DEBUG
 	.dump_reg         = t6w_dump_reg,
 #endif
+	.axi_sts_init     = t6w_axi_sts_init,
 };

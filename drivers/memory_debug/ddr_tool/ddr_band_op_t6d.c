@@ -75,6 +75,13 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0042  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x00cf  << 2))
+static unsigned int axi_chan_sts_offset[] __initdata = {
+	(0x84 << 2), (0x88 << 2), (0x8d << 2),
+	(0x93 << 2), (0x98 << 2), (0x9c << 2),
+	(0xa3 << 2), (0xa8 << 2), (0xad << 2)
+};
+
 static unsigned int ots_regs_offset[] __initdata = {
 	(0x81 << 2), (0x86 << 2), (0x8b << 2),
 	(0x91 << 2), (0x96 << 2), (0x9b << 2),
@@ -404,6 +411,12 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 	return 0;
 }
 
+static int __init t6d_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET,
+				 axi_chan_sts_offset, ARRAY_SIZE(axi_chan_sts_offset));
+}
+
 struct ddr_bandwidth_ops t6d_ddr_bw_ops = {
 	.init             = t6d_dmc_bandwidth_init,
 	.config_port      = t6d_dmc_port_config,
@@ -419,4 +432,5 @@ struct ddr_bandwidth_ops t6d_ddr_bw_ops = {
 #endif
 	.property_access  = property_access,
 	.side_band	  = side_band,
+	.axi_sts_init     = t6d_axi_sts_init,
 };

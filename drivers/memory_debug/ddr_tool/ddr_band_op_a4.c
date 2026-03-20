@@ -66,6 +66,12 @@
 
 #define DMC_CMD_FILTER_CTRL3		((0x0042  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x00bc  << 2))
+static unsigned int axi_chan_sts_offset[] __initdata = {
+	(0xa0 << 2), (0xa1 << 2), (0xa2 << 2), (0xa3 << 2),
+	(0xa4 << 2), (0xa5 << 2), (0xa6 << 2), (0xa7 << 2)
+};
+
 static void a4_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 {
 	unsigned int val;
@@ -269,6 +275,12 @@ static int property_access(struct ddr_bandwidth *db, u64 *val,
 	return -1;
 }
 
+static int __init a4_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET,
+				 axi_chan_sts_offset, ARRAY_SIZE(axi_chan_sts_offset));
+}
+
 struct ddr_bandwidth_ops a4_ddr_bw_ops = {
 	.init             = a4_dmc_bandwidth_init,
 	.config_port      = a4_dmc_port_config,
@@ -280,4 +292,5 @@ struct ddr_bandwidth_ops a4_ddr_bw_ops = {
 	.dump_reg         = a4_dump_reg,
 #endif
 	.property_access  = property_access,
+	.axi_sts_init     = a4_axi_sts_init,
 };

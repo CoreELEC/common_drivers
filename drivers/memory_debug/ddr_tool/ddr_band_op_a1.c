@@ -21,6 +21,8 @@
 #define CLKTREE_DMC_CLK_CTRL	((0x003e  << 2))
 #define DMC_CMD_FILTER_CTRL3	((0x0042  << 2))
 
+#define DMC_CHAN_STS_OFFSET		((0x0036  << 2))
+
 static void a1_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 {
 	unsigned int val;
@@ -206,6 +208,11 @@ static int property_access(struct ddr_bandwidth *db, u64 *val,
 	return -1;
 }
 
+static int __init a1_axi_sts_init(struct ddr_bandwidth *db)
+{
+	return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET, NULL, 0);
+}
+
 struct ddr_bandwidth_ops a1_ddr_bw_ops = {
 	.init             = a1_dmc_bandwidth_init,
 	.config_port      = a1_dmc_port_config,
@@ -216,4 +223,5 @@ struct ddr_bandwidth_ops a1_ddr_bw_ops = {
 	.dump_reg         = a1_dump_reg,
 #endif
 	.property_access  = property_access,
+	.axi_sts_init     = a1_axi_sts_init,
 };
