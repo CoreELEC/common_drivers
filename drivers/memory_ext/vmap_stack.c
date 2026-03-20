@@ -24,12 +24,14 @@
 #include <linux/highmem.h>
 #include <linux/delay.h>
 #include <linux/sched/task_stack.h>
+#include <linux/sched/clock.h>
 #ifdef CONFIG_KASAN
 #include <linux/kasan.h>
 #endif
 #include <asm/tlbflush.h>
 #include <asm/stacktrace.h>
 #include <asm/ptrace.h>
+#include <asm/pgalloc.h>
 #include <internal.h>
 
 #define DEBUG_VMAP							0
@@ -372,8 +374,57 @@ struct page *check_pte_exist(unsigned long addr)
 #endif
 }
 
+#ifdef CONFIG_ARM
+static void sync_pmd_for_task(struct page *page, unsigned long addr, pte_t *pte, int set)
+{
+	pgd_t *pgd = NULL;
+	p4d_t *p4d = NULL;
+	pud_t *pud = NULL;
+	pmd_t *pmd = NULL;
+	struct mm_struct *mm;
+	struct task_struct *p;
+	unsigned long tick, synced_task = 0, looped_task = 0;
+
+	if (!is_vmap_addr(addr))
+		return;
+
+	preempt_disable();
+	tick = sched_clock();
+	rcu_read_lock();
+	for_each_process(p) {
+		if (p->flags & PF_KTHREAD || p == current)
+			continue;
+
+		mm = get_task_mm(p);
+		if (!mm)
+			continue;
+
+		looped_task++;
+
+		pgd = pgd_offset(mm, addr);
+		p4d = p4d_offset(pgd, addr);
+		pud = pud_offset(p4d, addr);
+		pmd = pmd_offset(pud, addr);
+		if (pmd_none(*pmd)) {
+			pmd_populate_kernel(mm, pmd, pte);
+			pr_debug("mm:%px, addr:%lx, pgd:%px:%px, p4d:%px, pud:%px, pmd:%px, pte:%px, pmd:%x, task:%d %s\n",
+			  mm, addr, mm->pgd, pgd, p4d, pud, pmd, pte, pmd_val(*pmd), p->pid, p->comm);
+			synced_task++;
+		}
+
+		mmput_async(mm);
+	}
+	rcu_read_unlock();
+	tick = sched_clock() - tick;
+
+	pr_debug("sync %ld tasks(total %ld) for %ld ns\n", synced_task, looped_task, tick);
+	preempt_enable();
+}
+#endif
+
 static int vmap_mmu_set(struct page *page, unsigned long addr, int set)
 {
+	/* init_mm page table */
 	pgd_t *pgd = NULL;
 	p4d_t *p4d = NULL;
 	pud_t *pud = NULL;
@@ -400,6 +451,9 @@ static int vmap_mmu_set(struct page *page, unsigned long addr, int set)
 		pte = pte_alloc_kernel(pmd, addr);
 		if (!pte)
 			goto nomem;
+	#ifdef CONFIG_ARM
+		sync_pmd_for_task(page, addr, pte, set);
+	#endif
 	}
 
 	pte = pte_offset_kernel(pmd, addr);
@@ -408,15 +462,16 @@ static int vmap_mmu_set(struct page *page, unsigned long addr, int set)
 	else
 		pte_clear(&init_mm, addr, pte);
 	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
+
 #ifdef CONFIG_ARM64
 	D("add:%lx, pgd:%px %llx, pmd:%px %llx, pte:%px %llx\n",
 		addr, pgd, pgd_val(*pgd), pmd, pmd_val(*pmd),
 		pte, pte_val(*pte));
 #elif defined(CONFIG_ARM)
-	D("add:%lx, pgd:%px %x, pmd:%px %x, pte:%px %x\n",
-		addr, pgd, (unsigned int)pgd_val(*pgd),
-		pmd, (unsigned int)pmd_val(*pmd),
-		pte, pte_val(*pte));
+	D("add:%lx, pgd:%px %x, pmd:%px %x, pte:%px %x,  task:%5d,%s\n",
+	  addr, pgd, (unsigned int)pgd_val(*pgd),
+	  pmd, (unsigned int)pmd_val(*pmd),
+	  pte, pte_val(*pte), current->pid, current->comm);
 #endif
 	return 0;
 nomem:
