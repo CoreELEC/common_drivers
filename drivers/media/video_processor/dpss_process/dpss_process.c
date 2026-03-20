@@ -733,7 +733,9 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 				vf->src_crop.right,
 				vf->src_crop.bottom);
 			vf->compHeight -= vf->src_crop.bottom;
+			vf->compWidth -= vf->src_crop.right;
 			vf->src_crop.bottom = 0;
+			vf->src_crop.right = 0;
 		}
 	}
 
@@ -751,7 +753,9 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 					enhance_vf->src_crop.right,
 					enhance_vf->src_crop.bottom);
 				enhance_vf->compHeight -= enhance_vf->src_crop.bottom;
+				enhance_vf->compWidth -= enhance_vf->src_crop.right;
 				enhance_vf->src_crop.bottom = 0;
+				enhance_vf->src_crop.right = 0;
 			}
 		}
 	}
