@@ -23,18 +23,16 @@
 #include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
 #include <linux/amlogic/media/video_processor/dpss_process_ext.h>
+#include "dpss_process_util.h"
+#include "ge2d_process.h"
 
 #define DPSSPR_POOL_SIZE 16
 #define LCEVC_POOL_SIZE  8
-#define PRINT_ERROR		0X0
-#define PRINT_OTHER		0X0001
-#define PRINT_FENCE		0X0002
-#define PRINT_MORE		0X0080
-
 #define LCEVC_RESIDUAL_Y10BIT_PACKED	1
 #define LCEVC_RESIDUAL_UYVY10BIT_PACKED	5
 #define DISPLAY_SPEED_DEFAULT    1000
 #define DISPLAY_SPEED_MASK       0
+#define ROTATE_POOL_SIZE  4
 
 struct frame_info_t {
 	u32 in_fd;
@@ -98,6 +96,23 @@ enum direct_mode_override {
 	DIRECT_MODE_FORCED_ENABLE,
 };
 
+enum dpss_transform_t {
+	/* flip source image horizontally */
+	DPSS_TRANSFORM_FLIP_H = 1,
+	/* flip source image vertically */
+	DPSS_TRANSFORM_FLIP_V = 2,
+	/* rotate source image 90 degrees clock-wise */
+	DPSS_TRANSFORM_ROT_90 = 4,
+	/* rotate source image 180 degrees */
+	DPSS_TRANSFORM_ROT_180 = 3,
+	/* rotate source image 270 degrees clock-wise */
+	DPSS_TRANSFORM_ROT_270 = 7,
+	/* flip source image horizontally, the rotate 90 degrees clock-wise */
+	DPSS_TRANSFORM_FLIP_H_ROT_90 = DPSS_TRANSFORM_FLIP_H | DPSS_TRANSFORM_ROT_90,
+	/* flip source image vertically, the rotate 90 degrees clock-wise */
+	DPSS_TRANSFORM_FLIP_V_ROT_90 = DPSS_TRANSFORM_FLIP_V | DPSS_TRANSFORM_ROT_90,
+};
+
 struct dpss_process_dev {
 	u32 index;
 	bool inited;
@@ -124,6 +139,7 @@ struct dpss_process_dev {
 	DECLARE_KFIFO(dpss_out_q, struct dpss_out_buf_t *, DPSSPR_POOL_SIZE);
 	DECLARE_KFIFO(dpss_out_free_q, struct vframe_s *, DPSSPR_POOL_SIZE);
 	DECLARE_KFIFO(lcevc_out_q, struct lcevc_buf_t *, LCEVC_POOL_SIZE);
+	DECLARE_KFIFO(dpss_rotate_q, struct rotate_buf_t *, ROTATE_POOL_SIZE);
 	struct file *last_file;
 	struct dp_buf_mgr_t *last_buf_mgr;
 	struct dma_buf *last_dmabuf;
@@ -156,6 +172,10 @@ struct dpss_process_dev {
 	u32 continue_to_vd1_num;
 	bool should_on_vd1;
 	bool vd1_switch_dpss_is_done;
+	bool rotate_en;
+	u32 rotate_buf_status;
+	struct rotate_buf_t rotate_buf[ROTATE_POOL_SIZE];
+	struct ge2d_composer_para ge2d_para;
 	bool is_first_frame;
 	bool is_switch_first_frame;
 	u32 sync_id;

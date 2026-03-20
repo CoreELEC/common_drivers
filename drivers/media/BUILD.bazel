@@ -835,6 +835,8 @@ ddk_module(
             True: [
                 "video_processor/dpss_process/dpss_proc_file.c",
                 "video_processor/dpss_process/dpss_process.c",
+                "video_processor/dpss_process/dpss_process_util.c",
+                "video_processor/dpss_process/ge2d_process.c",
             ],
         },
         "CONFIG_AMLOGIC_DPSS_THERMAL": {

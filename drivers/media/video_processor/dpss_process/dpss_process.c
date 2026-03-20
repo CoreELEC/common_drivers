@@ -29,25 +29,23 @@
 #include <linux/amlogic/media/amdolbyvision/dolby_vision_ext.h>
 #endif
 
-#include "dpss_process.h"
-#include "dpss_proc_file.h"
 #ifdef CONFIG_AMLOGIC_DPSS_THERMAL
 #include "dpss_cooling.h"
 #endif
+#include "dpss_process.h"
+#include "dpss_proc_file.h"
 #include "../../common/uvm_process/meson_uvm_lcevc_processor.h"
 
 #define DPSS_PROCESS_DEVICE_NAME   "di_process"
 #define WAIT_THREAD_STOPPED_TIMEOUT 20
 #define WAIT_READY_Q_TIMEOUT 100
 #define MAX_RECEIVE_WAIT_TIME 15  /*15ms*/
-#define DPSS_INSTANCE_COUNT 2
 #define CONTINUE_VD1_TOGGLE_NUM 10
 #define DPSS_P_MEM_USAGE 127
 #define DPSS_I_MEM_USAGE 88
 #define DPSS_PPS_I_MEM_USAGE 41
 
 static u32 dpss_process_instance_num = DPSS_INSTANCE_COUNT;
-static u32 print_flag;
 static u32 total_get_count;
 static u32 total_put_count;
 static u32 total_src_get_count;
@@ -79,33 +77,17 @@ struct dpss_cooling_device *dpss_cdev_global;
 #endif
 static u32 force_num_to_vd1;
 static atomic_t input_eos_enabled = ATOMIC_INIT(0);
-static u32 hdr_state_flag; /*0:normal 1:need send flag to force pq unmute*/
 static u32 last_instance_frame_index;
 static u32 dpss_out_axis[4];
 static u32 display_scaling_factor[4] = {20, 48, 84, 200};
+static u32 dpss_rotate_width = 1280;
+static u32 dpss_rotate_height = 720;
+static u32 rotate_dump_flag;
+static u32 dpss_rotate_en = 1;
+static u32 hdr_state_flag; /*0:normal 1:need send flag to force pq unmute*/
 static DEFINE_MUTEX(dpss_process_mutex);
 static DEFINE_MUTEX(play_speed_mutex);
 static struct display_speed_t display_speed[DPSSPR_POOL_SIZE];
-
-static int dp_print(int index, int debug_flag, const char *fmt, ...)
-{
-	if ((print_flag & debug_flag) ||
-	    debug_flag == PRINT_ERROR) {
-		unsigned char buf[256];
-		int len = 0;
-		va_list args;
-
-		va_start(args, fmt);
-		len = sprintf(buf, "dp:[%d]", index);
-		vsnprintf(buf + len, 256 - len, fmt, args);
-		if (debug_flag == PRINT_ERROR)
-			pr_err("%s", buf);
-		else
-			pr_info("%s", buf);
-		va_end(args);
-	}
-	return 0;
-}
 
 static struct dpss_process_port_s ports[] = {
 	{
@@ -560,6 +542,264 @@ static bool set_vf_lcevc_data(struct dpss_process_dev *dev,
 	return true;
 }
 
+static int init_rotate_buffer(struct dpss_process_dev *dev, bool is_tvp, size_t usage)
+{
+	int ret = 0;
+	int i, flags;
+	u32 buf_width, buf_height, buf_size;
+
+	switch (dev->rotate_buf_status) {
+	case UNINITIAL:/*not config*/
+		break;
+	case INIT_SUCCESS:/*config before , return ok*/
+		return 0;
+	case INIT_ERROR:/*config fail, won't retry , return failure*/
+		return -1;
+	default:
+		return -1;
+	}
+
+	buf_width = dpss_rotate_width;
+	buf_height = (dpss_rotate_height + 0x3f) & ~0x3f;
+	buf_size = buf_width * buf_height * 3 / 2;
+	buf_size = PAGE_ALIGN(buf_size);
+
+	if (is_tvp)
+		flags = CODEC_MM_FLAGS_DMA | CODEC_MM_FLAGS_TVP;
+	else
+		flags = CODEC_MM_FLAGS_DMA | CODEC_MM_FLAGS_CMA_CLEAR;
+
+	for (i = 0; i < ROTATE_POOL_SIZE; i++) {
+		if (dev->rotate_buf[i].phy_addr == 0)
+			dev->rotate_buf[i].phy_addr = codec_mm_alloc_for_dma(ports[dev->index].name,
+				buf_size / PAGE_SIZE, 0, flags);
+		dp_print(dev->index, PRINT_ERROR,
+			"%s: alloc cma addr is %lx, size is %x.\n",
+			ports[dev->index].name,
+			dev->rotate_buf[i].phy_addr,
+			(unsigned int)buf_size);
+
+		if (dev->rotate_buf[i].phy_addr == 0) {
+			dev->rotate_buf_status = INIT_ERROR;
+			dp_print(dev->index, PRINT_ERROR, "cma memory config fail\n");
+			return -1;
+		}
+		dev->rotate_buf[i].index = i;
+		dev->rotate_buf[i].dirty = false;
+		dev->rotate_buf[i].buf_w = buf_width;
+		dev->rotate_buf[i].buf_h = buf_height;
+		dev->rotate_buf[i].buf_size = buf_size;
+		dev->rotate_buf[i].is_tvp = is_tvp;
+		dev->rotate_buf[i].buf_used = USED_BY_GE2D;
+		memset(&dev->rotate_buf[i].frame, 0, sizeof(struct vframe_s));
+
+		if (!kfifo_put(&dev->dpss_rotate_q, &dev->rotate_buf[i]))
+			dp_print(dev->index, PRINT_ERROR, "init buffer free_q is full\n");
+	}
+
+	if (IS_ERR_OR_NULL(dev->ge2d_para.context))
+		ret = init_ge2d(dev->index, &dev->ge2d_para);
+
+	if (ret < 0) {
+		dp_print(dev->index, PRINT_ERROR, "create ge2d context failed.\n");
+		return -1;
+	}
+
+	dev->rotate_buf_status = INIT_SUCCESS;
+	return 0;
+}
+
+static void uninit_rotate_buffer(struct dpss_process_dev *dev)
+{
+	int i;
+	int ret = 0;
+
+	if (dev->rotate_buf_status == UNINITIAL)
+		return;
+
+	if (!IS_ERR_OR_NULL(dev->ge2d_para.context)) {
+		ret = uninit_ge2d(dev->index, &dev->ge2d_para);
+		if (ret < 0)
+			dp_print(dev->index, PRINT_ERROR, "uninit ge2d composer failed!\n");
+		dev->ge2d_para.context = NULL;
+	}
+
+	dev->rotate_buf_status = UNINITIAL;
+	for (i = 0; i < ROTATE_POOL_SIZE; i++) {
+		if (dev->rotate_buf[i].phy_addr != 0) {
+			dp_print(dev->index, PRINT_ERROR,
+				"%s: free cma addr is %lx.\n",
+				ports[dev->index].name,
+				(unsigned long)dev->rotate_buf[i].phy_addr);
+			codec_mm_free_for_dma(ports[dev->index].name, dev->rotate_buf[i].phy_addr);
+			dev->rotate_buf[i].phy_addr = 0;
+		}
+	}
+
+	INIT_KFIFO(dev->dpss_rotate_q);
+	kfifo_reset(&dev->dpss_rotate_q);
+}
+
+static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file *file_vf,
+	int transform)
+{
+	struct vframe_s *src_vf = NULL;
+	size_t usage = 0;
+	struct timeval begin_time;
+	struct timeval end_time;
+	int cost_time;
+	int ret = 0;
+	struct vframe_s *dst_vf = NULL;
+	struct rotate_buf_t *dst_buf = NULL;
+	struct src_data_para src_data;
+	bool is_tvp = false;
+	u32 transform_tmp;
+
+	if (!dev || !file_vf)
+		goto exit;
+
+	src_vf = get_vf_from_file(dev, file_vf);
+	if (!src_vf)
+		goto exit;
+
+	do_gettimeofday(&begin_time);
+
+	if (src_vf->flag & VFRAME_FLAG_VIDEO_SECURE)
+		is_tvp = true;
+#ifdef CONFIG_AMLOGIC_UVM_CORE
+	if (dmabuf_is_uvm(file_vf->private_data) &&
+		meson_uvm_get_usage(file_vf->private_data, &usage) < 0)
+		dp_print(dev->index, PRINT_ERROR, "rotate: meson_uvm_get_usage fail.\n");
+#endif
+	dev->ge2d_para.format = GE2D_FORMAT_M24_NV21;
+	dev->ge2d_para.plane_num = 2;
+	dev->ge2d_para.is_tvp = is_tvp;
+	dev->ge2d_para.canvas0_addr = -1;
+
+	ret = init_rotate_buffer(dev, is_tvp, usage);
+	if (ret != 0) {
+		dp_print(dev->index, PRINT_ERROR, "init buffer failed!\n");
+		uninit_rotate_buffer(dev);
+		goto exit;
+	}
+
+	ret = kfifo_get(&dev->dpss_rotate_q, &dst_buf);
+	if (!ret || !dst_buf) {
+		dp_print(dev->index, PRINT_ERROR, "get dst_buf failed.\n");
+		goto exit;
+	}
+
+	dst_vf = &dst_buf->frame;
+	if (!dst_buf)
+		goto exit;
+
+	dst_buf->src_file = file_vf;
+	memset(dst_vf, 0, sizeof(struct vframe_s));
+	dp_print(dev->index, PRINT_ROTATE, "rotate: dst_buf[%d]: file:%px, addr:0x%x, w*h:%d*%d.\n",
+		dst_buf->index,
+		dst_buf->src_file,
+		dst_buf->phy_addr,
+		dst_buf->buf_w,
+		dst_buf->buf_h);
+
+	dev->ge2d_para.phy_addr[0] = dst_buf->phy_addr;
+	dev->ge2d_para.buffer_w = dst_buf->buf_w;
+	dev->ge2d_para.buffer_h = dst_buf->buf_h;
+
+	if (dst_buf->dirty) {
+		ret = ge2d_fill_black(dev->index, &dev->ge2d_para);
+		if (ret < 0)
+			dp_print(dev->index, PRINT_ERROR, "ge2d fill black failed\n");
+		dst_buf->dirty = false;
+	}
+
+	memset(&src_data, 0, sizeof(struct src_data_para));
+	src_data.buf_format = NV21;
+	ret = config_ge2d(dev->index, src_vf, 0, 0, 0, 0, 0, 0, 0, src_vf->width, src_vf->height,
+		&src_data);
+	if (ret < 0)
+		return NULL;
+
+	transform_tmp = transform;
+	if (src_vf && src_vf->flag & VFRAME_FLAG_MIRROR_H) {
+		if (transform_tmp & DPSS_TRANSFORM_FLIP_H)
+			transform_tmp &= ~DPSS_TRANSFORM_FLIP_H;
+		else
+			transform_tmp |= DPSS_TRANSFORM_FLIP_H;
+	}
+
+	if (src_vf && src_vf->flag & VFRAME_FLAG_MIRROR_V) {
+		if (transform_tmp & DPSS_TRANSFORM_FLIP_V)
+			transform_tmp &= ~DPSS_TRANSFORM_FLIP_V;
+		else
+			transform_tmp |= DPSS_TRANSFORM_FLIP_V;
+	}
+
+	dev->ge2d_para.angle = transform_tmp;
+	dev->ge2d_para.position_left = 0;
+	dev->ge2d_para.position_top = 0;
+	dev->ge2d_para.position_width = dpss_rotate_width;
+	dev->ge2d_para.position_height = dpss_rotate_height;
+	dev->ge2d_para.buffer_w = dst_buf->buf_w;
+	dev->ge2d_para.buffer_h = dst_buf->buf_h;
+
+	ret = ge2d_data_process(dev->index, &src_data, &dev->ge2d_para);
+	if (ret < 0)
+		goto exit;
+
+	dst_vf->frame_index = src_vf->frame_index;
+	dst_vf->ready_jiffies64 = src_vf->ready_jiffies64;
+	dst_vf->duration = src_vf->duration;
+	dst_vf->src_fmt = src_vf->src_fmt;
+	dst_vf->signal_type = src_vf->signal_type;
+	dst_vf->source_type = src_vf->source_type;
+	if (src_vf->flag & VFRAME_FLAG_PC_MODE)
+		dst_vf->flag |= VFRAME_FLAG_PC_MODE;
+	if (src_vf->flag & VFRAME_FLAG_GAME_MODE)
+		dst_vf->flag |= VFRAME_FLAG_GAME_MODE;
+	if (is_tvp)
+		dst_vf->flag |= VFRAME_FLAG_VIDEO_SECURE;
+	dst_vf->flag |= VFRAME_FLAG_VIDEO_LINEAR;
+	dst_vf->bitdepth = (BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8);
+	dst_vf->type = (VIDTYPE_PROGRESSIVE | VIDTYPE_VIU_FIELD | VIDTYPE_VIU_NV21);
+	dst_vf->dpss_flg |= 0x10;
+	dst_vf->width = dpss_rotate_width;
+	dst_vf->height = dpss_rotate_height;
+	dst_vf->canvas0Addr = -1;
+	dst_vf->canvas1Addr = -1;
+	dst_vf->canvas0_config[0].phy_addr = dst_buf->phy_addr;
+	dst_vf->canvas0_config[0].width = dst_buf->buf_w;
+	dst_vf->canvas0_config[0].height = dst_buf->buf_h;
+	dst_vf->canvas0_config[0].block_mode = 0;
+	dst_vf->canvas0_config[1].phy_addr = dst_buf->phy_addr + dst_buf->buf_w * dst_buf->buf_h;
+	dst_vf->canvas0_config[1].width = dst_buf->buf_w;
+	dst_vf->canvas0_config[1].height = dst_buf->buf_h >> 1;
+	dst_vf->canvas0_config[1].block_mode = 0;
+	dst_vf->plane_num = 2;
+
+	dp_print(dev->index, PRINT_ROTATE,
+		"dst_vf: canvas0_addr: 0x%lx, canvas0_w: %d, canvas0_h: %d.\n",
+		dst_vf->canvas0_config[0].phy_addr,
+		dst_vf->canvas0_config[0].width,
+		dst_vf->canvas0_config[0].height);
+	dp_print(dev->index, PRINT_ROTATE,
+		"dst_vf: canvas1_addr:  0x%lx, canvas1_w: %d, canvas1_h: %d.\n",
+		dst_vf->canvas0_config[1].phy_addr,
+		dst_vf->canvas0_config[1].width,
+		dst_vf->canvas0_config[1].height);
+
+	do_gettimeofday(&end_time);
+	cost_time = (1000000 * (end_time.tv_sec - begin_time.tv_sec)
+		+ (end_time.tv_usec - begin_time.tv_usec));
+	dp_print(dev->index, PRINT_ROTATE, "rotate cost: %d us\n", cost_time);
+
+	return dst_vf;
+
+exit:
+	dp_print(dev->index, PRINT_ERROR, "rotate: invalid param.\n");
+	return NULL;
+}
+
 static int check_dropped(struct dpss_process_dev *dev, struct uvm_di_mgr_t *uvm_di_mgr,
 	struct vframe_s *vf)
 {
@@ -625,8 +865,7 @@ static void dump_vf(struct vframe_s *vf)
 		(vf->bitdepth & BITDEPTH_Y10) ? "10bit" : "8bit");
 
 	if (vf->canvas0Addr == (u32)-1) {
-		write_size =
-			vf->canvas0_config[0].width * vf->canvas0_config[0].height;
+		write_size = vf->canvas0_config[0].width * vf->canvas0_config[0].height;
 		data = codec_mm_vmap(vf->canvas0_config[0].phy_addr, write_size);
 		if (!data) {
 			filp_close(fp, NULL);
@@ -641,7 +880,7 @@ static void dump_vf(struct vframe_s *vf)
 		if (vf->plane_num == 2) {
 			if (vf->type & VIDTYPE_VIU_422) {
 				write_size = vf->canvas0_config[1].width *
-						vf->canvas0_config[1].height;
+					vf->canvas0_config[1].height;
 			} else if (vf->type & VIDTYPE_VIU_NV21 || vf->type & VIDTYPE_VIU_NV12) {
 				write_size = vf->canvas0_config[1].width *
 					vf->canvas0_config[1].height / 2;
@@ -661,9 +900,12 @@ static void dump_vf(struct vframe_s *vf)
 			codec_mm_unmap_phyaddr(data);
 		}
 		pr_info("dpss:dump phy_addr0=%lx, %d %d, phy_addr1=%lx, %d %d\n",
-			vf->canvas0_config[0].phy_addr, vf->canvas0_config[0].width,
-			vf->canvas0_config[0].height, vf->canvas0_config[1].phy_addr,
-			vf->canvas0_config[1].width, vf->canvas0_config[1].height);
+			vf->canvas0_config[0].phy_addr,
+			vf->canvas0_config[0].width,
+			vf->canvas0_config[0].height,
+			vf->canvas0_config[1].phy_addr,
+			vf->canvas0_config[1].width,
+			vf->canvas0_config[1].height);
 	} else {
 		canvas_read(vf->canvas0Addr & 0xff, &cs0);
 		canvas_read((vf->canvas0Addr >> 8) & 0xff, &cs1);
@@ -984,8 +1226,16 @@ static void dpss_process_task(struct dpss_process_dev *dev)
 	}
 
 	file_vf = received_frame->file_vf;
-	vf = received_frame->vf;
 	dummy = received_frame->dummy;
+
+	if (received_frame->transform == 4 || received_frame->transform == 7) {
+		dp_print(dev->index, PRINT_OTHER, "rotate frame.\n");
+		dev->rotate_en = true;
+		vf = vframe_rotate(dev, file_vf, received_frame->transform);
+	} else  {
+		vf = received_frame->vf;
+	}
+
 	if (!vf) {
 		dp_print(dev->index, PRINT_ERROR, "%s:vf is NULL\n", __func__);
 		return;
@@ -1144,6 +1394,8 @@ static enum DPSS_ERRORTYPE dp_empty_input_done(void *arg, struct vframe_s *vf)
 	int ret = 0;
 	struct dma_buf *dmabuf;
 	struct file_private_data *private_data = NULL;
+	struct rotate_buf_t *rotate_buf = NULL;
+	int i = 0;
 
 	if (!vf || !dev) {
 		pr_err("%s: NULL param.\n", __func__);
@@ -1239,6 +1491,27 @@ static enum DPSS_ERRORTYPE dp_empty_input_done(void *arg, struct vframe_s *vf)
 			dp_print(dev->index, PRINT_ERROR, "%s: processed_checkin fail\n", __func__);
 
 		dp_put_file(dev, pp_info->src_file);
+	}
+
+	if (dev->rotate_en) {
+		for (i = 0; i < ROTATE_POOL_SIZE; i++) {
+			if (dev->rotate_buf[i].src_file == pp_info->src_file)
+				break;
+		}
+
+		if (i == ROTATE_POOL_SIZE) {
+			dp_print(dev->index, PRINT_ERROR, "invalid vf.\n");
+		} else {
+			rotate_buf = &dev->rotate_buf[i];
+			dp_print(dev->index, PRINT_ROTATE, "%s: buf[%d]: addr:0x%lx, w*h:%d*%d.\n",
+				__func__,
+				rotate_buf->index,
+				rotate_buf->phy_addr,
+				rotate_buf->buf_w,
+				rotate_buf->buf_h);
+			if (!kfifo_put(&dev->dpss_rotate_q, rotate_buf))
+				dp_print(dev->index, PRINT_ERROR, "put dpss_rotate_q fail.\n");
+		}
 	}
 
 	dpss_in_buf = container_of(vf, struct dpss_in_buf_t, vf);
@@ -1642,6 +1915,12 @@ static void dpss_lcevc_buf_uninit(struct dpss_process_dev *dev)
 	}
 }
 
+static void dpss_rotate_q_init(struct dpss_process_dev *dev)
+{
+	INIT_KFIFO(dev->dpss_rotate_q);
+	kfifo_reset(&dev->dpss_rotate_q);
+}
+
 static int find_standard_duration(struct dpss_process_dev *dev, int duration_val)
 {
 	int min = INT_MAX;
@@ -2031,11 +2310,24 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->trick_play_en = false;
 	atomic_set(&input_eos_enabled, 0);
 
+	dev->rotate_en = false;
+	dev->ge2d_para.context = NULL;
+	dev->ge2d_para.count = 0;
+	dev->ge2d_para.canvas_dst[0] = -1;
+	dev->ge2d_para.canvas_dst[1] = -1;
+	dev->ge2d_para.canvas_dst[2] = -1;
+	dev->ge2d_para.canvas_scr[0] = -1;
+	dev->ge2d_para.canvas_scr[1] = -1;
+	dev->ge2d_para.canvas_scr[2] = -1;
+	dev->ge2d_para.plane_num = 2;
+	dev->rotate_buf_status = UNINITIAL;
+
 	receive_q_init(dev);
 	dpss_input_free_q_init(dev);
 	file_q_init(dev);
 	dpss_out_q_init(dev);
 	dpss_out_free_q_init(dev);
+	dpss_rotate_q_init(dev);
 
 	return 0;
 }
@@ -2077,6 +2369,8 @@ static int dpss_process_uninit(struct dpss_process_dev *dev)
 	file_q_uninit(dev);
 	dpss_out_free_q_uninit(dev);
 	dpss_lcevc_buf_uninit(dev);
+	if (dev->rotate_en)
+		uninit_rotate_buffer(dev);
 	/*input buffer in dpss side need fput file*/
 	for (i = 0; i < DPSSPR_POOL_SIZE; i++) {
 		buf = &dev->dpss_in_buf[i];
@@ -2145,10 +2439,11 @@ static bool is_dd_vframe(struct dpss_process_dev *dev, struct vframe_s *vf)
 }
 
 static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf,
-	bool rotate_en)
+	int transform)
 {
 	bool need_do_dpss = true;
 	bool is_qms_case = false;
+	bool need_dpss_rotate = false;
 	int used_vf_with = 0, used_vf_height = 0;
 
 	if (!dev || !vf) {
@@ -2164,21 +2459,20 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		used_vf_height = vf->height;
 	}
 
+	/*rotate frame*/
+	if (transform == 4 || transform == 7) {
+		if (!dpss_rotate_en) {
+			need_do_dpss = false;
+		} else {
+			need_do_dpss = true;
+			need_dpss_rotate = true;
+		}
+	}
+
 	/*4090*2160 no need do dpss*/
-	if (used_vf_with > 3840) {
+	if (!need_dpss_rotate &&
+		(vf->compWidth > 3840 || vf->width > 3840)) {
 		dp_print(dev->index, PRINT_OTHER, "over 3840, no need do dpss.\n");
-		need_do_dpss = false;
-	}
-
-	/*4k interlace no need do dpss*/
-	if (vf->type & VIDTYPE_INTERLACE && used_vf_with == 3840) {
-		dp_print(dev->index, PRINT_OTHER, "4k interlace, no need do dpss.\n");
-		need_do_dpss = false;
-	}
-
-	/*rotate no need do dpss*/
-	if (rotate_en) {
-		dp_print(dev->index, PRINT_OTHER, "rotate enable, no need do dpss.\n");
 		need_do_dpss = false;
 	}
 
@@ -2194,6 +2488,12 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 			dp_print(dev->index, PRINT_OTHER, "pip dpss only support I source.\n");
 			need_do_dpss = false;
 		}
+	}
+
+	/*height > 2160 no need do dpss*/
+	if (!need_dpss_rotate && used_vf_height > 2160) {
+		dp_print(dev->index, PRINT_OTHER, "height > 2160, no need do dpss.\n");
+		need_do_dpss = false;
 	}
 
 	is_qms_case = vf->vf_vrr_param.qms_en || vf->vf_vrr_param.qms_plus_en;
@@ -2356,12 +2656,12 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	u32 frame_index = 0;
 	u32 max_width_new = 0, max_width_last = 0;
 	bool ip_switch = false, tvp_switch = false, rotate180_switch = false, game_switch = false;
-	bool need_do_dummy = false, rotate_en = false;
+	bool need_do_dummy = false;
 	bool vf_from_vdin = false;
 	struct dp_buf_mgr_t *cur_buf_mgr;
 	struct dpss_status dpss_state;
-	char do_dpss_type = 0;
 	bool is_dtv_src = false;
+	char do_dpss_type = 0;
 	int ret = 0;
 
 	if (!dev || !frame_info) {
@@ -2395,14 +2695,26 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		is_dtv_src = true;
 	vf->dpss_flg |= DPSS_FLG_SET_DPSS_PROCESS;
 	dp_print(dev->index, PRINT_OTHER,
-		"%s: len =%d, fd=%d, frame_index=%d, file_vf=%px, file_count=%ld， vf_ext:%d\n",
+		"%s: len=%d,fd=%d,frame_index=%d,file=%px,file_count=%ld,transform=%d vf_ext:%d.\n",
 		__func__,
 		kfifo_len(&dev->receive_q),
 		frame_info->in_fd,
 		vf->frame_index,
 		file_vf,
 		file_count(file_vf),
+		frame_info->transform,
 		vf->flag_ext);
+
+	dp_print(dev->index, PRINT_OTHER,
+		"frame_index=%d,type=0x%x,flag=0x%x,compWidth*Height=%dX%d,width*height=%dX%d,duration=%d.\n",
+		vf->frame_index,
+		vf->type,
+		vf->flag,
+		vf->compWidth,
+		vf->compHeight,
+		vf->width,
+		vf->height,
+		vf->duration);
 
 	if (dev->dpss_index == -1) {
 		if (dev->index == 0 || (dev->index == 1 && (vf->type & VIDTYPE_INTERLACE))) {
@@ -2431,14 +2743,12 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dev->last_buf_mgr = cur_buf_mgr;
 		dev->is_first_frame = true;
 		atomic_set(&input_eos_enabled, 0);
-		dp_print(dev->index, PRINT_OTHER,
-			"new stream is on, first frame is set\n");
+		dp_print(dev->index, PRINT_OTHER, "new stream is on, first frame is set\n");
 	} else if (cur_buf_mgr != dev->last_buf_mgr) {
 		dev->last_buf_mgr = cur_buf_mgr;
 		dev->is_switch_first_frame = true;
 		atomic_set(&input_eos_enabled, 0);
-		dp_print(dev->index, PRINT_OTHER,
-			"stream changed, need notify processor\n");
+		dp_print(dev->index, PRINT_OTHER, "stream changed, need notify processor\n");
 		ret = 3;
 	}
 
@@ -2462,9 +2772,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		config_play_speed_for_frc(dev, vf);
 	}
 
-	if (frame_info->transform == 4 || frame_info->transform == 7)
-		rotate_en = true;
-
 	dev->output_duration = get_output_duration(dev);
 
 	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
@@ -2472,7 +2779,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dp_print(dev->index, PRINT_OTHER,
 		"need bypass due to dpss, reason=%d.\n", do_dpss_type);
 
-	if (do_dpss_type || !check_need_do_dpss(dev, vf, rotate_en) ||
+	if (do_dpss_type || !check_need_do_dpss(dev, vf, frame_info->transform) ||
 		force_num_to_vd1) {
 		dev->is_start_with_dpss = false;
 		if (force_num_to_vd1 > 0)
@@ -2642,11 +2949,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dev->cur_is_frcgame = false;
 
 	dp_print(dev->index, PRINT_OTHER,
-		"frame_index=%d,type=0x%x,flag=0x%x,compWidth=%d,compHeight=%d,width=%d,height=%d.\n",
-		vf->frame_index, vf->type, vf->flag, vf->compWidth, vf->compHeight, vf->width,
-		vf->height);
-
-	dp_print(dev->index, PRINT_OTHER,
 		"%s: frame_index=%d, magic_code=0x%x, ud_addr=%p, ud_len=%d.\n",
 		__func__,
 		vf->frame_index,
@@ -2704,6 +3006,16 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 			return -EINVAL;
 		}
 
+		if ((frame_info->transform == 4 || frame_info->transform == 7) &&
+			(dev->rotate_buf_status == INIT_SUCCESS &&
+			kfifo_len(&dev->dpss_rotate_q) == 0)) {
+			dp_print(dev->index, PRINT_ERROR, "dpss_rotate_q is full.\n");
+			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
+			kfifo_put(&dev->file_free_q, dmabuf);
+			dp_put_file(dev, file_vf);
+			return -1;
+		}
+
 		private_data->vf_p = NULL;
 		private_data->vf.frame_index = vf->frame_index;
 		private_data->vf.index_disp = vf->index_disp;
@@ -2743,7 +3055,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dev->received_frame[i].dst_y = frame_info->dst_y;
 		dev->received_frame[i].dst_w = frame_info->dst_w;
 		dev->received_frame[i].dst_h = frame_info->dst_h;
-
 		atomic_set(&dev->received_frame[i].on_use, true);
 
 		if (!kfifo_put(&dev->receive_q, &dev->received_frame[i]))
@@ -3088,7 +3399,7 @@ static ssize_t print_flag_show(const struct class *cla,
 {
 	return snprintf(buf, 80,
 			"current print_flag is %d\n",
-			print_flag);
+			get_dp_print_flag(0));
 }
 
 static ssize_t print_flag_store(const struct class *cla,
@@ -3103,7 +3414,7 @@ static ssize_t print_flag_store(const struct class *cla,
 		pr_info("ERROR converting %s to long int!\n", buf);
 		return ret;
 	}
-	print_flag = tmp;
+	set_dp_print_flag(0, tmp);
 	return count;
 }
 
@@ -3577,6 +3888,59 @@ static ssize_t display_scaling_factor_store(const struct class *cla,
 	return strnlen(buf, count);
 }
 
+static ssize_t dpss_rotate_en_show(const struct class *class,
+	const struct class_attribute *attr, char *buf)
+{
+	int len = 0;
+
+	len = sprintf(buf + len, "dpss_rotate_en is %d.\n", dpss_rotate_en);
+
+	return len;
+}
+
+static ssize_t dpss_rotate_en_store(const struct class *cla,
+	const struct class_attribute *attr, const char *buf, size_t count)
+{
+	long tmp;
+	int ret;
+
+	ret = kstrtol(buf, 0, &tmp);
+	if (ret != 0) {
+		pr_info("ERROR converting %s to long int!\n", buf);
+		return ret;
+	}
+
+	dpss_rotate_en = tmp;
+	return count;
+}
+
+static ssize_t rotate_dump_flag_show(const struct class *class,
+	const struct class_attribute *attr, char *buf)
+{
+	int len = 0;
+
+	len = sprintf(buf + len, "rotate_dump_flag is %d.\n", rotate_dump_flag);
+
+	return len;
+}
+
+static ssize_t rotate_dump_flag_store(const struct class *cla,
+	const struct class_attribute *attr, const char *buf, size_t count)
+{
+	long tmp;
+	int ret;
+
+	ret = kstrtol(buf, 0, &tmp);
+	if (ret != 0) {
+		pr_info("ERROR converting %s to long int!\n", buf);
+		return ret;
+	}
+
+	rotate_dump_flag = tmp;
+	set_dump_flag(rotate_dump_flag);
+	return count;
+}
+
 static CLASS_ATTR_RW(print_flag);
 static CLASS_ATTR_RO(total_get_count);
 static CLASS_ATTR_RO(total_put_count);
@@ -3602,6 +3966,8 @@ static CLASS_ATTR_RW(temperature_control_en);
 static CLASS_ATTR_RW(force_num_to_vd1);
 static CLASS_ATTR_RW(dpss_out_axis);
 static CLASS_ATTR_RW(display_scaling_factor);
+static CLASS_ATTR_RW(rotate_dump_flag);
+static CLASS_ATTR_RW(dpss_rotate_en);
 
 static struct attribute *dpss_process_class_attrs[] = {
 	&class_attr_print_flag.attr,
@@ -3629,6 +3995,8 @@ static struct attribute *dpss_process_class_attrs[] = {
 	&class_attr_force_num_to_vd1.attr,
 	&class_attr_dpss_out_axis.attr,
 	&class_attr_display_scaling_factor.attr,
+	&class_attr_rotate_dump_flag.attr,
+	&class_attr_dpss_rotate_en.attr,
 	NULL
 };
 
