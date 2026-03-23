@@ -5883,25 +5883,24 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp, unsigned int rdma_enable)
 		break;
 	}
 
-	if (devp->work_mode == VDIN_WORK_MD_V4L || vdin_dv_is_need_tunnel(devp) ||
+	if (devp->is_422_12bit_enabled)
+		bit_dep = VDIN_COLOR_DEEPS_12BIT;
+	else if (devp->work_mode == VDIN_WORK_MD_V4L || vdin_dv_is_need_tunnel(devp) ||
 		devp->local_var.is_rgba_en)
 		bit_dep = VDIN_COLOR_DEEPS_8BIT;
 
 	devp->source_bitdepth = bit_dep;
 
-	if (devp->double_wr) /* force dw to 8bit for saving bandwidth */
-		devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_8BIT;
-	else
+	if (devp->double_wr) {
+		if (devp->dv_hw5.hw5_ctl & BIT3) {
+			pr_info("%s dw_wrmif_444_10bit\n", __func__);
+			devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_10BIT;
+		} else {/* force dw to 8bit for saving bandwidth */
+			devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_8BIT;
+		}
+	} else {
 		devp->source_bitdepth_dw = devp->source_bitdepth;
-
-	if (devp->dv_hw5.hw5_ctl & BIT3) {
-		pr_info("%s dw_wrmif_444_10bit\n", __func__);
-		devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_10BIT;
 	}
-
-	if (devp->is_422_12bit_enabled)
-		devp->source_bitdepth = VDIN_COLOR_DEEPS_12BIT;
-
 	if (devp->source_bitdepth_dw == VDIN_COLOR_DEEPS_8BIT)
 		reg_bit_depth = 0;
 	else if (devp->source_bitdepth_dw == VDIN_COLOR_DEEPS_10BIT)
