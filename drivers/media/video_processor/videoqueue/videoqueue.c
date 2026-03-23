@@ -431,10 +431,7 @@ static void videoq_hdmi_video_sync_2(struct video_queue_dev *dev,
 	if (dev->di_backend_en && (vf->type & VIDTYPE_INTERLACE))
 		disp_delay_count += 1;
 
-	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) && (vf_width > 1920 || vf_height > 1088))
-		disp_delay_count += 1;
-
-	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) && (vf_width > 1920 || vf_height > 1088))
+	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) && (vf_width > 1920 && vf_height > 1088))
 		disp_delay_count += 1;
 
 	time_ns = sched_clock();
@@ -454,10 +451,6 @@ static void videoq_hdmi_video_sync_2(struct video_queue_dev *dev,
 		frc_delay = 0;
 	} else {
 		frc_delay = dpss_frc_get_video_latency();
-		if (frc_delay > 0 && vf->duration >= 4000) {
-			frc_delay += 15;
-			vq_print(dev->inst, P_AVSYNC, "add ext 15ms\n");
-		}
 		frc_delay = frc_delay * 1000;
 	}
 #endif
@@ -730,6 +723,7 @@ static int do_file_thread(struct video_queue_dev *dev)
 	bool is_i = false;
 	int temp = 0;
 	bool is_game_or_qms = false;
+	u64  frc_delay = 0;
 
 	if (!dev->provider_name) {
 		provider_name = vf_get_provider_name(dev->vf_receiver_name);
@@ -878,11 +872,20 @@ static int do_file_thread(struct video_queue_dev *dev)
 		dev->need_check_delay_count = 0;
 	}
 
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) &&
+		(vf->duration > 0 && vf->duration <= 582))
+		frc_delay = 0;
+	else
+		frc_delay = dpss_frc_get_video_latency();
+#endif
+
 	if (dev->frame_num > HDMI_DELAY_CHECK_INDEX &&
 		dev->need_check_delay_count == 0 &&
 		need_resync) {
 		tvin_delay_duration = get_avsync_delay_time(dev->inst);
 		vframe_walk_delay = get_tvin_delay();
+		vframe_walk_delay = vframe_walk_delay - frc_delay;
 		avsync_diff = abs(tvin_delay_duration - vframe_walk_delay);
 
 		vdin_vsync = vf->duration;
