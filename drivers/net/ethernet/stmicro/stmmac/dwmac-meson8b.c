@@ -814,10 +814,17 @@ static int meson8b_suspend(struct device *dev)
 		/* enable WOL when phy ready and wakeup source is not empty */
 		if (phydev && amlogic_wol_wakeup_src_not_empty(dev)) {
 			phydev->irq_suspended = 0;
+			/* preset: enable DDR ASR mode (S6 only)
+			 *   The DDR ASR mode introduces additional power consumption;
+			 *   therefore, it should only be enabled when BL30 ETH is active.
+			 */
+			set_wol_notify_bl31(dwmac, 0x3);
+			/* enable wol */
 			set_wol_notify_bl31(dwmac, true);
 			set_wol_notify_bl30(dwmac, 4);
 			amlogic_wol_enter(dev);
 		} else {
+			set_wol_notify_bl31(dwmac, false);
 			set_wol_notify_bl30(dwmac, false);
 			/* if it is not an external phy */
 			if (priv->eth_priv.internal_phy != 2 && dwmac->data->suspend)
@@ -877,6 +884,7 @@ static int meson8b_resume(struct device *dev)
 				input_event(dwmac->input_dev, EV_KEY, KEY_POWER, 0);
 				input_sync(dwmac->input_dev);
 			}
+			set_wol_notify_bl31(dwmac, false);
 			phydev->irq_suspended = 0;
 		} else {
 			/* if it is not an external phy */

@@ -73,7 +73,7 @@ struct phylink {
 	u8 sfp_port;
 };
 
-struct wol_sysfs_hook {
+struct aml_wol_ops {
 	bool (*not_empty)(struct device *device);
 	void (*clr_all)(struct device *device);
 	void (*set_all)(struct device *device);
@@ -101,7 +101,7 @@ struct aml_eth_priv {
 	unsigned int mdns_switch_from_user;
 	unsigned int support_gpio_wol;
 	unsigned int exphy_mdns_wkup;
-	struct wol_sysfs_hook wol_sysfs_hook;
+	struct aml_wol_ops wol_ops;
 #endif
 };
 
@@ -109,5 +109,6 @@ int gmac_create_sysfs(struct aml_eth_priv *eth_priv);
 int gmac_remove_sysfs(struct aml_eth_priv *eth_priv);
 struct aml_eth_priv *aml_get_eth_priv_by_pdev(struct phy_device *phydev);
 struct aml_eth_priv *aml_get_eth_priv_by_ndev(struct device *dev);
+struct device *aml_get_ethmac_dev_by_priv(struct aml_eth_priv *eth_priv);
 
 #endif

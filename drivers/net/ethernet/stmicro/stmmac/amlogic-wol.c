@@ -677,9 +677,9 @@ int amlogic_wol_setup(struct device *device, struct mbox_chan *mbox_chan)
 	mutex_init(&wol->lock);
 
 	/* Bridging up to the old sysfs control node */
-	eth_priv->wol_sysfs_hook.not_empty = amlogic_wol_wakeup_src_not_empty;
-	eth_priv->wol_sysfs_hook.clr_all = amlogic_wol_wakeup_src_clr_all;
-	eth_priv->wol_sysfs_hook.set_all = amlogic_wol_wakeup_src_set_all;
+	eth_priv->wol_ops.not_empty = amlogic_wol_wakeup_src_not_empty;
+	eth_priv->wol_ops.clr_all = amlogic_wol_wakeup_src_clr_all;
+	eth_priv->wol_ops.set_all = amlogic_wol_wakeup_src_set_all;
 
 	mutex_unlock(&class_mutex);
 
@@ -723,7 +723,7 @@ void amlogic_wol_remove(struct device *device)
 			class_unregister(&wol_class);
 	}
 
-	memset(&eth_priv->wol_sysfs_hook, 0, sizeof(eth_priv->wol_sysfs_hook));
+	memset(&eth_priv->wol_ops, 0, sizeof(eth_priv->wol_ops));
 	wol->dev = NULL;
 	wol->mbox = NULL;
 

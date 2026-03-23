@@ -255,6 +255,12 @@
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
+
+		eth_reserved:linux,eth {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0x14000000 0x0 0x2400>;	/* 9 KBytes */
+		};
 	};
 
 /* Audio Related start */
@@ -1089,8 +1095,7 @@
 	amlogic,tx-delay-ns = <2>;
 	internal_phy = <2>;
 	cali_val = <0x290000>;
-	wol = <1>;
-	mdns_wkup = <1>;
+	amlogic,wol-enable;
 };
 
 /*inphy setting*/

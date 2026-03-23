@@ -93,6 +93,15 @@ struct aml_eth_priv *aml_get_eth_priv_by_ndev(struct device *dev)
 }
 EXPORT_SYMBOL(aml_get_eth_priv_by_ndev);
 
+struct device *aml_get_ethmac_dev_by_priv(struct aml_eth_priv *eth_priv)
+{
+	struct stmmac_priv *priv = container_of(eth_priv, struct stmmac_priv, eth_priv);
+	struct device *ethmac_dev = priv->device;
+
+	return ethmac_dev;
+}
+EXPORT_SYMBOL(aml_get_ethmac_dev_by_priv);
+
 static void am_net_dump_phyreg(struct aml_eth_priv *eth_priv)
 {
 	int reg = 0;
@@ -761,10 +770,10 @@ static ssize_t wol_show(struct device *dev,
 		return 0;
 
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	if (eth_priv->wol_sysfs_hook.not_empty) {
+	if (eth_priv->wol_ops.not_empty) {
 		return sysfs_emit(buf, "%s wol 0x%x\n",
 				  eth_priv->internal_phy != 2 ? "inphy" : "exphy",
-				  (int)eth_priv->wol_sysfs_hook.not_empty(ethmac_dev));
+				  (int)eth_priv->wol_ops.not_empty(ethmac_dev));
 	}
 #endif
 
@@ -791,11 +800,11 @@ static ssize_t wol_store(struct device *dev,
 	r = kstrtoint(buf, 16, &tmp);
 
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	if (eth_priv->wol_sysfs_hook.set_all && eth_priv->wol_sysfs_hook.clr_all) {
+	if (eth_priv->wol_ops.set_all && eth_priv->wol_ops.clr_all) {
 		if (tmp)
-			eth_priv->wol_sysfs_hook.set_all(ethmac_dev);
+			eth_priv->wol_ops.set_all(ethmac_dev);
 		else
-			eth_priv->wol_sysfs_hook.clr_all(ethmac_dev);
+			eth_priv->wol_ops.clr_all(ethmac_dev);
 
 		return count;
 	}

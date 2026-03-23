@@ -255,6 +255,12 @@
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
+
+		eth_reserved:linux,eth {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x0 0x14000000 0x0 0x2400>;	/* 9 KBytes */
+		};
 	};
 
 /* Audio Related start */
@@ -1092,8 +1098,7 @@
 	phy-handle = <&internal_ephy>;
 	phy-mode = "rmii";
 	internal_phy = <1>;
-	mac_wol = <1>;
-	mdns_wkup = <1>;
+	amlogic,wol-enable;
 };
 
 &ir {
