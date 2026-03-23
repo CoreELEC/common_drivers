@@ -77,6 +77,7 @@
 #if ENABLE_DPSS
 #include <linux/amlogic/media/di/dpss_interface.h>
 #endif
+#include <linux/amlogic/media/codec_mm/codec_mm.h>
 
 DEFINE_SPINLOCK(amdv_lock);
 
@@ -567,7 +568,7 @@ u32 enable_update_gdbs_delay = 1;/*update delay according fps*/
 u32 final_backlight_delay_vsync = 1;
 bool enable_frc_delay = true;
 
-#define MAX_DELAY 0xFFFFFFFF
+#define MAX_DELAY 0x7FFFFFFF
 
 int debug_cp_res;
 int debug_h_aoi = 0xFFFFFFFF;/*t6w/t6x:val = right << 16 | left based on frame*/
@@ -3141,12 +3142,210 @@ void check_efuse(void)
 	}
 }
 
+void amdv_alloc_mem(void)
+{
+	int i;
+	int j;
+	u32 alloc_size;
+	u32 py_buf_cnt = 2;
+
+	if (!is_aml_hw5())
+		return;
+
+	if (is_aml_t3x()) {
+		for (i = 0; i < DMA_BUF_CNT; i++) {
+			lut_dma_info[i].dma_total_size =
+				(top1_lut_num + top2_lut_num) * LUT_SIZE;
+			lut_dma_info[i].dma_top2_size = top2_lut_num * LUT_SIZE;
+			alloc_size =
+				(lut_dma_info[i].dma_total_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+			lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+			lut_dma_info[i].dma_vaddr = codec_mm_vmap(lut_dma_info[i].dma_paddr,
+				alloc_size);
+			lut_dma_info[i].dma_paddr_top2 =
+				lut_dma_info[i].dma_paddr + top1_lut_num * LUT_SIZE;
+			lut_dma_info[i].dma_vaddr_top2 =
+				lut_dma_info[i].dma_vaddr + top1_lut_num * LUT_SIZE;
+			pr_dv_dbg("dma_vaddr %px %pad,total %d,alloc size %d,top2 %px %pad\n",
+					lut_dma_info[i].dma_vaddr,
+					&lut_dma_info[i].dma_paddr,
+					lut_dma_info[i].dma_total_size,
+					alloc_size,
+					lut_dma_info[i].dma_vaddr_top2,
+					&lut_dma_info[i].dma_paddr_top2);
+		}
+	} else if (is_aml_t6w() || is_aml_t6x()) {/*top1 and top2 lut dma are separated*/
+		for (i = 0; i < DMA_BUF_CNT; i++) {
+			lut_dma_info[i].dma_top1_size = top1_lut_num * LUT_SIZE;
+			alloc_size =
+				(lut_dma_info[i].dma_top1_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+			lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+			lut_dma_info[i].dma_vaddr = codec_mm_vmap(lut_dma_info[i].dma_paddr,
+				alloc_size);
+
+			pr_dv_dbg("top1 dma_vaddr %px %pad,size %d,alloc size %d\n",
+					lut_dma_info[i].dma_vaddr,
+					&lut_dma_info[i].dma_paddr,
+					lut_dma_info[i].dma_top1_size,
+					alloc_size);
+
+			lut_dma_info[i].dma_top2_size = top2_lut_num * LUT_SIZE;
+			alloc_size =
+			(lut_dma_info[i].dma_top2_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+			lut_dma_info[i].dma_paddr_top2 = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+			lut_dma_info[i].dma_vaddr_top2 =
+				codec_mm_vmap(lut_dma_info[i].dma_paddr_top2, alloc_size);
+
+			pr_dv_dbg("dma_vaddr %px %pad,size %d,alloc size %d\n",
+					lut_dma_info[i].dma_vaddr_top2,
+					&lut_dma_info[i].dma_paddr_top2,
+					lut_dma_info[i].dma_top2_size,
+					alloc_size);
+		}
+	}
+
+	dv5_md_hist.hist_size = 256;
+	alloc_size = dv5_md_hist.hist_size;
+	dv5_md_hist.hist_paddr[0] = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+	dv5_md_hist.hist_vaddr[0] = codec_mm_vmap(dv5_md_hist.hist_paddr[0], alloc_size);
+	dv5_md_hist.hist_paddr[1] = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+	dv5_md_hist.hist_vaddr[1] = codec_mm_vmap(dv5_md_hist.hist_paddr[1], alloc_size);
+
+	if ((!(efuse_mode & 2) && !device_disable_pd)) {
+		if (is_aml_t3x())
+			py_buf_cnt = PYRAMID_BUF_CNT;
+		else if (is_aml_t6w() || is_aml_t6x())
+			py_buf_cnt = 2;
+
+		for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
+			alloc_size = py_size[0] + py_size[1] + py_size[2] +
+				py_size[3] + py_size[4] + py_size[5] +
+				py_size[6];
+			py_addr[i].top1_py_paddr[0] = codec_mm_alloc_for_dma("amdv",
+				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
+			py_addr[i].py_vaddr[0] = codec_mm_vmap(py_addr[i].top1_py_paddr[0],
+				alloc_size);
+
+			if (py_addr[i].py_vaddr[0])
+				memset(py_addr[i].py_vaddr[0], 0, alloc_size);
+			else
+				pr_err("dma alloc top1_py error\n");
+			for (j = 1; j < 7; j++) {
+				py_addr[i].py_vaddr[j] = py_addr[i].py_vaddr[j - 1] +
+					py_size[j - 1];
+				py_addr[i].top1_py_paddr[j] =
+					py_addr[i].top1_py_paddr[j - 1] + py_size[j - 1];
+			}
+			for (j = 0; j < 7; j++) {
+				py_addr[i].top1_py_size[j] = py_size[j];
+				if (py_addr[i].py_vaddr[j]) {
+					pr_dv_dbg("pyup_vaddr %px %pad, alloc size %d\n",
+						py_addr[i].py_vaddr[j],
+						&py_addr[i].top1_py_paddr[j],
+						py_addr[i].top1_py_size[j]);
+				} else {
+					pr_err("dma alloc top1_py error\n");
+				}
+			}
+		}
+		if (is_aml_t6w() || is_aml_t6x()) {
+			for (i = 0; i < TOP_BUF_CNT; i++) {
+				/*corep pyup max size 512x288*/
+				top_info.up_buf[i].pyup_size =
+				is_aml_t6w() ? PY_UP_SIZE_6 : PY_UP_SIZE_7;
+				alloc_size = top_info.up_buf[i].pyup_size;
+				top_info.up_buf[i].pyup_paddr = codec_mm_alloc_for_dma("amdv",
+					(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0,
+					CODEC_MM_FLAGS_DMA);
+				top_info.up_buf[i].pyup_vaddr =
+					codec_mm_vmap(top_info.up_buf[i].pyup_paddr, alloc_size);
+
+				if (top_info.up_buf[i].pyup_vaddr) {
+					memset(top_info.up_buf[i].pyup_vaddr, 0,
+						alloc_size);
+					pr_dv_dbg("pyup_vaddr %px %pad, alloc size %d\n",
+						top_info.up_buf[i].pyup_vaddr,
+						&top_info.up_buf[i].pyup_paddr,
+						alloc_size);
+				} else {
+					pr_err("dma alloc pyup error\n");
+				}
+			}
+		}
+	}
+}
+
+void amdv_free_mem(void)
+{
+	int i;
+	u32 py_buf_cnt = 2;
+
+	if (!is_aml_hw5())
+		return;
+
+	if (is_aml_t3x()) {
+		for (i = 0; i < DMA_BUF_CNT; i++) {
+			if (lut_dma_info[i].dma_paddr)
+				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
+		}
+	} else if (is_aml_t6w() || is_aml_t6x()) {
+		for (i = 0; i < DMA_BUF_CNT; i++) {
+			if (lut_dma_info[i].dma_paddr)
+				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
+			if (lut_dma_info[i].dma_paddr_top2)
+				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr_top2);
+		}
+	}
+	if (dv5_md_hist.hist_paddr[0])
+		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[0]);
+	if (dv5_md_hist.hist_paddr[1])
+		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[1]);
+
+	if (is_aml_t3x())
+		py_buf_cnt = PYRAMID_BUF_CNT;
+	else if (is_aml_t6w() || is_aml_t6x())
+		py_buf_cnt = 2;
+
+	for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
+		if (py_addr[i].top1_py_paddr[0])
+			codec_mm_free_for_dma("amdv", py_addr[i].top1_py_paddr[0]);
+	}
+	if (is_aml_t6w() || is_aml_t6x()) {
+		for (i = 0; i < TOP_BUF_CNT; i++) {
+			if (top_info.up_buf[i].pyup_paddr)
+				codec_mm_free_for_dma("amdv", top_info.up_buf[i].pyup_paddr);
+		}
+	}
+}
+
+static DEFINE_MUTEX(amdv_dev_mutex);
+static int amdv_mem_alloc_count;
+void amdv_mem_alloc_control(enum vd_module_type_e type, int enable)
+{
+	mutex_lock(&amdv_dev_mutex);
+	int last_count = amdv_mem_alloc_count;
+
+	if (enable)
+		amdv_mem_alloc_count++;
+	else
+		amdv_mem_alloc_count--;
+	pr_dv_dbg("amdv mem alloc status:%d, %d\n", amdv_mem_alloc_count, enable);
+	if (last_count == 0 && amdv_mem_alloc_count == 1)
+		amdv_alloc_mem();
+	else if (last_count == 1 && amdv_mem_alloc_count == 0)
+		amdv_free_mem();
+	mutex_unlock(&amdv_dev_mutex);
+}
+
 void amdv_init_receiver(void *pdev)
 {
 	u32 alloc_size;
 	int i;
-	int j;
-	u32 py_buf_cnt = 2;
 
 	vf_receiver_init(&dvel_vf_recv, DVEL_RECV_NAME,
 			&dvel_vf_receiver, &dvel_vf_recv);
@@ -3168,122 +3367,6 @@ void amdv_init_receiver(void *pdev)
 	}
 
 	if (is_aml_hw5()) {
-		if (is_aml_t3x()) {
-			for (i = 0; i < DMA_BUF_CNT; i++) {
-				lut_dma_info[i].dma_total_size =
-					(top1_lut_num + top2_lut_num) * LUT_SIZE;
-				lut_dma_info[i].dma_top2_size = top2_lut_num * LUT_SIZE;
-				alloc_size =
-				(lut_dma_info[i].dma_total_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-				lut_dma_info[i].dma_vaddr = dma_alloc_coherent(&amdv_pdev->dev,
-					alloc_size, &lut_dma_info[i].dma_paddr, GFP_KERNEL);
-
-				lut_dma_info[i].dma_paddr_top2 =
-					lut_dma_info[i].dma_paddr + top1_lut_num * LUT_SIZE;
-				lut_dma_info[i].dma_vaddr_top2 =
-					lut_dma_info[i].dma_vaddr + top1_lut_num * LUT_SIZE;
-				//pr_info("dma_vaddr %px %x,total %d,alloc size %d,top2 %px %x\n",
-				//		lut_dma_info[i].dma_vaddr,
-				//		lut_dma_info[i].dma_paddr,
-				//		lut_dma_info[i].dma_total_size,
-				//		alloc_size,
-				//		lut_dma_info[i].dma_vaddr_top2,
-				//		lut_dma_info[i].dma_paddr_top2);
-			}
-		} else if (is_aml_t6w() || is_aml_t6x()) {/*top1 and top2 lut dma are separated*/
-			for (i = 0; i < DMA_BUF_CNT; i++) {
-				lut_dma_info[i].dma_top1_size = top1_lut_num * LUT_SIZE;
-				alloc_size =
-				(lut_dma_info[i].dma_top1_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-				lut_dma_info[i].dma_vaddr = dma_alloc_coherent(&amdv_pdev->dev,
-					alloc_size, &lut_dma_info[i].dma_paddr, GFP_KERNEL);
-
-				//pr_info("top1 dma_vaddr %px %x,size %d,alloc size %d\n",
-				//		lut_dma_info[i].dma_vaddr,
-				//		lut_dma_info[i].dma_paddr,
-				//		lut_dma_info[i].dma_top1_size,
-				//		alloc_size);
-
-				lut_dma_info[i].dma_top2_size = top2_lut_num * LUT_SIZE;
-				alloc_size =
-				(lut_dma_info[i].dma_top2_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-				lut_dma_info[i].dma_vaddr_top2 = dma_alloc_coherent(&amdv_pdev->dev,
-					alloc_size, &lut_dma_info[i].dma_paddr_top2, GFP_KERNEL);
-
-				//pr_info("dma_vaddr %px %x,size %d,alloc size %d\n",
-				//		lut_dma_info[i].dma_vaddr_top2,
-				//		lut_dma_info[i].dma_paddr_top2,
-				//		lut_dma_info[i].dma_top2_size,
-				//		alloc_size);
-			}
-		}
-
-		dv5_md_hist.hist_size = 256;
-		alloc_size = dv5_md_hist.hist_size;
-		dv5_md_hist.hist_vaddr[0] = dma_alloc_coherent(&amdv_pdev->dev,
-				alloc_size, &dv5_md_hist.hist_paddr[0], GFP_KERNEL);
-
-		dv5_md_hist.hist_vaddr[1] = dma_alloc_coherent(&amdv_pdev->dev,
-						alloc_size, &dv5_md_hist.hist_paddr[1], GFP_KERNEL);
-
-		if ((!(efuse_mode & 2) && !device_disable_pd)) {
-			if (is_aml_t3x())
-				py_buf_cnt = PYRAMID_BUF_CNT;
-			else if (is_aml_t6w() || is_aml_t6x())
-				py_buf_cnt = 2;
-
-			for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
-				alloc_size = py_size[0] + py_size[1] + py_size[2] +
-					py_size[3] + py_size[4] + py_size[5] +
-					py_size[6];
-				py_addr[i].py_vaddr[0] = dma_alloc_coherent(&amdv_pdev->dev,
-					alloc_size,
-					&py_addr[i].top1_py_paddr[0], GFP_KERNEL);
-				if (py_addr[i].py_vaddr[0])
-					memset(py_addr[i].py_vaddr[0], 0, alloc_size);
-				else
-					pr_err("dma alloc top1_py error\n");
-				for (j = 1; j < 7; j++) {
-					py_addr[i].py_vaddr[j] = py_addr[i].py_vaddr[j - 1] +
-						py_size[j - 1];
-					py_addr[i].top1_py_paddr[j] =
-						py_addr[i].top1_py_paddr[j - 1] + py_size[j - 1];
-				}
-				for (j = 0; j < 7; j++) {
-					py_addr[i].top1_py_size[j] = py_size[j];
-					if (py_addr[i].py_vaddr[j]) {
-						//pr_info("pyup_vaddr %px %llx, alloc size %d\n",
-							//py_addr[i].py_vaddr[j],
-							//py_addr[i].top1_py_paddr[j],
-							//py_addr[i].top1_py_size[j]);
-					} else {
-						pr_err("dma alloc top1_py error\n");
-					}
-				}
-			}
-			if (is_aml_t6w() || is_aml_t6x()) {
-				for (i = 0; i < TOP_BUF_CNT; i++) {
-					/*corep pyup max size 512x288*/
-					top_info.up_buf[i].pyup_size =
-					is_aml_t6w() ? PY_UP_SIZE_6 : PY_UP_SIZE_7;
-					alloc_size = top_info.up_buf[i].pyup_size;
-					top_info.up_buf[i].pyup_vaddr =
-						dma_alloc_coherent(&amdv_pdev->dev,
-						alloc_size,
-						&top_info.up_buf[i].pyup_paddr, GFP_KERNEL);
-					if (top_info.up_buf[i].pyup_vaddr) {
-						memset(top_info.up_buf[i].pyup_vaddr, 0,
-							alloc_size);
-						//pr_info("pyup_vaddr %px %x, alloc size %d\n",
-						//		top_info.up_buf[i].pyup_vaddr,
-						//		top_info.up_buf[i].pyup_paddr,
-						//		alloc_size);
-					} else {
-						pr_err("dma alloc pyup error\n");
-					}
-				}
-			}
-		}
 		/*debug fix data, alloc memory, default disable*/
 		if (fix_data)
 			fixed_buf_config();
@@ -8569,7 +8652,7 @@ void calculate_gdbs_delay(struct vframe_s *vf, u32 w, u32 h)
 #endif
 		if (frc_latency == -2) {/*frc unstable, not update backlight*/
 			final_backlight_delay_vsync = MAX_DELAY;
-		} else if (frc_latency > 0) {
+		} else if (frc_latency > 0 && frc_latency < MAX_DELAY) {
 			final_backlight_delay_vsync = frc_latency + 1;
 			/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
 			/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
@@ -17236,7 +17319,7 @@ static long amdolby_vision_ioctl(struct file *file,
 static long amdolby_vision_compat_ioctl(struct file *file, unsigned int cmd,
 	unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = amdolby_vision_ioctl(file, cmd, arg);

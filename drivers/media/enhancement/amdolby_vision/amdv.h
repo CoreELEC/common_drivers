@@ -1516,4 +1516,6 @@ void check_pr_enabled_in_reg(u32 *p_reg_top1, u32 *p_reg_top1b);
 int get_support_max_level(void);
 bool vf_is_fel(struct vframe_s *vf);
 void calculate_gdbs_delay(struct vframe_s *vf, u32 w, u32 h);
+void amdv_alloc_mem(void);
+void amdv_free_mem(void);
 #endif

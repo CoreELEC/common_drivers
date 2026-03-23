@@ -171,6 +171,12 @@ enum OSD_INDEX {
 	OSD_MAX_INDEX = 4
 };
 
+enum vd_module_type_e {
+	module_dpss = 0,
+	module_vc = 1,
+	module_amvideo = 2
+};
+
 struct apo_value_s {
 	u8 content_type;
 	u8 white_point;
@@ -308,5 +314,6 @@ u32 get_hw5_status(struct vframe_s *vf);
 u8 get_dd_align_count(void);
 int amdv_notifier_call_chain(unsigned long val, void *v);
 int register_osd_func(int (*get_osd_enable_status)(u32 index));
+void amdv_mem_alloc_control(enum vd_module_type_e type, int enable);
 
 #endif
