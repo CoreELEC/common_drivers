@@ -76,7 +76,7 @@
 			#clock-cells = <1>;
 			reg = <0xFE420000 0xb0>, <0xFE421000 0x20>;
 			reg-names = "audio_bus", "audio_vad_top";
-			//power-domains = <&pwrdm PDID_A5_AUDIO>;
+			power-domains = <&pwrdm PDID_C4_AUDIO_TOP>;
 			status = "okay";
 		};
 		audiobus: audiobus@FE420000 {
@@ -87,9 +87,8 @@
 			#size-cells = <1>;
 			ranges = <0x0 0xFE420000 0x1000>;
 			chip_id = <0x4c>;
-		//	power-domains = <&pwrdm PDID_T7_AUDIO>;
 			status = "okay";
-
+			power-domains = <&pwrdm PDID_C4_AO_SED>;
 			ddr_manager {
 				compatible =
 					"amlogic, a5-audio-ddr-manager";
@@ -176,7 +175,7 @@
 			"pdm_dclk",
 			"pdm_sysclk";
 		pinctrl-names = "pdm_pins";
-		pinctrl-0 = <&pdmina>;
+		pinctrl-0 = <&pdmin>;
 		src-clk-freq = <491520000>;
 		/* mode 0~4, defalut:1 */
 		filter_mode = <1>;
@@ -247,11 +246,13 @@
 		clocks = <
 			&extclk
 			&extclk
-			&extclk
+			&clkc CLKID_FCLK_DIV4
+			&clkc CLKID_HIFI_PLL
 			&clkaudio CLKID_AUDIO2_PDM_DCLK
 			&clkaudio CLKID_AUDIO2_PDM_SYSCLK
 			&clkaudio CLKID_AUDIO2_VAD_CLK>;
 		clock-names =
+			"rc_pll",
 			"sed_clk_pll",
 			"sysclk_srcpll",
 			"dclk_srcpll",
@@ -290,7 +291,7 @@
 		};
 	};
 	pdmina: pdminpinsa {
-		mux { /* GPIOAO_4  GPIOAO_5*/
+		mux {
 			groups = "pdm_dclk",
 				"pdm_din0";
 			function = "pdm";

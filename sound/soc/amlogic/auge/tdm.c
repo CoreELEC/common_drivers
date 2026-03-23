@@ -627,7 +627,8 @@ static int aml_get_acodec_skew(void)
 	/*defulat skew for adc*/
 	int skew = 4;
 
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_T6W)
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_T6W ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_C4)
 		skew = 5;
 	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_T6X)
 		skew = 3;
@@ -2498,6 +2499,16 @@ static int aml_set_default_tdm_clk(struct aml_tdm *p_tdm)
 	int fmt = SND_SOC_DAIFMT_CBS_CFS | SND_SOC_DAIFMT_I2S
 	| SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CONT;
 
+	clk_name = (char *)__clk_get_name(p_tdm->clk);
+	if (!strcmp(clk_name, "hifi_pll") || !strcmp(clk_name, "t5_hifi_pll") ||
+		!strcmp(clk_name, "hifi1_pll")) {
+		if (p_tdm->syssrc_clk_rate)
+			pll = p_tdm->syssrc_clk_rate;
+		else
+			pll = 1806336 * 1000;
+	}
+	clk_set_rate(p_tdm->clk, pll);
+
 	aml_tdm_set_fmt(p_tdm, fmt, true);
 	/*set default i2s clk for codec sequence*/
 	p_tdm->setting.bclk_lrclk_ratio = 64;
@@ -2512,16 +2523,7 @@ static int aml_set_default_tdm_clk(struct aml_tdm *p_tdm)
 		p_tdm->clk_sel, lrclk_hi / 2, lrclk_hi,
 		p_tdm->chipinfo->use_vadtop);
 
-	clk_name = (char *)__clk_get_name(p_tdm->clk);
-	if (!strcmp(clk_name, "hifi_pll") || !strcmp(clk_name, "t5_hifi_pll") ||
-		!strcmp(clk_name, "hifi1_pll")) {
-		if (p_tdm->syssrc_clk_rate)
-			pll = p_tdm->syssrc_clk_rate;
-		else
-			pll = 1806336 * 1000;
-	}
 
-	clk_set_rate(p_tdm->clk, pll);
 	clk_set_rate(p_tdm->mclk, mclk);
 	clk_prepare_enable(p_tdm->mclk);
 

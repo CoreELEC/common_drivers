@@ -100,6 +100,11 @@ static const struct of_device_id audio_clocks_of_match[] = {
 		.data		= &t6d_audio_clks_init,
 	},
 #endif
+	{
+		.compatible = "amlogic, c4-audio-clocks",
+		.data		= &c4_audio_clks_init,
+	},
+
 	{},
 };
 MODULE_DEVICE_TABLE(of, audio_clocks_of_match);
@@ -114,16 +119,10 @@ static int audio_clocks_probe(struct platform_device *pdev)
 	void __iomem *clk_base2 = NULL;
 	struct audio_clk_init *p_audioclk_init = NULL;
 	int ret;
-	struct regmap *audio_top_vad_regmap;
+	void __iomem *regs;
+	struct resource *res_mem;
 
-	audio_top_vad_regmap = regmap_resource(dev, "audio_vad_top");
-	if (!IS_ERR(audio_top_vad_regmap))
-		/* need gate on vad_top then the audio top could work */
-		regmap_write
-			(audio_top_vad_regmap,
-			(EE_AUDIO2_CLK_GATE_EN0 << 2),
-			0xff);
-
+	//struct regmap *audio_top_vad_regmap;
 	p_audioclk_init = (struct audio_clk_init *)
 		of_device_get_match_data(dev);
 	if (!p_audioclk_init) {
@@ -131,7 +130,34 @@ static int audio_clocks_probe(struct platform_device *pdev)
 			      "check whether to update audio clock chipinfo\n");
 		return -EINVAL;
 	}
-
+	{
+		static struct regmap_config regmap_config = {
+			.reg_bits = 32,
+			.val_bits = 32,
+			.reg_stride = 4,
+		};
+		struct regmap *reg_map;
+		/*get vad top reg*/
+		res_mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+		if (!res_mem)
+			goto clk_base;
+		regs = ioremap(res_mem->start, resource_size(res_mem));
+		if (IS_ERR(regs))
+			return PTR_ERR(regs);
+		regmap_config.max_register = resource_size(res_mem) - 4;
+		regmap_config.name =
+		devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s-%s",
+			np->name, "audio_vad_top");
+		if (!regmap_config.name)
+			return -ENOMEM;
+		reg_map = devm_regmap_init_mmio(&pdev->dev, regs, &regmap_config);
+		if (IS_ERR_OR_NULL(reg_map)) {
+			dev_err(&pdev->dev, "toddr vad regmap failed\n");
+			return -EINVAL;
+		}
+		regmap_write(reg_map, (EE_AUDIO2_CLK_GATE_EN0 << 2), 0xff);
+	}
+clk_base:
 	clk_base = of_iomap(np, 0);
 	if (!clk_base) {
 		dev_err(dev,
