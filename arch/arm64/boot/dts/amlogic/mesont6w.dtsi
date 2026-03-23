@@ -3745,6 +3745,26 @@
 		&dvfs666_cfg
 		&dvfs840_cfg
 		&dvfs840_cfg>;
+	reset_cfg:reset_cfg {
+		reg_level = <0x11>;
+		reg_mask = <0x21>;
+		reg_bit = <2>;
+	};
+
+	capb_reset:capb_reset {
+		reg_level = <0x11>;
+		reg_mask = <0x21>;
+		reg_bit = <1>;
+	};
+
+	dmc_reset:dmc_reset {
+		reg_base = <0xfe340000>;
+		reg_rst = <0x1>;
+		reg_rst1 = <0x2>;
+		reg_sts = <0x88>;
+		reg_bit = <1>;
+		reg_sts1 = <0xcf>;
+	};
 };
 
 #include "mesont6w_cpufreq.dtsi"

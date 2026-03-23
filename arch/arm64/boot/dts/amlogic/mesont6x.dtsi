@@ -4478,6 +4478,36 @@
 		&dvfs666_cfg
 		&dvfs840_cfg
 		&dvfs840_cfg>;
+
+	reset_cfg:reset_cfg {
+		reg_level = <0x11>;
+		reg_mask = <0x21>;
+		reg_bit = <2>;
+	};
+
+	capb_reset:capb_reset {
+		reg_level = <0x11>;
+		reg_mask = <0x21>;
+		reg_bit = <1>;
+	};
+
+	dmc_reset:dmc_reset {
+		/*
+		 * 0xfe034000 can't do ioremap,so start from 0xfe035000
+		 * and remmark the reg bit12
+		 */
+		reg_base = <0xfe035000>;
+		reg_rst = <0x8d>;
+		reg_rst1 = <0x8e>;
+		reg_sts = <0x5b>;
+		reg_sts1 = <0x5f>;
+		reg_sts2 = <0x63>;
+		reg_sts3 = <0x67>;
+		reg_sts4 = <0x83>;
+		reg_sts5 = <0x87>;
+		reg_sts6 = <0x8b>;
+		reg_bit = <0>;
+	};
 };
 
 #include "mesont6x_cpufreq.dtsi"
