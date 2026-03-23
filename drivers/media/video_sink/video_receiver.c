@@ -602,6 +602,11 @@ static int  common_toggle_frame(struct video_recv_s *ins,
 					common_vf_put(ins, ins->original_vf);
 				}
 			} else {
+				if (debug_flag & DEBUG_FLAG_PRINT_FRAME_DETAIL)
+					pr_info("toggle drop:recv_name=%s, vf=%p(%px), frame_index=%d\n",
+						ins->recv_name,
+						ins->original_vf, ins->original_vf,
+						ins->original_vf->frame_index);
 				common_vf_put(ins, ins->original_vf);
 			}
 		} else {
@@ -845,6 +850,10 @@ static struct vframe_s *recv_common_dequeue_frame(struct video_recv_s *ins,
 					if (ret < 0)
 						return NULL;
 				}
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+				if (ins->cur_buf && glayer_info[0].display_path_id == ins->path_id)
+					put_vfm_to_frc(ins->cur_buf);
+#endif
 				toggle_vf = vf;
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 #ifdef AMLOGIC_MEDIA_DPSS
@@ -905,10 +914,6 @@ static struct vframe_s *recv_common_dequeue_frame(struct video_recv_s *ins,
 		drop_count++;
 		vf = common_vf_peek(ins);
 	}
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (ins->cur_buf && glayer_info[0].display_path_id == ins->path_id)
-		put_vfm_to_frc(ins->cur_buf);
-#endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 	if (toggle_vf && IS_DI_POST(toggle_vf->type) &&
