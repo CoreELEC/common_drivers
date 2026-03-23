@@ -35,4 +35,6 @@ void dmc_ge2d_test_notifier(void);
 void ge2d_runtime_pwr(int enable);
 int ge2d_irq_init(int irq);
 void dump_ge2d_regs(void);
+void get_canvas_info(u32 canvas_index, ulong *addr, u32 *stride,
+		     u32 *stride_mode, u32 *height);
 #endif

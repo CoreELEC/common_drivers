@@ -22,6 +22,13 @@ enum ge2d_memtype_s {
 	AML_GE2D_MEM_INVALID,
 };
 
+/* set the mem_sec field of struct ge2d_config_s */
+enum ge2d_secure_s {
+	AML_GE2D_NORMAL, /* non-secure */
+	AML_GE2D_SEC_BASIC, /* basic secure */
+	AML_GE2D_SEC_ENHANCED, /* enhanced secure */
+};
+
 #define MAX_PLANE         4
 #define MAX_BITBLT_WORK_CONFIG 4
 #define DEFAULT_MAX_GE2D_CMD  32   /* 64 */
@@ -502,6 +509,7 @@ struct ge2d_src2_dst_data_s {
 	unsigned int src2_stride_mode[MAX_PLANE];
 	unsigned long dst_phyaddr[MAX_PLANE];
 	unsigned int dst_stride[MAX_PLANE];
+	unsigned int dst_height[MAX_PLANE];
 	unsigned int dst_stride_mode[MAX_PLANE];
 	unsigned char dst_rpt;
 	unsigned char dst_swap64bit;
@@ -785,6 +793,8 @@ struct ge2d_queue_item_s {
 	ktime_t time_process_done;
 };
 
+typedef int (*ge2d_callback_t)(void *para, u32 para_size, ulong phys_addr, u32 buf_size);
+
 struct ge2d_context_s {
 	/* connect all process in one queue for RR process. */
 	struct list_head   list;
@@ -799,6 +809,8 @@ struct ge2d_context_s {
 	int				ge2d_request_exit;
 	spinlock_t		lock;	/* for get and release item. */
 	int ge2d_state;
+	/* to invoke the TEE interface for ge2d enhanced secure process */
+	ge2d_callback_t callback;
 };
 
 struct ge2d_event_s {

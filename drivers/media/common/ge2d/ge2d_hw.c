@@ -341,8 +341,8 @@ void ge2d_canv_config(u32 index, ulong *addr, u32 *stride, u32 *stride_mode,
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-static void get_canvas_info(u32 canvas_index, ulong *addr, u32 *stride,
-			    u32 *stride_mode)
+void get_canvas_info(u32 canvas_index, ulong *addr, u32 *stride,
+		     u32 *stride_mode, u32 *height)
 {
 	struct canvas_s canvas;
 	int i, tmp_index = 0;
@@ -359,6 +359,8 @@ static void get_canvas_info(u32 canvas_index, ulong *addr, u32 *stride,
 			addr[i] = canvas.addr;
 			stride[i] = canvas.width;
 			stride_mode[i] = canvas.blkmode;
+			if (height)
+				height[i] = canvas.height;
 		}
 	}
 }
@@ -409,7 +411,7 @@ void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg, unsigned int mask)
 		/* if virtual canvas is used, get info from it */
 		if (cfg->canaddr)
 			get_canvas_info(cfg->canaddr, cfg->phy_addr,
-					cfg->stride, cfg->stride_mode);
+					cfg->stride, cfg->stride_mode, NULL);
 #endif
 		ge2d_canv_config(GE2D_SRC1_INDEX,
 				 cfg->phy_addr,
@@ -564,10 +566,10 @@ void ge2d_set_src2_dst_data(struct ge2d_src2_dst_data_s *cfg, unsigned int mask)
 		if (cfg->src2_canaddr)
 			get_canvas_info(cfg->src2_canaddr, cfg->src2_phyaddr,
 					cfg->src2_stride,
-					cfg->src2_stride_mode);
+					cfg->src2_stride_mode, NULL);
 		if (cfg->dst_canaddr)
 			get_canvas_info(cfg->dst_canaddr, cfg->dst_phyaddr,
-					cfg->dst_stride, cfg->dst_stride_mode);
+					cfg->dst_stride, cfg->dst_stride_mode, NULL);
 #endif
 
 		ge2d_canv_config(GE2D_SRC2_INDEX,
