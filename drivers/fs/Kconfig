@@ -1,0 +1,10 @@
+menu "Meson filesystem modification for common code"
+
+config AMLOGIC_INCFS_FIX
+	bool "skip incfs invalid data which is pos > size"
+	depends on INCREMENTAL_FS
+	default n
+	help
+	  skip incfs invalid data which is pos > size.
+
+endmenu

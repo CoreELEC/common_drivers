@@ -1,0 +1,127 @@
+From 7987f3fb5c27982725e9e4a08c7ec40280a78d09 Mon Sep 17 00:00:00 2001
+From: Jiucheng Xu <jiucheng.xu@amlogic.com>
+Date: Tue, 24 Mar 2026 09:49:06 +0800
+Subject: [PATCH] incfs: userspace pass issue data skip it [1/1]
+
+PD#SWPL-260119
+
+Problem:
+userspace pass wrong data
+
+Solution:
+skip wrong data process
+
+Verify:
+ohm
+
+Change-Id: I0eb3c4d402ed3996eb2890ff3111614cf4fd713d
+Signed-off-by: Jiucheng Xu <jiucheng.xu@amlogic.com>
+---
+ fs/incfs/data_mgmt.c | 44 ++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 44 insertions(+)
+
+diff --git a/fs/incfs/data_mgmt.c b/fs/incfs/data_mgmt.c
+index 09959fac6c301..c6b62f169f34b 100644
+--- a/fs/incfs/data_mgmt.c
++++ b/fs/incfs/data_mgmt.c
+@@ -799,6 +799,20 @@ static bool is_data_block_present(struct data_file_block *block)
+ 	       (block->db_stored_size != 0);
+ }
+ 
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++static bool is_pos_valid(struct data_file *df, struct data_file_block *dfb)
++{
++	struct file *f = df->df_backing_file_context->bc_file;
++	loff_t size = f->f_inode->i_size;
++	loff_t pos = dfb->db_backing_file_data_offset;
++
++	if (pos > size)
++		pr_err("pos %llu > %llu\n", pos, size);
++
++	return pos < size;
++}
++#endif
++
+ static void convert_data_file_block(struct incfs_blockmap_entry *bme,
+ 				    struct data_file_block *res_block)
+ {
+@@ -939,14 +953,24 @@ int incfs_get_filled_blocks(struct data_file *df,
+ 
+ 		convert_data_file_block(bme + i, &dfb);
+ 
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++		if (is_data_block_present(&dfb) &&
++		    is_pos_valid(df, &dfb)) {
++#else
+ 		if (is_data_block_present(&dfb)) {
++#endif
+ 			if (arg->index_out >= df->df_data_block_count)
+ 				++hash_blocks_filled;
+ 			else
+ 				++data_blocks_filled;
+ 		}
+ 
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++		if (is_data_block_present(&dfb) == in_range &&
++		    is_pos_valid(df, &dfb))
++#else
+ 		if (is_data_block_present(&dfb) == in_range)
++#endif
+ 			continue;
+ 
+ 		if (!in_range) {
+@@ -1144,7 +1168,12 @@ static int wait_for_data_block(struct data_file *df, int block_index,
+ 		return error;
+ 
+ 	/* If the block was found, just return it. No need to wait. */
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++	if (is_data_block_present(&block) &&
++	    is_pos_valid(df, &block)) {
++#else
+ 	if (is_data_block_present(&block)) {
++#endif
+ 		*res_block = block;
+ 		if (timeouts && timeouts->min_time_us) {
+ 			*delayed_min_us = timeouts->min_time_us;
+@@ -1208,7 +1237,12 @@ static int wait_for_data_block(struct data_file *df, int block_index,
+ 	 */
+ 	error = get_data_file_block(df, block_index, &block);
+ 	if (!error) {
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++		if (is_data_block_present(&block) &&
++		    is_pos_valid(df, &block))
++#else
+ 		if (is_data_block_present(&block))
++#endif
+ 			*res_block = block;
+ 		else {
+ 			/*
+@@ -1402,7 +1436,12 @@ int incfs_process_new_data_block(struct data_file *df,
+ 
+ 	if (error)
+ 		return error;
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++	if (is_data_block_present(&existing_block) &&
++	    is_pos_valid(df, &existing_block))
++#else
+ 	if (is_data_block_present(&existing_block))
++#endif
+ 		/* Block is already present, nothing to do here */
+ 		return 0;
+ 
+@@ -1415,7 +1454,12 @@ int incfs_process_new_data_block(struct data_file *df,
+ 	if (error)
+ 		goto out_up_write;
+ 
++#ifdef CONFIG_AMLOGIC_INCFS_FIX
++	if (is_data_block_present(&existing_block) &&
++	    is_pos_valid(df, &existing_block))
++#else
+ 	if (is_data_block_present(&existing_block))
++#endif
+ 		goto out_up_write;
+ 
+ 	error = mutex_lock_interruptible(&bfc->bc_mutex);
+-- 
+2.52.0
+
