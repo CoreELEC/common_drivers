@@ -955,7 +955,7 @@ static struct vframe_s *recv_common_dequeue_frame(struct video_recv_s *ins,
 	}
 #endif
 
-	if (is_frc_vf(toggle_vf, ins)) {
+	if (ins->cur_buf && is_frc_vf(toggle_vf, ins)) {
 		toggle_vf->type_backup = toggle_vf->type;
 		toggle_vf->vf_ext = ins->cur_buf;
 		/* if axis changed, turn off frc link and do not use frc vf */
