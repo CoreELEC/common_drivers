@@ -1477,6 +1477,7 @@ void _ins_polling_send_ready(struct dpss_ch_s *pch)
 		lock_ret = mutex_trylock(&pch->c.ch_lock);
 		if (lock_ret)
 			break;
+		usleep_range(100, 200);
 	}
 
 	if (!lock_ret) {
