@@ -438,7 +438,7 @@ static int enable_video_discontinue_report = 1;
 static struct amvideocap_req *capture_frame_req;
 #endif
 
-u32 smallwindow_link_enable = 1;
+u32 smallwindow_link_enable;
 u32 smallwindow_link_h = 1080;
 
 u32 frc_delay_enable = 1;
