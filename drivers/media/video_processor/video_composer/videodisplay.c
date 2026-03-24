@@ -1049,6 +1049,13 @@ static void vc_vf_put(struct vframe_s *vf, void *op_arg)
 	vc_notify_msg_to_mediaproxy(vf, dev->index, MEDIA_VIDEO_METRICS_FRAME_SIGNAFENCE_INFO, ts);
 #endif
 
+#if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)
+	ATRACE_COUNTER("video_composer_put_vf_frame_index", vf->frame_index);
+	ATRACE_COUNTER("video_composer_put_vf_frame_index", 0);
+	ATRACE_COUNTER("video_composer_put_vf_timestamp", div_u64(vf->timestamp, 1000000000));
+	ATRACE_COUNTER("video_composer_put_vf_timestamp", 0);
+#endif
+
 	if (dev->is_drm_enable) {
 		if (vf->flag & VFRAME_FLAG_FAKE_FRAME) {
 			vc_print(dev->index, PRINT_OTHER, "put: fake frame\n");
@@ -1076,9 +1083,16 @@ static void vc_vf_put(struct vframe_s *vf, void *op_arg)
 					"%s: mpb_buf is NULL.\n",
 					__func__);
 			}
-			if (vf->vc_private)
+			if (vf->vc_private) {
 				vf->vc_private->unlock_buffer_cb(mpb_buf);
+				vc_private_q_recycle(dev, vf->vc_private);
+				vf->vc_private = NULL;
+			}
 		} else {
+			if (vf->vc_private) {
+				vc_private_q_recycle(dev, vf->vc_private);
+				vf->vc_private = NULL;
+			}
 			dma_buf_put((struct dma_buf *)file_vf);
 			dma_fence_signal(vd_prepare_tmp->release_fence);
 			dma_fence_put(vd_prepare_tmp->release_fence);
@@ -1090,26 +1104,13 @@ static void vc_vf_put(struct vframe_s *vf, void *op_arg)
 
 		dev->fput_count++;
 		vd_prepare_data_q_put(dev, vd_prepare_tmp);
-		if (vf->vc_private) {
-			vc_private_q_recycle(dev, vf->vc_private);
-			vf->vc_private = NULL;
-		}
-		vc_print(dev->index, PRINT_OTHER | PRINT_PATTERN,
-			"%s: frame_index=%d, put_count=%lld.\n",
-			__func__, vf->frame_index, dev->fput_count);
 	} else {
 		vf_pop_display_q(dev, display_vf);
 		videocomposer_vf_put(vf, op_arg);
 	}
+	//all the vframe param used must beforce fence release
 
-#if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)
-	ATRACE_COUNTER("video_composer_put_vf_frame_index", vf->frame_index);
-	ATRACE_COUNTER("video_composer_put_vf_frame_index", 0);
-	ATRACE_COUNTER("video_composer_put_vf_timestamp", div_u64(vf->timestamp, 1000000000));
-	ATRACE_COUNTER("video_composer_put_vf_timestamp", 0);
-#endif
-
-	vc_print(dev->index, PRINT_FENCE, "%s end.\n", __func__);
+	vc_print(dev->index, PRINT_FENCE, "%s end, put_count=%lld.\n", __func__, dev->fput_count);
 }
 
 static int vc_event_cb(int type, void *data, void *private_data)

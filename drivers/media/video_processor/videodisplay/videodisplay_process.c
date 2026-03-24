@@ -3963,7 +3963,12 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 	if (vf->rendered)
 		vc_notify_msg_to_mediaproxy(dev, vf, MEDIA_VIDEO_METRICS_FRAME_SIGNAFENCE_INFO, ts);
 #endif
-
+#if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)
+	ATRACE_COUNTER("video_composer_put_vf_frame_index", vf->frame_index);
+	ATRACE_COUNTER("video_composer_put_vf_frame_index", 0);
+	ATRACE_COUNTER("video_composer_put_vf_timestamp", div_u64(vf->timestamp, 1000000000));
+	ATRACE_COUNTER("video_composer_put_vf_timestamp", 0);
+#endif
 	if (dev->is_drm_enable) {
 		if (vf->flag & VFRAME_FLAG_FAKE_FRAME) {
 			vd_print(dev->index, PRINT_OTHER, "put: fake frame\n");
@@ -3982,6 +3987,16 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 		if (!file_vf)
 			vd_print(dev->index, PRINT_ERROR, "put: file error!!!\n");
 
+		if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
+			vd_print(dev->index, PRINT_OTHER, "put enhance vf:%px\n", vf->enhance_vf);
+			if (!kfifo_put(&dev->free_q, vf->enhance_vf))
+				vd_print(dev->index, PRINT_ERROR, "put free_q is full\n");
+		}
+
+		vd_print(dev->index, PRINT_OTHER | PRINT_PATTERN,
+			"%s: frame_index=%d, repeat_count=%d.\n",
+			__func__, vf->frame_index, vf->repeat_count);
+
 		for (i = 0; i <= repeat_count; i++) {
 			if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_DMA) {
 				vd_print(dev->index, PRINT_FENCE, "put dma buffer!!!\n");
@@ -3991,46 +4006,37 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 						"%s: mpb_buf is NULL.\n",
 						__func__);
 				}
-				vf->vc_private->unlock_buffer_cb(mpb_buf);
+				if (vf->vc_private) {
+					vf->vc_private->unlock_buffer_cb(mpb_buf);
+					vd_private_q_recycle(dev, vf->vc_private);
+					vf->vc_private = NULL;
+				}
 			} else {
+				vd_print(dev->index, PRINT_FENCE,
+					"%s: frame_index=%d, release_fence = %px\n",
+					__func__,
+					vf->frame_index,
+					vd_prepare_tmp->release_fence);
+
+				if (vf->vc_private) {
+					vd_private_q_recycle(dev, vf->vc_private);
+					vf->vc_private = NULL;
+				}
 				dma_buf_put((struct dma_buf *)file_vf);
 				dma_fence_signal(vd_prepare_tmp->release_fence);
 				dma_fence_put(vd_prepare_tmp->release_fence);
-				vd_print(dev->index, PRINT_FENCE,
-					"%s: release_fence = %px\n",
-					__func__,
-					vd_prepare_tmp->release_fence);
 			}
 			dev->fput_count++;
 			total_put_count++;
 		}
+		//all the vframe param used must beforce fence release
 		vd_prepare_data_q_put(dev, vd_prepare_tmp);
-		if (vf->vc_private) {
-			vd_private_q_recycle(dev, vf->vc_private);
-			vf->vc_private = NULL;
-		}
-		if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
-			vd_print(dev->index, PRINT_OTHER, "put enhance vf:%px\n", vf->enhance_vf);
-			if (!kfifo_put(&dev->free_q, vf->enhance_vf))
-				vd_print(dev->index, PRINT_ERROR, "put free_q is full\n");
-		}
-		vd_print(dev->index, PRINT_OTHER | PRINT_PATTERN,
-			"%s: frame_index=%d, repeat_count=%d, put_count=%lld.\n",
-			__func__,
-			vf->frame_index,
-			vf->repeat_count,
-			dev->fput_count);
 	} else {
 		vf_pop_display_q(dev, display_vf);
 		videocomposer_vf_put(vf, op_arg);
 	}
 
-#if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)
-	ATRACE_COUNTER("video_composer_put_vf_frame_index", vf->frame_index);
-	ATRACE_COUNTER("video_composer_put_vf_frame_index", 0);
-	ATRACE_COUNTER("video_composer_put_vf_timestamp", div_u64(vf->timestamp, 1000000000));
-	ATRACE_COUNTER("video_composer_put_vf_timestamp", 0);
-#endif
+	vd_print(dev->index, PRINT_FENCE, "put end, put_count=%lld.\n", dev->fput_count);
 }
 
 static struct vframe_s *vd_vf_get(void *op_arg)
