@@ -1543,6 +1543,7 @@ static void vdin_scale_and_cutwin_handle(struct vdin_dev_s *devp)
 	u32 vdin0_max_w_h;
 	u32 div_h = 1, div_v = 1;
 	u32 h_active, v_active;
+	const struct vinfo_s *vinfo = NULL;
 
 	if (!devp || !devp->fmt_info_p)
 		return;
@@ -1558,6 +1559,12 @@ static void vdin_scale_and_cutwin_handle(struct vdin_dev_s *devp)
 	h_active = devp->fmt_info_p->h_active /
 			(devp->prop.decimation_ratio + 1);
 	v_active = devp->fmt_info_p->v_active;
+
+	vinfo = get_current_vinfo();
+	if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL) {
+		if (vinfo->ufr_mode && devp->v_active > vinfo->height)
+			devp->prop.scaling4h = vinfo->height;
+	}
 
 	if (devp->dv_hw5.hw5_ctl) {
 		if (!devp->dv_hw5.dw_out_w && !devp->dv_hw5.dw_out_h) {
@@ -7500,6 +7507,22 @@ static int vdin_get_vinfo_notify_callback(struct notifier_block *block,
 
 	if (event != VOUT_EVENT_MODE_CHANGE)
 		return 0;
+
+	if (devp->vdin_function_sel & VDIN_SELF_STOP_START &&
+		devp->flags & VDIN_FLAG_DEC_STARTED) {
+		if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL) {
+			if (vinfo->ufr_mode && devp->v_active > vinfo->height) {
+				mutex_lock(&devp->fe_lock);
+				devp->self_stop_start = 1;
+				vdin_self_stop_dec(devp);
+				vdin_self_start_dec(devp);
+				devp->self_stop_start = 0;
+				pr_info("vout mode change need to self start_dec\n");
+				mutex_unlock(&devp->fe_lock);
+				return 0;
+			}
+		}
+	}
 
 	devp->vinfo_std_duration = vinfo->sync_duration_num / vinfo->sync_duration_den;
 	devp->vrr_data.cur_vrr_status = get_cur_vrr_status(devp);
