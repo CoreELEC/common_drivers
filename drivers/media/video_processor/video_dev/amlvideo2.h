@@ -47,6 +47,22 @@ enum aml_quantization_range {
 	QUANTIZATION_MAX
 };
 
+#ifndef MAX
+#define MAX(a, b) ({ \
+	typeof(a) _a = a; \
+	typeof(b) _b = b; \
+	_a > _b ? _a : _b; \
+	})
+#endif // MAX
+
+#ifndef MIN
+#define MIN(a, b) ({ \
+			typeof(a) _a = a; \
+			typeof(b) _b = b; \
+			_a < _b ? _a : _b; \
+		})
+#endif // MIN
+
 /* void vf_inqueue(struct vframe_s *vf, const char *receiver); */
 void get_vdx_axis(u32 index, int *buf);
 void get_vdx_real_axis(u32 index, int *buf);

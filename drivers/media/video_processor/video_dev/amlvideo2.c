@@ -93,6 +93,9 @@
 #define VDIN1_SCALE_W 480
 #define VDIN1_SCALE_H 270
 
+#define FP_SHIFT 16
+#define FP_ONE BIT(FP_SHIFT)
+
 /* Wake up at about 30 fps */
 #define WAKE_NUMERATOR 30
 #define WAKE_DENOMINATOR 1001
@@ -252,6 +255,13 @@ enum aml_receiver_type_e {
 	AML_RECEIVER_PPMGR,
 	AML_RECEIVER_DI,
 	AML_RECEIVER_MAX
+};
+
+struct rect_t {
+	int x;
+	int y;
+	int w;
+	int h;
 };
 
 enum aml_screen_mode_e {
@@ -1143,6 +1153,69 @@ static void output_axis_adjust(int src_w, int src_h, int *dst_w, int *dst_h,
 
 	if (amlvideo2_dbg_en & 4)
 		pr_info("%s: dst_w = %d, dst_h = %d.\n", __func__, *dst_w, *dst_h);
+}
+
+static int calc_src_crop_fixed(int rect_x, int rect_y, int rect_w, int rect_h,
+	int win_x1, int win_y1, int win_x2, int win_y2,
+	int src_w, int src_h,
+	struct rect_t *out)
+{
+	int win_w = win_x2 - win_x1;
+	int win_h = win_y2 - win_y1;
+
+	if (win_w <= 0 || win_h <= 0)
+		return -1;
+
+	// Step1: rect ∩ window
+	int crop_x1 = MAX(rect_x, win_x1);
+	int crop_y1 = MAX(rect_y, win_y1);
+	int crop_x2 = MIN(rect_x + rect_w, win_x2);
+	int crop_y2 = MIN(rect_y + rect_h, win_y2);
+
+	if (crop_x1 >= crop_x2 || crop_y1 >= crop_y2)
+		return -1;
+
+	// Step2: switch to window pixel coordinates
+	int win_crop_x = crop_x1 - win_x1;
+	int win_crop_y = crop_y1 - win_y1;
+	int win_crop_w = crop_x2 - crop_x1;
+	int win_crop_h = crop_y2 - crop_y1;
+
+	// Step3: scale
+	u32 scale_x = ((u32)src_w << FP_SHIFT) / win_w;
+	u32 scale_y = ((u32)src_h << FP_SHIFT) / win_h;
+
+	// Step4: switch to src
+	int src_x = (win_crop_x * scale_x) >> FP_SHIFT;
+	int src_y = (win_crop_y * scale_y) >> FP_SHIFT;
+	int src_w_crop = (win_crop_w * scale_x) >> FP_SHIFT;
+	int src_h_crop = (win_crop_h * scale_y) >> FP_SHIFT;
+
+	// Step5: area protect
+	if (src_x < 0)
+		src_x = 0;
+	if (src_y < 0)
+		src_y = 0;
+
+	if (src_x + src_w_crop > src_w)
+		src_w_crop = src_w - src_x;
+
+	if (src_y + src_h_crop > src_h)
+		src_h_crop = src_h - src_y;
+
+	// Step6: aligned
+	src_x &= ~1;
+	src_y &= ~1;
+	src_w_crop &= ~1;
+	src_h_crop &= ~1;
+
+	// output
+	out->x = src_x;
+	out->y = src_y;
+	out->w = src_w_crop;
+	out->h = src_h_crop;
+
+	return 0;
 }
 
 int amlvideo2_ge2d_interlace_two_canvasaddr_process(struct vframe_s *vf,
@@ -2495,6 +2568,9 @@ int amlvideo2_ge2d_interlace_one_canvasaddr_process(struct vframe_s *vf,
 	int output_canvas = output->canvas_id;
 	bool is_tvp = false;
 	int secure_size = 0;
+	int axis[4];
+	struct rect_t rect;
+	int ret = -1;
 
 	src_top = 0;
 	src_left = 0;
@@ -2549,10 +2625,25 @@ int amlvideo2_ge2d_interlace_one_canvasaddr_process(struct vframe_s *vf,
 
 	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
 	if (node->vid == 0) {
-		src_top = src_top * vf->height / fh->vinfo_data.height;
-		src_left = src_left * vf->width / fh->vinfo_data.width;
-		src_width = src_width * vf->width / fh->vinfo_data.width;
-		src_height = src_height * vf->height / fh->vinfo_data.height;
+		get_vdx_real_axis(0, axis);
+		ret = calc_src_crop_fixed(node->crop_info.source_left_crop,
+			node->crop_info.source_top_crop,
+			node->crop_info.source_width_crop,
+			node->crop_info.source_height_crop,
+			axis[0], axis[1], axis[2] + 1, axis[3] + 1,
+			vf->width, vf->height, &rect);
+		if (ret == 0) {
+			src_top = rect.y;
+			src_left = rect.x;
+			src_width = rect.w;
+			src_height = rect.h;
+		} else {
+			src_top = 0;
+			src_left = 0;
+			src_width = vf->width;
+			src_height = vf->height;
+			pr_info("amlvideo2: crop err,force full pic output\n");
+		}
 	} else if (node->vid == 1) {
 		src_top = 0;
 		src_left = 0;
@@ -2992,6 +3083,9 @@ int amlvideo2_ge2d_interlace_dtv_process(struct vframe_s *vf,
 	int output_canvas = output->canvas_id;
 	bool is_tvp = false;
 	int secure_size = 0;
+	int axis[4];
+	struct rect_t rect;
+	int ret = -1;
 
 	src_top = 0;
 	src_left = 0;
@@ -3048,10 +3142,25 @@ int amlvideo2_ge2d_interlace_dtv_process(struct vframe_s *vf,
 
 	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
 	if (node->vid == 0) {
-		src_top = src_top * vf->height / fh->vinfo_data.height;
-		src_left = src_left * vf->width / fh->vinfo_data.width;
-		src_width = src_width * vf->width / fh->vinfo_data.width;
-		src_height = src_height * vf->height / fh->vinfo_data.height;
+		get_vdx_real_axis(0, axis);
+		ret = calc_src_crop_fixed(node->crop_info.source_left_crop,
+			node->crop_info.source_top_crop,
+			node->crop_info.source_width_crop,
+			node->crop_info.source_height_crop,
+			axis[0], axis[1], axis[2] + 1, axis[3] + 1,
+			vf->width, vf->height, &rect);
+		if (ret == 0) {
+			src_top = rect.y;
+			src_left = rect.x;
+			src_width = rect.w;
+			src_height = rect.h;
+		} else {
+			src_top = 0;
+			src_left = 0;
+			src_width = vf->width;
+			src_height = vf->height;
+			pr_info("amlvideo2: crop err,force full pic output\n");
+		}
 	} else if (node->vid == 1) {
 		src_top = 0;
 		src_left = 0;
@@ -3744,6 +3853,9 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 	int output_canvas = output->canvas_id;
 	bool is_tvp = false;
 	int secure_size = 0;
+	int axis[4];
+	struct rect_t rect;
+	int ret = -1;
 
 	if (amlvideo2_dbg_en & 4) {
 		pr_info("vf->width = %d, vf->height = %d\n",
@@ -3803,10 +3915,25 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 
 	//amlvideo2.0 screencap, ioctl crop is relative to vinfo
 	if (node->vid == 0) {
-		src_top = src_top * vf->height / fh->vinfo_data.height;
-		src_left = src_left * vf->width / fh->vinfo_data.width;
-		src_width = src_width * vf->width / fh->vinfo_data.width;
-		src_height = src_height * vf->height / fh->vinfo_data.height;
+		get_vdx_real_axis(0, axis);
+		ret = calc_src_crop_fixed(node->crop_info.source_left_crop,
+			node->crop_info.source_top_crop,
+			node->crop_info.source_width_crop,
+			node->crop_info.source_height_crop,
+			axis[0], axis[1], axis[2] + 1, axis[3] + 1,
+			vf->width, vf->height, &rect);
+		if (ret == 0) {
+			src_top = rect.y;
+			src_left = rect.x;
+			src_width = rect.w;
+			src_height = rect.h;
+		} else {
+			src_top = 0;
+			src_left = 0;
+			src_width = vf->width;
+			src_height = vf->height;
+			pr_info("amlvideo2: crop err,force full pic output\n");
+		}
 	} else if (node->vid == 1) {
 		src_top = 0;
 		src_left = 0;
