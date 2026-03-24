@@ -585,22 +585,12 @@ void vdin_frame_lock_check(struct vdin_dev_s *devp, int state)
 	}
 }
 
-#ifdef CONFIG_AMLOGIC_LCD
 static enum hrtimer_restart vdin_game_frc_timer_callback(struct hrtimer *timer)
 {
-	// struct vdin_dev_s *devp =
-	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
-
-	if (!pdrv)
-		return HRTIMER_NORESTART;
-
-	lcd_mute_set(pdrv, 0);
-	// if (devp->debug.vdin_dbg_en)
-	// pr_info("%s lcd unmute done\n", __func__);
-
+	// unmute vpp
+	set_video_mute(FRC_MUTE_SET, false);
 	return HRTIMER_NORESTART;
 }
-#endif
 
 void vdin_game_frc_check(struct vdin_dev_s *devp, int state)
 {
@@ -5354,9 +5344,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	void __user *user_body_ptr = NULL;
 	void __user *user_buf = NULL;
 #endif
-#ifdef CONFIG_AMLOGIC_LCD
-	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
-#endif
 	/* Get the per-device structure that contains this cdev */
 	devp = file->private_data;
 	if (!devp)
@@ -6425,14 +6412,14 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (devp->debug.bypass_game_frc)
 			break;
 		if (devp->vdin_game_frc != tmp) {
-#ifdef CONFIG_AMLOGIC_LCD
-			lcd_mute_set(pdrv, 1);
+			// frc vpp mute
+			set_video_mute(FRC_MUTE_SET, true);
 			vdin_game_frc_hrtimer.function = vdin_game_frc_timer_callback;
 			if (!devp->game_frc_mute_time)
-				devp->game_frc_mute_time = 1000;
+				devp->game_frc_mute_time = 600;
 			hrtimer_start(&vdin_game_frc_hrtimer,
 				ms_to_ktime(devp->game_frc_mute_time), HRTIMER_MODE_REL);
-#endif
+
 			mutex_lock(&devp->fe_lock);
 			if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
 				devp->flags & VDIN_FLAG_DEC_STARTED) {

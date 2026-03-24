@@ -1871,6 +1871,7 @@ void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vfram
 		dpss_frc_set_deblur(10);
 		set_video_mute(FRC_MUTE_SET, true);
 		game_st->video_mute_en = true;
+		game_st->game_deblur = 64; // 0x40
 		//w_reg_bit(FRC_ME_GCV_EN, 0, 16, 1); // disable clear v-buffer
 		//w_reg_bit(FRC_ME_GCV2_EN, 0, 15, 1);// disable clear v-buffer2
 		//w_reg_bit(FRC_MC_HW_CTRL1, 0, 16, 1); // fhd->4K err mc_fhd_lbuf
@@ -2745,6 +2746,9 @@ int pvpp_display_frc_game(struct vframe_s *vfm,
 		return ret;
 	}
 
+	if (game_st->mc_need_byp_en)
+		return ret;
+
 	//get_nr_buf_idx(vfm, state_st);
 	//frc_cut_win_check(&in_para->win, vfm);
 	if (dpss_dae_frm_cnt_src0 <= state_st->enable_frclink_cnt) {
@@ -2759,6 +2763,7 @@ int pvpp_display_frc_game(struct vframe_s *vfm,
 		if (in_para->vinfo.x_d_size * in_para->vinfo.y_d_size <
 			in_para->vinfo.width * in_para->vinfo.height) {
 			dbg_h1("pvpp_game: litter_win bypass game frc\n");
+			state_st->is_frc_vpp_link = 0;
 			return ret;
 		}
 
@@ -5097,6 +5102,30 @@ void vdin_game_frc_notify(struct game_frc_s *frc_data)
 			game_st->off_game_mode = true;
 			venc_vrr_vdin();
 		}
+	}
+}
+
+void rx_game_frc_notify(void)
+{
+	struct dpss_frc_top_type_s *frc_top;
+	struct dpss_frc_fw_data_s *pfw_data;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	// struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
+
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pchip_st || !pfw_data)
+		return;
+
+	// state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
+	frc_top = &pfw_data->frc_top_type;
+
+	if (frc_top->game_mode) {
+		// game_st->off_game_mode = true;
+		// venc_vrr_vdin();
+		dbg_h0("rx sig chg\n");
+		game_st->mc_need_byp_en = true; // byp mc and dis mc link
 	}
 }
 

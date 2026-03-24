@@ -2385,6 +2385,8 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 	len +=
 		sprintf(buf + len, "game_st->game_deblur\t=%d\n", game_st->game_deblur);
 	len +=
+		sprintf(buf + len, "game_st->mc_need_byp_en\t=%d\n", game_st->mc_need_byp_en);
+	len +=
 		sprintf(buf + len, "ENCL_FRC_CTRL\t=%#X\n", rd_vc(encl_frc_ctrl));
 	len +=
 		sprintf(buf + len, "VENC_VRR_CTRL\t=%#X\n", rd_vc(venc_vrr_ctrl));

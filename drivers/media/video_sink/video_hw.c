@@ -95,6 +95,7 @@
 #endif
 #ifdef AMLOGIC_MEDIA_DPSS
 #include <linux/amlogic/media/dpss/dpss_frc.h>
+#include <linux/amlogic/media/dpss/frc_common_x.h>
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
 #include <linux/amlogic/media/resource_mgr/resourcemanage.h>
@@ -10481,6 +10482,9 @@ void rx_mute_vpp(u8 port_type)
 	if (cur_dev->display_module == S5_DISPLAY_MODULE) {
 		rx_mute_vpp_s5(black_val);
 	} else {
+#ifdef AMLOGIC_MEDIA_DPSS
+		rx_game_frc_notify(); //game memc need
+#endif
 		WRITE_VCBUS_REG(VPP_VD1_CLIP_MISC0, black_val);
 		WRITE_VCBUS_REG(VPP_VD1_CLIP_MISC1, black_val);
 	}

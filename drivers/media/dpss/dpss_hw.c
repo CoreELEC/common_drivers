@@ -166,7 +166,6 @@ unsigned int dpss_dbg_cfg_at_inp_site = 1;// = 1920; //
 module_param_named(dpss_dbg_cfg_at_inp_site, dpss_dbg_cfg_at_inp_site, uint, 0664);
 
 unsigned int dpss_dbg_delay_cnt = 2;
-module_param_named(dpss_dbg_delay_cnt, dpss_dbg_delay_cnt, uint, 0664);
 
 bool dpss_get_h_bypass(void)
 {
@@ -1831,6 +1830,7 @@ void pre_vs_game(void)
 	struct frc_state_s *state_st;
 	struct dpss_frc_fw_data_s *pfw_data;
 	struct dpss_frc_top_type_s *frc_top;
+	struct dpss_game_state_s *game_st;
 	u32 ro_disp_info_0;
 	bool src0_disp_obuf_rdy = 0;
 	unsigned int dpss_frc_vpp_link;
@@ -1859,6 +1859,7 @@ void pre_vs_game(void)
 		return;
 	}
 	state_st = &pchip_st->state_st;
+	game_st = &pchip_st->game_st;
 	frc_int_st = &state_st->frc_int_st;
 	frc_top = &pfw_data->frc_top_type;
 
@@ -1947,6 +1948,11 @@ void pre_vs_game(void)
 	//don't add  logic after triggle function,add by fxj
 	// hw_cfg_dpss_mc_pre_triggle();
 	w_reg_bit(DPSS_DPE_MC_START_CTRL, 1, 30, 1); //mc pre trig
+
+	if (game_st->mc_need_byp_en) {
+		frc_set_mc_bypass(3);
+		dbg_f2("game mode mc bypass set 3\n");
+	}
 
 #ifdef USE_FRC_PRE_VS_RDMA
 	// dpss_rdma_auto_wr_reg(reg, val + idx);
@@ -4784,6 +4790,7 @@ void venc_vrr_vdin(void)
 			w_reg_bit_vc(venc_vrr_ctrl_1, 0x10, 4, 8); //cfg_iofrm_num 1:2
 
 		w_reg_bit_vc(venc_vrr_ctrl_1, dly_st->pre_dly, 12, 16); //cfg_iofrm_num
+		game_st->mc_need_byp_en = false;
 		dbg_h2("game_frc enable : %d\n", enable);
 	} else if (prm_top->game_mode_film == 0 &&
 		   prm_top->game_mode_n2m == 0) {
@@ -4806,5 +4813,6 @@ void venc_vrr_vdin(void)
 		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 16, 4);
 		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 20, 4);
 		dbg_h2("game_frc enable : %d\n", enable);
+		//frc_top->game_mode = 0;
 	}
 }
