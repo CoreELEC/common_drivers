@@ -110,7 +110,7 @@ static inline void mbox_receive_callback(struct mbox_client *cl, void *mssg)
  * @name: mbox chan index
  * Return: The mbox channel if success
  */
-#ifdef CONFIG_AMLOGIC_MHU_MBOX
+#ifdef CONFIG_MAILBOX
 static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *dev, int idx)
 {
 	struct mbox_client *mbox_client;
@@ -143,7 +143,7 @@ static inline struct mbox_chan *aml_mbox_request_channel_byidx(struct device *de
  * @name: mbox chan name
  * Return: The mbox channel if success
  */
-#ifdef CONFIG_AMLOGIC_MHU_MBOX
+#ifdef CONFIG_MAILBOX
 static inline struct mbox_chan *aml_mbox_request_channel_byname(struct device *dev, char *name)
 {
 	struct mbox_client *mbox_client;
@@ -207,7 +207,7 @@ static inline int check_aocpu_status(void __iomem *sts_addr)
  * @rxsize:               Mbox receive data size
  * @sync                  Mbox Sync info
  */
-#ifdef CONFIG_AMLOGIC_MHU_MBOX
+#ifdef CONFIG_MAILBOX
 static inline int aml_mbox_transfer_data(struct mbox_chan *mbox_chan, int cmd,
 					 void *txbuf, u32 txsize, void *rxbuf, u32 rxsize,
 					 enum aml_mbox_sync sync)
