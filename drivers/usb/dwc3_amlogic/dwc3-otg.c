@@ -62,6 +62,7 @@ static enum usb_dr_mode usb_get_dr_mode_from_string(const char *str)
 	return (ret < 0) ? USB_DR_MODE_UNKNOWN : ret;
 }
 
+#if IS_ENABLED(CONFIG_USB_ROLE_SWITCH)
 static int dwc3_meson_otg_u2p_init(struct amlogic_otg_helper	*otg)
 {
 	struct dwc3_otg *dwc3_otg =  container_of(otg, struct dwc3_otg,
@@ -245,6 +246,7 @@ static int dwc3_meson_hw_otg_init(struct amlogic_otg_helper	*otg)
 			readl(&otg->u2p_aml_regs->r2));
 	return ret;
 }
+#endif
 
 static void dwc3_meson_dr_deconfig(struct dwc3_otg	*dwc3_otg)
 {
@@ -296,7 +298,7 @@ static int dwc3_otg_dr_configure(struct dwc3_otg	*dwc3_otg)
 
 	return ret;
 #else
-	dev_err(dwc3_otg->dev, "USB role not supported, cannot set otg mode\n", irq);
+	dev_err(dwc3_otg->dev, "USB role not supported, cannot set otg mode\n");
 	return -EOPNOTSUPP;
 #endif
 }
