@@ -1421,7 +1421,10 @@ void dpss_reg_val(struct dpss_ch_s *pch)
 	pch->c.en_frc = true;
 	//num for mem
 //	pch->c.num_dpe_o = DPSS_HW_LOOP_IN_OUT_BUF_NUB;
-	pch->c.num_lc = 4; //
+	if (dpss_nr_debug)
+		pch->c.num_lc = DPSS_HW_LOOP_IN_OUT_BUF_NUB; //
+	else
+		pch->c.num_lc = 4;
 	pch->c.num_aepe = nr_aepe_buf_num_dbg;
 	pch->c.num_nr_wrpt = 3;
 	pch->c.num_pq_buf = pch->c.o_b_nub;
