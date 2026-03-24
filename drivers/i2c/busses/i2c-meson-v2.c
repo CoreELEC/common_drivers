@@ -56,6 +56,7 @@
 #define I2C_JOIN_TX		BIT(0)
 
 /* CFG BUS fields */
+#define BUS_NO_STOP		BIT(18)//after soc c5 support this bit. others invalid.
 #define BUS_SPEED_MODE		BIT(17)
 #define BUS_SLAVE_MODE		BIT(16)
 #define BUS_FILTER_MASK		GENMASK(15, 12)
@@ -331,7 +332,7 @@ static void meson_i2c_init(struct meson_i2c *i2c)
 	meson_i2c_writel(i2c, 0, REG_CFG_START);
 	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
 	meson_i2c_writel(i2c, i2c->data->enable_irq_bits, REG_CGF_IRQ_ENABLE);
-	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK, 1 << 12);
+	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK | BUS_NO_STOP, 1 << 12 | BUS_NO_STOP);
 	/* set rx thresh, when fifo has data and fifo full will generate irq for cpu read.
 	 * set tx thresh, when fifo empty will generate irq for continue transfer.
 	 * set fifo depth and should clear dma mode avoid tcon driver set DMA,
@@ -347,6 +348,11 @@ static void meson_i2c_init(struct meson_i2c *i2c)
 
 	reset_fifo_pos(i2c);
 	meson_i2c_set_clk_div(i2c);
+}
+
+static void meson_i2c_add_stop(struct meson_i2c *i2c)
+{
+	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_NO_STOP, 0);
 }
 
 static void meson_i2c_push_data_to_user(struct meson_i2c *i2c, u8 data)
@@ -518,6 +524,8 @@ static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg, bool l
 	i2c->pos += i2c->count;//every prepare data pushed, should increase pos.
 	reinit_completion(&i2c->done);
 
+	if (last)
+		meson_i2c_add_stop(i2c);
 	/* Start the transfer */
 	meson_i2c_do_start(i2c, msg);
 
