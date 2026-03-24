@@ -3255,8 +3255,8 @@ void dpss_frc_demo_win(u8 demo_num, u8 style)
 		wr(DPSS_DPE_MC_DEMO_WIN1_X, tmp_x);
 		wr(DPSS_DPE_MC_DEMO_WIN1_Y, tmp_y);
 		// enable demo window1
-		w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x1, 17, 4);
-		w_reg_bit(FRC_REG_MC_DEBUG1, 0x1, 17, 4);
+		//w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x1, 17, 4);
+		//w_reg_bit(FRC_REG_MC_DEBUG1, 0x1, 17, 4);
 		w_reg_bit(FRC_MC_DEMO_WINDOW, 0x18, 0, 5);
 	} else if (demo_num == 2) {
 		tmp_x = (hsize / 2) << 16;
@@ -3271,8 +3271,8 @@ void dpss_frc_demo_win(u8 demo_num, u8 style)
 		wr(DPSS_DPE_MC_DEMO_WIN2_Y, tmp_y);
 
 		// enable demo window
-		w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x3, 17, 4);
-		w_reg_bit(FRC_REG_MC_DEBUG1, 0x3, 17, 4);
+		//w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x3, 17, 4);
+		//w_reg_bit(FRC_REG_MC_DEBUG1, 0x3, 17, 4);
 		w_reg_bit(FRC_MC_DEMO_WINDOW, 0x1c, 0, 5);
 	} else if (demo_num == 3) {
 		tmp_x = (hsize / 10) * 3 << 16;
@@ -3294,8 +3294,8 @@ void dpss_frc_demo_win(u8 demo_num, u8 style)
 		wr(DPSS_DPE_MC_DEMO_WIN3_Y, tmp_y);
 
 		// enable demo window
-		w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x7, 17, 4);
-		w_reg_bit(FRC_REG_MC_DEBUG1, 0x7, 17, 4);
+		//w_reg_bit(DPSS_DPE_MC_MC_DBG, 0x7, 17, 4);
+		//w_reg_bit(FRC_REG_MC_DEBUG1, 0x7, 17, 4);
 		w_reg_bit(FRC_MC_DEMO_WINDOW, 0x1e, 0, 5);
 	} else if (demo_num == 4) {
 		tmp_x = (hsize / 10) * 4 << 16 | hsize / 10;
@@ -3323,8 +3323,8 @@ void dpss_frc_demo_win(u8 demo_num, u8 style)
 		wr(DPSS_DPE_MC_DEMO_WIN4_Y, tmp_y);
 
 		// enable demo window
-		w_reg_bit(DPSS_DPE_MC_MC_DBG, 0xf, 17, 4);
-		w_reg_bit(FRC_REG_MC_DEBUG1, 0xf, 17, 4);
+		//w_reg_bit(DPSS_DPE_MC_MC_DBG, 0xf, 17, 4);
+		//w_reg_bit(FRC_REG_MC_DEBUG1, 0xf, 17, 4);
 		w_reg_bit(FRC_MC_DEMO_WINDOW, 0x1f, 0, 5);
 	}
 
