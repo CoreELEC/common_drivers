@@ -75,18 +75,48 @@ int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 	return 0;
 }
 
-/* Note: timing list memory need to be freed after DRM get mode list
- * TODO:
- * 1.add vic related timing in EDID to timing list
- * 2.filter repeated timings?
+/* Remove duplicate timing parameters and update the timing count */
+static void dptx_remove_duplicates_timing(struct tx_timing *timing, int *count)
+{
+	int new_count = 0;
+	int i;
+	int duplicate = 0;
+
+	if (!timing || !count || *count <= 1)
+		return;
+
+	for (i = 0; i < *count; i++) {
+		duplicate = 0;
+		for (int j = 0; j < new_count; j++) {
+			if (meson_tx_mode_compare(&timing[i], &timing[j])) {
+				duplicate = 1;
+				break;
+			}
+		}
+		if (!duplicate) {
+			if (new_count != i)
+				timing[new_count] = timing[i];
+			new_count++;
+		}
+	}
+	*count = new_count;
+}
+
+/*
+ * Note: timing list memory need to be freed after DRM get mode list
  */
 int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_list)
 {
+	struct rx_cap *prxcap = NULL;
 	struct display_id_cap *disp_id_cap = NULL;
-	struct tx_timing *disp_id_timings = 0;
-	struct tx_timing *timing;
+	int *edid_vics = NULL;
+	const struct tx_timing *edid_timing;
+	struct tx_timing *display_id_timing;
 	u32 i = 0;
 	int count = 0;
+	enum hdmi_vic vic;
+	int len = 0;
+	struct tx_timing *dptx_timings = NULL;
 
 	if (!tx_comm || !timing_list) {
 		DPTX_ERROR("%s: invalid param\n", __func__);
@@ -95,35 +125,59 @@ int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_li
 
 	mutex_lock(&tx_comm->base.valid_mode_mutex);
 	disp_id_cap = &tx_comm->base.rxcap.disp_id_cap;
+	prxcap = &tx_comm->base.rxcap;
 
-	if (disp_id_cap->timing_count == 0) {
-		mutex_unlock(&tx_comm->base.valid_mode_mutex);
-		return 0;
+	edid_vics = vzalloc((prxcap->VIC_count + VESA_MAX_TIMING) * sizeof(int));
+	len = disp_id_cap->timing_count + prxcap->VIC_count + VESA_MAX_TIMING;
+	dptx_timings = vzalloc(len * sizeof(struct tx_timing));
+	if (!edid_vics || !dptx_timings) {
+		DPTX_ERROR("%s: alloc fail\n", __func__);
+		goto out;
 	}
 
-	/* Allocate memory for timing list.
-	 * note timing list memory may be > PAGE_SIZE
-	 */
-	disp_id_timings = vzalloc(disp_id_cap->timing_count * sizeof(struct tx_timing));
-	if (!disp_id_timings) {
-		mutex_unlock(&tx_comm->base.valid_mode_mutex);
-		return -ENOMEM;
-	}
+	/* step1: only select VIC which is supported in EDID */
+	/* copy edid vic list */
+	if (prxcap->VIC_count > 0)
+		memcpy(edid_vics, prxcap->VIC, sizeof(int) * prxcap->VIC_count);
+	for (i = 0; i < VESA_MAX_TIMING && prxcap->vesa_timing[i]; i++)
+		edid_vics[prxcap->VIC_count + i] = prxcap->vesa_timing[i];
 
-	/* Filter supported timings */
-	for (i = 0; i < disp_id_cap->timing_count; i++) {
-		timing = &disp_id_cap->timing[i / BLK_TIMING_CNT][i % BLK_TIMING_CNT];
+	for (i = 0; i < prxcap->VIC_count; i++) {
+		vic = edid_vics[i];
+		if (vic == HDMI_0_UNKNOWN)
+			continue;
+		edid_timing = meson_tx_mode_vic_to_timing(vic);
+		if (!edid_timing) {
+			DPTX_INFO("%s: vic[%d] not found in edid timing list.\n", __func__, vic);
+			continue;
+		}
 		/* always treat timing supported under pxp */
 		if (!tx_comm->base.pxp_mode &&
-			!dptx_validate_timing_with_basic_cs(&tx_comm->base, timing))
+				!dptx_validate_timing_with_basic_cs(&tx_comm->base,
+					(struct tx_timing *)edid_timing))
 			continue;
-		memcpy(&disp_id_timings[count++], timing, sizeof(*timing));
+		memcpy(&dptx_timings[count++], edid_timing, sizeof(*edid_timing));
 	}
+
+	/* step2: filter supported timings in Display_ID */
+	for (i = 0; i < disp_id_cap->timing_count; i++) {
+		display_id_timing = &disp_id_cap->timing[i / BLK_TIMING_CNT][i % BLK_TIMING_CNT];
+		/* always treat timing supported under pxp */
+		if (!tx_comm->base.pxp_mode &&
+			!dptx_validate_timing_with_basic_cs(&tx_comm->base, display_id_timing))
+			continue;
+		memcpy(&dptx_timings[count++], display_id_timing, sizeof(*display_id_timing));
+	}
+	/* remove duplicate timings */
+	dptx_remove_duplicates_timing(dptx_timings, &count);
+
+out:
+	vfree(edid_vics);
 	if (count == 0) {
-		vfree(disp_id_timings);
+		vfree(dptx_timings);
 		*timing_list = NULL;
 	} else {
-		*timing_list = disp_id_timings;
+		*timing_list = dptx_timings;
 	}
 	mutex_unlock(&tx_comm->base.valid_mode_mutex);
 	return count;
