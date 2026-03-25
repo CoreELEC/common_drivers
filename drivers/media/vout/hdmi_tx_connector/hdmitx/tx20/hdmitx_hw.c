@@ -2503,7 +2503,8 @@ static void hdmitx_set_phy(struct hdmitx20_dev *hdev)
 	else
 		phy_addr = P_HHI_HDMI_PHY_CNTL0;
 
-	if (hdev->tx_comm.earc_hdmitx_hpdst && chip_id == MESON_CPU_ID_SC2)
+	if (hdev->tx_comm.earc_hdmitx_hpdst && (chip_id == MESON_CPU_ID_SC2 ||
+				chip_id == MESON_CPU_ID_SM1))
 		hd_write_reg(phy_addr, 0x0b4242);
 	else
 		hd_write_reg(phy_addr, 0x0);
@@ -6249,7 +6250,8 @@ static void hdmi_phy_suspend(void)
 	}
 
 	if (hdev->tx_comm.earc_hdmitx_hpdst &&
-			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_SC2)
+			(hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_SC2 ||
+			hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_SM1))
 		hd_write_reg(phy_cntl0, 0x0b4242);
 	else
 		hd_write_reg(phy_cntl0, 0x0);
