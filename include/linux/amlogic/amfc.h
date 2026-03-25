@@ -219,6 +219,19 @@ void cache_clean_flush(unsigned long start, unsigned long end);
 int hook_f2fs(void);
 #endif
 
-int amfc_supported(void);
+static inline int amfc_supported(void)
+{
+	int cpu = get_cpu_type();
 
+	switch (cpu) {
+	case MESON_CPU_MAJOR_ID_T6W:
+	case MESON_CPU_MAJOR_ID_S7D:
+	case MESON_CPU_MAJOR_ID_S6:
+	case MESON_CPU_MAJOR_ID_T6D:
+	case MESON_CPU_MAJOR_ID_T6X:
+	case MESON_CPU_MAJOR_ID_C4:
+		return 1;
+	}
+	return 0;
+}
 #endif

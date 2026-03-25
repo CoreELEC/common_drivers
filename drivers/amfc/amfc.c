@@ -1874,30 +1874,6 @@ const struct file_operations amfc_fops = {
 #endif
 };
 
-int amfc_supported(void)
-{
-	int cpu;
-
-
-	if (!amfc)
-		return 0;
-
-	cpu = amfc->chip;
-	switch (cpu) {
-	case AMFC_S7D:
-	case AMFC_S6:
-	case AMFC_T6W:
-	case AMFC_T6D:
-	case AMFC_T6X:
-	case AMFC_C4:
-		return 1;
-	default:
-		return 0;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(amfc_supported);
-
 /*------------ driver layer ---------------*/
 static void amfc_remove(struct platform_device *pdev)
 {
