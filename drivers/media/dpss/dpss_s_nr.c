@@ -2925,8 +2925,9 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		prm_top->mode_drct = false;
 	}
 	dbg_i0("init:direct =%d\n", pch->d->mode_drct);
-	if (((dpss_en_dct & C_BIT0) && !pch->c.ch) ||
-	    ((dpss_en_dct & C_BIT1) && pch->c.ch)) {
+	if ((((dpss_en_dct & C_BIT0) && !pch->c.ch) ||
+	    ((dpss_en_dct & C_BIT1) && pch->c.ch)) &&
+	    prm_top->dpe_nr_mode != DPE_NR_BYPS) {
 		dbg_i1("%s:src_is_1080p_nods =%d, prm_top->dae_dsx_scale=%d. %d, frm_hsize=%d\n",
 			__func__, prm_top->src_is_1080p_nods,
 			prm_top->dae_dsx_scale,

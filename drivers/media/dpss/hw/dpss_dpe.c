@@ -1153,7 +1153,9 @@ void hw_cfg_dpss_dpe(enum DPSS_WORK_MODE  dpe_mode,
 		}
 	}
 	w_reg_bit(DPSS_DPE_INTF_CTRL2, 7, 0, 3); //default
-	if ((prm_top->mode_drct2 || prm_top->mode_drct) && !prm_top->src_mode)
+	if ((prm_top->mode_drct2 || prm_top->mode_drct) &&
+	    !prm_top->src_mode &&
+	    dpe_mode == DPE_NR_BYPS)
 		w_reg_bit(DPSS_DPE_INTF_CTRL2, 6, 0, 3);
 	dbg_h2("direct:0x%x\n", rd(DPSS_DPE_INTF_CTRL2));
 
