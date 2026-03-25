@@ -19,6 +19,9 @@ struct hdmitx_tracer {
 	enum hdmitx_event_log_bits event;
 	int previous_event;
 	int hdr10plus_event;
+#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
+	int diagnostic_event;
+#endif
 	struct kfifo log_fifo;
 	struct hdmitx_event_mgr *event_mgr;
 	/* to trigger userspace read fifo logs */
@@ -160,7 +163,8 @@ static void hdmitx_log_events_handler(struct work_struct *work)
 		container_of(work, struct hdmitx_tracer, uevent_work);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
-	hdmitx_diagnostic_info(tracer->previous_event);
+	hdmitx_diagnostic_info(tracer->diagnostic_event);
+	tracer->diagnostic_event = 0;
 #endif
 	hdmitx_event_mgr_send_uevent(tracer->event_mgr,
 		HDMITX_CUR_ST_EVENT, ++cnt, false);
@@ -222,7 +226,11 @@ int hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
 	if (event == tracer->previous_event)
 		return 0;
 	tracer->previous_event = event;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
+	if (event == HDMITX_HPD_PLUGOUT || event == HDMITX_HDCP_I2C_ERROR ||
+			event == HDMITX_EDID_HEAD_ERROR)
+		tracer->diagnostic_event = event;
+#endif
 	/* Play HDR10+ videos, HDMITX_HDR_MODE_HDR10PLUS only writes once */
 	if (tracer->hdr10plus_event == HDMITX_HDR_MODE_HDR10PLUS)
 		return 0;
