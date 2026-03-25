@@ -3145,6 +3145,14 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		dpss_info.tbc_mode = prm_top->sw_tbc_mode;
 		dpss_info.vds_4k1k_en = prm_top->vds_4k1k_en;
 		dpss_info.dct_ahead_dv_mode = prm_top->dct_ahead_dv_mode;
+		dpss_info.real_h = prm_top->frm_hsize;
+		dpss_info.real_v = prm_top->frm_vsize;
+		if (dpss_dv_en & C_BIT9) {
+			dpss_info.real_h = prm_top->org_hsize;
+			dpss_info.real_v = prm_top->org_vsize;
+		}
+		if (prm_top->vds_4k1k_en)
+			dpss_info.real_v = dpss_info.real_v << 1;
 		if (prm_top->mode_drct)
 			dpss_info.direct_mode = true;
 		else

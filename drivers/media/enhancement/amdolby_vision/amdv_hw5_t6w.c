@@ -1963,7 +1963,7 @@ static void dolby5_top2_he2(struct prm_dolby_top *prm_dolby,
 	u32 corep_vsize = prm_dolby->corep_vsize;
 	u32 corep_baddr = prm_dolby->corep_up_wbaddr[1];
 	u32 core2_py_level = prm_dolby->core2_py_level;
-	u32 corep_scale = core2_hsize / corep_hsize;
+	u32 corep_scale = (core2_hsize + corep_hsize / 2) / corep_hsize;
 	u32 corep_ratio;
 	u32 amdv_pad  = dolby_slice_mode ? 96             : 0;//todo dv slc mode ? 32 : 0
 	u32 ext_pad = dolby_slice_mode ? core2_ext_ovlp : 0;//todo dv_slc mode & nr/di off
@@ -2218,7 +2218,7 @@ static void dolby5_top2_he2_slc(struct prm_dolby_top *prm_dolby,
 	u32 corep_baddr = prm_dolby->corep_up_wbaddr[1];
 	u32 core2_py_level = prm_dolby->core2_py_level;
 	bool direct_mode = prm_dolby->dpss_direct_mode;
-	u32 corep_scale = core2_hsize / corep_hsize;
+	u32 corep_scale = (core2_hsize + corep_hsize / 2) / corep_hsize;
 	u32 corep_ratio;
 	u32 amdv_pad  = dolby_slice_mode ? 96             : 0;//todo dv slc mode ? 32 : 0
 	u32 ext_pad = dolby_slice_mode ? core2_ext_ovlp : 0;//todo dv_slc mode & nr/di off
@@ -3164,10 +3164,13 @@ void cfg_dolby_ini(struct prm_dolby_top *prm_dolby, struct dpss_info_s *dpss_inf
 		prm_dolby->dpss_direct_mode = dpss_info->direct_mode;
 		prm_dolby->vds_4k1k_en = dpss_info->vds_4k1k_en;
 		prm_dolby->dpss_dct_ahead_dv    = dpss_info->dct_ahead_dv_mode;
-		pr_dv_dbg("init dpss_info %d %d %d %d %d %d\n",
+		prm_dolby->dpss_real_h = dpss_info->real_h;
+		prm_dolby->dpss_real_v = dpss_info->real_v;
+		pr_dv_dbg("init dpss_info %d %d %d %d %d %d,real size %d %d\n",
 			 dpss_info->frm_hsize_sel, dpss_info->slice_num,
 			 dpss_info->pad_mode, dpss_info->tbc_mode,
-			 dpss_info->direct_mode, dpss_info->dct_ahead_dv_mode);
+			 dpss_info->direct_mode, dpss_info->dct_ahead_dv_mode,
+			 dpss_info->real_h, dpss_info->real_v);
 	} else {/*reset after playing*/
 		prm_dolby->dolby5_mode         = DOLBY5_VD1_MODE;
 		if (is_aml_t6x() && enable_2ppc)

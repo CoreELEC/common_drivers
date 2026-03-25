@@ -99,6 +99,8 @@ void dpss_dd_init(struct vframe_s *vfm, struct dpss_info_s *dpss_info) //
 			dpss_inf.vds_4k1k_en = dpss_info->vds_4k1k_en;
 			dpss_inf.direct_mode = dpss_info->direct_mode;
 			dpss_inf.dct_ahead_dv_mode = dpss_info->dct_ahead_dv_mode;
+			dpss_inf.real_h = dpss_info->real_h;
+			dpss_inf.real_v = dpss_info->real_v;
 		} else {
 			dpss_inf.pad_mode = 2;
 			dpss_inf.slice_num = 2;
@@ -107,7 +109,10 @@ void dpss_dd_init(struct vframe_s *vfm, struct dpss_info_s *dpss_info) //
 			dpss_inf.vds_4k1k_en = 0;
 			dpss_inf.direct_mode = false;
 			dpss_inf.dct_ahead_dv_mode = 0;
+			dpss_inf.real_h = 3840;
+			dpss_inf.real_v = 2160;
 		}
+		dbg_h0("r_h=%d,r_v=%d\n", dpss_inf.real_h, dpss_inf.real_v);
 		init_prm_dolby(&dpss_inf);
 	}
 #endif
@@ -244,7 +249,7 @@ void dpss_dd_cfg_inp(struct vframe_s *vfm)//dae
 			vfm->compWidth : vfm->width;
 		ori_h = (vfm->type & VIDTYPE_COMPRESS) ?
 			vfm->compHeight : vfm->height;
-		dbg_h2("%s:type %x, size %d %d\n", __func__, vfm->type, ori_w, ori_h);
+		dbg_h2("%s:type %x, ori size %d %d\n", __func__, vfm->type, ori_w, ori_h);
 		if (get_top1_onoff()) {/* top1 + top2*/
 			//top1 parser + top1 cp
 			amdv_parse_metadata_hw5_top1(vfm);
@@ -277,7 +282,7 @@ void dpss_dd_cfg_dpe(struct vframe_s *vfm)
 				vfm->compWidth : vfm->width;
 			ori_h = (vfm->type & VIDTYPE_COMPRESS) ?
 				vfm->compHeight : vfm->height;
-			dbg_h2("%s:type %x, size %d %d\n", __func__, vfm->type, ori_w, ori_h);
+			dbg_h2("%s:type %x, ori size %d %d\n", __func__, vfm->type, ori_w, ori_h);
 			/*top2 parser+cp*/
 			ret = amdv_update_metadata(vfm, 0, false);
 			if (ret == 0)
@@ -332,7 +337,7 @@ void dpss_dd_dae_update(struct vframe_s *vfm)
 			vfm->compWidth : vfm->width;
 		ori_h = (vfm->type & VIDTYPE_COMPRESS) ?
 			vfm->compHeight : vfm->height;
-		dbg_h2("%s:type %x, size %d %d\n", __func__, vfm->type, ori_w, ori_h);
+		dbg_h2("%s:type %x, ori size %d %d\n", __func__, vfm->type, ori_w, ori_h);
 		if (get_top1_onoff()) {/* top1 + top2*/
 			//top1 parser + top1 cp
 			amdv_parse_metadata_hw5_top1(vfm);
@@ -365,7 +370,7 @@ void dpss_dd_dpe_update(struct vframe_s *vfm)
 			vfm->compWidth : vfm->width;
 		ori_h = (vfm->type & VIDTYPE_COMPRESS) ?
 			vfm->compHeight : vfm->height;
-		dbg_h2("%s:type %x, size %d %d\n", __func__, vfm->type, ori_w, ori_h);
+		dbg_h2("%s:type %x, ori size %d %d\n", __func__, vfm->type, ori_w, ori_h);
 		/*top2 parser+cp*/
 		ret = amdv_update_metadata(vfm, 0, false);
 		if (ret == 0)

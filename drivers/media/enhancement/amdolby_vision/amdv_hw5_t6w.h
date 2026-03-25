@@ -65,8 +65,10 @@ struct prm_dolby_top {
 	bool       core2_slc_mode;/*for t6x core2 2slice,2 core2*/
 	bool       mosaic_mode;/*for t6x 2x2 mode*/
 	bool       core2_prl_mode;/*for t6x 2 core2, only write one set regs*/
-	u32 vds_4k1k_en;
-	bool	   dpss_dct_ahead_dv;/*0:dv+dct,1:dct+dv*/
+	u32        vds_4k1k_en;
+	bool       dpss_dct_ahead_dv;/*0:dv+dct,1:dct+dv*/
+	u32        dpss_real_h;
+	u32        dpss_real_v;
 };
 
 struct prm_intf_type {

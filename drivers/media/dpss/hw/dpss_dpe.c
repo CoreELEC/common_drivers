@@ -2704,7 +2704,7 @@ void hw_cfg_dpe_size(enum DPSS_WORK_MODE dpe_mode,
 	amdv_lft_pad[1] = slc_num == 2 ?
 		amdv_pad : slc_num == 4 ? amdv_pad / 2 : 0;
 	amdv_lft_pad[2] = amdv_pad / 2;
-	amdv_lft_pad[3] = amdv_pad / 2;
+	amdv_lft_pad[3] = amdv_pad;// 2026-01-28 amdv_pad / 2;
 	amdv_rgt_pad[0] = slc_num != 1 ? amdv_pad : 0;
 	amdv_rgt_pad[1] = slc_num == 4 ? amdv_pad / 2 : 0;
 	amdv_rgt_pad[2] = amdv_pad / 2;

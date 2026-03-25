@@ -533,9 +533,13 @@ void update_top1_onoff(struct vframe_s *vf)
 			ori_w = vf->width;
 			ori_h = vf->height;
 		}
-		if (prm_dolby.vds_4k1k_en) {
-			h = h >> 1;
-			ori_h = ori_h >> 1;
+		if (is_amdv_dpss_path()) {
+			w = prm_dolby.dpss_real_h;
+			h = prm_dolby.dpss_real_v;
+			if (prm_dolby.vds_4k1k_en) {
+				h = h >> 1;
+				ori_h = ori_h >> 1;
+			}
 		}
 
 		cfg_enable_top1 = check_cfg_enabled_top1();
@@ -1310,8 +1314,6 @@ int amdv_parse_metadata_hw5_top1(struct vframe_s *vf)
 	enum signal_format_enum src_format = FORMAT_SDR;
 	int total_md_size = 0;
 	int total_comp_size = 0;
-	u32 w = 0xffff;
-	u32 h = 0xffff;
 	int meta_flag_bl = 1;
 	int src_chroma_format = 0;
 	int src_bdp = 12;
@@ -1355,25 +1357,8 @@ int amdv_parse_metadata_hw5_top1(struct vframe_s *vf)
 	memset(&req, 0, (sizeof(struct provider_aux_req_s)));
 	memset(&el_req, 0, (sizeof(struct provider_aux_req_s)));
 
-	if (vf) {
+	if (vf)
 		video_frame = true;
-		if (vf->type & VIDTYPE_COMPRESS) {
-			if (is_src_crop_valid(vf->src_crop) && !is_amdv_dpss_path()) {
-				w = vf->compWidth -
-					vf->src_crop.left - vf->src_crop.right;
-				h = vf->compHeight -
-					vf->src_crop.top - vf->src_crop.bottom;
-			} else {
-				w = vf->compWidth;
-				h = vf->compHeight;
-			}
-		} else {
-			w = vf->width;
-			h = vf->height;
-		}
-	}
-	if (prm_dolby.vds_4k1k_en)
-		h = h >> 1;
 
 	if (is_aml_tvmode() && vf &&
 	    vf->source_type == VFRAME_SOURCE_TYPE_HDMI) {
@@ -1685,14 +1670,6 @@ int amdv_parse_metadata_hw5_top1(struct vframe_s *vf)
 		}
 		if (ret_flags == 1)
 			mel_flag = true;
-		if (!is_dv_standard_es(req.dv_enhance_exist,
-				       ret_flags, w)) {
-			src_format = FORMAT_SDR;
-			/* dovi_setting.src_format = src_format; */
-			total_comp_size = 0;
-			total_md_size = 0;
-			src_bdp = 10;
-		}
 		if (is_aml_tvmode() &&
 			(req.dv_enhance_exist && !mel_flag)) {
 			src_format = FORMAT_SDR;
@@ -2094,8 +2071,12 @@ int amdv_parse_metadata_hw5(struct vframe_s *vf,
 			w = vf->width;
 			h = vf->height;
 		}
-		if (prm_dolby.vds_4k1k_en)
-			h = h >> 1;
+		if (is_amdv_dpss_path()) {
+			w = prm_dolby.dpss_real_h;
+			h = prm_dolby.dpss_real_v;
+			if (prm_dolby.vds_4k1k_en)
+				h = h >> 1;
+		}
 
 		if (enable_top1 || check_cfg_enabled_top1()) {
 			if (vf->src_fmt.py_level != last_top2_level) {
@@ -2458,14 +2439,6 @@ int amdv_parse_metadata_hw5(struct vframe_s *vf,
 			}
 			if (ret_flags == 1)
 				mel_flag = true;
-			if (!is_dv_standard_es(req.dv_enhance_exist,
-					       ret_flags, w)) {
-				src_format = FORMAT_SDR;
-				/* dovi_setting.src_format = src_format; */
-				total_comp_size = 0;
-				total_md_size = 0;
-				src_bdp = 10;
-			}
 			if (is_aml_tvmode() &&
 				(req.dv_enhance_exist && !mel_flag)) {
 				src_format = FORMAT_SDR;
@@ -3115,8 +3088,12 @@ int amdv_hw5_control_path(struct vframe_s *vf, struct vd_proc_info_t *vd_proc_in
 			w = vf->width;
 			h = vf->height;
 		}
-		if (prm_dolby.vds_4k1k_en)
-			h = h >> 1;
+		if (is_amdv_dpss_path()) {
+			w = prm_dolby.dpss_real_h;
+			h = prm_dolby.dpss_real_v;
+			if (prm_dolby.vds_4k1k_en)
+				h = h >> 1;
+		}
 
 		if (vd_proc_info) {
 			if (debug_dolby & 0x8)
@@ -3333,8 +3310,12 @@ int amdolby_vision_process_hw5_top1(struct vframe_s *vf_top1,
 			v_size = vf->height;
 		}
 	}
-	if (prm_dolby.vds_4k1k_en)
-		v_size = v_size >> 1;
+	if (is_amdv_dpss_path()) {
+		h_size = prm_dolby.dpss_real_h;
+		v_size = prm_dolby.dpss_real_v;
+		if (prm_dolby.vds_4k1k_en)
+			v_size = v_size >> 1;
+	}
 
 	if (vf && (debug_dolby & 0x8))
 		pr_dv_dbg("top1_proc: vf %px(index %d %d),mode %d,core_on %d %d,%d %d,flag %x\n",

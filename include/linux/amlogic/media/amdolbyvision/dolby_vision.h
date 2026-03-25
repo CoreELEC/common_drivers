@@ -183,6 +183,8 @@ struct dpss_info_s {
 	u32 pad_mode;//*0:nonr+noaa;1:no_nr+aa;2:nr+no_aa;3:nr+aa*/
 	u32 frm_hsize_sel;
 	u32 vds_4k1k_en;
+	u32 real_h;
+	u32 real_v;
 	bool tbc_mode;
 	bool direct_mode;
 	bool dct_ahead_dv_mode;//dct+dv mode
