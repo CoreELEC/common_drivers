@@ -683,8 +683,8 @@ static const char * const i2c5_ao_groups[] = {
 	"i2c5_sck_p", "i2c5_sda_p"
 };
 
-static const char * const i2c_ao_groups[] = {
-	"i2c_sck_p", "i2c_sda_p"
+static const char * const i2c6_ao_groups[] = {
+	"i2c6_sck_p", "i2c6_sda_p"
 };
 
 static const char * const i3c0_ao_groups[] = {
@@ -864,7 +864,7 @@ static struct meson_pmx_func meson_c5_ao_functions[] __initdata = {
 	FUNCTION(i2c3_ao),
 	FUNCTION(i2c4_ao),
 	FUNCTION(i2c5_ao),
-	FUNCTION(i2c_ao),
+	FUNCTION(i2c6_ao),
 	FUNCTION(i3c0_ao),
 	FUNCTION(mclk12_24),
 	FUNCTION(spi0_ao),
