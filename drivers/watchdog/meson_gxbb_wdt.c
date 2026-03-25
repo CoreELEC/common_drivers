@@ -67,6 +67,7 @@ struct meson_gxbb_wdt {
 #endif
 	u32 *shadow;
 	int shadow_size;
+	bool ignore_suspend;
 #endif
 };
 
@@ -259,8 +260,12 @@ static int __maybe_unused meson_gxbb_wdt_resume(struct device *dev)
 #ifdef CONFIG_AMLOGIC_MODIFY
 	if ((watchdog_active(&data->wdt_dev) ||
 	    watchdog_hw_running(&data->wdt_dev)) &&
-	    watchdog_enabled)
-		meson_gxbb_wdt_start(&data->wdt_dev);
+	    watchdog_enabled) {
+		if (data->ignore_suspend)
+			meson_gxbb_wdt_ping(&data->wdt_dev);
+		else
+			meson_gxbb_wdt_start(&data->wdt_dev);
+	}
 #else
 	if (watchdog_active(&data->wdt_dev))
 		meson_gxbb_wdt_start(&data->wdt_dev);
@@ -275,8 +280,14 @@ static int __maybe_unused meson_gxbb_wdt_suspend(struct device *dev)
 
 #ifdef CONFIG_AMLOGIC_MODIFY
 	if (watchdog_active(&data->wdt_dev) ||
-	    watchdog_hw_running(&data->wdt_dev))
-		meson_gxbb_wdt_stop(&data->wdt_dev);
+	    watchdog_hw_running(&data->wdt_dev)) {
+		if (data->ignore_suspend) {
+			meson_gxbb_wdt_ping(&data->wdt_dev);
+			dev_info(data->wdt_dev.parent, "ignore suspend\n");
+		} else {
+			meson_gxbb_wdt_stop(&data->wdt_dev);
+		}
+	}
 #else
 	if (watchdog_active(&data->wdt_dev))
 		meson_gxbb_wdt_stop(&data->wdt_dev);
@@ -638,6 +649,8 @@ static int meson_gxbb_wdt_probe(struct platform_device *pdev)
 		writel(readl(data->reg_base + GXBB_WDT_CTRL_REG) |
 		       GXBB_WDT_CTRL_IRQ_EN, data->reg_base + GXBB_WDT_CTRL_REG);
 	}
+
+	data->ignore_suspend = of_property_read_bool(pdev->dev.of_node, "amlogic,ignore-suspend");
 
 	ret = of_property_read_u32(pdev->dev.of_node,
 				   "amlogic,feed_watchdog_mode",
