@@ -129,9 +129,10 @@ static int meson_pwm_tee_calc(struct meson_pwm_tee *meson, struct pwm_device *pw
 	}
 
 	dev_dbg(&meson->chip->dev, "fin_freq: %lu Hz\n", fin_freq);
-	channel->pre_div = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period, NSEC_PER_SEC * 0xffffLL);
-	cnt = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period,
-			NSEC_PER_SEC * (channel->pre_div + 1));
+	channel->pre_div = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
+						(u64)NSEC_PER_SEC * 0xffffLL);
+	cnt = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
+			(u64)NSEC_PER_SEC * (u64)(channel->pre_div + 1));
 	if (cnt > 0xffff) {
 		dev_err(&meson->chip->dev, "unable to get period cnt\n");
 		return -EINVAL;

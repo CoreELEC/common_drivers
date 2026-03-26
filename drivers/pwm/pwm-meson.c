@@ -288,13 +288,15 @@ static int meson_pwm_calc(struct meson_pwm *meson, struct pwm_device *pwm,
 
 	dev_dbg(&meson->chip->dev, "fin_freq: %lu Hz\n", fin_freq);
 
-	pre_div = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period, NSEC_PER_SEC * 0xffffLL);
+	pre_div = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
+				(u64)NSEC_PER_SEC * 0xffffLL);
 	if (pre_div > MISC_CLK_DIV_MASK) {
 		dev_err(&meson->chip->dev, "unable to get period pre_div\n");
 		return -EINVAL;
 	}
 
-	cnt = DIV64_U64_ROUND_CLOSEST(fin_freq * (u64)period, NSEC_PER_SEC * (pre_div + 1));
+	cnt = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
+				(u64)NSEC_PER_SEC * (u64)(pre_div + 1));
 	if (cnt > 0xffff) {
 		dev_err(&meson->chip->dev, "unable to get period cnt\n");
 		return -EINVAL;
