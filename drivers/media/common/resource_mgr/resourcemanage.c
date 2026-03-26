@@ -2497,12 +2497,11 @@ int resman_register_query_ops_by_name(const char *device_name,
 	struct resman_query_cb_ops *ops;
 	size_t len;
 	int ret = 0;
-	char *null_pos = NULL;
 
 	if (!device_name || !fn)
 		return -EINVAL;
-	null_pos = memchr(device_name, '\0', RESMAN_LEN);
-	len = (null_pos) ? (null_pos - device_name) : RESMAN_LEN;
+
+	len = strnlen(device_name, RESMAN_LEN);
 	if (len == 0 || len >= RESMAN_LEN)
 		return -EINVAL;
 
@@ -2541,12 +2540,11 @@ static int resman_session_query_resource_by_name(struct resman_session *sess,
 	struct resman_query_cb_ops *ops;
 	int ret = -ENOENT;
 	size_t len;
-	char *null_pos = NULL;
 
 	if (!sess || !device_name)
 		return -EINVAL;
-	null_pos = memchr(device_name, '\0', RESMAN_LEN);
-	len = (null_pos) ? (null_pos - device_name) : RESMAN_LEN;
+
+	len = strlen(device_name);
 	if (len == 0 || len >= RESMAN_LEN)
 		return -EINVAL;
 
