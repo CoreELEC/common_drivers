@@ -63,11 +63,11 @@
 
 		ramoops@6300000 {
 			compatible = "ramoops";
-			reg = <0x06300000 0x00080000>;/* addr set in uboot */
-			record-size = <0x30000>;
-			console-size = <0x40000>;
+			reg = <0x05b00000 0x00004000>;/* addr set in uboot */
+			record-size = <0x00002000>;
+			console-size = <0x00001000>;
 			ftrace-size = <0x0>;
-			pmsg-size = <0x10000>;
+			pmsg-size = <0x00001000>;
 		};
 
 		dmc_reserved:linux,dmc_monitor {
@@ -77,30 +77,32 @@
 
 		debug_reserved:linux,iotrace {
 			compatible = "amlogic, iotrace";
-			reg = <0x04f00000 0x00100000>;
-			io-size = <0x19800>;
+			reg = <0x05b04000 0x00020000>;
+			io-size = <0x10000>;
 			sched-size = <0x2000>;
 			irq-size = <0x1000>;
 			smc-size = <0x1000>;
 			misc-size = <0x1000>;
-			iotm-size = <0x3a980>; //240k; v1:20000; v2:15000
+			iotm-size = <0x4000>;
 		};
 
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			no-map;
 			alignment = <0x100000>;
-			reg = <0x05000000 0x1300000>;
+			reg = <0x05000000 0xb00000>;
 		};
 
 		logo_reserved:linux,meson-fb {
 			compatible = "amlogic, meson-fb";
-			size = <0x800000>;
+			size = <0x00000000>;
 			alignment = <0x400000>;
+			reg = <0x0a800000 0x000000>;
 		};
 
 		lcd_cma_reserved:linux,lcd-reserved {
 			compatible = "amlogic, lcd_rsvd";
+			reg = <0x05b24000 0x00410000>;
 			tcon-size = <0x00202840>;
 		};
 
@@ -138,18 +140,17 @@
 		/*};*/
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
+			status = "disabled";
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0xc00000>;
+			size = <0x0>;
 			alignment = <0x400000>;
-			status = "okay";
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* DTV 1080I secure playback */
-			size = <0x9000000>;
+			size = <0x06800000>;
 			alignment = <0x400000>;
 			linux,contiguous-region;
 		};
@@ -157,7 +158,7 @@
 		secure_vdec_reserved:linux,secure_vdec_reserved {
 			compatible = "amlogic, secure-vdec-reserved";
 			no-map;
-			size = <0x300000>;
+			size = <0x400000>;
 			alignment = <0x100000>;
 		};
 
@@ -289,7 +290,7 @@
 		 * local 7*4075520 = 28
 		 * post 11*5222400 = 56 //??
 		 ***************************************************/
-		post_nub = <11>;
+		post_nub = <5>;
 		/***************************************************
 		 * 0:not support
 		 * bit 0: for 4k
@@ -676,7 +677,7 @@
 
 &drm_vpu {
 	status = "okay";
-	logo_addr = "0x3f800000";
+	logo_addr = "0x0a800000";
 
 	connectors_dev: port@1 {
 		drm_to_lcd0: endpoint@1 {
@@ -725,6 +726,7 @@
 &vdin1 {
 	memory-region = <&vdin1_cma_reserved>;
 	status = "okay";
+	flag_cma = <0x101>;/*1:share with codec_mm;0:cma alone*/
 };
 
 &sd_emmc_c {
