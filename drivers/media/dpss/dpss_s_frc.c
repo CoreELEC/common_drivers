@@ -66,6 +66,11 @@ int frc_delay_dbg; // for avsync debug
 #define N2M_LIST 29
 #define DPSS_FRC_RESET_PATH_SKIP_CNT 5
 
+//hdr_flag
+#define hdr_color_primaries ((vfm->signal_type >> 16) & 0xff)
+#define hdr_transfer_characteristic ((vfm->signal_type >> 8) & 0xff)
+#define hdr_signal_cuva ((vfm->signal_type >> 31) & 1)
+
 const char *vid_src_fmt_str[] = {
 	"YUV444",
 	"YUV422",
@@ -3522,6 +3527,35 @@ void dp_dynamic_detect_play_speed(bool en)
 	dbg_f1("fast_pat_set_n2m=%d\n", en);
 }
 
+enum hdr_fmt_s {
+	FMT_SDR,
+	FMT_HDR10,
+	FMT_HDR10PLUS,
+	FMT_HDR10PRIME,
+	FMT_HLG,
+	FMT_AMDV,
+};
+
+static enum hdr_fmt_s frc_set_hdr_flag(struct vframe_s *vfm)
+{
+	enum hdr_fmt_s hdr_flag = FMT_SDR;
+
+	if (!vfm)
+		return FMT_SDR;
+
+	if (hdr_transfer_characteristic == 16 &&
+			(hdr_color_primaries == 9 || hdr_color_primaries == 2))
+		hdr_flag = FMT_HDR10;
+	else if (hdr_transfer_characteristic == 0x30 &&
+			(hdr_color_primaries == 9 || hdr_color_primaries == 2))
+		hdr_flag = FMT_HDR10PLUS;
+	else if (hdr_transfer_characteristic == 18 &&
+			hdr_color_primaries == 9)
+		hdr_flag = FMT_HLG;
+
+	return hdr_flag;
+}
+
 void dpss_h_update_frc(struct vframe_s *vfm)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
@@ -3665,6 +3699,9 @@ void dpss_h_update_frc(struct vframe_s *vfm)
 
 	if (state_st->is_seek_bar && !(vfm->type_ext & VIDTYPE_EXT_DPSS_EOS))
 		state_st->is_seek_bar = false;
+
+	frc_top->hdr_flag = (u8)frc_set_hdr_flag(vfm);
+	dbg_f2("hdr_flag=%d\n", frc_top->hdr_flag);
 }
 
 static void frc_parse_vfcd_format(u32 format_value,
