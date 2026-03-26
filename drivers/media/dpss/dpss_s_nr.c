@@ -3653,14 +3653,20 @@ void dbg_dpss_reset(unsigned int para)
 		return;
 	}
 
-	if (para == 0) {
+	if (para == 0 || para == 0x10) {
 		wr(DPSS_DPE_MC_TOP_RESET, BIT_22 + BIT_25);
-		dbg_f1("mc reset bit 22+25\n");
+		dbg_i0("mc reset bit 22+25\n");
 		return;
 	} else if ((para & 0xF0) == 0x80) {
 		wr(DPSS_DPE_MC_TOP_RESET, BIT_22);
 		//dbg_f1("mc reset bit 22\n");
+	} else if ((para & 0xF0) == 0x20) {
+		w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1); //off frc hw
+		wr(DPSS_DPE_MC_TOP_RESET, BIT_22 + BIT_25);
+		dbg_i0("reset_off_frc with mc_2225\n");
+		return;
 	}
+
 	if ((para & 0x0F) == 0x01) {
 		w_reg_bit(DPSS_TOP_SOFT_RST, 0x0010, 0, 13); //2024-12-05 from 0x47e to 0x10
 		//dbg_h1("dpss reset 0x10\n");

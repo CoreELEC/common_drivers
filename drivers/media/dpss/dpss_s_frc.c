@@ -291,7 +291,7 @@ module_param_named(dpss_dbg_in_fmt_frc, dpss_dbg_in_fmt_frc, uint, 0664);
 unsigned int dpss_dbg_o_fmt_frc;
 module_param_named(dpss_dbg_o_fmt_frc, dpss_dbg_o_fmt_frc, uint, 0664);
 
-unsigned int dpss_reset_ctrl; // = 1; //bit 0 for frc rev
+unsigned int dpss_reset_ctrl = 0x10; // = 1; //bit 0 for frc rev
 module_param_named(dpss_reset_ctrl, dpss_reset_ctrl, uint, 0664);
 unsigned int dpss_ds_ctrl = 2;
 module_param_named(dpss_ds_ctrl, dpss_ds_ctrl, uint, 0664);

@@ -1987,8 +1987,13 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 			start = ktime_get();
 			dpss_enable_mc_link(0);
 			while (1) {
-				if (is_vd1_link_state())
+				if (is_vd1_link_state()) {
+					if ((dpss_reset_ctrl & 0xF0) == 0x10)
+						w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1);
+					usleep_range(4000, 8000);
+					dbg_i0("link off to disable frc\n");
 					break;
+				}
 				now = ktime_get();
 				elapsed_ms = ktime_ms_delta(now, start);
 				if (elapsed_ms > timeout_ms) {
