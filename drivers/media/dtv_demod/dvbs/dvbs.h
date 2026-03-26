@@ -184,6 +184,6 @@ unsigned int dvbs_get_iq_swap(void);
 void dvbs_blind_check_signal(struct aml_dtvdemod *demod,
 		unsigned int freq_khz, unsigned int *freq_add,
 		unsigned int *freq_add1, unsigned int *state, unsigned int *asperity,
-		unsigned int *sr_est, unsigned int spectrum_invert);
+		unsigned int *sr_est, int spectrum_invert);
 
 #endif

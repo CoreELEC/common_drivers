@@ -242,6 +242,7 @@
 /*  V4.1.017 add J83B status jittering when locked to unlock */
 /*  V4.1.018 fix dvbc unlock when signal is setting from weak to normal */
 /*  V4.1.019 fix dvbs unicable/diseqc/lnb cmd and timing */
+/*  V4.1.020 compatible dvbs unicable device polarity when blindscan */
 /****************************************************/
 /****************************************************************/
 /*               AMLDTVDEMOD_VER  Description:                  */
@@ -258,8 +259,8 @@
 /*->The last four digits indicate the release time              */
 /****************************************************************/
 #define KERNEL_4_9_EN		1
-#define AMLDTVDEMOD_VER "V4.1.019"
-#define DTVDEMOD_VER	"2026/04/29 fix dvbs unicable/diseqc/lnb cmd and timing"
+#define AMLDTVDEMOD_VER "V4.1.020"
+#define DTVDEMOD_VER	"2026/05/27 compatible dvbs unicable device polarity when blindscan"
 #define AMLDTVDEMOD_T2_FW_VER "v1059.20250521"
 #define DEMOD_DEVICE_NAME  "dtvdemod"
 

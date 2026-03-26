@@ -1542,7 +1542,7 @@ unsigned int dvbs_get_iq_swap(void)
 
 //V3
 static unsigned int fe_l2a_blind_check_agc2_bandwidth(struct aml_dtvdemod *demod,
-		struct fe_l2a_internal_param *pparams, unsigned int spectrum_invert)
+		struct fe_l2a_internal_param *pparams, int spectrum_invert)
 {
 	struct amldtvdemod_device_s *devp = (struct amldtvdemod_device_s *)demod->priv;
 	//unsigned int minagc2level = 0xffff, maxagc2level = 0x0000, midagc2level,
@@ -1875,7 +1875,7 @@ static unsigned int fe_l2a_blind_check_agc2_bandwidth(struct aml_dtvdemod *demod
 void dvbs_blind_check_signal(struct aml_dtvdemod *demod,
 		unsigned int freq_khz, unsigned int *freq_add,
 		unsigned int *freq_add1, unsigned int *state, unsigned int *asperity,
-		unsigned int *sr_est, unsigned int spectrum_invert)
+		unsigned int *sr_est, int spectrum_invert)
 {
 	struct amldtvdemod_device_s *devp = (struct amldtvdemod_device_s *)demod->priv;
 	unsigned int i;

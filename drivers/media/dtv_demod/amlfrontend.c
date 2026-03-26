@@ -2898,6 +2898,7 @@ static int aml_dtvdm_set_property(struct dvb_frontend *fe,
 	case DTV_CANCEL_BLIND_SCAN:
 		devp->blind_scan_stop = 1;
 		devp->singlecable_param.version = 0;
+		demod->blind_step = DTVBLIND_SCAN_NORMAL;
 		PR_INFO("DTV_CANCEL_BLIND_SCAN\n");
 		/* Normally, need to call cancel_work_sync()
 		 * wait to workqueue exit,
@@ -2905,12 +2906,8 @@ static int aml_dtvdm_set_property(struct dvb_frontend *fe,
 		 */
 		break;
 	case DTV_BLIND_SCAN_STEP_NEXT:
-		if (demod->blind_step == DTVBLIND_SCAN_STEP_LOCK) {
-			PR_INFO("blind_scan already is step lock\n");
-			break;
-		}
-		demod->blind_step = DTVBLIND_SCAN_STEP_LOCK;
-		PR_INFO("blind_scan step lock\n");
+		demod->blind_step = tvp->u.data;
+		PR_INFO("DTV_BLIND_SCAN_STEP_NEXT %d\n", demod->blind_step);
 		break;
 	case DTV_SINGLE_CABLE_VER:
 		/* not singlecable: 0, 1.0X - 1(EN50494), 2.0X - 2(EN50607) */
