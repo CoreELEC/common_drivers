@@ -1257,6 +1257,22 @@ static struct frddr *register_frddr_l(struct device *dev,
 	return from;
 }
 
+static inline unsigned int
+	calc_frddr_address(unsigned int reg, unsigned int base)
+{
+	return base + reg - EE_AUDIO_FRDDR_A_CTRL0;
+}
+
+static void aml_fddr_free(struct frddr *fr)
+{
+	struct aml_audio_controller *actrl = fr->actrl;
+	unsigned int reg_base = fr->reg_base;
+	unsigned int reg;
+
+	reg = calc_frddr_address(EE_AUDIO_FRDDR_A_CTRL2, reg_base);
+	aml_audiobus_write(actrl, reg, 0);
+}
+
 static int unregister_frddr_l(struct device *dev, void *data)
 {
 	struct frddr *from;
@@ -1296,6 +1312,7 @@ static int unregister_frddr_l(struct device *dev, void *data)
 	from->in_use = false;
 	from->dest = FRDDR_INVAL;
 	from->mixer_exist = 0;
+	aml_fddr_free(from);
 	pr_info("frddrs[%d] released by device %s\n", i, dev_name(dev));
 	return 0;
 }
@@ -1331,12 +1348,6 @@ int aml_audio_unregister_frddr(struct device *dev, void *data)
 	ret = unregister_frddr_l(dev, data);
 	mutex_unlock(&ddr_mutex);
 	return ret;
-}
-
-static inline unsigned int
-	calc_frddr_address(unsigned int reg, unsigned int base)
-{
-	return base + reg - EE_AUDIO_FRDDR_A_CTRL0;
 }
 
 /*
