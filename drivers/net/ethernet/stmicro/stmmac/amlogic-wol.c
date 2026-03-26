@@ -920,30 +920,25 @@ static int handle_offload_msg(struct amlogic_wol *wol, unsigned char *puc, const
 	type = *((int *)puc);
 	len = *((int *)(puc + 4));
 
+#ifdef CONFIG_MDNS_DEBUG
 	print_hex_dump(KERN_DEBUG, "OFFLOAD-MSG: ", DUMP_PREFIX_OFFSET, 16, 1, puc + 8, len, true);
+#endif
 
 	if (type == TYPE_SET_OFFLOAD_STATE && len == 1) {
-		unsigned char val = puc[8];
-
-		return set_mdns_notify_bl30(wol, val);
+		return set_mdns_notify_bl30(wol, puc[8]);
 	} else if (type == TYPE_ENABLE_NETLINK_SERVER && len == 1) {
-		unsigned char val = puc[8];
-
-		if (val == 1)
+		if (puc[8] == 1)
 			mdns_netlink_init(wol);
 	} else if (type == TYPE_ADD_RESPONSE) {
 		int response_len = *((int *)(puc + 8));
 		unsigned char *response;
-		unsigned char *q;
+		unsigned char *q = puc + 12;
 		int i;
 		int numberOfCriteria;
 		struct match_criteria *list;
 		unsigned short web_port, srv_port;
 
-		q = puc + 4 + 4 + 4;
 		response = q;
-		print_hex_dump(KERN_DEBUG, "MDNS response: ",
-			DUMP_PREFIX_OFFSET, 16, 1, q, response_len, true);
 		q += response_len;
 		numberOfCriteria = *((int *)q);
 		q += 4;
@@ -962,20 +957,21 @@ static int handle_offload_msg(struct amlogic_wol *wol, unsigned char *puc, const
 
 		mdns_remove_response(wol, val);
 	} else if (type == TYPE_SET_PASSTHROUGH_BEHAVIOR && len == 1) {
-		unsigned char val = puc[8];
-
-		mdns_set_passthrough_behavior(wol, val);
+		mdns_set_passthrough_behavior(wol, puc[8]);
 	} else if (type == TYPE_SET_WAKEUP_PORT) {
-		struct wake_up_port wp[MDNS_WAKE_PORT_MAX];
+		struct wake_up_port *wp = NULL;
 		int i, port_num;
-		unsigned char *q;
+		unsigned char *q = puc + 12;
 
 		port_num = *((u32 *)(puc + 8));
 		if (port_num <= 0 || port_num > MDNS_WAKE_PORT_MAX) {
 			pr_err("%s: Invalid port number: %d\n", __func__, port_num);
 			return -1;
 		}
-		q = puc + 4 + 4 + 4;
+		wp = kcalloc(port_num, sizeof(struct wake_up_port), GFP_KERNEL);
+		if (!wp)
+			return -ENOMEM;
+
 		for (i = 0; i < port_num; i++) {
 			unsigned char protocol, matcher;
 			unsigned short port;
@@ -994,6 +990,7 @@ static int handle_offload_msg(struct amlogic_wol *wol, unsigned char *puc, const
 			wp[i].port = port;
 		}
 		mdns_set_wakeup_port(wol, wp, port_num);
+		kfree(wp);
 	} else {
 		pr_err("%s: unsupported type: %d\n", mode, type);
 		return -1;
