@@ -2326,7 +2326,6 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->unreliable_vs_idx = 0;
 	devp->prop.hdcp_sts = 0;
 	devp->prop.macrovision_sts = 0;
-	devp->starting_chg = 0;
 	devp->vdin_stable_cnt = 0;
 	devp->vdin_nosig_cnt = 0;
 	devp->game_mode = 0;
@@ -2341,9 +2340,10 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->vdin_pc_mode = 0;
 	devp->dv_is_not_std = false;
 
-	if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
-		devp->self_stop_start) {
-		//bypass not need handling
+	if (((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
+		devp->self_stop_start) || devp->re_cfg) {
+		devp->self_stop_start = false;
+		devp->re_cfg = false;
 	} else {
 		/* clear color para*/
 		memset(&devp->pre_prop, 0, sizeof(devp->pre_prop));
@@ -4146,12 +4146,6 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	offset = devp->addr_offset;
 	vdin_set_mif_on_off(devp, devp->flags & VDIN_FLAG_RDMA_ENABLE);
 	isr_log(devp->vfp);
-
-	/* 10 is prevent abnormal frame */
-	if (devp->starting_chg && devp->irq_cnt < 10) {
-		vdin_drop_frame_info(devp, "starting chg");
-		return IRQ_HANDLED;
-	}
 
 	spin_lock_irqsave(&devp->isr_lock, flags);
 
@@ -7579,7 +7573,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->dts_config.nosig_in_cnt = NOSIG_MAX_CNT;
 	devp->dts_config.nosig2_unstable_cnt = EXIT_NOSIG_MAX_CNT;
 	devp->dts_config.vdin_dv_chg_cnt = 5;
-	devp->dts_config.vdin_hdr_chg_cnt = 1;
+	devp->dts_config.vdin_hdr_chg_cnt = 3;
 	devp->dts_config.vdin_vrr_chg_cnt = 1;
 	devp->dts_config.vdin_qms_chg_cnt = 2;
 	/* The VFCE cannot complete the compression in time,so adds 2 lines of time */

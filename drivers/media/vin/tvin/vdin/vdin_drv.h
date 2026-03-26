@@ -1061,7 +1061,6 @@ struct vdin_dev_s {
 	unsigned int curr_field_type_dw;/* mif type if dw enabled */
 	unsigned int curr_dv_flag;
 	unsigned int drop_hdr_set_sts;
-	unsigned int starting_chg;
 	u64 cur_us; //isr cur_us
 	u64 pre_us; //isr pre_us
 
@@ -1287,6 +1286,7 @@ struct vdin_dev_s {
 	bool vinfo_over_pixel_clk;
 	bool input_over_pixel_clk;
 	bool pause_dec_once;
+	bool re_cfg;
 	unsigned int mute_cnt;
 	unsigned int ignore_frames;
 	/*use frame rate to cal duration*/
