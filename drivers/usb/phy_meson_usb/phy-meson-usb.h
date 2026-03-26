@@ -138,6 +138,7 @@ extern bool meson_u2phy_960m;
 
 inline bool meson_uphy_of_device_pci_available(void);
 int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy);
+void meson_u2phy_set_reset_count(void);
 //int meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on);
 int meson_u2phy_hold_reset(struct amlogic_usb_v2 *phy, bool on);
 int meson_u2phy_reset_phycfg(struct amlogic_usb_v2 *phy);

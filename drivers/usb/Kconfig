@@ -186,6 +186,13 @@ config AMLOGIC_USB_DWC3_DUAL_ROLE
 
 endchoice
 
+config AMLOGIC_USB_DWC3_DEBUGFS
+	bool "Used to control to build debugfs-meson.c"
+	depends on AMLOGIC_USB_DWC3 && DEBUG_FS
+	default y
+	help
+	  Used to control to build debugfs-meson.c.
+
 comment "Platform Glue Driver Support"
 
 config AMLOGIC_USB_DWC3_OTG

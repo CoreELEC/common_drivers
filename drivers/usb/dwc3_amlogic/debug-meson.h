@@ -414,7 +414,7 @@ static inline const char *dwc3_gadget_generic_cmd_status_string(int status)
 }
 
 
-#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_AMLOGIC_USB_DWC3_DEBUGFS
 extern void aml_dwc3_debugfs_create_endpoint_dir(struct aml_dwc3_ep *dep);
 extern void aml_dwc3_debugfs_remove_endpoint_dir(struct aml_dwc3_ep *dep);
 extern void aml_dwc3_debugfs_init(struct aml_dwc3 *d);

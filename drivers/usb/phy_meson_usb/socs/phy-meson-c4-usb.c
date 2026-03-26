@@ -157,7 +157,7 @@ static int meson_u2phy_c4_exit(void *phy)
 	if (mphy->suspend_flag == 0)
 		clk_bulk_disable_unprepare(mphy->clk_num, mphy->clks);
 
-	mphy->reset_initcount = 0;
+	meson_u2phy_set_reset_count();
 	mphy->suspend_flag = 1;
 
 	return ret;

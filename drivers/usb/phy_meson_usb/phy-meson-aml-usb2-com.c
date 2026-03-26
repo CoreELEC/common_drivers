@@ -25,6 +25,7 @@ static int meson_u2phy_get_speed(char *str)
 __setup("usb2t_mode=", meson_u2phy_get_speed);
 
 /* Reset usb controller. */
+static int	init_count;
 int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 {
 	if (phy->usb_reset_bit == -1U)
@@ -37,8 +38,8 @@ int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 
 	dev_dbg(phy->dev, "%s initial: 0x%x.\n", __func__,
 				readl(phy->reset_regs + phy->reset_level));
-	if (!phy->reset_initcount) {
-		phy->reset_initcount++;
+	if (!init_count) {
+		init_count++;
 		if (phy->usb_reset_bit == 2)
 			writel((readl(phy->reset_regs) |
 				(0x1 << phy->usb_reset_bit)), phy->reset_regs);
@@ -48,6 +49,11 @@ int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy)
 	dev_dbg(phy->dev, "%s after: 0x%x.\n", __func__,
 				readl(phy->reset_regs + phy->reset_level));
 	return 0;
+}
+
+void meson_u2phy_set_reset_count(void)
+{
+	init_count = 0;
 }
 
 int __maybe_unused meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on)
@@ -366,7 +372,6 @@ int meson_u2phy_exit(struct amlogic_usb_v2 *phy)
 	if (phy->suspend_flag == 0)
 		clk_bulk_disable_unprepare(phy->clk_num, phy->clks);
 
-	//phy->reset_initcount = 0;
 	phy->suspend_flag = 1;
 
 	return ret;
