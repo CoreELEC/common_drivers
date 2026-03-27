@@ -20,6 +20,9 @@
 #include "../dpss/dpss_s.h"
 
 #include <linux/amlogic/media/di/di_pq.h>
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+#include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
+#endif
 #ifdef FUNC_EN_PQ
 static struct di_ext_pq_ops *dipq_api;
 #define DIPQ_INFO(fmt, args ...)		pr_info("dpsspq:" fmt, ##args)
@@ -360,32 +363,42 @@ void pq_update_suspend_flag(u32 suspend_flag)
 
 enum vframe_signal_fmt_e dpss_sfmt(struct vframe_s *vf)
 {
+	enum vframe_signal_fmt_e pq_format = VFRAME_SIGNAL_FMT_INVALID;
+
 	if (!vf || dpss_bypass_ko)
-		return VFRAME_SIGNAL_FMT_INVALID;
+		return pq_format;
 
 	/* invalid src fmt case */
-	if (vf->src_fmt.sei_magic_code != SEI_MAGIC_CD) {
-		if ((transfer_characteristic == 14 ||
-			transfer_characteristic == 18) &&
-			color_primaries == 9) {
-			if (cuva)
-				vf->src_fmt.fmt = VFRAME_SIGNAL_FMT_CUVA_HLG;
-			else
-				vf->src_fmt.fmt = VFRAME_SIGNAL_FMT_HLG;
-		} else if ((transfer_characteristic == 16) &&
-				 ((color_primaries == 9) ||
-				  (color_primaries == 2))) {
-			if (cuva)
-				vf->src_fmt.fmt = VFRAME_SIGNAL_FMT_CUVA_HDR;
-			else
-				vf->src_fmt.fmt = VFRAME_SIGNAL_FMT_HDR10;
-		} else {
-			vf->src_fmt.fmt = VFRAME_SIGNAL_FMT_SDR;
-		}
+	if ((transfer_characteristic == 18 || transfer_characteristic == 14) &&
+		color_primaries == 9) {
+		if (cuva)
+			pq_format = VFRAME_SIGNAL_FMT_CUVA_HLG;
+		else
+			pq_format = VFRAME_SIGNAL_FMT_HLG;
+	} else if ((transfer_characteristic == 16) &&
+			 ((color_primaries == 9) ||
+			  (color_primaries == 2))) {
+		if (cuva)
+			pq_format = VFRAME_SIGNAL_FMT_CUVA_HDR;
+		else
+			pq_format = VFRAME_SIGNAL_FMT_HDR10;
+	} else if ((transfer_characteristic == 0x30) &&
+			((color_primaries == 9 || color_primaries == 2))) {
+		pq_format = VFRAME_SIGNAL_FMT_HDR10PLUS;
+	} else if (transfer_characteristic == 1) {
+		if (color_primaries == 9)
+			pq_format = VFRAME_SIGNAL_FMT_SDR_2020;
+		else
+			pq_format = VFRAME_SIGNAL_FMT_SDR;
+	} else {
+		pq_format = VFRAME_SIGNAL_FMT_SDR;
 	}
-	dbg_i1("[%s]  %d\n", __func__, vf->src_fmt.fmt);
+	if (is_amdv_frame(vf))
+		pq_format = VFRAME_SIGNAL_FMT_DOVI;
+	dbg_i1("[%s]  %d,%d,%d,%d\n", __func__, vf->src_fmt.fmt,
+		transfer_characteristic, color_primaries, pq_format);
 
-	return vf->src_fmt.fmt;
+	return pq_format;
 }
 
 void pq_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
