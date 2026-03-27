@@ -913,6 +913,15 @@ static int lcd_config_load_from_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 		pconf->timing.pre_de_h = (unsigned short)(para[0]);
 		pconf->timing.pre_de_v = (unsigned short)(para[1]);
 	}
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	if (pconf->basic.lcd_type == LCD_MLVDS ||
+			pconf->basic.lcd_type == LCD_P2P) {
+		if (!pconf->timing.pre_de_h)
+			pconf->timing.pre_de_h = lcd_tcon_get_default_prede_h();
+		if (!pconf->timing.pre_de_v)
+			pconf->timing.pre_de_v = lcd_tcon_get_default_prede_v();
+	}
+#endif
 
 	ret = of_property_read_u32_array(child, "clk_attr", &para[0], 4);
 	if (ret) {
@@ -1396,6 +1405,15 @@ static int lcd_panel_parse_timing(struct json_parse_s *jsp,
 	parent         = json_get_object_child(jsp, parent, "pre_de");
 	tims->pre_de_h = json_get_arr_u32(jsp, parent, 0, 0);
 	tims->pre_de_v = json_get_arr_u32(jsp, parent, 1, 0);
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	if (dev_p->dev_cfg.basic.lcd_type == LCD_MLVDS ||
+			dev_p->dev_cfg.basic.lcd_type == LCD_P2P) {
+		if (!tims->pre_de_h)
+			tims->pre_de_h = lcd_tcon_get_default_prede_h();
+		if (!tims->pre_de_v)
+			tims->pre_de_v = lcd_tcon_get_default_prede_v();
+	}
+#endif
 
 	parent = json_path_to_node(jsp, jsp->root, "/timing/timing");
 	cnt = json_get_array_size(jsp, parent);
@@ -2492,6 +2510,15 @@ static int lcd_config_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 			ptiming->vsync_width - ptiming->vsync_bp;
 	pconf->timing.pre_de_h = lcd_ini_get_val(inip, psec, "pre_de_h", 0);
 	pconf->timing.pre_de_v = lcd_ini_get_val(inip, psec, "pre_de_v", 0);
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	if (pconf->basic.lcd_type == LCD_MLVDS ||
+			pconf->basic.lcd_type == LCD_P2P) {
+		if (!pconf->timing.pre_de_h)
+			pconf->timing.pre_de_h = lcd_tcon_get_default_prede_h();
+		if (!pconf->timing.pre_de_v)
+			pconf->timing.pre_de_v = lcd_tcon_get_default_prede_v();
+	}
+#endif
 
 	/* customer: 31byte */
 	ptiming->fr_adjust_type = lcd_ini_get_val(inip, psec, "fr_adjust_type", 0);

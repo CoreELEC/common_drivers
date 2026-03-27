@@ -360,8 +360,8 @@ static void lcd_venc_set_timing(struct aml_lcd_drv_s *pdrv)
 
 	if (pconf->basic.lcd_type == LCD_P2P ||
 	    pconf->basic.lcd_type == LCD_MLVDS) {
-		pre_vde = pconf->timing.pre_de_v ? pconf->timing.pre_de_v : 16;
-		pre_hde = pconf->timing.pre_de_h ? pconf->timing.pre_de_h : 6;
+		pre_vde = pconf->timing.pre_de_v;
+		pre_hde = pconf->timing.pre_de_h;
 		pre_de_vs = pconf->timing.vstart - pre_vde;
 		pre_de_ve = pconf->timing.act_timing.v_active + pre_de_vs;
 		pre_de_hs = pconf->timing.hstart + pre_hde;

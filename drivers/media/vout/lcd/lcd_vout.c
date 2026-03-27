@@ -2147,6 +2147,9 @@ static int lcd_global_init_once(struct lcd_data_s *pdata)
 	mutex_init(&lcd_vout_mutex);
 	mutex_init(&lcd_power_mutex);
 	lcd_clk_init();
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+	lcd_tcon_chip_init(pdata);
+#endif
 	lcd_phy_config_init(pdata);
 	lcd_venc_config_init(pdata);
 

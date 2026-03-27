@@ -516,6 +516,7 @@ unsigned int lcd_config_timing_check(struct aml_lcd_drv_s *pdrv, struct aml_lcd_
 	short vpw = ptiming->vsync_width;
 	short vbp = ptiming->vsync_bp;
 	short vfp = ptiming->vsync_fp;
+	short pre_de_v = 0;
 	short hfp_min, vfp_min, vfp_tail = 0, temp;
 	char *ferr_str = NULL, *warn_str = NULL;
 	int ferr_len = 0, warn_len = 0, ferr_left, warn_left;
@@ -535,8 +536,9 @@ unsigned int lcd_config_timing_check(struct aml_lcd_drv_s *pdrv, struct aml_lcd_
 
 	if (dev_p->dev_cfg.basic.lcd_type == LCD_MLVDS ||
 	    dev_p->dev_cfg.basic.lcd_type == LCD_P2P) {
+		pre_de_v = dev_p->dev_cfg.timing.pre_de_v;
 #ifdef CONFIG_AMLOGIC_LCD_TCON
-		vfp_tail = lcd_tcon_get_vfp_tail(pdrv);
+		vfp_tail = lcd_tcon_get_vfp_tail();
 #else
 		vfp_tail = 3;
 #endif
@@ -618,9 +620,24 @@ lcd_config_timing_check_vid_hfp:
 
 lcd_config_timing_check_vid_vswbp:
 	//vswbp
+	temp = vpw + vbp;
+	if (pre_de_v && temp < pre_de_v) {
+		if (pdrv->disp_req.alert_level == 1) {
+			warn_left = lcd_debug_info_len(warn_len);
+			warn_len += snprintf(warn_str + warn_len, warn_left,
+				"  vpw + vbp: %d, for display path, req: >=prede_v(%d)!\n",
+				temp, pre_de_v);
+			ret |= (1 << 7);
+		} else if (pdrv->disp_req.alert_level == 2) {
+			ferr_left = lcd_debug_info_len(ferr_len);
+			ferr_len += snprintf(ferr_str + ferr_len, ferr_left,
+				"  vpw + vbp: %d, for display path, req: >=prede_v(%d)!!!\n",
+				temp, pre_de_v);
+			ret |= (1 << 6);
+		}
+	}
 	if (pdrv->disp_req.vswbp_vid == 0)
 		goto lcd_config_timing_check_vid_vfp;
-	temp = vpw + vbp;
 	if (temp < pdrv->disp_req.vswbp_vid) {
 		if (pdrv->disp_req.alert_level == 1) {
 			warn_left = lcd_debug_info_len(warn_len);

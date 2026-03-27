@@ -3121,14 +3121,28 @@ static int lcd_panel_parse_tcon_from_json(struct aml_lcd_drv_s *pdrv)
 	return 0;
 }
 
-unsigned int lcd_tcon_get_vfp_tail(struct aml_lcd_drv_s *pdrv)
+unsigned int lcd_tcon_get_vfp_tail(void)
 {
-	struct lcd_tcon_config_s *tcon_conf = get_lcd_tcon_config();
-
-	if (!pdrv || !tcon_conf)
+	if (!lcd_tcon_conf)
 		return 0;
 
-	return tcon_conf->vfp_tail;
+	return lcd_tcon_conf->vfp_tail;
+}
+
+unsigned int lcd_tcon_get_default_prede_v(void)
+{
+	if (!lcd_tcon_conf)
+		return 0;
+
+	return lcd_tcon_conf->prede_v_dft;
+}
+
+unsigned int lcd_tcon_get_default_prede_h(void)
+{
+	if (!lcd_tcon_conf)
+		return 0;
+
+	return lcd_tcon_conf->prede_h_dft;
 }
 
 static int lcd_tcon_get_config(struct aml_lcd_drv_s *pdrv)
@@ -3328,6 +3342,8 @@ static struct lcd_tcon_config_s tcon_data_t5d = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 3,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_t5d,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3369,6 +3385,8 @@ static struct lcd_tcon_config_s tcon_data_t3 = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_uhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3410,6 +3428,8 @@ static struct lcd_tcon_config_s tcon_data_t5w = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_uhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3451,6 +3471,8 @@ static struct lcd_tcon_config_s tcon_data_t5m = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_uhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3492,6 +3514,8 @@ static struct lcd_tcon_config_s tcon_data_t3x = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 16,
+	.prede_h_dft = 6,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_uhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3529,6 +3553,8 @@ static struct lcd_tcon_config_s tcon_data_txhd2 = {
 	.secure_cfg_size = 0x00000040, /* 64byte */
 
 	.vfp_tail = 3,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_fhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3566,6 +3592,8 @@ static struct lcd_tcon_config_s tcon_data_t6d = {
 	.secure_cfg_size = 0x00000040, /* 64byte */
 
 	.vfp_tail = 3,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_fhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3609,6 +3637,8 @@ static struct lcd_tcon_config_s tcon_data_t6w = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 8,
+	.prede_h_dft = 8,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_uhd,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3652,6 +3682,8 @@ static struct lcd_tcon_config_s tcon_data_t6x = {
 	.secure_cfg_size = 0x00000040,
 
 	.vfp_tail = 5,
+	.prede_v_dft = 16,
+	.prede_h_dft = 6,
 
 	.init_pre_setting = lcd_tcon_init_pre_setting_t6x,
 	.init_post_setting = lcd_tcon_init_post_setting,
@@ -3671,14 +3703,12 @@ static struct lcd_tcon_config_s tcon_data_t6x = {
 	.tcon_check = lcd_tcon_setting_check_t5,
 };
 
-int lcd_tcon_probe(struct aml_lcd_drv_s *pdrv)
+void lcd_tcon_chip_init(struct lcd_data_s *pdata)
 {
-	// struct cma *cma;
-	// unsigned int mem_size;
-	int ret = 0;
+	if (!pdata)
+		return;
 
-	lcd_tcon_conf = NULL;
-	switch (pdrv->data->chip_type) {
+	switch (pdata->chip_type) {
 	case LCD_CHIP_T5D:
 		lcd_tcon_conf = &tcon_data_t5d;
 		break;
@@ -3707,8 +3737,17 @@ int lcd_tcon_probe(struct aml_lcd_drv_s *pdrv)
 		lcd_tcon_conf = &tcon_data_t6x;
 		break;
 	default:
+		lcd_tcon_conf = NULL;
 		break;
 	}
+}
+
+int lcd_tcon_probe(struct aml_lcd_drv_s *pdrv)
+{
+	// struct cma *cma;
+	// unsigned int mem_size;
+	int ret = 0;
+
 	if (!lcd_tcon_conf)
 		return 0;
 

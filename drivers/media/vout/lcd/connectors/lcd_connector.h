@@ -46,6 +46,7 @@ int lcd_vbyone_vsync_handler(struct aml_lcd_drv_s *pdrv);
 unsigned int lcd_tcon_reg_read(struct aml_lcd_drv_s *pdrv, unsigned int addr);
 void lcd_tcon_reg_write(struct aml_lcd_drv_s *pdrv,
 			unsigned int addr, unsigned int val);
+void lcd_tcon_chip_init(struct lcd_data_s *pdata);
 int lcd_tcon_probe(struct aml_lcd_drv_s *pdrv);
 int lcd_tcon_remove(struct aml_lcd_drv_s *pdrv);
 unsigned int lcd_tcon_table_read(unsigned int addr);
@@ -86,7 +87,9 @@ ssize_t lcd_tcon_demura_dbg_show(struct device *dev, struct device_attribute *at
 ssize_t lcd_tcon_demura_dbg_store(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count);
 long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned long arg);
-unsigned int lcd_tcon_get_vfp_tail(struct aml_lcd_drv_s *pdrv);
+unsigned int lcd_tcon_get_vfp_tail(void);
+unsigned int lcd_tcon_get_default_prede_v(void);
+unsigned int lcd_tcon_get_default_prede_h(void);
 #endif
 
 #ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
