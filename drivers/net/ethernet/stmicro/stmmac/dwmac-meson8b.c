@@ -129,6 +129,7 @@ struct meson8b_dwmac {
 	struct mbox_chan		*mbox_chan;
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
 	bool				wol_en;		/* MAC frames are processed in BL30 */
+	bool				wol_ready;
 #endif
 #endif
 	u32				smc_id;
@@ -812,7 +813,9 @@ static int meson8b_suspend(struct device *dev)
 		/* disable the old WOL to prevent the MAC from being re-enabled */
 		priv->eth_priv.wol_switch_from_user = 0;
 		/* enable WOL when phy ready and wakeup source is not empty */
-		if (phydev && amlogic_wol_wakeup_src_not_empty(dev)) {
+		dwmac->wol_ready = (bool)(phydev && phydev->link &&
+					  amlogic_wol_wakeup_src_not_empty(dev));
+		if (dwmac->wol_ready) {
 			phydev->irq_suspended = 0;
 			/* preset: enable DDR ASR mode (S6 only)
 			 *   The DDR ASR mode introduces additional power consumption;
@@ -877,7 +880,7 @@ static int meson8b_resume(struct device *dev)
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
 	/* Using the new WOL mode (processing MAC frames in BL30) */
 	if (dwmac->wol_en) {
-		if (phydev && amlogic_wol_wakeup_src_not_empty(dev)) {
+		if (dwmac->wol_ready) {
 			if (amlogic_wol_exit(dev)) {
 				input_event(dwmac->input_dev, EV_KEY, KEY_POWER, 1);
 				input_sync(dwmac->input_dev);
