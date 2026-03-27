@@ -22,7 +22,7 @@
 #include "meson_vpu.h"
 #include "meson_crtc.h"
 
-u32 writeback_fmts[TVIN_COLOR_FMT_MAX];
+u32 writeback_fmts[TVIN_PIXEL_FORMAT_NUM];
 
 static int meson_writeback_connector_get_modes(struct drm_connector *connector)
 {
