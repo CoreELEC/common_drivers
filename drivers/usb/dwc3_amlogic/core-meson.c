@@ -761,8 +761,8 @@ static void dwc3_cache_hwparams(struct aml_dwc3 *dwc)
 	parms->hwparams4 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS4);
 	parms->hwparams5 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS5);
 	parms->hwparams6 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS6);
-	//parms->hwparams7 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS7);
-	parms->hwparams7 = 512;
+	parms->hwparams7 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS7);
+	//parms->hwparams7 = 512;
 	parms->hwparams8 = dwc3_readl(dwc->regs, DWC3_GHWPARAMS8);
 
 	if (DWC3_IP_IS(DWC32))
