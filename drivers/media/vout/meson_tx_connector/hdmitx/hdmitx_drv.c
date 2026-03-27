@@ -735,6 +735,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 
 	/* init tx_common */
 	tx_comm->base.pdev = device;
+	tx_comm->base.conn_dev.connector_type = DRM_MODE_CONNECTOR_MESON_HDMIA_A
+		+ tx_comm->enc_idx;
 	meson_tx_dev_init(&tx_comm->base, &hw_comm->tx_hw_base, &hdmitx_common_helper_ops);
 	hdmitx_common_init(tx_comm, hw_comm);
 	/* note that dts config will override the default config when init */

@@ -270,8 +270,6 @@ int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *h
 	tx_comm->hdr_state = meson_tx_hdr_create(tx_comm);
 	tx_comm->hdr_state->config_csc_en = boot_param->config_csc;
 
-	tx_comm->base.conn_dev.connector_type = DRM_MODE_CONNECTOR_MESON_HDMIA_A
-		+ tx_comm->enc_idx;
 	hdmitx_vout_init(tx_comm, hw_comm);
 	hdmitx_ext_instance_init(tx_comm);
 	/* get efuse ctrl state */
