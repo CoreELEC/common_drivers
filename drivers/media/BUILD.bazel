@@ -320,7 +320,7 @@ ddk_module(
                 "vout/meson_tx_connector/meson_tx_mode_set.c",
                 "vout/meson_tx_connector/meson_tx_event_mgr.c",
                 "vout/meson_tx_connector/phy/meson_tx_phy_core.c",
-                "vout/meson_tx_connector/phy/meson_tx_phy_drv.c",
+                "vout/meson_tx_connector/phy/meson_tx_dp_phy_drv.c",
                 "vout/meson_tx_connector/phy/meson_tx_dummy_phy_drv.c",
                 "vout/meson_tx_connector/clk/meson_tx_clk.c",
                 "vout/meson_tx_connector/clk/tx_clk_a9.c",
@@ -1300,6 +1300,7 @@ ddk_module(
         "//common_drivers/drivers/aml_tee:tee",
         "//common_drivers/drivers/uvm:aml_uvm",
         "//common_drivers/drivers/mailbox:amlogic-mailbox",
+        "//common_drivers/drivers/usb:typec-mux-meson",
     ],
 )
 

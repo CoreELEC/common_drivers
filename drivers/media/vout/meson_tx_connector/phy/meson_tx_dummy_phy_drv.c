@@ -34,7 +34,8 @@ int meson_tx_dummy_phy_power_off(void *data)
 	return 0;
 }
 
-int meson_tx_dummy_phy_set_mode(void *data, enum meson_tx_phy_mode mode)
+int meson_tx_dummy_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
+	struct meson_tx_phy_cfg_opts *opts)
 {
 	pr_info("%s\n", __func__);
 	return 0;

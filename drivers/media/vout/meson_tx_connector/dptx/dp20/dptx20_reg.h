@@ -111,6 +111,11 @@
  *  1:0 REMAP_LANE_0: Specifies which internal lane number (0-3) will be mapped to the PHY lane 0.
  */
 #define DPTX20_LANE_REMAP                      0x02c
+    #define LANE_REMAP_EN                      BIT(8)
+    #define REMAP_LANE_3_NUM                   6
+    #define REMAP_LANE_2_NUM                   4
+    #define REMAP_LANE_1_NUM                   2
+    #define REMAP_LANE_0_NUM                   0
 
 /* RW   CUSTOM_80BIT_PATTERN_31_0
  * 31:0 Bits 31:0 of the 80-bit custom pattern
@@ -233,6 +238,13 @@
  *  8:0 Wait time in microseconds. This register is initialized to a value of 400 upon reset.
  */
 #define DPTX20_AUX_REPLY_TIMEOUT_INTERVAL      0x110
+
+/*
+ * RW   AUX_REPLY_SYNC_SET
+ *  5:0 aux reply sync set: aux sync pattern clk number
+ *    6 aux data invert
+ */
+#define DPTX20_AUX_REPLY_SYNC_SET              0x114
 
 #define TR_DPTX_AUX_GTC_AUTO_CTRL              0x118
 

@@ -12,7 +12,7 @@
 #include <linux/component.h>
 #include <linux/vmalloc.h>
 #include <linux/of_address.h>
-
+#include <linux/notifier.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_log.h>
@@ -23,6 +23,7 @@
 #include "dptx_internal.h"
 #include "dptx_hw_opcode.h"
 #include "dp20/dptx_hdcp_hw.h"
+#include "meson_tx_hw_task.h"
 
 #define DEVICE_NAME_DP "dptx"
 #define DPTX_DEV_COUNT 2
@@ -38,7 +39,7 @@ static void dptx_early_suspend(struct early_suspend *es)
 		return;
 
 	tx_comm = es->param;
-	DPTX_DEBUG("early suspend %s\n", dev_name(tx_comm->base.dev));
+	DPTX_DEBUG("early suspend %s\n", tx_comm ? dev_name(tx_comm->base.dev) : "");
 	/* disable phy and core output */
 	meson_tx_phy_power_off(tx_comm->base.tx_hw_base->tx_phy);
 	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
@@ -55,7 +56,7 @@ static void dptx_late_resume(struct early_suspend *es)
 		return;
 
 	tx_comm = es->param;
-	DPTX_DEBUG("late resume %s\n", dev_name(tx_comm->base.dev));
+	DPTX_DEBUG("late resume %s\n", tx_comm ? dev_name(tx_comm->base.dev) : "");
 }
 #endif
 
@@ -281,7 +282,8 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 		if (irq_index == -ENXIO) {
 			DPTX_ERROR("%s: hdcp2tx_intr not found\n", __func__);
 			ret = -ENXIO;
-			goto regs_region_alloc_fail;
+			// TODO temp mark, otherwise no /sys/class/drm/[CARD]
+			//goto regs_region_alloc_fail;
 		}
 		hw_comm->hdcp2tx_irq_id = irq_index;
 	} else {
@@ -372,6 +374,46 @@ static void dptx_hdcp_uninit(struct dptx_common *tx_comm)
 	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP_UNINIT, tx_comm, NULL);
 }
 
+static int dpphy_to_core_notifier(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct dptx_common *tx_comm = container_of(nb, struct dptx_common, dpphy_to_core_nb);
+	struct meson_hw_event_ops *event_ops = tx_comm->hw_comm->hw_base.event_ops;
+	u32 args = 0;
+	u32 flip = 0;
+	u32 pin_state = 0;
+	struct typec_dp_state usb_dp_state = {0};
+
+	switch (action) {
+	case MESON_TX_CONN_DPPHY_HPD_PLUGIN:
+		/* HPD rising */
+		event_ops->queue_event(event_ops->data, HPD_PLUGIN,
+			tx_comm->hw_comm->hpd_in_filter_ms);
+		break;
+	case MESON_TX_CONN_DPPHY_HPD_PLUGOUT:
+		/* HPD falling */
+		event_ops->cancel_event(event_ops->data, HPD_PLUGIN, false);
+		event_ops->queue_event(event_ops->data, HPD_PLUGOUT, 0);
+		break;
+	case MESON_TX_CONN_DPPHY_HPD_IRQ:
+		event_ops->queue_event(event_ops->data, IRQ_HPD_TASK, 0);
+		break;
+	case MESON_TX_CONN_DPPHY_LANE_REMAP:
+		usb_dp_state = *(struct typec_dp_state *)data;
+		if (usb_dp_state.flip == TYPEC_ORIENTATION_REVERSE)
+			flip = 1;
+		if (usb_dp_state.pin_state == TYPEC_DP_STATE_E)
+			pin_state = 2;
+		args = (flip << 8) || (pin_state & 0xf);
+		dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_LINK_LANE_REMAP, (void *)&args, NULL);
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	return NOTIFY_OK;
+}
+
 static int dptx_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -434,6 +476,9 @@ static int dptx_probe(struct platform_device *pdev)
 	dptx_hdcp_init(tx_comm);
 	dev_set_drvdata(device, tx_comm);
 
+	tx_comm->dpphy_to_core_nb.notifier_call = dpphy_to_core_notifier;
+	meson_tx_dpphy_register_notify(&tx_comm->dpphy_to_core_nb);
+
 	/* In multiple DPTX scenarios, the probe will be executed multiple times,
 	 * so a global handle cannot be used for registration here.
 	 */
@@ -479,6 +524,7 @@ static void dptx_remove(struct platform_device *pdev)
 	if (!tx_comm)
 		return;
 
+	meson_tx_dpphy_unregister_notify(&tx_comm->dpphy_to_core_nb);
 	component_del(device, &dptx_bind_ops);
 
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
@@ -487,7 +533,7 @@ static void dptx_remove(struct platform_device *pdev)
 		tx_comm->es_registered = false;
 	}
 #endif
-
+	meson_tx_phy_exit(tx_comm->hw_comm->hw_base.tx_phy);
 	dev_set_drvdata(device, NULL);
 	dptx_hdcp_uninit(tx_comm);
 	dptx_common_uninit(tx_comm);

@@ -97,13 +97,15 @@ static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para)
 
 void dptx_core_intr_process(struct dptx_common *tx_comm)
 {
-	struct dptx_hw_common *hw_comm = tx_comm->hw_comm;
+	struct dptx_hw_common *hw_comm = NULL;
 	struct dp_intr_t *pint = (struct dp_intr_t *)&dptx_all_intr;
 	u32 val;
-	int i;
+	u32 i;
 
 	if (!tx_comm)
 		return;
+
+	hw_comm = tx_comm->hw_comm;
 
 	/* note: the callback sequence is as the member sequence of
 	 * struct hdmitx_intr, instead of the sequence of dptx_all_intr
@@ -2362,6 +2364,7 @@ static int dptx20_pre_enable_mode(struct dptx_hw_common *hw_comm, struct meson_t
 	/* enable VENC clk for sync even mode set failed */
 	u32 clk_mask = PIXEL_PLL_MASK | VENC_CLK_MASK;
 
+	meson_tx_phy_power_on(hw_comm->hw_base.tx_phy);
 	meson_tx_clk_set(hw_comm->hw_base.tx_clk, clk_mask);
 	hw_comm->vid_enable = true;
 	/* fec init should before link training initial, dp2.1 3.5.1.5.5 P933 */
@@ -2863,6 +2866,29 @@ static void hw_timer_start(struct dptx_hw_common *hw_comm, enum timer_hw_type hw
 	}
 }
 
+/* remap dptx lanes according to flip and alt_mux status */
+static void dptx20_link_lane_remap(struct dptx_hw_common *hw_comm, bool flip, u32 alt_mux)
+{
+	u32 data32 = 0;
+
+	/*
+	 * this is specific with the RTL design, please refer to ANACTRL_USBCDP_CTRL definition
+	 */
+	if ((alt_mux == 0 || alt_mux == 1) && flip == 1) {
+		data32 = LANE_REMAP_EN | (0x0 << REMAP_LANE_3_NUM) | (0x1 << REMAP_LANE_2_NUM) |
+			 (0x2 << REMAP_LANE_1_NUM) | (0x3 << REMAP_LANE_0_NUM);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, data32);
+	}
+
+	/* revert aux and data when flip */
+	if (flip == 1) {
+		/* [19:16] revert main data lane */
+		dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, 0xf, 16, 4);
+		/* [7] revert aux data lane */
+		dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_AUX_REPLY_SYNC_SET, 1, 6, 1);
+	}
+}
+
 static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 				  void *input_argv, void *output_struct)
 {
@@ -2999,6 +3025,18 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 		value = *(u32 *)input_argv;
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HPD_OVER, value);
 		break;
+	/*
+	 * There are up to 4 mainlink lanes for displayport transimitter.
+	 * Due those lanes may combo with usb type c, and the actually usage numbers of
+	 * lanes maybe 2, and the plug orient of usb may be reversed, so this API will
+	 * handle and control the lane remap.
+	 */
+	case DP_LINK_LANE_REMAP:
+		if (!input_argv)
+			return -1;
+		value = *(u32 *)input_argv;
+		dptx20_link_lane_remap(hw_comm, value & BIT(8), value & 0xf);
+		return 0;
 	case DP_GET_HPD_STATE:
 		return dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE);
 	case DP_GET_HPD_EVENT_STATE:

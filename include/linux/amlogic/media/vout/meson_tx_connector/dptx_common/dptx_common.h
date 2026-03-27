@@ -102,6 +102,8 @@ struct dptx_common {
 
 	struct dptx_hw_common *hw_comm;
 	struct link_train_t *link_train;
+	struct notifier_block dpphy_to_core_nb;
+
 	/* instance index */
 	u32 dev_idx;
 	u32 is_edp;

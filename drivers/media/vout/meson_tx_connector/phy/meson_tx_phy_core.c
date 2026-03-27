@@ -46,10 +46,11 @@ int meson_tx_phy_power_off(struct meson_tx_phy *phy)
 	return 0;
 }
 
-int meson_tx_phy_set_mode(struct meson_tx_phy *phy, enum meson_tx_phy_mode mode)
+int meson_tx_phy_set_mode(struct meson_tx_phy *phy, enum meson_tx_phy_mode mode,
+	struct meson_tx_phy_cfg_opts *opts)
 {
 	if (phy->ops->set_mode)
-		phy->ops->set_mode(phy, mode);
+		phy->ops->set_mode(phy, mode, opts);
 
 	pr_info("%s\n", __func__);
 	return 0;
@@ -82,3 +83,10 @@ int meson_tx_phy_calibrate(struct meson_tx_phy *phy)
 	return 0;
 }
 
+int meson_tx_phy_dump_reg(struct meson_tx_phy *phy, struct seq_file *s)
+{
+	if (phy->ops->dump_reg)
+		phy->ops->dump_reg(phy, s);
+
+	return 0;
+}

@@ -17,7 +17,7 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_TX_CONNECTOR_COMMON_MODERN) += \
 							vout/meson_tx_connector/meson_tx_mode_set.o \
 							vout/meson_tx_connector/meson_tx_event_mgr.o \
 							vout/meson_tx_connector/phy/meson_tx_phy_core.o \
-							vout/meson_tx_connector/phy/meson_tx_phy_drv.o \
+							vout/meson_tx_connector/phy/meson_tx_dp_phy_drv.o \
 							vout/meson_tx_connector/phy/meson_tx_dummy_phy_drv.o \
 							vout/meson_tx_connector/clk/meson_tx_clk.o \
 							vout/meson_tx_connector/clk/tx_clk_a9.o

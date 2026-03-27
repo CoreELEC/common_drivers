@@ -361,6 +361,7 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 	struct meson_tx_clk *tx_clk = NULL;
 	int ret = -EINVAL;
 	u8 i = 0;
+	struct meson_tx_hw *tx_hw_base;
 
 	if (!tx_dev || !para)
 		return ret;
@@ -370,6 +371,16 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 
 	tx_comm = to_dptx_common(tx_dev);
 	tx_clk = tx_dev->tx_hw_base->tx_clk;
+	tx_hw_base = tx_dev->tx_hw_base;
+
+	/* check the parameters of tx_hw_base->tx_phy_conf is valid or not */
+	ret = meson_tx_phy_validate(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
+	if (ret < 0) {
+		DPTX_ERROR("Need check the phy parameters\n");
+		dump_stack();
+		return -EINVAL;
+	}
+	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 
 	for (i = 0; i <= tx_comm->link_train->lt_retry_cnt; i++) {
 		ret = dptx_link_training(tx_comm->link_train);
