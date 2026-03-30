@@ -131,6 +131,9 @@ static bool atvdemod_check_exited(struct v4l2_frontend *v4l2_fe)
 	struct dvb_frontend *fe = &v4l2_fe->fe;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	if (!priv)
+		return false;
+
 	if (priv->state != ATVDEMOD_STATE_WORK ||
 		v4l2_fe->async_tune_needexit(v4l2_fe)) {
 		pr_err("%s:need to exit\n", __func__);
@@ -145,6 +148,9 @@ int atv_demod_enter_mode(struct dvb_frontend *fe)
 {
 	int err_code = 0;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
+
+	if (!priv)
+		return -EFAULT;
 
 	atvdemod_power_switch(true);
 
@@ -241,6 +247,9 @@ int atv_demod_leave_mode(struct dvb_frontend *fe)
 {
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	if (!priv)
+		return -EFAULT;
+
 	priv->state = ATVDEMOD_STATE_IDEL;
 	priv->standby = true;
 
@@ -291,14 +300,19 @@ static void atv_demod_set_params(struct dvb_frontend *fe,
 		struct analog_parameters *params)
 {
 	int ret = -1;
-	u32 if_info[2] = { 0 };
+	u32 if_info[2] = { 0, 0 };
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	struct atv_demod_parameters *p = &priv->atvdemod_param;
+	struct atv_demod_parameters *p = NULL;
 	struct analog_parameters ptuner = { 0 };
+
+	if (!priv)
+		return;
 
 	mutex_lock(&atv_demod_list_mutex);
 
-	if (!priv || priv->state != ATVDEMOD_STATE_WORK ||
+	p = &priv->atvdemod_param;
+
+	if (priv->state != ATVDEMOD_STATE_WORK ||
 		!atv_demod_get_adc_status()) {
 		mutex_unlock(&atv_demod_list_mutex);
 
@@ -367,11 +381,12 @@ static int atv_demod_has_signal(struct dvb_frontend *fe, u16 *signal)
 	int line_lock = 0;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	if (!priv)
+		return -EFAULT;
+
 	mutex_lock(&atv_demod_list_mutex);
 
-	*signal = V4L2_TIMEDOUT;
-
-	if (!priv || priv->state != ATVDEMOD_STATE_WORK ||
+	if (priv->state != ATVDEMOD_STATE_WORK ||
 		!atv_demod_get_adc_status()) {
 		mutex_unlock(&atv_demod_list_mutex);
 
@@ -402,6 +417,9 @@ static void atv_demod_standby(struct dvb_frontend *fe)
 {
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	if (!priv)
+		return;
+
 	mutex_lock(&atv_demod_list_mutex);
 
 	if (priv->state != ATVDEMOD_STATE_IDEL) {
@@ -423,11 +441,14 @@ static int atv_demod_get_afc(struct dvb_frontend *fe, s32 *afc)
 {
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
+	if (!priv)
+		return -EFAULT;
+
 	mutex_lock(&atv_demod_list_mutex);
 
 	*afc = 0;
 
-	if (!priv || priv->state != ATVDEMOD_STATE_WORK ||
+	if (priv->state != ATVDEMOD_STATE_WORK ||
 		!atv_demod_get_adc_status()) {
 		mutex_unlock(&atv_demod_list_mutex);
 
@@ -445,6 +466,9 @@ static void atv_demod_release(struct dvb_frontend *fe)
 {
 	int instance = 0;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
+
+	if (!priv)
+		return;
 
 	mutex_lock(&atv_demod_list_mutex);
 
@@ -470,10 +494,8 @@ static int atv_demod_set_config(struct dvb_frontend *fe, void *priv_cfg)
 	int *state = (int *) priv_cfg;
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 
-	if (!state) {
-		pr_err("%s:state NULL\n", __func__);
-		return -1;
-	}
+	if (!priv || !state)
+		return -EFAULT;
 
 	mutex_lock(&atv_demod_list_mutex);
 
@@ -847,8 +869,13 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 	unsigned int audio = 0;
 	bool try_secaml = false;
 	bool try_secamlc = false;
-	unsigned int tuner_id = priv->atvdemod_param.tuner_id;
+	unsigned int tuner_id = 0;
 	s16 strength = 0;
+
+	if (!priv)
+		return;
+
+	tuner_id = priv->atvdemod_param.tuner_id;
 
 	if (fe->ops.analog_ops.set_params) {
 		params.frequency = p->frequency;
@@ -970,7 +997,12 @@ static int atvdemod_fe_afc_closer(struct v4l2_frontend *v4l2_fe, int minafcfreq,
 	int count = 25;
 	int lock_cnt = 0;
 	int temp_freq, temp_afc;
-	unsigned int tuner_id = priv->atvdemod_param.tuner_id;
+	unsigned int tuner_id = 0;
+
+	if (!priv)
+		return -EFAULT;
+
+	tuner_id = priv->atvdemod_param.tuner_id;
 
 	pr_dbg("[%s]freq:%d minfreq:%d maxfreq:%d\n",
 		__func__, p->frequency, minafcfreq, maxafcfreq);
@@ -1109,6 +1141,9 @@ static int atvdemod_fe_set_property(struct v4l2_frontend *v4l2_fe,
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 	struct v4l2_analog_parameters *params = &v4l2_fe->params;
 
+	if (!priv)
+		return -EFAULT;
+
 	pr_dbg("%s:cmd 0x%x, data 0x%x\n", __func__, tvp->cmd, tvp->data);
 
 	switch (tvp->cmd) {
@@ -1172,7 +1207,12 @@ static int atvdemod_fe_get_frontend(struct v4l2_frontend *v4l2_fe,
 		struct v4l2_analog_parameters *p)
 {
 	struct atv_demod_priv *priv = v4l2_fe->fe.analog_demod_priv;
-	struct analog_parameters *param = &priv->atvdemod_param.param;
+	struct analog_parameters *param = NULL;
+
+	if (!priv)
+		return -EFAULT;
+
+	param = &priv->atvdemod_param.param;
 
 	p->frequency = param->frequency + priv->atvdemod_param.lock_range;
 	p->audmode = param->audmode;
@@ -1202,7 +1242,10 @@ static int atvdemod_fe_tune(struct v4l2_frontend *v4l2_fe, bool re_tune,
 	struct atv_demod_priv *priv = fe->analog_demod_priv;
 	//unsigned int tuner_id = priv->atvdemod_param.tuner_id;
 
-	if (!priv || priv->state != ATVDEMOD_STATE_WORK ||
+	if (!priv)
+		return -EFAULT;
+
+	if (priv->state != ATVDEMOD_STATE_WORK ||
 		!atv_demod_get_adc_status())
 		return -ECANCELED;
 
@@ -1321,6 +1364,9 @@ static int atvdemod_fe_detect(struct v4l2_frontend *v4l2_fe)
 	int auto_detect = AUTO_DETECT_COLOR | AUTO_DETECT_AUDIO;
 
 	priv = fe->analog_demod_priv;
+	if (!priv)
+		return -EFAULT;
+
 	param = &priv->atvdemod_param.param;
 
 	priv_cfg = AML_ATVDEMOD_SCAN_MODE;
@@ -1393,6 +1439,9 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe, bool r
 	}
 
 	priv = fe->analog_demod_priv;
+	if (!priv)
+		return V4L2_SEARCH_ERROR;
+
 	param = &priv->atvdemod_param.param;
 	if (atvdemod_check_exited(v4l2_fe)) {
 		pr_err("state is not work\n");
@@ -1427,6 +1476,7 @@ static enum v4l2_search atvdemod_fe_search(struct v4l2_frontend *v4l2_fe, bool r
 		pr_dbg("std 0 set to %s\n",
 				v4l2_std_to_str(p->std & 0xFF000000));
 	}
+
 	if (pre_std) {
 		pr_info("pre_std 0x%x\n", pre_std);
 		p->std = pre_std;

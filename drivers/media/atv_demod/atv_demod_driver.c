@@ -85,7 +85,8 @@
 /* 2025/08/08 --- V4.08 --- fix access reg crash when resumed and tuned but not be inited. */
 /* 2025/09/29 --- V6.00 --- t6w and t6x bringup */
 /* 2025/11/26 --- V6.01 --- implement module debug parameter */
-#define AMLATVDEMOD_VER "V6.01"
+/* 2026/03/30 --- V6.02 --- fix scan code test. */
+#define AMLATVDEMOD_VER "V6.02"
 
 #define ATVDEMOD_ATTR_DEFINE()	\
 	ATVDEMOD_ATTR_ADD(reg_23cf, u32)	\
