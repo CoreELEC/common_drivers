@@ -1719,6 +1719,10 @@ static ssize_t attr_store(const struct class *cls, const struct class_attribute 
 #endif
 	} else if (!strcmp(parm[0], "clear_ddr_bus")) {
 		clear_ddr_bus_data(demod);
+	} else if (!strcmp(parm[0], "priority")) {
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+		set_demod_priority(val);
+#endif
 	}
 	DEMOD_COMMON_ATTR_DEFINE()
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_ISDBT

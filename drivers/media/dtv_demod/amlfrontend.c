@@ -80,6 +80,7 @@
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
 #include <linux/amlogic/media/vout/vdac_dev.h>
 #include <linux/amlogic/aml_dtvdemod.h>
+#include <linux/amlogic/aml_ddr_tool.h>
 
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_DTMB
 unsigned char dtmb_new_driver = 1;
@@ -458,6 +459,10 @@ static bool enter_mode(struct aml_dtvdemod *demod, enum fe_delivery_system delsy
 
 		if (!demod_chip_after_eq(DTVDEMOD_HW_TL1))
 			demod_top_write_reg(DEMOD_TOP_REGC, 0x8);
+
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+		set_device_accessible("demod", true);
+#endif
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_DVBC
@@ -520,6 +525,10 @@ static bool enter_mode(struct aml_dtvdemod *demod, enum fe_delivery_system delsy
 		}
 
 		timer_set_max(demod, D_TIMER_DETECT, demod->timeout_dvbt_ms);
+
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+		set_device_accessible("demod", true);
+#endif
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_ISDBT
@@ -534,6 +543,10 @@ static bool enter_mode(struct aml_dtvdemod *demod, enum fe_delivery_system delsy
 		timer_set_max(demod, D_TIMER_SET, 4000);
 
 		dvbt_isdbt_wr_reg((0x10 << 2), devp->mem_start);
+
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+		set_device_accessible("demod", true);
+#endif
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_DVBS
@@ -694,6 +707,10 @@ static void delsys_exit(struct aml_dtvdemod *demod, unsigned int ldelsys,
 	struct amldtvdemod_device_s *devp = (struct amldtvdemod_device_s *)demod->priv;
 	unsigned int abus_en_dly = 0, polling_en = 0, top_saved = 0;
 	int retry_count = 2;
+
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+	set_device_accessible("demod", false);
+#endif
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (demod_chip_eq(DTVDEMOD_HW_T3) && ldelsys == SYS_DTMB) {
