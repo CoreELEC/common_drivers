@@ -73,21 +73,26 @@ static unsigned int axi_chan_sts_offset[] __initdata = {
 	(0xa6 << 2), (0xa7 << 2), (0xa8 << 2)
 };
 
-static void t5m_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void t5m_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val, off;
-	int i;
+	int i, port;
 	void *io;
+
+	if (map_id >= 0)
+		port = db->port_map_table[map_id].port_id;
 
 	for (i = 0; i < db->dmc_number; i++) {
 		io = db->ddr_reg[i];
 		off = DMC_MON0_CTRL + channel * 16;
-		if (port < 0) {
+		if (map_id < 0) {
 			/* clear all port mask */
 			writel(0, io + off);
 		} else {
-			val  =  (1 << 31) | (0x03 << 29) | (0x7 << 24);
-			val |= port;
+			val = readl(io + off);
+			val &= 0xffffff;
+			val = (val << 8) | port;
+			val |=  (1 << 31) | (0x03 << 29) | (0x7 << 24);
 			writel(val, io + off);	/* DMC_MON*_CTRL */
 		}
 	}
@@ -152,7 +157,7 @@ static void t5m_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	t5m_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			t5m_dmc_port_config(db, i, -1);
 		t5m_dmc_range_config(db, i, 0, DEFAULT_RANGE_LARGE_DDR);
 		db->range[i].start = 0;

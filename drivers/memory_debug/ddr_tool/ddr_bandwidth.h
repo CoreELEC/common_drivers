@@ -20,9 +20,10 @@
 #define DEFAULT_SAMPLING_FREQ		1000
 #define DEFAULT_XTAL_FREQ		24000000UL
 
+#define MAX_DMC_NUM			4
 #define DMC_QOS_IRQ			BIT(30)
 #define MAX_CHANNEL			24
-#define MAX_DMC_NUM			4
+#define MAX_MAP_ID			256
 
 /* for soc_feature */
 #define DEV_IS_MDC		BIT(7)
@@ -152,6 +153,13 @@ enum property_type {
 	RBUF_L,
 };
 
+enum ddr_port_map_type {
+	DDR_PORT_ROW_MASTER = 0,
+	DDR_PORT_ROW_DESC_SUB,
+	DDR_PORT_ROW_VPU_R,
+	DDR_PORT_ROW_VPU_W,
+};
+
 struct ddr_bandwidth;
 
 struct ddr_grant {
@@ -161,6 +169,20 @@ struct ddr_grant {
 	unsigned int all_grant16;
 	unsigned int channel_grant[MAX_CHANNEL];
 };
+
+struct ddr_port_map {
+	enum ddr_port_map_type type;
+	u8 rw;
+	u8 port_id;
+	/* MASTER: -1; DESC_SUB: ddr_port_desc.sub_id; VPU_R/W: vpu_sub_list.id */
+	int sub_id;
+	union {
+		struct ddr_port_desc *desc;
+		struct vpu_sub_list *vpu_sub;
+	};
+};
+
+const char *ddr_port_map_name(const struct ddr_port_map *map);
 
 struct ddr_bandwidth_ops {
 	void (*init)(struct ddr_bandwidth *db);
@@ -299,6 +321,7 @@ struct ddr_bandwidth {
 	int async_dmc_num;
 	struct dmc_bus dmc_bus[4];
 	int bus_num;
+	int port_map_count;
 	unsigned int threshold;
 	unsigned int irq_num;
 	unsigned int clock_count;
@@ -321,7 +344,7 @@ struct ddr_bandwidth {
 	struct ddr_avg_bandwidth avg;
 	struct ddr_data_extern data_extern[MAX_DMC_NUM];
 	struct bandwidth_addr_range range[MAX_CHANNEL];
-	u64    port[MAX_CHANNEL];
+	DECLARE_BITMAP(mapid_select, MAX_MAP_ID * MAX_CHANNEL);
 	void __iomem *ddr_reg[MAX_DMC_NUM];
 	void __iomem *pll_reg;
 	void __iomem *freq_reg;
@@ -329,7 +352,7 @@ struct ddr_bandwidth {
 	struct class *class;
 	struct ddr_port_desc *port_desc;
 	struct ddr_priority *priority;
-	struct vpu_sub_desc *vpu_desc;
+	struct vpu_sub_desc *vpu_sub;
 	struct ddr_bandwidth_ops *ops;
 	struct work_struct work_bandwidth;
 	struct ddr_increase_tool increase_tool;
@@ -337,7 +360,11 @@ struct ddr_bandwidth {
 	struct dentry *debugfs;
 	struct mdc_device mdc;
 	struct ddr_axi_sts axi_sts;
+	struct ddr_port_map *port_map_table;
 };
+
+unsigned int ddr_get_ch_set_num(int ch);
+void ddr_set_map_select(int ch, int map_id);
 
 extern struct ddr_bandwidth *aml_db;
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_G12

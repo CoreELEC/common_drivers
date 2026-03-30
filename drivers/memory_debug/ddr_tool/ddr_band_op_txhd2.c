@@ -73,11 +73,11 @@ static unsigned int axi_chan_sts_offset[] __initdata = {
 	(0xa6 << 2), (0xa7 << 2), (0xa8 << 2)
 };
 
-static void txhd2_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void txhd2_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val;
 	unsigned int off = 0;
-	int subport = -1;
+	int port, sub;
 
 	if (channel < 4)
 		off = channel * 16 + DMC_MON0_CTRL;
@@ -85,26 +85,26 @@ static void txhd2_dmc_port_config(struct ddr_bandwidth *db, int channel, int por
 		off = (channel - 4) * 16 + DMC_MON4_CTRL;
 
 	/* clear all port mask */
-	if (port < 0) {
+	if (map_id < 0) {
 		writel(0, db->ddr_reg[0] + off + 4);	/* DMC_MON*_CTRL1 */
 		writel(0, db->ddr_reg[0] + off + 8);	/* DMC_MON*_CTRL2 */
 		return;
 	}
 
-	if (port >= PORT_MAJOR)
-		subport = port - PORT_MAJOR;
+	port = db->port_map_table[map_id].port_id;
+	sub = db->port_map_table[map_id].sub_id;
 
-	if (subport < 0) {
+	if (sub < 0) {
 		val = readl(db->ddr_reg[0] + off + 4);
 		val |=  (1 << port);
 		writel(val, db->ddr_reg[0] + off + 4);	/* DMC_MON*_CTRL1 */
 		val = 0xffff;
 		writel(val, db->ddr_reg[0] + off + 8);	/* DMC_MON*_CTRL2 */
 	} else {
-		val = (0x1 << 7);	/* select device */
+		val = (0x1 << port);	/* select major port */
 		writel(val, db->ddr_reg[0] + off + 4);
 		val = readl(db->ddr_reg[0] + off + 8);
-		val |= (1 << subport);
+		val |= (1 << sub);
 		writel(val, db->ddr_reg[0] + off + 8);
 	}
 }
@@ -153,7 +153,7 @@ static void txhd2_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	txhd2_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			txhd2_dmc_port_config(db, i, -1);
 		txhd2_dmc_range_config(db, i, 0, 0xffffffff);
 		db->range[i].start = 0;

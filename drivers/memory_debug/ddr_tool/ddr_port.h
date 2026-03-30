@@ -8,11 +8,9 @@
 
 #define DMC_MON_RW			0x8200004A
 
-/* see cpu_version.h define */
-#define MAX_PORTS			127
 #define MAX_NAME			15
-#define PORT_MAJOR			32
 
+/* see cpu_version.h define */
 #define DMC_TYPE_M8B			0x1B
 #define DMC_TYPE_GXBB			0x1F
 #define DMC_TYPE_GXTVBB			0x20
@@ -62,79 +60,180 @@
 #define DMC_READ			0
 #define DMC_WRITE			1
 
+/* port defaults sub_id is -1, override with .sub_id = n if needed */
+#define PORT_DESC(...)	((struct ddr_port_desc){ .sub_id = -1, .bus = -1, __VA_ARGS__ })
+#define VPU_SUB_CNT  (sizeof(struct vpu_sub_desc) / sizeof(struct vpu_sub *))
+
 struct ddr_port_desc {
 	union {
+		struct {
+			unsigned int mask3:1;
+			unsigned int bus3:7;
+			unsigned int mask2:1;
+			unsigned int bus2:7;
+			unsigned int mask1:1;
+			unsigned int bus1:7;
+			unsigned int mask0:1;
+			unsigned int bus0:7;
+		};
 		unsigned int bus;
 		unsigned int mdc_id;
 	};
 	unsigned char port_id;
+	signed char sub_id;	/* default -1 when using PORT_DESC() */
 	unsigned char bus_id;
 	unsigned char mdc_bus;
 	char port_name[MAX_NAME];
 };
 
-struct vpu_sub_desc_v1 {
-	char vpu_r0_2[MAX_NAME]; /* vpu_r0 same as vpu_r2 */
-	char vpu_r1[MAX_NAME];
-	char vpu_w0[MAX_NAME];
-	char vpu_w1[MAX_NAME];
-	unsigned char sub_id;
-};
-
-struct vpu_sub {
+struct vpu_sub_list {
 	unsigned char id;
 	char *name;
 };
 
-struct vpu_sub_desc_v2 {
-	int vpu0_r_num;
-	int vpu0_w_num;
-	int vpu1_r_num;
-	int vpu1_w_num;
-	int vpu2_r_num;
-	int vpu2_w_num;
-	int vpu3_r_num;
-	int vpu3_w_num;
-	struct vpu_sub *vpu0_r;
-	struct vpu_sub *vpu0_w;
-	struct vpu_sub *vpu1_r;
-	struct vpu_sub *vpu1_w;
-	struct vpu_sub *vpu2_r;
-	struct vpu_sub *vpu2_w;
-	struct vpu_sub *vpu3_r;
-	struct vpu_sub *vpu3_w;
+struct vpu_sub_port {
+	int num;
+	char port_id; /* save vpu master port id */
+	struct vpu_sub_list *list;
+};
+
+struct vpu_sub {
+	struct vpu_sub_port sub_r;
+	struct vpu_sub_port sub_w;
 };
 
 struct vpu_sub_desc {
-	int ver;
-	unsigned short       vpu_port_num;		/* vpu sub number for v1 */
+	struct vpu_sub *vpu0_sub;
+	struct vpu_sub *vpu1_sub;
+	struct vpu_sub *vpu2_sub;
+	struct vpu_sub *vpu3_sub;
+};
+
+enum ddr_priority_type {
+	PRIO_NOT_SUPPORT = BIT(0),
+	PRIO_FIXED =       BIT(1),
+	PRIO_REG_RW =      BIT(2),
+	PRIO_REG_WO =      BIT(3),
+	PRIO_REG_POWER =   BIT(4),
+	PRIO_AUTO =        BIT(5),
+	PRIO_HANDLER =     BIT(6),
+	PRIO_FROM_MDC =    BIT(7),
+	PRIO_FROM_NIC =    BIT(8),
+	PRIO_FROM_DEV =    BIT(9),
+};
+
+struct ddr_priority_dev {
+	unsigned char port_id;
+	signed char sub_id;
+	unsigned int type;
 	union {
-		struct vpu_sub_desc_v1 *vpu_desc_v1;
-		struct vpu_sub_desc_v2 *vpu_desc_v2;
+		struct {
+			unsigned char fixed_w;
+			unsigned char fixed_r;
+			unsigned char fixed_nbits;
+		};
+		struct {
+			unsigned long reg_base;
+			unsigned char reg_mode;
+			long force_mask;
+			unsigned long w_offset;
+			unsigned long r_offset;
+			unsigned char w_lsb;
+			unsigned char r_lsb;
+			unsigned char w_nbits;
+			unsigned char r_nbits;
+		};
+	};
+	/* function pointer to specify handle priority */
+	int (*handle_get)(const struct ddr_priority_dev *dev, unsigned int value, int is_w);
+	int (*handle_set)(const struct ddr_priority_dev *dev, unsigned int value, int is_w);
+};
+
+struct ddr_priority_nic {
+	unsigned char port_id;
+	signed char sub_id;
+	unsigned int type;
+	union {
+		struct {
+			unsigned char fixed_w;
+			unsigned char fixed_r;
+			unsigned char fixed_nbits;
+		};
+		struct {
+			unsigned long reg_base;
+			unsigned char reg_mode;
+			unsigned long w_offset;
+			unsigned long r_offset;
+			unsigned char w_lsb;
+			unsigned char r_lsb;
+			unsigned char w_nbits;
+			unsigned char r_nbits;
+			unsigned int r_mask;
+			unsigned int w_mask;
+		};
 	};
 };
 
-struct ddr_priority_v1 {
-	/* default 0: normal mode; 1: secure mode */
-	unsigned char reg_mode;
+struct ddr_priority_mdc {
 	unsigned char port_id;
-	/* priority use bit width:
-	 *	0xf: use 4 bit
-	 *	0x7: use 3 bit
-	 *	0x4: use 2 bit
-	 *	0x1: use 1 bit
-	 */
-	unsigned char w_bit_s;
-	unsigned char r_bit_s;
+	signed char sub_id;
+	unsigned int type;
+	union {
+		struct {
+			unsigned char fixed_w;
+			unsigned char fixed_r;
+			unsigned char fixed_nbits;
+		};
+		struct {
+			unsigned long reg_base;
+			unsigned char reg_mode;
+			long force_mask;
+			unsigned long w_offset;
+			unsigned long r_offset;
+			unsigned char w_lsb;
+			unsigned char r_lsb;
+			unsigned char w_nbits;
+			unsigned char r_nbits;
+		};
+	};
+};
 
-	unsigned int w_width;
-	unsigned int r_width;
+struct ddr_priority_entry {
+	unsigned int type;
+	unsigned char port_id;
+	unsigned char dev_lsb_r;
+	unsigned char dev_lsb_w;
+	unsigned char nic_lsb_r;
+	unsigned char nic_lsb_w;
+	unsigned char mdc_lsb_r;
+	unsigned char mdc_lsb_w;
 
-	unsigned int reg_base;
-	unsigned int w_offset;
-	unsigned int r_offset;
+	unsigned char fixed_w;
+	unsigned char fixed_r;
+	unsigned char fixed_lsb;
+	unsigned char fixed_nbits;
+};
 
-	unsigned int force_enable;
+struct ddr_priority_force {
+	unsigned int bus;
+	/* reg base fllow aml_ddr ddr_reg[] */
+	long force_mask;
+	unsigned long offset;
+	unsigned char lsb;
+	unsigned char nbits;
+};
+
+struct ddr_priority_info {
+	int dev_num;
+	int nic_num;
+	int mdc_num;
+	int entry_num;
+	int dmc_force_num;
+	struct ddr_priority_dev *dev;
+	struct ddr_priority_nic *nic;
+	struct ddr_priority_mdc *mdc;
+	struct ddr_priority_entry *entry;
+	struct ddr_priority_force *dmc_force;
 };
 
 struct dmc_priority {
@@ -372,9 +471,9 @@ struct ddr_priority {
 	unsigned char ver;
 	unsigned int flag;
 	unsigned char v1_num;
-	unsigned int v1_buf_size;
+	ssize_t v1_buf_size;
 	char *v1_buf;
-	struct ddr_priority_v1 *v1;
+	struct ddr_priority_info *v1;
 	struct ddr_priority_v2 *v2;
 };
 
@@ -383,17 +482,16 @@ struct dev_priority {
 	unsigned char r_width;
 };
 
-int priority_display(char *buf, loff_t pos, size_t count);
+ssize_t priority_display(char *buf, loff_t pos, size_t count);
 void set_priority_display(const char *buf);
-char *priority_find_port_name(int id);
-void ddr_priority_port_list(void);
-struct ddr_priority *get_ddr_priority(int cpu_type);
-int ddr_priority_rw(unsigned char port_id, int *priority_r,
-			int *priority_w, unsigned char control);
+int ddr_priority_init(int cpu_type);
+ssize_t ddr_priority_info_show(char *buf);
+int ddr_priority_info_write(unsigned int id, int value, int rw, int dmc, char type);
+int priority_info_sysfs_parse(const char *buf, size_t count, unsigned int *id,
+				     int *val, int *rw, int *dmc, char *type);
 
-struct dmc_monitor;
-struct vpu_sub_desc *vpu_sub_init(int cpu_type);
-char *vpu_to_sub_port(char *name, char rw, int sid);
+int vpu_sub_desc_init(int cpu_type, struct vpu_sub_desc **desc);
+char *vpu_to_sub_port(unsigned char port_id, int sid, char rw);
 /*
  * This function used only during boot
  */

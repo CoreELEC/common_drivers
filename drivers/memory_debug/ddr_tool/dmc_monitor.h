@@ -126,7 +126,7 @@ struct dmc_monitor {
 	struct dmc_mon_comm  mon_comm[DMC_NUM_MAX];	/* monitor common info */
 	struct dmc_filter    filter;
 	struct ddr_port_desc *port;
-	struct vpu_sub_desc  *vpu_port;
+	struct vpu_sub_desc *vpu_sub;
 	struct dmc_mon_ops   *ops;
 };
 

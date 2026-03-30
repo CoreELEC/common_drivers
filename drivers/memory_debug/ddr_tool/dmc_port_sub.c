@@ -13,840 +13,871 @@
 #include <linux/slab.h>
 #include "ddr_port.h"
 #include "dmc_monitor.h"
+#include "ddr_bandwidth.h"
 
-#define VPU_PORT_OSD1			"OSD1"
-#define VPU_PORT_OSD2			"OSD2"
-#define VPU_PORT_OSD3			"OSD3"
-#define VPU_PORT_MALI_AFBCD_RD		"MALI_AFBC_RD"
-#define VPU_PORT_TCON_P1		"TCON_P1"
-#define VPU_PORT_TCON_P2		"TCON_P2"
-#define VPU_PORT_RDMA_RD		"RDMA_RD"
-#define VPU_PORT_DMA_RD			"DMA_RD"
-#define VPU_PORT_DAE_RD0		"DAE_RD0"
-#define VPU_PORT_DAE_RD1		"DAE_RD1"
-#define VPU_PORT_DAE_RD2		"DAE_RD2"
-#define VPU_PORT_DAE_RD3		"DAE_RD3"
-#define VPU_PORT_DAE_RD4		"DAE_RD4"
-#define VPU_PORT_DAE_RD5		"DAE_RD5"
-#define VPU_PORT_DAE_RD6		"DAE_RD6"
-#define VPU_PORT_DAE_RD7		"DAE_RD7"
-#define VPU_PORT_DAE_RD8		"DAE_RD8"
-#define VPU_PORT_DAE_RD9		"DAE_RD9"
-#define VPU_PORT_DAE_RD10		"DAE_RD10"
-#define VPU_PORT_DAE_RD11		"DAE_RD11"
-#define VPU_PORT_INP_RD0		"INP_RD0"
-#define VPU_PORT_INP_RD1		"INP_RD1"
-#define VPU_PORT_NR_VFCD0		"NR_VFCD0"
-#define VPU_PORT_NR_VFCD1		"NR_VFCD1"
-#define VPU_PORT_NR_VFCD2		"NR_VFCD2"
-#define VPU_PORT_NR_VFCD3		"NR_VFCD3"
-#define VPU_PORT_MC_VFCD0		"MC_VFCD0"
-#define VPU_PORT_MC_VFCD1		"MC_VFCD1"
-#define VPU_PORT_MC_VFCD2		"MC_VFCD2"
-#define VPU_PORT_MC_VFCD3		"MC_VFCD3"
-#define VPU_PORT_NR_RD0			"NR_RD0"
-#define VPU_PORT_NR_RD1			"NR_RD1"
-#define VPU_PORT_NR_RD2			"NR_RD2"
-#define VPU_PORT_NR_RD3			"NR_RD3"
-#define VPU_PORT_NR_RD4			"NR_RD4"
-#define VPU_PORT_NR_RD5			"NR_RD5"
-#define VPU_PORT_NR_RD6			"NR_RD6"
-#define VPU_PORT_NR_RD7			"NR_RD7"
-#define VPU_PORT_NR_RD8			"NR_RD8"
-#define VPU_PORT_NR_RD9			"NR_RD9"
-#define VPU_PORT_NR_RD10		"NR_RD10"
-#define VPU_PORT_MC_RD0			"MC_RD0"
-#define VPU_PORT_MC_RD1			"MC_RD1"
-#define VPU_PORT_MC_RD2			"MC_RD2"
-#define VPU_PORT_MC_RD3			"MC_RD3"
-#define VPU_PORT_MMU			"MMU"
+#define VPU_SUB_RW(soc, index, port_id_r, port_id_w)				\
+	static struct vpu_sub vpu##index##_sub_##soc __initdata = {		\
+		.sub_r = {							\
+			.port_id = port_id_r,					\
+			.num = ARRAY_SIZE(vpu##index##_sub_r_##soc),		\
+			.list = vpu##index##_sub_r_##soc,			\
+		},								\
+		.sub_w = {							\
+			.port_id = port_id_w,					\
+			.num = ARRAY_SIZE(vpu##index##_sub_w_##soc),		\
+			.list = vpu##index##_sub_w_##soc,			\
+		},								\
+	}
 
-#define	VPU_PORT_VDIN0_WR		"VDIN0_WR"
-#define	VPU_PORT_VDIN1_WR		"VDIN1_WR"
-#define	VPU_PORT_VDIN_DOLBY		"VDIN_DOLBY"
-#define	VPU_PORT_VDIN_AFBCE		"VDIN_AFBCE"
-#define	VPU_PORT_RDMA			"RDMA"
-#define	VPU_PORT_LDIM			"LDIM"
-#define	VPU_PORT_DMA			"DMA"
-#define	VPU_PORT_DAE_WR0		"DAE_WR0"
-#define	VPU_PORT_DAE_WR1		"DAE_WR1"
-#define	VPU_PORT_DAE_WR2		"DAE_WR2"
-#define	VPU_PORT_DAE_WR3		"DAE_WR3"
-#define	VPU_PORT_DAE_WR4		"DAE_WR4"
-#define	VPU_PORT_DAE_WR5		"DAE_WR5"
-#define	VPU_PORT_DAE_WR6		"DAE_WR6"
-#define	VPU_PORT_DAE_WR7		"DAE_WR7"
-#define	VPU_PORT_DAE_WR8		"DAE_WR8``"
-#define	VPU_PORT_INP_WR			"INP_WR"
-#define	VPU_PORT_RDMA_WR		"RDMA_WR"
-#define	VPU_PORT_VFCE_WRMIF2		"VFCE_WRMIF2"
-#define	VPU_PORT_DS_WRMIF		"DS_WRMIF"
-#define	VPU_PORT_WRMIF0			"WRMIF0"
-#define	VPU_PORT_WRMIF1			"WRMIF1"
-#define	VPU_PORT_DMSQ_WR		"DMSQ_WR"
-#define	VPU_PORT_NR_WR0			"NR_WR0"
-#define	VPU_PORT_NR_WR1			"NR_WR1"
+#define VPU_SUB_RO(soc, index, port_id_r)					\
+	static struct vpu_sub vpu##index##_sub_##soc __initdata = {		\
+		.sub_r = {							\
+			.port_id = port_id_r,					\
+			.num = ARRAY_SIZE(vpu##index##_sub_r_##soc),		\
+			.list = vpu##index##_sub_r_##soc,			\
+		},								\
+		.sub_w = {							\
+			.port_id = -1,						\
+			.num = 0,						\
+			.list = NULL,						\
+		},								\
+	}
+
+#define VPU_SUB_WO(soc, index, port_id_w)					\
+	static struct vpu_sub vpu##index##_sub_##soc __initdata = {		\
+		.sub_r = {							\
+			.port_id = -1,						\
+			.num = 0,						\
+			.list = NULL,						\
+		},								\
+		.sub_w = {							\
+			.port_id = port_id_w,					\
+			.num = ARRAY_SIZE(vpu##index##_sub_w_##soc),		\
+			.list = vpu##index##_sub_w_##soc,			\
+		},								\
+	}
+
+#define VPU_SUB_DESC_INIT(soc, p0, p1, p2, p3)					\
+	static struct vpu_sub_desc vpu_sub_desc_##soc __initdata = {		\
+		.vpu0_sub = (p0),						\
+		.vpu1_sub = (p1),						\
+		.vpu2_sub = (p2),						\
+		.vpu3_sub = (p3),						\
+	}									\
+
 
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
-static struct vpu_sub_desc_v1 vpu_sub_desc_txlx[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "AFBC_ENC", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON3", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P3", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "AFBC_ENC", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_r_txlx[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "TCON_P3"				},
+	{ .id = 0xE, .name = "AFBC_ENC"			},
 };
 
-//static struct vpu_sub_desc_v1 vpu_sub_desc_txl[] __initdata = vpu_sub_desc_txlx[]
-//static struct vpu_sub_desc_v1 vpu_sub_desc_txhd[] __initdata = vpu_sub_desc_txlx[]
-
-static struct vpu_sub_desc_v1 vpu_sub_desc_tl1[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "AFBC_ENC", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON3", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P3", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "AFBC_ENC", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_w_txlx[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "AFBC_ENC"				},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "TCON3"				},
 };
+
+static struct vpu_sub_list vpu1_sub_r_txlx[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_txlx[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+};
+
+#define vpu2_sub_r_txlx		vpu0_sub_r_txlx
+VPU_SUB_RW(txlx, 0, 8, 11);
+VPU_SUB_RW(txlx, 1, 9, 12);
+VPU_SUB_RO(txlx, 2, 10);
+VPU_SUB_DESC_INIT(txlx, &vpu0_sub_txlx, &vpu1_sub_txlx, &vpu2_sub_txlx, NULL);
+
+//static struct vpu_sub_desc vpu_sub_desc_txl[] __initdata = vpu_sub_desc_txlx[]
+//static struct vpu_sub_desc vpu_sub_desc_txhd[] __initdata = vpu_sub_desc_txlx[]
+static struct vpu_sub_list vpu0_sub_r_tl1[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "TCON_P3"				},
+	{ .id = 0xE, .name = "AFBC_ENC"			},
+};
+
+static struct vpu_sub_list vpu0_sub_w_tl1[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "AFBC_ENC"				},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "TCON3"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_tl1[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_tl1[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+};
+
+#define vpu2_sub_r_tl1		vpu0_sub_r_tl1
+VPU_SUB_RW(tl1, 0, 16, 19);
+VPU_SUB_RW(tl1, 1, 17, 20);
+VPU_SUB_RO(tl1, 2, 18);
+VPU_SUB_DESC_INIT(tl1, &vpu0_sub_tl1, &vpu1_sub_tl1, &vpu2_sub_tl1, NULL);
 #endif
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-static struct vpu_sub_desc_v1 vpu_sub_desc_sm1[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "NULL", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu0_sub_r_sm1[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0xA, .name = "RDMA"				},
 };
 
-// static struct vpu_sub_desc_v1 vpu_sub_desc_g12b[] __initdata = vpu_sub_desc_sm1[]
-// static struct vpu_sub_desc_v1 vpu_sub_desc_g12a[] __initdata = vpu_sub_desc_sm1[]
-
-static struct vpu_sub_desc_v1 vpu_sub_desc_tm2[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "NULL"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON3", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P3", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "VDIN_AFBCE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu0_sub_w_sm1[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x6, .name = "RDMA"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t5[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "DCNTR_GRID", .vpu_w1 = "DI_AFBCE1"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "LDIM", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "DCNTR_GRID", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "AFBC_ENC", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu1_sub_r_sm1[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t5d[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "AFBC_ENC", .vpu_w1 = "DI_AFBCE"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "NULL"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "AFBC_ENC", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu1_sub_w_sm1[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t7[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
+#define vpu2_sub_r_sm1		vpu0_sub_r_sm1
+VPU_SUB_RW(sm1, 0, 16, 19);
+VPU_SUB_RW(sm1, 1, 17, 20);
+VPU_SUB_RO(sm1, 2, 18);
+VPU_SUB_DESC_INIT(sm1, &vpu0_sub_sm1, &vpu1_sub_sm1, &vpu2_sub_sm1, NULL);
 
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "DCNTR_GRID", .vpu_w1 = "DI_AFBCE1"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "OSD4", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VD3", .vpu_r1 = "NULL",
-			.vpu_w0 = "LDIM", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "LDIM", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "VDIN_AFBCE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+// static struct vpu_sub_desc vpu_sub_desc_g12b[] __initdata = vpu_sub_desc_sm1[]
+// static struct vpu_sub_desc vpu_sub_desc_g12a[] __initdata = vpu_sub_desc_sm1[]
+static struct vpu_sub_list vpu0_sub_r_tm2[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "TCON_P3"				},
+	{ .id = 0xE, .name = "VDIN_AFBCE"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t3[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "DCNTR_GRID", .vpu_w1 = "DI_AFBCE1"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "OSD4", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "AISR_HPF"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "NPU", .vpu_r1 = "NULL",
-			.vpu_w0 = "LDIM", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "DCNTR_GRID", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_SUBRD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_w_tm2[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "TCON3"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
 };
+
+static struct vpu_sub_list vpu1_sub_r_tm2[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_tm2[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+};
+
+#define vpu2_sub_r_tm2		vpu0_sub_r_tm2
+VPU_SUB_RW(tm2, 0, 16, 19);
+VPU_SUB_RW(tm2, 1, 17, 20);
+VPU_SUB_RO(tm2, 2, 18);
+VPU_SUB_DESC_INIT(tm2, &vpu0_sub_tm2, &vpu1_sub_tm2, &vpu2_sub_tm2, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t5[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "DCNTR_GRID"			},
+	{ .id = 0xE, .name = "AFBC_ENC"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_t5[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "DCNTR_GRID"			},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "LDIM"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_t5[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t5[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+};
+
+#define vpu2_sub_r_t5		vpu0_sub_r_t5
+VPU_SUB_RW(t5, 0, 16, 19);
+VPU_SUB_RW(t5, 1, 17, 20);
+VPU_SUB_RO(t5, 2, 18);
+VPU_SUB_DESC_INIT(t5, &vpu0_sub_t5, &vpu1_sub_t5, &vpu2_sub_t5, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t5d[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xE, .name = "AFBC_ENC"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_t5d[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "AFBC_ENC"				},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_t5d[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t5d[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE"				},
+};
+
+#define vpu2_sub_r_t5d		vpu0_sub_r_t5d
+VPU_SUB_RW(t5d, 0, 16, 19);
+VPU_SUB_RW(t5d, 1, 17, 20);
+VPU_SUB_RO(t5d, 2, 18);
+VPU_SUB_DESC_INIT(t5d, &vpu0_sub_t5d, &vpu1_sub_t5d, &vpu2_sub_t5d, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t7[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "OSD4"				},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VD3"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xD, .name = "LDIM"				},
+	{ .id = 0xE, .name = "VDIN_AFBCE"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_t7[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "DCNTR_GRID"			},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "LDIM"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_t7[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t7[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+};
+
+#define vpu2_sub_r_t7		vpu0_sub_r_t7
+VPU_SUB_RW(t7, 0, 80, 80);
+VPU_SUB_RW(t7, 1, 81, 81);
+VPU_SUB_RO(t7, 2, 82);
+VPU_SUB_DESC_INIT(t7, &vpu0_sub_t7, &vpu1_sub_t7, &vpu2_sub_t7, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t3[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "OSD4"				},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "NPU"				},
+	{ .id = 0x9, .name = "TCON"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "DCNTR_GRID"			},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xF, .name = "VPU_SUBRD"			},
+};
+
+static struct vpu_sub_list vpu0_sub_w_t3[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "DCNTR_GRID"			},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "LDIM"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_t3[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t3[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+	{ .id = 0x5, .name = "AISR_HPF"			},
+};
+
+#define vpu2_sub_r_t3		vpu0_sub_r_t3
+VPU_SUB_RW(t3, 0, 80, 80);
+VPU_SUB_RW(t3, 1, 81, 81);
+VPU_SUB_RO(t3, 2, 82);
+VPU_SUB_DESC_INIT(t3, &vpu0_sub_t3, &vpu1_sub_t3, &vpu2_sub_t3, NULL);
 #endif
 
-// static struct vpu_sub_desc_v1 vpu_sub_desc_s4d[] __initdata = vpu_sub_desc_s4[]
-static struct vpu_sub_desc_v1 vpu_sub_desc_s4[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "AFBC_ENC", .vpu_w1 = "DI_AFBCE0"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "DI_AFBCE1"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON3", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P3", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "AFBC_ENC", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+// static struct vpu_sub_desc vpu_sub_desc_s4d[] __initdata = vpu_sub_desc_s4[]
+static struct vpu_sub_list vpu0_sub_r_s4[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"			},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "TCON_P3"				},
+	{ .id = 0xE, .name = "AFBC_ENC"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
 };
+
+static struct vpu_sub_list vpu0_sub_w_s4[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "AFBC_ENC"				},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "TCON3"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_s4[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_s4[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+};
+
+#define vpu2_sub_r_s4		vpu0_sub_r_s4
+VPU_SUB_RW(s4, 0, 16, 19);
+VPU_SUB_RW(s4, 1, 17, 20);
+VPU_SUB_RO(s4, 2, 18);
+VPU_SUB_DESC_INIT(s4, &vpu0_sub_s4, &vpu1_sub_s4, &vpu2_sub_s4, NULL);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-static struct vpu_sub_desc_v1 vpu_sub_desc_sc2[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "TVFE", .vpu_w1 = "DI_AFBCE1"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "OSD4", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "VIU2", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON3", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "TVFE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P3", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "VDIN_AFBCE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_r_sc2[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "OSD4"				},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "VIU2"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "TVFE"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xD, .name = "TCON_P3"				},
+	{ .id = 0xE, .name = "VDIN_AFBCE"			},
+	{ .id = 0xF, .name = "VPU_DMA"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t5w[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "AFBC_ENC", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "DCNTR_GRID", .vpu_w1 = "DI_AFBCE1"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "AFBC_DEC", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "ASIR_HPF"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "DOLBY0", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "NPU", .vpu_r1 = "NULL",
-			.vpu_w0 = "LDIM", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON1", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "DCNTR_GRID", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_SUBRD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_w_sc2[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "TVFE"				},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "TCON3"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_s5[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0", .vpu_w1 = "NR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1", .vpu_w1 = "DI"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "VDIN_DOLBY", .vpu_w1 = "DI_SUB"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "VDIN_AFBCE", .vpu_w1 = "DI_AFBCE0"	},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "OSD3", .vpu_r1 = "DI_SUB",
-			.vpu_w0 = "DCNTR_GRID", .vpu_w1 = "DI_AFBCE1"	},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "OSD4", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON1", .vpu_w1 = "ASIR_HPF"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "VD3", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD", .vpu_r1 = "DI_AFBCD",
-			.vpu_w0 = "TCON2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "NPU READ", .vpu_r1 = "NULL",
-			.vpu_w0 = "LDIM", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "VD4", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "VD5", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "NOUSE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "DCNTR_GRID", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "TCON_P1", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "VPU_SUBRD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu1_sub_r_sc2[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_s7d[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "NR_WR", .vpu_w1 = "NR_WR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "DI_WR", .vpu_w1 = "DI_WR"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "DI_SUBAXI", .vpu_w1 = "DI_SUBAXI"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "DI_SUBAXI",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "RDMA", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "NULL", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD_RD", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN1_WR", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "DI_IF1", .vpu_r1 = "NULL",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "DI_MEM", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "DI_INP", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "DI_CHAN2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "DI_SUBAXI", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "DI_IF2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "DI_IF0", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu1_sub_w_sc2[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_s6[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "NR_WR", .vpu_w1 = "NR_WR"		},
+#define vpu2_sub_r_sc2	vpu0_sub_r_sc2
+VPU_SUB_RW(sc2, 0, 16, 19);
+VPU_SUB_RW(sc2, 1, 17, 20);
+VPU_SUB_RO(sc2, 2, 18);
+VPU_SUB_DESC_INIT(sc2, &vpu0_sub_sc2, &vpu1_sub_sc2, &vpu2_sub_sc2, NULL);
 
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "DI_WR", .vpu_w1 = "DI_WR"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "DI_SUBAXI", .vpu_w1 = "DI_SUBAXI"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "VPU_DMA", .vpu_r1 = "CONTP_RD",
-			.vpu_w0 = "VDIN0_WR", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "RDMA", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "VDIN1_WR", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "VIU2", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD_RD", .vpu_r1 = "DI_AFBCE",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "DI_IF1", .vpu_r1 = "NULL",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "DI_MEM", .vpu_r1 = "NULL",
-			.vpu_w0 = "VPU_DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "DI_INP", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "DI_CHAN2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "CONTP_RD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "DI_IF2", .vpu_r1 = "NULL",
-			.vpu_w0 = "VDIN2_WR", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "DI_IF0", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "DI_AFBCE", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		}
+static struct vpu_sub_list vpu0_sub_r_t5w[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "AFBC_DEC"				},
+	{ .id = 0x6, .name = "DOLBY0"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "NPU"				},
+	{ .id = 0x9, .name = "TCON1"				},
+	{ .id = 0xA, .name = "RDMA"				},
+	{ .id = 0xB, .name = "DCNTR_GRID"			},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xF, .name = "VPU_SUBRD"			},
 };
 
-static struct vpu_sub_desc_v1 vpu_sub_desc_t6d[] __initdata = {
-	{ .sub_id = 0x0, .vpu_r0_2 = "OSD1", .vpu_r1 = "DI_IF1",
-			.vpu_w0 = "VDIN0_WR", .vpu_w1 = "NR_WR"		},
-
-	{ .sub_id = 0x1, .vpu_r0_2 = "OSD2", .vpu_r1 = "DI_MEM",
-			.vpu_w0 = "VDIN1_WR", .vpu_w1 = "DI_WR"		},
-
-	{ .sub_id = 0x2, .vpu_r0_2 = "VD1", .vpu_r1 = "DI_INP",
-			.vpu_w0 = "NULL", .vpu_w1 = "DI_SUBAXI"	},
-
-	{ .sub_id = 0x3, .vpu_r0_2 = "VD2", .vpu_r1 = "DI_CHAN2",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x4, .vpu_r0_2 = "NULL", .vpu_r1 = "DI_SUBAXI",
-			.vpu_w0 = "DCGRD", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x5, .vpu_r0_2 = "NULL", .vpu_r1 = "DI_IF2",
-			.vpu_w0 = "TCON_P1", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x6, .vpu_r0_2 = "NULL", .vpu_r1 = "DI_IF0",
-			.vpu_w0 = "RDMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x7, .vpu_r0_2 = "MALI_AFBCD_RD", .vpu_r1 = "NULL",
-			.vpu_w0 = "TCON_P2", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x8, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0x9, .vpu_r0_2 = "TCON_P1", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xA, .vpu_r0_2 = "RDMA_RD", .vpu_r1 = "NULL",
-			.vpu_w0 = "DMA", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xB, .vpu_r0_2 = "DCGRD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xC, .vpu_r0_2 = "TCON_P2", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xD, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xE, .vpu_r0_2 = "NULL", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
-
-	{ .sub_id = 0xF, .vpu_r0_2 = "DMA_RD", .vpu_r1 = "NULL",
-			.vpu_w0 = "NULL", .vpu_w1 = "NULL"		},
+static struct vpu_sub_list vpu0_sub_w_t5w[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "AFBC_ENC"				},
+	{ .id = 0x4, .name = "DCNTR_GRID"			},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "LDIM"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
 };
 
-static struct vpu_sub vpu0_r_t5m[] __initdata = {
+static struct vpu_sub_list vpu1_sub_r_t5w[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t5w[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+	{ .id = 0x5, .name = "ASIR_HPF"				},
+};
+
+#define vpu2_sub_r_t5w	vpu0_sub_r_t5w
+VPU_SUB_RW(t5w, 0, 16, 19);
+VPU_SUB_RW(t5w, 1, 17, 20);
+VPU_SUB_RO(t5w, 2, 18);
+VPU_SUB_DESC_INIT(t5w, &vpu0_sub_t5w, &vpu1_sub_t5w, &vpu2_sub_t5w, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_s5[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "OSD3"				},
+	{ .id = 0x5, .name = "OSD4"				},
+	{ .id = 0x6, .name = "VD3"				},
+	{ .id = 0x7, .name = "MALI_AFBCD"			},
+	{ .id = 0x8, .name = "NPU READ"			},
+	{ .id = 0x9, .name = "VD4"				},
+	{ .id = 0xA, .name = "VD5"				},
+	{ .id = 0xB, .name = "NOUSE"				},
+	{ .id = 0xC, .name = "DCNTR_GRID"			},
+	{ .id = 0xD, .name = "TCON_P1"				},
+	{ .id = 0xE, .name = "TCON_P2"				},
+	{ .id = 0xF, .name = "VPU_SUBRD"			},
+};
+
+static struct vpu_sub_list vpu0_sub_w_s5[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0"				},
+	{ .id = 0x1, .name = "VDIN1"				},
+	{ .id = 0x2, .name = "VDIN_DOLBY"			},
+	{ .id = 0x3, .name = "VDIN_AFBCE"			},
+	{ .id = 0x4, .name = "DCNTR_GRID"			},
+	{ .id = 0x5, .name = "TCON1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON2"				},
+	{ .id = 0x8, .name = "LDIM"				},
+	{ .id = 0x9, .name = "VDIN2"				},
+	{ .id = 0xA, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_s5[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUB"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCD"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_s5[] __initdata = {
+	{ .id = 0x0, .name = "NR"				},
+	{ .id = 0x1, .name = "DI"				},
+	{ .id = 0x2, .name = "DI_SUB"				},
+	{ .id = 0x3, .name = "DI_AFBCE0"			},
+	{ .id = 0x4, .name = "DI_AFBCE1"			},
+	{ .id = 0x5, .name = "ASIR_HPF"				},
+};
+
+#define vpu2_sub_r_s5	vpu0_sub_r_s5
+#define vpu3_sub_r_s5	vpu0_sub_r_s5
+VPU_SUB_RW(s5, 0, 64, 64);
+VPU_SUB_RW(s5, 1, 66, 66);
+VPU_SUB_RO(s5, 2, 68);
+VPU_SUB_RO(s5, 3, 70);
+VPU_SUB_DESC_INIT(s5, &vpu0_sub_s5, &vpu1_sub_s5, &vpu2_sub_s5, &vpu3_sub_s5);
+
+static struct vpu_sub_list vpu0_sub_r_s7d[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "VPU_DMA"				},
+	{ .id = 0x5, .name = "RDMA"				},
+	{ .id = 0x7, .name = "MALI_AFBCD_RD"			},
+	{ .id = 0x8, .name = "DI_IF1"				},
+	{ .id = 0x9, .name = "DI_MEM"				},
+	{ .id = 0xA, .name = "DI_INP"				},
+	{ .id = 0xB, .name = "DI_CHAN2"				},
+	{ .id = 0xC, .name = "DI_SUBAXI"			},
+	{ .id = 0xD, .name = "DI_IF2"				},
+	{ .id = 0xE, .name = "DI_IF0"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_s7d[] __initdata = {
+	{ .id = 0x0, .name = "NR_WR"				},
+	{ .id = 0x1, .name = "DI_WR"				},
+	{ .id = 0x2, .name = "DI_SUBAXI"			},
+	{ .id = 0x7, .name = "VDIN1_WR"				},
+	{ .id = 0x8, .name = "RDMA"				},
+	{ .id = 0x9, .name = "VPU_DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_s7d[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUBAXI"			},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_s7d[] __initdata = {
+	{ .id = 0x0, .name = "NR_WR"				},
+	{ .id = 0x1, .name = "DI_WR"				},
+	{ .id = 0x2, .name = "DI_SUBAXI"			},
+};
+
+VPU_SUB_RW(s7d, 0, 1, 4);
+VPU_SUB_RW(s7d, 1, 2, 6);
+VPU_SUB_DESC_INIT(s7d, &vpu0_sub_s7d, &vpu1_sub_s7d, NULL, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_s6[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x4, .name = "VPU_DMA"				},
+	{ .id = 0x5, .name = "RDMA"				},
+	{ .id = 0x6, .name = "VIU2"				},
+	{ .id = 0x7, .name = "MALI_AFBCD_RD"			},
+	{ .id = 0x8, .name = "DI_IF1"				},
+	{ .id = 0x9, .name = "DI_MEM"				},
+	{ .id = 0xA, .name = "DI_INP"				},
+	{ .id = 0xB, .name = "DI_CHAN2"				},
+	{ .id = 0xC, .name = "CONTP_RD"				},
+	{ .id = 0xD, .name = "DI_IF2"				},
+	{ .id = 0xE, .name = "DI_IF0"				},
+	{ .id = 0xF, .name = "DI_AFBCE"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_s6[] __initdata = {
+	{ .id = 0x0, .name = "NR_WR"				},
+	{ .id = 0x1, .name = "DI_WR"				},
+	{ .id = 0x2, .name = "DI_SUBAXI"			},
+	{ .id = 0x4, .name = "VDIN0_WR"				},
+	{ .id = 0x5, .name = "VDIN1_WR"				},
+	{ .id = 0x8, .name = "RDMA"				},
+	{ .id = 0x9, .name = "VPU_DMA"				},
+	{ .id = 0xD, .name = "VDIN2_WR"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_s6[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "CONTP_RD"				},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+	{ .id = 0x7, .name = "DI_AFBCE"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_s6[] __initdata = {
+	{ .id = 0x0, .name = "NR_WR"				},
+	{ .id = 0x1, .name = "DI_WR"				},
+	{ .id = 0x2, .name = "DI_SUBAXI"			},
+};
+
+#define vpu2_sub_r_s6	vpu0_sub_r_s6
+VPU_SUB_RW(s6, 0, 1, 1);
+VPU_SUB_RW(s6, 1, 2, 2);
+VPU_SUB_RO(s6, 2, 3);
+VPU_SUB_DESC_INIT(s6, &vpu0_sub_s6, &vpu1_sub_s6, &vpu2_sub_s6, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t6d[] __initdata = {
+	{ .id = 0x0, .name = "OSD1"				},
+	{ .id = 0x1, .name = "OSD2"				},
+	{ .id = 0x2, .name = "VD1"				},
+	{ .id = 0x3, .name = "VD2"				},
+	{ .id = 0x7, .name = "MALI_AFBCD_RD"			},
+	{ .id = 0x9, .name = "TCON_P1"				},
+	{ .id = 0xA, .name = "RDMA_RD"				},
+	{ .id = 0xB, .name = "DCGRD"				},
+	{ .id = 0xC, .name = "TCON_P2"				},
+	{ .id = 0xF, .name = "DMA_RD"				},
+};
+
+static struct vpu_sub_list vpu0_sub_w_t6d[] __initdata = {
+	{ .id = 0x0, .name = "VDIN0_WR"				},
+	{ .id = 0x1, .name = "VDIN1_WR"				},
+	{ .id = 0x4, .name = "DCGRD"				},
+	{ .id = 0x5, .name = "TCON_P1"				},
+	{ .id = 0x6, .name = "RDMA"				},
+	{ .id = 0x7, .name = "TCON_P2"				},
+	{ .id = 0xA, .name = "DMA"				},
+};
+
+static struct vpu_sub_list vpu1_sub_r_t6d[] __initdata = {
+	{ .id = 0x0, .name = "DI_IF1"				},
+	{ .id = 0x1, .name = "DI_MEM"				},
+	{ .id = 0x2, .name = "DI_INP"				},
+	{ .id = 0x3, .name = "DI_CHAN2"				},
+	{ .id = 0x4, .name = "DI_SUBAXI"			},
+	{ .id = 0x5, .name = "DI_IF2"				},
+	{ .id = 0x6, .name = "DI_IF0"				},
+};
+
+static struct vpu_sub_list vpu1_sub_w_t6d[] __initdata = {
+	{ .id = 0x0, .name = "NR_WR"				},
+	{ .id = 0x1, .name = "DI_WR"				},
+	{ .id = 0x2, .name = "DI_SUBAXI"			},
+};
+
+VPU_SUB_RW(t6d, 0, 2, 2);
+VPU_SUB_RW(t6d, 1, 3, 3);
+VPU_SUB_DESC_INIT(t6d, &vpu0_sub_t6d, &vpu1_sub_t6d, NULL, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t5m[] __initdata = {
 	{ .id = 0x00, .name = "OSD1"			},
 	{ .id = 0x01, .name = "OSD2"			},
 	{ .id = 0x02, .name = "VD1"			},
@@ -861,12 +892,12 @@ static struct vpu_sub vpu0_r_t5m[] __initdata = {
 	{ .id = 0x0B, .name = "DCNTR_GRID_RD"		},
 	{ .id = 0x0C, .name = "TCON_P2"			},
 	{ .id = 0x0F, .name = "VPU_DMA_RD"		},
-	{ .id = 0x1F, .name = "DOBLY_TV_RD"		},
+	{ .id = 0x1F, .name = "DOLBY_TV_RD"		},
 	{ .id = 0x2F, .name = "LDIM_RD"			},
 	{ .id = 0x3F, .name = "AFBCE_RD"		},
 };
 
-static struct vpu_sub vpu1_r_t5m[] __initdata = {
+static struct vpu_sub_list vpu1_sub_r_t5m[] __initdata = {
 	{ .id = 0x00, .name = "DI_IF1"			},
 	{ .id = 0x01, .name = "DI_MEM"			},
 	{ .id = 0x02, .name = "DIVR"			},
@@ -885,7 +916,7 @@ static struct vpu_sub vpu1_r_t5m[] __initdata = {
 	{ .id = 0x07, .name = "DI_AFBCD"		},
 };
 
-static struct vpu_sub vpu2_r_t5m[] __initdata = {
+static struct vpu_sub_list vpu2_sub_r_t5m[] __initdata = {
 	{ .id = 0x00, .name = "OSD1"			},
 	{ .id = 0x01, .name = "OSD2"			},
 	{ .id = 0x02, .name = "VD1"			},
@@ -900,12 +931,12 @@ static struct vpu_sub vpu2_r_t5m[] __initdata = {
 	{ .id = 0x0B, .name = "DCNTR_GRID_RD"		},
 	{ .id = 0x0C, .name = "TCON_P2"			},
 	{ .id = 0x0F, .name = "VPU_DMA_RD"		},
-	{ .id = 0x1F, .name = "DOBLY_TV_RD"		},
+	{ .id = 0x1F, .name = "DOLBY_TV_RD"		},
 	{ .id = 0x2F, .name = "LDIM_RD"			},
 	{ .id = 0x3F, .name = "AFBCE_RD"		},
 };
 
-static struct vpu_sub vpu0_w_t5m[] __initdata = {
+static struct vpu_sub_list vpu0_sub_w_t5m[] __initdata = {
 	{ .id = 0x00, .name = "VDIN0_WR"		},
 	{ .id = 0x01, .name = "VDIN1_WR"		},
 	{ .id = 0x02, .name = "VDIN_DOLBY"		},
@@ -919,7 +950,7 @@ static struct vpu_sub vpu0_w_t5m[] __initdata = {
 	{ .id = 0x0A, .name = "VPU_DMA_WR"		},
 };
 
-static struct vpu_sub vpu1_w_t5m[] __initdata = {
+static struct vpu_sub_list vpu1_sub_w_t5m[] __initdata = {
 	{ .id = 0x00, .name = "NR_WR"			},
 	{ .id = 0x01, .name = "DI_WR"			},
 	{ .id = 0x02, .name = "CONT_WR"			},
@@ -932,7 +963,7 @@ static struct vpu_sub vpu1_w_t5m[] __initdata = {
 	{ .id = 0x05, .name = "AISR_HPF_WR"		},
 };
 
-static struct vpu_sub vpu2_w_t5m[] __initdata = {
+static struct vpu_sub_list vpu2_sub_w_t5m[] __initdata = {
 	{ .id = 0x00, .name = "VDIN0_WR"		},
 	{ .id = 0x01, .name = "VDIN1_WR"		},
 	{ .id = 0x02, .name = "VDIN_DOLBY"		},
@@ -946,139 +977,156 @@ static struct vpu_sub vpu2_w_t5m[] __initdata = {
 	{ .id = 0x0A, .name = "VPU_DMA_WR"		},
 };
 
-static struct vpu_sub vpu0_r_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_OSD1		},
-	{ .id = 0x01, .name = VPU_PORT_OSD2		},
-	{ .id = 0x04, .name = VPU_PORT_OSD3		},
-	{ .id = 0x07, .name = VPU_PORT_MALI_AFBCD_RD	},
-	{ .id = 0x09, .name = VPU_PORT_TCON_P1		},
-	{ .id = 0x0a, .name = VPU_PORT_RDMA_RD		},
-	{ .id = 0x0c, .name = VPU_PORT_TCON_P2		},
-	{ .id = 0x0f, .name = VPU_PORT_DMA_RD		},
+VPU_SUB_RW(t5m, 0, 62, 62);
+VPU_SUB_RW(t5m, 1, 64, 64);
+VPU_SUB_RW(t5m, 2, 66, 66);
+VPU_SUB_DESC_INIT(t5m, &vpu0_sub_t5m, &vpu1_sub_t5m, &vpu2_sub_t5m, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_t6w[] __initdata = {
+	{ .id = 0x00, .name = "OSD1"			},
+	{ .id = 0x01, .name = "OSD2"			},
+	{ .id = 0x04, .name = "OSD3"			},
+	{ .id = 0x07, .name = "MALI_AFBC_RD"		},
+	{ .id = 0x09, .name = "TCON_P1"			},
+	{ .id = 0x0a, .name = "RDMA_RD"			},
+	{ .id = 0x0c, .name = "TCON_P2"			},
+	{ .id = 0x0f, .name = "DMA_RD"			},
 };
 
-static struct vpu_sub vpu0_w_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_VDIN0_WR		},
-	{ .id = 0x10, .name = VPU_PORT_VDIN0_WR		},
-	{ .id = 0x01, .name = VPU_PORT_VDIN1_WR		},
-	{ .id = 0x11, .name = VPU_PORT_VDIN1_WR		},
-	{ .id = 0x02, .name = VPU_PORT_VDIN_DOLBY	},
-	{ .id = 0x03, .name = VPU_PORT_VDIN_AFBCE	},
-	{ .id = 0x13, .name = VPU_PORT_VDIN_AFBCE	},
-	{ .id = 0x23, .name = VPU_PORT_VDIN_AFBCE	},
-	{ .id = 0x33, .name = VPU_PORT_VDIN_AFBCE	},
-	{ .id = 0x05, .name = VPU_PORT_TCON_P1		},
-	{ .id = 0x06, .name = VPU_PORT_RDMA		},
-	{ .id = 0x08, .name = VPU_PORT_LDIM		},
-	{ .id = 0x0a, .name = VPU_PORT_DMA		},
+static struct vpu_sub_list vpu0_sub_w_t6w[] __initdata = {
+	{ .id = 0x00, .name = "VDIN0_WR"		},
+	{ .id = 0x10, .name = "VDIN0_WR"		},
+	{ .id = 0x01, .name = "VDIN1_WR"		},
+	{ .id = 0x11, .name = "VDIN1_WR"		},
+	{ .id = 0x02, .name = "VDIN_DOLBY"		},
+	{ .id = 0x03, .name = "VDIN_AFBCE"		},
+	{ .id = 0x13, .name = "VDIN_AFBCE"		},
+	{ .id = 0x23, .name = "VDIN_AFBCE"		},
+	{ .id = 0x33, .name = "VDIN_AFBCE"		},
+	{ .id = 0x05, .name = "TCON_P1"			},
+	{ .id = 0x06, .name = "RDMA"			},
+	{ .id = 0x08, .name = "LDIM"			},
+	{ .id = 0x0a, .name = "DMA"			},
 };
 
-static struct vpu_sub vpu1_r_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_DAE_RD0		},
-	{ .id = 0x10, .name = VPU_PORT_DAE_RD1		},
-	{ .id = 0x20, .name = VPU_PORT_DAE_RD2		},
-	{ .id = 0x30, .name = VPU_PORT_DAE_RD3		},
-	{ .id = 0x40, .name = VPU_PORT_DAE_RD4		},
-	{ .id = 0x50, .name = VPU_PORT_DAE_RD5		},
-	{ .id = 0x60, .name = VPU_PORT_DAE_RD6		},
-	{ .id = 0x70, .name = VPU_PORT_DAE_RD7		},
-	{ .id = 0x80, .name = VPU_PORT_DAE_RD8		},
-	{ .id = 0x90, .name = VPU_PORT_DAE_RD9		},
-	{ .id = 0xa0, .name = VPU_PORT_DAE_RD10		},
-	{ .id = 0xb0, .name = VPU_PORT_DAE_RD11		},
-	{ .id = 0xc0, .name = VPU_PORT_DAE_RD11		},
-	{ .id = 0xd0, .name = VPU_PORT_DAE_RD11		},
-	{ .id = 0x01, .name = VPU_PORT_INP_RD0		},
-	{ .id = 0x11, .name = VPU_PORT_INP_RD0		},
-	{ .id = 0x21, .name = VPU_PORT_INP_RD0		},
-	{ .id = 0x41, .name = VPU_PORT_INP_RD1		},
-	{ .id = 0x32, .name = VPU_PORT_RDMA_RD		},
+static struct vpu_sub_list vpu1_sub_r_t6w[] __initdata = {
+	{ .id = 0x00, .name = "DAE_RD0"			},
+	{ .id = 0x10, .name = "DAE_RD1"			},
+	{ .id = 0x20, .name = "DAE_RD2"			},
+	{ .id = 0x30, .name = "DAE_RD3"			},
+	{ .id = 0x40, .name = "DAE_RD4"			},
+	{ .id = 0x50, .name = "DAE_RD5"			},
+	{ .id = 0x60, .name = "DAE_RD6"			},
+	{ .id = 0x70, .name = "DAE_RD7"			},
+	{ .id = 0x80, .name = "DAE_RD8"			},
+	{ .id = 0x90, .name = "DAE_RD9"			},
+	{ .id = 0xa0, .name = "DAE_RD10"		},
+	{ .id = 0xb0, .name = "DAE_RD11"		},
+	{ .id = 0xc0, .name = "DAE_RD11"		},
+	{ .id = 0xd0, .name = "DAE_RD11"		},
+	{ .id = 0x01, .name = "INP_RD0"			},
+	{ .id = 0x11, .name = "INP_RD0"			},
+	{ .id = 0x21, .name = "INP_RD0"			},
+	{ .id = 0x41, .name = "INP_RD1"			},
+	{ .id = 0x32, .name = "RDMA_RD"			},
 };
 
-static struct vpu_sub vpu1_w_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_DAE_WR0		},
-	{ .id = 0x10, .name = VPU_PORT_DAE_WR1		},
-	{ .id = 0x20, .name = VPU_PORT_DAE_WR2		},
-	{ .id = 0x30, .name = VPU_PORT_DAE_WR3		},
-	{ .id = 0x40, .name = VPU_PORT_DAE_WR4		},
-	{ .id = 0x50, .name = VPU_PORT_DAE_WR5		},
-	{ .id = 0x60, .name = VPU_PORT_DAE_WR6		},
-	{ .id = 0x70, .name = VPU_PORT_DAE_WR7		},
-	{ .id = 0x80, .name = VPU_PORT_DAE_WR8		},
-	{ .id = 0x01, .name = VPU_PORT_INP_WR		},
-	{ .id = 0x42, .name = VPU_PORT_RDMA_WR		},
+static struct vpu_sub_list vpu1_sub_w_t6w[] __initdata = {
+	{ .id = 0x00, .name = "DAE_WR0"			},
+	{ .id = 0x10, .name = "DAE_WR1"			},
+	{ .id = 0x20, .name = "DAE_WR2"			},
+	{ .id = 0x30, .name = "DAE_WR3"			},
+	{ .id = 0x40, .name = "DAE_WR4"			},
+	{ .id = 0x50, .name = "DAE_WR5"			},
+	{ .id = 0x60, .name = "DAE_WR6"			},
+	{ .id = 0x70, .name = "DAE_WR7"			},
+	{ .id = 0x80, .name = "DAE_WR8"			},
+	{ .id = 0x01, .name = "INP_WR"			},
+	{ .id = 0x42, .name = "RDMA_WR"			},
 };
 
-static struct vpu_sub vpu2_r_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_NR_VFCD0		},
-	{ .id = 0x10, .name = VPU_PORT_NR_VFCD0		},
-	{ .id = 0x20, .name = VPU_PORT_NR_VFCD0		},
-	{ .id = 0x01, .name = VPU_PORT_NR_VFCD1		},
-	{ .id = 0x11, .name = VPU_PORT_NR_VFCD1		},
-	{ .id = 0x21, .name = VPU_PORT_NR_VFCD1		},
-	{ .id = 0x02, .name = VPU_PORT_NR_VFCD2		},
-	{ .id = 0x12, .name = VPU_PORT_NR_VFCD2		},
-	{ .id = 0x22, .name = VPU_PORT_NR_VFCD2		},
-	{ .id = 0x03, .name = VPU_PORT_NR_VFCD3		},
-	{ .id = 0x13, .name = VPU_PORT_NR_VFCD3		},
-	{ .id = 0x23, .name = VPU_PORT_NR_VFCD3		},
+static struct vpu_sub_list vpu2_sub_r_t6w[] __initdata = {
+	{ .id = 0x00, .name = "NR_VFCD0"		},
+	{ .id = 0x10, .name = "NR_VFCD0"		},
+	{ .id = 0x20, .name = "NR_VFCD0"		},
+	{ .id = 0x01, .name = "NR_VFCD1"		},
+	{ .id = 0x11, .name = "NR_VFCD1"		},
+	{ .id = 0x21, .name = "NR_VFCD1"		},
+	{ .id = 0x02, .name = "NR_VFCD2"		},
+	{ .id = 0x12, .name = "NR_VFCD2"		},
+	{ .id = 0x22, .name = "NR_VFCD2"		},
+	{ .id = 0x03, .name = "NR_VFCD3"		},
+	{ .id = 0x13, .name = "NR_VFCD3"		},
+	{ .id = 0x23, .name = "NR_VFCD3"		},
 };
 
-static struct vpu_sub vpu2_w_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_VFCE_WRMIF2	},
-	{ .id = 0x01, .name = VPU_PORT_VFCE_WRMIF2	},
-	{ .id = 0x02, .name = VPU_PORT_VFCE_WRMIF2	},
-	{ .id = 0x03, .name = VPU_PORT_VFCE_WRMIF2	},
-	{ .id = 0x04, .name = VPU_PORT_DS_WRMIF		},
-	{ .id = 0x05, .name = VPU_PORT_DS_WRMIF		},
-	{ .id = 0x06, .name = VPU_PORT_WRMIF0		},
-	{ .id = 0x07, .name = VPU_PORT_WRMIF0		},
-	{ .id = 0x08, .name = VPU_PORT_WRMIF1		},
-	{ .id = 0x09, .name = VPU_PORT_WRMIF1		},
-	{ .id = 0x0a, .name = VPU_PORT_DMSQ_WR		},
-	{ .id = 0x0b, .name = VPU_PORT_NR_WR0		},
-	{ .id = 0x0c, .name = VPU_PORT_NR_WR1		},
+static struct vpu_sub_list vpu2_sub_w_t6w[] __initdata = {
+	{ .id = 0x00, .name = "VFCE_WRMIF2"		},
+	{ .id = 0x01, .name = "VFCE_WRMIF2"		},
+	{ .id = 0x02, .name = "VFCE_WRMIF2"		},
+	{ .id = 0x03, .name = "VFCE_WRMIF2"		},
+	{ .id = 0x04, .name = "DS_WRMIF"		},
+	{ .id = 0x05, .name = "DS_WRMIF"		},
+	{ .id = 0x06, .name = "WRMIF0"			},
+	{ .id = 0x07, .name = "WRMIF0"			},
+	{ .id = 0x08, .name = "WRMIF1"			},
+	{ .id = 0x09, .name = "WRMIF1"			},
+	{ .id = 0x0a, .name = "DMSQ_WR"			},
+	{ .id = 0x0b, .name = "NR_WR0"			},
+	{ .id = 0x0c, .name = "NR_WR1"			},
 };
 
-static struct vpu_sub vpu3_r_t6w[] __initdata = {
-	{ .id = 0x00, .name = VPU_PORT_MC_VFCD0		},
-	{ .id = 0x10, .name = VPU_PORT_MC_VFCD0		},
-	{ .id = 0x20, .name = VPU_PORT_MC_VFCD0		},
-	{ .id = 0x01, .name = VPU_PORT_MC_VFCD1		},
-	{ .id = 0x11, .name = VPU_PORT_MC_VFCD1		},
-	{ .id = 0x21, .name = VPU_PORT_MC_VFCD1		},
-	{ .id = 0x02, .name = VPU_PORT_MC_VFCD2		},
-	{ .id = 0x12, .name = VPU_PORT_MC_VFCD2		},
-	{ .id = 0x22, .name = VPU_PORT_MC_VFCD2		},
-	{ .id = 0x03, .name = VPU_PORT_NR_RD0		},
-	{ .id = 0x23, .name = VPU_PORT_NR_RD2		},
-	{ .id = 0x33, .name = VPU_PORT_NR_RD3		},
-	{ .id = 0x43, .name = VPU_PORT_NR_RD4		},
-	{ .id = 0x53, .name = VPU_PORT_NR_RD5		},
-	{ .id = 0x63, .name = VPU_PORT_NR_RD6		},
-	{ .id = 0x73, .name = VPU_PORT_NR_RD7		},
-	{ .id = 0x83, .name = VPU_PORT_NR_RD8		},
-	{ .id = 0x93, .name = VPU_PORT_NR_RD9		},
-	{ .id = 0xa3, .name = VPU_PORT_NR_RD10		},
-	{ .id = 0xb3, .name = VPU_PORT_NR_RD10		},
-	{ .id = 0xc3, .name = VPU_PORT_NR_RD10		},
-	{ .id = 0x04, .name = VPU_PORT_MC_RD0		},
-	{ .id = 0x14, .name = VPU_PORT_MC_RD1		},
-	{ .id = 0x24, .name = VPU_PORT_MC_RD2		},
-	{ .id = 0x34, .name = VPU_PORT_MC_RD3		},
-	{ .id = 0x05, .name = VPU_PORT_MMU		},
+static struct vpu_sub_list vpu3_sub_r_t6w[] __initdata = {
+	{ .id = 0x00, .name = "MC_VFCD0"		},
+	{ .id = 0x10, .name = "MC_VFCD0"		},
+	{ .id = 0x20, .name = "MC_VFCD0"		},
+	{ .id = 0x01, .name = "MC_VFCD1"		},
+	{ .id = 0x11, .name = "MC_VFCD1"		},
+	{ .id = 0x21, .name = "MC_VFCD1"		},
+	{ .id = 0x02, .name = "MC_VFCD2"		},
+	{ .id = 0x12, .name = "MC_VFCD2"		},
+	{ .id = 0x22, .name = "MC_VFCD2"		},
+	{ .id = 0x03, .name = "NR_RD0"			},
+	{ .id = 0x23, .name = "NR_RD2"			},
+	{ .id = 0x33, .name = "NR_RD3"			},
+	{ .id = 0x43, .name = "NR_RD4"			},
+	{ .id = 0x53, .name = "NR_RD5"			},
+	{ .id = 0x63, .name = "NR_RD6"			},
+	{ .id = 0x73, .name = "NR_RD7"			},
+	{ .id = 0x83, .name = "NR_RD8"			},
+	{ .id = 0x93, .name = "NR_RD9"			},
+	{ .id = 0xa3, .name = "NR_RD10"			},
+	{ .id = 0xb3, .name = "NR_RD10"			},
+	{ .id = 0xc3, .name = "NR_RD10"			},
+	{ .id = 0x04, .name = "MC_RD0"			},
+	{ .id = 0x14, .name = "MC_RD1"			},
+	{ .id = 0x24, .name = "MC_RD2"			},
+	{ .id = 0x34, .name = "MC_RD3"			},
+	{ .id = 0x05, .name = "MMU"			},
 };
 
-static struct vpu_sub vpu0_r_t6x[] __initdata = {
+VPU_SUB_RW(t6w, 0, 2, 2);
+VPU_SUB_RW(t6w, 1, 3, 3);
+VPU_SUB_RW(t6w, 2, 6, 4);
+VPU_SUB_RO(t6w, 3, 7);
+VPU_SUB_DESC_INIT(t6w, &vpu0_sub_t6w, &vpu1_sub_t6w, &vpu2_sub_t6w, &vpu3_sub_t6w);
+
+static struct vpu_sub_list vpu0_sub_r_t6x[] __initdata = {
 	{ .id = 0x00, .name = "OSD1"			},
 	{ .id = 0x01, .name = "OSD2"			},
 	{ .id = 0x02, .name = "NR_SUB"			},
 	{ .id = 0x03, .name = "MC_SUB"			},
 	{ .id = 0x04, .name = "OSD3"			},
 	{ .id = 0x05, .name = "MC_VFCD0"		},
+	{ .id = 0x15, .name = "MC_VFCD0"		},
+	{ .id = 0x25, .name = "MC_VFCD0"		},
 	{ .id = 0x06, .name = "MC_VFCD1"		},
+	{ .id = 0x16, .name = "MC_VFCD1"		},
+	{ .id = 0x26, .name = "MC_VFCD1"		},
 	{ .id = 0x07, .name = "MALI_AFBCD"		},
 	{ .id = 0x08, .name = "MC_VFCD2"		},
+	{ .id = 0x18, .name = "MC_VFCD2"		},
+	{ .id = 0x28, .name = "MC_VFCD2"		},
 	{ .id = 0x09, .name = "TCON_P1"			},
 	{ .id = 0x0A, .name = "RDMA"			},
 	{ .id = 0x0B, .name = "LOCAL_DIMMING"		},
@@ -1087,11 +1135,11 @@ static struct vpu_sub vpu0_r_t6x[] __initdata = {
 	{ .id = 0x0F, .name = "DOLBY_TV"		},
 };
 
-static struct vpu_sub vpu0_w_t6x[] __initdata = {
-	{ .id = 0x00, .name = "VDIN0_WRMIF"		},
-	{ .id = 0x01, .name = "VDIN1_WRMIF"		},
+static struct vpu_sub_list vpu0_sub_w_t6x[] __initdata = {
+	{ .id = 0x00, .name = "VDIN0"			},
+	{ .id = 0x01, .name = "VDIN1"			},
 	{ .id = 0x02, .name = "VDIN_DOLBY"		},
-	{ .id = 0x03, .name = "VDIN_VFCE"		},
+	{ .id = 0x03, .name = "VDIN_AFBCE"		},
 	{ .id = 0x05, .name = "TCON_P1"			},
 	{ .id = 0x06, .name = "LDIM_WR"			},
 	{ .id = 0x16, .name = "LDIM_WR"			},
@@ -1104,7 +1152,7 @@ static struct vpu_sub vpu0_w_t6x[] __initdata = {
 	{ .id = 0x0E, .name = "DPE_WR"			},
 };
 
-static struct vpu_sub vpu2_r_t6x[] __initdata = {
+static struct vpu_sub_list vpu2_sub_r_t6x[] __initdata = {
 	{ .id = 0x00, .name = "NR_VFCD0"		},
 	{ .id = 0x01, .name = "NR_VFCD1"		},
 	{ .id = 0x02, .name = "NR_VFCD2"		},
@@ -1114,13 +1162,13 @@ static struct vpu_sub vpu2_r_t6x[] __initdata = {
 	{ .id = 0x36, .name = "RDMA_RD"			},
 };
 
-static struct vpu_sub vpu2_w_t6x[] __initdata = {
+static struct vpu_sub_list vpu2_sub_w_t6x[] __initdata = {
 	{ .id = 0x00, .name = "VFCE_WRMIF2"		},
 	{ .id = 0x01, .name = "VFCE_WRMIF2"		},
 	{ .id = 0x02, .name = "VFCE_WRMIF2"		},
 	{ .id = 0x03, .name = "VFCE_WRMIF2"		},
 	{ .id = 0x04, .name = "DS_WRMIF"		},
-	{ .id = 0x05, .name = "DS_WRMIF"		},
+	{ .id = 0x05, .name = "WRMIF"			},
 	{ .id = 0x06, .name = "WRMIF0"			},
 	{ .id = 0x07, .name = "WRMIF0"			},
 	{ .id = 0x08, .name = "WRMIF1"			},
@@ -1133,7 +1181,11 @@ static struct vpu_sub vpu2_w_t6x[] __initdata = {
 	{ .id = 0x4F, .name = "RDMA_WR"			},
 };
 
-static struct vpu_sub vpu0_r_s7[] __initdata = {
+VPU_SUB_RW(t6x, 0, 8, 8);
+VPU_SUB_RW(t6x, 2, 16, 16);
+VPU_SUB_DESC_INIT(t6x, &vpu0_sub_t6x, NULL, &vpu2_sub_t6x, NULL);
+
+static struct vpu_sub_list vpu0_sub_r_s7[] __initdata = {
 	{ .id = 0x00, .name = "OSD1"			},
 	{ .id = 0x01, .name = "OSD2"			},
 	{ .id = 0x02, .name = "VD1"			},
@@ -1154,7 +1206,7 @@ static struct vpu_sub vpu0_r_s7[] __initdata = {
 	{ .id = 0x0E, .name = "DI_IF0"			},
 };
 
-static struct vpu_sub vpu1_r_s7[] __initdata = {
+static struct vpu_sub_list vpu1_sub_r_s7[] __initdata = {
 	{ .id = 0x00, .name = "DI_IF1"			},
 	{ .id = 0x01, .name = "DI_MEM"			},
 	{ .id = 0x02, .name = "DI_INP"			},
@@ -1168,7 +1220,7 @@ static struct vpu_sub vpu1_r_s7[] __initdata = {
 	{ .id = 0x06, .name = "DI_IF0"			},
 };
 
-static struct vpu_sub vpu0_w_s7[] __initdata = {
+static struct vpu_sub_list vpu0_sub_w_s7[] __initdata = {
 	{ .id = 0x00, .name = "NR_WR"			},
 	{ .id = 0x01, .name = "DI_WR"			},
 	{ .id = 0x02, .name = "CONT_WR"			},
@@ -1180,7 +1232,7 @@ static struct vpu_sub vpu0_w_s7[] __initdata = {
 	{ .id = 0x08, .name = "RDMA"			},
 };
 
-static struct vpu_sub vpu1_w_s7[] __initdata = {
+static struct vpu_sub_list vpu1_sub_w_s7[] __initdata = {
 	{ .id = 0x00, .name = "NR_WR"			},
 	{ .id = 0x01, .name = "DI_WR"			},
 	{ .id = 0x02, .name = "CONT_WR"			},
@@ -1189,254 +1241,220 @@ static struct vpu_sub vpu1_w_s7[] __initdata = {
 	{ .id = 0x32, .name = "MCVEC_WR"		},
 	{ .id = 0x42, .name = "NRDS_WR"			},
 };
+
+VPU_SUB_RW(s7, 0, 1, 4);
+VPU_SUB_RW(s7, 1, 2, 6);
+VPU_SUB_DESC_INIT(s7, &vpu0_sub_s7, &vpu1_sub_s7, NULL, NULL);
 #endif
 
-static struct vpu_sub_desc vpu_port;
-static struct vpu_sub_desc_v2 vpu_port_v2;
-struct vpu_sub_desc * __init vpu_sub_init(int cpu_type)
+static int __init vpu_sub_desc_alloc(struct vpu_sub_desc **dst, struct vpu_sub_desc *src)
 {
-#define VPU_DATA_RW_CHIP_INIT(id, chip)	\
-	{										\
-		vpu_port_v2.vpu##id##_r_num = ARRAY_SIZE(vpu##id##_r_##chip);	\
-		vpu##id##_r = vpu##id##_r_##chip;					\
-		vpu_port_v2.vpu##id##_w_num = ARRAY_SIZE(vpu##id##_w_##chip);	\
-		vpu##id##_w = vpu##id##_w_##chip;					\
+	struct vpu_sub_desc *desc;
+	struct vpu_sub *src_sub;
+	struct vpu_sub *dst_sub;
+	struct vpu_sub **src_subs;
+	struct vpu_sub **dst_subs;
+	int i;
+
+	if (!src)
+		return 0;
+
+	/* Check if all NULL */
+	src_subs = (struct vpu_sub **)&src->vpu0_sub;
+	for (i = 0; i < VPU_SUB_CNT; i++) {
+		if (src_subs[i])
+			break;
+	}
+	if (i >= VPU_SUB_CNT)
+		return 0;
+
+	desc = kzalloc(sizeof(*desc), GFP_KERNEL);
+	if (!desc)
+		return -ENOMEM;
+
+	dst_subs = &desc->vpu0_sub;
+
+	for (i = 0; i < VPU_SUB_CNT; i++) {
+		if (!src_subs[i])
+			continue;
+
+		src_sub = src_subs[i];
+		dst_sub = kzalloc(sizeof(*dst_sub), GFP_KERNEL);
+		if (!dst_sub)
+			goto err;
+
+		dst_sub->sub_r.port_id = src_sub->sub_r.port_id;
+		dst_sub->sub_r.num = src_sub->sub_r.num;
+		if (src_sub->sub_r.num && src_sub->sub_r.list) {
+			dst_sub->sub_r.list = kmemdup(src_sub->sub_r.list,
+				src_sub->sub_r.num * sizeof(struct vpu_sub_list), GFP_KERNEL);
+			if (!dst_sub->sub_r.list) {
+				kfree(dst_sub);
+				goto err;
+			}
+		} else {
+			dst_sub->sub_r.list = NULL;
+		}
+
+		dst_sub->sub_w.port_id = src_sub->sub_w.port_id;
+		dst_sub->sub_w.num = src_sub->sub_w.num;
+		if (src_sub->sub_w.num && src_sub->sub_w.list) {
+			dst_sub->sub_w.list = kmemdup(src_sub->sub_w.list,
+				src_sub->sub_w.num * sizeof(struct vpu_sub_list), GFP_KERNEL);
+			if (!dst_sub->sub_w.list) {
+				kfree(dst_sub->sub_r.list);
+				kfree(dst_sub);
+				goto err;
+			}
+		} else {
+			dst_sub->sub_w.list = NULL;
+		}
+
+		dst_subs[i] = dst_sub;
 	}
 
-#define VPU_DATA_R_CHIP_INIT(id, chip)							\
-	{										\
-		vpu_port_v2.vpu##id##_r_num = ARRAY_SIZE(vpu##id##_r_##chip);	\
-		vpu##id##_r = vpu##id##_r_##chip;					\
+	*dst = desc;
+	return 0;
+
+err:
+	for (i = 0; i < VPU_SUB_CNT; i++) {
+		if (dst_subs[i]) {
+			kfree(dst_subs[i]->sub_r.list);
+			kfree(dst_subs[i]->sub_w.list);
+			kfree(dst_subs[i]);
+		}
 	}
+	kfree(desc);
+	return -ENOMEM;
+}
 
-#define VPU_DATA_W_CHIP_INIT(id, chip)							\
-	{										\
-		vpu_port_v2.vpu##id##_w_num = ARRAY_SIZE(vpu##id##_w_##chip);	\
-		vpu##id##_w = vpu##id##_w_##chip;					\
-	}
-
-#define VPU_DATA_INIT(id)									\
-	{											\
-		if (vpu_port_v2.vpu##id##_r_num) {						\
-			vpu_port_v2.vpu##id##_r =						\
-						kcalloc(vpu_port_v2.vpu##id##_r_num,	\
-								sizeof(struct vpu_sub),		\
-								GFP_KERNEL);			\
-			if (!vpu_port_v2.vpu##id##_r || !vpu##id##_r)			\
-				return NULL;							\
-			memcpy(vpu_port_v2.vpu##id##_r, vpu##id##_r,			\
-				sizeof(struct vpu_sub) * vpu_port_v2.vpu##id##_r_num);	\
-		}										\
-		if (vpu_port_v2.vpu##id##_w_num) {						\
-			vpu_port_v2.vpu##id##_w =						\
-						kcalloc(vpu_port_v2.vpu##id##_w_num,	\
-								sizeof(struct vpu_sub),		\
-								GFP_KERNEL);			\
-			if (!vpu_port_v2.vpu##id##_w || !vpu##id##_w)			\
-				return NULL;							\
-			memcpy(vpu_port_v2.vpu##id##_w, vpu##id##_w,			\
-				sizeof(struct vpu_sub) * vpu_port_v2.vpu##id##_w_num);	\
-		}										\
-	}
-
-	struct vpu_sub_desc_v1 *desc = NULL;
-	struct vpu_sub *vpu0_r = NULL;
-	struct vpu_sub *vpu0_w = NULL;
-	struct vpu_sub *vpu1_r = NULL;
-	struct vpu_sub *vpu1_w = NULL;
-	struct vpu_sub *vpu2_r = NULL;
-	struct vpu_sub *vpu2_w = NULL;
-	struct vpu_sub *vpu3_r = NULL;
-	struct vpu_sub *vpu3_w = NULL;
-	int desc_size = -EINVAL;
-	static int initialized;
-
-	if (initialized)
-		return &vpu_port;
-
+static struct vpu_sub_desc *__init get_vpu_sub_desc(int cpu_type)
+{
 	switch (cpu_type) {
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
 	case DMC_TYPE_TXL:
 	case DMC_TYPE_TXLX:
 	case DMC_TYPE_TXHD:
-		desc = vpu_sub_desc_txlx;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_txlx);
-		break;
+		return &vpu_sub_desc_txlx;
 	case DMC_TYPE_TL1:
-		desc = vpu_sub_desc_tl1;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_tl1);
-		break;
+		return &vpu_sub_desc_tl1;
 #endif
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	case DMC_TYPE_G12A:
 	case DMC_TYPE_G12B:
 	case DMC_TYPE_SM1:
-		desc = vpu_sub_desc_sm1;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_sm1);
-		break;
+		return &vpu_sub_desc_sm1;
 	case DMC_TYPE_TM2:
-		desc = vpu_sub_desc_tm2;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_tm2);
-		break;
+		return &vpu_sub_desc_tm2;
 	case DMC_TYPE_T5:
-		desc = vpu_sub_desc_t5;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t5);
-		break;
+		return &vpu_sub_desc_t5;
 	case DMC_TYPE_T5D:
-		desc = vpu_sub_desc_t5d;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t5d);
-		break;
+		return &vpu_sub_desc_t5d;
 	case DMC_TYPE_T7:
-		desc = vpu_sub_desc_t7;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t7);
-		break;
+		return &vpu_sub_desc_t7;
 	case DMC_TYPE_T3:
-		desc = vpu_sub_desc_t3;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t3);
-		break;
+		return &vpu_sub_desc_t3;
 #endif
 	case DMC_TYPE_S4:
-		desc = vpu_sub_desc_s4;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_s4);
-		break;
+		return &vpu_sub_desc_s4;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	case DMC_TYPE_SC2:
-		desc = vpu_sub_desc_sc2;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_sc2);
-		break;
+		return &vpu_sub_desc_sc2;
 	case DMC_TYPE_T5W:
-		desc = vpu_sub_desc_t5w;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t5w);
-		break;
+		return &vpu_sub_desc_t5w;
 	case DMC_TYPE_S5:
-		desc = vpu_sub_desc_s5;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_s5);
-		break;
+		return &vpu_sub_desc_s5;
 	case DMC_TYPE_S7D:
-		desc = vpu_sub_desc_s7d;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_s7d);
-		break;
+		return &vpu_sub_desc_s7d;
 	case DMC_TYPE_S6:
-		desc = vpu_sub_desc_s6;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_s6);
-		break;
+		return &vpu_sub_desc_s6;
 	case DMC_TYPE_T6D:
-		desc = vpu_sub_desc_t6d;
-		desc_size = ARRAY_SIZE(vpu_sub_desc_t6d);
-		break;
+		return &vpu_sub_desc_t6d;
 	case DMC_TYPE_T5M:
-		VPU_DATA_RW_CHIP_INIT(0, t5m);
-		VPU_DATA_RW_CHIP_INIT(1, t5m);
-		VPU_DATA_RW_CHIP_INIT(2, t5m);
-		break;
+		return &vpu_sub_desc_t5m;
 	case DMC_TYPE_T6W:
-		VPU_DATA_RW_CHIP_INIT(0, t6w);
-		VPU_DATA_RW_CHIP_INIT(1, t6w);
-		VPU_DATA_RW_CHIP_INIT(2, t6w);
-		VPU_DATA_R_CHIP_INIT(3, t6w);
-		break;
+		return &vpu_sub_desc_t6w;
 	case DMC_TYPE_T6X:
-		VPU_DATA_RW_CHIP_INIT(0, t6x);
-		VPU_DATA_RW_CHIP_INIT(2, t6x);
-		break;
+		return &vpu_sub_desc_t6x;
 	case DMC_TYPE_S7:
-		VPU_DATA_RW_CHIP_INIT(0, s7);
-		VPU_DATA_RW_CHIP_INIT(1, s7);
-		break;
+		return &vpu_sub_desc_s7;
 #endif
 	default:
-		pr_err("the vpu data in the chip has not been ported yet");
 		return NULL;
 	}
-	initialized = 1;
-	/* using once */
-	if (desc) {
-		vpu_port.ver = 1;
-		vpu_port.vpu_port_num = desc_size;
-		vpu_port.vpu_desc_v1  = kcalloc(desc_size,
-						sizeof(struct vpu_sub_desc_v1), GFP_KERNEL);
-		if (!vpu_port.vpu_desc_v1)
-			return NULL;
-		memcpy(vpu_port.vpu_desc_v1, desc, sizeof(struct vpu_sub_desc_v1) * desc_size);
-	} else {
-		vpu_port.ver = 2;
-		vpu_port.vpu_desc_v2 = &vpu_port_v2;
-		VPU_DATA_INIT(0);
-		VPU_DATA_INIT(1);
-		VPU_DATA_INIT(2);
-		VPU_DATA_INIT(3);
-	}
-
-	return &vpu_port;
 }
 
-char *vpu_to_sub_port(char *name, char rw, int sid)
+static struct vpu_sub_desc *vpu_sub_desc_cache;
+static int vpu_sub_save_type = -1;
+
+int __init vpu_sub_desc_init(int cpu_type, struct vpu_sub_desc **desc)
 {
-	int i;
-	int size;
-#define VPU_TO_SUB(idx)										\
-	{											\
-		if (!strncmp(name, "VPU"#idx, 4)) {						\
-			if (rw == 'r')								\
-				for (i = 0; i < vpu_port_v2.vpu##idx##_r_num; i++) {	\
-					if (vpu_port_v2.vpu##idx##_r[i].id == sid)	\
-						return vpu_port_v2.vpu##idx##_r[i].name;\
-				}								\
-			else									\
-				for (i = 0; i < vpu_port_v2.vpu##idx##_w_num; i++) {	\
-					if (vpu_port_v2.vpu##idx##_w[i].id == sid)	\
-						return vpu_port_v2.vpu##idx##_w[i].name;\
-				}								\
-		}										\
+	struct vpu_sub_desc *init_desc;
+	int ret;
+
+	if (!desc)
+		return -EINVAL;
+
+	*desc = NULL;
+
+	/* Return cached copy if same cpu_type */
+	if (vpu_sub_save_type == cpu_type) {
+		*desc = vpu_sub_desc_cache;
+		return 0;
 	}
 
-	if (vpu_port.ver == 0) {
-		pr_warn("vpu port has not been initialized or initialization failed.");
+	init_desc = get_vpu_sub_desc(cpu_type);
+	if (!init_desc)
+		return -EINVAL;
+
+	ret = vpu_sub_desc_alloc(desc, init_desc);
+	if (ret)
+		return ret;
+
+	/* Cache for reuse */
+	vpu_sub_desc_cache = *desc;
+	vpu_sub_save_type = cpu_type;
+	return 0;
+}
+
+char *vpu_to_sub_port(unsigned char port_id, int sid, char rw)
+{
+	struct vpu_sub_desc *desc;
+	struct vpu_sub **vpu_subs;
+	struct vpu_sub *sub;
+	struct vpu_sub_port *port;
+	int i, j;
+
+	desc = dmc_mon ? dmc_mon->vpu_sub : (aml_db ? aml_db->vpu_sub : NULL);
+	if (!desc)
 		return NULL;
-	}
 
-	if (vpu_port.ver == 2) {
-		sid &= 0xff;
-		size = vpu_port_v2.vpu0_r_num + vpu_port_v2.vpu0_w_num +
-		       vpu_port_v2.vpu1_r_num + vpu_port_v2.vpu1_w_num +
-		       vpu_port_v2.vpu2_r_num + vpu_port_v2.vpu2_w_num +
-		       vpu_port_v2.vpu3_r_num + vpu_port_v2.vpu3_w_num;
-		if (!size)
-			return NULL;
+	sid &= 0xff;
+	vpu_subs = (struct vpu_sub **)&desc->vpu0_sub;
 
-		VPU_TO_SUB(0);
-		VPU_TO_SUB(1);
-		VPU_TO_SUB(2);
-		VPU_TO_SUB(3);
-		return NULL;
-	}
+	for (j = 0; j < VPU_SUB_CNT; j++) {
+		sub = vpu_subs[j];
+		if (!sub)
+			continue;
 
-	sid &= 0x1f;
-	if (!vpu_port.vpu_desc_v1 || sid >= vpu_port.vpu_port_num)
-		return NULL;
+		if (rw == 'r') {
+			if (sub->sub_r.port_id != port_id)
+				continue;
+			port = &sub->sub_r;
+		} else {
+			if (sub->sub_w.port_id != port_id)
+				continue;
+			port = &sub->sub_w;
+		}
 
-	if (vpu_port.vpu_desc_v1[sid].sub_id == sid) {
-		if (!strncmp(name, "VPU0", 4)) {
-			if (rw == 'r')
-				return vpu_port.vpu_desc_v1[sid].vpu_r0_2;
-			else
-				return vpu_port.vpu_desc_v1[sid].vpu_w0;
-		} else if (!strncmp(name, "VPU1", 4)) {
-			if (rw == 'r')
-				return vpu_port.vpu_desc_v1[sid].vpu_r1;
-			else
-				return vpu_port.vpu_desc_v1[sid].vpu_w1;
-		} else if (!strncmp(name, "VPU2", 4)) {
-			if (rw == 'r')
-				return vpu_port.vpu_desc_v1[sid].vpu_r0_2;
-			else
-				return NULL;
-		} else if (!strncmp(name, "VPU3", 4)) {
-			if (rw == 'r')
-				return vpu_port.vpu_desc_v1[sid].vpu_r0_2;
-			else
-				return NULL;
+		if (!port->list)
+			continue;
+
+		for (i = 0; i < port->num; i++) {
+			if (port->list[i].id == sid)
+				return port->list[i].name;
 		}
 	}
 	return NULL;
 }
+

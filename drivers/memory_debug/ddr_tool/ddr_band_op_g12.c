@@ -23,36 +23,36 @@
 #define DMC_CHAN_STS_OFFSET		((0x0036  << 2))
 #define DMC_CHAN_STS_OFFSET_SC2		((0x003c  << 2))  /* SAME C2 */
 
-static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void g12_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val;
 	unsigned int rp[MAX_CHANNEL] = {DMC_MON_G12_CTRL1, DMC_MON_G12_CTRL3,
 					DMC_MON_G12_CTRL5, DMC_MON_G12_CTRL7};
 	unsigned int rs[MAX_CHANNEL] = {DMC_MON_G12_CTRL2, DMC_MON_G12_CTRL4,
 					DMC_MON_G12_CTRL6, DMC_MON_G12_CTRL8};
-	int subport = -1;
+	int port, sub;
 
 	/* clear all port mask */
-	if (port < 0) {
+	if (map_id < 0) {
 		writel(0, db->ddr_reg[0] + rp[channel]);
 		writel(0, db->ddr_reg[0] + rs[channel]);
 		return;
 	}
 
-	if (port >= PORT_MAJOR)
-		subport = port - PORT_MAJOR;
+	port = db->port_map_table[map_id].port_id;
+	sub = db->port_map_table[map_id].sub_id;
 
-	if (subport < 0) {
+	if (sub < 0) {
 		val = readl(db->ddr_reg[0] + rp[channel]);
 		val |=  (1 << port);
 		writel(val, db->ddr_reg[0] + rp[channel]);
 		val = 0xffff;
 		writel(val, db->ddr_reg[0] + rs[channel]);
 	} else {
-		val = (0x1 << 7);	/* select device */
+		val = (0x1 << port);	/* select major port */
 		writel(val, db->ddr_reg[0] + rp[channel]);
 		val = readl(db->ddr_reg[0] + rs[channel]);
-		val |= (1 << subport);
+		val |= (1 << sub);
 		writel(val, db->ddr_reg[0] + rs[channel]);
 	}
 }
@@ -134,7 +134,7 @@ static void g12_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	g12_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			g12_dmc_port_config(db, i, -1);
 	}
 }

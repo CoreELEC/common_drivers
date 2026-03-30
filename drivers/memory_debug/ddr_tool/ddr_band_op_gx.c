@@ -22,30 +22,27 @@
 
 #define DMC_CHAN_STS_OFFSET		((0x0032  << 2))
 
-static void gx_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void gx_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val;
-	int subport = -1;
+	int port, sub;
 
 	/* set to a unused port to clear bandwidth */
-	if (port < 0) {
+	if (map_id < 0) {
 		writel(0x8016ffff, db->ddr_reg[0] + DMC_MON_CTRL2);
 		return;
 	}
 
-	if (port >= PORT_MAJOR)
-		subport = port - PORT_MAJOR;
+	port = db->port_map_table[map_id].port_id;
+	sub = db->port_map_table[map_id].sub_id;
 
 	val = readl(db->ddr_reg[0] + DMC_MON_CTRL2);
-	if (subport < 0) {
+	if (sub < 0) {
 		val &= ~(0xfffff << 0);
-		val |= ((port << 16) | 0xffff);
+		val |= ((1 << (port + 16)) | 0xffff);
 	} else {
 		val &= ~(0xffff);
-		if (db->cpu_type == DMC_TYPE_M8B)
-			val |= (0xf << 16) | (1 << subport);
-		else
-			val |= (0x7 << 16) | (1 << subport);
+		val |= (1 << (port + 16)) | (1 << sub);
 	}
 	writel(val, db->ddr_reg[0] + DMC_MON_CTRL2);
 }
@@ -92,7 +89,7 @@ static void gx_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	writel(db->clock_count, db->ddr_reg[0] + DMC_MON_CTRL3);
 	gx_dmc_bandwidth_enable(db);
 
-	if (!db->port[0])
+	if (!ddr_get_ch_set_num(0))
 		gx_dmc_port_config(db, 0, -1);
 }
 

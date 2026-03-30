@@ -76,34 +76,37 @@ static unsigned int ots_levels[] __initdata = {
 	0x30263026, 0x34293429, 0x382C382C, 0x3C2F3C2F
 };
 
-static void t6x_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void t6x_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val, index, mdc_select = 0;
-	int i, subport = -1, id = -1;
+	int i, port, sub, id = -1;
 	void *io;
 
-	if (port >= 0) {
-		if (port >= PORT_MAJOR) {
-			id = 3;
-			subport = port - PORT_MAJOR;
-		} else {
-			id = (port >> 3) & 0x3;
+	if (map_id >= 0) {
+		port = db->port_map_table[map_id].port_id;
+		sub = db->port_map_table[map_id].sub_id;
+
+		if (port >= 0) {
+			if (sub < 0)
+				id = (port >> 3) & 0x3;
+			else
+				id = 3;
+			mdc_select = 1;
 		}
-		mdc_select = 1;
 	}
 
 	/* clear all port mask */
 	for (i = 0; i < db->mdc.number; i++) {
 		io = db->mdc.reg_base[i];
 
-		if (port < 0) {
+		if (map_id < 0) {
 			writel(0, io + MDC_MON_CTRL[channel]);	/* MDC_MON*_CTRL */
 			writel(0, io + MDC_MON_CTRL1[channel]);	/* MDC_MON*_CTRL1 */
 		} else {
 			if (mdc_select && i != id)	/* select mdc */
 				continue;
 
-			if (subport < 0) {
+			if (sub < 0) {
 				val = readl(io + MDC_MON_CTRL[channel]);
 				index = port & 0x7;  /* real mdc port id */
 				val |= (1 << index);
@@ -114,7 +117,7 @@ static void t6x_port_config(struct ddr_bandwidth *db, int channel, int port)
 				val = (0x1 << 3);	/* select mdc device */
 				writel(val, io + MDC_MON_CTRL[channel]);
 				val = readl(io + MDC_MON_CTRL1[channel]);
-				val |= (1 << subport);
+				val |= (1 << sub);
 				writel(val, io + MDC_MON_CTRL1[channel]);
 			}
 		}
@@ -208,7 +211,7 @@ static void t6x_bandwidth_init(struct ddr_bandwidth *db)
 	void *io;
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			t6x_port_config(db, i, -1);
 		t6x_range_config(db, i, 0, DEFAULT_RANGE_LARGE_DDR);
 		db->range[i].start = 0;

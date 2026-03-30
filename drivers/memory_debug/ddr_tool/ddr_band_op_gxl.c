@@ -22,31 +22,28 @@
 
 #define DMC_CHAN_STS_OFFSET		((0x0032  << 2))
 
-static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void gxl_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val;
 	unsigned int port_reg[MAX_CHANNEL] = {DMC_MON_CTRL1, DMC_MON_CTRL4,
 					      DMC_MON_CTRL5, DMC_MON_CTRL6};
-	int subport = -1;
-
-	if (port >= PORT_MAJOR)
-		subport = port - PORT_MAJOR;
+	int port, sub;
 
 	/* clear all port mask */
-	if (port < 0) {
+	if (map_id < 0) {
 		writel(0, db->ddr_reg[0] + port_reg[channel]);
 		return;
 	}
 
+	port = db->port_map_table[map_id].port_id;
+	sub = db->port_map_table[map_id].sub_id;
+
 	val = readl(db->ddr_reg[0] + port_reg[channel]);
-	if (port < 16) {
-		val |= ((1 << (16 + port)) | 0xffff);
-	} else if (subport > 0) {
-		val &= ~(0xffffffff);
-		val |= (1 << 23) | (1 << subport);
+	if (sub < 0) {
+		val |= ((1 << (port + 16)) | 0xffff);
 	} else {
-		pr_err("port config fail\n");
-		return;
+		val &= ~(0xffffffff);
+		val |= (1 << (port + 16)) | (1 << sub);
 	}
 	writel(val, db->ddr_reg[0] + port_reg[channel]);
 }
@@ -93,7 +90,7 @@ static void gxl_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	gxl_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			gxl_dmc_port_config(db, i, -1);
 	}
 }

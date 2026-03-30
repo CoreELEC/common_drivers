@@ -12,1954 +12,1912 @@
 #include <linux/printk.h>
 #include <linux/amlogic/arm-smccc.h>
 #include <linux/slab.h>
+#include <linux/mutex.h>
 #include <linux/io.h>
 #include <linux/bitops.h>
+#include <linux/bits.h>
+#include <linux/bitfield.h>
+#include <linux/overflow.h>
 #include "ddr_port.h"
 #include "ddr_bandwidth.h"
 
+#define DDR_PRIORITY_FORCE_RW(_bus, _mask, _off, _lsb, _nbits)				\
+	{										\
+		.bus = (_bus),								\
+		.force_mask = (_mask),							\
+		.offset = (_off), .lsb = (_lsb), .nbits = (_nbits),			\
+	}										\
+
+#define DDR_PRIORITY_NIC_FIXED(_port_id, _sub_id, _fixed_w, _fixed_r)			\
+	{										\
+		.port_id = _port_id,							\
+		.sub_id = _sub_id,							\
+		.type = PRIO_FIXED,							\
+		.fixed_w = (_fixed_w),							\
+		.fixed_r = (_fixed_r),							\
+		.fixed_nbits = 8,							\
+	}										\
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT_C1A
-static struct ddr_priority_v1 ddr_priority_s4[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_force ddr_priority_force_s4[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(6, -1, (0x98 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0xac << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+};
 
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 5, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0		},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 16, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 17, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 18, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 20, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x70 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x70 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 23, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x7c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7c << 2), .r_bit_s = 16, .r_width = 0x7	}
+static struct ddr_priority_info ddr_priority_info_s4 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s4),
+	.dmc_force = ddr_priority_force_s4,
 };
 #endif
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-static struct ddr_priority_v1 ddr_priority_t7[] __initdata = {
-	{ .port_id = 1, .reg_base = 0xfe704100,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe703100,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 3, .reg_base = 0xfe701100,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe702100,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0xf	},
-
-	//{ .port_id = 8, .reg_base = 0xfe374014,
-	//	.reg_mode = 1, .force_enable = 0x1000000,
-	//	.w_offset = 0, .w_bit_s = 28, .w_width = 0xf,
-	//	.r_offset = 0, .r_bit_s = 28, .r_width = 0xf	},
-
-	//{ .port_id = 9, .reg_base = 0xfe374014,
-	//	.reg_mode = 1, .force_enable = 0x10000,
-	//	.w_offset = 0, .w_bit_s = 20, .w_width = 0xf,
-	//	.r_offset = 0, .r_bit_s = 20, .r_width = 0xf	},
-
-	//{ .port_id = 10, .reg_base = 0xfe374014,
-	//	.reg_mode = 1, .force_enable = 0x100,
-	//	.w_offset = 0, .w_bit_s = 12, .w_width = 0xf,
-	//	.r_offset = 0, .r_bit_s = 12, .r_width = 0xf	},
-
-	//{ .port_id = 11, .reg_base = 0xfe374014,
-	//	.reg_mode = 1, .force_enable = 0x1,
-	//	.w_offset = 0, .w_bit_s = 4, .w_width = 0xf,
-	//	.r_offset = 0, .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 17, .reg_base = 0xfe0104d8,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 18, .reg_base = 0xfe0104d8,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 19, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 24, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 25, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 26, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 27, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 28, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 29, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 34, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 35, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 36, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 37, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 38, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 39, .reg_base = 0xfe0104d4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 48, .reg_base = 0xfe0104dc,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 49, .reg_base = 0xfe0104d8,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 50, .reg_base = 0xfe0104d8,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x7	},
-
-	{ .port_id = 51, .reg_base = 0xfe0104e0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0x7,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0x7	},
-
-	{ .port_id = 52, .reg_base = 0xfe0104dc,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 53, .reg_base = 0xfe0104dc,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 54, .reg_base = 0xfe0104dc,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 55, .reg_base = 0xfe0104e0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 63, .reg_base = 0xfe0104e4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0x3	},
-
-	{ .port_id = 64, .reg_base = 0xfe3b3000,
-		.reg_mode = 0, .force_enable = 0x10000,
-		.w_offset = 0xac4, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0xac0, .r_bit_s = 0, .r_width = 0xf},
-
-	{ .port_id = 65, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 66, .reg_base = 0xfe3b5000,
-		.reg_mode = 0, .force_enable = 0x10000,
-		.w_offset = 0xac4, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0xac0, .r_bit_s = 0, .r_width = 0xf},
-
-	{ .port_id = 67, .reg_base = 0xfe3b3000,
-		.reg_mode = 0, .force_enable = 0x10000,
-		.w_offset = 0xec4, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0xec0, .r_bit_s = 0, .r_width = 0xf},
-
-	{ .port_id = 68, .reg_base = 0xfe0104e0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 69, .reg_base = 0xfe0104e0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = 0, .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 72, .reg_base = 0xfe0104e4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 73, .reg_base = 0xfe0104e4,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = 0, .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 80, .reg_base = 0xff009000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0xcc8, .w_bit_s = 0, .w_width = 0xffff,
-		.r_offset = 0xcc0, .r_bit_s = 0, .r_width = 0xffff},
-
-	{ .port_id = 81, .reg_base = 0xff009000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0xcc8, .w_bit_s = 16, .w_width = 0xffff,
-		.r_offset = 0xcc0, .r_bit_s = 16, .r_width = 0xffff},
-
-	{ .port_id = 82, .reg_base = 0xff009000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0xcc4, .r_bit_s = 0, .r_width = 0xffff}
+static struct ddr_priority_nic ddr_priority_nic_t7[] __initdata = {
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 17, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d8, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 18, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d8, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 19, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 24, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 25, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 26, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 27, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 28, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 29, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 34, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 35, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 36, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 37, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 38, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 39, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 48, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104dc, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 49, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d8, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 50, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104d8, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 3,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 3,
+	},
+	{ .port_id = 51, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 3,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 3,
+	},
+	{ .port_id = 52, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104dc, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 53, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104dc, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 54, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104dc, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 55, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 63, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 2,
+	},
+	{ .port_id = 68, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 69, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 72, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 73, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe0104e4, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = 0, .r_lsb = 12, .r_nbits = 2,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_s5[] __initdata = {
-	{ .port_id = 2, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x130 << 2), .w_bit_s = 20, .w_width = 0xf0f,
-		.r_offset = (0x130 << 2), .r_bit_s = 16, .r_width = 0xf0f	},
+static struct ddr_priority_dev ddr_priority_dev_t7[] __initdata = {
+	{ .port_id = 1, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe704100, .reg_mode = 1,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 2, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe703100, .reg_mode = 1,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 3, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe701100, .reg_mode = 1,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 4, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe702100, .reg_mode = 1,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 4,
+	},
+	//{ .port_id = 8, .sub_id = -1, .force_mask = BIT(24),
+	//  .type = PRIO_REG_RW,
+	//	.reg_base = 0xfe374014, .reg_mode = 1,
+	//	.w_offset = 0, .w_lsb = 28, .w_nbits = 4,
+	//	.r_offset = 0, .r_lsb = 28, .r_nbits = 4,
+	//},
+	//{ .port_id = 9, .sub_id = -1, .force_mask = BIT(24),
+	//  .type = PRIO_REG_RW,
+	//	.reg_base = 0xfe374014, .reg_mode = 1,
+	//	.w_offset = 0, .w_lsb = 20, .w_nbits = 4,
+	//	.r_offset = 0, .r_lsb = 20, .r_nbits = 4,
+	//},
+	//{ .port_id = 10, .sub_id = -1, .force_mask = BIT(24),
+	//  .type = PRIO_REG_RW,
+	//	.reg_base = 0xfe374014, .reg_mode = 1,
+	//	.w_offset = 0, .w_lsb = 12, .w_nbits = 4,
+	//	.r_offset = 0, .r_lsb = 12, .r_nbits = 4,
+	//},
+	//{ .port_id = 11, .sub_id = -1, .force_mask = BIT(24),
+	//  .type = PRIO_REG_RW,
+	//	.reg_base = 0xfe374014, .reg_mode = 1,
+	//	.w_offset = 0, .w_lsb = 4, .w_nbits = 4,
+	//	.r_offset = 0, .r_lsb = 4, .r_nbits = 4,
+	//},
+	{ .port_id = 64, .sub_id = -1, .force_mask = BIT(16),
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xfe3b3000, .reg_mode = 0,
+	  .w_offset = 0xac4, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0xac0, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 66, .sub_id = -1, .force_mask = BIT(16),
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xfe3b5000, .reg_mode = 0,
+	  .w_offset = 0xac4, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0xac0, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 67, .sub_id = -1, .force_mask = BIT(16),
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xfe3b3000, .reg_mode = 0,
+	  .w_offset = 0xec4, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0xec0, .r_lsb = 0, .r_nbits = 4,
+	},
 
-	{ .port_id = 4, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x130 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x130 << 2), .r_bit_s = 8, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x15b << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x15b << 2), .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 9, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x15b << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x15b << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0		},
-
-	{ .port_id = 24, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 25, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 26, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 28, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 29, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 33, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 0, .w_width = 0xffff,
-		.r_offset = (0x139 << 2), .r_bit_s = 16, .r_width = 0xffff},
-
-	{ .port_id = 35, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 22, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 22, .r_width = 0xf	},
-
-	{ .port_id = 36, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 37, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 4, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 38, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 8, .r_width = 0xf	},
-
-	{ .port_id = 54, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 56, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 57, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 4, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 58, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 8, .r_width = 0xf	},
-
-	{ .port_id = 59, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 60, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 64, .reg_base = 0xff809000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0xcc8, .w_bit_s = 0, .w_width = 0xffff,
-		.r_offset = 0xcc0, .r_bit_s = 0, .r_width = 0xffff},
-
-	{ .port_id = 66, .reg_base = 0xff809000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0xcc8, .w_bit_s = 16, .w_width = 0xffff,
-		.r_offset = 0xcc0, .r_bit_s = 16, .r_width = 0xffff},
-
-	{ .port_id = 68, .reg_base = 0xff809000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0xcc4, .r_bit_s = 0, .r_width = 0xffff},
-
-	{ .port_id = 70, .reg_base = 0xff809000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0xcc4, .r_bit_s = 16, .r_width = 0xffff},
-
-	{ .port_id = 72, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 9, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 6, .r_width = 0x7	},
-
-	{ .port_id = 80, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 15, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 12, .r_width = 0x7	},
-
-	{ .port_id = 81, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 21, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 18, .r_width = 0x7	},
-
-	{ .port_id = 88, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 27, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 24, .r_width = 0x7	},
-
-	{ .port_id = 96, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 3, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 0, .r_width = 0x7	},
-
-	{ .port_id = 104, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x133 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x133 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 106, .reg_base = 0xfe03e000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x4c4, .w_bit_s = 16, .w_width = 0xffff,
-		.r_offset = 0x4c8, .r_bit_s = 0, .r_width = 0xfffff	},
-
-	{ .port_id = 108, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x133 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x133 << 2), .r_bit_s = 28, .r_width = 0xf	},
+	{ .port_id = 80, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_WO,
+	  .reg_base = 0xff009000, .reg_mode = 1,
+	  .w_offset = 0xcc8, .w_lsb = 0, .w_nbits = 16,
+	  .r_offset = 0xcc0, .r_lsb = 0, .r_nbits = 16,
+	},
+	{ .port_id = 81, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_WO,
+	  .reg_base = 0xff009000, .reg_mode = 1,
+	  .w_offset = 0xcc8, .w_lsb = 16, .w_nbits = 16,
+	  .r_offset = 0xcc0, .r_lsb = 16, .r_nbits = 16,
+	},
+	{ .port_id = 82, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_WO,
+	  .reg_base = 0xff009000, .reg_mode = 1,
+	  .w_offset = 0xcc4, .w_lsb = 0, .w_nbits = 16,
+	  .r_offset = 0xcc4, .r_lsb = 0, .r_nbits = 16,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_s6[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 9, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xa4 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa4 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 12, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xb0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 13, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xb4 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb4 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 14, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xb8 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb8 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 15, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0xbc << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xbc << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 17, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 18, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 19, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = BIT(15),
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
+static struct ddr_priority_entry ddr_priority_entry_t7[] __initdata = {
+	/* CCI */
+	{.port_id =  1, .type = PRIO_FROM_DEV},
+	{.port_id =  2, .type = PRIO_FROM_DEV},
+	{.port_id =  3, .type = PRIO_FROM_DEV},
+	{.port_id =  4, .type = PRIO_FROM_DEV},
+	{.port_id =  5, .type = PRIO_NOT_SUPPORT},
+	/* NIC1 */
+	{.port_id =  8, .type = PRIO_FROM_DEV},
+	{.port_id =  9, .type = PRIO_FROM_DEV},
+	{.port_id = 10, .type = PRIO_FROM_DEV},
+	{.port_id = 11, .type = PRIO_FROM_DEV},
+	/* NIC2 */
+	{.port_id = 16, .type = PRIO_FROM_NIC},
+	{.port_id = 17, .type = PRIO_FROM_NIC},
+	{.port_id = 18, .type = PRIO_FROM_NIC},
+	{.port_id = 19, .type = PRIO_FROM_NIC},
+	{.port_id = 24, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 25, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 26, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 27, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 28, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 29, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 34, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 35, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 36, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 37, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 38, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 39, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	/* NIC3 */
+	{.port_id = 48, .type = PRIO_FROM_NIC},
+	{.port_id = 49, .type = PRIO_FROM_NIC},
+	{.port_id = 50, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 51, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 52, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 53, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 54, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 55, .type = PRIO_FROM_NIC},
+	/* NIC4 */
+	{.port_id = 63, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 64, .type = PRIO_FROM_DEV},
+	{.port_id = 65, .type = PRIO_FROM_DEV},
+	{.port_id = 66, .type = PRIO_FROM_DEV},
+	{.port_id = 67, .type = PRIO_FROM_DEV},
+	{.port_id = 68, .type = PRIO_FROM_NIC},
+	{.port_id = 69, .type = PRIO_FROM_NIC},
+	{.port_id = 70, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 71, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 72, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 73, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	/* NIC5 */
+	{.port_id = 80, .type = PRIO_FROM_DEV},
+	{.port_id = 81, .type = PRIO_FROM_DEV},
+	{.port_id = 82, .type = PRIO_FROM_DEV},
 };
 
-static struct ddr_priority_v1 ddr_priority_c3[] __initdata = {
-	{ .port_id = 2, .reg_base = 0xffe42000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 9, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 10, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0xff010800,
-		.reg_mode = 1, .force_enable = 0x10000,
-		.w_offset = (0xb1 << 2), .w_bit_s = 0, .w_width = 0xffff,
-		.r_offset = (0xb0 << 2), .r_bit_s = 0, .r_width = 0xffff},
-
-	{ .port_id = 17, .reg_base = 0xff010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x05 << 2), .w_bit_s = 8, .w_width = 0xff,
-		.r_offset = (0x05 << 2), .r_bit_s = 0, .r_width = 0xff	},
-
-	{ .port_id = 18, .reg_base = 0xff010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x05 << 2), .w_bit_s = 16, .w_width = 0xff,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0		},
-
-	{ .port_id = 19, .reg_base = 0xfe350010,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 4, .r_width = 0xff	},
-
-	{ .port_id = 40, .reg_base = 0xfd342000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 41, .reg_base = 0xfd343000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 42, .reg_base = 0xfd344000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 43, .reg_base = 0xfd346000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 44, .reg_base = 0xfd345000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 48, .reg_base = 0xffe48000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 72, .reg_base = 0xffe44000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 73, .reg_base = 0xffe44000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 74, .reg_base = 0xffe44000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 80, .reg_base = 0xffe47000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 81, .reg_base = 0xffe45000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 82, .reg_base = 0xffe4a000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 83, .reg_base = 0xffe46000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 85, .reg_base = 0xffe49000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = 0x104, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_t7[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4)
 };
 
-static struct ddr_priority_v1 ddr_priority_t5m[] __initdata = {
-	{ .port_id = 2, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0xf		},
-
-	{ .port_id = 4, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x135 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 17, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 18, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 19, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 32, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 4, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 6, .r_width = 0x3	},
-
-	{ .port_id = 33, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 4, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 6, .r_width = 0x3	},
-
-	{ .port_id = 36, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x134 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x134 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 37, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x134 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x134 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 38, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 20, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 24, .r_width = 0xf	},
-
-	{ .port_id = 54, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 2, .r_width = 0x3	},
-
-	{ .port_id = 56, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 57, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 58, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 59, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 60, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 61, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 62, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 10, .r_width = 0x3	},
-
-	{ .port_id = 64, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 12, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 14, .r_width = 0x3	},
-
-	{ .port_id = 66, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 18, .r_width = 0x3	},
-
-	{ .port_id = 68, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 70, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 72, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 74, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x137 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 82, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = (0x138 << 2), .r_bit_s = 4, .r_width = 0x3	},
-
-	{ .port_id = 90, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x137 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 98, .reg_base = 0xfe010000,
-		.reg_mode = 1, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x137 << 2), .r_bit_s = 4, .r_width = 0xf	},
+static struct ddr_priority_info ddr_priority_info_t7 __initdata = {
+	.dev_num = ARRAY_SIZE(ddr_priority_dev_t7),
+	.dev = ddr_priority_dev_t7,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_t7),
+	.nic = ddr_priority_nic_t7,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_t7),
+	.entry = ddr_priority_entry_t7,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t7),
+	.dmc_force = ddr_priority_force_t7,
 };
 
-static struct ddr_priority_v1 ddr_priority_txhd2[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 1, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 2, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 8, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 16, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 17, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 18, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 20, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x70 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x70 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 23, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x7c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7c << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_nic ddr_priority_nic_s5[] __initdata = {
+	{ .port_id = 2, .sub_id = -1,
+	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x130 << 2), .w_lsb = 20, .w_nbits = 12,
+	  .r_offset = (0x130 << 2), .r_lsb = 16, .r_nbits = 12,
+	  .r_mask = 0xf0f, .w_mask = 0xf0f,
+	},
+	{ .port_id = 4, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x130 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x130 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 8, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x15b << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x15b << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 9, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x15b << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x15b << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 0,
+	},
+	{ .port_id = 24, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 25, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 26, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 28, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 29, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 35, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 22, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 22, .r_nbits = 4,
+	},
+	{ .port_id = 36, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 37, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 4, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 38, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 54, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 56, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 57, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 4, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 58, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 59, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 60, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 16, .r_nbits = 4,
+	},
+	{ .port_id = 72, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 9, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 6, .r_nbits = 3,
+	},
+	{ .port_id = 80, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 15, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 12, .r_nbits = 3,
+	},
+	{ .port_id = 81, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 21, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 18, .r_nbits = 3,
+	},
+	{ .port_id = 88, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 27, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 24, .r_nbits = 3,
+	},
+	{ .port_id = 96, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 3, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 0, .r_nbits = 3,
+	},
+	{ .port_id = 104, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x133 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x133 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 108, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x133 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x133 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_t3x[] __initdata = {
-	{ .port_id = 2, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x131 << 2), .w_bit_s = 20, .w_width = 0xf0f,
-		.r_offset = (0x131 << 2), .r_bit_s = 16, .r_width = 0xf0f},
+static struct ddr_priority_dev ddr_priority_dev_s5[] __initdata = {
+	{ .port_id = 33, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 0, .w_nbits = 16,
+	  .r_offset = (0x139 << 2), .r_lsb = 16, .r_nbits = 16,
+	},
+	{ .port_id = 64, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xff809000, .reg_mode = 0,
+	  .w_offset = 0xcc8, .w_lsb = 0, .w_nbits = 16,
+	  .r_offset = 0xcc0, .r_lsb = 0, .r_nbits = 16,
+	},
 
-	{ .port_id = 4, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x131 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x131 << 2), .r_bit_s =  8, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x15b << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x15b << 2), .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 9, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x15b << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x15b << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 16, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 19, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 21, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 24, .r_width = 0xf	},
-
-	{ .port_id = 22, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 28, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 23, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 4, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 32, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 20, .w_width = 0x7,
-		.r_offset = (0x138 << 2), .r_bit_s = 20, .r_width = 0x7	},
-
-	{ .port_id = 33, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 35, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 28, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 36, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 37, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 4, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 38, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 8, .r_width = 0xf	},
-
-	{ .port_id = 54, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 56, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 57, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 0, .r_width = 0xf	},
-
-	{ .port_id = 58, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 8, .r_width = 0xf	},
-
-	{ .port_id = 59, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 12, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 60, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 61, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 62, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 63, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 20, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 64, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 66, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 68, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 70, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 72, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 9, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 6, .r_width = 0x7	},
-
-	{ .port_id = 80, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 15, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 12, .r_width = 0x7	},
-
-	{ .port_id = 81, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 21, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 18, .r_width = 0x7	},
-
-	{ .port_id = 88, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 27, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 24, .r_width = 0x7	},
-
-	{ .port_id = 96, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x158 << 2), .w_bit_s = 3, .w_width = 0x7,
-		.r_offset = (0x158 << 2), .r_bit_s = 0, .r_width = 0x7	},
-
-	{ .port_id = 104, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x0133 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x0133 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 106, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x0133 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x0133 << 2), .r_bit_s = 28, .r_width = 0xf},
-
-	{ .port_id = 116, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x0133 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x0133 << 2), .r_bit_s = 12, .r_width = 0xf},
-
-	{ .port_id = 117, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 119, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 121, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 123, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
+	{ .port_id = 66, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xff809000, .reg_mode = 0,
+	  .w_offset = 0xcc8, .w_lsb = 16, .w_nbits = 16,
+	  .r_offset = 0xcc0, .r_lsb = 16, .r_nbits = 16,
+	},
+	{ .port_id = 68, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xff809000, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0xcc4, .r_lsb = 0, .r_nbits = 16,
+	},
+	{ .port_id = 70, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xff809000, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0xcc4, .r_lsb = 16, .r_nbits = 16,
+	},
+	{ .port_id = 106, .sub_id = -1, .force_mask = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe03e000, .reg_mode = 0,
+	  .w_offset = 0x4c4, .w_lsb = 16, .w_nbits = 16,
+	  .r_offset = 0x4c8, .r_lsb = 0, .r_nbits = 16,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_t3[] __initdata = {
-	{ .port_id = 2, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x139 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x14c << 2), .w_bit_s = 21, .w_width = 0x5,
-		.r_offset = (0x14c << 2), .r_bit_s = 20, .r_width = 0x5	},
-
-	{ .port_id = 16, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x135 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 17, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 18, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 8, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 12, .r_width = 0xf	},
-
-	{ .port_id = 19, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x135 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 20, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 20, .r_width = 0xf	},
-
-	{ .port_id = 27, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 28, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 34, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 34, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 35, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 36, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 37, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 38, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 39, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x135 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x135 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 48, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = (0x137 << 2), .r_bit_s = 4, .r_width = 0xf	},
-
-	{ .port_id = 51, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 0, .w_width = 0x7,
-		.r_offset = (0x138 << 2), .r_bit_s = 4, .r_width = 0x7	},
-
-	{ .port_id = 52, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 24, .w_width = 0x3,
-		.r_offset = (0x137 << 2), .r_bit_s = 28, .r_width = 0x3	},
-
-	{ .port_id = 53, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 16, .w_width = 0x3,
-		.r_offset = (0x137 << 2), .r_bit_s = 20, .r_width = 0x3	},
-
-	{ .port_id = 54, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x137 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x137 << 2), .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 63, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 4, .r_width = 0x3	},
-
-	{ .port_id = 68, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x136 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x136 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 70, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x138 << 2), .w_bit_s = 24, .w_width = 0xf,
-		.r_offset = (0x138 << 2), .r_bit_s = 28, .r_width = 0xf	},
-
-	{ .port_id = 72, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 73, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x139 << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x139 << 2), .r_bit_s = 12, .r_width = 0x3	},
-
-	{ .port_id = 80, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 81, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 82, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 83, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 84, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
-
-	{ .port_id = 85, .reg_base = 0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0	},
+static struct ddr_priority_entry ddr_priority_entry_s5[] __initdata = {
+	/* TOP*/
+	{.port_id =  2, .type = PRIO_FROM_NIC},
+	{.port_id =  4, .type = PRIO_FROM_NIC},
+	/* NIC_NPU */
+	{.port_id =  8, .type = PRIO_FROM_NIC},
+	{.port_id =  9, .type = PRIO_FROM_NIC},
+	/* NIC_SYS */
+	{.port_id = 16, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 24, .type = PRIO_FROM_NIC},
+	{.port_id = 25, .type = PRIO_FROM_NIC},
+	{.port_id = 26, .type = PRIO_FROM_NIC},
+	{.port_id = 28, .type = PRIO_FROM_NIC},
+	{.port_id = 29, .type = PRIO_FROM_NIC},
+	{.port_id = 33, .type = PRIO_FROM_DEV},
+	{.port_id = 35, .type = PRIO_FROM_NIC},
+	{.port_id = 36, .type = PRIO_FROM_NIC},
+	{.port_id = 37, .type = PRIO_FROM_NIC},
+	{.port_id = 38, .type = PRIO_FROM_NIC},
+	{.port_id = 54, .type = PRIO_FROM_NIC},
+	{.port_id = 56, .type = PRIO_FROM_NIC},
+	{.port_id = 57, .type = PRIO_FROM_NIC},
+	{.port_id = 58, .type = PRIO_FROM_NIC},
+	{.port_id = 59, .type = PRIO_FROM_NIC},
+	{.port_id = 60, .type = PRIO_FROM_NIC},
+	/* NIC_VPU */
+	{.port_id = 64, .type = PRIO_FROM_DEV},
+	{.port_id = 66, .type = PRIO_FROM_DEV},
+	{.port_id = 68, .type = PRIO_FROM_DEV},
+	{.port_id = 70, .type = PRIO_FROM_DEV},
+	/* NIC_DOS*/
+	{.port_id = 72, .type = PRIO_FROM_NIC},
+	{.port_id = 80, .type = PRIO_FROM_NIC},
+	{.port_id = 81, .type = PRIO_FROM_NIC},
+	{.port_id = 88, .type = PRIO_FROM_NIC},
+	{.port_id = 96, .type = PRIO_FROM_NIC},
+	/* NIC_VGE*/
+	{.port_id = 104, .type = PRIO_FROM_NIC},
+	{.port_id = 106, .type = PRIO_FROM_DEV},
+	{.port_id = 108, .type = PRIO_FROM_NIC},
 };
 
-static struct ddr_priority_v1 ddr_priority_a4[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80  << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80  << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x88  << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x88  << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x90  << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90  << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x98  << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x98  << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x9c  << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x9c  << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 40, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x69  << 2), .w_bit_s = 0, .w_width = 0x3,
-		.r_offset = (0x69  << 2), .r_bit_s = 2, .r_width = 0x3	},
-
-	{ .port_id = 41, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x69  << 2), .w_bit_s = 12, .w_width = 0x1,
-		.r_offset = (0x69  << 2), .r_bit_s = 13, .r_width = 0x1	},
-
-	{ .port_id = 42, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x69  << 2), .w_bit_s = 8, .w_width = 0x3,
-		.r_offset = (0x69  << 2), .r_bit_s = 10, .r_width = 0x3	},
-
-	{ .port_id = 43, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x69  << 2), .w_bit_s = 14, .w_width = 0x3,
-		.r_offset = (0x69  << 2), .r_bit_s = 16, .r_width = 0x3	},
-
-	{ .port_id = 45, .reg_base = 0xfe010000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x69  << 2), .w_bit_s = 18, .w_width = 0x3,
-		.r_offset = (0x69  << 2), .r_bit_s = 20, .r_width = 0x3	},
+static struct ddr_priority_force ddr_priority_force_s5[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4)
 };
 
-static struct ddr_priority_v1 ddr_priority_s7[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 10, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb4 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb4 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb8 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb8 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 12, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xbc << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xbc << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 13, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xc0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xc0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 32, .reg_base = 0xffe46000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 33, .reg_base = 0xffe47000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 34, .reg_base = 0xffe48000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 39, .reg_base = 0xffe4b000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 36, .reg_base = 0xffe45000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 39, .reg_base = 0xffe4b000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 40, .reg_base = 0x0,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = 0x0, .w_bit_s = 0, .w_width = 0x0,
-		.r_offset = 0x0, .r_bit_s = 0, .r_width = 0x0		},
-
-	{ .port_id = 41, .reg_base = 0xffe49000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 42, .reg_base = 0xffe4a000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
-
-	{ .port_id = 43, .reg_base = 0xffe4b000,
-		.reg_mode = 1, .force_enable = 0x0,
-		.w_offset = 0x100, .w_bit_s = 0, .w_width = 0xf,
-		.r_offset = 0x100, .r_bit_s = 0, .r_width = 0xf		},
+static struct ddr_priority_info ddr_priority_info_s5 __initdata = {
+	.dev_num = ARRAY_SIZE(ddr_priority_dev_s5),
+	.dev = ddr_priority_dev_s5,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_s5),
+	.nic = ddr_priority_nic_s5,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_s5),
+	.entry = ddr_priority_entry_s5,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s5),
+	.dmc_force = ddr_priority_force_s5,
 };
 
-static struct ddr_priority_v1 ddr_priority_s7d[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x85 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x85 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x8a << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8a << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x95 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x95 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa5 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xaa << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xaa << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 9, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 10, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb5 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xba << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xba << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 12, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xc0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xc0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 13, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xc5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xc5 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 14, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xca << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xca << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_s6[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(9, BIT(15), (0xa4 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(11, BIT(15), (0xac << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(12, BIT(15), (0xb0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(13, BIT(15), (0xb4 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(14, BIT(15), (0xb8 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(15, BIT(15), (0xbc << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(16, BIT(15), (0x60 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(17, BIT(15), (0x64 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(18, BIT(15), (0x68 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(19, BIT(15), (0x6c << 2), 16, 4)
 };
 
-static struct ddr_priority_v1 ddr_priority_sc2[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 9, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xa4 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa4 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 12, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xb0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xb0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 16, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 17, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 18, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 20, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x70 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x70 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 22, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x78 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x78 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 23, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x7c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7c << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_info ddr_priority_info_s6 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s6),
+	.dmc_force = ddr_priority_force_s6,
 };
 
-static struct ddr_priority_v1 ddr_priority_t5w[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
+struct ddr_priority_nic ddr_priority_nic_c3[] __initdata = {
+	{ .port_id = 2, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe42000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
 
-	{ .port_id = 1, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 6, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 8, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 9, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xa4 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa4 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 10, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0xa8 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa8 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 16, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 17, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 18, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 20, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x70 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x70 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 23, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0x0,
-		.w_offset = (0x7c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7c << 2), .r_bit_s = 16, .r_width = 0x7	},
+	{ .port_id = 40, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfd342000, .reg_mode = 0,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 41, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfd343000, .reg_mode = 0,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 42, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfd344000, .reg_mode = 0,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 43, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfd346000, .reg_mode = 0,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 44, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfd345000, .reg_mode = 0,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 48, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe48000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 72, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe44000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 73, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe44000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 74, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe44000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 80, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe47000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 81, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe45000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 82, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe4a000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 83, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe46000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 85, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe49000, .reg_mode = 1,
+	  .w_offset = 0x104, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_g12b[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 1, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 2, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x84 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x84 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 5, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x94 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x94 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 6, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x98 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x98 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 8, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 9, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xa4 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa4 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 10, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xa8 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa8 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 11, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 12, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xae << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xae << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 13, .reg_base = 0x0,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = 0, .w_bit_s = 0, .w_width = 0,
-		.r_offset = 0, .r_bit_s = 0, .r_width = 0		},
-
-	{ .port_id = 16, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 17, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x64 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x64 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 18, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x68 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x68 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 20, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x70 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x70 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 22, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x78 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x78 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 23, .reg_base = 0xff638000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x7c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7c << 2), .r_bit_s = 16, .r_width = 0x7	}
+static struct ddr_priority_dev ddr_priority_dev_c3[] __initdata = {
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xff010800, .reg_mode = 1, .force_mask = BIT(16),
+	  .w_offset = (0xb1 << 2), .w_lsb = 0, .w_nbits = 16,
+	  .r_offset = (0xb0 << 2), .r_lsb = 0, .r_nbits = 16,
+	},
+	{ .port_id = 17, .sub_id = -1,
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xff010000, .reg_mode = 1,  .force_mask = 0,
+	  .w_offset = (0x05 << 2), .w_lsb = 8, .w_nbits = 8,
+	  .r_offset = (0x05 << 2), .r_lsb = 0, .r_nbits = 8,
+	},
+	{ .port_id = 18, .sub_id = -1,
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xff010000, .reg_mode = 1,  .force_mask = 0,
+	  .w_offset = (0x05 << 2), .w_lsb = 16, .w_nbits = 8,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 0,
+	},
+	{ .port_id = 19, .sub_id = -1,
+	  .type = PRIO_REG_POWER,
+	  .reg_base = 0xfe350010, .reg_mode = 0,  .force_mask = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0, .r_lsb = 4, .r_nbits = 8,
+	},
 };
 
-static struct ddr_priority_v1 ddr_priority_gxlx3[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xb0 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xb0 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 1, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xba << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xba << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 2, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xc4 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xc4 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 3, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xce << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xce << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xd8 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xd8 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xf6 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xf6 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 8, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 9, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x6a << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6a << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 10, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 11, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x7e << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x7e << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 12, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 12, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x88 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x88 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 13, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x92 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x92 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 14, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 15, .reg_base = 0xc8838000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xa6 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xa6 << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_entry ddr_priority_entry_c3[] __initdata = {
+	{.port_id = 2, .type = PRIO_FROM_DEV},
+	{.port_id = 8, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 9, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 10, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 11, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 16, .type = PRIO_FROM_DEV},
+	{.port_id = 17, .type = PRIO_FROM_DEV},
+	{.port_id = 18, .type = PRIO_FROM_DEV},
+	{.port_id = 19, .type = PRIO_FROM_DEV},
+	{.port_id = 40, .type = PRIO_FROM_NIC},
+	{.port_id = 41, .type = PRIO_FROM_NIC},
+	{.port_id = 42, .type = PRIO_FROM_NIC},
+	{.port_id = 43, .type = PRIO_FROM_NIC},
+	{.port_id = 44, .type = PRIO_FROM_NIC},
+	{.port_id = 48, .type = PRIO_FROM_NIC},
+	{.port_id = 71, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 72, .type = PRIO_FROM_NIC},
+	{.port_id = 73, .type = PRIO_FROM_NIC},
+	{.port_id = 74, .type = PRIO_FROM_NIC},
+	{.port_id = 80, .type = PRIO_FROM_NIC},
+	{.port_id = 81, .type = PRIO_FROM_NIC},
+	{.port_id = 82, .type = PRIO_FROM_NIC},
+	{.port_id = 83, .type = PRIO_FROM_NIC},
+	{.port_id = 85, .type = PRIO_FROM_NIC},
 };
 
-static struct ddr_priority_v1 ddr_priority_t6d[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x85 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x85 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x8a << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8a << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x95 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x95 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa5 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 8, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xaa << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xaa << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_c3[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4)
 };
 
-static struct ddr_priority_v1 ddr_priority_t6w[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_info ddr_priority_info_c3 __initdata = {
+	.dev_num = ARRAY_SIZE(ddr_priority_dev_c3),
+	.dev = ddr_priority_dev_c3,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_c3),
+	.nic = ddr_priority_nic_c3,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_c3),
+	.entry = ddr_priority_entry_c3,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_c3),
+	.dmc_force = ddr_priority_force_c3,
+};
 
-	{ .port_id = 1, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x85 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x85 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_nic ddr_priority_nic_t5m[] __initdata = {
+	{ .port_id = 2, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 4, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x135 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 17, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 18, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 19, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 32, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 4, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 6, .r_nbits = 2,
+	},
+	{ .port_id = 33, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 4, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 6, .r_nbits = 2,
+	},
+	{ .port_id = 36, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x134 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x134 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 37, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x134 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x134 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 38, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 20, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 24, .r_nbits = 4,
+	},
+	{ .port_id = 54, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 2, .r_nbits = 2,
+	},
+	{ .port_id = 56, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x136 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 57, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x136 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 58, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x136 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 59, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x136 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 60, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x135 << 2), .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 62, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 10, .r_nbits = 2,
+	},
+	{ .port_id = 64, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 12, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 14, .r_nbits = 2,
+	},
+	{ .port_id = 66, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x139 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 18, .r_nbits = 2,
+	},
+	{ .port_id = 74, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x137 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x137 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 82, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x138 << 2), .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = (0x138 << 2), .r_lsb = 4, .r_nbits = 2,
+	},
+	{ .port_id = 90, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x137 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x137 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 98, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 1,
+	  .w_offset = (0x137 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x137 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+};
 
-	{ .port_id = 2, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x8a << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8a << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_entry ddr_priority_entry_t5m[] __initdata = {
+	{.port_id = 2, .type = PRIO_FROM_NIC},
+	{.port_id = 4, .type = PRIO_FROM_NIC},
+	{.port_id = 8, .type = PRIO_FROM_NIC},
+	{.port_id = 16, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 17, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 18, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 19, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 32, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 33, .type = PRIO_FROM_NIC},
+	{.port_id = 36, .type = PRIO_FROM_NIC},
+	{.port_id = 37, .type = PRIO_FROM_NIC},
+	{.port_id = 38, .type = PRIO_FROM_NIC},
+	{.port_id = 54, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 56, .type = PRIO_FROM_NIC},
+	{.port_id = 57, .type = PRIO_FROM_NIC},
+	{.port_id = 58, .type = PRIO_FROM_NIC},
+	{.port_id = 59, .type = PRIO_FROM_NIC},
+	{.port_id = 60, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 61, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 62, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 64, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 66, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 68, .type = PRIO_FROM_DEV},
+	{.port_id = 70, .type = PRIO_FROM_DEV},
+	{.port_id = 72, .type = PRIO_FROM_DEV},
+	{.port_id = 74, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 82, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 90, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 98, .type = PRIO_FROM_NIC},
+};
 
-	{ .port_id = 3, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_t5m[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4)
+};
 
-	{ .port_id = 4, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x95 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x95 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_info ddr_priority_info_t5m __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_t5m),
+	.nic = ddr_priority_nic_t5m,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_t5m),
+	.entry = ddr_priority_entry_t5m,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t5m),
+	.dmc_force = ddr_priority_force_t5m,
+};
 
-	{ .port_id = 6, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_txhd2[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(2, -1, (0x88 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0xa0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+};
 
-	{ .port_id = 7, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa5 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_info ddr_priority_info_txhd2 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_txhd2),
+	.dmc_force = ddr_priority_force_txhd2,
+};
 
-	{ .port_id = 8, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xaa << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xaa << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_nic ddr_priority_nic_t3x[] __initdata = {
+	{ .port_id = 2, .sub_id = -1,
+	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x131 << 2), .w_lsb = 20, .w_nbits = 12,
+	  .r_offset = (0x131 << 2), .r_lsb = 16, .r_nbits = 12,
+	  .r_mask = 0xf0f, .w_mask = 0xf0f,
+	},
+	{ .port_id = 4, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x131 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x131 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 8, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x15b << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x15b << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 9, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x15b << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x15b << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 0,
+	},
+	{ .port_id = 19, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0, .reg_mode = 0,
+	  .w_offset = 0, .w_lsb = 0, .w_nbits = 0,
+	  .r_offset = 0, .r_lsb = 0, .r_nbits = 0,
+	},
+	{ .port_id = 21, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 24, .r_nbits = 4,
+	},
+	{ .port_id = 22, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 28, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 23, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 4, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 32, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 20, .w_nbits = 3,
+	  .r_offset = (0x138 << 2), .r_lsb = 20, .r_nbits = 3,
+	},
+	{ .port_id = 35, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 28, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 36, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 37, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 4, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 38, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 54, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 57, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 58, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 8, .r_nbits = 4,
+	},
+	{ .port_id = 59, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 12, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 60, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 16, .r_nbits = 4,
+	},
+	{ .port_id = 62, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 16, .r_nbits = 4,
+	},
+	{ .port_id = 63, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 20, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 72, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 9, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 6, .r_nbits = 3,
+	},
+	{ .port_id = 80, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 15, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 12, .r_nbits = 3,
+	},
+	{ .port_id = 81, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 21, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 18, .r_nbits = 3,
+	},
+	{ .port_id = 88, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 27, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 24, .r_nbits = 3,
+	},
+	{ .port_id = 96, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x158 << 2), .w_lsb = 3, .w_nbits = 3,
+	  .r_offset = (0x158 << 2), .r_lsb = 0, .r_nbits = 3,
+	},
+	{ .port_id = 104, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x0133 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x0133 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 106, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x0133 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x0133 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 116, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x0133 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x0133 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+};
 
-	{ .port_id = 9, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb0 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_entry ddr_priority_entry_t3x[] __initdata = {
+	{.port_id = 2, .type = PRIO_FROM_NIC},
+	{.port_id = 4, .type = PRIO_FROM_NIC},
+	{.port_id = 8, .type = PRIO_FROM_NIC},
+	{.port_id = 9, .type = PRIO_FROM_NIC},
+	{.port_id = 16, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 19, .type = PRIO_FIXED, .fixed_nbits = 4},
+	{.port_id = 21, .type = PRIO_FROM_NIC},
+	{.port_id = 22, .type = PRIO_FROM_NIC},
+	{.port_id = 23, .type = PRIO_FROM_NIC},
+	{.port_id = 32, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 33, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 35, .type = PRIO_FROM_NIC},
+	{.port_id = 36, .type = PRIO_FROM_NIC},
+	{.port_id = 37, .type = PRIO_FROM_NIC},
+	{.port_id = 38, .type = PRIO_FROM_NIC},
+	{.port_id = 54, .type = PRIO_FROM_NIC},
+	{.port_id = 56, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 57, .type = PRIO_FROM_NIC},
+	{.port_id = 58, .type = PRIO_FROM_NIC},
+	{.port_id = 59, .type = PRIO_FROM_NIC},
+	{.port_id = 60, .type = PRIO_FROM_NIC},
+	{.port_id = 61, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 62, .type = PRIO_FROM_NIC},
+	{.port_id = 63, .type = PRIO_FROM_NIC},
+	{.port_id = 64, .type = PRIO_FROM_DEV},
+	{.port_id = 66, .type = PRIO_FROM_DEV},
+	{.port_id = 68, .type = PRIO_FROM_DEV},
+	{.port_id = 70, .type = PRIO_FROM_DEV},
+	{.port_id = 72, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 80, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 81, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 88, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 96, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 104, .type = PRIO_FROM_NIC},
+	{.port_id = 106, .type = PRIO_FROM_NIC},
+	{.port_id = 116, .type = PRIO_FROM_NIC},
+	{.port_id = 117, .type = PRIO_FROM_DEV},
+	{.port_id = 119, .type = PRIO_FROM_DEV},
+	{.port_id = 121, .type = PRIO_FROM_DEV},
+	{.port_id = 123, .type = PRIO_FROM_DEV},
+};
 
-	{ .port_id = 10, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xb5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xb5 << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_force ddr_priority_force_t3x[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4)
+};
 
-	{ .port_id = 11, .reg_base = 0xfe340000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xba << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xba << 2), .r_bit_s = 16, .r_width = 0xf	},
+static struct ddr_priority_info ddr_priority_info_t3x __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_t3x),
+	.nic = ddr_priority_nic_t3x,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_t3x),
+	.entry = ddr_priority_entry_t3x,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t3x),
+	.dmc_force = ddr_priority_force_t3x,
+};
+
+static struct ddr_priority_nic ddr_priority_nic_t3[] __initdata = {
+	{ .port_id = 2, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x139 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 4, .sub_id = -1,
+	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x14c << 2), .w_lsb = 21, .w_nbits = 3,
+	  .r_offset = (0x14c << 2), .r_lsb = 20, .r_nbits = 3,
+	  .r_mask = 0x5, .w_mask = 0x5,
+	},
+	{ .port_id = 16, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x135 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 17, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x136 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 18, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x136 << 2), .w_lsb = 8, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 12, .r_nbits = 4,
+	},
+	{ .port_id = 19, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x135 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 20, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x136 << 2), .w_lsb = 16, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 20, .r_nbits = 4,
+	},
+	{ .port_id = 27, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 28, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 34, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 34, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 35, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 36, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 37, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 38, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 39, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x135 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x135 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 48, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x137 << 2), .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = (0x137 << 2), .r_lsb = 4, .r_nbits = 4,
+	},
+	{ .port_id = 51, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 0, .w_nbits = 3,
+	  .r_offset = (0x138 << 2), .r_lsb = 4, .r_nbits = 3,
+	},
+	{ .port_id = 52, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x137 << 2), .w_lsb = 24, .w_nbits = 2,
+	  .r_offset = (0x137 << 2), .r_lsb = 28, .r_nbits = 2,
+	},
+	{ .port_id = 53, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x137 << 2), .w_lsb = 16, .w_nbits = 2,
+	  .r_offset = (0x137 << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+	{ .port_id = 54, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x137 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x137 << 2), .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 63, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 4, .r_nbits = 2,
+	},
+	{ .port_id = 68, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x136 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x136 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 70, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x138 << 2), .w_lsb = 24, .w_nbits = 4,
+	  .r_offset = (0x138 << 2), .r_lsb = 28, .r_nbits = 4,
+	},
+	{ .port_id = 72, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 12, .r_nbits = 2,
+	},
+	{ .port_id = 73, .sub_id = -1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x139 << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x139 << 2), .r_lsb = 12, .r_nbits = 2,
+	},
+};
+
+static struct ddr_priority_force ddr_priority_force_t3[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4)
+};
+
+static struct ddr_priority_entry ddr_priority_entry_t3[] __initdata = {
+	{.port_id = 2, .type = PRIO_FROM_NIC},
+	{.port_id = 4, .type = PRIO_FROM_NIC},
+	{.port_id = 16, .type = PRIO_FROM_NIC},
+	{.port_id = 17, .type = PRIO_FROM_NIC},
+	{.port_id = 18, .type = PRIO_FROM_NIC},
+	{.port_id = 19, .type = PRIO_FROM_NIC},
+	{.port_id = 20, .type = PRIO_FROM_NIC},
+	{.port_id = 21, .type = PRIO_FROM_NIC},
+	{.port_id = 27, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 28, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 34, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 35, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 36, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 37, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 38, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 39, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 2, .dev_lsb_w = 2,},
+	{.port_id = 48, .type = PRIO_FROM_NIC},
+	{.port_id = 51, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 52, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 53, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 54, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 63, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 64, .type = PRIO_FROM_NIC},
+	{.port_id = 68, .type = PRIO_FROM_NIC},
+	{.port_id = 70, .type = PRIO_FROM_NIC},
+	{.port_id = 71, .type = PRIO_NOT_SUPPORT},
+	{.port_id = 72, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 73, .type = PRIO_FROM_NIC | PRIO_FROM_DEV, .dev_lsb_r = 3, .dev_lsb_w = 3,},
+	{.port_id = 80, .type = PRIO_FROM_DEV},
+	{.port_id = 81, .type = PRIO_FROM_DEV},
+	{.port_id = 82, .type = PRIO_FROM_DEV},
+	{.port_id = 83, .type = PRIO_FROM_DEV},
+	{.port_id = 84, .type = PRIO_FROM_DEV},
+	{.port_id = 85, .type = PRIO_FROM_DEV},
+};
+
+static struct ddr_priority_info ddr_priority_info_t3 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_t3),
+	.nic = ddr_priority_nic_t3,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_t3),
+	.entry = ddr_priority_entry_t3,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t3),
+	.dmc_force = ddr_priority_force_t3,
+};
+
+struct ddr_priority_nic ddr_priority_nic_a4[] __initdata = {
+	{ .port_id = 6, .sub_id = 8,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x69  << 2), .w_lsb = 0, .w_nbits = 2,
+	  .r_offset = (0x69  << 2), .r_lsb = 2, .r_nbits = 2,
+	},
+	{ .port_id = 6, .sub_id = 9,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x69  << 2), .w_lsb = 12, .w_nbits = 1,
+	  .r_offset = (0x69  << 2), .r_lsb = 13, .r_nbits = 1,
+	},
+	{ .port_id = 6, .sub_id = 10,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x69  << 2), .w_lsb = 8, .w_nbits = 2,
+	  .r_offset = (0x69  << 2), .r_lsb = 10, .r_nbits = 2,
+	},
+	{ .port_id = 6, .sub_id = 11,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x69  << 2), .w_lsb = 14, .w_nbits = 2,
+	  .r_offset = (0x69  << 2), .r_lsb = 16, .r_nbits = 2,
+	},
+	{ .port_id = 6, .sub_id = 13,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xfe010000, .reg_mode = 0,
+	  .w_offset = (0x69  << 2), .w_lsb = 18, .w_nbits = 2,
+	  .r_offset = (0x69  << 2), .r_lsb = 20, .r_nbits = 2,
+	},
+};
+
+static struct ddr_priority_force ddr_priority_force_a4[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4)
+};
+
+static struct ddr_priority_entry ddr_priority_entry_a4[] __initdata = {
+	{.port_id = 6, .type = PRIO_FROM_NIC},
+};
+
+static struct ddr_priority_info ddr_priority_info_a4 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_a4),
+	.nic = ddr_priority_nic_a4,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_a4),
+	.entry = ddr_priority_entry_a4,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_a4),
+	.dmc_force = ddr_priority_force_a4,
+};
+
+static struct ddr_priority_nic ddr_priority_nic_s7[] __initdata = {
+	{ .port_id = 10, .sub_id = 0,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe46000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 1,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe47000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 2,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe48000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 3,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe4b000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 4,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe45000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 7,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe4b000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 9,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe49000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 10,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe4a000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+	{ .port_id = 10, .sub_id = 11,
+	  .type = PRIO_REG_RW,
+	  .reg_base = 0xffe4b000, .reg_mode = 1,
+	  .w_offset = 0x100, .w_lsb = 0, .w_nbits = 4,
+	  .r_offset = 0x100, .r_lsb = 0, .r_nbits = 4,
+	},
+};
+
+static struct ddr_priority_force ddr_priority_force_s7[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xac << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(10, BIT(15), (0xb4 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(11, BIT(15), (0xb8 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(12, BIT(15), (0xbc << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(13, BIT(15), (0xc0 << 2), 16, 4)
+};
+
+static struct ddr_priority_entry ddr_priority_entry_s7[] __initdata = {
+	{.port_id = 10, .type = PRIO_FROM_NIC},
+};
+
+static struct ddr_priority_info ddr_priority_info_s7 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = ARRAY_SIZE(ddr_priority_nic_s7),
+	.nic = ddr_priority_nic_s7,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = ARRAY_SIZE(ddr_priority_entry_s7),
+	.entry = ddr_priority_entry_s7,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s7),
+	.dmc_force = ddr_priority_force_s7,
+};
+
+static struct ddr_priority_force ddr_priority_force_s7d[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x85 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x8a << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x95 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0xa5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(9, BIT(15), (0xb0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(10, BIT(15), (0xb5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(11, BIT(15), (0xba << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(12, BIT(15), (0xc0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(13, BIT(15), (0xc5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(14, BIT(15), (0xca << 2), 16, 4)
+};
+
+static struct ddr_priority_info ddr_priority_info_s7d __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s7d),
+	.dmc_force = ddr_priority_force_s7d,
+};
+
+static struct ddr_priority_force ddr_priority_force_sc2[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(2, -1, (0x88 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(6, -1, (0x98 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0xa0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(9, -1, (0xa4 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0xac << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(12, -1, (0xb0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(22, -1, (0x78 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+};
+
+static struct ddr_priority_info ddr_priority_info_sc2 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_sc2),
+	.dmc_force = ddr_priority_force_sc2,
+};
+
+static struct ddr_priority_force ddr_priority_force_t5w[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(6, -1, (0x98 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0xa0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(9, -1, (0xa4 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(10, -1, (0xa8 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+};
+
+static struct ddr_priority_info ddr_priority_info_t5w __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t5w),
+	.dmc_force = ddr_priority_force_t5w,
+};
+
+static struct ddr_priority_force ddr_priority_force_g12b[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(2, -1, (0x88 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(5, -1, (0x94 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(6, -1, (0x98 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0xa0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(9, -1, (0xa4 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(10, -1, (0xa8 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0xac << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(12, -1, (0xae << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(22, -1, (0x78 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+};
+
+static struct ddr_priority_info ddr_priority_info_g12b __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_g12b),
+	.dmc_force = ddr_priority_force_g12b,
+};
+
+static struct ddr_priority_force ddr_priority_force_gxlx3[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0xb0 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0xba << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(2, -1, (0xc4 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0xce << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0xd8 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0xf6 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(9, -1, (0x6a << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(10, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0x7e << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(12, -1, (0x88 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(13, -1, (0x92 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(14, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(15, -1, (0xa6 << 2), 16, 3)
+};
+
+static struct ddr_priority_info ddr_priority_info_gxlx3 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_gxlx3),
+	.dmc_force = ddr_priority_force_gxlx3,
+};
+
+static struct ddr_priority_force ddr_priority_force_t6d[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x85 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x8a << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x95 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0xa5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4)
+};
+
+static struct ddr_priority_info ddr_priority_info_t6d __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t6d),
+	.dmc_force = ddr_priority_force_t6d,
+};
+
+static struct ddr_priority_force ddr_priority_force_t6w[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x85 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x8a << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x95 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0xa5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xaa << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(9, BIT(15), (0xb0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(10, BIT(15), (0xb5 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(11, BIT(15), (0xba << 2), 16, 4)
+};
+
+static struct ddr_priority_info ddr_priority_info_t6w __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_t6w),
+	.dmc_force = ddr_priority_force_t6w,
+};
+
+static struct ddr_priority_force ddr_priority_force_c4[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x85 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x8a << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x90 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x95 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0xa0 << 2), 16, 4),
+	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0xa5 << 2), 16, 4),
+};
+
+static struct ddr_priority_info ddr_priority_info_c4 __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_c4),
+	.dmc_force = ddr_priority_force_c4,
 };
 
 static struct dmc_priority dmc_t6x[] __initdata = {
@@ -2458,85 +2416,29 @@ static struct ddr_priority_v2 ddr_priority_t6x __initdata = {
 	.hcodec = &hcodec_t6x,
 	.vpu = &vpu_t6x,
 };
-static struct ddr_priority_v1 ddr_priority_c4[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 1, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x85 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x85 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 2, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x8a << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x8a << 2), .r_bit_s = 16, .r_width = 0xf	},
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0x95 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0x95 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 6, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa0 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa0 << 2), .r_bit_s = 16, .r_width = 0xf	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0x8000,
-		.w_offset = (0xa5 << 2), .w_bit_s = 16, .w_width = 0xf,
-		.r_offset = (0xa5 << 2), .r_bit_s = 16, .r_width = 0xf	},
-};
 #endif
-static struct ddr_priority_v1 ddr_priority_s1a[] __initdata = {
-	{ .port_id = 0, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x80 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x80 << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_force ddr_priority_force_s1a[] __initdata = {
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0xac << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3)
+};
 
-	{ .port_id = 3, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x8c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x8c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 4, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x90 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x90 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 7, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x9c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x9c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 11, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0xac << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0xac << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 16, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x60 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x60 << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 19, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x6c << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x6c << 2), .r_bit_s = 16, .r_width = 0x7	},
-
-	{ .port_id = 21, .reg_base = 0xfe036000,
-		.reg_mode = 0, .force_enable = 0,
-		.w_offset = (0x74 << 2), .w_bit_s = 16, .w_width = 0x7,
-		.r_offset = (0x74 << 2), .r_bit_s = 16, .r_width = 0x7	},
+static struct ddr_priority_info ddr_priority_info_s1a __initdata = {
+	.dev_num = 0, .dev = NULL,
+	.nic_num = 0, .nic = NULL,
+	.mdc_num = 0, .mdc = NULL,
+	.entry_num = 0, .entry = NULL,
+	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_s1a),
+	.dmc_force = ddr_priority_force_s1a,
 };
 
 static struct ddr_priority ddr_priority;
+
 struct ddr_priority_v2 * __init ddr_priority_v2_init(struct ddr_priority_v2 *v2)
 {
 	unsigned int size;
@@ -2704,305 +2606,724 @@ struct ddr_priority_v2 * __init ddr_priority_v2_init(struct ddr_priority_v2 *v2)
 	return temp;
 }
 
-struct ddr_priority * __init get_ddr_priority(int cpu_type)
+static int __init ddr_priority_info_alloc(struct ddr_priority_info **dst,
+						struct ddr_priority_info *src)
 {
-	struct ddr_priority_v1 *v1 = NULL;
+	struct ddr_priority_info *info;
+	struct ddr_priority_dev *dev = NULL;
+	struct ddr_priority_nic *nic = NULL;
+	struct ddr_priority_mdc *mdc = NULL;
+	struct ddr_priority_entry *entry = NULL;
+	struct ddr_priority_force *force = NULL;
+
+	if (!dst || !src)
+		return -EINVAL;
+
+	info = kmemdup(src, sizeof(*info), GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
+
+	info->dmc_force = NULL;
+
+	if (src->dev_num > 0) {
+		dev = kmemdup(src->dev, src->dev_num * sizeof(*dev), GFP_KERNEL);
+		if (!dev)
+			goto err;
+	}
+	if (src->nic_num > 0) {
+		nic = kmemdup(src->nic, src->nic_num * sizeof(*nic), GFP_KERNEL);
+		if (!nic)
+			goto err;
+	}
+	if (src->mdc_num > 0) {
+		mdc = kmemdup(src->mdc, src->mdc_num * sizeof(*mdc), GFP_KERNEL);
+		if (!mdc)
+			goto err;
+	}
+	if (src->entry_num > 0) {
+		entry = kmemdup(src->entry, src->entry_num * sizeof(*entry), GFP_KERNEL);
+		if (!entry)
+			goto err;
+	}
+	if (src->dmc_force_num > 0) {
+		force = kmemdup(src->dmc_force, src->dmc_force_num * sizeof(*force), GFP_KERNEL);
+		if (!force)
+			goto err;
+	}
+
+	info->dev = dev;
+	info->nic = nic;
+	info->mdc = mdc;
+	info->entry = entry;
+	info->dmc_force = force;
+	*dst = info;
+	return 0;
+
+err:
+	kfree(dev);
+	kfree(nic);
+	kfree(mdc);
+	kfree(entry);
+	kfree(info->dmc_force);
+	kfree(info);
+	return -ENOMEM;
+}
+
+int __init ddr_priority_init(int cpu_type)
+{
+	struct ddr_priority_info *info = NULL;
 	struct ddr_priority_v2 *v2 = NULL;
-	int v1_num;
+	int ret;
 
 	switch (cpu_type) {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	case DMC_TYPE_T7:
-		v1 = ddr_priority_t7;
-		v1_num = ARRAY_SIZE(ddr_priority_t7);
+		info = &ddr_priority_info_t7;
 		break;
 #endif
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT_C1A
 	case DMC_TYPE_S4:
-		v1 = ddr_priority_s4;
-		v1_num = ARRAY_SIZE(ddr_priority_s4);
+		info = &ddr_priority_info_s4;
 		break;
 #endif
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	case DMC_TYPE_S5:
-		v1 = ddr_priority_s5;
-		v1_num = ARRAY_SIZE(ddr_priority_s5);
+		info = &ddr_priority_info_s5;
 		break;
 	case DMC_TYPE_S6:
-		v1 = ddr_priority_s6;
-		v1_num = ARRAY_SIZE(ddr_priority_s6);
+		info = &ddr_priority_info_s6;
 		break;
 	case DMC_TYPE_C3:
-		v1 = ddr_priority_c3;
-		v1_num = ARRAY_SIZE(ddr_priority_c3);
+		info = &ddr_priority_info_c3;
 		break;
 	case DMC_TYPE_T5M:
-		v1 = ddr_priority_t5m;
-		v1_num = ARRAY_SIZE(ddr_priority_t5m);
+		info = &ddr_priority_info_t5m;
 		break;
 	case DMC_TYPE_TXHD2:
-		v1 = ddr_priority_txhd2;
-		v1_num = ARRAY_SIZE(ddr_priority_txhd2);
+		info = &ddr_priority_info_txhd2;
 		break;
 	case DMC_TYPE_T3X:
-		v1 = ddr_priority_t3x;
-		v1_num = ARRAY_SIZE(ddr_priority_t3x);
+		info = &ddr_priority_info_t3x;
 		break;
 	case DMC_TYPE_T3:
-		v1 = ddr_priority_t3;
-		v1_num = ARRAY_SIZE(ddr_priority_t3);
+		info = &ddr_priority_info_t3;
 		break;
 	case DMC_TYPE_A4:
-		v1 = ddr_priority_a4;
-		v1_num = ARRAY_SIZE(ddr_priority_a4);
+		info = &ddr_priority_info_a4;
 		break;
 	case DMC_TYPE_S7:
-		v1 = ddr_priority_s7;
-		v1_num = ARRAY_SIZE(ddr_priority_s7);
+		info = &ddr_priority_info_s7;
 		break;
 	case DMC_TYPE_S7D:
-		v1 = ddr_priority_s7d;
-		v1_num = ARRAY_SIZE(ddr_priority_s7d);
+		info = &ddr_priority_info_s7d;
 		break;
 	case DMC_TYPE_SC2:
-		v1 = ddr_priority_sc2;
-		v1_num = ARRAY_SIZE(ddr_priority_sc2);
+		info = &ddr_priority_info_sc2;
 		break;
 	case DMC_TYPE_T5W:
-		v1 = ddr_priority_t5w;
-		v1_num = ARRAY_SIZE(ddr_priority_t5w);
+		info = &ddr_priority_info_t5w;
 		break;
 	case DMC_TYPE_G12B:
-		v1 = ddr_priority_g12b;
-		v1_num = ARRAY_SIZE(ddr_priority_g12b);
+		info = &ddr_priority_info_g12b;
 		break;
 	case DMC_TYPE_GXLX3:
-		v1 = ddr_priority_gxlx3;
-		v1_num = ARRAY_SIZE(ddr_priority_gxlx3);
+		info = &ddr_priority_info_gxlx3;
 		break;
 	case DMC_TYPE_T6D:
-		v1 = ddr_priority_t6d;
-		v1_num = ARRAY_SIZE(ddr_priority_t6d);
+		info = &ddr_priority_info_t6d;
 		break;
 	case DMC_TYPE_T6W:
-		v1 = ddr_priority_t6w;
-		v1_num = ARRAY_SIZE(ddr_priority_t6w);
+		info = &ddr_priority_info_t6w;
 		break;
 	case DMC_TYPE_T6X:
 		v2 = &ddr_priority_t6x;
 		break;
 	case DMC_TYPE_C4:
-		v1 = ddr_priority_c4;
-		v1_num = ARRAY_SIZE(ddr_priority_c4);
+		info = &ddr_priority_info_c4;
 		break;
 #endif
 	case DMC_TYPE_S1A:
-		v1 = ddr_priority_s1a;
-		v1_num = ARRAY_SIZE(ddr_priority_s1a);
+		info = &ddr_priority_info_s1a;
 		break;
 	default:
-		return NULL;
+		return -EINVAL;
 	}
-	if (v1) {
-		ddr_priority.v1_buf = kmalloc(4096, GFP_KERNEL);
-		if (!ddr_priority.v1_buf)
-			return NULL;
-		ddr_priority.v1 = kcalloc(v1_num, sizeof(struct ddr_priority_v1), GFP_KERNEL);
-		if (!ddr_priority.v1)
-			return NULL;
-		memcpy(ddr_priority.v1, v1, sizeof(struct ddr_priority_v1) * v1_num);
-		ddr_priority.ver = 1;
-		ddr_priority.v1_num = v1_num;
-		return &ddr_priority;
+
+	aml_db->priority = kzalloc(sizeof(*aml_db->priority), GFP_KERNEL);
+	if (!aml_db->priority)
+		return -ENOMEM;
+
+	if (info) {
+		ret = ddr_priority_info_alloc(&aml_db->priority->v1, info);
+		if (ret) {
+			kfree(aml_db->priority);
+			aml_db->priority = NULL;
+			return ret;
+		}
+		aml_db->priority->ver = 1;
+		aml_db->priority->v1_num = 1;
 	} else if (v2) {
-		ddr_priority.v2 = ddr_priority_v2_init(v2);
-		if (!ddr_priority.v2)
-			return NULL;
-		ddr_priority.ver = 2;
-		return &ddr_priority;
-	}
-
-	return NULL;
-}
-
-static int ddr_priority_get_info(unsigned char port_id)
-{
-	unsigned int i;
-
-	if (!aml_db->priority->v1) {
-		pr_info("ddr priority null\n");
-		return -EINVAL;
-	}
-
-	for (i = 0; i < aml_db->priority->v1_num; i++) {
-		if (aml_db->priority->v1[i].port_id == port_id)
-			return i;
-	}
-
-	return -EINVAL;
-}
-
-static int ddr_priority_config(struct ddr_priority_v1 info,
-				int *priority, unsigned char type)
-{
-	void __iomem *vaddr = 0;
-	unsigned int reg_addr, reg_value;
-	unsigned char bit_s;
-	unsigned int width;
-	int set_priority = 0;
-
-	/* type define
-	 * 0x00: read r_priority  0x10: read w_priority
-	 * 0x01: write r_priority  0x11: write w_priority
-	 */
-	if (type & 0x10) {
-		if (info.w_width) {
-			reg_addr = info.reg_base + info.w_offset;
-			bit_s = info.w_bit_s;
-			width = info.w_width;
-		} else {
-			pr_err("port id : %d w_priority not exit\n", info.port_id);
-			*priority = -1;
-			return -EINVAL;
+		aml_db->priority->v2 = ddr_priority_v2_init(v2);
+		if (!aml_db->priority->v2) {
+			kfree(aml_db->priority);
+			aml_db->priority = NULL;
+			return -ENOMEM;
 		}
-
-	} else {
-		if (info.r_width) {
-			reg_addr = info.reg_base + info.r_offset;
-			bit_s = info.r_bit_s;
-			width = info.r_width;
-		} else {
-			pr_err("port id : %d r_priority not exit\n", info.port_id);
-			*priority = -1;
-			return -EINVAL;
-		}
-	}
-
-	/*
-	 * current only c3 and t7 use isp module reg to ctrl priority,
-	 * so need isp clk and power be normal;
-	 * after will be use dmc reg to ctrl, can ignore clk and power.
-	 */
-	if (aml_db->cpu_type == DMC_TYPE_T7 || aml_db->cpu_type == DMC_TYPE_C3) {
-		if (strstr(priority_find_port_name(info.port_id), "ISP")) {
-			if (!(aml_db->priority->flag & DDR_PRIORITY_POWER)) {
-				*priority = -1;
-				return -EINVAL;
-			}
-		}
-	}
-
-	if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
-		pr_info("port %d, name %s, addr %x mode:%d\n",
-			info.port_id,
-			priority_find_port_name(info.port_id),
-			reg_addr,
-			info.reg_mode);
-
-	set_priority = width & ((*priority) | (*priority) << 8 |
-			(*priority) << 16 | (*priority) << 24);
-
-	if (info.reg_mode) {/* secure mode */
-		reg_value = dmc_rw(reg_addr, 0, DMC_READ);
-		if (type & 0x01) {
-			reg_value &= ~(width << bit_s);
-			reg_value |= (set_priority << bit_s);
-			reg_value |= info.force_enable;
-			dmc_rw(reg_addr, reg_value, DMC_WRITE);
-		} else {
-			*priority = (reg_value >> bit_s) & width;
-		}
-	} else {
-		vaddr = ioremap(reg_addr, 0x4);
-		if (!vaddr) {
-			pr_err("reg_addr %x ioremap failed\n", reg_addr);
-			return -EINVAL;
-		}
-		reg_value = readl_relaxed(vaddr);
-		if (type & 0x01) {
-			reg_value &= ~(width << bit_s);
-			reg_value |= (set_priority << bit_s);
-			reg_value |= info.force_enable;
-			writel_relaxed(reg_value, vaddr);
-		} else {
-			*priority = (reg_value >> bit_s) & width;
-		}
-	}
-
-	if (vaddr)
-		iounmap(vaddr);
-
-	return 0;
-}
-
-int ddr_priority_rw(unsigned char port_id, int *priority_r,
-			int *priority_w, unsigned char control)
-{
-	int index;
-	struct ddr_priority_v1 info;
-
-	index = ddr_priority_get_info(port_id);
-	if (index < 0) {
-		pr_err("port_id: %d not exit\n", port_id);
-		return -EINVAL;
-	}
-	info = aml_db->priority->v1[index];
-
-	switch (control) {
-	case 0:
-		ddr_priority_config(info, priority_r, 0x00);
-		ddr_priority_config(info, priority_w, 0x10);
-		break;
-	case 1:
-		ddr_priority_config(info, priority_r, 0x01);
-		ddr_priority_config(info, priority_w, 0x11);
-		break;
-	case 2:
-		ddr_priority_config(info, priority_r, 0x01);
-		break;
-	case 3:
-		ddr_priority_config(info, priority_w, 0x11);
-		break;
-	default:
-		break;
+		aml_db->priority->ver = 2;
 	}
 
 	return 0;
 }
 
-static struct ddr_port_desc *priority_port_list;
-static unsigned int priority_port_list_num;
-void __init ddr_priority_port_list(void)
-{
-	struct ddr_port_desc *desc = NULL;
-	int pcnt = 0;
-
-	if (aml_db->cpu_type != DMC_TYPE_C3) {
-		priority_port_list = aml_db->port_desc;
-		priority_port_list_num = aml_db->real_ports;
-	} else {
-		pcnt = ddr_find_port_desc_type(aml_db->cpu_type, &desc, 0);
-		if (pcnt < 0) {
-			pr_err("can't find priority_port_list, cpu:%d\n", aml_db->cpu_type);
-		} else {
-			priority_port_list = desc;
-			priority_port_list_num = pcnt;
-		}
-	}
-}
-
-char *priority_find_port_name(int id)
+static struct ddr_priority_force *find_force_by_bus(struct ddr_priority_info *info,
+							unsigned int bus)
 {
 	int i;
 
-	if (!priority_port_list || !priority_port_list_num)
+	if (!info || !info->dmc_force)
 		return NULL;
-
-	for (i = 0; i < priority_port_list_num; i++) {
-		if (priority_port_list[i].port_id == id)
-			return priority_port_list[i].port_name;
+	for (i = 0; i < info->dmc_force_num; i++) {
+		if (info->dmc_force[i].bus == bus)
+			return &info->dmc_force[i];
 	}
 	return NULL;
+}
+
+static int priority_force_write(void __iomem *base, struct ddr_priority_force *force,
+				unsigned char value, bool clr_force_mask)
+{
+	u32 reg;
+	unsigned long off;
+	u8 lsb, nbits;
+
+	off = force->offset;
+	lsb = force->lsb;
+	nbits = force->nbits;
+
+	if (!nbits || nbits >= 32 || value >= (1U << nbits)) {
+		pr_err("invalid value: %d nbits: %u\n", value, nbits);
+		return -EINVAL;
+	}
+
+	reg = readl(base + off);
+	reg &= ~GENMASK_U32(lsb + nbits - 1, lsb);
+	reg |= value << lsb;
+	if (clr_force_mask && force->force_mask > 0)
+		reg &= ~force->force_mask;
+	else if (force->force_mask > 0)
+		reg |= force->force_mask;
+
+	writel(reg, base + off);
+	return 0;
+}
+
+static int set_force_priority(unsigned char dmc, unsigned char bus,
+			      unsigned char value, bool clr_force_mask)
+{
+	struct ddr_priority_info *info;
+	struct ddr_priority_force *force;
+	void __iomem *base;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1 || dmc >= aml_db->dmc_number)
+		return -EINVAL;
+
+	info = aml_db->priority->v1;
+	base = aml_db->ddr_reg[dmc];
+	if (!base)
+		return -ENODEV;
+	force = find_force_by_bus(info, bus);
+	if (!force)
+		return -EINVAL;
+
+	return priority_force_write(base, force, value, clr_force_mask);
+}
+
+static int get_force_priority(unsigned char dmc, unsigned char bus)
+{
+	struct ddr_priority_info *info;
+	struct ddr_priority_force *force;
+	void __iomem *base;
+	u32 val, mask, priority;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1 || dmc >= aml_db->dmc_number)
+		return -EINVAL;
+
+	info = aml_db->priority->v1;
+	base = aml_db->ddr_reg[dmc];
+	if (!base)
+		return -ENODEV;
+
+	force = find_force_by_bus(info, bus);
+	if (!force)
+		return -EINVAL;
+
+	val = readl(base + force->offset);
+	mask = GENMASK_U32(force->lsb + force->nbits - 1, force->lsb);
+	priority = (val & mask) >> force->lsb;
+
+	if (force->force_mask > 0 && !(val & force->force_mask) && priority != 0)
+		pr_err("dmc=%d bus=%d force bit clear but val is %d\n", dmc, bus, priority);
+
+	return priority;
+}
+
+static bool force_bus_match_port(const struct ddr_port_desc *port_desc,
+					unsigned int force_bus,
+					unsigned int *asym_dmc_mask)
+{
+	unsigned int i, bus, mask = 0;
+
+	if (!port_desc)
+		return false;
+	if (!aml_db || !(aml_db->soc_feature & DMC_ASYMMETRY)) {
+		if (asym_dmc_mask)
+			*asym_dmc_mask = 0;
+		if (port_desc->bus == -1 && !(aml_db->soc_feature & DDR_DEVICE_8BIT))
+			return port_desc->port_id == force_bus;
+		return port_desc->bus == force_bus;
+	}
+
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		bus = (port_desc->bus >> (i * 8)) & 0xffU;
+		if ((bus & 0x80U) && ((bus & 0x7fU) == force_bus))
+			mask |= BIT(i);
+	}
+	if (asym_dmc_mask)
+		*asym_dmc_mask = mask;
+	return mask != 0;
+}
+
+static bool port_is_asym(unsigned int asym_dmc_mask)
+{
+	return asym_dmc_mask && hweight32(asym_dmc_mask) == 1;
+}
+
+static void force_format_asym_name(char *buf, size_t size, const char *name, unsigned int dmc_mask)
+{
+	unsigned int idx;
+
+	if (!buf || size == 0)
+		return;
+
+	if (!name) {
+		strscpy(buf, "", size);
+		return;
+	}
+
+	if (hweight32(dmc_mask) != 1) {
+		strscpy(buf, name, size);
+		return;
+	}
+
+	for (idx = 0; idx < aml_db->dmc_number; idx++) {
+		if (dmc_mask & BIT(idx)) {
+			scnprintf(buf, size, "%s(DMC%u)", name, idx);
+			return;
+		}
+	}
+	strscpy(buf, name, size);
+}
+
+#define PRIO_V1_BUF_SZ		(1024 * 1024)
+
+static __printf(3, 4)
+int force_format_buf(char *buf, ssize_t *poff, const char *fmt, ...)
+{
+	va_list ap;
+	int count;
+	size_t size;
+
+	if (*poff < 0 || (size_t)*poff >= PRIO_V1_BUF_SZ)
+		return -ENOSPC;
+	size = PRIO_V1_BUF_SZ - (size_t)*poff;
+	va_start(ap, fmt);
+	count = vscnprintf(buf + *poff, size, fmt, ap);
+	va_end(ap);
+	if (count < 0)
+		return count;
+	*poff += count;
+	return 0;
+}
+
+static int force_format_header(char *buf, ssize_t *poff, bool show_reg)
+{
+	int i, err;
+	char header_buf[2][12];
+
+	err = force_format_buf(buf, poff, "%-*s %-*s", 3, "bus", MAX_NAME, "name");
+	if (err)
+		return err;
+
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		scnprintf(header_buf[0], sizeof(header_buf[0]), "f%d", i);
+		scnprintf(header_buf[1], sizeof(header_buf[1]), "f%dM", i);
+		err = force_format_buf(buf, poff, " %-*s %-*s", 6,
+						header_buf[0], 6, header_buf[1]);
+		if (err)
+			return err;
+	}
+
+	if (show_reg) {
+		err = force_format_buf(buf, poff, " %-*s %-*s %-*s",
+						9, "offset", 6, "lsb", 6, "nbits");
+		if (err)
+			return err;
+	}
+	return force_format_buf(buf, poff, "\n");
+}
+
+#define MAX_BUS_PORT	32
+static void force_format_port(struct ddr_priority_force *force,
+				  bool asym_flag, char *bus_port_pool,
+				  const char **format_name, char *format_buf,
+				  const char **bus_port, int *bus_port_cnt)
+{
+	int i, index = 0;
+	unsigned int asym_mask;
+	const struct ddr_port_desc *port_desc;
+	const char *name;
+	bool asym_show;
+
+	for (i = 0; i < aml_db->real_ports; i++) {
+		port_desc = &aml_db->port_desc[i];
+		if (!force_bus_match_port(port_desc, force->bus, &asym_mask))
+			continue;
+
+		name = port_desc->port_name;
+		if (!name)
+			continue;
+
+		asym_show = asym_flag && aml_db->dmc_number > 1 && port_is_asym(asym_mask);
+
+		if (port_desc->sub_id == -1) {
+			if (!*format_name) {
+				if (asym_show) {
+					force_format_asym_name(format_buf, 32, name, asym_mask);
+					*format_name = format_buf;
+				} else {
+					*format_name = name;
+				}
+			} else if (*bus_port_cnt < MAX_BUS_PORT) {
+				if (asym_show) {
+					index = *bus_port_cnt * 32;
+					force_format_asym_name(bus_port_pool + index, 32,
+								name, asym_mask);
+					index = (*bus_port_cnt - 1) * 32;
+					bus_port[*bus_port_cnt] = bus_port_pool + index;
+					(*bus_port_cnt)++;
+				} else {
+					bus_port[(*bus_port_cnt)++] = name;
+				}
+			}
+		} else if (*bus_port_cnt < MAX_BUS_PORT) {
+			if (asym_show) {
+				index = *bus_port_cnt * 32;
+				force_format_asym_name(bus_port_pool + index, 32, name, asym_mask);
+				index = (*bus_port_cnt - 1) * 32;
+				bus_port[*bus_port_cnt] = bus_port_pool + index;
+				(*bus_port_cnt)++;
+			} else {
+				bus_port[(*bus_port_cnt)++] = name;
+			}
+		}
+	}
+}
+
+static int force_format_priority(char *buf, ssize_t *poff,
+				     struct ddr_priority_force *force,
+				     char *format_buf)
+{
+	int i, err, priority;
+	u32 max;
+
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		if (!force || !aml_db->ddr_reg[i]) {
+			err = force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+			if (err)
+				return err;
+			continue;
+		}
+
+		priority = get_force_priority(i, force->bus);
+		max = force->nbits < 32 ? ((1U << force->nbits) - 1U) : 0;
+		if (priority < 0)
+			strscpy(format_buf, "-", 16);
+		else
+			scnprintf(format_buf, 16, "%x", priority);
+
+		err = force_format_buf(buf, poff, " %-*s %-*x", 6, format_buf, 6, max);
+		if (err)
+			return err;
+	}
+	return 0;
+}
+
+static int force_format_reg(char *buf, ssize_t *poff, struct ddr_priority_force *force)
+{
+	char reg_off_str[24];
+
+	scnprintf(reg_off_str, sizeof(reg_off_str), "0x%lx", force->offset);
+	return force_format_buf(buf, poff, " %-*s %-*u %-*u",
+					9, reg_off_str,
+					6, force->lsb,
+					6, force->nbits);
+}
+
+static ssize_t ddr_priority_info_force_show(char *buf)
+{
+	struct ddr_priority_info *info;
+	ssize_t buf_offset = 0;
+	ssize_t ret = 0;
+	unsigned char show_reg, asym_flag;
+	int i, j;
+	struct ddr_priority_force *force;
+	const char *format_name;
+	char format_buf[32];
+	const char *bus_port[MAX_BUS_PORT];
+	char *bus_port_pool = NULL;
+	int bus_port_cnt;
+
+	if (!buf || !aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	info = aml_db->priority->v1;
+	if (!info->dmc_force || info->dmc_force_num <= 0)
+		return 0;
+	if (!aml_db->port_desc || !aml_db->real_ports)
+		return 0;
+
+	asym_flag = aml_db->soc_feature & DMC_ASYMMETRY ? 1 : 0;
+	show_reg = aml_db->priority->flag & DDR_PRIORITY_DEBUG ? 1 : 0;
+
+	if (asym_flag) {
+		bus_port_pool = kmalloc(MAX_BUS_PORT * 32, GFP_KERNEL);
+		if (!bus_port_pool)
+			asym_flag = false;
+	}
+
+	ret = force_format_header(buf, &buf_offset, show_reg);
+	if (ret)
+		goto err;
+
+	for (i = 0; i < info->dmc_force_num; i++) {
+		force = &info->dmc_force[i];
+		format_name = NULL;
+		bus_port_cnt = 0;
+
+		force_format_port(force, asym_flag,
+				      bus_port_pool, &format_name,
+				      format_buf, bus_port,
+				      &bus_port_cnt);
+
+		ret = force_format_buf(buf, &buf_offset, "%-*u %-*.*s",
+					   3, force->bus, MAX_NAME, MAX_NAME,
+					   format_name ? format_name : "");
+		if (ret)
+			goto err;
+
+		ret = force_format_priority(buf, &buf_offset, force, format_buf);
+		if (ret)
+			goto err;
+
+		if (show_reg) {
+			ret = force_format_reg(buf, &buf_offset, force);
+			if (ret)
+				goto err;
+		}
+		ret = force_format_buf(buf, &buf_offset, "\n");
+		if (ret)
+			goto err;
+
+		for (j = 0; j < bus_port_cnt; j++) {
+			ret = force_format_buf(buf, &buf_offset, "%*s%s\n", 4, "",
+							  bus_port[j]);
+			if (ret)
+				goto err;
+		}
+	}
+	ret = buf_offset;
+err:
+	kfree(bus_port_pool);
+	return ret;
+}
+
+static struct ddr_priority_entry *priority_find_entry(struct ddr_priority_info *info,
+							unsigned char port_id)
+{
+	int i;
+
+	if (!info || !info->entry)
+		return NULL;
+	for (i = 0; i < info->entry_num; i++) {
+		if (info->entry[i].port_id == port_id)
+			return &info->entry[i];
+	}
+	return NULL;
+}
+
+static const struct ddr_port_desc *find_desc_by_map(const struct ddr_port_map *map)
+{
+	unsigned int i;
+
+	if (map->type == DDR_PORT_ROW_MASTER && map->desc)
+		return map->desc;
+
+	for (i = 0; i < aml_db->real_ports; i++) {
+		if (aml_db->port_desc[i].port_id == map->port_id &&
+		    aml_db->port_desc[i].sub_id == -1)
+			return &aml_db->port_desc[i];
+	}
+	return NULL;
+}
+
+static struct ddr_priority_force *find_force_by_map(struct ddr_priority_info *info,
+							const struct ddr_port_map *map)
+{
+	int i;
+	const struct ddr_port_desc *desc;
+
+	if (!info || !info->dmc_force || !aml_db || !map)
+		return NULL;
+
+	desc = find_desc_by_map(map);
+
+	if (!desc)
+		return NULL;
+
+	for (i = 0; i < info->dmc_force_num; i++) {
+		if (force_bus_match_port(desc, info->dmc_force[i].bus, NULL))
+			return &info->dmc_force[i];
+	}
+	return NULL;
+}
+
+static bool get_force_prio_by_dmc(unsigned char dmc, struct ddr_priority_force *force, u32 *prio)
+{
+	void __iomem *base;
+	u32 val, pri;
+
+	if (!force || dmc >= aml_db->dmc_number || !aml_db->ddr_reg[dmc])
+		return false;
+
+	if (!force->nbits || force->nbits >= 32)
+		return false;
+
+	base = aml_db->ddr_reg[dmc];
+	val = readl(base + force->offset);
+	pri = (val & GENMASK_U32(force->lsb + force->nbits - 1, force->lsb)) >> force->lsb;
+	if (prio)
+		*prio = pri;
+
+	if (force->force_mask == -1L)
+		return pri != 0;
+
+	return (val & force->force_mask) != 0;
+}
+
+static unsigned int get_force_en_mask(struct ddr_priority_force *force,
+					     unsigned int *dmc_mask)
+{
+	unsigned char i;
+	unsigned int dmc_m = 0, en_m = 0;
+
+	if (!dmc_mask)
+		return 0;
+	if (!force) {
+		*dmc_mask = 0;
+		return 0;
+	}
+
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		if (!aml_db->ddr_reg[i])
+			continue;
+		dmc_m |= BIT(i);
+		if (get_force_prio_by_dmc(i, force, NULL))
+			en_m |= BIT(i);
+	}
+	*dmc_mask = dmc_m;
+	return en_m;
+}
+
+static struct ddr_priority_nic *priority_find_nic(struct ddr_priority_info *info,
+						  unsigned char port_id, signed char sub_id)
+{
+	int i;
+
+	if (!info || !info->nic)
+		return NULL;
+	for (i = 0; i < info->nic_num; i++) {
+		if (info->nic[i].port_id == port_id && info->nic[i].sub_id == sub_id)
+			return &info->nic[i];
+	}
+	return NULL;
+}
+
+static struct ddr_priority_dev *priority_find_dev(struct ddr_priority_info *info,
+						  unsigned char port_id, signed char sub_id)
+{
+	int i;
+
+	if (!info || !info->dev)
+		return NULL;
+	for (i = 0; i < info->dev_num; i++) {
+		if (info->dev[i].port_id == port_id && info->dev[i].sub_id == sub_id)
+			return &info->dev[i];
+	}
+	return NULL;
+}
+
+static struct ddr_priority_mdc *priority_find_mdc(struct ddr_priority_info *info,
+						  unsigned char port_id, signed char sub_id)
+{
+	int i;
+
+	if (!info || !info->mdc)
+		return NULL;
+	for (i = 0; i < info->mdc_num; i++) {
+		if (info->mdc[i].port_id == port_id && info->mdc[i].sub_id == sub_id)
+			return &info->mdc[i];
+	}
+	return NULL;
+}
+
+static bool prio_type_is_reg(unsigned int type)
+{
+	if (type & PRIO_REG_RW)
+		return true;
+	if (type & PRIO_REG_WO)
+		return true;
+	if (type & PRIO_REG_POWER)
+		return true;
+	return false;
+}
+
+static bool prio_reg_power_en(unsigned int type)
+{
+	if (!(type & PRIO_REG_POWER))
+		return true;
+	return aml_db->priority->flag & DDR_PRIORITY_POWER;
+}
+
+static bool prio_reg_get_en(unsigned int type, int is_w)
+{
+	if (!prio_type_is_reg(type))
+		return false;
+	if (!prio_reg_power_en(type))
+		return false;
+	if (!is_w && (type & PRIO_REG_WO))
+		return false;
+	return true;
+}
+
+static bool prio_reg_set_en(unsigned int type, int is_w)
+{
+	if (!prio_type_is_reg(type))
+		return false;
+	if (!prio_reg_power_en(type))
+		return false;
+	if (!is_w && (type & PRIO_REG_WO) && !(type & PRIO_REG_RW))
+		return false;
+	return true;
 }
 
 static int reg_access(unsigned int reg, char sec, char rw, unsigned int *value)
@@ -3050,6 +3371,1419 @@ static int reg_access_byte(unsigned int reg, char sec, char rw, unsigned int *va
 			writeb_relaxed(*value, vaddr);
 		iounmap(vaddr);
 	}
+	return 0;
+}
+
+static int get_ddr_dev_priority(const struct ddr_priority_dev *dev, int is_w)
+{
+	unsigned int val = 0;
+	unsigned long offset;
+	unsigned char lsb, nbits;
+
+	if (!dev)
+		return -EINVAL;
+
+	if (dev->type & PRIO_FIXED) {
+		val = is_w ? dev->fixed_w : dev->fixed_r;
+
+		if (!dev->fixed_nbits || dev->fixed_nbits >= 32)
+			return -EINVAL;
+
+		return val & GENMASK_U32(dev->fixed_nbits - 1, 0);
+	}
+
+	if (prio_reg_get_en(dev->type, is_w)) {
+		lsb = is_w ? dev->w_lsb : dev->r_lsb;
+		nbits = is_w ? dev->w_nbits : dev->r_nbits;
+		offset = is_w ? dev->w_offset : dev->r_offset;
+
+		if (!nbits || nbits >= 32)
+			return -EINVAL;
+
+		if (reg_access(dev->reg_base + offset, dev->reg_mode, READ, &val))
+			return -EFAULT;
+
+		val = (val >> lsb) & GENMASK_U32(nbits - 1, 0);
+	} else if (prio_type_is_reg(dev->type)) {
+		return -EIO;
+	}
+
+	if ((dev->type & PRIO_HANDLER) && dev->handle_get)
+		val = dev->handle_get(dev, val, is_w);
+
+	return val;
+}
+
+static int set_ddr_dev_priority(struct ddr_priority_dev *dev, unsigned int prio, int is_w,
+				bool clr_force_mask)
+{
+	unsigned int val;
+	unsigned char lsb, nbits;
+	unsigned long offset;
+
+	if (!dev)
+		return -EINVAL;
+	if (dev->type & PRIO_FIXED)
+		return -EINVAL;
+
+	if ((dev->type & PRIO_HANDLER) && dev->handle_set)
+		val = dev->handle_set(dev, prio, is_w);
+
+	if (prio_reg_set_en(dev->type, is_w)) {
+		lsb = is_w ? dev->w_lsb : dev->r_lsb;
+		nbits = is_w ? dev->w_nbits : dev->r_nbits;
+		offset = is_w ? dev->w_offset : dev->r_offset;
+
+		if (!nbits || nbits >= 32)
+			return -EINVAL;
+		if (prio >= (1U << nbits))
+			return -EINVAL;
+
+		if (reg_access(dev->reg_base + offset, dev->reg_mode, READ, &val))
+			return -EFAULT;
+
+		val &= ~GENMASK_U32(lsb + nbits - 1, lsb);
+		val |= (prio & GENMASK_U32(nbits - 1, 0)) << lsb;
+
+		if (clr_force_mask && dev->force_mask)
+			val &= ~dev->force_mask;
+		else if (dev->force_mask)
+			val |= dev->force_mask;
+
+		if (reg_access(dev->reg_base + offset, dev->reg_mode, WRITE, &val))
+			return -EFAULT;
+	} else if (prio_type_is_reg(dev->type)) {
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int get_nic_priority(const struct ddr_priority_nic *nic, int is_w)
+{
+	unsigned int val, mask;
+	long offset;
+	unsigned char lsb, nbits;
+
+	if (!nic)
+		return -EINVAL;
+
+	if (nic->type & PRIO_FIXED) {
+		val = is_w ? nic->fixed_w : nic->fixed_r;
+
+		if (!nic->fixed_nbits || nic->fixed_nbits >= 32)
+			return -EINVAL;
+
+		return (int)(val & GENMASK_U32(nic->fixed_nbits - 1, 0));
+	}
+
+	if (!prio_reg_get_en(nic->type, is_w)) {
+		if (!prio_type_is_reg(nic->type))
+			return -EINVAL;
+		return -EIO;
+	}
+
+	lsb = is_w ? nic->w_lsb : nic->r_lsb;
+	nbits = is_w ? nic->w_nbits : nic->r_nbits;
+	offset = is_w ? nic->w_offset : nic->r_offset;
+	mask = is_w ? nic->w_mask : nic->r_mask;
+
+	if (!nbits || nbits >= 32)
+		return -EINVAL;
+
+	if (reg_access(nic->reg_base + offset, nic->reg_mode, READ, &val))
+		return -EFAULT;
+
+	val = (val >> lsb) & GENMASK_U32(nbits - 1, 0);
+	if (mask)
+		val &= mask;
+
+	return val;
+}
+
+static int set_nic_priority(struct ddr_priority_nic *nic, unsigned int prio, int is_w)
+{
+	unsigned int val, mask;
+	unsigned char lsb, nbits;
+	unsigned long offset;
+
+	if (!nic)
+		return -EINVAL;
+	if (nic->type & PRIO_FIXED)
+		return -EINVAL;
+	if (!prio_reg_set_en(nic->type, is_w)) {
+		if (!prio_type_is_reg(nic->type))
+			return -EINVAL;
+		return -EIO;
+	}
+
+	lsb = is_w ? nic->w_lsb : nic->r_lsb;
+	nbits = is_w ? nic->w_nbits : nic->r_nbits;
+	offset = is_w ? nic->w_offset : nic->r_offset;
+	mask = is_w ? nic->w_mask : nic->r_mask;
+
+	if (!nbits || nbits >= 32)
+		return -EINVAL;
+	if (prio >= (1U << nbits))
+		return -EINVAL;
+
+	if (reg_access(nic->reg_base + offset, nic->reg_mode, READ, &val))
+		return -EFAULT;
+
+	val &= ~GENMASK_U32(lsb + nbits - 1, lsb);
+
+	if (mask)
+		prio &= mask;
+	val |= (prio & GENMASK_U32(nbits - 1, 0)) << lsb;
+
+	if (reg_access(nic->reg_base + offset, nic->reg_mode, WRITE, &val))
+		return -EFAULT;
+
+	return 0;
+}
+
+static int get_mdc_priority(const struct ddr_priority_mdc *mdc, int is_w)
+{
+	unsigned int val;
+	unsigned long offset;
+	unsigned char lsb, nbits;
+
+	if (!mdc)
+		return -EINVAL;
+
+	if (mdc->type & PRIO_FIXED) {
+		val = is_w ? mdc->fixed_w : mdc->fixed_r;
+
+		if (!mdc->fixed_nbits || mdc->fixed_nbits >= 32)
+			return -EINVAL;
+
+		return val & GENMASK_U32(mdc->fixed_nbits - 1, 0);
+	}
+
+	if (!prio_reg_get_en(mdc->type, is_w)) {
+		if (!prio_type_is_reg(mdc->type))
+			return -EINVAL;
+		return -EIO;
+	}
+
+	lsb = is_w ? mdc->w_lsb : mdc->r_lsb;
+	nbits = is_w ? mdc->w_nbits : mdc->r_nbits;
+	offset = is_w ? mdc->w_offset : mdc->r_offset;
+
+	if (!nbits || nbits >= 32)
+		return -EINVAL;
+
+	if (reg_access(mdc->reg_base + offset, mdc->reg_mode, READ, &val))
+		return -EFAULT;
+
+	val = (val >> lsb) & GENMASK_U32(nbits - 1, 0);
+
+	return val;
+}
+
+static int set_mdc_priority(struct ddr_priority_mdc *mdc, unsigned int prio, int is_w,
+			    bool clr_force_mask)
+{
+	unsigned int val;
+	unsigned char lsb, nbits;
+	unsigned long offset;
+
+	if (!mdc)
+		return -EINVAL;
+	if (mdc->type & PRIO_FIXED)
+		return -EINVAL;
+	if (!prio_reg_set_en(mdc->type, is_w)) {
+		if (!prio_type_is_reg(mdc->type))
+			return -EINVAL;
+		return -EIO;
+	}
+
+	lsb = is_w ? mdc->w_lsb : mdc->r_lsb;
+	nbits = is_w ? mdc->w_nbits : mdc->r_nbits;
+	offset = is_w ? mdc->w_offset : mdc->r_offset;
+
+	if (!nbits || nbits >= 32)
+		return -EINVAL;
+	if (prio >= (1U << nbits))
+		return -EINVAL;
+
+	if (reg_access(mdc->reg_base + offset, mdc->reg_mode, READ, &val))
+		return -EFAULT;
+
+	val &= ~GENMASK_U32(lsb + nbits - 1, lsb);
+	val |= (prio & GENMASK_U32(nbits - 1, 0)) << lsb;
+
+	if (clr_force_mask && mdc->force_mask)
+		val &= ~mdc->force_mask;
+	else if (mdc->force_mask)
+		val |= mdc->force_mask;
+
+	if (reg_access(mdc->reg_base + offset, mdc->reg_mode, WRITE, &val))
+		return -EFAULT;
+
+	return 0;
+}
+
+static unsigned int prio_nbits_max(unsigned char nb)
+{
+	if (!nb)
+		nb = 32;
+	return GENMASK_U32(nb - 1, 0);
+}
+
+static void priority_type_format(char *buf, size_t sz, unsigned int type)
+{
+	size_t pos = 0;
+
+	if (type & PRIO_NOT_SUPPORT) {
+		strscpy(buf, "-", sz);
+		return;
+	}
+	/* (high -> low): dev, nic, mdc, fix */
+	if (type & PRIO_FROM_DEV)
+		pos += scnprintf(buf + pos, sz - pos, "d");
+	if (type & PRIO_FROM_NIC)
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|n" : "n");
+	if (type & PRIO_FROM_MDC)
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|m" : "m");
+	if (type & PRIO_HANDLER)
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|h" : "h");
+	if (type & PRIO_AUTO)
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|a" : "a");
+	if (type & PRIO_FIXED)
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|fix" : "fix");
+	if (!pos)
+		strscpy(buf, "-", sz);
+}
+
+static void priority_shift_dev(struct ddr_priority_info *info, struct ddr_priority_entry *entry,
+			  unsigned char port_id, signed char sub_id, bool is_w,
+			  unsigned int *out_v, unsigned char *out_nb, bool *miss)
+{
+	struct ddr_priority_dev *dev;
+	int ret;
+	unsigned int val;
+	unsigned char nbits;
+	unsigned int raw;
+	unsigned char lsb;
+
+	*miss = true;
+	*out_v = 0;
+	*out_nb = 0;
+	dev = priority_find_dev(info, port_id, sub_id);
+	if (!dev)
+		return;
+	if (dev->type & PRIO_FIXED) {
+		raw = is_w ? dev->fixed_w : dev->fixed_r;
+		lsb = is_w ? entry->dev_lsb_w : entry->dev_lsb_r;
+		nbits = dev->fixed_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	} else if (prio_reg_get_en(dev->type, is_w)) {
+		ret = get_ddr_dev_priority(dev, is_w);
+		if (ret < 0)
+			return;
+		val = (unsigned int)ret;
+		nbits = is_w ? dev->w_nbits : dev->r_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = val & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	}
+}
+
+static void priority_shift_nic(struct ddr_priority_info *info, struct ddr_priority_entry *entry,
+			  unsigned char port_id, signed char sub_id, bool is_w,
+			  unsigned int *out_v, unsigned char *out_nb, bool *miss)
+{
+	struct ddr_priority_nic *nic;
+	int ret;
+	unsigned int val;
+	unsigned char nbits;
+	unsigned int raw;
+	unsigned char lsb;
+
+	*miss = true;
+	*out_v = 0;
+	*out_nb = 0;
+	nic = priority_find_nic(info, port_id, sub_id);
+	if (!nic)
+		return;
+	if (nic->type & PRIO_FIXED) {
+		raw = is_w ? nic->fixed_w : nic->fixed_r;
+		lsb = is_w ? entry->nic_lsb_w : entry->nic_lsb_r;
+		nbits = nic->fixed_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	} else if (prio_reg_get_en(nic->type, is_w)) {
+		ret = get_nic_priority(nic, is_w);
+		if (ret < 0)
+			return;
+		val = (unsigned int)ret;
+		nbits = is_w ? nic->w_nbits : nic->r_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = val & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	}
+}
+
+static void priority_shift_mdc(struct ddr_priority_info *info, struct ddr_priority_entry *entry,
+			  unsigned char port_id, signed char sub_id, bool is_w,
+			  unsigned int *out_v, unsigned char *out_nb, bool *miss)
+{
+	struct ddr_priority_mdc *mdc;
+	int ret;
+	unsigned int val;
+	unsigned char nbits;
+	unsigned int raw;
+	unsigned char lsb;
+
+	*miss = true;
+	*out_v = 0;
+	*out_nb = 0;
+	mdc = priority_find_mdc(info, port_id, sub_id);
+	if (!mdc)
+		return;
+	if (mdc->type & PRIO_FIXED) {
+		raw = is_w ? mdc->fixed_w : mdc->fixed_r;
+		lsb = is_w ? entry->mdc_lsb_w : entry->mdc_lsb_r;
+		nbits = mdc->fixed_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	} else if (prio_reg_get_en(mdc->type, is_w)) {
+		ret = get_mdc_priority(mdc, is_w);
+		if (ret < 0)
+			return;
+		val = (unsigned int)ret;
+		nbits = is_w ? mdc->w_nbits : mdc->r_nbits;
+		if (!nbits || nbits >= 32)
+			return;
+		*out_v = val & GENMASK_U32(nbits - 1, 0);
+		*out_nb = nbits;
+		*miss = false;
+	}
+}
+
+static void priority_shift_fixed(struct ddr_priority_entry *entry, bool is_w,
+			    unsigned int *out_v, unsigned char *out_nb, bool *miss)
+{
+	unsigned int raw;
+	unsigned char nbits;
+
+	*miss = true;
+	*out_v = 0;
+	*out_nb = 0;
+	nbits = entry->fixed_nbits;
+	if (!nbits || nbits >= 32)
+		return;
+	raw = is_w ? entry->fixed_w : entry->fixed_r;
+	*out_v = (raw >> entry->fixed_lsb) & GENMASK_U32(nbits - 1, 0);
+	*out_nb = nbits;
+	*miss = false;
+}
+
+static int priority_entry_format(struct ddr_priority_info *info, struct ddr_priority_entry *entry,
+				 unsigned char port_id, signed char sub_id, bool is_w,
+				 char *buf, size_t b_sz)
+{
+	char v_str[40] = "", n_str[40] = "";
+	int v_off = 0, n_off = 0, type_cnt = 0;
+	unsigned int d_v = 0, n_v = 0, m_v = 0, f_v = 0, prio_real = 0, max_bit = 0;
+	unsigned char d_nb = 0, n_nb = 0, m_nb = 0, f_nb = 0;
+	unsigned char d_ls, n_ls, m_ls, f_ls;
+	bool d_ms = true, n_ms = true, m_ms = true, f_ms = true;
+	bool val_right, skip_packed = false, shift_flag;
+	bool nbit_is_add = false, val_is_add = false;
+
+#define NBITS_MISS_FORMAT(miss, nbv)								\
+	do {											\
+		if (nbit_is_add)								\
+			n_off += scnprintf(n_str + n_off, sizeof(n_str) - n_off, ":");		\
+		nbit_is_add = true;								\
+		if (miss)									\
+			n_off += scnprintf(n_str + n_off, sizeof(n_str) - n_off, "*");		\
+		else										\
+			n_off += scnprintf(n_str + n_off, sizeof(n_str) - n_off, "%u", nbv);	\
+	} while (0)										\
+
+#define VAL_MISS_FORMAT(miss, val)								\
+	do {											\
+		if (miss) {									\
+			if (val_is_add)								\
+				v_off += scnprintf(v_str + v_off, sizeof(v_str) - v_off, ":");	\
+			val_is_add = true;							\
+			v_off += scnprintf(v_str + v_off, sizeof(v_str) - v_off, "*");		\
+		} else {									\
+			if (val_is_add)								\
+				v_off += scnprintf(v_str + v_off, sizeof(v_str) - v_off, ":");	\
+			val_is_add = true;							\
+			v_off += scnprintf(v_str + v_off, sizeof(v_str) - v_off, "%x", (val));	\
+		}										\
+	} while (0)										\
+
+	d_ls = is_w ? entry->dev_lsb_w : entry->dev_lsb_r;
+	n_ls = is_w ? entry->nic_lsb_w : entry->nic_lsb_r;
+	m_ls = is_w ? entry->mdc_lsb_w : entry->mdc_lsb_r;
+	f_ls = entry->fixed_lsb;
+
+	shift_flag = !!(entry->type & (PRIO_FROM_DEV | PRIO_FROM_NIC | PRIO_FROM_MDC | PRIO_FIXED));
+
+	if (entry->type & PRIO_FROM_DEV)
+		priority_shift_dev(info, entry, port_id, sub_id, is_w, &d_v, &d_nb, &d_ms);
+	if (entry->type & PRIO_FROM_NIC)
+		priority_shift_nic(info, entry, port_id, sub_id, is_w, &n_v, &n_nb, &n_ms);
+	if (entry->type & PRIO_FROM_MDC)
+		priority_shift_mdc(info, entry, port_id, sub_id, is_w, &m_v, &m_nb, &m_ms);
+	if (entry->type & PRIO_FIXED)
+		priority_shift_fixed(entry, is_w, &f_v, &f_nb, &f_ms);
+
+	val_right = true;
+	if ((entry->type & PRIO_FROM_DEV) && d_ms)
+		val_right = false;
+	if ((entry->type & PRIO_FROM_NIC) && n_ms)
+		val_right = false;
+	if ((entry->type & PRIO_FROM_MDC) && m_ms)
+		val_right = false;
+	if ((entry->type & PRIO_FIXED) && f_ms)
+		val_right = false;
+
+	if (val_right && shift_flag) {
+		if (entry->type & PRIO_FROM_DEV) {
+			prio_real |= (d_v << d_ls);
+			if (d_ls + d_nb > max_bit)
+				max_bit = d_ls + d_nb;
+		}
+		if (entry->type & PRIO_FROM_NIC) {
+			prio_real |= (n_v << n_ls);
+			if (n_ls + n_nb > max_bit)
+				max_bit = n_ls + n_nb;
+		}
+		if (entry->type & PRIO_FROM_MDC) {
+			prio_real |= (m_v << m_ls);
+			if (m_ls + m_nb > max_bit)
+				max_bit = m_ls + m_nb;
+		}
+		if (entry->type & PRIO_FIXED) {
+			prio_real |= (f_v << f_ls);
+			if (f_ls + f_nb > max_bit)
+				max_bit = f_ls + f_nb;
+		}
+		if (max_bit < 32) {
+			type_cnt++;
+			VAL_MISS_FORMAT(false, prio_real);
+			if (entry->type & PRIO_FROM_DEV)
+				NBITS_MISS_FORMAT(false, d_nb);
+			if (entry->type & PRIO_FROM_NIC)
+				NBITS_MISS_FORMAT(false, n_nb);
+			if (entry->type & PRIO_FROM_MDC)
+				NBITS_MISS_FORMAT(false, m_nb);
+			if (entry->type & PRIO_FIXED)
+				NBITS_MISS_FORMAT(false, f_nb);
+			skip_packed = true;
+		}
+	}
+
+	if (!skip_packed && shift_flag) {
+		if (entry->type & PRIO_FROM_DEV) {
+			type_cnt++;
+			VAL_MISS_FORMAT(d_ms, d_v);
+			NBITS_MISS_FORMAT(d_ms, d_nb);
+		}
+		if (entry->type & PRIO_FROM_NIC) {
+			type_cnt++;
+			VAL_MISS_FORMAT(n_ms, n_v);
+			NBITS_MISS_FORMAT(n_ms, n_nb);
+		}
+		if (entry->type & PRIO_FROM_MDC) {
+			type_cnt++;
+			VAL_MISS_FORMAT(m_ms, m_v);
+			NBITS_MISS_FORMAT(m_ms, m_nb);
+		}
+		if (entry->type & PRIO_FIXED) {
+			type_cnt++;
+			VAL_MISS_FORMAT(f_ms, f_v);
+			NBITS_MISS_FORMAT(f_ms, f_nb);
+		}
+	}
+
+	if (!type_cnt)
+		return scnprintf(buf, b_sz, "-");
+
+	return scnprintf(buf, b_sz, "%s[%s]", v_str, n_str);
+}
+
+static int priority_format_nic(char *buf, ssize_t *poff, struct ddr_priority_nic *nic,
+			       enum ddr_port_map_type map_type)
+{
+	unsigned int r = 0, w = 0, rm, wm;
+	unsigned char rnb, wnb;
+	bool show_r = true, show_w = true;
+	int ret;
+	char tmp[16];
+
+	if (map_type == DDR_PORT_ROW_VPU_R)
+		show_w = false;
+	else if (map_type == DDR_PORT_ROW_VPU_W)
+		show_r = false;
+
+	if (!nic)
+		return force_format_buf(buf, poff, " %-*s %-*s %-*s %-*s",
+					    6, "-", 6, "-",
+					    6, "-", 6, "-");
+
+	if (prio_type_is_reg(nic->type)) {
+		rnb = nic->r_nbits;
+		wnb = nic->w_nbits;
+	} else if (nic->type & PRIO_FIXED) {
+		rnb = nic->fixed_nbits;
+		wnb = nic->fixed_nbits;
+	} else {
+		rnb = 0;
+		wnb = 0;
+	}
+	rm = prio_nbits_max(rnb);
+	wm = prio_nbits_max(wnb);
+
+	if (show_r) {
+		if (!prio_reg_power_en(nic->type)) {
+			ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		} else {
+			ret = get_nic_priority(nic, 0);
+			if (ret == -EIO) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			} else if (ret < 0) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+			} else {
+				r = (unsigned int)ret;
+				scnprintf(tmp, sizeof(tmp), "%x", r);
+				ret = force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, rm);
+			}
+		}
+	} else {
+		ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+	}
+	if (ret)
+		return ret;
+
+	if (show_w) {
+		if (!prio_reg_power_en(nic->type))
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		ret = get_nic_priority(nic, 1);
+		if (ret == -EIO)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+		if (ret < 0)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+		w = (unsigned int)ret;
+		scnprintf(tmp, sizeof(tmp), "%x", w);
+		return force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, wm);
+	}
+	return force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+}
+
+static int priority_format_dev(char *buf, ssize_t *poff, struct ddr_priority_dev *dev,
+			       enum ddr_port_map_type map_type)
+{
+	unsigned int r = 0, w = 0, rm, wm;
+	unsigned char rnb, wnb;
+	bool show_r = true, show_w = true;
+	int ret;
+	char tmp[16];
+
+	if (map_type == DDR_PORT_ROW_VPU_R)
+		show_w = false;
+	else if (map_type == DDR_PORT_ROW_VPU_W)
+		show_r = false;
+
+	if (!dev)
+		return force_format_buf(buf, poff, " %-*s %-*s %-*s %-*s",
+					    6, "-", 6, "-",
+					    6, "-", 6, "-");
+
+	if (prio_type_is_reg(dev->type)) {
+		rnb = dev->r_nbits;
+		wnb = dev->w_nbits;
+	} else if (dev->type & PRIO_FIXED) {
+		rnb = dev->fixed_nbits;
+		wnb = dev->fixed_nbits;
+	} else {
+		rnb = 0;
+		wnb = 0;
+	}
+	rm = prio_nbits_max(rnb);
+	wm = prio_nbits_max(wnb);
+
+	if (show_r) {
+		if (!prio_reg_power_en(dev->type)) {
+			ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		} else {
+			ret = get_ddr_dev_priority(dev, 0);
+			if (ret == -EIO) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			} else if (ret < 0) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+			} else {
+				r = (unsigned int)ret;
+				scnprintf(tmp, sizeof(tmp), "%x", r);
+				ret = force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, rm);
+			}
+		}
+	} else {
+		ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+	}
+	if (ret)
+		return ret;
+
+	if (show_w) {
+		if (!prio_reg_power_en(dev->type))
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		ret = get_ddr_dev_priority(dev, 1);
+		if (ret == -EIO)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+		if (ret < 0)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+		w = (unsigned int)ret;
+		scnprintf(tmp, sizeof(tmp), "%x", w);
+		return force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, wm);
+	}
+	return force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+}
+
+static int priority_format_mdc(char *buf, ssize_t *poff, struct ddr_priority_mdc *mdc,
+				 enum ddr_port_map_type map_type)
+{
+	unsigned int r = 0, w = 0, rm, wm;
+	unsigned char rnb, wnb;
+	bool show_r = true, show_w = true;
+	int ret;
+	char tmp[16];
+
+	if (map_type == DDR_PORT_ROW_VPU_R)
+		show_w = false;
+	else if (map_type == DDR_PORT_ROW_VPU_W)
+		show_r = false;
+
+	if (!mdc)
+		return force_format_buf(buf, poff, " %-*s %-*s %-*s %-*s",
+					    6, "-", 6, "-",
+					    6, "-", 6, "-");
+
+	if (prio_type_is_reg(mdc->type)) {
+		rnb = mdc->r_nbits;
+		wnb = mdc->w_nbits;
+	} else if (mdc->type & PRIO_FIXED) {
+		rnb = mdc->fixed_nbits;
+		wnb = mdc->fixed_nbits;
+	} else {
+		rnb = 0;
+		wnb = 0;
+	}
+	rm = prio_nbits_max(rnb);
+	wm = prio_nbits_max(wnb);
+
+	if (show_r) {
+		if (!prio_reg_power_en(mdc->type)) {
+			ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		} else {
+			ret = get_mdc_priority(mdc, 0);
+			if (ret == -EIO) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			} else if (ret < 0) {
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+			} else {
+				r = (unsigned int)ret;
+				scnprintf(tmp, sizeof(tmp), "%x", r);
+				ret = force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, rm);
+			}
+		}
+	} else {
+		ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+	}
+	if (ret)
+		return ret;
+
+	if (show_w) {
+		if (!prio_reg_power_en(mdc->type))
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
+		ret = get_mdc_priority(mdc, 1);
+		if (ret == -EIO)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+		if (ret < 0)
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
+		w = (unsigned int)ret;
+		scnprintf(tmp, sizeof(tmp), "%x", w);
+		return force_format_buf(buf, poff, " %-*s %-*x", 6, tmp, 6, wm);
+	}
+	return force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+}
+
+static int priority_format_entry_head(char *buf, ssize_t *poff, int map_id, const char *name,
+				      bool show_mdc)
+{
+	int err;
+
+	err = force_format_buf(buf, poff, "%-*d %-*.*s %-*s %-*s %-*s", 6, map_id,
+				   MAX_NAME, MAX_NAME, name ? name : "-",
+				   12, "-", 12, "-", 12, "-");
+	if (err)
+		return err;
+	err = force_format_priority(buf, poff, NULL, NULL);
+	if (err)
+		return err;
+	if (show_mdc) {
+		err = force_format_buf(buf, poff, " %-*s %-*s %-*s %-*s",
+					   6, "-", 6, "-",
+					   6, "-", 6, "-");
+		if (err)
+			return err;
+	}
+	err = force_format_buf(buf, poff, " %-*s %-*s %-*s %-*s %-*s %-*s %-*s %-*s",
+				   6, "-", 6, "-",
+				   6, "-", 6, "-",
+				   6, "-", 6, "-",
+				   6, "-", 6, "-");
+	return force_format_buf(buf, poff, "\n");
+}
+
+static void priority_format_force_rw(char *rstr, size_t sz, unsigned int dmc_mask,
+					 struct ddr_priority_force *force)
+{
+	unsigned int idx, count, i;
+	u32 f_prio;
+	u32 prio[MAX_DMC_NUM] = {0};
+	bool is_force[MAX_DMC_NUM];
+	int pos;
+	bool val_same;
+
+	if (!force) {
+		strscpy(rstr, "-", sz);
+		return;
+	}
+
+	count = 0;
+	val_same = true;
+	for (idx = 0; idx < aml_db->dmc_number; idx++) {
+		if (!(dmc_mask & BIT(idx)))
+			continue;
+		if (get_force_prio_by_dmc(idx, force, &f_prio)) {
+			prio[count] = f_prio;
+			is_force[count] = true;
+			if (count > 0 && prio[count] != prio[0])
+				val_same = false;
+		} else {
+			is_force[count] = false;
+			val_same = false;
+		}
+		count++;
+	}
+	if (!count) {
+		strscpy(rstr, "-", sz);
+		return;
+	}
+	if (count == 1)
+		val_same = false;
+
+	pos = 0;
+	if (count == 1) {
+		if (is_force[0])
+			pos += scnprintf(rstr + pos, sz - pos, "%x", prio[0]);
+		else
+			pos += scnprintf(rstr + pos, sz - pos, "-");
+	} else if (val_same) {
+		pos += scnprintf(rstr + pos, sz - pos, "%x", prio[0]);
+	} else {
+		for (i = 0; i < count && pos < sz - 1; i++) {
+			if (is_force[i])
+				pos += scnprintf(rstr + pos, sz - pos, "%s%x",
+						 i ? "/" : "", prio[i]);
+			else
+				pos += scnprintf(rstr + pos, sz - pos, "%s-",
+						 i ? "/" : "");
+		}
+	}
+
+	pos += scnprintf(rstr + pos, sz - pos, "[%u]", force->nbits);
+}
+
+static void priority_format_type_rw(struct ddr_priority_info *info,
+					struct ddr_priority_entry *entry,
+					const struct ddr_port_map *map,
+					struct ddr_priority_force *force,
+					char *tbuf, char *rstr, char *wstr, size_t sz)
+{
+	unsigned int dmc_mask;
+
+	if (get_force_en_mask(force, &dmc_mask)) {
+		strscpy(tbuf, "f", sz);
+		priority_format_force_rw(rstr, sz, dmc_mask, force);
+		if (map->type == DDR_PORT_ROW_VPU_R) {
+			strscpy(wstr, "-", sz);
+		} else {
+			strscpy(wstr, rstr, sz);
+			if (map->type == DDR_PORT_ROW_VPU_W)
+				strscpy(rstr, "-", sz);
+		}
+		return;
+	}
+
+	priority_type_format(tbuf, sz, entry->type);
+	if (entry->type & (PRIO_FIXED | PRIO_FROM_MDC | PRIO_FROM_NIC | PRIO_FROM_DEV)) {
+		if (map->type == DDR_PORT_ROW_VPU_R) {
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+						false, rstr, sz);
+			strscpy(wstr, "-", sz);
+		} else if (map->type == DDR_PORT_ROW_VPU_W) {
+			strscpy(rstr, "-", sz);
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+						true, wstr, sz);
+		} else {
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+						false, rstr, sz);
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+						true, wstr, sz);
+		}
+	} else {
+		strscpy(rstr, "-", sz);
+		strscpy(wstr, "-", sz);
+	}
+}
+
+static void priority_map_display_name(char *out, size_t osz, const struct ddr_port_map *map)
+{
+	const char *nm = ddr_port_map_name(map);
+
+	if (!nm)
+		nm = "-";
+
+	switch (map->type) {
+	case DDR_PORT_ROW_DESC_SUB:
+		scnprintf(out, osz, "  %s", nm);
+		break;
+	case DDR_PORT_ROW_VPU_R:
+		scnprintf(out, osz, "  R:%s", nm);
+		break;
+	case DDR_PORT_ROW_VPU_W:
+		scnprintf(out, osz, "  W:%s", nm);
+		break;
+	case DDR_PORT_ROW_MASTER:
+	default:
+		strscpy(out, nm, osz);
+		break;
+	}
+}
+
+static ssize_t ddr_priority_info_entry_show(char *buf)
+{
+	struct ddr_priority_info *info;
+	struct ddr_priority_entry *entry;
+	struct ddr_priority_force *force;
+	const struct ddr_port_map *map;
+	char name_buf[MAX_NAME + 16];
+	char tbuf[48], rstr[48], wstr[48], tmp[24];
+	ssize_t off = 0;
+	int i, err, map_count;
+	unsigned char port_id;
+	signed char sub_id;
+	enum ddr_port_map_type map_type;
+	bool show_mdc;
+
+	if (!buf || !aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+	if (!aml_db->port_desc)
+		return -EINVAL;
+	info = aml_db->priority->v1;
+	if (!info->entry || info->entry_num <= 0)
+		return -EINVAL;
+	show_mdc = info->mdc_num > 0;
+
+	if (!aml_db->port_map_table || !aml_db->port_map_count)
+		return scnprintf(buf, PAGE_SIZE,
+				"DDR priority: port map table not initialized\n");
+
+	map_count = aml_db->port_map_count;
+
+	err = force_format_buf(buf, &off, "%-*s %-*s %-*s %-*s %-*s", 6, "map_id",
+				   MAX_NAME, "name", 12, "type",
+				   12, "r[nbit]", 12, "w[nbit]");
+	if (err)
+		return err;
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		scnprintf(tmp, sizeof(tmp), "f%d", i);
+		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
+		if (err)
+			return err;
+		scnprintf(tmp, sizeof(tmp), "f%dM", i);
+		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
+		if (err)
+			return err;
+	}
+	if (show_mdc)
+		err = force_format_buf(buf, &off, " %-*s %-*s %-*s %-*s",
+					   6, "m_r", 6, "m_rM",
+					   6, "m_w", 6, "m_wM");
+	if (err)
+		return err;
+	err = force_format_buf(buf, &off,
+				   " %-*s %-*s %-*s %-*s %-*s %-*s %-*s %-*s\n",
+				   6, "n_r", 6, "n_rM",
+				   6, "n_w", 6, "n_wM",
+				   6, "d_r", 6, "d_rM",
+				   6, "d_w", 6, "d_wM");
+	if (err)
+		return err;
+
+	for (i = 0; i < map_count; i++) {
+		map = &aml_db->port_map_table[i];
+		port_id = map->port_id;
+		sub_id = map->sub_id;
+		map_type = map->type;
+
+		priority_map_display_name(name_buf, sizeof(name_buf), map);
+
+		entry = priority_find_entry(info, port_id);
+		if ((map_type == DDR_PORT_ROW_VPU_R || map_type == DDR_PORT_ROW_VPU_W) && !entry) {
+			err = priority_format_entry_head(buf, &off, i, name_buf, show_mdc);
+			if (err)
+				return err;
+			continue;
+		}
+		if (!entry) {
+			err = priority_format_entry_head(buf, &off, i, name_buf, show_mdc);
+			if (err)
+				return err;
+			continue;
+		}
+		if (entry->type & PRIO_NOT_SUPPORT) {
+			err = priority_format_entry_head(buf, &off, i, name_buf, show_mdc);
+			if (err)
+				return err;
+			continue;
+		}
+
+		force = find_force_by_map(info, map);
+		priority_format_type_rw(info, entry, map, force, tbuf, rstr, wstr, sizeof(tbuf));
+
+		err = force_format_buf(buf, &off, "%-*d %-*.*s %-*s %-*s %-*s", 6, i,
+					   MAX_NAME, MAX_NAME, name_buf,
+					   12, tbuf, 12, rstr, 12, wstr);
+		if (err)
+			return err;
+		err = force_format_priority(buf, &off, find_force_by_map(info, map), tmp);
+		if (err)
+			return err;
+		if (show_mdc) {
+			err = priority_format_mdc(buf, &off,
+						    priority_find_mdc(info, port_id, sub_id),
+						    map_type);
+			if (err)
+				return err;
+		}
+		err = priority_format_nic(buf, &off,
+					  priority_find_nic(info, port_id, sub_id),
+					  map_type);
+		if (err)
+			return err;
+		err = priority_format_dev(buf, &off,
+					  priority_find_dev(info, port_id, sub_id),
+					  map_type);
+		if (err)
+			return err;
+		err = force_format_buf(buf, &off, "\n");
+		if (err)
+			return err;
+	}
+	return off;
+}
+
+static int priority_entry_write_force(int dmc, unsigned char bus, unsigned int value,
+				      bool clr_force_mask)
+{
+	int i, ret;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	if (dmc < 0) {
+		for (i = 0; i < aml_db->dmc_number; i++) {
+			if (!aml_db->ddr_reg[i])
+				continue;
+			ret = set_force_priority(i, bus, (unsigned char)value, clr_force_mask);
+			if (ret < 0)
+				return ret;
+		}
+		return 0;
+	}
+
+	if (dmc >= aml_db->dmc_number)
+		return -EINVAL;
+	return set_force_priority((unsigned char)dmc, bus, (unsigned char)value,
+				  clr_force_mask);
+}
+
+static unsigned int prio_get_real_val(unsigned int val, unsigned char lsb,
+					      unsigned char nbits)
+{
+	if (!nbits || nbits >= 32 || lsb + nbits > 32U)
+		return 0;
+
+	return (val >> lsb) & GENMASK_U32(nbits - 1, 0);
+}
+
+static int priority_set_by_type(struct ddr_priority_entry *entry,
+				struct ddr_priority_nic *nic,
+				struct ddr_priority_dev *dev,
+				struct ddr_priority_mdc *mdc,
+				unsigned int val, int rw, char type,
+				enum ddr_port_map_type map_type, bool clr_force_mask)
+{
+	bool is_auto = false;
+	bool write_r = false;
+	bool write_w = false;
+	unsigned int prio;
+	int ret;
+
+	if (entry->type & PRIO_NOT_SUPPORT)
+		return -EINVAL;
+
+	if (type == 'a')
+		is_auto = true;
+
+	if (rw < 0) {
+		write_r = true;
+		write_w = true;
+	} else if (rw == 0) {
+		write_r = true;
+	} else {
+		write_w = true;
+	}
+
+	if (map_type == DDR_PORT_ROW_VPU_R) {
+		if (rw == 1)
+			return -EINVAL;
+		write_w = false;
+	} else if (map_type == DDR_PORT_ROW_VPU_W) {
+		if (rw == 0)
+			return -EINVAL;
+		write_r = false;
+	}
+
+	if (!is_auto) {
+		if (type == 'd' && !(entry->type & PRIO_FROM_DEV))
+			return -EINVAL;
+		if (type == 'n' && !(entry->type & PRIO_FROM_NIC))
+			return -EINVAL;
+		if (type == 'm' && !(entry->type & PRIO_FROM_MDC))
+			return -EINVAL;
+	}
+
+	if (is_auto || type == 'd') {
+		if (entry->type & PRIO_FROM_DEV) {
+			if (!dev || (dev->type & PRIO_FIXED))
+				return -EINVAL;
+			if (write_r && prio_reg_set_en(dev->type, 0) && dev->r_nbits) {
+				prio = prio_get_real_val(val, entry->dev_lsb_r, dev->r_nbits);
+				ret = set_ddr_dev_priority(dev, prio, 0, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
+			if (write_w && prio_reg_set_en(dev->type, 1) && dev->w_nbits) {
+				prio = prio_get_real_val(val, entry->dev_lsb_w, dev->w_nbits);
+				ret = set_ddr_dev_priority(dev, prio, 1, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
+		}
+		if (!is_auto && type == 'd')
+			return 0;
+	}
+	if (is_auto || type == 'n') {
+		if (entry->type & PRIO_FROM_NIC) {
+			if (!nic || (nic->type & PRIO_FIXED))
+				return -EINVAL;
+			if (write_r && prio_reg_set_en(nic->type, 0) && nic->r_nbits) {
+				prio = prio_get_real_val(val, entry->nic_lsb_r, nic->r_nbits);
+				ret = set_nic_priority(nic, prio, 0);
+				if (ret < 0)
+					return ret;
+			}
+			if (write_w && prio_reg_set_en(nic->type, 1) && nic->w_nbits) {
+				prio = prio_get_real_val(val, entry->nic_lsb_w, nic->w_nbits);
+				ret = set_nic_priority(nic, prio, 1);
+				if (ret < 0)
+					return ret;
+			}
+		}
+		if (!is_auto && type == 'n')
+			return 0;
+	}
+	if (is_auto || type == 'm') {
+		if (entry->type & PRIO_FROM_MDC) {
+			if (!mdc || (mdc->type & PRIO_FIXED))
+				return -EINVAL;
+			if (write_r && prio_reg_set_en(mdc->type, 0) && mdc->r_nbits) {
+				prio = prio_get_real_val(val, entry->mdc_lsb_r, mdc->r_nbits);
+				ret = set_mdc_priority(mdc, prio, 0, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
+			if (write_w && prio_reg_set_en(mdc->type, 1) && mdc->w_nbits) {
+				prio = prio_get_real_val(val, entry->mdc_lsb_w, mdc->w_nbits);
+				ret = set_mdc_priority(mdc, prio, 1, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
+		}
+		if (!is_auto && type == 'm')
+			return 0;
+	}
+	return 0;
+}
+
+static int priority_entry_set(unsigned int map_id, unsigned int pack_val, int rw,
+			      int dmc, char type, bool clr_force_mask)
+{
+	struct ddr_priority_info *info;
+	const struct ddr_port_map *map;
+	struct ddr_priority_entry *entry;
+	struct ddr_priority_force *force;
+	struct ddr_priority_nic *nic;
+	struct ddr_priority_dev *dev;
+	struct ddr_priority_mdc *mdc;
+	unsigned int dmc_mask;
+	bool is_auto = false;
+	bool use_force = false;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1 || !aml_db->port_map_table)
+		return -EINVAL;
+
+	info = aml_db->priority->v1;
+	if (!info->entry)
+		return -EINVAL;
+
+	if (map_id >= aml_db->port_map_count)
+		return -EINVAL;
+
+	map = &aml_db->port_map_table[map_id];
+	entry = priority_find_entry(info, map->port_id);
+	if (!entry || (entry->type & PRIO_NOT_SUPPORT))
+		return -EINVAL;
+
+	force = find_force_by_map(info, map);
+	nic = priority_find_nic(info, map->port_id, map->sub_id);
+	dev = priority_find_dev(info, map->port_id, map->sub_id);
+	mdc = priority_find_mdc(info, map->port_id, map->sub_id);
+
+	if (type == 'f')
+		use_force = true;
+
+	if (type == 'a')
+		is_auto = true;
+
+	if (is_auto && get_force_en_mask(force, &dmc_mask))
+		use_force = true;
+
+	if (use_force) {
+		if (!force)
+			return -EINVAL;
+
+		return priority_entry_write_force(dmc, force->bus, pack_val, clr_force_mask);
+	}
+
+	if (type == 'm' || type == 'n' || type == 'd' || is_auto)
+		return priority_set_by_type(entry, nic, dev, mdc, pack_val, rw, type, map->type,
+					    clr_force_mask);
+
+	return -EINVAL;
+}
+
+ssize_t ddr_priority_info_show(char *buf)
+{
+	ssize_t ret;
+	ssize_t count;
+	ssize_t total;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	count = scnprintf(buf, PRIO_V1_BUF_SZ,
+		      "usage: echo <id> <val> [r|w] [dmc] [type] > priority\n"
+		      "  <val> -1: write priority 0 and clear force_mask bits\n"
+		      "  <r|w> read or write, ignore set read and write\n"
+		      "  <dmc> dmc number, ignore set all dmc\n"
+		      "  <type> f=force m=mdc n=nic d=dev, ignore set auto\n"
+		      "  example: echo 0 f [r] [1] [f] > priority\n\n");
+	if (count < 0)
+		return -EINVAL;
+
+	if (count >= PRIO_V1_BUF_SZ)
+		return -EINVAL;
+
+	if (!aml_db->priority->v1->entry)
+		ret = ddr_priority_info_force_show(buf + count);
+	else
+		ret = ddr_priority_info_entry_show(buf + count);
+
+	if (ret < 0)
+		return ret;
+
+	if (check_add_overflow(count, ret, &total))
+		return -EOVERFLOW;
+	return total;
+}
+
+int ddr_priority_info_write(unsigned int id, int value, int rw, int dmc, char type)
+{
+	bool clr_force_mask;
+	unsigned int eff;
+
+	if (value < -1)
+		return -EINVAL;
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	clr_force_mask = (value == -1);
+	eff = clr_force_mask ? 0U : (unsigned int)value;
+
+	if (!aml_db->priority->v1->entry)
+		return priority_entry_write_force(dmc, id, eff, clr_force_mask);
+
+	return priority_entry_set(id, eff, rw, dmc, type, clr_force_mask);
+}
+
+static char priority_info_sysfs_type(const char *s)
+{
+	if (!s || s[1] != '\0')
+		return 0;
+
+	switch (s[0]) {
+	case 'f':
+	case 'F':
+		return 'f';
+	case 'm':
+	case 'M':
+		return 'm';
+	case 'n':
+	case 'N':
+		return 'n';
+	case 'd':
+	case 'D':
+		return 'd';
+	default:
+		return 0;
+	}
+}
+
+static int priority_info_sysfs_rw(const char *s)
+{
+	if (!s || s[1] != '\0')
+		return -EINVAL;
+
+	if (s[0] == 'r' || s[0] == 'R')
+		return 0;
+	if (s[0] == 'w' || s[0] == 'W')
+		return 1;
+
+	return -EINVAL;
+}
+
+int priority_info_sysfs_parse(const char *buf, size_t count, unsigned int *id,
+				     int *val, int *rw, int *dmc, char *type)
+{
+	char line[128];
+	char *argv[6];
+	char *p;
+	int argc, i;
+	int idx;
+	unsigned int u;
+	char t;
+	int is_rw;
+
+	if (count >= sizeof(line))
+		return -EINVAL;
+	memcpy(line, buf, count);
+	line[count] = '\0';
+
+	p = strim(line);
+	argc = 0;
+	for (i = 0; i < 6; i++) {
+		char *tok = strsep(&p, " \t\n\r");
+
+		if (!tok)
+			break;
+		if (*tok)
+			argv[argc++] = tok;
+	}
+	if (argc < 2)
+		return -EINVAL;
+	if (kstrtouint(argv[0], 10, id))
+		return -EINVAL;
+	if (kstrtoint(argv[1], 0, val))
+		return -EINVAL;
+	if (*val < -1)
+		return -EINVAL;
+
+	*rw = -1;
+	*dmc = -1;
+	*type = 'a';
+
+	if (argc == 2)
+		return 0;
+
+	idx = 2;
+	is_rw = priority_info_sysfs_rw(argv[idx]);
+	if (is_rw >= 0) {
+		*rw = is_rw;
+		idx++;
+		if (idx == argc)
+			return 0;
+		if (!kstrtouint(argv[idx], 0, &u)) {
+			*dmc = u;
+			idx++;
+			if (idx == argc)
+				return 0;
+			t = priority_info_sysfs_type(argv[idx]);
+			if (!t)
+				return -EINVAL;
+			*type = t;
+			idx++;
+		} else {
+			t = priority_info_sysfs_type(argv[idx]);
+			if (!t)
+				return -EINVAL;
+			*type = t;
+			idx++;
+		}
+	} else if (!kstrtouint(argv[idx], 0, &u)) {
+		*dmc = (int)u;
+		idx++;
+		if (idx == argc)
+			return 0;
+		t = priority_info_sysfs_type(argv[idx]);
+		if (!t)
+			return -EINVAL;
+		*type = t;
+		idx++;
+	} else {
+		t = priority_info_sysfs_type(argv[idx]);
+		if (!t)
+			return -EINVAL;
+		*type = t;
+		idx++;
+	}
+
+	if (idx != argc)
+		return -EINVAL;
 	return 0;
 }
 
@@ -3606,14 +5340,30 @@ static int get_vpu_super_urgent_info(unsigned char axi, unsigned char rw, char *
 
 static char *get_vpu_name(unsigned char axi, unsigned char rw, unsigned char sid)
 {
-	char buf[5];
+	struct vpu_sub_desc *desc;
+	struct vpu_sub **vpu_subs;
+	struct vpu_sub *sub;
+	char rw_char = rw ? 'w' : 'r';
 	char *name;
+	unsigned char port_id;
 
-	sprintf(buf, "VPU%d", axi);
-	buf[4] = 0;
-	name = vpu_to_sub_port(buf, rw ? 'w' : 'r', sid);
+	desc = aml_db ? aml_db->vpu_sub : NULL;
+	if (!desc || axi >= VPU_SUB_CNT)
+		return NULL;
+
+	vpu_subs = (struct vpu_sub **)&desc->vpu0_sub;
+	sub = vpu_subs[axi];
+	if (!sub)
+		return NULL;
+
+	if (rw)
+		port_id = sub->sub_w.port_id;
+	else
+		port_id = sub->sub_r.port_id;
+
+	name = vpu_to_sub_port(port_id, sid, rw_char);
 	if (!name)
-		name = vpu_to_sub_port(buf, rw ? 'w' : 'r', sid & 0x0f);
+		name = vpu_to_sub_port(port_id, sid & 0x0f, rw_char);
 	return name;
 }
 
@@ -4011,9 +5761,10 @@ static int bus_dev_priority_display(int idx, char *buf)
 }
 
 #define SPLIT_LINE "------------------------------------------------------------------------------\n"
-static int priority_v2_display(char *buf, loff_t pos, size_t count)
+static ssize_t priority_v2_display(char *buf, loff_t pos, size_t count)
 {
-	int i, j, s = 0;
+	int i, j;
+	ssize_t s = 0;
 	struct ddr_priority_v2 *v2;
 	struct ddr_port_desc *port_desc;
 	unsigned short real_ports;
@@ -4060,52 +5811,55 @@ static int priority_v2_display(char *buf, loff_t pos, size_t count)
 	return s;
 }
 
-int priority_display(char *buf, loff_t pos, size_t count)
+static DEFINE_MUTEX(prio_v1_buf_mutex);
+
+ssize_t priority_display(char *buf, loff_t pos, size_t count)
 {
-	int i, s = 0, ret;
-	int priority_w, priority_r;
-	struct ddr_priority_v1 info;
+	ssize_t info_len;
+	loff_t ppos = pos;
+
+	if (!aml_db || !aml_db->priority)
+		return -EINVAL;
 
 	if (aml_db->priority->ver == 2)
 		return priority_v2_display(buf, pos, count);
 
-	if (!pos) {
-		s += sprintf(ddr_priority.v1_buf + s, "\nusage Example:\n"
-				"\techo 2 0xf (r) > priority\n"
-				"\tparm0: port id\n"
-				"\tparm1: priority value\n"
-				"\tparm2: 'r' or 'w' priority (default set all)\n");
+	mutex_lock(&prio_v1_buf_mutex);
+	if (!ppos) {
+		ddr_priority.v1_buf = NULL;
+		ddr_priority.v1_buf_size = 0;
 
-		s += sprintf(ddr_priority.v1_buf + s, "\tid\t name \t\tw_current \tw_max \t\tr_current \tr_max\n");
-		for (i = 0; i < aml_db->priority->v1_num; i++) {
-			info =  aml_db->priority->v1[i];
-			ret = ddr_priority_rw(info.port_id, &priority_r, &priority_w, DMC_READ);
-
-			s += sprintf(ddr_priority.v1_buf + s, "%10d\t %*s ",
-					info.port_id,
-					-12, priority_find_port_name(info.port_id));
-			if (priority_w < 0) {
-				s += sprintf(ddr_priority.v1_buf + s, "\t%*s \t%*s ",
-						-8, "N/A", -8, "N/A");
-			} else {
-				s += sprintf(ddr_priority.v1_buf + s, "\t%-8x \t%-8x",
-						priority_w, info.w_width & 0xf);
-			}
-
-			if (priority_r < 0) {
-				s += sprintf(ddr_priority.v1_buf + s, "\t%*s \t%*s\n",
-						-8, "N/A", -8, "N/A");
-			} else {
-				s += sprintf(ddr_priority.v1_buf + s, "\t%-8x \t%-8x\n",
-						priority_r, info.r_width  & 0xf);
-			}
+		ddr_priority.v1_buf = kzalloc(PRIO_V1_BUF_SZ, GFP_KERNEL);
+		if (!ddr_priority.v1_buf) {
+			mutex_unlock(&prio_v1_buf_mutex);
+			return -ENOMEM;
 		}
-		ddr_priority.v1_buf_size = s;
-		s = memory_read_from_buffer(buf, count, &pos, ddr_priority.v1_buf, ddr_priority.v1_buf_size);
-	} else {
-		s = memory_read_from_buffer(buf, count, &pos, ddr_priority.v1_buf, ddr_priority.v1_buf_size);
+		info_len = ddr_priority_info_show(ddr_priority.v1_buf);
+		if (info_len < 0) {
+			kfree(ddr_priority.v1_buf);
+			ddr_priority.v1_buf = NULL;
+			mutex_unlock(&prio_v1_buf_mutex);
+			return info_len;
+		}
+		ddr_priority.v1_buf_size = info_len;
+	} else if (!ddr_priority.v1_buf) {
+		if (ddr_priority.v1_buf_size > 0 &&
+		    pos >= (loff_t)ddr_priority.v1_buf_size) {
+			mutex_unlock(&prio_v1_buf_mutex);
+			return 0;
+		}
+		mutex_unlock(&prio_v1_buf_mutex);
+		return -EIO;
 	}
-	return s;
+
+	info_len = memory_read_from_buffer(buf, count, &ppos, ddr_priority.v1_buf,
+					   ddr_priority.v1_buf_size);
+	if (info_len > 0 && ppos >= ddr_priority.v1_buf_size) {
+		kfree(ddr_priority.v1_buf);
+		ddr_priority.v1_buf = NULL;
+	}
+	mutex_unlock(&prio_v1_buf_mutex);
+	return info_len;
 }
 
 int get_dmc_priority(unsigned int bus_id, char rw)

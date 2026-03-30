@@ -95,36 +95,36 @@ static unsigned int ots_levels[] __initdata = {
 	0x30263026, 0x34293429, 0x382C382C, 0x3C2F3C2F
 };
 
-static void t6w_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void t6w_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int val;
 	unsigned int off = 0, off1 = 0;
-	int subport = -1;
+	int port, sub;
 
 	off = DMC_MON0_CTRL + channel * 16;
 	off1 = DMC_MON0_CTRL1 + channel * 4;
 
 	/* clear all port mask */
-	if (port < 0) {
+	if (map_id < 0) {
 		writel(0, db->ddr_reg[0] + off);	/* DMC_MON*_CTRL */
 		writel(0, db->ddr_reg[0] + off1);	/* DMC_MON*_CTRL1 */
 		return;
 	}
 
-	if (port >= PORT_MAJOR)
-		subport = port - PORT_MAJOR;
+	port = db->port_map_table[map_id].port_id;
+	sub = db->port_map_table[map_id].sub_id;
 
-	if (subport < 0) {
+	if (sub < 0) {
 		val = readl(db->ddr_reg[0] + off);
 		val |=  (1 << port);
 		writel(val, db->ddr_reg[0] + off);	/* DMC_MON*_CTRL */
 		val = 0xffffffff;
 		writel(val, db->ddr_reg[0] + off1);	/* DMC_MON*_CTRL1 */
 	} else {
-		val = (0x1 << 10);			/* select device */
+		val = (0x1 << port);			/* select major port */
 		writel(val, db->ddr_reg[0] + off);
 		val = readl(db->ddr_reg[0] + off1);
-		val |= (1 << subport);
+		val |= (1 << sub);
 		writel(val, db->ddr_reg[0] + off1);
 	}
 }
@@ -170,7 +170,7 @@ static void t6w_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	t6w_dmc_bandwidth_enable(db);
 
 	for (i = 0; i < db->channels; i++) {
-		if (!db->port[i])
+		if (!ddr_get_ch_set_num(i))
 			t6w_dmc_port_config(db, i, -1);
 		t6w_dmc_range_config(db, i, 0, 0xffffffff);
 		db->range[i].start = 0;

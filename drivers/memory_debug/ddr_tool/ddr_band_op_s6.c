@@ -39,13 +39,13 @@ static unsigned int axi_chan_sts_offset[] __initdata = {
 	(0xd4 << 2), (0xd5 << 2), (0xd6 << 2), (0xd7 << 2)
 };
 
-static void s6_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void s6_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int i, val;
 
 	/* s6 can not se port, default be set */
 	for (i = 0; i < db->channels; i++) {
-		db->port[i] = 1 << i;
+		ddr_set_map_select(i, i);
 		db->range[i].start = 0;
 		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
 	}

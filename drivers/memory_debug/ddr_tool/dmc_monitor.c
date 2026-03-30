@@ -545,16 +545,13 @@ static int dev_name_to_id(const char *dev_name)
 	int i, len;
 
 	for (i = 0; i < dmc_mon->port_num; i++) {
-		if (dmc_mon->port[i].port_id >= PORT_MAJOR &&
-		    !dmc_dev_is_byte(dmc_mon))
-			return -1;
+		if (dmc_mon->port[i].sub_id != -1)
+			continue;
 		len = strlen(dmc_mon->port[i].port_name);
 		if (!strncmp(dmc_mon->port[i].port_name, dev_name, len))
-			break;
+			return dmc_mon->port[i].port_id;
 	}
-	if (i >= dmc_mon->port_num)
-		return -1;
-	return dmc_mon->port[i].port_id;
+	return -1;
 }
 
 char *to_ports(int id)
@@ -563,7 +560,7 @@ char *to_ports(int id)
 	int i;
 
 	for (i = 0; i < dmc_mon->port_num; i++) {
-		if (dmc_mon->port[i].port_id == id) {
+		if (dmc_mon->port[i].port_id == id && dmc_mon->port[i].sub_id == -1) {
 			name =  dmc_mon->port[i].port_name;
 			return name;
 		}
@@ -574,33 +571,18 @@ char *to_ports(int id)
 char *to_sub_ports_name(int mid, int sid, char rw)
 {
 	char *name = NULL;
-	int i, s_port = 0;
+	int i;
 	char *port_name = to_ports(mid);
 
 	if (!port_name)
 		return NULL;
 
 	if (strstr(port_name, "VPU")) {
-		name = vpu_to_sub_port(port_name, rw, sid);
-	} else if (strstr(port_name, "DEVICE")) {
+		name = vpu_to_sub_port(mid, sid, rw);
+	} else {
 		sid &= 0x1f;
-		if (strstr(port_name, "DEVICE1"))
-			s_port = sid + PORT_MAJOR + 8;
-		else
-			s_port = sid + PORT_MAJOR;
-
 		for (i = 0; i < dmc_mon->port_num; i++) {
-			if (dmc_mon->port[i].port_id == s_port) {
-				name = dmc_mon->port[i].port_name;
-				break;
-			}
-		}
-	} else if (strstr(to_ports(mid), "VGE")) {
-		sid &= 0x1f;
-		s_port = sid + PORT_MAJOR * 3;
-
-		for (i = 0; i < dmc_mon->port_num; i++) {
-			if (dmc_mon->port[i].port_id == s_port) {
+			if (dmc_mon->port[i].port_id == mid && dmc_mon->port[i].sub_id == sid) {
 				name = dmc_mon->port[i].port_name;
 				break;
 			}
@@ -634,9 +616,9 @@ unsigned int get_all_dev_mask(void)
 	if (dmc_dev_is_byte(dmc_mon))	/* not supported */
 		return 0;
 
-	for (i = 0; i < PORT_MAJOR; i++) {
-		if (dmc_mon->port[i].port_id >= PORT_MAJOR)
-			break;
+	for (i = 0; i < dmc_mon->port_num; i++) {
+		if (dmc_mon->port[i].sub_id != -1)
+			continue;
 		ret |= (1 << dmc_mon->port[i].port_id);
 	}
 	return ret;
@@ -647,9 +629,9 @@ static unsigned int get_other_dev_mask(void)
 	unsigned int ret = 0;
 	int i;
 
-	for (i = 0; i < PORT_MAJOR; i++) {
-		if (dmc_mon->port[i].port_id >= PORT_MAJOR)
-			break;
+	for (i = 0; i < dmc_mon->port_num; i++) {
+		if (dmc_mon->port[i].sub_id != -1)
+			continue;
 
 		/*
 		 * we don't want id with arm mali and device
@@ -1354,7 +1336,9 @@ static ssize_t device_store(const struct class *class,
 		return count;
 	}
 
-	if (dmc_dev_is_byte(dmc_mon)) {
+	if (!strncmp(buf, "all", 3) && !dmc_dev_is_byte(dmc_mon)) {
+		dmc_mon->device = get_all_dev_mask();
+	} else {
 		if (buf[0] == '!') {
 			i = dev_name_to_id(buf + 1);
 			is_add = 0;
@@ -1362,29 +1346,20 @@ static ssize_t device_store(const struct class *class,
 			i = dev_name_to_id(buf);
 			is_add = 1;
 		}
+
 		if (i < 0) {
 			pr_info("bad device:%s\n", buf);
 			return -EINVAL;
 		}
+
+		if (!dmc_dev_is_byte(dmc_mon)) {
+			if (i >= 32)
+				return -EINVAL;
+			i = 1UL << i;
+		}
+
 		if (dmc_regulation_dev(i, is_add))
 			return -EINVAL;
-	} else {
-		if (!strncmp(buf, "all", 3)) {
-			dmc_mon->device = get_all_dev_mask();
-		} else {
-			if (buf[0] == '!') {
-				i = dev_name_to_id(buf + 1);
-				is_add = 0;
-			} else {
-				i = dev_name_to_id(buf);
-				is_add = 1;
-			}
-			if (i < 0) {
-				pr_info("bad device:%s\n", buf);
-				return -EINVAL;
-			}
-			dmc_regulation_dev(1UL << i, is_add);
-		}
 	}
 
 	dmc_set_monitor(dmc_mon->addr_start, dmc_mon->addr_end,
@@ -1405,9 +1380,8 @@ static ssize_t device_show(const struct class *class,
 
 	s += sprintf(buf + s, "supported device:\n");
 	for (i = 0; i < dmc_mon->port_num; i++) {
-		if (dmc_mon->port[i].port_id >= PORT_MAJOR &&
-		   !dmc_dev_is_byte(dmc_mon))
-			break;
+		if (dmc_mon->port[i].sub_id != -1)
+			continue;
 		s += sprintf(buf + s, "%2d : %s\n",
 			dmc_mon->port[i].port_id,
 			dmc_mon->port[i].port_name);
@@ -1934,7 +1908,7 @@ static int __init dmc_monitor_probe(struct platform_device *pdev)
 	dmc_mon->port = desc;
 	get_dmc_ops(dmc_mon->chip, dmc_mon);
 
-	dmc_mon->vpu_port = vpu_sub_init(tmp);
+	vpu_sub_desc_init(tmp, &dmc_mon->vpu_sub);
 
 	node = pdev->dev.of_node;
 	r = of_property_read_u32(node, "reg_base", &tmp);
