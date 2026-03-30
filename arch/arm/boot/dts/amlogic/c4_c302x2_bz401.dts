@@ -319,7 +319,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		//gpio = <&gpio GPIOB_4 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio GPIOB_4 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <7000>;
 		enable-active-high;
 		regulator-boot-on;
@@ -445,13 +445,12 @@
 			"sd_1bit_pins";
 	bus-width = <4>;
 	cap-sd-highspeed;
-	//sd-uhs-sdr104;
+	sd-uhs-sdr104;
 	disable-wp;
-	//mmc-run-pxp;
 	max-frequency = <200000000>;
 	cd-gpios = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
-	//vmmc-supply = <&vdd33_sd_reg>;
-	//vqmmc-supply = <&vddio_c_p>;
+	vmmc-supply = <&vdd33_sd_reg>;
+	vqmmc-supply = <&vddio_c_p>;
 };
 
 &sd_emmc_a {

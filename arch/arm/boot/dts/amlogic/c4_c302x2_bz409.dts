@@ -449,7 +449,6 @@
 	cap-sd-highspeed;
 	//sd-uhs-sdr104;
 	disable-wp;
-	//mmc-run-pxp;
 	max-frequency = <200000000>;
 	cd-gpios = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
 	//vmmc-supply = <&vdd33_sd_reg>;
