@@ -11,23 +11,28 @@
 #include "dptx_hdcp_hw.h"
 #include "dpcd_reg.h"
 
+#define DPTX_HDCP1X_WQ_NAME "dptx_hdcp1x_workqueue"
 #define HDCP1X_MAX_DEV_CNT 127
+#define BINFO_MAX_DEVS_EXCEEDED BIT(7)
+#define BINFO_MAX_CASCADE_EXCEEDED BIT(11)
+
 /* DP HDP1.1 Spec chapter2.2.1
  * r0' must be available for the HDCP Transmitter to read
  * within 100 milliseconds from the time that the HDCP
  * Transmitter finishes writing Aksv to the HDCP Receiver.
  * The HDCP Transmitter must not read the r0' value
- * sooner than 100ms after write AKSV
+ * sooner than 100ms after write AKSV;
+ * add extra 10ms for error tolerance
  */
-#define DP1X_R0_TIMEOUT_MS 100
+#define DP1X_R0_TIMEOUT_MS (100 + 10)
 /* DP HDP1.1 Spec chapter2.2.2
  * The HDCP Transmitter, having determined that the REPEATER
  * bit read earlier in the protocol is set, sets a five-second
  * watchdog timer. It may either poll the HDCP Repeater's READY
  * status bit or alternatively check the READY bit when a CP_IRQ
- * interrupt is received.
+ * interrupt is received. add extra 10ms for error tolerance
  */
-#define DP1X_RPT_RDY_MS 5000
+#define DP1X_RPT_RDY_MS (5000 + 10)
 
 /* Set specified HDCP mode. */
 static void hdcp1_tx_hw_mode_set(struct dptx_hw_common *hw_comm, bool enable)
@@ -45,7 +50,7 @@ static void hdcp1_tx_hw_state_enable(struct dptx_hw_common *hw_comm, bool enable
  * Initialize HDCP transmit authentication state machine.
  * Returns:  None
  */
-static void hdcp1_tx_state_init(struct dptx_hw_common *hw_comm)
+static void hdcp1_tx_state_init(struct dptx_hw_common *hw_comm, bool en)
 {
 	if (!hw_comm)
 		return;
@@ -54,17 +59,17 @@ static void hdcp1_tx_state_init(struct dptx_hw_common *hw_comm)
 	/* set mode to HDCP 1.x */
 	hdcp1_tx_hw_mode_set(hw_comm, true);
 	/* enable hdcp */
-	hdcp1_tx_hw_state_enable(hw_comm, true);
+	hdcp1_tx_hw_state_enable(hw_comm, en);
 	/* bit2 lvp enc */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
-		DPTX20_HDCP_CIPHER_CONTROL, (0x1 << 2) | (0x1 << 0));
+		DPTX20_HDCP_CIPHER_CONTROL, (en << 2) | (en << 0));
 }
 
 /* HDCP stack initialization function */
-static void hdcp1_tx_stack_init(struct dptx_hw_common *hw_comm)
+static void hdcp1_tx_stack_init(struct dptx_hw_common *hw_comm, bool en)
 {
 	/* Initialize HDCP 1.x transmitter (source) state machine */
-	hdcp1_tx_state_init(hw_comm);
+	hdcp1_tx_state_init(hw_comm, en);
 }
 
 /* This function reads the HDCP 1.x bcaps register.
@@ -280,12 +285,16 @@ static int hdcp1_tx_dpcd_wr_ainfo(struct dptx_hw_common *hw_comm)
  * if the DPCD version is 1.2 or greater and the
  * Bcaps.REPEATER bit is set
  */
-static void hdcp1_tx_a1_wr_ainfo_enter(struct dptx_hw_common *hw_comm)
+static int hdcp1_tx_a1_wr_ainfo_enter(struct dptx_hw_common *hw_comm)
 {
+	int ret = 0;
+
 	/* set REAUTHENTICATION_ENABLE_IRQ_HPD */
 	hw_comm->dptx_hdcp1x_inst->ainfo = 1;
 	/* write ainfo DPCD register */
-	hdcp1_tx_dpcd_wr_ainfo(hw_comm);
+	ret = hdcp1_tx_dpcd_wr_ainfo(hw_comm);
+
+	return ret;
 }
 
 /* Function: hdcp1_tx_dpcd_auth_init
@@ -393,6 +402,25 @@ static int hdcp1_tx_dpcd_rd_binfo(struct dptx_hw_common *hw_comm)
 	return ret;
 }
 
+/* Function: hdcp1_hw_tx_encrypt_enable
+ * Enable or disable the stream cipher. DPTx core will control
+ * encryption process automatically, based on this setting.
+ *
+ * Parameters:
+ * enable - true=enable / false=disable
+ *
+ * Returns: None
+ */
+static void hdcp1_tx_hw_encrypt_enable(struct dptx_hw_common *hw_comm, bool enable)
+{
+	if (enable) {
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HDCP_STREAM_CIPHER_ENABLE, 1);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_FORCE_SCRAMBLER_RESET, 1);
+	} else {
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HDCP_STREAM_CIPHER_ENABLE, 0);
+	}
+}
+
 /* Function: hdcp1_tx_dpcd_rd_ksv_fifo
  *
  * This function reads the HDCP 1.x KSV FIFO. The entire FIFO is read.
@@ -490,7 +518,7 @@ static int hdcp1_tx_get_rptr_v(struct dptx_hw_common *hw_comm)
 	if (v_ready == 0)
 		return -1;
 
-	DPTX_DEBUG_HDCP("DPTX HDCP14 RPTR V ready Now\n");
+	DPTX_DEBUG_HDCP("DPTX HDCP1X RPTR V ready Now\n");
 	for (idx = 0; idx < 5; idx++) {
 		blk_v = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HDCP_RPT_VH0 + idx * 4);
 		for (vdx = 0; vdx < 4; vdx++)
@@ -518,86 +546,115 @@ static bool compare_v_and_v_prime(struct dptx_hw_common *hw_comm)
 /* process for hdcp1x repeater */
 static int dptx_hdcp1x_rpt_proc(struct dptx_hw_common *hw_comm)
 {
-	int ret = 0;
+	int ret = -1;
+	u8 i = 0;
+	/* DP HDCP1.1 spec chapter 2.2.2:
+	 * If V is not equal to V', the HDCP Transmitter must re-read
+	 * the KSV list, Binfo and V two additional times (for a total
+	 * of three consecutive V' checks) to account for the possibility
+	 * of link errors. The authentication protocol is aborted on
+	 * three consecutive mismatches between V and V' and
+	 * authentication can be reattempted with the transmission of
+	 * new An and the Aksv.
+	 */
+	u8 v_retry_cnt = 3;
+	bool v_match = false;
+
+	if (!hw_comm || !hw_comm->dptx_hdcp1x_inst) {
+		DPTX_ERROR("null hw_comm or dptx_hdcp1x_inst\n");
+		return -1;
+	}
 
 	DPTX_DEBUG_HDCP("DPTX HDCP1.x read ksvlist after R0' Prime\n");
-	ret = hdcp1_tx_dpcd_rd_binfo(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
-		return ret;
-	}
-	ret = hdcp1_tx_dpcd_rd_ksv_fifo(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
-		return ret;
-	}
-	hdcp1_tx_ksv_lists_process(hw_comm);
-	ret = hdcp1_tx_dpcd_rd_v_prime(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
-		return ret;
-	}
-	ret = hdcp1_tx_get_rptr_v(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
-		return ret;
-	}
-	if (compare_v_and_v_prime(hw_comm)) {
-		ret = 0;
-		DPTX_DEBUG_HDCP("DPTX HDCP14 Check RPTR V Prime Pass\n");
-	} else {
-		ret = -1;
-		DPTX_ERROR("DPTX HDCP14 Check RPTR V Prime FAIL\n");
+
+	for (i = 0; i < v_retry_cnt; i++) {
+		ret = hdcp1_tx_dpcd_rd_binfo(hw_comm);
+		if (ret < 0)
+			continue;
+
+		ret = hdcp1_tx_dpcd_rd_ksv_fifo(hw_comm);
+		if (ret < 0)
+			continue;
+
+		hdcp1_tx_ksv_lists_process(hw_comm);
+		ret = hdcp1_tx_dpcd_rd_v_prime(hw_comm);
+		if (ret < 0)
+			continue;
+
+		ret = hdcp1_tx_get_rptr_v(hw_comm);
+		if (ret < 0)
+			continue;
+
+		if (compare_v_and_v_prime(hw_comm)) {
+			v_match = true;
+			DPTX_DEBUG_HDCP("DPTX HDCP1X Check RPTR V Prime Pass\n");
+			break;
+		}
+		v_match = false;
+		DPTX_ERROR("DPTX HDCP1X Check RPTR V Prime FAIL\n");
+		continue;
 	}
 
+	if (!v_match) {
+		hdcp1_tx_hw_encrypt_enable(hw_comm, false);
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+		ret = -1;
+	} else if (hw_comm->dptx_hdcp1x_inst->binfo & BINFO_MAX_DEVS_EXCEEDED ||
+		hw_comm->dptx_hdcp1x_inst->binfo & BINFO_MAX_CASCADE_EXCEEDED) {
+		/* DP hdcpv1.0 1B-06/1B-07:
+		 * auth fail, disable hdcp encryption and abort auth
+		 */
+		hdcp1_tx_hw_encrypt_enable(hw_comm, false);
+		ret = -1;
+	} else {
+		ret = 0;
+	}
 	return ret;
 }
 
-/* Function: hdcp1_hw_tx_encrypt_enable
- * Enable or disable the stream cipher. DPTx core will control
- * encryption process automatically, based on this setting.
- *
- * Parameters:
- * enable - true=enable / false=disable
- *
- * Returns: None
- */
-static void hdcp1_tx_hw_encrypt_enable(struct dptx_hw_common *hw_comm, bool enable)
-{
-	if (enable) {
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HDCP_STREAM_CIPHER_ENABLE, 1);
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_FORCE_SCRAMBLER_RESET, 1);
-	} else {
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_HDCP_STREAM_CIPHER_ENABLE, 0);
-	}
-}
-
-void dptx_hdcp1x_proc(struct dptx_hw_common *hw_comm)
+static void dptx_hdcp1x_proc(struct dptx_hw_common *hw_comm)
 {
 	int ret;
-	u8 hdcp1_tx_repeater_auth_done = 0;
 	unsigned long intenal_r0_timeout = 0;
 	bool internal_r0_ready = false;
-	unsigned long stat = 0;
+	/* TODO: assume downstream hdcp support dpcd revision 1.2 or highr */
+	bool dpcd_rev_12 = true;
 
 	if (!hw_comm || !hw_comm->dptx_hdcp1x_inst)
 		return;
 
-	hdcp1_tx_stack_init(hw_comm);
-	ret = hdcp1_tx_dpcd_rd_bcaps(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
+	if (!hw_comm->dptx_hdcp1x_inst->hdcp1x_en) {
+		DPTX_ERROR("DPTX HDCP1x not enabled!\n");
 		return;
 	}
+
+	ret = hdcp1_tx_dpcd_rd_bcaps(hw_comm);
+	if (ret < 0) {
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+		return;
+	} else if ((hw_comm->dptx_hdcp1x_inst->bcaps & DP_BCAPS_HDCP_CAPABLE) !=
+		DP_BCAPS_HDCP_CAPABLE) {
+		DPTX_ERROR("DPRX HDCP1x not capable!\n");
+		return;
+	}
+	hdcp1_tx_stack_init(hw_comm, true);
 	hdcp1_tx_hw_gen_an(hw_comm);
 	ret = hdcp1_tx_dpcd_rd_bksv(hw_comm);
 	if (ret < 0) {
-		/* TODO: abnormal retry logic */
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 	ret = hdcp1_tx_a1_bksv_process(hw_comm);
-	if (ret > 0) {
-		/* TODO: abnormal retry logic */
+	if (ret < 0) {
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 
@@ -609,85 +666,284 @@ void dptx_hdcp1x_proc(struct dptx_hw_common *hw_comm)
 			break;
 	}
 	if (!internal_r0_ready) {
-		/* TODO: abnormal retry logic */
 		DPTX_ERROR("DPTX HDCP1x internal r0 not ready\n");
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 
 	hdcp1_tx_key_get_aksv(hw_comm);
-	hdcp1_tx_a1_wr_ainfo_enter(hw_comm);
+	/* DP HDCP1.1 spec chapter 2.2.1:
+	 * After the HDCP Transmitter has written An and Aksv and read
+	 * the receiver's Bksv and the REPEATER bit, it sets the
+	 * REAUTHENTICATION_ENABLE_IRQ_HPD bit in the Ainfo register
+	 * if the REPEATER bit is set and the transmitter determines
+	 * that the downstream HDCP Repeater supports DPCD Revision
+	 * 1.2 or higher.
+	 */
+	if ((hw_comm->dptx_hdcp1x_inst->bcaps & DP_BCAPS_REPEATER_PRESENT) &&
+		dpcd_rev_12) {
+		ret = hdcp1_tx_a1_wr_ainfo_enter(hw_comm);
+		if (ret < 0) {
+			queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+			return;
+		}
+	}
 	ret = hdcp1_tx_dpcd_wr_an(hw_comm);
 	if (ret < 0) {
-		/* TODO: abnormal retry logic */
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 
-	/* reinit r0 completion before start write AKSV */
-	reinit_completion(&hw_comm->dptx_hdcp1x_inst->r0_completion);
-	reinit_completion(&hw_comm->dptx_hdcp1x_inst->ksv_list_completion);
 	ret = hdcp1_tx_dpcd_wr_aksv(hw_comm);
 	if (ret < 0) {
-		/* TODO: abnormal retry logic */
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 
-	/* wait CP_IRQ for R0 prime */
-	stat = wait_for_completion_timeout(&hw_comm->dptx_hdcp1x_inst->r0_completion,
+	/* wait for R0' ready */
+	queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+		&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_timeout_work,
 		msecs_to_jiffies(hw_comm->dptx_hdcp1x_inst->rx_r0_timeout_ms));
-	if (stat == 0) {
-		DPTX_ERROR("DPTX HDCP1x wait for r0 timeout\n");
-		/* TODO: abnormal retry logic */
+}
+
+static void dptx20_hdcp1x_reauth_whandler(struct work_struct *w)
+{
+	struct dptx_hdcp1x *dptx_hdcp1x_inst = container_of((struct delayed_work *)w,
+		struct dptx_hdcp1x, hdcp1x_reauth_work);
+
+	if (!dptx_hdcp1x_inst) {
+		DPTX_ERROR("null dptx_hdcp1x_inst\n");
 		return;
 	}
-	/* read R0' from DP RX */
-	ret = hdcp1_tx_dpcd_rd_r0_prime(hw_comm);
-	if (ret < 0) {
-		/* TODO: abnormal retry logic */
+	dptx_hdcp1x_inst->auth_result = false;
+	if (!dptx_hdcp1x_inst->hdcp1x_en)
+		return;
+	/* disable encryption */
+	hdcp1_tx_hw_encrypt_enable(dptx_hdcp1x_inst->bind_hw_comm, false);
+	/* restart hdcp1x auth */
+	dptx_hdcp1x_proc(dptx_hdcp1x_inst->bind_hw_comm);
+}
+
+static void dptx20_hdcp1x_r0_whandler(struct work_struct *w)
+{
+	int ret = 0;
+	bool hdcp1_tx_repeater_auth_done = 0;
+	/* DP HDCP1.1 spec chapter 2.2.1:
+	 * If there's a mismatch between R0 and R0', the HDCP transmitter
+	 * must re-read R0' for comparison against R0 two additional times(
+	 * for a total of three consecutive comparisons) in order to account
+	 * for the possibility of link errors. The authentication protocol is
+	 * deemed to have failed on three consecutive mismatches between R0 and
+	 * R0'. Authentication can be reattempted with the transmission of new
+	 * An and Aksv on failure of the first part of authentication.
+	 */
+	u8 r0_retry_cnt = 3;
+	u8 i = 0;
+	bool r0_match = false;
+	bool work_canceled = false;
+	struct dptx_hdcp1x *dptx_hdcp1x_inst = container_of((struct delayed_work *)w,
+		struct dptx_hdcp1x, hdcp1x_r0_work);
+
+	if (!dptx_hdcp1x_inst) {
+		DPTX_ERROR("null dptx_hdcp1x_inst\n");
 		return;
 	}
-	if (hw_comm->dptx_hdcp1x_inst->r0 != hw_comm->dptx_hdcp1x_inst->r0_prime) {
-		DPTX_ERROR("DPTX HDCP14 Check R0' Prime fail!\n");
-		/* TODO: abnormal retry logic */
+	if (!dptx_hdcp1x_inst->hdcp1x_en)
+		return;
+	work_canceled = cancel_delayed_work(&dptx_hdcp1x_inst->hdcp1x_r0_timeout_work);
+	if (!work_canceled) {
+		/* r0 handler and r0_timeout handler come together,
+		 * should not go into this case(as we add error
+		 * tolerance in timeout period). However if this
+		 * abnormal case happens, exit r0 handler and
+		 * continue timeout retry
+		 */
+		DPTX_INFO("warning: r0_timeout work in progress, continue timeout work\n");
+		return;
+	}
+	/* read R0' from DP RX and check if match */
+	for (i = 0; i < r0_retry_cnt; i++) {
+		ret = hdcp1_tx_dpcd_rd_r0_prime(dptx_hdcp1x_inst->bind_hw_comm);
+		if (ret < 0)
+			continue;
+
+		if (dptx_hdcp1x_inst->r0 != dptx_hdcp1x_inst->r0_prime) {
+			r0_match = false;
+			continue;
+		} else {
+			r0_match = true;
+			break;
+		}
+	}
+	if (!r0_match) {
+		DPTX_ERROR("DPTX HDCP1X Check R0' Prime fail!\n");
+		queue_delayed_work(dptx_hdcp1x_inst->hdcp_wq,
+			&dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
 		return;
 	}
 
 	DPTX_DEBUG_HDCP("DPTX HDCP1x Check R0' Prime pass\n");
-	if (hw_comm->dptx_hdcp1x_inst->bstatus & DP_BSTATUS_READY) {
-		ret = dptx_hdcp1x_rpt_proc(hw_comm);
+	/* enable encryption
+	 * DP HDCP1.1 spec chapter 2.2.1:
+	 * The hdcp transmitter enables HDCP Encryption when the first
+	 * part of the authentication protocol successfully completes.
+	 */
+	hdcp1_tx_hw_encrypt_enable(dptx_hdcp1x_inst->bind_hw_comm, true);
+
+	/* for non-repater case, just return */
+	if ((dptx_hdcp1x_inst->bcaps & DP_BCAPS_REPEATER_PRESENT) !=
+		DP_BCAPS_REPEATER_PRESENT) {
+		dptx_hdcp1x_inst->auth_result = true;
+		return;
+	}
+
+	/* below for hdcp1.x repeater case */
+	if (dptx_hdcp1x_inst->bstatus & DP_BSTATUS_READY) {
+		ret = dptx_hdcp1x_rpt_proc(dptx_hdcp1x_inst->bind_hw_comm);
 		if (ret == 0)
-			hdcp1_tx_repeater_auth_done = 1;
+			hdcp1_tx_repeater_auth_done = true;
 		else
-			hdcp1_tx_repeater_auth_done = 0;
+			hdcp1_tx_repeater_auth_done = false;
+		DPTX_DEBUG_HDCP("DPTX HDCP1x rpt auth %s\n",
+			hdcp1_tx_repeater_auth_done ? "pass" : "fail");
+		dptx_hdcp1x_inst->auth_result = hdcp1_tx_repeater_auth_done;
 	}
 
 	/* if hdcp repeater & DPCD rev is greater than v1.2 */
-	if ((hw_comm->dptx_hdcp1x_inst->bcaps & DP_BCAPS_REPEATER_PRESENT) &&
-		hdcp1_tx_repeater_auth_done == 0) {
-		DPTX_DEBUG_HDCP("DPTX HDCP14 WAIT CP_IRQ FOR RPTR KSVLIST ready...\n");
+	if (!hdcp1_tx_repeater_auth_done) {
+		DPTX_DEBUG_HDCP("DPTX HDCP1X wait CP_IRQ for RPTR KSVLIST ready...\n");
 
 		/* wait CP_IRQ for READY bit for ksv_list/V' */
-		stat = wait_for_completion_timeout(&hw_comm->dptx_hdcp1x_inst->ksv_list_completion,
-			msecs_to_jiffies(hw_comm->dptx_hdcp1x_inst->rpt_ksv_list_rdy_timeout_ms));
-		if (stat == 0) {
-			DPTX_ERROR("wait for ksv list timeout\n");
-			/* TODO: abnormal retry logic */
-			return;
-		}
-
-		if (hw_comm->dptx_hdcp1x_inst->bstatus & DP_BSTATUS_READY) {
-			ret = dptx_hdcp1x_rpt_proc(hw_comm);
-			if (ret == 0)
-				hdcp1_tx_repeater_auth_done = 1;
-			else
-				hdcp1_tx_repeater_auth_done = 0;
-		}
+		queue_delayed_work(dptx_hdcp1x_inst->hdcp_wq,
+			&dptx_hdcp1x_inst->hdcp1x_ksv_list_work,
+			msecs_to_jiffies(dptx_hdcp1x_inst->rpt_ksv_list_rdy_timeout_ms));
 	}
-
-	/* enable encryption */
-	hdcp1_tx_hw_encrypt_enable(hw_comm, true);
 }
 
-struct dptx_hdcp1x *dptx20_hdcp1x_init(void)
+static void dptx20_hdcp1x_r0_timeout_whandler(struct work_struct *w)
+{
+	struct dptx_hdcp1x *dptx_hdcp1x_inst = container_of((struct delayed_work *)w,
+		struct dptx_hdcp1x, hdcp1x_r0_timeout_work);
+
+	if (!dptx_hdcp1x_inst) {
+		DPTX_ERROR("null dptx_hdcp1x_inst\n");
+		return;
+	}
+	if (!dptx_hdcp1x_inst->hdcp1x_en)
+		return;
+	DPTX_ERROR("DPTX HDCP1X wait r0' ready timeout!\n");
+		queue_delayed_work(dptx_hdcp1x_inst->hdcp_wq,
+			&dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+}
+
+static void dptx20_hdcp1x_ksv_list_whandler(struct work_struct *w)
+{
+	int ret = 0;
+	bool work_canceled = false;
+	struct dptx_hdcp1x *dptx_hdcp1x_inst = container_of((struct delayed_work *)w,
+		struct dptx_hdcp1x, hdcp1x_ksv_list_work);
+
+	if (!dptx_hdcp1x_inst) {
+		DPTX_ERROR("null dptx_hdcp1x_inst\n");
+		return;
+	}
+	if (!dptx_hdcp1x_inst->hdcp1x_en)
+		return;
+	work_canceled = cancel_delayed_work(&dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work);
+	if (!work_canceled) {
+		/* ksv_list handler and r0_ksv_list handler come together,
+		 * should not go into this case(as we add error tolerance
+		 * in timeout period). However if this abnormal case happens,
+		 * exit ksv_list handle and continue timeout retry
+		 */
+		DPTX_INFO("warning: ksv_list_timeout work in progress, continue timeout work\n");
+		return;
+	}
+	if (dptx_hdcp1x_inst->bstatus & DP_BSTATUS_READY) {
+		ret = dptx_hdcp1x_rpt_proc(dptx_hdcp1x_inst->bind_hw_comm);
+		if (ret == 0)
+			dptx_hdcp1x_inst->auth_result = true;
+		else
+			dptx_hdcp1x_inst->auth_result = false;
+	}
+	DPTX_DEBUG_HDCP("DPTX HDCP1x rpt auth %s\n",
+		dptx_hdcp1x_inst->auth_result ? "pass" : "fail");
+}
+
+static void dptx20_hdcp1x_ksv_list_timeout_whandler(struct work_struct *w)
+{
+	struct dptx_hdcp1x *dptx_hdcp1x_inst = container_of((struct delayed_work *)w,
+		struct dptx_hdcp1x, hdcp1x_ksv_list_timeout_work);
+
+	if (!dptx_hdcp1x_inst) {
+		DPTX_ERROR("null dptx_hdcp1x_inst\n");
+		return;
+	}
+	if (!dptx_hdcp1x_inst->hdcp1x_en)
+		return;
+	DPTX_ERROR("DPTX HDCP1X KSV list timeout!\n");
+		queue_delayed_work(dptx_hdcp1x_inst->hdcp_wq,
+			&dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+}
+
+void dptx_hdcp1x_auth_enable(struct dptx_hw_common *hw_comm)
+{
+	if (!hw_comm || !hw_comm->dptx_hdcp1x_inst)
+		return;
+
+	mutex_lock(&hw_comm->dptx_hdcp1x_inst->hdcp1x_lock);
+	hw_comm->dptx_hdcp1x_inst->hdcp1x_en = true;
+	dptx_hdcp1x_proc(hw_comm);
+	mutex_unlock(&hw_comm->dptx_hdcp1x_inst->hdcp1x_lock);
+}
+
+void dptx_hdcp1x_auth_disable(struct dptx_hw_common *hw_comm)
+{
+	u8 max_loops = 3;
+
+	if (!hw_comm || !hw_comm->dptx_hdcp1x_inst)
+		return;
+
+	mutex_lock(&hw_comm->dptx_hdcp1x_inst->hdcp1x_lock);
+	hw_comm->dptx_hdcp1x_inst->hdcp1x_en = false;
+	/* double confirm all work canceled */
+	do {
+		cancel_delayed_work_sync(&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work);
+		cancel_delayed_work_sync(&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_timeout_work);
+		cancel_delayed_work_sync(&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work);
+		cancel_delayed_work_sync(&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_work);
+		cancel_delayed_work_sync(&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_work);
+
+		max_loops--;
+	} while (max_loops > 0 &&
+		(delayed_work_pending(&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work) ||
+		delayed_work_pending(&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_timeout_work) ||
+		delayed_work_pending(&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work) ||
+		delayed_work_pending(&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_work) ||
+		delayed_work_pending(&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_work)));
+
+	flush_workqueue(hw_comm->dptx_hdcp1x_inst->hdcp_wq);
+
+	/* disable encryption */
+	hdcp1_tx_hw_encrypt_enable(hw_comm, false);
+	/* disable HDCP1.X HW */
+	hdcp1_tx_stack_init(hw_comm, false);
+	hw_comm->dptx_hdcp1x_inst->auth_result = false;
+	mutex_unlock(&hw_comm->dptx_hdcp1x_inst->hdcp1x_lock);
+}
+
+struct dptx_hdcp1x *dptx20_hdcp1x_init(struct dptx_hw_common *hw_comm)
 {
 	struct dptx_hdcp1x *dptx_hdcp1x_inst = NULL;
 
@@ -699,17 +955,64 @@ struct dptx_hdcp1x *dptx20_hdcp1x_init(void)
 		kfree(dptx_hdcp1x_inst);
 		return NULL;
 	}
-	init_completion(&dptx_hdcp1x_inst->r0_completion);
+	dptx_hdcp1x_inst->hdcp_wq = alloc_workqueue(DPTX_HDCP1X_WQ_NAME,
+		WQ_HIGHPRI | WQ_CPU_INTENSIVE, 0);
+	if (!dptx_hdcp1x_inst->hdcp_wq) {
+		kfree(dptx_hdcp1x_inst->ksv_lists);
+		kfree(dptx_hdcp1x_inst);
+		return NULL;
+	}
+	dptx_hdcp1x_inst->bind_hw_comm = hw_comm;
+	dptx_hdcp1x_inst->auth_result = false;
+
 	dptx_hdcp1x_inst->rx_r0_timeout_ms = DP1X_R0_TIMEOUT_MS;
-	init_completion(&dptx_hdcp1x_inst->ksv_list_completion);
 	dptx_hdcp1x_inst->rpt_ksv_list_rdy_timeout_ms = DP1X_RPT_RDY_MS;
 
-	dptx_hdcp1x_inst->internal_sha_timeout_ms = 100;
+	/* assume internal r0 calculate done in 20ms */
+	dptx_hdcp1x_inst->intenal_r0_timeout_ms = 20;
+	/* assume internal SHA calculate done in 20ms */
+	dptx_hdcp1x_inst->internal_sha_timeout_ms = 20;
+
+	mutex_init(&dptx_hdcp1x_inst->hdcp1x_lock);
+
+	/* hdcp related work */
+	INIT_DELAYED_WORK(&dptx_hdcp1x_inst->hdcp1x_reauth_work, dptx20_hdcp1x_reauth_whandler);
+
+	INIT_DELAYED_WORK(&dptx_hdcp1x_inst->hdcp1x_r0_work,
+		dptx20_hdcp1x_r0_whandler);
+	INIT_DELAYED_WORK(&dptx_hdcp1x_inst->hdcp1x_r0_timeout_work,
+		dptx20_hdcp1x_r0_timeout_whandler);
+	INIT_DELAYED_WORK(&dptx_hdcp1x_inst->hdcp1x_ksv_list_work,
+		dptx20_hdcp1x_ksv_list_whandler);
+	INIT_DELAYED_WORK(&dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work,
+		dptx20_hdcp1x_ksv_list_timeout_whandler);
+
 	return dptx_hdcp1x_inst;
 }
 
 void dptx_hdcp1x_uninit(struct dptx_hdcp1x *dptx_hdcp1x_inst)
 {
+	u8 max_loops = 3;
+
+	/* double confirm all work canceled */
+	do {
+		cancel_delayed_work_sync(&dptx_hdcp1x_inst->hdcp1x_reauth_work);
+		cancel_delayed_work_sync(&dptx_hdcp1x_inst->hdcp1x_r0_timeout_work);
+		cancel_delayed_work_sync(&dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work);
+		cancel_delayed_work_sync(&dptx_hdcp1x_inst->hdcp1x_r0_work);
+		cancel_delayed_work_sync(&dptx_hdcp1x_inst->hdcp1x_ksv_list_work);
+
+		max_loops--;
+	} while (max_loops > 0 &&
+		(delayed_work_pending(&dptx_hdcp1x_inst->hdcp1x_reauth_work) ||
+		delayed_work_pending(&dptx_hdcp1x_inst->hdcp1x_r0_timeout_work) ||
+		delayed_work_pending(&dptx_hdcp1x_inst->hdcp1x_ksv_list_timeout_work) ||
+		delayed_work_pending(&dptx_hdcp1x_inst->hdcp1x_r0_work) ||
+		delayed_work_pending(&dptx_hdcp1x_inst->hdcp1x_ksv_list_work)));
+
+	flush_workqueue(dptx_hdcp1x_inst->hdcp_wq);
+
+	destroy_workqueue(dptx_hdcp1x_inst->hdcp_wq);
 	kfree(dptx_hdcp1x_inst->ksv_lists);
 	kfree(dptx_hdcp1x_inst);
 }

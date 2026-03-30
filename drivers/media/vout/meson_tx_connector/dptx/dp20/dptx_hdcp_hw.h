@@ -278,8 +278,9 @@ bool dptx_hdcptx_ddc_check_busy(void);
 u8 dptx_hdmi_ddc_status_check(void);
 
 /* for dptx hdcp1.x */
-void dptx_hdcp1x_proc(struct dptx_hw_common *hw_comm);
-struct dptx_hdcp1x *dptx20_hdcp1x_init(void);
+struct dptx_hdcp1x *dptx20_hdcp1x_init(struct dptx_hw_common *hw_comm);
 void dptx_hdcp1x_uninit(struct dptx_hdcp1x *dptx_hdcp1x_inst);
+void dptx_hdcp1x_auth_enable(struct dptx_hw_common *hw_comm);
+void dptx_hdcp1x_auth_disable(struct dptx_hw_common *hw_comm);
 
 #endif

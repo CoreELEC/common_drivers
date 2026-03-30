@@ -41,6 +41,9 @@ static void dptx_early_suspend(struct early_suspend *es)
 	DPTX_DEBUG("early suspend %s\n", dev_name(tx_comm->base.dev));
 	/* disable phy and core output */
 	meson_tx_phy_power_off(tx_comm->base.tx_hw_base->tx_phy);
+	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
+		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
 	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 }
 
@@ -366,7 +369,7 @@ static void dptx_hdcp_init(struct dptx_common *tx_comm)
 
 static void dptx_hdcp_uninit(struct dptx_common *tx_comm)
 {
-	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP_UNINIT, NULL, NULL);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP_UNINIT, tx_comm, NULL);
 }
 
 static int dptx_probe(struct platform_device *pdev)

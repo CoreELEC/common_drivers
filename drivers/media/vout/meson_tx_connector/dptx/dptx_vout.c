@@ -38,10 +38,14 @@ static int dptx_module_disable(enum vmode_e cur_vmod, void *data)
 {
 	struct meson_tx_dev *tx_dev = (struct meson_tx_dev *)data;
 	u8 en = 0;
+	struct dptx_common *tx_comm = container_of(tx_dev, struct dptx_common, base);
 
 	/* disable phy */
 	meson_tx_phy_power_off(tx_dev->tx_hw_base->tx_phy);
 	/* disable core output */
+	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
+		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
+	dptx_hw_cntl(tx_dev->tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	return 0;
 }

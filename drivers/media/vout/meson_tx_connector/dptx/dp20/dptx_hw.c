@@ -2434,7 +2434,7 @@ static void start_hdcp_work_func(struct work_struct *work)
 	if (hw_comm->hdcp_sec_en == 2)
 		dptx_hdcp22_proc(hw_comm);
 	else if (hw_comm->hdcp_sec_en == 1)
-		dptx_hdcp1x_proc(hw_comm);
+		dptx_hdcp1x_auth_enable(hw_comm);
 	else
 		DPTX_ERROR("invalid hdcp mode: %d\n", hw_comm->hdcp_sec_en);
 }
@@ -2498,6 +2498,7 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 {
 	struct dptx_hw_common *hw_comm = to_dptx_hw_common(tx_hw);
 	int ret = 0;
+	u8 en = 0;
 	struct dptx_common *tx_comm = NULL;
 
 	if (!hw_comm)
@@ -2519,14 +2520,47 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 		tx_comm->hdcptx_priv = dptx20_hdcp2x_init(&tx_comm->hdcptx_comm);
 		tx_comm->hdcptx_comm.bind_tx_comm = (void *)tx_comm;
 		tx_comm->hdcptx_comm.bind_hw_comm = (void *)tx_comm->hw_comm;
-		hw_comm->dptx_hdcp1x_inst = dptx20_hdcp1x_init();
+		hw_comm->dptx_hdcp1x_inst = dptx20_hdcp1x_init(tx_comm->hw_comm);
 		INIT_WORK(&tx_comm->hw_comm->work_dptx_hdcp, start_hdcp_work_func);
 		break;
 	case DP_HDCP_UNINIT:
+		if (!input_argv) {
+			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
 		dptx_hdcp1x_uninit(hw_comm->dptx_hdcp1x_inst);
 		/* for hdcp2.2 */
 		if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit)
 			tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit(tx_comm->hdcptx_priv);
+		break;
+	case DP_HDCP1X_REAUTH:
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
+			msecs_to_jiffies(5));
+		break;
+	case DP_HDCP1X_R0_PRIME_READY:
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_work,
+			msecs_to_jiffies(5));
+		break;
+	case DP_HDCP1X_KSV_LIST_READY:
+		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
+			&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_work,
+			msecs_to_jiffies(5));
+		break;
+	case DP_HDCP1X_AUTH_EN:
+		if (!input_argv) {
+			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
+			ret = -1;
+			break;
+		}
+		en = *(u8 *)input_argv;
+		if (en)
+			dptx_hdcp1x_auth_enable(hw_comm);
+		else
+			dptx_hdcp1x_auth_disable(hw_comm);
 		break;
 	default:
 		break;

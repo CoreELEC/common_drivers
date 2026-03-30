@@ -66,11 +66,15 @@ int dptx_hpd_plugin(struct meson_tx_dev *tx_dev)
 int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 {
 	u8 en = 0;
+	struct dptx_common *tx_comm = container_of(tx_dev, struct dptx_common, base);
 
 	DPTX_INFO("%s %px\n", __func__, tx_dev);
 	/* DP V1.4a chapter5.1.4, disable the Main-Link as a power-saving measure */
 	meson_tx_phy_power_off(tx_dev->tx_hw_base->tx_phy);
 	/* disable core output */
+	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
+		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
+	dptx_hw_cntl(tx_dev->tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	return 0;
 }
@@ -445,6 +449,7 @@ static void dptx_irq_hpd_process(void *para)
 	/* cp_irq */
 	if (link_sink_status_buf[1] & DP_CP_IRQ) {
 		if (tx_comm->hdcptx_comm.hdcp_mode == 1) {
+			/* refer to DP HDCP1.1 spec chapter2.7 step1~8 */
 			ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_AUX_HDCP_BSTATUS,
 				&bstatus, 1);
 			if (ret != 1) {
@@ -452,21 +457,19 @@ static void dptx_irq_hpd_process(void *para)
 				return;
 			}
 			tx_comm->hw_comm->dptx_hdcp1x_inst->bstatus = bstatus;
-			if (bstatus & DP_BSTATUS_READY)
-				complete(&tx_comm->hw_comm->dptx_hdcp1x_inst->ksv_list_completion);
-			if (bstatus & DP_BSTATUS_R0_PRIME_READY)
-				complete(&tx_comm->hw_comm->dptx_hdcp1x_inst->r0_completion);
-			if (bstatus & DP_BSTATUS_LINK_FAILURE) {
-				/* TODO:
-				 * stop hdcp and retry
-				 */
+			if ((bstatus & DP_BSTATUS_LINK_FAILURE) ||
+				(bstatus & DP_BSTATUS_REAUTH_REQ)) {
+				/* Bstatus REAUTH_REQ is only for hdcp repeater */
+				dptx_hw_cntl(&tx_comm->hw_comm->hw_base,
+					DP_HDCP1X_REAUTH, NULL, NULL);
+			} else if (bstatus & DP_BSTATUS_READY) {
+				dptx_hw_cntl(&tx_comm->hw_comm->hw_base,
+					DP_HDCP1X_KSV_LIST_READY, NULL, NULL);
+			} else if (bstatus & DP_BSTATUS_R0_PRIME_READY) {
+				dptx_hw_cntl(&tx_comm->hw_comm->hw_base,
+					DP_HDCP1X_R0_PRIME_READY, NULL, NULL);
 			}
-			/* only for hdcp repeater */
-			if (bstatus & DP_BSTATUS_REAUTH_REQ) {
-				/* TODO:
-				 * stop hdcp and retry
-				 */
-			}
+			/* ignore other interrupt and continue HDCP session without aborting */
 		} else if (tx_comm->hdcptx_comm.hdcp_mode == 2) {
 			ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_HDCP_2_2_REG_RXSTATUS_OFFSET,
 					 &rxstatus, sizeof(rxstatus));

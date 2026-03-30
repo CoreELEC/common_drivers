@@ -105,12 +105,28 @@ struct dptx_hdcp1x {
 	unsigned long intenal_r0_timeout_ms;
 	/* timeout period for DPRX to trigger CP_IRQ and r0' available */
 	u32 rx_r0_timeout_ms;
-	struct completion r0_completion;
 	/* for hdcp1.x repeater, READY for ksv list and V' */
 	unsigned long rpt_ksv_list_rdy_timeout_ms;
-	struct completion ksv_list_completion;
-
+	/* timeout period for HW to calculate SHA */
 	unsigned long internal_sha_timeout_ms;
+
+	/* hdcp1x enable/disable lock */
+	struct mutex hdcp1x_lock;
+	bool hdcp1x_en;
+	/* for hdcp1.x work */
+	struct workqueue_struct *hdcp_wq;
+	struct delayed_work hdcp1x_reauth_work;
+	/* r0' read/check process */
+	struct delayed_work hdcp1x_r0_work;
+	/* wait r0' CP_IRQ timeout handler */
+	struct delayed_work hdcp1x_r0_timeout_work;
+	/* KSV list/V' read/check handler */
+	struct delayed_work hdcp1x_ksv_list_work;
+	/* wait KSV_list READY CP_IRQ timeout handler */
+	struct delayed_work hdcp1x_ksv_list_timeout_work;
+	bool auth_result;
+
+	struct dptx_hw_common *bind_hw_comm;
 };
 
 struct dptx_hw_common {
