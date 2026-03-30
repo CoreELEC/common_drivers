@@ -124,24 +124,17 @@ static void dwc3_meson_otg_work(struct work_struct *work)
 	}
 
 	mutex_lock(otg->otg_mutex);
-	if (!dwc3_otg->dwc3_poped) {
-		if (reg2.b.iddig_curr == 0)
-			dwc3_otg->cur_role = USB_ROLE_DEVICE;
-		else
-			dwc3_otg->cur_role = USB_ROLE_HOST;
-		//wake_up_interruptible(&dwc3_meson_wait);
-		mutex_unlock(otg->otg_mutex);
-		return;
-	}
-
 	reg2.d32 = readl(&otg->u2p_aml_regs->r2);
 	reg2.b.usb_iddig_irq = 0;
 	writel(reg2.d32, &otg->u2p_aml_regs->r2);
 	curr = reg2.b.iddig_curr;
-	if (reg2.b.iddig_curr == 0)
+	if (reg2.b.iddig_curr == 0) {
 		usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_HOST);
-	else
+		dwc3_otg->cur_role = USB_ROLE_HOST;
+	} else {
 		usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_DEVICE);
+		dwc3_otg->cur_role = USB_ROLE_DEVICE;
+	}
 	/* PHY has comb reset feature may reset otg related bits
 	 * to default. Restore reg bits we concern.
 	 */
