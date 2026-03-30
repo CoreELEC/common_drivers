@@ -23,7 +23,8 @@
 //2025.11.24 fix DTD offset error
 //2025.12.15 update vrr range once
 //2026.04.01 add mute before update edid
-#define RX_EDID_H_VER "ver.2026/04/01"
+//2026.04.09 Pull HPD after both audio and tvserver have updated the EDID
+#define RX_EDID_H_VER "ver.2026/04/09"
 
 #define EDID_EXT_BLK_OFF	128
 #define EDID_BLK_SIZE		128
@@ -1340,7 +1341,6 @@ enum edid_states_e {
 
 extern u8 port_hpd_rst_flag;
 extern int phy_addr_map;
-extern u32 atmos_edid_update_hpd_en;
 extern u32 en_take_dtd_space;
 extern u32 earc_cap_ds_update_hpd_en;
 extern unsigned int edid_select;
@@ -1349,6 +1349,8 @@ extern enum edid_delivery_mothed_e edid_delivery_mothed;
 extern unsigned int edid_reset_max;
 extern u8 edid_port_type[4];
 extern u8 cta_flag[4];
+extern bool sad_set_hpd;
+
 #ifdef CONFIG_AMLOGIC_HDMITX
 extern u32 tx_hdr_priority;
 #endif

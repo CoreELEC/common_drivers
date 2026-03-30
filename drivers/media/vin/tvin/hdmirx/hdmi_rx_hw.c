@@ -60,6 +60,7 @@
 #define GCP_GLOB_AVMUTE_EN 1 /* ag506 must clear this bit */
 #define EDID_CLK_DIV 9 /* sys clk/(9+1) = 20M */
 #define HDCP_KEY_WR_TRIES		(5)
+#define HPD_LOW_CNT_THRES 50
 
 /* i2c monitor */
 #define I2C_BUFF_SIZE 0x100000 //1M byte
@@ -3348,7 +3349,7 @@ int rx_set_port_hpd(u8 port_id, bool val)
 
 	if (port_id < rx_info.port_num) {
 		if (val != hdmirx_rd_bits_top_common(TOP_HPD_PWR5V, _BIT(port_id))) {
-			rx_pr("rx_set_port_hpd, port:%d, val:%d\n", port_id, val);
+			rx_pr("set_port_hpd, port:%d, val:%d\n", port_id, val);
 		} else if (port_id == rx_info.arc_port &&
 			rx[port_id].state == FSM_HPD_HIGH) {
 			/* rx sense was set to 0 when plugout for power consumption,
@@ -3382,14 +3383,15 @@ int rx_set_port_hpd(u8 port_id, bool val)
 				aml_earc_recovery();
 			rx_set_term_value(port_id, 0);
 			if (rx[port_id].var.frl_rate)
-				hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX,
-				0, port_id);
+				hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX, 0, port_id);
 			rx[port_id].var.hpd_high_cnt = 0;
 		}
+		if (rx[port_id].var.hpd_low_cnt < HPD_LOW_CNT_THRES)
+			rx[port_id].var.hpd_low_cnt = 0;
 	} else if (port_id == ALL_PORTS) {
 		for (i = 0; i < rx_info.port_num && i < E_PORT_NUM; i++) {
 			if (val != hdmirx_rd_bits_top_common(TOP_HPD_PWR5V, _BIT(i)))
-				rx_pr("rx_set_port_hpd, ALL_PORTS port:%d, val:%d\n", i, val);
+				rx_pr("set_port_hpd, ALL_PORTS port:%d, val:%d\n", i, val);
 			else
 				continue;
 			if (val) {
@@ -3400,11 +3402,12 @@ int rx_set_port_hpd(u8 port_id, bool val)
 			} else {
 				hdmirx_wr_bits_top_common(TOP_HPD_PWR5V, _BIT(i), 0);
 				if (rx[i].var.frl_rate)
-					hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX,
-					0, i);
+					hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX, 0, i);
 				rx_set_term_value(i, 0);
 				rx[i].var.hpd_high_cnt = 0;
 			}
+			if (rx[i].var.hpd_low_cnt < HPD_LOW_CNT_THRES)
+				rx[i].var.hpd_low_cnt = 0;
 		}
 	} else {
 		return -1;
@@ -3413,18 +3416,32 @@ int rx_set_port_hpd(u8 port_id, bool val)
 	return 0;
 }
 
+void rx_edid_reset_on_hpd_low(u8 port)
+{
+	if (rx_is_need_edid_reset(port))
+		rx_edid_reset(port);
+}
+
 /* add param to differentiate repeater/main state machine/etc
  * 0: main loop; 2: workaround; 3: repeater flow; 4: special use
  */
-void rx_set_cur_hpd(u8 val, u8 func, u8 port)
+void rx_set_cur_hpd(u8 val, char *str, u8 port)
 {
-	rx_pr("func-%d\n", func);
+	u8 i;
+
+	rx_pr("hpd reason:%s\n", str);
 	if (val == 0) {
-		if (rx_is_need_edid_reset(port))
-			rx_edid_reset(port);
+		if (port == ALL_PORTS) {
+			for (i = 0; i < rx_info.main_port; ++i) {
+				rx_edid_reset_on_hpd_low(i);
+				port_hpd_rst_flag |= (1 << i);
+			}
+		} else {
+			rx_edid_reset_on_hpd_low(port);
+			port_hpd_rst_flag |= (1 << port);
+		}
 	}
 	rx_set_port_hpd(port, val);
-	port_hpd_rst_flag |= (1 << port);
 }
 
 /*
@@ -3437,9 +3454,9 @@ void rx_force_hpd_cfg(u8 hpd_level)
 
 	if (hpd_level) {
 		hpd_value = 0xF & (~rx_info.disable_port_num);
-		rx_set_port_hpd(ALL_PORTS, hpd_value);
+		rx_set_cur_hpd(hpd_value, "force hpd", ALL_PORTS);
 	} else {
-		rx_set_port_hpd(ALL_PORTS, 0);
+		rx_set_cur_hpd(0, "force hpd", ALL_PORTS);
 	}
 }
 
@@ -4455,7 +4472,7 @@ void rx_hdcp_monitor(u8 port)
 	if (rx[port].ecc_err_frames_cnt >= rx_ecc_err_frames) {
 		rx[port].hdcp_reauth_cnt++;
 		if (rx[port].hdcp_reauth_cnt >= hdcp_reauth_max) {
-			rx[port].fsm_ext_state = FSM_HPD_LOW;
+			rx_set_ext_state(port, FSM_HPD_LOW);
 			return;
 		}
 		if (rx[port].hdcp.hdcp_version == HDCP_VER_22 ||
@@ -6383,10 +6400,12 @@ void rx_earc_hpd_handler(struct work_struct *work)
 		cancel_delayed_work(&eq_dwork);
 		skip_frame(2, rx_info.arc_port, "earc skip");
 		rx_pr("earc call hpd\n");
-		rx_set_port_hpd(rx_info.arc_port, 0);
-		usleep_range(600000, 650000);
-		rx_set_port_hpd(rx_info.arc_port, 1);
-		earc_hpd_low_flag = false;
+		rx[rx_info.arc_port].var.hpd_low_cnt = 0;
+		rx_set_cur_hpd(0, "earc hpd", rx_info.arc_port);
+		port_hpd_rst_flag |= (1 << rx_info.arc_port);
+		//usleep_range(600000, 650000);
+		//rx_set_cur_hpd(1, "earc hpd", rx_info.arc_port);
+		//earc_hpd_low_flag = false;
 	}
 }
 
@@ -6435,7 +6454,7 @@ void rx_debug_load22key(u8 port)
 		if (ret) {
 			rx_pr("load 2.2 key\n");
 			sm_pause = 1;
-			rx_set_cur_hpd(0, 4, port);
+			rx_set_cur_hpd(0, "load22key", port);
 			hdcp22_on = 1;
 			hdcp22_kill_esm = 1;
 			while (wait_kill_done_cnt++ < 10) {
@@ -6462,7 +6481,7 @@ void rx_debug_load22key(u8 port)
 			hdmirx_hw_config(port);
 			hpd_to_esm = 1;
 			/* mdelay(900); */
-			rx_set_cur_hpd(1, 4, port);
+			rx_set_cur_hpd(1, "load22key", port);
 			sm_pause = 0;
 		}
 	}
@@ -8967,7 +8986,7 @@ void rx_power_consumption_cntl(u8 tmp_5v_sts)
 		for (i = 0; i < rx_info.port_num; i++) {
 			if (((tmp_5v_sts >> i) & 1) == 0) {
 				if (rx_get_hpd_sts(i) == 1)
-					rx_set_cur_hpd(0, 5, i);
+					rx_set_cur_hpd(0, "power cntl", i);
 				if (!rx_is_phy_power_off(i))
 					aml_phy_power_off_t3x(i);
 			}
@@ -8997,7 +9016,7 @@ void rx_power_consumption_cntl(u8 tmp_5v_sts)
 		for (i = 0; i < rx_info.port_num; i++) {
 			if (((tmp_5v_sts >> i) & 1) == 0) {
 				if (rx_get_hpd_sts(i) == 1 && i != rx_info.arc_port)
-					rx_set_cur_hpd(0, 5, i);
+					rx_set_cur_hpd(0, "power cntl", i);
 				if (!rx_is_phy_power_off(i))
 					aml_phy_power_off_t6x(i);
 			}

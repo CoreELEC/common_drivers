@@ -639,7 +639,7 @@ void rx_update_edid_callback(enum tvin_port_e tvin_port, u32 hdr_priority)
 	rx_pr(" edid update:%d\n", hdr_priority);
 	hdmi_rx_top_edid_update(port);
 	port_hpd_rst_flag |= (1 << rx_info.main_port);
-	rx[port].state = FSM_HPD_LOW;
+	rx_set_ext_state(port, FSM_HPD_LOW);
 }
 EXPORT_SYMBOL(rx_update_edid_callback);
 
@@ -3479,7 +3479,6 @@ void rx_get_global_variable(const char *buf)
 	pr_var(phy_addr_map, i++);
 	pr_var(skip_frame_cnt, i++);
 	pr_var(vdin_drop_frame_cnt, i++);
-	pr_var(atmos_edid_update_hpd_en, i++);
 	pr_var(suspend_pddq_sel, i++);
 	pr_var(hdcp_none_wait_max, i++);
 	pr_var(pll_unlock_max, i++);
@@ -3846,9 +3845,6 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(skip_frame_cnt, index);
 	if (set_pr_var(tmpbuf, var_to_str(vdin_drop_frame_cnt), &vdin_drop_frame_cnt, value))
 		return pr_var(vdin_drop_frame_cnt, index);
-	if (set_pr_var(tmpbuf, var_to_str(atmos_edid_update_hpd_en),
-		&atmos_edid_update_hpd_en, value))
-		return pr_var(atmos_edid_update_hpd_en, index);
 	if (set_pr_var(tmpbuf, var_to_str(suspend_pddq_sel), &suspend_pddq_sel, value))
 		return pr_var(suspend_pddq_sel, index);
 	if (set_pr_var(tmpbuf, var_to_str(hdcp_none_wait_max), &hdcp_none_wait_max, value))
@@ -4457,6 +4453,11 @@ void hdmirx_open_main_port_t3x(u8 port)
 	rx_info.main_port_open = true;
 	rx_info.main_port = port;
 	aml_phy_switch_port(port);
+	if (sad_set_hpd) {
+		rx_send_hpd_pulse(port);
+		sad_set_hpd = false;
+	}
+
 	rx_pr("%s:%d\n", __func__, port);
 }
 
@@ -4496,10 +4497,10 @@ void hdmirx_open_main_port(u8 port)
 		hdmirx_clr_scdc(true, port);
 		rx_esm_reset(1);
 		if (rx[port].state > FSM_HPD_LOW)
-			rx[port].state = FSM_HPD_LOW;
+			rx_set_ext_state(port, FSM_HPD_LOW);
 		wait_ddc_idle(port);
 		rx_i2c_div_init();
-		rx_set_cur_hpd(0, 0, port);
+		rx_set_cur_hpd(0, "open port", port);
 		/* need reset the whole module when switch port */
 		if (need_update_edid(port))
 			hdmi_rx_top_edid_update(port);
@@ -4512,7 +4513,6 @@ void hdmirx_open_main_port(u8 port)
 	}
 	rx[port].var.edid_update_flag = 0;
 	rx_pkt_initial(port);
-	rx[port].fsm_ext_state = FSM_NULL;
 	sm_pause = fsmst;
 	rx[port].pre_state = rx[port].state;
 	rx_pr("%s:%d\n", __func__, port);
@@ -4960,7 +4960,7 @@ void rx_main_state_machine(void)
 		/* disable irq before hpd low */
 		rx_irq_en(0, port);
 		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port))
-			rx_set_cur_hpd(0, 0, port);
+			rx_set_cur_hpd(0, "machine hpd low", port);
 		rx[port].state = FSM_INIT;
 		break;
 	case FSM_INIT:
@@ -4990,7 +4990,7 @@ void rx_main_state_machine(void)
 		pre_port = port;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
-		rx_set_cur_hpd(1, 0, port);
+		rx_set_cur_hpd(1, "machine hpd high", port);
 		rx[port].last_sw_vic = 0;
 		memset(&rx[port].pre, 0, sizeof(struct rx_video_info));
 		memset(&rx[port].cur, 0, sizeof(struct rx_video_info));
@@ -5123,7 +5123,7 @@ void rx_main_state_machine(void)
 				if (port == rx_info.arc_port) {
 					rx[port].state = FSM_WAIT_CLK_STABLE;
 				} else {
-					rx_set_cur_hpd(0, 2, port);
+					rx_set_cur_hpd(0, "machine unstable", port);
 					rx[port].clk.cable_clk = 0;
 					rx[port].state = FSM_INIT;
 					rx[port].err_rec_mode = ERR_REC_EQ_RETRY;
@@ -5479,7 +5479,7 @@ void rx_port0_main_state_machine(void)
 		rx_irq_en(0, port);
 		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
 			rx_info.arc_port == E_PORT0))
-			rx_set_cur_hpd(0, 0, port);
+			rx_set_cur_hpd(0, "machine hpd low", port);
 		rx[port].state = FSM_INIT;
 		break;
 	case FSM_INIT:
@@ -5506,7 +5506,7 @@ void rx_port0_main_state_machine(void)
 		rx[port].hdcp.hdcp_pre_ver = HDCP_VER_NONE;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
-		rx_set_cur_hpd(1, 0, port);
+		rx_set_cur_hpd(1, "machine hpd high", port);
 		rx[port].last_sw_vic = 0;
 		memset(&rx[port].pre, 0, sizeof(struct rx_video_info));
 		memset(&rx[port].cur, 0, sizeof(struct rx_video_info));
@@ -5943,7 +5943,7 @@ void rx_port1_main_state_machine(void)
 		rx_irq_en(0, port);
 		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
 			rx_info.arc_port == E_PORT1))
-			rx_set_cur_hpd(0, 0, port);
+			rx_set_cur_hpd(0, "machine hpd low", port);
 		rx[port].state = FSM_INIT;
 		break;
 	case FSM_INIT:
@@ -5967,7 +5967,7 @@ void rx_port1_main_state_machine(void)
 		rx[port].var.edid_update_flag = 0;
 		rx[port].hdcp.hdcp_pre_ver = HDCP_VER_NONE;
 		rx_irq_en(IRQ_EN_EDID, port);
-		rx_set_cur_hpd(1, 0, port);
+		rx_set_cur_hpd(1, "machine hpd high", port);
 		rx[port].last_sw_vic = 0;
 		memset(&rx[port].pre, 0, sizeof(struct rx_video_info));
 		memset(&rx[port].cur, 0, sizeof(struct rx_video_info));
@@ -6411,9 +6411,8 @@ void rx_port2_main_state_machine(void)
 		rx_irq_en(0, port);
 		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
 			rx_info.arc_port == E_PORT2))
-			rx_set_cur_hpd(0, 0, port);
+			rx_set_cur_hpd(0, "machine hpd low", port);
 		hdmi_rx_cor_reset(port);
-		rx_set_cur_hpd(0, 0, port);
 		//set_scdc_cfg(1, 0, port);
 		rx[port].state = FSM_INIT;
 		break;
@@ -6439,7 +6438,7 @@ void rx_port2_main_state_machine(void)
 		pre_port = port;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
-		rx_set_cur_hpd(1, 0, port);
+		rx_set_cur_hpd(1, "machine hpd high", port);
 		rx[port].last_sw_vic = 0;
 		memset(&rx[port].pre, 0, sizeof(struct rx_video_info));
 		memset(&rx[port].cur, 0, sizeof(struct rx_video_info));
@@ -6738,7 +6737,7 @@ void rx_port2_main_state_machine(void)
 					rx[port].hdcp.hdcp_version == HDCP_VER_NONE &&
 					!rx[port].var.frl_rate) {
 					rx[port].state = FSM_HPD_LOW;
-					 rx[port].var.dvi_check_en = false;
+					rx[port].var.dvi_check_en = false;
 					break;
 				}
 				if (rx[port].last_sw_vic != rx[port].pre.sw_vic ||
@@ -7110,7 +7109,7 @@ void rx_port3_main_state_machine(void)
 		rx_irq_en(0, port);
 		if (!(is_earc_hpd_low() && rx_info.main_port == rx_info.arc_port &&
 			rx_info.arc_port == E_PORT3))
-			rx_set_cur_hpd(0, 0, port);
+			rx_set_cur_hpd(0, "machine hpd low", port);
 		hdmi_rx_cor_reset(port);
 		//set_scdc_cfg(1, 0, port);
 		rx[port].state = FSM_INIT;
@@ -7137,7 +7136,7 @@ void rx_port3_main_state_machine(void)
 		pre_port = port;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
-		rx_set_cur_hpd(1, 0, port);
+		rx_set_cur_hpd(1, "machine hpd high", port);
 		rx[port].last_sw_vic = 0;
 		memset(&rx[port].pre, 0, sizeof(struct rx_video_info));
 		memset(&rx[port].cur, 0, sizeof(struct rx_video_info));
@@ -7203,7 +7202,7 @@ void rx_port3_main_state_machine(void)
 				reset_pcs(port);
 				rx[port].var.frl_rst_cnt++;
 			} else {
-				rx[port].state = FSM_HPD_LOW;
+				skip_frame(skip_frame_cnt, port, "hpd low skip");
 				rx[port].var.frl_rst_cnt = 0;
 				break;
 			}
@@ -7436,7 +7435,7 @@ void rx_port3_main_state_machine(void)
 					rx[port].hdcp.hdcp_version == HDCP_VER_NONE &&
 					!rx[port].var.frl_rate) {
 					rx[port].state = FSM_HPD_LOW;
-					 rx[port].var.dvi_check_en = false;
+					rx[port].var.dvi_check_en = false;
 					break;
 				}
 				if (rx[port].last_sw_vic != rx[port].pre.sw_vic ||
@@ -8252,7 +8251,7 @@ int hdmirx_debug(const char *buf, int size)
 	if (strncmp(tmpbuf, "help", 4) == 0) {
 		rx_debug_help();
 	} else if (strncmp(tmpbuf, "hpd", 3) == 0) {
-		rx_set_cur_hpd((tmpbuf[3] == '0' ? 0 : 1), 4, port);
+		rx_set_cur_hpd((tmpbuf[3] == '0' ? 0 : 1), "debug", port);
 	} else if (strncmp(tmpbuf, "reset", 5) == 0) {
 		if (tmpbuf[5] == '0') {
 			rx_pr(" hdmirx hw config\n");
@@ -8542,8 +8541,11 @@ int hdmirx_debug(const char *buf, int size)
 
 void rx_set_ext_state(u8 port, unsigned int ext_state)
 {
-	if (rx[port].fsm_ext_state >= ext_state)
+	if (rx[port].fsm_ext_state >= ext_state) {
+		if (ext_state == FSM_HPD_LOW)
+			skip_frame(skip_frame_cnt, port, "hpd low skip");
 		rx[port].fsm_ext_state = ext_state;
+	}
 }
 
 void rx_ext_state_monitor(u8 port)
@@ -8746,6 +8748,8 @@ void rx_hpd_monitor(void)
 			rx[i].var.hpd_high_cnt++;
 		if (rx_info.chip_id >= CHIP_ID_T3X)
 			continue;
+		if (!hdmi_cec_en && !hpd_low_cec_off)
+			continue;
 		if (rx_info.main_port_open && i == rx_info.main_port) {
 			port_hpd_rst_flag &= ~(1 << rx_info.main_port);
 			continue;
@@ -8753,8 +8757,11 @@ void rx_hpd_monitor(void)
 		hpd_wait = rx_get_hpd_wait(i);
 		if ((port_hpd_rst_flag & _BIT(i)) && rx[i].cur_5v_sts) {
 			if (rx[i].var.hpd_low_cnt > hpd_wait) {
-				rx_set_port_hpd(i, 1);
+				if (rx[i].hpd_cntl == EDID_UPDATE_READY)
+					rx_set_cur_hpd(1, "hpd monitor", i);
 				port_hpd_rst_flag &= 0xff & (~_BIT(i));
+				if (earc_hpd_low_flag)
+					earc_hpd_low_flag = false;
 			}
 		}
 	}
@@ -8770,7 +8777,7 @@ void hdmirx_timer(void)
 	rx_edid_monitor();
 	if (!sm_pause) {
 		for (port = E_PORT0; port < E_PORT_NUM; port++) {
-			if ((rx_info.edid_update_done & (1 << port)) != (1 << port))
+			if (rx[port].hpd_cntl != EDID_UPDATE_READY)
 				continue;
 			if (rx_info.main_port_open)
 				rx_nosig_monitor(port);
@@ -8784,13 +8791,13 @@ void hdmirx_timer(void)
 			//hdcp22_decrypt_monitor(port);
 			rx_ext_state_monitor(port);
 		}
-		if ((rx_info.edid_update_done & (1 << E_PORT0)) == (1 << E_PORT0))
+		if (rx[E_PORT0].hpd_cntl == EDID_UPDATE_READY)
 			rx_port0_main_state_machine();
-		if ((rx_info.edid_update_done & (1 << E_PORT1)) == (1 << E_PORT1))
+		if (rx[E_PORT1].hpd_cntl == EDID_UPDATE_READY)
 			rx_port1_main_state_machine();
-		if ((rx_info.edid_update_done & (1 << E_PORT2)) == (1 << E_PORT2))
+		if (rx[E_PORT2].hpd_cntl == EDID_UPDATE_READY)
 			rx_port2_main_state_machine();
-		if ((rx_info.edid_update_done & (1 << E_PORT3)) == (1 << E_PORT3))
+		if (rx[E_PORT3].hpd_cntl == EDID_UPDATE_READY)
 			rx_port3_main_state_machine();
 	}
 	#ifdef K_TEST_CHK_ERR_CNT
@@ -8808,7 +8815,7 @@ void hdmirx_timer_t3x_pre(void)
 	rx_hpd_monitor();
 	rx_edid_monitor();
 	if (rx_info.main_port_open ||
-		(rx_info.pre_load.cfg && rx_info.edid_update_done == MSK(rx_info.port_num, 0))) {
+		(rx_info.pre_load.cfg && rx[rx_info.main_port].hpd_cntl == EDID_UPDATE_READY)) {
 		rx_nosig_monitor(rx_info.main_port);
 		rx_cable_clk_monitor(rx_info.main_port);
 #ifdef CONFIG_AMLOGIC_HDMITX

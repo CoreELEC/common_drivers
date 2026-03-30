@@ -221,6 +221,8 @@ extern int dump_aud_max;
 extern int htotal_threshold;
 extern int vtem_interval_debug;
 extern earc_hdmirx_callback earc_hdmirx_hpdst;
+extern char *fsm_st[];
+
 enum tvin_sig_fmt_e hdmirx_hw_get_fmt(u8 port);
 void rx_mute_vpp(u8 port_type);
 void hdmirx_mute_vpp(bool en, u8 port);

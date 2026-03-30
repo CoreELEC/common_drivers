@@ -254,7 +254,6 @@ u32 rpt_edid_selection;
 /* disable hdr function in dts */
 u32 disable_hdr;
 
-bool update_edid_type = true;
 int rx_phy_level = 1;
 int def_trim_value;
 int over_clk_flag;
@@ -1303,30 +1302,25 @@ EXPORT_SYMBOL(hdmirx_get_hpd_info);
  */
 int hdmirx_set_cec_cfg(u32 cfg)
 {
+	u8 i;
+
 	if (rx_info.chip_id == CHIP_ID_NONE)
 		return 0;
 	switch (cfg) {
 	case 1:
 		hdmi_cec_en = 1;
-		if (rx_info.chip_id < CHIP_ID_T3X && rx_info.boot_flag)
-			rx_force_hpd_rxsense_cfg(1);
 		break;
 	case 2:
 		hdmi_cec_en = 1;
 		tv_auto_power_on = 1;
-		if (rx_info.chip_id < CHIP_ID_T3X && is_valid_edid_data(edid_cur))
-			rx_force_hpd_rxsense_cfg(1);
 		break;
 	case 0:
 	default:
 		hdmi_cec_en = 0;
-		/* fix source can't get edid if cec off */
-		if (rx_info.chip_id < CHIP_ID_T3X && rx_info.boot_flag) {
-			if (hpd_low_cec_off == 0)
-				rx_force_hpd_rxsense_cfg(1);
-		}
 		break;
 	}
+	for (i = 0; i < rx_info.port_num; ++i)
+		rx[i].hpd_cntl |= CEC_CNTL_HPD;
 	rx_info.boot_flag = false;
 	return 0;
 }
@@ -2367,13 +2361,13 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 	case HDMI_IOC_HDCP_ON:
 		hdcp_enable = 1;
 		rx_irq_en(0, rx_info.main_port);
-		rx_set_cur_hpd(0, 4, rx_info.main_port);
+		rx_set_cur_hpd(0, "ioc hdcp on", rx_info.main_port);
 		/*fsm_restart();*/
 		break;
 	case HDMI_IOC_HDCP_OFF:
 		hdcp_enable = 0;
 		rx_irq_en(0, rx_info.main_port);
-		rx_set_cur_hpd(0, 4, rx_info.main_port);
+		rx_set_cur_hpd(0, "ioc hdcp off", rx_info.main_port);
 		hdmirx_hw_config(rx_info.main_port);
 		/*fsm_restart();*/
 		break;
@@ -2384,7 +2378,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			if (rx_info.main_port_open) {
 				skip_frame(4, port_idx, "edid skip");
 				msleep(20);
-				rx_set_cur_hpd(0, 4, rx_info.main_port);
+				rx_set_cur_hpd(0, "ioc update edid", rx_info.main_port);
 				rx[rx_info.main_port].var.edid_update_flag = 1;
 			}
 			if (rx_info.chip_id < CHIP_ID_T3X && hdmi_cec_en == 1)
@@ -2394,7 +2388,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			fsm_restart(port_idx);
 		if (hdmi_cec_en == 1 && rx_info.boot_flag)
 			rx_force_hpd_rxsense_cfg(1);
-		rx_info.edid_update_done |= 0xf;
+		//rx_info.edid_update_done |= 0xf;
 		rx_pr("*update edid*\n");
 		break;
 	case HDMI_IOC_EDID_UPDATE_WITH_PORT:
@@ -2418,14 +2412,15 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		if (rx_info.main_port == port_idx)
 			pre_port = 0xff;
 		if (!rx_info.main_port_open) {
-			rx_set_port_hpd(port_idx, 0);
+			rx_set_cur_hpd(0, "ioc update edid", port_idx);
+			hdmi_rx_top_edid_update(port_idx);
+			rx[port_idx].hpd_cntl |= EDID_CNTL_HPD;
 			rx_set_ext_state(port_idx, FSM_INIT);
 			port_hpd_rst_flag |= (1 << port_idx);
-			hdmi_rx_top_edid_update(port_idx);
 		} else {
 			if (port_idx != rx_info.main_port) {
 				rx_set_ext_state(port_idx, FSM_INIT);
-				rx_set_port_hpd(port_idx, 0);
+				rx_set_cur_hpd(0, "ioc update edid", port_idx);
 				port_hpd_rst_flag |= (1 << port_idx);
 				hdmi_rx_top_edid_update(port_idx);
 			} else {
@@ -2434,12 +2429,12 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 				rx_irq_en(false, port_idx);
 				skip_frame(4, port_idx, "edid skip");
 				msleep(20);
-				rx_set_cur_hpd(0, 4, port_idx);
+				rx_set_cur_hpd(0, "ioc update edid", port_idx);
 				fsm_restart(port_idx);
 				hdmirx_scdc_reset(port_idx);
 			}
 		}
-		rx_info.edid_update_done |= _BIT(port_idx);
+		//rx_info.edid_update_done |= _BIT(port_idx);
 		mutex_unlock(&devp->rx_lock);
 		break;
 	case HDMI_IOC_PC_MODE_ON:
@@ -2555,7 +2550,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			mutex_unlock(&devp->rx_lock);
 			break;
 		}
-		rx_set_port_hpd(hpd_state.port, hpd_state.signal);
+		rx_set_cur_hpd(hpd_state.signal, "ioc set hpd", hpd_state.port);
 		mutex_unlock(&devp->rx_lock);
 		break;
 	case HDMI_IOC_GET_HPD:
@@ -3337,10 +3332,10 @@ static ssize_t edid_select_store(struct device *dev,
 		return -EINVAL;
 
 	edid_select = tmp;
-	if (!phy_addr_map)
-		update_edid_type = false;
-	else
-		update_edid_type_cfg(tmp);
+	//if (!phy_addr_map)
+	//	update_edid_type = false;
+	//else
+	update_edid_type_cfg(tmp);
 
 	return count;
 }
@@ -3731,7 +3726,7 @@ static void rx_phy_suspend(void)
 {
 	/* set HPD low when cec off or TV auto power on disabled. */
 	if (!hdmi_cec_en || !tv_auto_power_on)
-		rx_set_port_hpd(ALL_PORTS, 0);
+		rx_set_cur_hpd(0, "phy suspend", ALL_PORTS);
 	if (suspend_pddq_sel == 0) {
 		rx_pr("don't set phy pddq down\n");
 	} else {
@@ -4189,7 +4184,7 @@ static void hdmirx_late_resume(struct early_suspend *h)
 				port_hpd_rst_flag |= (1 << i);
 		} else {
 			if (rx_info.chip_id >= CHIP_ID_T3X)
-				rx_set_cur_hpd(1, 6, i);
+				rx_set_cur_hpd(1, "late resume", i);
 			else
 				port_hpd_rst_flag |= (1 << i);
 			rx_set_ext_state(i, FSM_HPD_HIGH);
@@ -5241,7 +5236,7 @@ static int hdmirx_resume(struct platform_device *pdev)
 				port_hpd_rst_flag |= (1 << i);
 		} else {
 			if (rx_info.chip_id >= CHIP_ID_T3X)
-				rx_set_cur_hpd(1, 6, i);
+				rx_set_cur_hpd(1, "resume", i);
 			else
 				port_hpd_rst_flag |= (1 << i);
 			rx_set_ext_state(i, FSM_HPD_HIGH);

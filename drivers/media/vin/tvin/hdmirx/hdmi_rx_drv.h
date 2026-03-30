@@ -1011,6 +1011,14 @@ struct hdmirx_uevent {
 	const char *env;
 };
 
+enum hpd_control_e {
+	CEC_CNTL_HPD = 1,
+	AUD_CNTL_HPD = 2,
+	EDID_CNTL_HPD = 4,
+};
+
+#define EDID_UPDATE_READY (AUD_CNTL_HPD | EDID_CNTL_HPD | CEC_CNTL_HPD)
+
 int hdmirx_set_uevent(enum hdmirx_event type, int val);
 
 struct rx_info_s {
@@ -1038,7 +1046,7 @@ struct rx_info_s {
 	struct emp_info_s emp_buff_b; //for vid1
 	struct i2c_info_s i2c_buff;
 	bool suspend_flag;
-	u8 edid_update_done;
+	//u8 edid_update_done;
 	bool timer_flag;
 	/* bit[3:0]:HDMI4/3/2/1 */
 	u32 disable_port_num;
@@ -1160,6 +1168,7 @@ struct rx_s {
 	bool game_mode;
 	bool irq_all_en;
 	bool is_cta_signal;
+	u8 hpd_cntl;
 };
 
 struct reg_map {
@@ -1329,7 +1338,7 @@ extern u32 rpt_only_mode;
 extern u32 vrr_func_en;
 extern u32 allm_func_en;
 extern u32 qms_func_en;
-
+extern u32 hpd_low_cec_off;
 /* debug */
 extern bool hdcp_enable;
 extern int log_level;
@@ -1358,7 +1367,6 @@ extern u32 edid_auto_sel;
 extern int audio_dump_frame;
 extern struct edid_timer_data edid_timer;
 extern ktime_t interval;
-extern bool update_edid_type;
 extern int ee_voltage_val;
 extern int ee_voltage_en;
 extern int force_dsc_4ppc;

@@ -62,14 +62,9 @@ u8 port_hpd_rst_flag;
 int phy_addr_map;
 u8 cta_flag[4] = {0};
 
-/*
- * 1:reset hpd after atmos edid update
- * 0:not reset hpd after atmos edid update
- */
-u32 atmos_edid_update_hpd_en = 1;
 static u_char tmp_sad_len;
 static u_char tmp_sad[30];
-
+bool sad_set_hpd;
 /* if free space is not enough in edid to do
  * data blk splice, then remove the last dtd(s)
  */
@@ -624,7 +619,7 @@ bool is_edid_size_valid(u8 type, int size)
 		break;
 	case EDID_TYPE_256_PLUS_512_PLUS_256:
 	case EDID_TYPE_256_PLUS_512_PLUS_512:
-		if (size == EDID_TYPE_256_PLUS_512_PLUS_256)
+		if (size == EDID_SIZE_256_PLUS_512_PLUS_256)
 			ret = true;
 		break;
 	default:
@@ -635,28 +630,6 @@ bool is_edid_size_valid(u8 type, int size)
 
 void update_edid_type_cfg(unsigned int val)
 {
-	int i = 0;
-	/* PCB port number for UI HDMI1/2/3/4 */
-	unsigned char pos[E_PORT_NUM] = {0};
-
-	for (i = 0; i < E_PORT_NUM; i++) {
-		switch ((phy_addr_map >> (i * 4)) & 0xF) {
-		case 1:
-			pos[0] = i;
-			break;
-		case 2:
-			pos[1] = i;
-			break;
-		case 3:
-			pos[2] = i;
-			break;
-		case 4:
-			pos[3] = i;
-			break;
-		default:
-			break;
-		}
-	}
 	/* edid select for portD/C/B/A */
 	rx[0].edid_type.cfg = (enum edid_ver_e)(val & 0xF);
 	rx[1].edid_type.cfg = (enum edid_ver_e)((val >> 4) & 0xF);
@@ -796,10 +769,6 @@ void hdmirx_fill_edid_with_port_buf(const char *buf, int size)
 	if (!is_valid_edid_data(edid_buf + 768) && edid_type > EDID_TYPE_256_PLUS_512)
 		rx_pr("port %d: 2.0 edid error\n", port_num);
 	get_edid_phy_addr(edid_buf, port_num);
-	if (port_num == rx_info.port_num - 1 && !update_edid_type) {
-		update_edid_type = true;
-		update_edid_type_cfg(edid_select);
-	}
 	rx_sprintf(&boot_info_num, "EDID port%d - size %d\n", port_num, size);
 	if (log_level & EDID_LOG) {
 		for (i = 0; i * 16 < size; i++) {
@@ -1370,8 +1339,7 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 			need_support_atmos_bit = 1;
 			hdmi_rx_top_edid_update(rx_info.arc_port);
 			if (rx_info.main_port_open && rx_info.main_port != rx_info.arc_port) {
-				if (atmos_edid_update_hpd_en)
-					rx_send_hpd_pulse(rx_info.main_port);
+				rx_send_hpd_pulse(rx_info.main_port);
 				rx_pr("*update edid-atmos*\n");
 			} else {
 				pre_port = 0xff;
@@ -1384,8 +1352,7 @@ unsigned char rx_parse_arc_aud_type(const unsigned char *buff)
 			need_support_atmos_bit = 0;
 			hdmi_rx_top_edid_update(rx_info.arc_port);
 			if (rx_info.main_port_open && rx_info.main_port != rx_info.arc_port) {
-				if (atmos_edid_update_hpd_en)
-					rx_send_hpd_pulse(rx_info.main_port);
+				rx_send_hpd_pulse(rx_info.main_port);
 				rx_pr("*update edid-no atmos*\n");
 			} else {
 				pre_port = 0xff;
@@ -1444,41 +1411,51 @@ EXPORT_SYMBOL(rx_edid_get_aud_sad);
  */
 bool rx_edid_set_aud_sad(u_char *sad, u_char len)
 {
+	u8 i;
+
 	if (rx_info.chip_id == CHIP_ID_NONE)
 		return false;
+
 	if (len > 30 || len % 3 != 0) {
 		if (log_level & AUDIO_LOG)
 			rx_pr("err sad length: %d\n", len);
 		return false;
 	}
+
+	if (len == 0 || !sad)
+		goto set_flag;
+
 	memset(tmp_sad, 0, sizeof(tmp_sad));
-	if (sad)
-		memcpy(tmp_sad, sad, len);
-	if (tmp_sad_len != len) {
-		tmp_sad_len = len;
-	} else {
-		if (!len)
-			return false;
-		tmp_sad_len = len;
+	memcpy(tmp_sad, sad, len);
+	tmp_sad_len = len;
+	for (i = 0; i < rx_info.port_num; ++i) {
+		if (rx[i].hpd_cntl & EDID_CNTL_HPD)
+			hdmi_rx_top_edid_update(i);
+		else
+			break;
 	}
-	hdmi_rx_top_edid_update(rx_info.main_port);
+
 	if (rx_info.main_port_open && rx_info.main_port != rx_info.arc_port) {
-		if (atmos_edid_update_hpd_en) {
-			if (rx_info.main_port_open &&
-				rx[rx_info.main_port].state == FSM_SIG_READY) {
-				hdmirx_mute_vpp(true, rx_info.main_port);
-				rx[rx_info.main_port].vpp_mute_cnt = vpp_mute_cnt;
-			}
-			rx_send_hpd_pulse(rx_info.main_port);
+		if (rx_info.main_port_open &&
+			rx[rx_info.main_port].state == FSM_SIG_READY) {
+			hdmirx_mute_vpp(true, rx_info.main_port);
+			rx[rx_info.main_port].vpp_mute_cnt = vpp_mute_cnt;
 		}
+			rx_send_hpd_pulse(rx_info.main_port);
 		if (log_level & AUDIO_LOG)
 			rx_pr("*update aud SAD len: %d*\n", len);
 	} else {
-		pre_port = 0xff;
+		if (rx_info.chip_id < CHIP_ID_T3X)
+			pre_port = 0xff;
+		else
+			sad_set_hpd = true;
 		if (log_level & AUDIO_LOG)
 			rx_pr("update aud SAD later, in arc port:%s\n",
 			      rx_info.main_port == rx_info.arc_port ? "Y" : "N");
 	}
+set_flag:
+	for (i = 0; i < rx_info.port_num; ++i)
+		rx[i].hpd_cntl |= AUD_CNTL_HPD;
 	return true;
 }
 EXPORT_SYMBOL(rx_edid_set_aud_sad);

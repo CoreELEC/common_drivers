@@ -117,7 +117,7 @@ int rx_hdmi_tx_notify_handler(struct notifier_block *nb,
 			break;
 		}
 		rx_irq_en(0, rx_info.main_port);
-		rx_set_cur_hpd(0, 4, rx_info.main_port);
+		rx_set_cur_hpd(0, "tx plug", rx_info.main_port);
 		if (!rx_info.main_port_open)
 			port_hpd_rst_flag = 0xf;
 		//if (hdmirx_repeat_support())
@@ -153,7 +153,7 @@ int rx_hdmi_tx_notify_handler(struct notifier_block *nb,
 		if (log_level & EDID_LOG)
 			rx_pr("tx_hdr_priority = %d\n", tx_hdr_priority);
 		rx_irq_en(0, rx_info.main_port);
-		rx_set_cur_hpd(0, 4, rx_info.main_port);
+		rx_set_cur_hpd(0, "tx hdr", rx_info.main_port);
 		if (!rx_info.main_port_open)
 			port_hpd_rst_flag = 0xf;
 		fsm_restart(rx_info.main_port);
