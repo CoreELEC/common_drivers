@@ -3649,10 +3649,15 @@ start_chk:
 		}
 		time_end = jiffies_to_msecs(jiffies);
 		time_delta = time_end - time_start;
-		if ((devp->parm.info.status != TVIN_SIG_STATUS_STABLE ||
-		     devp->parm.info.fmt == TVIN_SIG_FMT_NULL) &&
-		    time_delta <= 5000)
+		if (devp->debug.force_tvstop) {
+			err = -6;
+			goto force_tvstop;
+		}
+		if (devp->parm.info.status != TVIN_SIG_STATUS_STABLE ||
+			devp->parm.info.fmt == TVIN_SIG_FMT_NULL) {
+			msleep(100);
 			goto start_chk;
+		}
 
 		if (devp->parm.info.fmt != TVIN_SIG_FMT_NULL)
 			fmt = devp->parm.info.fmt; /* = parm.info.fmt; */
@@ -3662,7 +3667,7 @@ start_chk:
 		 * tvin_get_fmt_info(devp->parm.info.fmt);
 		 */
 		if (!devp->fmt_info_p) {
-			err = -6;
+			err = -7;
 			goto error;
 		}
 		if (!(devp->flags & VDIN_FLAG_ISR_REQ)) {
@@ -5177,6 +5182,16 @@ start_chk:
 			err = -EINVAL;
 			goto error;
 		}
+	} else if (!strcmp(parm[0], "force_tvstop")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			if (temp)
+				devp->debug.force_tvstop = true;
+			else
+				devp->debug.force_tvstop = false;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
 	} else if (!strcmp(parm[0], "dbg_force_duration")) {
 		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
 			devp->debug.dbg_force_duration = temp;
@@ -5201,6 +5216,11 @@ start_chk:
 
 	kfree(buf_orig);
 	return len;
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+force_tvstop:
+	if (devp->flags & VDIN_FLAG_DEC_OPENED)
+		vdin_close_fe(devp);
+#endif
 error:
 	pr_err("vdin set param error: %d\n", err);
 	return len;

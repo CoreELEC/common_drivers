@@ -753,6 +753,7 @@ struct vdin_debug_s {
 	unsigned int dbg_force_duration;
 	bool bypass_game_dyn_fmt;
 	bool force_pause_en;
+	bool force_tvstop;
 	unsigned int vdin_manual_req_mem_size;
 };
 
