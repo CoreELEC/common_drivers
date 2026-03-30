@@ -1984,6 +1984,7 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	bool rotate_en)
 {
 	bool need_do_dpss = true;
+	bool is_qms_case = false;
 	int used_vf_with = 0, used_vf_height = 0;
 
 	if (!dev || !vf) {
@@ -2031,7 +2032,8 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		}
 	}
 
-	if (vf->duration < 1600 && (vf->duration + 1) < dev->output_duration) {
+	is_qms_case = vf->vf_vrr_param.qms_en || vf->vf_vrr_param.qms_plus_en;
+	if (vf->duration < 1600 && (vf->duration + 1) < dev->output_duration && !is_qms_case) {
 		/*input fps more than output fps*/
 		dp_print(dev->index, PRINT_OTHER,
 			"input fps more than output, no need do dpss.\n");
