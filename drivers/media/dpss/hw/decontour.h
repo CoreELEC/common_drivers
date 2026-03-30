@@ -8,7 +8,7 @@
 
 void dpss_ini_dcntr_pre(int hsize, int vsize, int grd_num_mode, int
 	in_fmt_mode, int grd_444to422_mode, int grd_422to420_mode, int dsx, int dsy);
-void ini_dcntr_post(int hsize, int vsize, int grd_num_mode, int dsx, int dsy);
+void ini_dcntr_post(int hsize, int vsize, int grd_num_mode, int dsx, int dsy, u32 *grid_stride);
 
 void set_dcntr_grid_mif(u32 x_start,
 	u32 x_end,

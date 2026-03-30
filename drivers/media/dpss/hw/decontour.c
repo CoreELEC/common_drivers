@@ -218,7 +218,7 @@ void dpss_ini_dcntr_pre(int hsize, int vsize, int grd_num_mode,
 }
 
 //initial decontour post - core
-void ini_dcntr_post(int hsize, int vsize, int grd_num_mode, int dsx, int dsy)
+void ini_dcntr_post(int hsize, int vsize, int grd_num_mode, int dsx, int dsy, u32 *grid_stride)
 {
 	//dct post enable
 	w_reg_bit(VPU_VBE_TOP_CTR0, 1, 26, 1);
@@ -390,6 +390,9 @@ void ini_dcntr_post(int hsize, int vsize, int grd_num_mode, int dsx, int dsy)
 		__func__,
 		reg_grd_xsize,
 		reg_grd_ysize);
+
+	*grid_stride = reg_grd_xnum_use * 8;
+	dbg_h2("%s: grid_stride = %d\n", __func__, *grid_stride);
 
 	//wr(DCTR_PATH,(grd_path<<25));
 	w_reg_bit(DCTR_PATH, reg_in_ds_rate_y, 0, 2);
@@ -903,17 +906,17 @@ void dcntr_pst_slc(struct DCNTR_SLC *dcntr_slc, u32 dpe_pad, u32 *dpe_pad_l,
 	//0: ds 1: no ds, 1080i, 2: no ds, 1080p no small pic
 	u32 ds_mode = dcntr_slc->ds_mode;
 	u32 grid_num_mode = dcntr_slc->grid_num_mode;
-	u32 grid_stride = dcntr_slc->grid_stride;
+	u32 grid_stride = 0;
 	u32 cds_stride_sel = (fmt == YUV444) ? 0 : 1;
 	bool frame_mode = dcntr_slc->frame_mode & 0x1;
 
 	dbg_h2("%s start frame_mode:%d\n", __func__, frame_mode);
-	dbg_h2("%s:ds_mode=%d,grid_num_mode=%d,grid_stride=%d,cds_stride_sel=%d\n",
-		__func__, ds_mode, grid_num_mode, grid_stride, cds_stride_sel);
+	dbg_h2("%s:ds_mode=%d,grid_num_mode=%d,cds_stride_sel=%d\n",
+		__func__, ds_mode, grid_num_mode, cds_stride_sel);
 	dbg_h2("%s:frame_mode=%d,slc_num=%d, dsx=%d, dsy=%d\n",
 		__func__, frame_mode, slc_num, dsx, dsy);
 
-	ini_dcntr_post(hsize, vsize, grid_num_mode, dsx, dsy);
+	ini_dcntr_post(hsize, vsize, grid_num_mode, dsx, dsy, &grid_stride);
 
 	//divr, yflt, cflt, grd rdmif enable
 	w_reg_bit(DPSS_DPE_TOP_CTRL0, 1, 15, 1);
