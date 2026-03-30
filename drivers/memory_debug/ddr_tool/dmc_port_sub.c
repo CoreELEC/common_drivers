@@ -1246,7 +1246,7 @@ VPU_SUB_RW(s7, 0, 1, 4);
 VPU_SUB_RW(s7, 1, 2, 6);
 VPU_SUB_DESC_INIT(s7, &vpu0_sub_s7, &vpu1_sub_s7, NULL, NULL);
 
-static struct vpu_sub vpu0_r_a9[] __initdata = {
+static struct vpu_sub_list vpu0_sub_r_a9[] __initdata = {
 	{ .id = 0x00, .name = "OSD1"			},
 	{ .id = 0x01, .name = "OSD2"			},
 	{ .id = 0x02, .name = "VD1"			},
@@ -1261,7 +1261,7 @@ static struct vpu_sub vpu0_r_a9[] __initdata = {
 	{ .id = 0x0F, .name = "LUT_DMA"			},
 };
 
-static struct vpu_sub vpu0_w_a9[] __initdata = {
+static struct vpu_sub_list vpu0_sub_w_a9[] __initdata = {
 	{ .id = 0x00, .name = "VDIN0_WR"		},
 	{ .id = 0x01, .name = "VDIN1_WR"		},
 	{ .id = 0x02, .name = "VDIN_DOLBY_WR"		},
@@ -1271,7 +1271,7 @@ static struct vpu_sub vpu0_w_a9[] __initdata = {
 	{ .id = 0x0A, .name = "VPU_DMA"			},
 };
 
-static struct vpu_sub vpu1_r_a9[] __initdata = {
+static struct vpu_sub_list vpu1_sub_r_a9[] __initdata = {
 	{ .id = 0x00, .name = "DI_IF1"			},
 	{ .id = 0x01, .name = "DI_MEM"			},
 	{ .id = 0x42, .name = "DI_INP"			},
@@ -1285,7 +1285,7 @@ static struct vpu_sub vpu1_r_a9[] __initdata = {
 	{ .id = 0x06, .name = "DI_IF0"			},
 };
 
-static struct vpu_sub vpu1_w_a9[] __initdata = {
+static struct vpu_sub_list vpu1_sub_w_a9[] __initdata = {
 	{ .id = 0x00, .name = "NR_WR"			},
 	{ .id = 0x01, .name = "DI_WR"			},
 	{ .id = 0x02, .name = "CONT_WR"			},
@@ -1294,6 +1294,10 @@ static struct vpu_sub vpu1_w_a9[] __initdata = {
 	{ .id = 0x32, .name = "MCVEC_WR"		},
 	{ .id = 0x42, .name = "NRDS_WR"			},
 };
+
+VPU_SUB_RW(a9, 0, 2, 2);
+VPU_SUB_RW(a9, 1, 3, 3);
+VPU_SUB_DESC_INIT(a9, &vpu0_sub_a9, &vpu1_sub_a9, NULL, NULL);
 #endif
 
 static int __init vpu_sub_desc_alloc(struct vpu_sub_desc **dst, struct vpu_sub_desc *src)

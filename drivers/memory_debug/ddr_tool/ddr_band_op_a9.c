@@ -45,7 +45,7 @@ static unsigned int ots_levels[] __initdata = {
 	0x30263026, 0x34293429, 0x382C382C, 0x3C2F3C2F
 };
 
-static void a9_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
+static void a9_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	pr_info("A9 can not set port, default be set\n");
 }
@@ -83,7 +83,7 @@ static void a9_dmc_bandwidth_init(struct ddr_bandwidth *db)
 
 	/* a9 can not set port, default be set */
 	for (i = 0; i < db->channels; i++) {
-		db->port[i] = 1 << i;
+		ddr_set_map_select(i, i);
 		db->range[i].start = 0;
 		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
 	}
