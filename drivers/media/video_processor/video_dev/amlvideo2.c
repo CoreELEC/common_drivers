@@ -7142,12 +7142,13 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 		}
 #endif
 	}
+	node->start_vdin_flag = 0;
+	mutex_unlock(&fh->mutex);
+
 	if (node->r_type == AML_RECEIVER_NONE)
 		amlvideo2_stop_thread(&node->vidq);
 
-	node->start_vdin_flag = 0;
 	fh->is_streamed_on = 0;
-	mutex_unlock(&fh->mutex);
 	return ret;
 }
 
