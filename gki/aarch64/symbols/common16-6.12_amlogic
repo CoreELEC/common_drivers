@@ -16,6 +16,7 @@
 
 #amlogic-usb.ko
   of_add_property
+  usb_role_switch_get
 
 #aml_media.ko
   __vmalloc_array_noprof
