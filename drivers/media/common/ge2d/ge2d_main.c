@@ -1970,7 +1970,7 @@ static int alloc_cmd_queue_buffer(struct device *dev, unsigned int cmd_cnt)
 {
 	backup_init_reg_vaddr = dma_alloc_coherent(dev, ONE_CMD_BUF_SIZE,
 						   &backup_init_reg_paddr,
-						   GFP_DMA | GFP_KERNEL);
+						   GFP_KERNEL);
 	if (!backup_init_reg_vaddr) {
 		ge2d_log_err("alloc backup buffer failed\n");
 		return -ENOMEM;
@@ -1978,7 +1978,7 @@ static int alloc_cmd_queue_buffer(struct device *dev, unsigned int cmd_cnt)
 
 	cmd_queue_vaddr = dma_alloc_coherent(dev, cmd_cnt * ONE_CMD_BUF_SIZE,
 					     &cmd_queue_paddr,
-					     GFP_DMA | GFP_KERNEL);
+					     GFP_KERNEL);
 	if (!cmd_queue_vaddr) {
 		ge2d_log_err("alloc cmd queue buffer failed\n");
 		return -ENOMEM;
