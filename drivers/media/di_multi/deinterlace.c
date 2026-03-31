@@ -12252,6 +12252,7 @@ static long dim_pq_load_io_l(struct di_dev_s *de_devp, unsigned long arg)
 	if (copy_from_user(di_pq_ptr->regs, argp, mm_size)) {
 		PR_ERR("pq i:copy\n");
 		//atomic_set(&de_devp->pq_io, 1); /* idle */
+		di_pq_parm_destroy(di_pq_ptr);
 		return -EFAULT;
 	}
 #ifdef HIS_CODE
