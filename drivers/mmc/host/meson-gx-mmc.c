@@ -4496,23 +4496,26 @@ static void meson_mmc_remove(struct platform_device *pdev)
 	mmc_free_host(host->mmc);
 }
 
-#ifdef CONFIG_HIBERNATION
 static int meson_mmc_freeze(struct device *dev)
 {
-	//struct meson_host *host = dev_get_drvdata(dev);
 	return 0;
 }
 
 static int meson_mmc_restore(struct device *dev)
 {
 	struct meson_host *host = dev_get_drvdata(dev);
+	u32 reg;
 	int ret = 0;
 
-	if (aml_card_type_sdio(host))
+	if (!host || !host->mmc)
 		return ret;
+
+	reg = readl(host->regs + SD_EMMC_CLOCK);
+	if (!(reg & CLK_DIV_MASK))
+		writel(reg | (0x3c & CLK_DIV_MASK), host->regs + SD_EMMC_CLOCK);
 	ret = clk_set_rate(host->mmc_clk, host->mmc->f_min);
 	if (ret) {
-		pr_info("[%s]set rate failed.ret:%d\n", __func__, ret);
+		dev_err(dev, "[%s]set rate failed.ret:%d\n", __func__, ret);
 		return ret;
 	}
 	clk_prepare_enable(host->mmc_clk);
@@ -4527,7 +4530,6 @@ static int meson_mmc_restore(struct device *dev)
 
 	return ret;
 }
-#endif
 
 static const struct meson_mmc_data meson_axg_data = {
 	.tx_delay_mask	= CLK_V3_TX_DELAY_MASK,
@@ -4557,12 +4559,14 @@ static const struct of_device_id meson_mmc_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, meson_mmc_of_match);
 
-#ifdef CONFIG_HIBERNATION
 static const struct dev_pm_ops meson_mmc_pm_ops = {
+#ifdef CONFIG_HIBERNATION
 	.freeze = meson_mmc_freeze,
 	.restore = meson_mmc_restore,
-};
 #endif
+	.suspend = meson_mmc_freeze,
+	.resume = meson_mmc_restore,
+};
 
 static struct platform_driver meson_mmc_driver = {
 	.probe		= meson_mmc_probe,
@@ -4570,9 +4574,7 @@ static struct platform_driver meson_mmc_driver = {
 	.driver		= {
 		.name = DRIVER_NAME,
 		.of_match_table = of_match_ptr(meson_mmc_of_match),
-#ifdef CONFIG_HIBERNATION
 		.pm = &meson_mmc_pm_ops,
-#endif
 	},
 };
 
