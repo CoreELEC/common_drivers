@@ -742,6 +742,10 @@
 		bl_mode = <1>;
 		fip_copies = <4>;
 		fip_size = <0x200000>;
+		/* if you are not very clear,
+		 * please do not set page_info_adjust_bbtlen.
+		 */
+		page_info_adjust_bbtlen = <16>;
 
 		partitions {
 			#address-cells = <1>;

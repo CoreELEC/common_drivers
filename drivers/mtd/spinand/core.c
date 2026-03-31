@@ -702,7 +702,7 @@ static int spinand_write_page(struct spinand_device *spinand,
 	int version = get_page_info_version();
 	u8 read_cmd = spinand->op_templates.read_cache->cmd.opcode;
 	u32 fip_size = 0, fip_copies = 0;
-	u8 *buf, *info;
+	u8 *buf;
 	int ret = 0;
 
 	if (!req->pos.target && page_info_is_page(mtd, page)) {
@@ -713,8 +713,8 @@ static int spinand_write_page(struct spinand_device *spinand,
 		last_req.ooblen = 0;
 		buf = kzalloc(mtd->writesize, GFP_KERNEL);
 		last_req.databuf.in = buf;
-		info = page_info_post_init(mtd, read_cmd, fip_size, fip_copies);
-		memcpy(buf, info, get_page_info_size());
+		page_info_post_init(mtd, read_cmd, fip_size, fip_copies);
+		page_info_fetch_content((void *)buf, get_page_info_size());
 		/* information page is behind BL2 */
 		if (version == PAGE_INFO_V1)
 			nanddev_pos_next_page(nand, &last_req.pos);

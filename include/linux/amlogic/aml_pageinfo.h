@@ -111,4 +111,6 @@ int page_info_pre_init(u8 *boot_info, int version);
 bool page_info_is_page(struct mtd_info *mtd, int page);
 unsigned char *page_info_post_init(struct mtd_info *mtd,
 		u8 cmd, u32 fip_size, u32 fip_copies);
+void meson_nand_set_page_info_bbtlen(s32 adjust_len);
+void page_info_fetch_content(void *dst, int len);
 #endif

@@ -9,6 +9,7 @@
 
 struct boot_info *page_info;
 static int page_info_state;
+static s32 page_info_adjust_bbtlen;
 
 enum BOOT_LAYOUT_VERS {
 	BOOT_DISCRETE_DEFAULT = 0,
@@ -304,6 +305,35 @@ static unsigned int do_checksum(unsigned char *buf, int len)
 	return checksum;
 }
 
+static void page_info_adjust_content(struct boot_info *booti)
+{
+	/* The MAX_F_BAD_BLOCK_NUM is defaulting to 64, but it should be 16 in a1.
+	 * so here to adjust it
+	 */
+	u8 *p = (u8 *)booti;
+	u8 adjust_buffer[MAX_BYTES_IN_BOOTINFO];
+	size_t len;
+
+	memset(adjust_buffer, 0, MAX_BYTES_IN_BOOTINFO);
+	booti->checksum = 0;
+
+	len = (u8 *)&booti->dev_cfg1.bbt[page_info_adjust_bbtlen] - (u8 *)booti;
+	memcpy(adjust_buffer, p, len);
+
+	memcpy(adjust_buffer + len, (u8 *)&booti->dev_cfg1.enable_bbt,
+		   (sizeof(struct boot_info) -
+		   ((u8 *)&booti->dev_cfg1.enable_bbt - (u8 *)booti)));
+
+	memcpy(p, adjust_buffer, min_t(int, sizeof(*booti), MAX_BYTES_IN_BOOTINFO));
+
+	if (get_page_info_version() != PAGE_INFO_V2)
+		booti->checksum = do_checksum(p, sizeof(*booti));
+	else
+		booti->checksum = do_checksum(p, 20);
+
+	pr_info("page info adjust, checksum : 0x%x\n", booti->checksum);
+}
+
 static void page_info_init_from_mtd(struct mtd_info *mtd, u8 cmd, u32 fip_size, u32 fip_copies)
 {
 	struct nand_device *dev = mtd_to_nanddev(mtd);
@@ -433,6 +463,15 @@ unsigned char *page_info_post_init(struct mtd_info *mtd, u8 cmd, u32 fip_size, u
 }
 EXPORT_SYMBOL_GPL(page_info_post_init);
 
+void page_info_fetch_content(void *dst, int len)
+{
+	memset(dst, 0, len);
+	memcpy(dst, (const void *)page_info, min_t(int, MAX_BYTES_IN_BOOTINFO, len));
+	if (page_info_adjust_bbtlen > 0)
+		page_info_adjust_content((struct boot_info *)dst);
+}
+EXPORT_SYMBOL_GPL(page_info_fetch_content);
+
 int page_info_pre_init(u8 *boot_info, int version)
 {
 	page_info = (struct boot_info *)boot_info;
@@ -464,3 +503,13 @@ bool page_info_is_page(struct mtd_info *mtd, int page)
 }
 EXPORT_SYMBOL_GPL(page_info_is_page);
 
+void meson_nand_set_page_info_bbtlen(s32 adjust_len)
+{
+	if (adjust_len >= MAX_F_BAD_BLOCK_NUM) {
+		pr_info("adjust page info bbt len (%d) invalid\n", adjust_len);
+		return;
+	}
+	page_info_adjust_bbtlen = adjust_len;
+	pr_info("adjust page info bbt len to %d\n", page_info_adjust_bbtlen);
+}
+EXPORT_SYMBOL_GPL(meson_nand_set_page_info_bbtlen);

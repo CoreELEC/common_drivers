@@ -28,6 +28,7 @@
 #include <linux/amlogic/aml_storage.h>
 #include <linux/amlogic/aml_spi_mem.h>
 #include <linux/amlogic/nand_encryption.h>
+#include <linux/amlogic/aml_pageinfo.h>
 
 #define NAND_BLOCK_GOOD	0
 #define NAND_BLOCK_BAD	1
@@ -176,6 +177,7 @@ static int meson_spinand_parse_dt(struct mtd_info *mtd)
 {
 	u32 bl_mode = NAND_FIPMODE_ADVANCE, fip_copies = 0, fip_size = 0;
 	struct device_node *np = mtd_get_of_node(mtd);
+	s32 page_info_adjust_bbtlen = -1;
 
 	if (!np) {
 		pr_err("%s %d: can't get np\n", __func__, __LINE__);
@@ -191,6 +193,10 @@ static int meson_spinand_parse_dt(struct mtd_info *mtd)
 			return -EINVAL;
 		}
 	}
+
+	if (of_property_read_s32(np, "page_info_adjust_bbtlen",
+	    &page_info_adjust_bbtlen) == 0)
+		meson_nand_set_page_info_bbtlen(page_info_adjust_bbtlen);
 
 	meson_nand_set_bootloader_mode(bl_mode);
 	meson_nand_set_fipsize(fip_size);

@@ -795,7 +795,6 @@ static int _meson_nfc_boot_write_page_hwecc(struct nand_chip *nand,
 	int len = mtd->writesize + mtd->oobsize;
 	int bl2_pages_per_copy, ecc_size, bch_mode;
 	u8 *oob_buf = nand->oob_poi;
-	u8 *info;
 	int i;
 	u64 ofs, tmp;
 	u32 remainder;
@@ -815,9 +814,9 @@ static int _meson_nfc_boot_write_page_hwecc(struct nand_chip *nand,
 
 	if (nfc->param_from_dts.common_pageinfo &&
 	    page_info_is_page(mtd, page)) {
-		info = page_info_post_init(mtd, 0, 0, 0);
+		page_info_post_init(mtd, 0, 0, 0);
 		memset(meson_chip->data_buf, 0x00, mtd->writesize + mtd->oobsize);
-		memcpy(meson_chip->data_buf, info, get_page_info_size());
+		page_info_fetch_content((void *)meson_chip->data_buf, get_page_info_size());
 		meson_nfc_write_page_sub(nand, page, 0, len, 0);
 	} else {
 		if (!nfc->param_from_dts.common_pageinfo &&
