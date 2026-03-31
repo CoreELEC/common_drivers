@@ -1872,6 +1872,12 @@ function build_kernel_with_bazel() {
 		echo "    DDK_BUILD = False,"			>> ${PROJECT_DIR}/project.bzl
 	fi
 
+	if [[ "${KASAN}" == "1" ]]; then
+		echo "    KASAN = True,"			>> ${PROJECT_DIR}/project.bzl
+	else
+		echo "    KASAN = False,"			>> ${PROJECT_DIR}/project.bzl
+	fi
+
 	echo "    UPGRADE_PROJECT = \"${UPGRADE_PROJECT}\"," 	>> ${PROJECT_DIR}/project.bzl
 
 	echo 							>> ${PROJECT_DIR}/project.bzl
