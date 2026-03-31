@@ -720,6 +720,9 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		} else if (devp->prop.color_format == TVIN_RGB444) {
 			if (devp->dv_is_not_std)
 				format_convert = VDIN_FORMAT_CONVERT_BRG_YUV422;
+			else if (devp->prop.low_latency &&
+			    devp->prop.colordepth == VDIN_COLOR_DEEPS_8BIT)
+				format_convert = VDIN_FORMAT_CONVERT_RGB_YUV444;
 			else
 				format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
 		} else {

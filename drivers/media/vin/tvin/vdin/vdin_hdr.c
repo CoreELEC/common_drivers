@@ -310,6 +310,7 @@ bool vdin_dv_is_not_std_source_led(struct vdin_dev_s *devp)
 			devp->prop.colordepth, devp->prop.dv_unique_drm_flag,
 			devp->fmt_info_p->scan_mode, devp->bypass_tunnel);
 
+	// interlaced not support dv
 	if (devp->dv.dv_flag) {
 		if (devp->fmt_info_p->scan_mode == TVIN_SCAN_MODE_INTERLACED)
 			return true;
@@ -332,7 +333,10 @@ bool vdin_dv_is_not_std_source_led(struct vdin_dev_s *devp)
 		} else {
 			if (devp->prop.color_format == TVIN_YUV420 ||
 				(devp->prop.color_format == TVIN_RGB444 &&
-				devp->prop.colordepth == VDIN_COLOR_DEEPS_12BIT))
+				devp->prop.colordepth == VDIN_COLOR_DEEPS_12BIT) ||
+				(devp->prop.color_format == TVIN_RGB444 &&
+				devp->prop.low_latency &&
+				devp->prop.colordepth == VDIN_COLOR_DEEPS_8BIT))
 				/* dv 420 12bit/rgb 12bit: recognize as dv but drop 2-lsb */
 				devp->bypass_tunnel = true;
 			if (vdin_force_format_for_decontour(devp) && !vdin_dv_is_sink_led(devp))
