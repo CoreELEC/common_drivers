@@ -7937,7 +7937,8 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	devp->addr_offset = vdin_addr_offset[devp->index];
 
 	/*canvas align number*/
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&
+		get_cpu_type() != MESON_CPU_MAJOR_ID_S6)
 		devp->canvas_align = 64;
 	else
 		devp->canvas_align = 32;

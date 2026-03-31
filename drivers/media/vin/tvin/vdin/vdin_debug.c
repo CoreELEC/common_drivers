@@ -4005,6 +4005,13 @@ start_chk:
 		} else if (kstrtoul(parm[1], 0, &val) == 0) {
 			devp->force_disp_skip_num = val;
 		}
+	} else if (!strcmp(parm[0], "canvas_align")) {
+		if (!parm[1]) {
+			err = -EINVAL;
+			goto error;
+		} else if (kstrtoul(parm[1], 0, &val) == 0) {
+			devp->canvas_align = val;
+		}
 	} else if (!strcmp(parm[0], "force_one_buffer")) {
 		if (!parm[1]) {
 			err = -EINVAL;

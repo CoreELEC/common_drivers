@@ -2185,6 +2185,7 @@ int vdin_v4l2_start_tvin(struct vdin_dev_s *devp)
 	int cur_axis[4];
 	const struct vinfo_s *vinfo;
 	bool from_vinfo = 0;
+
 	memset(&vdin_cap_param, 0, sizeof(struct vdin_parm_s));
 	memset(&cur_axis, 0, sizeof(cur_axis));
 	memset(&video_input_parms, 0, sizeof(struct video_input_info));
@@ -2204,7 +2205,6 @@ int vdin_v4l2_start_tvin(struct vdin_dev_s *devp)
 				vdin_cap_param.h_active = video_input_parms.width;
 				vdin_cap_param.v_active = video_input_parms.height;
 			}
-
 			devp->ext_cap_video_win_info.in.w = vdin_cap_param.h_active;
 			devp->ext_cap_video_win_info.in.h = vdin_cap_param.v_active;
 		} else {
@@ -2225,16 +2225,25 @@ int vdin_v4l2_start_tvin(struct vdin_dev_s *devp)
 	} else {
 		fmt_info_p = tvin_get_fmt_info(devp->parm.info.fmt);
 		if (!fmt_info_p) {
-			dprintk(0, "%s,invalid fmt:%s\n",
-				__func__, tvin_sig_fmt_str(devp->parm.info.fmt));
-			return -1;
+			dprintk(0, "fmt:%s set hv_active:%dx%d\n",
+				tvin_sig_fmt_str(devp->parm.info.fmt),
+				devp->v4l2_fmt.fmt.pix_mp.width,
+				devp->v4l2_fmt.fmt.pix_mp.height);
+			vdin_cap_param.h_active = devp->v4l2_fmt.fmt.pix_mp.width;
+			vdin_cap_param.v_active = devp->v4l2_fmt.fmt.pix_mp.height;
+			vdin_cap_param.fmt = TVIN_SIG_FMT_MAX;
+			vdin_cap_param.hsync_phase = 0;
+			vdin_cap_param.vsync_phase = 1;
+			vdin_cap_param.hs_bp = 0;
+			vdin_cap_param.vs_bp = 0;
+			vdin_cap_param.scan_mode = TVIN_SCAN_MODE_PROGRESSIVE;
+		} else {
+			vdin_cap_param.h_active = fmt_info_p->h_active;
+			vdin_cap_param.v_active = fmt_info_p->v_active;
+			vdin_cap_param.fmt = devp->parm.info.fmt;
+			vdin_cap_param.scan_mode = fmt_info_p->scan_mode;
 		}
-		vdin_cap_param.h_active = fmt_info_p->h_active;
-		vdin_cap_param.v_active = fmt_info_p->v_active;
-
-		vdin_cap_param.scan_mode = fmt_info_p->scan_mode;
 		vdin_cap_param.cfmt  = devp->parm.info.cfmt;
-		vdin_cap_param.fmt = devp->parm.info.fmt;
 	}
 
 	vdin_cap_param.frame_rate   = devp->parm.info.fps;
