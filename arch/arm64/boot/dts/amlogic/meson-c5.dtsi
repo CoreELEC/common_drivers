@@ -2265,12 +2265,13 @@
 		#address-cells=<2>;
 		#size-cells=<2>;
 		status = "okay";
-		compatible = "amlogic, aml-gdc-v5";
+		compatible = "amlogic, mbp-dewarp-v2";
 		reg = <0 0xff566c00 0 0x000030c>;
-		interrupts = <GIC_SPI 356 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "amlgdc";
-		clocks = <&clkc CLKID_DEWARPA>;
-		clock-names = "clk_gate";
+		interrupts = <GIC_SPI 356 IRQ_TYPE_EDGE_RISING>,
+			<GIC_SPI 374 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "amlgdc", "opp_done";
+		clocks = <&clkc CLKID_DEWARPA>, <&clkc CLKID_CVE>, <&clkc CLKID_ISP0>;
+		clock-names = "clk_gate", "cve_arb", "isp_clk";
 		clk-rate = <800000000>;
 		power-domains = <&pwrdm PDID_C5_DEWARP>;
 	};
