@@ -1258,7 +1258,7 @@
 		dev_name = "adla";
 		status = "okay";
 		reg = <0xfe04a000 0x2000
-			0xf3C05000 0x20000
+			0xf3C05000 0x1E000
 			>;
 		reg-names = "adla_reg\0adla_sram";
 		interrupt-names = "adla";
