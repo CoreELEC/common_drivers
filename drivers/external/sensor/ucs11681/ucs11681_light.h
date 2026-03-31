@@ -27,6 +27,6 @@
 
 // To reduce probe time consume
 //#define ADD_UC11681_INPUT_DEVICE
-#define CONFIG_REDUCE_TIME_CONSUME
+//#define CONFIG_REDUCE_TIME_CONSUME
 
 #endif

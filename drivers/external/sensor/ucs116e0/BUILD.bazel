@@ -1,0 +1,30 @@
+load("//build/kernel/kleaf:kernel.bzl", "ddk_headers", "ddk_module")
+load("//common_drivers:amlogic_utils.bzl", "m_k_files", "kernel_select")
+
+m_k_files()
+
+ddk_module(
+	name = "sei_ucs116e0_light",
+	srcs = glob([
+		"**/*.h",
+	]),
+	conditional_srcs = {
+		"CONFIG_SEI_UCS116E0_LIGHT": {
+			True: [
+				"ucs116e0_light.c",
+			],
+		},
+	},
+	hdrs = [
+	],
+
+	local_defines = [
+		"pr_fmt(fmt)=\"[sei_ucs116e0_light]: \" fmt",
+	],
+	out = "sei_ucs116e0_light.ko",
+	kernel_build = kernel_select(),
+	visibility = ["//visibility:public"],
+	deps = [
+		"//common_drivers/drivers/gki_tool:amlogic-gkitool",
+	],
+)

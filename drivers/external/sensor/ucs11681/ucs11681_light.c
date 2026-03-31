@@ -360,7 +360,7 @@ static int ucs11681_verify(struct ucs11681_data *ucs11681)
 	SEI_UCS11681_FUNC_DEBUG("match product id is fail\n");
 	return -1;
 out:
-	ucs11681_disable(ucs11681);
+	//ucs11681_disable(ucs11681);
 
 	SEI_UCS11681_FUNC_EXIT("exit\n");
 	return retval;
@@ -471,6 +471,8 @@ static int ucs11681_i2c_probe(struct i2c_client *client)
 	if (ret < 0) {
 		// maybe need to do something
 		SEI_UCS11681_FUNC_DEBUG("device not recognized\n");
+		kfree(ucs11681);
+		return ret;
 	}
 #endif
 	i2c_set_clientdata(client, ucs11681);

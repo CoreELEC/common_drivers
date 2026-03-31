@@ -2850,6 +2850,18 @@
 		};
 	};
 
+	c_uart_pins3:c_uart3 {
+		mux {
+			groups = "uart_c_rx_h",
+				"uart_c_tx_h",
+				"uart_c_cts",
+				"uart_c_rts";
+			function = "uart_c";
+			drive-strength = <3>;
+			bias-pull-up;
+		};
+	};
+
 	emmc_pins: emmc_pins {
 		mux-0 {
 			groups = "emmc_nand_d0",

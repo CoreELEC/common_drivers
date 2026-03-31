@@ -174,9 +174,9 @@ static void leds_aw21036b_work_func(struct work_struct *work)
 			//aw21036_i2c_writes(aw21036->i2c, REG_BR24, 9, tmp_w[j] + 24);
 			aw21036_i2c_writes(aw21036->i2c, REG_BR0, BR_MAX, tmp_w[j] + 0); //LED0-LED12 * 3 = 36
 
-			usleep_range(1000 * (time_val-10), 1000 * (time_val + 10));
-
 			aw21036_i2c_write(aw21036, REG_UPDATE, 0x00);
+
+			usleep_range(1000 * (time_val-10), 1000 * (time_val + 10));
 
 			if(0==state_mode)
 				break;
@@ -197,7 +197,7 @@ static void leds_aw21036b_work_func(struct work_struct *work)
 			aw21036_i2c_write(aw21036, REG_UPDATE, 0x00);
 
 			usleep_range(1000 * (time_val-10), 1000 * (time_val + 10));
-			
+
 			if(0==state_mode)
 				break;
 		}
@@ -207,7 +207,7 @@ static void leds_aw21036b_work_func(struct work_struct *work)
 	}
 
 	AW21036_FUNC_DEBUG("platform_id = %d, driver_init_flag = %d\n", platform_id, driver_init_flag);
-	if((15 == platform_id) && (0 ==driver_init_flag)) {
+	if (platform_id == 15 && driver_init_flag == 0) { //15 is adt-5
 		driver_init_flag = 1;
 		tmp_color[4] = 0x007f00;
 		AW21036_FUNC_DEBUG("set 0x007f00 for power led\n");
@@ -237,7 +237,7 @@ static void init_leds_mode(int leds_mode)
 	}
 
 	AW21036_FUNC_DEBUG("leds_mode=%d < time_val=%d, cycles_val=%d, instruct_val=%d >\n",leds_mode,time_val,cycles_val,instruct_val);
-	
+
 	for(i=0; i < instruct_val; i++)                    //instruct_val, value
 	{
 		for(j = 0; j < 12; j++) //max led_counts is 12, 12x3 = 36 max io
@@ -299,7 +299,7 @@ static void meson_aw21036_set_colors(unsigned int *colors, unsigned int counts)
 		color_data[io->g_io] = color->green = (tmp_color[i] >> 8) & 0xff;
 		color_data[io->r_io] = color->red = (tmp_color[i] >> 16) & 0xff;
 	}
-	
+
 	AW21036_FUNC_DEBUG("colors0 = 0x%x \n",colors[0]);
 	//aw21036_i2c_writes(aw21036->i2c, REG_DIM00, AW21036_MAX_IO, color_data);
 	//aw21036_i2c_writes(aw21036->i2c, REG_BR0, 15, &color_data[0]);	//LED-1~5:LED1~LED15
@@ -344,7 +344,7 @@ static void init_leds_data(void)
 
 	/*add X3 SEI600TID */
 	all_data[12] = (int *)&data_mode12;
-	
+
 	length_data[0] = sizeof(data_mode0)/sizeof(data_mode0[0]);
 	length_data[1] = sizeof(data_mode1)/sizeof(data_mode1[0]);
 	length_data[2] = sizeof(data_mode2)/sizeof(data_mode2[0]);
@@ -358,7 +358,7 @@ static void init_leds_data(void)
 	length_data[10] = sizeof(data_mode10)/sizeof(data_mode10[0]);
 	length_data[11] = sizeof(data_mode11)/sizeof(data_mode11[0]);
 
-	/*add X3 SEI600TID */   
+	/*add X3 SEI600TID */
 	length_data[12] = sizeof(data_mode12)/sizeof(data_mode12[0]);       //add X3 SEI600TID
 
 	init_leds_config();
@@ -427,10 +427,11 @@ static int aw21036_parse_dt(struct device *dev, struct meson_aw21036 *aw21036, s
 {
 	//int ret;
 
-	aw21036->reset_gpio = of_get_named_gpio(np, "reset-gpio", 0);
-	if (aw21036->reset_gpio < 0) {
+	aw21036->reset_gpiod = devm_gpiod_get_optional(dev, "reset", GPIOD_ASIS);
+	if (IS_ERR(aw21036->reset_gpiod)) {
 		dev_err(dev, "%s: no reset gpio provided, will not HW reset device\n", __func__);
-	} else {
+		aw21036->reset_gpiod = NULL;
+	} else if (aw21036->reset_gpiod) {
 		dev_info(dev, "%s: reset gpio provided ok\n", __func__);
 	}
 
@@ -450,15 +451,15 @@ static int aw21036_hw_reset(struct meson_aw21036 *aw21036)
 {
 	AW21036_FUNC_ENTER("enter\n");
 
-	if (aw21036 && gpio_is_valid(aw21036->reset_gpio)) {
+    if (aw21036 && aw21036->reset_gpiod) {
 		// use internal soft reset
 		aw21036_i2c_write(aw21036, REG_SWRST, 0x00);   //soft reset
 		usleep_range(10000,15000);
 
 		// set CHIPEN to 1
-		gpio_set_value_cansleep(aw21036->reset_gpio, 0);
+		gpiod_set_value_cansleep(aw21036->reset_gpiod, 0);
 		msleep(2);
-		gpio_set_value_cansleep(aw21036->reset_gpio, 1);
+		gpiod_set_value_cansleep(aw21036->reset_gpiod, 1);
 		msleep(2);
 	} else {
 		// use internal soft reset
@@ -475,8 +476,8 @@ static int aw21036_hw_off(struct meson_aw21036 *aw21036)
 {
 	AW21036_FUNC_ENTER("enter\n");
 
-	if (aw21036 && gpio_is_valid(aw21036->reset_gpio)) {
-		gpio_set_value_cansleep(aw21036->reset_gpio, 0);
+	if (aw21036 && aw21036->reset_gpiod) {
+		gpiod_set_value_cansleep(aw21036->reset_gpiod, 0);
 		msleep(1);
 	} else {
 		//aw21036_i2c_write(aw21036, REG_SWRST, 0x00);   //0x7F  SW_RSTN
@@ -495,25 +496,19 @@ static int aw21036_read_chipid(struct meson_aw21036 *aw21036)
 	AW21036_FUNC_ENTER("enter\n");
 
 // [SEI-Mack.Zhang 2025-12-02 ]user hw reset function {
-	if (aw21036->reset_gpio > 0) {
+	if (aw21036->reset_gpiod) {
 		// use internal soft reset
 		aw21036_i2c_write(aw21036, REG_SWRST, 0x00);   //soft reset
 		usleep_range(10000,15000);
 
-		ret = gpio_request(aw21036->reset_gpio, "aw21036-reset-gpio");
-		if (ret < 0) {
-			pr_err("%s] reset pin GPIO is already allocated\n", __func__);
-			//return;
-		} else if (aw21036 && gpio_is_valid(aw21036->reset_gpio)) {
-			//gpiod_set_pull(gpio_to_desc(aw21036->reset_gpio), GPIOD_PULL_UP);
-			gpio_direction_output(aw21036->reset_gpio, 0);
-			//gpio_set_value_cansleep(aw21036->reset_gpio, 0);
-			msleep(1);
-			gpio_set_value_cansleep(aw21036->reset_gpio, 1);
-			msleep(1);
+		//gpiod_set_pull(aw21036->reset_gpiod, GPIOD_PULL_UP);
+		gpiod_direction_output(aw21036->reset_gpiod, 0);
+		//gpiod_set_value_cansleep(aw21036->reset_gpiod, 0);
+		msleep(1);
+		gpiod_set_value_cansleep(aw21036->reset_gpiod, 1);
+		msleep(1);
 
-			pr_info("aw21036]%s use hw reset:%d\n", __func__,__LINE__);
-		} 
+		pr_info("aw21036]%s use hw reset:%d\n", __func__, __LINE__);
 	} else { //use sw reset function
 		aw21036_i2c_write(aw21036, REG_SWRST, 0x00);   //soft reset
 		usleep_range(80000,100000);
@@ -624,7 +619,7 @@ static ssize_t aw21036_reg_show(struct device *dev, struct device_attribute *att
 
 /**
 * sys group attribute: hwen
-* 1: gpio reset 
+* 1: gpio reset
 * 2: sw-reset
 * 3: init_leds_data
 */
@@ -691,7 +686,7 @@ static ssize_t aw21036_colors_store(struct device *dev, struct device_attribute 
 			if (colors[0] == 4) {
 				AW21036_FUNC_DEBUG("ignore led data\n");
 				return count;
-			} 
+			}
 		}
 
 		if (colors[0] < aw21036->led_counts) {
@@ -820,11 +815,11 @@ static ssize_t aw21036_led1_store(struct device *dev, struct device_attribute *a
 			led_value[1] = (databuf[0] >> 8) & 0xFF;     //G
 			led_value[2] = databuf[0] & 0xFF;            //B
 		}
-		
+
 		//AW21036_FUNC_DEBUG("set mode=%d\n", databuf[0]);
 		AW21036_FUNC_DEBUG("set R=%x,G=%x,B=%x\n", led_value[0], led_value[1], led_value[2]);
 
-		aw21036_i2c_writes(aw21036->i2c, REG_BR21, 3, led_value); 
+		aw21036_i2c_writes(aw21036->i2c, REG_BR21, 3, led_value);
 		aw21036_i2c_write(aw21036, REG_UPDATE, 0x00);
 	}
 
@@ -837,7 +832,7 @@ static ssize_t aw21036_led1_show(struct device *dev, struct device_attribute *at
 	//struct led_classdev *led_cdev = dev_get_drvdata(dev);
 	//struct meson_aw21036 *aw21036 = container_of(led_cdev, struct meson_aw21036, cdev);
 	ssize_t len = 0;
-	
+
 	aw21036_i2c_read(aw21036, 0x10, &ledr_value);
 	aw21036_i2c_read(aw21036, 0x11, &ledg_value);
 	aw21036_i2c_read(aw21036, 0x12, &ledb_value);
@@ -868,7 +863,7 @@ static ssize_t aw21036_led2_store(struct device *dev, struct device_attribute *a
 			led_value[1] = (databuf[0] >> 8) & 0xFF;     //G
 			led_value[2] = databuf[0] & 0xFF;            //B
 		}
-		
+
 		//AW21036_FUNC_DEBUG("set mode=%d\n", databuf[0]);
 		AW21036_FUNC_DEBUG("set R=%x,G=%x,B=%x\n", led_value[0], led_value[1], led_value[2]);
 
@@ -886,7 +881,7 @@ static ssize_t aw21036_led2_show(struct device *dev, struct device_attribute *at
 	//struct meson_aw21036 *aw21036 = container_of(led_cdev, struct meson_aw21036, cdev);
 	ssize_t len = 0;
 	AW21036_FUNC_ENTER("enter\n");
-	
+
 	aw21036_i2c_read(aw21036, 0x13, &ledr_value);
 	aw21036_i2c_read(aw21036, 0x14, &ledg_value);
 	aw21036_i2c_read(aw21036, 0x15, &ledb_value);
@@ -921,7 +916,7 @@ static ssize_t aw21036_led3_store(struct device *dev, struct device_attribute *a
 
 		//AW21036_FUNC_DEBUG("set mode=%d\n", databuf[0]);
 		AW21036_FUNC_DEBUG("set R=%x,G=%x,B=%x\n", led_value[0], led_value[1], led_value[2]);
-		
+
 		aw21036_i2c_writes(aw21036->i2c, REG_BR15, 3, led_value);
 		aw21036_i2c_write(aw21036, REG_UPDATE, 0x00);
 	}
@@ -936,7 +931,7 @@ static ssize_t aw21036_led3_show(struct device *dev, struct device_attribute *at
 	//struct meson_aw21036 *aw21036 = container_of(led_cdev, struct meson_aw21036, cdev);
 	ssize_t len = 0;
 	AW21036_FUNC_ENTER("enter\n");
-	
+
 	aw21036_i2c_read(aw21036, 0x16, &ledr_value);
 	aw21036_i2c_read(aw21036, 0x17, &ledg_value);
 	aw21036_i2c_read(aw21036, 0x18, &ledb_value);
@@ -1067,7 +1062,7 @@ static int aw21036_parse_led_cdev(struct meson_aw21036 *aw21036, struct device_n
 		aw21036->colors[i].red = colors[0];
 		aw21036->colors[i].green = colors[1];
 		aw21036->colors[i].blue = colors[2];
-		
+
 		AW21036_FUNC_DEBUG("led[%d] default_colors=%d %d %d\n", i, colors[0], colors[1], colors[2]);
 		AW21036_FUNC_DEBUG("led[%d] r_io_number=%d, g_io_number=%d, b_io_number=%d\n", i, aw21036->io[i].r_io, aw21036->io[i].g_io, aw21036->io[i].b_io);
 		i++;
@@ -1137,7 +1132,7 @@ static int aw21036_i2c_probe(struct i2c_client *i2c)
 
 	aw21036->dev = &i2c->dev;
 	aw21036->i2c = i2c;
-	
+
 	aw21036->led_counts = device_get_child_node_count(&i2c->dev);
 	aw21036->io = devm_kcalloc(&i2c->dev, aw21036->led_counts, sizeof(struct meson_aw21036_io),
 				GFP_KERNEL);
@@ -1148,7 +1143,7 @@ static int aw21036_i2c_probe(struct i2c_client *i2c)
 				GFP_KERNEL);
 	if (aw21036->colors == NULL)
 		return -ENOMEM;
-	
+
 	//i2c_set_clientdata(i2c, aw21036);
 	//dev_set_drvdata(&i2c->dev, aw21036);
 
@@ -1226,11 +1221,8 @@ static void aw21036_i2c_remove(struct i2c_client *i2c)
 	AW21036_FUNC_DEBUG("sysfs attributes removed\n");
 	led_classdev_unregister(&aw21036->cdev);
 	AW21036_FUNC_DEBUG("led_classdev_unregister\n");
-	
-	if (gpio_is_valid(aw21036->reset_gpio)) {
-		gpio_free(aw21036->reset_gpio);
-		AW21036_FUNC_DEBUG("gpio_free\n");
-	}
+
+    /* reset_gpiod is managed by devm, released automatically */
 
 	devm_kfree(&i2c->dev, aw21036);
 	AW21036_FUNC_DEBUG("devm_kfree\n");

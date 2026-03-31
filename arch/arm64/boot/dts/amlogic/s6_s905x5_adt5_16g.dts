@@ -251,6 +251,31 @@
 		};
 	};
 
+	adc_keypad {
+		compatible = "amlogic, adc_keypad";
+		status = "okay";
+		key_name = "641", "KEY_F10";
+		key_num = <2>;
+		io-channels = <&saradc 3>;
+		io-channel-names = "key-chan-3";
+		key_chan = <SARADC_CH3 SARADC_CH3>;
+		key_code = <641 68>;
+		key_val = <900 0>;	/* Unit: millivolt */
+		key_tolerance = <70 70>;	/* Unit: millivolt */
+	};
+
+	MG24_RST_ctrl:MG24_RST_ctrl {
+		compatible = "sei, gpio_ctrl";
+		status = "okay";
+		ctrl-gpios = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+	};
+
+	MG24_BTL_ctrl:MG24_BTL_ctrl {
+		compatible = "sei, gpio_ctrl";
+		status = "okay";
+		ctrl-gpios = <&gpio GPIOB_13 GPIO_ACTIVE_HIGH>;
+	};
+
 /* Audio Related start */
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
@@ -572,19 +597,6 @@
 		cma_mem_size = <0>; //MB
 	};
 
-	adc_keypad {
-		compatible = "amlogic, adc_keypad";
-		status = "okay";
-		key_name = "KEY_F10";	//sw2(findMe)
-		key_num = <1>;
-		io-channels = <&saradc 3>;
-		io-channel-names = "key-chan-3";
-		key_chan = <3>;
-		key_code = <68>;
-		key_val = <20>;
-		key_tolerance = <40>;
-	};
-
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
 		status = "okay";
@@ -722,7 +734,7 @@
 	clock-frequency = <300000>;
 
 	ucs11681@38 {
-		compatible = "sei,ucs11681";
+		compatible = "sei,ucs11681","sei,ucs116e0";
 		reg = <0x38>;
 		status = "okay";
 	};
@@ -752,7 +764,7 @@
 	aw21036@34 {
 		compatible = "seirobotics,aw21036_led";
 		reg = <0x34>;
-		reset-gpio = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio GPIOE_2 GPIO_ACTIVE_LOW>;
 		status = "okay";
 		platform = <15>;
 
@@ -1400,7 +1412,7 @@
 &pwm_c {
 	pinctrl-0 = <&pwm_c_pins5>;
 	pinctrl-names = "default";
-	status = "okay";
+	status = "disabled";
 };
 
 &uart_A {
@@ -1411,7 +1423,9 @@
 &uart_C {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&c_uart_pins>;//GPIOH_6 GPIOH_7
+	//pinctrl-0 = <&c_uart_pins>;//GPIOH_6 GPIOH_7
+	pinctrl-0 = <&c_uart_pins3>;
+	uart-has-rtscts;
 };
 
 &amlogic_codec {
