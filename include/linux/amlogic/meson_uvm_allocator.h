@@ -100,6 +100,12 @@ struct mua_realloc_buffer_list {
 	struct list_head dmabuf_list;
 };
 
+struct uvm_dump_data {
+	void *vir_addr;
+	size_t dump_size;
+	phys_addr_t dump_paddr;
+};
+
 struct mua_device {
 	struct miscdevice dev;
 	struct rb_root root;
@@ -110,6 +116,7 @@ struct mua_device {
 	struct mua_realloc_buffer_list mua_rec_buf_list[MAX_PIPE_LINE];
 	struct mutex mua_rec_buf_lock[MAX_PIPE_LINE]; /* mua_rec_buf_list mutex */
 	struct mutex buffer_lock; /* dev mutex */
+	struct uvm_dump_data dump_data;
 	struct workqueue_struct *workq;
 	int pid;
 	struct uvm_ge2d *ge2d;

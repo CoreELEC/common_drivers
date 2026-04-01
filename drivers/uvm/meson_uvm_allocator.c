@@ -36,6 +36,7 @@
 
 struct mua_device *mua_dev;
 struct device *uvmdev;
+static u32 pages;
 static int enable_screencap;
 module_param_named(enable_screencap, enable_screencap, int, 0664);
 static int mua_debug_level = MUA_ERROR;
@@ -1085,6 +1086,8 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 	time_use = (end.tv_sec - start.tv_sec) * 1000 +
 				(end.tv_usec - start.tv_usec) / 1000;
 	MUA_PRINTK(MUA_INFO, "uvm realloc use time: %ldms\n", time_use);
+	mua_dev->dump_data.dump_paddr = buffer->realloc_paddr;
+	mua_dev->dump_data.dump_size = new_size;
 
 	return 0;
 }
@@ -1801,6 +1804,61 @@ static const struct file_operations mua_fops = {
 #endif
 };
 
+static ssize_t uvm_data_dump_show(struct file *file, struct kobject *kobj,
+		struct bin_attribute *attr, char *buf, loff_t off, size_t count)
+{
+	u32 num_pages;
+	struct uvm_dump_data *dump = &mua_dev->dump_data;
+
+	mutex_lock(&mua_dev->buffer_lock);
+	if (pages == 0 && off < dump->dump_size)
+		dump->vir_addr = phys_to_virt(dump->dump_paddr);
+	if (!dump->vir_addr) {
+		MUA_PRINTK(MUA_ERROR, "vmap failed, vir_addr is null\n");
+		mutex_unlock(&mua_dev->buffer_lock);
+		return -EINVAL;
+	}
+	num_pages = PAGE_ALIGN(dump->dump_size) / PAGE_SIZE;
+
+	if (pages <= num_pages && off < dump->dump_size) {
+		memcpy(buf, dump->vir_addr + off, count);
+		pages++;
+
+		if (pages == num_pages)
+			pages = 0;
+		mutex_unlock(&mua_dev->buffer_lock);
+		return count;
+	}
+	mutex_unlock(&mua_dev->buffer_lock);
+
+	return 0;
+}
+
+static struct bin_attribute uvmdump_attr = {
+	.attr = {
+		.name = "uvm_data_dump",
+		.mode = 0664,
+	},
+	.private = NULL,
+	.read = uvm_data_dump_show,
+	.write = NULL,
+	.size = 14155776,
+};
+
+static struct bin_attribute *uvm_bin_attrs[] = {
+	&uvmdump_attr,
+	NULL,
+};
+
+static struct attribute *uvm_attrs[] = {
+	NULL
+};
+
+static const struct attribute_group uvmdump_attr_group = {
+	.attrs = uvm_attrs,
+	.bin_attrs = uvm_bin_attrs,
+};
+
 static int mua_probe(struct platform_device *pdev)
 {
 	int i, ret;
@@ -1815,6 +1873,10 @@ static int mua_probe(struct platform_device *pdev)
 		enable_recbuf_pool = 0;
 	enable_rec_buf_pool = enable_recbuf_pool;
 	uvmdev = &pdev->dev;
+
+	ret = sysfs_create_group(&uvmdev->kobj, &uvmdump_attr_group);
+	if (ret)
+		MUA_PRINTK(MUA_ERROR, "/sys/devices/platform/meson_uvm/uvmdump creat fail\n");
 
 	mua_dev = kzalloc(sizeof(*mua_dev), GFP_KERNEL);
 	if (!mua_dev)
@@ -1846,6 +1908,7 @@ static int mua_probe(struct platform_device *pdev)
 
 static void mua_remove(struct platform_device *pdev)
 {
+	sysfs_remove_group(&uvmdev->kobj, &uvmdump_attr_group);
 	misc_deregister(&mua_dev->dev);
 	if (mua_dev->workq) {
 		flush_workqueue(mua_dev->workq);
