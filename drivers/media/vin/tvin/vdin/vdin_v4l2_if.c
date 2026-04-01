@@ -1495,6 +1495,8 @@ static int vdin_vidioc_enum_framesizes(struct file *file, void *fh,
 	int ret = 0, i = 0;
 	struct vdin_v4l2_pix_fmt *fmt = NULL;
 	struct v4l2_frmsize_discrete *frmsize = NULL;
+	struct vdin_dev_s *devp = video_drvdata(file);
+	const struct tvin_format_s *fmt_info_p;
 
 	for (i = 0; i < ARRAY_SIZE(pix_formats); i++) {
 		if (pix_formats[i].fourcc == fsize->pixel_format) {
@@ -1507,14 +1509,28 @@ static int vdin_vidioc_enum_framesizes(struct file *file, void *fh,
 	if (fsize->index >= ARRAY_SIZE(vdin_v4l2_frmsize_dis))
 		return -EINVAL;
 
+	fmt_info_p = tvin_get_fmt_info(devp->parm.info.fmt);
 	frmsize = &vdin_v4l2_frmsize_dis[fsize->index];
-	/* TODO:vdin can only scale down
-	 * width & height should less than real format size.
-	 */
-	fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fsize->discrete.width  = frmsize->width;
-	fsize->discrete.height = frmsize->height;
+	if (!fmt_info_p || !IS_HDMI_SRC(devp->parm.port)) {
+		dprintk(1, "vdin%d report size:%dx%d\n",
+			devp->index, frmsize->width, frmsize->height);
 
+		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+		fsize->discrete.width  = frmsize->width;
+		fsize->discrete.height = frmsize->height;
+	} else {
+		if (frmsize->width <= fmt_info_p->h_active &&
+			frmsize->height <= fmt_info_p->v_active) {
+			fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+			fsize->discrete.width  = frmsize->width;
+			fsize->discrete.height = frmsize->height;
+			dprintk(1, "vdin%d report size:%dx%d based on:%s\n",
+				devp->index, frmsize->width, frmsize->height,
+				tvin_sig_fmt_str(devp->parm.info.fmt));
+		} else {
+			ret = -EINVAL;
+		}
+	}
 	return ret;
 }
 
