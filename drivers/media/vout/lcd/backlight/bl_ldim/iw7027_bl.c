@@ -47,7 +47,6 @@ static DEFINE_MUTEX(dev_mutex);
 struct iw7027_s {
 	struct spi_device *spi;
 	unsigned int dev_on_flag;
-	unsigned char dma_support;
 	unsigned short vsync_cnt;
 	unsigned short fault_cnt;
 	unsigned int fault_cnt_save;
@@ -246,7 +245,7 @@ static int spi_wregs_all(struct spi_device *spi, unsigned int chip_cnt,
 }
 
 /* write diff data to all device */
-static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigned char spi_sync,
+static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigned char trig_mode,
 			  unsigned char reg, unsigned char *data_buf, int tlen)
 {
 	unsigned char *tbuf, *rbuf;
@@ -292,14 +291,10 @@ static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigne
 		memset(&tbuf[3 + tlen * chip_cnt], 0, n);
 	}
 
-	switch (spi_sync) {
-	case SPI_SYNC:
-		ret = ldim_spi_write(spi, tbuf,	xlen);
-		break;
+	switch (trig_mode) {
 	case SPI_ASYNC:
 		ret = ldim_spi_write_async(spi, tbuf, rbuf, xlen, bl_iw7027->tbuf_size);
 		break;
-	case SPI_DMA_TRIG:
 	default:
 		ret = ldim_spi_write_dma_trig(spi, tbuf, rbuf, xlen, bl_iw7027->tbuf_size);
 		break;
@@ -363,19 +358,14 @@ static int iw7027_reg_write_duty(struct ldim_dev_driver_s *dev_drv,
 	int ret;
 	unsigned long flags = 0;
 
-	if (dev_drv->spi_sync == SPI_SYNC)
-		mutex_lock(&spi_mutex);
-	else
-		spin_lock_irqsave(&spi_lock, flags);
+	spin_lock_irqsave(&spi_lock, flags);
 
-	ret = spi_wregs_duty(bl_iw7027->spi, dev_drv->chip_cnt, dev_drv->spi_sync, reg, buf, len);
+	ret = spi_wregs_duty(bl_iw7027->spi, dev_drv->chip_cnt,
+			dev_drv->spi_conf.trig_mode, reg, buf, len);
 	if (ret)
 		LDIMERR("%s: reg 0x%x, len %d error\n", __func__, reg, len);
 
-	if (dev_drv->spi_sync == SPI_SYNC)
-		mutex_unlock(&spi_mutex);
-	else
-		spin_unlock_irqrestore(&spi_lock, flags);
+	spin_unlock_irqrestore(&spi_lock, flags);
 
 	return ret;
 }
@@ -830,8 +820,6 @@ static ssize_t iw7027_show(const struct class *class, const struct class_attribu
 				"rbuf_size      = %d\n"
 				"en_on          = %d\n"
 				"en_off         = %d\n"
-				"cs_hold_delay  = %d\n"
-				"cs_clk_delay   = %d\n"
 				"dim_max        = 0x%03x\n"
 				"dim_min        = 0x%03x\n",
 				dev_drv->index,
@@ -843,8 +831,6 @@ static ssize_t iw7027_show(const struct class *class, const struct class_attribu
 				bl_iw7027->rbuf_size,
 				dev_drv->en_gpio_on,
 				dev_drv->en_gpio_off,
-				dev_drv->cs_hold_delay,
-				dev_drv->cs_clk_delay,
 				dev_drv->dim_max,
 				dev_drv->dim_min);
 	} else if (!strcmp(attr->attr.name, "dump_buf")) {
@@ -899,11 +885,6 @@ static ssize_t iw7027_store(const struct class *class, const struct class_attrib
 		} else {
 			LDIMERR("%s: invalid args\n", __func__);
 		}
-	} else if (!strcmp(attr->attr.name, "dma")) {
-		n = sscanf(buf, "set %d", &val);
-		if (n == 1)
-			bl_iw7027->dma_support = val;
-		LDIMPR("dma_support: %d\n", bl_iw7027->dma_support);
 	} else {
 		LDIMERR("argument error!\n");
 	}
@@ -945,12 +926,12 @@ int ldim_dev_iw7027_probe(struct aml_ldim_driver_s *ldim_drv)
 		LDIMERR("%s: dev_drv is null\n", __func__);
 		return -1;
 	}
-	if (!dev_drv->spi_dev[0]) {
+	if (!dev_drv->spi_conf.spi_dev[0]) {
 		LDIMERR("%s: spi_dev[0] is null\n", __func__);
 		return -1;
 	}
 
-	if (!dev_drv->spi_dev[1] && dev_drv->spi_dev_num == 2) {
+	if (!dev_drv->spi_conf.spi_dev[1] && dev_drv->spi_conf.spi_dev_num == 2) {
 		LDIMERR("%s: spi_dev[1] is null\n", __func__);
 		return -1;
 	}
@@ -963,11 +944,10 @@ int ldim_dev_iw7027_probe(struct aml_ldim_driver_s *ldim_drv)
 	if (!bl_iw7027)
 		return -1;
 
-	bl_iw7027->spi = dev_drv->spi_dev[0];
+	bl_iw7027->spi = dev_drv->spi_conf.spi_dev[0];
 	bl_iw7027->dev_on_flag = 0;
 	bl_iw7027->vsync_cnt = 0;
 	bl_iw7027->fault_cnt = 0;
-	bl_iw7027->dma_support = dev_drv->dma_support;
 
 	/* 16 each device, each zone 2 bytes */
 	bl_iw7027->reg_buf_size = 16 * 2 * dev_drv->chip_cnt;
@@ -978,7 +958,7 @@ int ldim_dev_iw7027_probe(struct aml_ldim_driver_s *ldim_drv)
 
 	/* spi transfer buffer: header + reg_max_cnt + chip_cnt */
 	bl_iw7027->tbuf_size = IW7027_REG_MAX + bl_iw7027->reg_buf_size;
-	if (bl_iw7027->dma_support && dev_drv->spi_dev[0]->controller->dma_alignment) {
+	if (dev_drv->spi_conf.spi_dev[0]->controller->dma_alignment) {
 		n = bl_iw7027->tbuf_size;
 		bl_iw7027->tbuf_size = ldim_spi_dma_cycle_align_byte(n);
 	}
@@ -1024,7 +1004,7 @@ int ldim_dev_iw7027_probe(struct aml_ldim_driver_s *ldim_drv)
 		}
 	}
 
-	if (dev_drv->spi_sync == SPI_ASYNC)
+	if (dev_drv->spi_conf.trig_mode == SPI_ASYNC)
 		spin_lock_init(&spi_lock);
 
 	if (bdrv->state & BL_STATE_BL_ON)

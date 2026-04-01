@@ -71,6 +71,33 @@ struct abcon_conf_s {
 	unsigned int ctrl;
 };
 
+struct data_pkt_s {
+	unsigned char pkt_type;
+	unsigned char header_cnt;
+	unsigned char *header_data;
+	unsigned char extend_cnt;
+	unsigned char *extend_data;
+	unsigned char datamapping_en;
+	unsigned char adim_width;
+	unsigned char pdim_width;
+	unsigned short adim;
+	unsigned short pdim;
+};
+
+struct spi_conf_s {
+	unsigned char trig_mode;
+	//unsigned int spi_line_n;/*vpp line n irq*/
+	unsigned char rx_en;
+	int spi_dev_num;
+	int use_ctrl_cs;
+	int cs2clk_delay;
+	int clk2cs_delay;
+	int vs2cs_delay;
+	struct spi_device *spi_dev[3];
+	struct spi_board_info spi_info[3];
+	struct data_pkt_s data_pkt;
+};
+
 #define LDIM_DEV_NAME_MAX    30
 #define LDIM_INIT_ON_MAX     2000
 #define LDIM_INIT_OFF_MAX    100
@@ -81,14 +108,7 @@ struct ldim_dev_driver_s {
 	unsigned char key_valid;
 	unsigned char config_load;
 	unsigned char type;
-	unsigned char dma_support;
-	unsigned char spi_sync;
-	unsigned int spi_line_n;/*vpp line n irq*/
 	unsigned int pwm_phase;
-	int spi_dev_num;
-	int use_ctrl_cs;
-	int cs_hold_delay;
-	int cs_clk_delay;
 	int en_gpio;
 	int en_gpio_on;
 	int en_gpio_off;
@@ -96,14 +116,15 @@ struct ldim_dev_driver_s {
 	unsigned char fault_check;
 	unsigned char write_check;
 	unsigned char pinmux_flag;
+	unsigned char brightness_mode;
 	unsigned int chip_cnt;
-	unsigned int mcu_header;
-	unsigned int mcu_dim;
 
 	unsigned int bl_row;
 	unsigned int bl_col;
 	unsigned int dim_min;
 	unsigned int dim_max;
+	unsigned int dim_adim;
+	unsigned int dim_pdim;
 
 	unsigned int zone_num;
 	char bl_mapping_path[256];
@@ -129,9 +150,10 @@ struct ldim_dev_driver_s {
 	struct pinctrl *pin;
 	struct device *dev;
 	struct class *class;
-	struct spi_device *spi_dev[2];
-	struct spi_board_info spi_info[2];
+	//struct spi_device *spi_dev[2];
+	//struct spi_board_info spi_info[2];
 	struct abcon_conf_s abcon_conf;
+	struct spi_conf_s spi_conf;
 
 	void (*dim_range_update)(struct ldim_dev_driver_s *dev_drv);
 	int (*pinmux_ctrl)(struct ldim_dev_driver_s *dev_drv, int status);
@@ -197,7 +219,6 @@ struct aml_ldim_driver_s {
 	unsigned char vsync_change_flag;
 	unsigned char duty_update_flag;
 	unsigned char in_vsync_flag;
-	unsigned char spiout_mode;
 
 	unsigned char init_on_flag;
 	unsigned char func_en;

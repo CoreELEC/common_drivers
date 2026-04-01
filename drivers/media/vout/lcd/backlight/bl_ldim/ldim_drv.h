@@ -47,11 +47,12 @@ extern unsigned char ldim_print_en;
 #define LDIMWARN(fmt, args...)    pr_warn("ldim: warning: " fmt "", ## args)
 #define ldim_pr(fmt, args...)    pr_info("ldim: " fmt "", ## args)//always print
 
-enum spi_sync_type_e {
-	SPI_SYNC	= 0x00,
-	SPI_ASYNC	= 0x01,
-	SPI_DMA_TRIG	= 0x02,
-	SPI_SYNC_MAX,
+enum spi_trig_mode_e {
+	SPI_ASYNC       = 0x00,
+	SPI_TRIG_VSYNC  = 0x01,
+	SPI_TRIG_PWM_VS = 0x02,
+	SPI_TRIG_LINE_N = 0x03,
+	SPI_TRIG_MAX,
 };
 
 enum spiout_type_e {

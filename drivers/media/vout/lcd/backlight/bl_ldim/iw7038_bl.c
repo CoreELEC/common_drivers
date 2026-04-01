@@ -47,8 +47,6 @@ static DEFINE_MUTEX(iw7038_spi_mutex);
 struct iw7038_s {
 	int test_mode;
 	struct spi_device *spi;
-	int cs_hold_delay;
-	int cs_clk_delay;
 	unsigned char cmd_size;
 	unsigned char *init_data;
 	unsigned int init_data_cnt;
@@ -758,8 +756,6 @@ static ssize_t iw7038_show(const struct class *class,
 				"fault_cnt      = %d\n"
 				"en_on          = %d\n"
 				"en_off         = %d\n"
-				"cs_hold_delay  = %d\n"
-				"cs_clk_delay   = %d\n"
 				"dim_max        = 0x%03x\n"
 				"dim_min        = 0x%03x\n",
 				ldim_drv->dev_index,
@@ -768,8 +764,6 @@ static ssize_t iw7038_show(const struct class *class,
 				iw7038_on_flag, fault_cnt,
 				ldim_drv->ldev_conf->en_gpio_on,
 				ldim_drv->ldev_conf->en_gpio_off,
-				ldim_drv->ldev_conf->cs_hold_delay,
-				ldim_drv->ldev_conf->cs_clk_delay,
 				ldim_drv->ldev_conf->dim_max,
 				ldim_drv->ldev_conf->dim_min);
 	} else if (!strcmp(attr->attr.name, "dump_dim")) {
@@ -907,8 +901,6 @@ int ldim_dev_iw7038_probe(struct aml_ldim_driver_s *ldim_drv)
 
 	bl_iw7038->test_mode = 0;
 	bl_iw7038->spi = ldim_drv->ldev_conf->spi_dev;
-	bl_iw7038->cs_hold_delay = ldim_drv->ldev_conf->cs_hold_delay;
-	bl_iw7038->cs_clk_delay = ldim_drv->ldev_conf->cs_clk_delay;
 	bl_iw7038->cmd_size = ldim_drv->ldev_conf->cmd_size;
 	bl_iw7038->init_data = ldim_drv->ldev_conf->init_on;
 	bl_iw7038->init_data_cnt = ldim_drv->ldev_conf->init_on_cnt;

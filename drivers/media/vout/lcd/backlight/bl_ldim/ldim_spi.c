@@ -134,25 +134,20 @@ int ldim_spi_write_async(struct spi_device *spi, unsigned char *tbuf,
 		return -EIO;
 
 	xlen = tlen;
-	if (dev_drv->dma_support) {
-		if (spi->controller->dma_alignment) {
-			spi->bits_per_word = 64;
-			xlen = ldim_spi_dma_cycle_align_byte(tlen);
-			if (xlen > max_len) {
-				LDIMERR("%s: dma xlen %d out of max_len %d\n",
-					__func__, xlen, max_len);
-				return -1;
-			}
-		} else {
-			spi->bits_per_word = 8;
+	if (spi->controller->dma_alignment) {
+		spi->bits_per_word = 64;
+		xlen = ldim_spi_dma_cycle_align_byte(tlen);
+		if (xlen > max_len) {
+			LDIMERR("spi_write_async: dma xlen %d out of max_len %d\n", xlen, max_len);
+			return -1;
 		}
-
-		if ((spi->controller->mode_bits & SPI_LSB_FIRST) == 0 &&
-			spi->bits_per_word == 64)
-			ldim_spi_buf_byte_swap_64bit(tbuf, tlen, xlen);
 	} else {
 		spi->bits_per_word = 8;
 	}
+
+	if ((spi->controller->mode_bits & SPI_LSB_FIRST) == 0 &&
+	    spi->bits_per_word == 64)
+		ldim_spi_buf_byte_swap_64bit(tbuf, tlen, xlen);
 
 	if (priv->async_busy_cnt > 5) {
 		priv->async_busy = 0;
@@ -195,9 +190,14 @@ int ldim_spi_init_dma_trig(struct spi_device *spi)
 	if (!priv)
 		return -EIO;
 
-	if (is_spicc_capable(cdata, CAP_DMA_TRIG_VSYNC) &&
+	if (is_spicc_capable(cdata, CAP_DMA_TRIG_PWM_VS) &&
 		is_spicc_capable(cdata, CAP_TRIG_DELAY)) {
-		cdata->dma_trig_delay = dev_drv->spi_line_n * 1000 / 6;
+		cdata->dma_trig_delay = dev_drv->spi_conf.vs2cs_delay * 1000 / 6;
+		ret = cdata->dirspi_dma_trig(spi, priv->tx_dma, priv->rx_dma,
+			priv->xlen, DMA_TRIG_PWM_VS);
+	} else if (is_spicc_capable(cdata, CAP_DMA_TRIG_VSYNC) &&
+		is_spicc_capable(cdata, CAP_TRIG_DELAY)) {
+		cdata->dma_trig_delay = dev_drv->spi_conf.vs2cs_delay * 1000 / 6;
 		ret = cdata->dirspi_dma_trig(spi, priv->tx_dma, priv->rx_dma,
 			priv->xlen, DMA_TRIG_VSYNC);
 	} else if (is_spicc_capable(cdata, CAP_DMA_TRIG_LINE_N)) {
@@ -266,11 +266,11 @@ int ldim_spi_dma_trig_start_all(void)
 	if (!dev_drv)
 		return -EIO;
 
-	if (dev_drv->spi_sync != SPI_DMA_TRIG)
+	if (dev_drv->spi_conf.trig_mode == SPI_ASYNC)
 		return 0;
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++)
-		ret |= ldim_spi_dma_trig_start(dev_drv->spi_dev[i]);
+	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++)
+		ret |= ldim_spi_dma_trig_start(dev_drv->spi_conf.spi_dev[i]);
 
 	return ret;
 }
@@ -300,11 +300,11 @@ int ldim_spi_dma_trig_stop_all(void)
 	if (!dev_drv)
 		return -EIO;
 
-	if (dev_drv->spi_sync != SPI_DMA_TRIG)
+	if (dev_drv->spi_conf.trig_mode == SPI_ASYNC)
 		return 0;
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++)
-		ret |= ldim_spi_dma_trig_stop(dev_drv->spi_dev[i]);
+	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++)
+		ret |= ldim_spi_dma_trig_stop(dev_drv->spi_conf.spi_dev[i]);
 
 	return ret;
 }
@@ -334,34 +334,28 @@ int ldim_spi_write_dma_trig(struct spi_device *spi, unsigned char *tbuf,
 	}
 
 	xlen = tlen;
-	if (dev_drv->dma_support) {
-		if (spi->controller->dma_alignment) {
-			spi->bits_per_word = 64;
-			xlen = ldim_spi_dma_cycle_align_byte(tlen);
-			if (xlen > max_len) {
-				LDIMERR("%s: dma xlen %d out of max_len %d\n",
-					__func__, xlen, max_len);
-				return -1;
-			}
-		} else {
-			spi->bits_per_word = 8;
+	if (spi->controller->dma_alignment) {
+		spi->bits_per_word = 64;
+		xlen = ldim_spi_dma_cycle_align_byte(tlen);
+		if (xlen > max_len) {
+			LDIMERR("spi_write_dma_trig: dma xlen %d out of max_len %d\n",
+				xlen, max_len);
+			return -1;
 		}
-
-		if ((spi->controller->mode_bits & SPI_LSB_FIRST) == 0 &&
-			spi->bits_per_word == 64)
-			ldim_spi_buf_byte_swap_64bit(tbuf, tlen, xlen);
 	} else {
-		if (ldim_debug_print & LDIM_DBG_PR_SPI)
-			LDIMERR("%s: dma_support should set 1\n", __func__);
-		return 0;
+		spi->bits_per_word = 8;
 	}
+
+	if ((spi->controller->mode_bits & SPI_LSB_FIRST) == 0 &&
+	    spi->bits_per_word == 64)
+		ldim_spi_buf_byte_swap_64bit(tbuf, tlen, xlen);
 
 	if (!cdata->dmatrig_is_busy) {
 		LDIMERR("%s: cdata->dmatrig_is_busy is null\n", __func__);
 		return -EIO;
 	}
 
-	spi_trig_line = dev_drv->spi_line_n;
+	spi_trig_line = dev_drv->spi_conf.vs2cs_delay;
 	current_line = lcd_get_encl_line_cnt(pdrv);
 	line_total_cnt = ldim_drv->trig_param.line_total_cnt;
 	//vrr mode may cause current_line bigger than line_total_cnt
@@ -465,8 +459,8 @@ int ldim_spi_write(struct spi_device *spi, unsigned char *tbuf, int tlen)
 	}
 	priv->async_busy = 1;
 
-	if (dev_drv->cs_hold_delay)
-		udelay(dev_drv->cs_hold_delay);
+	if (dev_drv->spi_conf.cs2clk_delay)
+		udelay(dev_drv->spi_conf.cs2clk_delay);
 
 	spi->bits_per_word = 8;
 	spi_message_init(&msg);
@@ -511,8 +505,8 @@ int ldim_spi_read(struct spi_device *spi, unsigned char *tbuf, int tlen,
 	}
 	priv->async_busy = 1;
 
-	if (dev_drv->cs_hold_delay)
-		udelay(dev_drv->cs_hold_delay);
+	if (dev_drv->spi_conf.cs2clk_delay)
+		udelay(dev_drv->spi_conf.cs2clk_delay);
 
 	spi->bits_per_word = 8;
 	spi_message_init(&msg);
@@ -562,8 +556,8 @@ int ldim_spi_read_sync(struct spi_device *spi, unsigned char *tbuf,
 	}
 	priv->async_busy = 1;
 
-	if (dev_drv->cs_hold_delay)
-		udelay(dev_drv->cs_hold_delay);
+	if (dev_drv->spi_conf.cs2clk_delay)
+		udelay(dev_drv->spi_conf.cs2clk_delay);
 
 	spi->bits_per_word = 8;
 	spi_message_init(&msg);
@@ -601,8 +595,8 @@ void ldim_spi_async_busy_clear(void)
 		return;
 	}
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++) {
-		spi = dev_drv->spi_dev[i];
+	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++) {
+		spi = dev_drv->spi_conf.spi_dev[i];
 		if (!spi) {
 			LDIMPR("%s: spi(0x%p) is null,return!\n", __func__, spi);
 			return;
@@ -645,8 +639,8 @@ void ldim_spi_async_busy_proc(void)
 		return;
 	}
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++) {
-		spi = dev_drv->spi_dev[i];
+	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++) {
+		spi = dev_drv->spi_conf.spi_dev[i];
 		if (!spi) {
 			LDIMPR("%s: spi(0x%p) is null,return!\n", __func__, spi);
 			return;
@@ -695,8 +689,8 @@ static int ldim_spi_dev_probe(struct spi_device *spi)
 	if (spi->controller->mode_bits & SPI_LSB_FIRST)
 		spi->mode |= SPI_LSB_FIRST;
 
-	spi->cs_setup.value = dev_drv->cs_hold_delay;
-	spi->cs_hold.value = dev_drv->cs_clk_delay;
+	spi->cs_setup.value = dev_drv->spi_conf.cs2clk_delay;
+	spi->cs_hold.value = dev_drv->spi_conf.clk2cs_delay;
 	ret = spi_setup(spi);
 	if (ret)
 		LDIMERR("spi setup failed\n");
@@ -722,14 +716,12 @@ static void ldim_spi_dev_remove(struct spi_device *spi)
 	if (!priv)
 		return;
 
-	if (dev_drv->spi_sync == SPI_DMA_TRIG)  {
-		dma_free_coherent(dev, priv->xlen,
-			priv->tx_buf, priv->tx_dma);
-		dma_free_coherent(dev, priv->xlen,
-			priv->rx_buf, priv->rx_dma);
+	if (dev_drv->spi_conf.trig_mode != SPI_ASYNC)  {
+		dma_free_coherent(dev, priv->xlen, priv->tx_buf, priv->tx_dma);
+		dma_free_coherent(dev, priv->xlen, priv->rx_buf, priv->rx_dma);
 	}
 
-	dev_drv->spi_dev[priv->dev_idx] = NULL;
+	dev_drv->spi_conf.spi_dev[priv->dev_idx] = NULL;
 	dev_set_drvdata(&spi->dev, NULL);
 
 	return;
@@ -768,24 +760,24 @@ struct spi_controller *spi_aliases_to_ctlr(const char *spi_aliases, int spicc_ve
 		if (!strncmp(alias_name, spi_aliases, strlen(pp->name))) {
 			target_node = of_find_node_by_path(pp->value);
 
-		if (!target_node) {
-			pr_warn("Alias %s has no valid target node\n", alias_name);
-			continue;
-		}
+			if (!target_node) {
+				pr_warn("Alias %s has no valid target node\n", alias_name);
+				continue;
+			}
 
-		pdev = of_find_device_by_node(target_node);
-		if (!pdev)
-			return NULL;
+			pdev = of_find_device_by_node(target_node);
+			if (!pdev)
+				return NULL;
 
-		if (spicc_version == SPICC_V1) {
-			spicc_v1_device_ = platform_get_drvdata(pdev);
-			ctlr = spicc_v1_device_->controller;
-		} else if (spicc_version == SPICC_V2) {
-			spicc_v2_device_ = platform_get_drvdata(pdev);
-			ctlr = spicc_v2_device_->controller;
-		}
+			if (spicc_version == SPICC_V1) {
+				spicc_v1_device_ = platform_get_drvdata(pdev);
+				ctlr = spicc_v1_device_->controller;
+			} else if (spicc_version == SPICC_V2) {
+				spicc_v2_device_ = platform_get_drvdata(pdev);
+				ctlr = spicc_v2_device_->controller;
+			}
 
-		of_node_put(target_node);
+			of_node_put(target_node);
 		}
 	}
 
@@ -799,17 +791,17 @@ int ldim_spi_driver_add(struct ldim_dev_driver_s *dev_drv)
 	struct spi_controller *ctlr;
 	struct spicc_controller_data *cdata;
 	struct spi_device *spi_device;
+	struct spi_conf_s *spi_conf = &dev_drv->spi_conf;
 	int ret, i;
 	char busname[16];
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++) {
-		cdata = dev_drv->spi_info[i].controller_data;
-		cdata->use_ctrl_cs = dev_drv->use_ctrl_cs;
-		cdata->ss_leading_gap = dev_drv->cs_hold_delay;
-		cdata->ss_trailing_gap = dev_drv->cs_clk_delay;
+	for (i = 0; i < spi_conf->spi_dev_num; i++) {
+		cdata = spi_conf->spi_info[i].controller_data;
+		cdata->use_ctrl_cs = spi_conf->use_ctrl_cs;
+		cdata->ss_leading_gap = spi_conf->cs2clk_delay;
+		cdata->ss_trailing_gap = spi_conf->clk2cs_delay;
 
-		snprintf(busname, sizeof(busname), "spi%d",
-			dev_drv->spi_info[i].bus_num);
+		snprintf(busname, sizeof(busname), "spi%d", spi_conf->spi_info[i].bus_num);
 		//Default:SPICC_V2 new spicc controller after A4
 		//TODO: add spicc version detect code for dts，spicltr_version = <2>;
 		ctlr = spi_aliases_to_ctlr(busname, SPICC_V2);
@@ -818,13 +810,13 @@ int ldim_spi_driver_add(struct ldim_dev_driver_s *dev_drv)
 			return -1;
 		}
 
-		spi_device = spi_new_device(ctlr, &dev_drv->spi_info[i]);
+		spi_device = spi_new_device(ctlr, &spi_conf->spi_info[i]);
 		if (!spi_device) {
 			LDIMERR("get spi_device %d failed\n", i);
 			return -1;
 		}
-		dev_drv->spi_dev[i] = spi_device;
-		LDIMPR("%s dev_drv->spi_dev[%d] = 0x%p\n", __func__, i, dev_drv->spi_dev[i]);
+		spi_conf->spi_dev[i] = spi_device;
+		LDIMPR("spi_driver_add: spi_dev[%d] = 0x%p\n", i, spi_conf->spi_dev[i]);
 	}
 
 	ret = spi_register_driver(&ldim_spi_dev_driver);
@@ -844,8 +836,8 @@ int ldim_spi_driver_remove(struct ldim_dev_driver_s *dev_drv)
 {
 	int i;
 
-	for (i = 0; i < dev_drv->spi_dev_num; i++) {
-		if (dev_drv->spi_dev[i])
+	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++) {
+		if (dev_drv->spi_conf.spi_dev[i])
 			spi_unregister_driver(&ldim_spi_dev_driver);
 	}
 

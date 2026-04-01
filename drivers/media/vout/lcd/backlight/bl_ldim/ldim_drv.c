@@ -107,7 +107,6 @@ static struct aml_ldim_driver_s ldim_driver = {
 	.vsync_change_flag = 0,
 	.duty_update_flag = 0,
 	.in_vsync_flag = 0,
-	.spiout_mode = SPIOUT_VSYNC,
 
 	.init_on_flag = 0,
 	.func_en = 1,
@@ -219,8 +218,8 @@ static int ldim_power_on(void)
 
 	if (fw && ldim_driver.dev_drv) {
 		fw->fw_ctrl |= FW_CTRL_RESUME;
-		if (ldim_driver.dev_drv->spi_sync == SPI_DMA_TRIG)
-			ldim_wr_vcbus(VPP_INT_LINE_NUM, ldim_driver.dev_drv->spi_line_n);
+		if (ldim_driver.dev_drv->spi_conf.trig_mode == SPI_TRIG_LINE_N)
+			ldim_wr_vcbus(VPP_INT_LINE_NUM, ldim_driver.dev_drv->spi_conf.vs2cs_delay);
 
 		LDIMPR("%s: fw_resume\n", __func__);
 	}
@@ -331,16 +330,15 @@ static int ldim_set_level(unsigned int level)
 
 	level = ldim_level_curve_mapping(&ldim_driver, level);
 
-	//if (strcmp(dev_drv->name, "blmcu") == 0) {
-	//	level = (level >> 4) & 0xff;
-	//	dev_drv->mcu_dim = (dev_drv->mcu_dim & 0xffffff00) | (level & 0xff);
-	//} else {
-	level &= 0xfff;
-	ldim_driver.litgain = (unsigned int)level;
-	if (ldim_driver.fw && ldim_driver.fw->param)
-		ldim_driver.fw->param->litgain = ldim_driver.litgain;
-	ldim_driver.level_update = 1;
-	//}
+	if (dev_drv->brightness_mode) {
+		dev_drv->dim_pdim = level;
+	} else {
+		level &= 0xfff;
+		ldim_driver.litgain = (unsigned int)level;
+		if (ldim_driver.fw && ldim_driver.fw->param)
+			ldim_driver.fw->param->litgain = ldim_driver.litgain;
+		ldim_driver.level_update = 1;
+	}
 
 	return 0;
 }
@@ -457,7 +455,7 @@ void ldim_trig_line_update(struct aml_ldim_driver_s *ldim_drv)
 	}
 
 	if (spi_tx_clk == 0) {
-		spi_tx_clk = ldim_drv->dev_drv->spi_info[0].max_speed_hz;
+		spi_tx_clk = ldim_drv->dev_drv->spi_conf.spi_info[0].max_speed_hz;
 		ldim_drv->trig_param.spi_tx_clk = spi_tx_clk;
 		if (spi_tx_clk == 0) {
 			LDIMERR("%s: spi_tx_clk is 0\n", __func__);
@@ -630,8 +628,7 @@ static irqreturn_t ldim_line_n_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&ldim_isr_lock, flags);
 
 	if (dev_drv->type == LDIM_DEV_TYPE_ABCON ||
-		(dev_drv->type == LDIM_DEV_TYPE_SPI &&
-		dev_drv->spi_sync == SPI_DMA_TRIG))
+	    (dev_drv->type == LDIM_DEV_TYPE_SPI && dev_drv->spi_conf.trig_mode != SPI_ASYNC))
 		ldim_vs_brightness();
 
 	spin_unlock_irqrestore(&ldim_isr_lock, flags);
@@ -655,20 +652,16 @@ static irqreturn_t ldim_pwm_vs_isr(int irq, void *dev_id)
 		return IRQ_HANDLED;
 
 	if (dev_drv->type == LDIM_DEV_TYPE_ABCON ||
-		(dev_drv->type == LDIM_DEV_TYPE_SPI &&
-		dev_drv->spi_sync == SPI_DMA_TRIG))
+	    (dev_drv->type == LDIM_DEV_TYPE_SPI && dev_drv->spi_conf.trig_mode != SPI_ASYNC))
 		return IRQ_HANDLED;
 
-	if (dev_drv->spi_sync == SPI_ASYNC)
-		ldim_spi_async_busy_proc();
+	ldim_spi_async_busy_proc();
 
 	local_time = sched_clock();
 	diff = local_time - ldim_driver.pwm_vs_irq_time_pre;
 	ldim_driver.pwm_vs_irq_time_pre = local_time;
 
-	if (dev_drv->spi_sync == SPI_ASYNC &&
-		dev_drv->ldim_pwm_config.pwm_port == BL_PWM_VS &&
-		diff < 3000000) {
+	if (dev_drv->ldim_pwm_config.pwm_port == BL_PWM_VS && diff < 3000000) {
 		ldim_driver.pwm_vs_irq_err_cnt++;
 		return IRQ_HANDLED;
 	}
@@ -721,7 +714,7 @@ static void ldim_dev_transmit(int update_flag, unsigned int size)
 		return;
 
 	if (dev_drv->type == LDIM_DEV_TYPE_SPI &&
-		!dev_drv->spi_dev[0])
+	    !dev_drv->spi_conf.spi_dev[0])
 		return;
 
 	if (!dev_drv->dev_transmit) {
@@ -1215,9 +1208,9 @@ int aml_ldim_get_config_json(int panel_id)
 		return -1;
 	}
 
-	parent = json_path_to_node(jsp, jsp->root, "/backlight/basic_info/ldim_row_col");
+	parent = json_path_to_node(jsp, jsp->root, "/backlight/ldim_dev/basic_info/ldim_row_col");
 	if (!parent) {
-		BLPR("failed find /backlight/basic_info/ldim_row_col\n");
+		BLPR("failed find /backlight/ldim_dev/basic_info/ldim_row_col\n");
 		return -1;
 	}
 

@@ -743,19 +743,6 @@ static ssize_t ldim_attr_store(const struct class *cla, const struct class_attri
 		ldim_drv->dev_drv->boost_conf.i_l100, ldim_drv->dev_drv->boost_conf.i_l32,
 		ldim_drv->dev_drv->boost_conf.i_l100_val, ldim_drv->dev_drv->boost_conf.i_l32_val,
 		ldim_drv->dev_drv->boost_conf.kp_l100, ldim_drv->dev_drv->boost_conf.kp_l32);
-	} else if (!strcmp(parm[0], "spiout_mode")) {
-		if (parm[1]) {
-			if (!strcmp(parm[1], "r")) {
-				dbg_attr.cmd = LDIM_DBG_ATTR_CMD_RD;
-				dbg_attr.mode = LDIM_DBG_ATTR_MODE_SINGLE;
-				dbg_attr.data = ldim_drv->spiout_mode;
-				goto ldim_attr_store_end;
-			}
-			if (kstrtoul(parm[1], 0, &val1) < 0)
-				goto ldim_attr_store_err;
-			ldim_drv->spiout_mode = (unsigned char)val1;
-		}
-		pr_info("spiout_mode = %d\n", ldim_drv->spiout_mode);
 	} else if (!strcmp(parm[0], "valid_flag")) {
 		if (parm[1]) {
 			if (kstrtoul(parm[1], 10, &val1) < 0)

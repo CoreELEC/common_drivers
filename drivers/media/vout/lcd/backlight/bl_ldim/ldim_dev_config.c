@@ -146,15 +146,15 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		if (ret) {
 			LDIMERR("failed to get spi_bus_num\n");
 		} else {
-			dev_drv->spi_info[0].bus_num = val & 0xf;
-			dev_drv->spi_info[1].bus_num = (val >> 4) & 0xf;
-			if (dev_drv->spi_info[1].bus_num)
-				dev_drv->spi_dev_num = 2;
+			dev_drv->spi_conf.spi_info[0].bus_num = val & 0xf;
+			dev_drv->spi_conf.spi_info[1].bus_num = (val >> 4) & 0xf;
+			if (dev_drv->spi_conf.spi_info[1].bus_num)
+				dev_drv->spi_conf.spi_dev_num = 2;
 			if (ldim_debug_print) {
 				LDIMPR("spi bus_num: %d : %d, spi_dev_num:%d\n",
-					dev_drv->spi_info[0].bus_num,
-					dev_drv->spi_info[1].bus_num,
-					dev_drv->spi_dev_num);
+					dev_drv->spi_conf.spi_info[0].bus_num,
+					dev_drv->spi_conf.spi_info[1].bus_num,
+					dev_drv->spi_conf.spi_dev_num);
 			}
 		}
 
@@ -162,12 +162,12 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		if (ret) {
 			LDIMERR("failed to get spi_chip_select\n");
 		} else {
-			dev_drv->spi_info[0].chip_select = val & 0xf;
-			dev_drv->spi_info[1].chip_select = (val >> 4) & 0xf;
+			dev_drv->spi_conf.spi_info[0].chip_select = val & 0xf;
+			dev_drv->spi_conf.spi_info[1].chip_select = (val >> 4) & 0xf;
 			if (ldim_debug_print) {
 				LDIMPR("spi chip_select: %d : %d\n",
-				dev_drv->spi_info[0].chip_select,
-				dev_drv->spi_info[1].chip_select);
+				dev_drv->spi_conf.spi_info[0].chip_select,
+				dev_drv->spi_conf.spi_info[1].chip_select);
 			}
 		}
 
@@ -175,11 +175,11 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		if (ret) {
 			LDIMERR("failed to get spi_chip_select\n");
 		} else {
-			dev_drv->spi_info[0].max_speed_hz = val;
-			dev_drv->spi_info[1].max_speed_hz = val;
+			dev_drv->spi_conf.spi_info[0].max_speed_hz = val;
+			dev_drv->spi_conf.spi_info[1].max_speed_hz = val;
 			if (ldim_debug_print) {
 				LDIMPR("spi max_speed_hz: %d\n",
-				       dev_drv->spi_info[0].max_speed_hz);
+				       dev_drv->spi_conf.spi_info[0].max_speed_hz);
 			}
 		}
 
@@ -187,31 +187,19 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		if (ret) {
 			LDIMERR("failed to get spi_mode\n");
 		} else {
-			dev_drv->spi_info[0].mode = val;
-			dev_drv->spi_info[1].mode = val;
+			dev_drv->spi_conf.spi_info[0].mode = val;
+			dev_drv->spi_conf.spi_info[1].mode = val;
 			if (ldim_debug_print)
-				LDIMPR("spi mode: %d\n", dev_drv->spi_info[0].mode);
+				LDIMPR("spi mode: %d\n", dev_drv->spi_conf.spi_info[0].mode);
 		}
 
-		ret = of_property_read_u32(child, "spi_dma_support", &val);
+		ret = of_property_read_u32_array(child, "spi_cs_delay", &temp[0], 2);
 		if (ret) {
-			LDIMERR("failed to get spi_dma_support\n");
+			dev_drv->spi_conf.cs2clk_delay = 0;
+			dev_drv->spi_conf.clk2cs_delay = 0;
 		} else {
-			dev_drv->dma_support = (unsigned char)val;
-			if (ldim_debug_print) {
-				LDIMPR("spi_dma_support: %d\n",
-				       dev_drv->dma_support);
-			}
-		}
-
-		ret = of_property_read_u32_array(child, "spi_cs_delay",
-						 &temp[0], 2);
-		if (ret) {
-			dev_drv->cs_hold_delay = 0;
-			dev_drv->cs_clk_delay = 0;
-		} else {
-			dev_drv->cs_hold_delay = temp[0];
-			dev_drv->cs_clk_delay = temp[1];
+			dev_drv->spi_conf.cs2clk_delay = temp[0];
+			dev_drv->spi_conf.clk2cs_delay = temp[1];
 		}
 		break;
 	default:
@@ -361,33 +349,19 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 	else
 		dev_drv->chip_cnt = val;
 
-	ret = of_property_read_u32(child, "mcu_header", &val);
-	if (ret)
-		dev_drv->mcu_header = 0;
-	else
-		dev_drv->mcu_header = (unsigned int)val;
-
-	ret = of_property_read_u32(child, "mcu_dim", &val);
-	if (ret)
-		dev_drv->mcu_dim = 0;
-	else
-		dev_drv->mcu_dim = (unsigned int)val;
-
-	ret = of_property_read_u32(child, "spi_line_n", &val);
+	ret = of_property_read_u32(child, "vs2cs_delay", &val);
 	if (ret) {
-		dev_drv->spi_sync = SPI_ASYNC;
-		dev_drv->spi_line_n = 0;
-		dev_drv->use_ctrl_cs = 0;
+		dev_drv->spi_conf.trig_mode = SPI_ASYNC;
+		dev_drv->spi_conf.vs2cs_delay = 0;
+		dev_drv->spi_conf.use_ctrl_cs = 0;
 	} else {
-		dev_drv->spi_sync = SPI_DMA_TRIG;
-		dev_drv->spi_line_n = (unsigned int)val;
-		dev_drv->use_ctrl_cs = 1;
+		dev_drv->spi_conf.trig_mode = SPI_TRIG_VSYNC;
+		dev_drv->spi_conf.vs2cs_delay = (unsigned int)val;
+		dev_drv->spi_conf.use_ctrl_cs = 1;
 	}
 
-	dbg_str_len = sprintf(dbg_str, "mcu_header=0x%08x, mcu_dim=0x%08x,",
-		dev_drv->mcu_header, dev_drv->mcu_dim);
-	dbg_str_len += sprintf(dbg_str + dbg_str_len, "spi_sync:%d, spi_line_n: %d,",
-		dev_drv->spi_sync, dev_drv->spi_line_n);
+	dbg_str_len = sprintf(dbg_str + dbg_str_len, "trig_mode:%d, vs2cs_delay: %d,",
+		dev_drv->spi_conf.trig_mode, dev_drv->spi_conf.vs2cs_delay);
 	sprintf(dbg_str + dbg_str_len, "chip_cnt:%d, cus pwm_pinmux_sel:%s",
 		dev_drv->chip_cnt, dev_drv->pinmux_name);
 	LDIMPR("load dts config: %s: type:%d, %s\n",
@@ -535,6 +509,8 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 	unsigned int *nums = NULL;
 	unsigned char *table;
 	struct abcon_conf_s *abcon_conf;
+	struct spi_conf_s *spi_conf;
+	struct data_pkt_s *data_pkt;
 
 	if (!json_parse_ok(jsp)) {
 		LDIMERR("panel 0 json not ready\n");
@@ -560,6 +536,7 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 	dev_drv->chip_cnt = json_get_obj_u32(jsp, child, "chip_count", 1);
 	dev_drv->dim_min  = json_get_obj_u32(jsp, child, "dim_min", 0);
 	dev_drv->dim_max  = json_get_obj_u32(jsp, child, "dim_max", 4095);
+	dev_drv->brightness_mode = json_get_obj_u32(jsp, child, "brightness_mode", 0x0);
 
 //interface
 	child = json_get_object_child(jsp, parent, "interface");
@@ -578,41 +555,54 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 
 	switch (dev_drv->type) {
 	case LDIM_DEV_TYPE_SPI:
-		dev_drv->spi_info[0].bus_num = json_get_obj_u32(jsp, child, "bus_number", 2);
-		dev_drv->spi_info[1].bus_num = json_get_obj_u32(jsp, child, "bus_number1", 0);
-		dev_drv->spi_info[0].chip_select = json_get_obj_u32(jsp, child, "chip_select", 0);
-		dev_drv->spi_info[1].chip_select = json_get_obj_u32(jsp, child, "chip_select1", 0);
-		dev_drv->spi_info[0].max_speed_hz =
-			json_get_obj_u32(jsp, child, "max_frequency_hz", 3000000);
-		dev_drv->spi_info[1].max_speed_hz =
-			json_get_obj_u32(jsp, child, "max_frequency_hz", 3000000);
-		dev_drv->spi_info[0].mode = json_get_obj_u32(jsp, child, "spi_mode", 0);
-		dev_drv->spi_info[1].mode = json_get_obj_u32(jsp, child, "spi_mode", 0);
-		dev_drv->cs_hold_delay = json_get_obj_u32(jsp, child, "cs_hold_delay_ms", 0);
-		dev_drv->cs_clk_delay = json_get_obj_u32(jsp, child, "cs_clk_delay_ms", 0);
-		dev_drv->spi_line_n = json_get_obj_u32(jsp, child, "line_n", 0);
-		dev_drv->spi_sync = json_get_obj_u32(jsp, child, "spi_sync", 0);
-		dev_drv->dma_support = json_get_obj_u32(jsp, child, "dma_support", 0);
-		if (dev_drv->spi_info[1].bus_num)
-			dev_drv->spi_dev_num = 2;
-		else
-			dev_drv->spi_dev_num = 1;
-
-		if (dev_drv->spi_line_n == 0) {
-			dev_drv->spi_sync = SPI_ASYNC;
-			dev_drv->use_ctrl_cs = 0;
-		} else {
-			dev_drv->spi_sync = SPI_DMA_TRIG;
-			dev_drv->use_ctrl_cs = 1;
+		spi_conf = &dev_drv->spi_conf;
+		spi_conf->spi_dev_num = json_get_obj_u32(jsp, child, "spi_dev_num", 1);
+		child2 = json_get_object_child(jsp, child, "bus_number");
+		if (child2) {
+			for (i = 0; i < spi_conf->spi_dev_num; i++)
+				spi_conf->spi_info[i].bus_num = json_get_arr_u32(jsp, child2, i, 0);
 		}
+		child2 = json_get_object_child(jsp, child, "chip_select");
+		if (child2) {
+			for (i = 0; i < spi_conf->spi_dev_num; i++)
+				spi_conf->spi_info[i].chip_select =
+					json_get_arr_u32(jsp, child2, i, 0);
+		}
+		spi_conf->spi_info[0].max_speed_hz =
+			json_get_obj_u32(jsp, child, "max_freq", 3000000);
+		spi_conf->spi_info[1].max_speed_hz = spi_conf->spi_info[0].max_speed_hz;
+		spi_conf->spi_info[2].max_speed_hz = spi_conf->spi_info[0].max_speed_hz;
+		spi_conf->spi_info[0].mode = json_get_obj_u32(jsp, child, "spi_mode", 0);
+		spi_conf->spi_info[1].mode = spi_conf->spi_info[0].mode;
+		spi_conf->spi_info[2].mode = spi_conf->spi_info[0].mode;
+		spi_conf->cs2clk_delay = json_get_obj_u32(jsp, child, "cs2clk_delay", 0);
+		spi_conf->clk2cs_delay = json_get_obj_u32(jsp, child, "clk2cs_delay", 0);
+		spi_conf->vs2cs_delay = json_get_obj_u32(jsp, child, "vs2cs_delay", 0);
+		spi_conf->trig_mode = json_get_obj_u32(jsp, child, "trig_mode", 0);
+		spi_conf->rx_en = json_get_obj_u32(jsp, child, "rx_en", 0);
+
+		if (spi_conf->trig_mode == SPI_ASYNC)
+			spi_conf->use_ctrl_cs = 0;
+		else
+			spi_conf->use_ctrl_cs = 1;
 
 		if (lcd_debug_print_flag & LCD_DBG_PR_BL_LDIM) {
-			LDIMPR("spi dev_num:%d, bus:%d:%d, cs:%d:%d, freq:%dhz, mode:%d, dma:%d\n",
-				dev_drv->spi_dev_num,
-				dev_drv->spi_info[0].bus_num, dev_drv->spi_info[1].bus_num,
-				dev_drv->spi_info[0].chip_select, dev_drv->spi_info[1].chip_select,
-				dev_drv->spi_info[0].max_speed_hz,
-				dev_drv->spi_info[0].mode, dev_drv->dma_support);
+			LDIMPR("spi dev_num:%d, bus:%d:%d:%d, cs:%d:%d:%d, freq:%dhz, mode:%d,\n"
+				"cs2clk:%d, clk2cs:%d,vs2cs:%d, trig_mode:%d, rx_en:%d\n",
+				spi_conf->spi_dev_num,
+				spi_conf->spi_info[0].bus_num,
+				spi_conf->spi_info[1].bus_num,
+				spi_conf->spi_info[2].bus_num,
+				spi_conf->spi_info[0].chip_select,
+				spi_conf->spi_info[1].chip_select,
+				spi_conf->spi_info[2].chip_select,
+				spi_conf->spi_info[0].max_speed_hz,
+				spi_conf->spi_info[0].mode,
+				spi_conf->cs2clk_delay,
+				spi_conf->clk2cs_delay,
+				spi_conf->vs2cs_delay,
+				spi_conf->trig_mode,
+				spi_conf->rx_en);
 		}
 		break;
 
@@ -757,8 +747,61 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 //packet_info
 	child = json_get_object_child(jsp, parent, "packet_info");
 	if (child) {
-		dev_drv->mcu_header = json_get_obj_u32(jsp, child, "header", 0x0);
-		dev_drv->mcu_dim = json_get_obj_u32(jsp, child, "mcu_dim", 0x0);
+		data_pkt = &dev_drv->spi_conf.data_pkt;
+		data_pkt->pkt_type = json_get_obj_u32(jsp, child, "pkt_type", 0x0);
+		data_pkt->header_cnt = json_get_obj_u32(jsp, child, "headercnt", 0x0);
+		child2 = json_get_object_child(jsp, child, "headerdata");
+		if (child2) {
+			data_pkt->header_data =
+			kcalloc(data_pkt->header_cnt, sizeof(unsigned int), GFP_KERNEL);
+			if (data_pkt->header_data) {
+				for (i = 0; i < data_pkt->header_cnt; i++)
+					data_pkt->header_data[i] =
+					(unsigned char)json_get_arr_u32(jsp, child2, i, 0);
+			} else {
+				LDIMERR("kcalloc header_data failed!\n");
+			}
+		} else {
+			LDIMERR("get headerdata failed!\n");
+		}
+
+		data_pkt->extend_cnt = json_get_obj_u32(jsp, child, "extendcnt", 0x0);
+		child2 = json_get_object_child(jsp, child, "extenddata");
+		if (child2) {
+			data_pkt->extend_data =
+			kcalloc(data_pkt->extend_cnt, sizeof(unsigned int), GFP_KERNEL);
+			if (data_pkt->extend_data) {
+				for (i = 0; i < data_pkt->extend_cnt; i++)
+					data_pkt->extend_data[i] =
+					(unsigned char)json_get_arr_u32(jsp, child2, i, 0);
+			} else {
+				LDIMERR("kcalloc extenddata failed!\n");
+			}
+		} else {
+			LDIMERR("get extenddata failed!\n");
+		}
+
+		data_pkt->adim_width = json_get_obj_u32(jsp, child, "adim_width", 0x0);
+		data_pkt->adim = json_get_obj_u32(jsp, child, "adim_data", 0x0);
+		data_pkt->pdim_width = json_get_obj_u32(jsp, child, "pdim_width", 0x0);
+		data_pkt->pdim = json_get_obj_u32(jsp, child, "pdim_data", 0x0);
+		data_pkt->datamapping_en = json_get_obj_u32(jsp, child, "datamapping_en", 0x1);
+		LDIMPR("header_cnt:%d, extend_cnt:%d, adim_width:%d,pdim_width:%d\n"
+			"datamapping_en:%d, pkt_type:%d, adim:%d, pdim:%d\n",
+			data_pkt->header_cnt, data_pkt->extend_cnt,
+			data_pkt->adim_width, data_pkt->pdim_width,
+			data_pkt->datamapping_en, data_pkt->pkt_type,
+			data_pkt->adim, data_pkt->pdim);
+
+		if (data_pkt->header_data) {
+			for (i = 0; i < data_pkt->header_cnt; i++)
+				LDIMPR("header_data[%d]:0x%x\n", i, data_pkt->header_data[i]);
+		}
+
+		if (data_pkt->extend_data) {
+			for (i = 0; i < data_pkt->extend_cnt; i++)
+				LDIMPR("extend_data[%d]:0x%x\n", i, data_pkt->extend_data[i]);
+		}
 	}
 
 //boost
@@ -928,6 +971,8 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 	unsigned int val, *init_buf;
 	unsigned char *table;
 	int init_len, data_cnt, tmp_cnt;
+	struct spi_conf_s *spi_conf;
+	struct data_pkt_s *data_pkt;
 	int i;
 
 	inip = get_lcd_ini_parse_mem(0);
@@ -953,32 +998,53 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 
 	switch (dev_drv->type) {
 	case LDIM_DEV_TYPE_SPI:
-		dev_drv->spi_info[0].max_speed_hz = lcd_ini_get_val(inip, psec, "if_freq", 0);
-		dev_drv->spi_info[1].max_speed_hz = dev_drv->spi_info[0].max_speed_hz;
+		spi_conf = &dev_drv->spi_conf;
+		spi_conf->spi_info[0].max_speed_hz = lcd_ini_get_val(inip, psec, "if_freq", 0);
+		spi_conf->spi_info[1].max_speed_hz = spi_conf->spi_info[0].max_speed_hz;
+		spi_conf->spi_info[2].max_speed_hz = spi_conf->spi_info[0].max_speed_hz;
 
 		val = lcd_ini_get_val(inip, psec, "if_attr_0", 0);
-		dev_drv->spi_info[0].bus_num = val & 0xf;
-		dev_drv->spi_info[1].bus_num = (val >> 4) & 0xf;
-		if (dev_drv->spi_info[1].bus_num)
-			dev_drv->spi_dev_num = 2;
+		spi_conf->spi_info[0].bus_num = val & 0xf;
+		spi_conf->spi_info[1].bus_num = (val >> 4) & 0xf;
+		spi_conf->spi_info[2].bus_num = (val >> 8) & 0xf;
+		i = (val >> 12) & 0xf;
+		if (i)
+			spi_conf->spi_dev_num = i;
 
 		val = lcd_ini_get_val(inip, psec, "if_attr_1", 0);
-		dev_drv->spi_info[0].chip_select = val & 0xf;
-		dev_drv->spi_info[1].chip_select = (val >> 4) & 0xf;
+		spi_conf->spi_info[0].chip_select = val & 0xf;
+		spi_conf->spi_info[1].chip_select = (val >> 4) & 0xf;
+		spi_conf->spi_info[2].chip_select = (val >> 4) & 0xf;
 
-		dev_drv->spi_info[0].mode = lcd_ini_get_val(inip, psec, "if_attr_2", 0);
-		dev_drv->spi_info[1].mode = dev_drv->spi_info[0].mode;
+		spi_conf->spi_info[0].mode = lcd_ini_get_val(inip, psec, "if_attr_2", 0);
+		spi_conf->spi_info[1].mode = spi_conf->spi_info[0].mode;
+		spi_conf->spi_info[2].mode = spi_conf->spi_info[0].mode;
 
-		dev_drv->dma_support = lcd_ini_get_val(inip, psec, "if_attr_3", 0);
-		dev_drv->cs_hold_delay = lcd_ini_get_val(inip, psec, "if_attr_4", 0);
-		dev_drv->cs_clk_delay = lcd_ini_get_val(inip, psec, "if_attr_5", 0);
+		spi_conf->cs2clk_delay = lcd_ini_get_val(inip, psec, "if_attr_4", 0);
+		spi_conf->clk2cs_delay = lcd_ini_get_val(inip, psec, "if_attr_5", 0);
+		spi_conf->vs2cs_delay = lcd_ini_get_val(inip, psec, "custome_attr_2", 0);
+		spi_conf->trig_mode = lcd_ini_get_val(inip, psec, "if_attr_9", 1);
+		spi_conf->rx_en = lcd_ini_get_val(inip, psec, "if_attr_8", 0);
+		if (spi_conf->trig_mode == SPI_ASYNC)
+			spi_conf->use_ctrl_cs = 0;
+		else
+			spi_conf->use_ctrl_cs = 1;
 		if (lcd_debug_print_flag & LCD_DBG_PR_BL_LDIM) {
-			LDIMPR("spi dev_num:%d, bus:%d:%d, cs:%d:%d, freq:%dhz, mode:%d, dma:%d\n",
-				dev_drv->spi_dev_num,
-				dev_drv->spi_info[0].bus_num, dev_drv->spi_info[1].bus_num,
-				dev_drv->spi_info[0].chip_select, dev_drv->spi_info[1].chip_select,
-				dev_drv->spi_info[0].max_speed_hz,
-				dev_drv->spi_info[0].mode, dev_drv->dma_support);
+			LDIMPR("spi dev_num:%d, bus:%d:%d:%d, cs:%d:%d:%d, freq:%dhz, mode:%d\n"
+				"cs2clk:%d, clk2cs:%d,vs2cs:%d, trig_mode:%d, rx_en:%d\n",
+				spi_conf->spi_dev_num,
+				spi_conf->spi_info[0].bus_num,
+				spi_conf->spi_info[1].bus_num,
+				spi_conf->spi_info[2].bus_num,
+				spi_conf->spi_info[0].chip_select,
+				spi_conf->spi_info[1].chip_select,
+				spi_conf->spi_info[2].chip_select,
+				spi_conf->spi_info[0].max_speed_hz,
+				spi_conf->spi_info[0].mode,
+				spi_conf->cs2clk_delay,
+				spi_conf->clk2cs_delay,
+				spi_conf->vs2cs_delay,
+				spi_conf->trig_mode, spi_conf->rx_en);
 		}
 		break;
 	default:
@@ -1087,17 +1153,83 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 
 	dev_drv->chip_cnt = lcd_ini_get_val(inip, psec, "chip_count", 0);
 
-	dev_drv->mcu_header = lcd_ini_get_val(inip, psec, "custome_attr_0", 0);
-	dev_drv->mcu_dim = lcd_ini_get_val(inip, psec, "custome_attr_1", 0);
+	//dev_drv->mcu_header = lcd_ini_get_val(inip, psec, "custome_attr_0", 0);
+	//dev_drv->mcu_dim = lcd_ini_get_val(inip, psec, "custome_attr_1", 0);
+	data_pkt = &dev_drv->spi_conf.data_pkt;
+	val = lcd_ini_get_val(inip, psec, "custome_attr_0", 0);
+	data_pkt->header_cnt = val & 0xff;
+	data_pkt->extend_cnt = (val >> 8) & 0xff;
+	data_pkt->adim_width = (val >> 16) & 0x1f;
+	data_pkt->pdim_width = (val >> 21) & 0x1f;
+	data_pkt->datamapping_en = (val >> 26) & 0x1;
+	data_pkt->pkt_type = (val >> 27) & 0xf;
+	dev_drv->brightness_mode = (val >> 31) & 0x1;
+
+	val = lcd_ini_get_val(inip, psec, "custome_attr_1", 0);
+	data_pkt->adim = val & 0xffff;
+	data_pkt->pdim = (val >> 16) & 0xffff;
+	//ini fix max header_cnt is 8
+	data_pkt->header_data = kcalloc(8, sizeof(unsigned char), GFP_KERNEL);
+	if (data_pkt->header_data) {
+		val = lcd_ini_get_val(inip, psec, "custome_attr_6", 0);
+		data_pkt->header_data[0] = val & 0xff;
+		data_pkt->header_data[1] = (val >> 8) & 0xff;
+		data_pkt->header_data[2] = (val >> 16) & 0xff;
+		data_pkt->header_data[3] = (val >> 24) & 0xff;
+		val = lcd_ini_get_val(inip, psec, "custome_attr_7", 0);
+		data_pkt->header_data[4] = val & 0xff;
+		data_pkt->header_data[5] = (val >> 8) & 0xff;
+		data_pkt->header_data[6] = (val >> 16) & 0xff;
+		data_pkt->header_data[7] = (val >> 24) & 0xff;
+	} else {
+		LDIMERR("kcalloc header_data failed!\n");
+	}
+
+	data_pkt->extend_data = kcalloc(8, sizeof(unsigned char), GFP_KERNEL);
+	if (data_pkt->extend_data) {
+		val = lcd_ini_get_val(inip, psec, "custome_attr_8", 0);
+		data_pkt->extend_data[0] = val & 0xff;
+		data_pkt->extend_data[1] = (val >> 8) & 0xff;
+		data_pkt->extend_data[2] = (val >> 16) & 0xff;
+		data_pkt->extend_data[3] = (val >> 24) & 0xff;
+		val = lcd_ini_get_val(inip, psec, "custome_attr_9", 0);
+		data_pkt->extend_data[4] = val & 0xff;
+		data_pkt->extend_data[5] = (val >> 8) & 0xff;
+		data_pkt->extend_data[6] = (val >> 16) & 0xff;
+		data_pkt->extend_data[7] = (val >> 24) & 0xff;
+	} else {
+		LDIMERR("kcalloc extend_data failed!\n");
+	}
+	LDIMPR("header_cnt:%d, extend_cnt:%d, adim_width:%d,pdim_width:%d\n"
+	       "datamapping_en:%d, pkt_type:%d, brightness_mode:%d,adim:%d, pdim:%d\n",
+		data_pkt->header_cnt, data_pkt->extend_cnt,
+		data_pkt->adim_width, data_pkt->pdim_width,
+		data_pkt->datamapping_en, data_pkt->pkt_type,
+		dev_drv->brightness_mode, data_pkt->adim, data_pkt->pdim);
+
+	if (data_pkt->header_data)
+		LDIMPR("header_data:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x\n",
+			data_pkt->header_data[0], data_pkt->header_data[1],
+			data_pkt->header_data[2], data_pkt->header_data[3],
+			data_pkt->header_data[4], data_pkt->header_data[5],
+			data_pkt->header_data[6], data_pkt->header_data[7]);
+
+	if (data_pkt->extend_data)
+		LDIMPR("extend_data:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x:0x%x\n",
+			data_pkt->extend_data[0], data_pkt->extend_data[1],
+			data_pkt->extend_data[2], data_pkt->extend_data[3],
+			data_pkt->extend_data[4], data_pkt->extend_data[5],
+			data_pkt->extend_data[6], data_pkt->extend_data[7]);
+
 	val = lcd_ini_get_val(inip, psec, "custome_attr_2", 0);
 	if (val == 0) {
-		dev_drv->spi_sync = SPI_ASYNC;
-		dev_drv->spi_line_n = 0;
-		dev_drv->use_ctrl_cs = 0;
+		dev_drv->spi_conf.trig_mode = SPI_ASYNC;
+		dev_drv->spi_conf.vs2cs_delay = 0;
+		dev_drv->spi_conf.use_ctrl_cs = 0;
 	} else {
-		dev_drv->spi_sync = SPI_DMA_TRIG;
-		dev_drv->spi_line_n = val;
-		dev_drv->use_ctrl_cs = 1;
+		dev_drv->spi_conf.trig_mode = SPI_TRIG_VSYNC;
+		dev_drv->spi_conf.vs2cs_delay = val;
+		dev_drv->spi_conf.use_ctrl_cs = 1;
 	}
 
 	val = lcd_ini_get_val(inip, psec, "custome_attr_3", 0);
@@ -1265,10 +1397,8 @@ int ldim_dev_get_config(struct ldim_dev_driver_s *dev_drv, struct device_node *n
 		ret = -1;
 		break;
 	}
-	len = sprintf(str, "mcu_header=0x%08x, mcu_dim=0x%08x, ",
-		dev_drv->mcu_header, dev_drv->mcu_dim);
-	len += sprintf(str + len, "spi_sync:%d, spi_line_n: %d, ",
-		dev_drv->spi_sync, dev_drv->spi_line_n);
+	len += sprintf(str + len, "trig_mode:%d, vs2cs_delay: %d, ",
+		dev_drv->spi_conf.trig_mode, dev_drv->spi_conf.vs2cs_delay);
 	sprintf(str + len,
 		"chip_cnt:%d, hw_on_dly: %dms, hw_off_dly: %dms, cus pwm_pinmux_sel:%s",
 		dev_drv->chip_cnt, dev_drv->hw_on_delay, dev_drv->hw_off_delay,

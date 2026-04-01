@@ -45,7 +45,6 @@ static DEFINE_MUTEX(dev_mutex);
 struct iw7039_s {
 	struct spi_device *spi;
 	unsigned int dev_on_flag;
-	unsigned char dma_support;
 	unsigned short vsync_cnt;
 	unsigned short fault_cnt;
 	unsigned int fault_cnt_save;
@@ -152,7 +151,7 @@ static int spi_wregs_all(struct spi_device *spi, unsigned int chip_cnt,
 }
 
 /* write diff data to all device */
-static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigned char spi_sync,
+static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigned char trig_mode,
 			  unsigned short reg, unsigned short *data_buf, int tlen)
 {
 	unsigned char *tbuf, *rbuf;
@@ -213,14 +212,10 @@ static int spi_wregs_duty(struct spi_device *spi, unsigned int chip_cnt, unsigne
 		memset(&tbuf[j], 0, 2 * n);
 	}
 
-	switch (spi_sync) {
-	case SPI_SYNC:
-		ret = ldim_spi_write(spi, tbuf,	xlen);
-		break;
+	switch (trig_mode) {
 	case SPI_ASYNC:
 		ret = ldim_spi_write_async(spi, tbuf, rbuf, xlen, bl_iw7039->tbuf_size);
 		break;
-	case SPI_DMA_TRIG:
 	default:
 		ret = ldim_spi_write_dma_trig(spi, tbuf, rbuf, xlen, bl_iw7039->tbuf_size);
 		break;
@@ -253,7 +248,7 @@ static int iw7039_reg_write_duty(struct ldim_dev_driver_s *dev_drv,
 
 	spin_lock_irqsave(&spi_lock, flags);
 
-	ret = spi_wregs_duty(bl_iw7039->spi, dev_drv->chip_cnt, dev_drv->spi_sync, reg, buf, len);
+	ret = spi_wregs_duty(bl_iw7039->spi, dev_drv->chip_cnt, dev_drv->trig_mode, reg, buf, len);
 	if (ret)
 		LDIMERR("%s: reg 0x%x, len %d error\n", __func__, reg, len);
 
@@ -586,8 +581,6 @@ static ssize_t iw7039_show(const struct class *class, const struct class_attribu
 				"rbuf_size      = %d\n"
 				"en_on          = %d\n"
 				"en_off         = %d\n"
-				"cs_hold_delay  = %d\n"
-				"cs_clk_delay   = %d\n"
 				"dim_max        = 0x%03x\n"
 				"dim_min        = 0x%03x\n",
 				dev_drv->index,
@@ -599,8 +592,6 @@ static ssize_t iw7039_show(const struct class *class, const struct class_attribu
 				bl_iw7039->rbuf_size,
 				dev_drv->en_gpio_on,
 				dev_drv->en_gpio_off,
-				dev_drv->cs_hold_delay,
-				dev_drv->cs_clk_delay,
 				dev_drv->dim_max,
 				dev_drv->dim_min);
 	} else {
@@ -705,7 +696,6 @@ int ldim_dev_iw7039_probe(struct aml_ldim_driver_s *ldim_drv)
 	bl_iw7039->dev_on_flag = 0;
 	bl_iw7039->vsync_cnt = 0;
 	bl_iw7039->fault_cnt = 0;
-	bl_iw7039->dma_support = dev_drv->dma_support;
 	bl_iw7039->iset = dev_drv->boost_conf.iset;
 
 	/* 32 channel each device */
@@ -717,7 +707,7 @@ int ldim_dev_iw7039_probe(struct aml_ldim_driver_s *ldim_drv)
 
 	/* spi transfer buffer: header + reg_max_cnt * chip_cnt */
 	bl_iw7039->tbuf_size = IW7039_REG_MAX + bl_iw7039->reg_buf_size * 2;
-	if (bl_iw7039->dma_support && dev_drv->spi_dev[0]->controller->dma_alignment) {
+	if (dev_drv->spi_dev[0]->controller->dma_alignment) {
 		n = bl_iw7039->tbuf_size;
 		bl_iw7039->tbuf_size = ldim_spi_dma_cycle_align_byte(n);
 	}
@@ -762,7 +752,7 @@ int ldim_dev_iw7039_probe(struct aml_ldim_driver_s *ldim_drv)
 		}
 	}
 
-	if (dev_drv->spi_sync == SPI_ASYNC)
+	if (dev_drv->trig_mode == SPI_ASYNC)
 		spin_lock_init(&spi_lock);
 
 	if (bdrv->state & BL_STATE_BL_ON)
