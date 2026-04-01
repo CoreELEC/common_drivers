@@ -359,6 +359,16 @@ static u32 std_bt709_white_point[2] = {
 	0.3127 * NORM + 0.5, 0.3290 * NORM + 0.5
 };
 
+static u32 std_adobe_rgb_prmy[3][2] = {
+	{0.21 * NORM + 0.5, 0.71 * NORM + 0.5},	/* G */
+	{0.15 * NORM + 0.5, 0.06 * NORM + 0.5},	/* B */
+	{0.64 * NORM + 0.5, 0.33 * NORM + 0.5},	/* R */
+};
+
+static u32 std_adobe_rgb_white_point[2] = {
+	0.3127 * NORM + 0.5, 0.3290 * NORM + 0.5
+};
+
 uint force_primary;
 uint force_matrix;
 
@@ -409,28 +419,56 @@ struct hdr_gamut_data_s force_gamut0_mtx = {
 int vpp_color_pri_sel;/*0:709 or panel, 1:2020*/
 
 int gamut_convert_process(struct vinfo_s *vinfo,
-			  enum hdr_type_e *source_type,
-			  enum vd_path_e vd_path,
-			  struct matrix_s *mtx,
-			  int mtx_depth,
-			  enum dest_hdr_type_e dest_type)
+	enum hdr_type_e *source_type,
+	enum vd_path_e vd_path,
+	struct matrix_s *mtx,
+	int mtx_depth,
+	enum dest_hdr_type_e dest_type)
 {
 	int i, j;
 	s64 out[3][3];
 	s64 src_prmy[4][2];
 	s64 dest_prmy[4][2];
+	enum src_primary_type_e src_primary;
+
+	src_primary = get_src_primary_type();
+	pr_gmt("[src_type] primary: [%d:%d] %d case\n",
+		source_type[vd_path], vd_path, src_primary);
 
 	/*default 11bit*/
 	if (mtx_depth == 0)
 		mtx_depth = 11;
 
 	if (source_type[vd_path] == HDRTYPE_SDR) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt709_white_point[j];
+		if (src_primary == SRC_PRIMARY_BT709) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
 			}
-		pr_gmt("src_primary: SDR_BT709 case\n");
+			src_prmy[3][0] = std_bt709_white_point[0];
+			src_prmy[3][1] = std_bt709_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_BT2020) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_bt2020_white_point[0];
+			src_prmy[3][1] = std_bt2020_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_P3) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_p3_primaries[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_p3_white_point[0];
+			src_prmy[3][1] = std_p3_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_adobe_rgb_prmy[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_adobe_rgb_white_point[0];
+			src_prmy[3][1] = std_adobe_rgb_white_point[1];
+		}
 	} else if (((source_type[vd_path] == HDRTYPE_HDR10) ||
 		(source_type[vd_path] == HDRTYPE_HDR10_709)) ||
 		(source_type[vd_path] == HDRTYPE_HLG) ||
@@ -440,87 +478,94 @@ int gamut_convert_process(struct vinfo_s *vinfo,
 		(source_type[vd_path] == HDRTYPE_CUVA_HLG) ||
 		(source_type[vd_path] == HDRTYPE_HLGPLUS)) {
 		if (get_primary_policy() == PRIMARIES_AUTO) {
-			for (i = 0; i < 3; i++)
-				for (j = 0; j < 2; j++) {
-					src_prmy[i][j] =
-						std_p3_primaries
-						[(i + 2) % 3][j];
-					src_prmy[3][j] =
-						std_p3_white_point
-						[j];
-				}
-			pr_gmt("src_primary: HDR_P3 case\n");
-		} else {
-			if (source_type[vd_path] == HDRTYPE_HDR10_709) {
-				for (i = 0; i < 3; i++)
-					for (j = 0; j < 2; j++) {
-						src_prmy[i][j] =
-							std_bt709_prmy[(i + 2) % 3][j];
-						src_prmy[3][j] =
-							std_bt709_white_point[j];
-					}
-				pr_gmt("src_primary: HDR10_BT709 case\n");
-			} else {
-				for (i = 0; i < 3; i++)
-					for (j = 0; j < 2; j++)
-						src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
-
+			for (i = 0; i < 3; i++) {
 				for (j = 0; j < 2; j++)
-					src_prmy[3][j] = std_bt2020_white_point[j];
-
-				pr_gmt("src_primary: HDR10_BT2020 case\n");
+					src_prmy[i][j] = std_p3_primaries[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_p3_white_point[0];
+			src_prmy[3][1] = std_p3_white_point[1];
+		} else {
+			if (source_type[vd_path] == HDRTYPE_HDR10_709 && is_hdmi_source(vd_path)) {
+				for (i = 0; i < 3; i++) {
+					for (j = 0; j < 2; j++)
+						src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
+				}
+				src_prmy[3][0] = std_bt709_white_point[0];
+				src_prmy[3][1] = std_bt709_white_point[1];
+			} else {
+				if (src_primary == SRC_PRIMARY_BT709) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_bt709_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_bt709_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_bt709_white_point[0];
+					src_prmy[3][1] = std_bt709_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_BT2020) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_bt2020_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_bt2020_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_bt2020_white_point[0];
+					src_prmy[3][1] = std_bt2020_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_P3) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_p3_primaries[(i + 2) % 3][0];
+						src_prmy[i][1] = std_p3_primaries[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_p3_white_point[0];
+					src_prmy[3][1] = std_p3_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_adobe_rgb_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_adobe_rgb_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_adobe_rgb_white_point[0];
+					src_prmy[3][1] = std_adobe_rgb_white_point[1];
+				}
 			}
 		}
 	} else if (source_type[vd_path] == HDRTYPE_SDR2020) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
 				src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt2020_white_point[j];
-			}
+		}
+		src_prmy[3][0] = std_bt2020_white_point[0];
+		src_prmy[3][1] = std_bt2020_white_point[1];
 	} else {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
 				src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt709_white_point[j];
-			}
+		}
+		src_prmy[3][0] = std_bt709_white_point[0];
+		src_prmy[3][1] = std_bt709_white_point[1];
 	}
 
 	if (get_primary_policy() == PRIMARIES_SOURCE) {
-		for (i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++) {
 			for (j = 0; j < 2; j++)
 				dest_prmy[i][j] = panel_primary[i * 2 + j];
-	} else {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				dest_prmy[i][j] =
-					std_bt709_prmy[(i + 2) % 3][j];
-				dest_prmy[3][j] = std_bt709_white_point[j];
-			}
-	}
-
-	if (chip_type_id == chip_t6x && gamut_mapping1_en &&
-		vpp_color_pri_sel) {
-		pr_gmt("vpp_color_pri_sel: %d, hdr gamut convert to 2020\n",
-			vpp_color_pri_sel);
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				dest_prmy[i][j] =
-					std_bt2020_prmy[(i + 2) % 3][j];
-				dest_prmy[3][j] = std_bt2020_white_point[j];
 		}
+	} else {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
+				dest_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
+		}
+		dest_prmy[3][0] = std_bt709_white_point[0];
+		dest_prmy[3][1] = std_bt709_white_point[1];
 	}
 
-	if (dest_type == DEST_HDR10) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				dest_prmy[i][j] =
-					std_bt2020_prmy[(i + 2) % 3][j];
-				dest_prmy[3][j] = std_bt2020_white_point[j];
-			}
+	if (dest_type == DEST_HDR10 ||
+		(chip_type_id == chip_t6x && gamut_mapping1_en &&
+		vpp_color_pri_sel)) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
+				dest_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
+		}
+		dest_prmy[3][0] = std_bt2020_white_point[0];
+		dest_prmy[3][1] = std_bt2020_white_point[1];
 	}
 
 	if (force_primary) {
-		pr_gmt("use force primary\n");
 		/* because of blue x,y too close to zero,
 		 * and usually have difference
 		 * force blue dest primary >= src primary to avoid blue clip
@@ -528,21 +573,21 @@ int gamut_convert_process(struct vinfo_s *vinfo,
 		if (source_type[vd_path] == HDRTYPE_SDR) {
 			if (force_dst_primary[5] > force_src_primary[5])
 				force_dst_primary[5] = force_src_primary[5];
+
 			if (force_dst_primary[4] > force_src_primary[4])
 				force_dst_primary[4] = force_src_primary[4];
 		}
 
-		for (i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++) {
 			for (j = 0; j < 2; j++) {
 				src_prmy[i][j] =
 					force_src_primary[i * 2 + j];
-			}
-		for (i = 0; i < 4; i++)
-			for (j = 0; j < 2; j++) {
 				dest_prmy[i][j] =
 					force_dst_primary[i * 2 + j];
 			}
+		}
 	}
+
 	gamut_proc(src_prmy, dest_prmy, out, NORM, BL);
 	cal_mtx_seting(out, BL, BL, mtx, mtx_depth);
 
@@ -554,6 +599,13 @@ int gamut_convert_process(struct vinfo_s *vinfo,
 			}
 		}
 	}
+
+	pr_gmt("primary_policy/force_primary/force_matrix/wrapper1_en/pri_sel: %d/%d/%d/%d/%d\n",
+		get_primary_policy(), force_primary, force_matrix,
+		gamut_mapping1_en, vpp_color_pri_sel);
+	pr_gmt("panel_primary: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n",
+		panel_primary[0], panel_primary[1], panel_primary[2], panel_primary[3],
+		panel_primary[4], panel_primary[5], panel_primary[6], panel_primary[7]);
 
 	return 0;
 }
@@ -599,12 +651,14 @@ int gamut_mode_process(struct vinfo_s *vinfo,
 	s64 out[3][3];
 	s64 src_prmy[4][2];
 	s64 dest_prmy[4][2];
+	enum src_primary_type_e src_primary;
+
+	src_primary = get_src_primary_type();
+	pr_gmt("[wrapper src_type] primary: [%d] %d case, gamut_mode/module/dest_type %d/%d/%d\n",
+		source_type, src_primary, gamut_mode, module, dest_type);
 
 	if (mtx_depth == 0)
 		mtx_depth = 11;
-
-	pr_gmt("gamut wrapper process: gamut_mode = %d, module =%d\n",
-		gamut_mode, module);
 
 	if (gamut_mode == 2) {
 		if (module == GAMUT_WRAPPER0) {
@@ -616,88 +670,195 @@ int gamut_mode_process(struct vinfo_s *vinfo,
 				for (j = 0; j < 3; j++)
 					mtx->matrix[i][j] = force_gamut_mtx.coef[i * 3 + j];
 		}
+
 		return 0;
 	}
 
 	if (source_type == HDRTYPE_SDR) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt709_white_point[j];
-			}
-		pr_gmt("src_primary: SDR_BT709 case\n");
-	} else if (((source_type == HDRTYPE_HDR10) ||
-		(source_type == HDRTYPE_HDR10_709)) ||
-		(source_type == HDRTYPE_HLG) ||
-		(source_type == HDRTYPE_PRIMESL) ||
-		(source_type == HDRTYPE_HDR10PLUS)) {
-		if (get_primary_policy() == PRIMARIES_AUTO) {
-			for (i = 0; i < 3; i++)
-				for (j = 0; j < 2; j++) {
-					src_prmy[i][j] =
-						std_p3_primaries
-						[(i + 2) % 3][j];
-					src_prmy[3][j] =
-						std_p3_white_point
-						[j];
-				}
-			pr_gmt("src_primary: HDR_P3 case\n");
-		} else {
-			if (source_type == HDRTYPE_HDR10_709) {
-				for (i = 0; i < 3; i++)
-					for (j = 0; j < 2; j++) {
-						src_prmy[i][j] =
-							std_bt709_prmy[(i + 2) % 3][j];
-						src_prmy[3][j] =
-							std_bt709_white_point[j];
-					}
-				pr_gmt("src_primary: HDR10_BT709 case\n");
-			} else {
-				for (i = 0; i < 3; i++)
-					for (j = 0; j < 2; j++)
-						src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
-
+		if (src_primary == SRC_PRIMARY_BT709) {
+			for (i = 0; i < 3; i++) {
 				for (j = 0; j < 2; j++)
-					src_prmy[3][j] = std_bt2020_white_point[j];
-
-				pr_gmt("src_primary: HDR10_BT2020 case\n");
+					src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_bt709_white_point[0];
+			src_prmy[3][1] = std_bt709_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_BT2020) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_bt2020_white_point[0];
+			src_prmy[3][1] = std_bt2020_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_P3) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_p3_primaries[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_p3_white_point[0];
+			src_prmy[3][1] = std_p3_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_adobe_rgb_prmy[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_adobe_rgb_white_point[0];
+			src_prmy[3][1] = std_adobe_rgb_white_point[1];
+		}
+	} else if (source_type == HDRTYPE_HDR10 ||
+		source_type == HDRTYPE_HDR10_709 ||
+		source_type == HDRTYPE_HLG ||
+		source_type == HDRTYPE_PRIMESL ||
+		source_type == HDRTYPE_HDR10PLUS ||
+		source_type == HDRTYPE_CUVA_HDR ||
+		source_type == HDRTYPE_CUVA_HLG ||
+		source_type == HDRTYPE_HLGPLUS) {
+		if (get_primary_policy() == PRIMARIES_AUTO) {
+			for (i = 0; i < 3; i++) {
+				for (j = 0; j < 2; j++)
+					src_prmy[i][j] = std_p3_primaries[(i + 2) % 3][j];
+			}
+			src_prmy[3][0] = std_p3_white_point[0];
+			src_prmy[3][1] = std_p3_white_point[1];
+		} else {
+			if (source_type == HDRTYPE_HDR10_709 && is_hdmi_source(VD1_PATH)) {
+				for (i = 0; i < 3; i++) {
+					for (j = 0; j < 2; j++)
+						src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
+				}
+				src_prmy[3][0] = std_bt709_white_point[0];
+				src_prmy[3][1] = std_bt709_white_point[1];
+			} else {
+				if (src_primary == SRC_PRIMARY_BT709) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_bt709_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_bt709_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_bt709_white_point[0];
+					src_prmy[3][1] = std_bt709_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_BT2020) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_bt2020_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_bt2020_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_bt2020_white_point[0];
+					src_prmy[3][1] = std_bt2020_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_P3) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_p3_primaries[(i + 2) % 3][0];
+						src_prmy[i][1] = std_p3_primaries[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_p3_white_point[0];
+					src_prmy[3][1] = std_p3_white_point[1];
+				} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+					for (i = 0; i < 3; i++) {
+						src_prmy[i][0] = std_adobe_rgb_prmy[(i + 2) % 3][0];
+						src_prmy[i][1] = std_adobe_rgb_prmy[(i + 2) % 3][1];
+					}
+					src_prmy[3][0] = std_adobe_rgb_white_point[0];
+					src_prmy[3][1] = std_adobe_rgb_white_point[1];
+				}
 			}
 		}
 	} else if (source_type == HDRTYPE_SDR2020) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
 				src_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt2020_white_point[j];
-			}
+		}
+		src_prmy[3][0] = std_bt2020_white_point[0];
+		src_prmy[3][1] = std_bt2020_white_point[1];
 	} else {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
 				src_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
-				src_prmy[3][j] = std_bt709_white_point[j];
-			}
+		}
+		src_prmy[3][0] = std_bt709_white_point[0];
+		src_prmy[3][1] = std_bt709_white_point[1];
+	}
+
+	if (module == GAMUT_WRAPPER0) {
+		for (i = 0; i < 3; i++) {
+			src_prmy[i][0] = std_bt709_prmy[(i + 2) % 3][0];
+			src_prmy[i][1] = std_bt709_prmy[(i + 2) % 3][1];
+		}
+		src_prmy[3][0] = std_bt709_white_point[0];
+		src_prmy[3][1] = std_bt709_white_point[1];
 	}
 
 	if (dest_type == DEST_SDR) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
-				dest_prmy[i][j] = std_bt709_prmy[(i + 2) % 3][j];
-				dest_prmy[3][j] = std_bt709_white_point[j];
+		if (src_primary == SRC_PRIMARY_BT709) {
+			for (i = 0; i < 3; i++) {
+				dest_prmy[i][0] = std_bt709_prmy[(i + 2) % 3][0];
+				dest_prmy[i][1] = std_bt709_prmy[(i + 2) % 3][1];
 			}
+			dest_prmy[3][0] = std_bt709_white_point[0];
+			dest_prmy[3][1] = std_bt709_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_BT2020) {
+			for (i = 0; i < 3; i++) {
+				dest_prmy[i][0] = std_bt2020_prmy[(i + 2) % 3][0];
+				dest_prmy[i][1] = std_bt2020_prmy[(i + 2) % 3][1];
+			}
+			dest_prmy[3][0] = std_bt2020_white_point[0];
+			dest_prmy[3][1] = std_bt2020_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_P3) {
+			for (i = 0; i < 3; i++) {
+				dest_prmy[i][0] = std_p3_primaries[(i + 2) % 3][0];
+				dest_prmy[i][1] = std_p3_primaries[(i + 2) % 3][1];
+			}
+			dest_prmy[3][0] = std_p3_white_point[0];
+			dest_prmy[3][1] = std_p3_white_point[1];
+		} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+			for (i = 0; i < 3; i++) {
+				dest_prmy[i][0] = std_adobe_rgb_prmy[(i + 2) % 3][0];
+				dest_prmy[i][1] = std_adobe_rgb_prmy[(i + 2) % 3][1];
+			}
+			dest_prmy[3][0] = std_adobe_rgb_white_point[0];
+			dest_prmy[3][1] = std_adobe_rgb_white_point[1];
+		}
 	} else if (dest_type == DEST_HDR10) {
-		for (i = 0; i < 3; i++)
-			for (j = 0; j < 2; j++) {
+		for (i = 0; i < 3; i++) {
+			for (j = 0; j < 2; j++)
 				dest_prmy[i][j] = std_bt2020_prmy[(i + 2) % 3][j];
-				dest_prmy[3][j] = std_bt2020_white_point[j];
-			}
+		}
+		dest_prmy[3][0] = std_bt2020_white_point[0];
+		dest_prmy[3][1] = std_bt2020_white_point[1];
 	} else {
 		for (i = 0; i < 4; i++)
 			for (j = 0; j < 2; j++)
 				dest_prmy[i][j] = panel_primary[i * 2 + j];
 	}
-	pr_gmt("dest_primary: %d\n", dest_type);
+
+	if (vpp_color_pri_sel) {
+		if (module == GAMUT_WRAPPER0) {
+			for (i = 0; i < 3; i++) {
+				src_prmy[i][0] = std_bt709_prmy[(i + 2) % 3][0];
+				src_prmy[i][1] = std_bt709_prmy[(i + 2) % 3][1];
+			}
+			src_prmy[3][0] = std_bt709_white_point[0];
+			src_prmy[3][1] = std_bt709_white_point[1];
+
+			for (i = 0; i < 3; i++) {
+				dest_prmy[i][0] = std_bt2020_prmy[(i + 2) % 3][0];
+				dest_prmy[i][1] = std_bt2020_prmy[(i + 2) % 3][1];
+			}
+			dest_prmy[3][0] = std_bt2020_white_point[0];
+			dest_prmy[3][1] = std_bt2020_white_point[1];
+		} else {
+			for (i = 0; i < 3; i++) {
+				src_prmy[i][0] = std_bt2020_prmy[(i + 2) % 3][0];
+				src_prmy[i][1] = std_bt2020_prmy[(i + 2) % 3][1];
+			}
+			src_prmy[3][0] = std_bt2020_white_point[0];
+			src_prmy[3][1] = std_bt2020_white_point[1];
+
+			for (i = 0; i < 4; i++)
+				for (j = 0; j < 2; j++)
+					dest_prmy[i][j] = panel_primary[i * 2 + j];
+		}
+	}
 
 	gamut_proc(src_prmy, dest_prmy, out, NORM, BL);
 	cal_mtx_seting(out, BL, BL, mtx, mtx_depth);
+
 	if (module == GAMUT_WRAPPER0) {
 		for (i = 0; i < 3; i++)
 			for (j = 0; j < 3; j++)
@@ -707,6 +868,13 @@ int gamut_mode_process(struct vinfo_s *vinfo,
 			for (j = 0; j < 3; j++)
 				force_gamut_mtx.coef[i * 3 + j] = mtx->matrix[i][j];
 	}
+
+	pr_gmt("[wrapper] primary_policy/wrapper1_en/pri_sel: %d/%d/%d\n",
+		get_primary_policy(), gamut_mapping1_en, vpp_color_pri_sel);
+	pr_gmt("panel_primary: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x\n",
+		panel_primary[0], panel_primary[1], panel_primary[2], panel_primary[3],
+		panel_primary[4], panel_primary[5], panel_primary[6], panel_primary[7]);
+
 	return 0;
 }
 

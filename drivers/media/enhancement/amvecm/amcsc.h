@@ -249,6 +249,8 @@ enum color_primary_e get_color_primary(void);
 unsigned int get_cur_vd_ext_signal_type(enum vd_path_e vd_path);
 enum vpp_matrix_csc_e get_csc_type(void);
 enum vpp_matrix_ext_csc_e get_ext_csc_type(void);
+int is_hdmi_source(enum vd_path_e vd_path);
+int get_vf_source_type(enum vd_path_e vd_path);
 
 /*hdr*/
 /*#define DBG_BUF_SIZE (1024)*/
@@ -515,6 +517,15 @@ extern int hdr_hist_test_module;
 extern int hdr_hist_test_cnt;
 void hdr_hist_test(enum vd_path_e vd_path);
 unsigned int get_cur_signal_type(void);
+
+enum src_primary_type_e {
+	SRC_PRIMARY_BT709 = 0,
+	SRC_PRIMARY_BT2020,
+	SRC_PRIMARY_P3,
+	SRC_PRIMARY_ADOBE_RGB,
+};
+
+enum src_primary_type_e get_src_primary_type(void);
 #endif
 #endif /* AM_CSC_H */
 

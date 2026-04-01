@@ -66,6 +66,7 @@ static int cur_mvc_type[VD_PATH_MAX];
 static int cur_rgb_type[VD_PATH_MAX];
 static int rgb_type_proc[VD_PATH_MAX];
 static int cur_primesl_type[VD_PATH_MAX];
+static int cur_vf_src_type[VD_PATH_MAX];
 #define FORCE_RGB_PROCESS 1
 
 uint hdr_hist_select = 1;
@@ -100,6 +101,8 @@ unsigned int muxio_link_delay_cnt;
 unsigned int pre_dpss_mode;
 unsigned int dpss_mode;
 enum hdr_type_e cur_dpss_src_format;
+int cur_vf_src_type_dpss;
+unsigned int cur_signal_type_dpss = 0xffffffff;
 
 static unsigned int pre_flag_lc_evc;
 #endif
@@ -4195,6 +4198,7 @@ int signal_type_changed(struct vframe_s *vf,
 	}
 
 	ext_signal_type = vf->ext_signal_type;
+	cur_vf_src_type[vd_path] = vf->source_type;
 
 	if (vf->type & VIDTYPE_MVC) {
 		if (cur_mvc_type[vd_path] != (vf->type & VIDTYPE_MVC)) {
@@ -4661,11 +4665,11 @@ enum vpp_matrix_ext_csc_e get_ext_csc_type(void)
 			csc_type = VPP_MATRIX_BT_2020_YCC;
 		else if (signal_ext_colorimetry == 6)
 			csc_type = VPP_MATRIX_BT_2020_RGBORYCC;
-		else if (signal_ext_colorimetry == 7)
+		else if (signal_ext_colorimetry == 10)
 			csc_type = VPP_MATRIX_SMPTE_ST_2113_P3D65RGB;
-		else if (signal_ext_colorimetry == 8)
+		else if (signal_ext_colorimetry == 11)
 			csc_type = VPP_MATRIX_SMPTE_ST_2113_P3DCIRGB;
-		else if (signal_ext_colorimetry == 9)
+		else if (signal_ext_colorimetry == 12)
 			csc_type = VPP_MATRIX_BT_2100;
 	}
 
@@ -4716,16 +4720,30 @@ enum hdr_type_e get_hdr_source_type(void)
 
 enum color_primary_e get_color_primary(void)
 {
-	enum color_primary_e color_pri;
+	enum color_primary_e color_pri = VPP_COLOR_PRI_NULL;
+	enum src_primary_type_e src_primary;
+	int signal_cp = 0;
 
-	if (signal_color_primaries == 1)
-		color_pri = VPP_COLOR_PRI_BT709;
-	else if (signal_color_primaries == 3)
-		color_pri = VPP_COLOR_PRI_BT601;
-	else if (signal_color_primaries == 9)
+	src_primary = get_src_primary_type();
+
+	if (src_primary == SRC_PRIMARY_BT2020) {
 		color_pri = VPP_COLOR_PRI_BT2020;
-	else
-		color_pri = VPP_COLOR_PRI_NULL;
+	} else if (src_primary == SRC_PRIMARY_P3) {
+		color_pri = VPP_COLOR_PRI_P3;
+	} else if (src_primary == SRC_PRIMARY_ADOBE_RGB) {
+		color_pri = VPP_COLOR_PRI_ADOBE_RGB;
+	} else {
+		if (!dpss_mode)
+			signal_cp = (cur_signal_type[VD1_PATH] >> 16) & 0xff;
+		else
+			signal_cp = (cur_signal_type_dpss >> 16) & 0xff;
+
+		if (signal_cp == 3)
+			color_pri = VPP_COLOR_PRI_BT601;
+		else
+			color_pri = VPP_COLOR_PRI_BT709;
+	}
+
 	return color_pri;
 }
 
@@ -7331,6 +7349,27 @@ bool is_vinfo_available(const struct vinfo_s *vinfo)
 EXPORT_SYMBOL(is_vinfo_available);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+int is_hdmi_source(enum vd_path_e vd_path)
+{
+	int ret = 0;
+
+	if ((!dpss_mode && cur_vf_src_type[vd_path] == VFRAME_SOURCE_TYPE_HDMI) ||
+		(dpss_mode && cur_vf_src_type_dpss == VFRAME_SOURCE_TYPE_HDMI))
+		ret = 1;
+
+	return ret;
+}
+
+int get_vf_source_type(enum vd_path_e vd_path)
+{
+	int ret = cur_vf_src_type[vd_path];
+
+	if (dpss_mode)
+		ret = cur_vf_src_type_dpss;
+
+	return ret;
+}
+
 static enum hdr_type_e get_source_type(enum vd_path_e vd_path,
 	enum vpp_index_e vpp_index, struct vframe_s *vf)
 {
@@ -9573,7 +9612,6 @@ static unsigned int fg_vf_sw_dbg;
 unsigned int null_vf_max = 2;
 
 unsigned int fake_frame_flag[VD_PATH_MAX];
-unsigned int cur_signal_type_dpss = 0xffffffff;
 
 int amvecm_matrix_process(struct vframe_s *vf,
 			  struct vframe_s *vf_rpt, int flags,
@@ -10564,6 +10602,7 @@ int signal_type_detect_for_dpss(struct vframe_s *vf)
 
 	ext_signal_type = vf->ext_signal_type;
 	limit_full = (vf->signal_type >> 25) & 0x01;
+	cur_vf_src_type_dpss = vf->source_type;
 
 	if (vf->source_type == VFRAME_SOURCE_TYPE_TUNER ||
 		vf->source_type == VFRAME_SOURCE_TYPE_CVBS ||
@@ -11235,29 +11274,29 @@ void update_hdr_path_for_dpss(struct vframe_s *vf)
 	set_muxio_link_mode(1, vf, VPP_VCBUS);
 }
 
-#define signal_cp ((vf->signal_type >> 16) & 0xff)
-#define signal_tc ((vf->signal_type >> 8) & 0xff)
-
-s32 get_vf_src_fmt(struct vframe_s *vf)
+int get_vf_src_fmt(struct vframe_s *vf)
 {
 	int fmt = VFRAME_SIGNAL_FMT_SDR;
+	int signal_cp = 0;
+	int signal_tc = 0;
 
 	if (!vf)
-		return -1;
+		return VFRAME_SIGNAL_FMT_INVALID;
+
+	signal_cp = (vf->signal_type >> 16) & 0xff;
+	signal_tc = (vf->signal_type >> 8) & 0xff;
 
 	if ((signal_tc == 18 || signal_tc == 14) &&
-	    signal_cp == 9) {
+		signal_cp == 9) {
 		if (signal_cuva)
 			fmt = VFRAME_SIGNAL_FMT_CUVA_HLG;
 		else
 			fmt = VFRAME_SIGNAL_FMT_HLG;
-	} else if ((signal_tc == 0x30) &&
-		     ((signal_cp == 9) ||
-		      (signal_cp == 2))) {
+	} else if (signal_tc == 0x30 &&
+		(signal_cp == 9 || signal_cp == 2)) {
 		fmt = VFRAME_SIGNAL_FMT_HDR10PLUS;
-	} else if ((signal_tc == 16) &&
-		     ((signal_cp == 9) ||
-		      (signal_cp == 2))) {
+	} else if (signal_tc == 16 &&
+		(signal_cp == 9 || signal_cp == 2)) {
 		if (signal_cuva)
 			fmt = VFRAME_SIGNAL_FMT_CUVA_HDR;
 		else
@@ -12097,6 +12136,83 @@ void set_lc_evc_ctrl_for_dpss(unsigned int enable, unsigned int lc_evc_src)
 	lc_evc_pq_settings(lc_evc_src, VPP_VCBUS);
 }
 
+enum src_primary_type_e get_src_primary_type(void)
+{
+	enum src_primary_type_e ret = SRC_PRIMARY_BT709;
+	int hdmi_src = is_hdmi_source(VD1_PATH);
+	unsigned int signal_type = 0;
+	unsigned int ext_signal_type = 0;
+	enum vpp_matrix_ext_csc_e ext_csc_type = VPP_MATRIX_EXT_NULL;
+	unsigned int sc = 0;
+	unsigned int sc_ext = 0;
+
+	if (!dpss_mode) {
+		signal_type = cur_signal_type[VD1_PATH];
+		ext_signal_type = cur_ext_signal_type[VD1_PATH];
+	} else {
+		signal_type = cur_signal_type_dpss;
+		ext_signal_type = cur_ext_signal_type_dpss;
+	}
+
+//	if (hdmi_src && ext_signal_type) {
+	if (ext_signal_type) {
+		sc = (ext_signal_type >> 8) & 0xf;
+		sc_ext = (ext_signal_type >> 12) & 0xf;
+
+		if (sc > 0 && sc <= 2) {
+			if (sc == 1)
+				ext_csc_type = VPP_MATRIX_SMPTE_ST_170;
+			else
+				ext_csc_type = VPP_MATRIX_BT_709;
+		} else {
+			if (sc_ext == 0)
+				ext_csc_type = VPP_MATRIX_XVYCC_601;
+			else if (sc_ext == 1)
+				ext_csc_type = VPP_MATRIX_XVYCC_709;
+			else if (sc_ext == 2)
+				ext_csc_type = VPP_MATRIX_SYCC_601;
+			else if (sc_ext == 3)
+				ext_csc_type = VPP_MATRIX_OPYCC_601;
+			else if (sc_ext == 4)
+				ext_csc_type  = VPP_MATRIX_OP_RGB;
+			else if (sc_ext == 5)
+				ext_csc_type = VPP_MATRIX_BT_2020_YCC;
+			else if (sc_ext == 6)
+				ext_csc_type = VPP_MATRIX_BT_2020_RGBORYCC;
+			else if (sc_ext == 10)
+				ext_csc_type = VPP_MATRIX_SMPTE_ST_2113_P3D65RGB;
+			else if (sc_ext == 11)
+				ext_csc_type = VPP_MATRIX_SMPTE_ST_2113_P3DCIRGB;
+			else if (sc_ext == 12)
+				ext_csc_type = VPP_MATRIX_BT_2100;
+		}
+
+		if (ext_csc_type == VPP_MATRIX_BT_2020_YCC ||
+			ext_csc_type == VPP_MATRIX_BT_2020_RGBORYCC)
+			ret = SRC_PRIMARY_BT2020;
+		else if (ext_csc_type == VPP_MATRIX_SMPTE_ST_2113_P3D65RGB ||
+			ext_csc_type == VPP_MATRIX_SMPTE_ST_2113_P3DCIRGB)
+			ret = SRC_PRIMARY_P3;
+		else if (ext_csc_type == VPP_MATRIX_OP_RGB ||
+			ext_csc_type == VPP_MATRIX_OPYCC_601)
+			ret = SRC_PRIMARY_ADOBE_RGB;
+		else
+			ret = SRC_PRIMARY_BT709;
+	} else {
+		sc = (signal_type >> 16) & 0xff;
+
+		if (sc == 9)
+			ret = SRC_PRIMARY_BT2020;
+		else
+			ret = SRC_PRIMARY_BT709;
+	}
+
+	pr_csc(64, "[src_pt] hdmi_src %d, signal_type 0x%x, ext_signal_type 0x%x, ret %d\n",
+		hdmi_src, signal_type, ext_signal_type, ret);
+
+	return ret;
+}
+
 int amvecm_hdr_dbg(u32 sel)
 {
 	int i, j, k;
@@ -12122,6 +12238,7 @@ int amvecm_hdr_dbg(u32 sel)
 			dbg_vf[k]->signal_type,
 			dbg_vf[k]->prop.master_display_colour.present_flag);
 		pr_info("cur_ext_signal_type:0x%x\n", dbg_vf[k]->ext_signal_type);
+		pr_info("cur_vf_source_type:%d\n", dbg_vf[k]->source_type);
 
 		if (((dbg_vf[k]->signal_type >> 16) & 0xff) == 9) {
 			pr_info("HDR color primaries:0x%x\n",
@@ -12172,6 +12289,7 @@ hdr_dump:
 			hdr10_plus_process_mode[i]);
 		pr_info("cuva_hdr_process_mode = 0x%x, cuva_hlg_process_mode = 0x%x\n",
 			cuva_hdr_process_mode[i], cuva_hlg_process_mode[i]);
+		pr_info("cur_vf_source_type:%d\n", cur_vf_src_type[i]);
 		pr_info("hlg_plus_process_mode = 0x%x\n",
 			hlg_plus_process_mode[i]);
 	}
@@ -12456,6 +12574,10 @@ dbg_end:
 			force_source_format);
 		pr_info("cur_signal_type_dpss: 0x%x\n",
 			cur_signal_type_dpss);
+		pr_info("cur_ext_signal_type_dpss: 0x%x\n",
+			cur_ext_signal_type_dpss);
+		pr_info("cur_vf_src_type_dpss: 0x%x\n",
+			cur_vf_src_type_dpss);
 		pr_info("cur_dpss_src_format: 0x%x\n",
 			cur_dpss_src_format);
 		pr_info("cur_csc_type_dpss: 0x%x\n",
