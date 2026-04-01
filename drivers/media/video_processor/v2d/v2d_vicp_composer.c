@@ -105,7 +105,7 @@ int v2d_config_vicp_output_data(int fbc_out_en, int mif_out_en, ulong *phy_addr,
 	output_data->stride[0] = stride;
 	output_data->mif_out_en = mif_out_en;
 	output_data->endian = endian;
-	output_data->need_swap_cbcr = 1;
+	output_data->need_swap_cbcr = 0;
 	output_data->out_sig_fmt = out_sig_fmt;
 	if (mif_out_en) {
 		output_data->mif_color_fmt = cfmt_mif;
