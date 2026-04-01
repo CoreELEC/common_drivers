@@ -129,6 +129,7 @@ struct vad {
 	loff_t pos;
 #endif
 	struct vad_chipinfo *chipinfo;
+	bool always_on;
 };
 
 static struct vad *s_vad;
@@ -547,6 +548,11 @@ static irqreturn_t vad_fs_isr(int irq, void *data)
 		p_vad->vad_fs_count++;
 	}
 
+	if (p_vad->always_on) {
+		p_vad->wake_up_flag = true;
+		wake_up_process(p_vad->thread);
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -650,6 +656,11 @@ static int vad_init(struct vad *p_vad)
 
 	/* clock ready */
 	vad_set_clks(p_vad, true);
+
+	if (p_vad->always_on) {
+		p_vad->wake_up_flag = true;
+		wake_up_process(p_vad->thread);
+	}
 
 	return ret;
 }
@@ -994,6 +1005,34 @@ static int vad_set_enable_enum(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int vad_get_thread_enum(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct vad *p_vad = snd_kcontrol_chip(kcontrol);
+
+	if (!p_vad) {
+		pr_debug("VAD is not inited\n");
+		return 0;
+	}
+
+	ucontrol->value.integer.value[0] = p_vad->always_on;
+	return 0;
+}
+
+static int vad_set_thread_enum(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct vad *p_vad = snd_kcontrol_chip(kcontrol);
+
+	if (!p_vad) {
+		pr_debug("VAD is not inited\n");
+		return 0;
+	}
+
+	p_vad->always_on = ucontrol->value.integer.value[0];
+	return 0;
+}
+
 static const char *const vad_src_txt[] = {
 	"TDMIN_A",
 	"TDMIN_B",
@@ -1111,6 +1150,11 @@ static const struct snd_kcontrol_new vad_controls[] = {
 		0,
 		vad_get_enable_enum,
 		vad_set_enable_enum),
+
+	SOC_SINGLE_BOOL_EXT("VAD set thread always on",
+		0,
+		vad_get_thread_enum,
+		vad_set_thread_enum),
 
 	SOC_ENUM_EXT("VAD Source sel",
 		vad_src_enum,
