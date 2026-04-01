@@ -34,7 +34,6 @@
 
 #define BUFFER_LEN 4
 #define DMA_BUF_COUNT 4
-#define MXA_LAYER_COUNT 9
 #define COMPOSER_READY_POOL_SIZE 32
 #define FRAMES_INFO_POOL_SIZE 32
 #define VCOM_MAP_NAME_SIZE 90
@@ -77,7 +76,7 @@ struct frame_info_t {
 
 struct frames_info_t {
 	u32 frame_count;
-	struct frame_info_t frame_info[MXA_LAYER_COUNT];
+	struct frame_info_t frame_info[MAX_COMPOSER_COUNT];
 	u32 layer_index;
 	u32 disp_zorder;
 	u32 reserved[4];
@@ -111,11 +110,11 @@ struct received_frames_t {
 	atomic_t on_use;
 	struct frames_info_t frames_info;
 	unsigned long long frames_num;
-	struct file *file_vf[MXA_LAYER_COUNT];
-	unsigned long phy_addr[MXA_LAYER_COUNT];
+	struct file *file_vf[MAX_COMPOSER_COUNT];
+	unsigned long phy_addr[MAX_COMPOSER_COUNT];
 	u64 time_us64;
 	bool is_tvp;
-	struct file *fence_file[MXA_LAYER_COUNT];
+	struct file *fence_file[MAX_COMPOSER_COUNT];
 	bool is_drm;
 	u32 vsync_index;
 };

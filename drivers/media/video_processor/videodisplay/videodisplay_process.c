@@ -2392,7 +2392,7 @@ static void video_display_para_reset(int layer_index)
 static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 	struct vframe_s *vf, int event, struct timespec64 ts)
 {
-	struct aml_video_user_data msg[9] = {0};
+	struct aml_video_user_data msg[MAX_COMPOSER_COUNT] = {0};
 	struct input_mediaproxy_info_s *input_vf_info;
 	int count = 0;
 	int i;
@@ -2420,11 +2420,11 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 			return;
 		}
 		count = vf->composer_info->count;
-		if (count > MXA_LAYER_COUNT) {
+		if (count > MAX_COMPOSER_COUNT) {
 			vd_print(dev->index, PRINT_ERROR,
-				"%s:count (%d) exceeds MXA_LAYER_COUNT(%d)\n",
-				__func__, count, MXA_LAYER_COUNT);
-			count = MXA_LAYER_COUNT;
+				"%s:count (%d) exceeds MAX_COMPOSER_COUNT(%d)\n",
+				__func__, count, MAX_COMPOSER_COUNT);
+			count = MAX_COMPOSER_COUNT;
 		}
 		for (i = 0; i < count; i++) {
 			input_vf_info = &vf->composer_info->input_info[i];

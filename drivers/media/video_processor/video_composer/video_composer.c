@@ -70,7 +70,7 @@ static unsigned int force_composer_pip;
 static int transform = -1;
 static unsigned int vidc_debug;
 static unsigned int vidc_pattern_debug;
-static int last_index[MAX_VD_LAYERS][MXA_LAYER_COUNT];
+static int last_index[MAX_VD_LAYERS][MAX_COMPOSER_COUNT];
 static int last_frame_index;
 static u32 print_flag;
 static u32 full_axis = 1;
@@ -2670,8 +2670,8 @@ static void vframe_composer(struct composer_dev *dev)
 	struct frames_info_t *frames_info = NULL;
 	struct vframe_s *src_vf = NULL;
 	struct file *file_vf = NULL;
-	int vf_dev[MXA_LAYER_COUNT];
-	struct frame_info_t *vframe_info[MXA_LAYER_COUNT];
+	int vf_dev[MAX_COMPOSER_COUNT];
+	struct frame_info_t *vframe_info[MAX_COMPOSER_COUNT];
 	size_t usage = 0;
 	int i, j, tmp;
 	u32 zd1, zd2;
@@ -2699,14 +2699,14 @@ static void vframe_composer(struct composer_dev *dev)
 	ulong buf_addr[3];
 	int fbc_init_ctrl, fbc_pip_mode;
 	int mifout_en = 1, fbcout_en = 1;
-	enum vicp_skip_mode_e skip_mode[MXA_LAYER_COUNT] = {VICP_SKIP_MODE_OFF};
+	enum vicp_skip_mode_e skip_mode[MAX_COMPOSER_COUNT] = {VICP_SKIP_MODE_OFF};
 	struct file *temp_file = NULL;
 	struct frame_info_t *vframe_info_cur = NULL;
 	struct composer_common_para common_para;
 	struct vf_aiface_t *aiface_info_temp = NULL;
 	u32 num = 0, last_num = 0, size = 0;
-	struct vframe_s *input_vf[MXA_LAYER_COUNT] = {NULL};
-	struct output_axis out_axis[MXA_LAYER_COUNT] = {0};
+	struct vframe_s *input_vf[MAX_COMPOSER_COUNT] = {NULL};
+	struct output_axis out_axis[MAX_COMPOSER_COUNT] = {0};
 	struct file *fence_file;
 	bool has_fence;
 	u32 transform_tmp;
@@ -4950,7 +4950,7 @@ static void set_frames_info(struct composer_dev *dev,
 
 	if (!frames_info ||
 	    frames_info->frame_count <= 0 ||
-	    frames_info->frame_count > MXA_LAYER_COUNT) {
+	    frames_info->frame_count > MAX_COMPOSER_COUNT) {
 		vc_print(dev->index, PRINT_ERROR,
 			 "%s: param is invalid.\n",
 			 __func__);
@@ -5033,7 +5033,7 @@ static void set_frames_info(struct composer_dev *dev,
 	/*time_vsync = (u64)1000000 * (time2.tv_sec - vsync_time.tv_sec)*/
 	/*+ time2.tv_usec - vsync_time.tv_usec;*/
 
-	if (frames_info->frame_count > MXA_LAYER_COUNT ||
+	if (frames_info->frame_count > MAX_COMPOSER_COUNT ||
 	    frames_info->frame_count < 1) {
 		vc_print(dev->index, PRINT_ERROR,
 			 "vc: layer count %d\n", frames_info->frame_count);
@@ -5307,7 +5307,7 @@ static int video_composer_init(struct composer_dev *dev)
 	dev_array[dev->index] = dev;
 	init_completion(&dev->task_done);
 	for (i = 0; i < MAX_VD_LAYERS; i++) {
-		for (j = 0; j < MXA_LAYER_COUNT; j++)
+		for (j = 0; j < MAX_COMPOSER_COUNT; j++)
 			last_index[i][j] = -1;
 	}
 	last_frame_index = -1;
