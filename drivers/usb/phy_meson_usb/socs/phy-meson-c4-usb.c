@@ -91,6 +91,20 @@ static int meson_usb2phy_c4_cali_disc_squelch
 	return 0;
 }
 
+static int meson_usb2phy_c4_improve_eye_height
+			(struct amlogic_usb_v2 *mphy)
+{
+	u32 val = 0;
+	void __iomem *cfg = mphy->phy_cfg[0];
+
+	/* improve eye height. */
+	val = readl(cfg + 0x54);
+	val = (val & ~((u32)GENMASK(11, 9))) | (0x4 << 9);
+	writel(val, cfg + 0x54);
+
+	return 0;
+}
+
 static int meson_usb2phy_c4_set_mode
 			(struct amlogic_usb_v2 *mphy, enum meson_uphy_mode mode)
 {
@@ -116,6 +130,7 @@ static void meson_usb2phy_c4_cali(struct amlogic_usb_v2 *mphy)
 {
 	meson_usb2phy_set_calibration_trim(mphy);
 	meson_usb2phy_c4_cali_disc_squelch(mphy);
+	meson_usb2phy_c4_improve_eye_height(mphy);
 }
 
 static struct meson_u2phy_priv meson_u2phy_c4_priv = {
