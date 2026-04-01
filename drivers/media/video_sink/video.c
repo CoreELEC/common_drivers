@@ -1004,6 +1004,8 @@ inline int amvideo_vf_put(struct vframe_s *vf)
 			return 0;
 		return -EINVAL;
 	}
+
+	check_present_fence_and_signal(vf);
 	if (atomic_dec_and_test(&vf->use_cnt)) {
 		vpp_trace_vframe("video_vf_put",
 			(void *)vf, vf->type, vf->flag, 0, vsync_cnt[VPP0]);

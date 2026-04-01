@@ -1411,6 +1411,7 @@ int VSYNC_WR_VIDEO_TABLE_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 int PRE_VSYNC_WR_VIDEO_TABLE_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 
 struct vpp_frame_par_s *get_cur_frame_par(struct video_layer_s *layer);
+void check_present_fence_and_signal(struct vframe_s *vf);
 
 #ifndef CONFIG_AMLOGIC_MEDIA_FRAME_SYNC
 enum avevent_e {

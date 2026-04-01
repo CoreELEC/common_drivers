@@ -3158,26 +3158,35 @@ static void vd_dispbuf_init(u8 layer_id)
 	}
 }
 
-static void signal_present_fence(u32 layer_id)
+void check_present_fence_and_signal(struct vframe_s *vf)
 {
-	struct vframe_s *dispbuf = NULL;
 	struct video_composer_private *vc = NULL;
 
-	if (layer_id >= MAX_VD_LAYER)
+	if (!vf)
 		return;
 
-	dispbuf = get_dispbuf(layer_id);
-	if (dispbuf && dispbuf->vc_private) {
-		vc = dispbuf->vc_private;
+	if (vf && vf->vc_private) {
+		vc = vf->vc_private;
 		if (vc->present_fence) {
 			if (debug_common_flag & DEBUG_FLAG_COMMON_FENCE)
 				pr_info("vf:%px index:%d vc_private:%px present_fence:%px\n",
-					dispbuf, dispbuf->frame_index, vc, vc->present_fence);
+					vf, vf->frame_index, vc, vc->present_fence);
 			dma_fence_signal(vc->present_fence);
 			dma_fence_put(vc->present_fence);
 			vc->present_fence = NULL;
 		}
 	}
+}
+
+static void signal_present_fence(u32 layer_id)
+{
+	struct vframe_s *dispbuf = NULL;
+
+	if (layer_id >= MAX_VD_LAYER)
+		return;
+
+	dispbuf = get_dispbuf(layer_id);
+	check_present_fence_and_signal(dispbuf);
 }
 
 void put_buffer_proc(void)

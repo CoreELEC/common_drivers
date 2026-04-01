@@ -183,6 +183,7 @@ static inline void common_vf_put(struct video_recv_s *ins,
 	if (!ins || !ins->recv_name || vf == ins->frc_vf_used)
 		return;
 
+	check_present_fence_and_signal(vf);
 	vfp = vf_get_provider(ins->recv_name);
 	if (vfp && vf) {
 		vpp_trace_vframe("common_vf_put",
