@@ -935,6 +935,14 @@ void lut_dma_unregister(u32 dma_dir, u32 channel)
 }
 EXPORT_SYMBOL(lut_dma_unregister);
 
+static void lut_dma_hw_init(void)
+{
+	//lut dma error reset enable
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_SC2))
+		lut_dma_reg_set_bits(VPU_DMA_RDMIF_CTRL2,
+				     1, 29, 1, VPP_INVALID);
+}
+
 static int parse_para(const char *para, int para_num, int *result)
 {
 	char *token = NULL;
@@ -1212,10 +1220,8 @@ static int lut_dma_probe(struct platform_device *pdev)
 	for (i = 0; i < LUT_DMA_CHANNEL; i++)
 		mutex_init(&info->ins[i].lut_dma_lock);
 	set_lut_rdma_func_handler();
+	lut_dma_hw_init();
 	lut_dma_probed = 1;
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_SC2))
-		lut_dma_reg_set_bits(VPU_DMA_RDMIF_CTRL2,
-				     1, 29, 1, VPP_INVALID);
 	return 0;
 fail_class_create_file:
 	for (i = 0; i < ARRAY_SIZE(lut_dma_attrs); i++)
@@ -1248,6 +1254,7 @@ static int lut_dma_resume(struct device *dev)
 	struct lut_dma_device_info *info = &lut_dma_info;
 	int i;
 
+	lut_dma_hw_init();
 	for (i = 0; i < LUT_DMA_CHANNEL; i++)
 		if (info->ins[i].registered) {
 			if (!info->ins[i].enable && info->ins[i].force_disable)
@@ -1281,6 +1288,7 @@ static int lut_dma_restore(struct device *dev)
 	struct lut_dma_device_info *info = &lut_dma_info;
 	int i;
 
+	lut_dma_hw_init();
 	for (i = 0; i < LUT_DMA_CHANNEL; i++)
 		if (info->ins[i].registered) {
 			if (!info->ins[i].enable && info->ins[i].force_disable)
