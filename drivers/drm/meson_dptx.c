@@ -13,6 +13,8 @@
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_connector.h>
 #include <drm/drm_modeset_lock.h>
+#include <drm/amlogic/meson_connector_dev.h>
+#include <drm/display/drm_hdcp_helper.h>
 
 #include <vout/vout_serve/vout_func.h>
 
@@ -175,6 +177,11 @@ static int meson_dptx_connector_atomic_set_property
 		attr->bitdepth = val;
 	else if (property == meson_dptx->color_space_prop)
 		attr->colorformat = val;
+	else if (property == meson_dptx->hdcp_content_type0_pri_prop) {
+		meson_dptx->hdcp_content_type0_pri = val;
+		dptx_state->hdcp_force_st = true;
+	} else if (property == meson_dptx->hdcp_content_type0_pri_store_prop)
+		meson_dptx->hdcp_content_type0_pri = val;
 	else
 		return -EINVAL;
 
@@ -190,6 +197,7 @@ static int meson_dptx_connector_atomic_get_property
 	struct meson_dptx_connector_state *dptx_state =
 		to_dptx_connector_state(state);
 	struct tx_color_attr *attr = &dptx_state->color_attr_para;
+	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
 
 	if (property == meson_dptx->color_depth_prop)
 		*val = attr->bitdepth;
@@ -197,6 +205,12 @@ static int meson_dptx_connector_atomic_get_property
 		*val = attr->colorformat;
 	else if (property == meson_dptx->type_prop)
 		*val = meson_dptx->dptx_type;
+	else if (property == meson_dptx->hdcp_mode_prop)
+		*val = dptx_common_get_hdcp_mode(tx_comm);
+	else if (property == meson_dptx->hdcp_content_type0_pri_prop)
+		*val = meson_dptx->hdcp_content_type0_pri;
+	else if (property == meson_dptx->hdcp_content_type0_pri_store_prop)
+		*val = meson_dptx->hdcp_content_type0_pri;
 	else
 		return -EINVAL;
 
@@ -351,6 +365,228 @@ static const struct drm_connector_funcs meson_dptx_connector_funcs = {
 	.early_unregister	= meson_dptx_early_unregister,
 };
 
+static void meson_dptx_set_hdcp_result(struct meson_dp_tx *am_dptx, int result)
+{
+	struct drm_connector *connector = &am_dptx->base.connector;
+
+	if (result == HDCP_AUTH_OK) {
+		am_dptx->hdcp_state = DP_HDCP_RESULT_SUCCESS;
+		am_dptx->content_protection = DRM_MODE_CONTENT_PROTECTION_ENABLED;
+		schedule_work(&am_dptx->hdcp_update_work);
+		DRM_DEBUG("hdcp [%d] set result ok.\n", am_dptx->hdcp_mode);
+	} else if (result == HDCP_AUTH_FAIL) {
+		am_dptx->hdcp_state = DP_HDCP_RESULT_FAIL;
+		/*no event needed when fail.*/
+		DRM_DEBUG("hdcp [%d] set result fail.\n", am_dptx->hdcp_mode);
+	} else if (result == HDCP_AUTH_UNKNOWN) {
+		/*reset property value to DESIRED.*/
+		if (connector->state &&
+			connector->state->content_protection ==
+			DRM_MODE_CONTENT_PROTECTION_ENABLED) {
+			am_dptx->content_protection = DRM_MODE_CONTENT_PROTECTION_DESIRED;
+			schedule_work(&am_dptx->hdcp_update_work);
+		}
+	}
+}
+
+static int meson_dptx_get_hdcp_request(struct meson_dp_tx *am_dptx,
+	int request_type_mask)
+{
+	unsigned int hdcp_rx_type = am_dptx->hdcp_rx_type;
+	struct drm_connector *connector = &am_dptx->base.connector;
+	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
+	unsigned int hdcp_tx_type;
+
+	hdcp_tx_type = drm_dptx_common_get_tx_hdcp_cap(tx_comm);
+	/*
+	 * for bootup case, some project not have tee notify to load hdcp key,
+	 * need to get rx_cap by dptx api.
+	 * for hotplug case, rx_cap is updated in hpd callback.
+	 */
+	if (hdcp_rx_type == 0)
+		hdcp_rx_type = drm_dptx_common_get_rx_hdcp_cap(tx_comm);
+
+	DRM_INFO("%s usr_type: %d, hdcp cap: %d,%d\n",
+			__func__, request_type_mask,
+			hdcp_tx_type, hdcp_rx_type);
+
+	return hdcp_tx_type & hdcp_rx_type & request_type_mask;
+}
+
+void meson_dptx_update_hdcp(struct meson_dp_tx *am_dptx, int hdcp_request)
+{
+	int hdcp_request_mode = HDCP_NULL;
+	int hdcp_request_mask = HDCP_NULL;
+	int hdcp_is_same = 0;
+	struct drm_connector *conn = &am_dptx->base.connector;
+	struct dptx_common *dptx_comm = connector_to_dptx_common(conn);
+
+	DRM_INFO("meson update hdcp_request:%d\n", hdcp_request);
+
+	/*Undesired, disable hdcp.*/
+	if (am_dptx->hdcp_request_content_protection == DRM_MODE_CONTENT_PROTECTION_UNDESIRED)
+		hdcp_request = DP_HDCP_STATE_STOP;
+
+	if (hdcp_request == DP_HDCP_STATE_STOP || hdcp_request == DP_HDCP_STATE_DISCONNECT) {
+		dptx_common_set_hdcp_mode(dptx_comm, HDCP_NULL, hdcp_request);
+		am_dptx->hdcp_mode = HDCP_NULL;
+		am_dptx->hdcp_state = hdcp_request;
+		meson_dptx_set_hdcp_result(am_dptx, HDCP_AUTH_UNKNOWN);
+		return;
+	}
+
+	if (am_dptx->hdcp_request_content_type == DRM_MODE_HDCP_CONTENT_TYPE0)
+		hdcp_request_mask = HDCP_MODE14 | HDCP_MODE22;
+	else
+		hdcp_request_mask = HDCP_MODE22;
+
+	if (am_dptx->hdcp_request_content_type == DRM_MODE_HDCP_CONTENT_TYPE0) {
+		if (am_dptx->hdcp_content_type0_pri)
+			hdcp_request_mask = HDCP_MODE14;
+	}
+
+	hdcp_request_mode = meson_dptx_get_hdcp_request(am_dptx, hdcp_request_mask);
+
+	/*mode is same, try to re-use last state*/
+	if (hdcp_request_mode & 2) {
+		if (am_dptx->hdcp_mode == HDCP_MODE22)
+			hdcp_is_same = 1;
+	} else {
+		if (am_dptx->hdcp_mode == HDCP_MODE14 && (hdcp_request_mode & 1))
+			hdcp_is_same = 1;
+	}
+
+	if (hdcp_is_same) {
+		switch (am_dptx->hdcp_state) {
+		case DP_HDCP_STATE_START:
+			DRM_INFO("waiting hdcp result.\n");
+			return;
+		case DP_HDCP_RESULT_SUCCESS:
+			DRM_INFO("is auth ok.\n");
+			meson_dptx_set_hdcp_result(am_dptx, HDCP_AUTH_OK);
+			return;
+		case DP_HDCP_RESULT_FAIL:
+		default:
+			DRM_ERROR("meet stopped hdcp stat\n");
+			break;
+		};
+	}
+
+	if (am_dptx->hdcp_force) {
+		am_dptx->hdcp_force = false;
+		DRM_INFO("force hdcp\n");
+	} else {
+		dptx_common_set_hdcp_mode(dptx_comm, HDCP_NULL, DP_HDCP_STATE_STOP);
+		am_dptx->hdcp_mode = HDCP_NULL;
+		am_dptx->hdcp_state = DP_HDCP_STATE_STOP;
+	}
+
+	meson_dptx_set_hdcp_result(am_dptx, HDCP_AUTH_UNKNOWN);
+
+	if (hdcp_request_mode != HDCP_NULL &&
+		(hdcp_request == DP_HDCP_STATE_START || hdcp_request == DP_HDCP_FORCE ||
+		hdcp_request == DP_HDCP_KEY_READY)) {
+		if (hdcp_request_mode & 2)
+			am_dptx->hdcp_mode = HDCP_MODE22;
+		else
+			am_dptx->hdcp_mode = HDCP_MODE14;
+
+		am_dptx->hdcp_state = DP_HDCP_STATE_START;
+		dptx_common_set_hdcp_mode(dptx_comm, hdcp_request_mode, hdcp_request);
+	} else {
+		DRM_ERROR("No valid hdcp mode exit, maybe hdcp havenot init.\n");
+	}
+}
+
+static void meson_dptx_update(struct drm_connector_state *new_state,
+			struct drm_connector_state *old_state)
+{
+	struct drm_connector *connector = new_state->connector;
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+	struct meson_dptx_connector_state *new_dptx_state =
+		to_dptx_connector_state(new_state);
+	int hdcp_request;
+
+	if (old_state->hdcp_content_type
+			!= new_state->hdcp_content_type ||
+		(old_state->content_protection !=
+			new_state->content_protection &&
+		new_state->content_protection !=
+			DRM_MODE_CONTENT_PROTECTION_ENABLED) ||
+			new_dptx_state->hdcp_force_st) {
+		/*check hdcp property update*/
+		meson_dptx->hdcp_request_content_type =
+			new_state->hdcp_content_type;
+		meson_dptx->hdcp_request_content_protection =
+			new_state->content_protection;
+
+		if (new_dptx_state->hdcp_force_st) {
+			meson_dptx->hdcp_force = true;
+			hdcp_request = DP_HDCP_FORCE;
+		} else {
+			hdcp_request = DP_HDCP_STATE_START;
+		}
+
+		if (new_state->crtc && !drm_atomic_crtc_needs_modeset(new_state->crtc->state))
+			meson_dptx_update_hdcp(meson_dptx, hdcp_request);
+	}
+}
+
+static void meson_dptx_hdcp_notify(void *data, int type, int result)
+{
+	struct meson_dp_tx *am_dptx = (struct meson_dp_tx *)data;
+	struct drm_connector *connector = &am_dptx->base.connector;
+	struct dptx_common *dptx_comm = connector_to_dptx_common(connector);
+	struct drm_modeset_lock *mode_lock =
+		&connector->dev->mode_config.connection_mutex;
+	char event_string[64];
+	char *envp[2];
+	struct drm_device *dev = connector->dev;
+
+	drm_modeset_lock(mode_lock, NULL);
+
+	if (type == HDCP_KEY_UPDATE && result == HDCP_AUTH_UNKNOWN) {
+		DRM_INFO("HDCP statue changed, need re-run hdcp\n");
+		if (meson_tx_get_hpd_state(&dptx_comm->base))
+			am_dptx->hdcp_rx_type = drm_dptx_common_get_rx_hdcp_cap(dptx_comm);
+		if (!am_dptx->dptx_on)
+			goto end;
+		meson_dptx_update_hdcp(am_dptx, DP_HDCP_KEY_READY);
+		goto end;
+	}
+	if (!am_dptx->dptx_on)
+		goto end;
+
+	am_dptx->hdcp_mode = type;
+	if (0) {
+		if (type != am_dptx->hdcp_mode) {
+			DRM_DEBUG("notify type is mismatch[%d]-[%d]\n",
+				type, am_dptx->hdcp_mode);
+			goto end;
+		}
+	}
+
+	if (result == HDCP_AUTH_OK)
+		meson_dptx_set_hdcp_result(am_dptx, HDCP_AUTH_OK);
+	else if (result == HDCP_AUTH_FAIL)
+		meson_dptx_set_hdcp_result(am_dptx, HDCP_AUTH_FAIL);
+	else
+		DRM_ERROR("HDCP report unknown result [%d-%d]\n", type, result);
+
+	/*hdcp uevent*/
+	memset(envp, 0, sizeof(envp));
+	envp[0] = event_string;
+	envp[1] = NULL;
+	snprintf(event_string, sizeof(event_string),
+				"dptx hdcp uevent, mode=%d,result=%d", type, result);
+
+	DRM_DEBUG("dptx hdcp uevent, mode=%d,result=%d\n", type, result);
+
+	kobject_uevent_env(&dev->primary->kdev->kobj, KOBJ_CHANGE, envp);
+end:
+	drm_modeset_unlock(mode_lock);
+}
+
 static void meson_dptx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 	struct drm_crtc_state *crtc_state,
 	struct drm_connector_state *conn_state)
@@ -386,6 +622,8 @@ static void meson_dptx_encoder_atomic_enable(struct drm_encoder *encoder,
 	mode = &crtc_state->adjusted_mode;
 	meson_crtc_state = to_am_meson_crtc_state(crtc_state);
 
+	meson_dptx_update_hdcp(meson_dptx, DP_HDCP_STATE_START);
+
 	meson_vout_notify_mode_change(amcrtc->vout_index,
 				      meson_crtc_state->vmode, EVENT_MODE_SET_START);
 	/* assume hdmi_if_index = venc_idx by default */
@@ -398,6 +636,7 @@ static void meson_dptx_encoder_atomic_enable(struct drm_encoder *encoder,
 	meson_vout_notify_mode_change(amcrtc->vout_index,
 				      meson_crtc_state->vmode, EVENT_MODE_SET_FINISH);
 	meson_vout_update_mode_name(amcrtc->vout_index, mode->name, "dptx");
+	meson_dptx->dptx_on = 1;
 }
 
 static void meson_dptx_encoder_atomic_disable(struct drm_encoder *encoder,
@@ -408,10 +647,14 @@ static void meson_dptx_encoder_atomic_disable(struct drm_encoder *encoder,
 	struct meson_dp_tx *meson_dptx = encoder_to_meson_dptx(encoder);
 	struct drm_connector *conn = &meson_dptx->base.connector;
 
+	DRM_INFO("[%s]\n", __func__);
+
 	old_conn_state = drm_atomic_get_old_connector_state(state, conn);
 	amcrtc = to_am_meson_crtc(old_conn_state->crtc);
+	meson_dptx->dptx_on = 0;
 
 	meson_venc_mode_disable(meson_dptx->venc, meson_dptx->enc_idx, VENC_ENCP);
+	meson_dptx_update_hdcp(meson_dptx, DP_HDCP_STATE_STOP);
 }
 
 static enum drm_mode_status meson_dptx_encoder_mode_valid(struct drm_encoder *crtc,
@@ -470,17 +713,34 @@ static const struct drm_encoder_funcs meson_dptx_encoder_funcs = {
 	.destroy = drm_encoder_cleanup,
 };
 
-static void meson_dptx_update(struct drm_connector_state *new_state,
-			struct drm_connector_state *old_state)
+static void meson_dptx_hdcp_work_func(struct work_struct *work)
 {
+	struct meson_dp_tx *am_dptx = container_of(work, struct meson_dp_tx, hdcp_update_work);
+	struct drm_connector *connector = &am_dptx->base.connector;
+	struct drm_modeset_lock *mode_lock = &connector->dev->mode_config.connection_mutex;
+
+	drm_modeset_lock(mode_lock, NULL);
+	drm_hdcp_update_content_protection(connector, am_dptx->content_protection);
+	drm_modeset_unlock(mode_lock);
 }
 
 static void meson_dptx_hpd_cb(void *data)
 {
 	struct meson_connector *meson_con = (struct meson_connector *)data;
 	struct drm_connector *connector = &meson_con->connector;
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
+	struct drm_modeset_lock *mode_lock =
+			&connector->dev->mode_config.connection_mutex;
 
-	DRM_INFO("drm hdmitx hpd notify\n");
+	DRM_INFO("drm dptx hpd notify\n");
+
+	if (!meson_tx_get_hpd_state(&tx_comm->base)) {
+		drm_modeset_lock(mode_lock, NULL);
+		meson_dptx_update_hdcp(meson_dptx, DP_HDCP_STATE_DISCONNECT);
+		meson_dptx->dptx_on = 0;
+		drm_modeset_unlock(mode_lock);
+	}
 
 	meson_drm_kms_helper_hotplug_event(connector);
 }
@@ -535,6 +795,49 @@ static void meson_dptx_init_colordepth_property(struct drm_device *drm_dev,
 		colordepth_to_bitdepth(bitdepth));
 	} else {
 		DRM_ERROR("Failed to color_depth property\n");
+	}
+}
+
+static void meson_dptx_init_hdcp_content_type0_pri_property(struct drm_device *drm_dev,
+						struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_bool(drm_dev, 0, "HDCP_CONTENT_TYPE0_PRIORITY");
+	if (prop) {
+		meson_dptx->hdcp_content_type0_pri_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to HDCP_CONTENT_TYPE0_PRIORITY property\n");
+	}
+}
+
+static void meson_dptx_init_hdcp_content_type0_pri_store_property(struct drm_device *drm_dev,
+						struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_bool(drm_dev, 0, "HDCP_CONTENT_TYPE0_PRI_STORE");
+	if (prop) {
+		meson_dptx->hdcp_content_type0_pri_store_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to HDCP_CONTENT_TYPE0_PRI_STORE property\n");
+	}
+}
+
+static void meson_hdmitx_init_hdcp_mode_property(struct drm_device *drm_dev,
+						struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "hdcp_mode", 0, 36);
+
+	if (prop) {
+		meson_dptx->hdcp_mode_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to hdcp_mode property\n");
 	}
 }
 
@@ -596,6 +899,8 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	int connector_type = type;
 	char *connector_name = NULL;
 	struct drm_property *type_prop = NULL;
+	struct connector_hdcp_cb hdcp_cb;
+	int hdcp_ctl_lvl;
 
 	meson_dptx = devm_kzalloc(drm->dev, sizeof(*meson_dptx), GFP_KERNEL);
 	if (!meson_dptx)
@@ -604,6 +909,28 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	meson_dptx->dptx_dev = intf;
 	tx_dev  = to_meson_tx_dev(intf);
 	tx_comm = to_dptx_common(tx_dev);
+
+	hdcp_ctl_lvl = tx_comm->hdcptx_comm.hdcp_ctl_lvl;
+	DRM_DEBUG("hdcp_ctl_lvl=%d\n", hdcp_ctl_lvl);
+
+	if (hdcp_ctl_lvl == 0) {
+		meson_dptx->hdcp_request_content_type =
+				DRM_MODE_HDCP_CONTENT_TYPE0;
+		meson_dptx->hdcp_request_content_protection =
+				DRM_MODE_CONTENT_PROTECTION_DESIRED;
+	} else if (hdcp_ctl_lvl == 1) {
+		meson_dptx->hdcp_request_content_type =
+			DRM_MODE_HDCP_CONTENT_TYPE0;
+		meson_dptx->hdcp_request_content_protection =
+			DRM_MODE_CONTENT_PROTECTION_DESIRED;
+	} else if (hdcp_ctl_lvl == 2) {
+		meson_dptx->hdcp_request_content_type =
+			DRM_MODE_HDCP_CONTENT_TYPE0;
+		meson_dptx->hdcp_request_content_protection =
+			DRM_MODE_CONTENT_PROTECTION_UNDESIRED;
+	} else {
+		DRM_ERROR("no HDCP func registered.\n");
+	}
 
 	mesonconn = &meson_dptx->base;
 	mesonconn->drm_priv = priv;
@@ -614,6 +941,7 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	connector = &meson_dptx->base.connector;
 	intf->conn = connector;
 	meson_dptx->dptx_type = type;
+	INIT_WORK(&meson_dptx->hdcp_update_work, meson_dptx_hdcp_work_func);
 
 	DRM_INFO("[%s]: type = %d\n", __func__, type);
 
@@ -686,10 +1014,20 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	tx_state = devm_kzalloc(drm->dev, sizeof(*tx_state), GFP_KERNEL);
 	if (!tx_state)
 		return -ENOMEM;
+	/*hdcp init, default is disable state*/
+	drm_connector_attach_content_protection_property(connector, true);
+	hdcp_cb.hdcp_notify = meson_dptx_hdcp_notify;
+	hdcp_cb.data = meson_dptx;
+	drm_dptx_common_register_hdcp_notify(tx_comm, &hdcp_cb);
+	meson_dptx->hdcp_mode = HDCP_NULL;
+	meson_dptx->hdcp_state = DP_HDCP_STATE_DISCONNECT;
 
 	meson_tx_get_init_state(tx_dev, tx_state);
 	meson_dptx_init_colordepth_property(drm, meson_dptx, tx_state);
 	meson_dptx_init_colorspace_property(drm, meson_dptx, tx_state);
+	meson_dptx_init_hdcp_content_type0_pri_property(drm, meson_dptx);
+	meson_dptx_init_hdcp_content_type0_pri_store_property(drm, meson_dptx);
+	meson_hdmitx_init_hdcp_mode_property(drm, meson_dptx);
 
 	/*prop for userspace to acquire prop*/
 	type_prop = drm_property_create_range(drm, DRM_MODE_PROP_IMMUTABLE,
@@ -711,5 +1049,9 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 int meson_dptx_dev_unbind(struct drm_device *drm,
 	int type, struct meson_connector_dev *intf)
 {
+	struct drm_connector *connector = intf->conn;
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+
+	cancel_work_sync(&meson_dptx->hdcp_update_work);
 	return 0;
 }
