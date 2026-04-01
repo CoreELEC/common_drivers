@@ -4,6 +4,7 @@
   get_track
   bitmap_alloc
   __seq_open_private
+  __lruvec_stat_mod_folio
 
 #page_trace.ko
   __tracepoint_android_vh_get_page_wmark

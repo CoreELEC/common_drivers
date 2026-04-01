@@ -246,7 +246,7 @@ config AMLOGIC_KHEADERS_OPT
 		kernel image size.
 
 config AMLOGIC_MEMORY_SLAB_LARGE
-	bool "large kmalloc optimization"
+	tristate "large kmalloc optimization"
 	default n
 	help
 		kmalloc defaults to order alignment, change it

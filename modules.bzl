@@ -182,6 +182,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/memory_debug:amlogic-memory-debug",
     "common_drivers/drivers/memory_ext/aml_smmu.ko",
     "//common_drivers/drivers/memory_ext:aml_smmu",
+    "common_drivers/drivers/memory_ext/slab_large.ko",
+    "//common_drivers/drivers/memory_ext:slab_large",
     "common_drivers/drivers/memory_ext/user_fault.ko",
     "//common_drivers/drivers/memory_ext:user_fault",
     "common_drivers/drivers/mmc/host/amlogic-mmc.ko",

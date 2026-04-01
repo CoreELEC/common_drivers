@@ -145,3 +145,28 @@ ddk_module(
     deps = [
     ],
 )
+
+ddk_module(
+    name = "slab_large",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_MEMORY_SLAB_LARGE": {
+            True: ["slab_large.c"],
+        },
+    },
+    hdrs = [
+    ],
+    linux_includes = ["../../../common/mm"],
+    local_defines = [
+        "pr_fmt(fmt)=\"[slab_large]: \" fmt",
+    ],
+    out = "slab_large.ko",
+
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common_drivers/drivers/memory_ext:page_trace",
+    ],
+)
