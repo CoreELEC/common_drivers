@@ -556,7 +556,7 @@ static ssize_t dump_vdin_afbc_head_show(struct file *filp, struct kobject *kobj,
 		info->sizeimage = devp->afbce_info->frame_head_size;
 
 		info->highmem_flag =
-				PageHighMem(phys_to_page(devp->afbce_info->fm_body_paddr[0]));
+				PageHighMem(phys_to_page(info->phy_addr));
 
 		if (info->highmem_flag == 0) {
 			if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC)
@@ -640,7 +640,7 @@ static ssize_t dump_vdin_afbc_table_show(struct file *filp, struct kobject *kobj
 		info->sizeimage = devp->afbce_info->frame_table_size;
 
 		info->highmem_flag =
-				PageHighMem(phys_to_page(devp->afbce_info->fm_body_paddr[0]));
+				PageHighMem(phys_to_page(info->phy_addr));
 
 		if (info->highmem_flag == 0) {
 			if ((devp->cma_config_flag & 0xfff) == 0x101)
