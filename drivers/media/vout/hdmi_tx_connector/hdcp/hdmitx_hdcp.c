@@ -33,6 +33,8 @@
 #include "hdmi_tx_connector/hdmitx_audio.h"
 #include "hdmi_rx_repeater.h"
 
+#include <linux/amlogic/media/vout/hdmitx_common/hdmitx_common.h>
+
 #define TEE_HDCP_IOC_START _IOW('P', 0, int)
 #define TEE_HDCP_IOC_VALIDATE_KEY _IOWR('P', 0x1, int)
 
@@ -124,6 +126,8 @@ void hdmitx21_enable_hdcp(struct hdmitx_common *tx_comm)
 		return;
 	}
 
+	if (hdmitx_hw_cntl(tx_comm->tx_hw, PLATFORM_RXSENSE, NULL, NULL) == 0)
+		hdmitx_current_status(tx_comm, HDMITX_HDCP_DEVICE_NOT_READY_ERROR);
 	p_hdcp = tx_comm->hdcptx_priv;
 	/*
 	 * lstore: 0 by default, 0x11/0x12 for debug usage

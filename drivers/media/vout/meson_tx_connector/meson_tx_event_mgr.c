@@ -137,10 +137,11 @@ int meson_tx_tracer_write_event(struct meson_tx_tracer *tracer,
 	if (tracer->hdr10plus_event == TX_HDR_MODE_HDR10PLUS)
 		return 0;
 
-	//if (event & HDMITX_HDMI_ERROR_MASK)
-	//	HDMITX_ERROR("Record HDMI error: %s\n", hdmitx_event_to_str(event));
-
 	log_str = meson_tx_event_to_str(event);
+
+	if (event & TX_ERROR_MASK)
+		HDMITX_WARNING(log_str);
+
 	ret = kfifo_in(&tracer->log_fifo, log_str, strlen(log_str));
 	if (!ret)
 		kfifo_reset(&tracer->log_fifo);

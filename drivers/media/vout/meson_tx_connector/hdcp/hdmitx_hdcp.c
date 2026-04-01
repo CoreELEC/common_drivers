@@ -32,6 +32,9 @@
 #include "hdmitx_audio.h"
 #include "hdmi_rx_repeater.h"
 #include "hdmitx_hw_hdcp.h"
+#include "meson_tx_event_mgr.h"
+
+#include <linux/amlogic/media/vout/meson_tx_connector/hdmitx_common/hdmitx_common.h>
 
 #define TEE_HDCP_IOC_START _IOW('P', 0, int)
 #define TEE_HDCP_IOC_VALIDATE_KEY _IOWR('P', 0x1, int)
@@ -150,12 +153,16 @@ static void hdcptx_enable_mode(struct hdcptx21_core *p_hdcp, int hdcp_type)
 static void hdmitx21_enable_hdcp(struct hdcptx21_core *p_hdcp)
 {
 	struct hdcptx_common *hdcp_comm = NULL;
+	struct hdmitx_common *tx_comm;
 
 	if (!p_hdcp || !p_hdcp->bind_hdcptx_comm) {
 		HDMITX_ERROR("%s NULL tx_comm or NULL hdcp_private instance\n", __func__);
 		return;
 	}
 	hdcp_comm = p_hdcp->bind_hdcptx_comm;
+	tx_comm = hdcp_comm->bind_tx_comm;
+	if (hdmitx_hw_cntl(tx_comm->tx_hw, PLATFORM_RXSENSE, NULL, NULL) == 0)
+		hdmitx_current_status(tx_comm, TX_HDCP_DEVICE_NOT_READY_ERROR);
 	/*
 	 * lstore: 0 by default, 0x11/0x12 for debug usage
 	 * 0: enable hdcp mode based on stored key and downstream hdcp cap

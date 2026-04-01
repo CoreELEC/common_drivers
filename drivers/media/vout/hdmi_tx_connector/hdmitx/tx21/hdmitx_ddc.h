@@ -128,6 +128,6 @@ uint32_t hdcp21_rd_hdcp14_ver(void);
 void scdc21_config(struct hdmitx21_dev *hdev);
 void edid21_read_head_8bytes(void);
 int scdc21_status_flags(struct hdmitx21_dev *hdev);
-void hdmitx21_read_edid(u8 *rx_edid);
+void hdmitx21_read_edid(struct hdmitx_common *tx_comm);
 #endif  /* __HDMI_TX_SCDC_H__ */
 

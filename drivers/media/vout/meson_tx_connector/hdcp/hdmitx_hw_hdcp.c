@@ -537,7 +537,7 @@ int hdcptx_get_hdcprx_ver(struct hdcptx_common *hdcptx_comm)
 			ret = hdcptx_comm->ddcm_read(0, DDC_HDCP_DEVICE_ADDR,
 				REG_DDC_HDCP_VERSION, &cap_val, 1, TPI_DDC_CMD_SEQUENTIAL_READ);
 			if (ret)
-				HDMITX_ERROR("hdmitx: ddc read hdcp version failed\n");
+				HDMITX_WARNING("hdmitx: ddc read hdcp version failed\n");
 			if (i > 1)
 				HDMITX_DEBUG("hdmitx: read hdcp version retry %d time(s)\n", i - 1);
 		}

@@ -24,6 +24,7 @@
 #include "hdmitx_hw_platform.h"
 #include "hdmitx_hw_core.h"
 #include "hdmitx_hdcp.h"
+#include "meson_tx_event_mgr.h"
 
 static DEFINE_MUTEX(ddc_mutex);
 
@@ -49,16 +50,18 @@ void scdc21_wr_sink(u8 adr, u8 val)
 	hdmitx_ddcm_write(0, DDC_SCDC_ADDR, adr, val);
 }
 
-void hdmitx21_read_edid(u8 *_rx_edid)
+void hdmitx21_read_edid(struct hdmitx_common *tx_comm)
 {
 	u32 blk_idx = 0;
 	u8 ext_block_num = 0;
-	u8 *rx_edid = _rx_edid;
-	struct hdmitx21_dev *hdev = get_hdmitx21_device();
+	u8 *rx_edid;
+	bool ret = 0;
 
 	/* skip edid reading in pxp */
-	if (hdev->tx_comm.pxp_mode)
+	if (tx_comm->pxp_mode)
 		return;
+
+	rx_edid = tx_comm->base.edid_buf;
 
 	if (0) {
 		/* DDC_DELAY_CNT_IVCTX, config scl fre 100k */
@@ -71,9 +74,11 @@ void hdmitx21_read_edid(u8 *_rx_edid)
 	}
 	/* Read complete EDID data sequentially */
 	while (blk_idx < (1 + ext_block_num)) {
-		hdmitx_ddcm_read(blk_idx >> 1, DDC_EDID_ADDR, (blk_idx * EDID_BLK_SIZE) & 0xff,
-			&rx_edid[blk_idx * EDID_BLK_SIZE], EDID_BLK_SIZE,
-			TPI_DDC_CMD_ENHANCED_DDC_READ);
+		ret = hdmitx_ddcm_read(blk_idx >> 1, DDC_EDID_ADDR,
+			(blk_idx * EDID_BLK_SIZE) & 0xff, &rx_edid[blk_idx * EDID_BLK_SIZE],
+			EDID_BLK_SIZE, TPI_DDC_CMD_ENHANCED_DDC_READ);
+		if (ret)
+			hdmitx_current_status(tx_comm, TX_EDID_I2C_ERROR);
 		if (blk_idx == 0)
 			ext_block_num = rx_edid[126];
 		if (blk_idx == 1)

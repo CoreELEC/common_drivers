@@ -235,10 +235,11 @@ int hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
 	if (tracer->hdr10plus_event == HDMITX_HDR_MODE_HDR10PLUS)
 		return 0;
 
-	if (event & HDMITX_HDMI_ERROR_MASK)
-		HDMITX_ERROR("Record HDMI error: %s\n", hdmitx_event_to_str(event));
-
 	log_str = hdmitx_event_to_str(event);
+
+	if (event & HDMITX_HDMI_ERROR_MASK)
+		HDMITX_WARNING(log_str);
+
 	ret = kfifo_in(&tracer->log_fifo, log_str, strlen(log_str));
 	if (!ret)
 		kfifo_reset(&tracer->log_fifo);
