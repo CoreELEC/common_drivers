@@ -1,4 +1,4 @@
-From 13ae260c85417265cae355b7ac8d33ce9c815db1 Mon Sep 17 00:00:00 2001
+From d6eccd4b3a0dc20834a0bd4b5f8035f24bfb6056 Mon Sep 17 00:00:00 2001
 From: "xuequan.feng" <xuequan.feng@amlogic.com>
 Date: Wed, 21 May 2025 20:17:46 +0800
 Subject: [PATCH] initramfs : amfc decompress [1/1]
@@ -16,25 +16,26 @@ C4
 
 Change-Id: Id1560bd9dec45e636f3d85f1a29ca817d538952e
 Signed-off-by: xuequan.feng <xuequan.feng@amlogic.com>
-Signed-off-by: yongbing.he <yongbing.he@amlogic.com>
 ---
- init/initramfs.c | 74 ++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 74 insertions(+)
+ init/initramfs.c | 76 ++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 76 insertions(+)
 
 diff --git a/init/initramfs.c b/init/initramfs.c
-index b2f7583bb1f5..5f24e8ab5aaf 100644
+index b2f7583bb1f5..c45489988f2c 100644
 --- a/init/initramfs.c
 +++ b/init/initramfs.c
-@@ -19,6 +19,8 @@
+@@ -19,6 +19,10 @@
  #include <linux/umh.h>
  #include <linux/security.h>
 
++#ifdef CONFIG_AMLOGIC_FREERTOS_C4
 +#include <linux/amlogic/amfc.h>
++#endif /* CONFIG_AMLOGIC_FREERTOS_C4 */
 +
  #include "do_mounts.h"
 
  static __initdata bool csum_present;
-@@ -703,8 +705,37 @@ static void __init populate_initrd_image(char *err)
+@@ -703,8 +707,37 @@ static void __init populate_initrd_image(char *err)
  }
  #endif /* CONFIG_BLK_DEV_RAM */
 
@@ -72,7 +73,7 @@ index b2f7583bb1f5..5f24e8ab5aaf 100644
  	/* Load the built in initramfs */
  	char *err = unpack_to_rootfs(__initramfs_start, __initramfs_size);
  	if (err)
-@@ -718,6 +749,49 @@ static void __init do_populate_rootfs(void *unused, async_cookie_t cookie)
+@@ -718,6 +751,49 @@ static void __init do_populate_rootfs(void *unused, async_cookie_t cookie)
  	else
  		printk(KERN_INFO "Unpacking initramfs...\n");
 
