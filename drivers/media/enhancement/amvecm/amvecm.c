@@ -17968,7 +17968,8 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 	}
 
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_T5 ||
-		get_cpu_type() == MESON_CPU_MAJOR_ID_T5D)
+		get_cpu_type() == MESON_CPU_MAJOR_ID_T5D ||
+		chip_type_id == chip_t6d)
 		gamma_en = 0;
 
 	amvecm_gamma_init(gamma_en);
