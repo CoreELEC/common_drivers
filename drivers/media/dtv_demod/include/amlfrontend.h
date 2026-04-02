@@ -238,6 +238,7 @@
 /*  V4.1.013 dvbc switch to inner frontend*/
 /*  V4.1.014 fix dtmb bch reset constantly */
 /*  V4.1.015 add ddr priority control */
+/*  V4.1.016 modify dvb-t2 status process to lock early */
 /****************************************************/
 /****************************************************************/
 /*               AMLDTVDEMOD_VER  Description:                  */
@@ -254,8 +255,8 @@
 /*->The last four digits indicate the release time              */
 /****************************************************************/
 #define KERNEL_4_9_EN		1
-#define AMLDTVDEMOD_VER "V4.1.015"
-#define DTVDEMOD_VER	"2026/03/30 add ddr priority control"
+#define AMLDTVDEMOD_VER "V4.1.016"
+#define DTVDEMOD_VER	"2026/04/07 modify dvb-t2 status process to lock early"
 #define AMLDTVDEMOD_T2_FW_VER "v1059.20250521"
 #define DEMOD_DEVICE_NAME  "dtvdemod"
 

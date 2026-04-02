@@ -55,6 +55,9 @@ unsigned int t2_0x2a48_delay = 100000;
 unsigned int t2_snr_threshold = 529;
 bool jita_det_enable = true;
 
+unsigned int t2_lock_snr_h = 28;
+unsigned int t2_lock_snr_l = 20;
+
 #define FIXED_SHIFT 16
 #define FIXED_ONE  0x10000 //65536
 typedef s32 fixed_t;
@@ -344,8 +347,9 @@ static int dvbt_read_status(struct dvb_frontend *fe, enum fe_status *status, int
 
 	if (demod->last_lock != ilock) {
 		if (*status == FE_LOCKED) {
-			PR_INFO("%s [id %d]: !!  >> LOCKT << !!, freq:%d\n",
-					__func__, demod->id, fe->dtv_property_cache.frequency);
+			PR_INFO("%s [id %d]: !!  >> LOCKT << !!, freq:%d, time_passed:%d\n",
+					__func__, demod->id, fe->dtv_property_cache.frequency,
+					demod->time_passed);
 			demod->last_lock = ilock;
 		} else if (*status == FE_TIMEDOUT) {
 			PR_INFO("%s [id %d]: !!  >> UNLOCKT << !!, freq:%d\n",
@@ -666,8 +670,18 @@ static int dvbt2_read_status(struct dvb_frontend *fe, enum fe_status *status, in
 		if (demod->last_lock >= 0 &&
 			demod->last_lock < CONTINUE_TIMES_LOCK &&
 			demod->time_passed < TIMEOUT_DVBT2) {
-			PR_DVBT("!!>> maybe lock %d <<!!\n", demod->last_lock);
 			demod->last_lock += 1;
+
+			if (t2_lock_snr_h <= snr && demod->last_lock >= 0) {
+				PR_DVBT("!!>> continue lock1 <<!!\n");
+				demod->last_lock = CONTINUE_TIMES_LOCK;
+			} else if (t2_lock_snr_l <= snr && snr < t2_lock_snr_h &&
+					demod->last_lock >= 2) {
+				PR_DVBT("!!>> continue lock2 <<!!\n");
+				demod->last_lock = CONTINUE_TIMES_LOCK;
+			} else {
+				PR_DVBT("!!>> maybe lock %d <<!!\n", demod->last_lock);
+			}
 		} else {
 			PR_DVBT("!!>> continue lock <<!!\n");
 			demod->last_lock = CONTINUE_TIMES_LOCK;
@@ -734,8 +748,9 @@ static int dvbt2_read_status(struct dvb_frontend *fe, enum fe_status *status, in
 	if (*status == 0)
 		PR_INFO("!! >> WAITT2 << !!\n");
 	else if (demod->last_status != *status) {
-		PR_INFO("!! >> %sT2 << !!, freq:%d\n", *status == FE_TIMEDOUT ? "UNLOCK" : "LOCK",
-			fe->dtv_property_cache.frequency);
+		PR_INFO("!! >> %sT2 << !!, freq:%d, time_passed:%d\n",
+			*status == FE_TIMEDOUT ? "UNLOCK" : "LOCK",
+			fe->dtv_property_cache.frequency, demod->time_passed);
 		doppler_detect = true;
 	}
 

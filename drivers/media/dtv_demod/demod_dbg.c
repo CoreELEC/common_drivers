@@ -115,7 +115,9 @@ unsigned char testbus_test_mode;
 	DEMOD_ATTR_ADD(dvbt2_agc_target2, unchar)	\
 	DEMOD_ATTR_ADD(dvbtx_auto, unchar)	\
 	DEMOD_ATTR_ADD(dvbt2_common_plp_skip, bool)	\
-	DEMOD_ATTR_ADD(dvbt2_mplp_retune, bool)
+	DEMOD_ATTR_ADD(dvbt2_mplp_retune, bool)	\
+	DEMOD_ATTR_ADD(t2_lock_snr_l, uint)	\
+	DEMOD_ATTR_ADD(t2_lock_snr_h, uint)
 #endif
 
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_DVBS
