@@ -3051,6 +3051,9 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 					(reg + offset), rd(offset, reg));
 			}
 			pr_info("t6x aa ds regs end\n");
+			for (reg = VDIN0_META_DSC_CTRL0_T6X;
+				reg <= VDIN0_META_DSC_STATUS3_T6X; reg++)
+				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
 		}
 		pr_info("t6x wrmif regs begin\n");
 		for (reg = VDIN0_WRMIF_FRM_EN_CTRL + VDIN0_WRMIF_REG_OFFSET_T6X;
@@ -3073,6 +3076,8 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 					(reg + offset), rd(offset, reg));
 			}
 			pr_info("t6w aa ds regs end\n");
+			for (reg = VDIN0_META_DSC_CTRL0; reg <= VDIN0_META_DSC_STATUS3; reg++)
+				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
 		}
 		pr_info("t6w wrmif regs begin\n");
 		for (reg = VDIN0_WRMIF_FRM_EN_CTRL;
@@ -3110,6 +3115,11 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 			pr_info("0x%04x = 0x%08x\n",
 				(reg + offset), rd(offset, reg));
 		}
+		for (reg = VDIN_DOLBY_DSC_CTRL0; reg <= VDIN_DOLBY_DSC_STATUS2; reg++)
+			pr_info("0x%04x = 0x%08x\n", (reg + offset), R_VCBUS(reg));
+		pr_info("0x%04x = 0x%08x\n",
+			(VDIN_DOLBY_DSC_STATUS3 + offset),
+			rd(offset, VDIN_DOLBY_DSC_STATUS3));
 	}
 
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TM2)) {

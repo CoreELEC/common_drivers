@@ -6982,6 +6982,8 @@ void vdin_config_amldolby_axi_addr(struct vdin_dev_s *devp, struct vf_entry *vfe
 			devp->vfp->dv_buf_mem[vfe->vf.index]);
 		rdma_write_reg_bits(devp->rdma_handle,
 			VDIN0_META_AXI_CTRL0_T6X + devp->addr_offset, 1, 4, 1);
+		rdma_write_reg_bits(devp->rdma_handle,
+			VDIN0_META_AXI_CTRL0_T6X + devp->addr_offset, 1, 30, 1);
 	} else if (devp->dtdata->hw_ver == VDIN_HW_T3X) {
 		rdma_write_reg(devp->rdma_handle,
 			VDIN0_META_AXI_CTRL1 + devp->addr_offset,
