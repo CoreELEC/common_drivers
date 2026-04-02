@@ -974,7 +974,7 @@
 };
 
 &spicc2 {	//for UWB/LocalDimm
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spicc2_pins_m>;
 };
