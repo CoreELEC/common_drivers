@@ -8,6 +8,10 @@
 
 #include "set_hdr2_v0.h"
 
+#define DMA_STATE_DISABLE 0
+#define DMA_STATE_WAIT_ENABLE 1
+#define DMA_STATE_ENABLE 2
+
 enum lut_dma_wr_id_e {
 	EN_DMA_WR_ID_LC_STTS_0 = 0,
 	EN_DMA_WR_ID_LC_STTS_1,
@@ -101,4 +105,6 @@ int check_dma_status(enum lut_dma_wr_id_e dma_wr_id);
 void am_dma_updat_hdr2_hist(int mosaic_mode);
 int am_dma_3dlut_buffer_init(void);
 void am_dma_3dlut_buffer_release(void);
+void am_dma_set_dma_mif_rd_en(enum lut_dma_rd_id_e dma_rd_id,
+	int enable, int vpp_index);
 #endif

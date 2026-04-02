@@ -3275,8 +3275,23 @@ void bs_ct_latch(void)
 
 void gamut_mapping_wrapper_process(int vpp_index)
 {
+	static unsigned int pre_gamut0_dma_state;
+	static unsigned int pre_gamut1_dma_state;
+
 	if (chip_type_id != chip_t6x)
 		return;
+
+	if (pre_gamut0_dma_state == DMA_STATE_ENABLE) {
+		am_dma_set_dma_mif_rd_en(EN_DMA_RD_ID_GAMUT0, 0, vpp_index);
+		pre_gamut0_dma_state = DMA_STATE_DISABLE;
+		gamut_mapping0_param.flag_update_lut = DMA_STATE_DISABLE;
+	}
+
+	if (pre_gamut1_dma_state == DMA_STATE_ENABLE) {
+		am_dma_set_dma_mif_rd_en(EN_DMA_RD_ID_GAMUT1, 0, vpp_index);
+		pre_gamut1_dma_state = DMA_STATE_DISABLE;
+		gamut_mapping1_param.flag_update_lut = DMA_STATE_DISABLE;
+	}
 
 	if (vecm_latch_flag2 & FLAG_GAMUT_MAPPING0_UPDATE) {
 		vecm_latch_flag2 &= ~FLAG_GAMUT_MAPPING0_UPDATE;
@@ -3287,6 +3302,10 @@ void gamut_mapping_wrapper_process(int vpp_index)
 		vecm_latch_flag2 &= ~FLAG_GAMUT_MAPPING1_UPDATE;
 		set_gamut_mapping_wrapper(1, vpp_index);
 	}
+
+	pre_gamut0_dma_state = gamut_mapping0_param.flag_update_lut;
+	pre_gamut1_dma_state = gamut_mapping1_param.flag_update_lut;
+
 }
 
 void gamut_mapping_wrapper_crtl(int module, int en)
@@ -12603,8 +12622,8 @@ static void resume_dma(void)
 		am_dma_set_mif_wr(EN_DMA_WR_ID_CM2_LC, 0);
 		am_dma_set_mif_wr(EN_DMA_WR_ID_VD1_HDR_HIST, 1);
 		am_dma_set_mif_wr(EN_DMA_WR_ID_VD2_HDR_HIST, 1);
-		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT0, 1);
-		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT1, 1);
+		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT0, 0);
+		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT1, 0);
 		am_dma_set_mif_rd(EN_DMA_RD_ID_3DLUT, 1);
 	}
 }
@@ -17962,8 +17981,8 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 		am_dma_set_mif_wr(EN_DMA_WR_ID_CM2_LC, 0);
 		am_dma_set_mif_wr(EN_DMA_WR_ID_VD1_HDR_HIST, 1);
 		am_dma_set_mif_wr(EN_DMA_WR_ID_VD2_HDR_HIST, 1);
-		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT0, 1);
-		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT1, 1);
+		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT0, 0);
+		am_dma_set_mif_rd(EN_DMA_RD_ID_GAMUT1, 0);
 		am_dma_set_mif_rd(EN_DMA_RD_ID_3DLUT, 1);
 	}
 

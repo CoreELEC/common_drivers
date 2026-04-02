@@ -12602,11 +12602,12 @@ void set_gamut_mapping_wrapper(int module, int vpp_index)
 			gamut_mapping0_param.flag_update_mtx = 0;
 		}
 
-		if (gamut_mapping0_param.flag_update_lut) {
-			gamut_mapping0_param.flag_update_lut = 0;
+		if (gamut_mapping0_param.flag_update_lut == DMA_STATE_WAIT_ENABLE) {
+			gamut_mapping0_param.flag_update_lut = DMA_STATE_ENABLE;
 			if (gamut_dma_case) {
 				VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_MISC2, 1, 0, 1,
 					vpp_index);
+				am_dma_set_dma_mif_rd_en(EN_DMA_RD_ID_GAMUT0, 1, vpp_index);
 				am_dma_set_mif_data_gamut0(gamut_mapping0_param.eotf_lut,
 				gamut_mapping0_param.oetf_lut,
 				gamut_mapping0_param.ootf_lut);
@@ -12681,11 +12682,12 @@ void set_gamut_mapping_wrapper(int module, int vpp_index)
 			gamut_mapping1_param.flag_update_mtx = 0;
 		}
 
-		if (gamut_mapping1_param.flag_update_lut) {
-			gamut_mapping1_param.flag_update_lut = 0;
+		if (gamut_mapping1_param.flag_update_lut == DMA_STATE_WAIT_ENABLE) {
+			gamut_mapping1_param.flag_update_lut = DMA_STATE_ENABLE;
 			if (gamut_dma_case) {
 				VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_MISC2, 1, 0, 1,
 					vpp_index);
+				am_dma_set_dma_mif_rd_en(EN_DMA_RD_ID_GAMUT1, 1, vpp_index);
 				am_dma_set_mif_data_gamut1(gamut_mapping1_param.eotf_lut,
 					gamut_mapping1_param.oetf_lut);
 				return;

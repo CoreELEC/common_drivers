@@ -346,8 +346,8 @@ static void _set_vpu_lut_dma_mif_rd_unit(int enable,
     /*gamut0 dma and dolby dma use different trigger, gamut0 dma (lut0) has
      *a higher priority than amldolby dma (lut3, lut4). so err_rst needs to be 0
      */
-	if (cfg_data->dma_rd_id == EN_DMA_RD_ID_GAMUT0 && enable)
-		WRITE_VPP_REG_BITS_S5(VPU_DMA_RDMIF_CTRL2, 0, 29, 1);
+	//if (cfg_data->dma_rd_id == EN_DMA_RD_ID_GAMUT0 && enable)
+		//WRITE_VPP_REG_BITS_S5(VPU_DMA_RDMIF_CTRL2, 0, 29, 1);
 }
 
 void am_dma_init(void)
@@ -1337,6 +1337,44 @@ void am_dma_get_blend_hdr2_hist(unsigned int *data,
 				break;
 		}
 	}
+}
+
+void am_dma_set_dma_mif_rd_en(enum lut_dma_rd_id_e dma_rd_id,
+	int enable, int vpp_index)
+{
+	unsigned int addr;
+	unsigned int val;
+	int wr_sel;
+	int offset;
+	struct vpu_lut_dma_rd_s *cfg_data;
+
+	if (dma_rd_id < 8) {
+		wr_sel = 0;
+		offset = dma_rd_id;
+	} else {
+		wr_sel = 1;
+		offset = dma_rd_id - 8;
+	}
+
+	cfg_data = &lut_dma_rd[dma_rd_id];
+
+	/*
+	 * Bit 0 lut_reg_sel unsigned, RW, default = 0,
+	 *       0: sel lut0-7; 1: sel lut8-15
+	 */
+	addr = ADDR_PARAM(dma_reg_cfg.page,
+		dma_reg_cfg.reg_rdmif_sel);
+	val = wr_sel;
+	VSYNC_WRITE_VPP_REG_VPP_SEL(addr, val, vpp_index);
+
+	addr = ADDR_PARAM(dma_reg_cfg.page,
+		dma_reg_cfg.reg_rdmif0_ctrl) + offset;
+	val = ((enable & 0x1) << 16) |
+		(cfg_data->stride & 0x1fff);
+	VSYNC_WRITE_VPP_REG_VPP_SEL(addr, val, vpp_index);
+
+	pr_info("dma_rd_id = %d, enable =%d, [%x]= %x\n",
+		dma_rd_id, enable, addr, val);
 }
 
 int am_dma_set_mif_data_gamut0(int *eotf, int *oetf, int *ootf)
