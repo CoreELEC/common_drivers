@@ -4510,7 +4510,9 @@ static int meson_s7d_probe(struct platform_device *pdev)
 	struct regmap *basic_map;
 	struct regmap *pll_map;
 	struct meson_clk_hw_data *data;
+#ifdef CONFIG_AMLOGIC_CLK_DEBUG
 	struct clk *clk;
+#endif
 	int ret, i;
 
 	data = (struct meson_clk_hw_data *)of_device_get_match_data(dev);
