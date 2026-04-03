@@ -563,13 +563,11 @@ void dim_ddbg_mod_save(unsigned int mod, unsigned int ch, unsigned int cnt)
 	struct di_dbg_mod dbg_mod;
 	struct di_dbg_reg_log *plog = get_dbg_reg_log();
 	unsigned int pos;
+	unsigned int ch_mod;
 
-/*--------------------------*/
-	if (ch)
-		h_dbg_reg_set(mod | 0x80000000);
-	else
-		h_dbg_reg_set(mod);
-/*--------------------------*/
+	ch_mod = ((ch << 28) & 0xf0000000) | mod;
+
+	h_dbg_reg_set(ch_mod, cnt);
 
 	if (!plog->en_mod)
 		return;

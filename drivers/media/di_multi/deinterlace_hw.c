@@ -4567,19 +4567,15 @@ void di_async_txhd2(void)
 	dim_print("%s:0x%x,0x%x,0x%x\n", __func__, val1, val2, val3);
 }
 
-void h_dbg_reg_set(unsigned int val)
+void h_dbg_reg_set(unsigned int val, unsigned int cnt)
 {
-	struct di_hpst_s  *pst = get_hw_pst();
+//	struct di_hpst_s  *pst = get_hw_pst();
 //	enum EDI_PST_ST pst_st = pst->state;
-	unsigned int valb, pst_st = 0;
+//	unsigned int valb, pst_st = 0;
 
 	DIM_DI_WR(DI_NOP_REG1, val);
 
-	valb = pst_st;
-	if (pst->curr_ch)
-		valb = pst_st | 0x80000000;
-
-	DIM_DI_WR(DI_NOP_REG2, valb);
+	DIM_DI_WR(DI_NOP_REG2, cnt);
 }
 
 /*ary move to di_hw_v2.c*/

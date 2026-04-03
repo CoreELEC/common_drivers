@@ -724,7 +724,7 @@ void dimh_int_ctr(unsigned int set_mod, unsigned char ma_en,
 		  unsigned char det3d_en, unsigned char nrds_en,
 		  unsigned char post_wr, unsigned char mc_en);
 
-void h_dbg_reg_set(unsigned int val);
+void h_dbg_reg_set(unsigned int val, unsigned int cnt);
 enum EDI_POST_FLOW {
 	EDI_POST_FLOW_STEP1_STOP,
 	EDI_POST_FLOW_STEP2_START,

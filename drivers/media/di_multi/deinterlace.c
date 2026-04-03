@@ -7531,6 +7531,7 @@ void dim_irq_pre(void)
 		ppre->timeout_check = false;
 	}
 	if (flag) {
+		dbg_once("irq pre:ch[%d]\n", channel);
 		if (DIM_IS_IC_EF(SC2)) {
 			opl1()->pre_gl_sw(false);
 			dim_print("c:0x%x:0x%x\n", DI_RO_PRE_DBG, DIM_RDMA_RD(DI_RO_PRE_DBG));
@@ -7681,7 +7682,7 @@ void dim_post_irq_sub(int irq)
 			opl1()->pst_set_flow(1, EDI_POST_FLOW_STEP3_IRQ, NULL);
 		else
 			di_post_set_flow(1, EDI_POST_FLOW_STEP3_IRQ);
-		dim_print("irq p ch[%d]done\n", channel);
+		dbg_once("irq p ch[%d]done\n", channel);
 		pst->flg_int_done = true;
 		pst->flg_have_set = false;
 	}
@@ -10550,6 +10551,8 @@ int dim_process_post_vframe(unsigned int channel)
 			       &di_buf->di_buf_dup_p[1]->pq_rpt,
 			       sizeof(di_buf->pq_rpt));
 			di_buf->field_count = di_buf->di_buf_dup_p[1]->field_count;
+			if (!di_buf->field_count) //2026-04-02
+				di_buf->trig_post_update = 1;
 			if (di_buf->di_buf_dup_p[1]->post_proc_flag == 3) {
 				/* dummy, not for display */
 				inc_post_ref_count(di_buf);
@@ -10686,7 +10689,8 @@ int dim_process_post_vframe(unsigned int channel)
 #endif
 				drop_frame(true, tmp || tmp0 || tmp1,
 					   di_buf, channel);
-
+				dbg_once("post_vframe:i:ch[%d] field_count=%d,update=%d\n",
+					channel, di_buf->field_count, di_buf->trig_post_update);
 				frame_count++;
 #ifdef MARK_HIS
 				if (!is_pw)
