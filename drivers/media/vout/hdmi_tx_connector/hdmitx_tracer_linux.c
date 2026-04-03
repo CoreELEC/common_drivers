@@ -14,15 +14,13 @@
 #include "hdmitx_log.h"
 
 #define HDMI_TRACE_SIZE (BIT(12)) /* 4k */
+#define HDMI_EVENT_SIZE (BIT(5)) /* 32 */
 
 struct hdmitx_tracer {
-	enum hdmitx_event_log_bits event;
 	int previous_event;
 	int hdr10plus_event;
-#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
-	int diagnostic_event;
-#endif
 	struct kfifo log_fifo;
+	struct kfifo event_fifo;
 	struct hdmitx_event_mgr *event_mgr;
 	/* to trigger userspace read fifo logs */
 	struct work_struct uevent_work;
@@ -162,100 +160,116 @@ static void hdmitx_log_events_handler(struct work_struct *work)
 	struct hdmitx_tracer *tracer =
 		container_of(work, struct hdmitx_tracer, uevent_work);
 
-#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
-	hdmitx_diagnostic_info(tracer->diagnostic_event);
-	tracer->diagnostic_event = 0;
-#endif
-	hdmitx_event_mgr_send_uevent(tracer->event_mgr,
-		HDMITX_CUR_ST_EVENT, ++cnt, false);
+	enum hdmitx_event_log_bits event;
 
-	hdmitx_event_mgr_send_uevent(tracer->event_mgr,
-		HDMITX_TRACER_EVENT, tracer->event, false);
+	while (kfifo_out(&tracer->event_fifo, &event, sizeof(event))) {
+		hdmitx_event_mgr_send_uevent(tracer->event_mgr,
+			HDMITX_CUR_ST_EVENT, ++cnt, false);
+
+		hdmitx_event_mgr_send_uevent(tracer->event_mgr,
+			HDMITX_TRACER_EVENT, event, false);
+
+#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
+		hdmitx_diagnostic_info(event);
+#endif
+	}
 }
 
 struct hdmitx_tracer *hdmitx_tracer_create(struct hdmitx_event_mgr *event_mgr)
 {
 	struct hdmitx_tracer *instance = kzalloc(sizeof(*instance), GFP_KERNEL);
-
-	if (instance) {
-		instance->event_mgr = event_mgr;
-		if (kfifo_alloc(&instance->log_fifo, HDMI_TRACE_SIZE, GFP_KERNEL) != 0) {
-			HDMITX_ERROR("alloc hdmi_log_kfifo fail\n");
-			kfree(instance);
-			instance = NULL;
-		} else {
-			INIT_WORK(&instance->uevent_work, hdmitx_log_events_handler);
-		}
-	} else {
+	if (!instance) {
 		HDMITX_ERROR("%s: alloc instance failed\n", __func__);
+		goto instance_fail;
 	}
 
+	instance->event_mgr = event_mgr;
+
+	if (kfifo_alloc(&instance->log_fifo, HDMI_TRACE_SIZE, GFP_KERNEL) != 0) {
+		HDMITX_ERROR("alloc hdmi_log_kfifo fail\n");
+		goto log_fifo_fail;
+	}
+
+	if (kfifo_alloc(&instance->event_fifo, HDMI_EVENT_SIZE, GFP_KERNEL) != 0) {
+		HDMITX_ERROR("alloc hdmi_event_kfifo fail\n");
+		goto event_fifo_fail;
+	}
+
+	INIT_WORK(&instance->uevent_work, hdmitx_log_events_handler);
+
 	return instance;
+event_fifo_fail:
+	kfifo_free(&instance->log_fifo);
+log_fifo_fail:
+	kfree(instance);
+instance_fail:
+	return NULL;
 }
 
-int hdmitx_tracer_destroy(struct hdmitx_tracer *tracer)
+void hdmitx_tracer_destroy(struct hdmitx_tracer *tracer)
 {
 	if (tracer) {
 		kfifo_free(&tracer->log_fifo);
+		kfifo_free(&tracer->event_fifo);
 		kfree(tracer);
 	}
-
-	return 0;
 }
 
 /* When hdr10plus mode ends, clear hdr10plus_event flag */
 int hdmitx_tracer_clean_hdr10plus_event(struct hdmitx_tracer *tracer,
 	enum hdmitx_event_log_bits event)
 {
+	if (!tracer)
+		return -EINVAL;
+
 	if (event == HDMITX_HDR_MODE_HDR10PLUS)
 		tracer->hdr10plus_event = -1;
 
 	return 0;
 }
 
-int hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
+void hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
 	enum hdmitx_event_log_bits event)
 {
 	const char *log_str;
-	int ret = 0;
+
+	if (!tracer)
+		return;
 
 	/*
 	 * Found, skip duplicate logging
 	 * For example, UEvent spamming of HDCP support (b/220687552)
 	 */
 	if (event == tracer->previous_event)
-		return 0;
+		return;
 	tracer->previous_event = event;
-#ifdef CONFIG_AMLOGIC_MEDIA_RESMANAGE
-	if (event == HDMITX_HPD_PLUGOUT || event == HDMITX_HDCP_I2C_ERROR ||
-			event == HDMITX_EDID_HEAD_ERROR)
-		tracer->diagnostic_event = event;
-#endif
+
 	/* Play HDR10+ videos, HDMITX_HDR_MODE_HDR10PLUS only writes once */
 	if (tracer->hdr10plus_event == HDMITX_HDR_MODE_HDR10PLUS)
-		return 0;
+		return;
 
 	log_str = hdmitx_event_to_str(event);
 
 	if (event & HDMITX_HDMI_ERROR_MASK)
 		HDMITX_WARNING(log_str);
 
-	ret = kfifo_in(&tracer->log_fifo, log_str, strlen(log_str));
-	if (!ret)
+	if (!kfifo_in(&tracer->log_fifo, log_str, strlen(log_str)))
 		kfifo_reset(&tracer->log_fifo);
 	else
 		tracer->hdr10plus_event = tracer->previous_event;
 
-	tracer->event = event;
+	if (!kfifo_in(&tracer->event_fifo, &event, sizeof(event)))
+		HDMITX_ERROR("event fifo overflow\n");
+
 	/* after write trace, trigger uevent to save trace log */
 	schedule_work(&tracer->uevent_work);
-
-	return ret;
 }
 
 int hdmitx_tracer_read_event(struct hdmitx_tracer *tracer,
 	char *buf, int read_len)
 {
+	if (!tracer || !buf || read_len <= 0)
+		return -EINVAL;
 	return kfifo_out(&tracer->log_fifo, buf, read_len);
 }
 

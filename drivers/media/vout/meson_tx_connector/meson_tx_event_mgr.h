@@ -108,11 +108,11 @@ struct tx_notifier_client {
 	struct notifier_block base;
 };
 
-int meson_tx_tracer_destroy(struct meson_tx_tracer *tracer);
+void meson_tx_tracer_destroy(struct meson_tx_tracer *tracer);
 struct meson_tx_tracer *meson_tx_tracer_create(struct meson_tx_event_mgr *event_mgr);
 int meson_tx_tracer_read_event(struct meson_tx_tracer *tracer,
 	char *buf, int read_len);
-int meson_tx_tracer_write_event(struct meson_tx_tracer *tracer,
+void meson_tx_tracer_write_event(struct meson_tx_tracer *tracer,
 	enum tx_trace_log_bits event);
 int meson_tx_tracer_clean_hdr10plus_event(struct meson_tx_tracer *tracer,
 	enum tx_trace_log_bits event);

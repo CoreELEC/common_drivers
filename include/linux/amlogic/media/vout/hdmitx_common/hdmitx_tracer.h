@@ -63,13 +63,13 @@ enum hdmitx_event_log_bits {
 
 struct hdmitx_tracer;
 
-int hdmitx_tracer_destroy(struct hdmitx_tracer *tracer);
+void hdmitx_tracer_destroy(struct hdmitx_tracer *tracer);
 
 /* When hdr10plus mode ends, clear hdr10plus_event flag */
 int hdmitx_tracer_clean_hdr10plus_event(struct hdmitx_tracer *tracer,
 	enum hdmitx_event_log_bits event);
 /*write event to fifo, return 0 if write success, else return errno.*/
-int hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
+void hdmitx_tracer_write_event(struct hdmitx_tracer *tracer,
 	enum hdmitx_event_log_bits event);
 /*read events log in fifo, return read buffer len.*/
 int hdmitx_tracer_read_event(struct hdmitx_tracer *tracer,

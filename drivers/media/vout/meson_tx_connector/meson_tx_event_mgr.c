@@ -9,13 +9,16 @@
 
 #include "meson_tx_event_mgr.h"
 
+#include "hdmitx_log.h"
+
 #define TX_TRACE_SIZE (BIT(12)) /* 4k */
+#define TX_EVENT_SIZE (BIT(5)) /* 32 */
 
 struct meson_tx_tracer {
-	u32 event;
 	int previous_event;
 	int hdr10plus_event;
 	struct kfifo log_fifo;
+	struct kfifo event_fifo;
 	struct meson_tx_event_mgr *event_mgr;
 	/* to trigger userspace read fifo logs */
 	struct work_struct uevent_work;
@@ -109,56 +112,61 @@ static void meson_tx_log_events_handler(struct work_struct *work)
 	struct meson_tx_tracer *tracer =
 		container_of(work, struct meson_tx_tracer, uevent_work);
 
-	meson_tx_event_mgr_send_uevent(tracer->event_mgr,
-		TX_CUR_ST_EVENT, ++cnt, false);
+	enum tx_trace_log_bits event;
 
-	meson_tx_event_mgr_send_uevent(tracer->event_mgr,
-		TX_TRACER_EVENT, tracer->event, false);
+	while (kfifo_out(&tracer->event_fifo, &event, sizeof(event))) {
+		meson_tx_event_mgr_send_uevent(tracer->event_mgr,
+			TX_CUR_ST_EVENT, ++cnt, false);
+
+		meson_tx_event_mgr_send_uevent(tracer->event_mgr,
+			TX_TRACER_EVENT, event, false);
+	}
 }
 
-int meson_tx_tracer_write_event(struct meson_tx_tracer *tracer,
+void meson_tx_tracer_write_event(struct meson_tx_tracer *tracer,
 	enum tx_trace_log_bits event)
 {
 	const char *log_str;
-	int ret = 0;
 
 	if (!tracer)
-		return -EINVAL;
+		return;
 
 	/*
 	 * Found, skip duplicate logging
 	 * For example, UEvent spamming of HDCP support (b/220687552)
 	 */
 	if (event == tracer->previous_event)
-		return 0;
+		return;
 	tracer->previous_event = event;
 
 	/* Play HDR10+ videos, HDMITX_HDR_MODE_HDR10PLUS only writes once */
 	if (tracer->hdr10plus_event == TX_HDR_MODE_HDR10PLUS)
-		return 0;
+		return;
 
 	log_str = meson_tx_event_to_str(event);
 
 	if (event & TX_ERROR_MASK)
 		HDMITX_WARNING(log_str);
 
-	ret = kfifo_in(&tracer->log_fifo, log_str, strlen(log_str));
-	if (!ret)
+	if (!kfifo_in(&tracer->log_fifo, log_str, strlen(log_str)))
 		kfifo_reset(&tracer->log_fifo);
 	else
 		tracer->hdr10plus_event = tracer->previous_event;
 
-	tracer->event = event;
+	if (!kfifo_in(&tracer->event_fifo, &event, sizeof(event)))
+		HDMITX_ERROR("event fifo overflow\n");
+
 	/* after write trace, trigger uevent to save trace log */
 	schedule_work(&tracer->uevent_work);
-
-	return ret;
 }
 
 /* When hdr10plus mode ends, clear hdr10plus_event flag */
 int meson_tx_tracer_clean_hdr10plus_event(struct meson_tx_tracer *tracer,
 	enum tx_trace_log_bits event)
 {
+	if (!tracer)
+		return -EINVAL;
+
 	if (event == TX_HDR_MODE_HDR10PLUS)
 		tracer->hdr10plus_event = -1;
 
@@ -176,32 +184,44 @@ int meson_tx_tracer_read_event(struct meson_tx_tracer *tracer,
 
 struct meson_tx_tracer *meson_tx_tracer_create(struct meson_tx_event_mgr *event_mgr)
 {
-	struct meson_tx_tracer *instance = vmalloc(sizeof(*instance));
-	int ret = 0;
+	struct meson_tx_tracer *instance = kzalloc(sizeof(*instance), GFP_KERNEL);
 
 	if (!instance) {
 		TX_ERROR(event_mgr->log, "%s FAIL\n", __func__);
-	} else {
-		instance->event_mgr = event_mgr;
-		instance->previous_event = -1;
-		instance->hdr10plus_event = -1;
-		ret = kfifo_alloc(&instance->log_fifo, TX_TRACE_SIZE, GFP_KERNEL);
-		if (ret)
-			TX_ERROR(event_mgr->log, "alloc tx_log_kfifo fail [%d]\n", ret);
-		INIT_WORK(&instance->uevent_work, meson_tx_log_events_handler);
+		goto instance_fail;
 	}
 
+	instance->event_mgr = event_mgr;
+	instance->previous_event = -1;
+	instance->hdr10plus_event = -1;
+	if (kfifo_alloc(&instance->log_fifo, TX_TRACE_SIZE, GFP_KERNEL) != 0) {
+		HDMITX_ERROR("alloc hdmi_log_kfifo fail\n");
+		goto log_fifo_fail;
+	}
+	if (kfifo_alloc(&instance->event_fifo, TX_EVENT_SIZE, GFP_KERNEL) != 0) {
+		HDMITX_ERROR("alloc hdmi_event_kfifo fail\n");
+		goto event_fifo_fail;
+	}
+
+	INIT_WORK(&instance->uevent_work, meson_tx_log_events_handler);
+
 	return instance;
+
+event_fifo_fail:
+	kfifo_free(&instance->log_fifo);
+log_fifo_fail:
+	kfree(instance);
+instance_fail:
+	return NULL;
 }
 
-int meson_tx_tracer_destroy(struct meson_tx_tracer *tracer)
+void meson_tx_tracer_destroy(struct meson_tx_tracer *tracer)
 {
 	if (tracer) {
 		kfifo_free(&tracer->log_fifo);
-		vfree(tracer);
+		kfifo_free(&tracer->event_fifo);
+		kfree(tracer);
 	}
-
-	return 0;
 }
 
 /* start of uevent and notifier */
