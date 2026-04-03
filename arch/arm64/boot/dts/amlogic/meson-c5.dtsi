@@ -261,20 +261,39 @@
 		status = "okay";
 	};
 
-	adla: adla@fe098000 {
-		compatible = "amlogic,adla";
+	adla: adla@fe096000 {
+		compatible = "amlogic,adla-gen2b";
 		dev_name = "adla";
-		status = "disabled";
+		status = "okay";
+		reg = <0x0 0xfe096000 0x0 0x2000
+			0x0 0xf3d00000 0x0 0x15FFFF
+			>;
+		reg-names = "adla_reg\0adla_sram";
+		interrupt-names = "adla";
+		interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc CLKID_NNA2_CORE>;
+		clock-names = "adla_core_clk";
+		power-domains=<&pwrdm PDID_C5_NNA2>;
+		nn_hw_version="r3p3";
+		adla_core_clk_rate = <1000000000>;
+		adla_smc_cmd = <0x820000b2>;
+		smmu;
+	};
+
+	adla3: adla3@fe098000 {
+		compatible = "amlogic,adla-gen3b";
+		dev_name = "adla";
+		status = "okay";
 		reg = <0x0 0xfe098000 0x0 0x2000
-			0x0 0xf3c16000 0x0 0x3f000
+			0x0 0xf3d00000 0x0 0x15FFFF
 			>;
 		reg-names = "adla_reg\0adla_sram";
 		interrupt-names = "adla";
 		interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>;
-		//clocks = <&clkc CLKID_NNA_CORE>;
-		//clock-names = "adla_core_clk";
-		//power-domains=<&pwrdm PDID_S6_NNA_4T>;
-		nn_hw_version="r3p1";
+		clocks = <&clkc CLKID_NNA_CORE>;
+		clock-names = "adla_core_clk";
+		power-domains=<&pwrdm PDID_C5_NNA3>;
+		nn_hw_version="r4p2";
 		adla_core_clk_rate = <1000000000>;
 		adla_smc_cmd = <0x820000b2>;
 		smmu;

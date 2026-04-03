@@ -433,8 +433,8 @@
 };
 
 &adla {
-	status = "disabled";
-	memory-region = <&nna_cma_reserved>;
+	status = "okay";
+	//memory-region = <&nna_cma_reserved>;
 };
 
 /* SDIO */
