@@ -2758,10 +2758,13 @@ static void vsync_video_pattern(struct videodisplay_dev *dev, struct vframe_s *v
 }
 
 static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vframe_s *vf,
-					 bool *expired)
+					 bool *expired, int current_delay_count)
 {
 	int pattern_range, expected_curr_interval;
 	int expected_prev_interval;
+	bool is_44_pattern;
+	bool is_early_frame;
+	bool is_odd_trace_val;
 
 	/* Dont do anything if we have invalid data */
 	if (!vf || !vf->vc_private)
@@ -2822,19 +2825,24 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 	}
 
 	vd_print(dev->index, PRINT_PATTERN,
-		"patten: detected %d, pattern =%d, patten_trace=%d, expected=%d expired=%d\n",
+		"patten: detected %d, pattern =%d, patten_trace=%d, expected=%d expired=%d current_delay_count:%d\n",
 		dev->pattern_detected,
 		dev->pattern[dev->pattern_detected],
 		patten_trace[dev->index],
 		expected_curr_interval,
-		*expired);
+		*expired,
+		current_delay_count);
 
 	/* We do nothing if we dont have enough data*/
 	if (dev->pattern[dev->pattern_detected] != pattern_range)
 		return -1;
 
+	is_44_pattern = (dev->pattern_detected == PATTERN_44);
+	is_early_frame = (patten_trace[dev->index] < expected_curr_interval);
+	is_odd_trace_val = (patten_trace[dev->index] % 2 || patten_trace[dev->index] == 0);
+
 	if (*expired) {
-		if (patten_trace[dev->index] < expected_curr_interval) {
+		if (!is_44_pattern && is_early_frame) {
 			/* 2323232323..2233..2323, prev=2, curr=3,*/
 			/* check if next frame will toggle after 3 vsync */
 			/* 22222...22222 -> 222..2213(2)22...22 */
@@ -2842,6 +2850,12 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 			*expired = false;
 			vd_print(dev->index, PRINT_PATTERN,
 				"patten:hold frame for pattern: %d",
+				dev->pattern_detected);
+		} else if (is_44_pattern && is_early_frame && (current_delay_count <= 2 ||
+			(current_delay_count > 2 && is_odd_trace_val))) {
+			*expired = false;
+			vd_print(dev->index, PRINT_PATTERN,
+				"patten_44: hold frame for pattern: %d",
 				dev->pattern_detected);
 		}
 	} else {
@@ -3716,6 +3730,7 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 	int ready_len;
 	u32 vsync_index = 0;
 	int ret;
+	int current_delay_count;
 	int max_delay_count = 2;
 	int input_fps, output_fps, output_pts_inc_scale = 0, output_pts_inc_scale_base = 0;
 	int aisr_delay_vsync;
@@ -3879,29 +3894,18 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 					expired = false;
 			}
 			expired_tmp = expired;
-			ret = vd_perform_pulldown(dev, vf, &expired);
+			current_delay_count = vsync_count[dev->index] - vsync_index;
+			ret = vd_perform_pulldown(dev, vf, &expired, current_delay_count);
 			if (!expired) {
 				if (vd_pulldown_level > 1)
 					max_delay_count += vd_pulldown_level - 1;
+				if (dev->pattern_detected == PATTERN_44)
+					max_delay_count += 1;
 				if (vsync_index + max_delay_count < vsync_count[dev->index]) {
 					vd_print(dev->index, PRINT_PATTERN,
 						"need disp, vsync_index =%d, vsync_count=%d\n",
 						vsync_index, vsync_count[dev->index]);
 					expired = true;
-				} else if (expired_tmp && dev->pattern_detected != PATTERN_11) {
-					if (dev->last_hold_index + 1 == vf->frame_index)
-						dev->continue_hold_count++;
-					else if (dev->last_hold_index != vf->frame_index)
-						dev->continue_hold_count = 1;
-					vd_print(dev->index, PRINT_PATTERN,
-						"patten: hold, frame_index =%d, continue_count=%d\n",
-						vf->frame_index, dev->continue_hold_count);
-					dev->last_hold_index = vf->frame_index;
-					if (dev->continue_hold_count >= vd_max_hold_count) {
-						expired = true;
-						vd_print(dev->index, PRINT_PATTERN,
-						"patten: can not hold too many vf\n");
-					}
 				}
 				if (!expired)
 					return NULL;
