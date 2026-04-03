@@ -387,7 +387,6 @@ static void video_set_state(struct meson_vpu_block *vblk,
 
 		vf_info.release_fence = video->fence;
 		vf_info.dmabuf = mvvs->dmabuf[0];
-		vf_info.present_fence = video->present_fence;
 		vf_info.dst_x = mvvs->dst_x;
 		vf_info.dst_y = mvvs->dst_y;
 		vf_info.dst_w = mvvs->dst_w;
@@ -407,8 +406,14 @@ static void video_set_state(struct meson_vpu_block *vblk,
 
 		if (mvvs->repeat_frame) {
 			dma_fence_get(vf_info.release_fence);
-			dma_fence_get(vf_info.present_fence);
 		} else {
+			/*
+			 * The present fence indicates the buff's on-screen time.
+			 * For repeat frames, since the buff has already been
+			 * displayed on the screen in the previous frame,
+			 * DRM does not process it.
+			 */
+			vf_info.present_fence = video->present_fence;
 			dma_resv_lock(vf_info.dmabuf->resv, NULL);
 
 			ret = dma_resv_reserve_fences(vf_info.dmabuf->resv, 1);
@@ -435,7 +440,6 @@ static void video_set_state(struct meson_vpu_block *vblk,
 #endif
 	} else {
 		vf_info.release_fence = video->fence;
-		vf_info.present_fence = video->present_fence;
 		video_vfm_convert_to_vfminfo(mvvs, &vf_info);
 		vf_info.phy_addr[0] = mvvs->phy_addr[0];
 		if (pixel_format == DRM_FORMAT_NV12 ||
@@ -453,8 +457,14 @@ static void video_set_state(struct meson_vpu_block *vblk,
 		vf_info.input_fence = mvvs->in_fence;
 		if (mvvs->repeat_frame) {
 			dma_fence_get(vf_info.release_fence);
-			dma_fence_get(vf_info.present_fence);
 		} else {
+			/*
+			 * The present fence indicates the buff's on-screen time.
+			 * For repeat frames, since the buff has already been
+			 * displayed on the screen in the previous frame,
+			 * DRM does not process it.
+			 */
+			vf_info.present_fence = video->present_fence;
 			dma_resv_lock(vf_info.dmabuf->resv, NULL);
 
 			ret = dma_resv_reserve_fences(vf_info.dmabuf->resv, 1);
