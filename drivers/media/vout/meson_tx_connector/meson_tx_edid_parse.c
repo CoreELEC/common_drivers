@@ -411,8 +411,10 @@ static void store_vesa_idx(struct rx_cap *prxcap, enum hdmi_vic vesa_timing)
 		}
 	}
 
-	if (!already && i != VESA_MAX_TIMING)
+	if (!already && i != VESA_MAX_TIMING) {
 		prxcap->vesa_timing[i] = vesa_timing;
+		prxcap->vesa_timing_count++;
+	}
 }
 
 static void store_cea_idx(struct rx_cap *prxcap, enum hdmi_vic vic)
@@ -2637,17 +2639,17 @@ int meson_tx_edid_parse(struct rx_cap *prxcap, u8 *edid_buf, u8 edid_parse_mask)
 	_edid_parse_base_structure(prxcap, edid_buf);
 
 	for (i = 1; i <= cta_block_count; i++) {
-		if (edid_buf[i * 0x80] == 0x70 || (prxcap->edid_check & 0x01 &&
-			edid_buf[i * 0x80] != 0x70)) {
+		if (edid_buf[i * 0x80] == 0x70) {
 			/* skip parse displayID structure contained in EDID */
 			if ((edid_parse_mask & BIT(1)) == 0)
-				return 0;
+				continue;
 			display_id_parse(&prxcap->disp_id_cap, &edid_buf[i * 0x80 + 1]);
 			if (i < cta_block_count)
 				pr_info("warning: exceed 1 displayID block in EDID\n");
 			if (prxcap->disp_id_cap.extension_count > 0)
 				pr_info("warning: exceed 1 section in displayID of EDID\n");
-		} else if (edid_buf[i * 0x80] == 0x02) {
+		} else if (edid_buf[i * 0x80] == 0x02 || (prxcap->edid_check & 0x01 &&
+			edid_buf[i * 0x80] != 0x70)) {
 			tx_edid_cta_block_parse(prxcap, &edid_buf[i * 0x80]);
 		}
 	}
@@ -2670,10 +2672,24 @@ int meson_tx_edid_parse(struct rx_cap *prxcap, u8 *edid_buf, u8 edid_parse_mask)
 		prxcap->physical_height = t->v_image_size;
 	}
 
-	/* if edid no VIC, set default vic */
-	if (prxcap->VIC_count == 0)
-		hdmitx_edid_set_default_vic(prxcap);
-
+	if (edid_parse_mask & BIT(1)) {
+		/* for DPTX, if no available timing in CTA
+		 * block/displayID, then set default VESA timing
+		 */
+		if (prxcap->VIC_count == 0 &&
+			prxcap->vesa_timing_count == 0 &&
+			prxcap->disp_id_cap.timing_count == 0) {
+			prxcap->vesa_timing_count = 1;
+			prxcap->vesa_timing[0] = HDMI_1_640x480p60_4x3;
+			pr_info("warning: no timing in EDID/DisplayID, add 640x480p60hz by default\n");
+		}
+	} else {
+		/* for HDMITX(which won't parse displayID),
+		 * if edid no VIC, set default vic
+		 */
+		if (prxcap->VIC_count == 0)
+			hdmitx_edid_set_default_vic(prxcap);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(meson_tx_edid_parse);
@@ -2865,6 +2881,7 @@ static int displayid_detailed(struct displayid_detailed_timings_1 *timings,
 	bool dsc_support = false;
 	bool y420_support = false;
 	int divisor = 0;
+	int len = 0;
 
 	if (!timings || !t)
 		return -1;
@@ -2982,6 +2999,26 @@ static int displayid_detailed(struct displayid_detailed_timings_1 *timings,
 	y420_support = type_7 && (block_revision & 0x2) && (timings->flags & 0x80);
 	if (y420_support)
 		t->flags |= DISPLAY_ID_TYPE_VII_YUV420;
+
+	t->v_freq = meson_tx_get_timing_vrefresh(t);
+
+	/* add name for timing:
+	 * assume the timings in DATA_BLOCK_TYPE_1_DETAILED_TIMING
+	 * and DATA_BLOCK_2_TYPE_7_DETAILED_TIMING blocks in displayID
+	 * are VESA timings, add suffix 'V' in the end of mode name;
+	 * and assume all the CEA timings are included in CTA extension data
+	 * blocks(128bytes) or CTA video data blocks(VDB/Y420 VDB...).
+	 */
+	t->name = kzalloc(32, GFP_KERNEL);
+	if (t->name) {
+		len = snprintf((char *)t->name, 32,  "%dx%d%s%lluhzV",
+			t->h_active, t->v_active, t->pi_mode ? "p" : "i",
+			DIV_ROUND_CLOSEST_ULL(t->v_freq, 1000));
+		if (len >= 32)
+			t->name[31] = '\0';
+	} else {
+		pr_err("DisplayID detailed timing alloc name mem failed\n");
+	}
 
 	return 0;
 }
@@ -3406,6 +3443,7 @@ static int display_id_section_parse(struct display_id_cap *disp_id_cap, u8 *disp
 static void display_id_cap_clear(struct display_id_cap *disp_id_cap)
 {
 	int i = 0;
+	int j = 0;
 	/* number of BLK_TIMING_CNT already alloc for timing */
 	int alloced_blocks = 0;
 
@@ -3416,6 +3454,8 @@ static void display_id_cap_clear(struct display_id_cap *disp_id_cap)
 		alloced_blocks = DIV_ROUND_UP(disp_id_cap->timing_count, BLK_TIMING_CNT);
 		/* free memory of each block */
 		for (i = 0; i < alloced_blocks; i++) {
+			for (j = 0; j < BLK_TIMING_CNT; j++)
+				kfree(disp_id_cap->timing[i][j].name);
 			kfree(disp_id_cap->timing[i]);
 			disp_id_cap->timing[i] = NULL;
 		}

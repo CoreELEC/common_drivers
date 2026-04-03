@@ -506,6 +506,7 @@ struct rx_cap {
 	/*hdmi_vic have different define for tx20&tx21,use u32 instead here.*/
 	/* Max 64 */
 	u32 vesa_timing[VESA_MAX_TIMING];
+	u32 vesa_timing_count;
 
 	/*audio*/
 	struct rx_audio_cap RxAudioCap[AUD_MAX_NUM];

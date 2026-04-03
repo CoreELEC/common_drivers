@@ -115,7 +115,7 @@ int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_li
 	struct display_id_cap *disp_id_cap = NULL;
 	int *edid_vics = NULL;
 	const struct tx_timing *edid_timing;
-	struct tx_timing *display_id_timing;
+	struct tx_timing *display_id_timing = NULL;
 	u32 i = 0;
 	int count = 0;
 	enum hdmi_vic vic;
@@ -131,22 +131,32 @@ int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_li
 	disp_id_cap = &tx_comm->base.rxcap.disp_id_cap;
 	prxcap = &tx_comm->base.rxcap;
 
-	edid_vics = vzalloc((prxcap->VIC_count + VESA_MAX_TIMING) * sizeof(int));
-	len = disp_id_cap->timing_count + prxcap->VIC_count + VESA_MAX_TIMING;
-	dptx_timings = vzalloc(len * sizeof(struct tx_timing));
-	if (!edid_vics || !dptx_timings) {
-		DPTX_ERROR("%s: alloc fail\n", __func__);
-		goto out;
+	if (prxcap->VIC_count + prxcap->vesa_timing_count > 0) {
+		edid_vics = vzalloc((prxcap->VIC_count + prxcap->vesa_timing_count) * sizeof(u32));
+		if (!edid_vics) {
+			DPTX_ERROR("edid_vics alloc fail\n");
+			goto out;
+		}
+	}
+
+	len = disp_id_cap->timing_count + prxcap->VIC_count + prxcap->vesa_timing_count;
+	if (len > 0) {
+		dptx_timings = vzalloc(len * sizeof(struct tx_timing));
+		if (!dptx_timings) {
+			DPTX_ERROR("dptx_timing alloc fail\n");
+			goto out;
+		}
 	}
 
 	/* step1: only select VIC which is supported in EDID */
 	/* copy edid vic list */
 	if (prxcap->VIC_count > 0)
-		memcpy(edid_vics, prxcap->VIC, sizeof(int) * prxcap->VIC_count);
-	for (i = 0; i < VESA_MAX_TIMING && prxcap->vesa_timing[i]; i++)
-		edid_vics[prxcap->VIC_count + i] = prxcap->vesa_timing[i];
+		memcpy(edid_vics, prxcap->VIC, sizeof(u32) * prxcap->VIC_count);
+	if (prxcap->vesa_timing_count > 0)
+		memcpy(&edid_vics[prxcap->VIC_count], prxcap->vesa_timing,
+			sizeof(u32) * prxcap->vesa_timing_count);
 
-	for (i = 0; i < prxcap->VIC_count; i++) {
+	for (i = 0; i < prxcap->VIC_count + prxcap->vesa_timing_count; i++) {
 		vic = edid_vics[i];
 		if (vic == HDMI_0_UNKNOWN)
 			continue;
