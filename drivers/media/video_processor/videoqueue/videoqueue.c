@@ -630,6 +630,17 @@ static int videoqueue_dequeue_buf(struct video_queue_dev *dev, bool is_I, bool i
 		dev->dq_count++;
 		vq_print(dev->inst, P_OTHER, "dq_buf:file=%px, fence_file=%px\n",
 			free_file, fence_file);
+		if (dev->di_backend_en && !fence_file) {
+			vq_print(dev->inst, P_OTHER, "fence_file is NULL, pre recycle\n");
+			ret = buf_mgr_q_checkin(dev->dp_buf_mgr, free_file);
+			if (ret) {
+				vq_print(dev->inst, P_ERROR, "q_checkin fail\n");
+				videoqueue_put_vf(dev, free_file);
+				return -1;
+			} else {
+				return 0;
+			}
+		}
 		for (i = 0; i < FILE_CNT; i++) {
 			if (!dev->dq_info[i].used)
 				break;
