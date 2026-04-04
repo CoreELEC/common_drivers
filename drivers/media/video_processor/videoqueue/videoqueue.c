@@ -248,7 +248,7 @@ void videoqueue_pcrscr_update(u8 vpp_index, s32 inc, u32 base)
 
 static inline int DUR2PTS(int y)
 {
-	int var = 0;
+	int var = 0, count = 0;
 	int x = y;
 
 	if (y >= 1915 && y <= 1925) {
@@ -271,7 +271,8 @@ static inline int DUR2PTS(int y)
 		var = x * 15;
 	} else {
 		var = 12012;
-		var = var * x / 800;
+		count = x / 800;
+		var = var * count;
 	}
 
 	return var;

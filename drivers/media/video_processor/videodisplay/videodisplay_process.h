@@ -54,7 +54,8 @@
 
 /*if add new patten, need change dev->patten[X]*/
 enum video_refresh_pattern {
-	PATTERN_11 = 0,
+	PATTERN_UNDETECTED = 0,
+	PATTERN_11,
 	PATTERN_32,
 	PATTERN_22,
 	PATTERN_22323,

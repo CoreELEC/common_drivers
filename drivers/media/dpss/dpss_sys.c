@@ -1529,7 +1529,7 @@ int dpss_probe(struct platform_device *pdev)
 				       dpss_irq_fun[i],
 				       IRQF_SHARED, irq_name,
 				       (void *)&pdev->dev);
-		if (i == 0)
+		if (i < 3)
 			irq_set_affinity_hint(devp->irq_q[i], cpumask_of(3));
 		else
 			irq_set_affinity_hint(devp->irq_q[i], cpumask_of(2));

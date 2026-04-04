@@ -672,7 +672,7 @@ void dpss_irq_set_affinity_hint(struct dpss_dev_s *dpss_pdev)
 		return;
 
 	for (i = 0; i < DPSS_IRQ_ID_NUB; i++) {
-		if (i == 0)
+		if (i < 3)
 			irq_set_affinity_hint(dpss_pdev->irq_q[i], cpumask_of(3));
 		else
 			irq_set_affinity_hint(dpss_pdev->irq_q[i], cpumask_of(2));

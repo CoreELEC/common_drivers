@@ -2709,12 +2709,20 @@ static void vd_vsync_video_pattern_53(struct videodisplay_dev *dev, struct vfram
 static void vd_vsync_video_pattern_11120(struct videodisplay_dev *dev, struct vframe_s *vf)
 {
 	int i = 0, sum = 0, ave = 0;
+	int vsync_pts_inc = 16 * 90000 *
+		vsync_pts_inc_scale[dev->index] / vsync_pts_inc_scale_base[dev->index];
+	int vframe_duration = vf->duration * 15;
+
+	if (abs(vsync_pts_inc - vframe_duration) >= 30) {
+		vd_print(dev->index, PRINT_PATTERN, "%s: not 11 condition.\n", __func__);
+		return;
+	}
 
 	for (i = 0; i < PATTEN_FACTOR_MAX; i++)
 		sum += dev->patten_factor[i];
 
-	ave = sum / PATTEN_FACTOR_MAX;
-	if (ave == 1) {
+	ave = 2 * sum / PATTEN_FACTOR_MAX;
+	if (ave == 2) {
 		dev->pattern_detected = PATTERN_11;
 		dev->pattern[PATTERN_11] = PATTERN_11_DETECT_RANGE;
 		dev->pattern_enter_cnt++;
@@ -2759,7 +2767,7 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 	if (vf->vc_private->vsync_index == 0)
 		return -1;
 
-	if (vd_vf_is_tvin(vf))
+	if (vf->vf_vrr_param.qms_plus_en || vf->vf_vrr_param.qms_en)
 		return -1;
 
 	switch (dev->pattern_detected) {
@@ -2919,7 +2927,8 @@ static bool pulldown_support_vf(struct videodisplay_dev *dev, u32 duration_val)
 		/*119.88hz for 23.976,29.97,59.94*/
 		if (duration == 4004 ||
 			duration == 3203 ||
-			duration == 1601)
+			duration == 1601 ||
+			duration == 801)
 			support = true;
 	} else if (vsync_pts_inc_scale[dev->index] == 1 &&
 		vsync_pts_inc_scale_base[dev->index] == 120) {
@@ -2929,7 +2938,9 @@ static bool pulldown_support_vf(struct videodisplay_dev *dev, u32 duration_val)
 			duration == 3203 ||
 			duration == 3200 ||
 			duration == 1601 ||
-			duration == 1600)
+			duration == 1600 ||
+			duration == 801 ||
+			duration == 800)
 			support = true;
 	}
 
@@ -4274,7 +4285,7 @@ static int video_display_create_path(struct videodisplay_dev *dev)
 	}
 #endif
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
-	if (vd_pulldown_level && dpss_frc_get_video_latency()) {
+	if (vd_pulldown_level && (is_meson_t6w_cpu() || is_meson_t6x_cpu())) {
 		dev->enable_pulldown = true;
 		vd_print(dev->index, PRINT_OTHER, "%s: enable pulldown\n", __func__);
 	}
