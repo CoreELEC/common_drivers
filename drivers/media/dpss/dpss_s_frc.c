@@ -2552,9 +2552,22 @@ void frc_transform_check(struct vframe_s *vfm, struct pvpp_dis_frc_para_in_s *in
 
 bool is_vd1_link_state(void)
 {
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
 	bool is_vd1_link = rd_vc(VPU_AXIRD_PATH_CTRL) & 0x1;
+	bool ret = false;
 
-	return is_vd1_link;
+	if (!pchip_st)
+		return is_vd1_link;
+
+	state_st = &pchip_st->state_st;
+
+	if (is_vd1_link && !state_st->is_frc_vpp_link)
+		ret = true;
+
+	dbg_f1("vd1_link_state_sw=%d(%d,%d)\n",
+		ret, is_vd1_link, !state_st->is_frc_vpp_link);
+	return ret;
 }
 
 static void check_readback_reg(u8 reg_type)
@@ -2929,8 +2942,7 @@ exit:
 		state_st->check_fallback = 0;
 		state_st->mc_link_available = false;
 		state_st->dae0_available_cnt = 0;
-
-		dbg_f2("reg=%d,dpe_ready=%d,enable_mc_link=%d,dis_mc_link=%d,%d,unformat=%d,%d",
+		dbg_f2("reg=%d,dpe_ready=%d,enable_mc_link=%d,dis_mc_link=%d,%d,unformat=%d,%d\n",
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
 			state_st->need_disable_mc_link, state_st->disable_mc_link_intf,
 			state_st->unformat_bypass, state_st->special_format);

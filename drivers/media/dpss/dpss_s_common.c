@@ -2007,7 +2007,7 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 					if ((dpss_reset_ctrl & 0xF0) == 0x10)
 						w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1);
 					usleep_range(4000, 8000);
-					dbg_i0("link off to disable frc\n");
+					dbg_f0("link off to disable frc\n");
 					break;
 				}
 				now = ktime_get();

@@ -185,9 +185,9 @@ void hw_cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm
 	//cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, 0);
 	//cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, 0);
 	//dbg_f2("dpss_init_done=%d\n", prm_top->is_dpss_init_done);
-	if (prm_top->is_dpss_init_done)
-		cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, fmt444_out);
-	cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, fmt444_out);
+//	if (prm_top->is_dpss_init_done)
+//		cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, fmt444_out);
+//	cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, fmt444_out);
 	if (mc_skip_mode_h) {
 		regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC0);
 		w_reg_bit_vc(RMIF_TOP_CTRL + regs_ofst, 1, 13, 1);
@@ -259,9 +259,9 @@ void hw_cfg_dpss_mc_intf(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm
 	dbg_h2("%s vfcd->src_h/v size:(%d,%d)\n", __func__, vfcd->src_hsize, vfcd->src_vsize);
 	dbg_h2("%s pix_rmif.slc_x:(%d,%d), .slc_y:(%d,%d)\n", __func__, vfcd->win_bgn_h[0],
 		   vfcd->win_end_h[0], vfcd->win_bgn_v[0], vfcd->win_end_v[0]);
-	if (prm_top->is_dpss_init_done)
-		cfg_vfcd_dec(4, vfcd);	 // mc0
-	cfg_vfcd_dec(5, vfcd);	 // mc1
+//	if (prm_top->is_dpss_init_done)
+//		cfg_vfcd_dec(4, vfcd);	 // mc0
+//	cfg_vfcd_dec(5, vfcd);	 // mc1
 
 	if (prm_top->is_dpss_init_done) {
 		// mc din vfcd mode
@@ -1952,7 +1952,7 @@ void hw_mc_vfcd_cfg_update(void)
 	frc_top = &pfw_data->frc_top_type;
 
 	frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, &pchip_st->mc_pix_rmif, pchip_st->fmt444_out);
-	//frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, &pchip_st->mc_pix_rmif, pchip_st->fmt444_out);
+	frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, &pchip_st->mc_pix_rmif, pchip_st->fmt444_out);
 	if ((frc_top->mc_skip_mode & 0x2) ==  0x2) {
 		regs_ofst = get_vfcd_regs_ofst(DPSS_RMIF_MC0);
 		VSYNC_WR_VIDEO_TABLE_REG_BITS(RMIF_TOP_CTRL + regs_ofst, 1, 13, 1);
@@ -1960,7 +1960,7 @@ void hw_mc_vfcd_cfg_update(void)
 		VSYNC_WR_VIDEO_TABLE_REG_BITS(RMIF_TOP_CTRL + regs_ofst, 1, 13, 1);
 	}
 	frc_cfg_vfcd_dec(4, &pchip_st->mc_vfcd);   // mc0
-	//frc_cfg_vfcd_dec(5, &pchip_st->mc_vfcd);   // mc1
+	frc_cfg_vfcd_dec(5, &pchip_st->mc_vfcd);   // mc1
 
 	if (pchip_st->prm_mc.src_cmpr == CMPR_AFBC) {
 		frc_cfg_vfcd_cmpr_enable(4, 1);
