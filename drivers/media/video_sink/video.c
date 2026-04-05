@@ -1510,6 +1510,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 				dv_inst_unmap(dv_inst);
 				dv_inst = -1;
 			}
+			amdv_mem_alloc_control(module_amvideo, 0);
 		}
 #endif
 		update_process_hdmi_avsync_flag(false);
@@ -1567,6 +1568,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 #else
 		if (is_amdv_enable()) {
 #endif
+			amdv_mem_alloc_control(module_amvideo, 1);
 			dv_vf_light_reg_provider();
 			if (is_tunnel_mode(RECEIVER_NAME)) {
 				dv_inst_map(&dv_inst);
@@ -9718,20 +9720,18 @@ static ssize_t video_filename_store(const struct class *cla,
 				    const struct class_attribute *attr,
 				    const char *buf, size_t count)
 {
-	size_t r;
+	size_t len;
 
-	/* check input buf to mitigate buffer overflow issue */
-	if (strlen(buf) >= sizeof(file_name)) {
-		memcpy(file_name, buf, sizeof(file_name));
-		file_name[sizeof(file_name) - 1] = '\0';
-		r = 1;
-	} else {
-		r = sscanf(buf, "%s", file_name);
-	}
-	if (r != 1)
-		return -EINVAL;
+	len = strnlen(buf, count);
+	if (len > 0 && buf[len - 1] == '\n')
+		len--;
 
-	return r;
+	/*delete \n*/
+	len = min(len, sizeof(file_name) - 1);
+	memcpy(file_name, buf, len);
+	file_name[len] = '\0';
+
+	return count;
 }
 
 static ssize_t video_debugflags_show(const struct class *cla,

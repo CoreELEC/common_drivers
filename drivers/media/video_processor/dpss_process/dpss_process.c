@@ -2309,7 +2309,6 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->sync_id = 0;
 	dev->trick_play_en = false;
 	atomic_set(&input_eos_enabled, 0);
-
 	dev->rotate_en = false;
 	dev->ge2d_para.context = NULL;
 	dev->ge2d_para.count = 0;
@@ -2321,7 +2320,9 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->ge2d_para.canvas_scr[2] = -1;
 	dev->ge2d_para.plane_num = 2;
 	dev->rotate_buf_status = UNINITIAL;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	amdv_mem_alloc_control(module_dpss, 1);
+#endif
 	receive_q_init(dev);
 	dpss_input_free_q_init(dev);
 	file_q_init(dev);
@@ -2364,6 +2365,9 @@ static int dpss_process_uninit(struct dpss_process_dev *dev)
 				  dev->dpss_index);
 		dev->dpss_index = -1;
 	}
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	amdv_mem_alloc_control(module_dpss, 0);
+#endif
 
 	receive_q_uninit(dev);
 	file_q_uninit(dev);
