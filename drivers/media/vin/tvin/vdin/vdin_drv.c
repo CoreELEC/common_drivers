@@ -2192,15 +2192,21 @@ void vdin_self_start_dec(struct vdin_dev_s *devp)
 void vdin_delay_n_vsync(struct vdin_dev_s *devp, unsigned int vsync_cnt)
 {
 	unsigned int delay_us;
+	unsigned int fps = VDIN_VRR_MIN_FRAME_RATE;
 
 	if (devp->hw_core == VDIN_HW_CORE_LITE)
 		return;
 
-	if (devp->parm.info.fps) {
-		delay_us = (1000000 / devp->parm.info.fps) * vsync_cnt;
+	if (vdin_is_vrr_state(devp) && (devp->game_mode & VDIN_GAME_MODE_2))
+		fps = VDIN_VRR_MIN_FRAME_RATE;/* The lowest fps in HW VRR */
+	else if (devp->parm.info.fps)
+		fps = devp->parm.info.fps;
+
+	if (fps) {
+		delay_us = (1000000 / fps) * vsync_cnt;
 		if (devp->debug.vdin_dbg_en)
 			pr_info("vdin%d,delay_us:%d us\n", devp->index, delay_us);
-		usleep_range(delay_us, delay_us + 10);
+		usleep_range(delay_us, delay_us + 1000);
 	}
 }
 
