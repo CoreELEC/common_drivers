@@ -2878,7 +2878,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	if (dpss_state.buf_status != DPSS_BUF_STATE_READY) {
 		dp_print(dev->index, PRINT_OTHER, "dpss buf not ready.\n");
 		if (is_dtv_src)
-			vf->dpss_flg |= DPSS_FLG_OUT_DONE;
+			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
 		display_original_frame(dev, frame_info, file_vf, vf);
@@ -2906,7 +2906,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	if (dev->need_check_hdr_state && !hdr_path_delink_status()) {
 		dp_print(dev->index, PRINT_ERROR, "need do dpss but hdr not ready, bypass.\n");
 		if (is_dtv_src)
-			vf->dpss_flg |= DPSS_FLG_OUT_DONE;
+			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
 		display_original_frame(dev, frame_info, file_vf, vf);
@@ -3068,7 +3068,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dp_print(dev->index, PRINT_ERROR, "first i, need drop\n");
 	} else if ((dev->is_switch_first_frame || dev->is_first_frame) &&
 		is_dtv_src && dev->cur_is_i) {
-		vf->dpss_flg |= DPSS_FLG_OUT_DONE;
+		vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		dp_print(dev->index, PRINT_OTHER,
 			"first i, set dpss done flag, then vd1 toggle\n");
 	}
