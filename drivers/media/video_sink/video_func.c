@@ -1444,7 +1444,8 @@ bool is_crop_from_vf(struct vframe_s *vf)
 	    s_type != VFRAME_SOURCE_TYPE_CVBS &&
 	    s_type != VFRAME_SOURCE_TYPE_TUNER &&
 	    s_type != VFRAME_SOURCE_TYPE_HWC) ||
-	    (vf->flag & VFRAME_FLAG_COMPOSER_DONE))
+	    (vf->flag & VFRAME_FLAG_COMPOSER_DONE) ||
+	    (vf->type_ext & VIDTYPE_EXT_FORCE_CROP))
 		return true;
 	else
 		return false;
@@ -3951,22 +3952,24 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 			u32 src_width = 0, src_height = 0;
 
 			new_frame = video_lcevc.enhance_vf;
-			if (new_frame->type & VIDTYPE_COMPRESS) {
-				src_width = new_frame->compWidth;
-				src_height = new_frame->compHeight;
-			} else {
-				src_width = new_frame->width;
-				src_height = new_frame->height;
+			if (new_frame) {
+				if (new_frame->type & VIDTYPE_COMPRESS) {
+					src_width = new_frame->compWidth;
+					src_height = new_frame->compHeight;
+				} else {
+					src_width = new_frame->width;
+					src_height = new_frame->height;
+				}
+				if (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC)
+					pr_info("%s,new_frame=0x%p, type=0x%x, flag=0x%x, bitdepth=0x%x, src_width=%d, src_height=%d\n",
+						__func__,
+						new_frame,
+						new_frame->type,
+						new_frame->flag,
+						new_frame->bitdepth,
+						src_width,
+						src_height);
 			}
-			if (new_frame && (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC))
-				pr_info("%s,new_frame=0x%p, type=0x%x, flag=0x%x, bitdepth=0x%x, src_width=%d, src_height=%d\n",
-					__func__,
-					new_frame,
-					new_frame->type,
-					new_frame->flag,
-					new_frame->bitdepth,
-					src_width,
-					src_height);
 		} else {
 			if (!new_frame) {
 				if (!gvideo_recv[0]->cur_buf) {
@@ -3986,7 +3989,7 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 					new_frame = gvideo_recv[0]->cur_buf;
 				}
 			}
-			if (new_frame || gvideo_recv[0]->cur_buf) {
+			if (gvideo_recv[0]->cur_buf) {
 				vd_layer[layer_id].dispbuf_mapping =
 					&gvideo_recv[0]->cur_buf;
 				if ((gvideo_recv[0]->cur_buf->type_ext & VIDTYPE_EXT_LCEVC) &&
@@ -4028,7 +4031,7 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 						(unsigned int)(coef1[1] & 0xff) << 16 |
 						(unsigned int)(coef1[2] & 0xff) << 8 |
 						(unsigned int)(coef1[3] & 0xff);
-					if (vf && (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC))
+					if (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC)
 						pr_info("%s,coef:[0]%d,%d,%d,%d, [1]%d,%d,%d,%d,coef0:%d,%d,%d,%d, coef1:%d,%d,%d,%d, trans:0x%x, 0x%x\n",
 							__func__,
 							vf->scaler_coeff.k[0][0],
@@ -4130,22 +4133,24 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 			u32 src_width = 0, src_height = 0;
 
 			new_frame = video_lcevc.enhance_vf;
-			if (new_frame->type & VIDTYPE_COMPRESS) {
-				src_width = new_frame->compWidth;
-				src_height = new_frame->compHeight;
-			} else {
-				src_width = new_frame->width;
-				src_height = new_frame->height;
+			if (new_frame) {
+				if (new_frame->type & VIDTYPE_COMPRESS) {
+					src_width = new_frame->compWidth;
+					src_height = new_frame->compHeight;
+				} else {
+					src_width = new_frame->width;
+					src_height = new_frame->height;
+				}
+				if (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC)
+					pr_info("%s,new_frame=0x%p, type=0x%x, flag=0x%x, bitdepth=0x%x, src_width=%d, src_height=%d\n",
+						__func__,
+						new_frame,
+						new_frame->type,
+						new_frame->flag,
+						new_frame->bitdepth,
+						src_width,
+						src_height);
 			}
-			if (new_frame && (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC))
-				pr_info("%s,new_frame=0x%p, type=0x%x, flag=0x%x, bitdepth=0x%x, src_width=%d, src_height=%d\n",
-					__func__,
-					new_frame,
-					new_frame->type,
-					new_frame->flag,
-					new_frame->bitdepth,
-					src_width,
-					src_height);
 		} else {
 			if (!new_frame) {
 				if (!cur_dispbuf[0]) {
@@ -4163,7 +4168,7 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 					new_frame = cur_dispbuf[0];
 				}
 			}
-			if (new_frame || cur_dispbuf[0]) {
+			if (cur_dispbuf[0]) {
 				vd_layer[layer_id].dispbuf_mapping =
 					&cur_dispbuf[0];
 				if ((cur_dispbuf[0]->type_ext & VIDTYPE_EXT_LCEVC) &&
@@ -4204,7 +4209,7 @@ static struct vframe_s *vdx_swap_frame(u8 layer_id,
 						(unsigned int)(coef1[1] & 0xff) << 16 |
 						(unsigned int)(coef1[2] & 0xff) << 8 |
 						(unsigned int)(coef1[3] & 0xff);
-					if (vf && (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC))
+					if (debug_common_flag & DEBUG_FLAG_COMMON_LCEVC)
 						pr_info("%s,coef:[0]%d,%d,%d,%d, [1]%d,%d,%d,%d,coef0:%d,%d,%d,%d, coef1:%d,%d,%d,%d, trans:0x%x, 0x%x\n",
 							__func__,
 							vf->scaler_coeff.k[0][0],
