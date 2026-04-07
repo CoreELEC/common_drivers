@@ -303,7 +303,7 @@ int vf_ref_count_dec(struct dp_buf_mgr_t *buf_mgr, struct vf_ref_t *vf_ref)
 			buf_mgr->recycle_buffer_cb(buf_mgr->caller_data, vf_ref->file,
 				buf_mgr->instance_id);
 		} else {
-			buf_mgr_print(buf_mgr, PRINT_ERROR,
+			buf_mgr_print(buf_mgr, PRINT_OTHER,
 				"not recycle:frame_index=%d, qbuf_id: %d, reset_id: %d\n",
 				vf->frame_index,
 				vf_ref->qbuf_id,
@@ -312,7 +312,7 @@ int vf_ref_count_dec(struct dp_buf_mgr_t *buf_mgr, struct vf_ref_t *vf_ref)
 		pop_from_ref_list(buf_mgr, vf_ref);
 	} else {
 		mutex_unlock(&buf_mgr->ref_count_mutex);
-		buf_mgr_print(buf_mgr, PRINT_ERROR, "ref_count is 0 !!!\n");
+		buf_mgr_print(buf_mgr, PRINT_OTHER, "ref_count is 0 !!!\n");
 	}
 
 	return 0;
@@ -467,7 +467,7 @@ struct vf_ref_t *get_ref_from_list(struct dp_buf_mgr_t *buf_mgr, struct vframe_s
 	}
 
 	if (!atomic_read(&buf_mgr->ref_list[i].on_use)) {
-		buf_mgr_print(buf_mgr, PRINT_ERROR,
+		buf_mgr_print(buf_mgr, PRINT_OTHER,
 			"%s get ref fail: on_use is false\n",
 			__func__);
 		print_all_in_ref_list(buf_mgr);
@@ -481,7 +481,7 @@ struct vf_ref_t *get_ref_from_list(struct dp_buf_mgr_t *buf_mgr, struct vframe_s
 	}
 
 	if (vf->frame_index != vf_ref->frame_index) {
-		buf_mgr_print(buf_mgr, PRINT_ERROR, "%s err: %d %d\n",
+		buf_mgr_print(buf_mgr, PRINT_OTHER, "%s err: %d %d\n",
 			__func__, vf->frame_index, vf_ref->frame_index);
 		print_all_in_ref_list(buf_mgr);
 	}
@@ -505,14 +505,14 @@ struct vf_ref_t *get_ref1_from_list(struct dp_buf_mgr_t *buf_mgr, struct vf_ref_
 			break;
 	}
 	if (i == VF_LIST_COUNT) {
-		buf_mgr_print(buf_mgr, PRINT_ERROR, "get ref1 fail, not find ref, frame_index=%d\n",
+		buf_mgr_print(buf_mgr, PRINT_OTHER, "get ref1 fail, not find ref, frame_index=%d\n",
 			vf_ref->frame_index);
 		print_all_in_ref_list(buf_mgr);
 		return NULL;
 	}
 
 	if (!atomic_read(&buf_mgr->ref_list[i].on_use)) {
-		buf_mgr_print(buf_mgr, PRINT_ERROR,
+		buf_mgr_print(buf_mgr, PRINT_OTHER,
 			"get ref1 fail: i=%d, index=%d, vf_ref->frame_index=%d, frame_index=%d\n",
 			i, buf_mgr->ref_list[i].index,
 			vf_ref->frame_index, vf_ref->vf.frame_index);
@@ -756,7 +756,7 @@ int buf_mgr_to_file(struct dp_buf_mgr_t *buf_mgr, struct file *file)
 			buf_mgr_put(uvm_di_mgr->buf_mgr);
 			buf_mgr_get(buf_mgr);
 			uvm_di_mgr->buf_mgr = buf_mgr;
-			buf_mgr_print(buf_mgr, PRINT_ERROR, "%s:buf_mgr changed\n", __func__);
+			buf_mgr_print(buf_mgr, PRINT_OTHER, "%s:buf_mgr changed\n", __func__);
 		}
 		return 0;
 	}
@@ -1011,7 +1011,7 @@ int buf_mgr_q_checkin(struct dp_buf_mgr_t *buf_mgr, struct file *file)
 	mutex_lock(&buf_mgr->file_mutex);
 	vf_ref = get_ref_from_list(buf_mgr, vf);
 	if (!vf_ref) {
-		buf_mgr_print(buf_mgr, PRINT_ERROR, "%s: ref dec fail\n", __func__);
+		buf_mgr_print(buf_mgr, PRINT_OTHER, "q_checkin: ref dec fail\n");
 		mutex_unlock(&buf_mgr->file_mutex);
 		return -1;
 	}
@@ -1174,7 +1174,7 @@ int di_processed_checkin(struct file *file)
 	if (vf_ref->ref_other_number > 1) {
 		vf_ref1 = get_ref1_from_list(buf_mgr, vf_ref);
 		if (!vf_ref1) {
-			buf_mgr_print(buf_mgr, PRINT_ERROR, "%s: ref1 dec fail.\n", __func__);
+			buf_mgr_print(buf_mgr, PRINT_OTHER, "%s: ref1 dec fail.\n", __func__);
 			mutex_unlock(&buf_mgr->file_mutex);
 			return -1;
 		}
@@ -1185,7 +1185,7 @@ int di_processed_checkin(struct file *file)
 	if (need_dec_two) {
 		vf_ref2 = get_ref1_from_list(buf_mgr, vf_ref1);
 		if (!vf_ref2) {
-			buf_mgr_print(buf_mgr, PRINT_ERROR, "%s: ref2 dec fail.\n", __func__);
+			buf_mgr_print(buf_mgr, PRINT_OTHER, "%s: ref2 dec fail.\n", __func__);
 			vf_ref_count_dec(buf_mgr, vf_ref1);
 			mutex_unlock(&buf_mgr->file_mutex);
 			return -1;
