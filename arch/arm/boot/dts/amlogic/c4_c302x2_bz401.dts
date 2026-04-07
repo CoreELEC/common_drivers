@@ -420,7 +420,7 @@
 };
 
 &sd_emmc_c {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&emmc_pins>;
 	pinctrl-1 = <&emmc_clk_gate_pins>;
 	pinctrl-2 = <&emmc_pins_sleep>;
@@ -553,12 +553,12 @@
 };
 
 &spi_nfc {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&spinf_pins>;
 	spi-nand@0 {
 		compatible = "spi-nand";
-		status = "disabled";
+		status = "okay";
 		reg = <0>;
 		spi-max-frequency = <83000000>;
 		spi-tx-bus-width = <4>;
@@ -566,7 +566,7 @@
 	};
 	spi-nor@0 {
 		compatible = "spi-nor";
-		status = "okay";
+		status = "disabled";
 		reg = <0>;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
