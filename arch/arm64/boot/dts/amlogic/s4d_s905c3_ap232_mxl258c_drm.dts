@@ -775,7 +775,7 @@
 
 		/*tdm clk tuning enable*/
 		clk_tuning_enable = <1>;
-
+		ctrl_gain = <1>;
 		status = "okay";
 	};
 

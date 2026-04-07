@@ -737,7 +737,7 @@
 
 		/*tdm clk tuning enable*/
 		clk_tuning_enable = <1>;
-
+		ctrl_gain = <1>;
 		status = "okay";
 	};
 
@@ -906,6 +906,8 @@
 		/* config which data pin for loopback */
 		datain-lane-mask-in = <0 0 0 0>;
 
+		src-clk-freq = <491520000>;
+
 		/* calc mclk for datalb */
 		mclk-fs = <256>;
 
@@ -925,7 +927,6 @@
 		datalb_chmask = <0x3>;
 		/* config which data pin as loopback */
 		datalb-lane-mask-in = <1 0 0 0>;
-		src-clk-freq = <491520000>;
 
 		status = "okay";
 	};

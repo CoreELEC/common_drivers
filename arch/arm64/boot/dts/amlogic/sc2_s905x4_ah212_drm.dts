@@ -546,6 +546,7 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
+			continuous-clock;
 			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-spdif";
 			cpu {

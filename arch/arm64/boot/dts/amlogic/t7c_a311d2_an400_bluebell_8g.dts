@@ -1065,6 +1065,7 @@
 
 		/*this resample is only used for loopback_A.*/
 		capture_sample_rate = <16000>;
+		src-clk-freq = <491520000>;
 
 		status = "disabled";
 	};
