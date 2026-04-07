@@ -16,6 +16,7 @@
 #include <linux/sched/clock.h>
 #include <linux/sync_file.h>
 #include <linux/delay.h>
+#include <linux/videodev2.h>
 #include <linux/vmalloc.h>
 #include <linux/amlogic/aml_sync_api.h>
 #include <linux/compat.h>
@@ -758,6 +759,19 @@ static void di_process_task(struct di_process_dev *dev)
 		ret = di_get_ref_vf(file_vf, &vf_1, &vf_2, &file_1, &file_2);
 		if (ret)
 			dp_print(dev->index, PRINT_ERROR, "di_get_ref_vf failed.\n");
+
+		/*err frame not to di*/
+		if (vf_1 && (vf_1->frame_type & V4L2_BUF_FLAG_ERROR)) {
+			dp_print(dev->index, PRINT_OTHER, "vf_1 is error frame, skip\n");
+			vf_1 = NULL;
+			file_1 = NULL;
+		}
+		if (vf_2 && (vf_2->frame_type & V4L2_BUF_FLAG_ERROR)) {
+			dp_print(dev->index, PRINT_OTHER, "vf_2 is error frame, skip\n");
+			vf_2 = NULL;
+			file_2 = NULL;
+		}
+
 		/*this time file_1 or file_2 has been free, it will panic when get file*/
 		if (drop_count == 1) {
 			if (vf_1 && file_1) {
@@ -784,6 +798,13 @@ static void di_process_task(struct di_process_dev *dev)
 				ret = queue_input_to_di(dev, vf_1, true, file_1, false);
 				if (ret != 0)
 					fput(file_2);
+			} else if (vf_1 && file_1 && (!vf_2 || !file_2)) {
+				get_file(file_1);
+				buf_mgr_file_unlock(uvm_di_mgr);
+				video_wait_decode_fence(dev, vf_1);
+				ret = queue_input_to_di(dev, vf_1, true, file_1, false);
+				if (ret != 0)
+					fput(file_1);
 			} else {
 				buf_mgr_file_unlock(uvm_di_mgr);
 				dp_print(dev->index, PRINT_ERROR, "drop 2 but not find ref\n");
