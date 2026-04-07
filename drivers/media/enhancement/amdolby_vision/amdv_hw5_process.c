@@ -2099,6 +2099,8 @@ int amdv_parse_metadata_hw5(struct vframe_s *vf,
 		last_top2_level = vf->src_fmt.py_level;
 	}
 
+	calculate_gdbs_delay(vf, w, h);
+
 	if (is_aml_tvmode() && vf &&
 	    vf->source_type == VFRAME_SOURCE_TYPE_HDMI) {
 		if (vf->src_fmt.sei_magic_code != HDMI_SEI_MAGIC_CODE) {

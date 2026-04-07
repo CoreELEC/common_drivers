@@ -8532,6 +8532,77 @@ int is_primesl_output_amdv_std(struct vframe_s *vf)
 	return false;
 }
 
+void calculate_gdbs_delay(struct vframe_s *vf, u32 w, u32 h)
+{
+	int frc_latency = 0;
+
+	if (!is_aml_tvmode() || !vf || !enable_update_gdbs_delay) {
+		final_backlight_delay_vsync = set_backlight_delay_vsync;
+		goto GDBS_RET;
+	}
+
+	if (is_aml_hw5()) {
+		if (is_amdv_dpss_path()) {/*with dpss*/
+			/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
+			/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
+			if (vf->source_type == VFRAME_SOURCE_TYPE_OTHERS &&
+				w == 3840 && h == 2160)
+				final_backlight_delay_vsync = 4;
+			else if (vf->source_type == VFRAME_SOURCE_TYPE_OTHERS &&
+				w < 3840 && h < 2160)
+				final_backlight_delay_vsync = 3;
+			else if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI &&
+				w == 3840 && h == 2160)
+				final_backlight_delay_vsync = 4;
+			else if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI &&
+				w < 3840 && h < 2160)
+				final_backlight_delay_vsync = 3;
+
+			else
+				final_backlight_delay_vsync = 1;
+		} else {
+			final_backlight_delay_vsync = set_backlight_delay_vsync;
+		}
+	} else {
+#ifdef CONFIG_AMLOGIC_MEDIA_FRC
+		frc_latency = enable_frc_delay ? frc_get_video_latency_for_gd1() : 0;
+#endif
+		if (frc_latency == -2) {/*frc unstable, not update backlight*/
+			final_backlight_delay_vsync = MAX_DELAY;
+		} else if (frc_latency > 0) {
+			final_backlight_delay_vsync = frc_latency + 1;
+			/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
+			/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
+			if ((vf->duration == 1600 || vf->duration == 1599) &&
+				vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)/*ott 60fps*/
+				final_backlight_delay_vsync += 1;
+			else if (vf->duration == 1920 &&
+				vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)/*ott 50fps*/
+				final_backlight_delay_vsync += 1;
+			else if (vf->duration == 1600)/*hdmi 60fps*/
+				final_backlight_delay_vsync += 1;
+		} else {/*no frc*/
+			/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
+			/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
+			if (vf->duration == 4000 &&
+				vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)
+				final_backlight_delay_vsync = 2;
+			else if (vf->duration == 1920 && w < 3840 &&
+				vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)
+				final_backlight_delay_vsync = 2;
+			else
+				final_backlight_delay_vsync = 1;
+		}
+	}
+GDBS_RET:
+	if (debug_dolby & 0x1)
+		pr_dv_dbg("vf %px, duration %d, %d, %d, %d, final delay %d\n",
+			vf, vf ? vf->duration : 0, frc_latency,
+			enable_update_gdbs_delay,
+			set_backlight_delay_vsync,
+			final_backlight_delay_vsync);
+}
+
 int amdv_parse_metadata_v1(struct vframe_s *vf,
 					      u8 toggle_mode,
 					      bool bypass_release,
@@ -8585,7 +8656,6 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 	bool vf_changed = true;
 	char *dvel_provider = NULL;
 	struct ambient_cfg_s *p_ambient = NULL;
-	int frc_latency = 0;
 	enum cp_signal_range_enum yuv_range = SIGNAL_RANGE_SMPTE;
 
 	memset(&req, 0, (sizeof(struct provider_aux_req_s)));
@@ -8609,52 +8679,7 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 		}
 	}
 
-	if (is_aml_tvmode()) {
-#ifdef CONFIG_AMLOGIC_MEDIA_FRC
-		frc_latency = enable_frc_delay ? frc_get_video_latency_for_gd1() : 0;
-#endif
-		if (frc_latency == -2) {/*frc unstable, not update backlight*/
-			final_backlight_delay_vsync = MAX_DELAY;
-		} else if (frc_latency > 0) {
-			final_backlight_delay_vsync = frc_latency + 1;
-			if (vf && enable_update_gdbs_delay) {
-				/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
-				/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
-				if ((vf->duration == 1600 || vf->duration == 1599) &&
-					vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)/*ott 60fps*/
-					final_backlight_delay_vsync += 1;
-				else if (vf->duration == 1920 &&
-					vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)/*ott 50fps*/
-					final_backlight_delay_vsync += 1;
-				else if (vf->duration == 1600)/*hdmi 60fps*/
-					final_backlight_delay_vsync += 1;
-				if (debug_dolby & 0x1)
-					pr_dv_dbg("duration %d, delay %d\n", vf->duration,
-					final_backlight_delay_vsync);
-			}
-		} else {/*no frc*/
-			if (vf && enable_update_gdbs_delay) {
-				/*800(120fps) 801(119.88fps) 960(100fps) 1600(60fps) 1920(50fps)*/
-				/*3200(30fps) 3203(29.97) 3840(25fps) 4000(24fps) 4004(23.976fps)*/
-				if (vf->duration == 4000 &&
-					vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)
-					final_backlight_delay_vsync = 2;
-				else if (vf->duration == 1920 && w < 3840 &&
-					vf->source_type == VFRAME_SOURCE_TYPE_OTHERS)
-					final_backlight_delay_vsync = 2;
-				else
-					final_backlight_delay_vsync = 1;
-				if (debug_dolby & 0x1)
-					pr_dv_dbg("duration %d, delay %d\n", vf->duration,
-						final_backlight_delay_vsync);
-			} else {
-				final_backlight_delay_vsync = set_backlight_delay_vsync;
-			}
-		}
-		if (debug_dolby & 0x1)
-			pr_dv_dbg("frc_latency %d, final delay %d\n", frc_latency,
-				final_backlight_delay_vsync);
-	}
+	calculate_gdbs_delay(vf, w, h);
 
 	if (is_aml_tvmode() && vf &&
 	    vf->source_type == VFRAME_SOURCE_TYPE_HDMI) {
