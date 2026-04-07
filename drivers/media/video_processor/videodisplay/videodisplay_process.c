@@ -3455,6 +3455,12 @@ static void vframe_display(struct videodisplay_dev *dev,
 
 	if (frame_info->private_flag & 0x1)
 		vf->source_type = VFRAME_SOURCE_TYPE_HWC;
+
+	if (frame_info->private_flag & 0x2) {
+		vd_print(dev->index, PRINT_AXIS, "need add VFRAME_HALF_SCREEN.\n");
+		vf->type_ext |= VIDTYPE_EXT_FORCE_CROP;
+	}
+
 	vd_print(dev->index, PRINT_AXIS, "=========dst frame info:==========\n");
 	vd_print(dev->index, PRINT_AXIS, "frame_index=%d.\n", vf->frame_index);
 	vd_print(dev->index, PRINT_AXIS,
