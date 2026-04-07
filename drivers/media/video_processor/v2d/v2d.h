@@ -305,6 +305,7 @@ struct v2d_dev {
 	u32 set_fence_count;
 	struct v2d_dump_info_s info_output_yuv;
 	struct v2d_dump_info_s info_dewarp_src;
+	struct kref refcount;
 };
 
 struct v2d_port_s {

@@ -1595,19 +1595,21 @@ static int process_vicp_data(struct v2d_dev *dev, struct v2d_dev_config *v2d_com
 	return ret;
 }
 
+static void v2d_device_data_free(struct kref *ref)
+{
+	struct v2d_dev *dev = container_of(ref, struct v2d_dev, refcount);
+
+	vfree(dev);
+}
+
 static void v2d_fence_signal_cb(struct dma_fence *fence, struct dma_fence_cb *cb)
 {
-	struct v2d_fence_cb_t *v2d_cb;
-	struct v2d_dev *dev;
-	struct file *need_recycle_file;
-	struct file *fence_file;
+	struct v2d_fence_cb_t *v2d_cb = container_of(cb, struct v2d_fence_cb_t, base_cb);
+	struct v2d_dev *dev = v2d_cb->dev;
+	struct file *need_recycle_file = v2d_cb->buffer_file;
+	struct file *fence_file = v2d_cb->fence_file;
 	struct display_data_t *display_data = NULL;
 	int len, i;
-
-	v2d_cb = container_of(cb, struct v2d_fence_cb_t, base_cb);
-	dev = v2d_cb->dev;
-	need_recycle_file = v2d_cb->buffer_file;
-	fence_file = v2d_cb->fence_file;
 
 	spin_lock(&v2d_spin_lock);
 	len = kfifo_len(&dev->display_q);
@@ -1615,7 +1617,8 @@ static void v2d_fence_signal_cb(struct dma_fence *fence, struct dma_fence_cb *cb
 		if (!kfifo_get(&dev->display_q, &display_data)) {
 			v2d_print(dev->index, PRINT_ERROR,
 				"%s: error, display_q underflow!\n", __func__);
-			return;
+			spin_unlock(&v2d_spin_lock);
+			goto out_clean;
 		}
 		if (display_data->output_dmabuf->file == need_recycle_file)
 			break;
@@ -1625,14 +1628,11 @@ static void v2d_fence_signal_cb(struct dma_fence *fence, struct dma_fence_cb *cb
 	}
 	spin_unlock(&v2d_spin_lock);
 
-	fput(need_recycle_file);
-	fput(fence_file);
-
 	if (i == len) {
 		v2d_print(dev->index, PRINT_OTHER,
 			"recycle failed, may be at uninit process?\n");
 		dev->buffer_release_count++;
-		return;
+		goto out_clean;
 	}
 
 	dev->buffer_release_count++;
@@ -1652,6 +1652,12 @@ static void v2d_fence_signal_cb(struct dma_fence *fence, struct dma_fence_cb *cb
 	v2d_print(dev->index, PRINT_FENCE,
 		"wait dma_fence:%px done, display_q:%d free_q:%d\n",
 		fence, kfifo_len(&dev->display_q), kfifo_len(&dev->free_q));
+out_clean:
+	fput(need_recycle_file);
+	fput(fence_file);
+
+	kref_put(&dev->refcount, v2d_device_data_free);
+
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
@@ -2147,6 +2153,7 @@ static int v2d_set_fence(struct v2d_dev *dev, struct release_info_t *release_inf
 	cur_fence_cb->dev = dev;
 	cur_fence_cb->buffer_file = buffer_file;
 	cur_fence_cb->fence_file = fence_file;
+	kref_get(&dev->refcount);
 	ret = dma_fence_add_callback(fence_obj, &cur_fence_cb->base_cb, v2d_fence_signal_cb);
 	if (ret == -ENOENT) {
 		v2d_print(dev->index, PRINT_ERROR, "fence has already signaled\n");
@@ -2797,6 +2804,7 @@ static int v2d_open(struct inode *inode, struct file *file)
 	}
 	dev = vmalloc(sizeof(*dev));
 	memset(dev, 0, sizeof(*dev));
+	kref_init(&dev->refcount);
 	port->dev = dev;
 	dev->ge2d_para.count = 0;
 	dev->ge2d_para.canvas_dst[0] = -1;
@@ -2851,7 +2859,8 @@ static int v2d_release(struct inode *inode, struct file *file)
 	struct v2d_port_s *port = dev->port;
 	int ret = 0;
 
-	pr_info("%s enable=%d\n", __func__, dev->status_enabled);
+	pr_info("release: enable=%d ref_count:%u\n",
+		dev->status_enabled, kref_read(&dev->refcount));
 
 	if (iminor(inode) >= v2d_instance_num)
 		return -ENODEV;
@@ -2872,7 +2881,7 @@ static int v2d_release(struct inode *inode, struct file *file)
 	mutex_lock(&v2d_mutex);
 	port->open_count--;
 	mutex_unlock(&v2d_mutex);
-	vfree(dev);
+	kref_put(&dev->refcount, v2d_device_data_free);
 
 	return 0;
 }
