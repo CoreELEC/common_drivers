@@ -1270,7 +1270,6 @@
 			#clock-cells = <1>;
 			clocks = <&xtal>;
 			clock-names = "xtal";
-			status = "disabled";
 		};
 
 		pwrdm: power-domains {

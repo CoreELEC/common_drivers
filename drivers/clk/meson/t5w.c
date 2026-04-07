@@ -428,7 +428,7 @@ static struct clk_regmap t5w_gp0_pll = {
 		.od_max = 5,
 		.init_regs = t5w_gp0_init_regs,
 		.init_count = ARRAY_SIZE(t5w_gp0_init_regs),
-		.flags = CLK_MESON_PLL_FIXED_N,
+		.flags = CLK_MESON_PLL_FIXED_N | CLK_MESON_PLL_NOINIT_ENABLED
 	},
 	.hw.init = &(struct clk_init_data){
 		.name = "gp0_pll",
@@ -502,7 +502,7 @@ static struct clk_regmap t5w_gp1_pll = {
 		 */
 		.init_regs = t5w_gp1_init_regs,
 		.init_count = ARRAY_SIZE(t5w_gp1_init_regs),
-		.flags = CLK_MESON_PLL_FIXED_N,
+		.flags = CLK_MESON_PLL_FIXED_N | CLK_MESON_PLL_NOINIT_ENABLED,
 	},
 	.hw.init = &(struct clk_init_data){
 		.name = "gp1_pll",
@@ -519,7 +519,7 @@ static struct clk_regmap t5w_gp1_pll = {
 };
 
 static const struct pll_params_table t5w_hifi_pll_table[] = {
-	PLL_PARAMS_OD(150, 1, 1), /* DCO = 1806.336M OD = 1 */
+	PLL_PARAMS_OD(163, 1, 3), /* DCO = 3932.16M */
 	{ /* sentinel */  }
 };
 
@@ -527,7 +527,7 @@ static const struct pll_params_table t5w_hifi_pll_table[] = {
  * Internal hifi pll emulation configuration parameters
  */
 static const struct reg_sequence t5w_hifi_init_regs[] = {
-	{ .reg = HHI_HIFI_PLL_CNTL1,	.def = 0x00010e56 },
+	{ .reg = HHI_HIFI_PLL_CNTL1,	.def = 0x00014820 },
 	{ .reg = HHI_HIFI_PLL_CNTL2,	.def = 0x00000000 },
 	{ .reg = HHI_HIFI_PLL_CNTL3,	.def = 0x6a285c00 },
 	{ .reg = HHI_HIFI_PLL_CNTL4,	.def = 0x65771290 },
@@ -577,7 +577,8 @@ static struct clk_regmap t5w_hifi_pll = {
 		.init_regs = t5w_hifi_init_regs,
 		.init_count = ARRAY_SIZE(t5w_hifi_init_regs),
 		.flags = CLK_MESON_PLL_ROUND_CLOSEST |
-			 CLK_MESON_PLL_FIXED_N,
+			 CLK_MESON_PLL_FIXED_N |
+			 CLK_MESON_PLL_FIXED_FRAC_WEIGHT_PRECISION
 	},
 	.hw.init = &(struct clk_init_data){
 		.name = "hifi_pll",
@@ -3346,7 +3347,7 @@ static MESON_T5W_SYS_GATE(t5w_clk81_enc480p,		HHI_GCLK_OTHER, 20);
 static MESON_T5W_SYS_GATE(t5w_clk81_random,		HHI_GCLK_OTHER, 21);
 static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_enct,		HHI_GCLK_OTHER, 22);
 static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_encl,		HHI_GCLK_OTHER, 23);
-static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_venclmmc,	HHI_GCLK_OTHER, 24);
+static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_vclmmc,	HHI_GCLK_OTHER, 24);
 static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_vencl,	HHI_GCLK_OTHER, 25);
 static MESON_T5W_SYS_GATE(t5w_clk81_vclk2_other1,	HHI_GCLK_OTHER, 26);
 
@@ -3454,7 +3455,7 @@ static struct clk_hw_onecell_data t5w_hw_onecell_data = {
 		[CLKID_CLK81_RANDOM]		= &t5w_clk81_random.hw,
 		[CLKID_CLK81_VCLK2_ENCT]	= &t5w_clk81_vclk2_enct.hw,
 		[CLKID_CLK81_VCLK2_ENCL]	= &t5w_clk81_vclk2_encl.hw,
-		[CLKID_CLK81_VCLK2_VENCLMMC]	= &t5w_clk81_vclk2_venclmmc.hw,
+		[CLKID_CLK81_VCLK2_VENCLMMC]	= &t5w_clk81_vclk2_vclmmc.hw,
 		[CLKID_CLK81_VCLK2_VENCL]	= &t5w_clk81_vclk2_vencl.hw,
 		[CLKID_CLK81_VCLK2_OTHER1]	= &t5w_clk81_vclk2_other1.hw,
 		[CLKID_CLK81_DMA]		= &t5w_clk81_dma.hw,
@@ -3811,7 +3812,7 @@ static struct clk_regmap *const t5w_cpu_clk_regmaps[] __initconst = {
 	&t5w_clk81_random,
 	&t5w_clk81_vclk2_enct,
 	&t5w_clk81_vclk2_encl,
-	&t5w_clk81_vclk2_venclmmc,
+	&t5w_clk81_vclk2_vclmmc,
 	&t5w_clk81_vclk2_vencl,
 	&t5w_clk81_vclk2_other1,
 	&t5w_clk81_dma,
@@ -3889,8 +3890,6 @@ static int __ref meson_t5w_probe(struct platform_device *pdev)
 
 	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
 					   &t5w_hw_onecell_data);
-
-	return 0;
 }
 
 static const struct of_device_id clkc_match_table[] = {
