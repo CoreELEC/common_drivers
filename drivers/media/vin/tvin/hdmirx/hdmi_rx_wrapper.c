@@ -1189,10 +1189,10 @@ static int rx_cor_irq_handler(u8 port)
 		//rx_pkt_handler(PKT_BUFF_SET_DRM);
 	//if (emp_handle_flag)
 		//rx_pkt_handler(PKT_BUFF_SET_EMP);
-	if (rx[port].irq_flag && port == rx_info.main_port) {
-		rx_tasklet.data = port;
-		tasklet_schedule(&rx_tasklet);
-	}
+	//if (rx[port].irq_flag && port == rx_info.main_port) {
+	//	rx_tasklet.data = port;
+	//	tasklet_schedule(&rx_tasklet);
+	//}
 	//if (irq_need_clr)
 		//error = 1;
 	return error;
@@ -1296,6 +1296,20 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT, port);
 						rx_get_vsi_info(port);
 					}
 					emp_rcvd = false;
+				}
+				if (rx[port].irq_flag & IRQ_AVI_CHG_FLAG) {
+					rx[port].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
+					rx[port].irq_flag &= ~IRQ_AVI_CHG_FLAG;
+				}
+				if (rx[port].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+					if (video_mute_enabled(port)) {
+						hdmirx_mute_vpp_pkt(true, port);
+						rx[port].vpp_mute_cnt = vpp_mute_cnt;
+					} else {
+						skip_frame(skip_frame_cnt, port, "avi stop-");
+					}
+					if (log_level & VIDEO_LOG)
+						rx_pr("avi stop\n");
 				}
 				rx_get_avi_info(port);
 				if (!rx_game_need_mute(port))
@@ -1469,6 +1483,20 @@ irqreturn_t irq1_handler(int irq, void *params)
 				}
 				emp_rcvd = false;
 			}
+			if (rx[E_PORT1].irq_flag & IRQ_AVI_CHG_FLAG) {
+				rx[E_PORT1].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
+				rx[E_PORT1].irq_flag &= ~IRQ_AVI_CHG_FLAG;
+			}
+			if (rx[E_PORT1].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+				if (video_mute_enabled(E_PORT1)) {
+					hdmirx_mute_vpp_pkt(true, E_PORT1);
+					rx[E_PORT1].vpp_mute_cnt = vpp_mute_cnt;
+				} else {
+					skip_frame(skip_frame_cnt, E_PORT1, "avi stop-");
+				}
+				if (log_level & VIDEO_LOG)
+					rx_pr("avi stop\n");
+			}
 			rx_get_avi_info(E_PORT1);
 			if (!rx_game_need_mute(E_PORT1))
 				rx[E_PORT1].pkt_need_mute = false;
@@ -1631,6 +1659,20 @@ irqreturn_t irq2_handler(int irq, void *params)
 					rx_get_vsi_info(E_PORT2);
 				}
 				emp_rcvd = false;
+			}
+			if (rx[E_PORT2].irq_flag & IRQ_AVI_CHG_FLAG) {
+				rx[E_PORT2].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
+				rx[E_PORT2].irq_flag &= ~IRQ_AVI_CHG_FLAG;
+			}
+			if (rx[E_PORT2].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+				if (video_mute_enabled(E_PORT2)) {
+					hdmirx_mute_vpp_pkt(true, E_PORT2);
+					rx[E_PORT2].vpp_mute_cnt = vpp_mute_cnt;
+				} else {
+					skip_frame(skip_frame_cnt, E_PORT2, "avi stop-");
+				}
+				if (log_level & VIDEO_LOG)
+					rx_pr("avi stop\n");
 			}
 			rx_get_avi_info(E_PORT2);
 			if (!rx_game_need_mute(E_PORT2))
@@ -1838,6 +1880,20 @@ irqreturn_t irq3_handler(int irq, void *params)
 					rx_get_vsi_info(E_PORT3);
 				}
 				emp_rcvd = false;
+			}
+			if (rx[E_PORT3].irq_flag & IRQ_AVI_CHG_FLAG) {
+				rx[E_PORT3].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
+				rx[E_PORT3].irq_flag &= ~IRQ_AVI_CHG_FLAG;
+			}
+			if (rx[E_PORT3].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+				if (video_mute_enabled(E_PORT3)) {
+					hdmirx_mute_vpp_pkt(true, E_PORT3);
+					rx[E_PORT3].vpp_mute_cnt = vpp_mute_cnt;
+				} else {
+					skip_frame(skip_frame_cnt, E_PORT3, "avi stop-");
+				}
+				if (log_level & VIDEO_LOG)
+					rx_pr("avi stop\n");
 			}
 			rx_get_avi_info(E_PORT3);
 			if (!rx_game_need_mute(E_PORT3))

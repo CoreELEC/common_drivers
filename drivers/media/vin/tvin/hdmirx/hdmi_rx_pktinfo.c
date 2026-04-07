@@ -738,7 +738,10 @@ void rx_pkt_initial(u8 port)
 	rx[i].qms_plus_flag = false;
 	rx[i].vs_info_details.pkt_status = HDMIRX_PACKET_STATUS_NOT_RECEIVED;
 	rx[i].spd_pkt_st = HDMIRX_PACKET_STATUS_NOT_RECEIVED;
-	rx[i].avi_pkt_st = HDMIRX_PACKET_STATUS_NOT_RECEIVED;
+	if (rx[i].avi_pkt_st == HDMIRX_PACKET_STATUS_NOT_RECEIVED)
+		rx[i].avi_pkt_st = HDMIRX_PACKET_STATUS_STOPPED;
+	else
+		rx[i].avi_pkt_st = HDMIRX_PACKET_STATUS_NOT_RECEIVED;
 	rx[i].rx_sig_type &= MSK(3, 0);
 	if (!emp_info_p) {
 		rx_pr("%s emp info null\n", __func__);
@@ -918,8 +921,8 @@ void rx_pkt_get_avi_ex(void *pktinfo, u8 port)
 	pkt->pix_num_right_bar = hdmirx_rd_cor(AVIRX_DBYTE12_DP2_IVCRX, port) |
 		(u16)hdmirx_rd_cor(AVIRX_DBYTE13_DP2_IVCRX, port) << 8;
 	pkt->additional_colorimetry = hdmirx_rd_cor(AVIRX_DBYTE14_DP2_IVCRX, port);
-	if (hdmirx_rd_cor(AVIRX_LENGTH_DP2_IVCRX, port) != 0)
-		rx[port].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
+	//if (hdmirx_rd_cor(AVIRX_LENGTH_DP2_IVCRX, port) != 0)
+	//	rx[port].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
 }
 
 void rx_pkt_get_spd_ex(void *pktinfo, u8 port)
