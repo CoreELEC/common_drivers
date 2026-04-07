@@ -65,6 +65,7 @@ void mc_res_switch_begin(void);
 void detect_axis_change(struct pvpp_dis_frc_para_in_s *in_para);
 void detect_crop_change(struct frc_win_s *vpp_win, struct vframe_s *vfm);
 void update_frc_screen_vinfo(struct pvpp_dis_frc_para_in_s *in_para);
+void dpss_frc_sync_status(u8 working);
 
 // frc game
 void dpss_game_reinit_reg_tab(void);

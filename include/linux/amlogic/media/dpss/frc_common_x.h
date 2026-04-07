@@ -106,10 +106,10 @@ struct dpss_frc_top_type_s {
 	u8        chip;   // 1:T3, 2:T5M
 	u16       other_set1;
 	u8        rdma_en; //1:rdma 0:cpu interrupt access reg
-	u8        motion_ctrl;  // for frc motion ctrl
+	u8        motion_ctrl;  // for dv_flag
 	u8        need_dpe_mix; //t6w badedit
 	u8        dpe_mix_cnt; //t6w badedit
-	u32       frc_prot_mode;//0:memc prefetch acorrding mode frame 1:memc prefetch 1 frame
+	u32       frc_prot_mode;// dpss_flg bit10-dw,bit11-skip
 	u32       force_en;    // for debug
 	u32       in_out_ratio;
 	u8        frc_input_n;

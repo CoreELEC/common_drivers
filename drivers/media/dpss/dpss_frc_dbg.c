@@ -79,16 +79,15 @@ void dpss_frc_status(void)
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
 			!state_st->need_disable_mc_link, !state_st->disable_mc_link_intf,
 			!state_st->unformat_bypass);
-	pr_frc(0, "pre_vsync_offset\t= %d\n",
-			rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
-	pr_frc(0, "mc_bypass=%d   compr_sel_st=%d\n",
-		rd(FRC_MC_HW_CTRL0) & 0x3, state_st->compr_sel);
+	pr_frc(0, "mc_bypass\t= %d, pre_vs_offset\t= %d\n",
+			rd(FRC_MC_HW_CTRL0) & 0x3, rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
+	pr_frc(0, "dpss_flag\t= %#x\n", frc_top->frc_prot_mode);
 	pr_frc(0, "eos enable\t= %d\n", state_st->enable_last_drop);
 	pr_frc(0, "game_n2m\t= %d, game_film\t= %d\n",
 		game_st->game_n2m, game_st->game_film);
-	//	pr_frc(0, "secure_mode= %d, buf secured= %d\n",
-	//			state_st->frc_sts.secure_mode, pst_chip->buf_st->secured);
-	pr_frc(0, "frame_rate= [%3d Hz to %3d Hz] (in_duration= %d)\n",
+//	pr_frc(0, "secure_mode= %d, buf secured= %d\n",
+//			state_st->frc_sts.secure_mode, pst_chip->buf_st->secured);
+	pr_frc(0, "frame_rate= [%3d Hz  to  %3d Hz] (in_duration= %d)\n",
 			state_st->n2m_status.input_framerate,
 			state_st->n2m_status.output_framerate,
 			state_st->n2m_status.duration);
@@ -118,7 +117,6 @@ void dpss_frc_status(void)
 	pr_frc(0, "irq_chk_err_cnt\t= %d\n", frc_int_st->irq_chk_err_cnt);
 	pr_frc(0, "src_frm_size\t= [%d, %d]\n", state_st->src_frm_width,
 			state_st->src_frm_height);
-
 //	pr_frc(0, "frc_out isr lost tsk_cnt:%d, err_cnt= (me:%d,mc:%d,vp:%d)\n",
 //	       state_st->out_sts.lost_tsk_cnt, state_st->frc_sts.me_undone_cnt,
 //	       state_st->frc_sts.mc_undone_cnt,

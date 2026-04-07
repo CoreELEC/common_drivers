@@ -1212,7 +1212,7 @@ static long dpss_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static long dpss_compat_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = dpss_ioctl(file, cmd, arg);
@@ -1371,6 +1371,7 @@ static void dpss_early_suspend(struct early_suspend *h)
 		clk_disable_unprepare(dpss_pdev->vpu_clk_dpe);
 		dpss_pdev->clk_status &= ~(1 << 1);
 	}
+	dpss_frc_sync_status(0);
 	dbg_s1("%s ok\n", __func__);
 }
 

@@ -563,6 +563,7 @@ void dpss_exit(void)
 
 void dpss_s_shutdown(struct dpss_dev_s *dpss_pdev)
 {
+	dpss_frc_sync_status(0);
 }
 
 void dpss_s_suspend(struct dpss_dev_s *dpss_pdev)
@@ -589,6 +590,7 @@ void dpss_s_suspend(struct dpss_dev_s *dpss_pdev)
 		clk_disable_unprepare(dpss_pdev->vpu_clk_dpe);
 		dpss_pdev->clk_status &= ~(1 << 1);
 	}
+	dpss_frc_sync_status(0);
 	dbg_s1("%s ok\n", __func__);
 }
 
@@ -612,6 +614,7 @@ void dpss_s_resume(struct dpss_dev_s *dpss_pdev)
 
 	dbg_s1("cur dpe clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dpe));
 	dbg_s1("cur dae clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dae));
+	dpss_frc_sync_status(1);
 	dbg_s1("%s ok\n", __func__);
 }
 
@@ -639,6 +642,7 @@ void dpss_s_freeze(struct dpss_dev_s *dpss_pdev)
 		clk_disable_unprepare(dpss_pdev->vpu_clk_dpe);
 		dpss_pdev->clk_status &= ~(1 << 1);
 	}
+	dpss_frc_sync_status(0);
 	dbg_s1("%s ok\n", __func__);
 }
 
@@ -661,6 +665,7 @@ void dpss_s_restore(struct dpss_dev_s *dpss_pdev)
 	tee_write_reg_bits(((VPU_DAE_WRAP_SEC_MODE << 2) + 0xff850000), 0, 0, 1);
 	dbg_s1("cur dpe clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dpe));
 	dbg_s1("cur dae clk :0x%lx\n", clk_get_rate(dpss_pdev->vpu_clk_dae));
+	dpss_frc_sync_status(1);
 	dbg_s1("%s ok\n", __func__);
 }
 

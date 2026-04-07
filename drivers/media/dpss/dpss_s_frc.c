@@ -772,8 +772,8 @@ void dpss_frc_prob(struct dpss_dev_s *devp)
 			goto fail_attr_create;
 		}
 	}
-
 	frc_drv_initial(devp);
+	dpss_frc_sync_status(1);
 
 #ifdef USE_FRC_PRE_VS_RDMA
 	dpss_rdma_init();
@@ -3673,10 +3673,10 @@ void dpss_h_update_frc(struct vframe_s *vfm)
 	src_h = (vfm->type & VIDTYPE_COMPRESS) ? vfm->compHeight : vfm->height;
 	state_st->src_frm_height = src_h;
 	state_st->src_frm_width = src_w;
-
+	if (vfm->dpss_flg != frc_top->frc_prot_mode)
+		frc_top->frc_prot_mode = vfm->dpss_flg;
 	is_4k2k = (src_w > 1920 && src_h > 1088);
 	state_st->is_dos = is_dos;
-
 	if (is_dos && is_4k2k) {
 		if (pchip_st->chip == ID_T6W && in_fr >= 50)
 			state_st->mc_bypass_always = 2;
@@ -4493,13 +4493,12 @@ int dpss_frc_get_video_latency(void)
 	enum DPSS_FRC_RATIO frc_ratio;
 
 	pchip_st = dpss_get_frc_st();
-	if (!pchip_st) {
-		dbg_f2("%s pchip_st is null\n", __func__);
+	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
+	if (!pchip_st || !pchip_st->frc_en || !pfw_data) {
+		dbg_f2("dpss_get_video_latency pchip_st or frc no ready\n");
 		return -1;
 	}
-	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
-	if (!pfw_data)
-		return -1;
+
 	frc_top = &pfw_data->frc_top_type;
 
 	vinfo = get_current_vinfo();
@@ -4517,7 +4516,7 @@ int dpss_frc_get_video_latency(void)
 	frm_rate = state_st->n2m_status.input_framerate;
 	frc_ratio = state_st->n2m_status.frc_ratio;
 
-	if (vpu_clk_get() > 100)
+	if (vpu_clk_get() > 400)
 		is_mc_link = !is_vd1_link_state();
 	else
 		is_mc_link = 0;
@@ -5148,4 +5147,15 @@ void vsync_signal_to_game_frc(void)
 			dbg_h0("delay enable game frc ok\n");
 		}
 	}
+}
+
+void dpss_frc_sync_status(u8 working)
+{
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st) {
+		dbg_h0("sync status: pchip_st is null\n");
+		return;
+	}
+	pchip_st->frc_en = working;
 }
