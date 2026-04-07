@@ -8873,20 +8873,32 @@ unsigned int vdin_get_base_fr(struct vdin_dev_s *devp)
 	} else {
 		fps = devp->prop.fps;
 	}
-
-	if (fps) {
-		devp->vin_base_fps = fps;
-		devp->parm.info.fps = fps;
+	if (devp->flags & VDIN_FLAG_DEC_STARTED) {
+		if (fps && fps != devp->parm.info.fps) {
+			devp->local_var.base_fr_chg_cnt++;
+			if (devp->local_var.base_fr_chg_cnt > VDIN_VRR_CHG_MAX_CNT) {
+				devp->local_var.base_fr_chg_cnt = 0;
+				devp->vin_base_fps = fps;
+				devp->parm.info.fps = fps;
+			}
+		} else {
+			devp->local_var.base_fr_chg_cnt = 0;
+		}
+	} else {
+		if (fps) {
+			devp->vin_base_fps = fps;
+			devp->parm.info.fps = fps;
+		}
 	}
 
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_RATIO)
-		pr_info("%s vrr_en:%d vic=%d;%d,%d;base_fr=%d,spd[5]:%#x,[7]:%#x,[11]:%#x,fps:%d,%d,%d,%d\n",
+		pr_info("%s vrr_en:%d vic=%d;%d,%d;brr=%d,spd[5]:%#x %#x %#x,fps:%d,%d,%d,%d;%d\n",
 			__func__, devp->prop.vtem_data.vrr_en, devp->prop.hw_vic,
 			devp->prop.vtem_data.qms_en, devp->prop.qms_plus_flag,
 			devp->prop.vtem_data.base_framerate, devp->prop.spd_data.data[5],
 			devp->prop.spd_data.data[7], devp->prop.spd_data.data[11],
 			devp->parm.info.fps, devp->prop.fps,
-			devp->vin_base_fps, devp->vout_base_fps);
+			devp->vin_base_fps, devp->vout_base_fps, devp->local_var.base_fr_chg_cnt);
 
 	return fps;
 }

@@ -372,6 +372,7 @@ struct match_data_s {
 #define VDIN_SET_MODE_MAX_FRAME		60
 #define VDIN_VRR_MIN_FRAME_RATE		25
 #define VDIN_RDMA_UNDONE_MAX_CNT	10
+#define VDIN_VRR_CHG_MAX_CNT		20
 
 /* Stay in TVIN_SIG_STATE_NOSIG for some
  * cycles => be sure TVIN_SIG_STATE_NOSIG
@@ -1020,6 +1021,7 @@ struct vdin_lossy_comp_param_s {
 
 struct vdin_local_variable_s {
 	bool is_rgba_en;
+	unsigned int base_fr_chg_cnt;
 };
 
 struct vdin_dev_s {

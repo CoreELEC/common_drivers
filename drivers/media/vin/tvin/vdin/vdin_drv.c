@@ -1689,6 +1689,7 @@ static void vdin_start_param_init(struct vdin_dev_s *devp)
 	devp->game_mode_dly = 0;
 	devp->chroma_size = 0;
 	memset(&devp->stats, 0, sizeof(devp->stats));
+	memset(&devp->local_var, 0, sizeof(devp->local_var));
 	devp->afbce_flag = devp->dts_config.afbce_flag_cfg;
 	//todo:more parameter initializations will be move here
 	//TBC
@@ -7685,7 +7686,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->dts_config.nosig2_unstable_cnt = EXIT_NOSIG_MAX_CNT;
 	devp->dts_config.vdin_dv_chg_cnt = 5;
 	devp->dts_config.vdin_hdr_chg_cnt = 3;
-	devp->dts_config.vdin_vrr_chg_cnt = 1;
+	devp->dts_config.vdin_vrr_chg_cnt = VDIN_VRR_CHG_MAX_CNT;
 	devp->dts_config.vdin_qms_chg_cnt = 2;
 	/* The VFCE cannot complete the compression in time,so adds 2 lines of time */
 	devp->delay_line_num = 2;
