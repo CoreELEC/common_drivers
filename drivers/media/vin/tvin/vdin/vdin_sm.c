@@ -13,6 +13,7 @@
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#include <linux/amlogic/media/vrr/vrr.h>
 
 /* Local Headers */
 #include "../tvin_frontend.h"
@@ -1238,6 +1239,10 @@ void tvin_smr(struct vdin_dev_s *devp)
 			wake_up(&devp->queue);
 		}
 	}
+
+	if (sm_p->sig_status != signal_status &&
+		sm_p->state == TVIN_SM_STATUS_UNSTABLE)
+		vrr_check_dec(0);
 
 	signal_status = sm_p->sig_status;
 }

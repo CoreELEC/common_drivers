@@ -82,6 +82,10 @@ static int base_fps;
 static unsigned int vrr_dec_state;
 static unsigned int vrr_signal_pre;
 
+static int vrr_disable_cnt = 3;
+static unsigned int vrr_enable_cnt;
+static unsigned int vout_base;
+
 struct vrr_sig_sts frame_sts = {
 	.vrr_support = false,
 	.vrr_lfc_mode = false,
@@ -102,6 +106,7 @@ struct vrr_sig_sts frame_sts = {
 	.vrr_frame_out_fps_min = 48,
 	.vrr_frame_out_fps_max = 120,
 	.vrr_small_window = false,
+	.vrr_check_signal = 10,
 };
 
 int get_framelock_sta(void)
@@ -498,12 +503,9 @@ static int frame_lock_check_base_fps(struct vframe_s *vf)
 int frame_lock_frame_rate_check(struct vframe_s *vf, struct vinfo_s *vinfo)
 {
 	bool ret = false;
-	unsigned int vout_base = 0;
 
 	if (!vinfo || !vf)
 		return ret;
-
-	vout_base = vinfo->sync_duration_num / vinfo->sync_duration_den;
 
 	if (frame_lock_check_freerun_mode(vinfo)) {
 		ret = true;
@@ -590,6 +592,11 @@ int frame_lock_frame_rate_check(struct vframe_s *vf, struct vinfo_s *vinfo)
 				frame_sts.vrr_lfc_mode = false;
 				ret =  false;
 			}
+			if (frame_lock_debug & VRR_POLICY_DEBUG_RANGE_FLAG)
+				framelock_pr_info("frame_rate_check lfc mode:%d rate:%d sup:%d md:%d\n",
+					frame_lock_lfc_mode_check(),
+					frame_lock_lfc_rate_check(vf, vinfo), lfc_support,
+					frame_sts.vrr_lfc_mode);
 		} else {
 			if (frame_sts.vrr_frame_cur != vout_base) {
 				ret = false;
@@ -611,6 +618,14 @@ int frame_lock_frame_rate_check(struct vframe_s *vf, struct vinfo_s *vinfo)
 			}
 			hdr_low_latency = 0;
 			frame_sts.vrr_lfc_mode = false;
+			if (frame_lock_debug & VRR_POLICY_DEBUG_RANGE_FLAG)
+				framelock_pr_info("frame_rate_check fps:%d out:%d rate:%d min:%d max:%d ranc:%d outc:%d hdr:%d\n",
+					frame_sts.vrr_frame_cur, vout_base,
+					frame_lock_lfc_rate_check(vf, vinfo),
+					frame_sts.vrr_frame_out_fps_min,
+					frame_sts.vrr_frame_out_fps_max,
+					frame_sts.vrr_frame_outof_range_cnt, vrr_outof_rge_cnt,
+					hdr_low_latency);
 		}
 	}
 
@@ -691,8 +706,14 @@ void frame_lock_disable_vrr(bool en)
 void vrr_check_dec(unsigned int state)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (!state && frame_lock_vrr_lock_status())
-		frame_lock_disable_vrr(false);
+	if (vrr_dec_state != state)
+		frame_sts.vrr_check_signal = state;
+
+	if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
+		framelock_pr_info("vrr_check_dec state:%d->%d vrr:%d chk_sig:%d\n",
+			vrr_dec_state, state, aml_vrr_state(),
+			frame_sts.vrr_check_signal);
+
 	vrr_dec_state = state;
 #endif
 }
@@ -708,42 +729,46 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 		return FRAMELOCK_VLOCK;
 
 	if (frame_lock_chk_is_small_win(cur_video_sts, vinfo)) {
-		vrr_skip_frame_cnt = 15;
+		vrr_skip_frame_cnt = 5;
 		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
-			framelock_pr_info("%s small window, VRR disable!!!\n",
-			__func__);
-
+			framelock_pr_info("check_type small window, VRR disable!!!\n");
 		return FRAMELOCK_VLOCK;
 	}
 
-	if (!vrr_dec_state) {
-		vrr_skip_frame_cnt = 15;
+	if (!frame_sts.vrr_check_signal && aml_vrr_state() &&
+		vrr_enable_cnt >= 2) {
+		vrr_skip_frame_cnt = 5;
 		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
-			framelock_pr_info("stop decoder\n");
+			framelock_pr_info("check_type unstable, disable vrr!\n");
+		return FRAMELOCK_VLOCK;
+	}
+
+	if (!vf) {
+		vrr_skip_frame_cnt = 5;
+		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
+			framelock_pr_info("check_type vf is null\n");
 		return FRAMELOCK_VLOCK;
 	}
 
 	frame_sts.vrr_frame_cur = frame_lock_check_input_hz(vf);
 
-	if (vf->vf_vrr_param.game_frc || get_dpss_game_frc_locked()) {
+	if (aml_vrr_state() && vrr_enable_cnt < vrr_disable_cnt) {
+		ret = FRAMELOCK_VRRLOCK;
+	} else if ((vf->vf_vrr_param.game_frc || get_dpss_game_frc_locked()) &&
+		!vf->vf_vrr_param.vrr_signal) {
 		ret = FRAMELOCK_GAMEFRC;
-		vrr_skip_frame_cnt = 15;
+		vrr_skip_frame_cnt = 5;
 		hdr_low_latency = 0;
 	} else if (vinfo->fr_adj_type == VOUT_FR_ADJ_NONE ||
 		vinfo->fr_adj_type == VOUT_FR_ADJ_HDMI) {
 		ret = FRAMELOCK_VLOCK;
-		vrr_skip_frame_cnt = 15;
+		vrr_skip_frame_cnt = 5;
 		hdr_low_latency = 0;
 	} else if (vf->vf_vrr_param.qms_en) {
 		ret = FRAMELOCK_NOLOCK;
-		vrr_skip_frame_cnt = 15;
+		vrr_skip_frame_cnt = 5;
 		hdr_low_latency = 0;
-	} else if (!(vf->flag & VFRAME_FLAG_GAME_MODE)) {
-		ret = FRAMELOCK_VLOCK;
-		vrr_skip_frame_cnt = 15;
-		hdr_low_latency = 0;
-	} else if ((frame_sts.vrr_en || (vf->flag & VFRAME_FLAG_GAME_MODE)) &&
-		frame_sts.vrr_support) {
+	} else if (frame_sts.vrr_en) {
 		if (frame_lock_frame_rate_check(vf, vinfo) &&
 			frame_sts.vrr_frame_outof_range_cnt < vrr_outof_rge_cnt &&
 			vrr_skip_frame_cnt == 0 && frame_sts.vrr_frame_cur != 0) {
@@ -752,16 +777,26 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 			if (vrr_skip_frame_cnt != 0)
 				vrr_skip_frame_cnt--;
 			else
-				vrr_skip_frame_cnt = 15;
+				vrr_skip_frame_cnt = 5;
 			ret = FRAMELOCK_VLOCK;
 			hdr_low_latency = 0;
 		}
 	} else {
 		ret = FRAMELOCK_VLOCK;
-		vrr_skip_frame_cnt = 15;
+		vrr_skip_frame_cnt = 5;
 		hdr_low_latency = 0;
 	}
 	frame_sts.vrr_frame_sts = ret;
+
+	if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG) {
+		framelock_pr_info("check_type vrrst:%d g_frc:%d g_frc_l:%d qms:%d fr_adj:%d\n",
+			aml_vrr_state(), vf->vf_vrr_param.game_frc,
+			get_dpss_game_frc_locked(), vf->vf_vrr_param.qms_en,
+			vinfo->fr_adj_type);
+		framelock_pr_info("check_types en:%d ranc:%d outc:%d ret:%d skip:%d\n",
+			frame_sts.vrr_en, frame_sts.vrr_frame_outof_range_cnt,
+			vrr_outof_rge_cnt, ret, vrr_skip_frame_cnt);
+	}
 
 	return ret;
 }
@@ -826,6 +861,28 @@ unsigned int game_mode_low_latency(void)
 			__func__, low_latency, lock_flag, out_time);
 
 	return low_latency;
+}
+
+void vrr_check_phase_error(struct vframe_s *vf)
+{
+	unsigned int fr = frame_lock_show_vout_framerate();
+
+	if (!vf) {
+		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
+			framelock_pr_info("check_phase vf is null, vrr:%d\n",
+				frame_lock_vrr_lock_status());
+		return;
+	}
+
+	if ((vf->vf_vrr_param.vin_base_fps == 60 && vout_base == 60 &&
+		fr >= 60200) || (vf->vf_vrr_param.vin_base_fps == 120 &&
+		vout_base == 120 && fr >= 120400)) {
+		vrr_skip_frame_cnt = 5;
+		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
+			framelock_pr_info("check_phase base:%d out:%d fr:%d skip:%d\n",
+				vf->vf_vrr_param.vin_base_fps, vout_base,
+				fr, vrr_skip_frame_cnt);
+	}
 }
 
 void vrrlock_process(struct vframe_s *vf,
@@ -893,7 +950,9 @@ void vrrlock_process(struct vframe_s *vf,
 		}
 	}
 
-	if (frame_sts.vrr_en || (vf->flag & VFRAME_FLAG_GAME_MODE)) {
+	vdata.vrr_enable_cnt = vrr_enable_cnt;
+
+	if (frame_sts.vrr_en && frame_sts.vrr_check_signal) {
 		frame_lock_calc_lcnt_variance_val(vf);
 
 		if (frame_sts.vrr_switch_off) {
@@ -918,7 +977,7 @@ void vrrlock_process(struct vframe_s *vf,
 			if (frame_sts.vrr_frame_sts != frame_sts.vrr_frame_pre_sts ||
 				vdata.line_dly != vrr_delay_line_pre ||
 				(!frame_sts.vrr_lfc_mode && lfc_mode_pre == 1) ||
-				!frame_lock_vrr_lock_status()) {
+				!frame_lock_vrr_lock_status() || vrr_enable_cnt == 2) {
 				if (frame_sts.vrr_frame_sts == FRAMELOCK_VRRLOCK) {
 					vlock_set_sts_by_frame_lock(false);
 					frame_lock_vrr_ctrl(true, &vdata);
@@ -930,7 +989,7 @@ void vrrlock_process(struct vframe_s *vf,
 		}
 	}
 
-	if (frame_sts.vrr_lfc_mode) {
+	if (frame_sts.vrr_lfc_mode && frame_sts.vrr_check_signal) {
 		vdata.vrr_policy = 0;
 
 		if (frame_sts.vrr_frame_sts != frame_sts.vrr_frame_pre_sts ||
@@ -970,9 +1029,10 @@ void vrrlock_process(struct vframe_s *vf,
 			vdata.line_dly,
 			vrr_delay_line_pre,
 			line);
-		framelock_pr_info("spd_max:%d spd_min:%d line:%d\n",
+		framelock_pr_info("spd_max:%d spd_min:%d line:%d check_signal:%d\n",
 			freesync_vsif_data.freesync_max_fps,
-			freesync_vsif_data.freesync_min_fps, line);
+			freesync_vsif_data.freesync_min_fps, line,
+			frame_sts.vrr_check_signal);
 	}
 
 	vrr_delay_line_pre = vdata.line_dly;
@@ -998,7 +1058,6 @@ void frame_lock_process(struct vframe_s *vf,
 		   struct vpp_frame_par_s *cur_video_sts, u16 line)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	unsigned int fr = frame_lock_show_vout_framerate();
 	struct vinfo_s *vinfo = NULL;
 	unsigned int index = 0;
 
@@ -1007,6 +1066,7 @@ void frame_lock_process(struct vframe_s *vf,
 		return;
 
 	index = (vinfo->viu_mux >> 4) & 0xf;
+	vout_base = vinfo->sync_duration_num / vinfo->sync_duration_den;
 
 	if (probe_ok == 0) {
 		return;
@@ -1020,28 +1080,20 @@ void frame_lock_process(struct vframe_s *vf,
 		return;
 	}
 
-	if (!vf) {
-		vrr_skip_frame_cnt = 15;
-		vlock_set_disable();
-		if (frame_lock_vrr_lock_status())
-			frame_lock_disable_vrr(false);
-		if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG)
-			framelock_pr_info("%s vf is null, vrr:%d\n",
-				__func__, frame_lock_vrr_lock_status());
-		return;
-	}
+	vrr_check_phase_error(vf);
 
-	if ((vf->vf_vrr_param.vin_base_fps == 60 && fr >= 60200) ||
-		(vf->vf_vrr_param.vin_base_fps == 120 && fr >= 120400))
-		vrr_skip_frame_cnt = 10;
+	if (aml_vrr_state())
+		vrr_enable_cnt++;
+	else
+		vrr_enable_cnt = 0;
 
 	frame_sts.vrr_frame_lock_type =
 		frame_lock_check_lock_type(cur_video_sts, vf);
 
-	if (frame_lock_debug & VRR_POLICY_LOCK_STATUS_DEBUG_FLAG) {
-		framelock_pr_info("%s lock_type:%d vrr_skip_frame_cnt:%d\n",
-			__func__, frame_sts.vrr_frame_lock_type, vrr_skip_frame_cnt);
-	}
+	if (frame_lock_debug & VRR_POLICY_LOCK_STATUS_DEBUG_FLAG)
+		framelock_pr_info("%s lock_type:%d vrr_skip_frame_cnt:%d vrr_enable:%d\n",
+			__func__, frame_sts.vrr_frame_lock_type, vrr_skip_frame_cnt,
+			vrr_enable_cnt);
 
 	switch (frame_sts.vrr_frame_lock_type) {
 	case FRAMELOCK_VRRLOCK:
@@ -1052,7 +1104,8 @@ void frame_lock_process(struct vframe_s *vf,
 		vrrlock_process(vf, cur_video_sts, line);
 		break;
 	case FRAMELOCK_VLOCK:
-		if (frame_sts.vrr_frame_pre_sts != frame_sts.vrr_frame_lock_type)
+		if (aml_vrr_state() && ((vrr_enable_cnt >= vrr_disable_cnt &&
+			frame_sts.vrr_check_signal) || !frame_sts.vrr_check_signal))
 			frame_lock_disable_vrr(false);
 #ifdef CONFIG_AMLOGIC_LCD
 		if (frame_sts.vrr_frame_pre_sts == FRAMELOCK_NOLOCK)
@@ -1065,9 +1118,11 @@ void frame_lock_process(struct vframe_s *vf,
 #ifdef CONFIG_AMLOGIC_LCD
 			lcd_sw_vrr_enable(index, 1);
 #endif
-			frame_lock_disable_vrr(false);
 			vlock_set_sts_by_frame_lock(false);
 		}
+		if (aml_vrr_state() && ((vrr_enable_cnt >= vrr_disable_cnt &&
+			frame_sts.vrr_check_signal) || !frame_sts.vrr_check_signal))
+			frame_lock_disable_vrr(false);
 		break;
 	case FRAMELOCK_GAMEFRC:
 		if (frame_sts.vrr_frame_pre_sts != frame_sts.vrr_frame_lock_type) {
@@ -1075,9 +1130,11 @@ void frame_lock_process(struct vframe_s *vf,
 #ifdef CONFIG_AMLOGIC_LCD
 				lcd_sw_vrr_enable(index, 0);
 #endif
-			frame_lock_disable_vrr(false);
 			vlock_set_disable();
 		}
+		if (aml_vrr_state() && ((vrr_enable_cnt >= vrr_disable_cnt &&
+			frame_sts.vrr_check_signal) || !frame_sts.vrr_check_signal))
+			frame_lock_disable_vrr(false);
 		break;
 	default:
 		break;

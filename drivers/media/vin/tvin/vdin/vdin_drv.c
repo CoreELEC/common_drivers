@@ -994,6 +994,8 @@ static void vdin_handle_game_mode_chg(struct vdin_dev_s *devp)
 		vdin_game_mode_check(devp);
 
 	vdin_game_mode_transfer(devp);
+	if (game_mode_pre != devp->game_mode)
+		vdin_frame_lock_check(devp, 1);
 	/* game mode 1/2 changed, send vf strategy needs to be changed,recycle unused vf */
 	if ((game_mode_pre & VDIN_GAME_MODE_1_2) != (devp->game_mode & VDIN_GAME_MODE_1_2)) {
 		if (devp->game_mode & VDIN_GAME_MODE_2) {
@@ -2018,7 +2020,6 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 	vf_pool_init(devp->vfp, devp->vfp->size);
 	//vdin_game_mode_check(devp);
 	vdin_frame_lock_check(devp, 1);
-	vrr_check_dec(1);
 	vdin_vf_init(devp);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
@@ -2131,6 +2132,7 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 #endif
 	vdin_set_to_vpp_parm(devp);
 	vdin_register_rdma_read(devp);
+	vrr_check_dec(1);
 
 	if (devp->debug.vdin_dbg_en)
 		pr_info("****[%s]ok!****\n", __func__);
@@ -2423,6 +2425,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	}
 	devp->debug.slt_test.vf_check_result = false;
 	devp->debug.slt_test.vf_pass_cnt = 0;
+	vrr_check_dec(0);
 
 	if (devp->debug.vdin_time_en)
 		pr_info("vdin.%d stop time %ums,run time:%ums.\n",

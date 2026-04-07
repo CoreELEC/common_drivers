@@ -55,6 +55,7 @@ struct vrr_notifier_data_s {
 	unsigned int vrr_panel_min;
 	unsigned int rx_vfreq_max;
 	unsigned int rx_vfreq_min;
+	unsigned int vrr_enable_cnt;
 };
 
 /* **********************************

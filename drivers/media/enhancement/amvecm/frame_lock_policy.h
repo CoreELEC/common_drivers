@@ -43,6 +43,7 @@ struct vrr_sig_sts {
 	u32 vrr_frame_out_fps_min;
 	u32 vrr_frame_out_fps_max;
 	bool vrr_small_window;
+	u32 vrr_check_signal;
 };
 
 struct freesync_vsif_s {

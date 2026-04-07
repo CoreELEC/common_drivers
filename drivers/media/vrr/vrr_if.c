@@ -253,6 +253,7 @@ static int aml_vrr_switch_notify_callback(struct notifier_block *block,
 			vdrv_active->policy = vdata->vrr_policy;
 			vrr_dly_new = vdata->line_dly;
 			vdrv_active->qms_en = vdata->qms_en;
+			vdrv_active->vrr_enable_cnt = vdata->vrr_enable_cnt;
 		}
 		aml_vrr_func_en(1);
 		break;

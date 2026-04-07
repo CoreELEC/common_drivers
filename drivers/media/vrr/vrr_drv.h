@@ -63,6 +63,7 @@ struct vrr_data_s {
 #define VRR_STATE_POLICY      BIT(2)
 #define VRR_STATE_MODE_HW     BIT(4)
 #define VRR_STATE_MODE_SW     BIT(5)
+#define VRR_STATE_SWITCH_ON	  BIT(7)
 #define VRR_STATE_ENCL        BIT(8)
 #define VRR_STATE_ENCP        BIT(9)
 #define VRR_STATE_SWITCH_OFF  BIT(10)
@@ -98,6 +99,7 @@ struct aml_vrr_drv_s {
 	spinlock_t vrr_isr_lock; /* vsync lock */
 	char vs_isr_name[16];
 	u32 qms_en;
+	u32 vrr_enable_cnt;
 };
 
 //===========================================================================

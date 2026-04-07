@@ -65,6 +65,12 @@ u8 vrr_vpp_index;
 unsigned int line_change_type;
 unsigned int vrr_dot_line = 600;
 
+unsigned int vsp_in;
+unsigned int vsp_sel;
+unsigned int line_dly;
+unsigned int v_max;
+unsigned int v_min;
+
 #define VRR_MNT_MAX      5
 static unsigned int vrr_mnt_table[VRR_MNT_MAX] = {
 	VPU_VENCP_STAT,
@@ -95,7 +101,7 @@ static void vrr_monitor_save(void)
 
 void vrr_drv_trace(struct aml_vrr_drv_s *vdrv, char *str)
 {
-	int len, temp, seg1, seg2;
+	int len, temp, seg1, seg2, len2;
 	char *seg2_str;
 
 	if (!vdrv || !str)
@@ -105,6 +111,7 @@ void vrr_drv_trace(struct aml_vrr_drv_s *vdrv, char *str)
 
 	len = strlen(str);
 	temp = vrr_trace.pcur - vrr_trace.buf;
+	len2 = strlen(vrr_trace.pcur);
 	if ((temp + len) >= vrr_trace.size) {
 		seg1 = vrr_trace.size - temp;
 		seg2 = len - seg1;
@@ -116,8 +123,10 @@ void vrr_drv_trace(struct aml_vrr_drv_s *vdrv, char *str)
 			vrr_trace.pcur += seg2;
 		}
 	} else {
-		strncpy(vrr_trace.pcur, str, len);
-		vrr_trace.pcur += len;
+		if (len2 >= len) {
+			strncpy(vrr_trace.pcur, str, len);
+			vrr_trace.pcur += len;
+		}
 	}
 }
 
@@ -169,11 +178,80 @@ static int vrr_config_load(struct aml_vrr_drv_s *vdrv, struct platform_device *p
 	return 0;
 }
 
+static void vrr_drv_enable(struct aml_vrr_drv_s *vdrv)
+{
+	unsigned int offset = 0;
+
+	if (vdrv->state & VRR_STATE_TRACE)
+		vrr_drv_trace(vdrv, "vrr driver enable\n");
+
+	offset = vdrv->data->offset[vdrv->index];
+
+	if (vdrv->data->chip_type == VRR_CHIP_T6X) {
+		vrr_reg_write((VENC_VRR_CTRL_T6X + offset),
+				(line_dly << 8) | //cfg_vsp_dly_num number
+				(1 << 4) |  //cfg_vrr_frm_ths frame delay number
+				//cfg_vrr_vsp_en  bit[2]=hdmi_in, bit[3]=gpu_in
+				(vsp_in << 2) |
+				(1 << 1) |      //cfg_vrr_mode    0:normal      1:vrr
+				(vsp_sel << 0)); //cfg_vrr_vsp_sel 1:hdmi in  0:gpu in
+		vrr_reg_write((VENC_VRR_ADJ_LMT_T6X + offset),
+				(v_min << 16) | //cfg_vrr_min_vnum <= am_spdat[31:16]
+				(v_max << 0));  //cfg_vrr_max_vnum <= am_spdat[15:0]
+		vrr_reg_write(VENC_VRR_CTRL1_T6X, (1 << 0));
+	} else if (vdrv->data->chip_type == VRR_CHIP_T3X) {
+		vrr_reg_write((VENC_VRR_CTRL_T3X + offset),
+				(line_dly << 16) | //cfg_vsp_dly_num number
+				(0x0) |	//RFU
+				(0x1) | // vsp_rst_num
+				(1 << 4) |	//cfg_vrr_frm_ths frame delay number
+				//cfg_vrr_vsp_en  bit[2]=hdmi_in, bit[3]=gpu_in
+				(vsp_in << 2) |
+				(1 << 1) |	//cfg_vrr_mode 0:normal 1:vrr
+				(vsp_sel << 0)); //cfg_vrr_vsp_sel 1:hdmi in  0:gpu in
+		vrr_reg_write((VENC_VRR_ADJ_LMT_T3X + offset),
+				(v_min << 16) | //cfg_vrr_min_vnum <= am_spdat[31:16]
+				(v_max << 0));	//cfg_vrr_max_vnum <= am_spdat[15:0]
+	} else {
+		vrr_reg_write((VENC_VRR_CTRL + offset),
+				(line_dly << 8) | //cfg_vsp_dly_num number
+				(1 << 4) |  //cfg_vrr_frm_ths frame delay number
+				//cfg_vrr_vsp_en  bit[2]=hdmi_in, bit[3]=gpu_in
+				(vsp_in << 2) |
+				(1 << 1) |      //cfg_vrr_mode    0:normal      1:vrr
+				(vsp_sel << 0)); //cfg_vrr_vsp_sel 1:hdmi in  0:gpu in
+		vrr_reg_write((VENC_VRR_ADJ_LMT + offset),
+				(v_min << 16) | //cfg_vrr_min_vnum <= am_spdat[31:16]
+				(v_max << 0));  //cfg_vrr_max_vnum <= am_spdat[15:0]
+	}
+
+	if (vdrv->data->chip_type == VRR_CHIP_T6W)
+		vrr_reg_write((VENC_VRR_CTRL1 + offset), (1 << 0));
+
+	if (vdrv->data->chip_type == VRR_CHIP_T6X) {
+		VRRPR("VENC_VRR_CTRL = 0x%x\n",
+			vrr_reg_read(VENC_VRR_CTRL_T6X + offset));
+		VRRPR("VENC_VRR_ADJ_LMT = 0x%x\n",
+			vrr_reg_read(VENC_VRR_ADJ_LMT_T6X + offset));
+	} else if (vdrv->data->chip_type == VRR_CHIP_T3X) {
+		VRRPR("VENC_VRR_CTRL = 0x%x\n",
+			vrr_reg_read(VENC_VRR_CTRL_T3X + offset));
+		VRRPR("VENC_VRR_ADJ_LMT = 0x%x\n",
+			vrr_reg_read(VENC_VRR_ADJ_LMT_T3X + offset));
+	} else {
+		VRRPR("VENC_VRR_CTRL = 0x%x\n",
+			vrr_reg_read(VENC_VRR_CTRL + offset));
+		VRRPR("VENC_VRR_ADJ_LMT = 0x%x\n",
+			vrr_reg_read(VENC_VRR_ADJ_LMT + offset));
+	}
+
+	vdrv->state &= ~VRR_STATE_SWITCH_ON;
+
+	VRRPR("[%d]: vrr_drv_en\n", vdrv->index);
+}
+
 static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 {
-	unsigned int vsp_in, vsp_sel;
-	unsigned int line_dly, v_max, v_min;
-	unsigned int offset = 0;
 	unsigned long flags = 0;
 	char str[64];
 
@@ -184,6 +262,7 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 
 	spin_lock_irqsave(&vdrv->vrr_isr_lock, flags);
 	vdrv->state &= ~VRR_STATE_SWITCH_OFF;
+	vdrv->state |= VRR_STATE_SWITCH_ON;
 
 	if ((vdrv->state & VRR_STATE_EN) && ((vdrv->state & VRR_STATE_RESET) == 0)) {
 		if (vdrv->state & VRR_STATE_TRACE)
@@ -192,7 +271,6 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 		return;
 	}
 
-	offset = vdrv->data->offset[vdrv->index];
 	line_dly = vdrv->line_dly + crop_line;
 	if (vdrv->lfc_en) {
 		v_max = vdrv->adj_vline_max;
@@ -213,10 +291,12 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 		vsp_in = 2;  //gpu source
 		vsp_sel = 0; //gpu input
 		vdrv->state |= VRR_STATE_MODE_SW;
+		vdrv->state &= ~VRR_STATE_MODE_HW;
 	} else {
 		vsp_in = 1;  //hmdi source
 		vsp_sel = 1;  //hdmi input
 		vdrv->state |= VRR_STATE_MODE_HW;
+		vdrv->state &= ~VRR_STATE_MODE_SW;
 	}
 	if (vdrv->policy)
 		vdrv->state |= VRR_STATE_POLICY;
@@ -225,6 +305,7 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 	vdrv->state &= ~VRR_STATE_RESET;
 
 	//vrr setting
+/*
 	if (vdrv->data->chip_type == VRR_CHIP_T6X) {
 		vrr_reg_write((VENC_VRR_CTRL_T6X + offset),
 				(line_dly << 8) | //cfg_vsp_dly_num number
@@ -264,10 +345,10 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 
 	if (vdrv->data->chip_type == VRR_CHIP_T6W)
 		vrr_reg_write((VENC_VRR_CTRL1 + offset), (1 << 0));
-
+ */
 	vdrv->state |= (VRR_STATE_ENCL | VRR_STATE_EN);
 	spin_unlock_irqrestore(&vdrv->vrr_isr_lock, flags);
-
+/*
 	if (vrr_debug_print & VRR_DBG_PR_NORMAL) {
 		if (vdrv->data->chip_type == VRR_CHIP_T6X) {
 			VRRPR("VENC_VRR_CTRL = 0x%x\n",
@@ -286,8 +367,10 @@ static void vrr_lcd_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
 				vrr_reg_read(VENC_VRR_ADJ_LMT + offset));
 		}
 	}
-	VRRPR("[%d]: %s: state = 0x%x chip_type:%d\n",
-			vdrv->index, __func__, vdrv->state, vdrv->data->chip_type);
+ */
+	VRRPR("[%d]: %s: state = 0x%x chip_type:%d mode:%d\n",
+		vdrv->index, __func__, vdrv->state,
+		vdrv->data->chip_type, mode);
 }
 
 static void vrr_hdmi_enable(struct aml_vrr_drv_s *vdrv, unsigned int mode)
@@ -467,13 +550,13 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 
 	if (!vdrv) {
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s no vrr drv!", __func__);
+			VRRPR("crop_update no vrr drv!");
 		return;
 	}
 
 	if (!vdrv->vrr_dev) {
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s no vrr_dev\n", __func__);
+			VRRPR("crop_update no vrr_dev\n");
 		return;
 	}
 
@@ -484,7 +567,7 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 			line_change_type = VRR_CROP;
 
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s crop:%d pre:%d\n", __func__, crop_line, pre_line);
+			VRRPR("crop_update crop:%d pre:%d\n", crop_line, pre_line);
 		break;
 
 	case VRR_AXIS:
@@ -500,8 +583,8 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 		if (dst_line != pre_dst_line) {
 			line_change_type = VRR_AXIS;
 			if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-				VRRPR("%s y:%d w:%d h:%d ac:%d dst:%d pre:%d\n",
-					__func__, axis_y, dst_w, dst_h, vdrv->vrr_dev->v_active,
+				VRRPR("crop_update y:%d w:%d h:%d ac:%d dst:%d pre:%d\n",
+					axis_y, dst_w, dst_h, vdrv->vrr_dev->v_active,
 					dst_line, pre_dst_line);
 		}
 		break;
@@ -509,7 +592,7 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 	case VRR_DOT:
 		line_change_type = VRR_DOT;
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s doy by dot change line!\n", __func__);
+			VRRPR("crop_update doy by dot change line!\n");
 		break;
 
 	default:
@@ -518,20 +601,35 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 
 	if (!vdrv->enable) {
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s vrr not enable!", __func__);
+			VRRPR("crop_update vrr not enable!");
+		return;
+	}
+
+	if (vdrv->state & VRR_STATE_MODE_SW) {
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("crop_update vrr sw mode!");
+		pre_line = crop_line;
+		pre_dst_line = dst_line;
+		pre_axis_y = vrr_axis_y;
 		return;
 	}
 
 	if (line_change_type) {
 		vrr_line_delay_update(vdrv);
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
-			VRRPR("%s type:%d crop:%d->%d dst:%d->%d\n", __func__,
+			VRRPR("crop_update type:%d crop:%d->%d dst:%d->%d\n",
 				type, pre_line, crop_line, pre_dst_line, dst_line);
 	}
 
 	pre_line = crop_line;
 	pre_dst_line = dst_line;
 	pre_axis_y = vrr_axis_y;
+}
+
+static int vrr_timer_stop(struct aml_vrr_drv_s *vdrv)
+{
+	del_timer_sync(&vdrv->sw_timer);
+	return 0;
 }
 
 static void vrr_drv_disable(struct aml_vrr_drv_s *vdrv)
@@ -548,6 +646,13 @@ static void vrr_drv_disable(struct aml_vrr_drv_s *vdrv)
 	else
 		val = 0xf0;
 
+	if (vdrv->sw_timer_flag) {
+		vrr_timer_stop(vdrv);
+		vdrv->sw_timer_flag = 0;
+		VRRPR("[%d]: vrr_drv_dis: stop sw_timer\n",
+			vdrv->index);
+	}
+
 	if (vdrv->state & VRR_STATE_ENCL) {
 		if (vdrv->data->chip_type == VRR_CHIP_T6X)
 			vrr_reg_setb((VENC_VRR_CTRL_T6X + offset), val, 0, 8);
@@ -563,8 +668,11 @@ static void vrr_drv_disable(struct aml_vrr_drv_s *vdrv)
 	if (vdrv->vrr_dev && vdrv->vrr_dev->disable_cb)
 		vdrv->vrr_dev->disable_cb(vdrv->vrr_dev->dev_data);
 
+	if (vdrv->data->chip_type == VRR_CHIP_T6X)
+		vrr_reg_setb((VENC_VRR_CTRL_T6X + offset), 1, 30, 1);
+
 	if (vrr_debug_print & VRR_DBG_PR_ISR)
-		VRRPR("[%d]: %s\n", vdrv->index, __func__);
+		VRRPR("[%d]: vrr_drv_dis\n", vdrv->index);
 
 	vdrv->state &= ~VRR_STATE_CLR_MASK;
 }
@@ -577,6 +685,7 @@ static void vrr_work_disable(struct aml_vrr_drv_s *vdrv)
 		vrr_drv_trace(vdrv, "vrr work disable\n");
 
 	spin_lock_irqsave(&vdrv->vrr_isr_lock, flags);
+	vdrv->state &= ~VRR_STATE_SWITCH_ON;
 	vdrv->state |= VRR_STATE_SWITCH_OFF;
 	spin_unlock_irqrestore(&vdrv->vrr_isr_lock, flags);
 	if ((vdrv->state & VRR_STATE_VS_IRQ_EN) == 0)
@@ -584,6 +693,22 @@ static void vrr_work_disable(struct aml_vrr_drv_s *vdrv)
 
 	if (vrr_debug_print & VRR_DBG_PR_NORMAL)
 		VRRPR("[%d]: %s\n", vdrv->index, __func__);
+}
+
+static void vrr_trigger_sw_mode(struct aml_vrr_drv_s *vdrv)
+{
+	unsigned int offset = 0;
+
+	if (vdrv->state & VRR_STATE_TRACE)
+		vrr_drv_trace(vdrv, "vrr trigger sw mode\n");
+
+	offset = vdrv->data->offset[vdrv->index];
+
+	if (vdrv->data->chip_type == VRR_CHIP_T6X)
+		vrr_reg_setb((VENC_VRR_CTRL_T6X + offset), 1, 31, 1);
+
+	if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+		VRRPR("[%d]: vrr trigger\n", vdrv->index);
 }
 
 static void vrr_set_venc_vspin(struct aml_vrr_drv_s *vdrv)
@@ -607,12 +732,6 @@ static int vrr_timert_start(struct aml_vrr_drv_s *vdrv)
 {
 	vdrv->sw_timer.expires = jiffies + msecs_to_jiffies(vdrv->sw_timer_cnt);
 	add_timer(&vdrv->sw_timer);
-	return 0;
-}
-
-static int vrr_timer_stop(struct aml_vrr_drv_s *vdrv)
-{
-	del_timer_sync(&vdrv->sw_timer);
 	return 0;
 }
 
@@ -674,19 +793,30 @@ static int vrr_restart_check(struct aml_vrr_drv_s *vdrv)
 
 	offset = vdrv->data->offset[vdrv->index];
 
-	temp = vrr_reg_getb(VENC_VRR_CTRL + offset, 8, 16);
-	if (vdrv->enable == 0 || vrr_dly_new != temp) {
+	if (vdrv->data->chip_type == VRR_CHIP_T6X)
+		temp = vrr_reg_getb(VENC_VRR_CTRL_T6X + offset, 8, 16);
+	else if (vdrv->data->chip_type == VRR_CHIP_T3X)
+		temp = vrr_reg_getb(VENC_VRR_CTRL_T3X + offset, 16, 16);
+	else
+		temp = vrr_reg_getb(VENC_VRR_CTRL + offset, 8, 16);
+
+	if (vdrv->enable == 0) {
 		vdrv->state &= ~VRR_STATE_EN;
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("[%d]: restart_check enable:%d\n",
+				vdrv->index, vdrv->enable);
 		return 0;
 	}
 
 	mode = (vdrv->state & VRR_STATE_POLICY) ? 1 : 0;
-	if (vdrv->policy != mode) {
+	if (vdrv->policy != mode || vdrv->qms_en ||
+		vrr_dly_new != temp || vdrv->vrr_enable_cnt >= 2) {
 		vdrv->state |= VRR_STATE_RESET;
-		return 0;
-	}
-	if (vdrv->qms_en) {
-		vdrv->state |= VRR_STATE_RESET;
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("[%d]: restart_check policy:%d->%d line_chg:%d->:%d qms:%d cnt:%d\n",
+				vdrv->index, mode, vdrv->policy,
+				temp, vrr_dly_new, vdrv->qms_en,
+				vdrv->vrr_enable_cnt);
 		return 0;
 	}
 
@@ -722,7 +852,10 @@ int vrr_drv_func_en(struct aml_vrr_drv_s *vdrv, int flag)
 			vrr_hdmi_enable(vdrv, 0);
 			break;
 		case VRR_OUTPUT_ENCL:
-			vrr_lcd_enable(vdrv, 0);
+			if ((vdrv->state & VRR_STATE_EN) == 0)
+				vrr_lcd_enable(vdrv, 1);
+			else
+				vrr_lcd_enable(vdrv, 0);
 			break;
 		default:
 			break;
@@ -732,12 +865,14 @@ int vrr_drv_func_en(struct aml_vrr_drv_s *vdrv, int flag)
 			return 0;
 
 		vdrv->enable = 0;
+/*
 		if (vdrv->sw_timer_flag) {
 			vrr_timer_stop(vdrv);
 			vdrv->sw_timer_flag = 0;
 			VRRPR("[%d]: %s: stop sw_timer\n",
 			      vdrv->index, __func__);
 		}
+ */
 		vrr_work_disable(vdrv);
 	}
 
@@ -842,6 +977,11 @@ static irqreturn_t vrr_vsync_isr_handler(int irq, void *data)
 	spin_lock_irqsave(&vdrv->vrr_isr_lock, flags);
 	if (vdrv->state & VRR_STATE_SWITCH_OFF)
 		vrr_drv_disable(vdrv);
+	else if (vdrv->state & VRR_STATE_SWITCH_ON)
+		vrr_drv_enable(vdrv);
+
+	if (vdrv->enable && (vdrv->state & VRR_STATE_MODE_SW))
+		vrr_trigger_sw_mode(vdrv);
 	spin_unlock_irqrestore(&vdrv->vrr_isr_lock, flags);
 
 	return IRQ_HANDLED;
@@ -1283,7 +1423,7 @@ static long vrr_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static long vrr_compat_ioctl(struct file *file, unsigned int cmd,
 			     unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = vrr_ioctl(file, cmd, arg);
