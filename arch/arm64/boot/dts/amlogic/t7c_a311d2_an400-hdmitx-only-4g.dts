@@ -204,8 +204,8 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* 4k TV + 1080p STB android16 size 4M */
-			size = <0x0 0x400000>;
-			alignment = <0x0 0x400000>;
+			size = <0x0 0xaa00000>;
+			alignment = <0x0 0xaa00000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
@@ -382,8 +382,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmbcodec: codec {
-				prefix-names = "AMP", "AMP1";
-				sound-dai = <&tas5707_36 &tas5707_3a &acodec>;
+				sound-dai = <&acodec>;
 			};
 		};
 
@@ -400,7 +399,7 @@
 			//bitclock-master = <&tdmccodec>;
 			//frame-master = <&tdmccodec>;
 			/* suffix-name, sync with android audio hal used for */
-			suffix-name = "alsaPORT-i2s4parser";
+			suffix-name = "alsaPORT-i2s2hdmi";
 			cpu {
 				sound-dai = <&tdmc>;
 				dai-tdm-slot-tx-mask = <1 1>;
@@ -615,6 +614,11 @@
 		pinctrl-0 = <&dvb_s_ts0_pins>;
 		pinctrl-1 = <&dvb_s_ts1_pins>;
 	};
+	di_process {
+		compatible = "amlogic, di_process";
+		dev_name = "di_process";
+		status = "okay";
+	};
 
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
@@ -784,21 +788,13 @@
 };
 
 &hdmirx {
-	status = "okay";
-	pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux
-		&hdmirx_c_mux>;
-	en_4k_2_2k = <0>;
-	hpd_low_cec_off = <1>;
-	arc_port = <1>;
-	/* bit4: enable feature, bit3~0: port number */
-	disable_port = <0x0>;
-	/delete-property/ aud_compose_type;
+	status = "disabled";
 };
 
 &amlvideo2_1 {
 	/delete-property/ memory-region;
-	cma_mode = <1>;
 	/delete-property/ support_4k;
+	cma_mode = <1>;
 };
 
 &audiobus {
@@ -871,7 +867,7 @@
 		/* !!!For --TV platform-- ONLY */
 		Channel_Mask {
 			/*i2s has 4 pins, 8channel, mux output*/
-			Spdif_samesource_Channel_Mask = "i2s_2/3";
+			Spdif_samesource_Channel_Mask = "i2s_0/1";
 		};
 	};
 
@@ -916,7 +912,6 @@
 		ctrl_gain = <1>;
 		/*tdm clk tuning enable*/
 		clk_tuning_enable = <1>;
-		src-clk-freq = <491520000>;
 		status = "okay";
 	};
 
@@ -970,7 +965,7 @@
 		pinctrl-0 = <&spdifout_d>;
 		pinctrl-1 = <&spdifout_d_mute>;
 
-		samesource_sel = <4>;
+		/*samesource_sel = <4>;*/
 
 		/*spdif clk tuning enable*/
 		clk_tuning_enable = <1>;
@@ -1062,6 +1057,7 @@
 
 		/*this resample is only used for loopback_A.*/
 		capture_sample_rate = <16000>;
+		src-clk-freq = <491520000>;
 
 		status = "disabled";
 	};
@@ -1214,7 +1210,11 @@
 }; /* end of audiobus */
 
 &earc {
-	status = "okay";
+	status = "disabled";
+};
+
+&acodec {
+	dat0_ch_sel = <0>;
 };
 
 &usbphy0 {
@@ -1267,7 +1267,7 @@
 };
 
 &i2c1 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0=<&i2c1_pins1>;
 	pinctrl-1=<&i2c1_pins1_sleep>;
 	pinctrl-names="default", "sleep";
@@ -1277,7 +1277,7 @@
 		compatible = "ti,tas5707";
 		#sound-dai-cells = <0>;
 		reg = <0x1b>;
-		status = "okay";
+		status = "disabled";
 		reset_pin = <&gpio GPIOT_19 GPIO_ACTIVE_HIGH>;
 	};
 
@@ -1285,7 +1285,7 @@
 		compatible = "ti,tas5707";
 		#sound-dai-cells = <0>;
 		reg = <0x1d>;
-		status = "okay";
+		status = "disabled";
 	};
 };
 
@@ -1578,13 +1578,12 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x3f800000";
+	/* 1:sel afbcd and can not be changed; 0:sel afbcd or mif according data source */
+	osd_axi_sel = <1>;
 };
 
 &amvideom {
-	display_device_cnt = <2>;
-	vpp0_layer_count = <2>;
-	/* number of video layer display on vpp1 */
-	vpp1_layer_count = <1>;
+	display_device_cnt = <1>;
 };
 
 &amhdmitx {
@@ -1593,11 +1592,6 @@
 	enc_idx = <0>;
 	vrr_type = <2>; /* 1: GAME-VRR, 2: QMS-VRR */
 	hdmi_repeater = <1>;
-};
-
-&aocec {
-	status = "okay";
-	port_num = <1>;
 };
 
 /*if you want to use vdin just modify status to "ok"*/
@@ -1776,7 +1770,7 @@
 	tdm_d5_pins: tdm_d5_pin {
 		mux {
 			groups = "tdm_d5";
-			function = "tdmoutb_lane1";
+			function = "tdmoutb_lane0";
 		};
 	};
 
