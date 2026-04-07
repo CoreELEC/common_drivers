@@ -9793,8 +9793,7 @@ int amvecm_matrix_process(struct vframe_s *vf,
 					flags,
 					vd_path,
 					vpp_index);
-			} else if ((cur_sbtm_mode[vd_path] == sbtm_mode) &&
-				!sbtmdb_change_get(vd_path)) {
+			} else if (cur_sbtm_mode[vd_path] == sbtm_mode) {
 				pr_csc(1, "vd%d: no change hold frame when video off\n",
 					vd_path + 1);
 				return 0;
@@ -10103,12 +10102,11 @@ int amvecm_matrix_process(struct vframe_s *vf,
 				       dv_hdr_policy,
 				       cur_vd_h,
 				       cur_vd_w);
-				if (sbtmdb_change_get(vd_path) ||
-					(cur_sbtm_mode[vd_path] != sbtm_mode &&
+				if (cur_sbtm_mode[vd_path] != sbtm_mode &&
 					sbtm_mode_support_get() &&
 					(get_source_type(vd_path, vpp_index, vf) == HDRTYPE_HDR10 ||
 					(get_hdr_policy() != 1 &&
-					get_source_type(vd_path, vpp_index, vf) == HDRTYPE_SDR)))) {
+					get_source_type(vd_path, vpp_index, vf) == HDRTYPE_SDR))) {
 					send_fake_frame = true;
 					video_process_status[vd_path] = HDR_MODULE_ON;
 					pr_csc(12, "dv on and sbtm[vd%d] on, set HDR_MODULE_ON.\n",
