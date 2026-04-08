@@ -533,7 +533,7 @@ void vpu_clktree_init_dft(struct device *dev)
 
 	vpu_conf.vpu_intr = devm_clk_get(dev, "vpu_intr_gate");
 	if (IS_ERR_OR_NULL(vpu_conf.vpu_intr)) {
-		VPUERR("%s: vpu_intr_gate\n", __func__);
+		VPUPR("%s:No vpu_intr_gate\n", __func__);
 	} else {
 		ret = clk_prepare_enable(vpu_conf.vpu_intr);
 		if (ret)
