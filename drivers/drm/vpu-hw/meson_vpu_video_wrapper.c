@@ -402,6 +402,7 @@ static void video_set_state(struct meson_vpu_block *vblk,
 		vf_info.reserved[0] = 0;
 		vf_info.phy_addr[0] = mvvs->phy_addr[0];
 		vf_info.phy_addr[1] = mvvs->phy_addr[1];
+		vf_info.private_flag = mvvs->frame_flag;
 
 		if (mvvs->repeat_frame) {
 			dma_fence_get(vf_info.release_fence);
