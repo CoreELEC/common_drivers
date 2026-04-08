@@ -734,6 +734,7 @@ static int do_file_thread(struct video_queue_dev *dev)
 	bool is_vt_connect = true;
 	bool is_i = false;
 	int temp = 0;
+	bool is_game_or_qms = false;
 
 	if (!dev->provider_name) {
 		provider_name = vf_get_provider_name(dev->vf_receiver_name);
@@ -878,6 +879,7 @@ static int do_file_thread(struct video_queue_dev *dev)
 	if (dev->game_mode || vf->vf_vrr_param.qms_en || vf->vf_vrr_param.qms_plus_en) {
 		vq_print(dev->inst, P_OTHER, "game or QMS or VRR, no need sync.\n");
 		need_resync = false;
+		is_game_or_qms = true;
 		dev->need_check_delay_count = 0;
 	}
 
@@ -987,7 +989,7 @@ static int do_file_thread(struct video_queue_dev *dev)
 		dev->pcr_time,
 		pcr_margin);
 
-	if (!dev->game_mode) {
+	if (!is_game_or_qms) {
 		if (pts + pcr_margin <= dev->pcr_time) {
 			vq_print(dev->inst, P_SYNC, "need update.\n");
 			dev->pcr_time = pts;
