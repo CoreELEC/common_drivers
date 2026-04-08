@@ -26,6 +26,7 @@ enum vpu_chip_e {
 	VPU_CHIP_G12B,
 	VPU_CHIP_SM1,
 	VPU_CHIP_S5,
+	VPU_CHIP_A4,
 	VPU_CHIP_T3X,
 	VPU_CHIP_TXHD2,
 	VPU_CHIP_S1A,
@@ -197,6 +198,7 @@ extern int vpu_debug_print_flag;
 extern int vpu_reg_table[];
 extern int vpu_reg_table_new[];
 extern int vpu_reg_table_c3[];
+extern int vpu_reg_table_a4[];
 
 int vpu_chip_valid_check(void);
 
