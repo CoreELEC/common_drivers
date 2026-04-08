@@ -1208,6 +1208,14 @@
 	fbdev_sizes = <1280 720 1280 1440 32>;
 };
 
+&dummy_venc {
+	status = "disabled";
+};
+
+&drm_to_dummyl {
+	status = "disabled";
+};
+
 &amhdmitx {
 	status = "okay";
 };
