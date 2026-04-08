@@ -12230,6 +12230,7 @@ void suspend_vsr_sharpness(void)
 {
 	int i;
 	unsigned int reg;
+	unsigned int ext_num = 9;
 
 	if (chip_type_id != chip_t6d &&
 		chip_type_id != chip_s7d &&
@@ -12240,7 +12241,8 @@ void suspend_vsr_sharpness(void)
 
 	if (pq_cfg.sharpness0_en) {
 		if (chip_type_id == chip_t6x) {
-			reg_vsr_list = kcalloc(RECOVERY_REG_SR_MAX + 107,
+			ext_num = 107 + 6;
+			reg_vsr_list = kcalloc(RECOVERY_REG_SR_MAX + ext_num,
 				sizeof(struct am_reg_s), GFP_KERNEL);
 			if (!reg_vsr_list)
 				return;
@@ -12252,14 +12254,19 @@ void suspend_vsr_sharpness(void)
 			for (i = 0x100; i < 0x155; i++) //os,cc
 				reg_vsr_list[i].addr = reg + i - 0x100;
 
-			for (i = 0; i < RECOVERY_REG_SR_MAX + 107; i++) {
+			reg = offset_addr(VPP_DNLP_SATPRT_DIV_M);
+			for (i = 0x155; i < RECOVERY_REG_SR_MAX + ext_num; i++)
+				reg_vsr_list[i].addr = reg + i - 0x155;
+
+			for (i = 0; i < RECOVERY_REG_SR_MAX + ext_num; i++) {
 				reg_vsr_list[i].type = REG_TYPE_VCBUS;
 				reg_vsr_list[i].mask = 0xffffffff;
 				reg = reg_vsr_list[i].addr;
 				reg_vsr_list[i].val = READ_VPP_REG_EX(reg, 0);
 			}
 		} else {
-			reg_vsr_list = kcalloc(RECOVERY_REG_SR_MAX + 3,
+			ext_num = 9;
+			reg_vsr_list = kcalloc(RECOVERY_REG_SR_MAX + ext_num,
 				sizeof(struct am_reg_s), GFP_KERNEL);
 			if (!reg_vsr_list)
 				return;
@@ -12267,17 +12274,23 @@ void suspend_vsr_sharpness(void)
 			reg = offset_addr(VPP_SR_MISC);
 			for (i = 0; i < 5; i++)
 				reg_vsr_list[i].addr = reg + i;
+
 			reg = offset_addr(VPP_SR_DIR_EN);
 			for (i = 5; i < 237; i++)
 				reg_vsr_list[i].addr = reg + i - 5;
 
-			for (i = 0; i < RECOVERY_REG_SR_MAX + 3; i++) {
+			reg = offset_addr(VPP_DNLP_SATPRT_DIV_M);
+			for (i = 237; i < RECOVERY_REG_SR_MAX + ext_num; i++)
+				reg_vsr_list[i].addr = reg + i - 237;
+
+			for (i = 0; i < RECOVERY_REG_SR_MAX + ext_num; i++) {
 				reg_vsr_list[i].type = REG_TYPE_VCBUS;
 				reg_vsr_list[i].mask = 0xffffffff;
 				reg = reg_vsr_list[i].addr;
 				reg_vsr_list[i].val = READ_VPP_REG(reg);
 			}
 		}
+
 		pr_amvecm_dbg("amvecm: suspend vsr sharpness\n");
 	}
 }
@@ -12472,9 +12485,9 @@ void resume_vsr_sharpness(int vpp_index)
 
 	if (pq_cfg.sharpness0_en) {
 		if (chip_type_id == chip_t6x)
-			len = RECOVERY_REG_SR_MAX + 107;
+			len = RECOVERY_REG_SR_MAX + 107 + 6;
 		else
-			len = RECOVERY_REG_SR_MAX + 3;
+			len = RECOVERY_REG_SR_MAX + 3 + 6;
 
 		amregs_store.length = len;
 		if (!(memcpy(amregs_store.am_reg, reg_vsr_list,
