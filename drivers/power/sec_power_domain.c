@@ -1055,7 +1055,7 @@ static int pd_syscore_suspend(void)
 
 static void pd_syscore_resume(void)
 {
-	if (hib_enable)
+	if (hib_enable || ee_support_powerdown_restore())
 		restore_power_domain();
 }
 

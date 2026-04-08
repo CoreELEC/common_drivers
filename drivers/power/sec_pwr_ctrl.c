@@ -49,3 +49,11 @@ unsigned long pwr_ctrl_irq_set(u64 irq, u64 irq_mask, u64 irq_invert)
 }
 EXPORT_SYMBOL(pwr_ctrl_irq_set);
 
+bool ee_support_powerdown_restore(void)
+{
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(0x82000079, 0x1003, 0, 0, 0, 0, 0, 0, &res);
+
+	return res.a0 ? 0 : res.a1;
+}
