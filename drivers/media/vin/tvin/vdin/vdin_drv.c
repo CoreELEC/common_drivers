@@ -1551,7 +1551,8 @@ static void vdin_scale_and_cutwin_handle(struct vdin_dev_s *devp)
 	v_active = devp->fmt_info_p->v_active;
 
 	vinfo = get_current_vinfo();
-	if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL) {
+	if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL &&
+		devp->dtdata->hw_ver == VDIN_HW_T6X) {
 		if (vinfo->ufr_mode && devp->v_active > vinfo->height)
 			devp->prop.scaling4h = vinfo->height;
 	}
@@ -7497,17 +7498,17 @@ static int vdin_get_vinfo_notify_callback(struct notifier_block *block,
 
 	if (devp->vdin_function_sel & VDIN_SELF_STOP_START &&
 		devp->flags & VDIN_FLAG_DEC_STARTED) {
-		if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL) {
-			if (vinfo->ufr_mode && devp->v_active > vinfo->height) {
-				mutex_lock(&devp->fe_lock);
-				devp->self_stop_start = 1;
-				vdin_self_stop_dec(devp);
-				vdin_self_start_dec(devp);
-				devp->self_stop_start = 0;
-				pr_info("vout mode change need to self start_dec\n");
-				mutex_unlock(&devp->fe_lock);
-				return 0;
-			}
+		if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL &&
+			vinfo->height != devp->v_active &&
+			devp->dtdata->hw_ver == VDIN_HW_T6X) {
+			mutex_lock(&devp->fe_lock);
+			devp->self_stop_start = 1;
+			vdin_self_stop_dec(devp);
+			vdin_self_start_dec(devp);
+			devp->self_stop_start = 0;
+			pr_info("vout mode change need to self start_dec\n");
+			mutex_unlock(&devp->fe_lock);
+			return 0;
 		}
 	}
 
