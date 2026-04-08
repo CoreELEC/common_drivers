@@ -494,10 +494,15 @@ struct vpp_postblend_scope_s {
 
 void set_video_mute(u32 owner, bool on);
 void set_video_mute_vcbus(u32 owner, bool on);
+int get_video_mute(void);
+bool get_video_mute_val(u32 owner);
 void rx_mute_dual_video_rdma(int vdin0_mute, int vdin1_mute);
 void rx_mute_dual_video_vcbus(int vdin0_mute, int vdin1_mute);
+void set_videopip_mute(u32 owner, bool on);
+void set_videopip_mute_vcbus(u32 owner, bool on);
+bool get_videopip_mute_val(u32 owner);
+int get_videopip_mute(void);
 void mute_output_vcbus(void);
-int get_video_mute(void);
 void set_output_mute(bool on);
 int get_output_mute(void);
 void set_vdx_test_pattern(u32 index, bool on, u32 color);

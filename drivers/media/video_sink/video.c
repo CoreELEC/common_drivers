@@ -6709,7 +6709,7 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		}
 		break;
 	case AMSTREAM_IOC_GET_VIDEO_MUTE:
-		put_user(video_mute_on, (bool __user *)argp);
+		put_user(video_mute_on[0], (bool __user *)argp);
 		break;
 
 	case AMSTREAM_IOC_SET_VIDEOPIP_DISABLE:
@@ -8672,7 +8672,7 @@ static ssize_t video_mute_show(const struct class *cla,
 {
 	ssize_t ret = 0;
 
-	get_video_mute_info();
+	get_video_mute_info(0);
 	return ret;
 }
 
@@ -8687,9 +8687,9 @@ static ssize_t video_mute_store(const struct class *cla,
 		return -EINVAL;
 
 	if (val)
-		ret = set_video_mute_info(USER_MUTE_SET, true, false);
+		ret = set_video_mute_info(USER_MUTE_SET, 0, true, false);
 	else
-		ret = set_video_mute_info(USER_MUTE_SET, false, false);
+		ret = set_video_mute_info(USER_MUTE_SET, 0, false, false);
 	if (ret == 0) {
 		if (val == 0)
 			pr_info("VIDEO UNMUTE by %s ret = %d\n", current->comm, ret);
@@ -8701,6 +8701,42 @@ static ssize_t video_mute_store(const struct class *cla,
 	if (ret < 0)
 		return -EINVAL;
 
+	return count;
+}
+
+static ssize_t videopip_mute_show(const struct class *cla,
+				  const struct class_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+
+	get_video_mute_info(1);
+	return ret;
+}
+
+static ssize_t videopip_mute_store(const struct class *cla,
+				   const struct class_attribute *attr,
+				   const char *buf, size_t count)
+{
+	int r, val, ret;
+
+	r = kstrtoint(buf, 0, &val);
+	if (r < 0)
+		return -EINVAL;
+
+	if (val)
+		ret = set_video_mute_info(USER_MUTE_SET, 1, true, false);
+	else
+		ret = set_video_mute_info(USER_MUTE_SET, 1, false, false);
+	if (ret == 0) {
+		if (val == 0)
+			pr_info("VIDEO UNMUTE by %s ret = %d\n", current->comm, ret);
+		else if (val == 1)
+			pr_info("VIDEO MUTE by %s ret = %d\n", current->comm, ret);
+		else
+			pr_info("set 1 mute video,set 0 unmute video\n");
+	}
+	if (ret < 0)
+		return -EINVAL;
 	return count;
 }
 
@@ -14387,6 +14423,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       video_mute_show,
 	       video_mute_store),
+	__ATTR(videopip_mute,
+	       0664,
+	       videopip_mute_show,
+	       videopip_mute_store),
 	__ATTR(disable_video,
 	       0664,
 	       video_disable_show,

@@ -12497,7 +12497,7 @@ void set_video_slice_policy(struct video_layer_s *layer,
 				}
 				/* if vd1 mute internal by frc, unmute it */
 				if (get_video_mute_val(VPP_INTERNAL))
-					set_video_mute_info(VPP_INTERNAL, false, false);
+					set_video_mute_info(VPP_INTERNAL, 0, false, false);
 			} else if (video_is_meson_t3x_cpu()) {
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 				/* 4k120hz and frc_n2m_worked && aisr enable 1 slice */
@@ -12516,11 +12516,11 @@ void set_video_slice_policy(struct video_layer_s *layer,
 					layer->slice_num = slice_num;
 				}
 				if (frc_muted_frames == frc_mute_frames)
-					set_video_mute_info(VPP_INTERNAL, true, false);
+					set_video_mute_info(VPP_INTERNAL, 0, true, false);
 				if (frc_muted_frames == 0) {
 					/* move force 2 slice to vd1_clip_setting_s5() */
 					/*layer->slice_num = 2; */
-					set_video_mute_info(VPP_INTERNAL, false, false);
+					set_video_mute_info(VPP_INTERNAL, 0, false, false);
 				} else {
 					if (debug_common_flag & DEBUG_FLAG_COMMON_FRC)
 						pr_info("%s:frc_muted_frames=%d\n",
@@ -12558,11 +12558,11 @@ void set_video_slice_policy(struct video_layer_s *layer,
 				vd_layer[0].property_changed = true;
 			last_vd1s1_vd2_prebld_en = vd1s1_vd2_prebld_en;
 			if (get_video_mute_val(VPP_INTERNAL))
-				set_video_mute_info(VPP_INTERNAL, false, false);
+				set_video_mute_info(VPP_INTERNAL, 0, false, false);
 		} else {
 			slice_num = 1;
 			if (get_video_mute_val(VPP_INTERNAL))
-				set_video_mute_info(VPP_INTERNAL, false, false);
+				set_video_mute_info(VPP_INTERNAL, 0, false, false);
 		}
 slice_calc_exit:
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC

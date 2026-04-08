@@ -1032,7 +1032,7 @@ extern u32 lcevc_coef_demo;
 extern uint int_hv_phase;
 extern uint int_hv_rpt_num;
 extern bool force_vpp_blend_update;
-extern bool video_mute_on;
+extern bool video_mute_on[MAX_VD_LAYER];
 extern u32 vsync_counts;
 extern u32 smallwindow_link_enable, smallwindow_link_h;
 bool is_dovi_tv_on(void);
