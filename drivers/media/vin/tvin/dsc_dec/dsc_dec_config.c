@@ -18,6 +18,12 @@
 #define VPU_CLK_DIV_2 1
 #define FPLL_DIV3 2
 #define DSC_PIX_PLL 3
+#define V_FILTER_MAX 3
+#define CHUNK_BUF_NUM 8
+#define HALF_CHUNK_BUF_DEPTH 175
+#define BYTE_PER_FLOOR 12
+
+int v_print_en;
 
 unsigned int calculate_tmg_havon_begin(struct aml_dsc_dec_drv_s *dsc_dec_drv)
 {
@@ -1201,6 +1207,9 @@ void dsc_update_info(int vstart, int vend, int odd)
 	struct hdmi_dsc_pps_data_s *pps_data;
 	u32 tmp;
 	u32 clk;
+	u32 v;
+	static u32 pre_v;
+	static int v_stable_cnt;
 
 	dsc_dec_drv = dsc_dec_drv_get();
 	if (!dsc_dec_drv)
@@ -1210,28 +1219,25 @@ void dsc_update_info(int vstart, int vend, int odd)
 		return;
 	vcnt = R_DSC_DEC_BIT(DSC_ASIC_CTRL15,
 		DBG_DE_BEGIN_VCNT, DBG_DE_BEGIN_VCNT_WID);
-	if ((vstart - vcnt) == 1) {
-		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vstart + 1,
-				TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
-		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vend + 1,
-				TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
-	} else if (odd) {
-		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vcnt + 2,
-				TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
-		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vcnt + vend - vstart + 2,
-				TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
+	//(175*8/(m_hslice_num+1) * 12+ 0.5* m_chunk_size) / m_chunk_size
+	v = vcnt + (HALF_CHUNK_BUF_DEPTH * CHUNK_BUF_NUM /
+	(dsc_dec_drv->slice_num_m1 + 1) * BYTE_PER_FLOOR +
+	dsc_dec_drv->pps_data.chunk_size / 2) /
+	dsc_dec_drv->pps_data.chunk_size;
+	if (v_print_en)
+		DSC_DEC_PR("v = %d\n", v);
+	if (v == pre_v) {
+		v_stable_cnt++;
 	} else {
-		if ((vcnt - vstart) >= 5) {
-			W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vcnt + 2,
-				TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
-			W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vcnt + vend - vstart + 2,
-				TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
-		} else {
-			W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vstart + 1,
-					TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
-			W_DSC_DEC_BIT(DSC_ASIC_CTRL10, vend + 1,
-				TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
-		}
+		v_stable_cnt = 0;
+		pre_v = v;
+	}
+
+	if (v_stable_cnt == V_FILTER_MAX) {
+		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, v,
+			TMG_CB_VON_BLINE, TMG_CB_VON_BLINE_WID);
+		W_DSC_DEC_BIT(DSC_ASIC_CTRL10, v + pps_data->pic_height,
+			TMG_CB_VON_ELINE, TMG_CB_VON_ELINE_WID);
 	}
 
 	if (pps_data->native_420 == 1 || pps_data->native_422 == 1)

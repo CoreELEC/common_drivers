@@ -577,6 +577,9 @@ static ssize_t dsc_dec_debug_store(struct device *dev,
 		} else {
 			pr_info("calculate_dsc_dec_clk wrong format\n");
 		}
+	} else if (!strcmp(parm[0], "print_v_en")) {
+		if (parm[1] && (kstrtouint(parm[1], 10, &temp) == 0))
+			v_print_en = temp;
 	} else {
 		pr_info("unknown command\n");
 	}

@@ -1767,6 +1767,17 @@ void hdmirx_get_spd_info(struct tvin_frontend_s *fe,
 	memcpy(&prop->spd_data, &rx_pkt[port].spd_info, sizeof(struct tvin_spd_data_s));
 }
 
+bool is_dsc_update_info_needed(struct tvin_sig_property_s *prop)
+{
+	bool ret = true;
+
+	if (prop->pps_data.pic_width == 1920 &&
+		prop->pps_data.pic_height == 1080 &&
+		prop->pps_data.fps > 690)
+		ret = false;
+	return ret;
+}
+
 void __weak dsc_update_info(int vstart, int vend, int odd)
 {
 }
@@ -1846,7 +1857,7 @@ void hdmirx_get_pps_info(struct tvin_sig_property_s *prop, u8 port)//todo)
 	prop->pps_data.pixel_clk = rx[port].clk.pixel_clk;
 	prop->pps_data.hw_vic = rx[port].cur.hw_vic;
 	prop->pps_data.dsc_force_4ppc = force_dsc_4ppc;
-	if (dsc_update_en && rx[port].dsc_flag)
+	if (dsc_update_en && rx[port].dsc_flag && is_dsc_update_info_needed(prop))
 		dsc_update_info(prop->pps_data.vbegin, prop->pps_data.vend, rx[port].is_htotal_odd);
 }
 
