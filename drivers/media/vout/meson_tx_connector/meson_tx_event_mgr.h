@@ -89,7 +89,7 @@ enum meson_tx_event {
 struct meson_tx_event_mgr {
 	/*for uevent*/
 	struct kobject *kobj;
-	/* can't send uevent after enter suspend */
+	/* can't send uevent after enter deep suspend */
 	bool deep_suspend_flag;
 	/*for extcon event*/
 	struct extcon_dev *tx_extcon;

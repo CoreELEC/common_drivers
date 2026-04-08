@@ -255,7 +255,17 @@ void hdmitx_common_output_disable(struct hdmitx_common *tx_comm,
 	if (phy_dis) {
 		arg = TMDS_PHY_DISABLE;
 		hdmitx_hw_cntl(tx_hw_base, PLATFORM_PHY_OP, (void *)&arg, NULL);
-		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_DISABLE_OUTPUT);
+		/*
+		 * Using the suspend_flag as a condition: when hdmitx
+		 * enters early suspend, it calls hdmitx_common_output_disable api,
+		 * sends a uevent, and then sets suspend_flag to true.
+		 * When DRM suspend is executed, hdmitx_common_output_disable api
+		 * is called again, but since suspend_flag is now true,
+		 * the uevent is not sent again, allowing the system to enter
+		 * the suspend state normally
+		 */
+		if (!tx_comm->suspend_flag)
+			hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_DISABLE_OUTPUT);
 	}
 
 	/* disable frl/dsc/vrr */

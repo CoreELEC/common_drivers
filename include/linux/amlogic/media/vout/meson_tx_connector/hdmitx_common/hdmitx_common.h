@@ -365,7 +365,7 @@ struct hdmitx_common {
 	/* 6. video mode set related */
 	/* indicate hdmitx output ready, sw/hw mode setting done */
 	bool ready;
-	/* if hdmitx is in suspend state. */
+	/* if hdmitx is in early suspend state. */
 	bool suspend_flag;
 	/*current format para.*/
 	/* TODO: remove, it's moved to struct meson_tx_dev */

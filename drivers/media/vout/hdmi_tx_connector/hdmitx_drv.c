@@ -546,20 +546,30 @@ static void hdmitx_early_suspend(struct early_suspend *h)
 
 	need_rst_ratio = hdmitx_find_vendor_ratio(tx_comm->edid_buf);
 	mutex_lock(&tx_comm->hdmimode_mutex);
-	/*
-	 * under suspend, driver should not respond to mode setting,
-	 * as it may cause logic abnormal, most importantly,
-	 * it will enable hdcp and occupy DDC channel with high
-	 * priority, though there's protection in system control,
-	 * driver still need protection in case of old android version
-	 */
-	tx_comm->suspend_flag = true;
+
 	tx_comm->qms_log_id = 0;
 	HDMITX_INFO(SYS "Early Suspend\n");
 
 	/* step2: clear ready status/disable phy/packets/hdcp HW */
 	hdmitx_common_output_disable(tx_comm,
 		true, true, true, false);
+
+	/*
+	 * under suspend, driver should not respond to mode setting,
+	 * as it may cause logic abnormal, most importantly,
+	 * it will enable hdcp and occupy DDC channel with high
+	 * priority, though there's protection in system control,
+	 * driver still need protection in case of old android version
+	 *
+	 * Using the suspend_flag as a condition: when hdmitx
+	 * enters early suspend, it calls hdmitx_common_output_disable api,
+	 * sends a uevent, and then sets suspend_flag to true.
+	 * When DRM suspend is executed, hdmitx_common_output_disable api
+	 * is called again, but since suspend_flag is now true,
+	 * the uevent is not sent again, allowing the system to enter
+	 * the suspend state normally
+	 */
+	tx_comm->suspend_flag = true;
 	hdmitx_hw_cntl(tx_comm->tx_hw, HDCP_PARAM_RESET, NULL, NULL);
 	/* step3: SW: post uevent to system */
 	hdmitx_set_uevent(tx_comm, HDMITX_HDCPPWR_EVENT, HDMI_SUSPEND);

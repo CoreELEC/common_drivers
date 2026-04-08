@@ -248,7 +248,7 @@ struct hdmitx_common {
 	struct mutex valid_mutex;
 	/* indicate hdmitx output ready, sw/hw mode setting done */
 	bool ready;
-	/* if hdmitx is in suspend state. */
+	/* if hdmitx is in early suspend state. */
 	bool suspend_flag;
 	/*current format para.*/
 	struct hdmi_format_para fmt_para;
