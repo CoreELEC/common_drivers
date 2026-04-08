@@ -1965,8 +1965,10 @@ static void a9_osd_set_state(struct meson_vpu_block *vblk,
 	osd_color_config(vblk, reg_ops, reg, pixel_format, mvos->pixel_blend, afbc_en);
 	osd_afbc_config_linear(vblk, reg_ops, reg, vblk->index, pixel_format, afbc_en);
 
+#ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
 	if (mvos->sec_en)
 		mvsps->sec_src |= osd_secure_input_index[vblk->index];
+#endif
 
 	osd_premult_enable(vblk, reg_ops, reg, alpha_div_en);
 	if (!osd->gfcd_global_alpha_policy)

@@ -418,7 +418,7 @@ int meson_writeback_get_format(u32 *writeback_fmts)
 	pixel_format.pixel_value[2] = TVIN_PIXEL_UYVY444;
 	pixel_format.pixel_value[3] = TVIN_PIXEL_NV12;
 	pixel_format.pixel_value[4] = TVIN_PIXEL_NV21;
-	pixel_format->pixel_value[5] = TVIN_PIXEL_RGBA8888;
+	pixel_format.pixel_value[5] = TVIN_PIXEL_RGBA8888;
 #endif
 
 	for (i = 0; i < TVIN_PIXEL_FORMAT_NUM; i++)

@@ -5060,6 +5060,7 @@ lcd_phy_debug_store_err:
 	return count;
 }
 
+#if defined(CONFIG_AMLOGIC_LCD_LVDS) || defined(CONFIG_AMLOGIC_LCD_VBYONE) || defined(CONFIG_AMLOGIC_LCD_TCON)
 static ssize_t lcd_dphy_debug_store(struct device *dev, struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
@@ -5089,7 +5090,7 @@ static ssize_t lcd_dphy_debug_store(struct device *dev, struct device_attribute 
 	kfree(buf_orig);
 	return count;
 }
-
+#endif
 /***** LCD debug file operation ******/
 static struct device_attribute lcd_debug_attrs[] = {
 	__ATTR(help,        0444, lcd_debug_common_help, NULL),

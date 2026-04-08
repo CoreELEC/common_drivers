@@ -738,7 +738,9 @@ static const struct meson_vpu_data vpu_a9_data = {
 	.hdr_ops = &s7d_hdr_ops,
 	.dv_ops = &db_ops,
 	.postblend_ops = &a9_postblend_ops,
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
 	.video_ops = &video_ops,
+#endif
 	.osd_formats = &osd_formats_t6d,
 	.video_formats = &video_formats,
 	.policy = s7d_policy,

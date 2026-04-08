@@ -599,17 +599,6 @@ static void lcd_prbs_config_clk_t6x(struct aml_lcd_drv_s *pdrv, unsigned int lcd
 	LCD_DBG(pdrv, "%s ok", __func__);
 }
 
-static void lcd_clk_set_dummy_t6x(struct aml_lcd_drv_s *pdrv)
-{
-	lcd_clk_setb(CLKCTRL_VIID_CLK0_CTRL, 5, 16, 3);
-	lcd_clk_setb(CLKCTRL_VIID_CLK0_DIV, 19, 0, 8);
-	if (lcd_pxp_mode)
-		return;
-	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 28, 1);
-	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 29, 1);
-	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0, 0, 30, 1);
-}
-
 static void lcd_clk_prbs_test_t6x(struct aml_lcd_drv_s *pdrv,
 				 unsigned int ms, unsigned int mode_flag)
 {

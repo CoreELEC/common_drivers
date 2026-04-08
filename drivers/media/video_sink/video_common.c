@@ -1711,7 +1711,7 @@ ssize_t reg_dump_store(const struct class *cla,
 		} else if (cur_dev->display_module == C3_DISPLAY_MODULE) {
 			dump_mif_reg();
 			if (!video_is_meson_c3_cpu())
-				dump_pps_reg();
+				dump_pps_reg(false);
 			dump_vout_blend_reg();
 		} else {
 			if (cur_dev->display_module == T6W_DISPLAY_MODULE) {

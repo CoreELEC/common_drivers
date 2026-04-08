@@ -1999,7 +1999,6 @@ static int amfc_probe(struct platform_device *pdev)
 	 * this will cause long waiting time of AMFC upper caller compared
 	 * with IRQ disabled. So finally chose spinlock with IRQ off.
 	 */
-#ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
 	amfc->work_mode = AMFC_POLL_IRQ_OFF;
 #ifndef CONFIG_AMLOGIC_LINUX_S_OPTIMIZE
 	if (!amfc->work_mode) {

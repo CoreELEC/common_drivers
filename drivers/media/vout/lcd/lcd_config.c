@@ -1677,7 +1677,10 @@ static int lcd_panel_parse_interface(struct json_parse_s *jsp,
 	struct p2p_config_s    *p2p;
 #endif
 	union lcd_ctrl_config_u *cfg;
-	int type, lcd_bits = dev_p->dev_cfg.timing.base_timing->lcd_bits;
+#ifdef CONFIG_AMLOGIC_LCD_VBYONE
+	int lcd_bits = dev_p->dev_cfg.timing.base_timing->lcd_bits;
+#endif
+	int type;
 #if defined(CONFIG_AMLOGIC_LCD_LVDS) || defined(CONFIG_AMLOGIC_LCD_TCON)
 	const char *str;
 #endif
