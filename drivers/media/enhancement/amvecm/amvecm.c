@@ -3032,40 +3032,6 @@ static int amvecm_set_osd_contrast(int val)
 	return 0;
 }
 
-static int amvecm_set_osd_saturation(int val)
-{
-	struct vpp_mtx_info_s *mtx_p = &mtx_info;
-	u16 sat_val, sat_u, sat_v;
-
-	if (!osd_pic_en)
-		return 0;
-
-	if (chip_type_id == chip_t5m ||
-		chip_type_id == chip_t6d ||
-		chip_type_id == chip_a9) {
-		if (chip_type_id == chip_t5m)
-			mtx_p->mtx_sel = OSD1_HDR_MTX;
-		else
-			mtx_p->mtx_sel = OSD1_PQ_MTX;
-
-		vpp_mtx_get(mtx_p);
-
-		sat_val = val + 128;
-		sat_u = sat_val << 3;
-		sat_v = sat_val << 3;
-		if (sat_u > 2047)
-			sat_u = 2047;
-		if (sat_v > 2047)
-			sat_v = 2047;
-		mtx_p->mtx_coef.matrix_coef[1][1] = sat_u;
-		mtx_p->mtx_coef.matrix_coef[2][2] = sat_v;
-		vecm_latch_flag2 |= VPP_MARTIX_UPDATE;
-	} else {
-		pr_info("osd pq setting: only for t5m/t6d enable osd_pic_en\n");
-	}
-	return 0;
-}
-
 static int amvecm_set_osd_hue_sat(int hue_val, int sat_val)
 {
 	struct vpp_mtx_info_s *mtx_p = &mtx_info;
@@ -3288,58 +3254,7 @@ free_buf:
 	kfree(buf_orig);
 	return -EINVAL;
 }
-
-static ssize_t osd_saturation_show(const struct class *cla,
-					const struct class_attribute *attr,
-					char *buf)
-{
-	struct vpp_mtx_info_s *mtx_p = &mtx_info;
-	u16 sat_val, sat_u, sat_v;
-
-	if (!osd_pic_en)
-		return -EINVAL;
-
-	if (chip_type_id == chip_t5m ||
-		chip_type_id == chip_t6d ||
-		chip_type_id == chip_a9) {
-		if (chip_type_id == chip_t5m)
-			mtx_p->mtx_sel = OSD1_HDR_MTX;
-		else
-			mtx_p->mtx_sel = OSD1_PQ_MTX;
-
-		vpp_mtx_get(mtx_p);
-
-		sat_u = mtx_p->mtx_coef.matrix_coef[1][1];
-		sat_v = mtx_p->mtx_coef.matrix_coef[2][2];
-		if (sat_u == 2047)
-			sat_u = 2048;
-		if (sat_v == 2047)
-			sat_v = 2048;
-		mtx_p->mtx_coef.matrix_coef[1][1] = sat_u >> 3;
-		mtx_p->mtx_coef.matrix_coef[2][2] = sat_v >> 3;
-		sat_val = (sat_u >> 3) - 128;
-
-		return sprintf(buf, "%d\n", sat_val);
-	} else {
-		return -EINVAL;
-	}
-}
-
-static ssize_t osd_saturation_store(const struct class *cla,
-					 const struct class_attribute *attr,
-					 const char *buf, size_t count)
-{
-	size_t r;
-	int val;
-
-	r = sscanf(buf, "%d\n", &val);
-	if (val < -128 || val > 128) {
-		pr_info("osd brightness range: -128 ~ 128\n");
-		return -EINVAL;
-	}
-	amvecm_set_osd_saturation(val);
-	return count;
-}
+#endif
 
 void amvecm_saturation_hue_update(int offset_val)
 {

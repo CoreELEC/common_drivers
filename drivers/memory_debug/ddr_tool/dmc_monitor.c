@@ -1840,6 +1840,7 @@ static void __init get_dmc_ops(int chip, struct dmc_monitor *mon)
 	case DMC_TYPE_C4:
 		mon->ops = &c4_dmc_mon_ops;
 		break;
+#endif
 #ifdef CONFIG_AMLOGIC_DMC_MONITOR_A9
 	case DMC_TYPE_A9:
 		mon->ops = &a9_dmc_mon_ops;

@@ -5509,8 +5509,9 @@ static struct lcd_debug_info_s lcd_debug_info_s6 = {
 
 static struct lcd_debug_info_s lcd_debug_info_a9_0 = {
 	.reg_pinmux_table = lcd_reg_dump_pinmux_t7,
-
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	.reg_dump_lvds   = lcd_reg_print_lvds_t7,
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	.reg_dump_vbyone = lcd_reg_print_vbyone_t7,
 #endif
@@ -5525,8 +5526,9 @@ static struct lcd_debug_info_s lcd_debug_info_a9_0 = {
 
 static struct lcd_debug_info_s lcd_debug_info_a9_1 = {
 	.reg_pinmux_table = lcd_reg_dump_pinmux_t7,
-
+#ifdef CONFIG_AMLOGIC_LCD_LVDS
 	.reg_dump_lvds   = lcd_reg_print_lvds_t7,
+#endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	.reg_dump_vbyone = lcd_reg_print_vbyone_t7,
 #endif

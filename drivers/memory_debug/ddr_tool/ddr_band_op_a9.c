@@ -52,7 +52,7 @@ static void a9_dmc_port_config(struct ddr_bandwidth *db, int channel, int port)
 
 static unsigned long a9_get_dmc_freq_quick(struct ddr_bandwidth *db)
 {
-	if ((readl(db->ddr_reg1 + DDR_TYPE) & 0xff00) == 0x600) {
+	if ((readl(db->ddr_reg[0] + DDR_TYPE) & 0xff00) == 0x600) {
 		db->ddr_type = LPDDR5;
 		db->dmc_freq = (readl(db->pll_reg) & 0xffff) * 1000000;
 		db->ddr_freq = db->dmc_freq;
@@ -69,8 +69,8 @@ static void a9_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	unsigned int val;
 
 	val = db->mode << 31;
-	val |= (readl(db->ddr_reg1 + DMC_MON_CTRL0) & ~BIT(31));
-	writel(val, db->ddr_reg1 + DMC_MON_CTRL0);
+	val |= (readl(db->ddr_reg[0] + DMC_MON_CTRL0) & ~BIT(31));
+	writel(val, db->ddr_reg[0] + DMC_MON_CTRL0);
 }
 
 static void a9_dmc_bandwidth_init(struct ddr_bandwidth *db)
@@ -78,7 +78,7 @@ static void a9_dmc_bandwidth_init(struct ddr_bandwidth *db)
 	unsigned int i, val;
 
 	/* set timer trigger clock_cnt */
-	writel(db->clock_count, db->ddr_reg1 + DMC_MON_TIMER);
+	writel(db->clock_count, db->ddr_reg[0] + DMC_MON_TIMER);
 	a9_dmc_bandwidth_enable(db);
 
 	/* a9 can not set port, default be set */
@@ -88,9 +88,9 @@ static void a9_dmc_bandwidth_init(struct ddr_bandwidth *db)
 		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
 	}
 
-	val = readl(db->ddr_reg1 + DMC_MON_CTRL0);
+	val = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
 	val |= 0xffffff;
-	writel(val,  db->ddr_reg1 + DMC_MON_CTRL0);
+	writel(val,  db->ddr_reg[0] + DMC_MON_CTRL0);
 }
 
 static int a9_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
@@ -98,17 +98,17 @@ static int a9_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
 	unsigned int i, val, off;
 	int ret = -1;
 
-	val = readl(db->ddr_reg1 + DMC_MON_CTRL0);
+	val = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
 	if (val & DMC_QOS_IRQ) {
 		/*
 		 * get total bytes by each channel, each cycle 16 bytes;
 		 */
-		dg->all_grant    += readl(db->ddr_reg1 + DMC_MON_ALL_BW);
-		dg->all_grant16  += readl(db->ddr_reg1 + DMC_MON_ALL16_BW);
+		dg->all_grant    += readl(db->ddr_reg[0] + DMC_MON_ALL_BW);
+		dg->all_grant16  += readl(db->ddr_reg[0] + DMC_MON_ALL16_BW);
 		for (i = 0; i < db->channels; i++) {
 			off = i * 8 + DMC_AXI0_READ_BW;
-			dg->channel_grant[i] += readl(db->ddr_reg1 + off);
-			dg->channel_grant[i] += readl(db->ddr_reg1 + off + 4);
+			dg->channel_grant[i] += readl(db->ddr_reg[0] + off);
+			dg->channel_grant[i] += readl(db->ddr_reg[0] + off + 4);
 		}
 		ret = 0;
 	}
@@ -133,22 +133,22 @@ static int a9_dump_reg(struct ddr_bandwidth *db, char *buf)
 	int s = 0, i;
 	unsigned int r, off;
 
-	r  = readl(db->ddr_reg1 + DMC_MON_CTRL0);
+	r  = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
 	s += sprintf(buf + s, "DMC_MON_CTRL0:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_TIMER);
+	r  = readl(db->ddr_reg[0] + DMC_MON_TIMER);
 	s += sprintf(buf + s, "DMC_MON_TIMER:        %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_ALL_IDLE_CNT);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ALL_IDLE_CNT);
 	s += sprintf(buf + s, "DMC_MON_ALL_IDLE_CNT: %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_ALL_BW);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ALL_BW);
 	s += sprintf(buf + s, "DMC_MON_ALL_BW:       %08x\n", r);
-	r  = readl(db->ddr_reg1 + DMC_MON_ALL16_BW);
+	r  = readl(db->ddr_reg[0] + DMC_MON_ALL16_BW);
 	s += sprintf(buf + s, "DMC_MON_ALL16_BW:     %08x\n", r);
 
 	for (i = 0; i < db->channels; i++) {
 		off = i * 8 + DMC_AXI0_READ_BW;
-		r  = readl(db->ddr_reg1 + off);
+		r  = readl(db->ddr_reg[0] + off);
 		s += sprintf(buf + s, "DMC_AXI%d_READ_BW:          %08x\n", i, r);
-		r  = readl(db->ddr_reg1 + off + 4);
+		r  = readl(db->ddr_reg[0] + off + 4);
 		s += sprintf(buf + s, "DMC_AXI%d_WRITE_BW:          %08x\n", i, r);
 	}
 
@@ -180,10 +180,10 @@ static int __init outstanding_init(struct ddr_bandwidth *db)
 
 	for (i = 0; i < db->bus_num; i++) {
 		db->ost.regs[i].offset = ots_regs_offset[i];
-		db->ost.regs[i].def_val = readl(db->ddr_reg1 + db->ost.regs[i].offset);
+		db->ost.regs[i].def_val = readl(db->ddr_reg[0] + db->ost.regs[i].offset);
 		if (db->ost.levels.cur_level >= 0 && db->ost.levels.count) {
 			writel(db->ost.levels.value[db->ost.levels.cur_level],
-				db->ddr_reg1 + db->ost.regs[i].offset);
+				db->ddr_reg[0] + db->ost.regs[i].offset);
 		}
 	}
 
@@ -199,9 +199,9 @@ static int outstanding_set(struct ddr_bandwidth *db, int bus, int value)
 		return -1;
 
 	if (value == -1)
-		writel(db->ost.regs[bus].def_val, db->ddr_reg1 + db->ost.regs[bus].offset);
+		writel(db->ost.regs[bus].def_val, db->ddr_reg[0] + db->ost.regs[bus].offset);
 	else
-		writel(value, db->ddr_reg1 + db->ost.regs[bus].offset);
+		writel(value, db->ddr_reg[0] + db->ost.regs[bus].offset);
 
 	return 0;
 }
@@ -214,7 +214,7 @@ static int outstanding_get(struct ddr_bandwidth *db, int bus)
 	if (!db->ost.regs)
 		return -1;
 
-	return readl(db->ddr_reg1 + db->ost.regs[bus].offset);
+	return readl(db->ddr_reg[0] + db->ost.regs[bus].offset);
 }
 
 static int outstanding_handle(struct ddr_bandwidth *db, int bus,

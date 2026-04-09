@@ -7216,7 +7216,7 @@ enum hdr_process_sel hdr10p_func(enum hdr_module_sel module_sel,
 			chip_type_id != chip_t5m &&
 			chip_type_id != chip_s7d &&
 			chip_type_id != chip_s6 &&
-			chip_type_id != chip_a9))
+			chip_type_id != chip_a9)
 			return hdr_process_select;
 		break;
 	case OSD3_HDR:
