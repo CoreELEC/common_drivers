@@ -93,7 +93,6 @@
 			compatible = "amlogic, aml_rtos_memory";
 			status = "disabled";
 			reg = <0x4800000 0x200000>;
-			no-map;
 		};
 
 		dsp_fw_reserved:linux,dsp_fw {

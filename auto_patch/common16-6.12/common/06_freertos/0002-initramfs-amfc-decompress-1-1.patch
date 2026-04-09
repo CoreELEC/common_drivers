@@ -97,7 +97,7 @@ index b2f7583bb1f5..c45489988f2c 100644
 +	       ktime_us_delta(ktime_get(), start_time));
 +
 +	/*check amfc bin header.*/
-+	amfc_bin_start = 0xc000000 - 0x40;
++	amfc_bin_start = 0x1080000 - 0x40;
 +	amfc_bin_vir_start = (unsigned long)phys_to_virt(amfc_bin_start);
 +	amfc_hdr = (struct amfc_bin_hdr *)amfc_bin_vir_start;
 +

@@ -31,8 +31,8 @@
 
 	chosen {
 		stdout-path = "serial0:115200n8";
-		linux,initrd-start = <0x0 0xd000000>;
-		linux,initrd-end = <0x0   0xe000000>;
+		linux,initrd-start = <0x0 0x1A80000>;
+		linux,initrd-end = <0x0 0x2200000>;
 		bootargs = "console=ttyS0,921600  earlycon=aml_uart,0xfe07a000
 			debug initcall_debug=1 loglevel=7
 			module_blacklist=amlogic_wireless clk_ignore_unused
@@ -107,8 +107,7 @@
 			status = "okay";
 			size = <0x1F00000>;
 			alignment = <0x100000>;
-			reg = <0x4C00000 0x1F00000>;
-			no-map;
+			reg = <0x2200000 0x1F00000>;
 		};
 		autocap_reserved:linux,autocap_reserved {
 			compatible = "amlogic, aml_autocap_memory";
