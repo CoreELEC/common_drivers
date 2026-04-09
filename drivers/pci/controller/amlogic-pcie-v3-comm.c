@@ -1189,6 +1189,9 @@ static int amlogic_pcie_set_reset_gpio(struct amlogic_pcie *amlogic)
 		dev_info(dev, "pad gpio\n");
 		if (gpio_is_valid(amlogic->reset_gpio)) {
 			dev_info(dev, "GPIO pad: assert reset\n");
+			ret = gpio_direction_output(amlogic->reset_gpio, 0);
+			if (ret)
+				return ret;
 			usleep_range(90000, 110000);
 			ret = gpio_direction_input(amlogic->reset_gpio);
 			if (ret)
@@ -1198,6 +1201,7 @@ static int amlogic_pcie_set_reset_gpio(struct amlogic_pcie *amlogic)
 		dev_info(dev, "normal gpio\n");
 		if (gpio_is_valid(amlogic->reset_gpio)) {
 			dev_info(dev, "GPIO normal: assert reset\n");
+			gpio_set_value_cansleep(amlogic->reset_gpio, 0);
 			usleep_range(90000, 110000);
 			gpio_set_value_cansleep(amlogic->reset_gpio, 1);
 		}

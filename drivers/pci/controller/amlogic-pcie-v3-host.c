@@ -83,7 +83,7 @@ static bool amlogic_pcie_valid_device(struct pci_bus *bus, unsigned int devfn)
 	}
 
 	/* Only one device down on each root port */
-	if (bus->number == rc->root_bus_nr && devfn > 0)
+	if (bus->number == rc->root_bus_nr && PCI_SLOT(devfn) > 0)
 		return false;
 
 	return true;
@@ -98,6 +98,13 @@ static void __iomem *amlogic_pcie_map_bus(struct pci_bus *bus,
 
 	if (!amlogic_pcie_valid_device(bus, devfn))
 		return NULL;
+
+	if (PCIE_ECAM_ADDR(bus->number, devfn, devfn, where) >= pcie->ecam_size) {
+		WARN(1, "bus->number=%d, devfn=%d where=0x%x PCIE_ECAM_ADDR=0x%x\n",
+			bus->number, devfn, where,
+			PCIE_ECAM_ADDR(bus->number, devfn, devfn, where));
+		return NULL;
+	}
 
 	return pcie->ecam_base +
 		PCIE_ECAM_ADDR(bus->number, devfn, devfn, where);
