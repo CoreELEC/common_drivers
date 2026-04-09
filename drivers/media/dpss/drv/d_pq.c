@@ -393,8 +393,10 @@ enum vframe_signal_fmt_e dpss_sfmt(struct vframe_s *vf)
 	} else {
 		pq_format = VFRAME_SIGNAL_FMT_SDR;
 	}
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (is_amdv_frame(vf))
 		pq_format = VFRAME_SIGNAL_FMT_DOVI;
+#endif
 	dbg_i1("[%s]  %d,%d,%d,%d\n", __func__, vf->src_fmt.fmt,
 		transfer_characteristic, color_primaries, pq_format);
 
