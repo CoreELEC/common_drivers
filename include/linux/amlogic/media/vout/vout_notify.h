@@ -43,8 +43,8 @@ struct vout_op_s {
 	int (*set_vframe_rate_hint)(int policy, void *data);
 	int (*get_vframe_rate_hint)(void *data);
 	void (*set_bist)(unsigned int num, void *data);
-	void (*set_bl_brightness)(unsigned int brightness, void *data);
-	unsigned int (*get_bl_brightness)(void *data);
+	void (*set_bl_brightness)(int brightness, void *data);
+	int (*get_bl_brightness)(void *data);
 	int (*vout_suspend)(void *data);
 	int (*vout_resume)(void *data);
 	int (*vout_shutdown)(void *data);
@@ -83,8 +83,8 @@ int get_vframe_rate_hint(void);
 int set_vframe_rate_policy(int policy);
 int get_vframe_rate_policy(void);
 void set_vout_bist(unsigned int bist);
-void set_vout_bl_brightness(unsigned int brightness);
-unsigned int get_vout_bl_brightness(void);
+void set_vout_bl_brightness(int brightness);
+int get_vout_bl_brightness(void);
 int get_dummyp_timing_flip(void);
 #else
 static inline int vout_register_client(struct notifier_block *p)
@@ -152,12 +152,12 @@ static inline void set_vout_bist(unsigned int bist)
 	/*return;*/
 }
 
-static inline void set_vout_bl_brightness(unsigned int brightness)
+static inline void set_vout_bl_brightness(int brightness)
 {
 	/*return;*/
 }
 
-static inline unsigned int get_vout_bl_brightness(void)
+static inline int get_vout_bl_brightness(void)
 {
 	return 0;
 }
@@ -183,8 +183,8 @@ int get_vframe2_rate_hint(void);
 int set_vframe2_rate_policy(int policy);
 int get_vframe2_rate_policy(void);
 void set_vout2_bist(unsigned int bist);
-void set_vout2_bl_brightness(unsigned int brightness);
-unsigned int get_vout2_bl_brightness(void);
+void set_vout2_bl_brightness(int brightness);
+int get_vout2_bl_brightness(void);
 
 enum vmode_e validate_vmode2(char *name, int type, unsigned int frac);
 void set_vout2_init(enum vmode_e mode);
@@ -260,12 +260,12 @@ static inline void set_vout2_bist(unsigned int bist)
 	/*return;*/
 }
 
-static inline void set_vout2_bl_brightness(unsigned int brightness)
+static inline void set_vout2_bl_brightness(int brightness)
 {
 	/*return;*/
 }
 
-static inline unsigned int get_vout2_bl_brightness(void)
+static inline int get_vout2_bl_brightness(void)
 {
 	return 0;
 }
@@ -306,8 +306,8 @@ int get_vframe3_rate_hint(void);
 int set_vframe3_rate_policy(int policy);
 int get_vframe3_rate_policy(void);
 void set_vout3_bist(unsigned int bist);
-void set_vout3_bl_brightness(unsigned int brightness);
-unsigned int get_vout3_bl_brightness(void);
+void set_vout3_bl_brightness(int brightness);
+int get_vout3_bl_brightness(void);
 char *get_uboot_connector2_type(void);
 #else
 static inline int vout3_register_client(struct notifier_block *p)
@@ -375,12 +375,12 @@ static inline void set_vout3_bist(unsigned int bist)
 	/*return;*/
 }
 
-static inline void set_vout3_bl_brightness(unsigned int brightness)
+static inline void set_vout3_bl_brightness(int brightness)
 {
 	/*return;*/
 }
 
-static inline unsigned int get_vout3_bl_brightness(void)
+static inline int get_vout3_bl_brightness(void)
 {
 	return 0;
 }

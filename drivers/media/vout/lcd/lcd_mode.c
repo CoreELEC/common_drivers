@@ -55,7 +55,7 @@ static void lcd_mode_vout_debug_test(unsigned int num, void *data)
 	lcd_debug_test(pdrv, num);
 }
 
-static void lcd_mode_vout_set_bl_brightness(unsigned int brightness, void *data)
+static void lcd_mode_vout_set_bl_brightness(int brightness, void *data)
 {
 	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
@@ -71,13 +71,13 @@ static void lcd_mode_vout_set_bl_brightness(unsigned int brightness, void *data)
 #endif
 }
 
-static unsigned int lcd_mode_vout_get_bl_brightness(void *data)
+static int lcd_mode_vout_get_bl_brightness(void *data)
 {
 	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
 	struct aml_bl_drv_s *bdrv;
 #endif
-	unsigned int ret = 0;
+	int ret = 0;
 
 	if (!pdrv)
 		return 0;

@@ -223,7 +223,7 @@ static void dptx_vout_debug_test(unsigned int num, void *data)
 	dptx_debug_test(dptx, num);
 }
 
-static void dptx_vout_set_bl_brightness(unsigned int brightness, void *data)
+static void dptx_vout_set_bl_brightness(int brightness, void *data)
 {
 	struct dptx_drv_s *dptx = (struct dptx_drv_s *)data;
 
@@ -231,7 +231,7 @@ static void dptx_vout_set_bl_brightness(unsigned int brightness, void *data)
 		return;
 }
 
-static unsigned int dptx_vout_get_bl_brightness(void *data)
+static int dptx_vout_get_bl_brightness(void *data)
 {
 	struct dptx_drv_s *dptx = (struct dptx_drv_s *)data;
 

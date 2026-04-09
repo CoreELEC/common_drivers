@@ -386,12 +386,12 @@ static ssize_t vout3_bl_brightness_show(const struct class *class,
 			const struct class_attribute *attr,
 			char *buf)
 {
-	unsigned int brightness;
+	int brightness;
 	int ret = 0;
 
 	mutex_lock(&vout3_serve_mutex);
 	brightness = get_vout3_bl_brightness();
-	ret = sprintf(buf, "%u\n", brightness);
+	ret = sprintf(buf, "%d\n", brightness);
 	mutex_unlock(&vout3_serve_mutex);
 
 	return ret;
@@ -401,12 +401,12 @@ static ssize_t vout3_bl_brightness_store(const struct class *class,
 			const struct class_attribute *attr,
 			const char *buf, size_t count)
 {
-	unsigned int brightness;
+	int brightness;
 	int ret = 0;
 
 	mutex_lock(&vout3_serve_mutex);
 
-	ret = kstrtouint(buf, 10, &brightness);
+	ret = kstrtoint(buf, 10, &brightness);
 	if (ret) {
 		pr_info("%s: invalid data\n", __func__);
 		mutex_unlock(&vout3_serve_mutex);
@@ -670,7 +670,7 @@ static long vout3_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct vinfo_s *vinfo = NULL;
 	struct vinfo_base_s baseinfo;
 	struct venc_base_s venc_info;
-	unsigned int temp;
+	int temp;
 
 	mcd_nr = _IOC_NR(cmd);
 	if (vout_debug_print) {
@@ -722,13 +722,13 @@ static long vout3_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			VOUTPR("%s: VOUT_IOC_NR_GET_BL_BRIGHTNESS\n", __func__);
 
 		temp = get_vout3_bl_brightness();
-		if (copy_to_user(argp, &temp, sizeof(unsigned int)))
+		if (copy_to_user(argp, &temp, sizeof(int)))
 			ret = -EFAULT;
 		break;
 	case VOUT_IOC_NR_SET_BL_BRIGHTNESS:
 		if (vout_debug_print)
 			VOUTPR("%s: VOUT_IOC_NR_SET_BL_BRIGHTNESS\n", __func__);
-		if (copy_from_user(&temp, argp, sizeof(unsigned int))) {
+		if (copy_from_user(&temp, argp, sizeof(int))) {
 			ret = -EFAULT;
 			break;
 		}

@@ -567,6 +567,7 @@ ddk_module(
         "CONFIG_AMLOGIC_BACKLIGHT": {
             True: [
                 "vout/lcd/backlight/lcd_bl.c",
+                "vout/lcd/backlight/lcd_bl_debug.c",
                 "vout/lcd/backlight/lcd_bl_config.c",
                 "vout/lcd/backlight/bl_pwm.c",
             ],

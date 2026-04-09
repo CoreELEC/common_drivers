@@ -18,13 +18,11 @@
 #define BLWARN(fmt, args...)     pr_warn("bl warning: " fmt "", ## args)
 #define AML_BL_NAME		"aml-bl"
 
-#define BL_LEVEL_MAX		255
-#define BL_LEVEL_MIN		10
-#define BL_LEVEL_OFF		1
+#define BL_LEVEL_FULL_SCALE    4095
+#define BL_PWM_DUTY_FULL_SCALE 4095
 
-#define BL_LEVEL_MID		128
-#define BL_LEVEL_MID_MAPPED	BL_LEVEL_MID
-#define BL_LEVEL_DEFAULT	BL_LEVEL_MID
+#define PWM_MAP_RESCALING      0
+#define PWM_MAP_NORMALIZATION  1
 
 #define XTAL_FREQ_HZ		(24 * 1000 * 1000) /* unit: Hz */
 #define XTAL_HALF_FREQ_HZ	(24 * 1000 * 500)  /* 24M/2 in HZ */
@@ -92,8 +90,6 @@ enum bl_off_policy_e {
 };
 
 #define BL_LEVEL_MASK                        0xfff
-#define BL_POLICY_BRIGHTNESS_BYPASS_BIT      15
-#define BL_POLICY_BRIGHTNESS_BYPASS_MASK     1
 #define BL_POLICY_POWER_ON_BIT               12
 #define BL_POLICY_POWER_ON_MASK              3
 
@@ -113,29 +109,37 @@ struct pwm_data_s {
 	struct meson_pwm *meson;
 };
 
+struct pwm_curve_s {
+	unsigned int curve_duty[5]; //out
+	int curve_level[5]; //in
+	unsigned int turn_point_duty; //out
+	int turn_point_level; //in
+	int step_level;
+	unsigned int en;
+};
+
 struct bl_pwm_config_s {
 	unsigned int index;
 	unsigned int drv_index;
 	struct pwm_data_s pwm_data;
 	enum bl_pwm_method_e pwm_method;
 	enum bl_pwm_port_e pwm_port;
-	unsigned int level_max;
-	unsigned int level_min;
-	unsigned int bl_level;
+	int level_max; /* 12bit */
+	int level_min; /* 12bit */
+
 	unsigned int pwm_freq; /* pwm_vs: 1~4(vfreq), pwm: freq(unit: Hz) */
-	unsigned int pwm_duty; /* unit: % */
-	unsigned int pwm_duty_save; /* unit: %, for power on recovery */
-	unsigned int pwm_duty_max; /* unit: % */
-	unsigned int pwm_duty_min; /* unit: % */
+	unsigned int pwm_duty; /* 12bit */
+	unsigned int pwm_duty_dft; /* 12bit */
+	unsigned int pwm_duty_save; /* 12bit, for power on recovery */
+	unsigned int pwm_duty_max; /* 12bit */
+	unsigned int pwm_duty_min; /* 12bit */
+	unsigned int pwm_phase;	/*pwm_vs phase base on vsync*/
+
 	unsigned int pwm_cnt; /* internal used for pwm control */
 	unsigned int pwm_pre_div; /* internal used for pwm control */
-	unsigned int pwm_max; /* internal used for pwm control */
-	unsigned int pwm_min; /* internal used for pwm control */
-	unsigned int pwm_level; /* internal used for pwm control */
-	unsigned int pwm_mapping[8]; /* mapping curve for pwm control */
-	unsigned int pwm_phase;	/*pwm_vs phase base on vsync*/
-	unsigned int pwm_range_h; /* internal used for pwm control */
-	unsigned int pwm_range_l; /* internal used for pwm control */
+	unsigned int pwm_value; /* internal used for pwm control */
+
+	struct pwm_curve_s pwm_curve;
 };
 
 #define BL_NAME_MAX    30
@@ -143,13 +147,13 @@ struct bl_config_s {
 	unsigned int index;
 	char name[BL_NAME_MAX];
 	char pinmux_name[BL_NAME_MAX];
-	unsigned int level_uboot;
-	unsigned int level_default;
-	unsigned int level_min;
-	unsigned int level_max;
-	unsigned int level_mid;
-	unsigned int level_mid_mapping;
+	int level_min;
+	int level_max;
 	unsigned int ldim_flag;
+
+	int level_in_scale;
+	unsigned int pwm_duty_in_scale;
+	unsigned int pwm_mapping_method;
 
 	enum bl_ctrl_method_e method;
 	unsigned int en_gpio;
@@ -157,8 +161,6 @@ struct bl_config_s {
 	unsigned int en_gpio_off;
 	unsigned short power_on_delay;
 	unsigned short power_off_delay;
-	unsigned int dim_max;
-	unsigned int dim_min;
 	unsigned int en_sequence_reverse;
 
 	struct bl_pwm_config_s *bl_pwm;
@@ -212,13 +214,11 @@ struct aml_bl_drv_s {
 	unsigned int retry_cnt;
 	unsigned char config_load;
 	unsigned int state;
-	unsigned int level;
-	unsigned int level_brightness;
-	unsigned int level_gd;
-	unsigned int level_init_on;
+	int level;
+	int level_brightness;
+	int level_gd;
 
 	unsigned char probe_done;
-	unsigned char brightness_bypass;
 	unsigned char step_on_flag;
 	unsigned char on_request; /* for lcd power sequence */
 	unsigned char off_policy_cnt; /* bl_off_policy support */
@@ -241,6 +241,7 @@ struct aml_bl_drv_s {
 	int res_ldim_pwm_vs_irq;
 	int res_vsync_irq[3];
 	/*struct resource *res_ldim_rdma_irq;*/
+	spinlock_t isr_lock;
 
 	struct pinctrl *pin;
 	unsigned int pinmux_flag;
@@ -257,11 +258,10 @@ struct bl_pwm_init_config_s {
 struct aml_bl_drv_s *aml_bl_get_driver(int index);
 int aml_bl_index_add(int drv_index, int conf_index);
 
-int aml_bl_set_level_brightness(struct aml_bl_drv_s *bdrv, unsigned int brightness);
-unsigned int aml_bl_get_level_brightness(struct aml_bl_drv_s *bdrv);
+int aml_bl_set_level_brightness(struct aml_bl_drv_s *bdrv, int brightness);
+int aml_bl_get_level_brightness(struct aml_bl_drv_s *bdrv);
 
 void bl_pwm_config_init(struct bl_pwm_config_s *bl_pwm);
-enum bl_pwm_port_e bl_pwm_str_to_pwm(const char *str);
 void bl_pwm_ctrl(struct bl_pwm_config_s *bl_pwm, int status);
 struct bl_pwm_init_config_s *get_pwm_init_cfg(void);
 void bl_pwm_port_switch(unsigned int state);

@@ -217,8 +217,7 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		LDIMPR("ldim_pwm_port: %s(0x%x)\n", str, bl_pwm->pwm_port);
 	}
 	if (bl_pwm->pwm_port < BL_PWM_MAX) {
-		ret = of_property_read_u32_array(child, "ldim_pwm_attr",
-						 temp, 3);
+		ret = of_property_read_u32_array(child, "ldim_pwm_attr", temp, 3);
 		if (ret) {
 			LDIMERR("failed to get ldim_pwm_attr\n");
 			bl_pwm->pwm_method = BL_PWM_POSITIVE;
@@ -226,7 +225,7 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 				bl_pwm->pwm_freq = 1;
 			else
 				bl_pwm->pwm_freq = 60;
-			bl_pwm->pwm_duty = 50;
+			bl_pwm->pwm_duty_dft = 50;
 			bl_pwm->pwm_phase = 0;
 		} else {
 			bl_pwm->pwm_method = temp[0];
@@ -237,17 +236,17 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 				bl_pwm->pwm_freq = temp[1];
 				bl_pwm->pwm_phase = 0;
 			}
-			bl_pwm->pwm_duty = temp[2];
+			bl_pwm->pwm_duty_dft = temp[2];
 		}
-		LDIMPR("get ldim_pwm pol = %d, freq = %d, phase = %d, dft duty = %d%%\n",
+		bl_pwm->pwm_duty = bl_pwm->pwm_duty_dft;
+		bl_pwm->pwm_duty_save = bl_pwm->pwm_duty_dft;
+		LDIMPR("get ldim_pwm pol=%d, freq=%d, phase=%d, duty=%d\n",
 		       bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_phase, bl_pwm->pwm_duty);
 
 		bl_pwm_config_init(bl_pwm);
 
-		if (bl_pwm->pwm_port < BL_PWM_VS) {
-			bl_pwm_channel_register(dev_drv->dev,
-						pwm_phandle, bl_pwm);
-		}
+		if (bl_pwm->pwm_port < BL_PWM_VS)
+			bl_pwm_channel_register(dev_drv->dev, pwm_phandle, bl_pwm);
 	}
 
 	/* analog pwm config */
@@ -260,8 +259,7 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 		bl_pwm->pwm_port = bl_pwm_str_to_num(str);
 	if (bl_pwm->pwm_port < BL_PWM_VS) {
 		LDIMPR("find analog_pwm_port: %s(%u)\n", str, bl_pwm->pwm_port);
-		ret = of_property_read_u32_array(child, "analog_pwm_attr",
-						 temp, 5);
+		ret = of_property_read_u32_array(child, "analog_pwm_attr", temp, 5);
 		if (ret) {
 			LDIMERR("failed to get analog_pwm_attr\n");
 		} else {
@@ -275,13 +273,13 @@ static int ldim_dev_get_config_from_dts(struct ldim_dev_driver_s *dev_drv,
 			}
 			bl_pwm->pwm_duty_max = temp[2];
 			bl_pwm->pwm_duty_min = temp[3];
-			bl_pwm->pwm_duty = temp[4];
+			bl_pwm->pwm_duty_dft = temp[4];
 		}
-		LDIMPR("get analog_pwm pol = %d, freq = %d, phase = %d\n",
-			bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_phase);
-		LDIMPR("duty max = %d, min = %d, default = %d\n",
-			bl_pwm->pwm_duty_max,
-			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty);
+		bl_pwm->pwm_duty = bl_pwm->pwm_duty_dft;
+		bl_pwm->pwm_duty_save = bl_pwm->pwm_duty_dft;
+		LDIMPR("get analog_pwm pol=%d, freq=%d, phase=%d, duty=%d [%d~%d]\n",
+			bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_phase,
+			bl_pwm->pwm_duty, bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 
 		bl_pwm_config_init(bl_pwm);
 		bl_pwm_channel_register(dev_drv->dev, pwm_phandle, bl_pwm);
@@ -694,27 +692,16 @@ static int ldim_dev_get_config_from_json(struct ldim_dev_driver_s *dev_drv, phan
 				bl_pwm->pwm_duty_min = 0;
 				bl_pwm->pwm_duty_max = 4095;
 			}
-			bl_pwm->pwm_duty = json_get_obj_u32(jsp, child2, "duty",
+			bl_pwm->pwm_duty_dft = json_get_obj_u32(jsp, child2, "duty",
 							    bl_pwm->pwm_duty_min);
-			child3 = json_get_object_child(jsp, child2, "pwm_range");
-			if (child3) {
-				bl_pwm->pwm_range_l = json_get_arr_u32(jsp, child3,
-					0, bl_pwm->pwm_duty_min);
-				bl_pwm->pwm_range_h = json_get_arr_u32(jsp, child3,
-					1, bl_pwm->pwm_duty_max);
-			} else {
-				bl_pwm->pwm_range_l = bl_pwm->pwm_duty_min;
-				bl_pwm->pwm_range_h = bl_pwm->pwm_duty_max;
-			}
-
+			bl_pwm->pwm_duty = bl_pwm->pwm_duty_dft;
+			bl_pwm->pwm_duty_save = bl_pwm->pwm_duty_dft;
 			bl_pwm_config_init(bl_pwm);
 			if (bl_pwm->pwm_port < BL_PWM_VS)
 				bl_pwm_channel_register(dev_drv->dev, pwm_phandle, bl_pwm);
-			LDIMPR("get pwm[%d] pol = %d, freq = %d, phase = %d\n"
-				"duty:%d(%d ~ %d), pwm_range:[%d: %d]\n",
+			LDIMPR("get pwm[%d] pol=%d, freq=%d, phase=%d, duty=%d [%d~%d]\n",
 				i, bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_phase,
-				bl_pwm->pwm_duty, bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max,
-				bl_pwm->pwm_range_l, bl_pwm->pwm_range_h);
+				bl_pwm->pwm_duty, bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 		}
 	}
 
@@ -1067,13 +1054,11 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 			bl_pwm->pwm_freq = lcd_ini_get_val(inip, psec, "pwm_vs_freq", 0);
 			bl_pwm->pwm_phase = 0;
 		}
-		bl_pwm->pwm_duty = lcd_ini_get_val(inip, psec, "pwm_vs_duty", 0);
 		bl_pwm->pwm_duty_max = lcd_ini_get_val(inip, psec, "pwm_vs_attr_0", 4095);
 		bl_pwm->pwm_duty_min = lcd_ini_get_val(inip, psec, "pwm_vs_attr_1", 0);
-		bl_pwm->pwm_range_h = lcd_ini_get_val(inip, psec, "pwm_vs_range_h",
-				bl_pwm->pwm_duty_max);
-		bl_pwm->pwm_range_l = lcd_ini_get_val(inip, psec, "pwm_vs_range_l",
-				bl_pwm->pwm_duty_min);
+		bl_pwm->pwm_duty_dft = lcd_ini_get_val(inip, psec, "pwm_vs_duty", 0);
+		bl_pwm->pwm_duty = bl_pwm->pwm_duty_dft;
+		bl_pwm->pwm_duty_save = bl_pwm->pwm_duty_dft;
 
 		if (bl_pwm->pwm_port == BL_PWM_VS) {
 			if (bl_pwm->pwm_freq > 4) {
@@ -1084,7 +1069,7 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 			if (bl_pwm->pwm_freq > XTAL_HALF_FREQ_HZ)
 				bl_pwm->pwm_freq = XTAL_HALF_FREQ_HZ;
 		}
-		LDIMPR("get ldim_pwm pol: %d, freq: %d, dft duty: %d%%, phase: %d\n",
+		LDIMPR("get ldim_pwm pol:%d, freq:%d, duty:%d, phase:%d\n",
 		       bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_duty, bl_pwm->pwm_phase);
 		bl_pwm_config_init(bl_pwm);
 		if (bl_pwm->pwm_port < BL_PWM_VS)
@@ -1106,21 +1091,17 @@ static int ldim_dev_get_config_from_ini(struct ldim_dev_driver_s *dev_drv, phand
 			bl_pwm->pwm_freq = lcd_ini_get_val(inip, psec, "pwm_adj_freq", 0);
 			bl_pwm->pwm_phase = 0;
 		}
-		bl_pwm->pwm_duty = lcd_ini_get_val(inip, psec, "pwm_adj_duty", 0);
 		bl_pwm->pwm_duty_max = lcd_ini_get_val(inip, psec, "pwm_adj_attr_0", 0);
 		bl_pwm->pwm_duty_min = lcd_ini_get_val(inip, psec, "pwm_adj_attr_1", 0);
-		bl_pwm->pwm_range_h = lcd_ini_get_val(inip, psec, "pwm_range_h",
-				bl_pwm->pwm_duty_max);
-		bl_pwm->pwm_range_l = lcd_ini_get_val(inip, psec, "pwm_range_l",
-				bl_pwm->pwm_duty_min);
+		bl_pwm->pwm_duty_dft = lcd_ini_get_val(inip, psec, "pwm_adj_duty", 0);
+		bl_pwm->pwm_duty = bl_pwm->pwm_duty_dft;
+		bl_pwm->pwm_duty_save = bl_pwm->pwm_duty_dft;
 
 		if (bl_pwm->pwm_freq > XTAL_HALF_FREQ_HZ)
 			bl_pwm->pwm_freq = XTAL_HALF_FREQ_HZ;
-		LDIMPR("get analog_pwm pol = %d, freq = %d\n",
-			bl_pwm->pwm_method, bl_pwm->pwm_freq);
-		LDIMPR("duty max = %d%%, min = %d%%, default = %d%%, phase=%d\n",
-			bl_pwm->pwm_duty_max,
-			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty, bl_pwm->pwm_phase);
+		LDIMPR("get analog_pwm pol=%d, freq=%d, phase=%d, duty=%d [%d~%d]\n",
+			bl_pwm->pwm_method, bl_pwm->pwm_freq, bl_pwm->pwm_phase,
+			bl_pwm->pwm_duty, bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 		bl_pwm_config_init(bl_pwm);
 		bl_pwm_channel_register(dev_drv->dev, pwm_phandle, bl_pwm);
 	}

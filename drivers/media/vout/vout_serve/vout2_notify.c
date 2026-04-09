@@ -221,7 +221,7 @@ EXPORT_SYMBOL(set_vout2_bist);
 /*
  *interface export to client who want to update backlight brightness.
  */
-unsigned int get_vout2_bl_brightness(void)
+int get_vout2_bl_brightness(void)
 {
 	return vout_func_get_bl_brightness(2);
 }
@@ -230,7 +230,7 @@ EXPORT_SYMBOL(get_vout2_bl_brightness);
 /*
  *interface export to client who want to update backlight brightness.
  */
-void set_vout2_bl_brightness(unsigned int brightness)
+void set_vout2_bl_brightness(int brightness)
 {
 	vout_func_set_bl_brightness(2, brightness);
 }

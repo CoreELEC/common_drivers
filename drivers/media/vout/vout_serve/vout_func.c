@@ -650,7 +650,7 @@ void vout_func_set_test_bist(int index, unsigned int bist)
 }
 EXPORT_SYMBOL(vout_func_set_test_bist);
 
-void vout_func_set_bl_brightness(int index, unsigned int brightness)
+void vout_func_set_bl_brightness(int index, int brightness)
 {
 	struct vout_server_s *p_server = NULL;
 	void *data;
@@ -672,11 +672,11 @@ EXPORT_SYMBOL(vout_func_set_bl_brightness);
 /*
  *interface export to client who want to update backlight brightness.
  */
-unsigned int vout_func_get_bl_brightness(int index)
+int vout_func_get_bl_brightness(int index)
 {
 	struct vout_server_s *p_server = NULL;
 	void *data;
-	unsigned int brightness = 0;
+	int brightness = 0;
 
 	mutex_lock(&vout_mutex);
 

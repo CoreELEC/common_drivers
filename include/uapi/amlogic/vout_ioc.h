@@ -92,9 +92,9 @@ struct optical_base_s {
 #define VOUT_IOC_CMD_GET_VENC_INFO   \
 		_IOR(VOUT_IOC_TYPE, VOUT_IOC_NR_GET_VENC_INFO, struct venc_base_s)
 #define VOUT_IOC_CMD_GET_BL_BRIGHTNESS   \
-		_IOR(VOUT_IOC_TYPE, VOUT_IOC_NR_GET_BL_BRIGHTNESS, unsigned int)
+		_IOR(VOUT_IOC_TYPE, VOUT_IOC_NR_GET_BL_BRIGHTNESS, int)
 #define VOUT_IOC_CMD_SET_BL_BRIGHTNESS   \
-		_IOW(VOUT_IOC_TYPE, VOUT_IOC_NR_SET_BL_BRIGHTNESS, unsigned int)
+		_IOW(VOUT_IOC_TYPE, VOUT_IOC_NR_SET_BL_BRIGHTNESS, int)
 /* ******************************** */
 
 #endif

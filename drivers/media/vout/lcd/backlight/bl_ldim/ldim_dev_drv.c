@@ -93,12 +93,14 @@ struct ldim_dev_driver_s ldim_dev_drv = {
 	.boundary_y = NULL,
 
 	.ldim_pwm_config = {
+		.drv_index = 0,
 		.pwm_method = BL_PWM_POSITIVE,
 		.pwm_port = BL_PWM_MAX,
 		.pwm_duty_max = 4095,
 		.pwm_duty_min = 0,
 	},
 	.analog_pwm_config = {
+		.drv_index = 0,
 		.pwm_method = BL_PWM_POSITIVE,
 		.pwm_port = BL_PWM_MAX,
 		.pwm_freq = 1000,
@@ -313,27 +315,24 @@ unsigned int ldim_gpio_get(struct ldim_dev_driver_s *dev_drv, int index)
 
 void ldim_set_duty_pwm(struct bl_pwm_config_s *bl_pwm)
 {
-	unsigned long long temp;
-
 	if (bl_pwm->pwm_port >= BL_PWM_MAX)
 		return;
 	if (bl_pwm->pwm_duty_max == 0)
 		return;
 
-	if (bl_pwm->pwm_duty > bl_pwm->pwm_range_h)
-		bl_pwm->pwm_duty = bl_pwm->pwm_range_h;
-	else if (bl_pwm->pwm_duty < bl_pwm->pwm_range_l)
-		bl_pwm->pwm_duty = bl_pwm->pwm_range_l;
-
-	temp = bl_pwm->pwm_cnt;
-	bl_pwm->pwm_level = bl_do_div(((temp * bl_pwm->pwm_duty) +
-		((bl_pwm->pwm_duty_max + 1) >> 1)), bl_pwm->pwm_duty_max);
+	if (bl_pwm->pwm_duty < bl_pwm->pwm_duty_min ||
+	    bl_pwm->pwm_duty > bl_pwm->pwm_duty_max) {
+		LDIMERR("set_duty_pwm: pwm_port %d: duty %d out of range [%d~%d]\n",
+			bl_pwm->pwm_port, bl_pwm->pwm_duty,
+			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
+		bl_pwm->pwm_duty = bl_pwm->pwm_duty_save;
+		return;
+	}
 
 	if (ldim_debug_print & LDIM_DBG_PR_PWM) {
-		LDIMPR("pwm port %d: duty= %d, pwm_range=[%d:%d]\n"
-			"pwm_max=%d, pwm_min=%d, pwm_level=%d\n",
-		    bl_pwm->pwm_port, bl_pwm->pwm_duty, bl_pwm->pwm_range_l, bl_pwm->pwm_range_h,
-		    bl_pwm->pwm_max, bl_pwm->pwm_min, bl_pwm->pwm_level);
+		LDIMPR("set_duty_pwm: port_port: %d: duty=%d [%d~%d]\n",
+			bl_pwm->pwm_port, bl_pwm->pwm_duty,
+			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 	}
 
 	bl_pwm_ctrl(bl_pwm, 1);
@@ -686,27 +685,28 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 		pr_info("ldim_pwm_port:   %d\n"
 			"ldim_pwm_pol:    %d\n"
 			"ldim_pwm_freq:   %d\n"
-			"ldim_pwm_phase:  %d\n"
+			"ldim_pwm_duty:   %d\n"
 			"ldim_pwm_cnt:    %d\n"
-			"ldim_pwm_level:  %d\n"
-			"ldim_pwm_duty:   %d / %d\n",
+			"ldim_pwm_value:  %d\n",
 			bl_pwm->pwm_port, bl_pwm->pwm_method,
-			bl_pwm->pwm_freq, bl_pwm->pwm_phase, bl_pwm->pwm_cnt,
-			bl_pwm->pwm_level,
-			bl_pwm->pwm_duty, bl_pwm->pwm_duty_max);
+			bl_pwm->pwm_freq, bl_pwm->pwm_duty,
+			bl_pwm->pwm_cnt, bl_pwm->pwm_value);
 		switch (bl_pwm->pwm_port) {
-		case BL_PWM_A:
-		case BL_PWM_B:
-		case BL_PWM_C:
-		case BL_PWM_D:
-		case BL_PWM_E:
-		case BL_PWM_F:
+		case BL_PWM_VS:
+			pr_info("ldim_pwm_phase:  %d\n", bl_pwm->pwm_phase);
+			str = kcalloc(1024, sizeof(char), GFP_KERNEL);
+			if (str) {
+				bl_pwm_vs_reg_dump(str, 0, 1024);
+				pr_info("%s\n\n", str);
+				kfree(str);
+			}
+			break;
+		default:
 			if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
 				pr_info("ldim_pwm invalid\n");
 				break;
 			}
-			pr_info("ldim_pwm_pointer:    0x%p\n",
-				bl_pwm->pwm_data.pwm);
+			pr_info("ldim_pwm_pointer:    0x%p\n", bl_pwm->pwm_data.pwm);
 			pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 			pr_info("ldim_pwm state:\n"
 				"  period:        %lld\n"
@@ -716,48 +716,36 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 				pstate.period, pstate.duty_cycle,
 				pstate.polarity, pstate.enabled);
 			break;
-		case BL_PWM_VS:
-			pr_info("ldim_pwm_reg0:   0x%08x\n"
-				"ldim_pwm_reg1:   0x%08x\n"
-				"ldim_pwm_reg2:   0x%08x\n"
-				"ldim_pwm_reg3:   0x%08x\n",
-				lcd_vcbus_read(VPU_VPU_PWM_V0),
-				lcd_vcbus_read(VPU_VPU_PWM_V1),
-				lcd_vcbus_read(VPU_VPU_PWM_V2),
-				lcd_vcbus_read(VPU_VPU_PWM_V3));
-			break;
-		default:
-			break;
 		}
 	}
 	bl_pwm = &ldim_drv->dev_drv->analog_pwm_config;
 	if (bl_pwm->pwm_port < BL_PWM_MAX) {
-		pr_info("\nanalog_pwm_port:     %d\n"
-			"analog_pwm_pol:      %d\n"
-			"analog_pwm_freq:     %d\n"
-			"analog_pwm_phase:    %d\n"
-			"analog_pwm_cnt:      %d\n"
-			"analog_pwm_level:    %d\n"
-			"analog_pwm_duty:     %d\n"
-			"analog_pwm_duty_max: %d\n"
-			"analog_pwm_duty_min: %d\n",
+		pr_info("\nanalog_pwm_port:   %d\n"
+			"analog_pwm_pol:    %d\n"
+			"analog_pwm_freq:   %d\n"
+			"analog_pwm_duty:   %d [%d~%d]\n"
+			"analog_pwm_cnt:    %d\n"
+			"analog_pwm_value:  %d\n",
 			bl_pwm->pwm_port, bl_pwm->pwm_method,
-			bl_pwm->pwm_freq, bl_pwm->pwm_phase, bl_pwm->pwm_cnt,
-			bl_pwm->pwm_level, bl_pwm->pwm_duty,
-			bl_pwm->pwm_duty_max, bl_pwm->pwm_duty_min);
+			bl_pwm->pwm_freq, bl_pwm->pwm_duty,
+			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max,
+			bl_pwm->pwm_cnt, bl_pwm->pwm_value);
 		switch (bl_pwm->pwm_port) {
-		case BL_PWM_A:
-		case BL_PWM_B:
-		case BL_PWM_C:
-		case BL_PWM_D:
-		case BL_PWM_E:
-		case BL_PWM_F:
+		case BL_PWM_VS:
+			pr_info("analog_pwm_phase:  %d\n", bl_pwm->pwm_phase);
+			str = kcalloc(1024, sizeof(char), GFP_KERNEL);
+			if (str) {
+				bl_pwm_vs_reg_dump(str, 0, 1024);
+				pr_info("%s\n\n", str);
+				kfree(str);
+			}
+			break;
+		default:
 			if (IS_ERR_OR_NULL(bl_pwm->pwm_data.pwm)) {
 				pr_info("analog_pwm invalid\n");
 				break;
 			}
-			pr_info("analog_pwm_pointer:  0x%p\n",
-				bl_pwm->pwm_data.pwm);
+			pr_info("analog_pwm_pointer:  0x%p\n", bl_pwm->pwm_data.pwm);
 			pwm_get_state(bl_pwm->pwm_data.pwm, &pstate);
 			pr_info("analog_pwm state:\n"
 				"  period:     %lld\n"
@@ -766,8 +754,6 @@ static void ldim_dev_config_print(struct aml_ldim_driver_s *ldim_drv)
 				"  enabled:    %d\n",
 				pstate.period, pstate.duty_cycle,
 				pstate.polarity, pstate.enabled);
-			break;
-		default:
 			break;
 		}
 	}
@@ -812,11 +798,9 @@ static ssize_t ldim_dev_pwm_ldim_show(const struct class *class,
 	bl_pwm = &ldim_dev_drv.ldim_pwm_config;
 	if (bl_pwm->pwm_port < BL_PWM_MAX) {
 		len += sprintf(buf + len,
-			"ldim_pwm: freq=%d, phase=%d, pol=%d, duty_max=%d, duty_min=%d,",
+			"ldim_pwm: freq=%d, phase=%d, pol=%d, duty=%d [%d~%d]\n",
 			bl_pwm->pwm_freq, bl_pwm->pwm_phase, bl_pwm->pwm_method,
-			bl_pwm->pwm_duty_max, bl_pwm->pwm_duty_min);
-		len += sprintf(buf + len, " duty_value=%d, duty_range={%d, %d]\n",
-			       bl_pwm->pwm_duty, bl_pwm->pwm_range_l, bl_pwm->pwm_range_h);
+			bl_pwm->pwm_duty, bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 	}
 
 	return len;
@@ -881,30 +865,6 @@ static void ldim_dev_pwm_debug(struct bl_pwm_config_s *bl_pwm, const char *buf, 
 			} else {
 				LDIMERR("invalid parameters\n");
 			}
-		} else if (buf[10] == 'h') { /* pwm_range_h */
-			ret = sscanf(buf, "pwm_range_h %d", &val);
-			if (ret == 1) {
-				bl_pwm->pwm_range_h = val;
-				ldim_set_duty_pwm(bl_pwm);
-				if (ldim_debug_print) {
-					LDIMPR("set ldim_pwm (port 0x%x): pwm_range_h = %d\n",
-						bl_pwm->pwm_port, bl_pwm->pwm_range_h);
-				}
-			} else {
-				LDIMERR("invalid parameters\n");
-			}
-		} else if (buf[10] == 'l') { /* pwm_range_l */
-			ret = sscanf(buf, "pwm_range_l %d", &val);
-			if (ret == 1) {
-				bl_pwm->pwm_range_l = val;
-				ldim_set_duty_pwm(bl_pwm);
-				if (ldim_debug_print) {
-					LDIMPR("set ldim_pwm (port 0x%x): pwm_range_l = %d\n",
-						bl_pwm->pwm_port, bl_pwm->pwm_range_l);
-				}
-			} else {
-				LDIMERR("invalid parameters\n");
-			}
 		}
 		break;
 	case 'm':
@@ -918,8 +878,7 @@ static void ldim_dev_pwm_debug(struct bl_pwm_config_s *bl_pwm, const char *buf, 
 				ldim_set_duty_pwm(bl_pwm);
 				if (ldim_debug_print) {
 					LDIMPR("set ldim_pwm (port 0x%x): duty_max = %d\n",
-				 bl_pwm->pwm_port,
-				 bl_pwm->pwm_duty_max);
+						bl_pwm->pwm_port, bl_pwm->pwm_duty_max);
 				}
 			} else {
 				LDIMERR("invalid parameters\n");
@@ -934,8 +893,7 @@ static void ldim_dev_pwm_debug(struct bl_pwm_config_s *bl_pwm, const char *buf, 
 				ldim_set_duty_pwm(bl_pwm);
 				if (ldim_debug_print) {
 					LDIMPR("set ldim_pwm (port 0x%x): duty_min = %d\n",
-				 bl_pwm->pwm_port,
-				 bl_pwm->pwm_duty_min);
+						bl_pwm->pwm_port, bl_pwm->pwm_duty_min);
 				}
 			} else {
 				LDIMERR("invalid parameters\n");
@@ -970,12 +928,11 @@ static ssize_t ldim_dev_pwm_analog_show(const struct class *class,
 	ssize_t len = 0;
 
 	bl_pwm = &ldim_dev_drv.analog_pwm_config;
-	if (bl_pwm->pwm_port < BL_PWM_VS) {
+	if (bl_pwm->pwm_port < BL_PWM_MAX) {
 		len += sprintf(buf + len,
-			"analog_pwm: freq=%d, pol=%d, duty_max=%d, duty_min=%d,",
-			bl_pwm->pwm_freq, bl_pwm->pwm_method,
-			bl_pwm->pwm_duty_max, bl_pwm->pwm_duty_min);
-		len += sprintf(buf + len, " duty_value=%d\n", bl_pwm->pwm_duty);
+			"analog_pwm: freq=%d, pol=%d, duty=%d [%d~%d]\n",
+			bl_pwm->pwm_freq, bl_pwm->pwm_method, bl_pwm->pwm_duty,
+			bl_pwm->pwm_duty_min, bl_pwm->pwm_duty_max);
 	}
 
 	return len;
