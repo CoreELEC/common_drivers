@@ -29,8 +29,11 @@
 #include <linux/amlogic/power_domain.h>
 #include <linux/syscore_ops.h>
 #include <linux/amlogic/gki_module.h>
+#include <dt-bindings/power/meson-pm.h>
 #include "main.h"
 
+static u32 deep_mode;
+static int deep_mode_init_done;
 bool is_clr_resume_reason;
 
 #if IS_ENABLED(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND)
@@ -512,32 +515,140 @@ static unsigned int suspend_mode;
 #define SMCID_POWER_MANAGER	0x82000079
 #define SMCSUBID_PM_DDR_ASR	0x1000
 #define SMCSUBID_PM_DUMP_INFO	0x1001
+#define SMCSUBID_PM_DEEPCTRL	0x1002
+
+struct suspend_cmd_t {
+	const char *name;
+	int (*store)(void *data, const char *buf, size_t count);
+	int (*show)(void *data, char *buf);
+};
+
+struct suspend_mode_cmd_t {
+	const char *version;
+	struct suspend_cmd_t cmds[];
+};
+
+static int suspend_ddr_mode_store(void *data, const char *buf, size_t count)
+{
+	int ret;
+
+	ret = kstrtouint(buf, 0, &suspend_mode);
+	if (ret)
+		return ret;
+
+	__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DDR_ASR, suspend_mode, 0);
+	return 0;
+}
+
+static int suspend_ddr_mode_show(void *data, char *buf)
+{
+	(void)data;
+
+	return scnprintf(buf, PAGE_SIZE, "DDR mode=%s\n", suspend_mode ? "ASR" : "SelfRefresh");
+}
+
+bool ee_support_powerdown(void)
+{
+	return GET_MODULE_VAL(EE_PWR_DN, deep_mode);
+}
+EXPORT_SYMBOL_GPL(ee_support_powerdown);
+
+static int suspend_ctrl_store(void *data, const char *buf, size_t count)
+{
+	char cmd[16];
+	u32 arg1;
+
+	(void)data;
+
+	if (!deep_mode_init_done)
+		return 0;
+
+	if (sscanf(buf, "%15s %x", cmd, &arg1) == 2) {
+		deep_mode = SET_MODULE_VAL(VERSION, PM_VERSION, arg1);
+		__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
+	} else {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int suspend_ctrl_show(void *data, char *buf)
+{
+	(void)data;
+
+	if (!deep_mode_init_done)
+		return 0;
+
+	return scnprintf(buf, PAGE_SIZE, "SUSPEND MODE=0x%x\n", deep_mode);
+}
+
+static inline int deep_mode_init(struct platform_device *pdev)
+{
+	if (!of_property_read_u32(pdev->dev.of_node, "deep_mode", &deep_mode)) {
+		__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
+		deep_mode_init_done = 1;
+	}
+
+	return 0;
+}
+
+static inline void clr_deep_mode(void)
+{
+	if (deep_mode_init_done)
+		__invoke_psci_fn_smc(SMCID_POWER_MANAGER,
+				SMCSUBID_PM_DEEPCTRL, SYSTEM_COLD_BOOT, 0);
+}
+
+static struct suspend_mode_cmd_t suspend_cmds = {
+	.version = "V01",
+	.cmds = {
+		{"0", suspend_ddr_mode_store, suspend_ddr_mode_show},
+		{"1", suspend_ddr_mode_store, NULL},
+		{"DEEPCTRL", suspend_ctrl_store, suspend_ctrl_show},
+		{NULL, NULL, NULL},
+	}
+};
 
 static ssize_t suspend_mode_show(const struct class *class,
-			const struct class_attribute *attr,
-			char *buf)
+			    const struct class_attribute *attr,
+			    char *buf)
 {
-	unsigned int len;
+	unsigned int len = 0;
+	int i;
 
-	len = sprintf(buf, "%d\n", suspend_mode);
+	if (!deep_mode_init_done)
+		return scnprintf(buf, PAGE_SIZE, "Don't support deep mode config.\n");
+
+	for (i = 0; suspend_cmds.cmds[i].name; i++) {
+		if (suspend_cmds.cmds[i].show)
+			len += suspend_cmds.cmds[i].show(&suspend_cmds, buf + len);
+	}
 
 	return len;
 }
 
 static ssize_t suspend_mode_store(const struct class *class,
-			const struct class_attribute *attr,
-			const char *buf, size_t count)
+			     const struct class_attribute *attr,
+			     const char *buf, size_t count)
 {
-	int ret;
+	char cmd[32];
+	int ret, i;
 
-	ret = kstrtouint(buf, 0, &suspend_mode);
+	if (sscanf(buf, "%31s", cmd) != 1)
+		return -EINVAL;
 
-	if (ret)
-		return ret;
+	for (i = 0; suspend_cmds.cmds[i].name; i++) {
+		if (strcmp(cmd, suspend_cmds.cmds[i].name) == 0) {
+			ret = suspend_cmds.cmds[i].store(&suspend_cmds, buf, count);
+			if (ret)
+				return ret;
+			return count;
+		}
+	}
 
-	__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DDR_ASR, suspend_mode, 0);
-
-	return count;
+	pr_warn("unknown command:%s\n", cmd);
+	return -EINVAL;
 }
 
 static CLASS_ATTR_RW(suspend_mode);
@@ -618,6 +729,8 @@ static void gx_pm_syscore_shutdown(void)
 		}
 		writel_relaxed(val, exit_reg);
 	}
+
+	clr_deep_mode();
 }
 
 static void gx_pm_syscore_resume(void)
@@ -660,6 +773,8 @@ static int meson_pm_probe(struct platform_device *pdev)
 	} else {
 		dev_info(&pdev->dev, "clear_suspend_reason found: 0x%x\n", clear_suspend_reason);
 	}
+
+	deep_mode_init(pdev);
 
 	debug_reg = of_iomap(pdev->dev.of_node, 0);
 	if (!debug_reg)

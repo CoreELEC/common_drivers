@@ -30,6 +30,7 @@ unsigned int get_resume_method(void);
 bool is_screenon_resume_method(void);
 unsigned int get_resume_reason(void);
 unsigned int is_pm_s2idle_mode(void);
+bool ee_support_powerdown(void);
 #else
 static inline unsigned int get_resume_method(void)
 {
@@ -49,6 +50,11 @@ static inline unsigned int get_resume_reason(void)
 static inline unsigned int is_pm_s2idle_mode(void)
 {
 	return 0;
+}
+
+static inline bool ee_support_powerdown(void)
+{
+	return false;
 }
 #endif
 

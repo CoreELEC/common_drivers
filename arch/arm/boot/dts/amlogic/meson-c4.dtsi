@@ -20,6 +20,7 @@
 #include <dt-bindings/mailbox/amlogic,mbox.h>
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/thermal/ddr-params.h>
+#include <dt-bindings/power/meson-pm.h>
 
 / {
 	compatible = "amlogic,c1";
@@ -257,11 +258,14 @@
 
 	meson_suspend:pm {
 		compatible = "amlogic, pm";
-		status = "disabled";
+		status = "okay";
 		device_name = "aml_pm";
 		extend_resume_reason;
 		reg = <0xfe010288 0x4>, /*SYSCTRL_STATUS_REG2*/
-			<0xfe0102dc 0x4>; /*SYSCTRL_STICKY_REG7*/
+			<0xfe43245c 0x4>; /*SYSCTRL_STICKY_REG7*/
+		deep_mode = <SYSTEM_SUSPEND_EE_PWR_DOWN>;
+		/*deep_mode supports custom configuration */
+		// deep_mode = <(DEFINE(SENSOR, OFF) | DEFINE(LCD, ON) |DEFINE(DDR, SELFREFRESH))>;
 	};
 
 	shmem {

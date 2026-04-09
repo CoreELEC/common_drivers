@@ -54,6 +54,14 @@
 			status = "disabled";
 		};
 
+		skip_range_1 {
+			compatible = "skip_mem";
+			size = <0x00100000>;
+			reg = <0x10000000 0x00100000>;
+			no-map;
+			status = "okay";
+		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			no-map;
