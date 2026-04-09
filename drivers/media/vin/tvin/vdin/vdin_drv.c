@@ -7665,8 +7665,8 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->dts_config.vdin_get_prop_in_sm_en = true;
 	devp->dts_config.canvas_config_mode = 2;
 	devp->dts_config.viu_hw_irq = 1;
-	devp->dts_config.game_mode_switch_frames = 10;
-	devp->dts_config.game_mode_phlock_switch_frames = 60;
+	devp->dts_config.game_mode_switch_frames = 300;
+	devp->dts_config.game_mode_phlock_switch_frames = 300;
 	devp->dts_config.vdin_vrr_switch_cnt = 3;
 	devp->dts_config.sct_cache_size = 192;
 	devp->dts_config.vdin_re_config = (RE_CONFIG_DV_EN | RE_CONFIG_HDR_EN);
