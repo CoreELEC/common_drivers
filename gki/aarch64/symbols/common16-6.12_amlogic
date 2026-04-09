@@ -14,6 +14,7 @@
   bpf_trace_run12
   memory_read_from_buffer
   kobj_sysfs_ops
+  kstrtoul_from_user
 
 #amlogic-usb.ko
   of_add_property

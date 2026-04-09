@@ -1134,7 +1134,11 @@ static int dmc_irq_set_affinity(void)
 		affinity_cpu++;
 
 		desc = irq_to_desc(irq_prot);
-		dmc_mon->mon_comm[i].irq_thread_task = desc->action->thread;
+
+		if (!desc || !desc->action)
+			dmc_mon->mon_comm[i].irq_thread_task = NULL;
+		else
+			dmc_mon->mon_comm[i].irq_thread_task = desc->action->thread;
 	}
 
 	return 0;

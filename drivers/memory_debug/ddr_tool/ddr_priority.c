@@ -413,7 +413,7 @@ static struct ddr_priority_info ddr_priority_info_t7 __initdata = {
 
 static struct ddr_priority_nic ddr_priority_nic_s5[] __initdata = {
 	{ .port_id = 2, .sub_id = -1,
-	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .type = PRIO_REG_RW,
 	  .reg_base = 0xfe010000, .reg_mode = 0,
 	  .w_offset = (0x130 << 2), .w_lsb = 20, .w_nbits = 12,
 	  .r_offset = (0x130 << 2), .r_lsb = 16, .r_nbits = 12,
@@ -1112,7 +1112,7 @@ static struct ddr_priority_info ddr_priority_info_txhd2 __initdata = {
 
 static struct ddr_priority_nic ddr_priority_nic_t3x[] __initdata = {
 	{ .port_id = 2, .sub_id = -1,
-	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .type = PRIO_REG_RW,
 	  .reg_base = 0xfe010000, .reg_mode = 0,
 	  .w_offset = (0x131 << 2), .w_lsb = 20, .w_nbits = 12,
 	  .r_offset = (0x131 << 2), .r_lsb = 16, .r_nbits = 12,
@@ -1362,7 +1362,7 @@ static struct ddr_priority_nic ddr_priority_nic_t3[] __initdata = {
 	  .r_offset = (0x139 << 2), .r_lsb = 28, .r_nbits = 4,
 	},
 	{ .port_id = 4, .sub_id = -1,
-	  .type = PRIO_REG_RW | PRIO_FIXED,
+	  .type = PRIO_REG_RW,
 	  .reg_base = 0xfe010000, .reg_mode = 0,
 	  .w_offset = (0x14c << 2), .w_lsb = 21, .w_nbits = 3,
 	  .r_offset = (0x14c << 2), .r_lsb = 20, .r_nbits = 3,
@@ -1701,7 +1701,17 @@ static struct ddr_priority_force ddr_priority_force_s7[] __initdata = {
 };
 
 static struct ddr_priority_entry ddr_priority_entry_s7[] __initdata = {
+	{.port_id = 0,},
+	{.port_id = 1,},
+	{.port_id = 2,},
+	{.port_id = 4,},
+	{.port_id = 6,},
+	{.port_id = 7,},
+	{.port_id = 8,},
 	{.port_id = 10, .type = PRIO_FROM_NIC},
+	{.port_id = 11,},
+	{.port_id = 12,},
+	{.port_id = 13,},
 };
 
 static struct ddr_priority_info ddr_priority_info_s7 __initdata = {
@@ -1741,25 +1751,25 @@ static struct ddr_priority_info ddr_priority_info_s7d __initdata = {
 };
 
 static struct ddr_priority_force ddr_priority_force_sc2[] __initdata = {
-	DDR_PRIORITY_FORCE_RW(0, -1, (0x80 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(1, -1, (0x84 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(2, -1, (0x88 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(3, -1, (0x8c << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(4, -1, (0x90 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(6, -1, (0x98 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(7, -1, (0x9c << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(8, -1, (0xa0 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(9, -1, (0xa4 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(11, -1, (0xac << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(12, -1, (0xb0 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(16, -1, (0x60 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(17, -1, (0x64 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(18, -1, (0x68 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(19, -1, (0x6c << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(20, -1, (0x70 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(21, -1, (0x74 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(22, -1, (0x78 << 2), 16, 3),
-	DDR_PRIORITY_FORCE_RW(23, -1, (0x7c << 2), 16, 3)
+	DDR_PRIORITY_FORCE_RW(0, -1, (0x50 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(1, -1, (0x54 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(2, -1, (0x58 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(3, -1, (0x5c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(4, -1, (0x60 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(6, -1, (0x68 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(7, -1, (0x6c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(8, -1, (0x70 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(9, -1, (0x74 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(11, -1, (0x7c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(12, -1, (0x80 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(16, -1, (0x30 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(17, -1, (0x34 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(18, -1, (0x38 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(19, -1, (0x3c << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(20, -1, (0x40 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(21, -1, (0x44 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(22, -1, (0x48 << 2), 16, 3),
+	DDR_PRIORITY_FORCE_RW(23, -1, (0x4c << 2), 16, 3)
 };
 
 static struct ddr_priority_info ddr_priority_info_sc2 __initdata = {
@@ -2625,27 +2635,27 @@ static int __init ddr_priority_info_alloc(struct ddr_priority_info **dst,
 
 	info->dmc_force = NULL;
 
-	if (src->dev_num > 0) {
+	if (src->dev_num > 0 && src->dev) {
 		dev = kmemdup(src->dev, src->dev_num * sizeof(*dev), GFP_KERNEL);
 		if (!dev)
 			goto err;
 	}
-	if (src->nic_num > 0) {
+	if (src->nic_num > 0 && src->nic) {
 		nic = kmemdup(src->nic, src->nic_num * sizeof(*nic), GFP_KERNEL);
 		if (!nic)
 			goto err;
 	}
-	if (src->mdc_num > 0) {
+	if (src->mdc_num > 0 && src->mdc) {
 		mdc = kmemdup(src->mdc, src->mdc_num * sizeof(*mdc), GFP_KERNEL);
 		if (!mdc)
 			goto err;
 	}
-	if (src->entry_num > 0) {
+	if (src->entry_num > 0 && src->entry) {
 		entry = kmemdup(src->entry, src->entry_num * sizeof(*entry), GFP_KERNEL);
 		if (!entry)
 			goto err;
 	}
-	if (src->dmc_force_num > 0) {
+	if (src->dmc_force_num > 0 && src->dmc_force) {
 		force = kmemdup(src->dmc_force, src->dmc_force_num * sizeof(*force), GFP_KERNEL);
 		if (!force)
 			goto err;

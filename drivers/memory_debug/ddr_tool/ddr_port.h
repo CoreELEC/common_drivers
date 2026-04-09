@@ -110,16 +110,19 @@ struct vpu_sub_desc {
 };
 
 enum ddr_priority_type {
+	/* entry set */
 	PRIO_NOT_SUPPORT = BIT(0),
-	PRIO_FIXED =       BIT(1),
-	PRIO_REG_RW =      BIT(2),
-	PRIO_REG_WO =      BIT(3),
-	PRIO_REG_POWER =   BIT(4),
-	PRIO_AUTO =        BIT(5),
-	PRIO_HANDLER =     BIT(6),
-	PRIO_FROM_MDC =    BIT(7),
-	PRIO_FROM_NIC =    BIT(8),
-	PRIO_FROM_DEV =    BIT(9),
+	PRIO_AUTO =        BIT(1),
+	PRIO_FROM_MDC =    BIT(2),
+	PRIO_FROM_NIC =    BIT(3),
+	PRIO_FROM_DEV =    BIT(4),
+	/* fix only entry can mix set */
+	PRIO_FIXED =       BIT(5),
+	/* mdc nic dev type set */
+	PRIO_REG_RW =      BIT(6),
+	PRIO_REG_WO =      BIT(7),
+	PRIO_REG_POWER =   BIT(8),
+	PRIO_HANDLER =     BIT(9),
 };
 
 struct ddr_priority_dev {

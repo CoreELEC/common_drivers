@@ -18,7 +18,8 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 
-#define DMC_CMD_FILTER_CTRL3		((0x0012  << 2))
+/* SC2 dts add offset (0xc0 << 2) */
+#define DMC_CMD_FILTER_CTRL3		((0x0042  << 2))
 
 #define DMC_CHAN_STS_OFFSET		((0x0036  << 2))
 #define DMC_CHAN_STS_OFFSET_SC2		((0x003c  << 2))  /* SAME C2 */
@@ -197,27 +198,32 @@ static int g12_dump_reg(struct ddr_bandwidth *db, char *buf)
 static int dmc_buf_level_handle(struct ddr_bandwidth *db, u32 *val,
 				enum property_type type, int rw)
 {
+	unsigned int offset = DMC_CMD_FILTER_CTRL3;
+
+	if (db->cpu_type == DMC_TYPE_SC2)
+		offset -= 0xc0;
+
 	switch (type) {
 	case WBUF_EMPTY:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 31, 1);
+		all_dmc_reg_field_access(db, val, rw, offset, 31, 1);
 		break;
 	case WBUF_H:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 26, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 26, 5);
 		break;
 	case WBUF_M:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 21, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 21, 5);
 		break;
 	case WBUF_L:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 16, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 16, 5);
 		break;
 	case RBUF_H:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 10, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 10, 5);
 		break;
 	case RBUF_M:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 5, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 5, 5);
 		break;
 	case RBUF_L:
-		all_dmc_reg_field_access(db, val, rw, DMC_CMD_FILTER_CTRL3, 0, 5);
+		all_dmc_reg_field_access(db, val, rw, offset, 0, 5);
 		break;
 	default:
 		break;
@@ -279,11 +285,12 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 
 static int __init g12_axi_sts_init(struct ddr_bandwidth *db)
 {
-	if (db->cpu_type == DMC_TYPE_C2 || db->cpu_type == DMC_TYPE_SC2) {
+	if (db->cpu_type == DMC_TYPE_C2)
 		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET_SC2, NULL, 0);
-	} else {
+	else if (db->cpu_type == DMC_TYPE_SC2)
+		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET_SC2 - 0xc0, NULL, 0);
+	else
 		return ddr_axi_sts_alloc(db, DMC_CHAN_STS_OFFSET, NULL, 0);
-	}
 }
 
 struct ddr_bandwidth_ops g12_ddr_bw_ops = {

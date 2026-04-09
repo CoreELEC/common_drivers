@@ -852,6 +852,9 @@ static ssize_t outstanding_display(char *buf)
 	int i, j, count;
 	char c;
 
+	if (!aml_db->ost.regs)
+		return 0;
+
 	/* show usage */
 	len += sprintf(buf + len, "Usage: echo <index> <value> > ots\n");
 	len += sprintf(buf + len, "parm:\n\tindex:\tindex_num or ignore(set all bus)\n");
@@ -2557,9 +2560,14 @@ static ssize_t bus_devices_display(struct ddr_bandwidth *aml_db, char *buf)
 static ssize_t bus_devices_read(struct file *file,
 				char __user *to, size_t count, loff_t *ppos)
 {
-	struct ddr_bandwidth *aml_db = file->private_data;
+	struct ddr_bandwidth *aml_db;
 	int len = 0;
 	char buf[1800];
+
+	if (!file || !file->private_data)
+		return 0;
+
+	aml_db = file->private_data;
 
 	len = bus_devices_display(aml_db, buf);
 
@@ -2974,11 +2982,16 @@ static ssize_t side_band_write(struct file *file,
 			       const char __user *user_buf,
 			       size_t count, loff_t *ppos)
 {
-	struct ddr_bandwidth *aml_db = file->private_data;
+	struct ddr_bandwidth *aml_db;
 	char *buf;
 	unsigned char dmc, bus, rw, block_num;
 	unsigned char block_bus[32];
 	int ret;
+
+	if (!file || !file->private_data)
+		return 0;
+
+	aml_db = file->private_data;
 
 	if (!aml_db->ops->side_band) {
 		pr_err("The driver currently does not support the side band functionality of the chip\n");
@@ -3009,6 +3022,9 @@ static ssize_t side_band_display(struct ddr_bandwidth *aml_db, char *buf)
 {
 	ssize_t len = 0;
 	int i, j, k, l;
+
+	if (!aml_db || !buf)
+		return 0;
 
 	for (i = 0, k = 0;
 	     ((1 << i) & aml_db->async_dmc_num) || (i == 0 && aml_db->async_dmc_num == 0);
@@ -3045,9 +3061,14 @@ static ssize_t side_band_display(struct ddr_bandwidth *aml_db, char *buf)
 static ssize_t side_band_read(struct file *file,
 			      char __user *to, size_t count, loff_t *ppos)
 {
-	struct ddr_bandwidth *aml_db = file->private_data;
+	struct ddr_bandwidth *aml_db;
 	int len = 0, ret;
 	char buf[1800];
+
+	if (!file || !file->private_data)
+		return 0;
+
+	aml_db = file->private_data;
 
 	len = side_band_display(aml_db, buf);
 
@@ -3128,11 +3149,14 @@ static ssize_t smc_rw_write(struct file *file, const char __user *user_buf,
 	char buf[256];
 	unsigned long addr, value;
 
+	if (count > sizeof(buf) - 1)
+		return -EFAULT;
+
 	if (copy_from_user(buf, user_buf, count))
 		return -EFAULT;
 
 	if (sscanf(buf, "%lx %lx", &addr, &value) != 2) {
-		if (kstrtoul(buf, 0, &addr)) {
+		if (kstrtoul_from_user(user_buf, count, 0, &addr)) {
 			pr_info("invalid input:%s\n", buf);
 			return -EINVAL;
 		}
