@@ -22,6 +22,19 @@
 static struct aocpu_work_data *aocpu_data;
 static struct mbox_chan *mbox_chan;
 
+static int send_message_to_aocpu(unsigned int *cmd, unsigned int size)
+{
+	unsigned int msg;
+
+	aml_mbox_transfer_data(mbox_chan, MBOX_CMD_SEND_ARM_ALIVE_MSG,
+				cmd, size, &msg, sizeof(msg), MBOX_SYNC);
+
+	if (msg == 1)
+		return 0;
+	else
+		return -1;
+}
+
 static void do_aocpu_ping_work(struct kthread_work *work)
 {
 	struct aocpu_work_data *data = container_of(work, struct aocpu_work_data, monitor_work);
@@ -30,41 +43,27 @@ static void do_aocpu_ping_work(struct kthread_work *work)
 		data->alive_check_cmd[0] = ARM_ALIVE_CHECK_EN;
 		data->alive_check_cmd[1] = 0;
 
-		if (aml_mbox_transfer_data(mbox_chan,
-					MBOX_CMD_SEND_ARM_ALIVE_MSG,
-					&data->alive_check_cmd,
-					sizeof(data->alive_check_cmd),
-					NULL, 0, MBOX_SYNC) < 0)
+		if (send_message_to_aocpu(data->alive_check_cmd,
+					  sizeof(data->alive_check_cmd)) < 0)
 			goto FAIL;
 
 		data->alive_check_cmd[0] = ARM_ALIVE_CHECK_TIMESET;
 		data->alive_check_cmd[1] = AOCPU_TIMEOUT;
-
-		if (aml_mbox_transfer_data(mbox_chan,
-					MBOX_CMD_SEND_ARM_ALIVE_MSG,
-					&data->alive_check_cmd,
-					sizeof(data->alive_check_cmd),
-					NULL, 0, MBOX_SYNC) < 0)
-			goto FAIL;
+		send_message_to_aocpu(data->alive_check_cmd, sizeof(data->alive_check_cmd));
 
 		data->enabled = true;
 		pr_info("enable aocpu monitor!\n");
 	} else {
 		data->alive_check_cmd[0] = ARM_ALIVE_CHECK_TICK;
 		data->alive_check_cmd[1] = 0;
-
-		if (aml_mbox_transfer_data(mbox_chan,
-					MBOX_CMD_SEND_ARM_ALIVE_MSG,
-					&data->alive_check_cmd,
-					sizeof(data->alive_check_cmd),
-					NULL, 0, MBOX_SYNC) < 0)
-			goto FAIL;
+		send_message_to_aocpu(data->alive_check_cmd, sizeof(data->alive_check_cmd));
 	}
 
 	return;
 
 FAIL:
-	pr_info("mailbox to aocpu fail!\n");
+	del_timer_sync(&aocpu_data->aocpu_timer);
+	pr_info("fail to enable aocpu monitor!\n");
 }
 
 static void aocpu_timer_work(struct timer_list *timer)
