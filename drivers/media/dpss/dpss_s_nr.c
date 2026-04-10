@@ -226,7 +226,7 @@ void dpss_hw_disable_one_play(struct dpss_ch_s *pch)
 	dbg_i2("%s:ch[%d]:end\n", "disable one play", pch->c.ch);
 }
 
-static bool check_need_enable_4k1k(struct vframe_s *vf)
+bool check_need_enable_4k1k(struct vframe_s *vf)
 {
 	bool ret = false;
 	bool input_4k2k = false, output_4k1k = false;
@@ -247,6 +247,12 @@ static bool check_need_enable_4k1k(struct vframe_s *vf)
 	if (vf->compWidth * vf->compHeight > flag || vf->width * vf->height > flag) {
 		dbg_h1("%s: 4k2k input.\n", __func__);
 		input_4k2k = true;
+	}
+
+	if ((vf->compWidth == 3840 && vf->compHeight == 1080) ||
+		(vf->width == 3840 && vf->height == 1080)) {
+		dbg_h1("%s: 4k1k input not set\n", __func__);
+		input_4k2k = false;
 	}
 
 	if (vinfo->width >= 3840 && vinfo->height <= 1080) {
@@ -598,7 +604,8 @@ static void _prm_top_init_light(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_
 	else
 		prm_top->is_secure = false;
 
-	if (check_need_enable_4k1k(vf) && !pch->c.ch) //force src 0
+	dbg_h0("%s vf->dpss_flg:0x%x\n", __func__, vf->dpss_flg);
+	if ((check_need_enable_4k1k(vf) && !pch->c.ch) || (vf->dpss_flg & DPSS_FLG_NEED_SKIP))
 		prm_top->vds_4k1k_en = 1;
 	else
 		prm_top->vds_4k1k_en = 0;
@@ -1617,7 +1624,8 @@ void _prm_top_init_vfm(struct dpss_ch_s *pch,
 		prm_top->org_vsize   = vfms->height >> 1;
 	}
 
-	dbg_h1("%s: src_frm:w*h:%d*%d\n", __func__, prm_top->frm_hsize, prm_top->frm_vsize);
+	dbg_h1("%s: src_frm:w*h:%d*%d,4k1k_en=%d\n", __func__, prm_top->frm_hsize,
+		prm_top->frm_vsize, prm_top->vds_4k1k_en);
 	prm_top->src_h_buf_size = vfms->cvs_h;	//tmp for nv21/12
 	dbg_h2("src_h_buf_size=%d\n", prm_top->src_h_buf_size);
 
@@ -2337,8 +2345,8 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		//not support i / p
 		light_chg = true;
 	}
-	dbg_i1("%s: start init.light = %d source_type:%d\n",
-		__func__, light_chg, vf->source_type);
+	dbg_i1("%s: start init.light = %d source_type:%d vf_dpss_flg:0x%x\n",
+		__func__, light_chg, vf->source_type, vf->dpss_flg);
 
 	if (light_chg) {
 		prm_top->trig_byp_dae0 = true;

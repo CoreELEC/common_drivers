@@ -57,6 +57,10 @@ static struct dpss_game_n2m_t frc_n2m_list[GAME_N2M_LIST_MAX] = {
 };
 
 /*game end*/
+
+unsigned int dpss_force_v;
+module_param_named(dpss_force_v, dpss_force_v, uint, 0664);
+
 static void _ch_releas_data_fifo(struct dpss_ch_d_s1 *pch_d)
 {
 	int i;
@@ -854,6 +858,7 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 	struct dpss_nr_i_s *nr_i;
 	struct dpss_frc_i_s *frc_i;
 	unsigned int len_nr, len_in, len_frc;
+	unsigned int alig_height;
 
 	if (!pch || !pch->d) {
 		DBG_ERR("%s 01\n", __func__);
@@ -881,7 +886,33 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 			return DPSS_ERR_UNDEFINED;
 		}
 
+		if (dpss_force_v) {
+			if (VFM_IS_COMP_MODE(vfm->type)) {
+				vfm->compHeight = dpss_force_v;
+				vfm->height = dpss_force_v / 4;
+			} else {
+				vfm->height = dpss_force_v;
+			}
+		}
 		nr_i->in_vfm = vfm;
+		if (check_need_enable_4k1k(nr_i->in_vfm)) {
+			if (VFM_IS_COMP_MODE(vfm->type)) {
+				if (nr_i->in_vfm->compHeight % 2)
+					nr_i->in_vfm->compHeight =
+						roundup(nr_i->in_vfm->compHeight, 2);
+				alig_height = nr_i->in_vfm->compHeight >> 1;
+				if (alig_height % 2)
+					alig_height = rounddown(alig_height, 2);
+				nr_i->in_vfm->compHeight = alig_height * 2;
+			} else {
+				if (nr_i->in_vfm->height % 2)
+					nr_i->in_vfm->height = roundup(nr_i->in_vfm->height, 2);
+				alig_height = nr_i->in_vfm->height >> 1;
+				if (alig_height % 2)
+					alig_height = rounddown(alig_height, 2);
+				nr_i->in_vfm->height = alig_height * 2;
+			}
+		}
 		if (pch->c.etype) { //ins path
 			itf_get_status(pch, vfm, &nr_i->info_in);
 		} else {
