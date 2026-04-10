@@ -361,6 +361,15 @@ struct meson_vpu_osd_state {
 	struct osd_dimm_info osd_dimm;
 };
 
+enum video_frame_flag {
+	/* hwc send black frame for videodisplay */
+	VIDEO_BLACK_FRAME = 0,
+	/* half screen case for videodisplay */
+	VIDEO_FRAME_HALFSCREEN,
+	/* bypass video axis calculate for drm */
+	VIDEO_FRAME_BYPASS_CROP,
+};
+
 struct meson_vpu_video_layer_info {
 	/* record the original src and dst info */
 	u32 ori_src_x;

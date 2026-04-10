@@ -645,7 +645,8 @@ meson_video_plane_position_calc(struct meson_vpu_video_layer_info *plane_info,
 	orig_w = plane_info->src_w;
 	orig_h = plane_info->src_h;
 
-	if (!bypass_video_crop) {
+	if (!bypass_video_crop && !(plane_info->frame_flag &
+	    BIT(VIDEO_FRAME_BYPASS_CROP))) {
 		/*negative position process*/
 		if (plane_info->dst_x < 0) {
 			plane_info->src_x = (-plane_info->dst_x) *
