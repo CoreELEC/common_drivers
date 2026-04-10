@@ -4152,11 +4152,14 @@ static int dim_probe(struct platform_device *pdev)
 
 	di_devp->aisr_irq = -ENXIO;
 
-	di_devp->aisr_irq = platform_get_irq_byname(pdev, "aisr_irq");
-	if (di_devp->aisr_irq  == -ENXIO)
-		dbg_mem("no aisr_irq\n");
-	else
-		dbg_mem("aisr_irq:%d\n", di_devp->aisr_irq);
+	if ((DIM_IS_IC(T3) && !DIM_IS_ICS_T5M && !DIM_IS_ICS(T5W)) ||
+		DIM_IS_IC(S5) || DIM_IS_IC(T3X)) {
+		di_devp->aisr_irq = platform_get_irq_byname(pdev, "aisr_irq");
+		if (di_devp->aisr_irq  == -ENXIO)
+			dbg_mem("no aisr_irq\n");
+		else
+			dbg_mem("aisr_irq:%d\n", di_devp->aisr_irq);
+	}
 
 	//di_pr_info("%s allocate rdma channel %d.\n", __func__,
 	//	   di_devp->rdma_handle);

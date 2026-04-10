@@ -722,7 +722,7 @@ int __init di_v4l_init(void)
 
 	r = of_reserved_mem_device_init(devp);
 	if (r < 0)
-		pr_err("%s reserved mem is not used.\n", __func__);
+		pr_info("%s reserved mem is not used.\n", __func__);
 	pr_info("%s out\n", __func__);
 
 	return 0;
