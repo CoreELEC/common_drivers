@@ -126,6 +126,12 @@ struct dptx_common {
 	struct hdcptx_common hdcptx_comm;
 	/* hw private hdcp struct */
 	void *hdcptx_priv;
+	/* hdr */
+	u32 hdr_transfer_feature;
+	u32 hdr_color_feature;
+	u32 colormetry;
+	/* edid hdr/dv cap lock, hdr/dv handle in irq, need spinlock */
+	spinlock_t edid_spinlock;
 };
 
 #define to_dptx_common(x)	container_of(x, struct dptx_common, base)

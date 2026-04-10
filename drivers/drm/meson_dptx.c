@@ -4,6 +4,7 @@
  */
 
 #include <linux/of_platform.h>
+#include <linux/spinlock.h>
 
 #include <drm/drm_modeset_helper.h>
 #include <drm/drmP.h>
@@ -75,6 +76,7 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 	struct tx_timing *timing_list = NULL;
 	u64 sequence_id, new_sequence_id;
 	int count = 0;
+	unsigned long flags = 0;
 
 	if (!meson_dptx || !meson_dptx->dptx_dev || !tx_comm)
 		return count;
@@ -95,10 +97,12 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 	 */
 	if (sequence_id != new_sequence_id) {
 		dptx_state->base_state.sequence_id = new_sequence_id;
+		spin_lock_irqsave(&tx_comm->edid_spinlock, flags);
 		meson_tx_clear_rx_cap(&tx_comm->base.rxcap);
 		meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
 			tx_comm->base.edid_parse_mask);
 		DRM_INFO("%s[%d]\n", __func__, __LINE__);
+		spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
 	}
 
 	count = dptx_get_mode_list(tx_comm, &timing_list);

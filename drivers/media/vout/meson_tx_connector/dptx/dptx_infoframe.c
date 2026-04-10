@@ -177,7 +177,8 @@ void dptx_drm_infoframe_set(struct dptx_hw_common *hw_comm, u8 vc_id, struct drm
 	drm_infoframe_pack(info, &data, sizeof(data));
 	sdp_info.data[0] = info->version;
 	sdp_info.data[1] = info->length;
-	memcpy(&sdp_info.data[2], &data[4], DRM_INFOFRAME_SIZE); /* ignore the checksum */
+	/* ignore the checksum */
+	memcpy(&sdp_info.data[2], &data[INFOFRAME_HEADER_SIZE], DRM_INFOFRAME_SIZE);
 	dptx_infoframe_send(hw_comm, vc_id, INFOFRAME_TYPE_DRM, (u8 *)&sdp_info);
 }
 

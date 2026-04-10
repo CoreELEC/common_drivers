@@ -22,6 +22,12 @@
 #include "dptx_timer.h"
 #include "dptx_gtc.h"
 #include "dptx_hw_opcode.h"
+#include "dptx_hdr.h"
+
+static struct vout_device_s dptx_vdev = {
+	.enable_tx_packet = dptx_enable_tx_packet,
+	.disable_tx_packet = dptx_disable_tx_packet,
+};
 
 /*
  * Per dp1.4a spec chapter 5.1.4:
@@ -77,6 +83,8 @@ int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
+	/* clear hdr packet */
+	dptx_drm_infoframe_set(tx_comm->hw_comm, 0, NULL);
 	return 0;
 }
 
@@ -408,6 +416,15 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 
 static int dptx_post_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_para *para)
 {
+	int ret = -EINVAL;
+	struct dptx_common *tx_comm = NULL;
+
+	if (!tx_dev || !para)
+		return ret;
+
+	tx_comm = to_dptx_common(tx_dev);
+	dptx_update_vinfo(tx_comm);
+
 	return dptx_hw_cntl(tx_dev->tx_hw_base, MODE_FLOW_POST_ENABLE_MODE, para, NULL);
 }
 
@@ -801,8 +818,12 @@ int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm
 	meson_tx_dev_init(tx_dev, &hw_comm->hw_base, &dptx_common_helper_ops);
 	mutex_init(&tx_dev->set_mode_mutex);
 	mutex_init(&tx_dev->valid_mode_mutex);
+
+	spin_lock_init(&tx_comm->edid_spinlock);
 	/* parse rx cap in both EDID and displayID */
 	tx_dev->edid_parse_mask = 0x3;
+	tx_comm->base.tx_vinfo.vout_device = &dptx_vdev;
+	tx_comm->base.tx_vinfo.vout_device->tx_instance = tx_comm;
 	/* init the timers' mutex */
 	dptx_timer_init(hw_comm);
 	/* dptx aux init */

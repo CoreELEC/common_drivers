@@ -19,10 +19,12 @@ int dptx_validate_tx_state_fmt_para(struct meson_tx_dev *tx_base,
 int dptx_calc_hw_fmt_para(struct meson_tx_dev *tx_base, struct meson_tx_format_para *sw_para,
 	struct dptx_hw_fmt_para *hw_para);
 
-int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm);
-int dptx_common_uninit(struct dptx_common *tx_comm);
+struct vinfo_s *dptx_get_current_vinfo(void *data);
+void dptx_update_vinfo(struct dptx_common *tx_comm);
+void dptx_reset_vinfo(struct vinfo_s *tx_vinfo);
 void dptx_vout_init(struct dptx_common *tx_comm);
 void dptx_vout_uninit(struct dptx_common *tx_comm);
 struct dptx_common *dptx_get_edptx_inst(u8 idx);
-
+int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm);
+int dptx_common_uninit(struct dptx_common *tx_comm);
 #endif

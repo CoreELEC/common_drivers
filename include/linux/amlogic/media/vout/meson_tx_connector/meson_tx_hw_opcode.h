@@ -119,9 +119,13 @@ enum cmd_aux_pkt {
 	AUX_PKT_SET_EMP_SBTM,
 	AUX_PKT_CONF_EMP_VRR_QMS,
 	AUX_PKT_CONF_EMP_VRR_GAME,
-	AUX_PKT_SET_SDP, /* used for setting the Secondary Data Packet */
-	AUX_PKT_GET_SDP, /* used for getting the Secondary Data Packet */
+	/* used for setting the Secondary Data Packet for DPTX */
+	AUX_PKT_SET_SDP,
+	/* used for getting the Secondary Data Packet for DPTX */
+	AUX_PKT_GET_SDP,
 	AUX_PKT_SDP_INFO_DUMP,
+	AUX_PKT_SET_BT2020,
+	AUX_PKT_CLR_BT2020,
 	AUX_PKT_CONF_EMP_PHY_ADDR,
 	AUX_PKT_GET_AVI_VIDEO_CODE,
 	AUX_PKT_GET_AVI_ACTIVE_ASPECT,

@@ -48,9 +48,63 @@ enum dp_lane_count_e {
 	DPTX_LANE_COUNT_MAX,
 };
 
-/*
- * HW format param calculated from primary SW format param
+/**
+ * enum dptx_colorimetry - drm DP Colorimetry formats
+ *
+ * This enum is used to indicate DP VSC SDP Colorimetry formats.
+ * It is based on DP 1.4 spec [Table 2-117: VSC SDP Payload for DB16 through
+ * DB18] and a name of enum member follows enum drm_colorimetry definition.
+ *
+ * @DPTX_COLORIMETRY_DEFAULT: sRGB (IEC 61966-2-1) or
+ *                          ITU-R BT.601 colorimetry format
+ * @DPTX_COLORIMETRY_RGB_WIDE_FIXED: RGB wide gamut fixed point colorimetry format
+ * @DPTX_COLORIMETRY_BT709_YCC: ITU-R BT.709 colorimetry format
+ * @DPTX_COLORIMETRY_RGB_WIDE_FLOAT: RGB wide gamut floating point
+ *                                 (scRGB (IEC 61966-2-2)) colorimetry format
+ * @DPTX_COLORIMETRY_XVYCC_601: xvYCC601 colorimetry format
+ * @DPTX_COLORIMETRY_OPRGB: OpRGB colorimetry format
+ * @DPTX_COLORIMETRY_XVYCC_709: xvYCC709 colorimetry format
+ * @DPTX_COLORIMETRY_DCI_P3_RGB: DCI-P3 (SMPTE RP 431-2) colorimetry format
+ * @DPTX_COLORIMETRY_SYCC_601: sYCC601 colorimetry format
+ * @DPTX_COLORIMETRY_RGB_CUSTOM: RGB Custom Color Profile colorimetry format
+ * @DPTX_COLORIMETRY_OPYCC_601: opYCC601 colorimetry format
+ * @DPTX_COLORIMETRY_BT2020_RGB: ITU-R BT.2020 R' G' B' colorimetry format
+ * @DPTX_COLORIMETRY_BT2020_CYCC: ITU-R BT.2020 Y'c C'bc C'rc colorimetry format
+ * @DPTX_COLORIMETRY_BT2020_YCC: ITU-R BT.2020 Y' C'b C'r colorimetry format
  */
+enum dptx_colorimetry {
+	DPTX_COLORIMETRY_DEFAULT = 0,
+	DPTX_COLORIMETRY_RGB_WIDE_FIXED = 0x1,
+	DPTX_COLORIMETRY_BT709_YCC = 0x1,
+	DPTX_COLORIMETRY_RGB_WIDE_FLOAT = 0x2,
+	DPTX_COLORIMETRY_XVYCC_601 = 0x2,
+	DPTX_COLORIMETRY_OPRGB = 0x3,
+	DPTX_COLORIMETRY_XVYCC_709 = 0x3,
+	DPTX_COLORIMETRY_DCI_P3_RGB = 0x4,
+	DPTX_COLORIMETRY_SYCC_601 = 0x4,
+	DPTX_COLORIMETRY_RGB_CUSTOM = 0x5,
+	DPTX_COLORIMETRY_OPYCC_601 = 0x5,
+	DPTX_COLORIMETRY_BT2020_RGB = 0x6,
+	DPTX_COLORIMETRY_BT2020_CYCC = 0x6,
+	DPTX_COLORIMETRY_BT2020_YCC = 0x7,
+};
+
+/**
+ * enum dptx_dynamic_range - drm DP Dynamic Range
+ *
+ * This enum is used to indicate DP VSC SDP Dynamic Range.
+ * It is based on DP 1.4 spec [Table 2-117: VSC SDP Payload for DB16 through
+ * DB18]
+ *
+ * @DPTX_DYNAMIC_RANGE_VESA: VESA range
+ * @DPTX_DYNAMIC_RANGE_CTA: CTA range
+ */
+enum dptx_dynamic_range {
+	DPTX_DYNAMIC_RANGE_VESA = 0,
+	DPTX_DYNAMIC_RANGE_CTA = 1,
+};
+
+/* HW format param calculated from primary SW format param */
 struct dptx_hw_fmt_para {
 	u32 total_bandwidth;
 	enum dp_link_rate_e link_rate;
@@ -65,7 +119,8 @@ struct hdmitx_hw_fmt_para {
 	enum hdmi_vic vic;
 	u32 scrambler_en:1;
 	u32 tmds_clk_div40:1;
-	u32 tmds_clk; /* Unit: 1000 */
+	/* Unit: 1000 */
+	u32 tmds_clk;
 	u8 dsc_en;
 	enum frl_rate_enum frl_rate;
 };
@@ -79,26 +134,16 @@ struct meson_tx_format_para {
 	 */
 	unsigned char name[32];
 	struct tx_timing timing;
-	/*
-	 * cd8, cd10 or cd12
-	 */
+
+	/* cd8, cd10 or cd12 */
 	enum hdmi_color_depth cd;
-	/*
-	 * 0/1/2/3: rgb/422/444/420
-	 */
+	/* 0/1/2/3: rgb/422/444/420 */
 	enum hdmi_colorspace cs;
-	/*
-	 * limit, full
-	 */
+	/* limit, full */
 	enum hdmi_quantization_range cr;
-	/*
-	 * 1: cta range; 0: vesa range
-	 */
-	bool cta_range;
-	/*
-	 * >= 2: bt-2020...; 1: bt-709; 0: bt-601
-	 */
-	u8 colorimetry;
+	/* 1: cta range; 0: vesa range */
+	enum dptx_dynamic_range cta_range;
+	enum dptx_colorimetry colorimetry;
 	u32 frac_mode;
 	/*
 	 * video source virtual channel, used for MST index
@@ -126,13 +171,9 @@ enum venc_bist_type {
 	VENC_BIST_PTTN_LINE,
 	VENC_BIST_PTTN_DOT,
 	VENC_BIST_PTTN_COLORBAR,
-	/*
-	 * new adding in S5
-	 */
+	/* new adding in S5 */
 	VENC_BIST_PTTN_CROSSING,
-	/*
-	 * new adding in A9
-	 */
+	/* new adding in A9 */
 	VENC_BIST_PTTN_GRAY,
 };
 
@@ -142,9 +183,7 @@ enum venc_bist_type {
  */
 struct video_bist_format_para {
 	enum venc_bist_type bist_type;
-	/*
-	 * 0: encp; 1: encl
-	 */
+	/* 0: encp; 1: encl */
 	u8 enc_sel;
 };
 

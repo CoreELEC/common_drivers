@@ -22,6 +22,7 @@
 #include "dpcd_reg.h"
 #include "dptx_infoframe.h"
 #include "dptx_timer.h"
+#include "dptx_hdr.h"
 
 conn_dev_to_txdev dptx_convert;
 
@@ -161,6 +162,7 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 	int ret = 0;
 	static char test_color_attr[16];
 	struct reg_access reg_acc;
+	struct master_display_info_s data = {};
 
 	token = strsep(&cur, delim);
 	if (token && strncmp(token, "load", 4) == 0) {
@@ -717,6 +719,21 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 					tx_dev->sw_fmt_para.vc_id, NULL);
 		}
 		DPTX_INFO("set sdp info test\n");
+	} else if (token && strncmp(token, "hdr", 3) == 0) {
+		data.features = 0x00091000;
+		data.primaries[0][0] = 0x0102;
+		data.primaries[0][1] = 0x0304;
+		data.primaries[1][0] = 0x0506;
+		data.primaries[1][1] = 0x0708;
+		data.primaries[2][0] = 0x090a;
+		data.primaries[2][1] = 0x0b0c;
+		data.white_point[0] = 0x0d0e;
+		data.white_point[1] = 0x0f10;
+		data.luminance[0] = 0x1112;
+		data.luminance[1] = 0x1314;
+		data.max_content = 0x1516;
+		data.max_frame_average = 0x1718;
+		dptx_set_drm_pkt(tx_comm, &data);
 	} else if (token && strncmp(token, "adaptive_sync", 13) == 0) {
 		bool enable = false;
 

@@ -14,7 +14,6 @@ enum vmode_e {
 	 VMODE_LCD,
 	 VMODE_eDP,
 	 VMODE_DPTX,
-	 VMODE_DisplayPort,
 	 VMODE_NULL, /* null mode is used as temporary witch mode state */
 	 VMODE_INVALID,
 	 VMODE_DUMMY_ENCP,

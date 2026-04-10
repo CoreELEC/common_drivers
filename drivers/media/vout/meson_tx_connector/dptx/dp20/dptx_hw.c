@@ -1203,7 +1203,7 @@ static void dptx20_hw_set_vsc_colorimetry(struct dptx_hw_common *hw_comm,
 	u32 data = 0;
 
 	if (para->cs != HDMI_COLORSPACE_YUV420 &&
-		para->colorimetry < 2 &&
+		para->colorimetry <= DPTX_COLORIMETRY_BT709_YCC &&
 		!para->tx_hw_para.dptx_hw_para.dsc_en) {
 		/* disable override of MSA */
 		dptx20_reg_write(hw_comm, CORE_LEVEL,
@@ -1318,14 +1318,14 @@ static void dptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 	misc |= (para->cs & 0x3) << 1;
 	if (para->cs == HDMI_COLORSPACE_RGB) {
 		/* 0: VESA range */
-		misc |= DP_DYNAMIC_RANGE_VESA << 3;
+		misc |= DPTX_DYNAMIC_RANGE_VESA << 3;
 		/* 0: BT.601 */
-		misc |= DP_COLORIMETRY_DEFAULT << 4;
+		misc |= DPTX_COLORIMETRY_DEFAULT << 4;
 	} else {
 		/* 1: CTA range */
-		misc |= DP_DYNAMIC_RANGE_CTA << 3;
+		misc |= DPTX_DYNAMIC_RANGE_CTA << 3;
 		/* 1: BT.709 */
-		misc |= DP_COLORIMETRY_BT709_YCC << 4;
+		misc |= DPTX_COLORIMETRY_BT709_YCC << 4;
 	}
 	misc |= (dptx20_get_mapped_cd_conf(para->cd) & 0x7) << 5;
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
@@ -1336,7 +1336,8 @@ static void dptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 		even_line_cnt = para->timing.v_total % 2 ? false : true;
 	else
 		even_line_cnt = false;
-	if (para->cs == HDMI_COLORSPACE_YUV420 || para->colorimetry >= 2)
+	if (para->cs == HDMI_COLORSPACE_YUV420 ||
+			para->colorimetry > DPTX_COLORIMETRY_BT709_YCC)
 		vsc_colorimetry = true;
 	else
 		vsc_colorimetry = false;
@@ -2759,6 +2760,7 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 	int ret = 0;
 	struct aux_pkt_sdp_param *param;
 	u8 vc_id = 0;
+	struct meson_tx_format_para *para;
 
 	if (!hw_comm)
 		return -1;
@@ -2780,6 +2782,32 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 	case AUX_PKT_SDP_INFO_DUMP:
 		vc_id = *(u8 *)input_argv;
 		dptx_dump_infoframe_packets(hw_comm, vc_id);
+		break;
+	/* To enable DPTX HDR, need to send BT2020 */
+	case AUX_PKT_SET_BT2020:
+		para = (struct meson_tx_format_para *)input_argv;
+		if (para->cs == HDMI_COLORSPACE_RGB)
+			para->colorimetry = DPTX_COLORIMETRY_BT2020_RGB;
+		else
+			para->colorimetry = DPTX_COLORIMETRY_BT2020_YCC;
+		DPTX_DEBUG_PACKET("colorimetry = 0x%x, vc_id = %d\n",
+				para->colorimetry, para->vc_id);
+		dptx20_hw_set_msa(hw_comm, para->vc_id, para);
+		dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
+		dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
+		break;
+	/* To disable DPTX HDR, need to clear BT2020 */
+	case AUX_PKT_CLR_BT2020:
+		para = (struct meson_tx_format_para *)input_argv;
+		if (para->cs == HDMI_COLORSPACE_RGB)
+			para->colorimetry = DPTX_COLORIMETRY_DEFAULT;
+		else
+			para->colorimetry = DPTX_COLORIMETRY_BT709_YCC;
+		DPTX_DEBUG_PACKET("colorimetry = 0x%x, vc_id = %d\n",
+				para->colorimetry, para->vc_id);
+		dptx20_hw_set_msa(hw_comm, para->vc_id, para);
+		dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
+		dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
 		break;
 	default:
 		break;

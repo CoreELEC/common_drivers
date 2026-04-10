@@ -15,6 +15,16 @@
 #define	VMODE_MODE_BIT_MASK	0xff
 #define VMODE_NULL_DISP_MAX	2
 
+enum tx_packet_type {
+	HDR10 = 0,
+	HDR10_PLUS,
+	DOLBY_VISION,
+	CUVA_VSIF,
+	CUVA_EMP,
+	SBTM,
+	DISPLAY_HDR,
+};
+
 enum viu_mux_e {
 	VIU_MUX_ENCL = 0,
 	VIU_MUX_ENCI,
@@ -76,6 +86,7 @@ typedef enum hdmi_color_depth color_depth_t;
 
 /* master_display_info for display device */
 struct master_display_info_s {
+	enum tx_packet_type type;
 	u32 present_flag;
 	u32 features;			/* feature bits bt2020/2084 */
 	u32 primaries[3][2];		/* normalized 50000 in G,B,R order */
@@ -370,6 +381,33 @@ struct dv_info {
 	u8 sup_10b_12b_444;/*only ver2*/
 };
 
+/* generic tx packet */
+struct any_packet {
+	enum tx_packet_type type;
+};
+
+/*
+ * union tx_packet - the overall union of all abstract tx package representations
+ * @any: generic tx packet
+ * @hdr: hdr10 and hlg and sdr tx packet
+ * @hdr10plus: hdr10plus tx packet
+ * @dv: amdolby_vision tx packet
+ * @cuva_emp：cuva tx emp packet
+ * @cuva_vsif: cuva tx vsif packet
+ * @sbtm: sbtm packet
+ * @display_hdr: dptx hdr packet
+ */
+union tx_packet {
+	struct any_packet any;
+	struct master_display_info_s hdr;
+	struct hdr10plus_para hdr10plus;
+	struct dv_vsif_para dv;
+	struct cuva_hdr_vs_emds_para cuva_emp;
+	struct cuva_hdr_vsif_para cuva_vsif;
+	struct vtem_sbtm_st sbtm;
+	struct master_display_info_s display_hdr;
+};
+
 struct vout_device_s {
 	void (*fresh_tx_hdr_pkt)(void *tx_instance, struct master_display_info_s *data);
 	void (*fresh_tx_sbtm_pkt)(void *tx_instance, struct vtem_sbtm_st *data);
@@ -383,6 +421,9 @@ struct vout_device_s {
 	void (*fresh_tx_cuva_hdr_vs_emds)(void *tx_instance, struct cuva_hdr_vs_emds_para *data);
 	void (*fresh_tx_emp_pkt)(void *tx_instance, unsigned char *data, unsigned int type,
 				 unsigned int size);
+	/* Currently only used by dptx display_hdr */
+	void (*enable_tx_packet)(void *tx_instance, union tx_packet *data);
+	void (*disable_tx_packet)(void *tx_instance, union tx_packet *data);
 	/* used for SDR case, yuv/rgb, limit/full, 601/709 dynamic switching */
 	void (*fresh_tx_input_vpp_info)(void *tx_instance);
 	void *tx_instance;
