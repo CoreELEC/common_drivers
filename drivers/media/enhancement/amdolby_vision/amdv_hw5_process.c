@@ -86,6 +86,13 @@ bool ignore_top_path_change;
 u32 delay_update_path;
 bool update_path_done;
 bool enable_2ppc = true;
+u32 force_src_chroma_format;
+u32 force_src_bdp;
+bool dither_en;
+u32 dithering_out_depth;
+u32 rgb2yuv_offset0;
+u32 rgb2yuv_offset1;
+u32 rgb2yuv_offset2;
 
 const char dolby_work_mode_str[12][20] = {
 	"wrap-byps",
@@ -2780,6 +2787,12 @@ int amdv_parse_metadata_hw5(struct vframe_s *vf,
 	} else {
 		tv_hw5_setting->top1_stats.enable = false;
 	}
+
+	if (force_src_chroma_format)
+		src_chroma_format = force_src_chroma_format;
+	if (force_src_bdp)
+		src_bdp = force_src_bdp;
+
 	v_inst_info->src_format = src_format;
 	v_inst_info->input_mode = input_mode;
 	v_inst_info->video_width = w;

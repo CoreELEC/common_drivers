@@ -9737,6 +9737,11 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 				update_ambient_lightsense(p_ambient);
 			}
 
+			if (force_src_chroma_format)
+				src_chroma_format = force_src_chroma_format;
+			if (force_src_bdp)
+				src_bdp = force_src_bdp;
+
 			if (debug_dolby & 0x200)
 				pr_dv_dbg("[count %d %d]dark_detail from cfg:%d,from api:%d\n",
 					     hdmi_frame_count, frame_count,
@@ -17402,8 +17407,22 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo panel_max_lumin value > /sys/class/amdolby_vision/debug;\n"
 	"echo force_update_top2 value > /sys/class/amdolby_vision/debug;\n"
 	"echo path_sel value > /sys/class/amdolby_vision/debug;\n"
-	"echo dump_pyr_up > /sys/class/amdolby_vision/debug;\n"
-	"echo bypass_shadow > /sys/class/amdolby_vision/debug;\n"
+	"echo dump_pyr_up value > /sys/class/amdolby_vision/debug;\n"
+	"echo bypass_shadow value > /sys/class/amdolby_vision/debug;\n"
+	"echo ignore_top_path_change value > /sys/class/amdolby_vision/debug;\n"
+	"echo debug_val value > /sys/class/amdolby_vision/debug;\n"
+	"echo test_hold_line value > /sys/class/amdolby_vision/debug;\n"
+	"echo ignore_ext_policy value > /sys/class/amdolby_vision/debug;\n"
+	"echo clear_hdr10plus_pkt value > /sys/class/amdolby_vision/debug;\n"
+	"echo enable_2ppc value > /sys/class/amdolby_vision/debug;\n"
+	"echo prl_mode value > /sys/class/amdolby_vision/debug;\n"
+	"echo force_src_chroma_format value > /sys/class/amdolby_vision/debug;\n"
+	"echo force_src_bdp value > /sys/class/amdolby_vision/debug;\n"
+	"echo dither_en value > /sys/class/amdolby_vision/debug;\n"
+	"echo dithering_out_depth value > /sys/class/amdolby_vision/debug;\n"
+	"echo rgb2yuv_offset0 value > /sys/class/amdolby_vision/debug;\n"
+	"echo rgb2yuv_offset1 value > /sys/class/amdolby_vision/debug;\n"
+	"echo rgb2yuv_offset2 value > /sys/class/amdolby_vision/debug;\n"
 };
 
 static ssize_t  amdolby_vision_debug_show
@@ -17967,6 +17986,41 @@ static ssize_t amdolby_vision_debug_store
 			return -EINVAL;
 		prl_mode = val;
 		pr_info("set prl_mode %d\n", prl_mode);
+	} else if (!strcmp(parm[0], "force_src_chroma_format")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		force_src_chroma_format = val;
+		pr_info("set src_chroma_format %d\n", force_src_chroma_format);
+	} else if (!strcmp(parm[0], "force_src_bdp")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		force_src_bdp = val;
+		pr_info("set src_bdp %d\n", force_src_bdp);
+	} else if (!strcmp(parm[0], "dither_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		dither_en = val;
+		pr_info("set dither_en %d\n", dither_en);
+	} else if (!strcmp(parm[0], "dithering_out_depth")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		dithering_out_depth = val;
+		pr_info("set dithering_out_depth %d\n", dithering_out_depth);
+	} else if (!strcmp(parm[0], "rgb2yuv_offset0")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		rgb2yuv_offset0 = val;
+		pr_info("set rgb2yuv_offset0 %d\n", rgb2yuv_offset0);
+	} else if (!strcmp(parm[0], "rgb2yuv_offset1")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		rgb2yuv_offset1 = val;
+		pr_info("set rgb2yuv_offset1 %d\n", rgb2yuv_offset1);
+	} else if (!strcmp(parm[0], "rgb2yuv_offset2")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		rgb2yuv_offset2 = val;
+		pr_info("set rgb2yuv_offset2 %d\n", rgb2yuv_offset2);
 	} else {
 		pr_info("unsupport cmd\n");
 	}

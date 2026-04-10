@@ -213,7 +213,7 @@ static void dolby5_ahb_reg_config(u32 *reg_baddr,
 				/*aml_ver|src1_gated |ab_inbuf_en| slice_num|ab_buf_th |byp_shadow*/
 				reg_val = reg_val | (3 << 9) | (1 << 11) | (1 << 12) |
 						((core2_slice_num >> 1) << 18) | (0x8 << 24) |
-						(core2_byp_shadow << 29);
+						(core2_byp_shadow << 29) | (dither_en << 6);
 			}
 			/*bypass precision rendering*/
 			if (reg_addr == 1 &&
@@ -227,6 +227,15 @@ static void dolby5_ahb_reg_config(u32 *reg_baddr,
 				(efuse_mode & 0x2) ||
 				device_disable_pd))
 				reg_val = reg_val | (1 << 3);
+
+			if (reg_addr == 0x119 && dithering_out_depth)
+				reg_val = reg_val | (dithering_out_depth << 12);
+			if (reg_addr == 0x40 && rgb2yuv_offset0)
+				reg_val = rgb2yuv_offset0;
+			if (reg_addr == 0x41 && rgb2yuv_offset1)
+				reg_val = rgb2yuv_offset1;
+			if (reg_addr == 0x42 && rgb2yuv_offset2)
+				reg_val = rgb2yuv_offset2;
 
 			/*0x10 clear interrupt*/
 			if (reg_addr == 4) {
@@ -351,8 +360,8 @@ static void dolby5_ahb_reg_config(u32 *reg_baddr,
 				reg_val = 1;
 			if (reg_addr == 1) {
 				reg_val = reg_val | (3 << 9) | (1 << 11) | (1 << 12) |
-						((core2_slice_num >> 1) << 18) |
-						(0x8 << 24) | (core2_byp_shadow << 29);
+						((core2_slice_num >> 1) << 18) | (0x8 << 24) |
+						(core2_byp_shadow << 29) | (dither_en << 6);
 			}
 			/*bypass precision rendering*/
 			if (reg_addr == 1 &&
@@ -366,6 +375,15 @@ static void dolby5_ahb_reg_config(u32 *reg_baddr,
 				(efuse_mode & 0x2) ||
 				device_disable_pd))
 				reg_val = reg_val | (1 << 3);
+
+			if (reg_addr == 0x119 && dithering_out_depth)
+				reg_val = reg_val | (dithering_out_depth << 12);
+			if (reg_addr == 0x40 && rgb2yuv_offset0)
+				reg_val = rgb2yuv_offset0;
+			if (reg_addr == 0x41 && rgb2yuv_offset1)
+				reg_val = rgb2yuv_offset1;
+			if (reg_addr == 0x42 && rgb2yuv_offset2)
+				reg_val = rgb2yuv_offset2;
 
 			/*0x10 clear interrupt*/
 			if (reg_addr == 4) {

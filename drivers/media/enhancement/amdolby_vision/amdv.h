@@ -1098,6 +1098,13 @@ extern u32 force_level;
 extern bool prl_mode;
 extern bool force_corep_max_level6;
 extern bool device_disable_pd;
+extern u32 force_src_chroma_format;
+extern u32 force_src_bdp;
+extern bool dither_en;
+extern u32 dithering_out_depth;
+extern u32 rgb2yuv_offset0;
+extern u32 rgb2yuv_offset1;
+extern u32 rgb2yuv_offset2;
 /************/
 extern enum signal_format_enum g_dst_format;
 
