@@ -240,7 +240,7 @@ bool vdin_chk_is_comb_mode(struct vdin_dev_s *devp)
 		return false;
 
 	/* only set comb when 444 8bit output */
-	if (vdin_is_convert_to_444(devp->format_convert) &&
+	if (vdin_is_convert_to_444(devp->afbc_format_convert) &&
 		devp->source_bitdepth == 8)
 		reg_fmt444_comb = true;
 	else
@@ -274,7 +274,7 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 
 	reg_fmt444_comb = vdin_chk_is_comb_mode(devp);
 
-	switch (devp->format_convert) {
+	switch (devp->afbc_format_convert) {
 	case VDIN_FORMAT_CONVERT_YUV_NV12:
 	case VDIN_FORMAT_CONVERT_YUV_NV21:
 	case VDIN_FORMAT_CONVERT_RGB_NV12:
@@ -372,7 +372,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	blk_out_end_v	=  enc_win_bgn_v      >> 2 ;//output blk scope
 	blk_out_bgn_v	= (enc_win_end_v + 3) >> 2 ;//output blk scope
 
-	vdin_out_fmt = devp->format_convert;
+	vdin_out_fmt = devp->afbc_format_convert;
 	if (vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_RGB ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_GBR ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_BRG ||
@@ -380,10 +380,10 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 		reg_fmt444_rgb_en = 1;
 
 	reg_fmt444_comb = vdin_chk_is_comb_mode(devp);
-	if (vdin_is_convert_to_nv21(devp->format_convert)) {
+	if (vdin_is_convert_to_nv21(devp->afbc_format_convert)) {
 		reg_format_mode = 2;/*420*/
 	    bits_num = 12;
-	} else if (vdin_is_convert_to_422(devp->format_convert)) {
+	} else if (vdin_is_convert_to_422(devp->afbc_format_convert)) {
 		reg_format_mode = 1;/*422*/
 	    bits_num = 16;
 	} else {
@@ -397,7 +397,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	uncompress_size = (((((16 * uncompress_bits * bits_num) + 7) >> 3) + 31)
 		      / 32) << 1;
 	pr_info("%s fmt_convert:%d comb:%d\n", __func__,
-		devp->format_convert, reg_fmt444_comb);
+		devp->afbc_format_convert, reg_fmt444_comb);
 	W_VCBUS_BIT(AFBCE_MODE_EN, 1, 18, 1);/* disable order mode */
 
 	W_VCBUS_BIT(VDIN_WRARB_REQEN_SLV, 0x1, 3, 1);//vpu arb axi_enable

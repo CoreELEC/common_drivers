@@ -59,7 +59,7 @@ void vdin_afbce_update_t3x(struct vdin_dev_s *devp)
 
 	reg_fmt444_comb = vdin_chk_is_comb_mode(devp);
 
-	switch (devp->format_convert) {
+	switch (devp->afbc_format_convert) {
 	case VDIN_FORMAT_CONVERT_YUV_NV12:
 	case VDIN_FORMAT_CONVERT_YUV_NV21:
 	case VDIN_FORMAT_CONVERT_RGB_NV12:
@@ -195,7 +195,7 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	blk_out_end_v	=  enc_win_bgn_v      >> 2 ;//output blk scope
 	blk_out_bgn_v	= (enc_win_end_v + 3) >> 2 ;//output blk scope
 
-	vdin_out_fmt = devp->format_convert;
+	vdin_out_fmt = devp->afbc_format_convert;
 	if (vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_RGB ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_GBR ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_BRG ||
@@ -237,7 +237,7 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	uncompress_size = (((((16 * uncompress_bits * sub_block_num) + 7) >> 3) + 31)
 		      / 32) << 1;
 	pr_info("%s fmt_convert:%d comb:%d;%d,%d;%d,%d\n", __func__,
-		devp->format_convert, reg_fmt444_comb, devp->h_active, h_blk_size_out,
+		devp->afbc_format_convert, reg_fmt444_comb, devp->h_active, h_blk_size_out,
 		uncompress_bits, sub_block_num);
 	W_VCBUS_BIT(offset + VDIN0_AFBCE_MODE_EN, 1, 18, 1);/* disable order mode */
 

@@ -272,7 +272,7 @@ void vdin_set_drm_data(struct vdin_dev_s *devp,
 		       struct vframe_s *vf);
 void vdin_set_freesync_data(struct vdin_dev_s *devp,
 			    struct vframe_s *vf);
-u32 vdin_get_curr_field_type(struct vdin_dev_s *devp);
+void vdin_get_curr_field_type(struct vdin_dev_s *devp);
 void vdin_set_source_type(struct vdin_dev_s *devp,
 			  struct vframe_s *vf);
 void vdin_set_source_mode(struct vdin_dev_s *devp, struct vframe_s *vf);
@@ -391,4 +391,5 @@ void vdin_set_game_frc_on_off(struct vdin_dev_s *devp, bool on_off);
 enum vd_format_e vdin_get_tx_format(struct vdin_dev_s *devp);
 bool vdin_select_hdr_matrix(struct vdin_dev_s *devp);
 void vdin_manual_matrix_csc(struct vdin_dev_s *devp, enum vdin_matrix_csc_e *matrix_csc);
+bool vdin_force_format_for_decontour(struct vdin_dev_s *devp);
 #endif

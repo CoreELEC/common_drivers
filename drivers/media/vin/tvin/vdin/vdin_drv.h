@@ -680,6 +680,7 @@ struct vdin_debug_s {
 	unsigned int dbg_wrmif_444;
 	unsigned int dbg_de_interlanced_ctl;
 	unsigned int dbg_force_convert;
+	unsigned int dbg_force_afbc_convert;
 	unsigned int force_afbce_422_12bit;/* 0-auto,1-force enable,2-force disable */
 	unsigned int force_fmt;
 	unsigned int sar_width;
@@ -697,6 +698,7 @@ struct vdin_debug_s {
 	unsigned int input_swap; /* 0:no swap, 1:swap */
 	unsigned int wr_endian; /* 0:big endian, 1:little endian */
 	unsigned int dbg_force_type;
+	unsigned int dbg_force_type_dw;
 	unsigned int rgb_info_x;
 	unsigned int rgb_info_y;
 	unsigned int rgb_info_r;
@@ -733,6 +735,8 @@ struct vdin_debug_s {
 	bool pause_afbce_dec;
 	bool bypass_filter_vsync;
 	bool force_bypass_tunnel;
+	bool force_descramble;
+	bool force_fmt_for_dct;
 	bool conversion;
 	bool ip_pat_en;
 	bool invalid_input_en;
@@ -1054,6 +1058,7 @@ struct vdin_dev_s {
 
 	struct vdin_debug_s debug;
 	enum vdin_format_convert_e format_convert;
+	enum vdin_format_convert_e afbc_format_convert;
 	unsigned int mif_fmt;/*enum vdin_mif_fmt*/
 	enum vdin_color_deeps_e source_bitdepth;/* afbce or main mif */
 	enum vdin_color_deeps_e source_bitdepth_dw;/* dw or main mif */
@@ -1204,6 +1209,7 @@ struct vdin_dev_s {
 	 *12:force config as 12bit
 	 */
 	enum color_deeps_cfg_e color_depth_config;
+	enum color_deeps_cfg_e color_depth_config_dw;
 	/* new add from txl:color depth mode for 10bit
 	 *1: full pack mode;config 10bit as 10bit
 	 *0: config 10bit as 12bit
@@ -1288,6 +1294,7 @@ struct vdin_dev_s {
 	bool baddr_en;/*0-use canvas;1-use phy addr*/
 	bool is_vfce_en;
 	bool is_422_12bit_enabled;
+	bool detunnel_enabled;
 	bool force_unlock;
 	bool vinfo_over_pixel_clk;
 	bool input_over_pixel_clk;

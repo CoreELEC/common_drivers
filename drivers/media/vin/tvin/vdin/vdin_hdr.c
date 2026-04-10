@@ -275,7 +275,8 @@ bool vdin_dv_is_need_tunnel(struct vdin_dev_s *devp)
 	    (devp->prop.color_format == TVIN_YUV422 ||
 	     devp->prop.color_format == TVIN_YUV420) &&
 	     !devp->bypass_tunnel &&
-	     vdin_is_dv_supported())
+	     vdin_is_dv_supported() &&
+	     !vdin_force_format_for_decontour(devp))
 		return true;
 	else
 		return false;
@@ -304,9 +305,10 @@ bool vdin_dv_is_visf_data(struct vdin_dev_s *devp)
 bool vdin_dv_is_not_std_source_led(struct vdin_dev_s *devp)
 {
 	if (devp->debug.dv_dbg_log & DV_DEBUG_NORMAL)
-		pr_info("%s:vdin%d,dv:%d,cfmt:%d,depth:%d,drm:%d\n", __func__,
+		pr_info("vdin%d,dv:%d,cfmt:%d %d bit,drm:%d,scan:%d bypass:%d\n",
 			devp->index, devp->dv.dv_flag, devp->prop.color_format,
-			devp->prop.colordepth, devp->prop.dv_unique_drm_flag);
+			devp->prop.colordepth, devp->prop.dv_unique_drm_flag,
+			devp->fmt_info_p->scan_mode, devp->bypass_tunnel);
 
 	if (devp->dv.dv_flag) {
 		if (devp->fmt_info_p->scan_mode == TVIN_SCAN_MODE_INTERLACED)
@@ -325,11 +327,15 @@ bool vdin_dv_is_not_std_source_led(struct vdin_dev_s *devp)
 					devp->bypass_tunnel = false;
 			else
 				devp->bypass_tunnel = true;
+			if (vdin_dv_is_hw5(devp))
+				devp->bypass_tunnel = true;
 		} else {
 			if (devp->prop.color_format == TVIN_YUV420 ||
 				(devp->prop.color_format == TVIN_RGB444 &&
 				devp->prop.colordepth == VDIN_COLOR_DEEPS_12BIT))
 				/* dv 420 12bit/rgb 12bit: recognize as dv but drop 2-lsb */
+				devp->bypass_tunnel = true;
+			if (vdin_force_format_for_decontour(devp) && !vdin_dv_is_sink_led(devp))
 				devp->bypass_tunnel = true;
 		}
 	}

@@ -380,10 +380,12 @@ static ssize_t dump_vdin_mif_show(struct file *filp, struct kobject *kobj,
 	is_data_end = (off + to_copy) >= info->sizeimage;
 
 	if (is_data_end) {
-		pr_info("dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
-			devp->index, devp->curr_wr_vfe->vf.width,
-			devp->curr_wr_vfe->vf.height, devp->canvas_w,
-			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth_dw);
+		if (devp->curr_wr_vfe)
+			pr_info("dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
+				devp->index, devp->curr_wr_vfe->vf.width,
+				devp->curr_wr_vfe->vf.height, devp->canvas_w,
+				vdin_get_dst_fmt_str(devp->format_convert),
+				devp->source_bitdepth_dw);
 		if (info->highmem_flag)
 			vdin_unmap_phyaddr(info->vir_addr);
 		info->vir_addr = NULL;
@@ -514,7 +516,7 @@ static ssize_t dump_vdin_sct_body_show(struct kobject *kobj,
 	if (is_data_end) {
 		pr_info("dump vdin%d sct body ok %dx%d %s %d bit addr:0x0 sct:%d\n",
 			devp->index, devp->h_active, devp->v_active,
-			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
+			vdin_get_dst_fmt_str(devp->afbc_format_convert), devp->source_bitdepth,
 			devp->mem_type);
 		info->vir_addr = NULL;
 		mutex_unlock(&info->mutex);
@@ -704,7 +706,7 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	struct dump_info_s *info;
 	u32 sizeimage;
 	u8 *vir_addr;
-	size_t to_copy = 0;
+	ssize_t to_copy = 0;
 	u64 map_addr;
 	unsigned int span = SZ_1M;
 	loff_t block_idx = off / span;
@@ -819,7 +821,7 @@ static ssize_t dump_vdin_afbc_body_show(struct file *filp, struct kobject *kobj,
 	if (is_data_end) {
 		pr_info("dump vdin%d afbc body ok %dx%d %s %d bit afbc:0x%x 0x%lx\n",
 			devp->index, devp->h_active, devp->v_active,
-			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
+			vdin_get_dst_fmt_str(devp->afbc_format_convert), devp->source_bitdepth,
 			devp->afbce_flag, devp->afbce_info->fm_body_paddr[0]);
 		if (info->highmem_flag)
 			vdin_unmap_phyaddr(info->vir_addr);
@@ -1129,7 +1131,7 @@ void *output_body_ptr, struct vdin_dev_s *devp, unsigned int buf_num)
 	}
 	pr_info("user dump vdin%d afbc buffer ok %dx%d %s %d bit afbc:0x%x 0x%lx %d sct:%d\n",
 		devp->index, devp->h_active, devp->v_active,
-		vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
+		vdin_get_dst_fmt_str(devp->afbc_format_convert), devp->source_bitdepth,
 		devp->afbce_flag, devp->afbce_info->fm_body_paddr[0],
 		devp->afbce_info->frame_body_size, devp->mem_type);
 	return;
@@ -1228,7 +1230,8 @@ int vdin_dump_one_buf_mem_user(void *output_buf, struct vdin_dev_s *devp,
 				buf_num, devp->canvas_max_num);
 	}
 
-	pr_info("user dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
+	if (devp->curr_wr_vfe)
+		pr_info("user dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
 		devp->index, devp->curr_wr_vfe->vf.width,
 		devp->curr_wr_vfe->vf.height, devp->canvas_w,
 		vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth_dw);
@@ -1561,7 +1564,8 @@ static void vdin_dump_one_buf_mem(char *path, struct vdin_dev_s *devp,
 		pr_debug("high-mem write buffer %2d of %2u to %s.\n",
 			buf_num, devp->canvas_max_num, path);
 	}
-	pr_info("kernel dump one vdin%d mif ok %dx%d(%d) %s %d bit\n",
+	if (devp->curr_wr_vfe)
+		pr_info("kernel dump one vdin%d mif ok %dx%d(%d) %s %d bit\n",
 			devp->index, devp->curr_wr_vfe->vf.width,
 			devp->curr_wr_vfe->vf.height, devp->canvas_w,
 			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth_dw);
@@ -1679,7 +1683,8 @@ static void vdin_dump_mem(char *path, struct vdin_dev_s *devp)
 				i, devp->canvas_max_num, path);
 		}
 	}
-	pr_info("kernel dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
+	if (devp->curr_wr_vfe)
+		pr_info("kernel dump vdin%d mif ok %dx%d(%d) %s %d bit\n",
 			devp->index, devp->curr_wr_vfe->vf.width,
 			devp->curr_wr_vfe->vf.height, devp->canvas_w,
 			vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth_dw);
@@ -1906,7 +1911,7 @@ static void vdin_dump_one_afbce_mem(char *path, struct vdin_dev_s *devp,
 
 	pr_info("kernel dump vdin%d afbc buffer ok %dx%d %s %d bit en:0x%x 0x%lx sct:%d\n",
 		devp->index, devp->h_active, devp->v_active,
-		vdin_get_dst_fmt_str(devp->format_convert), devp->source_bitdepth,
+		vdin_get_dst_fmt_str(devp->afbc_format_convert), devp->source_bitdepth,
 		devp->afbce_flag, devp->afbce_info->fm_body_paddr[0], devp->mem_type);
 	return;
 error:
@@ -2162,6 +2167,9 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 	pr_info("format_convert	= %s(%d)\n",
 		vdin_fmt_convert_str(devp->format_convert),
 		devp->format_convert);
+	pr_info("afbc_format_convert	= %s(%d)\n",
+		vdin_fmt_convert_str(devp->afbc_format_convert),
+		devp->afbc_format_convert);
 	pr_info("vdin csc_idx	= %s(%d)\n",
 		vdin_trans_matrix_str(devp->csc_idx),
 		devp->csc_idx);
@@ -2333,7 +2341,9 @@ static void vdin_dump_state(struct vdin_dev_s *devp)
 		devp->prop.imax_flag);
 	pr_info("dv emp size:%d crc_flag:%d\n", devp->prop.emp_data.size,
 		devp->dv.dv_crc_check);
-	pr_info("dv_is_not_std:%d\n", devp->dv_is_not_std);
+	pr_info("dv no std:%d, no tunnel:%d, desc:%d, detunnel:%d, 12bit:%d\n",
+		devp->dv_is_not_std, devp->bypass_tunnel, devp->debug.force_descramble,
+		devp->detunnel_enabled, devp->is_422_12bit_enabled);
 	pr_info("size of struct vdin_dev_s: %d\n", devp->vdin_dev_ssize);
 	pr_info("devp->dv.dv_vsif:(%d,%d,%d,%d,%d,%d,%d,%d);\n",
 		devp->dv.dv_vsif.dolby_vision_signal,
@@ -3186,9 +3196,9 @@ int vdin_afbce_compression_ratio_monitor(struct vdin_dev_s *devp, struct vf_entr
 	if (src_size1)
 		ratio1 = dst_frame_size * 100 / src_size1;
 
-	if (vdin_is_convert_to_444(devp->format_convert))
+	if (vdin_is_convert_to_444(devp->afbc_format_convert))
 		src_size2 = devp->h_active * devp->v_active * 3 * devp->source_bitdepth / 8;
-	else if (vdin_is_convert_to_nv21(devp->format_convert))
+	else if (vdin_is_convert_to_nv21(devp->afbc_format_convert))
 		src_size2 =
 			devp->h_active * devp->v_active * 3 / 2 * devp->source_bitdepth / 8;
 	else
@@ -3887,6 +3897,11 @@ start_chk:
 		int i;
 		struct vframe_master_display_colour_s *prop;
 
+		if (!devp->curr_wr_vfe) {
+			err = -EINVAL;
+			goto error;
+		}
+
 		prop = &devp->curr_wr_vfe->vf.prop.master_display_colour;
 
 		for (i = 0; i < 6; i++)
@@ -3987,6 +4002,17 @@ start_chk:
 				devp->color_depth_config = COLOR_DEEPS_AUTO;
 			else
 				devp->color_depth_config =
+					val | COLOR_DEEPS_MANUAL;
+		}
+	} else if (!strcmp(parm[0], "color_depth_dw")) {
+		if (!parm[1]) {
+			err = -EINVAL;
+			goto error;
+		} else if (kstrtoul(parm[1], 10, &val) == 0) {
+			if (val == 0)
+				devp->color_depth_config_dw = COLOR_DEEPS_AUTO;
+			else
+				devp->color_depth_config_dw =
 					val | COLOR_DEEPS_MANUAL;
 		}
 	} else if (!strcmp(parm[0], "color_depth_support")) {
@@ -5036,6 +5062,26 @@ start_chk:
 			err = -EINVAL;
 			goto error;
 		}
+	} else if (!strcmp(parm[0], "force_descramble")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			if (temp)
+				devp->debug.force_descramble = true;
+			else
+				devp->debug.force_descramble = false;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (!strcmp(parm[0], "force_fmt_for_dct")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			if (temp)
+				devp->debug.force_fmt_for_dct = true;
+			else
+				devp->debug.force_fmt_for_dct = false;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
 	} else if (!strcmp(parm[0], "yuv422_2plane")) {
 		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
 			if (temp == 0)
@@ -5155,9 +5201,23 @@ start_chk:
 			err = -EINVAL;
 			goto error;
 		}
+	} else if (!strcmp(parm[0], "force_afbc_convert")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			devp->debug.dbg_force_afbc_convert = temp;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
 	} else if (!strcmp(parm[0], "force_type")) {
 		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
 			devp->debug.dbg_force_type = temp;
+		} else {
+			err = -EINVAL;
+			goto error;
+		}
+	} else if (!strcmp(parm[0], "force_type_dw")) {
+		if (parm[1] && (kstrtouint(parm[1], 0, &temp) == 0)) {
+			devp->debug.dbg_force_type_dw = temp;
 		} else {
 			err = -EINVAL;
 			goto error;

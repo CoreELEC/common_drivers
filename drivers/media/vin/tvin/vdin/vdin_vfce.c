@@ -194,10 +194,10 @@ void vdin_vfce_update(struct vdin_dev_s *devp)
 	unsigned int uncmp_size, uncmp_bits, cmp_bits;
 	unsigned int ram_ram_size_mode = 1;
 
-	if (vdin_is_convert_to_nv21(devp->format_convert)) {
+	if (vdin_is_convert_to_nv21(devp->afbc_format_convert)) {
 		reg_enc_format = 2;/*420*/
 		uncmp_bits = 12;
-	} else if (vdin_is_convert_to_422(devp->format_convert)) {
+	} else if (vdin_is_convert_to_422(devp->afbc_format_convert)) {
 		reg_enc_format = 1;/*422*/
 		uncmp_bits = 16;
 	} else {
@@ -290,7 +290,7 @@ void vdin_vfce_chnl(struct vdin_dev_s *devp)
 
 	comp_target_byte = devp->cr_lossy_param.cr_lossy_target_byte;
 
-	if (vdin_is_convert_to_rgb(devp->format_convert)) { //rgb
+	if (vdin_is_convert_to_rgb(devp->afbc_format_convert)) { //rgb
 		reg_pixel_format	= 2;
 		reg_pixel_type_0	= 0;
 		reg_pixel_type_1	= 0;
@@ -305,10 +305,10 @@ void vdin_vfce_chnl(struct vdin_dev_s *devp)
 		reg_pixel_is_diff_chn	= 0;
 		reg_input_is_rgba	= 0;
 	}
-	if (vdin_is_convert_to_nv21(devp->format_convert)) {
+	if (vdin_is_convert_to_nv21(devp->afbc_format_convert)) {
 		reg_enc_format = 2;/*420*/
 		uncmp_bits = 12;
-	} else if (vdin_is_convert_to_422(devp->format_convert)) {
+	} else if (vdin_is_convert_to_422(devp->afbc_format_convert)) {
 		reg_enc_format = 1;/*422*/
 		uncmp_bits = 16;
 	} else {
@@ -614,7 +614,7 @@ void vdin_vfce_afbce_config(struct vdin_dev_s *devp)
 	blk_out_end_v	=  enc_win_bgn_v      >> 2 ;//output blk scope
 	blk_out_bgn_v	= (enc_win_end_v + 3) >> 2 ;//output blk scope
 
-	vdin_out_fmt = devp->format_convert;
+	vdin_out_fmt = devp->afbc_format_convert;
 	if (vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_RGB ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_GBR ||
 	    vdin_out_fmt == VDIN_FORMAT_CONVERT_YUV_BRG ||
@@ -622,10 +622,10 @@ void vdin_vfce_afbce_config(struct vdin_dev_s *devp)
 		reg_fmt444_rgb_en = 1;
 
 	reg_fmt444_comb = vdin_chk_is_comb_mode(devp);
-	if (vdin_is_convert_to_nv21(devp->format_convert)) {
+	if (vdin_is_convert_to_nv21(devp->afbc_format_convert)) {
 		reg_format_mode = 2;/*420*/
 	    bits_num = 12;
-	} else if (vdin_is_convert_to_422(devp->format_convert)) {
+	} else if (vdin_is_convert_to_422(devp->afbc_format_convert)) {
 		reg_format_mode = 1;/*422*/
 	    bits_num = 16;
 	} else {
@@ -652,11 +652,21 @@ void vdin_vfce_afbce_config(struct vdin_dev_s *devp)
 		W_VCBUS_BIT(devp->addr_offset + VDIN_DETUNNEL_CTRL, 0, 0, 1);
 	}
 
+	if (devp->detunnel_enabled) {
+		/* detunnel hsize */
+		W_VCBUS_BIT(devp->addr_offset + VDIN_DETUNNEL_HSIZE, devp->h_active, 0, 13);
+		/* reg_detunnel_sel */
+		W_VCBUS_BIT(devp->addr_offset + VDIN_DETUNNEL_CTRL, 0x2c2d0, 2, 18);
+		/* enable detunnel */
+		W_VCBUS_BIT(devp->addr_offset + VDIN_DETUNNEL_CTRL, 1, 0, 1);
+	}
+
 	//bit size of uncompressed mode
 	uncompress_size = (((((16 * uncompress_bits * bits_num) + 7) >> 3) + 31)
 		      / 32) << 1;
-	pr_info("%s fmt_convert:%d comb:%d,uncompress_bits:%d %d %d\n", __func__,
-		devp->format_convert, reg_fmt444_comb, uncompress_bits,
+	pr_info("%s fmt_convert:%d %d, comb:%d,uncompress_bits:%d %d %d\n", __func__,
+		devp->format_convert, devp->afbc_format_convert,
+		reg_fmt444_comb, uncompress_bits,
 		reg_format_mode, bits_num);
 //	W_VCBUS_BIT(AFBCE_MODE_EN, 1, 18, 1);/* disable order mode */
 //

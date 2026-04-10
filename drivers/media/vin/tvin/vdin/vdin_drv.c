@@ -1086,7 +1086,9 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 			vf->flag |= VFRAME_FLAG_GAME_MODE;
 		if (devp->vdin_pc_mode)
 			vf->flag |= VFRAME_FLAG_PC_MODE;
-		if (devp->dv_is_not_std || devp->bypass_tunnel)
+		if (devp->dv_is_not_std || devp->bypass_tunnel ||
+			vdin_dv_is_hw5(devp) ||
+			vdin_force_format_for_decontour(devp))
 			vf->type_ext |= VIDTYPE_EXT_BYPASS_DETUNNEL;
 		else
 			vf->type_ext &= ~VIDTYPE_EXT_BYPASS_DETUNNEL;
@@ -1286,8 +1288,9 @@ void vdin_double_write_confirm(struct vdin_dev_s *devp)
 	if (devp->double_wr && (devp->afbce_flag & VDIN_AFBCE_EN_422_12BIT) &&
 		((vdin_is_dolby_signal_in(devp) &&
 		!(vdin_dv_is_hw2(devp) || vdin_dv_is_hw5(devp)) &&
-		(devp->format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444 ||
-		devp->format_convert == VDIN_FORMAT_CONVERT_RGB_RGB)) ||
+		(devp->afbc_format_convert == VDIN_FORMAT_CONVERT_YUV_YUV444 ||
+		devp->afbc_format_convert == VDIN_FORMAT_CONVERT_RGB_RGB) &&
+		!vdin_force_format_for_decontour(devp)) ||
 		devp->debug.force_afbce_422_12bit == 2)) {
 		devp->is_422_12bit_enabled = true;
 		if (devp->debug.vdin_dbg_en)
@@ -1296,6 +1299,10 @@ void vdin_double_write_confirm(struct vdin_dev_s *devp)
 		devp->is_422_12bit_enabled = false;
 	}
 
+	if (vdin_force_format_for_decontour(devp))
+		devp->detunnel_enabled = true;
+	else
+		devp->detunnel_enabled = false;
 }
 
 static u32 vdin_is_delay_vfe2rd_list(struct vdin_dev_s *devp)
@@ -1870,7 +1877,8 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_start_param_init(devp);
 	if (devp->frontend && devp->frontend->sm_ops) {
 		sm_ops = devp->frontend->sm_ops;
-		sm_ops->get_sig_property(devp->frontend, &devp->prop, devp->port_type);
+		if (sm_ops->get_sig_property)
+			sm_ops->get_sig_property(devp->frontend, &devp->prop, devp->port_type);
 
 		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))
 			vdin_check_hdmi_hdr(devp);
@@ -2073,7 +2081,7 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 
 	memset(&devp->parm.histgram[0], 0, sizeof(unsigned short) * 64);
 
-	devp->curr_field_type = vdin_get_curr_field_type(devp);
+	vdin_get_curr_field_type(devp);
 	devp->curr_dv_flag = devp->dv.dv_flag;
 	/* configure regs and enable hw */
 	vdin_vpu_clk_mem_pd(devp, 1);
@@ -3294,7 +3302,7 @@ irqreturn_t vdin_isr_simple(int irq, void *dev_id)
 	}
 
 	last_field_type = devp->curr_field_type;
-	devp->curr_field_type = vdin_get_curr_field_type(devp);
+	vdin_get_curr_field_type(devp);
 
 	if (devp->frontend) {
 		dec_ops = devp->frontend->dec_ops;
@@ -4353,7 +4361,7 @@ irqreturn_t vdin_isr(int irq, void *dev_id)
 	devp->h_cnt64 = vdin_get_meas_h_cnt64(offset);
 	last_field_type = devp->curr_field_type;
 	last_dv_flag = devp->curr_dv_flag;
-	devp->curr_field_type = vdin_get_curr_field_type(devp);
+	vdin_get_curr_field_type(devp);
 	devp->curr_dv_flag = devp->dv.dv_flag;
 
 	if (devp->vdin_function_sel & VDIN_ADJUST_VLOCK) {
@@ -4906,7 +4914,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	 */
 
 	last_field_type = devp->curr_field_type;
-	devp->curr_field_type = vdin_get_curr_field_type(devp);
+	vdin_get_curr_field_type(devp);
 
 	curr_wr_vfe = devp->curr_wr_vfe;
 	curr_wr_vf  = &curr_wr_vfe->vf;
@@ -5202,7 +5210,12 @@ static int vdin_open(struct inode *inode, struct file *file)
  */
 static int vdin_release(struct inode *inode, struct file *file)
 {
-	struct vdin_dev_s *devp = file->private_data;
+	struct vdin_dev_s *devp;
+
+	if (!file->private_data)
+		return -EINVAL;
+
+	devp = file->private_data;
 
 	if (devp->index == 0 && devp->dtdata->vdin0_en == 0) {
 		pr_err("%s vdin%d not enable\n", __func__, devp->index);
@@ -5359,9 +5372,10 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	void __user *user_buf = NULL;
 #endif
 	/* Get the per-device structure that contains this cdev */
+	if (!file->private_data)
+		return -EINVAL;
+
 	devp = file->private_data;
-	if (!devp)
-		return -EFAULT;
 
 	if (devp->index == 0 && devp->dtdata->vdin0_en == 0) {
 		pr_err("%s vdin%d not enable\n", __func__, devp->index);
@@ -6561,7 +6575,7 @@ exit_unlock:
 static long vdin_compat_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = vdin_ioctl(file, cmd, arg);
@@ -6575,9 +6589,14 @@ static long vdin_compat_ioctl(struct file *file, unsigned int cmd,
  */
 static int vdin_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	struct vdin_dev_s *devp = file->private_data;
+	struct vdin_dev_s *devp;
 	unsigned long start, len, off;
 	unsigned long pfn, size;
+
+	if (!file->private_data)
+		return -EINVAL;
+
+	devp = file->private_data;
 
 	if (vma->vm_pgoff > (~0UL >> PAGE_SHIFT))
 		return -EINVAL;
@@ -6608,8 +6627,13 @@ static int vdin_mmap(struct file *file, struct vm_area_struct *vma)
 
 static unsigned int vdin_poll(struct file *file, poll_table *wait)
 {
-	struct vdin_dev_s *devp = file->private_data;
+	struct vdin_dev_s *devp;
 	unsigned int mask = 0;
+
+	if (!file->private_data)
+		return -EINVAL;
+
+	devp = file->private_data;
 
 	if ((devp->flags & VDIN_FLAG_FS_OPENED) == 0 &&
 	    devp->set_canvas_manual != 1)
@@ -6639,7 +6663,12 @@ static ssize_t vdin_read(struct file *file, char __user *buf,
 	struct vdin_vf_info vf_info;
 	long ret;
 	struct vf_entry *vfe;
-	struct vdin_dev_s *devp = file->private_data;
+	struct vdin_dev_s *devp;
+
+	if (!file->private_data)
+		return -EINVAL;
+
+	devp = file->private_data;
 
 	/* currently only for keystone get buf use */
 	if (devp->set_canvas_manual == 0)
@@ -7501,7 +7530,7 @@ static int vdin_get_vinfo_notify_callback(struct notifier_block *block,
 	struct vdin_dev_s *devp_vdin1 = vdin_get_dev(1);
 	const struct vinfo_s *vinfo = get_current_vinfo();
 
-	if (event != VOUT_EVENT_MODE_CHANGE)
+	if (event != VOUT_EVENT_MODE_CHANGE || !vinfo || !devp)
 		return 0;
 
 	if (devp->vdin_function_sel & VDIN_SELF_STOP_START &&
@@ -7524,6 +7553,9 @@ static int vdin_get_vinfo_notify_callback(struct notifier_block *block,
 	devp->vrr_data.cur_vrr_status = get_cur_vrr_status(devp);
 
 	vdin_dlg_update_hist_hv(vinfo->width, vinfo->height, devp->vinfo_std_duration);
+
+	if (!devp_vdin1)
+		return 0;
 
 	if (devp_vdin1 && devp_vdin1->debug.vdin_dbg_en)
 		pr_info("vdin%d,vinfo:%dx%d@%dHz,vrr:%d\n",
@@ -7852,6 +7884,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 
 	devp->color_depth_support = bit_mode & 0xff;
 	devp->color_depth_config = COLOR_DEEPS_AUTO;
+	devp->color_depth_config_dw = COLOR_DEEPS_AUTO;
 
 	/* bit8:use 8bit  at 4k_50/60hz_10bit*/
 	/* bit9:use 10bit at 4k_50/60hz_10bit*/

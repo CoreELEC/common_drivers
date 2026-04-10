@@ -512,6 +512,20 @@ u32 vdin_matrix_range_chk(struct vdin_dev_s *devp)
 	}
 }
 
+bool vdin_force_format_for_decontour(struct vdin_dev_s *devp)
+{
+/* For t6x/t6w dpss: decontour before DV. */
+	if ((devp->dtdata->hw_ver == VDIN_HW_T6W ||
+		devp->dtdata->hw_ver == VDIN_HW_T6X) &&
+		!devp->game_mode && !devp->vdin_pc_mode &&
+		(vdin_dv_is_sink_led(devp) || vdin_dv_is_source_led(devp)) &&
+		!vdin_dv_is_hw5(devp) &&
+		devp->debug.force_fmt_for_dct)
+		return true;
+	else
+		return false;
+}
+
 /* set format_convert
  * base on parameters:
  *	a.color_format
@@ -519,7 +533,8 @@ u32 vdin_matrix_range_chk(struct vdin_dev_s *devp)
  */
 void vdin_get_format_convert(struct vdin_dev_s *devp)
 {
-	enum vdin_format_convert_e	format_convert;
+	enum vdin_format_convert_e format_convert = VDIN_MATRIX_XXX_YUV_BLACK;
+	enum vdin_format_convert_e afbc_format_convert = VDIN_MATRIX_XXX_YUV_BLACK;
 	unsigned int port = devp->parm.port;
 	unsigned int scan_mod;
 	unsigned int manual_md = (devp->flags & VDIN_FLAG_MANUAL_CONVERSION);
@@ -715,6 +730,31 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		}
 	}
 #endif
+
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	if (vdin_is_dolby_signal_in(devp)) {
+		if (vdin_dv_is_hw5(devp)) {
+			if (devp->prop.color_format == TVIN_RGB444) {
+				format_convert = VDIN_FORMAT_CONVERT_RGB_YUV444;
+				afbc_format_convert = VDIN_FORMAT_CONVERT_RGB_YUV422;
+			} else if (devp->prop.color_format == TVIN_YUV444 ||
+				devp->prop.color_format == TVIN_YUV422 ||
+				devp->prop.color_format == TVIN_YUV420) {
+				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
+				afbc_format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
+			}
+		} else if (vdin_force_format_for_decontour(devp)) {
+			if (devp->prop.color_format == TVIN_RGB444) {
+				format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
+				afbc_format_convert = VDIN_FORMAT_CONVERT_RGB_RGB;
+			} else {
+				format_convert = VDIN_FORMAT_CONVERT_YUV_YUV444;
+				afbc_format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
+			}
+		}
+	}
+#endif
+
 	/*hw test:vdin de-tunnel to 422 12bit*/
 	//if (devp->dtdata->ipt444_to_422_12bit && vdin_cfg_444_to_422_wmif_en)
 	//	format_convert = VDIN_FORMAT_CONVERT_YUV_YUV422;
@@ -749,6 +789,15 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		format_convert = devp->debug.dbg_force_convert;
 
 	devp->format_convert = format_convert;
+
+	if (devp->debug.dbg_force_afbc_convert)
+		afbc_format_convert = devp->debug.dbg_force_afbc_convert;
+
+	if (afbc_format_convert)
+		devp->afbc_format_convert = afbc_format_convert;
+	else
+		devp->afbc_format_convert = format_convert;
+
 	if (vdin_is_convert_to_422(format_convert))
 		devp->mif_fmt = MIF_FMT_YUV422;
 	else if (vdin_is_convert_to_444(format_convert))
@@ -764,9 +813,10 @@ void vdin_get_format_convert(struct vdin_dev_s *devp)
 		devp->local_var.is_rgba_en = false;
 
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_CFMT)
-		pr_info("%s pc mode:%d(%d) game:%d man_md:%d, cfmt:%d, dst cfmt:%d convert md:%d mif_fmt:%d\n",
-			__func__, vdin_pc_mode, devp->vdin_pc_mode, game_mode, manual_md,
-			devp->prop.color_format, devp->prop.dest_cfmt, format_convert,
+		pr_info("vdin%d pc:%d(%d) game:%d manual:%d, cfmt:%d, dfmt:%d convert:%d %d mif:%d\n",
+			devp->index, vdin_pc_mode, devp->vdin_pc_mode, game_mode, manual_md,
+			devp->prop.color_format, devp->prop.dest_cfmt,
+			format_convert, afbc_format_convert,
 			devp->mif_fmt);
 }
 
@@ -5189,12 +5239,17 @@ void vdin_calculate_duration(struct vdin_dev_s *devp)
 {
 	unsigned int last_field_type, cycle_phase;
 	struct vframe_s *curr_wr_vf = NULL;
-	const struct tvin_format_s *fmt_info = devp->fmt_info_p;
-	enum tvin_port_e port = devp->parm.port;
+	const struct tvin_format_s *fmt_info = NULL;
+	enum tvin_port_e port = TVIN_PORT_NULL;
 	unsigned int fps;
 	unsigned long tmp_clk;
 	unsigned long tmp_cycle;
 
+	if (!devp || !devp->curr_wr_vfe || !devp->fmt_info_p)
+		return;
+
+	fmt_info = devp->fmt_info_p;
+	port = devp->parm.port;
 	curr_wr_vf = &devp->curr_wr_vfe->vf;
 	last_field_type = devp->curr_field_type;
 	cycle_phase = devp->msr_clk_val / 96000;
@@ -5966,17 +6021,29 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp, unsigned int rdma_enable)
 			bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		}
 
+		if (devp->is_422_12bit_enabled)
+			bit_dep = VDIN_COLOR_DEEPS_12BIT;
+		else if (devp->work_mode == VDIN_WORK_MD_V4L || vdin_dv_is_need_tunnel(devp) ||
+			devp->local_var.is_rgba_en)
+			bit_dep = VDIN_COLOR_DEEPS_8BIT;
+
+		if (vdin_is_dolby_signal_in(devp)) {
+			if (vdin_dv_is_hw5(devp)) {
+				if (devp->prop.colordepth == VDIN_COLOR_DEEPS_10BIT ||
+					devp->prop.colordepth == VDIN_COLOR_DEEPS_12BIT)
+					bit_dep = VDIN_COLOR_DEEPS_10BIT;
+				else
+					bit_dep = VDIN_COLOR_DEEPS_8BIT;
+			} else if (vdin_force_format_for_decontour(devp)) {
+				bit_dep = VDIN_COLOR_DEEPS_10BIT;
+			}
+		}
+
 		break;
 	default:
 		bit_dep = VDIN_COLOR_DEEPS_8BIT;
 		break;
 	}
-
-	if (devp->is_422_12bit_enabled)
-		bit_dep = VDIN_COLOR_DEEPS_12BIT;
-	else if (devp->work_mode == VDIN_WORK_MD_V4L || vdin_dv_is_need_tunnel(devp) ||
-		devp->local_var.is_rgba_en)
-		bit_dep = VDIN_COLOR_DEEPS_8BIT;
 
 	devp->source_bitdepth = bit_dep;
 
@@ -5990,6 +6057,14 @@ void vdin_set_bitdepth(struct vdin_dev_s *devp, unsigned int rdma_enable)
 	} else {
 		devp->source_bitdepth_dw = devp->source_bitdepth;
 	}
+
+	if (devp->color_depth_config_dw == COLOR_DEEPS_8BIT)
+		devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_8BIT;
+	else if (devp->color_depth_config_dw == COLOR_DEEPS_10BIT)
+		devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_10BIT;
+	else if (devp->color_depth_config_dw == COLOR_DEEPS_12BIT)
+		devp->source_bitdepth_dw = VDIN_COLOR_DEEPS_12BIT;
+
 	if (devp->source_bitdepth_dw == VDIN_COLOR_DEEPS_8BIT)
 		reg_bit_depth = 0;
 	else if (devp->source_bitdepth_dw == VDIN_COLOR_DEEPS_10BIT)
@@ -7221,17 +7296,17 @@ void vdin_dv_tunnel_set(struct vdin_dev_s *devp)
 	if (!devp->dtdata->de_tunnel_tunnel && !devp->dv_hw5.hw5_ctl)
 		return;
 
-	if (devp->debug.vdin_dbg_en) {
-		pr_info("vdin dv tunel_set shrink:(%d, %d)\n",
-			devp->h_active, devp->h_shrink_out);
-	}
-
 	/* h shrink on*/
-	if (devp->h_shrink_out < devp->h_active && !devp->bypass_tunnel) {
+	if ((devp->h_shrink_out < devp->h_active && !devp->bypass_tunnel &&
+		!vdin_dv_is_hw5(devp)) ^
+		devp->debug.force_descramble) {
 		/*hw verify:de-tunnel 444 to 422 12bit*/
 		vdin_dv_de_tunnel_to_44410bit(devp, true);
 		/*vdin de tunnel and tunnel for vdin scaling*/
 		vdin_dv_desc_to_4448bit(devp, true);
+		if (devp->debug.vdin_dbg_en)
+			pr_info("vdin dv tunel_set shrink:(%d, %d)\n",
+				devp->h_active, devp->h_shrink_out);
 	} else {
 		vdin_dv_de_tunnel_to_44410bit(devp, false);
 		vdin_dv_desc_to_4448bit(devp, false);
@@ -7861,16 +7936,17 @@ void vdin_check_hdmi_hdr(struct vdin_dev_s *devp)
 	}
 }
 
-u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
+void vdin_get_curr_field_type(struct vdin_dev_s *devp)
 {
 	u32 field_status;
 	u32 type = VIDTYPE_VIU_SINGLE_PLANE | VIDTYPE_VIU_FIELD;
+	u32 type_dw = VIDTYPE_VIU_SINGLE_PLANE | VIDTYPE_VIU_FIELD;
 
 	/* struct tvin_parm_s *parm = &devp->parm; */
 	const struct tvin_format_s *fmt_info = devp->fmt_info_p;
 
 	if (!fmt_info)
-		return devp->curr_field_type;
+		return;
 
 	if (fmt_info->scan_mode == TVIN_SCAN_MODE_PROGRESSIVE) {
 		type |= VIDTYPE_PROGRESSIVE;
@@ -7896,40 +7972,6 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 				type |= VIDTYPE_INTERLACE_TOP;
 			}
 		}
-	}
-
-	switch (devp->format_convert) {
-	case VDIN_FORMAT_CONVERT_YUV_YUV444:
-	case VDIN_FORMAT_CONVERT_RGB_YUV444:
-		type |= VIDTYPE_VIU_444;
-		/*if (devp->afbce_mode_pre) */
-		/*	type |= VIDTYPE_COMB_MODE; */
-		break;
-	case VDIN_FORMAT_CONVERT_YUV_YUV422:
-	case VDIN_FORMAT_CONVERT_RGB_YUV422:
-		type |= VIDTYPE_VIU_422;
-		break;
-	case VDIN_FORMAT_CONVERT_YUV_RGB:
-	case VDIN_FORMAT_CONVERT_RGB_RGB:
-		type |= VIDTYPE_RGB_444;
-
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-		if (devp->afbce_mode_pre && vdin_chk_is_comb_mode(devp))
-			type |= VIDTYPE_COMB_MODE;
-#endif
-		break;
-	case VDIN_FORMAT_CONVERT_YUV_NV21:
-	case VDIN_FORMAT_CONVERT_RGB_NV21:
-		type |= VIDTYPE_VIU_NV21;
-		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
-		break;
-	case VDIN_FORMAT_CONVERT_YUV_NV12:
-	case VDIN_FORMAT_CONVERT_RGB_NV12:
-		/* type |= VIDTYPE_VIU_NV12; */
-		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
-		break;
-	default:
-		break;
 	}
 
 	if (devp->afbce_valid)
@@ -7969,18 +8011,97 @@ u32 vdin_get_curr_field_type(struct vdin_dev_s *devp)
 	else
 		type &= ~VIDTYPE_SEC_MD;
 #endif
-	devp->curr_field_type_dw = type;
+
+	type_dw = type;
+
+	switch (devp->afbc_format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
+		type |= VIDTYPE_VIU_444;
+		/*if (devp->afbce_mode_pre) */
+		/*	type |= VIDTYPE_COMB_MODE; */
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
+		type |= VIDTYPE_VIU_422;
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
+		type |= VIDTYPE_RGB_444;
+
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+		if (devp->afbce_mode_pre && vdin_chk_is_comb_mode(devp))
+			type |= VIDTYPE_COMB_MODE;
+#endif
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
+		type |= VIDTYPE_VIU_NV21;
+		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+		/* type |= VIDTYPE_VIU_NV12; */
+		type &= (~VIDTYPE_VIU_SINGLE_PLANE);
+		break;
+	default:
+		break;
+	}
+
+	switch (devp->format_convert) {
+	case VDIN_FORMAT_CONVERT_YUV_YUV444:
+	case VDIN_FORMAT_CONVERT_RGB_YUV444:
+		type_dw |= VIDTYPE_VIU_444;
+		/*if (devp->afbce_mode_pre) */
+		/*	type |= VIDTYPE_COMB_MODE; */
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_YUV422:
+	case VDIN_FORMAT_CONVERT_RGB_YUV422:
+		type_dw |= VIDTYPE_VIU_422;
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_RGB:
+	case VDIN_FORMAT_CONVERT_RGB_RGB:
+		type_dw |= VIDTYPE_RGB_444;
+
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+		if (devp->afbce_mode_pre && vdin_chk_is_comb_mode(devp))
+			type_dw |= VIDTYPE_COMB_MODE;
+#endif
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV21:
+	case VDIN_FORMAT_CONVERT_RGB_NV21:
+		type_dw |= VIDTYPE_VIU_NV21;
+		type_dw &= (~VIDTYPE_VIU_SINGLE_PLANE);
+		break;
+	case VDIN_FORMAT_CONVERT_YUV_NV12:
+	case VDIN_FORMAT_CONVERT_RGB_NV12:
+		/* type |= VIDTYPE_VIU_NV12; */
+		type_dw &= (~VIDTYPE_VIU_SINGLE_PLANE);
+		break;
+	default:
+		break;
+	}
+
 	if (devp->is_422_12bit_enabled) {
 		type &= ~(VIDTYPE_VIU_NV21 | VIDTYPE_VIU_422 | VIDTYPE_VIU_444 | VIDTYPE_RGB_444);
 		type |= VIDTYPE_VIU_422;
+		type_dw &=
+			~(VIDTYPE_VIU_NV21 | VIDTYPE_VIU_422 | VIDTYPE_VIU_444 | VIDTYPE_RGB_444);
+		type_dw |= VIDTYPE_VIU_422;
 	}
 
-	if (devp->debug.dbg_force_type >= 0x80000000)
-		type = 0;
-	else if (devp->debug.dbg_force_type)
-		type = devp->debug.dbg_force_type;
+	devp->curr_field_type = type;
+	devp->curr_field_type_dw = type_dw;
 
-	return type;
+	if (devp->debug.dbg_force_type >= 0x80000000)
+		devp->curr_field_type = 0;
+	else if (devp->debug.dbg_force_type)
+		devp->curr_field_type = devp->debug.dbg_force_type;
+
+	if (devp->debug.dbg_force_type_dw >= 0x80000000)
+		devp->curr_field_type_dw = 0;
+	else if (devp->debug.dbg_force_type_dw)
+		devp->curr_field_type_dw = devp->debug.dbg_force_type_dw;
 }
 
 /*	function: set vf source type
