@@ -12596,10 +12596,11 @@ void resume_lut3d(int vpp_index)
 		chip_type_id == chip_s7d)
 		return;
 
+	pr_amvecm_dbg("amvecm: resume lut3d lut3d_en=%d, ct_en = %d\n",
+		lut3d_en, ct_en);
 	if (lut3d_en || ct_en) {
 		vpp_enable_lut3d(1);
 		lut3d_update(0, vpp_index);
-		pr_amvecm_dbg("amvecm: resume lut3d\n");
 	} else {
 		flag_lut3d_resume = 1;
 	}
@@ -13495,6 +13496,7 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 				if (kstrtoul(parm[2], 10, &val) < 0)
 					goto free_buf;
 				lut3d_dma_case = val;
+				WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, lut3d_dma_case, 1, 1);
 			}
 		} else if (!strcmp(parm[1], "long_section")) {
 			if (parm[2]) {

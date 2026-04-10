@@ -2731,6 +2731,8 @@ int vpp_set_lut3d(int bfromkey,
 		lut3d_single_sz = LUT3D_SINGLE_SIZE;
 		lut3d_points = LUT3D_POINTS;
 	}
+	pr_amve_dbg("lut3d_en=%d, ct_en= %d, rdma_w =%d\n",
+		lut3d_en, ct_en, rdma_w);
 
 	if (!lut3d_en)
 		return 1;
@@ -2889,8 +2891,6 @@ int vpp_set_lut3d(int bfromkey,
 		if (lut3d_dma_case && chip_type_id == chip_t6x) {
 			if (!rdma_w) {
 				am_dma_set_mif_data_3dlut(plut3d);
-				WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, 1, 1, 1);//enable dma wr
-				ctltemp  = READ_VPP_REG(VPP_LUT3D_CTRL);
 				if (lut3d_debug == 1) {
 					for (i = 0; i < lut3d_points * lut3d_points; i++)
 						pr_info("%d: %03x %03x %03x\n",
@@ -2925,6 +2925,8 @@ int vpp_set_lut3d(int bfromkey,
 						plut3d[i * 3 + 1],
 						plut3d[i * 3 + 2]);
 			}
+			WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
+			WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp);
 		}
 
 		if (blut3dcheck) {
@@ -2961,11 +2963,6 @@ int vpp_set_lut3d(int bfromkey,
 				}
 			}
 			pr_info("%s: Lut3d check ok!!\n", __func__);
-		}
-
-		if (!rdma_w) {
-			WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
-			WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp);
 		}
 	}
 
@@ -3111,6 +3108,7 @@ void lut3d_update(unsigned int p3dlut_in[][3], int vpp_index)
 	int lut3d_single_sz;
 	int lut3d_points;
 
+	pr_amve_dbg("lut3d_en=%d, ct_en= %d\n", lut3d_en, ct_en);
 	if (!ct_en && !lut3d_en)
 		return;
 
@@ -3151,8 +3149,6 @@ void lut3d_update(unsigned int p3dlut_in[][3], int vpp_index)
 	{
 		if (lut3d_dma_case && chip_type_id == chip_t6x) {
 			am_dma_set_mif_data_3dlut(plut3d);
-			VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_LUT3D_CTRL,
-				1, 1, 1, vpp_index);//enable dma wr
 			if (lut3d_debug == 1) {
 				for (i = 0; i < lut3d_points * lut3d_points; i++)
 					pr_info("%d: %03x %03x %03x\n",
@@ -3162,7 +3158,6 @@ void lut3d_update(unsigned int p3dlut_in[][3], int vpp_index)
 						plut3d[i * 3 + 2]);
 			}
 		} else {
-			VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_LUT3D_CTRL, 0, 1, 1, vpp_index);
 			VSYNC_WRITE_VPP_REG_VPP_SEL(VPP_LUT3D_CBUS2RAM_CTRL, 1, vpp_index);
 			VSYNC_WRITE_VPP_REG_VPP_SEL(VPP_LUT3D_RAM_ADDR, 0 | (0 << 31), vpp_index);
 
@@ -3286,7 +3281,6 @@ int vpp_read_lut3d_section(int index, int section_len,
 
 int vpp_enable_lut3d(int enable)
 {
-	u32 temp;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (chip_type_id == chip_t3x) {
@@ -3294,13 +3288,13 @@ int vpp_enable_lut3d(int enable)
 	} else
 #endif
 	{
+		pr_amve_dbg("enable = %d\n", enable);
 		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
-
-		temp  = READ_VPP_REG(VPP_LUT3D_CTRL);
-		temp = (temp & 0xFFFFFF8E) | (enable & 0x1) | (0x7 << 4);
 		/*reg_lut3d_extend_en[6:4]*/
 		/*reg_lut3d_en*/
-		WRITE_VPP_REG(VPP_LUT3D_CTRL, temp);
+		WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, enable, 0, 1);
+		WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, 0x7, 4, 3);
+		WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, lut3d_dma_case, 1, 1);
 	}
 	return 0;
 }
