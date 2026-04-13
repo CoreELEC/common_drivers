@@ -97,6 +97,34 @@ static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para)
 	dptx_hdcp2x_process_intr(p_hdcp, hdcp2_intr_reg);
 }
 
+static void config_avmute(u32 val)
+{
+	DPTX_DEBUG("avmute set to %d\n", val);
+	switch (val) {
+	/* This code is required for proper generation of GCP's in ES1 */
+	case SET_AVMUTE:
+		DPTX_INFO("TODO: avmute set to %d\n", val);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 0, 7, 1);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 0, 3, 1);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 1, 3, 1);
+		break;
+	case CLR_AVMUTE:
+		DPTX_INFO("TODO: avmute set to %d\n", val);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 0, 7, 1);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 0, 3, 1);
+//		dptx20_set_reg_bits(TPI_SC_IVCTX, 1, 7, 1);
+		break;
+	case OFF_AVMUTE:
+	default:
+		break;
+	}
+}
+
+static int read_avmute(void)
+{
+	return 0;
+}
+
 void dptx_core_intr_process(struct dptx_common *tx_comm)
 {
 	struct dptx_hw_common *hw_comm = NULL;
@@ -2764,6 +2792,7 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 	struct aux_pkt_sdp_param *param;
 	u8 vc_id = 0;
 	struct meson_tx_format_para *para;
+	u32 arg;
 
 	if (!hw_comm)
 		return -1;
@@ -2811,6 +2840,18 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 		//dptx20_hw_set_msa(hw_comm, para->vc_id, para);
 		//dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
 		//dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
+		break;
+	case AUX_PKT_CONFIG_AVMUTE:
+		arg = *((u32 *)input_argv);
+		/* todo: dptx avmute*/
+		config_avmute(arg);
+		DPTX_INFO("%s mute arg: %d\n", __func__, arg);
+		break;
+	case AUX_PKT_GET_AVMUTE_ST:
+		return read_avmute();
+	case AUX_PKT_CONF_AVI_CT:
+		arg = *((u32 *)input_argv);
+		dptx_avi_infoframe_config(hw_comm, AUX_PKT_CONF_AVI_CT, arg);
 		break;
 	default:
 		break;

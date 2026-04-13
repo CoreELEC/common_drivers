@@ -20,6 +20,16 @@ struct meson_dptx_connector_state {
 	struct tx_color_attr color_attr_para;
 	struct meson_tx_state base_state;
 	bool hdcp_force_st : 1;
+	bool update : 1;
+	bool avmute : 1;
+	bool ready : 1;
+	struct drm_property_blob *metadata;
+};
+
+struct meson_hdr_static_metadata {
+	u8 lumi_max;
+	u8 lumi_min;
+	u8 lumi_avg;
 };
 
 #define to_dptx_connector_state(x)	container_of(x, struct meson_dptx_connector_state, base)
@@ -27,6 +37,20 @@ struct meson_dptx_connector_state {
 #define encoder_to_meson_dptx(x)	container_of(x, struct meson_dp_tx, encoder)
 #define connector_to_meson_dptx(x)  \
 	container_of(connector_to_meson_connector(x), struct meson_dp_tx, base)
+
+enum meson_color_attr_type {
+	COLOR_YCBCR420_12BIT = 0,
+	COLOR_YCBCR420_10BIT,
+	COLOR_YCBCR420_8BIT,
+	COLOR_YCBCR444_12BIT,
+	COLOR_YCBCR444_10BIT,
+	COLOR_YCBCR444_8BIT,
+	COLOR_YCBCR422_12BIT,
+	COLOR_RGB_12BIT,
+	COLOR_RGB_10BIT,
+	COLOR_RGB_8BIT,
+	COLOR_MAX_ATTR,
+};
 
 struct meson_dp_tx {
 	struct meson_connector base;
@@ -52,12 +76,24 @@ struct meson_dp_tx {
 	struct drm_property *type_prop;
 	struct drm_property *hdcp_mode_prop;
 
+	struct drm_property *hdcp_user_prop;
+	/* TV's real hdr capability that not changed by hdr_priority */
+	struct drm_property *hdr_cap_rx_prop;
+	struct drm_property *dc_cap_prop;
+	struct drm_property *contenttype_cap_prop;
+	/*amlogic property: force dptx update
+	 *colorspace/colordepth from sysfs.
+	 */
+	struct drm_property *update_attr_prop;
+	struct drm_property *avmute_prop;
+	struct drm_property *ready_prop;
 	/*
 	 * Whether the current edid is valid
 	 * 0:edid is invalid
 	 * 1:edid is valid
 	 */
 	struct drm_property *edid_valid_prop;
+	struct drm_property *sink_type_prop;
 
 	struct drm_property *color_space_prop;
 	struct drm_property *color_depth_prop;
@@ -66,6 +102,9 @@ struct meson_dp_tx {
 	/* update content protection property */
 	struct work_struct hdcp_update_work;
 	int content_protection;
+	struct drm_property *dptx_hdr_status_prop;
+	struct drm_property *hdr_priority_prop;
+	struct drm_property *static_meta_prop;
 };
 
 #endif

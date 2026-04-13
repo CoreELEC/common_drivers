@@ -294,3 +294,10 @@ void dptx_dump_infoframe_packets(struct dptx_hw_common *hw_comm, u8 vc_id)
 				body[j + 6], body[j + 7], body[j + 8]);
 	}
 }
+
+int dptx_avi_infoframe_config(struct dptx_hw_common *tx_comm, u32 avi_cmd, u8 val)
+{
+	/* TODO */
+	return 0;
+}
+

@@ -9,6 +9,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
+#include <linux/delay.h>
 
 #include "dptx_infoframe.h"
 #include "meson_tx_internal.h"
@@ -98,6 +99,7 @@ int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	/* clear hdr packet */
 	//dptx_drm_infoframe_set(tx_comm->hw_comm, 0, NULL);
+	tx_comm->ready = 0;
 	return 0;
 }
 
@@ -293,6 +295,213 @@ u8 dptx_get_color_component_cnt(enum colorimetry_format color)
 	return color_component[color];
 }
 
+bool dptx_common_get_hdcp_user_state(struct dptx_common *tx_comm)
+{
+	if (!tx_comm) {
+		DPTX_ERROR("[%s]: invalid input param\n", __func__);
+		return false;
+	}
+	return tx_comm->hdcptx_comm.hdcp_user;
+}
+EXPORT_SYMBOL(dptx_common_get_hdcp_user_state);
+
+int dptx_get_hdrinfo_rx(struct dptx_common *tx_comm, struct hdr_info *hdrinfo)
+{
+	struct rx_cap *prxcap = &tx_comm->base.rxcap;
+
+	memcpy(hdrinfo, &prxcap->hdr_info, sizeof(struct hdr_info));
+	hdrinfo->colorimetry_support = prxcap->colorimetry_data;
+
+	return 0;
+}
+
+const struct hdr_info *dptx_common_get_hdr_info_rx(struct dptx_common *tx_comm)
+{
+	static struct hdr_info hdrinfo;
+
+	if (!tx_comm) {
+		DPTX_ERROR("%s: invalid param\n", __func__);
+		return NULL;
+	}
+	dptx_get_hdrinfo_rx(tx_comm, &hdrinfo);
+	return &hdrinfo;
+}
+EXPORT_SYMBOL(dptx_common_get_hdr_info_rx);
+
+bool dptx_common_get_edid_valid_state(struct dptx_common *tx_comm)
+{
+	if (!tx_comm) {
+		DPTX_ERROR("[%s]: invalid input param\n", __func__);
+		return false;
+	}
+	return tx_comm->base.rxcap.edid_parsing;
+}
+EXPORT_SYMBOL(dptx_common_get_edid_valid_state);
+
+int dptx_common_get_hdr_status(struct dptx_common *tx_comm)
+{
+	/* todo:hdr module development */
+	return 6;
+}
+EXPORT_SYMBOL(dptx_common_get_hdr_status);
+
+unsigned int dptx_common_get_content_types(struct dptx_common *tx_comm)
+{
+	unsigned int types = 1 << DRM_MODE_CONTENT_TYPE_NO_DATA;/*NONE DATA*/
+	struct rx_cap *prxcap = &tx_comm->base.rxcap;
+
+	if (!tx_comm) {
+		DPTX_ERROR("%s: invalid param\n", __func__);
+		return -EINVAL;
+	}
+	if (prxcap->cnc0)
+		types |= 1 << DRM_MODE_CONTENT_TYPE_GRAPHICS;
+	if (prxcap->cnc1)
+		types |= 1 << DRM_MODE_CONTENT_TYPE_PHOTO;
+	if (prxcap->cnc2)
+		types |= 1 << DRM_MODE_CONTENT_TYPE_CINEMA;
+	if (prxcap->cnc3)
+		types |= 1 << DRM_MODE_CONTENT_TYPE_GAME;
+
+	return types;
+}
+EXPORT_SYMBOL(dptx_common_get_content_types);
+
+bool dptx_common_get_ready_state(struct dptx_common *tx_comm)
+{
+	if (!tx_comm) {
+		DPTX_ERROR("[%s]: invalid input param\n", __func__);
+		return false;
+	}
+	return tx_comm->ready;
+}
+EXPORT_SYMBOL(dptx_common_get_ready_state);
+
+/* index is hdmi 1.4 vic in vsif, value is hdmi2.0 vic */
+static const u32 dptx14_4k_vics[] = {
+	/* 0 - dummy */
+	0,
+	/* 1 - 3840x2160@30Hz */
+	95,
+	/* 2 - 3840x2160@25Hz */
+	94,
+	/* 3 - 3840x2160@24Hz */
+	93,
+	/* 4 - 4096x2160@24Hz (SMPTE) */
+	98,
+};
+
+/*
+ * HDMI 1.4 introduces the 4 types of 4K resolutions
+ * 3840x2160@30/25/24Hz and 4096x2160@24Hz
+ * but no corresponding CEA-861-D VIC.
+ * so it uses VSIF.hdmi_vic as 1/2/3/4 to represent 4 types
+ * In CEA-861-F, here assigns the VIC 95/94/93/98 later
+ * this function converts 861-F 4k vic to VSIF.hdmi_vic
+ */
+u32 dptx_edid_get_hdmi14_4k_vic(u32 vic)
+{
+	u32 ret = 0;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(dptx14_4k_vics); i++) {
+		if (vic == dptx14_4k_vics[i]) {
+			ret = i;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+int dptx_common_set_contenttype(struct dptx_common *tx_comm, int content_type)
+{
+	/* todo */
+	return 0;
+}
+EXPORT_SYMBOL(dptx_common_set_contenttype);
+
+u32 dptx_common_get_vrr_cap(struct dptx_common *tx_comm)
+{
+	struct rx_cap *prxcap = NULL;
+	u32 vrr_cap = 0;
+
+	if (!tx_comm) {
+		DPTX_ERROR("%s: invalid param\n", __func__);
+		return 0;
+	}
+	prxcap = &tx_comm->base.rxcap;
+
+	if (prxcap->qms || prxcap->vrr_max || prxcap->vrr_min) {
+		vrr_cap |= prxcap->qms ? QMS_VRR_SUP : 0;
+		vrr_cap |= prxcap->vrr_min ? GAMING_VRR_SUP : 0;
+		DPTX_DEBUG("%s get vrr cap : %d\n", __func__, vrr_cap);
+		return vrr_cap;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(dptx_common_get_vrr_cap);
+
+int dptx_common_avmute_locked(struct dptx_common *tx_comm,
+	int mute_flag, int mute_path_hint)
+{
+	static DEFINE_MUTEX(avmute_mutex);
+	static unsigned int global_avmute_mask;
+	unsigned int mute_us = 0;
+	unsigned int avmute_frame = 0;
+	u32 arg = 0;
+	struct meson_tx_dev *tx_dev = &tx_comm->base;
+
+	if (!tx_comm || !tx_comm->hw_comm) {
+		DPTX_ERROR("%s: invalid param\n", __func__);
+		return -EINVAL;
+	}
+	avmute_frame = tx_comm->debug_param.avmute_frame;
+	mute_us =
+		avmute_frame * meson_tx_mode_get_frame_duration(&tx_dev->sw_fmt_para.timing);
+	mutex_lock(&avmute_mutex);
+	if (mute_flag == SET_AVMUTE) {
+		global_avmute_mask |= mute_path_hint;
+		DPTX_DEBUG("%s: AVMUTE path=0x%x\n", __func__, mute_path_hint);
+		arg = SET_AVMUTE;
+		dptx_hw_cntl(tx_dev->tx_hw_base, AUX_PKT_CONFIG_AVMUTE, (void *)&arg, NULL);
+	} else if (mute_flag == CLR_AVMUTE) {
+		global_avmute_mask &= ~mute_path_hint;
+		/* unmute only if none of the paths are muted */
+		if (global_avmute_mask == 0) {
+			DPTX_DEBUG("%s: AV UNMUTE path=0x%x\n", __func__, mute_path_hint);
+			arg = CLR_AVMUTE;
+			dptx_hw_cntl(tx_dev->tx_hw_base, AUX_PKT_CONFIG_AVMUTE, (void *)&arg, NULL);
+		}
+	} else if (mute_flag == OFF_AVMUTE) {
+		arg = OFF_AVMUTE;
+		dptx_hw_cntl(tx_dev->tx_hw_base, AUX_PKT_CONFIG_AVMUTE, (void *)&arg, NULL);
+	}
+	if (mute_flag == SET_AVMUTE) {
+		if (tx_comm->debug_param.avmute_frame > 0)
+			msleep(mute_us / 1000);
+		else if (mute_path_hint == AVMUTE_PATH_DPTX)
+			msleep(100);
+	}
+
+	mutex_unlock(&avmute_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL(dptx_common_avmute_locked);
+
+int dptx_get_hdr_priority(struct dptx_common *tx_comm, u32 *hdr_priority)
+{
+	if (!tx_comm || !hdr_priority) {
+		DPTX_ERROR("%s fail\n", __func__);
+		return -EINVAL;
+	}
+	*hdr_priority = tx_comm->hdr_priority;
+	return 0;
+}
+EXPORT_SYMBOL(dptx_get_hdr_priority);
+
 /* return pixel clk(bits per second) with specific cs/cd */
 static u32 calc_video_fmt_bw(u32 pixel_clk, enum colorimetry_format cs, color_depth_t cd)
 {
@@ -476,10 +685,17 @@ static int dptx_post_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_fo
 	if (!tx_dev || !para)
 		return ret;
 
+	dptx_hw_cntl(tx_dev->tx_hw_base, MODE_FLOW_POST_ENABLE_MODE, para, NULL);
+
 	tx_comm = to_dptx_common(tx_dev);
+	/*
+	 * attach vinfo, if hdr_cap and dv_cap change, the HDR/DV module will
+	 * call the packet sending function, need to set ready flag to 1 first
+	 */
+	tx_comm->ready = 1;
 	dptx_update_vinfo(tx_comm);
 
-	return dptx_hw_cntl(tx_dev->tx_hw_base, MODE_FLOW_POST_ENABLE_MODE, para, NULL);
+	return 0;
 }
 
 unsigned int dptx_common_get_hdcp_mode(struct dptx_common *tx_comm)
@@ -882,6 +1098,8 @@ int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm
 	dptx_timer_init(hw_comm);
 	/* dptx aux init */
 	tx_comm->tx_aux = dptx_aux_init(hw_comm);
+	tx_comm->ready = 0;
+	tx_comm->hdcptx_comm.hdcp_user = 0;
 	if (!tx_comm->tx_aux)
 		return -ENOMEM;
 

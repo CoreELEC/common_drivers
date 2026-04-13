@@ -100,6 +100,8 @@ void dptx_hw_get_mnvid_clock(struct dptx_hw_common *hw_comm, u8 video_num,
 	u32 *pixel_clock, u32 *link_clock);
 void dptx_hw_infoframe_send(struct dptx_hw_common *hw_comm, u8 vc_id, u16 info_type, u8 *body);
 int dptx_hw_infoframe_raw_get(struct dptx_hw_common *hw_comm, u8 vc_id, u16 info_type, u8 *body);
+int dptx_avi_infoframe_config(struct dptx_hw_common *tx_comm, u32 avi_cmd, u8 val);
+
 void dptx_dump_infoframe_packets(struct dptx_hw_common *hw_comm, u8 vc_id);
 int dptx_vsc_pkt_for_pixel_enc(struct dptx_hw_common *hw_comm,
 	struct meson_tx_format_para *para, u8 sdp_sel);

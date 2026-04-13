@@ -77,6 +77,7 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 	u64 sequence_id, new_sequence_id;
 	int count = 0;
 	unsigned long flags = 0;
+	u32 vrr_cap = 0;
 
 	if (!meson_dptx || !meson_dptx->dptx_dev || !tx_comm)
 		return count;
@@ -105,6 +106,11 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 		spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
 	}
 
+	/* get vrr capability */
+	vrr_cap = dptx_common_get_vrr_cap(tx_comm);
+	DRM_DEBUG("support vrr_cap[%d]\n", vrr_cap);
+	drm_connector_set_vrr_capable_property(connector, vrr_cap);
+
 	count = dptx_get_mode_list(tx_comm, &timing_list);
 	if (count > 0) {
 		meson_dptx_mode_probed_add(count, timing_list, connector);
@@ -126,6 +132,10 @@ static int meson_dptx_atomic_check(struct drm_connector *connector,
 	struct drm_atomic_state *state)
 {
 	struct meson_dptx_connector_state *new_state, *curr_state;
+	struct drm_crtc_state *new_crtc_state = NULL;
+	struct am_meson_crtc_state *meson_crtc_state;
+	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
+	unsigned int dptx_content_type = dptx_common_get_content_types(tx_comm);
 
 	if (!state) {
 		DRM_ERROR("state is NULL.\n");
@@ -137,6 +147,30 @@ static int meson_dptx_atomic_check(struct drm_connector *connector,
 	new_state = to_dptx_connector_state
 		(drm_atomic_get_new_connector_state(state, connector));
 
+	/*check content type.*/
+	if (((1 << new_state->base.content_type) &
+		dptx_content_type) == 0) {
+		DRM_ERROR("check content type[%d-%u] fail\n",
+			new_state->base.content_type,
+			dptx_content_type);
+		return -EINVAL;
+	}
+
+	if (new_state->base.crtc)
+		new_crtc_state = drm_atomic_get_new_crtc_state(state,
+			new_state->base.crtc);
+	else
+		return 0;
+
+	meson_crtc_state = to_am_meson_crtc_state(new_crtc_state);
+
+	if (state->allow_modeset && new_crtc_state) {
+		DRM_DEBUG("update[%d]\n",
+			new_state->update);
+
+		if (new_state->update)
+			new_crtc_state->connectors_changed = true;
+	}
 	DRM_DEBUG("%px %px\n", curr_state, new_state);
 
 	return 0;
@@ -167,6 +201,104 @@ static enum drm_connector_status meson_dptx_connector_detect
 		connector_status_connected : connector_status_disconnected;
 }
 
+static int _get_hdr_info(const struct hdr_info *hdr)
+{
+	int hdr_cap_value = 0;
+	const struct hdr10_plus_info *hdr10p = &hdr->hdr10plus_info;
+
+	/*
+	 * hdr_cap_value:
+	 *   bit0 SDR
+	 *   bit1 HDR
+	 *   bit2 SMPTE2084
+	 *   bit3 HLG
+	 *   bit4 HDR10PLUS
+	 */
+	hdr_cap_value = hdr->hdr_support;
+	/* hdr10plus_supported */
+	if (hdr10p->ieeeoui == HDR10_PLUS_IEEE_OUI &&
+		hdr10p->application_version != 0xFF)
+		hdr_cap_value |= BIT(4);
+
+	return hdr_cap_value;
+}
+
+static int get_hdr_info_rx(struct dptx_common *tx_comm)
+{
+	const struct hdr_info *hdr = dptx_common_get_hdr_info_rx(tx_comm);
+
+	return _get_hdr_info(hdr);
+}
+
+static int get_sink_type(struct dptx_common *tx_comm)
+{
+	/*
+	 * TODO: Repeater check for HDMI sink.
+	 * Need confirm for DP.
+	 */
+	return BIT(2);
+}
+
+static int get_dc_cap(struct dptx_common *tx_comm)
+{
+	struct rx_cap *prxcap = &tx_comm->base.rxcap;
+	const struct dv_info *dv =  &prxcap->dv_info;
+	int i, dc_cap_mask = 0;
+
+	if (prxcap->dc_36bit_420)
+		/* 420,12bit */
+		dc_cap_mask |= BIT(COLOR_YCBCR420_12BIT);
+	if (prxcap->dc_30bit_420)
+		/* 420,10bit */
+		dc_cap_mask |= BIT(COLOR_YCBCR420_10BIT);
+
+	for (i = 0; i < Y420_VIC_MAX_NUM; i++) {
+		if (prxcap->y420_vic[i]) {
+			/* 420,8bit */
+			dc_cap_mask |= BIT(COLOR_YCBCR420_8BIT);
+			break;
+		}
+	}
+
+	if (prxcap->native_Mode & CAP_BIT5_YCBCR_444_MASK) {
+		if (prxcap->dc_y444) {
+			if (prxcap->dc_36bit || dv->sup_10b_12b_444 == 0x2)
+				/* 444,12bit */
+				dc_cap_mask |= BIT(COLOR_YCBCR444_12BIT);
+			if (prxcap->dc_30bit || dv->sup_10b_12b_444 == 0x1) {
+				/* 444,10bit */
+				dc_cap_mask |= BIT(COLOR_YCBCR444_10BIT);
+			}
+		}
+		/* 444,8bit */
+		dc_cap_mask |= BIT(COLOR_YCBCR444_8BIT);
+	}
+	/* y422, not check dc */
+	if (prxcap->native_Mode & CAP_BIT4_YCBCR_422_MASK)
+		/* 422,12bit */
+		dc_cap_mask |= BIT(COLOR_YCBCR422_12BIT);
+
+	if (prxcap->dc_36bit || dv->sup_10b_12b_444 == 0x2)
+		/* rgb,12bit */
+		dc_cap_mask |= BIT(COLOR_RGB_12BIT);
+	if (prxcap->dc_30bit || dv->sup_10b_12b_444 == 0x1)
+		/* rgb,10bit */
+		dc_cap_mask |= BIT(COLOR_RGB_10BIT);
+	/* rgb,8bit */
+	dc_cap_mask |= BIT(COLOR_RGB_8BIT);
+	return dc_cap_mask;
+}
+
+void get_dptx_metadata(struct dptx_common *tx_comm,
+	struct meson_hdr_static_metadata *mHdrMetaDataValue)
+{
+	const struct hdr_info hdrinfo = tx_comm->base.rxcap.hdr_info;
+
+	mHdrMetaDataValue->lumi_max = hdrinfo.lumi_max;
+	mHdrMetaDataValue->lumi_min = hdrinfo.lumi_min;
+	mHdrMetaDataValue->lumi_avg = hdrinfo.lumi_avg;
+}
+
 static int meson_dptx_connector_atomic_set_property
 	(struct drm_connector *connector,
 	struct drm_connector_state *state,
@@ -176,6 +308,7 @@ static int meson_dptx_connector_atomic_set_property
 	struct meson_dptx_connector_state *dptx_state =
 		to_dptx_connector_state(state);
 	struct tx_color_attr *attr = &dptx_state->color_attr_para;
+	struct meson_tx_state *tx_state = &dptx_state->base_state;
 
 	if (property == meson_dptx->color_depth_prop)
 		attr->bitdepth = val;
@@ -186,6 +319,12 @@ static int meson_dptx_connector_atomic_set_property
 		dptx_state->hdcp_force_st = true;
 	} else if (property == meson_dptx->hdcp_content_type0_pri_store_prop)
 		meson_dptx->hdcp_content_type0_pri = val;
+	else if (property == meson_dptx->update_attr_prop)
+		dptx_state->update = true;
+	else if (property == meson_dptx->avmute_prop)
+		dptx_state->avmute = val;
+	else if (property == meson_dptx->hdr_priority_prop)
+		tx_state->hdr_priority = val;
 	else
 		return -EINVAL;
 
@@ -202,6 +341,10 @@ static int meson_dptx_connector_atomic_get_property
 		to_dptx_connector_state(state);
 	struct tx_color_attr *attr = &dptx_state->color_attr_para;
 	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
+	struct meson_tx_state *tx_state = &dptx_state->base_state;
+	struct meson_hdr_static_metadata mHdrMetaDataValue;
+	struct drm_property_blob *new_metadata, *old_metadata;
+	bool replaced;
 
 	if (property == meson_dptx->color_depth_prop)
 		*val = attr->bitdepth;
@@ -215,9 +358,48 @@ static int meson_dptx_connector_atomic_get_property
 		*val = meson_dptx->hdcp_content_type0_pri;
 	else if (property == meson_dptx->hdcp_content_type0_pri_store_prop)
 		*val = meson_dptx->hdcp_content_type0_pri;
-	else
-		return -EINVAL;
+	else if (property == meson_dptx->hdcp_user_prop)
+		*val = dptx_common_get_hdcp_user_state(tx_comm);
+	else if (property == meson_dptx->hdr_cap_rx_prop)
+		*val = get_hdr_info_rx(tx_comm);
+	else if (property == meson_dptx->ready_prop)
+		*val = dptx_common_get_ready_state(tx_comm);
+	else if (property == meson_dptx->update_attr_prop)
+		*val = 0;
+	else if (property == meson_dptx->avmute_prop)
+		*val = dptx_state->avmute;
+	else if (property == meson_dptx->dc_cap_prop)
+		*val = get_dc_cap(tx_comm);
+	else if (property == meson_dptx->edid_valid_prop)
+		*val = dptx_common_get_edid_valid_state(tx_comm);
+	else if (property == meson_dptx->dptx_hdr_status_prop)
+		*val = dptx_common_get_hdr_status(tx_comm);
+	else if (property == meson_dptx->hdr_priority_prop)
+		*val = tx_state->hdr_priority;
+	else if (property == meson_dptx->sink_type_prop)
+		*val = get_sink_type(tx_comm);
+	else if (property == meson_dptx->contenttype_cap_prop)
+		*val = dptx_common_get_content_types(tx_comm);
+	else if (property == meson_dptx->static_meta_prop) {
+		get_dptx_metadata(tx_comm, &mHdrMetaDataValue);
+		old_metadata = dptx_state->metadata;
+		new_metadata = drm_property_create_blob(connector->dev,
+			sizeof(mHdrMetaDataValue), &mHdrMetaDataValue);
+		if (IS_ERR(new_metadata)) {
+			DRM_ERROR("create metadata blob fail.\n");
+			return -EINVAL;
+		}
+		replaced = drm_property_replace_blob(&dptx_state->metadata,
+			new_metadata);
+		if (replaced && old_metadata)
+			drm_property_blob_put(old_metadata);
 
+		if (!replaced && new_metadata)
+			drm_property_blob_put(new_metadata);
+		*val = (dptx_state->metadata) ? dptx_state->metadata->base.id : 0;
+	} else {
+		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -267,6 +449,10 @@ struct drm_connector_state *meson_dptx_atomic_duplicate_state
 	tx_state = &new_state->base_state;
 	curr_tx_state = &curr_state->base_state;
 	tx_state->sequence_id = curr_tx_state->sequence_id;
+	new_state->update = false;
+	tx_state->hdr_priority = curr_tx_state->hdr_priority;
+	new_state->metadata = curr_state->metadata;
+
 	return &new_state->base;
 }
 
@@ -283,6 +469,33 @@ static void meson_dptx_atomic_destroy_state(struct drm_connector *connector,
 static void meson_dptx_atomic_print_state(struct drm_printer *p,
 	const struct drm_connector_state *state)
 {
+	struct drm_connector *connector = state->connector;
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+	struct meson_dptx_connector_state *dptx_state =
+		to_dptx_connector_state(state);
+	struct dptx_common *tx_comm = connector_to_dptx_common(connector);
+	struct meson_connector_dev *conn_dev = meson_dptx->dptx_dev;
+	struct meson_tx_dev *tx_dev = to_meson_tx_dev(conn_dev);
+	struct meson_tx_state *tx_state = &dptx_state->base_state;
+
+	drm_printf(p, "\t\t update:[%d]\n", dptx_state->update);
+	drm_printf(p, "\t\t\t cs: [%d], cd: [%d]\n",
+		   dptx_state->color_attr_para.colorformat,
+		   dptx_state->color_attr_para.bitdepth);
+	drm_printf(p, "\t\t update:[%d]\n", dptx_state->update);
+	drm_printf(p, "\t\t avmute:[%d]\n", dptx_state->avmute);
+	drm_printf(p, "\t\t hdr_cap_rx:[%d]\n", get_hdr_info_rx(tx_comm));
+	drm_printf(p, "\t\t ready:[%d]\n", tx_dev->ready);
+	drm_printf(p, "\t\t VRR_CAP:[%u]\n", dptx_common_get_vrr_cap(tx_comm));
+
+	drm_printf(p, "\t\t hdcp_user:[%d]\n", dptx_common_get_hdcp_user_state(tx_comm));
+	drm_printf(p, "\t\t dc_cap:[%d]\n", get_dc_cap(tx_comm));
+	drm_printf(p, "\t\t edid_valid:[%d]\n", dptx_common_get_edid_valid_state(tx_comm));
+	drm_printf(p, "\t\t hdr_priority:[%d]\n", tx_state->hdr_priority);
+	drm_printf(p, "\t\t dptx_hdr_status:[%d]\n", dptx_common_get_hdr_status(tx_comm));
+	drm_printf(p, "\t\t sink_type:[%d]\n", get_sink_type(tx_comm));
+	drm_printf(p, "\t\t contenttype_cap:[%d]\n", dptx_common_get_content_types(tx_comm));
+
 }
 
 static ssize_t venc_cfg_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -755,6 +968,74 @@ static void meson_dptx_hpd_cb(void *data)
 	meson_drm_kms_helper_hotplug_event(connector);
 }
 
+struct meson_range_prop_info {
+	u64 init_val;
+	u64 min;
+	u64 max;
+	u32 flags;
+	char *prop_name;
+};
+
+static struct meson_range_prop_info range_props[] = {
+	{0, 0, 1, 0, "hdcp_user"},
+	{0, 0, 64, 0, "hdr_cap_rx"},
+	{0, 0,  1 << COLOR_MAX_ATTR, 0, "dc_cap"},
+	{0, 0, 1023, 0, "contenttype_cap"},
+	{0, 0, 1, 0, "UPDATE"},
+	{0, 0, 1, 0, "MESON_DRM_DPTX_PROP_AVMUTE"},
+	{0, 0, 1, 0, "ready"},
+	{0, 0, 1, 0, "edid_valid"},
+	{0, 0, 8, 0, "sink_type"},
+};
+
+static void meson_dptx_create_range_property(struct drm_device *drm_dev,
+						  struct meson_dp_tx *meson_dptx)
+{
+	int i;
+	struct meson_range_prop_info *info;
+	struct drm_property *prop;
+	struct drm_property **props = &meson_dptx->hdcp_user_prop;
+
+	for (i = 0; i < ARRAY_SIZE(range_props); i++, props++) {
+		info = &range_props[i];
+		prop = drm_property_create_range(drm_dev, info->flags, info->prop_name,
+						 info->min, info->max);
+		if (prop) {
+			*(props) = prop;
+			drm_object_attach_property(&meson_dptx->base.connector.base, prop,
+						   info->init_val);
+		} else {
+			DRM_ERROR("Failed to %s property\n", info->prop_name);
+		}
+	}
+}
+
+static const struct drm_prop_enum_list dptx_hdr_status_enum_list[] = {
+	{ HDR10PLUS_VSIF, "HDR10Plus-VSIF" },
+	{ DOLBYVISION_STD, "DolbyVision-Std" },
+	{ DOLBYVISION_LOWLATENCY, "DolbyVision-Lowlatency" },
+	{ HDR10_GAMMA_ST2084, "HDR10-GAMMA_ST2084" },
+	{ HDR10_OTHERS, "HDR10-others" },
+	{ HDR10_GAMMA_HLG, "HDR10-GAMMA_HLG" },
+	{ SDR, "SDR" }
+};
+
+static void meson_dptx_init_dptx_hdr_status_property(struct drm_device *drm_dev,
+						  struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_enum(drm_dev, 0, "dptx_hdr_status",
+					dptx_hdr_status_enum_list,
+					ARRAY_SIZE(dptx_hdr_status_enum_list));
+	if (prop) {
+		meson_dptx->dptx_hdr_status_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dptx_hdr_status property\n");
+	}
+}
+
 /* Optional colorspace properties. */
 static const struct drm_prop_enum_list color_space_enum_list[] = {
 	{ HDMI_COLORSPACE_RGB, "RGB" },
@@ -848,6 +1129,39 @@ static void meson_hdmitx_init_hdcp_mode_property(struct drm_device *drm_dev,
 		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
 	} else {
 		DRM_ERROR("Failed to hdcp_mode property\n");
+	}
+}
+
+static void meson_dptx_init_hdr_priority_property(struct drm_device *drm_dev,
+						  struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+	u32 hdr_priority;
+	struct dptx_common *dptx_comm = conn_to_dptx_common(meson_dptx->dptx_dev);
+
+	dptx_get_hdr_priority(dptx_comm, &hdr_priority);
+	prop = drm_property_create_range(drm_dev, 0,
+			"hdr_priority", 0, UINT_MAX);
+
+	if (prop) {
+		meson_dptx->hdr_priority_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, hdr_priority);
+	} else {
+		DRM_ERROR("Failed to allm property\n");
+	}
+}
+
+static void meson_dptx_init_static_meta_property(struct drm_device *drm_dev,
+						  struct meson_dp_tx *meson_dptx)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create(drm_dev, DRM_MODE_PROP_BLOB, "HDR_STATIC_META", 0);
+	if (prop) {
+		meson_dptx->static_meta_prop = prop;
+		drm_object_attach_property(&meson_dptx->base.connector.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to create hdr static metadata property\n");
 	}
 }
 
@@ -1032,12 +1346,19 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	meson_dptx->hdcp_mode = HDCP_NULL;
 	meson_dptx->hdcp_state = DP_HDCP_STATE_DISCONNECT;
 
+	drm_connector_attach_content_type_property(connector);
+	drm_connector_attach_vrr_capable_property(connector);
+
 	meson_tx_get_init_state(tx_dev, tx_state);
+	meson_dptx_init_dptx_hdr_status_property(drm, meson_dptx);
 	meson_dptx_init_colordepth_property(drm, meson_dptx, tx_state);
 	meson_dptx_init_colorspace_property(drm, meson_dptx, tx_state);
 	meson_dptx_init_hdcp_content_type0_pri_property(drm, meson_dptx);
 	meson_dptx_init_hdcp_content_type0_pri_store_property(drm, meson_dptx);
 	meson_hdmitx_init_hdcp_mode_property(drm, meson_dptx);
+	meson_dptx_create_range_property(drm, meson_dptx);
+	meson_dptx_init_static_meta_property(drm, meson_dptx);
+	meson_dptx_init_hdr_priority_property(drm, meson_dptx);
 
 	/*prop for userspace to acquire prop*/
 	type_prop = drm_property_create_range(drm, DRM_MODE_PROP_IMMUTABLE,

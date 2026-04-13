@@ -96,6 +96,10 @@ struct dptx_cap {
 	u32 max_link_rate; /* unit: kHz, 5400000 is 5.4Gbps */
 };
 
+struct dp_debug_param {
+	unsigned int avmute_frame;
+};
+
 struct dptx_common {
 	struct meson_tx_dev base;
 	int drm_dptx_id;
@@ -132,6 +136,13 @@ struct dptx_common {
 	u32 colormetry;
 	/* edid hdr/dv cap lock, hdr/dv handle in irq, need spinlock */
 	spinlock_t edid_spinlock;
+	/* indicate dptx output ready, sw/hw mode setting done */
+	bool ready;
+	/* debug & log */
+	struct dp_debug_param debug_param;
+	/* contenttype:0/off 1/game, 2/graphics, 3/photo, 4/cinema */
+	u32 ct_mode;
+	u32 hdr_priority;
 };
 
 #define to_dptx_common(x)	container_of(x, struct dptx_common, base)
@@ -141,6 +152,23 @@ struct dptx_common {
 int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_list);
 void dptx_register_dev_to_txdev_xlate(struct meson_tx_dev *base,
 		conn_dev_to_txdev convert);
+bool dptx_common_get_hdcp_user_state(struct dptx_common *tx_comm);
+bool dptx_common_get_ready_state(struct dptx_common *tx_comm);
+const struct hdr_info *dptx_common_get_hdr_info_rx(struct dptx_common *tx_comm);
+bool dptx_common_get_edid_valid_state(struct dptx_common *tx_comm);
+u32 dptx_common_get_vrr_cap(struct dptx_common *tx_comm);
+unsigned int dptx_common_get_content_types(struct dptx_common *tx_comm);
+int dptx_common_get_hdr_status(struct dptx_common *tx_comm);
+int dptx_common_set_contenttype(struct dptx_common *tx_comm, int content_type);
+int dptx_get_hdr_priority(struct dptx_common *tx_comm, u32 *hdr_priority);
+bool dptx_common_get_ready_state(struct dptx_common *tx_comm);
+
+#define AVMUTE_PATH_1 0x80 //mute by avmute sysfs node
+#define AVMUTE_PATH_2 0x40 //mute by upstream side request re-auth
+#define AVMUTE_PATH_DRM 0x20 //called by drm;
+#define AVMUTE_PATH_DPTX 0x10 //internal use
+int dptx_common_avmute_locked(struct dptx_common *tx_comm,
+	int mute_flag, int mute_path_hint);
 
 unsigned int dptx_common_get_hdcp_mode(struct dptx_common *tx_comm);
 unsigned int dptx_common_set_hdcp_mode(struct dptx_common *tx_comm, u8 hdcp_mode,
