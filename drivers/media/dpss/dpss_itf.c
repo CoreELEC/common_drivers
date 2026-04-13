@@ -2141,9 +2141,6 @@ unsigned char dpss_is_bypass(struct dpss_init_parm *parm, struct vframe_s *vf)
 	} else if (vf->vf_vrr_param.frc_get_vrr >= 1 &&
 		vf->vf_vrr_param.frc_get_vrr <= 5) {
 		reason = 0x6;/*vrr frame no need do dps*/
-	} else if (((vf->type & VIDTYPE_COMPRESS) ?
-			vf->compHeight : vf->height) > 2160) {
-		reason = 0x7;/*height > 2160 no need do dpss*/
 	} else if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
 		reason = 0x8;/*lcevc*/
 	} else if ((vf->compWidth > 2560 || vf->width > 2560) &&

@@ -2470,15 +2470,28 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	bool is_qms_case = false;
 	bool need_dpss_rotate = false;
 	int used_vf_with = 0, used_vf_height = 0;
+	char do_dpss_type = 0;
 
 	if (!dev || !vf) {
 		pr_err("%s: param is invalid.\n", __func__);
 		return need_do_dpss;
 	}
 
+	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
+	if (do_dpss_type) {
+		dp_print(dev->index, PRINT_OTHER,
+			"need bypass due to dpss, reason=%d.\n", do_dpss_type);
+		need_do_dpss = false;
+	}
+
 	if (vf->type & VIDTYPE_COMPRESS) {
 		used_vf_with = vf->compWidth;
 		used_vf_height = vf->compHeight;
+		if (is_src_crop_valid(vf->src_crop)) {
+			dp_print(dev->index, PRINT_OTHER, "need check src_crop.\n");
+			used_vf_height -= vf->src_crop.bottom;
+			used_vf_with -= vf->src_crop.right;
+		}
 	} else {
 		used_vf_with = vf->width;
 		used_vf_height = vf->height;
@@ -2495,8 +2508,7 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	/*4090*2160 no need do dpss*/
-	if (!need_dpss_rotate &&
-		(vf->compWidth > 3840 || vf->width > 3840)) {
+	if (!need_dpss_rotate && used_vf_with > 3840) {
 		dp_print(dev->index, PRINT_OTHER, "over 3840, no need do dpss.\n");
 		need_do_dpss = false;
 	}
@@ -2686,7 +2698,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	struct dp_buf_mgr_t *cur_buf_mgr;
 	struct dpss_status dpss_state;
 	bool is_dtv_src = false;
-	char do_dpss_type = 0;
 	int ret = 0;
 
 	if (!dev || !frame_info) {
@@ -2799,13 +2810,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	dev->output_duration = get_output_duration(dev);
 
-	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
-	if (do_dpss_type)
-		dp_print(dev->index, PRINT_OTHER,
-		"need bypass due to dpss, reason=%d.\n", do_dpss_type);
-
-	if (do_dpss_type || !check_need_do_dpss(dev, vf, frame_info->transform) ||
-		force_num_to_vd1) {
+	if (!check_need_do_dpss(dev, vf, frame_info->transform) || force_num_to_vd1) {
 		dev->is_start_with_dpss = false;
 		if (force_num_to_vd1 > 0)
 			force_num_to_vd1--;
