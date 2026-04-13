@@ -2287,8 +2287,8 @@ static int vpp_set_filters_internal
 	struct ar_frac_s orig_ar = {0, 0};
 	bool new_ar = false, new_aspect_ratio = false;
 	u32 gcd_val;
-	s64 r0;
-	u32 r1 = 0, nr_pps_h_scaler_rate = 0, nr_pps_v_scaler_rate = 0;
+	s64 r0 = 0;
+	u32 r1, nr_pps_h_scaler_rate = 0, nr_pps_v_scaler_rate = 0;
 	u32 h_in_temp, w_in_temp;
 
 	if (!input)
@@ -3108,7 +3108,7 @@ RESTART:
 		w_in_temp = w_in / (nr_pps_h_scaler_rate + 1);
 	}
 	if (new_aspect_ratio) {
-		r0 = video_top + (video_height + 1) / 2;
+		r0 = (s64)video_top + (video_height + 1) / 2;
 		r1 = (h_in_temp << 17) + (vpp_zoom_center_y << 10) + (ratio_y >> 1);
 		start = r0 - (r1 / ratio_y);
 	} else {
@@ -3355,7 +3355,7 @@ RESTART:
 	/*	(vpp_zoom_center_x << 10) + */
 	/*	(ratio_x >> 1)) / ratio_x; */
 	if (new_aspect_ratio) {
-		r0 = video_left + (video_width + 1) / 2;
+		r0 = (s64)video_left + (video_width + 1) / 2;
 		r1 = (w_in_temp << 17) + (vpp_zoom_center_x << 10) + (ratio_x >> 1);
 		start = r0 - (r1 / ratio_x);
 	} else {
