@@ -253,7 +253,7 @@
 
 			meson_clk_msr@3400 {
 				compatible = "amlogic,a1-clk-measure";
-				reg = <0x3400 0x10>;
+				reg = <0x3400 0x1c>;
 			};
 
 			uart_A: serial@1c00 {
