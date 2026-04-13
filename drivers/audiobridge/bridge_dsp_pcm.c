@@ -385,7 +385,7 @@ static int thread_capture(void *data)
 		size = pcm_process_client_dqbuf(dsp_pcm->pcm_handle, &buf, &buf,
 				PROCESSBUF, info->mbox_chan, MBOX_SYNC);
 		if (buf.size) {
-			dma_sync_single_for_device
+			dma_sync_single_for_cpu
 					(dev,
 					 (phys_addr_t)buf.phyaddr,
 					 buf.size,
