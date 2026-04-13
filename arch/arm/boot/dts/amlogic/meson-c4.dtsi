@@ -1160,9 +1160,14 @@
 		power-domain-names = "isp_pd", "opp_pd";
 		clocks = <&clkc CLKID_CSI_PHY>, <&clkc CLKID_ISP>, <&clkc CLKID_DEWARP>;
 		clock-names = "mipi_csi_clk", "mipi_isp_clk", "isp_dewarp_clk";
-		interrupts = <0 159 1>,//mipi_isp_irq[15] fe_frm_rst
-				<0 149 1>,//mipi_isp_irq[5] be_done
-				<0 150 1>;//mipi_isp_irq[6] opp_done
+		interrupts = <GIC_SPI 159 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 148 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 149 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 150 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 155 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 156 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "fe_rst", "fe_done", "be_done",
+				  "opp_done", "mipi_top", "intf";
 		status = "okay";
 	};
 
