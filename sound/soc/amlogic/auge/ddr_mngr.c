@@ -132,13 +132,18 @@ static struct toddr *register_toddr_l(struct device *dev,
 		to = &toddr_vad;
 		to->use_vad_toddr = use_vad_toddr;
 	}
-
-	/* irqs request */
-	ret = request_threaded_irq(to->irq, aml_ddr_isr, handler,
+	if (strstr(dev_name(dev), "sed")) {
+		ret = request_irq(to->irq,
+			handler, IRQF_SHARED | IRQF_NO_SUSPEND, dev_name(dev),
+			data);
+		if (ret) {
+			dev_err(dev, "failed to claim irq %u\n", to->irq);
+			return NULL;
+		}
+	} else {
+		/* irqs request */
+		ret = request_threaded_irq(to->irq, aml_ddr_isr, handler,
 		IRQF_SHARED, dev_name(dev), data);
-	if (ret) {
-		dev_err(dev, "failed to claim irq %u\n", to->irq);
-		return NULL;
 	}
 	/* enable audio ddr arb */
 	mask_bit = i;

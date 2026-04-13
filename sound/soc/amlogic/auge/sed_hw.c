@@ -4,6 +4,7 @@
  */
 #include "sed_hw.h"
 #include "sed_filter.h"
+#include <linux/amlogic/media/registers/cpu_version.h>
 
 #define MEL_FILTER_COUNT 32
 
@@ -33,7 +34,7 @@ unsigned int sed_irq_status(struct regmap *audio_top_sed_map)
 	return val;
 }
 
-int sed_top_ctrl_init(struct regmap *audio_top_sed_map)
+int sed_top_ctrl_init(struct regmap *audio_top_sed_map, int source)
 {
 	if (IS_ERR_OR_NULL(audio_top_sed_map)) {
 		pr_info("sed regmap is null:%s\n", __func__);
@@ -45,19 +46,22 @@ int sed_top_ctrl_init(struct regmap *audio_top_sed_map)
 	/*pdm mic source */
 	/*todo freeze tdm mic*/
 	regmap_update_bits(audio_top_sed_map, EE_AUDIO2_TOSED_CTRL0,
-							0x1f << 8, 0x4 << 8);
+							0x1f << 8, source << 8);
 
 	regmap_write(audio_top_sed_map, EE_AUDIO2_TOSED_CH_EN, 0x1);
 	return 0;
 }
 
-int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss)
+int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss, int measure_clk)
 {
 	 //pdm dclk 0.768M, 30/0.768 =	39.0625  ->int 39
 	//frac=round(  fraction(source_freq/tar_freq) * 256)
 	// frac = 0.0625 * 256 = 16
-	unsigned int div_int = 39;
-	unsigned int div_frac = 16;
+	unsigned long long div_int = 39;
+	unsigned long long div_frac = 16;
+	unsigned long long rc = 1;
+	unsigned long long int_div;
+	unsigned long long sysclk = measure_clk;
 
 	if (IS_ERR_OR_NULL(audio_top_sed_map)) {
 		pr_info("sed regmap is null:%s\n", __func__);
@@ -66,9 +70,18 @@ int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss)
 	if (bypss) {
 		div_int = 1;
 		div_frac = 0;
+		rc = 0;
+	} else {
+		int_div = sysclk * 1000;
+		int_div = div64_ul(int_div, 768000);
+		div_int = div64_ul(sysclk, 768000);
+		div_frac = int_div - (div_int * 1000);
+		div_frac = div64_ul(div_frac * 256, 1000);
 	}
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_A9)
+		rc = 0;
 	regmap_update_bits(audio_top_sed_map, EE_AUDIO2_CLK_PDMIN_CTRL_0,
-					0x1 << 28, 0x1 << 28);
+					0x1 << 28, rc  << 28);
 	regmap_update_bits(audio_top_sed_map, EE_AUDIO2_CLK_PDMIN_CTRL2,
 					0xff << 16, div_frac << 16);
 	regmap_update_bits(audio_top_sed_map, EE_AUDIO2_CLK_PDMIN_CTRL2,
@@ -76,7 +89,7 @@ int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss)
 	return 0;
 }
 
-int sed_clk_set(struct regmap *sed_map)
+int sed_clk_set(struct regmap *sed_map, int measure_clk)
 {
 	if (IS_ERR_OR_NULL(sed_map)) {
 		pr_info("sed regmap is null:%s\n", __func__);
@@ -84,7 +97,7 @@ int sed_clk_set(struct regmap *sed_map)
 	}
 	regmap_write(sed_map, SED_SYS_CFG_REG0, 0x1);
 	regmap_write(sed_map, SED_SYS_CFG_REG1, 0x1);
-	regmap_update_bits(sed_map, SED_CFG_REG1, 0xffff << 0, 0x7530 << 0);
+	regmap_update_bits(sed_map, SED_CFG_REG1, 0xffff << 0, (measure_clk / 1000) << 0);
 
 	return 0;
 }

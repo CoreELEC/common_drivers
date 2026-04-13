@@ -95,7 +95,6 @@ void pdm_set_channel_ctrl(int sample_count, int id)
 	/* 133 / 3.072 / 2 = 22 */
 	if (train_version == PDM_TRAIN_VERSION_V2)
 		right_sample_count += 22;
-
 	aml_pdm_write(id, PDM_CHAN_CTRL, ((right_sample_count << 24) |
 					(left_sample_count << 16) |
 					(right_sample_count << 8) |
@@ -616,7 +615,7 @@ int pdm_get_ors(int dclk_idx, int sample_rate)
 	return osr;
 }
 
-int pdm_auto_train_algorithm(int pdm_id, int enable)
+int pdm_auto_train_algorithm(int pdm_id, int enable, int cnt)
 {
 	int sample_count = 0;
 	int find = 0;
@@ -628,23 +627,27 @@ int pdm_auto_train_algorithm(int pdm_id, int enable)
 	if (enable == 0)
 		return 0;
 	pdm_set_channel_ctrl(sample_count, pdm_id);
+	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 1 << 18);
+	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 0 << 18);
 	while (1) {
-		aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 1 << 18);
-		aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 0 << 18);
-		usleep_range(8, 10);
+		usleep_range(30, 40);
 		val = (aml_pdm_read(pdm_id, PDM_STS) >> 4) & 0xff;
-		if (val == 0) {
+		if (val == 0 || val == 1) {
 			count++;
 			/*try to 10*/
-			if (count < 10)
+			if (count < 2)
 				continue;
 			else
 				count = 0;
+			if (sample_count2 > 40)
+				break;
 		} else {
 			/*must be find two sample count for max and min range*/
 			if (find == 1) {
 				sample_count2 = sample_count;
-				if (abs(sample_count2 - sample_count1) > 10) {
+				if (sample_count2 > cnt - 2)
+					break;
+				if (abs(sample_count2 - sample_count1) > 30) {
 					pr_info("sample range:%d~:%d\n",
 					(sample_count1 < sample_count2 ?
 					sample_count1 : sample_count2),
@@ -663,5 +666,6 @@ int pdm_auto_train_algorithm(int pdm_id, int enable)
 			break;
 		}
 	}
+	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 19, 0 << 19);
 	return (sample_count1 + sample_count2) / 2;
 }

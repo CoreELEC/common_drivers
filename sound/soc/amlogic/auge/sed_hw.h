@@ -26,9 +26,9 @@
 #include "sed_reg.h"
 
 int sed_enable(struct regmap *audio_top_sed_map, int enable);
-int sed_top_ctrl_init(struct regmap *audio_top_sed_map);
-int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss);
-int sed_clk_set(struct regmap *sed_map);
+int sed_top_ctrl_init(struct regmap *audio_top_sed_map, int source);
+int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss, int measure_clk);
+int sed_clk_set(struct regmap *sed_map, int measure_clk);
 void sed_parameter_set(struct sed_cfg_t *cfg);
 int sed_mel_filter_set(struct sed_cfg_t *cfg, struct regmap *sed_map, int rate);
 int sed_chain_set(struct regmap *sed_map);

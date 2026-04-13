@@ -721,6 +721,13 @@ void aml_tdm_trigger(struct aml_tdm *p_tdm, int stream, bool enable)
 		       p_tdm->chipinfo->use_vadtop);
 }
 
+int aml_tdm_reset(struct aml_tdm *p_tdm, int stream)
+{
+	aml_tdm_fifo_reset(p_tdm->actrl, stream, p_tdm->id,
+			p_tdm->chipinfo->use_vadtop);
+	return 0;
+}
+
 int aml_tdm_hw_setting_init(struct aml_tdm *p_tdm,
 		       unsigned int rate,
 		       unsigned int channels,

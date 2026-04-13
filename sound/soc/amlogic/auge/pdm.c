@@ -1193,7 +1193,8 @@ static void aml_pdm_train_debug_work(struct work_struct *debug)
 
 	p_pdm = container_of(debug, struct aml_pdm, debug_work);
 	if (p_pdm->pdm_train_debug) {
-		ret = pdm_auto_train_algorithm(p_pdm->pdm_id, p_pdm->pdm_train_debug);
+		ret = pdm_auto_train_algorithm(p_pdm->pdm_id, p_pdm->pdm_train_debug,
+		clk_get_rate(p_pdm->sysclk_srcpll) / clk_get_rate(p_pdm->clk_pdm_dclk));
 		if (ret > 0)
 			pr_info("pdm train sample count = %d\n", ret);
 	}

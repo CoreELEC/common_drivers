@@ -543,6 +543,7 @@ ddk_module(
                 "amlogic/auge/pinctrl/pctrl-audio-g12a.c",
                 "amlogic/auge/sed.c",
                 "amlogic/auge/sed_hw.c",
+                "amlogic/auge/sed_lib.c",
                 "amlogic/auge/card_utils.c",
                 "amlogic/auge/tdm.c",
                 "amlogic/auge/tdm_hw.c",

@@ -51,6 +51,7 @@ $(MODULE_NAME)-$(CONFIG_AMLOGIC_SND_SOC_AUGE) += auge/pinctrl/pctrl-audio-g12a.o
 endif
 ifndef CONFIG_AMLOGIC_AUDIO_CUT
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_SND_SOC_AUGE) += auge/sed.o
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_SND_SOC_AUGE) += auge/sed_lib.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_SND_SOC_AUGE) += auge/sed_hw.o
 endif
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_SND_SOC_AUGE) += auge/card_utils.o

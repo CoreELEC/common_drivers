@@ -42,12 +42,15 @@
 #include <linux/types.h>
 #include <linux/mm.h>
 #include <linux/firmware.h>
+#include <linux/irq.h>
 
 #include "ddr_mngr.h"
 #include "sed.h"
 #include "sed_hw.h"
 #include "pdm_hw.h"
 #include "pdm.h"
+#include "tdm.h"
+#include "sed_lib.h"
 
 #define DRV_NAME "snd_sed"
 
@@ -63,6 +66,10 @@ struct sed {
 	struct clk *sed_clk_pll;
 	struct clk *pdm_sysclk_srcpll;
 	struct clk *pdm_dclk_srcpll;
+
+	struct clk *pdm_sysclk_pll;
+	struct clk *pdm_dclk_pll;
+
 	struct clk *pdm_sysclk;
 	struct clk *pdm_dclk;
 	struct toddr *tddr;
@@ -81,9 +88,22 @@ struct sed {
 	enum sed_mic_rate mic_rate;
 	int sed_clk_en;
 	int sed_load_bin;
+	int sed_source;
+	void *pdm_src;
+	void *tdm_src;
+	struct task_struct *thread;
+	struct snd_pcm_substream *substream;
+	char *tmp_buffer;
+	int reset_ptr;
+	int thread_exit;
+	int running;
+	int prepared;
+	int xruns;
+	int max_sample_cnt;
+
 };
 
-#define SED_BUFFER_BYTES (512 * 1024 * 2)
+#define SED_BUFFER_BYTES (512 * 1024)
 static const struct snd_pcm_hardware aml_sed_hardware = {
 	.info =
 		SNDRV_PCM_INFO_MMAP |
@@ -107,6 +127,21 @@ static const struct snd_pcm_hardware aml_sed_hardware = {
 };
 
 #define SED_LOAD_MAX_SIZE (64 * 1024)
+
+static int kernel_pcm_read(struct snd_pcm_substream *substream,
+		void *buffer, unsigned int bytes)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	size_t count;
+	snd_pcm_sframes_t result;
+
+	count = bytes_to_frames(runtime, bytes);
+	/*amlogic read*/
+	result = aml_snd_pcm_kernel_read(substream, buffer, count);
+	if (result > 0)
+		result = frames_to_bytes(runtime, result);
+	return result;
+}
 
 static int load_sed_firmware(struct sed *sed_p)
 {
@@ -218,19 +253,24 @@ static int pdm_set_clk(struct sed *p_sed)
 {
 	unsigned int ret;
 	unsigned int rate, pdm_sysclk, pdm_dclk, by_pass;
+	unsigned int source_clk =  clk_get_rate(p_sed->rc_pll);
 
 	if (p_sed->suspend_type == SUSPEND_MODE) {
-		rate = 30000000;
-		pdm_sysclk = 30000000;
-		pdm_dclk = 30000000;
+		rate = source_clk;
+		pdm_sysclk = source_clk;
+		pdm_dclk = source_clk;
 		p_sed->pdm_sysclk_srcpll = p_sed->rc_pll;
 		p_sed->pdm_dclk_srcpll = p_sed->rc_pll;
 		by_pass = 0;
+		p_sed->max_sample_cnt = pdm_sysclk / 768000 - 5;
 	} else if (p_sed->suspend_type == FREEZE_MODE) {
 		pdm_sysclk = 133333351;
 		pdm_dclk = 3072000;
 		rate = 491520000;
 		by_pass = 1;
+		p_sed->max_sample_cnt = pdm_sysclk / pdm_dclk - 5;
+		p_sed->pdm_sysclk_srcpll = p_sed->pdm_sysclk_pll;
+		p_sed->pdm_dclk_srcpll = p_sed->pdm_dclk_pll;
 	} else {
 		rate = 30000000;
 		pdm_sysclk = 30000000;
@@ -259,7 +299,11 @@ static int pdm_set_clk(struct sed *p_sed)
 	clk_set_rate(p_sed->pdm_sysclk, pdm_sysclk);
 	clk_set_rate(p_sed->pdm_dclk, pdm_dclk);
 
-	pdm_dclk_coefficient(p_sed->audio_top_sed_map, by_pass);
+	if (clk_get_rate(p_sed->sed_clk) == SED_CLK_PLL)
+		source_clk = meson_clk_measure(109);
+	else
+		source_clk = 24000000;
+	pdm_dclk_coefficient(p_sed->audio_top_sed_map, by_pass, source_clk);
 	pdm_clk_enable(p_sed);
 
 	return 0;
@@ -268,6 +312,7 @@ static int pdm_set_clk(struct sed *p_sed)
 static int sed_clk_config(struct sed *p_sed)
 {
 	int ret = 0;
+	unsigned int source_clk = 24000000;
 
 	clk_set_rate(p_sed->sed_clk_pll, SED_CLK_PLL);
 	ret = clk_set_parent(p_sed->sed_clk, p_sed->sed_clk_pll);
@@ -281,7 +326,13 @@ static int sed_clk_config(struct sed *p_sed)
 		pr_err("Can't enable sed clk: %d\n", ret);
 		return ret;
 	}
-	sed_clk_set(p_sed->sed_map);
+
+	if (clk_get_rate(p_sed->sed_clk) == SED_CLK_PLL)
+		source_clk = meson_clk_measure(109);
+	else
+		source_clk = 24000000;
+
+	sed_clk_set(p_sed->sed_map, source_clk);
 	return ret;
 }
 
@@ -307,12 +358,26 @@ static int aml_dai_sed_startup(struct snd_pcm_substream *substream,
 
 static void sed_clk_disable(struct sed *sed_p)
 {
+	int ret;
 	if (sed_p->sed_clk_en) {
 		clk_disable_unprepare(sed_p->pdm_dclk);
 		clk_disable_unprepare(sed_p->pdm_sysclk);
 		clk_disable_unprepare(sed_p->pdm_sysclk_srcpll);
 		clk_disable_unprepare(sed_p->pdm_dclk_srcpll);
 		clk_disable_unprepare(sed_p->sed_clk);
+		ret = clk_set_parent(sed_p->pdm_sysclk, sed_p->pdm_sysclk_pll);
+		if (ret) {
+			dev_err(sed_p->dev,
+			"Can't set clk_pdm_sysclk parent clock\n");
+			return;
+		}
+		ret = clk_set_parent(sed_p->pdm_dclk, sed_p->pdm_dclk_pll);
+		if (ret) {
+			dev_err(sed_p->dev,
+			"Can't set clk_pdm_dclk parent clock\n");
+			return;
+		}
+		pdm_dclk_coefficient(sed_p->audio_top_sed_map, 1, meson_clk_measure(109));
 		sed_p->sed_clk_en = 0;
 	}
 }
@@ -329,13 +394,29 @@ static void aml_dai_sed_shutdown(struct snd_pcm_substream *substream,
 
 static void sed_init(struct sed *p_sed, int enable)
 {
-	pdm_fifo_reset(0);
-	sed_pdm_cfg(p_sed);
-	sed_top_ctrl_init(p_sed->audio_top_sed_map);
+	unsigned int source = 4;
+
+	if (p_sed->mic_source == PDM_MIC)
+		source = 4;
+	else if (p_sed->mic_source == TDM_MIC)
+		source = 19;
+	sed_top_ctrl_init(p_sed->audio_top_sed_map, source);
 	sed_parameter_set(&p_sed->cfg);
 	sed_mel_filter_set(&p_sed->cfg, p_sed->sed_map, p_sed->rate);
 	sed_chain_set(p_sed->sed_map);
-	pdm_enable(enable, 0);
+	if (p_sed->mic_source == PDM_MIC) {
+		pdm_fifo_reset(0);
+		sed_pdm_cfg(p_sed);
+		pdm_enable(enable, 0);
+	} else if (p_sed->mic_source == TDM_MIC) {
+		aml_tdm_hw_setting_init(p_sed->mic_src,
+			p_sed->rate, p_sed->channel, 1);
+			aml_tdmin_set_src(p_sed->mic_src);
+		aml_tdm_reset(p_sed->mic_src,
+			SNDRV_PCM_STREAM_CAPTURE);
+		aml_tdm_trigger(p_sed->mic_src,
+			SNDRV_PCM_STREAM_CAPTURE, enable);
+	}
 }
 
 static int sed_enable_get(struct snd_kcontrol *kcontrol,
@@ -365,6 +446,8 @@ static int sed_enable_set(struct snd_kcontrol *kcontrol,
 		load_sed_firmware(sed_p);
 		sed_init(sed_p, 1);
 		sed_enable(sed_p->audio_top_sed_map, 1);
+		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value, sed_p->max_sample_cnt);
+		pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	} else {
 		sed_init(sed_p, 0);
 		sed_enable(sed_p->audio_top_sed_map, 0);
@@ -391,7 +474,7 @@ static int sed_pdm_sample_count_set(struct snd_kcontrol *kcontrol,
 	unsigned int value = ucontrol->value.enumerated.item[0];
 
 	sed_p->pdm_sample_cnt = value;
-
+	pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	return 0;
 }
 
@@ -413,8 +496,9 @@ static int sed_pdm_sample_train_set(struct snd_kcontrol *kcontrol,
 	unsigned int value = ucontrol->value.enumerated.item[0];
 
 	if (sed_p->sed_enable)
-		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value);
-
+		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value,
+					sed_p->max_sample_cnt);
+	pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	return 0;
 }
 
@@ -450,6 +534,12 @@ static int sed_mic_rate_set(struct snd_kcontrol *kcontrol,
 		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
 	sed_p->mic_rate = value;
 
+	if (sed_p->mic_rate == MIC_16K)
+		sed_p->rate = 16000;
+	else if (sed_p->mic_rate == MIC_48K)
+		sed_p->rate = 48000;
+	else if (sed_p->mic_rate == MIC_96K)
+		sed_p->rate = 96000;
 	return 0;
 }
 
@@ -484,6 +574,45 @@ static int sed_mic_suspend_type_set(struct snd_kcontrol *kcontrol,
 		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
 	sed_p->suspend_type = value;
 
+	return 0;
+}
+
+static const char *const sed_source_type_texts[] = {
+	"PDM",
+	"TDM",
+};
+
+static const struct soc_enum sed_source_type_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(sed_source_type_texts),
+			sed_source_type_texts);
+
+static int sed_mic_source_type_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+
+	ucontrol->value.enumerated.item[0] = sed_p->sed_source;
+	return 0;
+}
+
+static int sed_mic_source_type_set(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	unsigned int value = ucontrol->value.enumerated.item[0];
+
+	if (value > 2)
+		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
+	sed_p->sed_source = value;
+	if (sed_p->sed_source == 0) {
+		sed_p->mic_src = sed_p->pdm_src;
+		sed_p->mic_source = PDM_MIC;
+	} else {
+		sed_p->mic_source = TDM_MIC;
+		sed_p->mic_src = sed_p->tdm_src;
+	}
 	return 0;
 }
 
@@ -542,6 +671,10 @@ static const struct snd_kcontrol_new snd_sed_controls[] = {
 			 sed_mic_suspend_type_get,
 			 sed_mic_suspend_type_set),
 
+	SOC_ENUM_EXT("Sed Source Select",
+			 sed_source_type_enum,
+			 sed_mic_source_type_get,
+			 sed_mic_source_type_set),
 };
 
 static irqreturn_t aml_sed_ddr_isr(int irq, void *devid)
@@ -551,9 +684,7 @@ static irqreturn_t aml_sed_ddr_isr(int irq, void *devid)
 
 	if (!snd_pcm_running(substream))
 		return IRQ_HANDLED;
-
 	snd_pcm_period_elapsed(substream);
-
 	return IRQ_HANDLED;
 }
 
@@ -579,11 +710,9 @@ static int aml_sed_open(struct snd_soc_component *component,
 			goto err_ddr;
 		}
 	}
-	/*user read, freeze mode*/
 	rtd->dai_link->ignore_suspend = 1;
-	if (sed_p->suspend_type == FREEZE_MODE)
-		current->flags |= PF_NOFREEZE;
 	runtime->private_data = sed_p;
+	sed_p->substream = substream;
 	return 0;
 err_ddr:
 	snd_pcm_lib_free_pages(substream);
@@ -675,6 +804,16 @@ static int aml_sed_mmap(struct snd_soc_component *component,
 	return snd_pcm_lib_default_mmap(substream, vma);
 }
 
+static int aml_dai_sed_set_fmt(struct snd_soc_dai *dai,
+	unsigned int fmt)
+{
+	struct sed *p_sed = snd_soc_dai_get_drvdata(dai);
+
+	if (p_sed->mic_source == TDM_MIC)
+		aml_tdm_set_fmt(p_sed->mic_src, fmt, 1);
+	return 0;
+}
+
 static int aml_dai_sed_prepare(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai)
 {
@@ -685,6 +824,7 @@ static int aml_dai_sed_prepare(struct snd_pcm_substream *substream,
 	struct toddr_fmt fmt;
 	enum toddr_src mic_src = PDMIN;
 	struct toddr *to;
+	unsigned int source = 4;
 
 	if (!p_sed)
 		return -EINVAL;
@@ -705,7 +845,6 @@ static int aml_dai_sed_prepare(struct snd_pcm_substream *substream,
 		pr_err("invalid bit_depth: %d\n", bitwidth);
 		return -1;
 	}
-
 	/* to ddr pdmin */
 	fmt.type = toddr_type;
 	fmt.msb = 31;
@@ -720,7 +859,7 @@ static int aml_dai_sed_prepare(struct snd_pcm_substream *substream,
 	else if (runtime->rate == 48000)
 		p_sed->mic_rate = MIC_48K;
 	else if (runtime->rate == 16000)
-		p_sed->mic_rate = MIC_48K;
+		p_sed->mic_rate = MIC_16K;
 
 	p_sed->sample_bit = bitwidth;
 	p_sed->channel = runtime->channels;
@@ -735,13 +874,46 @@ static int aml_dai_sed_prepare(struct snd_pcm_substream *substream,
 	if (p_sed->mic_source == PDM_MIC) {
 		pdm_fifo_reset(0);
 		sed_pdm_cfg(p_sed);
+		source = 4;
+	} else if (p_sed->mic_source == TDM_MIC) {
+		aml_tdm_hw_setting_init(p_sed->mic_src,
+			runtime->rate, runtime->channels, substream->stream);
+			aml_tdmin_set_src(p_sed->mic_src);
+			source = 19;
 	}
-	sed_top_ctrl_init(p_sed->audio_top_sed_map);
+	sed_top_ctrl_init(p_sed->audio_top_sed_map, source);
+	load_sed_firmware(p_sed);
 	sed_parameter_set(&p_sed->cfg);
 	sed_mel_filter_set(&p_sed->cfg, p_sed->sed_map, p_sed->rate);
-	//sed_chain_set(p_sed->sed_map);
-
+	sed_chain_set(p_sed->sed_map);
 	/*todo tdm mic*/
+	return 0;
+}
+
+/* calculate the target DMA-buffer position to be written/read */
+static void *get_dma_ptr(struct snd_pcm_runtime *runtime,
+			   int channel, unsigned long hwoff)
+{
+	return runtime->dma_area + hwoff +
+		channel * (runtime->dma_bytes / runtime->channels);
+}
+
+int sed_read_copy(struct snd_soc_component *component,
+		struct snd_pcm_substream *substream, int channel,
+		unsigned long hwoff, struct iov_iter *iter,
+		unsigned long bytes)
+{
+	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	/*reset app_ptr when thread exit*/
+	if (sed_p->reset_ptr) {
+		runtime->control->appl_ptr = runtime->status->hw_ptr - runtime->buffer_size;
+		sed_p->reset_ptr = 0;
+	}
+	if (copy_to_iter(get_dma_ptr(substream->runtime, channel, hwoff),
+			 bytes, iter) != bytes)
+		return -EFAULT;
 	return 0;
 }
 
@@ -758,6 +930,7 @@ static const struct snd_soc_component_driver aml_sed_component[] = {
 		.prepare	  = aml_sed_prepare,
 		.pointer	  = aml_sed_pointer,
 		.mmap		  = aml_sed_mmap,
+		.copy		  = sed_read_copy,
 	},
 };
 
@@ -771,24 +944,34 @@ static int aml_dai_sed_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		pdm_fifo_reset(0);
-		aml_toddr_enable(sed_p->tddr, 1);
-		pdm_enable(true, 0);
+		if (sed_p->mic_source == PDM_MIC) {
+			pdm_fifo_reset(0);
+			aml_toddr_enable(sed_p->tddr, 1);
+			pdm_enable(true, 0);
+		} else if (sed_p->mic_source == PDM_MIC) {
+			aml_tdm_reset(sed_p->mic_src,
+				substream->stream);
+			aml_tdm_trigger(sed_p->mic_src,
+				substream->stream, true);
+		}
 		sed_p->sed_enable = 1;
-		sed_enable(sed_p->audio_top_sed_map, true);
-
+		sed_p->asla_active = 1;
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
-		pdm_enable(false, 0);
+		if (sed_p->mic_source == PDM_MIC)
+			pdm_enable(false, 0);
+		else if (sed_p->mic_source == TDM_MIC)
+			aml_tdm_trigger(sed_p->mic_src,
+				substream->stream, false);
+
 		toddr_stopped = aml_toddr_burst_finished(sed_p->tddr);
 		if (toddr_stopped)
 			aml_toddr_enable(sed_p->tddr, false);
 		else
 			pr_err("%s(), toddr may be stuck\n", __func__);
 		sed_p->sed_enable = 0;
-		sed_enable(sed_p->audio_top_sed_map, false);
-
+		sed_p->asla_active = 0;
 		break;
 	default:
 		return -EINVAL;
@@ -801,6 +984,7 @@ static const struct snd_soc_dai_ops aml_sed_ops = {
 	.shutdown = aml_dai_sed_shutdown,
 	.prepare = aml_dai_sed_prepare,
 	.trigger = aml_dai_sed_trigger,
+	.set_fmt	= aml_dai_sed_set_fmt,
 };
 
 #define AML_DAI_MIXER_RATES	(SNDRV_PCM_RATE_8000_192000)
@@ -846,24 +1030,214 @@ static void sed_input_device_init(struct sed *pvad)
 	set_bit(KEY_POWER, pvad->input_device->keybit);
 }
 
+static int pcm_start(struct sed *p_sed)
+{
+	int ret;
+
+	ret = snd_pcm_kernel_ioctl(p_sed->substream, SNDRV_PCM_IOCTL_PREPARE, NULL);
+	if (ret < 0) {
+		dev_err(p_sed->dev, "prepare error");
+		return ret;
+	}
+	ret = snd_pcm_kernel_ioctl(p_sed->substream, SNDRV_PCM_IOCTL_START, NULL);
+	if (ret < 0) {
+		dev_err(p_sed->dev, "start error");
+		return ret;
+	}
+	p_sed->running = true;
+	return ret;
+}
+
+static int pcm_read(struct sed *p_sed, void *buffer, int bytes)
+{
+	int ret;
+
+	for (;;) {
+		if (!p_sed->running)
+			pcm_start(p_sed);
+		ret = kernel_pcm_read(p_sed->substream, buffer, bytes);
+		if (ret < 0) {
+			p_sed->prepared = false;
+			p_sed->running = false;
+			if (ret == EPIPE) {
+					/* we failed to make our window -- try to restart */
+				p_sed->xruns++;
+				continue;
+			}
+			dev_err(p_sed->dev, "cannot read stream data :%d\n", ret);
+			return ret;
+		}
+		return 0;
+	}
+	return ret;
+}
+
+/*The length of data detected by the algorithm*/
+#define ASR_SIZE 1024
+
+#define SED_PERIOD_BYTES (ASR_SIZE * 96)
+
+#define ASR_TIME 150
+static int rewind_appl_ptr(struct sed *p_sed)
+{
+	struct snd_pcm_substream *substream = p_sed->substream;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	snd_pcm_sframes_t rewind_ptr;
+
+	if (runtime->status->hw_ptr < runtime->buffer_size)
+		runtime->status->hw_ptr =  runtime->status->hw_ptr +  runtime->buffer_size;
+
+	if (runtime->buffer_size <= SED_PERIOD_BYTES)
+		rewind_ptr = runtime->buffer_size;
+	else
+		rewind_ptr = SED_PERIOD_BYTES;
+	/*read all buffer size*/
+	runtime->control->appl_ptr = runtime->status->hw_ptr - rewind_ptr;
+	return 0;
+}
+
+/*if key world, return true*/
+static bool aml_asr_feed(void *buffer, unsigned int bytes)
+{
+	static int count;
+
+	count++;
+	/*only test*/
+	if (count > 100)
+		return true;
+	return true;
+}
+
+static int algorithm_data_process(struct sed *p_sed, unsigned int bytes)
+{
+	int ret = 0;
+	char *buf;
+
+	buf = p_sed->tmp_buffer;
+
+	ret = pcm_read(p_sed, buf, bytes);
+	if (ret < 0) {
+		dev_err(p_sed->dev, "%s:read error:%d\n", __func__, ret);
+		return 0;
+	}
+	ret = aml_asr_feed(buf, bytes);
+	if (ret == 1) {
+		pm_wakeup_hard_event(p_sed->dev);
+		sed_key_report(p_sed);
+		return true;
+	}
+	memset(buf, 0x00, bytes);
+	return ret;
+}
+
+static bool sed_engine_check(struct sed *p_sed)
+{
+	struct snd_pcm_substream *substream = p_sed->substream;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	int ret = 0;
+
+	/*disable xrun*/
+	runtime->stop_threshold = runtime->boundary;
+	rewind_appl_ptr(p_sed);
+	/*read previous data before wake up*/
+	ret = algorithm_data_process(p_sed, SED_PERIOD_BYTES);
+	if (ret == 1)
+		return true;
+	/*enable xrun*/
+	runtime->stop_threshold = runtime->buffer_size;
+	/*normal read*/
+	for (int i = 0; i < ASR_TIME; i++) {
+		ret = algorithm_data_process(p_sed, ASR_SIZE);
+		if (ret == 1)
+			break;
+	}
+	/*disable xrun*/
+	runtime->stop_threshold = runtime->boundary;
+	return ret;
+}
+
+static int sed_freeze_thread(void *data)
+{
+	struct sed *p_sed = data;
+
+	if (!p_sed)
+		return 0;
+	current->flags |= PF_NOFREEZE;
+	if (!p_sed->tmp_buffer) {
+		p_sed->tmp_buffer = kzalloc(SED_PERIOD_BYTES, GFP_KERNEL);
+		if (!p_sed->tmp_buffer)
+			return -ENOMEM;
+	}
+	set_current_state(TASK_INTERRUPTIBLE);
+	for (;;) {
+		if (kthread_should_stop()) {
+			dev_info(p_sed->dev, "sed: freeze thread call stop exit\n");
+			break;
+		}
+		dev_info(p_sed->dev, "sed: freeze thread enter into\n");
+		if (sed_engine_check(p_sed) > 0) {
+			dev_info(p_sed->dev, "sed: freeze thread exit\n");
+			break;
+		}
+		if (!kthread_should_stop())
+			schedule();
+		set_current_state(TASK_INTERRUPTIBLE);
+	}
+	kfree(p_sed->tmp_buffer);
+	p_sed->reset_ptr = 1;
+	p_sed->thread_exit = 1;
+
+	return 0;
+}
+
 static int sed_platform_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct device *dev = &pdev->dev;
 	struct sed *p_sed = dev_get_drvdata(dev);
+	struct snd_pcm_substream *substream = p_sed->substream;
+	struct snd_pcm_runtime *runtime = substream->runtime;
 
 	dev_pm_set_wake_irq(dev, p_sed->irq_wakeup);
-
 	if (!p_sed->sed_load_bin)
 		pr_info("%s:no load bin!, need load\n", __func__);
-	if (p_sed->mic_source == PDM_MIC) {
-		if (!p_sed->asla_active) {
-			sed_clk_enable(p_sed);
-			sed_init(p_sed, 1);
-			sed_enable(p_sed->audio_top_sed_map, 1);
-			p_sed->sed_enable = 1;
+
+	if (is_pm_s2idle_mode()) {
+		dev_info(p_sed->dev, "%s:freeze mode\n", __func__);
+		if (!p_sed->thread) {
+			p_sed->thread =
+				kthread_create(sed_freeze_thread, p_sed,
+						   "sed_freeze_thread");
+			if (IS_ERR(p_sed->thread)) {
+				int err = PTR_ERR(p_sed->thread);
+
+				p_sed->thread = NULL;
+				dev_info(p_sed->dev,
+						"sed freeze: Creating thread failed\n");
+				return err;
+			}
+			get_task_struct(p_sed->thread);
+			if (runtime) {
+				p_sed->suspend_type = FREEZE_MODE;
+				/*disable xrun*/
+				runtime->stop_threshold = runtime->boundary;
+				pcm_start(p_sed);
+				sed_enable(p_sed->audio_top_sed_map, true);
+				dev_info(p_sed->dev, "sed pcm start\n");
+			}
+		}
+	} else {
+		dev_info(p_sed->dev, "%s:suspend mode\n", __func__);
+		p_sed->suspend_type = SUSPEND_MODE;
+		if (p_sed->mic_source == PDM_MIC) {
+			if (!p_sed->asla_active) {
+				sed_clk_enable(p_sed);
+				sed_init(p_sed, 1);
+				sed_enable(p_sed->audio_top_sed_map, 1);
+				p_sed->sed_enable = 1;
+			}
 		}
 	}
-	//dev_pm_set_wake_irq(dev, p_sed->irq_wakeup);
 	return 0;
 }
 
@@ -872,9 +1246,23 @@ static int sed_platform_resume(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct sed *p_sed = dev_get_drvdata(dev);
 
+	sed_enable(p_sed->audio_top_sed_map, 0);
 	dev_pm_clear_wake_irq(dev);
 	if (get_resume_method() == VAD_WAKEUP)
 		sed_key_report(p_sed);
+
+	if (!p_sed->thread_exit) {
+		kthread_stop(p_sed->thread);
+		p_sed->thread_exit = 1;
+	}
+	if (p_sed->thread) {
+		put_task_struct(p_sed->thread);
+		p_sed->thread = NULL;
+		sed_enable(p_sed->audio_top_sed_map, false);
+	}
+	if (!is_pm_s2idle_mode())
+		sed_clk_disable(p_sed);
+
 	return 0;
 }
 
@@ -892,7 +1280,8 @@ static irqreturn_t sed_wakeup_isr(int irq, void *data)
 
 	if (p_sed->sed_enable)
 		pr_info("%s:%0x\n", __func__, sed_irq_status(p_sed->sed_map));
-	pm_wakeup_hard_event(p_sed->dev);
+	if (p_sed->thread)
+		wake_up_process(p_sed->thread);
 	return IRQ_HANDLED;
 }
 
@@ -914,15 +1303,33 @@ static int sed_platform_probe(struct platform_device *pdev)
 	node_prt = of_get_parent(node);
 	if (!node_prt)
 		return -ENXIO;
-
-	np_src = of_parse_phandle(node, "mic-src", 0);
+	np_src = of_parse_phandle(node, "pdm-src", 0);
 	if (np_src) {
 		dev_src = of_find_device_by_node(np_src);
 		of_node_put(np_src);
-		sed_p->mic_src = platform_get_drvdata(dev_src);
-		pr_info("%s, mic-src found\n", __func__);
+		sed_p->pdm_src = platform_get_drvdata(dev_src);
+		pr_info("%s, pdm-src found\n", __func__);
+		sed_p->mic_src = sed_p->pdm_src;
+	}
+	np_src = of_parse_phandle(node, "tdm-src", 0);
+	if (np_src) {
+		dev_src = of_find_device_by_node(np_src);
+		of_node_put(np_src);
+		sed_p->tdm_src = platform_get_drvdata(dev_src);
+		if (!sed_p->pdm_src)
+			sed_p->mic_src = sed_p->tdm_src;
+		pr_info("%s, pdm-src found\n", __func__);
 	}
 
+	if (!sed_p->tdm_src && !sed_p->pdm_src) {
+		np_src = of_parse_phandle(node, "mic-src", 0);
+		if (np_src) {
+			dev_src = of_find_device_by_node(np_src);
+			of_node_put(np_src);
+			sed_p->mic_src = platform_get_drvdata(dev_src);
+			pr_info("%s, mic-src found\n", __func__);
+		}
+	}
 	sed_p->rc_pll = devm_clk_get(&pdev->dev, "rc_pll");
 	if (IS_ERR(sed_p->rc_pll)) {
 		dev_err(&pdev->dev,
@@ -938,7 +1345,7 @@ static int sed_platform_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sed_p->pdm_sysclk_srcpll);
 		goto err;
 	}
-
+	sed_p->pdm_sysclk_pll = sed_p->pdm_sysclk_srcpll;
 	sed_p->pdm_dclk_srcpll = devm_clk_get(&pdev->dev, "dclk_srcpll");
 	if (IS_ERR(sed_p->pdm_dclk_srcpll)) {
 		dev_err(&pdev->dev,
@@ -946,7 +1353,7 @@ static int sed_platform_probe(struct platform_device *pdev)
 		ret = PTR_ERR(sed_p->pdm_dclk_srcpll);
 		goto err;
 	}
-
+	sed_p->pdm_dclk_pll = sed_p->pdm_dclk_srcpll;
 	sed_p->pdm_sysclk = devm_clk_get(&pdev->dev, "pdm_sysclk");
 	if (IS_ERR(sed_p->pdm_sysclk)) {
 		dev_err(&pdev->dev,
@@ -1003,7 +1410,6 @@ static int sed_platform_probe(struct platform_device *pdev)
 					sed_p->irq_wakeup, ret);
 		return -ENXIO;
 	}
-
 	ret = of_property_read_u32(node, "train_sample_count",
 			&sed_p->pdm_sample_cnt);
 	if (ret < 0)
@@ -1018,6 +1424,12 @@ static int sed_platform_probe(struct platform_device *pdev)
 			&sed_p->rate);
 	if (ret < 0)
 		sed_p->mic_rate = MIC_16K;
+	if (sed_p->mic_rate == MIC_16K)
+		sed_p->rate = 16000;
+	else if (sed_p->mic_rate == MIC_48K)
+		sed_p->rate = 48000;
+	else if (sed_p->mic_rate == MIC_96K)
+		sed_p->rate = 96000;
 
 	ret = of_property_read_u32(node, "sed_mic_bit",
 			&sed_p->sample_bit);
@@ -1035,6 +1447,7 @@ static int sed_platform_probe(struct platform_device *pdev)
 		sed_p->suspend_type = SUSPEND_MODE;
 	sed_clk_enable(sed_p);
 	load_sed_firmware(sed_p);
+	sed_clk_disable(sed_p);
 
 	sed_p->input_device = input_allocate_device();
 	if (!sed_p->input_device) {
@@ -1047,6 +1460,7 @@ static int sed_platform_probe(struct platform_device *pdev)
 		kfree(sed_p);
 		return -EINVAL;
 	}
+	device_init_wakeup(dev, 1);
 
 	ret = devm_snd_soc_register_component(dev,
 			&aml_sed_component[0],
