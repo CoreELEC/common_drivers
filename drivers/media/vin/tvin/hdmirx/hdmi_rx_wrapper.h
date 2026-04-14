@@ -206,6 +206,7 @@ enum fmt_vic_status {
 	FMT_VIC_VESA_REPEAT_ERR,
 };
 
+typedef void (*earc_hdmirx_callback)(int earc_port, int st);
 /* signal */
 extern u32 force_vic;
 extern u32 vpp_mute_enable;
@@ -218,6 +219,7 @@ extern int edid_seg_flag[4];
 extern int dump_aud_max;
 extern int htotal_threshold;
 extern bool vtem_interval_debug;
+extern earc_hdmirx_callback earc_hdmirx_hpdst;
 enum tvin_sig_fmt_e hdmirx_hw_get_fmt(u8 port);
 void rx_mute_vpp(u8 port_type);
 void hdmirx_mute_vpp(bool en, u8 port);

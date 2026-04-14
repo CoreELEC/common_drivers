@@ -129,6 +129,8 @@ struct workqueue_struct *earc_hpd_wq;
 struct work_struct     vpu_dwork;
 struct workqueue_struct *vpu_wq;
 struct edid_delayed_work_data edid_reset_work;
+struct work_struct     aml_earc_dwork;
+struct workqueue_struct *aml_earc_wq;
 
 // edid updata
 struct edid_update_work_s edid_update_dwork;
@@ -4732,7 +4734,9 @@ static int hdmirx_probe(struct platform_device *pdev)
 	}
 
 	print_wq = create_workqueue(hdevp->frontend.name);
-		INIT_WORK(&print_dwork.work_wq, rx_fsm_print_handler);
+	INIT_WORK(&print_dwork.work_wq, rx_fsm_print_handler);
+	aml_earc_wq = create_workqueue(hdevp->frontend.name);
+	INIT_WORK(&aml_earc_dwork, earc_hpd_handler);
 	/* create for aml phy init */
 	aml_phy_wq_port0 = create_workqueue(hdevp->frontend.name);
 	INIT_WORK(&aml_phy_dwork_port0, aml_phy_init_handler_port0);
@@ -5042,6 +5046,8 @@ static void hdmirx_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&esm_dwork);
 	destroy_workqueue(esm_wq);
 
+	cancel_work_sync(&aml_earc_dwork);
+	destroy_workqueue(aml_earc_wq);
 	cancel_work_sync(&aml_phy_dwork_port0);
 	destroy_workqueue(aml_phy_wq_port0);
 	cancel_work_sync(&aml_phy_dwork_port1);

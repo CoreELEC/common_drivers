@@ -66,6 +66,8 @@
 int sda_filter = 0x2105; // min pulse:2 * 5 clk
 int scl_filter = 0x2102;
 int clk_div;
+int delay_dbg = 5;
+int delay_dbg1 = 1;
 
 /*------------------------variable define------------------------------*/
 static DEFINE_SPINLOCK(reg_rw_lock);
@@ -3324,15 +3326,38 @@ void scdc_dwork_handler(struct work_struct *work)
 	hdmirx_wr_cor(RX_HPD_C_CTRL_AON_IVCRX, 0x1, dd->port);
 }
 
+void earc_hpd_handler(struct work_struct *work)
+{
+	if (rx_info.chip_id != CHIP_ID_T6X)
+		return;
+	mdelay(delay_dbg);
+	earc_hdmirx_hpdst(rx_info.arc_port, 4);
+}
+
+void aml_earc_recovery(void)
+{
+	if (rx_info.chip_id != CHIP_ID_T6X)
+		return;
+	schedule_work(&aml_earc_dwork);
+}
+
 int rx_set_port_hpd(u8 port_id, bool val)
 {
 	u8 i = 0;
 
 	if (port_id < rx_info.port_num) {
-		if (val != hdmirx_rd_bits_top_common(TOP_HPD_PWR5V, _BIT(port_id)))
+		if (val != hdmirx_rd_bits_top_common(TOP_HPD_PWR5V, _BIT(port_id))) {
 			rx_pr("rx_set_port_hpd, port:%d, val:%d\n", port_id, val);
-		else
+		} else if (port_id == rx_info.arc_port &&
+			rx[port_id].state == FSM_HPD_HIGH) {
+			/* rx sense was set to 0 when plugout for power consumption,
+			 * need to set to 1 in ths state HPD_HIGH,otherwise there's no cable clk
+			 */
+			rx_set_term_value(port_id, 1);
 			return -1;
+		} else {
+			return -1;
+		}
 	} else if (port_id != ALL_PORTS) {
 		return -1;
 	}
@@ -3344,7 +3369,15 @@ int rx_set_port_hpd(u8 port_id, bool val)
 			rx[port_id].var.hpd_low_cnt = 0;
 		} else {
 			rx_i2c_edid_cfg_with_port(port_id, false);
+			if (port_id == rx_info.arc_port) {
+				if (log_level & PHY_LOG)
+					rx_pr("earc protect start\n");
+				earc_hdmirx_hpdst(rx_info.arc_port, 3);
+				mdelay(delay_dbg1);
+			}
 			hdmirx_wr_bits_top_common(TOP_HPD_PWR5V, _BIT(port_id), 0);
+			if (port_id == rx_info.arc_port)
+				aml_earc_recovery();
 			rx_set_term_value(port_id, 0);
 			if (rx[port_id].var.frl_rate)
 				hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX,
@@ -8966,7 +8999,7 @@ void rx_power_consumption_cntl(u8 tmp_5v_sts)
 	case CHIP_ID_T6X:
 		for (i = 0; i < rx_info.port_num; i++) {
 			if (((tmp_5v_sts >> i) & 1) == 0) {
-				if (rx_get_hpd_sts(i) == 1)
+				if (rx_get_hpd_sts(i) == 1 && i != rx_info.arc_port)
 					rx_set_cur_hpd(0, 5, i);
 				if (!rx_is_phy_power_off(i))
 					aml_phy_power_off_t6x(i);

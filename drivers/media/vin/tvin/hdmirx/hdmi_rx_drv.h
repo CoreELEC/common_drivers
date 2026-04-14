@@ -1236,6 +1236,8 @@ extern struct workqueue_struct	*esm_wq;
 extern struct delayed_work	repeater_dwork;
 //extern struct work_struct	aml_phy_dwork;
 //extern struct workqueue_struct	*aml_phy_wq;
+extern struct work_struct     aml_earc_dwork;
+extern struct workqueue_struct *aml_earc_wq;
 extern struct work_struct	aml_phy_dwork_port0;
 extern struct workqueue_struct	*aml_phy_wq_port0;
 extern struct work_struct	aml_phy_dwork_port1;

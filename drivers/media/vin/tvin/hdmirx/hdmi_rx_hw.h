@@ -3505,7 +3505,8 @@ extern enum frl_train_sts_e frl_train_sts;
 extern enum frl_train_sts_e frl_train_sts1;
 extern int vpcore1_select;
 extern int hdcp_reauth_max;
-
+extern int delay_dbg;
+extern int delay_dbg1;
 void hdmirx_set_vp_mapping(enum colorspace_e cs, u8 port);
 void rx_get_best_eq_setting(u8 port);
 void wr_reg_hhi(unsigned int offset, unsigned int val);
@@ -3736,6 +3737,8 @@ bool is_ddc_filter_en(u8 port);
 void rx_esm_reset(int level);
 void hdmirx_hdcp22_reauth(void);
 void rx_earc_hpd_handler(struct work_struct *work);
+void earc_hpd_handler(struct work_struct *work);
+
 void rx_kill_esm(void);
 int is_t7_former(void);
 bool rx_get_dig_clk_en_sts(void);

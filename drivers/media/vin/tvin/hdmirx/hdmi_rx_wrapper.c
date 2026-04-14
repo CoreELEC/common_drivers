@@ -104,8 +104,7 @@ int pix_limit = 400;
 static int frate_flg = 0xf;
 static int frate_flg1 = 0xf;
 char fsm_pr_buff[E_PORT_NUM][100];
-typedef void (*pf_callback)(int earc_port, int st);
-static pf_callback earc_hdmirx_hpdst;
+earc_hdmirx_callback earc_hdmirx_hpdst;
 static cec_callback cec_hdmirx5v_update;
 
 /* for debug */
@@ -603,7 +602,7 @@ int cec_set_vendor_id(u8 *vendor_id)
 }
 EXPORT_SYMBOL(cec_set_vendor_id);
 
-int register_earctx_callback(pf_callback callback)
+int register_earctx_callback(earc_hdmirx_callback callback)
 {
 	earc_hdmirx_hpdst = callback;
 	return 0;
@@ -3492,6 +3491,8 @@ void rx_get_global_variable(const char *buf)
 	pr_var(valid_m_slow_max, i++);
 	pr_var(valid_m_fast_max, i++);
 	pr_var(dsc_update_en, i++);
+	pr_var(delay_dbg, i++);
+	pr_var(delay_dbg1, i++);
 	pr_var(rx[E_PORT0].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT1].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT2].var.clk_stable_cnt, i++);
@@ -3978,6 +3979,12 @@ int rx_set_global_variable(const char *buf, int size)
 	if (set_pr_var(tmpbuf, var_to_str(dsc_update_en),
 		&dsc_update_en, value))
 		return pr_var(dsc_update_en, index);
+	if (set_pr_var(tmpbuf, var_to_str(delay_dbg),
+		&delay_dbg, value))
+		return pr_var(delay_dbg, index);
+	if (set_pr_var(tmpbuf, var_to_str(delay_dbg1),
+		&delay_dbg1, value))
+		return pr_var(delay_dbg1, index);
 	//fsm var
 	if (set_pr_var(tmpbuf, var_to_str(rx[E_PORT0].var.dbg_ve),
 		&rx[E_PORT0].var.dbg_ve, value))
