@@ -922,7 +922,8 @@ static void earctx_update_attend_event(struct earc *p_earc,
 	}
 
 	if (p_earc->tx_dmac_clk_on)
-		earctx_dmac_force_mode(p_earc->tx_dmac_map, is_earc, true);
+		earctx_dmac_force_mode(p_earc->tx_dmac_map, is_earc, true,
+			p_earc->chipinfo->tx_pll_new);
 	spin_unlock_irqrestore(&p_earc->tx_lock, flags);
 
 	if (send) {
@@ -3436,7 +3437,8 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 		}
 		p_earc->tx_dmac_clk_on = true;
 		/* switch to force mode for consume data even if the status is idle */
-		earctx_dmac_force_mode(p_earc->tx_dmac_map, false, true);
+		earctx_dmac_force_mode(p_earc->tx_dmac_map, false, true,
+			p_earc->chipinfo->tx_pll_new);
 	}
 	/* Default: no time out to connect RX */
 	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);

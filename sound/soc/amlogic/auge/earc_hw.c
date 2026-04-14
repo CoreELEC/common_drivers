@@ -1621,16 +1621,28 @@ static void earctx_channel_sync_start(struct regmap *dmac_map, bool statrt)
 	}
 }
 
-void earctx_dmac_force_mode(struct regmap *dmac_map, bool is_earc, bool enable)
+void earctx_dmac_force_mode(struct regmap *dmac_map, bool is_earc, bool enable, bool tx_pll_new)
 {
 	pr_info("set earc tx force mode is_earc %d, enable %d\n", is_earc, enable);
 
 	/* 0xe for arc mode, 0x3 for earc mode */
 	if (enable) {
-		if (is_earc)
+		if (is_earc) {
+			/* first biphase work clear, and then start
+			 * only for earc
+			 */
+			if (!tx_pll_new) {
+				mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL0,
+					 0x1 << 30,
+					 0x1 << 30);
+				mmio_update_bits(dmac_map, EARCTX_SPDIFOUT_CTRL0,
+					 0x1 << 31,
+					 0x1 << 31);
+			}
 			mmio_write(dmac_map, EARCTX_DMAC_TOP_CTRL0, 0x3);
-		else
+		} else {
 			mmio_write(dmac_map, EARCTX_DMAC_TOP_CTRL0, 0xe);
+		}
 	} else {
 		mmio_write(dmac_map, EARCTX_DMAC_TOP_CTRL0, 0);
 	}
