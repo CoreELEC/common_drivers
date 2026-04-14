@@ -2961,7 +2961,7 @@ static ssize_t hdmitx_get_clk(char *buf, int size)
 	}
 	for (i = 0; i < len; i++)
 		pos += snprintf(buf + pos, size - pos,
-			"[%d] %d %s\n", hdmiclkmsr[i].idx,
+			"[%d] %lld %s\n", hdmiclkmsr[i].idx,
 			meson_clk_measure(hdmiclkmsr[i].idx),
 			hdmiclkmsr[i].name);
 	return pos;

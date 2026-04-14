@@ -30,7 +30,9 @@
 #include "dptx_hw_gtc.h"
 #include "dptx_hdcp_hw.h"
 
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para);
+#endif
 
 static struct dptx_intr dptx_all_intr = {
 #ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
@@ -1075,6 +1077,7 @@ void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
 
 static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
 {
+#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 	if (hdcptx_comm->hdcp_mode == 2) {
 		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
 					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr0, en);
@@ -1083,6 +1086,7 @@ static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
 		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
 					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr2, en);
 	}
+#endif
 }
 
 /* #2.1 dptx task */
