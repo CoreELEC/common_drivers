@@ -261,7 +261,7 @@ void hdmitx21_disable_hdcp(struct hdcptx21_core_priv *p_hdcp)
 {
 	struct hdmitx_common *tx_comm;
 
-	if (!p_hdcp) {
+	if (!p_hdcp || !p_hdcp->bind_instance) {
 		HDMITX_ERROR("%s NULL tx_comm or NULL hdcp private instance\n", __func__);
 		return;
 	}
@@ -1767,7 +1767,6 @@ static enum hdcp_ver_t hdcp_check_ds_hdcp2ver(struct hdcptx21_core_priv *p_hdcp)
 			hdcp_type = HDCP_VER_HDCP1X;
 	} else {
 		hdcptx_update_failures(p_hdcp, HDCP_FAIL_DDC_NACK);
-		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_HDCP_I2C_ERROR);
 	}
 	return hdcp_type;
 }
@@ -1994,6 +1993,8 @@ static void hdcptx_update_failures(struct hdcptx21_core_priv *p_hdcp, enum hdcp_
 			HDMITX_HDCP_INFO("%s[%d] types: %s\n", __func__, __LINE__,
 				fail_string[types]);
 		}
+		if (types == HDCP_FAIL_DDC_NACK && p_hdcp->bind_instance)
+			hdmitx_current_status(p_hdcp->bind_instance, HDMITX_HDCP_I2C_ERROR);
 		p_hdcp->fail_reason = types;
 	} else {
 		HDMITX_DEBUG_HDCP("%s[%d] types: %s\n", __func__, __LINE__,

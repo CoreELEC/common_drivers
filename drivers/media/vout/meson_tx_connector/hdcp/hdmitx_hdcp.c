@@ -1993,6 +1993,8 @@ static void hdcptx_update_failures(struct hdcptx21_core *p_hdcp, enum hdcp_fail_
 		dump_stack();
 	}
 	if (p_hdcp->fail_reason != types) {
+		struct hdcptx_common *comm = p_hdcp->bind_hdcptx_comm;
+
 		/* if fail type is DDC_NAK, and then comes BKSV_RXID, don't print */
 		if (p_hdcp->fail_reason == HDCP_FAIL_DDC_NACK ||
 			p_hdcp->fail_reason == HDCP_FAIL_BKSV_RXID) {
@@ -2002,6 +2004,9 @@ static void hdcptx_update_failures(struct hdcptx21_core *p_hdcp, enum hdcp_fail_
 			HDMITX_HDCP_INFO("%s[%d] types: %s\n", __func__, __LINE__,
 				fail_string[types]);
 		}
+
+		if (types == HDCP_FAIL_DDC_NACK && comm)
+			hdmitx_current_status(comm->bind_tx_comm, TX_HDCP_I2C_ERROR);
 		p_hdcp->fail_reason = types;
 	} else {
 		HDMITX_DEBUG_HDCP("%s[%d] types: %s\n", __func__, __LINE__,
