@@ -75,12 +75,11 @@
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
 			//alloc-ranges = <0x70000000 0x18000000>;
-			reg = <0x2000000 0x1000000>;
 			size = <0x1000000>;
 			alignment = <0x400000>;
 			reusable;
 			//no-map;
-			status = "okay";
+			status = "disabled";
 		};
 
 		logo_reserved:linux,meson-fb {
@@ -158,10 +157,10 @@
 		pmz_cma_a1_reserved:anonymous {
 			compatible = "shared-dma-pool";
 			no-map;
-			size = <0x8000000>;
+			size = <0xC800000>;
 			alignment = <0x100000>;
+			reg = <0x013800000 0xC800000>;
 			status = "okay";
-			reg = <0xF700000 0x8000000>;
 		};
 
 		pmz_cma_a2_reserved:user_pmz {
@@ -169,8 +168,9 @@
 			//reusable;
 			no-map;
 			alignment = <0x100000>;
-			status = "okay";
 			reg = <0xB700000 0x4000000>;
+			status = "okay";
+
 		};
 
 		codec_mm_cma:linux,codec_mm_cma {
@@ -204,8 +204,8 @@
 			reusable;
 			size = <0x800000>;
 			alignment = <0x400000>;
+			alloc-ranges = <0x6000000 0x800000>;
 			linux,cma-default;
-			status = "disabled";
 		};
 	};
 
