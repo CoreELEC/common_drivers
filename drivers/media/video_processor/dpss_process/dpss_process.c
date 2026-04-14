@@ -2553,6 +2553,12 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		need_do_dpss = false;
 	}
 
+	/*JPEG image*/
+	if (vf->codec_vfmt == VFORMAT_JPEG) {
+		dp_print(dev->index, PRINT_OTHER, "JPEG image, no need so dpss.\n");
+		need_do_dpss = false;
+	}
+
 	/*all the check flow need done beforce this debug node control*/
 	/*force bypass dpss*/
 	if (dpss_bypass == 1) {
