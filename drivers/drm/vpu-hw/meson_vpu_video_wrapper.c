@@ -383,9 +383,6 @@ static void video_set_state(struct meson_vpu_block *vblk,
 			MESON_DRM_BLOCK("vf_ext:pic_w = %d, pic_h = %d\n", pic_w, pic_h);
 		}
 
-		if (mvvs->rotation == DRM_MODE_ROTATE_180)
-			vf->flag |= VFRAME_FLAG_MIRROR_H | VFRAME_FLAG_MIRROR_V;
-
 		vf_info.release_fence = video->fence;
 		vf_info.dmabuf[0] = mvvs->dmabuf[0];
 		vf_info.dmabuf[1] = mvvs->dmabuf[1];
