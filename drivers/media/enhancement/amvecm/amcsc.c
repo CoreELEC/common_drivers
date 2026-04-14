@@ -77,8 +77,10 @@ uint gamut_mapping1_en;
 int gamut_dma_case = 1;
 
 int pri_hdr;
-int set_dummy_flag;
+int set_dummy_flag = 1;
 int last_out_range = 10;
+unsigned int last_signal_range;
+
 static uint pre_gamut_conv_en;
 static uint pre_gamut_mapping1_en;
 static unsigned int pre_max_output_lum_sdr;
@@ -9571,6 +9573,7 @@ static unsigned int fg_vf_sw_dbg;
 unsigned int null_vf_max = 2;
 
 unsigned int fake_frame_flag[VD_PATH_MAX];
+unsigned int cur_signal_type_dpss = 0xffffffff;
 
 int amvecm_matrix_process(struct vframe_s *vf,
 			  struct vframe_s *vf_rpt, int flags,
@@ -9590,6 +9593,66 @@ int amvecm_matrix_process(struct vframe_s *vf,
 	unsigned int max_output_lum_sdr = 0;
 	u32 dummy_data = 0;
 	u32 dummy_alpha = 0;
+	u32 signal_type = 0;
+	int dummy_update = 0;
+	int full_range = 0;
+
+	if (vpp_index == VPP_TOP1)
+		vinfo = get_current_vinfo2();
+#ifdef CONFIG_AMLOGIC_VOUT3_SERVE
+	else if (vpp_index == VPP_TOP2)
+		vinfo = get_current_vinfo3();
+#endif
+	else
+		vinfo = get_current_vinfo();
+
+	if (set_dummy_flag) {
+		if (chip_cls_id == STB_CHIP) {
+			if (vinfo && vinfo->vpp_post_out_range != last_out_range) {
+				last_out_range = vinfo->vpp_post_out_range;
+				dummy_update = 1;
+
+				if (vinfo->vpp_post_out_range)
+					full_range = 1;
+				else
+					full_range = 0;
+			}
+		} else {
+			if (dpss_mode) {
+				if (vd_path == VD1_PATH && vf &&
+					vf->dpss_flg & DPSS_FLG_OUT_DONE &&
+					vf->dpss_flg & DPSS_FLG_FORCE_DPSS_DONE)
+					signal_type = vf->signal_type;
+				else
+					signal_type = cur_signal_type_dpss;
+			} else {
+				signal_type = cur_signal_type[VD1_PATH];
+			}
+
+			if (signal_type != 0xffffffff) {
+				full_range = (signal_type >> 25) & 0x1;
+				if (full_range != last_signal_range) {
+					last_signal_range = full_range;
+					dummy_update = 1;
+				}
+			}
+		}
+
+		if (dummy_update) {
+			get_post_blend_dummy_data(&dummy_data, &dummy_alpha);
+			pr_csc(258, "get dummy_data(0x%x), dummy_alpha(0x%x)\n",
+				dummy_data, dummy_alpha);
+
+			if (full_range)
+				dummy_data = 0x1008080;
+			else
+				dummy_data = 0x1108080;
+
+			set_post_blend_dummy_data(vpp_index, dummy_data, dummy_alpha);
+			pr_csc(258, "set dummy_data(0x%x), dummy_alpha(0x%x)\n",
+				dummy_data, dummy_alpha);
+		}
+	}
 
 	fake_frame_flag[vd_path] = 0;
 	if (dpss_mode &&
@@ -9625,15 +9688,6 @@ int amvecm_matrix_process(struct vframe_s *vf,
 			vf, vf->index, vf->frame_index, vf->dpss_flg);
 		return 0;
 	}
-
-	if (vpp_index == VPP_TOP1)
-		vinfo = get_current_vinfo2();
-	#ifdef CONFIG_AMLOGIC_VOUT3_SERVE
-	else if (vpp_index == VPP_TOP2)
-		vinfo = get_current_vinfo3();
-	#endif
-	else
-		vinfo = get_current_vinfo();
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_PRIME_SL
 	if (!dpss_mode && vd_path == VD1_PATH)
@@ -10228,22 +10282,6 @@ int amvecm_matrix_process(struct vframe_s *vf,
 		}
 	}
 
-	if (vinfo && set_dummy_flag) {
-		get_post_blend_dummy_data(&dummy_data, &dummy_alpha);
-
-		if (vinfo->vpp_post_out_range == last_out_range)
-			return 0;
-
-		last_out_range = vinfo->vpp_post_out_range;
-		if (vinfo->vpp_post_out_range)
-			set_post_blend_dummy_data(vpp_index, 0x1008080, dummy_alpha);
-		else
-			set_post_blend_dummy_data(vpp_index, 0x1108080, dummy_alpha);
-
-		pr_csc(258, "%s: set dummy_data(%d) dummy_alpha(%d) out_range(%d)\n",
-			__func__, dummy_data, dummy_alpha, vinfo->vpp_post_out_range);
-	}
-
 	return 0;
 }
 
@@ -10332,7 +10370,7 @@ void amvecm_osd_matrix_process(enum vd_path_e vd_path,
 	}
 }
 
-unsigned int cur_signal_type_dpss = 0xffffffff;
+//unsigned int cur_signal_type_dpss = 0xffffffff;
 unsigned int cur_ext_signal_type_dpss;
 unsigned int pre_src_type_dpss = VFRAME_SOURCE_TYPE_COMP;
 unsigned int cur_csc_type_dpss = 0xffff;
@@ -11197,6 +11235,45 @@ void update_hdr_path_for_dpss(struct vframe_s *vf)
 	set_muxio_link_mode(1, vf, VPP_VCBUS);
 }
 
+#define signal_cp ((vf->signal_type >> 16) & 0xff)
+#define signal_tc ((vf->signal_type >> 8) & 0xff)
+
+s32 get_vf_src_fmt(struct vframe_s *vf)
+{
+	int fmt = VFRAME_SIGNAL_FMT_SDR;
+
+	if (!vf)
+		return -1;
+
+	if ((signal_tc == 18 || signal_tc == 14) &&
+	    signal_cp == 9) {
+		if (signal_cuva)
+			fmt = VFRAME_SIGNAL_FMT_CUVA_HLG;
+		else
+			fmt = VFRAME_SIGNAL_FMT_HLG;
+	} else if ((signal_tc == 0x30) &&
+		     ((signal_cp == 9) ||
+		      (signal_cp == 2))) {
+		fmt = VFRAME_SIGNAL_FMT_HDR10PLUS;
+	} else if ((signal_tc == 16) &&
+		     ((signal_cp == 9) ||
+		      (signal_cp == 2))) {
+		if (signal_cuva)
+			fmt = VFRAME_SIGNAL_FMT_CUVA_HDR;
+		else
+			fmt = VFRAME_SIGNAL_FMT_HDR10;
+	} else if (signal_tc == 1) {
+		if (signal_cp == 9)
+			fmt = VFRAME_SIGNAL_FMT_SDR_2020;
+		else
+			fmt = VFRAME_SIGNAL_FMT_SDR;
+	} else {
+		fmt = VFRAME_SIGNAL_FMT_SDR;
+	}
+
+	return fmt;
+}
+
 void video_post_process_for_dpss(struct vframe_s *vf,
 				enum vd_path_e vd_path, enum vpp_index_e vpp_index)
 {
@@ -11204,6 +11281,8 @@ void video_post_process_for_dpss(struct vframe_s *vf,
 	enum mtx_csc_e matrix_csc = MATRIX_NULL;
 	int bypass_gamut_wrapper = 0;
 	struct vinfo_s *vinfo = get_current_vinfo();
+	int fmt;
+	int full_range = 0;
 
 	if (dpss_mode && vd_path == VD1_PATH &&
 		vf && vf->dpss_flg & DPSS_FLG_HDR_CHG) {
@@ -11241,6 +11320,31 @@ void video_post_process_for_dpss(struct vframe_s *vf,
 
 		pr_csc(128, "gamut_src_format = %d, bypass_gamut_wrapper = %d, matrix_csc =0x%x\n",
 			gamut_src_format, bypass_gamut_wrapper, matrix_csc);
+	} else if (dpss_mode && vd_path == VD1_PATH &&
+		vf && vf->dpss_flg & DPSS_FLG_OUT_DONE &&
+		vf->dpss_flg & DPSS_FLG_FORCE_DPSS_DONE) {
+		fmt = get_vf_src_fmt(vf);
+		if (fmt == VFRAME_SIGNAL_FMT_SDR) {
+			full_range = (vf->signal_type >> 25) & 0x1;
+			if (full_range)
+				matrix_csc = MATRIX_YUV709F_RGB;
+			else
+				matrix_csc = MATRIX_YUV709_RGB;
+
+			if (!watermark_support) {
+				mtx_setting(POST2_MTX,
+					matrix_csc, MTX_ON);
+			} else {
+				mtx_setting(POST2_MTX,
+					matrix_csc, MTX_OFF);
+				mtx_setting(POST_MTX,
+					matrix_csc, MTX_ON);
+			}
+		}
+
+		vf->dpss_flg &= ~DPSS_FLG_FORCE_DPSS_DONE;
+		pr_csc(128, "fmt = %d, full_range = %d, matrix_csc =0x%x\n",
+			fmt, full_range, matrix_csc);
 	}
 }
 
