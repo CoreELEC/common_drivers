@@ -1392,6 +1392,12 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 	ATRACE_ASYNC_BEGIN("codec_mm_alloc", mem->local_id);
 	ret = codec_mm_alloc_in(mgt, mem);
 	if (ret < 0) {
+		if (fatal_signal_pending(current)) {
+			pr_info("The allocation was canceled\n");
+			ATRACE_ASYNC_END("codec_mm_alloc", mem->local_id);
+			kfree(mem);
+			return NULL;
+		}
 		if (mgt->alloced_for_sc_cnt > 0 && /*have used for scatter.*/
 			!(memflags & CODEC_MM_FLAGS_FOR_SCATTER)) {
 			/*if not scatter, free scatter caches. */
@@ -1411,23 +1417,27 @@ struct codec_mm_s *codec_mm_alloc(const char *owner, int size,
 			dump_tvp_pool_info();
 		}
 		ret = codec_mm_alloc_in(mgt, mem);
-	}
-	if (ret < 0) {
-		if (mgt->total_codec_mem_size - mgt->total_alloced_size <= size)
-			pr_err("not enough mem for %s size %d, ret=%d\n",
-				owner, size, ret);
-		else
-			pr_err("not enough mem for %s size %d, ret=%d (fragmentation or thread killed)\n",
-				owner, size, ret);
-		pr_err("mem flags %d %d, %d\n",
-		       memflags, mem->flags, align2n);
-		ATRACE_ASYNC_END("codec_mm_alloc", mem->local_id);
-		kfree(mem);
-		codec_mm_dbuf_walk(NULL);
-		dump_mem_infos(NULL, NULL);
-		if (mgt->tvp_enable)
-			dump_tvp_pool_info();
-		return NULL;
+		if (ret < 0) {
+			if (fatal_signal_pending(current)) {
+				pr_info("The allocation was canceled\n");
+			} else {
+				if (mgt->total_codec_mem_size - mgt->total_alloced_size <= size)
+					pr_err("not enough mem for %s size %d, ret=%d\n",
+						owner, size, ret);
+				else
+					pr_err("not enough mem for %s size %d, ret=%d (fragmentation)\n",
+						owner, size, ret);
+				pr_err("mem flags %d %d, %d\n",
+					memflags, mem->flags, align2n);
+				codec_mm_dbuf_walk(NULL);
+				dump_mem_infos(NULL, NULL);
+				if (mgt->tvp_enable)
+					dump_tvp_pool_info();
+			}
+			ATRACE_ASYNC_END("codec_mm_alloc", mem->local_id);
+			kfree(mem);
+			return NULL;
+		}
 	}
 	atomic_set(&mem->use_cnt, 1);
 	mem->owner[0] = owner;
