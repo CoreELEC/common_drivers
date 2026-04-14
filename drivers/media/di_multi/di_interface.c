@@ -297,14 +297,14 @@ static unsigned int index_2_ch(int index)
 
 void dim_dbg_buffer(struct di_buffer *buffer, unsigned int id)
 {
-	PR_INF("%s:%d:%px\n", __func__, id, buffer);
-	PR_INF("\t:code:0x%x,ch[%d],index[%d], type[%d]\n",
+	dbg_nq("%s:%d:%px\n", __func__, id, buffer);
+	dbg_nq("\t:code:0x%x,ch[%d],index[%d], type[%d]\n",
 	       buffer->mng.code, buffer->mng.ch,
 	       buffer->mng.index, buffer->mng.type);
 	if (buffer->vf)
-		PR_INF("\t:vf:0x%px, 0x%x\n", buffer->vf, buffer->vf->index);
+		dbg_nq("\t:vf:0x%px, 0x%x\n", buffer->vf, buffer->vf->index);
 	else
-		PR_INF("\t:%s\n", "no vf");
+		dbg_nq("\t:%s\n", "no vf");
 }
 
 void dim_dbg_buffer2(struct di_buffer *buffer, unsigned int id)
@@ -390,17 +390,17 @@ static void cfg_ch_set(struct di_ch_s *pch)
 	if (!(di_dbg & DBG_M_REG))
 		return;
 	/* debug only */
-	PR_INF("%s:ch[%d]\n",
+	dbg_reg("%s:ch[%d]\n",
 	       __func__, pch->ch_id);
-	PR_INF("\tkeep_dec_vf[%d]\n", cfggch(pch, KEEP_DEC_VF));
-	PR_INF("\tout_fmt[%d][%d]\n", cfggch(pch, POUT_FMT),
+	dbg_reg("\tkeep_dec_vf[%d]\n", cfggch(pch, KEEP_DEC_VF));
+	dbg_reg("\tout_fmt[%d][%d]\n", cfggch(pch, POUT_FMT),
 		cfggch(pch, IOUT_FMT));
-	PR_INF("\talloc_sct[%d],4K[%d],dw[%d]\n", cfggch(pch, ALLOC_SCT),
+	dbg_reg("\talloc_sct[%d],4K[%d],dw[%d]\n", cfggch(pch, ALLOC_SCT),
 		cfggch(pch, 4K),
 		cfggch(pch, DW_EN));
-	PR_INF("\ttvp:%d\n",
+	dbg_reg("\ttvp:%d\n",
 	       parm->output_format & DI_OUTPUT_TVP ? 1 : 0);
-	PR_INF("\tPOST_NUB[%d]\n", cfggch(pch, POST_NUB));
+	dbg_reg("\tPOST_NUB[%d]\n", cfggch(pch, POST_NUB));
 }
 
 /**********************************************************
@@ -882,7 +882,7 @@ int new_release_keep_buf(struct di_buffer *buffer)
 	struct dim_ndis_s *ndis1;
 
 	if (!buffer) {
-		PR_INF("%s:buffer\n", __func__);
+		PR_ERR("%s:buffer\n", __func__);
 		return -1;
 	}
 
@@ -890,7 +890,7 @@ int new_release_keep_buf(struct di_buffer *buffer)
 		return dpvpp_fill_output_buffer2(buffer);
 
 	if (!buffer->private_data) {
-		PR_INF("%s:no di data:0x%px\n", __func__, buffer);
+		PR_ERR("%s:no di data:0x%px\n", __func__, buffer);
 		return -1;
 	}
 

@@ -467,13 +467,13 @@ int __init rmem_dil_init(struct reserved_mem *rmem,
 			di_set_mem_info(ch,
 					di_devp->mem_start + (o_size * ch),
 					o_size);
-			PR_INF("rmem:ch[%d]:start:0x%lx, size:%uB\n",
+			pr_debug("rmem:ch[%d]:start:0x%lx, size:%uB\n",
 			       ch,
 				(di_devp->mem_start + (o_size * ch)),
 				o_size);
 		}
 #endif
-		PR_INF("%s:0x%lx, size %uMB.\n",
+		pr_debug("%s:0x%lx, size %uMB.\n",
 		       __func__,
 			devp->mem_start, (devp->mem_size >> 20));
 		return 0;
@@ -491,7 +491,7 @@ static void rmem_dil_release(struct reserved_mem *rmem,
 		devp->mem_start = 0;
 		devp->mem_size = 0;
 	}
-	PR_INF("%s:ok\n", __func__);
+	pr_debug("%s:ok\n", __func__);
 }
 
 static const struct reserved_mem_ops rmem_di_ops = {
@@ -504,7 +504,7 @@ static int __init rmem_dil_setup(struct reserved_mem *rmem)
 	rmem->ops = &rmem_di_ops;
 /* rmem->priv = cma; */
 
-	PR_INF("%s %pa, size %ld MiB\n",
+	pr_debug("%s %pa, size %ld MiB\n",
 	       __func__,
 		&rmem->base, (unsigned long)rmem->size / SZ_1M);
 
@@ -520,7 +520,7 @@ static int dil_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 
-	PR_INF("%s.\n", __func__);
+	pr_debug("%s st.\n", __func__);
 
 	/*alloc data*/
 	pdv = kzalloc(sizeof(*pdv), GFP_KERNEL);
@@ -533,26 +533,26 @@ static int dil_probe(struct platform_device *pdev)
 
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret != 0)
-		PR_INF("%s no reserved mem.\n", __func__);
+		PR_ERR("%s no reserved mem.\n", __func__);
 
-	PR_INF("%s ok.\n", __func__);
+	pr_debug("%s ok.\n", __func__);
 	return 0;
 }
 
 static void dil_remove(struct platform_device *pdev)
 {
-	PR_INF("%s.\n", __func__);
+	pr_debug("%s st.\n", __func__);
 
 	/*data*/
 	kfree(pdv);
 	pdv = NULL;
 
-	PR_INF("%s ok.\n", __func__);
+	pr_debug("%s ok.\n", __func__);
 }
 
 static void dil_shutdown(struct platform_device *pdev)
 {
-	PR_INF("%s.\n", __func__);
+	pr_debug("%s ok.\n", __func__);
 }
 
 static const struct of_device_id dil_match[] = {
@@ -578,7 +578,7 @@ static struct platform_driver dev_driver_tab = {
 
 int __init dil_init(void)
 {
-	PR_INF("%s.\n", __func__);
+	pr_debug("%s st.\n", __func__);
 	if (platform_driver_register(&dev_driver_tab)) {
 		PR_ERR("%s: can't register\n", __func__);
 		return -ENODEV;
