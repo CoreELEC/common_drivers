@@ -1476,6 +1476,7 @@
 		compatible = "amlogic, tahoe";
 		dev_name = "tahoe";
 		status = "okay";
+		reg = <0xfe310000 0x400000>;
 		power-domains = <&pwrdm PDID_C4_TAHOE>;
 		clocks = <&clkc CLKID_SYS_TAHOE
 			   &clkc CLKID_TAHOE>;
