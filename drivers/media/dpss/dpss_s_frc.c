@@ -3746,6 +3746,9 @@ void dpss_h_update_frc(struct vframe_s *vfm)
 	}
 
 	is_dos = !VFM_IS_VDIN_SRC(vfm->source_type);
+	frc_top->frc_reserved = 0;
+	frc_top->frc_reserved = VFM_IS_HDMI_SRC(vfm->source_type); // BIT0 =1
+	frc_top->frc_reserved |= VFM_IS_DTV_SRC(vfm->flag_ext); // BIT2 =4
 	src_w = (vfm->type & VIDTYPE_COMPRESS) ? vfm->compWidth : vfm->width;
 	src_h = (vfm->type & VIDTYPE_COMPRESS) ? vfm->compHeight : vfm->height;
 	state_st->src_frm_height = src_h;

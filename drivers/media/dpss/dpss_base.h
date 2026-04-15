@@ -167,6 +167,7 @@ enum DPSS_MEM_FROM {
 	((src) == VFRAME_SOURCE_TYPE_HDMI))
 
 #define VFM_IS_HDMI_SRC(src) ((src) == VFRAME_SOURCE_TYPE_HDMI)
+#define VFM_IS_DTV_SRC(src) ((src) & VFRAME_FLAG_EXT_DTV_CASE)
 
 /*****************************************/
 #define DPSS_RUN_FLAG_RUN			0
