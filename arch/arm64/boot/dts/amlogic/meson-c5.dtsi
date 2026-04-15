@@ -261,6 +261,51 @@
 		status = "okay";
 	};
 
+	csiphy0: csiphy0@ff559000 {
+		compatible = "amlogic, csiphy0";
+		reg = <0x0 0xff559000 0x0 0x700>;
+		//clocks = <&clkc CLKID_CSI_PHY>;
+		clock-names = "mipi_phy_clk";
+		reg-names = "csi_phy0";
+		status = "okay";
+	};
+
+	adapter0: adapter0@ff55b000 {
+		compatible = "amlogic, adapter";
+		reg = <0x0 0xff55b000 0x0 0x4000>;
+		reg-names = "adapter";
+		status = "okay";
+	};
+
+	isp0: isp0@ff540000 {
+		compatible = "amlogic, isp";
+		reg = <0x0 0xff540000 0x0 0x17780>,
+				<0x0 0xff566000 0x0 0x600>;
+		reg-names = "base", "disp";
+		power-domains = <&pwrdm PDID_C5_ISP>,<&pwrdm PDID_C5_DEWARP>;
+		power-domain-names = "isp_pd", "opp_pd";
+		clocks = <&clkc CLKID_CSIPHY0>, <&clkc CLKID_ISP0>, <&clkc CLKID_DEWARPA>;
+		clock-names = "mipi_csi_clk", "mipi_isp_clk", "isp_dewarp_clk";
+		interrupts = <GIC_SPI 383 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 372 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 373 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 374 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 379 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 380 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "fe_rst", "fe_done", "be_done",
+				  "opp_done", "mipi_top", "intf";
+		status = "okay";
+	};
+
+	camera0 {
+		compatible = "amlogic, camera";
+		index = <0>;
+		csiphy = <&csiphy0>;
+		adapter = <&adapter0>;
+		isp = <&isp0>;
+		status = "okay";
+	};
+
 	adla: adla@fe096000 {
 		compatible = "amlogic,adla-gen2b";
 		dev_name = "adla";

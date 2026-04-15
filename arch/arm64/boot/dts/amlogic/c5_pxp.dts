@@ -189,25 +189,15 @@
 	};
 
 	sensor0: sensor0 {
-		compatible = "soc, sensor";
-		status = "disabled";
-		sensor-name = "imx335"; /*imx290;os08a10;imx227*/
-		pinctrl-names= "default";
-		//clocks = <&clkc CLKID_GP_PLL_MCLK1_GATE>;
-		clock-names = "mclk_0";
-		//reset = <&gpio GPIOM_11 GPIO_ACTIVE_HIGH>;
-		//pwdn = <&gpio GPIOM_10 GPIO_ACTIVE_HIGH>;
-	};
-
-	iq: iq {
-		compatible = "soc, iq";
-		status = "disabled";
-		sensor-name = "imx335"; /*imx290;os08a10;imx227*/
-	};
-
-	lens: lens {
-		compatible = "soc, lens";
-		status = "disabled";
+		compatible = "amlogic, sensor0";
+		status = "okay";
+		//clocks = <&clkc CLKID_MCLK_PLL_CLK
+		//		&clkc CLKID_MCLK0>;
+		clock-names = "mclk_pll", "mclk";
+		clock-frequency = <74250000>;
+		devices-type = <1>;
+		//reset-gpios = <&ao_gpio GPIOAO_7 GPIO_ACTIVE_HIGH>;
+		//pwdn-gpios = <&ao_gpio GPIOAO_6 GPIO_ACTIVE_HIGH>;
 	};
 
 	pmz_a1_dev {
