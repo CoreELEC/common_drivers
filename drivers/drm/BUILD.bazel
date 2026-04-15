@@ -42,6 +42,7 @@ ddk_module(
                 "vpu-hw/meson_osd_csc.c",
                 "meson_lcd.c",
                 "meson_eDP.c",
+                "meson_user_fence.c",
             ],
         },
         "CONFIG_AMLOGIC_DRM_USE_ION": {

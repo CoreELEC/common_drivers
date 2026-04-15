@@ -49,6 +49,7 @@
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_fb_dma_helper.h>
 #include "meson_hdmi.h"
+#include "meson_user_fence.h"
 
 #define DRIVER_NAME "meson"
 #define DRIVER_DESC "Amlogic Meson DRM driver"
@@ -238,6 +239,8 @@ static const struct drm_ioctl_desc meson_ioctls[] = {
 			  0),
 	DRM_IOCTL_DEF_DRV(MESON_CREAT_PRESENT_FENCE,
 			meson_crtc_creat_present_fence_ioctl, 0),
+	DRM_IOCTL_DEF_DRV(MESON_CREATE_FENCE, meson_create_fence_ioctl, DRM_RENDER_ALLOW),
+	DRM_IOCTL_DEF_DRV(MESON_SIGNAL_FENCE, meson_signal_fence_ioctl, DRM_RENDER_ALLOW),
 	#endif
 	DRM_IOCTL_DEF_DRV(MESON_MUTE_PLANE, meson_plane_mute_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(MESON_SET_CONNECTOR_FORCE, am_meson_set_connector_force_ioctl, 0),

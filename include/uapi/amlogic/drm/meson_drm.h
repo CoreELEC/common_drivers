@@ -168,6 +168,18 @@ struct drm_meson_connector_info {
 	char status[32];
 };
 
+struct meson_drm_create_fence {
+	__u64 context_id;
+	__u64 seqno;
+	__s32 fence_fd;   /* out */
+	__u32 flags;
+};
+
+struct meson_drm_signal_fence {
+	__s32 fence_fd;   /* in */
+	__u32 flags;
+};
+
 /*Memory related.*/
 #define DRM_IOCTL_MESON_GEM_CREATE	DRM_IOWR(DRM_COMMAND_BASE + \
 		0x00, struct drm_meson_gem_create)
@@ -195,5 +207,12 @@ struct drm_meson_connector_info {
 /*present fence*/
 #define DRM_IOCTL_MESON_CREAT_PRESENT_FENCE	DRM_IOWR(DRM_COMMAND_BASE + \
 		0x20, struct drm_meson_present_fence)
+
+/*creat fence*/
+#define DRM_IOCTL_MESON_CREATE_FENCE	DRM_IOWR(DRM_COMMAND_BASE + \
+		0x21, struct meson_drm_create_fence)
+/*signal fence*/
+#define DRM_IOCTL_MESON_SIGNAL_FENCE	DRM_IOWR(DRM_COMMAND_BASE + \
+		0x22, struct meson_drm_signal_fence)
 
 #endif /* _MESON_DRM_H_ */
