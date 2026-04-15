@@ -3325,12 +3325,8 @@ int amdolby_vision_process_hw5_top1(struct vframe_s *vf_top1,
 			v_size = vf->height;
 		}
 	}
-	if (is_amdv_dpss_path()) {
-		h_size = prm_dolby.dpss_real_h;
-		v_size = prm_dolby.dpss_real_v;
-		if (prm_dolby.vds_4k1k_en)
-			v_size = v_size >> 1;
-	}
+	if (prm_dolby.vds_4k1k_en)
+		v_size = v_size >> 1;
 
 	if (vf && (debug_dolby & 0x8))
 		pr_dv_dbg("top1_proc: vf %px(index %d %d),mode %d,core_on %d %d,%d %d,flag %x\n",
@@ -3441,8 +3437,12 @@ int amdolby_vision_process_hw5(struct vframe_s *vf_top1,
 	if (!module_installed && !hw5_reg_from_file)
 		return -1;
 
-	if (prm_dolby.vds_4k1k_en)
-		v_size = v_size >> 1;
+	if (is_amdv_dpss_path()) {
+		h_size = prm_dolby.dpss_real_h;
+		v_size = prm_dolby.dpss_real_v;
+		if (prm_dolby.vds_4k1k_en)
+			v_size = v_size >> 1;
+	}
 
 	vf = vf_top2;
 	if (vf_top2 && (debug_dolby & 0x8))
