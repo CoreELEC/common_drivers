@@ -9,115 +9,78 @@
  */
 
 / {
+		/* will be overlay by partition_overlay.dtsi */
     partitions: partitions{
-		parts = <17>;
-		part-0 = <&cache>;
-		part-1 = <&logo>;
-		part-2 = <&bootloader_up>;
-		part-3 = <&recovery>;
-		part-4 = <&misc>;
-		part-5 = <&cri_data>;
-		part-6 = <&param>;
-		part-7 = <&boot>;
-		part-8 = <&rsv>;
-		part-9 = <&tee>;
-		part-10 = <&factory>;
-		part-11 = <&vendor>;
-		part-12 = <&vbmeta>;
-		part-13 = <&odm>;
-		part-14 = <&system>;
-		part-15 = <&product>;
-		part-16 = <&data>;
+		parts = <12>;
+		part-0 = <&bootloader_up>;
+		part-1 = <&env>;
+		part-2 = <&vbmeta>;
+		part-3 = <&misc>;
+		part-4 = <&factory>;
+		part-5 = <&tee>;
+		part-6 = <&logo>;
+		part-7 = <&recovery>;
+		part-8 = <&boot>;
+		part-9 = <&vendor>;
+		part-10 = <&system>;
+		part-11 = <&data>;
 
-		cache:cache
-		{
-			pname = "cache";
-			size = <0x0 0x46000000>;
-			mask = <2>;
+		bootloader_up:bootloader_up{
+			pname = "bootloader_up";
+			size = <0x0 0x800000>;
+			mask = <1>;
+		};
+		env:env{
+			pname = "env";
+			size = <0x0 0x100000>;
+			mask = <1>;
+		};
+		vbmeta:vbmeta{
+			pname = "vbmeta";
+			size = <0x0 0x200000>;
+			mask = <1>;
+		};
+		misc:misc{
+			pname = "misc";
+			size = <0x0 0x100000>;
+			mask = <1>;
+		};
+		factory:factory{
+			pname = "factory";
+			size = <0x0 0x1000000>;
+			mask = <0x11>;
+		};
+		tee:tee{
+			pname = "tee";
+			size = <0x0 0x400000>;
+			mask = <1>;
 		};
 		logo:logo{
 			pname = "logo";
 			size = <0x0 0x800000>;
 			mask = <1>;
 		};
-		bootloader_up:bootloader_up{
-			pname = "bootloader_up";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
 		recovery:recovery{
 			pname = "recovery";
-			size = <0x0 0x2000000>;
+			size = <0x0 0x4000000>;
 			mask = <1>;
 		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		cri_data:cri_data
-		{
-			pname = "cri_data";
-			size = <0x0 0x800000>;
-			mask = <2>;
-		};
-		rsv:rsv{
-			pname = "rsv";
-			size = <0x0 0x1000000>;
-			mask = <0x11>;
-		};
-		param:param{
-			pname = "param";
-			size = <0x0 0x1000000>;
-			mask = <2>;
-		};
-		boot:boot
-		{
+		boot:boot{
 			pname = "boot";
 			size = <0x0 0x4000000>;
 			mask = <1>;
 		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		factory:factory{
-			pname = "factory";
-			size = <0x0 0x800000>;
-			mask = <0x11>;
-		};
-		vendor:vendor
-		{
+		vendor:vendor{
 			pname = "vendor";
-			size = <0x0 0x1C000000>;
+			size = <0x0 0x4000000>;
 			mask = <1>;
 		};
-		vbmeta:vbmeta
-		{
-			pname = "vbmeta";
-			size = <0x0 0x200000>;
-			mask = <1>;
-		};
-		odm:odm
-		{
-			pname = "odm";
-			size = <0x0 0x8000000>;
-			mask = <1>;
-		};
-		system:system
-		{
+		system:system{
 			pname = "system";
-			size = <0x0 0x60000000>;
+			size = <0x0 0x40000000>;
 			mask = <1>;
 		};
-		product:product{
-			pname = "product";
-			size = <0x0 0x8000000>;
-			mask = <1>;
-		};
-		data:data
-		{
+		data:data{
 			pname = "data";
 			size = <0xffffffff 0xffffffff>;
 			mask = <4>;
