@@ -1015,6 +1015,13 @@ uint fw_alg_ctl_en;
 uint clip_func = 0xff;
 u32 cuva_static_hlg_en = 1;
 
+static int num_hdr_hist_tool_lut = 128;
+int hdr_hist_tool[128] = {
+0
+};
+module_param_array(hdr_hist_tool, int, &num_hdr_hist_tool_lut, 0664);
+MODULE_PARM_DESC(hdr_hist_tool, "\n num_hdr_hist_tool_lut\n");
+
 /* gamut 3x3 matrix*/
 /*standard 2020rgb->709rgb*/
 int ncl_2020_709[9] = {
@@ -4282,6 +4289,12 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 		}
 	}
 #endif
+	for (i = 0; i < 128; i++) {
+		if (chip_type_id == chip_t3x || chip_type_id == chip_s5)
+			hdr_hist_tool[i] = s5_hdr_hist[NUM_HDR_HIST - 1][i];
+		else
+			hdr_hist_tool[i] = hdr_hist[NUM_HDR_HIST - 1][i];
+	}
 }
 
 void hdr_hist_config(enum hdr_module_sel module_sel,
