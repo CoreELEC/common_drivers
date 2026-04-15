@@ -2483,23 +2483,25 @@
 		max_frame_time = <200>;
 	};
 
-	p_tsensor: p_tsensor@fe020000 {
+	a55_tsensor: a55_tsensor@fe028000 {
 		compatible = "amlogic, r1p1-tsensor";
-		status = "disabled";
-		reg = <0x0 0xfe020000 0x0 0x50>;
+		status = "okay";
+		reg = <0x0 0xfe028000 0x0 0x50>;
 		tsensor_id = <1>;
 		cal_type = <0x11>;
 		cal_coeff = <270 370 2747 9164>;
 		rtemp = <110000>;
-		interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <GIC_SPI 23 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc_ts CLKID_TS>;
 		clock-names = "ts_comp";
+		reset-names = "ts_rst";
+		resets = <&reset RESET_TS_A55>;
 		#thermal-sensor-cells = <1>;
 	};
 
 	c_tsensor: c_tsensor@fe022000 {
 		compatible = "amlogic, r1p1-tsensor";
-		status = "disabled";
+		status = "okay";
 		reg = <0x0 0xfe022000 0x0 0x50>;
 		tsensor_id = <2>;
 		cal_type = <0x11>;
@@ -2508,6 +2510,40 @@
 		interrupts = <GIC_SPI 22 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc_ts CLKID_TS>;
 		clock-names = "ts_comp";
+		reset-names = "ts_rst";
+		resets = <&reset RESET_TS_CORE>;
+		#thermal-sensor-cells = <1>;
+	};
+
+	p_tsensor: p_tsensor@fe020000 {
+		compatible = "amlogic, r1p1-tsensor";
+		status = "okay";
+		reg = <0x0 0xfe020000 0x0 0x50>;
+		tsensor_id = <3>;
+		cal_type = <0x11>;
+		cal_coeff = <270 370 2747 9164>;
+		rtemp = <110000>;
+		interrupts = <GIC_SPI 30 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc_ts CLKID_TS>;
+		clock-names = "ts_comp";
+		reset-names = "ts_rst";
+		resets = <&reset RESET_TS_PLL>;
+		#thermal-sensor-cells = <1>;
+	};
+
+	dos_tsensor: dos_tsensor@fe02a000 {
+		compatible = "amlogic, r1p1-tsensor";
+		status = "okay";
+		reg = <0x0 0xfe02a000 0x0 0x50>;
+		tsensor_id = <4>;
+		cal_type = <0x11>;
+		cal_coeff = <270 370 2747 9164>;
+		rtemp = <110000>;
+		interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clkc_ts CLKID_TS>;
+		clock-names = "ts_comp";
+		reset-names = "ts_rst";
+		resets = <&reset RESET_TS_DOS>;
 		#thermal-sensor-cells = <1>;
 	};
 
@@ -2517,37 +2553,45 @@
 			cooling_devices {
 				gpufreq_cool {
 					dyn_coeff = <140>;
-					node_name = "valhall";
+					node_name = "avalon";
 					device_type = "gpufreq";
 				};
 			};
 		};/*meson cooling devices end*/
 
 	thermal-zones {
-		pll_thermal: pll_thermal {
+		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
 			sustainable-power = <1160>;
-			thermal-sensors = <&p_tsensor 0>;
+			thermal-sensors = <&a55_tsensor 0>;
 			trips {
-				pswitch_on: trip-point@0 {
+				a55_switch_on: trip-point@0 {
 					temperature = <85000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
-				pcontrol: trip-point@1 {
+				a55_control: trip-point@1 {
 					temperature = <95000>;
 					hysteresis = <5000>;
 					type = "passive";
 				};
-				pcritical: trip-point@2 {
+				a55_critical: trip-point@2 {
 					temperature = <105000>;
 					hysteresis = <1000>;
 					type = "critical";
 				};
 			};
+			cooling-maps {
+				a78_cooling_map {
+					trip = <&c_control>;
+					cooling-device = <&CPU6 0 6>;
+					contribution = <1024>;
+				};
+			};
 		};
-		soc_thermal: soc_thermal {
+
+		c_thermal: c_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
 			sustainable-power = <1160>;
@@ -2571,91 +2615,67 @@
 			};
 
 			cooling-maps {
-				cooling_map {
+				gpu_cooling_map {
 					trip = <&c_control>;
-					cooling-device = <&CPU0 0 6>,
-							 <&gpu 0 3>;
+					cooling-device = <&gpu 0 3>;
+					contribution = <1024>;
+				};
+				a55_cooling_map {
+					trip = <&c_control>;
+					cooling-device = <&CPU7 0 6>;
 					contribution = <1024>;
 				};
 			};
 		};
+
+		pll_thermal: pll_thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <100>;
+			sustainable-power = <1160>;
+			thermal-sensors = <&p_tsensor 2>;
+			trips {
+				p_switch_on: trip-point@0 {
+					temperature = <85000>;
+					hysteresis = <5000>;
+					type = "passive";
+				};
+				p_control: trip-point@1 {
+					temperature = <95000>;
+					hysteresis = <5000>;
+					type = "passive";
+				};
+				p_critical: trip-point@2 {
+					temperature = <105000>;
+					hysteresis = <1000>;
+					type = "critical";
+				};
+			};
+		};
+
+		dos_thermal: dos_thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <100>;
+			sustainable-power = <1160>;
+			thermal-sensors = <&dos_tsensor 3>;
+			trips {
+				dos_switch_on: trip-point@0 {
+					temperature = <85000>;
+					hysteresis = <5000>;
+					type = "passive";
+				};
+				dos_control: trip-point@1 {
+					temperature = <95000>;
+					hysteresis = <5000>;
+					type = "passive";
+				};
+				dos_critical: trip-point@2 {
+					temperature = <105000>;
+					hysteresis = <1000>;
+					type = "critical";
+				};
+			};
+		};
 	};/*thermal zone end*/
-
-	ddr_control: ddr_control {
-		compatible = "amlogic, ddr-control";
-		reg = <0 0xfe036c14 0 0x4>,
-		      <0 0xfe036ca8 0 0x4>;
-		reg-names = "type-addr",
-			    "freq-addr";
-		type-mask = <8 8>;
-		freq-mask = <0 16>;
-		status = "disabled";
-		lpddr4 {
-			particle = <LPDDR4_PARTICLE>;
-			particle-flag = <DDR_TYPE_FLAG>;
-			condition-type = <DDR_THERMAL>;
-			freq-divisor = <1 4>;
-			zone-name = "soc_thermal";
-			caddr = <0xfe0364b4>,
-				<0xfe0365b4>;
-			caddr-mask = <0 16>,
-				     <0 16>;
-			cstep-val = <85000 90000 95000 100000>,
-				    <105000 110000 115000 120000>;
-			caddr-val = <3900 1950>,
-				    <3120 1560>,
-				    <2437 1219>,
-				    <2437 1219>,
-				    <1950 975>,
-				    <1560 780>,
-				    <1218 609>,
-				    <975  488>;
-		};
-
-		lpddr4x {
-			particle = <LPDDR4X_PARTICLE>;
-			particle-flag = <DDR_TYPE_FLAG>;
-			condition-type = <DDR_THERMAL>;
-			freq-divisor = <1 4>;
-			zone-name = "soc_thermal";
-			caddr = <0xfe0364b4>,
-				<0xfe0365b4>;
-			caddr-mask = <0 16>,
-				     <0 16>;
-			cstep-val = <85000 90000 95000 100000>,
-				    <105000 110000 115000 120000>;
-			caddr-val = <3900 1950>,
-				    <3120 1560>,
-				    <2437 1219>,
-				    <2437 1219>,
-				    <1950 975>,
-				    <1560 780>,
-				    <1218 609>,
-				    <975  488>;
-		};
-
-		lpddr5 {
-			particle = <LPDDR5_PARTICLE>;
-			particle-flag = <DDR_TYPE_FLAG>;
-			condition-type = <DDR_THERMAL>;
-			freq-divisor = <1 1>;
-			zone-name = "soc_thermal";
-			caddr = <0xfe0364b4>,
-				<0xfe0365b4>;
-			caddr-mask = <0 16>,
-				     <0 16>;
-			cstep-val = <85000 90000 95000 100000>,
-				    <105000 110000 115000 120000>;
-			caddr-val = <3900 1950>,
-				    <3120 1560>,
-				    <2437 1219>,
-				    <2437 1219>,
-				    <1950 975>,
-				    <1560 780>,
-				    <1218 609>,
-				    <975  488>;
-		};
-	};
 
 	ion_dev {
 		compatible = "amlogic, ion_dev";
