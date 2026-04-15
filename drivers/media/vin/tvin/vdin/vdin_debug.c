@@ -3650,7 +3650,7 @@ static ssize_t attr_store(struct device *dev,
 			goto error;
 		}
 		devp->flags |= VDIN_FLAG_DEC_OPENED;
-
+		devp->debug.unplug_mute_en = true;
 		time_start = jiffies_to_msecs(jiffies);
 start_chk:
 		if (devp->flags & VDIN_FLAG_DEC_STARTED) {
@@ -3726,6 +3726,7 @@ start_chk:
 		vdin_close_fe(devp);
 		/* devp->flags &= (~VDIN_FLAG_FS_OPENED); */
 		devp->flags &= (~VDIN_FLAG_DEC_STARTED);
+		devp->debug.unplug_mute_en = false;
 		/* free irq, free when close device */
 		/* free_irq(devp->irq, (void *)devp); */
 

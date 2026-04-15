@@ -891,6 +891,8 @@ void tvin_smr(struct vdin_dev_s *devp)
 					pr_info("[smr.%d] unstable --> no signal\n",
 						devp->index);
 				sm_print_nosig  = 0;
+				if (devp->debug.unplug_mute_en)
+					vdin_mute_vpp(devp, true);
 			}
 		} else {
 			sm_p->back_nosig_cnt = 0;
@@ -1095,6 +1097,8 @@ void tvin_smr(struct vdin_dev_s *devp)
 				sm_print_nosig  = 0;
 				sm_print_notsup = 0;
 				sm_print_prestable = 0;
+				if (devp->debug.unplug_mute_en)
+					vdin_mute_vpp(devp, false);
 			}
 		}
 		break;

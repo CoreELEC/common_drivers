@@ -726,6 +726,7 @@ struct vdin_debug_s {
 	unsigned char rgb_8l[3];
 	bool vdin1_set_hdr_bypass; /* vdin1 hdr set bypass */
 	bool dbg_force_shrink_en;
+	bool unplug_mute_en;
 	bool bypass_update_prop;
 	bool bypass_pc_mode;//bypass pc mode set
 	bool bypass_game_mode;//bypass game mode set
