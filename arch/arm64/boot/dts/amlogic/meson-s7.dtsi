@@ -1059,6 +1059,12 @@
 			      0 61 IRQ_TYPE_EDGE_RISING>;
 	};
 
+	aocpu_monitor {
+		compatible = "amlogic, aocpu_monitor";
+		status = "okay";
+		mboxes = <&mbox_fifo S7_REE2AO_ALIVE_MSG>;
+	};
+
 	cvbsout: cvbsout {
 		compatible = "amlogic, cvbsout-s7";
 		status = "okay";

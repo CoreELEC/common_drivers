@@ -1081,6 +1081,7 @@ const struct mbox_domain t5m_mbox_domains[] = {
 	MBOX_DOMAIN(T5M_REE2AO8, T5M_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(T5M_REE2AO9, T5M_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(T5M_REE2AO10, T5M_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(T5M_REE2AO11, T5M_MBOX_REE2AO, 0),
 };
 
 static struct mbox_domain_data t5m_mbox_domains_data __initdata = {
@@ -1381,6 +1382,7 @@ const struct mbox_domain s7d_mbox_domains[] = {
 	MBOX_DOMAIN(S7D_REE2AO8, S7D_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(S7D_REE2AO9, S7D_MBOX_REE2AO, 0),
 	MBOX_DOMAIN(S7D_REE2AO10, S7D_MBOX_REE2AO, 0),
+	MBOX_DOMAIN(S7D_REE2AO12, S7D_MBOX_REE2AO, 0),
 };
 
 static struct mbox_domain_data s7d_mbox_domains_data __initdata = {

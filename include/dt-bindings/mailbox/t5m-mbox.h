@@ -34,6 +34,7 @@
 #define T5M_REE2AO8       72
 #define T5M_REE2AO9       73
 #define T5M_REE2AO10      74
+#define T5M_REE2AO11      75
 
 /* MBOX CLIENT ID */
 /* AOCPU to ARMREE client ID */
@@ -58,6 +59,7 @@
 #define T5M_REE2AO_SPINLOCK  T5M_REE2AO8
 #define T5M_REE2AO_IR        T5M_REE2AO9
 #define T5M_REE2AO_WATCHKEY  T5M_REE2AO10
+#define T5M_REE2AO_ALIVE_MSG T5M_REE2AO11
 
 /* MBOX CHANNEL ID */
 #define T5M_MBOX_AO2REE    2

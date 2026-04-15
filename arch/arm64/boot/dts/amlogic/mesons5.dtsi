@@ -1858,6 +1858,12 @@
 			      0 57 IRQ_TYPE_EDGE_RISING>;
 	};
 
+	aocpu_monitor {
+		compatible = "amlogic, aocpu_monitor";
+		status = "okay";
+		mboxes = <&mbox_fifo S5_REE2AO_ALIVE_MSG>;
+	};
+
 	amhdmitx: amhdmitx{
 		compatible = "amlogic, amhdmitx-s5";
 		dev_name = "amhdmitx";

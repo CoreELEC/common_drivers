@@ -206,6 +206,12 @@
 			      0 143 IRQ_TYPE_EDGE_RISING>;
 	};
 
+	aocpu_monitor {
+		compatible = "amlogic, aocpu_monitor";
+		status = "okay";
+		mboxes = <&mbox_fifo T5M_REE2AO_ALIVE_MSG>;
+	};
+
 	pwrdm: power-domains {
 		compatible = "amlogic,t5m-power-domain";
 		#power-domain-cells = <1>;
