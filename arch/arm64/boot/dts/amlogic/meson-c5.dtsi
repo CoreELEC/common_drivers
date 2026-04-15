@@ -2301,6 +2301,18 @@
 		reg = <0x0 0xfe09e080 0x0 0x100>;
 	};
 
+	cve:mbd_cve {
+		compatible = "amlogic, cve";
+		reg = <0x0 0xFF561000 0x0 0x1000>;
+		reg-names = "cve";
+		interrupts = <GIC_SPI 218 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "cve";
+		clocks = <&clkc CLKID_CVE>, <&clkc CLKID_VGE>;
+		clock-names = "clk_cve", "clk_vge";
+		power-domains = <&pwrdm PDID_C5_CVE>;
+		status = "okay";
+	};
+
 	ge2d {
 		compatible = "amlogic, mbp-ge2d-c5";
 		status = "okay";
@@ -2312,7 +2324,7 @@
 		clock-names = "clk_vapb_0",
 			"clk_ge2d_gate",
 			"cve_arb";
-		reg = <0x0 0xff560000 0x0 0x2000>;
+		reg = <0x0 0xff560000 0x0 0x1000>;
 		power-domains = <&pwrdm PDID_C5_GE2D>;
 	};
 
