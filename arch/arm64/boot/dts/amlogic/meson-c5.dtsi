@@ -2308,7 +2308,7 @@
 		interrupt-names = "ge2d";
 		clocks = <&clkc CLKID_VAPB>,
 			<&clkc CLKID_GE2D>,
-			<&clkc CLKID_CVE>;
+			<&clkc CLKID_VGE>;
 		clock-names = "clk_vapb_0",
 			"clk_ge2d_gate",
 			"cve_arb";
@@ -2325,7 +2325,7 @@
 		interrupts = <GIC_SPI 356 IRQ_TYPE_EDGE_RISING>,
 			<GIC_SPI 374 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amlgdc", "opp_done";
-		clocks = <&clkc CLKID_DEWARPA>, <&clkc CLKID_CVE>, <&clkc CLKID_ISP0>;
+		clocks = <&clkc CLKID_DEWARPA>, <&clkc CLKID_VGE>, <&clkc CLKID_ISP0>;
 		clock-names = "clk_gate", "cve_arb", "isp_clk";
 		clk-rate = <800000000>;
 		power-domains = <&pwrdm PDID_C5_DEWARP>;
