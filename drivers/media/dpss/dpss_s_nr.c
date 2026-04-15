@@ -260,7 +260,9 @@ bool check_need_enable_4k1k(struct vframe_s *vf)
 		output_4k1k = true;
 	}
 
-	if ((input_4k2k && output_4k1k) || nr_4k1k_en)
+	if ((input_4k2k && output_4k1k) || nr_4k1k_en  ||
+		(vf->dpss_flg & DPSS_FLG_NEED_SKIP &&
+		!VFM_IS_I_SRC(vf->type)))
 		ret = true;
 	else
 		ret = false;
@@ -604,11 +606,15 @@ static void _prm_top_init_light(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_
 	else
 		prm_top->is_secure = false;
 
-	dbg_h0("%s vf->dpss_flg:0x%x\n", __func__, vf->dpss_flg);
-	if ((check_need_enable_4k1k(vf) && !pch->c.ch) || (vf->dpss_flg & DPSS_FLG_NEED_SKIP))
-		prm_top->vds_4k1k_en = 1;
-	else
-		prm_top->vds_4k1k_en = 0;
+	if (vf) {
+		dbg_h0("%s vf->dpss_flg:0x%x\n", __func__, vf->dpss_flg);
+		if ((check_need_enable_4k1k(vf) && !pch->c.ch) ||
+				(vf->dpss_flg & DPSS_FLG_NEED_SKIP &&
+				!VFM_IS_I_SRC(vf->type)))
+			prm_top->vds_4k1k_en = 1;
+		else
+			prm_top->vds_4k1k_en = 0;
+	}
 
 	dbg_i1("%s:di_interlace:%d,%d\n", __func__, prm_top->di_interlace, prm_top->f_top);
 	dbg_i1("%s:prm_top->comp_setting.afrc_head_mode:%d,%d %d\n", __func__,
