@@ -2623,6 +2623,7 @@ void dae0_game(void)
 	struct dpss_frc_top_type_s *frc_top;
 	struct frc_chip_st *pchip_st;
 	struct frc_state_s *state_st;
+	struct dpss_game_state_s *game_st;
 	struct frc_interrupt_s *frc_int_st;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	struct PRM_DPSS_DAE *prm_dae = prm_dpss_dae;
@@ -2640,6 +2641,7 @@ void dae0_game(void)
 	if (!pfw_data)
 		return;
 
+	game_st = &pchip_st->game_st;
 	state_st = &pchip_st->state_st;
 	frc_int_st = &state_st->frc_int_st;
 	frc_top = &pfw_data->frc_top_type;
@@ -2681,7 +2683,10 @@ void dae0_game(void)
 	else
 		prm_top->frc_no_alg_ko = 1;
 
-	hw_cfg_dpss_dae_frc(DAE_FRC_MODE, prm_top, prm_dae);
+	if (unlikely(game_st->game_dae_byp_en))
+		hw_cfg_dpss_dae_frc(DAE_BYPS_MODE, prm_top, prm_dae);
+	else
+		hw_cfg_dpss_dae_frc(DAE_FRC_MODE, prm_top, prm_dae);
 
 	if (!pfw_data->dae_irq_handler || frc_top->fw_pause == 1)
 		prm_top->fw_en = 0;

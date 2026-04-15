@@ -712,6 +712,7 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	game_st->mc_link_en = true;
 	game_st->game_vrr_en = true;
 	game_st->inp_ctrl = true;
+	game_st->game_dae_byp_en = false;
 
 	frc_dbg(DPSS_FRC_TOP, "%s init_version_20250905\n", __func__);
 	if (pdata && pdata->mdata) {
@@ -3410,6 +3411,7 @@ void dpss_frc_set_deblur(u8 deblur_level)
 	if (!pchip_st)
 		return;
 
+	game_st = &pchip_st->game_st;
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
 	if (pfw_data) {
 		frc_top = &pfw_data->frc_top_type;
@@ -3417,10 +3419,15 @@ void dpss_frc_set_deblur(u8 deblur_level)
 		DBG_ERR("%s: frc_fw is null\n", __func__);
 		return;	// add abnormal case
 	}
+
+	game_st->game_deblur = (64 * deblur_level) / 10;
 	pr_frc(1, "ext_ctrl: deblur_level:%d\n", deblur_level);
-	if (frc_top->game_mode && !is_vd1_link_state()) {
-		game_st = &pchip_st->game_st;
-		game_st->game_deblur = (64 * deblur_level) / 10;
+	if (frc_top->game_mode) { // bug fix, game frc
+		pfw_data->frc_top_type.frc_deblur_level = 10;
+		if (pfw_data->frc_memc_level && !is_vd1_link_state())
+			pfw_data->frc_memc_level(pfw_data);
+		pr_frc(1, "game frc: deblur_level(mc phs):0x%x\n",
+			game_st->game_deblur);
 		return;
 	}
 	if (deblur_level != pfw_data->frc_top_type.frc_deblur_level) {

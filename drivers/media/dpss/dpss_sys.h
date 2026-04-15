@@ -484,6 +484,7 @@ struct dpss_game_state_s {
 	bool inp_ctrl;
 	bool delay_enable_game_frc;
 	bool mc_need_byp_en;
+	bool game_dae_byp_en;
 	u32 vrr_drop_cnt;
 	u32 video_mute_cnt;
 	u32 vdin_buf_num;

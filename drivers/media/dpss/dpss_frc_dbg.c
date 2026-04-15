@@ -2381,6 +2381,8 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 	venc_vrr_ctrl_1 = pchip_st->venc_vrr_ctrl_1;
 
 	len +=
+		sprintf(buf + len, "game memc ver 20260415\tchip id:%d\n", pchip_st->chip);
+	len +=
 		sprintf(buf + len, "game_st->game_vrr_en\t=%d\n", game_st->game_vrr_en);
 	len +=
 		sprintf(buf + len, "game_st->mc_link_en\t=%d\n", game_st->mc_link_en);
@@ -2412,13 +2414,19 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 	len +=
 		sprintf(buf + len, "game_st->mc_need_byp_en\t=%d\n", game_st->mc_need_byp_en);
 	len +=
-		sprintf(buf + len, "ENCL_FRC_CTRL\t=%#X\n", rd_vc(encl_frc_ctrl));
+		sprintf(buf + len, "game_st->game_dae_byp_en\t=%d\n", game_st->game_dae_byp_en);
 	len +=
-		sprintf(buf + len, "VENC_VRR_CTRL\t=%#X\n", rd_vc(venc_vrr_ctrl));
+		sprintf(buf + len, "ENCL_FRC_CTRL(0x%x)\t=%#X\n",
+			encl_frc_ctrl, rd_vc(encl_frc_ctrl));
 	len +=
-		sprintf(buf + len, "VENC_VRR_ADJ_LMT\t=%#X\n", rd_vc(venc_vrr_adj_lmt));
+		sprintf(buf + len, "VENC_VRR_CTRL(0x%x)\t=%#X\n",
+			venc_vrr_ctrl, rd_vc(venc_vrr_ctrl));
 	len +=
-		sprintf(buf + len, "VENC_VRR_CTRL1\t=%#X\n", rd_vc(venc_vrr_ctrl_1));
+		sprintf(buf + len, "VENC_VRR_ADJ_LMT(0x%x)\t=%#X\n",
+			venc_vrr_adj_lmt, rd_vc(venc_vrr_adj_lmt));
+	len +=
+		sprintf(buf + len, "VENC_VRR_CTRL1(0x%x)\t=%#X\n",
+			venc_vrr_ctrl_1, rd_vc(venc_vrr_ctrl_1));
 	return len;
 }
 
@@ -2510,6 +2518,15 @@ void dpss_frc_debug_game_if(const char *buf, size_t count)
 				game_st->game_deblur = val1;
 			else
 				pr_frc(0, "err: mc phase between 0 and 0x40 when game mode\n");
+		}
+	} else if (!strcmp(parm[0], "game_dae_byp_en")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0) {
+			if (val1 > 0)
+				game_st->game_dae_byp_en = true;
+			else
+				game_st->game_dae_byp_en = false;
 		}
 	}
 
