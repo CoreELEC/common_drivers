@@ -1580,6 +1580,15 @@
 	status = "okay";
 };
 
+&dptx {
+	status = "okay";
+	pxp_mode = <1>;
+};
+
+&edptx {
+	status = "okay";
+	pxp_mode = <1>;
+};
 //&lcd {
 //	status = "disable";
 //};

@@ -53,10 +53,10 @@
 				reg = <1>;
 				remote-endpoint = <&dummyl_to_drm>;
 			};
-			//drm_to_dptx: endpoint@1 {
-			//	reg = <0>;
-			//	remote-endpoint = <&dptx_to_drm>;
-			//};
+			drm_to_dptx: endpoint@2 {
+				reg = <2>;
+				remote-endpoint = <&dptx_to_drm>;
+			};
 			//drm_to_edp: endpoint@2 {
 			//	reg = <1>;
 			//	remote-endpoint = <&edp_to_drm>;
@@ -88,7 +88,7 @@
 		vpu_block_select = <&vpu_blocks>; /*default vpu_blocks*/
 		//vpu_block_select = <&vpu_blocks_path2>;
 		//vpu_block_select = <&vpu_blocks_path3>;
-		//tx_venc = <&tx_venc>;
+		tx_venc = <&tx_venc>;
 
 		vpu_topology: vpu_topology {
 			vpu_blocks: vpu_blocks {
@@ -742,18 +742,18 @@
 	};
 };
 
-//&dptx {
-//	ports {
-//		port {
-//			#address-cells = <1>;
-//			#size-cells = <0>;
-//			dptx_to_drm: endpoint@0 {
-//				reg = <0>;
-//				remote-endpoint = <&drm_to_dptx>;
-//			};
-//		};
-//	};
-//};
+&dptx {
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			dptx_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_dptx>;
+			};
+		};
+	};
+};
 
 //&edptx {
 //	ports {

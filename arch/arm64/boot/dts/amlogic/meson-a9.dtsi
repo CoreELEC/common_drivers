@@ -2509,6 +2509,109 @@
 			      0 61 IRQ_TYPE_EDGE_RISING>;
 	};
 
+	tx_venc: tx_venc {
+		compatible = "amlogic, tx-venc-a9";
+		status = "okay";
+		reg = <0x0 0xFF500000 0x0 0x3ffff>;
+		reg-names = "vcbus";
+		venc_offset = <0x0 0x600>;
+	};
+
+	tx_phy: tx_phy {
+		compatible = "amlogic, tx-phy-a9";
+		reg = <0x0 0xfe008000 0x0 0x1000>,
+		      <0x0 0xfe48c000 0x0 0x100>;
+		reg-names = "anactrl_typec_dp_reg", "dpphy_ctrl_reg";
+		status = "okay";
+	};
+
+	dptx_clk: dptx_clk {
+		compatible = "amlogic, tx-clk-a9";
+		status = "okay";
+		reg = <0x0 0xFE016000 0x0 0x2000
+			0x0 0xfe000000 0x0 0x2000>;
+		reg-names = "ana_ctrl",
+			"clk_ctrl";
+	};
+
+	dptx: dptx {
+		compatible = "amlogic, dptx-a9";
+		dev_name = "amdptx";
+		status = "disabled";
+		tx_phy = <&tx_phy>;
+		tx_clk = <&dptx_clk>;
+		dev_index = <0>;
+		interrupts = <0 285 4
+			0 286 4>;
+		interrupt-names = "apb_dp_int", "hdcp2tx_intr";
+
+		reg = <0x0 0xFE484000 0x0 0x2000
+			0x0 0xFE010000 0x0 0x2000
+			0x0 0xFE016000 0x0 0x2000
+			0x0 0xFE00C000 0x0 0x2000
+			0x0 0xFE002000 0x0 0x2000
+			0x0 0xFE000000 0x0 0x2000
+			0x0 0xFF500000 0x0 0x3ffff
+			0x0 0xFE004000 0x0 0x2000>;
+		reg-names = "dptx",
+			"sys_ctrl",
+			"ana_ctrl",
+			"pwr_ctrl",
+			"reset_ctrl",
+			"clk_ctrl",
+			"vpu_ctrl",
+			"pad_ctrl";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				dptx_to_drm: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <0>;
+				};
+			};
+		};
+	};
+
+	edptx: edptx {
+		compatible = "amlogic, edp-a9";
+		dev_name = "amedptx";
+		status = "disabled";
+		tx_phy = <&tx_phy>;
+		tx_clk = <&dptx_clk>;
+		dev_index = <1>;
+		pxp_mode = <1>;
+		interrupts = <0 287 4>;
+		interrupt-names = "apb_int_edptx";
+
+		reg = <0x0 0xFE074000 0x0 0x2000
+			0x0 0xFE010000 0x0 0x2000
+			0x0 0xFE016000 0x0 0x2000
+			0x0 0xFE00C000 0x0 0x2000
+			0x0 0xFE002000 0x0 0x2000
+			0x0 0xFE000000 0x0 0x2000
+			0x0 0xFF500000 0x0 0x3ffff
+			0x0 0xFE004000 0x0 0x2000>;
+		reg-names = "edptx",
+			"sys_ctrl",
+			"ana_ctrl",
+			"pwr_ctrl",
+			"reset_ctrl",
+			"clk_ctrl",
+			"vpu_ctrl",
+			"pad_ctrl";
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				edp_to_drm: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <0>;
+				};
+			};
+		};
+	};
+
 	amhdmitx: amhdmitx{
 		compatible = "amlogic, amhdmitx-a9";
 		dev_name = "amhdmitx";

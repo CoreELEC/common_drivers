@@ -2077,19 +2077,20 @@ static void dptx_hdcptx_up_hdcp_timeout_handler(struct work_struct *work)
 
 void dptx_tee_comm_dev_reg(struct miscdevice *hdcp_misc_dev, const struct file_operations *fops)
 {
-	int ret;
+	/* TODO: enable later */
+	/* int ret; */
 
-	if (!hdcp_misc_dev || !fops) {
-		DPTX_ERROR("null hdcp communicate device or file ops\n");
-		return;
-	}
-	hdcp_misc_dev->minor = MISC_DYNAMIC_MINOR;
-	hdcp_misc_dev->name = "tee_comm_hdcp";
-	hdcp_misc_dev->fops = fops;
+	/* if (!hdcp_misc_dev || !fops) { */
+	/* DPTX_ERROR("null hdcp communicate device or file ops\n"); */
+	/* return; */
+	/* } */
+	/* hdcp_misc_dev->minor = MISC_DYNAMIC_MINOR; */
+	/* hdcp_misc_dev->name = "tee_comm_hdcp"; */
+	/* hdcp_misc_dev->fops = fops; */
 
-	ret = misc_register(hdcp_misc_dev);
-	if (ret < 0)
-		DPTX_ERROR("misc_register fail\n");
+	/* ret = misc_register(hdcp_misc_dev); */
+	/* if (ret < 0) */
+	/* DPTX_ERROR("misc_register fail\n"); */
 }
 
 static void dptx_hdcptx_debug_func(void *hdcptx_instance, const char *buf)

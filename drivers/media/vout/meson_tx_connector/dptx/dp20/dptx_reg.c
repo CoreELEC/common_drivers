@@ -21,20 +21,18 @@ int dptx20_reg_write(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u3
 		return -1;
 	}
 	DPTX_DEBUG_REG("%s offset = 0x%x, value = 0x%x\n", __func__, offset, value);
+	writel(value, tx_comm->hw_base.regs_region[DPTX_COR_REG_IDX].p + offset);
 	return 0;
-	/* writel(value, tx_comm->hw_base.regs_region[DPTX_COR_REG_IDX].p + offset); */
-	/* return 0; */
 }
 
 u32 dptx20_reg_read(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset)
 {
 	if (io_type != CORE_LEVEL) {
 		DPTX_ERROR("%s check reg 0x%x\n", __func__, offset);
-		return -1;
+		return 0;
 	}
-	return 0;
 
-	/* return readl(tx_comm->hw_base.regs_region[DPTX_COR_REG_IDX].p + offset); */
+	return readl(tx_comm->hw_base.regs_region[DPTX_COR_REG_IDX].p + offset);
 }
 
 void dptx20_seq_rd_reg(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, u8 *buf, u16 cnt)
@@ -72,8 +70,8 @@ u32 dptx20_rd_plt_reg(struct dptx_hw_common *tx_comm, u32 vaddr)
 		(vaddr & ((1 << BASE_REG_OFFSET) - 1));
 	WARN_ON(!reg);
 	DPTX_DEBUG_REG("Rd32[0x%08x] 0x%08x\n", vaddr, val);
-	return 0;
-	/* return readl(reg); */
+
+	return readl(reg);
 }
 
 void dptx20_wr_plt_reg(struct dptx_hw_common *tx_comm, u32 vaddr, u32 val)
@@ -83,8 +81,7 @@ void dptx20_wr_plt_reg(struct dptx_hw_common *tx_comm, u32 vaddr, u32 val)
 	reg = get_reg_addr(tx_comm, vaddr >> BASE_REG_OFFSET) +
 		(vaddr & ((1 << BASE_REG_OFFSET) - 1));
 	WARN_ON(!reg);
-	return;
-	/* writel(val, reg); */
+	writel(val, reg);
 	DPTX_DEBUG_REG("Wr32[0x%08x] 0x%08x\n", vaddr, val);
 }
 

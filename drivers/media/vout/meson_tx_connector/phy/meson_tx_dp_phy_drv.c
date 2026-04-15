@@ -798,7 +798,7 @@ static int dptx_init_reg_map(struct platform_device *pdev, struct meson_tx_phy *
 		dev_err(dev, "Failed to get %s address\n", DPPHY_CTRL_NAME);
 		return -ENODEV;
 	}
-	base = devm_ioremap_resource(dev, res);
+	base = devm_ioremap(dev, res->start, resource_size(res));
 	if (IS_ERR(base)) {
 		dev_err(dev, "Failed to ioremap %s memory region\n", DPPHY_CTRL_NAME);
 		return PTR_ERR(base);
@@ -817,7 +817,7 @@ static int dptx_init_reg_map(struct platform_device *pdev, struct meson_tx_phy *
 		dev_err(dev, "Failed to get %s address\n", ANACTRL_USBCDP_NAME);
 		return -ENODEV;
 	}
-	base = devm_ioremap_resource(dev, res);
+	base = devm_ioremap(dev, res->start, resource_size(res));
 	if (IS_ERR(base)) {
 		dev_err(dev, "Failed to ioremap %s memory region\n", ANACTRL_USBCDP_NAME);
 		return PTR_ERR(base);
@@ -973,7 +973,7 @@ static int usb_to_dptx_notifier(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static int meson_tx_phy_probe(struct platform_device *pdev)
+static int meson_tx_dp_phy_probe(struct platform_device *pdev)
 {
 	struct meson_tx_phy *tx_phy;
 	const struct meson_tx_phy_data *data;
@@ -1035,7 +1035,7 @@ static const struct of_device_id meson_tx_phy_of_match[] = {
 };
 
 static struct platform_driver meson_tx_phy_driver = {
-	.probe   = meson_tx_phy_probe,
+	.probe   = meson_tx_dp_phy_probe,
 	.remove  = meson_tx_phy_remove,
 	.driver  = {
 		.name = DEVICE_NAME,
