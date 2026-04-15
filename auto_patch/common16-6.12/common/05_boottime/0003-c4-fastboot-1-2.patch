@@ -238,7 +238,7 @@ index 37c24ffea65c..8a6fb5a34395 100644
 -- 
 2.46.0
  
-From e5d42c52a91751930c2d02c3ec5fb0352d7ac445 Mon Sep 17 00:00:00 2001
+From fdfb439924940cb27e62a430536b557ca16a3255 Mon Sep 17 00:00:00 2001
 From: yao zhang1 <yao.zhang1@amlogic.com>
 Date: Tue, 10 Jun 2025 11:29:40 +0000
 Subject: [PATCH] fastboot: c4 optimization boottime [1/1]
@@ -260,13 +260,13 @@ c4 pxp
 Change-Id: I5b0e3acd00bb4a6733464b47e2c970de9ce3e65e
 Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
 ---
- drivers/of/platform.c    | 36 ++++++++++++++++++++++++++++++++++++
+ drivers/of/platform.c    | 38 ++++++++++++++++++++++++++++++++++++++
  kernel/sched/features.h  |  4 ++++
  net/ipv4/inet_fragment.c |  4 ++++
- 3 files changed, 44 insertions(+)
+ 3 files changed, 46 insertions(+)
 
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
-index 83dff7de6ce8..dba9d540af9d 100644
+index e01be7fd0cfb..d8381eae1d71 100644
 --- a/drivers/of/platform.c
 +++ b/drivers/of/platform.c
 @@ -24,6 +24,12 @@
@@ -305,21 +305,23 @@ index 83dff7de6ce8..dba9d540af9d 100644
  /**
   * of_platform_populate() - Populate platform_devices from device tree data
   * @root: parent of the first level to probe or NULL for the root of the tree
-@@ -467,6 +489,13 @@ int of_platform_populate(struct device_node *root,
+@@ -467,6 +489,15 @@ int of_platform_populate(struct device_node *root,
  
  	device_links_supplier_sync_state_pause();
  	for_each_child_of_node_scoped(root, child) {
 +#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
-+		if (!strcmp(child->name, "soc") && !strcmp(matches->compatible, "simple-bus")) {
-+			g_child = child;
-+			g_root = root;
-+			continue;
++		if (child && matches) {
++			if (!strcmp(child->name, "soc") && !strcmp(matches->compatible, "simple-bus")) {
++				g_child = child;
++				g_root = root;
++				continue;
++			}
 +		}
 +#endif
  		rc = of_platform_bus_create(child, matches, lookup, parent, true);
  		if (rc)
  			break;
-@@ -504,6 +533,9 @@ static int __init of_platform_default_populate_init(void)
+@@ -504,6 +535,9 @@ static int __init of_platform_default_populate_init(void)
  {
  	struct device_node *node;
  
@@ -329,7 +331,7 @@ index 83dff7de6ce8..dba9d540af9d 100644
  	device_links_supplier_sync_state_pause();
  
  	if (IS_ENABLED(CONFIG_PPC)) {
-@@ -593,6 +625,10 @@ static int __init of_platform_default_populate_init(void)
+@@ -593,6 +627,10 @@ static int __init of_platform_default_populate_init(void)
  
  		/* Populate everything else. */
  		of_platform_default_populate(NULL, NULL, NULL);
