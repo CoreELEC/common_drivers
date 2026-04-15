@@ -15,7 +15,9 @@
 /* 20241231: release vbi memory when suspend */
 /* 20250401: determine if the requested memory is available */
 /* 20251120: vbi don't set memory when vbi disable */
-#define VBI_DRV_VER    "20251120: vbi don't set memory when vbi disable"
+/* 20260415: enable cc of pal-m */
+
+#define VBI_DRV_VER    "20260415: enable cc of pal-m"
 
 /* *************************************************** */
 /* *** macro definitions ***************************** */
