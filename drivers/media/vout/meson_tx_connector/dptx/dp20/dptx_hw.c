@@ -30,12 +30,9 @@
 #include "dptx_hw_gtc.h"
 #include "dptx_hdcp_hw.h"
 
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para);
-#endif
 
 static struct dptx_intr dptx_all_intr = {
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 	.cp2tx_intr0 = {
 		.intr_mask_reg = DP_CP2TX_INTR0_MASK_IVCTX,
 		.intr_st_reg = DP_CP2TX_INTR0_IVCTX,
@@ -68,10 +65,8 @@ static struct dptx_intr dptx_all_intr = {
 		.mask_data = BIT(2) | BIT(3),
 		.callback = dptx_hdcp2x_intr_handler,
 	},
-#endif
 };
 
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 void dptx_intr_status_save_clr_cp2txs(u8 regs[])
 {
 	regs[0] = dptx_all_intr.cp2tx_intr0.st_data;
@@ -99,7 +94,6 @@ static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para)
 	dptx_intr_status_save_clr_cp2txs(hdcp2_intr_reg);
 	dptx_hdcp2x_process_intr(p_hdcp, hdcp2_intr_reg);
 }
-#endif
 
 void dptx_core_intr_process(struct dptx_common *tx_comm)
 {
@@ -140,14 +134,11 @@ void dptx_core_intr_process(struct dptx_common *tx_comm)
 static void dptx_intr_status_save_and_clear(struct dptx_common *tx_comm)
 {
 	struct dp_intr_t *pint = (struct dp_intr_t *)&dptx_all_intr;
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 	u32 gate_status = dptx_get_gate_status(tx_comm->hw_comm);
-#endif
 	int i;
 	u32 tmp;
 
 	for (i = 0; i < sizeof(struct dptx_intr) / sizeof(struct dp_intr_t); i++, pint++) {
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 		if (!(gate_status & BIT_DPTX_TOP_CLK_GATE_HDCP2X)) {
 			if (pint->intr_st_reg == DP_CP2TX_INTR0_IVCTX ||
 				pint->intr_st_reg == DP_CP2TX_INTR1_IVCTX ||
@@ -156,7 +147,6 @@ static void dptx_intr_status_save_and_clear(struct dptx_common *tx_comm)
 				continue;
 			}
 		}
-#endif
 		/* if last bottom half of interrupt is not finished, should keep
 		 * the interrupt state, only clear it after it is already
 		 * used in bottom half of interrupt handle
@@ -1077,7 +1067,6 @@ void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
 
 static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
 {
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 	if (hdcptx_comm->hdcp_mode == 2) {
 		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
 					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr0, en);
@@ -1086,7 +1075,6 @@ static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
 		_dptx_intr_enable(hdcptx_comm->bind_hw_comm,
 					(struct dp_intr_t *)&dptx_all_intr.cp2tx_intr2, en);
 	}
-#endif
 }
 
 /* #2.1 dptx task */

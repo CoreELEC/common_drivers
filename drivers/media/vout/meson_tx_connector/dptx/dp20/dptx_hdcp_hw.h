@@ -220,12 +220,10 @@ struct dp_intr_t {
  * note: the priority is in descending order
  */
 struct dptx_intr {
-#ifdef CONFIG_AMLOGIC_HDCP_TX_MODERN
 	struct dp_intr_t cp2tx_intr0;
 	struct dp_intr_t cp2tx_intr1;
 	struct dp_intr_t cp2tx_intr2;
 	struct dp_intr_t cp2tx_intr3;
-#endif
 };
 
 struct hdcp_csm_t;
