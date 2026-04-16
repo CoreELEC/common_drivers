@@ -10,6 +10,179 @@
 #include "dptx_hw.h"
 #include "dptx_hdcp_hw.h"
 #include "dpcd_reg.h"
+#include "dptx_hw_opcode.h"
+
+static void dptx_hdcptx_result_notify_drm(struct dptx_common *tx_comm, int auth)
+{
+	void *cb_data = NULL;
+
+	if (!tx_comm) {
+		DPTX_ERROR("dptx notify drm hdcp NULL tx_comm instance!\n");
+		return;
+	}
+
+	cb_data = tx_comm->hdcptx_comm.tx_hdcp_cb.data;
+	if (tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify)
+		tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify(cb_data,
+			tx_comm->hdcptx_comm.hdcp_mode, auth);
+}
+
+int drm_dptx_common_register_hdcp_notify(struct dptx_common *tx_comm,
+					   struct connector_hdcp_cb *cb)
+{
+	if (!tx_comm) {
+		DPTX_ERROR("NULL tx_comm instance!\n");
+		return -EINVAL;
+	}
+
+	if (!cb) {
+		DPTX_ERROR("NULL callback!\n");
+		return -EINVAL;
+	}
+
+	if (tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify)
+		DPTX_ERROR("register hdcp notify again!?\n");
+
+	tx_comm->hdcptx_comm.tx_hdcp_cb.hdcp_notify = cb->hdcp_notify;
+	tx_comm->hdcptx_comm.tx_hdcp_cb.data = cb->data;
+
+	return 0;
+}
+EXPORT_SYMBOL(drm_dptx_common_register_hdcp_notify);
+
+static int dptx_authenticated;
+MODULE_PARM_DESC(dptx_authenticated, "\n dptx_authenticated\n");
+module_param(dptx_authenticated, int, 0444);
+
+/* 40 * 200ms = 8s */
+#define HDCP_AUTH_TIMEOUT (40)
+/* hdcp monitor task, check hdcp auth status every 200ms */
+int dptx_hdcp_stat_monitor_task(void *data)
+{
+	static int auth_stat;
+	struct dptx_common *tx_comm = (struct dptx_common *)data;
+	struct meson_tx_hw *hw_base = NULL;
+	u8 en;
+
+	if (!tx_comm) {
+		DPTX_ERROR("dptx hdcp monitor NULL tx_comm instance\n");
+		return -1;
+	}
+	hw_base = &tx_comm->hw_comm->hw_base;
+
+	auth_stat = hw_base->hw_cntl(hw_base, DP_HDCP_GET_AUTH_RESULT, tx_comm, NULL);
+	tx_comm->hdcptx_comm.hdcp_auth_result = auth_stat;
+	dptx_hdcptx_result_notify_drm(tx_comm, auth_stat);
+
+	//TODO: event and tracer
+	while (!kthread_should_stop()) {
+		dptx_authenticated = hw_base->hw_cntl(hw_base, DP_HDCP_GET_AUTH_RESULT,
+					tx_comm, NULL);
+
+		tx_comm->hdcptx_comm.hdcp_auth_result = auth_stat;
+		dptx_hdcptx_result_notify_drm(tx_comm, auth_stat);
+		if (auth_stat != dptx_authenticated) {
+			auth_stat = dptx_authenticated;
+			DPTX_HDCP_INFO("mode %d, auth: %d\n",
+				tx_comm->hdcptx_comm.hdcp_mode, auth_stat);
+			if (auth_stat == 1) {
+				tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
+				tx_comm->hdcptx_comm.hdcp_mode_fallback_state =
+						HDCP_FALLBACK_LOCKED;
+			}
+		}
+		if (dptx_authenticated == 0 && tx_comm->hdcptx_comm.hdcp_mode == 2 &&
+			tx_comm->hdcptx_comm.hdcp_mode_fallback_state == HDCP_FALLBACK_NONE) {
+			tx_comm->hdcptx_comm.hdcp_fail_cnt++;
+			if (tx_comm->hdcptx_comm.hdcp_fail_cnt > HDCP_AUTH_TIMEOUT) {
+				tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP1X;
+				en = 1;
+				DPTX_HDCP_INFO("start hdcp14\n");
+				hw_base->hw_cntl(hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
+				tx_comm->hdcptx_comm.hdcp_fail_cnt = 0;
+				tx_comm->hdcptx_comm.hdcp_mode_fallback_state =
+					HDCP_FALLBACK_LOCKED;
+			}
+		}
+		msleep_interruptible(200);
+	}
+	return 0;
+}
+
+/* like dptx_hdcptx_get_hdcprx_ver */
+static unsigned int dptx_hdcptx_get_rx_version(struct dptx_common *tx_comm)
+{
+	unsigned int hdcprx_cap = 0;
+	struct meson_tx_hw *hw_base = NULL;
+
+	if (!tx_comm) {
+		DPTX_ERROR("get_rx_version NULL tx_comm instance!");
+		return 0;
+	}
+	hw_base = &tx_comm->hw_comm->hw_base;
+	/*
+	 * 1.if TX don't have HDCP22 key, skip RX hdcp22 ver.
+	 * 2.note that during hdcp1.4 authentication, read hdcp version
+	 * of connected TV set(capable of hdcp2.2) may cause TV
+	 * switch its hdcp mode, and flash screen. should not
+	 * read hdcp version of sink during hdcp1.4 authentication.
+	 * if hdcp1.4 authentication currently, force return hdcp1.4
+	 */
+	if (tx_comm->hdcptx_comm.hdcp_mode == 0x1) {
+		hdcprx_cap = HDCP_MODE14;
+	} else if (dptx_hw_cntl(hw_base, DP_HDCP_22_LSTORE, tx_comm, NULL) &&
+		dptx_hw_cntl(hw_base, DP_HDCP_22_GET_RX_VER, tx_comm, NULL)) {
+		/* load hdcp22 key and rx support hdcp22 version */
+		tx_comm->hdcptx_comm.dw_hdcp22_cap = 1;
+		hdcprx_cap = HDCP_MODE22 | HDCP_MODE14;
+	} else {
+		/* must assume RX support HDCP14, otherwise affect 1A-03 */
+		tx_comm->hdcptx_comm.dw_hdcp22_cap = 0;
+		hdcprx_cap = HDCP_MODE14;
+	}
+	return hdcprx_cap;
+}
+
+/* bit1: hdcp22, bit0: hdcp1.4 */
+unsigned int drm_dptx_common_get_tx_hdcp_cap(struct dptx_common *tx_comm)
+{
+	struct meson_tx_hw *hw_base = NULL;
+
+	if (!tx_comm) {
+		DPTX_ERROR("get_rx_version NULL tx_comm instance!");
+		return 0;
+	}
+	hw_base = &tx_comm->hw_comm->hw_base;
+
+	if (tx_comm->hdcptx_comm.hdcp_lstore < 0x10) {
+		tx_comm->hdcptx_comm.hdcp_lstore = 0;
+		if (dptx_hw_cntl(hw_base, DP_HDCP_14_LSTORE, tx_comm, NULL))
+			tx_comm->hdcptx_comm.hdcp_lstore |= HDCP_MODE14;
+		if (dptx_hw_cntl(hw_base, DP_HDCP_22_LSTORE, tx_comm, NULL))
+			tx_comm->hdcptx_comm.hdcp_lstore |= HDCP_MODE22;
+	}
+
+	DPTX_DEBUG("dptx hdcp lstore: [%d]\n", tx_comm->hdcptx_comm.hdcp_lstore);
+	return tx_comm->hdcptx_comm.hdcp_lstore & (HDCP_MODE14 | HDCP_MODE22);
+}
+EXPORT_SYMBOL(drm_dptx_common_get_tx_hdcp_cap);
+
+/* bit1: hdcp22, bit0: hdcp1.4 */
+unsigned int drm_dptx_common_get_rx_hdcp_cap(struct dptx_common *tx_comm)
+{
+	unsigned int hdcprx_cap = 0;
+
+	if (!tx_comm) {
+		DPTX_ERROR("drm get rx hdcp cap: NULL tx_comm instance!\n");
+		return 0;
+	}
+
+	hdcprx_cap = dptx_hdcptx_get_rx_version(tx_comm);
+	DPTX_DEBUG("dptx get rx hdcp [%d]\n", hdcprx_cap);
+
+	return hdcprx_cap;
+}
+EXPORT_SYMBOL(drm_dptx_common_get_rx_hdcp_cap);
 
 static void dptx_hdcp2msg_copy_to_fifo(struct dptx_hw_common *tx_comm, enum hdcp_msgid id)
 {

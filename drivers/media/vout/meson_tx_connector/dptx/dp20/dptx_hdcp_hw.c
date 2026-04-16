@@ -18,14 +18,12 @@ bool dptx_get_hdcptx_result(struct hdcptx_common *hdcptx_comm, int hdcp_type)
 
 	if (!hdcptx_comm)
 		return 0;
-
-	if (hdcp_type == HDCP_VER_HDCP1X) {
-		arm_smccc_smc(HDCPTX_IOOPR, HDCP14_RESULT, 0, 0, 0, 0, 0, 0, &res);
-		return res.a0 == 1;
-	} else if (hdcp_type == HDCP_VER_HDCP2X && hdcptx_comm->chip_type != MESON_CPU_ID_S1A) {
+	if (hdcp_type == HDCP_VER_HDCP2X && hdcptx_comm->chip_type != MESON_CPU_ID_S1A) {
 		arm_smccc_smc(HDCPTX_IOOPR, HDCP22_RESULT, 0, 0, 0, 0, 0, 0, &res);
 		return res.a0 == 1;
 	}
+
+	DPTX_INFO("only dptx hdcp22 use the api get result\n");
 	return 0;
 }
 

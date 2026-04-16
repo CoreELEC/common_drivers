@@ -14,6 +14,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/phy/meson_tx_phy_core.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/clk/meson_tx_clk.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 
 #include "meson_tx_task_mgr.h"
 #include "dptx_log.h"
@@ -2439,9 +2440,10 @@ static void start_hdcp_work_func(struct work_struct *work)
 		DPTX_ERROR("invalid hdcp mode: %d\n", hw_comm->hdcp_sec_en);
 }
 
-static int dptx20_post_enable_mode(struct dptx_hw_common *tx_comm)
+static int dptx20_post_enable_mode(struct dptx_hw_common *hw_comm)
 {
-	schedule_work(&tx_comm->work_dptx_hdcp);
+	//todo: need follow hdcp_statrt_mode
+	schedule_work(&hw_comm->work_dptx_hdcp);
 	return 0;
 }
 
@@ -2500,6 +2502,8 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 	int ret = 0;
 	u8 en = 0;
 	struct dptx_common *tx_comm = NULL;
+	struct hdcptx_common *hdcptx_comm = NULL;
+	u8 hdcp_type;
 
 	if (!hw_comm)
 		return -1;
@@ -2522,6 +2526,8 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 		tx_comm->hdcptx_comm.bind_hw_comm = (void *)tx_comm->hw_comm;
 		hw_comm->dptx_hdcp1x_inst = dptx20_hdcp1x_init(tx_comm->hw_comm);
 		INIT_WORK(&tx_comm->hw_comm->work_dptx_hdcp, start_hdcp_work_func);
+		tx_comm->hdcptx_comm.task_hdcp = kthread_run(dptx_hdcp_stat_monitor_task,
+				tx_comm, "kthread_hdcp_dp");
 		break;
 	case DP_HDCP_UNINIT:
 		if (!input_argv) {
@@ -2530,10 +2536,44 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 			break;
 		}
 		tx_comm = (struct dptx_common *)input_argv;
+
 		dptx_hdcp1x_uninit(hw_comm->dptx_hdcp1x_inst);
 		/* for hdcp2.2 */
 		if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit)
 			tx_comm->hdcptx_comm.hdcptx_api->hdcptx_uninit(tx_comm->hdcptx_priv);
+		if (tx_comm->hdcptx_comm.task_hdcp)
+			kthread_stop(tx_comm->hdcptx_comm.task_hdcp);
+		break;
+	case DP_HDCP2X_AUTH_ENABLE:
+		dptx_hdcp22_proc(hw_comm);
+		break;
+	case DP_HDCP2X_AUTH_DISABLE:
+		if (!input_argv) {
+			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+		hdcptx_comm = &tx_comm->hdcptx_comm;
+		if (hdcptx_comm->hdcptx_api->hdcptx_disable)
+			hdcptx_comm->hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
+		break;
+	case DP_HDCP_GET_AUTH_RESULT:
+		if (!input_argv) {
+			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+		hdcptx_comm = &tx_comm->hdcptx_comm;
+		hdcp_type = hdcptx_comm->hdcp_mode;
+
+		if (hdcp_type == 2) {
+			if (hdcptx_comm->hdcptx_api->get_hdcptx_result)
+				ret = hdcptx_comm->hdcptx_api->get_hdcptx_result(hdcptx_comm, 2);
+		} else if (hdcp_type == 1) {
+			ret = dptx_hdcp1_get_result(hdcptx_comm, 1);
+		}
 		break;
 	case DP_HDCP1X_REAUTH:
 		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
@@ -2561,6 +2601,46 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 			dptx_hdcp1x_auth_enable(hw_comm);
 		else
 			dptx_hdcp1x_auth_disable(hw_comm);
+		break;
+	case DP_HDCP_22_LSTORE:
+		if (!input_argv) {
+			DPTX_ERROR("cmd[0x%x] null input arg\n", cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+		hdcptx_comm = &tx_comm->hdcptx_comm;
+
+		if (hdcptx_comm->hdcptx_api->get_hdcptx_lstore)
+			//TODO: use HDCP_VER_HDCP2X
+			ret = hdcptx_comm->hdcptx_api->get_hdcptx_lstore(hdcptx_comm, 2);
+		break;
+	case DP_HDCP_14_LSTORE:
+		if (!input_argv) {
+			DPTX_ERROR("cmd[0x%x] null input arg\n", cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+		hdcptx_comm = &tx_comm->hdcptx_comm;
+
+		if (hdcptx_comm->hdcptx_api->get_hdcptx_lstore)
+			//TODO: use HDCP_VER_HDCP1X
+			ret = hdcptx_comm->hdcptx_api->get_hdcptx_lstore(hdcptx_comm, 1);
+		break;
+	case DP_HDCP_22_GET_RX_VER:
+		if (!input_argv) {
+			DPTX_ERROR("cmd[0x%x] null input arg\n", cmd);
+			ret = -1;
+			break;
+		}
+		tx_comm = (struct dptx_common *)input_argv;
+		hdcptx_comm = &tx_comm->hdcptx_comm;
+
+		//TODO: how get dptx hdcp version
+		if (hdcptx_comm->hdcptx_api->get_hdcprx_ver)
+			if (hdcptx_comm->hdcptx_api->get_hdcprx_ver(hdcptx_comm) == 2)
+				ret = true;
 		break;
 	default:
 		break;

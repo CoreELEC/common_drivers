@@ -109,16 +109,6 @@ int dump_hdmitx_basic_config(struct seq_file *s, void *p)
 	seq_printf(s, "cur_VIC: %d\n", tx_comm->fmt_para.tx_hw_para.hdmitx_hw_para.vic);
 	hdmitx_format_para_print(&tx_comm->fmt_para, buf);
 	seq_printf(s, "%s\n", buf);
-	if (tx_comm->fmt_para.flag_3dfp)
-		conf = "FramePacking";
-	else if (tx_comm->fmt_para.flag_3dss)
-		conf = "SidebySide";
-	else if (tx_comm->fmt_para.flag_3dtb)
-		conf = "TopButtom";
-	else
-		conf = "off";
-	seq_printf(s, "3D config: %s\n", conf);
-	seq_puts(s, "\n");
 
 	seq_puts(s, "******hdcp******\n");
 	seq_puts(s, "hdcp mode:");

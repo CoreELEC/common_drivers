@@ -282,5 +282,7 @@ struct dptx_hdcp1x *dptx20_hdcp1x_init(struct dptx_hw_common *hw_comm);
 void dptx_hdcp1x_uninit(struct dptx_hdcp1x *dptx_hdcp1x_inst);
 void dptx_hdcp1x_auth_enable(struct dptx_hw_common *hw_comm);
 void dptx_hdcp1x_auth_disable(struct dptx_hw_common *hw_comm);
+bool dptx_hdcp1_get_result(struct hdcptx_common *hdcptx_comm, int hdcp_type);
+int dptx_hdcp_stat_monitor_task(void *data);
 
 #endif

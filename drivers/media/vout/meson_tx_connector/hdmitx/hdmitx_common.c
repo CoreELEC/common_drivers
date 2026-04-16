@@ -251,9 +251,6 @@ int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *h
 	tx_comm->rxsense_policy = 0;
 	/* enable or disable HDMITX SSPLL, enable by default */
 	tx_comm->sspll = 1;
-	para->flag_3dfp = 0;
-	para->flag_3dss = 0;
-	para->flag_3dtb = 0;
 
 	/* default audio configure is on */
 	tx_comm->cur_audio_param.aud_output_en = 1;

@@ -4,12 +4,14 @@
  */
 
 #include <linux/delay.h>
+#include <linux/amlogic/arm-smccc.h>
 #include "dptx20_reg.h"
 #include "dptx_log.h"
 #include "dptx_aux_helper.h"
 #include "dptx_hw.h"
 #include "dptx_hdcp_hw.h"
 #include "dpcd_reg.h"
+#include "../../hdcp/hdmitx_hdcp.h"
 
 #define DPTX_HDCP1X_WQ_NAME "dptx_hdcp1x_workqueue"
 #define HDCP1X_MAX_DEV_CNT 127
@@ -33,6 +35,22 @@
  * interrupt is received. add extra 10ms for error tolerance
  */
 #define DP1X_RPT_RDY_MS (5000 + 10)
+
+bool dptx_hdcp1_get_result(struct hdcptx_common *hdcptx_comm, int hdcp_type)
+{
+	struct arm_smccc_res res;
+
+	if (!hdcptx_comm)
+		return 0;
+	//TODO: use HDCP_VER_HDCP1X
+	if (hdcp_type == 1) {
+		arm_smccc_smc(HDCPTX_IOOPR, HDCP14_RESULT, 0, 0, 0, 0, 0, 0, &res);
+		return res.a0 == 1;
+	}
+
+	DPTX_INFO("only dptx hdcp14 use the api get result\n");
+	return 0;
+}
 
 /* Set specified HDCP mode. */
 static void hdcp1_tx_hw_mode_set(struct dptx_hw_common *hw_comm, bool enable)
@@ -89,7 +107,7 @@ static int hdcp1_tx_dpcd_rd_bcaps(struct dptx_hw_common *hw_comm)
 	ret = dptx_aux_read_dpcd(hw_comm->tx_aux, DP_AUX_HDCP_BCAPS,
 		&hw_comm->dptx_hdcp1x_inst->bcaps, len);
 	if (ret != len) {
-		DPTX_ERROR("dptx hdp1.x read bcaps ret:%d\n", ret);
+		DPTX_ERROR("dptx hdcp1.x read bcaps ret:%d\n", ret);
 		ret = -1;
 	} else {
 		ret = 0;

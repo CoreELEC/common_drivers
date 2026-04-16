@@ -16,6 +16,17 @@
 
 struct dptx_hw_common;
 
+//TODO: use the same enum with hdmi/drm
+enum dp_hdcp_state {
+	DP_HDCP_STATE_START = 0,
+	DP_HDCP_RESULT_SUCCESS,
+	DP_HDCP_RESULT_FAIL,
+	DP_HDCP_STATE_STOP,
+	DP_HDCP_STATE_DISCONNECT,
+	DP_HDCP_FORCE,
+	DP_HDCP_KEY_READY,
+};
+
 struct meson_dp_aux_msg {
 	unsigned int address;
 	u8 request;
@@ -122,5 +133,13 @@ struct dptx_common {
 int dptx_get_mode_list(struct dptx_common *tx_comm, struct tx_timing **timing_list);
 void dptx_register_dev_to_txdev_xlate(struct meson_tx_dev *base,
 		conn_dev_to_txdev convert);
+
+unsigned int dptx_common_get_hdcp_mode(struct dptx_common *tx_comm);
+unsigned int dptx_common_set_hdcp_mode(struct dptx_common *tx_comm, u8 hdcp_mode,
+	enum dp_hdcp_state hdcp_state);
+unsigned int drm_dptx_common_get_tx_hdcp_cap(struct dptx_common *tx_comm);
+unsigned int drm_dptx_common_get_rx_hdcp_cap(struct dptx_common *tx_comm);
+int drm_dptx_common_register_hdcp_notify(struct dptx_common *tx_comm,
+					   struct connector_hdcp_cb *cb);
 
 #endif

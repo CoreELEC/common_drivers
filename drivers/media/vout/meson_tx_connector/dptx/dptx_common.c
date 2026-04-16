@@ -4,6 +4,7 @@
  */
 
 #include <linux/vmalloc.h>
+#include <linux/delay.h>
 
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
@@ -398,6 +399,75 @@ static int dptx_post_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_fo
 {
 	return dptx_hw_cntl(tx_dev->tx_hw_base, MODE_FLOW_POST_ENABLE_MODE, para, NULL);
 }
+
+unsigned int dptx_common_get_hdcp_mode(struct dptx_common *tx_comm)
+{
+	unsigned int hdcp_mode_flag = 0;
+
+	if (tx_comm->hdcptx_comm.hdcp_mode) {
+		hdcp_mode_flag |= tx_comm->hdcptx_comm.hdcp_mode;
+		if (tx_comm->hdcptx_comm.hdcp_auth_result == HDCP_AUTH_OK)
+			hdcp_mode_flag |= 1 << 3;
+		else if (tx_comm->hdcptx_comm.hdcp_auth_result == HDCP_AUTH_FAIL)
+			hdcp_mode_flag |= 0 << 3;
+	} else {
+		return 0;
+	}
+	return hdcp_mode_flag;
+}
+EXPORT_SYMBOL(dptx_common_get_hdcp_mode);
+
+unsigned int dptx_common_set_hdcp_mode(struct dptx_common *tx_comm, u8 hdcp_mode,
+			enum dp_hdcp_state hdcp_state)
+{
+	struct meson_tx_hw *tx_hw = NULL;
+	u8 en;
+
+	DPTX_INFO("set hdcp_mode: %d, hdcp_state:%d\n", hdcp_mode, hdcp_state);
+	if (!tx_comm) {
+		DPTX_ERROR("NULL tx_comm instance\n");
+		return -EINVAL;
+	}
+	tx_hw = &tx_comm->hw_comm->hw_base;
+
+	if ((hdcp_mode & HDCP_MODE22) && (hdcp_mode & HDCP_MODE14))
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_AUTO;
+	else if (hdcp_mode & HDCP_MODE22)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP2X;
+	else if (hdcp_mode & HDCP_MODE14)
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_HDCP1X;
+	else
+		tx_comm->hdcptx_comm.hdcptx_start_type = HDCP_START_NONE;
+
+	if (tx_comm->hdcptx_comm.hdcptx_start_type == HDCP_START_AUTO)
+		tx_comm->hdcptx_comm.hdcp_mode_fallback_state = HDCP_FALLBACK_NONE;
+	else
+		tx_comm->hdcptx_comm.hdcp_mode_fallback_state = HDCP_FALLBACK_LOCKED;
+
+	if (hdcp_state == DP_HDCP_FORCE || hdcp_state == DP_HDCP_KEY_READY) {
+		en = 0;
+		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_HDCP2X_AUTH_DISABLE, tx_comm, NULL);
+		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
+		switch (tx_comm->hdcptx_comm.hdcptx_start_type) {
+		case HDCP_START_HDCP2X:
+			dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_HDCP2X_AUTH_ENABLE,
+						tx_comm, NULL);
+			break;
+		case HDCP_START_HDCP1X:
+			en = 1;
+			dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
+			break;
+		case HDCP_START_NONE:
+			break;
+		default:
+			DPTX_DEBUG("%s don't use hdcp_state:%d\n", __func__, hdcp_state);
+			break;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(dptx_common_set_hdcp_mode);
 
 struct meson_tx_helper_ops dptx_common_helper_ops = {
 	.create_sysfs	= dptx_create_sysfs,

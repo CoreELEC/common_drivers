@@ -851,28 +851,6 @@ static struct hw_enc_clk_val_group setting_enc_clk_val_36[] = {
 		3450000, 1, 2, 2, VID_PLL_DIV_5, 1, 1, 1, -1},
 };
 
-/* For 3D Frame Packing Clock Setting
- * mode hpll_clk_out od1 od2(PHY) od3
- * vid_pll_div vid_clk_div hdmi_tx_pixel_div encp_div enci_div
- */
-static struct hw_enc_clk_val_group setting_3dfp_enc_clk_val[] = {
-	{{HDMI_16_1920x1080p60_16x9,
-	  HDMI_31_1920x1080p50_16x9,
-	  HDMI_VIC_END},
-		5940000, 2, 1, 2, VID_PLL_DIV_5, 1, 1, 1, -1},
-	{{HDMI_19_1280x720p50_16x9,
-	  HDMI_4_1280x720p60_16x9,
-	  HDMI_34_1920x1080p30_16x9,
-	  HDMI_32_1920x1080p24_16x9,
-	  HDMI_33_1920x1080p25_16x9,
-	  HDMI_VIC_END},
-		5940000, 2, 2, 2, VID_PLL_DIV_5, 1, 1, 1, -1},
-	/* NO 2160p mode*/
-	{{HDMI_VIC_FAKE,
-	  HDMI_VIC_END},
-		3450000, 1, 2, 2, VID_PLL_DIV_5, 1, 1, 1, -1},
-};
-
 static void set_hdmitx_fe_clk(struct hdmitx20_dev *hdev)
 {
 	unsigned int tmp = 0;
@@ -925,23 +903,7 @@ static void hdmitx_set_clk_(struct hdmitx20_dev *hdev,
 	if (cs == HDMI_COLORSPACE_YUV422)
 		cd = COLORDEPTH_24B;
 
-	if (para->flag_3dfp) {
-		p_enc = &setting_3dfp_enc_clk_val[0];
-		for (j = 0; j < sizeof(setting_3dfp_enc_clk_val)
-			/ sizeof(struct hw_enc_clk_val_group); j++) {
-			for (i = 0; ((i < GROUP_MAX) && (p_enc[j].group[i]
-				!= HDMI_VIC_END)); i++) {
-				if (vic == p_enc[j].group[i])
-					goto next;
-			}
-		}
-		if (j == sizeof(setting_3dfp_enc_clk_val)
-			/ sizeof(struct hw_enc_clk_val_group)) {
-			HDMITX_INFO("%d:Not find VIC = %d for hpll setting\n",
-				__LINE__, vic);
-			return;
-		}
-	} else if (cd == COLORDEPTH_24B) {
+	if (cd == COLORDEPTH_24B) {
 		if (cs == HDMI_COLORSPACE_YUV420) {
 			p_enc = &setting_enc_clk_val_420_24[0];
 			for (j = 0; j < sizeof(setting_enc_clk_val_420_24)

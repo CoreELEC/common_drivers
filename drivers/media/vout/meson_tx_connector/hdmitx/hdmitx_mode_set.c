@@ -567,8 +567,7 @@ int hdmitx_set_display(struct hdmitx_common *tx_comm, enum hdmi_vic video_code)
 			video_code == HDMI_93_3840x2160p24_16x9 ||
 			video_code == HDMI_98_4096x2160p24_256x135) {
 			hdmitx_common_setup_vsif_packet(tx_comm, VT_HDMI14_4K, 1, NULL);
-		} else if ((!para->flag_3dfp) && (!para->flag_3dtb) &&
-				(!para->flag_3dss)) {
+		} else {
 			/* For non-4kx2k mode setting */
 			hdmitx_common_setup_vsif_packet(tx_comm, VT_HDMI14_4K, 0, NULL);
 		}

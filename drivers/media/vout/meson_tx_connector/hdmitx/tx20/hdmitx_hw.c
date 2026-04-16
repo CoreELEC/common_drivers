@@ -2665,38 +2665,35 @@ void hdmitx_set_enc_hw(struct hdmitx20_dev *hdev)
 
 	set_vmode_enc_hw(hdev);
 
-	if (para->flag_3dfp) {
-		hd_write_reg(P_VPU_HDMI_SETTING, 0x8c);
-	} else {
-		switch (para->tx_hw_para.hdmitx_hw_para.vic) {
-		case HDMI_6_720x480i60_4x3:
-		case HDMI_7_720x480i60_16x9:
-		case HDMI_21_720x576i50_4x3:
-		case HDMI_22_720x576i50_16x9:
-		case HDMI_11_2880x480i60_16x9:
-		case HDMI_26_2880x576i50_16x9:
-			hdmi_tvenc480i_set(&hdev->tx20_hw, para);
-			break;
-		case HDMI_5_1920x1080i60_16x9:
-		case HDMI_20_1920x1080i50_16x9:
-			hdmi_tvenc1080i_set(&hdev->tx20_hw, para);
-			break;
-		case HDMI_95_3840x2160p30_16x9:
-		case HDMI_94_3840x2160p25_16x9:
-		case HDMI_93_3840x2160p24_16x9:
-		case HDMI_98_4096x2160p24_256x135:
-		case HDMI_99_4096x2160p25_256x135:
-		case HDMI_100_4096x2160p30_256x135:
-		case HDMI_101_4096x2160p50_256x135:
-		case HDMI_102_4096x2160p60_256x135:
-		case HDMI_96_3840x2160p50_16x9:
-		case HDMI_97_3840x2160p60_16x9:
-			hdmi_tvenc4k2k_set(&hdev->tx20_hw, para);
-			break;
-		default:
-			hdmi_tvenc_set(&hdev->tx20_hw, para);
-		}
+	switch (para->tx_hw_para.hdmitx_hw_para.vic) {
+	case HDMI_6_720x480i60_4x3:
+	case HDMI_7_720x480i60_16x9:
+	case HDMI_21_720x576i50_4x3:
+	case HDMI_22_720x576i50_16x9:
+	case HDMI_11_2880x480i60_16x9:
+	case HDMI_26_2880x576i50_16x9:
+		hdmi_tvenc480i_set(&hdev->tx20_hw, para);
+		break;
+	case HDMI_5_1920x1080i60_16x9:
+	case HDMI_20_1920x1080i50_16x9:
+		hdmi_tvenc1080i_set(&hdev->tx20_hw, para);
+		break;
+	case HDMI_95_3840x2160p30_16x9:
+	case HDMI_94_3840x2160p25_16x9:
+	case HDMI_93_3840x2160p24_16x9:
+	case HDMI_98_4096x2160p24_256x135:
+	case HDMI_99_4096x2160p25_256x135:
+	case HDMI_100_4096x2160p30_256x135:
+	case HDMI_101_4096x2160p50_256x135:
+	case HDMI_102_4096x2160p60_256x135:
+	case HDMI_96_3840x2160p50_16x9:
+	case HDMI_97_3840x2160p60_16x9:
+		hdmi_tvenc4k2k_set(&hdev->tx20_hw, para);
+		break;
+	default:
+		hdmi_tvenc_set(&hdev->tx20_hw, para);
 	}
+
 	/* [ 3: 2] chroma_dnsmp. 0=use pixel 0; 1=use pixel 1; 2=use average. */
 	/* [	5] hdmi_dith_md: random noise selector. */
 	hd_write_reg(P_VPU_HDMI_FMT_CTRL, (((TX_INPUT_COLOR_FORMAT ==
@@ -2829,9 +2826,8 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct meson_tx_f
 	if (hdev->tx_comm.skip_phy_setting)
 		return -1;
 
-	/* For 3D, enable phy by SystemControl at last step */
-	if (!para->flag_3dfp && !para->flag_3dtb && !para->flag_3dss)
-		hdmitx_set_phy(hdev);
+	hdmitx_set_phy(hdev);
+
 	return 0;
 }
 
@@ -6665,16 +6661,11 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	data32  = (t->h_blank >> 8) & 0x1f;
 	hdmitx_wr_reg(HDMITX_DWC_FC_INHBLANK1,  data32);
 
-	if (para->flag_3dfp) {
-		data32 = v_active * 2 + t->v_blank;
-		hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV0, data32 & 0xff);
-		hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV1, (data32 >> 8) & 0x1f);
-	} else {
-		data32 = v_active & 0xff;
-		hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV0, data32);
-		data32 = (v_active >> 8) & 0x1f;
-		hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV1, data32);
-	}
+	data32 = v_active & 0xff;
+	hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV0, data32);
+	data32 = (v_active >> 8) & 0x1f;
+	hdmitx_wr_reg(HDMITX_DWC_FC_INVACTV1, data32);
+
 	data32  = t->v_blank & 0xff;
 	hdmitx_wr_reg(HDMITX_DWC_FC_INVBLANK,   data32);
 
@@ -6873,15 +6864,9 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO3, 0, 6, 1);
 	hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 7, 1);
 
-	/* If RX  support 3D, then enable 3D send out */
-	if (para->flag_3dfp || para->flag_3dtb || para->flag_3dss) {
-		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 1, 3, 1);
-		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 4, 1);
-	} else {
-	  /* after changing mode, dv will call vsif function again*/
-		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 0, 3, 1);
-		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 4, 1);
-	}
+	/* after changing mode, dv will call vsif function again*/
+	hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 0, 3, 1);
+	hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 0, 4, 1);
 
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB0,  0);
 	hdmitx_wr_reg(HDMITX_DWC_FC_RDRB1,  0);
