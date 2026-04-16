@@ -2178,7 +2178,7 @@ void __exit amfc_exit(void)
 	platform_driver_unregister(&amfc_driver);
 }
 
-#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE)
+#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE) && IS_BUILTIN(CONFIG_AMLOGIC_AMFC)
 pure_initcall(amfc_init);
 #else
 module_init(amfc_init);
