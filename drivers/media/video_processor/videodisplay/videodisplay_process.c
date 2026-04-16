@@ -4012,10 +4012,10 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 		}
 
 		file_vf = vf->file_vf;
-
-		vf_pop_display_q(dev, display_vf);
 		if (!file_vf)
 			vd_print(dev->index, PRINT_ERROR, "put: file error!!!\n");
+
+		vf_pop_display_q(dev, display_vf);
 
 		if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
 			vd_print(dev->index, PRINT_OTHER, "put enhance vf:%px\n", vf->enhance_vf);
@@ -4023,42 +4023,37 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 				vd_print(dev->index, PRINT_ERROR, "put free_q is full\n");
 		}
 
-		vd_print(dev->index, PRINT_OTHER | PRINT_PATTERN,
-			"%s: frame_index=%d, repeat_count=%d.\n",
-			__func__, vf->frame_index, vf->repeat_count);
-
-		for (i = 0; i <= repeat_count; i++) {
-			if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_DMA) {
-				vd_print(dev->index, PRINT_FENCE, "put dma buffer!!!\n");
-				mpb_buf = (struct mbp_buffer_info_t *)file_vf;
-				if (IS_ERR_OR_NULL(mpb_buf)) {
-					vd_print(dev->index, PRINT_ERROR,
-						"%s: mpb_buf is NULL.\n",
-						__func__);
-				}
-				if (vf->vc_private) {
-					vf->vc_private->unlock_buffer_cb(mpb_buf);
-					vd_private_q_recycle(dev, vf->vc_private);
-					vf->vc_private = NULL;
-				}
+		if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_DMA) {
+			mpb_buf = (struct mbp_buffer_info_t *)file_vf;
+			if (mpb_buf && vf->vc_private) {
+				vf->vc_private->unlock_buffer_cb(mpb_buf);
+				vd_private_q_recycle(dev, vf->vc_private);
+				vf->vc_private = NULL;
+				dev->fput_count++;
+				total_put_count++;
 			} else {
-				vd_print(dev->index, PRINT_FENCE,
-					"%s: frame_index=%d, release_fence = %px\n",
-					__func__,
-					vf->frame_index,
-					vd_prepare_tmp->release_fence);
-
-				if (vf->vc_private) {
-					vd_private_q_recycle(dev, vf->vc_private);
-					vf->vc_private = NULL;
-				}
+				vd_print(dev->index, PRINT_ERROR, "put dma buffer failed.\n");
+			}
+		} else {
+			vd_print(dev->index, PRINT_FENCE | PRINT_PATTERN,
+				"%s: frame_index=%d, release_fence = %px, repeat_count=%d.\n",
+				__func__,
+				vf->frame_index,
+				vd_prepare_tmp->release_fence,
+				repeat_count);
+			if (vf->vc_private) {
+				vd_private_q_recycle(dev, vf->vc_private);
+				vf->vc_private = NULL;
+			}
+			for (i = 0; i <= repeat_count; i++) {
 				dma_buf_put((struct dma_buf *)file_vf);
 				dma_fence_signal(vd_prepare_tmp->release_fence);
 				dma_fence_put(vd_prepare_tmp->release_fence);
+				dev->fput_count++;
+				total_put_count++;
 			}
-			dev->fput_count++;
-			total_put_count++;
 		}
+
 		//all the vframe param used must beforce fence release
 		vd_prepare_data_q_put(dev, vd_prepare_tmp);
 	} else {
