@@ -11511,13 +11511,32 @@ void set_muxio_link_mode(unsigned int link_flag,
 void update_muxio_mode(struct vframe_s *vf,
 	enum vpp_index_e vpp_index)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	unsigned int delink_rdy = 0;
+	enum frm_src_e nfs = NULL_FRM;
+#endif
+
 	if (force_source_format == 0xff || hdr_core_fix_mode ||
 		(chip_type_id != chip_t6w && chip_type_id != chip_t6x))
 		return;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-	if (is_amdv_enable() && vf && is_amdv_frame(vf))
+	if (is_amdv_enable() && vf && is_amdv_frame(vf)) {
+		if (vf->dpss_flg & DPSS_FLG_OUT_DONE)
+			nfs = DPSS_FRM;
+		else if (vf->dpss_flg & DPSS_FLG_OUT_BYPASS)
+			nfs = VD1_FRM;
+
+		delink_rdy = get_dd_mode_update_status();
+		if (nfs == VD1_FRM &&
+			delink_rdy && dpss_mode &&
+			!muxio_de_link_status && muxio_de_link_mode) {
+			muxio_de_link_mode = 0;
+			pr_log(0x1000, "DV frame:muxio_de_link_status: %d, muxio_de_link_mode:%d\n",
+				muxio_de_link_status, muxio_de_link_mode);
+		}
 		return;
+	}
 #endif
 
 	if (!vf && !dpss_mode) {
@@ -11733,10 +11752,12 @@ void vd1_dpss_switch_proc(struct vframe_s *vf,
 	else
 		p->pre_frm_type = SRC_HDR;
 
-	pr_log(0x800, "frm_src:%s,nfs;%s,pre_pm:%s,pm:%s,ndp:%s,dp_bps=%d,dp_flg:0x%x,frm_idx=%d\n",
+	pr_log(0x800, "frm_src:%s,nfs;%s,pre_pm:%s,pm:%s,ndp:%s,dp_bps=%d,\n"
+		"dp_flg:0x%x,dd_frm=%d,frm_idx=%d\n",
 			fs_str[p->frm_src], fs_str[nfs],
 			pm_str[p->pre_path_mux], pm_str[p->path_mux],
-			dh_proc_str[p->dh_p], dp_mod_byps, pvf->dpss_flg, pvf->frame_index);
+			dh_proc_str[p->dh_p], dp_mod_byps, pvf->dpss_flg,
+			is_dd_frame, pvf->frame_index);
 
 	if (pvf->source_type == VFRAME_SOURCE_TYPE_HWC &&
 		nfs == VD1_FRM) {
@@ -11759,7 +11780,10 @@ void vd1_dpss_switch_proc(struct vframe_s *vf,
 			p->path_mux = PATH_VD1;
 			p->pre_path_mux = PATH_VD1;
 			p->delink_status = LINK_ON;
-			muxio_ready_flag = 0;
+			if (is_dd_frame)
+				muxio_ready_flag = 1;
+			else
+				muxio_ready_flag = 0;
 			//avoid dpss flag error or special case mute video
 			if (p->mute_cnt) {
 				pr_log(0x400, "%s: vd1 unmute: mute_cnt:%d, frm_idx=%d\n",
@@ -11833,7 +11857,10 @@ void vd1_dpss_switch_proc(struct vframe_s *vf,
 			p->path_mux = PATH_VD1;
 			p->pre_path_mux = PATH_VD1;
 			p->delink_status = LINK_ON;
-			muxio_ready_flag = 0;
+			if (is_dd_frame)
+				muxio_ready_flag = 1;
+			else
+				muxio_ready_flag = 0;
 			//avoid dpss flag error or special case mute video
 			if (p->mute_cnt) {
 				pr_log(0x400, "%s: vd1 unmute: mute_cnt:%d, frm_idx=%d\n",
@@ -11860,7 +11887,10 @@ void vd1_dpss_switch_proc(struct vframe_s *vf,
 			set_dpss_mode(0);
 			p->path_mux = PATH_VD1;
 			p->delink_status = LINK_ON;
-			muxio_ready_flag = 0;
+			if (is_dd_frame)
+				muxio_ready_flag = 1;
+			else
+				muxio_ready_flag = 0;
 			if (p->mute_cnt) {
 				set_video_mute(PATH_SW_MUTE_SET, false);
 				p->mute_cnt = 0;
@@ -11989,8 +12019,8 @@ void update_link_state(struct vframe_s *vf,
 			p->delink_status = DELINK;
 			//p->mute_cnt++;
 			pr_csc(0x400, "sw02: delink rdy, waiting for unmute,\n"
-				"delink_rdy=%d, mute_cnt=%d, frame_index=%d\n",
-				delink_rdy, p->mute_cnt, pvf->frame_index);
+				"delink_rdy=%d, mute_cnt=%d, dd_frm=%d, frame_index=%d\n",
+				delink_rdy, p->mute_cnt, is_dd_frame, pvf->frame_index);
 		}
 
 		//for repeat frame mute
