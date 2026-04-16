@@ -5,6 +5,12 @@ if AMLOGIC_POWER
 config AMLOGIC_CHARGER_SGM415XX
 	tristate "sgm415xx charger driver"
 	depends on I2C
+	depends on IIO
+	depends on IIO_BUFFER
+	depends on IIO_KFIFO_BUF
+	depends on AMLOGIC_ADC
+	depends on AMLOGIC_MESON_SARADC
+	depends on AMLOGIC_BATTERY_CW2015
 	default n
 	help
 	  Say Y here to enable support for getting battery and charger
