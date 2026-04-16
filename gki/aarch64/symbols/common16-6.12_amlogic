@@ -15,6 +15,7 @@
   memory_read_from_buffer
   kobj_sysfs_ops
   kstrtoul_from_user
+  printk_timed_ratelimit
 
 #amlogic-usb.ko
   of_add_property

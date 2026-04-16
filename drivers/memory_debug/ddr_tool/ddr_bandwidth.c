@@ -3067,7 +3067,6 @@ static ssize_t side_band_read(struct file *file,
 
 	if (!file || !file->private_data)
 		return 0;
-
 	aml_db = file->private_data;
 
 	len = side_band_display(aml_db, buf);
@@ -3084,9 +3083,23 @@ static const struct file_operations side_band_fops = {
 	.llseek = default_llseek,
 };
 
+static unsigned long long side_band_enable_count;
+static unsigned long long side_band_disable_count;
 int enable_side_band(struct dmc_side_band *sb)
 {
-	return set_side_band(aml_db, sb->dmc, sb->bus, sb->rw, sb->block_bus, sb->block_num);
+	int len = 0, ret;
+	char buf[1800];
+	static unsigned long warn_time;
+
+	ret = set_side_band(aml_db, sb->dmc, sb->bus, sb->rw, sb->block_bus, sb->block_num);
+
+	side_band_enable_count++;
+	if (printk_timed_ratelimit(&warn_time, 10000)) {
+		len = side_band_display(aml_db, buf);
+		pr_info("side band enable count %llu, disable count %llu current status:\n %s\n",
+			side_band_enable_count, side_band_disable_count, buf);
+	}
+	return ret;
 }
 EXPORT_SYMBOL(enable_side_band);
 
@@ -3094,6 +3107,7 @@ int disable_side_band(unsigned char dmc, unsigned char bus)
 {
 	unsigned char block_bus = -1;
 
+	side_band_disable_count++;
 	return set_side_band(aml_db, dmc, bus, 0, &block_bus, 1);
 }
 EXPORT_SYMBOL(disable_side_band);
