@@ -2024,7 +2024,7 @@ static int amfc_probe(struct platform_device *pdev)
 	clk_prepare_enable(amfc->clk);
 	amfc->rate = clk_get_rate(amfc->clk);
 	pm_runtime_enable(amfc->dev);
-	r = pm_runtime_get(amfc->dev);
+	r = pm_runtime_get_sync(amfc->dev);
 	if (r) {
 		pr_err("get runtime pm failed:%d\n", r);
 		r = -EPROBE_DEFER;
