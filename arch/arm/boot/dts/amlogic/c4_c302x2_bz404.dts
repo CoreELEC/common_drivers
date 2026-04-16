@@ -113,8 +113,10 @@
 			compatible = "amlogic, aml_autocap_memory";
 			status = "okay";
 			reg = <0x6B00000 0xC00000>;
-			venc_bsb_addr = <0x7500000>;
-			venc_bsb_size = <0x200000>;
+			venc_bsb_addr = <0x0>;
+			venc_bsb_size = <0x0>;
+			fastboot_buf_addr = <0xB700000>;
+			fastboot_buf_size = <0x4000000>;
 		};
 
 		dsp_fw_reserved:linux,dsp_fw {
