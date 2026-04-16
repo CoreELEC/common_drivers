@@ -37,7 +37,11 @@ static void __exit clk_module_exit(void)
 {
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+subsys_initcall_sync(clk_module_init);
+#else
 module_init(clk_module_init);
+#endif
 module_exit(clk_module_exit);
 
 MODULE_LICENSE("GPL v2");

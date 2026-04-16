@@ -46,6 +46,10 @@ static void __exit domain_main_exit(void)
 	cw2015_battery_exit();
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+subsys_initcall_sync(domain_main_init);
+#else
 module_init(domain_main_init);
+#endif
 module_exit(domain_main_exit);
 MODULE_LICENSE("GPL v2");

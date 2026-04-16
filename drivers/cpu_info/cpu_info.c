@@ -195,5 +195,9 @@ static int __init meson_cpuinfo_init(void)
 	return  platform_driver_register(&cpuinfo_platform_driver);
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+subsys_initcall_sync(meson_cpuinfo_init);
+#else
 module_init(meson_cpuinfo_init);
+#endif
 MODULE_LICENSE("GPL v2");

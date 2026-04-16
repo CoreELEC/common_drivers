@@ -35,6 +35,7 @@
 #include <linux/sched/clock.h>
 #include <linux/cpu.h>
 #include <linux/vmalloc.h>
+#include <linux/kthread.h>
 
 #define AML_RTOS_NAME "freertos"
 
@@ -115,7 +116,7 @@ EXPORT_SYMBOL_GPL(call_freertos_notifiers);
 #endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE)
-static int free_rtos_memory(void)
+static int free_rtos_memory(void *data)
 {
 	struct device_node *rtos_reserved;
 	struct reserved_mem *rmem;
@@ -346,7 +347,7 @@ static void freertos_do_finish(int bootup)
 					pr_info("cpu %u already take over\n", cpu);
 				}
 #if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE)
-				free_rtos_memory();
+				kthread_run(free_rtos_memory, NULL, "rtos_free");
 #if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_NOFITIER) && IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_T7)
 				call_freertos_notifiers(1, NULL);
 #endif

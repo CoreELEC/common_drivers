@@ -238,7 +238,7 @@ index 37c24ffea65c..8a6fb5a34395 100644
 -- 
 2.46.0
  
-From fdfb439924940cb27e62a430536b557ca16a3255 Mon Sep 17 00:00:00 2001
+From c1d1a9e4f0d268e0a331a8e5f29c2798261feab3 Mon Sep 17 00:00:00 2001
 From: yao zhang1 <yao.zhang1@amlogic.com>
 Date: Tue, 10 Jun 2025 11:29:40 +0000
 Subject: [PATCH] fastboot: c4 optimization boottime [1/1]
@@ -260,13 +260,104 @@ c4 pxp
 Change-Id: I5b0e3acd00bb4a6733464b47e2c970de9ce3e65e
 Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
 ---
- drivers/of/platform.c    | 38 ++++++++++++++++++++++++++++++++++++++
- kernel/sched/features.h  |  4 ++++
- net/ipv4/inet_fragment.c |  4 ++++
- 3 files changed, 46 insertions(+)
+ drivers/clk/clk-fixed-rate.c               |  8 +++++
+ drivers/clk/clk-scmi.c                     | 13 ++++++++
+ drivers/firmware/arm_scmi/driver.c         |  4 +++
+ drivers/firmware/arm_scmi/transports/smc.c | 13 ++++++++
+ drivers/of/platform.c                      | 38 ++++++++++++++++++++++
+ init/initramfs.c                           | 15 +++++++++
+ kernel/sched/features.h                    |  4 +++
+ mm/slab.h                                  |  2 +-
+ mm/slub.c                                  |  4 +--
+ net/ipv4/inet_fragment.c                   |  4 +++
+ 10 files changed, 102 insertions(+), 3 deletions(-)
 
+diff --git a/drivers/clk/clk-fixed-rate.c b/drivers/clk/clk-fixed-rate.c
+index 6b4f76b9c4da..5c2a3eac617a 100644
+--- a/drivers/clk/clk-fixed-rate.c
++++ b/drivers/clk/clk-fixed-rate.c
+@@ -234,5 +234,13 @@ static struct platform_driver of_fixed_clk_driver = {
+ 	.probe = of_fixed_clk_probe,
+ 	.remove = of_fixed_clk_remove,
+ };
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++static int __init of_fixed_clk_init(void)
++{
++	return platform_driver_register(&of_fixed_clk_driver);
++}
++subsys_initcall_sync(of_fixed_clk_init);
++#else
+ builtin_platform_driver(of_fixed_clk_driver);
+ #endif
++#endif
+diff --git a/drivers/clk/clk-scmi.c b/drivers/clk/clk-scmi.c
+index 7b7ea36333a6..2fe3275a0adf 100644
+--- a/drivers/clk/clk-scmi.c
++++ b/drivers/clk/clk-scmi.c
+@@ -513,7 +513,20 @@ static struct scmi_driver scmi_clocks_driver = {
+ 	.probe = scmi_clocks_probe,
+ 	.id_table = scmi_id_table,
+ };
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++static int __init scmi_clocks_driver_init(void)
++{
++	return scmi_register(&scmi_clocks_driver);
++}
++subsys_initcall_sync(scmi_clocks_driver_init);
++static void __exit scmi_clocks_driver_exit(void)
++{
++	scmi_unregister(&scmi_clocks_driver);
++}
++module_exit(scmi_clocks_driver_exit);
++#else
+ module_scmi_driver(scmi_clocks_driver);
++#endif
+ 
+ MODULE_AUTHOR("Sudeep Holla <sudeep.holla@arm.com>");
+ MODULE_DESCRIPTION("ARM SCMI clock driver");
+diff --git a/drivers/firmware/arm_scmi/driver.c b/drivers/firmware/arm_scmi/driver.c
+index 79866f3b6b3e..a924ed5200ad 100644
+--- a/drivers/firmware/arm_scmi/driver.c
++++ b/drivers/firmware/arm_scmi/driver.c
+@@ -3368,7 +3368,11 @@ static int __init scmi_driver_init(void)
+ 
+ 	return platform_driver_register(&scmi_driver);
+ }
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++subsys_initcall(scmi_driver_init);
++#else
+ module_init(scmi_driver_init);
++#endif
+ 
+ static void __exit scmi_driver_exit(void)
+ {
+diff --git a/drivers/firmware/arm_scmi/transports/smc.c b/drivers/firmware/arm_scmi/transports/smc.c
+index 2f0e981e7599..85440a046ffb 100644
+--- a/drivers/firmware/arm_scmi/transports/smc.c
++++ b/drivers/firmware/arm_scmi/transports/smc.c
+@@ -304,7 +304,20 @@ static const struct of_device_id scmi_of_match[] = {
+ 
+ DEFINE_SCMI_TRANSPORT_DRIVER(scmi_smc, scmi_smc_driver, scmi_smc_desc,
+ 			     scmi_of_match, core);
++#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
++static int __init scmi_smc_driver_init(void)
++{
++    return platform_driver_register(&scmi_smc_driver);
++}
++subsys_initcall(scmi_smc_driver_init);
++static void __exit scmi_smc_driver_exit(void)
++{
++    platform_driver_unregister(&scmi_smc_driver);
++}
++module_exit(scmi_smc_driver_exit)
++#else
+ module_platform_driver(scmi_smc_driver);
++#endif
+ 
+ MODULE_AUTHOR("Peng Fan <peng.fan@nxp.com>");
+ MODULE_AUTHOR("Nikunj Kela <quic_nkela@quicinc.com>");
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
-index e01be7fd0cfb..d8381eae1d71 100644
+index e01be7fd0cfb..49461151df04 100644
 --- a/drivers/of/platform.c
 +++ b/drivers/of/platform.c
 @@ -24,6 +24,12 @@
@@ -310,13 +401,13 @@ index e01be7fd0cfb..d8381eae1d71 100644
  	device_links_supplier_sync_state_pause();
  	for_each_child_of_node_scoped(root, child) {
 +#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
-+		if (child && matches) {
-+			if (!strcmp(child->name, "soc") && !strcmp(matches->compatible, "simple-bus")) {
-+				g_child = child;
-+				g_root = root;
-+				continue;
-+			}
-+		}
++		//if (child && matches) {
++		//	if (!strcmp(child->name, "soc") && !strcmp(matches->compatible, "simple-bus")) {
++		//		g_child = child;
++		//		g_root = root;
++		//		continue;
++		//	}
++		//}
 +#endif
  		rc = of_platform_bus_create(child, matches, lookup, parent, true);
  		if (rc)
@@ -336,12 +427,68 @@ index e01be7fd0cfb..d8381eae1d71 100644
  		/* Populate everything else. */
  		of_platform_default_populate(NULL, NULL, NULL);
 +#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
-+		queue_delayed_work(system_unbound_wq, &of_platform_work,
-+				   msecs_to_jiffies(10));
++		//queue_delayed_work(system_unbound_wq, &of_platform_work,
++		//		   msecs_to_jiffies(10));
 +#endif
  	}
  	return 0;
  }
+diff --git a/init/initramfs.c b/init/initramfs.c
+index b2f7583bb1f5..8cf1d90a1a89 100644
+--- a/init/initramfs.c
++++ b/init/initramfs.c
+@@ -703,7 +703,11 @@ static void __init populate_initrd_image(char *err)
+ }
+ #endif /* CONFIG_BLK_DEV_RAM */
+ 
++#ifdef CONFIG_AMLOGIC_FREERTOS_C4
++static void __init do_populate_rootfs(void)
++#else
+ static void __init do_populate_rootfs(void *unused, async_cookie_t cookie)
++#endif
+ {
+ 	/* Load the built in initramfs */
+ 	char *err = unpack_to_rootfs(__initramfs_start, __initramfs_size);
+@@ -748,11 +752,16 @@ static void __init do_populate_rootfs(void *unused, async_cookie_t cookie)
+ 	init_flush_fput();
+ }
+ 
++#ifndef CONFIG_AMLOGIC_FREERTOS_C4
+ static ASYNC_DOMAIN_EXCLUSIVE(initramfs_domain);
+ static async_cookie_t initramfs_cookie;
++#endif
+ 
+ void wait_for_initramfs(void)
+ {
++#ifdef CONFIG_AMLOGIC_FREERTOS_C4
++	return;
++#else
+ 	if (!initramfs_cookie) {
+ 		/*
+ 		 * Something before rootfs_initcall wants to access
+@@ -764,16 +773,22 @@ void wait_for_initramfs(void)
+ 		return;
+ 	}
+ 	async_synchronize_cookie_domain(initramfs_cookie + 1, &initramfs_domain);
++#endif
+ }
+ EXPORT_SYMBOL_GPL(wait_for_initramfs);
+ 
+ static int __init populate_rootfs(void)
+ {
++#ifdef CONFIG_AMLOGIC_FREERTOS_C4
++	do_populate_rootfs();
++	return 0;
++#else
+ 	initramfs_cookie = async_schedule_domain(do_populate_rootfs, NULL,
+ 						 &initramfs_domain);
+ 	usermodehelper_enable();
+ 	if (!initramfs_async)
+ 		wait_for_initramfs();
+ 	return 0;
++#endif
+ }
+ rootfs_initcall(populate_rootfs);
 diff --git a/kernel/sched/features.h b/kernel/sched/features.h
 index 050d7503064e..8b367ff20261 100644
 --- a/kernel/sched/features.h
@@ -358,6 +505,41 @@ index 050d7503064e..8b367ff20261 100644
  SCHED_FEAT(DELAY_ZERO, true)
  
  /*
+diff --git a/mm/slab.h b/mm/slab.h
+index def244431873..36b281181009 100644
+--- a/mm/slab.h
++++ b/mm/slab.h
+@@ -322,7 +322,7 @@ struct kmem_cache {
+ };
+ 
+ #if defined(CONFIG_SYSFS) && !defined(CONFIG_SLUB_TINY)
+-#ifndef CONFIG_AMLOGIC_TXHD2_REMOVE
++#if !defined(CONFIG_AMLOGIC_TXHD2_REMOVE) && !defined(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+ #define SLAB_SUPPORTS_SYSFS 1
+ #endif
+ void sysfs_slab_unlink(struct kmem_cache *s);
+diff --git a/mm/slub.c b/mm/slub.c
+index f8930461faf6..a78d8a3e20bf 100644
+--- a/mm/slub.c
++++ b/mm/slub.c
+@@ -3492,7 +3492,7 @@ static inline int node_match(struct slab *slab, int node)
+ }
+ 
+ #ifdef CONFIG_SLUB_DEBUG
+-#ifndef CONFIG_AMLOGIC_TXHD2_REMOVE
++#if !defined(CONFIG_AMLOGIC_TXHD2_REMOVE) && !defined(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+ static int count_free(struct slab *slab)
+ {
+ 	return slab->objects - slab->inuse;
+@@ -3563,7 +3563,7 @@ static inline bool free_debug_processing(struct kmem_cache *s,
+ #endif /* CONFIG_SLUB_DEBUG */
+ 
+ #if defined(CONFIG_SLUB_DEBUG) || defined(SLAB_SUPPORTS_SYSFS)
+-#ifndef CONFIG_AMLOGIC_TXHD2_REMOVE
++#if !defined(CONFIG_AMLOGIC_TXHD2_REMOVE) && !defined(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+ static unsigned long count_partial(struct kmem_cache_node *n,
+ 					int (*get_count)(struct slab *))
+ {
 diff --git a/net/ipv4/inet_fragment.c b/net/ipv4/inet_fragment.c
 index d179a2c84222..16a3b348ec5e 100644
 --- a/net/ipv4/inet_fragment.c

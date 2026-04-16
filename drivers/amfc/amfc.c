@@ -2179,7 +2179,7 @@ void __exit amfc_exit(void)
 }
 
 #if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS_MEMORY_FREE) && IS_BUILTIN(CONFIG_AMLOGIC_AMFC)
-pure_initcall(amfc_init);
+subsys_initcall_sync(amfc_init);
 #else
 module_init(amfc_init);
 #endif
