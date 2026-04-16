@@ -348,6 +348,7 @@ struct dpss_sub_vf_s {		//dsub_vf_s
 	unsigned int cvs_h;	//tmp;
 	struct afrc_frame_info_t afrc_info;
 	bool is_4k1k;
+	u32 flag_ext;
 };
 
 struct dpss_vinfo_s {		//di_vinfo_s

@@ -421,8 +421,12 @@ void pq_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 		de_devp->v_height = vfs->height;
 	if (vfs->sig_fmt == TVIN_SIG_FMT_CVBS_SECAM)
 		de_devp->v_sig_fmt = 1;//secam
+	else if (vfs->source_type == VFRAME_SOURCE_TYPE_CVBS)
+		de_devp->v_sig_fmt = 4;//av
 	else if (_IS_VDIN_SRC(vfs->source_type))
 		de_devp->v_sig_fmt = 2;//vdin
+	else if (vfs->flag_ext & VFRAME_FLAG_EXT_DTV_CASE)
+		de_devp->v_sig_fmt = 3;//DTV
 	else
 		de_devp->v_sig_fmt = 0;//dos
 	if (vfs->bitdepth & BITDEPTH_Y10)
@@ -462,8 +466,8 @@ void pq_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs)
 		DBG_INF("%s suspend :%d\n", __func__, de_devp->reserved3);
 	}
 	de_devp->checksum = "30";
-	dbg_i1("%s-1:%d,%d,%d\n", __func__, de_devp->v_width, de_devp->v_height,
-		de_devp->bitdepth);
+	DBG_INF("%s-1:%d,%d,%d,%d\n", __func__, de_devp->v_width, de_devp->v_height,
+		de_devp->bitdepth, de_devp->v_sig_fmt);
 	dbg_i1("%s-2:%px,%px,%d,%px,%px,%d,%px,%px,%px,%px\n", __func__,
 		pch->c.vaddr_ro1,
 		pch->c.vaddr_ro2, pch->c.sml_info->size_ro1,

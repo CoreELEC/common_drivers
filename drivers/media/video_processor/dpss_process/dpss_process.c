@@ -2664,28 +2664,6 @@ static int display_original_frame(struct dpss_process_dev *dev,
 	return 1;
 }
 
-static bool is_dtv_source(struct file *file_vf, struct vframe_s *vf)
-{
-	bool is_v4l_vf = false;
-	bool is_tv_path;
-
-	if (!file_vf || !vf)
-		return false;
-
-	is_v4l_vf = is_valid_mod_type(file_vf->private_data, VF_PROCESS_V4LVIDEO);
-	if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
-		vf->source_type == VFRAME_SOURCE_TYPE_CVBS ||
-		vf->source_type == VFRAME_SOURCE_TYPE_TUNER)
-		is_tv_path = true;
-	else
-		is_tv_path = false;
-
-	if (is_v4l_vf && !is_tv_path)
-		return true;
-	else
-		return false;
-}
-
 static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_info_t *frame_info)
 {
 	int i;
@@ -2733,7 +2711,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		return -EINVAL;
 	}
 
-	if (is_dtv_source(file_vf, vf))
+	if (vf->flag_ext & VFRAME_FLAG_EXT_DTV_CASE)
 		is_dtv_src = true;
 	vf->dpss_flg |= DPSS_FLG_SET_DPSS_PROCESS;
 	dp_print(dev->index, PRINT_OTHER,

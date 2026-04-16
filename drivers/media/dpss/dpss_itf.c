@@ -864,7 +864,7 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 		DBG_ERR("%s 01\n", __func__);
 		return DPSS_ERR_INDEX_NOT_ACTIVE;
 	}
-
+	vfm->type_original = vfm->type;
 	if (pch->c.parm.dps_work_mode != DPSS_WORK_MODE_FRC) {
 		len_nr = kfifo_len(&pch->d->q_ch[EDPSS_Q_CH_IDLE_NR].f);
 		len_in = kfifo_len(&pch->d->q_ch[EDPSS_Q_CH_IN].f);
@@ -953,7 +953,7 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 			vfm->height,
 			vfm->canvas0_config[0].phy_addr,
 			vfm->canvas0_config[1].phy_addr);
-	dbg_h1("vfm:0x%x\n", vfm->canvas0Addr);
+	dbg_h1("vfm:0x%x,0x%x,,0x%x\n", vfm->canvas0Addr, vfm->dpss_flg, vfm->type_original);
 	if (VFM_IS_COMP_MODE(vfm->type)) {
 		dbg_h1("cmp size:<%d,%d>, head_addr: 0x%lx, body_addr:0x%lx\n",
 			vfm->compWidth, vfm->compHeight,

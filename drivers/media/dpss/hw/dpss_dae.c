@@ -343,7 +343,7 @@ void hw_cfg_dpss_dae(enum DPSS_WORK_MODE  dae_mode,
 	if (dpss_dbg_uv_swap & C_BIT1)
 		dae_yuv->little_endian = dpss_dbg_uv_swap & C_BIT1;
 	if (dpss_dbg_uv_swap & C_BIT0)
-		dae_yuv->little_endian = dpss_dbg_uv_swap & C_BIT0;
+		dae_yuv->uv_swap = dpss_dbg_uv_swap & C_BIT0;
 	dae_yuv->block_mode = prm_top->block_mode;
 	if (prm_top->src_is_1080p_nods) {
 		dae_yuv->little_endian = prm_top->l_endian;//dpss_dbg_uv_swap & C_BIT1;

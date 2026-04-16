@@ -228,6 +228,7 @@ bool dpss_vfm_2_subvf(struct dpss_sub_vf_s *vfms, struct vframe_s *vfm)
 	if (VFM_IS_VDIN_SRC(vfms->source_type))
 		vfms->is_vdin = true;
 	vfms->duration_overflow = dpss_is_bypass_nr(NULL, vfm);
+	vfms->flag_ext = vfm->flag_ext;
 	dbg_h1
 	    ("cvs:sub_frm canvas0_cfg_size<%d,%d> <%d,%d> addr<0x%lx,0x%lx>\n",
 	     vfms->canvas0_config[0].width,
@@ -1782,9 +1783,13 @@ void dpss_s2_parser_input_new(struct dpss_ch_s *pch)
 #ifdef FUNC_EN_PQ
 	de_devp = dpss_pq_data(pch->c.ch);
 	if (vfm->sig_fmt == TVIN_SIG_FMT_CVBS_SECAM)
-		de_devp->v_sig_fmt = 1;//
+		de_devp->v_sig_fmt = 1;//secam
+	else if (vfm->source_type == VFRAME_SOURCE_TYPE_CVBS)
+		de_devp->v_sig_fmt = 4;//cvbs
 	else if (_IS_VDIN_SRC(vfm->source_type))
-		de_devp->v_sig_fmt = 2;
+		de_devp->v_sig_fmt = 2;//vdin
+	else if (vfm->flag_ext & VFRAME_FLAG_EXT_DTV_CASE)
+		de_devp->v_sig_fmt = 3;//dtv
 	else
 		de_devp->v_sig_fmt = 0;
 	de_devp->v_type = vfm->type;

@@ -2579,17 +2579,12 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	} else {
 		prm_top->l_endian = 0;
 		prm_top->swap_64bit = 1;
-		if (vf->canvas0_config[0].block_mode) {
-			dae_yuv->swap_64bit = 0;
-			dae_yuv->little_endian = 1;
-		} else {
-			dae_yuv->swap_64bit = 1;
-			dae_yuv->little_endian = 0;
-		}
+		dae_yuv->swap_64bit = 1;
+		dae_yuv->little_endian = 0;
 	}
 	prm_top->block_mode = vf->canvas0_config[0].block_mode;
 	dbg_h2("vfm flag:%d vfs->endian 0x%x\n", vf->flag, vf->canvas0_config[0].endian);
-	dbg_h2("vfm block mode %d\n", vf->canvas0_config[0].block_mode);
+	dbg_h2("vfm block mode %d,%d\n", vf->canvas0_config[0].block_mode, dae_yuv->little_endian);
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if (is_amdv_frame(vf) && is_amdv_enable()) {
 		prm_top->is_amdv_frame = true;

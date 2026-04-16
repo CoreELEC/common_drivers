@@ -149,6 +149,7 @@
 
 #define VDIN_GAME_FRC_FLAG_EN			0x1
 #define VFRAME_FLAG_EXT_CONTAIN_SRC     0x2
+#define VFRAME_FLAG_EXT_DTV_CASE        0x4
 
 /* need check folllowing bits when toggle frame, to trigger property change */
 /* add more bits which indicates display attr change in vf->flag */

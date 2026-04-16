@@ -2459,6 +2459,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	}
 
 	get_count[inst_id]++;
+	vf->flag_ext |= VFRAME_FLAG_EXT_DTV_CASE;
 	vf->frame_index = dev->frame_num;
 	dev->am_parm.signal_type = vf->signal_type;
 	dev->am_parm.master_display_colour =
