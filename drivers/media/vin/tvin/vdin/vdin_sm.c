@@ -1215,11 +1215,19 @@ void tvin_smr(struct vdin_dev_s *devp)
 	if (devp->debug.sm_debug_enable & VDIN_SM_LOG_L_5)
 		pr_info("[smr.%d]status:%x %x %x\n", devp->index,
 			sm_p->state, info->status, sm_p->sig_status);
+	/* signal status changed during start_dec need to restart vdin */
+	if (devp->is_status_locked && sm_p->sig_status != info->status)
+		devp->is_need_re_cfg = true;
+	if (devp->is_need_re_cfg) {
+		devp->parm.info.status = TVIN_SIG_STATUS_UNSTABLE;
+		sm_dev[devp->index].state = TVIN_SM_STATUS_UNSTABLE;
+	}
 
 	if (devp->flags & VDIN_FLAG_DEC_OPENED) {
 		if ((sm_p->sig_status != info->status ||
 		     vdin_is_need_send_event(devp, info)) &&
 		    !mutex_is_locked(&devp->fe_lock)) {
+			devp->is_need_re_cfg = false;
 			sm_p->sig_status = info->status;
 			devp->event_info.event_sts = TVIN_SIG_CHG_STS;
 			devp->pre_event_info.event_sts =

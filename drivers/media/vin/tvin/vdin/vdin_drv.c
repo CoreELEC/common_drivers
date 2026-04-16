@@ -2398,6 +2398,7 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	devp->game_mode_chg = VDIN_GAME_MODE_UN_CHG;
 	devp->common_divisor = 0;
 	devp->interlace_drop_bottom = 0;
+	devp->is_need_re_cfg = false;
 	if (devp->auto_game_flag) {//remove auto game mode
 		game_mode = game_mode_cfg;
 		devp->auto_game_flag = false;
@@ -5502,11 +5503,13 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			mutex_unlock(&devp->fe_lock);
 			break;
 		}
+		devp->is_status_locked = true;
 		ret = vdin_start_dec(devp);
 		if (ret) {
 			pr_err("TVIN_IOC_START_DEC(%d) error, start_dec fail\n",
 			       devp->index);
 			ret = -EFAULT;
+			devp->is_status_locked = false;
 			mutex_unlock(&devp->fe_lock);
 			break;
 		}
@@ -5542,6 +5545,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_START_DEC(%d) port %s, decode started ok flags=0x%x\n",
 				devp->index,
 				tvin_port_str(devp->parm.port), devp->flags);
+		devp->is_status_locked = false;
 		mutex_unlock(&devp->fe_lock);
 		break;
 	}

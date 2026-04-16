@@ -1300,7 +1300,9 @@ struct vdin_dev_s {
 	bool vinfo_over_pixel_clk;
 	bool input_over_pixel_clk;
 	bool pause_dec_once;
-	bool re_cfg;
+	bool is_status_locked;
+	bool is_need_re_cfg; /* signal status changed during start_dec */
+	bool re_cfg; /* hdr/dv status changed */
 	unsigned int mute_cnt;
 	unsigned int ignore_frames;
 	/*use frame rate to cal duration*/
