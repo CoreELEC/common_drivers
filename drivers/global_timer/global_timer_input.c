@@ -54,18 +54,25 @@ struct meson_glb_timer_input_pdata *glb_timer_input_padata;
 int meson_global_timer_input_gpio_configure(int virq,
 					enum meson_glb_srcsel_flag trigger_type)
 {
-	struct regmap *regmap = glb_timer_input_padata->regmap;
+	struct regmap *regmap;
 	u16 id;
 	u32 hwirq;
-	u32 start = glb_timer_input_padata->first_irq_ranges[0];
-	u32 end = glb_timer_input_padata->first_irq_ranges[1];
+	u32 start;
+	u32 end;
 
 	if (!glb_timer_input_padata) {
 		pr_err("glb timer input driver no probe yet\n");
 		return -ENODEV;
 	}
 
+	regmap = glb_timer_input_padata->regmap;
+	start = glb_timer_input_padata->first_irq_ranges[0];
+	end = glb_timer_input_padata->first_irq_ranges[1];
+
 	id = gpio_irq_get_channel_idx(virq, &hwirq);
+	if (id == 0xffff)
+		return id;
+
 	if (hwirq  < start || hwirq > end)
 		id += end - start + 1;
 
@@ -100,8 +107,14 @@ u64 meson_global_timer_input_gpio_get_snapshot(int id)
 	u32 ts_l;
 	u32 ts_h;
 	u64 ts;
+	struct regmap *regmap;
 
-	struct regmap *regmap = glb_timer_input_padata->regmap;
+	if (!glb_timer_input_padata) {
+		pr_info("input driver not ready!\n");
+		return 0;
+	}
+
+	regmap = glb_timer_input_padata->regmap;
 
 	regmap_read(regmap, SRC_OFFSET(TRIG_SRC0_TS_L, id), &ts_l);
 	regmap_read(regmap, SRC_OFFSET(TRIG_SRC0_TS_H, id), &ts_h);

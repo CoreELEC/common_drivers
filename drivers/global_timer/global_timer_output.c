@@ -88,7 +88,7 @@ global_timer_output_gpio_get_from_index(struct device *dev, int index)
 	propname = kasprintf(GFP_KERNEL, "global-timer-output-gpio-trigger");
 	prop = of_find_property(np, propname, &size);
 	kfree(propname);
-	if (!prop)
+	if (!prop || !prop->value)
 		return ERR_PTR(-ENODEV);
 
 	list = prop->value;
@@ -209,7 +209,7 @@ int global_timer_output_start(struct global_timer_output_gpio *gtod,
 
 	/* enable generator and rt */
 	regmap_update_bits(glb_timer_output->regmap[REG_OUTPUT_SEL],
-			   0, BIT(31) | GENMASK(3, 0),
+			   0, BIT(31) | GENMASK(7, 0),
 			   BIT(31) | glb_timer_output->source);
 
 	return 0;
@@ -227,11 +227,11 @@ int global_timer_output_stop(struct global_timer_output_gpio *gtod)
 	struct meson_glb_timer_output_dev *glb_timer_output;
 	struct regmap *regmap;
 
-	glb_timer_output = gtod->glb_output_dev;
-	regmap = glb_timer_output->regmap[REG_OUTPUT_CTRL];
-
 	if (!gtod)
 		return -EINVAL;
+
+	glb_timer_output = gtod->glb_output_dev;
+	regmap = glb_timer_output->regmap[REG_OUTPUT_CTRL];
 
 	/* disable output */
 	regmap_update_bits(regmap, OUTPUT_CTRL0, BIT(31), 0);

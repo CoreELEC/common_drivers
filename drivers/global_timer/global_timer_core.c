@@ -389,8 +389,9 @@ static int meson_glb_timer_core_probe(struct platform_device *pdev)
 	return ret;
 
 //err_hwspinlock:
-	meson_glb_timer_core_cdev_deint(pdev);
+	//meson_glb_timer_core_cdev_deint(pdev);
 err_ioctl:
+	meson_glb_timer_core_cdev_deint(pdev);
 	class_unregister(&global_timer_class);
 	return ret;
 }

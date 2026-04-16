@@ -685,7 +685,7 @@ unsigned int gpio_irq_get_channel_idx(int irq, u32 *hwirq)
 	desc = irq_to_desc(irq);
 	if (IS_ERR_OR_NULL(desc)) {
 		pr_err("%s: can't get irq desc\n", __func__);
-		return -EINVAL;
+		return 0xffff;
 	}
 
 	data = irq_desc_get_irq_data(desc);
