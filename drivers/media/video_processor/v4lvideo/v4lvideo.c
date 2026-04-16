@@ -33,6 +33,9 @@
 #ifdef CONFIG_AMLOGIC_BUF_MANAGER
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
 #endif
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#include <linux/amlogic/media/video_processor/dpss_process_ext.h>
+#endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 #else
@@ -159,6 +162,9 @@ void v4lvideo_dec_count_increase(void)
 	dec_count++;
 	if (dec_count > DI_NR_COUNT && !di_bypass_p) {
 		dim_polic_cfg(K_DIM_BYPASS_ALL_P, 1);
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+		dpss_direct_mode_ctrl(1);
+#endif
 		di_bypass_p = true;
 		pr_info("v4lvideo: di_p bypass 1\n");
 	}
@@ -176,6 +182,9 @@ void v4lvideo_dec_count_decrease(void)
 	dec_count--;
 	if (dec_count <= DI_NR_COUNT && di_bypass_p) {
 		dim_polic_cfg(K_DIM_BYPASS_ALL_P, 0);
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+		dpss_direct_mode_ctrl(0);
+#endif
 		di_bypass_p = false;
 		pr_info("v4lvideo: di_p bypass 0\n");
 	}

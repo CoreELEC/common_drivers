@@ -16,4 +16,13 @@ int set_display_speed(int sync_ins_id, int speed);
  * @param[in]  speed          play speed(*1000), 0.5x	500
  * @return     return set result 0:success, -1:fail
  */
+
+void dpss_direct_mode_ctrl(bool on);
+/**
+ * @brief  dpss_direct_mode_ctrl notify dpss to set direct mode for dual channel
+ *
+ * @param[in]  on             set dpss direct mode on
+ * @return
+ */
+
 #endif /* DPSS_PROCESS_EXT_H */

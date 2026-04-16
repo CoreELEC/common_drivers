@@ -72,6 +72,7 @@ static u32 direct_mode_flag;
 static enum direct_mode_override force_direct_mode;
 static bool is_main_channel_enabled;
 static bool is_dual_channel_enabled;
+static bool is_dec_set_direct_mode;
 static u32 temperature_control_en;
 #ifdef CONFIG_AMLOGIC_DPSS_THERMAL
 struct dpss_cooling_device *dpss_cdev_global;
@@ -159,6 +160,12 @@ void dpss_total_fill_count_increase(void)
 	total_fill_count++;
 }
 EXPORT_SYMBOL(dpss_total_fill_count_increase);
+
+void dpss_direct_mode_ctrl(bool on)
+{
+	is_dec_set_direct_mode = on;
+}
+EXPORT_SYMBOL(dpss_direct_mode_ctrl);
 
 static struct file_private_data *dp_get_file_private(struct dpss_process_dev *dev,
 						      struct file *file_vf)
@@ -2083,7 +2090,8 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	need_enable_direct_mode = (is_4k && is_high_fps) ||
 		is_high_bandwidth ||
 		is_dual_channel_enabled ||
-		temperature_control_en;
+		temperature_control_en ||
+		is_dec_set_direct_mode;
 
 	if (force_direct_mode == DIRECT_MODE_FORCED_ENABLE)
 		direct_mode_flag = 1;
