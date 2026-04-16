@@ -1208,9 +1208,9 @@ int aml_ldim_get_config_json(int panel_id)
 		return -1;
 	}
 
-	parent = json_path_to_node(jsp, jsp->root, "/backlight/ldim_dev/basic_info/ldim_row_col");
+	parent = json_path_to_node(jsp, jsp->root, "/backlight/ldim_dev/basic_info/row_col");
 	if (!parent) {
-		BLPR("failed find /backlight/ldim_dev/basic_info/ldim_row_col\n");
+		BLPR("failed find /backlight/ldim_dev/basic_info/row_col\n");
 		return -1;
 	}
 
