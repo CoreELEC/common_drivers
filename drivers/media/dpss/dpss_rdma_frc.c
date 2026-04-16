@@ -47,7 +47,7 @@ static unsigned int rdma_dbg_en;
 #define pr_rdma(level, fmt, arg...)			\
 	do {						\
 		if (rdma_dbg_en >= (level))	\
-			pr_info("dpss_rdma: " fmt, ## arg);	\
+			pr_debug("dpss_rdma: " fmt, ## arg);	\
 	} while (0)
 
 void dpss_rdma_dbg_level(u32 level)

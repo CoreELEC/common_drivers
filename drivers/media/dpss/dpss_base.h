@@ -237,7 +237,7 @@ extern unsigned int dpss_dbg;
 #ifdef RUN_ON_ARM
 #define DBG_ERR(fmt, args ...)		pr_err("dpss:err:" fmt, ##args)
 #define DBG_WARN(fmt, args ...)		pr_err("dpss:warn:" fmt, ##args)
-#define DBG_INF(fmt, args ...)		pr_info("dpss:" fmt, ##args)
+#define DBG_INF(fmt, args ...)		pr_debug("dpss:" fmt, ##args)
 #endif
 #define dbg_s0(fmt, args ...)		dbg_md(DPSS_M_SYS, 0, fmt, ##args)
 #define dbg_s1(fmt, args ...)		dbg_md(DPSS_M_SYS, 1, fmt, ##args)

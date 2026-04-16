@@ -414,22 +414,23 @@ void dpss_in_rck_in(struct dpss_ch_s *pch, struct vframe_s *vfm)
 	struct dpss_lk1_s *lk;
 	unsigned char val;
 	int ret_fifo;
+	int err;
 
 	q = &pch->d->q_ch[EDPSS_Q_CH_V_IDLE];
 
 	ret_fifo = kfifo_get(&q->f, &val);
 	if (ret_fifo != 1) {
-		DBG_ERR("%s: no idle\n", __func__);
-		return;
+		err = 1;
+		goto error;
 	}
 	if (val < EDPSS_HD_ID_BYPASS_BEGIN ||
 	    val >= EDPSS_HD_ID_FRC_BEGIN) {
-		DBG_ERR("%s: overflow:%d\n", __func__, val);
-		return;
+		err = 2;
+		goto error;
 	}
 	if (val - EDPSS_HD_ID_BYPASS_BEGIN >= 20) {
-		DBG_ERR("%s: array overflow:%d\n", __func__, val);
-		return;
+		err = 3;
+		goto error;
 	}
 	lk = &pch->d->lk_bp[val - EDPSS_HD_ID_BYPASS_BEGIN];
 	lk->lk_info = vfm;
@@ -438,9 +439,13 @@ void dpss_in_rck_in(struct dpss_ch_s *pch, struct vframe_s *vfm)
 	q = &pch->d->q_ch[EDPSS_Q_CH_V_RECYCLE];
 	ret_fifo = kfifo_put(&q->f, val);
 	if (ret_fifo != 1) {
-		DBG_ERR("%s: no rec\n", __func__);
-		return;
+		err = 5;
+		goto error;
 	}
+	return;
+error:
+	DBG_ERR("%s: %d\n", __func__, err);
+	return;
 }
 
 struct vframe_s *dpss_in_rck_o(struct dpss_ch_s *pch)
@@ -450,6 +455,7 @@ struct vframe_s *dpss_in_rck_o(struct dpss_ch_s *pch)
 	unsigned char val;
 	struct vframe_s *vfm;
 	struct dpss_lk1_s *lk;
+	int err;
 
 	q = &pch->d->q_ch[EDPSS_Q_CH_V_RECYCLE];
 	if (!kfifo_len(&q->f))
@@ -457,22 +463,22 @@ struct vframe_s *dpss_in_rck_o(struct dpss_ch_s *pch)
 
 	ret_fifo = kfifo_get(&q->f, &val);
 	if (ret_fifo != 1) {
-		DBG_ERR("%s: no rcl\n", __func__);
-		return NULL;
+		err = 1;
+		goto error;
 	}
 	if (val < EDPSS_HD_ID_BYPASS_BEGIN ||
 	    val >= EDPSS_HD_ID_FRC_BEGIN) {
-		DBG_ERR("%s: overflow:%d\n", __func__, val);
-		return NULL;
+		err = 2;
+		goto error;
 	}
 	if (val - EDPSS_HD_ID_BYPASS_BEGIN >= 20) {
-		DBG_ERR("%s: array overflow:%d\n", __func__, val);
-		return NULL;
+		err = 3;
+		goto error;
 	}
 	lk = &pch->d->lk_bp[val - EDPSS_HD_ID_BYPASS_BEGIN];
 	if (!lk->lk_info) {
-		DBG_ERR("%s: no vfm\n", __func__);
-		return NULL;
+		err = 4;
+		goto error;
 	}
 	vfm = (struct vframe_s *)lk->lk_info;
 	lk->lk_info = NULL;
@@ -480,10 +486,14 @@ struct vframe_s *dpss_in_rck_o(struct dpss_ch_s *pch)
 	q = &pch->d->q_ch[EDPSS_Q_CH_V_IDLE];
 	ret_fifo = kfifo_put(&q->f, val);
 	if (ret_fifo != 1) {
-		DBG_ERR("%s: idle\n", __func__);
-		return NULL;
+		err = 5;
+		goto error;
 	}
 	return vfm;
+
+error:
+	DBG_ERR("%s:%d\n", __func__, err);
+	return NULL;
 }
 
 /*called by other thread */
