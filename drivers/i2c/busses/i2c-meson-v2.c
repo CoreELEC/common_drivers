@@ -19,9 +19,13 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/arm-smccc.h>
 // #include <linux/amlogic/secure_pwm_i2c.h>
+#include <dt-bindings/i2c/i2c-meson.h>
+#include <linux/delay.h>
 
 // #define I2C_DEBUG
 // #define I2C_PXP
+#define I2C_PM_RUNTIME
+
 #define FUTURE_USE		0
 /* Meson I2C register map */
 #define REG_CFG_RDY		0x00
@@ -36,7 +40,7 @@
 #define REG_CGF_RX		0x24
 #define REG_CGF_IRQ_STATE	0x30
 #define REG_CGF_IRQ_ENABLE	0x34
-#define REG_CGF_SHAKE_BLK	0x38
+#define REG_SHAKE_BLK_CNT	0x38 //could check numbers of bytes send
 
 /* CFG RDY fields */
 #define RDY_TEE_ONLY		BIT(1)
@@ -61,6 +65,7 @@
 /* CFG START fields */
 #define START_STRAT		BIT(31)
 #define START_LEN		GENMASK(23, 12)
+#define START_LEN_SHIFT		12
 #define START_10_BITS		BIT(11) /*only 7bit now*/
 #define START_SLAVE_ADDR	GENMASK(10, 1)
 #define START_READ		BIT(0)
@@ -69,6 +74,10 @@
 #define TX_RX_EMPTY		BIT(9)
 #define TX_RX_FULL		BIT(8)
 #define TX_RX_DATA		GENMASK(7, 0)
+
+/* SHAKE_BLK_CNT fields */
+#define BLK_CNT_MASK		GENMASK(16, 4)
+#define BLK_CNT_SHIFTS		4
 
 /*CGF IRQ fields */
 #define RCH_ERROR		BIT(0)
@@ -142,12 +151,14 @@ struct meson_i2c_data {
  * @msg:	Pointer to the current I2C message
  * @state:	Current state in the driver state machine
  * @count:	Number of bytes to be sent/received in current transfer
+ * @last:	The last msg flag
  * @pos:	Current position in the send/receive buffer
  * @error:	Flag set when an error is received
  * @lock:	To avoid race conditions between irq handler and xfer code
  * @done:	Completion used to wait for transfer termination
  * @frequency:	Operating frequency of I2C bus clock
  * @data:	Pointer to the controller's platform data
+  *@mode:	I2C's transfer mode irq or polling
  */
 struct meson_i2c {
 	struct i2c_adapter	adap;
@@ -159,6 +170,7 @@ struct meson_i2c {
 	int			state;
 	int			count;
 	int			pos;
+	bool		last;
 	int			error;
 	int			fifo_depth;
 
@@ -172,6 +184,8 @@ struct meson_i2c {
 	bool is_runtime_sleep;
 #endif
 	struct meson_i2c_data		*data;
+	int mode;
+
 };
 
 static void meson_i2c_writel(struct meson_i2c *i2c, u32 data, int reg)
@@ -246,13 +260,69 @@ static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
 static void reset_fifo_pos(struct meson_i2c *i2c)
 {
 	meson_i2c_writel(i2c, 0x00, REG_TX_RD_ADDR);
-	meson_i2c_writel(i2c, i2c->fifo_depth, REG_TX_WR_ADDR);
+	if (i2c->mode == I2C_POLLING_MODE)
+		meson_i2c_writel(i2c, 0x00, REG_TX_WR_ADDR);
+	else
+		meson_i2c_writel(i2c, i2c->fifo_depth, REG_TX_WR_ADDR);
+
 	/* Must reset rx_wr_addr before rx_rd_addr for continues read.
 	 * Because reset rd will pull data to fifo, so we need reset wr early.
 	 * And then, data will be push rightly to 1st fifo position.
 	 */
 	meson_i2c_writel(i2c, 0x00, REG_RX_WR_ADDR);
 	meson_i2c_writel(i2c, 0x00, REG_RX_RD_ADDR);
+}
+
+static int controller_is_error(struct meson_i2c *i2c)
+{
+	int ret = 0;
+
+	if (readl(i2c->regs + REG_CGF_IRQ_STATE) & i2c->data->xfer_err_bits) {
+		dev_dbg(i2c->dev, "i2c trans error 0x%x\n", readl(i2c->regs + REG_CGF_IRQ_STATE));
+		ret = -ENXIO;
+	}
+
+	return 0;
+}
+
+static int wait_controller_done(struct meson_i2c *i2c)
+{
+	u32 time_cnt = 0;
+	int ret = 0;
+
+	while (!(readl(i2c->regs + REG_CGF_IRQ_STATE) & i2c->data->xfer_done_bits)) {
+		if (time_cnt > I2C_TIMEOUT_MS * 1000)
+			return -ETIMEDOUT;
+		udelay(1);
+		time_cnt++;
+	}
+	ret = controller_is_error(i2c);
+
+	return ret;
+}
+
+static int get_tx_count(struct meson_i2c *i2c)
+{
+	int rd_val;
+
+	rd_val = (readl(i2c->regs + REG_SHAKE_BLK_CNT) & BLK_CNT_MASK) >> BLK_CNT_SHIFTS;
+
+	return rd_val;
+}
+
+static int wait_tx_done(struct meson_i2c *i2c, u32 des_count)
+{
+	u32 time_cnt = 0;
+	int ret = 0;
+
+	while (get_tx_count(i2c) != des_count) {
+		if (time_cnt > I2C_TIMEOUT_MS * 1000)
+			return -ETIMEDOUT;
+		udelay(1);
+		time_cnt++;
+	}
+
+	return ret;
 }
 
 static void meson_i2c_init(struct meson_i2c *i2c)
@@ -268,8 +338,13 @@ static void meson_i2c_init(struct meson_i2c *i2c)
 	 * because TCON driver will OP i2c DMA in there driver.
 	 */
 	i2c->fifo_depth = 16;
-	meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
+	if (i2c->mode == I2C_POLLING_MODE)
+		meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
+					i2c->fifo_depth << 16 | (i2c->fifo_depth / 2) << 8);
+	else
+		meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
 					i2c->fifo_depth << 16 | 0 << 8);
+
 	reset_fifo_pos(i2c);
 	meson_i2c_set_clk_div(i2c);
 }
@@ -292,23 +367,29 @@ static void meson_i2c_put_data(struct meson_i2c *i2c, char *buf, int len)
 		meson_i2c_writel(i2c, 0x00, REG_CGF_TX);
 		return;
 	}
-	times = (len + 4 - 1) / 4;
-	left = len % 4;
+	if (i2c->mode == I2C_POLLING_MODE) {
+		for (int i = 0; i < len; i++, buf++)
+			meson_i2c_writel(i2c, *buf, REG_CGF_TX);
 
-	for (i = 0; i < times; i++) {
-		reg_val = 0;
-		if (left != 0 && i == (times - 1)) {
-			for (j = 0; j < left; j++, buf++)
-				reg_val += *buf << (8 * j);
-		} else {
-			for (j = 0; j < 4; j++, buf++)
-				reg_val += *buf << (8 * j);
+	} else {
+		times = (len + 4 - 1) / 4;
+		left = len % 4;
+
+		for (i = 0; i < times; i++) {
+			reg_val = 0;
+			if (left != 0 && i == (times - 1)) {
+				for (j = 0; j < left; j++, buf++)
+					reg_val += *buf << (8 * j);
+			} else {
+				for (j = 0; j < 4; j++, buf++)
+					reg_val += *buf << (8 * j);
+			}
+			meson_i2c_writel(i2c, reg_val, REG_FIFO_BASE + i * 4);
+			dev_dbg(i2c->dev, " write data 0x0%8x reg 0x%x\n",
+				reg_val, REG_FIFO_BASE + i * 4);
 		}
-		meson_i2c_writel(i2c, reg_val, REG_FIFO_BASE + i * 4);
-		dev_dbg(i2c->dev, " write data 0x0%8x reg 0x%x\n",
-			reg_val, REG_FIFO_BASE + i * 4);
+		reset_fifo_pos(i2c);//should reset fifo for every transfer
 	}
-	reset_fifo_pos(i2c);//should reset fifo for every transfer
 }
 
 static void meson_i2c_prepare_xfer(struct meson_i2c *i2c)
@@ -317,7 +398,10 @@ static void meson_i2c_prepare_xfer(struct meson_i2c *i2c)
 
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	if (write) {
-		i2c->count = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
+		if (i2c->mode == I2C_POLLING_MODE)
+			i2c->count = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
+		else
+			i2c->count = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
 		meson_i2c_put_data(i2c, i2c->msg->buf + i2c->pos, i2c->count);
 	}
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
@@ -393,14 +477,21 @@ trans_out:
 static void meson_i2c_do_start(struct meson_i2c *i2c, struct i2c_msg *msg)
 {
 	unsigned int reg_val;
+	unsigned int trans_len;
 
+	trans_len = msg->len;
+	if (i2c->mode == I2C_POLLING_MODE) {
+		//if TX and not last xfer, need add no stop
+		if (!(msg->flags & I2C_M_RD) && !i2c->last)
+			trans_len = msg->len + 1;
+	}
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	reg_val = (msg->addr << 1) |
 				((msg->flags & I2C_M_RD) ? START_READ : 0) |
-				((msg->len) << 12) | START_STRAT;
+				((trans_len) << 12) | START_STRAT;
 	meson_i2c_set_mask(i2c, REG_CFG_START,
 		START_STRAT | START_SLAVE_ADDR | START_READ | START_LEN, reg_val);
-	if (msg->len > i2c->fifo_depth) {
+	if (trans_len > i2c->fifo_depth) {
 		reg_val = (msg->flags & I2C_M_RD) ? RX_FIFO_READ : TX_FIFO_WRITE;
 		meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE,
 		RX_FIFO_READ | TX_FIFO_WRITE, reg_val);//enable thresh mode
@@ -410,7 +501,7 @@ static void meson_i2c_do_start(struct meson_i2c *i2c, struct i2c_msg *msg)
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 }
 
-static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg)
+static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg, bool last)
 {
 	unsigned long time_left, flags;
 	int ret = 0;
@@ -460,27 +551,118 @@ static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg)
 	return ret;
 }
 
+static int meson_i2c_no_stop(struct meson_i2c *i2c)
+{
+	int ret = 0;
+	int trans_cnt;
+	u32 time_cnt = 0;
+
+	//check data trans done
+	while (true) {
+		trans_cnt = (readl(i2c->regs + REG_SHAKE_BLK_CNT) & BLK_CNT_MASK) >> BLK_CNT_SHIFTS;
+		if (trans_cnt >= i2c->msg->len)
+			break;
+		/*time out*/
+		if (time_cnt > I2C_TIMEOUT_MS * 1000) {
+			ret =  -ETIMEDOUT;
+			goto no_stop_out;
+		}
+		udelay(1);
+		time_cnt++;
+	}
+	udelay(20);//must delay controller idle
+	pinctrl_pm_select_sleep_state(i2c->dev);//release SDA/SCL line
+	meson_i2c_writel(i2c, i2c->msg->len << START_LEN_SHIFT, REG_CFG_START);//stop controller
+	meson_i2c_writel(i2c, 0xaf, REG_CGF_TX);//write visual xfer
+	//wait trans done
+	ret = wait_controller_done(i2c);
+
+no_stop_out:
+	reset_fifo_pos(i2c);
+	pinctrl_pm_select_default_state(i2c->dev);
+
+	return ret;
+}
+
+static int meson_i2c_xfer_polling_msg(struct meson_i2c *i2c, struct i2c_msg *msg, bool last)
+{
+	int rd_val, time_cnt, ret = 0;
+
+	i2c->msg = msg;
+	i2c->pos = 0;
+	i2c->count = 0;
+	i2c->last = last;
+	meson_i2c_do_start(i2c, msg);
+	do {
+		if (msg->flags & I2C_M_RD) {//for rx
+			time_cnt = 0;
+			do {
+				rd_val = readl(i2c->regs + REG_CGF_RX);
+				if (time_cnt > I2C_TIMEOUT_MS * 1000) {
+					ret = -ETIMEDOUT;
+					goto xfer_out;
+				}
+				udelay(1);
+				time_cnt++;
+				ret = controller_is_error(i2c);
+				if (ret)
+					goto xfer_out;
+			} while (rd_val & TX_RX_EMPTY);//waiting data
+			meson_i2c_push_data_to_user(i2c, rd_val & TX_RX_DATA);
+		} else { //for tx
+			meson_i2c_prepare_xfer(i2c);
+			ret = wait_tx_done(i2c, i2c->pos + i2c->count);
+			if (ret)
+				goto xfer_out;
+		}
+		i2c->pos += i2c->count;
+	} while (i2c->pos < msg->len);
+
+	//if TX and not last xfer, need add no stop
+	if (!(msg->flags & I2C_M_RD) && !i2c->last) {
+		ret = meson_i2c_no_stop(i2c);
+		if (ret)
+			goto xfer_out;
+	} else {
+		//wait trans done
+		ret = wait_controller_done(i2c);
+		if (ret)
+			goto xfer_out;
+	}
+
+xfer_out:
+	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
+	reset_fifo_pos(i2c);
+
+	return ret;
+}
+
 static int meson_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 			  int num)
 {
 	struct meson_i2c *i2c = adap->algo_data;
 	int i, ret = 0;
 
+#ifdef I2C_PM_RUNTIME
 	ret = pm_runtime_get_sync(i2c->dev);
 	if (ret < 0)
 		goto out;
-
+#endif
 	meson_i2c_init(i2c);//must init i2c in every xfer
 	for (i = 0; i < num; i++) {
-		ret = meson_i2c_xfer_msg(i2c, msgs + i);
+		if (i2c->mode == I2C_POLLING_MODE)
+			ret = meson_i2c_xfer_polling_msg(i2c, msgs + i, i == num - 1);
+		else
+			ret = meson_i2c_xfer_msg(i2c, msgs + i, i == num - 1);
 		if (ret)
 			break;
 	}
 
+#ifdef I2C_PM_RUNTIME
 out:
 	pm_runtime_mark_last_busy(i2c->dev);
 	pm_runtime_put_autosuspend(i2c->dev);
-
+#endif
 	return ret ?: i;
 }
 
@@ -532,7 +714,7 @@ static int meson_i2c_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct meson_i2c *i2c;
 	struct i2c_timings timings;
-	int irq, ret = 0;
+	int irq, ret;
 
 	i2c = devm_kzalloc(&pdev->dev, sizeof(struct meson_i2c), GFP_KERNEL);
 	if (!i2c)
@@ -565,17 +747,24 @@ static int meson_i2c_probe(struct platform_device *pdev)
 		}
 	}
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		dev_err(&pdev->dev, "can't find IRQ\n");
-		return irq;
+	if (of_property_read_u32(pdev->dev.of_node, "working_mode",
+				 &i2c->mode)) {
+		i2c->mode = I2C_IRQ_MODE;
+		irq = platform_get_irq(pdev, 0);
+		if (irq < 0) {
+			dev_err(&pdev->dev, "can't find IRQ\n");
+			return irq;
+		}
+		ret = devm_request_irq(&pdev->dev, irq, meson_i2c_irq, 0, NULL, i2c);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "can't request IRQ\n");
+			return ret;
+		}
+		i2c->irq = irq;
+		/* Disable the interrupt so that the system can enter low-power mode */
+		disable_irq(i2c->irq);
 	}
 
-	ret = devm_request_irq(&pdev->dev, irq, meson_i2c_irq, 0, NULL, i2c);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "can't request IRQ\n");
-		return ret;
-	}
 	strscpy(i2c->adap.name, "Meson I2C V2 adapter",
 		sizeof(i2c->adap.name));
 	i2c->adap.owner = THIS_MODULE;
@@ -583,11 +772,7 @@ static int meson_i2c_probe(struct platform_device *pdev)
 	i2c->adap.dev.parent = &pdev->dev;
 	i2c->adap.dev.of_node = np;
 	i2c->adap.algo_data = i2c;
-
-	i2c->irq = irq;
-	/* Disable the interrupt so that the system can enter low-power mode */
-
-	disable_irq(i2c->irq);
+#ifdef I2C_PM_RUNTIME
 	pm_runtime_enable(i2c->dev);
 	pm_runtime_set_autosuspend_delay(i2c->dev, MESON_I2C_PM_TIMEOUT);
 	pm_runtime_use_autosuspend(i2c->dev);
@@ -598,7 +783,7 @@ static int meson_i2c_probe(struct platform_device *pdev)
 		pm_runtime_disable(i2c->dev);
 		return ret;
 	}
-
+#endif
 	/* speed sysfs */
 	ret = meson_i2c_speed_debug(&pdev->dev);
 	if (ret)
@@ -608,33 +793,38 @@ static int meson_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get clk rate\n");
 		return -EINVAL;
 	}
+#ifdef I2C_PM_RUNTIME
 	pm_runtime_mark_last_busy(i2c->dev);
 	pm_runtime_put_autosuspend(i2c->dev);
+#endif
 	ret = i2c_add_adapter(&i2c->adap);
 	if (ret < 0)
 		return ret;
-
 	return 0;
 }
 
 static void meson_i2c_remove(struct platform_device *pdev)
 {
 	struct meson_i2c *i2c = platform_get_drvdata(pdev);
+#ifdef I2C_PM_RUNTIME
 	int ret;
 
 	ret = pm_runtime_get_sync(&pdev->dev);
 	if (ret < 0)
 		return;
-
+#endif
 	i2c_del_adapter(&i2c->adap);
+#ifdef I2C_PM_RUNTIME
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
+#endif
 }
 
 static int meson_i2c_put(struct meson_i2c *i2c)
 {
-	disable_irq(i2c->irq);
+	if (i2c->mode == I2C_IRQ_MODE)
+		disable_irq(i2c->irq);
 	pinctrl_pm_select_sleep_state(i2c->dev);
 	clk_disable_unprepare(i2c->clk);
 
@@ -651,7 +841,9 @@ static int meson_i2c_regain(struct meson_i2c *i2c)
 		return ret;
 	}
 	pinctrl_pm_select_default_state(i2c->dev);
-	enable_irq(i2c->irq);
+	if (i2c->mode == I2C_IRQ_MODE)
+		enable_irq(i2c->irq);
+
 
 	return 0;
 }
