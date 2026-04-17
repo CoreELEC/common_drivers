@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+config AMLOGIC_HSGMII_PHY
+	tristate "Amlogic HSGMII SerDes/PHY driver"
+	depends on OF
+	depends on HAS_IOMEM
+	select GENERIC_PHY
+	help
+	  Enable this to support the internal SerDes/HSGMII PHY on various
+	  Amlogic chipsets.

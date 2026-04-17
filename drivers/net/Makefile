@@ -3,3 +3,4 @@
 obj-$(CONFIG_AMLOGIC_MDIO_G12A)	+= mdio/
 obj-$(CONFIG_AMLOGIC_INPHY)	+= phy/
 obj-$(CONFIG_AMLOGIC_INPHY)	+= ethernet/
+obj-$(CONFIG_AMLOGIC_HSGMII_PHY)	+= pma/

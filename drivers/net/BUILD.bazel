@@ -95,6 +95,28 @@ ddk_module(
 )
 
 ddk_module(
+    name = "amlogic-hsg-phy",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_HSGMII_PHY": {
+            True: [
+                "pma/phy-aml-hsgmii-eth.c",
+            ],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = ["pr_fmt(fmt)=\"[amlogic-hsg-phy]: \" fmt"],
+    out = "amlogic-hsg-phy.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+
+ddk_module(
     name = "amlogic-mdio-g12a",
     srcs = glob([
         "**/*.h",
