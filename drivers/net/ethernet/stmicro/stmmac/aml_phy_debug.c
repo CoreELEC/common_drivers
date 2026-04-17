@@ -122,6 +122,10 @@ static int am_net_read_phyreg(int argc, char **argv, struct aml_eth_priv *eth_pr
 	int reg = 0;
 	int val = 0;
 	int r = 0;
+	char *separator;
+	int devad = 0;
+	int len = 0;
+	char devad_str[16], reg_str[16];
 
 	if (!eth_priv->phydev)
 		return -1;
@@ -130,19 +134,45 @@ static int am_net_read_phyreg(int argc, char **argv, struct aml_eth_priv *eth_pr
 		return -1;
 	}
 
-	r = kstrtoint(argv[1], 0, &reg);
-	if (r) {
-		pr_err("kstrtoint failed\n");
-		return -1;
-	}
+	/* Check for MMD format: devad:reg */
+	separator = strchr(argv[1], ':');
+	if (separator) {
+		len = min((int)(separator - argv[1]), (int)(sizeof(devad_str) - 1));
+		strncpy(devad_str, argv[1], len);
+		devad_str[len] = '\0';
+		len = min((int)strlen(separator + 1), (int)(sizeof(reg_str) - 1));
+		strncpy(reg_str, separator + 1, len);
+		reg_str[len] = '\0';
 
-	if (reg >= 0 && reg <= 31) {
-		val = phy_read(eth_priv->phydev, reg);
-		pr_info("read phy [reg_%d] 0x%x\n", reg, val);
-	} else if (reg == 32) {
-//		pr_info("phy features:0x%x\n", eth_priv->phydev->drv->features);
+		r = kstrtoint(devad_str, 0, &devad);
+		if (r) {
+			pr_err("kstrtoint mmd devad failed\n");
+			return -1;
+		}
+		r = kstrtoint(reg_str, 0, &reg);
+		if (r) {
+			pr_err("kstrtoint mmd reg failed\n");
+			return -1;
+		}
+
+		val = phy_read_mmd(eth_priv->phydev, devad, reg);
+		pr_info("read phy [mmd 0x%x reg 0x%x] 0x%x\n", devad, reg, val);
 	} else {
-		pr_info("Invalid parameter\n");
+		/* Standard PHY register read */
+		r = kstrtoint(argv[1], 0, &reg);
+		if (r) {
+			pr_err("kstrtoint failed\n");
+			return -1;
+		}
+
+		if (reg >= 0 && reg <= 31) {
+			val = phy_read(eth_priv->phydev, reg);
+			pr_info("read phy [reg_%d] 0x%x\n", reg, val);
+		} else if (reg == 32) {
+			// pr_info("phy features:0x%x\n", eth_priv->phydev->drv->features);
+		} else {
+			pr_info("Invalid parameter\n");
+		}
 	}
 
 	return 0;
@@ -153,6 +183,10 @@ static int am_net_write_phyreg(int argc, char **argv, struct aml_eth_priv *eth_p
 	int reg = 0;
 	int val = 0;
 	int r = 0;
+	char *separator;
+	int devad = 0;
+	int len = 0;
+	char devad_str[16], reg_str[16];
 
 	if (!eth_priv->phydev)
 		return -1;
@@ -162,38 +196,61 @@ static int am_net_write_phyreg(int argc, char **argv, struct aml_eth_priv *eth_p
 		return -1;
 	}
 
-	r = kstrtoint(argv[1], 0, &reg);
-	if (r) {
-		pr_err("kstrtoint failed\n");
-		return -1;
-	}
-
 	r = kstrtoint(argv[2], 0, &val);
 	if (r) {
-		pr_err("kstrtoint failed\n");
+		pr_err("kstrtoint val failed\n");
 		return -1;
 	}
 
-	if (reg >= 0 && reg <= 31) {
-		phy_write(eth_priv->phydev, reg, val);
-		pr_info("write phy [reg_%d] 0x%x, 0x%x\n",
-			reg, val, phy_read(eth_priv->phydev, reg));
-	} else if (reg == 32) {
-		if (val > 255) {
-			pr_info("Invalid parameter\n");
-			return 0;
+	/* Check for MMD format: devad:reg */
+	separator = strchr(argv[1], ':');
+	if (separator) {
+		len = min((int)(separator - argv[1]), (int)(sizeof(devad_str) - 1));
+		strncpy(devad_str, argv[1], len);
+		devad_str[len] = '\0';
+		len = min((int)strlen(separator + 1), (int)(sizeof(reg_str) - 1));
+		strncpy(reg_str, separator + 1, len);
+		reg_str[len] = '\0';
+
+		r = kstrtoint(devad_str, 0, &devad);
+		if (r) {
+			pr_err("kstrtoint mmd devad failed\n");
+			return -1;
 		}
-//		eth_priv->phydev->drv->features &= 0xff;
-//		eth_priv->phydev->drv->features |= val << 8;
-	} else if (reg == 33) {
-		if (val > 255) {
-			pr_info("Invalid parameter\n");
-			return 0;
+		r = kstrtoint(reg_str, 0, &reg);
+		if (r) {
+			pr_err("kstrtoint mmd reg failed\n");
+			return -1;
 		}
-//		eth_priv->phydev->drv->features &= 0xff00;
-//		eth_priv->phydev->drv->features |= val;
+
+		phy_write_mmd(eth_priv->phydev, devad, reg, val);
+		pr_info("write phy [mmd 0x%x reg 0x%x] 0x%x, 0x%x\n",
+			devad, reg, val,
+			phy_read_mmd(eth_priv->phydev, devad, reg));
 	} else {
-		pr_info("Invalid parameter\n");
+		/* Standard PHY register write */
+		r = kstrtoint(argv[1], 0, &reg);
+		if (r) {
+			pr_err("kstrtoint reg failed\n");
+			return -1;
+		}
+
+		if (reg >= 0 && reg <= 31) {
+			phy_write(eth_priv->phydev, reg, val);
+			pr_info("write phy [reg_%d] 0x%x, 0x%x\n",
+				reg, val, phy_read(eth_priv->phydev, reg));
+		} else if (reg == 32) {
+			// pr_info("phy features:0x%x\n", eth_priv->phydev->drv->features);
+		} else if (reg == 33) {
+			if (val > 255) {
+				pr_info("Invalid parameter\n");
+				return 0;
+			}
+			// eth_priv->phydev->drv->features &= 0xff00;
+			// eth_priv->phydev->drv->features |= val;
+		} else {
+			pr_info("Invalid parameter\n");
+		}
 	}
 
 	return 0;
@@ -467,9 +524,9 @@ static ssize_t info_show(struct device *dev, struct device_attribute *attr, char
 
 static const char *phyreg_help = {
 	"Usage:\n"
-	"    echo d > phyreg;            //dump ethernet phy reg\n"
-	"    echo r reg > phyreg;        //read ethernet phy reg\n"
-	"    echo w reg val > phyreg;    //write ethernet phy reg\n"
+	"    echo d > phyreg;                    // dump ethernet phy reg\n"
+	"    echo r [devad:]reg > phyreg;        // read ethernet phy reg\n"
+	"    echo w [devad:]reg val > phyreg;    // write ethernet phy reg\n"
 };
 
 static ssize_t phyreg_show(struct device *dev,

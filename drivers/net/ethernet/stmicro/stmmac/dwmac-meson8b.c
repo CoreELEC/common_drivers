@@ -18,6 +18,8 @@
 #include <linux/mfd/syscon.h>
 #include <linux/platform_device.h>
 #include <linux/stmmac.h>
+#include <linux/phy.h>
+#include <linux/phy/phy.h>
 
 #include "stmmac_platform.h"
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
@@ -42,6 +44,7 @@
 #define PRG_ETH0_EXT_PHY_MODE_MASK	GENMASK(2, 0)
 #define PRG_ETH0_EXT_MII_MODE		0
 #define PRG_ETH0_EXT_RGMII_MODE		1
+#define PRG_ETH0_EXT_HSGMII_MODE	2
 #define PRG_ETH0_EXT_RMII_MODE		4
 
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
@@ -96,9 +99,13 @@
  * adjust the window between RX_CLK and RX_DATA and improve the stability
  * of "rx data valid".
  */
-#define PRG_ETH1_CFG_RXCLK_DLY		GENMASK(19, 16)
+#define PRG_ETH1_CFG_RXCLK_DLY		GENMASK(20, 16)
 
 #define PRG_ETH_TX_GLITCH_FIX		0x28
+
+/* MAC_CTRL_REG bits */
+#define MAC_CTRL_SPEED_MODE		BIT(14)
+#define MAC_CTRL_PORT_SEL		BIT(15)
 
 struct meson8b_dwmac;
 
@@ -132,6 +139,10 @@ struct meson8b_dwmac {
 	bool				wol_en;		/* MAC frames are processed in BL30 */
 	bool				wol_ready;
 #endif
+	bool				ignore_pcs_stats;
+	struct phy			*serdes_phy;
+	unsigned int			speed;			/* Update by .fix_mac_speed */
+	unsigned int			serdes_speed;		/* Current SerDes speed */
 #endif
 	u32				smc_id;
 	void __iomem			*ee_reset_base;
@@ -294,16 +305,22 @@ static int meson_axg_set_phy_mode(struct meson8b_dwmac *dwmac)
 					PRG_ETH0_EXT_RGMII_MODE);
 		break;
 	case PHY_INTERFACE_MODE_RMII:
-		/* disable RGMII mode -> enables RMII mode */
+		/* enable RMII mode */
 		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
 					PRG_ETH0_EXT_PHY_MODE_MASK,
 					PRG_ETH0_EXT_RMII_MODE);
 		break;
 	case PHY_INTERFACE_MODE_MII:
-		/* enables MII mode */
+		/* enable MII mode */
 		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
 					PRG_ETH0_EXT_PHY_MODE_MASK,
 					PRG_ETH0_EXT_MII_MODE);
+		break;
+	case PHY_INTERFACE_MODE_2500BASEX:
+		/* enable HSGMII mode */
+		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
+					PRG_ETH0_EXT_PHY_MODE_MASK,
+					PRG_ETH0_EXT_HSGMII_MODE);
 		break;
 	default:
 		dev_err(dwmac->dev, "fail to set phy-mode %s\n",
@@ -362,6 +379,7 @@ static int meson8b_init_rgmii_delays(struct meson8b_dwmac *dwmac)
 	case PHY_INTERFACE_MODE_RGMII_ID:
 	case PHY_INTERFACE_MODE_RMII:
 	case PHY_INTERFACE_MODE_MII:
+	case PHY_INTERFACE_MODE_2500BASEX:
 		delay_config = 0;
 		cfg_rxclk_dly = 0;
 		break;
@@ -403,7 +421,11 @@ static int meson8b_init_prg_eth(struct meson8b_dwmac *dwmac)
 {
 	int ret;
 
-	if (phy_interface_mode_is_rgmii(dwmac->phy_mode)) {
+	switch (dwmac->phy_mode) {
+	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		/* only relevant for RMII mode -> disable in RGMII mode */
 		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
 					PRG_ETH0_INVERTED_RMII_CLK, 0);
@@ -427,11 +449,23 @@ static int meson8b_init_prg_eth(struct meson8b_dwmac *dwmac)
 				"failed to enable the RGMII TX clock\n");
 			return ret;
 		}
-	} else {
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+	case PHY_INTERFACE_MODE_MII:
 		/* invert internal clk_rmii_i to generate 25/2.5 tx_rx_clk */
 		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
 					PRG_ETH0_INVERTED_RMII_CLK,
 					PRG_ETH0_INVERTED_RMII_CLK);
+		break;
+	case PHY_INTERFACE_MODE_2500BASEX:
+		/* disable in 2500BASEX/HSGMII mode */
+		meson8b_dwmac_mask_bits(dwmac, PRG_ETH0,
+					PRG_ETH0_INVERTED_RMII_CLK, 0);
+		break;
+	default:
+		dev_err(dwmac->dev, "unsupported phy-mode %s\n",
+			phy_modes(dwmac->phy_mode));
+		return -EINVAL;
 	}
 
 	/* enable TX_CLK and PHY_REF_CLK generator */
@@ -547,6 +581,81 @@ static int aml_custom_setting(struct platform_device *pdev, struct meson8b_dwmac
 
 	return 0;
 }
+
+static void amlogic_set_serdes_speed(struct meson8b_dwmac *dwmac, int speed)
+{
+	if (dwmac->serdes_speed != speed)
+		dwmac->serdes_speed = speed;
+
+	phy_set_speed(dwmac->serdes_phy, speed);
+}
+
+static void amlogic_fix_mac_speed(void *priv, unsigned int speed, unsigned int mode)
+{
+	struct meson8b_dwmac *dwmac = (struct meson8b_dwmac *)priv;
+	struct net_device *ndev = dev_get_drvdata(dwmac->dev);
+	struct stmmac_priv *stmmac_priv = netdev_priv(ndev);
+	int val;
+
+	dwmac->speed = speed;
+
+	val = readl(stmmac_priv->ioaddr + MAC_CTRL_REG);
+	val &= ~(MAC_CTRL_PORT_SEL | MAC_CTRL_SPEED_MODE);
+
+	pr_info("[amlogic] %s speed=%d, mode=%d\n", __func__, speed, mode);
+	/* Disable MAC PCS ANE, enable SGMII RAL Control. */
+	stmmac_pcs_ctrl_ane(stmmac_priv, stmmac_priv->ioaddr, 0, 1, 0);
+
+	switch (speed) {
+	case SPEED_2500:
+		val |= MAC_CTRL_SPEED_MODE;
+		break;
+	case SPEED_1000:
+		break;
+	case SPEED_100:
+		val |= MAC_CTRL_PORT_SEL | MAC_CTRL_SPEED_MODE;
+		break;
+	case SPEED_10:
+		val |= MAC_CTRL_PORT_SEL;
+		break;
+	}
+
+	writel(val, stmmac_priv->ioaddr + MAC_CTRL_REG);
+
+	amlogic_set_serdes_speed(dwmac, speed);
+}
+
+static int amlogic_serdes_powerup(struct net_device *ndev, void *priv)
+{
+	struct meson8b_dwmac *dwmac = (struct meson8b_dwmac *)priv;
+	int ret;
+
+	ret = phy_init(dwmac->serdes_phy);
+	if (ret)
+		return ret;
+
+	ret = phy_power_on(dwmac->serdes_phy);
+	if (ret) {
+		phy_exit(dwmac->serdes_phy);
+		return ret;
+	}
+
+	ret = phy_set_speed(dwmac->serdes_phy, dwmac->serdes_speed);
+	if (ret) {
+		phy_power_off(dwmac->serdes_phy);
+		phy_exit(dwmac->serdes_phy);
+	}
+
+	return ret;
+}
+
+static void amlogic_serdes_powerdown(struct net_device *ndev, void *priv)
+{
+	struct meson8b_dwmac *dwmac = (struct meson8b_dwmac *)priv;
+
+	phy_power_off(dwmac->serdes_phy);
+	phy_exit(dwmac->serdes_phy);
+}
 #endif
 
 static int meson8b_dwmac_probe(struct platform_device *pdev)
@@ -587,6 +696,14 @@ static int meson8b_dwmac_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "missing phy-mode property\n");
 		return ret;
 	}
+
+	dwmac->serdes_phy = devm_phy_optional_get(&pdev->dev, "serdes");
+	if (IS_ERR(dwmac->serdes_phy))
+		return dev_err_probe(&pdev->dev, PTR_ERR(dwmac->serdes_phy),
+				     "Failed to get serdes phy\n");
+
+	dwmac->speed = SPEED_1000;
+	dwmac->serdes_speed = SPEED_1000;
 
 	/* use 2ns as fallback since this value was previously hardcoded */
 	if (of_property_read_u32(pdev->dev.of_node, "amlogic,tx-delay-ns",
@@ -641,10 +758,32 @@ static int meson8b_dwmac_probe(struct platform_device *pdev)
 	plat_dat->bsp_priv = dwmac;
 
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	dwmac->ignore_pcs_stats = of_property_read_bool(pdev->dev.of_node,
+					"amlogic,ignore-pcs-stats");
+	if (dwmac->ignore_pcs_stats)
+		plat_dat->flags |= STMMAC_FLAG_HAS_INTEGRATED_PCS;
+
+	dwmac->serdes_phy = devm_phy_optional_get(&pdev->dev, "serdes");
+	if (IS_ERR(dwmac->serdes_phy))
+		return dev_err_probe(&pdev->dev, PTR_ERR(dwmac->serdes_phy),
+				     "Failed to get serdes phy\n");
+
+	dwmac->speed = SPEED_1000;
+
 	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
 	if (ret)
 		return ret;
 	aml_custom_setting(pdev, dwmac);
+
+	/* HSGMII serdes callback function */
+	if (dwmac->serdes_phy) {
+		dwmac->serdes_speed = SPEED_1000;
+
+		plat_dat->serdes_powerup = amlogic_serdes_powerup;
+		plat_dat->serdes_powerdown = amlogic_serdes_powerdown;
+		plat_dat->fix_mac_speed = amlogic_fix_mac_speed;
+	}
+
 #ifdef CONFIG_PM_SLEEP
 	device_init_wakeup(&pdev->dev, true);
 

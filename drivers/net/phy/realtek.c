@@ -73,7 +73,21 @@
 #define RTL822X_VND1_SERDES_OPTION			0x697a
 #define RTL822X_VND1_SERDES_OPTION_MODE_MASK		GENMASK(5, 0)
 #define RTL822X_VND1_SERDES_OPTION_MODE_2500BASEX_SGMII		0
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+#define RTL822X_VND1_SERDES_OPTION_MODE_HiSGMII_SGMII		1
+#endif
 #define RTL822X_VND1_SERDES_OPTION_MODE_2500BASEX		2
+
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+#define RTL822X_VND1_SERDES_CMD			0x7587
+#define  RTL822X_VND1_SERDES_CMD_WRITE		BIT(1)
+#define  RTL822X_VND1_SERDES_CMD_BUSY		BIT(0)
+#define RTL822X_VND1_SERDES_ADDR		0x7588
+#define  RTL822X_VND1_SERDES_ADDR_AUTONEG	0x2
+#define   RTL822X_VND1_SERDES_INBAND_DISABLE	0x71d0
+#define   RTL822X_VND1_SERDES_INBAND_ENABLE	0x70d0
+#define RTL822X_VND1_SERDES_DATA		0x7589
+#endif
 
 #define RTL822X_VND1_SERDES_CTRL3			0x7580
 #define RTL822X_VND1_SERDES_CTRL3_MODE_MASK		GENMASK(5, 0)
@@ -907,6 +921,32 @@ static int rtl822x_write_mmd(struct phy_device *phydev, int devnum, u16 regnum,
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+static int rtl822x_serdes_write(struct phy_device *phydev, u16 reg, u16 val)
+{
+	int ret, poll;
+
+	ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, RTL822X_VND1_SERDES_ADDR, reg);
+	if (ret < 0)
+		return ret;
+
+	ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, RTL822X_VND1_SERDES_DATA, val);
+	if (ret < 0)
+		return ret;
+
+	ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, RTL822X_VND1_SERDES_CMD,
+			    RTL822X_VND1_SERDES_CMD_WRITE |
+			    RTL822X_VND1_SERDES_CMD_BUSY);
+	if (ret < 0)
+		return ret;
+
+	return phy_read_mmd_poll_timeout(phydev, MDIO_MMD_VEND1,
+					 RTL822X_VND1_SERDES_CMD, poll,
+					 !(poll & RTL822X_VND1_SERDES_CMD_BUSY),
+					 500, 100000, false);
+}
+#endif
+
 static int rtl822xb_config_init(struct phy_device *phydev)
 {
 	bool has_2500, has_sgmii;
@@ -930,13 +970,19 @@ static int rtl822xb_config_init(struct phy_device *phydev)
 	if (!has_2500 && !has_sgmii)
 		return 0;
 
+	pr_info("%s: has_2500: %d, has_sgmii: %d\n", __func__, has_2500, has_sgmii);
 	/* determine SerDes option mode */
 	if (has_2500 && !has_sgmii) {
 		mode = RTL822X_VND1_SERDES_OPTION_MODE_2500BASEX;
 		phydev->rate_matching = RATE_MATCH_PAUSE;
 	} else {
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		mode = RTL822X_VND1_SERDES_OPTION_MODE_HiSGMII_SGMII;
+		phydev->rate_matching = RATE_MATCH_NONE; /* PHY Rate adaptor disable */
+#else
 		mode = RTL822X_VND1_SERDES_OPTION_MODE_2500BASEX_SGMII;
 		phydev->rate_matching = RATE_MATCH_NONE;
+#endif
 	}
 
 	/* the following sequence with magic numbers sets up the SerDes
@@ -952,6 +998,14 @@ static int rtl822xb_config_init(struct phy_device *phydev)
 				     mode);
 	if (ret < 0)
 		return ret;
+
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	/* Disable SGMII AN */
+	ret = rtl822x_serdes_write(phydev, RTL822X_VND1_SERDES_ADDR_AUTONEG,
+				    RTL822X_VND1_SERDES_INBAND_DISABLE);
+	if (ret < 0)
+		return ret;
+#endif
 
 	ret = phy_write_mmd(phydev, MDIO_MMD_VEND1, 0x6a04, 0x0503);
 	if (ret < 0)

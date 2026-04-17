@@ -169,3 +169,6 @@
   genphy_c45_read_status
   phy_modify_mmd_changed
   phy_read_mmd
+
+#dwmac-meson8b.ko
+  devm_phy_optional_get
