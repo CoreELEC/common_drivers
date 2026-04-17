@@ -794,11 +794,7 @@ static int parser_metadata_from_sei(struct sei_parser_s *p, bool hevc)
 	}
 
 	/* sl_hdr_extension_present_flag */
-	m = readU(p, 1);
-	if (!m) {
-		pr_sl(1, "Unsupported sl_hdr_extension_present_flag:%d\n", m);
-		return -1;
-	}
+	readU(p, 1);
 
 	/* sl_hdr_payload_mode */
 	metadata->payload_mode = readU(p, 3);
