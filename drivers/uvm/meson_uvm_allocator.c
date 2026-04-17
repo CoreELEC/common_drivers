@@ -672,7 +672,7 @@ void meson_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dmabuf, v
 }
 
 static void mua_screencap_filldata(struct mua_buffer *buffer, struct dma_buf *dmabuf,
-			void *vaddr, struct vframe_s *vf, bool skip_fill_buf)
+			void *vaddr, bool skip_fill_buf)
 {
 	size_t buf_size = 0;
 	int ret = 0;
@@ -690,7 +690,9 @@ static void mua_screencap_filldata(struct mua_buffer *buffer, struct dma_buf *dm
 			ret = avbcd_uvm_fill_pattern(buffer, dmabuf);
 		} else {
 			if (skip_fill_buf) {
-				if (vf->compWidth >= 3840 && vf->compHeight >= 2160) {
+				struct vframe_s *vf = mua_dmabuf_get_vframe(dmabuf);
+
+				if (vf && vf->compWidth >= 3840 && vf->compHeight >= 2160) {
 					MUA_PRINTK(MUA_INFO, "avbcd fill\n");
 					ret = avbcd_uvm_fill_pattern(buffer, dmabuf);
 				} else {
@@ -816,7 +818,6 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 	size_t new_size = 0;
 	struct dma_heap *heap;
 	struct dma_buf_attachment *attachment = NULL;
-	struct vframe_s *vf = NULL;
 	struct timeval start, end;
 	unsigned long time_use = 0;
 
@@ -836,10 +837,6 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 		MUA_PRINTK(MUA_DBG, "gpu_realloc: screen cap should not access the uvm buffer\n");
 		skip_fill_buf = true;
 	}
-
-	vf = mua_dmabuf_get_vframe(dmabuf);
-	if (!vf)
-		return -EINVAL;
 
 	heap = dma_heap_find(CODECMM_HEAP_NAME);
 	if (!heap)
@@ -1077,7 +1074,7 @@ static int mua_process_gpu_realloc(struct dma_buf *dmabuf,
 	vfree(page_array);
 
 	//start to filldata
-	mua_screencap_filldata(buffer, dmabuf, vaddr, vf, skip_fill_buf);
+	mua_screencap_filldata(buffer, dmabuf, vaddr, skip_fill_buf);
 
 	vunmap(vaddr);
 	if (src_sgt && attachment) {
