@@ -1561,12 +1561,6 @@ void rx_get_vsi_info(u8 port)
 					if (log_level & PACKET_LOG)
 						rx_pr("IEEE_VSI14 DV10\n");
 				}
-			} else if ((pkt->length == E_PKT_LENGTH_5) &&
-				(pkt->sbpkt.payload.data[0] & 0xffff)) {
-				rx[port].amdv_type = DV_NULL;
-			} else if ((pkt->length == E_PKT_LENGTH_4) &&
-				   ((pkt->sbpkt.payload.data[0] & 0xff) == 0)) {
-				rx[port].amdv_type = DV_NULL;
 			} else {
 				if (pkt->sbpkt.vsi_3dext.vdfmt == VSI_FORMAT_3D_FORMAT) {
 					rx[port].vs_info_details.vd_fmt = VSI_FORMAT_3D_FORMAT;
@@ -1590,7 +1584,6 @@ void rx_get_vsi_info(u8 port)
 							pkt->sbpkt.vsi_3dext.threed_meta_pre);
 				}
 				rx[port].vs_info_details.vsi_state |= E_VSI_4K3D;
-				rx[port].amdv_type = DV_NULL;
 			}
 		} else if (pkt->ieee == IEEE_VSI21) {
 			/* hdmi2.1 */

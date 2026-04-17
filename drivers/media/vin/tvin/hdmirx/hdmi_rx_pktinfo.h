@@ -27,7 +27,8 @@
 /* 2025.12.15 Fix the green screen issue when game to sdr */
 /* 2026.04.01 HDMI mute unless game mode changed */
 /* 2026.04.22 fix abnormal display when avi stopped */
-#define RX_PKT_VER "ver.2026/04/22"
+/* 2026.04.27 fix dv_type error issue */
+#define RX_PKT_VER "ver.2026/04/27"
 
 #define K_ONEPKT_BUFF_SIZE		8
 #define K_PKT_REREAD_SIZE		2
