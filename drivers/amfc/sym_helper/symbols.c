@@ -476,28 +476,7 @@ static int fill_module_symbols(struct proc_node *node, struct ksymbol *sym)
 static void direct_symbol_assign(void)
 {
 	/*--------- erofs symbols ----------*/
-	FUN_ASSIGN(__xa_cmpxchg);
-	FUN_ASSIGN(fs_ftype_to_dtype);
-	FUN_ASSIGN(filemap_read);
-	FUN_ASSIGN(iomap_dio_rw);
-	FUN_ASSIGN(iomap_bmap);
-	FUN_ASSIGN(iomap_readahead);
-	FUN_ASSIGN(iomap_readpage);
-	FUN_ASSIGN(iomap_fiemap);
-	FUN_ASSIGN(read_cache_page_gfp);
-	FUN_ASSIGN(crc32c);
-	FUN_ASSIGN(add_to_page_cache_lru);
-	FUN_ASSIGN(readahead_expand);
-	FUN_ASSIGN(kthread_create_worker_on_cpu);
-	FUN_ASSIGN(LZ4_decompress_safe);
-	FUN_ASSIGN(LZ4_decompress_safe_partial);
-	FUN_ASSIGN(out_of_line_wait_on_bit_lock);
-	FUN_ASSIGN(fs_param_is_enum);
-	FUN_ASSIGN(posix_acl_from_xattr);
 	dotdot_name_t = (struct qstr *)&dotdot_name;
-	generic_ro_fops_t                 = (struct file_operations *)&generic_ro_fops;
-	posix_acl_default_xattr_handler_t = (struct xattr_handler *)&posix_acl_default_xattr_handler;
-	posix_acl_access_xattr_handler_t  = (struct xattr_handler *)&posix_acl_access_xattr_handler;
 }
 #endif
 
