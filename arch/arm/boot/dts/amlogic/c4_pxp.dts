@@ -49,6 +49,11 @@
 			status = "disabled";
 		};
 
+		ramdump_data@0 {
+			reg = <0x0 0x0>;
+			status = "disabled"; /* disabled as default */
+		};
+
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			no-map;

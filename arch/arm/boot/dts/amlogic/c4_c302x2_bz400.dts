@@ -48,10 +48,15 @@
 			compatible = "shared-dma-pool";
 			size = <0x01800000>;
 			alignment = <0x00400000>;
-			alloc-ranges = <0x05000000 0x07000000>;
+			alloc-ranges = <0x10000000 0x02000000>;
 			linux,contiguous-region;
 			no-map;
 			status = "disabled";
+		};
+
+		ramdump_data@0 {
+			reg = <0x0 0x0>;
+			status = "disabled"; /* disabled as default */
 		};
 
 		skip_range_1 {

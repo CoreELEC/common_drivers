@@ -54,6 +54,11 @@
 			status = "disabled";
 		};
 
+		ramdump_data@0 {
+			reg = <0x0 0x0>;
+			status = "disabled"; /* disabled as default */
+		};
+
 		skip_range_1 {
 			compatible = "skip_mem";
 			size = <0x00100000>;
