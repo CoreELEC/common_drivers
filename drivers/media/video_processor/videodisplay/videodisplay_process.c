@@ -51,6 +51,7 @@
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #endif
+#include <uapi/drm/drm_mode.h>
 
 #define WAIT_THREAD_STOPPED_TIMEOUT 20
 #define WAIT_READY_Q_TIMEOUT 100
@@ -3313,9 +3314,15 @@ static void vframe_display(struct videodisplay_dev *dev,
 	vf->crop[3] = (pic_w >> vf->dpss_pps_dsx) - frame_info->crop_w - frame_info->crop_x;
 	vf->zorder = frame_info->zorder;
 	vf->flag |= VFRAME_FLAG_VIDEO_COMPOSER | VFRAME_FLAG_VIDEO_COMPOSER_BYPASS;
-	if (frame_info->rotation == VC_TRANSFORM_ROT_180) {
-		vd_print(dev->index, PRINT_AXIS, "%s: need rotate 180.\n", __func__);
+	if (frame_info->rotation == DRM_MODE_ROTATE_180) {
+		vd_print(dev->index, PRINT_AXIS, "need rotate 180.\n");
 		vf->flag |= (VFRAME_FLAG_MIRROR_H | VFRAME_FLAG_MIRROR_V);
+	} else if (frame_info->rotation & DRM_MODE_REFLECT_X) {
+		vd_print(dev->index, PRINT_AXIS, "need rotate MIRROR H.\n");
+		vf->flag |= VFRAME_FLAG_MIRROR_H;
+	} else if (frame_info->rotation & DRM_MODE_REFLECT_Y) {
+		vd_print(dev->index, PRINT_AXIS, "need rotate MIRROR_V.\n");
+		vf->flag |= VFRAME_FLAG_MIRROR_V;
 	}
 	if (!is_repeat_vf)
 		vf->pts_us64 = time_us64;
@@ -3405,10 +3412,6 @@ static void vframe_display(struct videodisplay_dev *dev,
 	}
 
 	if (!(is_dec_vf || is_v4l_vf)) {
-		vd_print(dev->index, PRINT_OTHER, "%s: dma buf.\n", __func__);
-		if (frame_info->rotation & ROTATION_180_DEGREES)
-			vf->flag |= VFRAME_FLAG_MIRROR_H | VFRAME_FLAG_MIRROR_V;
-
 		if (!(vf->dpss_flg & 0x08))
 			vf->dpss_flg |= 0x10;
 		vf->flag |= VFRAME_FLAG_VIDEO_LINEAR;
