@@ -45,8 +45,18 @@
 		ranges;
 
 		ramdump_bl33z {
-			reg = <0x0 0x1800000>; /* 0 ~ 24M */
+			compatible = "shared-dma-pool";
+			size = <0x01800000>;
+			alignment = <0x00400000>;
+			alloc-ranges = <0x05000000 0x07000000>;
+			linux,contiguous-region;
+			no-map;
 			status = "disabled";
+		};
+
+		ramdump_data@0 {
+			reg = <0x0 0x0>;
+			status = "disabled"; /* disabled as default */
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -250,8 +260,8 @@
 		key_chan = <SARADC_CH1 SARADC_CH1 SARADC_CH1 SARADC_CH1
 			SARADC_CH1 SARADC_CH2 SARADC_CH2>;
 		key_code = <116 114 115 28 139 466 174>;
-		key_val = <0 252 468 684 892 252 468>; // Unit: millivolt
-		key_tolerance = <70 70 70 70 70 70 70>; // Unit: millivolt
+		key_val = <0 143 266 389 507 143 266>; //val=voltage/1800mV*1023
+		key_tolerance = <40 40 40 40 40 40 40>;
 	};
 
 	/* Audio Related start */
@@ -262,7 +272,7 @@
 		avout_mute-gpios = <&gpio_ao GPIOD_6 GPIO_ACTIVE_HIGH>;
 		av_mute_sleep_time = <900>;
 		/* headphone insert det */
-		hp-det-gpios = <&gpio_analog CDAC_IOUT GPIO_ACTIVE_LOW>;
+		aml-audio-card,hp-det-gpio = <&gpio_analog CDAC_IOUT GPIO_ACTIVE_LOW>;
 
 		interrupts = <GIC_SPI 235 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "audio_exception64";
@@ -554,7 +564,7 @@
 	smartcard {
 		compatible = "amlogic,smartcard-sc2";
 		dev_name = "smartcard";
-		status = "okay";
+		status = "disabled";
 
 		reg = <0xffd25000 0x1000>;
 		irq_trigger_type = "GPIO_IRQ_LOW";
@@ -606,7 +616,7 @@
 }; /* end of reserved-memory */
 
 &hdmirx {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&hdmirx_a_mux &hdmirx_b_mux
 		&hdmirx_c_mux>;
 	en_4k_2_2k = <0>;
@@ -622,7 +632,7 @@
 };
 
 &dim { /*multi-di*/
-	status = "disabled";
+	//status = "okay";
 	/***************************************************
 	 * memory: default is 4
 	 *	0:use reserved;
@@ -674,19 +684,6 @@
 	clock-frequency = <300000>;
 	pinctrl-names="default";
 	pinctrl-0=<&i2c0_z_pins>;
-
-	aml_dvb_extern_i2c0: aml_dvb_extern_i2c@60 {
-		compatible = "aml_dvb_extern_i2c";
-		dev_name = "si2151";
-		reg = <0x60>;
-		status = "okay";
-	};
-	aml_dvb_extern_i2c1: aml_dvb_extern_i2c@7a {
-		compatible = "aml_dvb_extern_i2c";
-		dev_name = "rt710";
-		reg = <0x7a>;
-		status = "okay";
-	};
 };
 
 &i2c2 {
@@ -873,7 +870,7 @@
 };
 
 &aml_wifi{
-	status = "okay";
+	status = "disabled";
 	interrupt-gpios = <&gpio  GPIOC_12  GPIO_ACTIVE_HIGH>;
 	power_on-gpios = <&gpio   GPIOC_11  GPIO_ACTIVE_HIGH>;
 };
@@ -965,7 +962,7 @@
 		};
 	};
 
-	tdmb_gpio: tdmb_gpio {
+	tdmout_a_gpio: tdmout_a_gpio {
 		mux { /* GPIOH_15, GPIOH_16, GPIOH_17 */
 			groups ="GPIOH_15",
 				"GPIOH_16",
@@ -1133,8 +1130,4 @@
 
 &aml_vpp {
 	status = "disabled";
-};
-
-&chosen {
-	bootargs = "swiotlb=noforce";
 };

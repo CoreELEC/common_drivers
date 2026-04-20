@@ -335,7 +335,7 @@
 	};
 
 	vddcpu0: pwmb-regulator {
-		compatible = "amlogic, pwm-regulator";
+		compatible = "pwm-regulator";
 		pwms = <&pwm_ab MESON_PWM_1 1500 0>;
 		regulator-name = "vddcpu0";
 		regulator-min-microvolt = <690000>;
@@ -705,8 +705,8 @@
 			"vpu_intr_gate";
 		reg = <0xff646000 0x200   /* clk */
 		       0xff644000 0x100     /* pwrctrl */
-		       0xff900000 0xa000 /* vcbus */
-		       0xff638000 0x2000>;    /* dmc0 */
+		       0xff900000 0xa000   /* vcbus */
+			   0xff638000 0x2000>;    /* dmc0 */
 		clk_level = <8>;
 		/* 0: 24M       1: 100.0M    2: 166.7M    3: 200.0M    4: 250.0M */
 		/* 5: 333.3M    6: 400.0M    7: 500.0M    8: 666.7M */
@@ -1205,7 +1205,6 @@
 			mmc_debug_flag;
 			no-sdio;
 			no-sd;
-			full-pwr-cycle;
 			/* 1:mmc card(include eMMC),
 			 * 2:sd card(include tSD)
 			 */
@@ -1445,12 +1444,12 @@
 						&clkc CLKID_HIFI_PLL
 						&clkc CLKID_MPLL1>;
 				clock-names = "mclk", "clk_srcpll", "clk_src_cd";
-				pinctrl-names = "tdm_pins","tdm_gpio";
+				pinctrl-names = "tdm_pins","tdmout_a_gpio";
 				pinctrl-0 =
 					<&tdm_b_pins
 					&tdm_d0_pins
 					&tdm_clk_pins>;
-				pinctrl-1 = <&tdmb_gpio>;
+				pinctrl-1 = <&tdmout_a_gpio>;
 				/*
 				 * 0: tdmout_a;
 				 * 1: tdmout_b;
@@ -1820,37 +1819,6 @@
 				status = "disabled";
 			};
 		};/* end of audiobus*/
-
-		vad_open {
-			compatible = "amlogic, vad-open";
-
-			clocks = <&clkc CLKID_FCLK_DIV5
-					&clkc CLKID_FCLK_DIV3
-					&clkc CLKID_HIFI_PLL>;
-			clock-names = "vad_srcpll", "sysclk_srcpll", "dclk_srcpll";
-
-			interrupts = <GIC_SPI 39 IRQ_TYPE_EDGE_RISING
-				GIC_SPI 44 IRQ_TYPE_EDGE_RISING>;
-			interrupt-names = "irq_wakeup", "irq_frame_sync";
-
-			pinctrl-names = "pdm_pins";
-			pinctrl-0 = <&pdmin>;
-
-			#address-cells=<1>;
-			#size-cells=<1>;
-			ranges;
-			pdm_bus {
-				reg = <0xFE332000 0x400>;
-			};
-
-			audiobus_base {
-				reg = <0xFE330000 0x1000>;
-			};
-
-			vad_base {
-				reg = <0xFE331800 0x400>;
-			};
-		};
 
 		/* Sound iomap */
 		aml_snd_iomap {
@@ -2376,24 +2344,16 @@
 			status = "okay";
 		};
 
-		v2d {
-			compatible = "amlogic, v2d";
-			dev_name = "v2d";
-			status = "okay";
-		};
-
-		videodisplay {
-			compatible = "amlogic, videodisplay";
-			dev_name = "videodisplay";
-			status = "okay";
-		};
-
 		video_composer {
 			compatible = "amlogic, video_composer";
 			dev_name = "video_composer";
 			status = "okay";
 		};
-
+		video_dump {
+			compatible = "amlogic, video_dump";
+			dev_name = "video_dump";
+			status = "okay";
+		};
 		/* POST PROCESS MANAGER */
 		ppmgr_reserved:linux,ppmgr {
 			compatible = "amlogic, ppmgr_memory";
@@ -2406,7 +2366,7 @@
 			status = "okay";
 		};
 
-		amlvideo2_0: amlvideo2_0 {
+		amlvideo2_0 {
 			compatible = "amlogic, amlvideo2";
 			dev_name = "amlvideo2";
 			status = "okay";
@@ -2414,7 +2374,7 @@
 			cma_mode = <1>;
 		};
 
-		amlvideo2_1: amlvideo2_1 {
+		amlvideo2_1 {
 			compatible = "amlogic, amlvideo2";
 			dev_name = "amlvideo2";
 			status = "okay";
@@ -2448,11 +2408,38 @@
 			status = "okay";
 			compatible = "amlogic, meson-cooldev";
 			cooling_devices {
+				ddrtype_reg = <0xff6388b0>;
+				ddr_cool {
+					ddr_reg = <0xff6384b4 0xff638648>;
+					ddr_status = <13>;
+					ddr_bits = <8 15>, <0 8>;
+					ddr_data = <152 152 152 120 94 76 76 60 60 46 46 38 18>;
+					gpu_data = <0x33 0x33 0x33 0x33 0x33 0x33 0x33 0x33 0x33
+						0x33 0x33 0x33 0x33>;
+					node_name = "ddr_cool0";
+					device_type = "ddr";
+				};
+				ddr_cool_20nm {
+					ddr_reg = <0xff6384b4>;
+					ddr_status = <3>;
+					ddr_bits = <8 15>;
+					ddr_data = <0x4c 0x26 0x13>;
+					node_name = "ddr_cool1";
+					device_type = "ddr";
+				};
 				gpufreq_cool {
 					dyn_coeff = <245>;
 					node_name = "bifrost";
 					device_type = "gpufreq";
 				};
+			};
+			ddr_cool0:ddr_cool0 {
+				version = "v1";
+				#cooling-cells = <2>; /* min followed by max */
+			};
+			ddr_cool1:ddr_cool1 {
+				version = "v1";
+				#cooling-cells = <2>; /* min followed by max */
 			};
 		};/*meson cooling devices end*/
 
@@ -2473,7 +2460,17 @@
 						hysteresis = <5000>;
 						type = "passive";
 					};
-					pcritical: trip-point@2 {
+					pddr_change: trip-point@2 {
+						temperature = <55000>;
+						hysteresis = <5000>;
+						type = "hot";
+					};
+					pddr_change1: trip-point@3 {
+						temperature = <90000>;
+						hysteresis = <10000>;
+						type = "hot";
+					};
+					pcritical: trip-point@4 {
 						temperature = <115000>;
 						hysteresis = <1000>;
 						type = "critical";
@@ -2483,6 +2480,16 @@
 					cpufreq_cooling_map {
 						trip = <&pcontrol>;
 						cooling-device = <&CPU0 0 8>;
+						contribution = <1024>;
+					};
+					ddr_cooling_map {
+						trip = <&pddr_change>;
+						cooling-device = <&ddr_cool0 0 12>;
+						contribution = <1024>;
+					};
+					ddr_cooling_map1 {
+						trip = <&pddr_change1>;
+						cooling-device = <&ddr_cool1 0 2>;
 						contribution = <1024>;
 					};
 					gpufreq_cooling_map {
@@ -2549,7 +2556,7 @@
 		};
 	};
 
-	chosen: chosen {
+	chosen {
 	};
 
 	aml_mkl {
@@ -2574,7 +2581,7 @@
 	unifykey{
 		compatible = "amlogic,unifykey";
 		status = "okay";
-		unifykey-num = <20>;
+		unifykey-num = <24>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -2595,6 +2602,10 @@
 		unifykey-index-17= <&keysn_17>;
 		unifykey-index-18= <&keysn_18>;
 		unifykey-index-19= <&keysn_19>;
+		unifykey-index-20= <&keysn_20>;
+		unifykey-index-21= <&keysn_21>;
+		unifykey-index-22= <&keysn_22>;
+		unifykey-index-23= <&keysn_23>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -2695,6 +2706,26 @@
 			key-permit = "read","write","del";
 		};
 		keysn_19:key_19{
+			key-name = "lcd";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_20:key_20{
+			key-name = "lcd_extern";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_21:key_21{
+			key-name = "backlight";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_22:key_22{
+			key-name = "lcd_tcon";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_23:key_23{
 			key-name = "lcd_tcon_spi";
 			key-device = "normal";
 			key-permit = "read","write","del";
