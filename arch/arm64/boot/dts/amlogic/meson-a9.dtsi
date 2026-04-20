@@ -1393,40 +1393,40 @@
 			i2c0: i2c@e000 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe000 0x0 0x3c>;
-				interrupts = <GIC_SPI 24 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 408 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_A>;
 				status = "okay";
 			};
 
 			i2c1: i2c@e100 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe100 0x0 0x3c>;
-				interrupts = <GIC_SPI 25 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 409 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_B>;
 				status = "disabled";
 			};
 
 			i2c2: i2c@e200 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe200 0x0 0x3c>;
-				interrupts = <GIC_SPI 26 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 410 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_C>;
 				status = "disabled";
 			};
 
 			i2c3: i2c@e300 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe300 0x0 0x3c>;
-				interrupts = <GIC_SPI 27 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 411 IRQ_TYPE_EDGE_RISING>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				//clocks = <&clkc_sys CLKID_SYS_I2C_M_A>;
+				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_D>;
 				status = "disabled";
 			};
 
@@ -3597,6 +3597,15 @@
 		mux {
 			groups = "pwm_n";
 			function = "pwm_n";
+		};
+	};
+
+	i2c3_pins4:i2c3_pins4 {
+		mux {
+			groups = "i2c_d_sda",
+				"i2c_d_scl";
+			function = "i2c_d";
+			bias-disable;
 		};
 	};
 
