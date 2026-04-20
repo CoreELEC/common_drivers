@@ -184,7 +184,7 @@ void rx_dig_clk_en_t3x(bool en);
 void rx_lts_2_flt_ready(u8 port);
 int rx_lts_p_syn_detect(u8 frl_rate, u8 port);
 void aml_phy_init_t3x_21(u8 port);
-void rx_lts_3_err_detect(u8 port);
+int rx_lts_3_err_detect(u8 port);
 bool hdmirx_flt_update_cleared_wait(u32 addr, u8 port);
 void hdmirx_vga_gain_tuning(u8 port);
 void rx_set_term_value_t3x(unsigned char port, bool value);

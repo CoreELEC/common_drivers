@@ -1084,6 +1084,11 @@ struct rx_s {
 	unsigned char cur_5v_sts;
 	bool no_signal;
 	unsigned char err_cnt;
+	unsigned char err_cnt_ch0;
+	unsigned char err_cnt_ch1;
+	unsigned char err_cnt_ch2;
+	unsigned char err_cnt_ch3;
+	int retry_cfg_idx;
 	u16 wait_no_sig_cnt;
 	int aud_sr_stable_cnt;
 	int aud_sr_unstable_cnt;

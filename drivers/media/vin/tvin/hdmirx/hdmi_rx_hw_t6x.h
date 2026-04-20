@@ -98,7 +98,7 @@
 #define T6X_HDMIRX21PHY_DCHA_PI         (0x4a << 2)
 #define T6X_HDMIRX21PHY_DCHA_CTRL       (0x4b << 2)
 #define T6X_HDMIRX21PHY_DCHD_CDR        (0x4c << 2)
-	#define CDR_PH_DIV	MSK(2, 0)
+	#define CDR_PH_DIV	MSK(3, 0)
 	#define CDR_FR_EN	_BIT(6)
 	#define CDR_OS_RATE	MSK(2, 8)
 	#define CDR_PI_DIV	MSK(2, 10)
@@ -190,7 +190,7 @@ void rx_dig_clk_en_t6x(bool en);
 void rx_lts_2_flt_ready(u8 port);
 int rx_lts_p_syn_detect(u8 frl_rate, u8 port);
 void aml_phy_init_t6x_21(u8 port);
-void rx_lts_3_err_detect(u8 port);
+int rx_lts_3_err_detect(u8 port);
 bool hdmirx_flt_update_cleared_wait(u32 addr, u8 port);
 void hdmirx_vga_gain_tuning_t6x(u8 port);
 void rx_set_term_value_t6x(unsigned char port, bool value);

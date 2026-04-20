@@ -152,7 +152,7 @@ int frate_cnt = 100;
 /* bit'0 clk_ready, bit'1 overlap */
 int fpll_chk_lvl = 0x1;
 int valid_m_wait_max = 800;
-int vga_tuning_min = 0x21;
+int vga_tuning_min = 0x15;
 int vga_tuning_max = 0x26;
 int pll_band = 5;
 int cdr_bw;

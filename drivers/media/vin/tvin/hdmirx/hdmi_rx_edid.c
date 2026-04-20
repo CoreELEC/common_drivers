@@ -23,6 +23,7 @@
 #include "hdmi_rx_edid.h"
 #include "hdmi_rx_hw.h"
 #include "hdmi_rx_wrapper.h"
+#include "hdmi_rx_frl.h"
 
 enum edid_delivery_mothed_e edid_delivery_mothed;
 /* buff to store downstream EDID or EDID load from bin */
@@ -7599,6 +7600,39 @@ void rx_get_edid_support(u8 port)
 	rx[port].edid_cap.timing_4k = get_edid_support(edid_buf, TIMING_4K);
 }
 
+void hdmi_rx_frl_rate_update(u8 port, u8 new_frl_rate)
+{
+	u8 pedid[512] = {0};
+	u32 hf_vsdb_start;
+	struct data_block_location_s data_block;
+	u8 frl_byte;
+	u8 ext_blk_num = 1;
+	u8 j = 0;
+	u32 i = 0;
+
+	if (rx_info.chip_id != CHIP_ID_T6X)
+		return;
+	if (port != E_PORT2 && port != E_PORT3)
+		return;
+	for (i = 0; i < EDID_SIZE; i++)
+		pedid[i] = hdmirx_rd_top(edid_addr[port] + i, port);
+
+	rx[port].edid_size = rx_get_edid_size(pedid);
+	ext_blk_num = rx[port].edid_size / EDID_BLK_SIZE;
+	data_block = rx_get_cea_tag_offset(pedid, HF_VENDOR_DB_TAG);
+	hf_vsdb_start = data_block.pos[0];
+	frl_byte = pedid[hf_vsdb_start + 7];
+	frl_byte &= 0x0F;
+	if (frl_byte == 0)
+		return;
+	frl_byte |= (new_frl_rate & 0x0F) << 4;
+	pedid[hf_vsdb_start + 7] = frl_byte;
+	for (j = 0; j < ext_blk_num; ++j)
+		pedid[END_OF_BLK(j)] = rx_edid_calc_cksum(pedid, j);
+	for (i = 0; i < EDID_SIZE; i++)
+		hdmirx_wr_top(edid_addr[port] + i, pedid[i], port);
+}
+
 bool hdmi_rx_top_edid_update(u8 port)
 {
 	u_char *pedid = NULL;
@@ -7641,6 +7675,8 @@ bool hdmi_rx_top_edid_update(u8 port)
 		hdmirx_wr_top(edid_addr[port] + i, pedid[i], port);
 		edid_cur[port * EDID_SIZE + i] = pedid[i];
 	}
+	if (frl_update_edid_en[port])
+		hdmi_rx_frl_rate_update(port, FRL_8G_4LANE);
 	rx_get_edid_support(port);
 	if (log_level & EDID_LOG)
 		rx_print_edid_support(port);

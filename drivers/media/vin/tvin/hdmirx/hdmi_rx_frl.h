@@ -12,7 +12,16 @@
 #define H_HDMI 4
 #define FRL_CH_LOCK 0xe
 #define SCDC_FRL_RATE_ADDR 0x31
+#define NUM_RETRY_CONFIGS  15
+#define INVALID_RETRY_INDEX 0xffff
 
+extern int err_cnt_max;
+extern int ecc_err_monitor;
+extern int low_frl_rate_en;
+extern int force_low_rate;
+extern int vga_level_low;
+extern int vga_level_default;
+extern int frl_update_edid_en[E_PORT_NUM];
 void rx_lts_2_flt_ready(u8 port);
 int rx_lts_p_syn_detect(u8 frl_rate, u8 port);
 void rx_lts_p_frl_start(u8 port);
@@ -30,7 +39,7 @@ void rx_dump_reg_d_f_sts(u8 port);
 bool rx_get_clkready_sts(u8 port);
 bool rx_get_valid_m_sts(u8 port);
 bool is_fpll_err(u8 port);
-void rx_read_ecc_err(u8 port);
+void rx_read_err_cnt(u8 port);
 void clr_frl_fifo_status(u8 port);
 void rx_rcc_err_frl_config(u8 port);
 void rx_switch_to_self_hsync(u8 port, bool en);

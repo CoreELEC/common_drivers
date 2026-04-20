@@ -96,7 +96,6 @@ static int wait_no_sig_max = 600;
 static int fpll_stable_max = 150;
 static int reset_pcs_en;
 static int force_avi_stable;
-static int ecc_err_monitor;
 u32 vrr_func_en = 0xff;
 u32 allm_func_en = 0xff;
 u32 qms_func_en = 0xff;
@@ -3568,6 +3567,11 @@ void rx_get_global_variable(const char *buf)
 	pr_var(dsc_update_en, i++);
 	pr_var(delay_dbg, i++);
 	pr_var(delay_dbg1, i++);
+	pr_var(err_cnt_max, i++);
+	pr_var(low_frl_rate_en, i++);
+	pr_var(force_low_rate, i++);
+	pr_var(vga_level_low, i++);
+	pr_var(vga_level_default, i++);
 	pr_var(rx[E_PORT0].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT1].var.clk_stable_cnt, i++);
 	pr_var(rx[E_PORT2].var.clk_stable_cnt, i++);
@@ -4058,6 +4062,21 @@ int rx_set_global_variable(const char *buf, int size)
 	if (set_pr_var(tmpbuf, var_to_str(delay_dbg1),
 		&delay_dbg1, value))
 		return pr_var(delay_dbg1, index);
+	if (set_pr_var(tmpbuf, var_to_str(err_cnt_max),
+		&err_cnt_max, value))
+		return pr_var(err_cnt_max, index);
+	if (set_pr_var(tmpbuf, var_to_str(low_frl_rate_en),
+		&low_frl_rate_en, value))
+		return pr_var(low_frl_rate_en, index);
+	if (set_pr_var(tmpbuf, var_to_str(force_low_rate),
+		&force_low_rate, value))
+		return pr_var(force_low_rate, index);
+	if (set_pr_var(tmpbuf, var_to_str(vga_level_low),
+		&vga_level_low, value))
+		return pr_var(vga_level_low, index);
+	if (set_pr_var(tmpbuf, var_to_str(vga_level_default),
+		&vga_level_default, value))
+		return pr_var(vga_level_default, index);
 	//fsm var
 	if (set_pr_var(tmpbuf, var_to_str(rx[E_PORT0].var.dbg_ve),
 		&rx[E_PORT0].var.dbg_ve, value))
@@ -4760,6 +4779,10 @@ void rx_5v_monitor(void)
 					rx_clr_edid_type(i);
 					rx_edid_reset(i);
 					hdmirx_scdc_reset(i);
+					if (rx_info.chip_id == CHIP_ID_T6X) {
+						hdmi_rx_frl_rate_update(i, FRL_12G_4LANE);
+						frl_update_edid_en[i] = 0;
+					}
 					rx[i].hdcp.ake_init_cnt = 0;
 					rx[i].hdcp.reauth_req_cnt = 0;
 				} else {
@@ -6412,8 +6435,7 @@ void rx_port2_main_state_machine(void)
 	enum fmt_vic_status vic_status;
 	u8 port = E_PORT2;
 
-	if (ecc_err_monitor)
-		rx_read_ecc_err(port);
+	rx_read_err_cnt(port);
 	frate_monitor();
 	if ((dbg_port - 1 != port) &&
 		dbg_port)
@@ -6510,6 +6532,7 @@ void rx_port2_main_state_machine(void)
 		rx[port].var.valid_m_seen_after_training = 0;
 		rx[port].var.frl_rate_wait_cnt = 0;
 		rx[port].state = FSM_FRL_CH_LOCK;
+		rx[port].retry_cfg_idx = INVALID_RETRY_INDEX;
 		break;
 	case FSM_FRL_CH_LOCK:
 		rx[port].ch_lock_stb_flg = hdmi_rx_ch_lock(port);
@@ -6522,6 +6545,11 @@ void rx_port2_main_state_machine(void)
 			rx[port].var.ch_lock_stable_cnt = 0;
 			rx[port].var.ch_lock_unstable_cnt = 0;
 			rx[port].var.valid_m_stable_cnt = 0;
+			rx[port].err_cnt = 0;
+			rx[port].err_cnt_ch0 = 0;
+			rx[port].err_cnt_ch1 = 0;
+			rx[port].err_cnt_ch2 = 0;
+			rx[port].err_cnt_ch3 = 0;
 		} else {
 			rx[port].var.ch_lock_stable_cnt = 0;
 			if (rx[port].var.ch_lock_unstable_cnt < ch_lock_unstable_max) {
@@ -7138,8 +7166,7 @@ void rx_port3_main_state_machine(void)
 	enum fmt_vic_status vic_status;
 	u8 port = E_PORT3;
 
-	if (ecc_err_monitor)
-		rx_read_ecc_err(port);
+	rx_read_err_cnt(port);
 	frate_monitor1();
 	if ((dbg_port - 1 != port) &&
 		dbg_port)
@@ -7238,6 +7265,7 @@ void rx_port3_main_state_machine(void)
 		rx[port].var.valid_m_seen_after_training = 0;
 		rx[port].var.frl_rate_wait_cnt = 0;
 		rx[port].state = FSM_FRL_CH_LOCK;
+		rx[port].retry_cfg_idx = INVALID_RETRY_INDEX;
 		break;
 	case FSM_FRL_CH_LOCK:
 		rx[port].ch_lock_stb_flg = hdmi_rx_ch_lock(port);
@@ -7250,6 +7278,11 @@ void rx_port3_main_state_machine(void)
 			rx[port].var.ch_lock_stable_cnt = 0;
 			rx[port].var.ch_lock_unstable_cnt = 0;
 			rx[port].var.valid_m_stable_cnt = 0;
+			rx[port].err_cnt = 0;
+			rx[port].err_cnt_ch0 = 0;
+			rx[port].err_cnt_ch1 = 0;
+			rx[port].err_cnt_ch2 = 0;
+			rx[port].err_cnt_ch3 = 0;
 		} else {
 			rx[port].var.ch_lock_stable_cnt = 0;
 			if (rx[port].var.ch_lock_unstable_cnt < ch_lock_unstable_max) {
@@ -8612,6 +8645,8 @@ int hdmirx_debug(const char *buf, int size)
 			hdmirx_qms_plus_en(false, port);
 		else
 			hdmirx_qms_plus_en(true, port);
+	} else if (strncmp(tmpbuf, "low_frl", 7) == 0) {
+		hdmi_rx_frl_rate_update(port, FRL_8G_4LANE);
 	}
 	return 0;
 }

@@ -1777,6 +1777,7 @@ void aml_pll_bw_cfg_t6x_21(int f_rate, u8 port)
 	int pll_rst_cnt = 0;
 	u32 idx = rx[port].phy.pll_bw;
 	u32 clk_rate = 0;
+	unsigned int tmp_vga_gain = 0;
 
 	if (f_rate)
 		idx = f_rate + 5;
@@ -1868,10 +1869,16 @@ void aml_pll_bw_cfg_t6x_21(int f_rate, u8 port)
 		} while (!is_tmds_clk_stable(port) && is_clk_stable(port) &&
 			!aml_phy_pll_lock(port));
 	}
+	//if (rx[port].var.frl_rate == FRL_12G_4LANE)
+		//hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN, 0x1111, port);
 	//for debug
-	if (rx_info.aml_phy_21.vga_gain <= 0xffff)
-		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN,
-			decimaltogray_t6x(rx_info.aml_phy_21.vga_gain), port);
+	if (rx_info.aml_phy_21.vga_gain <= 0xffff) {
+		tmp_vga_gain = (decimaltogray_t6x(rx_info.aml_phy_21.vga_gain & 0xf)) |
+			(decimaltogray_t6x(rx_info.aml_phy_21.vga_gain >> 4 & 0xf) << 4) |
+			(decimaltogray_t6x(rx_info.aml_phy_21.vga_gain >> 8 & 0xf) << 8) |
+			(decimaltogray_t6x(rx_info.aml_phy_21.vga_gain >> 12 & 0xf) << 12);
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN, tmp_vga_gain, port);
+	}
 	if (rx_info.aml_phy_21.eq_stg1 < 0x1f) {
 		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_VAL1,
 			rx_info.aml_phy_21.eq_stg1, port);

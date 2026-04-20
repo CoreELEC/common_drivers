@@ -52,6 +52,14 @@ const u32 fpll[] = {
 #define VPU_OVER_SPEED 390
 #define VPU_OVER_SPEED1 838
 
+int err_cnt_max = 15;
+int ecc_err_monitor;
+int low_frl_rate_en;
+int force_low_rate = 1;
+int vga_level_low = 0x1111;
+int vga_level_default = 0xffff;
+int frl_update_edid_en[E_PORT_NUM];
+
 enum frl_rate_e hdmirx_get_frl_rate(u8 port)
 {
 	if (rx[port].var.frl_rate > 0xf)
@@ -114,7 +122,7 @@ void rx_lts_2_flt_ready(u8 port)
 	hdmirx_wr_cor(SCDCS_STATUS_FLAGS0_SCDC_IVCRX, (data8 | 0x40), port);
 }
 
-void rx_lts_3_err_detect(u8 port)
+int rx_lts_3_err_detect(u8 port)
 {
 	u8 bist0_err_cnt_0;
 	u8 bist0_err_cnt_1;
@@ -134,7 +142,7 @@ void rx_lts_3_err_detect(u8 port)
 	u8 bist3_err_cnt;
 	u8 data8;
 	u8 frl_rate_sel;
-
+	int ch_check = 0;
 	//-------hal_frl_eq_update(port)
 	//s_run_cal_adap(port,0x01,0x02)//TODO
 	//
@@ -162,25 +170,28 @@ void rx_lts_3_err_detect(u8 port)
 	//
 	//collect bist error count for each lane
 	//channel 0
-	hdmirx_poll_cor(SARAH_BIST_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port); //sync_done
+	if (!hdmirx_poll_cor(SARAH_BIST_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port))
+		ch_check |= _BIT(0);
+	usleep_range(500, 2000);
 	bist0_err_cnt_0 = hdmirx_rd_cor(SARAH_BIST_ST_0_DDPHY_IVCRX, port);
 	bist0_err_cnt_1 = hdmirx_rd_cor(SARAH_BIST_ST_1_DDPHY_IVCRX, port);
 	bist0_err_cnt_2 = hdmirx_rd_cor(SARAH_BIST_ST_2_DDPHY_IVCRX, port);
 	if (log_level & FRL_LOG)
-		rx_pr("bist0:0x%x-0x%x-0x%x\n", bist0_err_cnt_0, bist0_err_cnt_1, bist0_err_cnt_2);
+		rx_pr("bist0:0x%x -0x%x-0x%x\n", bist0_err_cnt_0, bist0_err_cnt_1, bist0_err_cnt_2);
 	bist0_err_cnt = ((bist0_err_cnt_2 & 0x7f) << 16) |
 					 (bist0_err_cnt_1  << 8) | bist0_err_cnt_0;
 	if (bist0_err_cnt > 0) {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **************Bist0 ERROR************\n");
+		ch_check |= _BIT(0);
 	} else {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **************Bist0 PASS************\n");
 	}
 	//channel 1
-	hdmirx_poll_cor(SARAH_BIST1_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port); //sync_done
-	//udelay(500);
-
+	if (!hdmirx_poll_cor(SARAH_BIST1_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port))
+		ch_check |= _BIT(1);
+	usleep_range(500, 2000);
 	bist1_err_cnt_0 = hdmirx_rd_cor(SARAH_BIST1_ST_0_DDPHY_IVCRX, port);
 	bist1_err_cnt_1 = hdmirx_rd_cor(SARAH_BIST1_ST_1_DDPHY_IVCRX, port);
 	bist1_err_cnt_2 = hdmirx_rd_cor(SARAH_BIST1_ST_2_DDPHY_IVCRX, port);
@@ -191,14 +202,15 @@ void rx_lts_3_err_detect(u8 port)
 	if (bist1_err_cnt > 0) {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **********Bist1 ERROR************\n");
+		ch_check |= _BIT(1);
 	} else {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **************Bist1 PASS************\n");
 	}
 	//channel 2
-	hdmirx_poll_cor(SARAH_BIST2_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port); //sync_done
-	//udelay(500);
-
+	if (!hdmirx_poll_cor(SARAH_BIST2_ST_2_DDPHY_IVCRX, 0 << 7, 0x7f, frl_sync_cnt, port))
+		ch_check |= _BIT(2);
+	usleep_range(500, 2000);
 	bist2_err_cnt_0 = hdmirx_rd_cor(SARAH_BIST2_ST_0_DDPHY_IVCRX, port);
 	bist2_err_cnt_1 = hdmirx_rd_cor(SARAH_BIST2_ST_1_DDPHY_IVCRX, port);
 	bist2_err_cnt_2 = hdmirx_rd_cor(SARAH_BIST2_ST_2_DDPHY_IVCRX, port);
@@ -209,15 +221,17 @@ void rx_lts_3_err_detect(u8 port)
 	if (bist2_err_cnt > 0) {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **************Bist2 ERROR************\n");
+		ch_check |= _BIT(2);
 	} else {
 		if (log_level & FRL_LOG)
 			rx_pr("[FRL ERROR] **************Bist2 PASS************\n");
 	}
 	if (rx[port].var.frl_rate >= FRL_RATE_6G_4LANES) {
 		//channel 3
-		hdmirx_poll_cor(SARAH_BIST3_ST_2_DDPHY_IVCRX, 0 << 7,
-			0x7f, frl_sync_cnt, port); //sync_done
-		//udelay(500);
+		if (!hdmirx_poll_cor(SARAH_BIST3_ST_2_DDPHY_IVCRX, 0 << 7,
+			0x7f, frl_sync_cnt, port))
+			ch_check |= _BIT(3);
+		usleep_range(500, 2000);
 
 		bist3_err_cnt_0 = hdmirx_rd_cor(SARAH_BIST3_ST_0_DDPHY_IVCRX, port);
 		bist3_err_cnt_1 = hdmirx_rd_cor(SARAH_BIST3_ST_1_DDPHY_IVCRX, port);
@@ -230,6 +244,7 @@ void rx_lts_3_err_detect(u8 port)
 		if (bist3_err_cnt > 0) {
 			if (log_level & FRL_LOG)
 				rx_pr("[FRL ERROR] **************Bist3 ERROR************\n");
+			ch_check |= _BIT(3);
 		} else {
 			if (log_level & FRL_LOG)
 				rx_pr("[FRL ERROR] **************Bist3 PASS************\n");
@@ -249,6 +264,7 @@ void rx_lts_3_err_detect(u8 port)
 	data8 |= (frl_rate_sel    << 1); //reg_lane_sel_mode: 0-3Lane; 1:4Lane
 	data8 |= (1               << 0); //reg_en
 	hdmirx_wr_cor(H21RXSB_CTRL_M42H_IVCRX, data8, port); //
+	return ch_check;
 }
 
 void rx_lts_3_ltp_req_send_0000(u8 port)
@@ -401,6 +417,8 @@ void rx_flt_update_set(u8 port)
 
 void hdmi_tx_rx_frl_training_main(u8 port)
 {
+	int ret;
+
 	rx[port].var.frl_rate = hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, port) & 0xf;
 	//hdmirx_wr_bits_cor(SCDCS_SRC_TEST_CONFIG_SCDC_IVCRX, _BIT(5), 1, port);
 	if (rx_info.chip_id == CHIP_ID_T3X)
@@ -419,14 +437,30 @@ void hdmi_tx_rx_frl_training_main(u8 port)
 		aml_phy_init_t3x(port);
 	else
 		aml_phy_init_t6x(port);
-	mdelay(20);
+	if (rx[port].var.frl_rate == FRL_12G_4LANE && low_frl_rate_en == 2)
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN,
+		vga_level_low, port);
 	hdmirx_wr_top(TOP_SW_RESET, 0x80, port);
 	hdmirx_wr_top(TOP_SW_RESET, 0, port);
 	hdmirx_wr_bits_cor(DPLL_CTRL2_DPLL_IVCRX, _BIT(1), 0, port);
 	hdmirx_wr_bits_cor(DPLL_CTRL2_DPLL_IVCRX, _BIT(1), 1, port);
-	rx_lts_3_err_detect(port);
+	usleep_range(20000, 21000);
+	ret = rx_lts_3_err_detect(port);
+	if (ret)
+		rx_pr("link training result = 0x%x\n", ret);
+	if (ret && low_frl_rate_en &&
+		rx[port].var.frl_rate == FRL_12G_4LANE) {
+		hdmirx_wr_cor(SCDCS_STATUS_FLAGS1_SCDC_IVCRX, 0xff, port);
+		hdmirx_wr_cor(SCDCS_STATUS_FLAGS2_SCDC_IVCRX, 0xff, port);
+		rx_flt_update_set(port);
+		rx_set_frl_train_sts(E_FRL_TRAIN_FINISH, port);
+		return;
+	}
 	rx_lts_3_ltp_req_send_0000(port);
 	rx_flt_update_set(port);
+	if (rx[port].var.frl_rate == FRL_12G_4LANE && low_frl_rate_en == 2)
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN,
+		vga_level_default, port);
 	if (!hdmirx_flt_update_cleared_wait(SCDCS_UPD_FLAGS_SCDC_IVCRX, port)) {
 		if (log_level & FRL_LOG)
 			rx_pr("polling time out b\n");
@@ -1151,16 +1185,123 @@ bool is_fpll_err(u8 port)
 	return ret;
 }
 
-void rx_read_ecc_err(u8 port)
+unsigned int decimaltogray_frl(unsigned int x)
+{
+	return x ^ (x >> 1);
+}
+
+void rx_8g_retry_cfg(u8 port)
+{
+	hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_CDR, CDR_PH_DIV, 5, port);
+	hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_VAL1, 0x9, port);
+	hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_EN, 0x1, port);
+}
+
+static const u8 eq_stg1_vals[4] = {0x10, 0x12, 0x14, 0x16};
+static const u16 vga_gain_vals[4] = {0xAAAA, 0x8888, 0x6666, 0x4444};
+static const u8 cdr_pi_ofst_vals[3] = {0x26, 0x28, 0x24};
+static const u8 eq_pole_vals[4] = {2, 3, 4, 1};
+
+static void apply_retry_config(u8 port, u16 index)
+{
+	if (index < 4) {
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_VAL1,
+			eq_stg1_vals[index], port);
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_EN,
+			0x1, port);
+		rx_pr("port %d retry EQ_STG1 = 0x%02x\n", port, eq_stg1_vals[index]);
+	} else if (index < 8) {
+		if (index == 4) {
+			hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_EN, 0x0, port);
+			rx_pr("port %d restore EQ (EQ_BYP_EN=0)\n", port);
+		}
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN,
+			decimaltogray_frl(vga_gain_vals[index - 4]), port);
+		rx_pr("port %d retry VGA_GAIN = 0x%04x\n", port, vga_gain_vals[index - 4]);
+	} else if (index < 11) {
+		if (index == 8)
+			hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, VGA_GAIN,
+			decimaltogray_frl(0xaaaa), port);
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_CDR, CDR_PI_OFST,
+					cdr_pi_ofst_vals[index - 8], port);
+		rx_pr("port %d retry CDR_PI_OFST = 0x%02x\n", port, cdr_pi_ofst_vals[index - 8]);
+	} else {
+		if (index == 11) {
+			hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_CDR,
+				CDR_PI_OFST, 0x24, port);
+			rx_pr("port %d restore CDR_PI_OFST (if needed)\n", port);
+		}
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHA_AFE, LEQ_POLE,
+			eq_pole_vals[index - 11], port);
+		rx_pr("port %d retry EQ_POLE = %d\n", port, eq_pole_vals[index - 11]);
+	}
+}
+
+void rx_read_err_cnt(u8 port)
 {
 	u32 ch0, ch1, ch2, ch3;
 
 	rx_get_error_cnt(&ch0, &ch1, &ch2, &ch3, port);
-	if (rx[port].state >= FLT_RX_LTS_P) {
+	if (rx[port].state >= FSM_FRL_FPLL_CFG) {
 		if (ch0 || ch1 || ch2 || ch3) {
-			rx_pr("port %d err cnt:%d,%d,%d,%d\n", port, ch0, ch1, ch2, ch3);
-			rx_pr("ced update flag 0x%x\n",
-			hdmirx_rd_cor(SCDCS_UPD_FLAGS_SCDC_IVCRX, port));
+			rx[port].err_cnt++;
+			if (ch0)
+				rx[port].err_cnt_ch0++;
+			if (ch1)
+				rx[port].err_cnt_ch1++;
+			if (ch2)
+				rx[port].err_cnt_ch2++;
+			if (ch3)
+				rx[port].err_cnt_ch3++;
+			if (log_level & FRL_LOG)
+				rx_pr("err_cnt %d\n", rx[port].err_cnt);
+			if (rx[port].err_cnt >= err_cnt_max) {
+				if (rx[port].var.frl_rate == FRL_8G_4LANE) {
+					if (rx[port].err_cnt_ch0 &&
+						rx[port].err_cnt_ch1 &&
+						rx[port].err_cnt_ch2 &&
+						rx[port].err_cnt_ch3) {
+						rx_8g_retry_cfg(port);
+						rx[port].err_cnt_ch0 = 0;
+						rx[port].err_cnt_ch1 = 0;
+						rx[port].err_cnt_ch2 = 0;
+						rx[port].err_cnt_ch3 = 0;
+						rx[port].err_cnt = 0;
+					}
+				}
+			}
+
+			if (rx[port].err_cnt >= err_cnt_max &&
+				rx[port].var.frl_rate == FRL_12G_4LANE) {
+				if (rx[port].retry_cfg_idx == INVALID_RETRY_INDEX) {
+					if (force_low_rate) {
+						frl_update_edid_en[port] = 1;
+						hdmi_rx_frl_rate_update(port, FRL_8G_4LANE);
+						rx[port].state = FSM_HPD_LOW;
+						rx[port].retry_cfg_idx = INVALID_RETRY_INDEX;
+					} else {
+						rx[port].retry_cfg_idx = 0;
+						apply_retry_config(port, 0);
+					}
+				} else if (rx[port].retry_cfg_idx < NUM_RETRY_CONFIGS - 1) {
+					rx[port].retry_cfg_idx++;
+					apply_retry_config(port, rx[port].retry_cfg_idx);
+				} else {
+					hdmi_rx_frl_rate_update(port, FRL_8G_4LANE);
+					rx[port].state = FSM_HPD_LOW;
+					rx[port].retry_cfg_idx = INVALID_RETRY_INDEX;
+				}
+				rx[port].err_cnt = 0;
+				rx[port].err_cnt_ch0 = 0;
+				rx[port].err_cnt_ch1 = 0;
+				rx[port].err_cnt_ch2 = 0;
+				rx[port].err_cnt_ch3 = 0;
+			}
+			if (ecc_err_monitor) {
+				rx_pr("port %d err cnt:%d,%d,%d,%d\n", port, ch0, ch1, ch2, ch3);
+				rx_pr("ced update flag 0x%x\n",
+				hdmirx_rd_cor(SCDCS_UPD_FLAGS_SCDC_IVCRX, port));
+			}
 		}
 	}
 }

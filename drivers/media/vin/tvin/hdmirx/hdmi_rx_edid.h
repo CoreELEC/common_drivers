@@ -1414,6 +1414,7 @@ struct data_block_location_s rx_get_cea_tag_offset(u8 *cur_edid, u16 tag_code);
 void get_edid_standard_timing_info(u8 *p_edid, struct edid_standard_timing *edid_st_info);
 void rm_unsupported_st(u8 *p_edid,
 	struct edid_standard_timing *edid_st_info, unsigned int refresh_rate);
+void hdmi_rx_frl_rate_update(u8 port, u8 new_frl_rate);
 
 #ifdef CONFIG_AMLOGIC_HDMITX
 bool rx_update_tx_edid_with_audio_block(unsigned char *edid_data,
