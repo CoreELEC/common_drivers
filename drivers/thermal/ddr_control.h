@@ -20,7 +20,7 @@ struct ddr_caddr {
 };
 
 struct ddr_cstep {
-	u32 temp;
+	int temp;
 	struct ddr_caddr *caddr_tab;
 	u32 caddr_cnt;
 };
