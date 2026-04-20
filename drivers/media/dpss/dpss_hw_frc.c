@@ -2574,29 +2574,28 @@ void hw_update_display_info(struct display_buffer_info_s *display_buf_info)
 		display_buf_info->mv_buf, display_buf_info->mc_phase);
 }
 
-void hw_mc_reverse_update(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc)
+void hw_mc_reverse_update(void)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct DPSS_MC0_TYPE *prm_mc;
 	struct PRM_INTF_TYPE *pix_rmif;
 	struct VFCD_t *vfcd;
 
-	if (!pchip_st) {
-		dbg_h0("%s pchip_st is null\n", __func__);
+	if (!pchip_st)
 		return;
-	}
-
+	if (!pchip_st->state_st.reverse_need_update)
+		return;
+	prm_mc = &pchip_st->prm_mc;
 	pix_rmif = &pchip_st->mc_pix_rmif;
 	pix_rmif->reverse[0]  = prm_mc->mc_rev_mode & 0x1;
 	pix_rmif->reverse[1]  = (prm_mc->mc_rev_mode & 0x2) >> 1;
 	frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC0, pix_rmif, pchip_st->fmt444_out);
 	frc_cfg_vfcd_rdmif_2ch(DPSS_RMIF_MC1, pix_rmif, pchip_st->fmt444_out);
-	dbg_h2("%s update mif\n", __func__);
 
 	vfcd = &pchip_st->mc_vfcd;
 	vfcd->rev_mode	  = prm_mc->mc_rev_mode;
 	frc_cfg_vfcd_dec(4, vfcd);   // mc0
 	frc_cfg_vfcd_dec(5, vfcd);   // mc1
-	dbg_h2("%s update cmpr\n", __func__);
 	if (prm_mc->src_cmpr == CMPR_AFBC) {
 		frc_cfg_vfcd_cmpr_enable(4, 1);
 		frc_cfg_vfcd_cmpr_enable(5, 1);
@@ -2609,5 +2608,7 @@ void hw_mc_reverse_update(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *pr
 		frc_cfg_vfcd_cmpr_enable(4, 0);
 		frc_cfg_vfcd_cmpr_enable(5, 0);
 	}
+	pchip_st->state_st.reverse_need_update = false;
+	dbg_h2("mc reverse update vfcd done\n");
 }
 

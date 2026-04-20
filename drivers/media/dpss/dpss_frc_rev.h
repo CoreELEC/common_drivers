@@ -37,11 +37,11 @@
 // dpss:20260208 add game memc
 // dpss:20260227 refine frc sw execution flow
 // dpss:20260407 add hdr flag
-// dpss_20260407 frc set fast pat mode"
-// dpss_20260415 add dpss_flag_info
+// dpss:20260407 frc set fast pat mode"
+// dpss:20260415 add dpss_flag_info
+// dpss:20260424 add rdma reset when start
 
-#define DPSS_FRC_FW_VER			"20260424 add rdma reset when start"
-
+#define DPSS_FRC_FW_VER			"20260507 frc set rev mode"
 #define DPSS_FRC_KERDRV_VER                  1000
 
 //#define DPSS_FRC_DEVNO		1

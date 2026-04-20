@@ -9,6 +9,7 @@
 #include "sys_def.h"
 #include <linux/module.h>
 #include <linux/kfifo.h>
+#include <linux/amlogic/gki_module.h>
 #include <uapi/amlogic/frc.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vfm/vframe_provider.h>
@@ -608,6 +609,42 @@ void DPSS_UPDATE_FRC_REG_BITS(unsigned int reg,
 }
 EXPORT_SYMBOL(DPSS_UPDATE_FRC_REG_BITS);
 /**********************************************************/
+static bool frc_reverse_panel;
+static u32 frc_mirror_panel;
+
+static int frc_get_panel_reverse(char *str)
+{
+	char *ptr = str;
+
+	/* Bootargs are defined as follows:
+	 *   "video_reverse=n"
+	 *      n=0: No flip
+	 *      n=1: X and Y flip
+	 *      n=2: X flip
+	 *      n=3: Y flip
+	 * The corresponding global vars:
+	 *   reverse -- 0:No flip  1.X and Y flip
+	 *    mirror -- 0:No flip  1:X flip 2:Y flip
+	 */
+	if (strstr(ptr, "1")) {
+		frc_reverse_panel = true;
+		frc_mirror_panel = DPSS_NO_MIRROR;
+	} else if (strstr(ptr, "2")) {
+		frc_reverse_panel = false;
+		frc_mirror_panel = DPSS_H_MIRROR;
+	} else if (strstr(ptr, "3")) {
+		frc_reverse_panel = false;
+		frc_mirror_panel = DPSS_V_MIRROR;
+	} else {
+		frc_reverse_panel = false;
+		frc_mirror_panel = DPSS_NO_MIRROR;
+	}
+
+	return 0;
+}
+
+__setup("video_reverse=", frc_get_panel_reverse);
+/**********************************************************/
 
 static void frc_drv_initial(struct dpss_dev_s *devp)
 {
@@ -1072,7 +1109,7 @@ void _prm_top_init_frc(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 	prm_top->comp_setting.dpe_vfce_num = 0;	//vfce start num
 	prm_top->comp_setting.dpe_vfcd_num = 1;	//vfcd start num
 
-	prm_top->frc_rev_mode = frc_top->frc_rev_mode;
+	prm_top->dp_set_rev_mode = frc_top->frc_rev_mode;
 	prm_top->fnr_sw_mode = 0;
 	prm_top->vdi_sw_mode = 0;
 	prm_top->sw_tbc_mode = 0;
@@ -1187,7 +1224,7 @@ static void frc_compress_fmt_parse(struct dpss_sub_vf_s *vfs)
 }
 
 extern unsigned int dpss_dbg_top_cfg0;
-void init_frc_pre_light(void)
+void init_frc_pre_light(struct vframe_s *vf)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
@@ -1197,6 +1234,15 @@ void init_frc_pre_light(void)
 
 	state_st = &pchip_st->state_st;
 	state_st->dae0_bypass_mode = 1;
+	state_st->reverse_need_update = false;
+
+	pchip_st->mc_pix_rmif.uv_swap = false;
+	pchip_st->mc_pix_rmif.reverse[0] = 0;
+	pchip_st->mc_pix_rmif.reverse[1] = 0;
+
+	pchip_st->prm_mc.mc_rev_mode = 0;
+
+	frc_transform_check(vf);
 }
 
 void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch)
@@ -1290,7 +1336,6 @@ void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch)
 	prm_top->trig_byp_dae0 = false;
 	prm_top->trig_byp_mc = false;
 	prm_top->reset_path = true;
-	pchip_st->mc_pix_rmif.uv_swap = false;
 	state_st->mc_byp_switch_on = false;
 	state_st->mc_byp_switch_off = false;
 	state_st->mc_ini_rdma_done = false;
@@ -2506,67 +2551,58 @@ void frc_cut_win_set_2_step(struct frc_win_s *win, struct vframe_s *vfm)
 	}
 }
 
-void frc_transform_check(struct vframe_s *vfm, struct pvpp_dis_frc_para_in_s *in_para)
+void frc_transform_check(struct vframe_s *vfm)
 {
-	struct frc_chip_st *pchip = dpss_get_frc_st();
+	struct frc_chip_st *pchip;
 	struct dpss_frc_fw_data_s *pfw_data;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	int reverse, mirror;
-	u32 src_from_nr = 0, frc_rev_mode = 0, rev_x = 0, uv_swap = 0;
+	u32 plink_rev_mode = 0, frc_rev_mode = 0, rev_x = 0, uv_swap = 0;
 	struct DPSS_MC0_TYPE *prm_mc;
+	struct dpss_frc_top_type_s *frc_top;
+	struct frc_state_s *state_st;
+	struct PRM_INTF_TYPE *pix_rmif;
 
-	if (!pchip) {
-		dbg_h2("%s pchip is null\n", __func__);
-		return;
-	}
+	pchip = dpss_get_frc_st();
 	pfw_data = (struct dpss_frc_fw_data_s *)dpss_get_fw_data();
-	if (!pfw_data) {
-		DBG_ERR("%s: frc_fw or pchip_st or win is null\n", __func__);
-		return;
-	}
-	if (!in_para)
+
+	if (!pchip || !pfw_data || !vfm)
 		return;
 
 	prm_mc = &pchip->prm_mc;
-	reverse = in_para->plink_reverse;
-	mirror = in_para->plink_hv_mirror;
+	pix_rmif = &pchip->mc_pix_rmif;
+	frc_top = &pfw_data->frc_top_type;
+	state_st = &pchip->state_st;
+
+	reverse = frc_reverse_panel;
+	mirror = frc_mirror_panel;
 
 	if (reverse)
-		frc_rev_mode |= C_BIT0 | C_BIT1;
-	else if (mirror & H_MIRROR)
-		frc_rev_mode |= C_BIT0;
-	else if (mirror & V_MIRROR)
-		frc_rev_mode |= C_BIT1;
+		plink_rev_mode |= DPSS_HV_MIRROR;
+	else if (mirror & DPSS_H_MIRROR)
+		plink_rev_mode |= DPSS_H_MIRROR;
+	else if (mirror & DPSS_V_MIRROR)
+		plink_rev_mode |= DPSS_V_MIRROR;
 
-	if (prm_top->frc_rev_mode != frc_rev_mode) {
-		struct frc_chip_st *pchip = dpss_get_frc_st();
-		struct PRM_INTF_TYPE *pix_rmif;
+	frc_rev_mode = prm_top->dp_set_rev_mode ^ plink_rev_mode;
 
-		if (!pchip) {
-			dbg_h2("%s pchip is null\n", __func__);
-			return;
-		}
-		pix_rmif = &pchip->mc_pix_rmif;
+	if (state_st->force_frc_rev_mode)
+		frc_rev_mode = state_st->force_frc_rev_mode;
 
-		if (prm_top->dpss_mode == DPSS_FRC_MODE)
-			src_from_nr = 0;
-		else
-			src_from_nr = 1;
+	rev_x = frc_rev_mode & DPSS_H_MIRROR;
+	if (((prm_top->dpss_mode == DPSS_FRC_MODE && !(vfm->type & VIDTYPE_COMPRESS)) ||
+		(prm_top->dpss_mode != DPSS_FRC_MODE &&
+		prm_top->nro_fs_fmt.src_cmpr == CMPR_UN)) && rev_x)
+		uv_swap = 1;
+	prm_top->frc_rev_mode = frc_rev_mode;
+	pix_rmif->uv_swap = uv_swap;
+	prm_mc->mc_rev_mode = prm_top->frc_rev_mode;
+	frc_top->frc_rev_mode = prm_top->frc_rev_mode & 0x3;
+	state_st->reverse_need_update = frc_rev_mode != 0 ? true : false;
 
-		rev_x = frc_rev_mode & C_BIT0;
-
-		if (!(vfm->type & VIDTYPE_COMPRESS) && rev_x)
-			uv_swap = 1;
-
-		prm_top->frc_rev_mode = frc_rev_mode;
-		pix_rmif->uv_swap = uv_swap;
-		prm_mc->mc_rev_mode = prm_top->frc_rev_mode;
-		dbg_f1("reverse:%d mirror:%d frc_rev_mode:0x%x uv_swap:%d\n",
-			reverse, mirror, prm_top->frc_rev_mode, pix_rmif->uv_swap);
-		//hw_cfg_dpss_mc0(prm_top, src_from_nr, prm_mc);
-		//hw_cfg_dpss_mc_intf(prm_top, prm_mc);
-		hw_mc_reverse_update(prm_top, prm_mc);
-	}
+	dbg_f1("reverse:%d mirror:%d frc_rev_mode:%d[%d,%d]force:%d uv_swap:%d\n",
+			reverse, mirror, prm_top->frc_rev_mode, prm_top->dp_set_rev_mode,
+			plink_rev_mode, state_st->force_frc_rev_mode, pix_rmif->uv_swap);
 }
 
 bool is_vd1_link_state(void)
@@ -2837,7 +2873,7 @@ int pvpp_display_frc_game(struct vframe_s *vfm,
 			frc_set_mc_bypass(3);
 			dbg_f1("pvpp_game enable frc\n");
 		}
-		frc_transform_check(vfm, in_para);
+		hw_mc_reverse_update();
 		frc_cut_win_chk_2_step(&in_para->win, vfm);
 		frc_cut_win_set_2_step(&in_para->win, vfm);
 		check_readback_reg(BIT_0);
@@ -2941,7 +2977,7 @@ int pvpp_display_frc(struct vframe_s *vfm,
 			frc_set_mc_bypass(3);
 			dbg_f1("enable frc\n");
 		}
-		frc_transform_check(vfm, in_para);
+		hw_mc_reverse_update();
 		frc_cut_win_chk_2_step(&in_para->win, vfm);
 		frc_cut_win_set_2_step(&in_para->win, vfm);
 		check_readback_reg(BIT_0);

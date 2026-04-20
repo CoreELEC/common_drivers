@@ -227,8 +227,8 @@ void hw_cfg_dpss_top(struct PRM_DPSS_TOP *prm_top)
 		w_reg_bit(DPSS_TOP_PER_DLY_CTRL,
 			src0_nrdi_frc_en, 0,
 			1); //wr reg_frc_nr_en[1], src0 include di
-		w_reg_bit(DPSS_TOP_INT_MODE_CTRL, 3, 8,
-			2); //dpe frm_int 0 for frc done
+		w_reg_bit(DPSS_TOP_INT_MODE_CTRL, 0, 8,
+			2); //dpe frm_int 0 for frc done  bit9:8 0:disable irq_dpe0
 		hw_cfg_dpss_buff_addr(prm_top, dpss_mode,
 			src0_nrdi_frc_en, 1, 0);
 

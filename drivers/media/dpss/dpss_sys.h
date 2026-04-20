@@ -587,6 +587,10 @@ struct frc_state_s {
 	bool is_pause_state_last_frmae;
 	u8 mc_last_idx;
 
+	//rev bit0:rev_x bit1:rev_y
+	u8 force_frc_rev_mode;
+	bool reverse_need_update;
+
 	struct buf_s buf_stats;
 	struct proc_s proc_stats;
 	struct undone_s undone_stats;

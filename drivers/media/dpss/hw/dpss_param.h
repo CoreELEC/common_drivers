@@ -331,6 +331,7 @@ struct PRM_DPSS_TOP {
 	bool            dpss_nr_byp;
 	u32        frm_hsize_sel;
 	struct PRM_COMP_SET  comp_setting;
+	u32        dp_set_rev_mode;
 	u32        frc_rev_mode;
 	u32        nr_hscale_on;
 	u32        nr_aapps_up;

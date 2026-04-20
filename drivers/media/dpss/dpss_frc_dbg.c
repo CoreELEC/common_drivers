@@ -73,8 +73,8 @@ void dpss_frc_status(void)
 			frc_top->frc_deblur_level);
 	pr_frc(0, "ratio_n2m\t= [%d:%d]\tfilm\t= %d\n", frc_top->frc_input_n,
 			frc_top->frc_output_m, (rd(FRC_REG_PHS_TABLE) >> 8) & 0xFF);
-	pr_frc(0, "mc_link_enable\t= [dpss:%2d, vd1_mc:%2d]\n", rd(FRC_DPSS_VPP_LINK) & 0x1,
-			!is_vd1_link_state());
+	pr_frc(0, "mc_link_enable\t= [dpss_frc:%2d, mc_link:%2d]\n",
+			state_st->frc_en, !is_vd1_link_state());
 	pr_frc(0, "mc_link_ctrl\t= [%2d,%2d,%2d,%2d,%2d,%2d]\n",
 			state_st->dpss_reg, state_st->dpe_ready, enable_mc_link,
 			!state_st->need_disable_mc_link, !state_st->disable_mc_link_intf,
@@ -82,7 +82,8 @@ void dpss_frc_status(void)
 	pr_frc(0, "mc_bypass\t= %d, pre_vs_offset\t= %d\n",
 			rd(FRC_MC_HW_CTRL0) & 0x3, rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
 	pr_frc(0, "dpss_flag\t= %#x\n", frc_top->frc_prot_mode);
-	pr_frc(0, "eos enable\t= %d\n", state_st->enable_last_drop);
+	pr_frc(0, "eos enable\t= %d\trev_mode\t= %d\n",
+		state_st->enable_last_drop, frc_top->frc_rev_mode);
 	pr_frc(0, "game_n2m\t= %d, game_film\t= %d\n",
 		game_st->game_n2m, game_st->game_film);
 //	pr_frc(0, "secure_mode= %d, buf secured= %d\n",

@@ -27,6 +27,6 @@ void hw_config_dae_loop_tab(enum DPSS_FRC_RATIO frc_ratio, enum DPSS_FILM_MODE f
 void frc_mc_cut_0(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr);
 void frc_mc_cut_1(struct PRM_DPSS_TOP *prm_top, u32 src_from_nr);
 void hw_update_display_info(struct display_buffer_info_s *display_buf_info);
-void hw_mc_reverse_update(struct PRM_DPSS_TOP *prm_top, struct DPSS_MC0_TYPE *prm_mc);
+void hw_mc_reverse_update(void);
 
 #endif

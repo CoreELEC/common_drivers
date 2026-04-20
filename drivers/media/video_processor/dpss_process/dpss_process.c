@@ -2235,6 +2235,8 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 		max_height -= vf->src_crop.bottom;
 	}
 
+	memset(&dev->dpss_parm, 0, sizeof(dev->dpss_parm));
+
 	if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
 		dev->dpss_parm.di_parm.is_interlace = 1;
 		dev->cur_is_i = true;

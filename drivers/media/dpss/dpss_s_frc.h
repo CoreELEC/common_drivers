@@ -16,10 +16,15 @@
 
 #define DAE0_FREEZE_CNT    2
 
+#define DPSS_NO_MIRROR  0
+#define DPSS_H_MIRROR   1
+#define DPSS_V_MIRROR   2
+#define DPSS_HV_MIRROR  3 /* HV_MIRROR = H_MIRROR | V_MIRROR */
+
 // #define DPSS_FRC_FW_VER			"20250816 dpss_frc_driver update release"
 // #define DPSS_FRC_KERDRV_VER		1000
 void dpss_h_update_frc(struct vframe_s *vfm);
-void init_frc_pre_light(void);
+void init_frc_pre_light(struct vframe_s *vf);
 void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch);
 void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs);
 void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vframe_s *vf);
@@ -61,6 +66,8 @@ int dpss_frc_fpp_memc_set_level(u8 level, u8 num);
 void update_frc_state(void);
 struct vframe_s *frc_get_vfm(void);
 void mc_res_switch_begin(void);
+//reverse
+void frc_transform_check(struct vframe_s *vfm);
 
 //crop
 void detect_axis_change(struct pvpp_dis_frc_para_in_s *in_para);

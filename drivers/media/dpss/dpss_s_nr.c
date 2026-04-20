@@ -373,8 +373,6 @@ static void _prm_top_init(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 		//DPSS_FRC_RATIO_1_2
 		prm_top->frc_ratio = (enum DPSS_FRC_RATIO)frc_top->in_out_ratio;
 		prm_top->dpss_mode = frc_top->dpss_mode;	//DPSS_FRC_MODE;
-		if (frc_top->frc_rev_mode)
-			prm_top->frc_rev_mode = frc_top->frc_rev_mode;
 	} else if (path_id == 1) {
 		prm_top->reverse[0] = 0;
 		prm_top->reverse[1] = 0;
@@ -413,8 +411,6 @@ static void _prm_top_init(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
 		prm_top->dw_disable = true;
 	else
 		prm_top->dw_disable = false;
-	dbg_h0("%s: frc_rev_mode:%d, node:%d.\n", __func__, prm_top->frc_rev_mode,
-		frc_top->frc_rev_mode);
 }
 
 static void _prm_top_init_light(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_top,
@@ -567,9 +563,9 @@ static void _prm_top_init_light(struct dpss_ch_s *pch, struct PRM_DPSS_TOP *prm_
 	prm_top->comp_setting.dpe_vfcd_num = 1;	//vfcd start num
 
 	if (pch->c.parm.di_parm.rotate_flag & VFRAME_FLAG_MIRROR_H)
-		prm_top->frc_rev_mode |= C_BIT0;
+		prm_top->dp_set_rev_mode |= C_BIT0;
 	if (pch->c.parm.di_parm.rotate_flag & VFRAME_FLAG_MIRROR_V)
-		prm_top->frc_rev_mode |= C_BIT1;
+		prm_top->dp_set_rev_mode |= C_BIT1;
 
 //	if (frc_top->frc_rev_mode)
 //		prm_top->frc_rev_mode = frc_top->frc_rev_mode;	// dpss_frc_rev_mode;
@@ -2912,7 +2908,7 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	if (pch->c.ch == 0 && pch->d->frc_link) {
 		if (!light_chg)
 			init_frc_pre(vfs, pch);
-		init_frc_pre_light();
+		init_frc_pre_light(vf);
 	}
 
 	//hw_init_prm(pch, prm_top, src, vfs);
