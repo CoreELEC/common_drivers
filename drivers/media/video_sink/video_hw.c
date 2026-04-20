@@ -14754,18 +14754,25 @@ static int update_afd_param(u8 id,
 	in_p.user_crop_type = AFD_CROP_INVALID;
 	/* CROP_SEL_DEF or CROP_SEL_SRC without src_crop*/
 	if (crop_mode == CROP_SEL_DEF) {
-		if (vf->ratio_control & DISP_RATIO_ADAPTED_PICMODE) {
-			in_p.user_crop.top = vf->pic_mode.vs;
-			in_p.user_crop.bottom = vf->pic_mode.ve;
-			in_p.user_crop.left = vf->pic_mode.hs;
-			in_p.user_crop.right = vf->pic_mode.he;
-			in_p.user_crop_type = AFD_CROP_DB;
+		if (vf->ratio_control & DISP_RATIO_DISABLE_OVERSCAN) {
+			in_p.user_crop.top = 0;
+			in_p.user_crop.bottom = 0;
+			in_p.user_crop.left = 0;
+			in_p.user_crop.right = 0;
 		} else {
-			in_p.user_crop.top = layer_info->crop_top;
-			in_p.user_crop.bottom = layer_info->crop_bottom;
-			in_p.user_crop.left = layer_info->crop_left;
-			in_p.user_crop.right = layer_info->crop_right;
-			in_p.user_crop_type = AFD_CROP_SYSFS;
+			if (vf->ratio_control & DISP_RATIO_ADAPTED_PICMODE) {
+				in_p.user_crop.top = vf->pic_mode.vs;
+				in_p.user_crop.bottom = vf->pic_mode.ve;
+				in_p.user_crop.left = vf->pic_mode.hs;
+				in_p.user_crop.right = vf->pic_mode.he;
+				in_p.user_crop_type = AFD_CROP_DB;
+			} else {
+				in_p.user_crop.top = layer_info->crop_top;
+				in_p.user_crop.bottom = layer_info->crop_bottom;
+				in_p.user_crop.left = layer_info->crop_left;
+				in_p.user_crop.right = layer_info->crop_right;
+				in_p.user_crop_type = AFD_CROP_SYSFS;
+			}
 		}
 	}
 	if (is_src_crop_valid(vf->src_crop)) {

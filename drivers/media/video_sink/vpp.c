@@ -6965,10 +6965,17 @@ RERTY:
 				local_input.custom_ar =
 					vf->pic_mode.custom_ar;
 		}
-		local_input.crop_top = vf->pic_mode.vs;
-		local_input.crop_left = vf->pic_mode.hs;
-		local_input.crop_bottom = vf->pic_mode.ve;
-		local_input.crop_right = vf->pic_mode.he;
+		if (vf->ratio_control & DISP_RATIO_DISABLE_OVERSCAN) {
+			local_input.crop_top = 0;
+			local_input.crop_left = 0;
+			local_input.crop_bottom = 0;
+			local_input.crop_right = 0;
+		} else {
+			local_input.crop_top = vf->pic_mode.vs;
+			local_input.crop_left = vf->pic_mode.hs;
+			local_input.crop_bottom = vf->pic_mode.ve;
+			local_input.crop_right = vf->pic_mode.he;
+		}
 	}
 
 	if (!local_input.pps_support)
