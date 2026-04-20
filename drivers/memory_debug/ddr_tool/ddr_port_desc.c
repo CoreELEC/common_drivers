@@ -1019,20 +1019,20 @@ static struct ddr_port_desc ddr_port_desc_s6[] __initdata = {
 	PORT_DESC(.port_id =  19, .bus = 19, .port_name = "VC9000E"),
 
 	/* SUB DEVICE */
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "SDIO_B"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "EMMC"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "SDIO_A"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "AUCPU"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "USB2DRD"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "USB3DRD"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "SPICCX2"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "ETH"),
-	PORT_DESC(.port_id = 14, .bus = 14, .port_name = "AUDIO"),
+	PORT_DESC(.port_id = 14, .sub_id =  8, .bus = 14, .port_name = "SDIO_B"),
+	PORT_DESC(.port_id = 14, .sub_id =  9, .bus = 14, .port_name = "EMMC"),
+	PORT_DESC(.port_id = 14, .sub_id = 12, .bus = 14, .port_name = "SDIO_A"),
+	PORT_DESC(.port_id = 14, .sub_id = 16, .bus = 14, .port_name = "AUCPU"),
+	PORT_DESC(.port_id = 14, .sub_id = 17, .bus = 14, .port_name = "USB2DRD"),
+	PORT_DESC(.port_id = 14, .sub_id = 19, .bus = 14, .port_name = "USB3DRD"),
+	PORT_DESC(.port_id = 14, .sub_id = 24, .bus = 14, .port_name = "SPICCX2"),
+	PORT_DESC(.port_id = 14, .sub_id = 25, .bus = 14, .port_name = "ETH"),
+	PORT_DESC(.port_id = 14, .sub_id = 48, .bus = 14, .port_name = "AUDIO"),
 
 	/* SUB VGE */
-	PORT_DESC(.port_id = 13, .bus = 13, .port_name = "VICP"),
-	PORT_DESC(.port_id = 13, .bus = 13, .port_name = "GE2D"),
-	PORT_DESC(.port_id = 13, .bus = 13, .port_name = "DEWRAP")
+	PORT_DESC(.port_id = 13, .sub_id =  0, .bus = 13, .port_name = "VICP"),
+	PORT_DESC(.port_id = 13, .sub_id =  1, .bus = 13, .port_name = "GE2D"),
+	PORT_DESC(.port_id = 13, .sub_id =  2, .bus = 13, .port_name = "DEWRAP")
 };
 
 static struct ddr_port_desc ddr_port_desc_t3x[] __initdata = {
