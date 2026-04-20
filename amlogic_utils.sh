@@ -604,7 +604,8 @@ function adjust_sequence_modules_loading() {
 		if [[ ! -f $module ]]; then
 			continue
 		fi
-		match=`sed -n "/${module}/=" modules.dep.temp0`
+		module_escaped=$(echo "$module" | sed 's/\./\\./g')
+		match=`sed -nE "/(^|[[:space:]:])${module_escaped}([[:space:]:]|$)/=" modules.dep.temp0`
 		for match in ${match[@]}; do
 			match_count=(${match_count[@]} $match)
 		done
