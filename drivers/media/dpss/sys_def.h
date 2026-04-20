@@ -59,7 +59,7 @@ typedef unsigned long u64;
 #define base_pr		printf
 #else
 //#include "../dpss_base.h"
-#define base_pr		pr_debug
+#define base_pr		pr_info
 #endif
 
 #define PRC_DBG(fmt, args ...)		base_pr("sw:" fmt, ##args)
