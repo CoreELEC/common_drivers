@@ -1113,7 +1113,6 @@ static void frc_state_init(void)
 	state_st->is_frc_vpp_link = false;
 	state_st->need_set_phase0 = false;
 	state_st->mc_set_phase0 = false;
-	state_st->dae0_bypass_mode = 1;
 	state_st->mc_bypass_always = 0;
 	state_st->is_dos = true;
 	state_st->check_fallback = 0;
@@ -1181,6 +1180,18 @@ static void frc_compress_fmt_parse(struct dpss_sub_vf_s *vfs)
 }
 
 extern unsigned int dpss_dbg_top_cfg0;
+void init_frc_pre_light(void)
+{
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
+
+	if (!pchip_st)
+		return;
+
+	state_st = &pchip_st->state_st;
+	state_st->dae0_bypass_mode = 1;
+}
+
 void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch)
 {
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top; //ary need check

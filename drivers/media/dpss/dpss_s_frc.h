@@ -19,6 +19,7 @@
 // #define DPSS_FRC_FW_VER			"20250816 dpss_frc_driver update release"
 // #define DPSS_FRC_KERDRV_VER		1000
 void dpss_h_update_frc(struct vframe_s *vfm);
+void init_frc_pre_light(void);
 void init_frc_pre(struct dpss_sub_vf_s *vfs, struct dpss_ch_s *pch);
 void init_frc_post(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs);
 void frc_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs, struct vframe_s *vf);

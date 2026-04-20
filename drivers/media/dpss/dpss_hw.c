@@ -2771,7 +2771,8 @@ void irq_dae0(void)
 		}
 		if (frc_int_st->dae0_int_cnt > 30 && dae_film_mode == DPSS_VIDEO)
 			state_st->dae0_bypass_mode = 2;
-		dbg_f2("irq_dae_0: dae0_bypass_mode=%d\n", state_st->dae0_bypass_mode);
+	} else if (state_st->mc_bypass_always == 2) {
+		state_st->dae0_bypass_mode = 2;
 	}
 
 	pre_fid = (dae_out_fid >> 16) & 0xf;
@@ -2805,8 +2806,8 @@ void irq_dae0(void)
 	}
 	dbg_h2("phs_swth=%d,pre_fid = %d,cur_fid = %d,nxt_fid= %d\n",
 	       phs_swth, pre_fid, cur_fid, nxt_fid);
-	dbg_h2("dae_film_mode:%d, sw_dae_cnt:%d\n",
-		dae_film_mode, frc_int_st->dae0_int_cnt);
+	dbg_h2("dae_film_mode:%d,bypass_mode:%d,sw_dae_cnt:%d\n",
+		dae_film_mode, state_st->dae0_bypass_mode, frc_int_st->dae0_int_cnt);
 	dpss_dae_frm_cnt_src0++;
 	prm_top->frame_count = dpss_dae_frm_cnt_src0;
 

@@ -2914,8 +2914,11 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	}
 	_prm_top_init_vfm(pch, prm_top, vfs, false);
 
-	if (pch->c.ch == 0 && pch->d->frc_link && !light_chg)
-		init_frc_pre(vfs, pch);
+	if (pch->c.ch == 0 && pch->d->frc_link) {
+		if (!light_chg)
+			init_frc_pre(vfs, pch);
+		init_frc_pre_light();
+	}
 
 	//hw_init_prm(pch, prm_top, src, vfs);
 
