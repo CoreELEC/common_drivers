@@ -14,6 +14,11 @@ ccflags-y += "-DGKI_CONFIG=\"$(srctree)/$(COMMON_DRIVERS_DIR)/arch/arm64/configs
 
 obj-$(CONFIG_AMLOGIC_DEBUG) = $(MODULE_NAME).o
 $(MODULE_NAME)-y = main.o lockup.o sched.o kprobes.o
+
+ifeq ($(CONFIG_THUMB2_KERNEL)$(CONFIG_KASAN),yy)
+CFLAGS_lockup.o += -fno-reorder-functions
+endif
+
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DEBUG_ISOLCPUS) += isolcpus.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DEBUG_MHZ) += cpu_mhz.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DEBUG_ATRACE) += atrace.o atrace_mem.o
