@@ -1513,7 +1513,9 @@ void get_cm_hist(struct vpp_hist_param_s *vp)
 	int data_port;
 
 	/*s5 not support color hist*/
-	if (chip_type_id == chip_s5 || chip_type_id == chip_s7d)
+	if (chip_type_id == chip_s5 ||
+		chip_type_id == chip_s7d ||
+		suspend_drv_status_get())
 		return;
 
 	if (enable_pattern_detect == 1) {
@@ -12634,6 +12636,9 @@ void resume_cm(int vpp_index)
 	pr_amvecm_dbg("amvecm: resume cm0, pq_cfg.cm_en/cm_en=%d/%d\n",
 		pq_cfg.cm_en, cm_en);
 
+	if (!cm_en)
+		amcm_disable(WR_VCB, vpp_index);
+
 //	if (pq_cfg.cm_en && reg_cm_list) {
 	if (reg_cm_list) {
 		amregs_store.length = RECOVERY_REG_CM_MAX;
@@ -12650,9 +12655,6 @@ void resume_cm(int vpp_index)
 		if (cm_en)
 			amcm_enable(WR_VCB, vpp_index);
 	}
-
-	if (!cm_en)
-		amcm_disable(WR_VCB, vpp_index);
 }
 
 void resume_sr(int vpp_index)
@@ -12964,7 +12966,7 @@ void resume_recovery_process(int vpp_index)
 			cm_top_ctl(WR_DMA, 1, vpp_index);
 		}
 
-		resume_cm(vpp_index);
+//		resume_cm(vpp_index);
 		resume_ve(vpp_index);
 		resume_dnlp();
 		resume_vadj1(vpp_index);
@@ -19037,6 +19039,7 @@ static int amvecm_drv_resume(struct device *dev)
 
 	resume_dma();
 	resume_gamut_wrapper();
+
 	if (chip_type_id == chip_t5w ||
 		chip_type_id == chip_t3 ||
 		chip_type_id == chip_t7 ||
@@ -19050,10 +19053,12 @@ static int amvecm_drv_resume(struct device *dev)
 		chip_type_id == chip_c5 ||
 		is_meson_g12b_cpu()) {
 		if (suspend_drv_status_get()) {
+			resume_cm(0);
 			vecm_latch_flag2 |= FLAG_RESUME_RECOVERY;
 			resume_mtx_flag_set(true);
 		}
 	}
+
 	reset_hdr_path_cfg();
 	pr_info("amvecm: resume module\n");
 	return 0;

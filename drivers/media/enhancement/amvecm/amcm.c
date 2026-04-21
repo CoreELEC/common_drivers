@@ -247,6 +247,10 @@ void write_reg_by_mask(unsigned int addr, unsigned int mask,
 	}
 }
 
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+static struct am_reg_s cm_reg_bak[179];
+#endif
+
 void am_set_regmap(struct am_regs_s *p, int vpp_index)
 {
 	unsigned short i;
@@ -260,6 +264,7 @@ void am_set_regmap(struct am_regs_s *p, int vpp_index)
 	unsigned int addr_tmp = 0;
 	unsigned int sr_addr_offset = 0x2500;
 	unsigned int reg_sr = SRSHARP1_LC_TOP_CTRL;
+	unsigned int cm_reg_flag = 0;
 
 	if (chip_type_id == chip_t6d ||
 		chip_type_id == chip_t6w ||
@@ -267,7 +272,12 @@ void am_set_regmap(struct am_regs_s *p, int vpp_index)
 		reg_sr = VPP_LC_MODE;
 
 	dejaggy_reg = sr0_dej_setting[DEJAGGY_LEVEL - 1].am_reg;
+
+	if (p->length == 0xb3 &&
+		p->am_reg[0].addr == 0x100)
+		cm_reg_flag = 1;
 #endif
+
 	for (i = 0; i < p->length; i++) {
 		mask = p->am_reg[i].mask;
 		val = p->am_reg[i].val;
@@ -278,6 +288,18 @@ void am_set_regmap(struct am_regs_s *p, int vpp_index)
 				__func__, i, mask, val, p->length);
 			continue;
 		}
+
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+		if (i < 179 &&
+			cm_reg_flag &&
+			addr == cm_reg_bak[i].addr &&
+			mask == cm_reg_bak[i].mask) {
+			if (val == cm_reg_bak[i].val)
+				continue;
+			else
+				cm_reg_bak[i].val = val;
+		}
+#endif
 
 		skip = skip_pq_ctrl_load(&p->am_reg[i]);
 		if (skip != 0)
@@ -413,18 +435,15 @@ void am_set_regmap(struct am_regs_s *p, int vpp_index)
 			break;
 		case REG_TYPE_INDEX_VPP_COEF:
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-			//if (((addr & 0xf) == 0) ||
-			//    ((addr & 0xf) == 0x8)) {
-			if (pq_reg_wr_rdma)
-				cm_wr_api(addr, val, 0xffffffff, WR_DMA, vpp_index);
-			else
+			if (chip_cls_id == TV_CHIP) {
 				cm_wr_api(addr, val, 0xffffffff, WR_VCB, 0);
-			//} else {
-			//	if (pq_reg_wr_rdma)
-			//		cm_wr_api(addr, val, 0xffffffff, WR_DMA);
-			//	else
-			//		cm_wr_api(addr, val, 0xffffffff, WR_VCB);
-			//}
+			} else {
+				if (pq_reg_wr_rdma)
+					cm_wr_api(addr, val, 0xffffffff, WR_DMA, vpp_index);
+				else
+					cm_wr_api(addr, val, 0xffffffff, WR_VCB, 0);
+			}
+
 			default_sat_param(addr, val);
 #endif
 			break;
@@ -1152,14 +1171,17 @@ void cm2_frame_size_patch(struct vframe_s *vf,
 	addr_port = VPP_CHROMA_ADDR_PORT;
 	data_port = VPP_CHROMA_DATA_PORT;
 
-	if (!cm_en || width == 0 || height == 0)
+	if (!cm_en || width == 0 || height == 0 ||
+		suspend_drv_status_get())
 		return;
-	else if (width < cm_width_limit)
+
+	if (width < cm_width_limit)
 		amcm_disable(WR_DMA, vpp_index);
 	else if (!cm_en_flag && !cm_dis_flag)
 		amcm_enable(WR_DMA, vpp_index);
 
 	vpp_size = width | (height << 16);
+
 	if (cm_size != vpp_size) {
 		VSYNC_WRITE_VPP_REG_VPP_SEL(addr_port, 0x205, vpp_index);
 		VSYNC_WRITE_VPP_REG_VPP_SEL(data_port, vpp_size, vpp_index);
@@ -1186,7 +1208,8 @@ void cm2_frame_switch_patch(void)
 	int data_port;
 	struct cm_port_s cm_port;
 
-	if (chip_type_id == chip_s7)
+	if (chip_type_id == chip_s7 ||
+		suspend_drv_status_get())
 		return;
 
 	if (chip_type_id == chip_s5 ||

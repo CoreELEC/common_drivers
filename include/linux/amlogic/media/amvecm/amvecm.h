@@ -789,5 +789,7 @@ extern int force_eotf_type;
 extern int force_oetf_type;
 
 void gamut_mapping_wrapper_crtl(int module, int en);
+bool suspend_drv_status_get(void);
+
 #endif /* AMVECM_H */
 
