@@ -45,6 +45,7 @@
 		lcd_cpu_gpio_names = "GPIOH_7";
 
 		config_check_glb = <1>;
+		resume_type = <3>;
 		display_timing_req_min = <1  /*alert_level: 0:disable, 1:warning, 2:fatal error*/
 			45   /*hsw+hbp*/
 			0    /*hfp, 0 for no need*/
