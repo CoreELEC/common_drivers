@@ -4022,6 +4022,10 @@ RESTART:
 		ratio_y = ratio_y / (vd_layer[input->layer_id].nr_pps_v_scaler_rate + 1);
 	}
 
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		if (is_amdv_enable() && video_is_meson_sc2_cpu())
+			pre_scaler_en = 0;/*sc2, use postscaler in pps*/
+#endif
 	/*pre hsc&vsc in pps for scaler down*/
 	if (input->vsr_safa_support &&
 		((filter->vpp_vsc_start_phase_step >= 0x2000000 &&

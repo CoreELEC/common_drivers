@@ -1105,6 +1105,8 @@ extern u32 dithering_out_depth;
 extern u32 rgb2yuv_offset0;
 extern u32 rgb2yuv_offset1;
 extern u32 rgb2yuv_offset2;
+extern u32 postblend_w;
+extern u32 postblend_h;
 /************/
 extern enum signal_format_enum g_dst_format;
 

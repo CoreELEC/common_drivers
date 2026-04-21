@@ -109,6 +109,9 @@ static int is_muted;
 
 struct vpp_post_info_t core3_slice_info;
 static char md_value[1024];
+u32 postblend_w;
+u32 postblend_h;
+
 /* -1: invalid osd index
  *  0: osd is disabled
  *  1: osd is enabled
@@ -2963,6 +2966,8 @@ static int dv_core3_set
 	 u32 *p_core3_dm_regs,
 	 u32 *p_core3_md_regs,
 	 int slice_idx,
+	 int h_total,
+	 int v_total,
 	 int hsize,
 	 int vsize,
 	 int amdv_enable,
@@ -3221,8 +3226,8 @@ static int dv_core3_set
 	else
 		VSYNC_WR_DV_REG(CORE3_CLKGATE_CTRL, 0);
 	VSYNC_WR_DV_REG(CORE3_SWAP_CTRL1,
-			((hsize + htotal_add) << 16)
-			| (vsize + vtotal_add + vsize_add + vsize_hold * 2));
+			((h_total + htotal_add) << 16)
+			| (v_total + vtotal_add + vsize_add + vsize_hold * 2));
 	VSYNC_WR_DV_REG(CORE3_SWAP_CTRL2,
 			(hsize << 16) | (vsize + vsize_add));
 	VSYNC_WR_DV_REG(CORE3_SWAP_CTRL3,
@@ -3371,11 +3376,31 @@ void update_core3_slice_info(u32 v_width, u32 v_height)
 	} else
 #endif
 	{
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+		post_info = get_vpp_post_amdv_info();
+		post0_info = &post_info->vpp0_post_info;
+		if (debug_dolby & 2)
+			pr_dv_dbg("post_info %d %d %d %d %d %d %d %d %d %d %d %d\n",
+					  post0_info->slice_num,
+					  post0_info->overlap_hsize,
+					  post0_info->vpp_post_blend_hsize,
+					  post0_info->vpp_post_blend_vsize,
+					  post0_info->slice[0].hsize,
+					  post0_info->slice[0].vsize,
+					  post0_info->slice[1].hsize,
+					  post0_info->slice[1].vsize,
+					  post0_info->slice[2].hsize,
+					  post0_info->slice[2].vsize,
+					  post0_info->slice[3].hsize,
+					  post0_info->slice[3].vsize);
+#endif
 		core3_slice_info.vpp0_post_info.slice_num = 1;
 		core3_slice_info.vpp0_post_info.vpp_post_blend_hsize = v_width;
 		core3_slice_info.vpp0_post_info.vpp_post_blend_vsize = v_height;
-		core3_slice_info.vpp0_post_info.slice[0].hsize = v_width;
-		core3_slice_info.vpp0_post_info.slice[0].vsize = v_height;
+		core3_slice_info.vpp0_post_info.slice[0].hsize =
+			postblend_w ? postblend_w : v_width;
+		core3_slice_info.vpp0_post_info.slice[0].vsize =
+			postblend_h ? postblend_h : v_height;
 	}
 }
 
@@ -3797,6 +3822,7 @@ void apply_stb_core_settings(dma_addr_t dma_paddr,
 				 (uint32_t *)p_dm_reg3,
 				 p_md_reg3->raw_metadata,
 				 i,
+				 vinfo->width, v_height,
 				 core3_slice_info.vpp0_post_info.slice[i].hsize,
 				 core3_slice_info.vpp0_post_info.slice[i].vsize,
 				 1,

@@ -17423,6 +17423,8 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo rgb2yuv_offset0 value > /sys/class/amdolby_vision/debug;\n"
 	"echo rgb2yuv_offset1 value > /sys/class/amdolby_vision/debug;\n"
 	"echo rgb2yuv_offset2 value > /sys/class/amdolby_vision/debug;\n"
+	"echo postblend_w value > /sys/class/amdolby_vision/debug;\n"
+	"echo postblend_h value > /sys/class/amdolby_vision/debug;\n"
 };
 
 static ssize_t  amdolby_vision_debug_show
@@ -18021,6 +18023,16 @@ static ssize_t amdolby_vision_debug_store
 			return -EINVAL;
 		rgb2yuv_offset2 = val;
 		pr_info("set rgb2yuv_offset2 %d\n", rgb2yuv_offset2);
+	} else if (!strcmp(parm[0], "postblend_w")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		postblend_w = val;
+		pr_info("postblend_w 0x%x\n", postblend_w);
+	} else if (!strcmp(parm[0], "postblend_h")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		postblend_h = val;
+		pr_info("postblend_h 0x%x\n", postblend_h);
 	} else {
 		pr_info("unsupport cmd\n");
 	}
