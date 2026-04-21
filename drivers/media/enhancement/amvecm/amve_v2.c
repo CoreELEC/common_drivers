@@ -727,7 +727,8 @@ void ve_eye_proc(int mtx_ep[][4], int mtx_on, int vpp_index)
 		64, 512, 512
 	};
 
-	if (vinfo_lcd_support())
+	if (vinfo_lcd_support() ||
+		vinfo_hdmi_out_fmt())
 		return;
 
 	for (i = SLICE0; i < slice_max; i++) {

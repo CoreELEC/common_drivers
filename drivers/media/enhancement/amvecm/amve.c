@@ -6629,7 +6629,7 @@ void init_pq_rdma_part_ins(void)
 	pq_rdma_part_ins[2].vpp_index = RDMA_VPP0;
 	pq_rdma_part_ins[2].table_index = AMVECM_PARTITION_TABLE_2;
 	pq_rdma_part_ins[2].flag = use_rdma_part_tables;
-	pq_rdma_part_ins[2].max_reg_cnt = 1024 + lut3d_reg_size;
+	pq_rdma_part_ins[2].max_reg_cnt = 2048 + lut3d_reg_size;
 	pq_rdma_part_ins[2].reg_range_check = false;
 	pq_rdma_part_ins[2].check_start_addr = 0x3800;
 	pq_rdma_part_ins[2].check_end_addr = 0x5b8f;
@@ -6639,7 +6639,7 @@ void init_pq_rdma_part_ins(void)
 	pq_rdma_part_ins[3].vpp_index = RDMA_VPP0;
 	pq_rdma_part_ins[3].table_index = AMVECM_PARTITION_TABLE_3;
 	pq_rdma_part_ins[3].flag = use_rdma_part_tables;
-	pq_rdma_part_ins[3].max_reg_cnt = 2048;
+	pq_rdma_part_ins[3].max_reg_cnt = 2500;
 	pq_rdma_part_ins[3].reg_range_check = false;
 	pq_rdma_part_ins[3].check_start_addr = 0x3800;
 	pq_rdma_part_ins[3].check_end_addr = 0x5b8f;

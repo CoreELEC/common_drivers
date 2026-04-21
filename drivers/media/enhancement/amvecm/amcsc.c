@@ -4509,13 +4509,11 @@ int signal_type_changed(struct vframe_s *vf,
 //	pr_csc(258, "out_range = %d, out_colorimetry = %d\n",
 //		vinfo->vpp_post_out_range, vinfo->vpp_post_out_colorimetry);
 
-/*
- *	if (vinfo && vinfo->vout_device &&
- *		vinfo->vout_device->fresh_hdmitx_input_vpp_info) {
- *		vinfo->vout_device->fresh_hdmitx_input_vpp_info();
- *		pr_csc(258, "vinfo out device changed\n");
- *	}
- */
+	if (vinfo && vinfo->vout_device &&
+		vinfo->vout_device->fresh_tx_input_vpp_info) {
+		vinfo->vout_device->fresh_tx_input_vpp_info(vinfo->vout_device->tx_instance);
+		pr_csc(258, "vinfo out device changed\n");
+	}
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (cur_hdmi_out_fmt != vinfo->vpp_post_out_color_fmt) {
@@ -9634,6 +9632,7 @@ int amvecm_matrix_process(struct vframe_s *vf,
 	u32 signal_type = 0;
 	int dummy_update = 0;
 	int full_range = 0;
+	struct vout_device_s *vdev = NULL;
 
 	if (vpp_index == VPP_TOP1)
 		vinfo = get_current_vinfo2();
@@ -9754,14 +9753,14 @@ int amvecm_matrix_process(struct vframe_s *vf,
 				cur_vinfo_out_range = vinfo->vpp_post_out_range;
 				cur_vinfo_out_cs = vinfo->vpp_post_out_colorimetry;
 			}
-/*
- *			if (vinfo->vout_device) {
- *				if (vinfo->vout_device->fresh_hdmitx_input_vpp_info) {
- *					vinfo->vout_device->fresh_hdmitx_input_vpp_info();
- *					pr_csc(1, "2 vinfo out device changed\n");
- *				}
- *			}
- */
+
+			if (vinfo->vout_device) {
+				vdev = vinfo->vout_device;
+				if (vdev->fresh_tx_input_vpp_info) {
+					vdev->fresh_tx_input_vpp_info(vdev->tx_instance);
+					pr_csc(1, "2 vinfo out device changed\n");
+				}
+			}
 		} else {
 			pr_csc(1, "pri_hdr = %d hdr_policy = %d\n",
 				pri_hdr, hdr_policy);
@@ -9787,14 +9786,15 @@ int amvecm_matrix_process(struct vframe_s *vf,
 						pri_hdr = 1;
 					}
 				}
-/*
- *				if (vinfo->vout_device) {
- *					if (vinfo->vout_device->fresh_hdmitx_input_vpp_info) {
- *						vinfo->vout_device->fresh_hdmitx_input_vpp_info();
- *						pr_csc(1, "3 vinfo out device changed\n");
- *					}
- *				}
- */
+
+				if (vinfo->vout_device) {
+					vdev = vinfo->vout_device;
+					if (vdev->fresh_tx_input_vpp_info) {
+						vdev->fresh_tx_input_vpp_info(vdev->tx_instance);
+						pr_csc(1, "3 vinfo out device changed\n");
+					}
+				}
+
 			}
 		}
 	}
