@@ -5018,6 +5018,7 @@ static void hdr_tone_mapping_get(enum lut_type_e lut_type,
 				oo_y_lut_hlg_sdr[i] = hdr_tm[i];
 
 			cuva_static_hlg_en = 0;
+			vecm_latch_flag |= FLAG_HDR_OOTF_LATCH;
 
 			if (debug_amvecm & 4) {
 				for (i = 0; i < length; i++) {
@@ -6621,7 +6622,7 @@ static long amvecm_ioctl(struct file *file,
 static long amvecm_compat_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = amvecm_ioctl(file, cmd, arg);
