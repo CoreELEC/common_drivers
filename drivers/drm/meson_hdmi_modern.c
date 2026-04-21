@@ -1763,6 +1763,7 @@ int meson_encoder_vrr_change(struct drm_encoder *encoder,
 		new_mode->vdisplay != old_mode->vdisplay ||
 		meson_crtc_state->attr_changed ||
 		meson_crtc_state->brr_update ||
+		(old_mode->flags & DRM_MODE_FLAG_INTERLACE) ||
 		(new_mode->flags & DRM_MODE_FLAG_INTERLACE))
 		return meson_crtc_state->seamless;
 

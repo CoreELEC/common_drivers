@@ -1986,8 +1986,11 @@ int meson_encoder_vrr_change(struct drm_encoder *encoder,
 		new_mode->vdisplay != old_mode->vdisplay ||
 		meson_crtc_state->attr_changed ||
 		meson_crtc_state->brr_update ||
-		(new_mode->flags & DRM_MODE_FLAG_INTERLACE))
+		(old_mode->flags & DRM_MODE_FLAG_INTERLACE) ||
+		(new_mode->flags & DRM_MODE_FLAG_INTERLACE)) {
+		DRM_DEBUG_KMS("%s non-seamless\n", __func__);
 		return meson_crtc_state->seamless;
+	}
 
 	if (new_state->vrr_enabled) {
 		if (old_state->vrr_enabled) {
