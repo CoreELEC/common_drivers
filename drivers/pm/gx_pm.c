@@ -59,6 +59,8 @@ unsigned int already_early_suspend;
 unsigned int early_suspend_debug;
 /* kernel & bl31 & bl30 suspend debug flag */
 unsigned int suspend_debug_flag;
+/* deep suspend enter flag */
+static unsigned int deep_suspend;
 
 void register_early_suspend(struct early_suspend *handler)
 {
@@ -109,7 +111,8 @@ static inline void early_suspend(void)
 		already_early_suspend = 1;
 	else
 		goto end_early_suspend;
-
+	//set node to 0 notify other drivers begin early suspend
+	deep_suspend = 0;
 	if (early_suspend_debug)
 		pr_info("%s: call handlers\n", __func__);
 	list_for_each_entry(pos, &early_suspend_handlers, link)
@@ -511,6 +514,16 @@ static ssize_t suspend_reason_store(const struct class *class,
 
 static CLASS_ATTR_RW(suspend_reason);
 
+/*Call it as deep_suspend flag when it's val is 1 means last str is deep suspend */
+ssize_t deep_suspend_show(const struct class *class,
+			   const struct class_attribute *attr,
+			    char *buf)
+{
+	return sprintf(buf, "%d\n", deep_suspend);
+}
+
+static CLASS_ATTR_RO(deep_suspend);
+
 static unsigned int suspend_mode;
 #define SMCID_POWER_MANAGER	0x82000079
 #define SMCSUBID_PM_DDR_ASR	0x1000
@@ -692,6 +705,7 @@ static struct attribute *meson_pm_attrs[] = {
 	&class_attr_suspend_reason.attr,
 	&class_attr_suspend_mode.attr,
 	&class_attr_time_out.attr,
+	&class_attr_deep_suspend.attr,
 #if IS_ENABLED(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND)
 	&class_attr_early_suspend_trigger.attr,
 #endif
@@ -843,11 +857,30 @@ static void meson_pm_shutdown(struct platform_device *pdev)
 	}
 }
 
+static int pm_platform_resume(struct device *dev)
+{
+	return 0;
+}
+
+static int pm_platform_suspend(struct device *dev)
+{
+	deep_suspend = 1;
+	if (early_suspend_debug)
+		pr_info("%s: set deep_suspend flag as 1\n", __func__);
+	return 0;
+}
+
+static const struct dev_pm_ops pm_ops = {
+	.resume = pm_platform_resume,
+	.suspend = pm_platform_suspend,
+};
+
 static struct platform_driver meson_pm_driver = {
 	.probe = meson_pm_probe,
 	.driver = {
 		   .name = "pm-meson",
 		   .owner = THIS_MODULE,
+		   .pm = &pm_ops,
 		   .of_match_table = amlogic_pm_dt_match,
 		   },
 	.remove = __exit_p(meson_pm_remove),
