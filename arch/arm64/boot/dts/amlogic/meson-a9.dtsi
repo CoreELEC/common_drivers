@@ -759,67 +759,84 @@
 		#hwlock-cells = <1>;
 	};
 
-	vddcpu0_board2: pwm_f_board2-regulator {
-		compatible = "pwm-regulator";
-		pwms = <&pwm_f MESON_PWM_0 1512 0>;
-		regulator-name = "vddcpu0_board2";
-		regulator-min-microvolt = <669000>;
-		regulator-max-microvolt = <1029000>;
+	vddee: pwm_e-regulator { //default ee/gpu/ddr and npu_sram/gpu_sram on United One-Way Power
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_e MESON_PWM_0 630 0>;
+		regulator-name = "vddee";
+		regulator-min-microvolt = <680000>;
+		regulator-max-microvolt = <830000>;
 		regulator-always-on;
-		max-duty-cycle = <1512>;
+		max-duty-cycle = <630>;
 		amlogic,vsel-step = <3>;
 		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;	//pwm 1nF
 		/* Voltage Duty-Cycle */
-		voltage-table = <1029000 0>,
-				<1019000 3>,
-				<1009000 6>,
-				<999000 8>,
-				<989000 11>,
-				<979000 14>,
-				<969000 17>,
-				<959000 19>,
-				<949000 22>,
-				<939000 25>,
-				<929000 28>,
-				<919000 31>,
-				<909000 33>,
-				<899000 36>,
-				<889000 39>,
-				<879000 42>,
-				<869000 44>,
-				<859000 47>,
-				<849000 50>,
-				<839000 53>,
-				<829000 56>,
-				<819000 58>,
-				<809000 61>,
-				<799000 64>,
-				<789000 67>,
-				<779000 69>,
-				<769000 72>,
-				<759000 75>,
-				<749000 78>,
-				<739000 81>,
-				<729000 83>,
-				<719000 86>,
-				<709000 89>,
-				<699000 92>,
-				<689000 94>,
-				<679000 97>,
-				<669000 100>;
-		status = "disabled";
+		voltage-table = <830000 0>,
+				<820000 7>,
+				<810000 13>,
+				<800000 20>,
+				<790000 27>,
+				<780000 33>,
+				<770000 40>,
+				<760000 47>,
+				<750000 53>,
+				<740000 60>,
+				<730000 67>,
+				<720000 73>,
+				<710000 80>,
+				<700000 87>,
+				<690000 93>,
+				<680000 100>;
+		status = "okay";
 	};
 
-	vddcpu0_board0: pwm_f_board0-regulator {
-		compatible = "pwm-regulator";
-		pwms = <&pwm_f MESON_PWM_0 1260 0>;
-		regulator-name = "vddcpu0_board0";
+	vddnpu: pwm_f-regulator {
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_f MESON_PWM_0 840 0>;
+		regulator-name = "vddnpu";
+		regulator-min-microvolt = <660000>;
+		regulator-max-microvolt = <860000>;
+		regulator-always-on;
+		max-duty-cycle = <840>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <860000 0>,
+				<850000 5>,
+				<840000 10>,
+				<830000 15>,
+				<820000 20>,
+				<810000 25>,
+				<800000 30>,
+				<790000 35>,
+				<780000 40>,
+				<770000 45>,
+				<760000 50>,
+				<750000 55>,
+				<740000 60>,
+				<730000 65>,
+				<720000 70>,
+				<710000 75>,
+				<700000 80>,
+				<690000 85>,
+				<680000 90>,
+				<670000 95>,
+				<660000 100>;
+		status = "okay";
+	};
+
+	vddcpu0: pwm_d-regulator {
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_d MESON_PWM_0 1260 0>;
+		regulator-name = "vddcpu0";
 		regulator-min-microvolt = <679000>;
 		regulator-max-microvolt = <979000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
 		amlogic,vsel-step = <3>;
 		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
 		/* Voltage Duty-Cycle */
 		voltage-table = <979000 0>,
 				<969000 3>,
@@ -852,7 +869,147 @@
 				<699000 93>,
 				<689000 97>,
 				<679000 100>;
-		status = "disabled";
+		status = "okay";
+	};
+
+	vddcpu0_sram: pwm_c-regulator {
+		vin-supply = <&vdd1v8_ao_reg>;
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_c MESON_PWM_0 1260 0>;
+		regulator-name = "vddcpu0_sram";
+		regulator-min-microvolt = <679000>;
+		regulator-max-microvolt = <979000>;
+		regulator-always-on;
+		max-duty-cycle = <1260>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <979000 0>,
+				<969000 3>,
+				<959000 7>,
+				<949000 10>,
+				<939000 13>,
+				<929000 17>,
+				<919000 20>,
+				<909000 23>,
+				<899000 27>,
+				<889000 30>,
+				<879000 33>,
+				<869000 37>,
+				<859000 40>,
+				<849000 43>,
+				<839000 47>,
+				<829000 50>,
+				<819000 53>,
+				<809000 57>,
+				<799000 60>,
+				<789000 63>,
+				<779000 67>,
+				<769000 70>,
+				<759000 73>,
+				<749000 77>,
+				<739000 80>,
+				<729000 83>,
+				<719000 87>,
+				<709000 90>,
+				<699000 93>,
+				<689000 97>,
+				<679000 100>;
+		status = "okay";
+	};
+
+	vddcpu1: pwm_a-regulator {
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_a MESON_PWM_0 1260 0>;
+		regulator-name = "vddcpu1";
+		regulator-min-microvolt = <679000>;
+		regulator-max-microvolt = <979000>;
+		regulator-always-on;
+		max-duty-cycle = <1260>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <979000 0>,
+				<969000 3>,
+				<959000 7>,
+				<949000 10>,
+				<939000 13>,
+				<929000 17>,
+				<919000 20>,
+				<909000 23>,
+				<899000 27>,
+				<889000 30>,
+				<879000 33>,
+				<869000 37>,
+				<859000 40>,
+				<849000 43>,
+				<839000 47>,
+				<829000 50>,
+				<819000 53>,
+				<809000 57>,
+				<799000 60>,
+				<789000 63>,
+				<779000 67>,
+				<769000 70>,
+				<759000 73>,
+				<749000 77>,
+				<739000 80>,
+				<729000 83>,
+				<719000 87>,
+				<709000 90>,
+				<699000 93>,
+				<689000 97>,
+				<679000 100>;
+		status = "okay";
+	};
+
+	vddcpu1_sram: pwm_b-regulator {
+		vin-supply = <&vdd1v8_ao_reg>;
+		compatible = "amlogic, pwm-regulator";
+		pwms = <&pwm_b MESON_PWM_0 1260 0>;
+		regulator-name = "vddcpu1_sram";
+		regulator-min-microvolt = <679000>;
+		regulator-max-microvolt = <979000>;
+		regulator-always-on;
+		max-duty-cycle = <1260>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;
+		/* Voltage Duty-Cycle */
+		voltage-table = <979000 0>,
+				<969000 3>,
+				<959000 7>,
+				<949000 10>,
+				<939000 13>,
+				<929000 17>,
+				<919000 20>,
+				<909000 23>,
+				<899000 27>,
+				<889000 30>,
+				<879000 33>,
+				<869000 37>,
+				<859000 40>,
+				<849000 43>,
+				<839000 47>,
+				<829000 50>,
+				<819000 53>,
+				<809000 57>,
+				<799000 60>,
+				<789000 63>,
+				<779000 67>,
+				<769000 70>,
+				<759000 73>,
+				<749000 77>,
+				<739000 80>,
+				<729000 83>,
+				<719000 87>,
+				<709000 90>,
+				<699000 93>,
+				<689000 97>,
+				<679000 100>;
+		status = "okay";
 	};
 
 	saradc_common: saradc-common@fe026000 {
@@ -1279,7 +1436,7 @@
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_A>;
 				clock-names = "clkin0";
 				tee_id = <0>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			pwm_b: pwm@10200 {
@@ -1289,7 +1446,7 @@
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_B>;
 				clock-names = "clkin0";
 				tee_id = <1>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			pwm_c: pwm@10400 {
@@ -1299,7 +1456,7 @@
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_C>;
 				clock-names = "clkin0";
 				tee_id = <2>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			pwm_d: pwm@10600 {
@@ -1309,7 +1466,7 @@
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_D>;
 				clock-names = "clkin0";
 				tee_id = <3>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			pwm_e: pwm@10800 {
@@ -1319,7 +1476,7 @@
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_E>;
 				clock-names = "clkin0";
 				tee_id = <4>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			pwm_f: pwm@10a00 {
@@ -1330,6 +1487,8 @@
 				clock-names = "clkin0";
 				tee_id = <5>;
 				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_f_pins1>;
 			};
 
 			pwm_g: pwm@10c00 {
