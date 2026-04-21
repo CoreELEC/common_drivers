@@ -15394,19 +15394,6 @@ static void is_framepacking_support(struct vframe_s *vf)
 	}
 }
 
-static bool is_layer_cropped(struct video_layer_s *layer)
-{
-	if (layer->next_frame_par->VPP_hd_start_lines_ != 0 ||
-		(layer->next_frame_par->VPP_hd_end_lines_ !=
-		(video_lcevc.vd1_src_width - 1)) ||
-		layer->next_frame_par->VPP_vd_start_lines_ != 0 ||
-		(layer->next_frame_par->VPP_vd_end_lines_ !=
-		(video_lcevc.vd1_src_height - 1)))
-		return true;
-	else
-		return false;
-}
-
 s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 		     bool force_toggle,
 		     const struct vinfo_s *vinfo, u32 swap_op_flag)
@@ -15646,8 +15633,7 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 		if (layer_id == 0 &&
 			video_lcevc.vd2_vd1_shared_vf &&
 			((!lcevc_smallwindow_enable &&
-			layer->next_frame_par->vscale_skip_count >= 1) ||
-			is_layer_cropped(layer))) {
+			layer->next_frame_par->vscale_skip_count >= 1))) {
 			/* switch vf to vd2 vf, disable vd2, disable lcevc */
 			layer->switch_vd2_vf = true;
 			vf  = video_lcevc.enhance_vf;
