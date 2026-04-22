@@ -1446,7 +1446,10 @@ void hw_cfg_dpss_dpe_intf(struct PRM_DPSS_TOP *prm_top,
 		memcpy(pix_rmif2, pix_rmif3, sizeof(*pix_rmif2));
 		pix_rmif->uv_swap = prm_top->uv_swap;
 		pix_rmif2->uv_swap = false;
+		pix_rmif2->block_mode = 0;
 	}
+	pix_rmif3->block_mode = 0;
+	pix_rmif4->block_mode = 0;
 	pix_rmif3->uv_swap = false;
 	pix_rmif4->uv_swap = false;
 

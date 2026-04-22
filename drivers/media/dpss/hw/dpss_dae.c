@@ -338,10 +338,7 @@ void hw_cfg_dpss_dae(enum DPSS_WORK_MODE  dae_mode,
 	dbg_h2("dae dwuv sw:%d\n", dae_yuv_intf.uv_swap);
 	//ary add default is 1, dae_yuv->little_endian
 	//dae_yuv->field_mode = 0;//0:close 1:odd->even 2:even->odd //12-17
-	if (dpss_dbg_uv_swap & C_BIT2)
-		dae_yuv->swap_64bit = dpss_dbg_uv_swap & C_BIT2;
-	if (dpss_dbg_uv_swap & C_BIT1)
-		dae_yuv->little_endian = dpss_dbg_uv_swap & C_BIT1;
+
 	if (dpss_dbg_uv_swap & C_BIT0)
 		dae_yuv->uv_swap = dpss_dbg_uv_swap & C_BIT0;
 	dae_yuv->block_mode = prm_top->block_mode;
@@ -349,6 +346,11 @@ void hw_cfg_dpss_dae(enum DPSS_WORK_MODE  dae_mode,
 		dae_yuv->little_endian = prm_top->l_endian;//dpss_dbg_uv_swap & C_BIT1;
 		dae_yuv->swap_64bit = prm_top->swap_64bit;//dpss_dbg_uv_swap & C_BIT2;
 	}
+	if (dpss_dbg_uv_swap & C_BIT10)
+		dae_yuv->swap_64bit = dpss_dbg_uv_swap & C_BIT2;
+	if (dpss_dbg_uv_swap & C_BIT10)
+		dae_yuv->little_endian = dpss_dbg_uv_swap & C_BIT1;
+
 	dae_yuv->canvas_hsize = prm_top->nr_src_canvas_hsize;
 
 	dpss_cfg_viu_pix_rdmif(dae_yuv, 1);

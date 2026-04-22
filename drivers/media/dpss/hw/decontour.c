@@ -206,7 +206,7 @@ void dpss_ini_dcntr_pre(int hsize, int vsize, int grd_num_mode,
 	w_reg_bit(VPU_DAE_WRAP_DCT_GRD, in_fmt_mode, 12, 2);
 	dbg_h2("%s:%d\n", __func__, in_fmt_mode);
 	di_write_data_table(DI_PAGE_MODULE_DCT, 0);
-	#ifdef HIS_MARK
+	//#ifdef HIS_MARK
 	if (dpss_dct_en) {
 		w_reg_bit(DCTR_PATH, 3, 27, 2);
 		w_reg_bit(DCTR_PATH, 3, 29, 2);
@@ -214,7 +214,7 @@ void dpss_ini_dcntr_pre(int hsize, int vsize, int grd_num_mode,
 		w_reg_bit(DCTR_PATH, 0, 27, 2);
 		w_reg_bit(DCTR_PATH, 0, 29, 2);
 	}
-	#endif
+	//#endif
 }
 
 //initial decontour post - core
