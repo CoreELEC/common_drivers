@@ -206,7 +206,8 @@ void set_vpu_sideband_init(void)
 	} else if (vpu_conf.data->chip_type == VPU_CHIP_T6W ||
 		vpu_conf.data->chip_type == VPU_CHIP_S7 ||
 		vpu_conf.data->chip_type == VPU_CHIP_T6X ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7D) {
+		vpu_conf.data->chip_type == VPU_CHIP_S7D ||
+		vpu_conf.data->chip_type == VPU_CHIP_S6) {
 		sideband_ctrl_table = vpu_conf.data->vpp_ofifo_urg_ctrl_table;
 		vpp_ofifo_urg_ctrl = sideband_ctrl_table->reg;
 		//bit15； urgent_ctrl_en
@@ -219,7 +220,8 @@ void set_vpu_sideband_init(void)
 			sideband_up = 16;
 			sideband_down = 5;
 		} else if (vpu_conf.data->chip_type == VPU_CHIP_S7 ||
-			vpu_conf.data->chip_type == VPU_CHIP_S7D) {
+			vpu_conf.data->chip_type == VPU_CHIP_S7D ||
+			vpu_conf.data->chip_type == VPU_CHIP_S6) {
 			//max 4k fifo
 			sideband_up = 8;
 			sideband_down = 5;
@@ -265,6 +267,13 @@ void dmc_reg_setting(char rw, u32 block_device)
 	}
 	dmc_sb_setting.rw = rw;
 	dmc_sb_setting.block_num = block_num;
+	pr_info("%s, rw=%d, block_num=%d,block_bus[0]=0x%x, j=%d;[j]=0x%x\n",
+		__func__,
+		rw,
+		block_num,
+		dmc_sb_setting.block_bus[0],
+		j,
+		dmc_sb_setting.block_bus[j]);
 	ret = enable_side_band(&dmc_sb_setting);
 }
 
@@ -363,6 +372,25 @@ static void dmc_sb_param_setting(u32 arb_port)
 			dmc_sb_setting.bus = 2;
 			break;
 		}
+	} else if (vpu_conf.data->chip_type == VPU_CHIP_S6) {
+		dmc_sb_setting.dmc = 0;
+		switch (arb_port) {
+		case 0:
+			dmc_sb_setting.bus = 1;
+			break;
+		case 1:
+			dmc_sb_setting.bus = 2;
+			break;
+		case 2:
+			dmc_sb_setting.bus = 3;
+			break;
+		case 3:
+			dmc_sb_setting.bus = 2;
+			break;
+		case 4:
+			dmc_sb_setting.bus = 2;
+			break;
+		}
 	}
 }
 
@@ -383,7 +411,8 @@ void set_vpu_sideband_enable(u32 arb_port, u32 port_enable)
 		vpu_conf.data->chip_type == VPU_CHIP_T3 ||
 		vpu_conf.data->chip_type == VPU_CHIP_S7 ||
 		vpu_conf.data->chip_type == VPU_CHIP_T6X ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7D) {
+		vpu_conf.data->chip_type == VPU_CHIP_S7D ||
+		vpu_conf.data->chip_type == VPU_CHIP_S6) {
 		if (vpu_sideband_en[arb_port] != 0xff)
 			port_enable = vpu_sideband_en[arb_port];
 		else if (port_enable == 0xff)
@@ -494,7 +523,8 @@ ssize_t vpu_sideband_show(const struct class *class,
 		len += sprintf(buf + len, "%s\n", vpu_arb_port_str);
 	} else if (vpu_conf.data->chip_type == VPU_CHIP_T7 ||
 		vpu_conf.data->chip_type == VPU_CHIP_T3X ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6W) {
+		vpu_conf.data->chip_type == VPU_CHIP_T6W ||
+		vpu_conf.data->chip_type == VPU_CHIP_S6) {
 		const char *vpu_arb_port_str = {
 		"Usage:(every time enable one bit)\n"
 		"bit0: 1 vpu read0 arb for vpp0 line fifo\n"
@@ -558,7 +588,8 @@ ssize_t vpu_sideband_store(const struct class *class,
 			vpu_conf.data->chip_type == VPU_CHIP_T7 ||
 			vpu_conf.data->chip_type == VPU_CHIP_T3X ||
 			vpu_conf.data->chip_type == VPU_CHIP_S7 ||
-			vpu_conf.data->chip_type == VPU_CHIP_S7D) {
+			vpu_conf.data->chip_type == VPU_CHIP_S7D ||
+			vpu_conf.data->chip_type == VPU_CHIP_S6) {
 			if (parsed[0] & 1)
 				arb_port = 0;
 			else if (parsed[0] & 2)
@@ -815,6 +846,35 @@ static ssize_t sideband_block_device_show_t6x(char *buf)
 	return len;
 }
 
+static ssize_t sideband_block_device_show_s6(char *buf)
+{
+	ssize_t len = 0;
+
+	const char *axi_device_usage_str = {
+	"Usage:\n"
+	"bit0: CPU  interface\n"
+	"bit1: VPU0 interface\n"
+	"bit2: VPU1 interface\n"
+	"bit3: VPU2 interface\n"
+	"bit6: HEVC_B  interface\n"
+	"bit7: HEVC_F interface\n"
+	"bit8: VDEC interface\n"
+	"bit9: MTE interface\n"
+	"bit11: DEMUX  interface\n"
+	"bit12: MALI interface\n"
+	"bit13: VGE interface(VICP/GE2D/DEWARP)\n"
+	"bit14: OTHER DEVICE interface\n"
+	"bit15: DSP  interface\n"
+	"bit16: AMFC interface\n"
+	"bit17: PCIE interface\n"
+	"bit18: NNA interface\n"
+	"bit19: vc9000E interface\n"
+	};
+	len += sprintf(buf + len, "%s\n", axi_device_usage_str);
+	len += sprintf(buf + len, "sideband_block_device: 0x%x\n", vpu_sideband_block_device);
+	return len;
+}
+
 void set_vpu_sideband_block_device(u32 block_device)
 {
 	if (vpu_conf.data->chip_type == VPU_CHIP_T6W ||
@@ -824,7 +884,8 @@ void set_vpu_sideband_block_device(u32 block_device)
 		vpu_conf.data->chip_type == VPU_CHIP_T6X ||
 		vpu_conf.data->chip_type == VPU_CHIP_T7 ||
 		vpu_conf.data->chip_type == VPU_CHIP_T3X ||
-		vpu_conf.data->chip_type == VPU_CHIP_T3) {
+		vpu_conf.data->chip_type == VPU_CHIP_T3 ||
+		vpu_conf.data->chip_type == VPU_CHIP_S6) {
 		dmc_reg_setting(3, block_device);
 	}
 }
@@ -852,6 +913,8 @@ ssize_t vpu_sideband_block_device_show(const struct class *class,
 		len = sideband_block_device_show_s7(buf);
 	else if (vpu_conf.data->chip_type == VPU_CHIP_T6X)
 		len = sideband_block_device_show_t6x(buf);
+	else if (vpu_conf.data->chip_type == VPU_CHIP_S6)
+		len = sideband_block_device_show_s6(buf);
 	return len;
 }
 
