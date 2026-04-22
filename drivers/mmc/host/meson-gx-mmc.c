@@ -64,6 +64,9 @@ static void mmc_info_stat(struct meson_host *host,
 	int rw_mode = 0;
 	unsigned int xfer_bytes = 0;
 
+	if (!data)
+		return;
+
 	if (data->flags & MMC_DATA_WRITE)
 		rw_mode = 1;
 	xfer_bytes = data->blksz * data->blocks;
@@ -1458,6 +1461,8 @@ static void set_delays(struct meson_host *host, struct mmc_card *card)
 		if (meson_io_rw_direct(card, 0, 1, regs[i], 0, (u8 *)&delays[i]) != 0)
 			return;
 	}
+	pr_info("cmd:%d, d0:%d d1:%d, d2:%d, d3:%d\n",
+		delays[0], delays[1], delays[2], delays[3], delays[4]);
 }
 
 void sdio_set_dly(struct meson_host *host)
@@ -1484,9 +1489,6 @@ void sdio_set_dly(struct meson_host *host)
 		return;
 
 	set_delays(host, card);
-	pr_info("cmd:%d, d0:%d d1:%d, d2:%d, d3:%d\n",
-		host->cmd_dly, host->dat0_dly,
-		host->dat1_dly, host->dat2_dly, host->dat3_dly);
 }
 
 static int meson_mmc_clk_set(struct meson_host *host,
@@ -1819,6 +1821,9 @@ static void meson_mmc_sg_link_chain_transfer(struct mmc_host *mmc, u32 cmd_cfg,
 	int i = 0, j = 0, k = 0, cnt = 0;
 	bool split = false;
 
+	if (!data)
+		return;
+
 	if (data->flags & MMC_DATA_WRITE)
 		cmd_cfg |= CMD_CFG_DATA_WR;
 
@@ -1929,6 +1934,9 @@ static void meson_mmc_desc_chain_transfer(struct mmc_host *mmc, u32 cmd_cfg,
 	int i, j = 0, cnt = 0;
 	bool split = false, block_mode = false;
 
+	if (!data)
+		return;
+
 	if (data->flags & MMC_DATA_WRITE)
 		cmd_cfg |= CMD_CFG_DATA_WR;
 
@@ -2009,6 +2017,9 @@ static void meson_mmc_quirk_transfer(struct mmc_host *mmc, u32 cmd_cfg,
 	struct sd_emmc_desc *desc = host->descs;
 	struct mmc_data *data = host->cmd->data;
 	u32 start, data_len;
+
+	if (!data)
+		return;
 
 	if (data->blocks > 1) {
 		cmd_cfg |= CMD_CFG_BLOCK_MODE;
@@ -3574,7 +3585,8 @@ static int intf3_scan(struct mmc_host *mmc, u32 opcode)
 static int mmc_intf3_win_tuning(struct mmc_host *mmc, u32 opcode)
 {
 	struct meson_host *host = mmc_priv(mmc);
-	u32 vclk, ret = -1;
+	u32 vclk;
+	int ret = -1;
 
 	vclk = readl(host->regs + SD_EMMC_CLOCK);
 
@@ -3785,6 +3797,9 @@ static void scan_emmc_tx_win(struct mmc_host *mmc)
 		__ffs(CLK_V3_TX_DELAY_MASK);
 	int repeat_times = 100;
 	char str[64] = {0};
+
+	if (!mmc->card)
+		return;
 
 	aml_sd_emmc_cali_v3(mmc, MMC_READ_MULTIPLE_BLOCK,
 			    host->blk_test, 512, 40, MMC_RANDOM_NAME);
