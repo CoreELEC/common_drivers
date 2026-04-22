@@ -2092,7 +2092,7 @@
 				reset-level = <0x40>;
 				phy-reset-level-bits = <6>;
 				usb-comb-reset-bit = <0>;
-				usb-apb-reset-bit = <49>;
+				phy-apb-reset-bit = <49>;
 				usb-reset-bit = <1>;
 				pll-settings = <0x0
 								0x0
@@ -2177,7 +2177,7 @@
 				reset-level = <0x40>;
 				phy-reset-level-bits = <7>;
 				usb-comb-reset-bit = <2>;
-				usb-apb-reset-bit = <50>;
+				phy-apb-reset-bit = <50>;
 				usb-reset-bit = <3>;
 				pll-settings = <0x0
 								0x0
@@ -2239,7 +2239,7 @@
 			reset-level = <0x40>;
 			phy-reset-level-bits = <8>;
 			usb-comb-reset-bit = <4>;
-			usb-apb-reset-bit = <62>;
+			phy-apb-reset-bit = <62>;
 			usb-reset-bit = <5>;
 			pll-settings = <0x0
 							0x0
