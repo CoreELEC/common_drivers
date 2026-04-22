@@ -103,9 +103,9 @@ int is_in_ldim_vsync_isr(u8 cur_cpuid);
 #ifdef CONFIG_AMLOGIC_AMBILIGHT
 int is_in_amblt_vsync_isr(u8 cur_cpuid);
 #endif
-//#ifdef CONFIG_AMLOGIC_LCD_TCON
-//int is_in_tcon_vsync_isr(u8 cur_cpuid);
-//#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+int is_in_tcon_vsync_isr(u8 cur_cpuid);
+#endif
 #endif
 void set_rdma_channel_enable(u8 rdma_en);
 u32 get_cur_enc_line(void);

@@ -1923,9 +1923,9 @@ int rdma_write_reg(int handle, u32 adr, u32 val)
 #ifdef CONFIG_AMLOGIC_AMBILIGHT
 		!is_in_amblt_vsync_isr(cur_cpuid) &&
 #endif
-//#ifdef CONFIG_AMLOGIC_LCD_TCON
-//		!is_in_tcon_vsync_isr(cur_cpuid) &&
-//#endif
+#ifdef CONFIG_AMLOGIC_LCD_TCON
+		!is_in_tcon_vsync_isr(cur_cpuid) &&
+#endif
 #endif
 		!is_in_pre_vsync_isr(cur_cpuid) &&
 		!is_in_vsync_isr_viu2(cur_cpuid) &&
