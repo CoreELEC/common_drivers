@@ -30,6 +30,8 @@
 #include <linux/syscore_ops.h>
 #include <linux/amlogic/gki_module.h>
 #include <dt-bindings/power/meson-pm.h>
+#include <linux/kdebug.h>
+#include <linux/panic_notifier.h>
 #include "main.h"
 
 static u32 deep_mode;
@@ -529,6 +531,7 @@ static unsigned int suspend_mode;
 #define SMCSUBID_PM_DDR_ASR	0x1000
 #define SMCSUBID_PM_DUMP_INFO	0x1001
 #define SMCSUBID_PM_DEEPCTRL	0x1002
+#define SMCSUBID_PM_GET_EE_STAT	0x1003
 
 struct suspend_cmd_t {
 	const char *name;
@@ -562,7 +565,11 @@ static int suspend_ddr_mode_show(void *data, char *buf)
 
 bool ee_support_powerdown(void)
 {
-	return GET_MODULE_VAL(EE_PWR_DN, deep_mode);
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_GET_EE_STAT, 0, 0, 0, 0, 0, 0, &res);
+
+	return res.a0 ? 0 : res.a1;
 }
 EXPORT_SYMBOL_GPL(ee_support_powerdown);
 
@@ -630,8 +637,9 @@ static ssize_t suspend_mode_show(const struct class *class,
 	unsigned int len = 0;
 	int i;
 
-	if (!deep_mode_init_done)
+	if (!deep_mode_init_done) {
 		return scnprintf(buf, PAGE_SIZE, "Don't support deep mode config.\n");
+	}
 
 	for (i = 0; suspend_cmds.cmds[i].name; i++) {
 		if (suspend_cmds.cmds[i].show)
@@ -664,7 +672,18 @@ static ssize_t suspend_mode_store(const struct class *class,
 	return -EINVAL;
 }
 
+static int panic_notify(struct notifier_block *self,
+			unsigned long cmd, void *ptr)
+{
+	clr_deep_mode();
+
+	return NOTIFY_DONE;
+}
+
 static CLASS_ATTR_RW(suspend_mode);
+static struct notifier_block panic_notifier = {
+	.notifier_call	= panic_notify,
+};
 
 static ssize_t time_out_show(const struct class *class,
 			const struct class_attribute *attr,
@@ -817,6 +836,16 @@ static int meson_pm_probe(struct platform_device *pdev)
 
 	err = register_pm_notifier(&clr_suspend_notifier);
 	if (unlikely(err))
+		return err;
+
+	err = register_die_notifier(&panic_notifier);
+	if (err != 0)
+		return err;
+
+	/* Register a call for panic conditions. */
+	err = atomic_notifier_chain_register(&panic_notifier_list,
+					     &panic_notifier);
+	if (err != 0)
 		return err;
 
 	if (suspend_debug_flag)
