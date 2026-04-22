@@ -772,10 +772,16 @@ unsigned int dvbc_fast_search(struct dvb_frontend *fe, unsigned int *delay, bool
 	PR_DVBC("fsm_state(0x31): 0x%x, auto_times: %d\n",
 			fsm_state, demod->auto_times);
 
+	/* fsm_state: 0x31[bit0-3].
+	 * 0: IDLE.               1: AGC.
+	 * 2: COARSE_SYMBOL_RATE. 3: FINE_SYMBOL_RATE.
+	 * 4: EQ_MMA_RESET.       5: FEC_LOCK.
+	 * 6: FEC_LOST.           7: EQ_SMMA_RESET.
+	 */
 	if ((fsm_state & 0xf) < 3) {
 		demod->auto_no_sig_cnt++;
 
-		if (demod->auto_no_sig_cnt == 2 && demod->auto_times == 2) {//250ms
+		if (demod->auto_no_sig_cnt == 2 && demod->auto_times == 3) {//250ms
 			demod->auto_no_sig_cnt = 0;
 			demod->auto_times = 0;
 			*delay = HZ / 4;

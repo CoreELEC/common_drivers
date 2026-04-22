@@ -240,6 +240,7 @@
 /*  V4.1.015 add ddr priority control */
 /*  V4.1.016 modify dvb-t2 status process to lock early */
 /*  V4.1.017 add J83B status jittering when locked to unlock */
+/*  V4.1.018 fix dvbc unlock when signal is setting from weak to normal */
 /****************************************************/
 /****************************************************************/
 /*               AMLDTVDEMOD_VER  Description:                  */
@@ -256,8 +257,8 @@
 /*->The last four digits indicate the release time              */
 /****************************************************************/
 #define KERNEL_4_9_EN		1
-#define AMLDTVDEMOD_VER "V4.1.017"
-#define DTVDEMOD_VER	"2026/04/23 add J83B status jittering when locked to unlock"
+#define AMLDTVDEMOD_VER "V4.1.018"
+#define DTVDEMOD_VER	"2026/04/27 fix dvbc unlock when signal is setting from weak to normal"
 #define AMLDTVDEMOD_T2_FW_VER "v1059.20250521"
 #define DEMOD_DEVICE_NAME  "dtvdemod"
 
