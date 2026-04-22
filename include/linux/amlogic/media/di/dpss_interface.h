@@ -126,8 +126,10 @@ enum DPSS_BUF_STATE {
 #define DPSS_FLG_NEED_SKIP        (0x00200) //nr need skip 4k1k
 #define DPSS_FLG_USE_DW           (0x00400) //nr need use dw
 #define DPSS_FLG_PPS_SKIP         (0x00800) //nr need bypass pps
+#define DPSS_FLG_ROTATE_DONE      (0x01000) //dpss_process do rotation
 #define DPSS_FLG_NEW_TRIG         (0x10000) //trig re-setting by input
 #define DPSS_FLG_FORCE_DPSS_DONE  (0x20000) //not do dpss but dpss done flag
+#define DPSS_FLG_HIGH_BANDWIWH    (0x40000)
 /************************************************/
 
 struct dpss_in_vf_info {

@@ -1297,6 +1297,11 @@ void dpss_val_user(struct dpss_ch_s *pch,
 	if (dpss_f_mode_get(5, &val))
 		prm_user->cfg_slc = val;
 #endif
+	if (vfs->dpss_flag & DPSS_FLG_HIGH_BANDWIWH) {
+		prm_user->dae_nr_mode = DAE_BYPS_MODE;
+		prm_user->dpe_nr_mode = DPE_NR_BYPS;
+	}
+
 	dbg_i1("%s:%d,%d,%d,%d,%d\n",
 	       __func__, prm_user->dpss_mode,
 	       prm_user->dae_nr_mode,
@@ -2350,6 +2355,9 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	}
 	dbg_i1("%s: start init.light = %d source_type:%d vf_dpss_flg:0x%x\n",
 		__func__, light_chg, vf->source_type, vf->dpss_flg);
+
+	if (vf->dpss_flg & DPSS_FLG_HIGH_BANDWIWH)
+		vfs->dpss_flag |= DPSS_FLG_HIGH_BANDWIWH;
 
 	if (light_chg) {
 		prm_top->trig_byp_dae0 = true;

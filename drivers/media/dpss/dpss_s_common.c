@@ -470,9 +470,14 @@ static unsigned int dpss_is_vinfo_chg(struct dpss_vinfo_s *v1,	/* new */
 		ret = 3;
 	} else if (v1->fg != v2->fg) {
 		ret = 4;
-	} else if (v1->dpss_flg != v2->dpss_flg) {
+	} else if ((v1->dpss_flg & DPSS_FLG_NEED_SKIP) !=
+		(v2->dpss_flg & DPSS_FLG_NEED_SKIP)) {
 		ret = 5;
+	} else if ((v1->dpss_flg & DPSS_FLG_HIGH_BANDWIWH) !=
+		(v2->dpss_flg & DPSS_FLG_HIGH_BANDWIWH)) {
+		ret = 6;
 	}
+	dbg_h1("v2->dpss_flg:%x %x", v1->dpss_flg, v2->dpss_flg);
 	return ret;
 }
 
@@ -1726,7 +1731,8 @@ void dpss_s2_parser_input_new(struct dpss_ch_s *pch)
 	vfm_in = nr_i->in_vfm;
 	//copy and back
 	dpss_vfm_cp(vfm, vfm_in);
-	vfm->dpss_flg = (vfm_in->dpss_flg) & (DPSS_FLG_NEW_TRIG | DPSS_FLG_NEED_SKIP); //keep input
+	vfm->dpss_flg = (vfm_in->dpss_flg) & (DPSS_FLG_NEW_TRIG | DPSS_FLG_NEED_SKIP |
+		DPSS_FLG_HIGH_BANDWIWH); //keep input
 	w_mode = dpss_work_mode_count(pch, vfm);
 
 	chg = dpss_m_chg_count(pch, vfm);

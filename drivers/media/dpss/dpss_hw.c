@@ -2839,7 +2839,7 @@ void irq_dae0(void)
 	}
 
 #ifdef FUNC_EN_PQ
-	if (prm_top->dpss_mode != DPSS_FRC_MODE)
+	if (prm_top->dpss_mode != DPSS_FRC_MODE && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
 		dpss_me_ro_data_update();
 #endif
 	if (pfw_data->dae_irq_handler)
@@ -2923,7 +2923,7 @@ void irq_dae1(void)
 	dbg_h2("%s: ro_index=%d, ro_index=%d\n", __func__,
 		dpss_dae_frm_cnt_src1, ro_index);
 
-	if (!prm_top->frc_en)
+	if (!prm_top->frc_en && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
 		dpss_me_ro_data_update();
 	if (dpss_dae_frm_cnt_src1 >= 2 && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE) {
 		pq_update_ro_dae(ro_index, DPSS_MAIN_CHANNEL);
@@ -3359,7 +3359,7 @@ void irq_dae2(void)
 		ro_index = temp_index % prm_top->num_nr_me_ro;
 	}
 
-	if (dpss_dae_frm_cnt_src2 >= 2) {
+	if (dpss_dae_frm_cnt_src2 >= 2 && dae_nr_mode != DAE_BYPS_MODE) {
 		pq_update_ro_dae(ro_index, DPSS_PIP_CHANNEL);
 		dae_fwalg_read(de_devp, op);
 		dae_fwalg(de_devp, op);
@@ -3458,7 +3458,7 @@ void irq_dpe2(void)
 	dbg_h2("%s: ro_index=%d, ro_index=%d, index=%d\n", __func__,
 		dpss_dpe_di_frm_cnt, ro_index,
 		pd_index);
-	if (dpss_dpe_di_frm_cnt >= 2) {
+	if (dpss_dpe_di_frm_cnt >= 2 && dpe_nr_mode != DPE_NR_BYPS) {
 		pq_update_ro_dpe(ro_index, DPSS_PIP_CHANNEL);
 		pq_update_ro_dae_pd(pd_index, DPSS_PIP_CHANNEL);
 		pq_update_ro_dblk_h(ro_index, DPSS_PIP_CHANNEL);
