@@ -4768,6 +4768,13 @@ void muxio_config(enum vpp_muxio_sel_e sel,
 						WRITE_VPP_REG_BITS(reg_addr[i], reg_val[i],
 							start[i], len[i]);
 				} else {
+					if (rdma_mode == 1)
+						VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(reg_addr[i],
+							reg_val[i],
+							start[i], len[i], vpp_index);
+					else
+						WRITE_VPP_REG_BITS(reg_addr[i], reg_val[i],
+							start[i], len[i]);
 					update_dd_axi_path_mode(reg_val[2]);
 				}
 			}
