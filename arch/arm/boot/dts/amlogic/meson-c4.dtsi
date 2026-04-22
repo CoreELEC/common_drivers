@@ -1061,7 +1061,7 @@
 
 	/*meson cooling devices end*/
 	thermal-zones {
-		thermal:thermal {
+		soc_thermal:soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
 			sustainable-power = <272>;
@@ -1102,7 +1102,7 @@
 		status = "okay";
 		ddr {
 			condition-type = <DDR_THERMAL>;
-			zone-name = "thermal";
+			zone-name = "soc_thermal";
 			caddr = <0xfe0364b4>,
 				<0xfe0365b4>;
 			caddr-mask = <0 16>,
