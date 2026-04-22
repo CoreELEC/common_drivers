@@ -1476,7 +1476,7 @@ static void a9_postblend_dump_register(struct drm_printer *p,
 			reg_addr, value);
 	}
 
-	DRM_INFO("************GLOBAL REG****************.\n");
+	drm_printf(p, "************GLOBAL REG****************\n");
 	reg_addr = VIU_OSD1_PATH_CTRL;
 	value = meson_drm_read_reg(VIU_OSD1_PATH_CTRL);
 	drm_printf(p, "%-35s\t\taddr: 0x%04X\tvalue: 0x%08X\n", "VIU_OSD1_PATH_CTRL",
@@ -1762,52 +1762,53 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 		if (crtcmask_osd[i] == crtc_index) {
 			if (i == MESON_OSD1) {
 				reg_val = meson_drm_read_reg(VIU_OSD1_PATH_CTRL);
-				reg_val = reg_val | (0 << 4) | /*no bypass osdblend*/
-						(1 << 16) | /* bypass osd dolby */
-						(0 << 17) | /* zero-pad the lower bits */
-						(1 << 0) |  /* osd scaler before osdblend */
-						(0 << 15) | /* no bypass hdr */
-						(1 << 12);  /* hdr before osdblend */
+				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
+				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+						BIT(12) | /* hdr after osdblend */
+						BIT(15) | /* no bypass hdr */
+						BIT(16) | /* no bypass osd dolby */
+						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD1_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD2) {
 				reg_val = meson_drm_read_reg(VIU_OSD2_PATH_CTRL);
-				reg_val = reg_val | (0 << 4) | /*no bypass osdblend*/
-						(1 << 16) | /* bypass osd dolby */
-						(0 << 17) | /* zero-pad the lower bits */
-						(1 << 0) |  /* osd scaler before osdblend */
-						(0 << 15) | /* no bypass hdr */
-						(1 << 12) | /* hdr before osdblend */
-						(0 << 18) | /* osd2 hdr */
-						(0 << 19) | /* osd2 hdr */
-						(0 << 20);  /* osd2 go field */
+				reg_val = reg_val |
+						BIT(0)  | /* osd scaler before osdblend */
+						BIT(15) | /* bypass hdr */
+						BIT(18) | /* osdblend45 to osdblend */
+						BIT(19);  /* osd2 hdr */
+				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+						BIT(12) | /* hdr after osdblend */
+						BIT(16) | /* no bypass osd dolby */
+						BIT(17) | /* zero-pad the lower bits */
+						BIT(20)); /* osd2 go field */
 				reg_ops->rdma_write_reg(VIU_OSD2_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD3) {
 				reg_val = meson_drm_read_reg(VIU_OSD3_PATH_CTRL);
-				reg_val = reg_val | (0 << 4) | /*no bypass osdblend*/
-						(1 << 16) | /* bypass osd dolby */
-						(0 << 17) | /* zero-pad the lower bits */
-						(1 << 0) |  /* osd scaler before osdblend */
-						(1 << 15) | /* bypass hdr */
-						(1 << 12);  /* hdr before osdblend */
+				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
+				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+						BIT(12) | /* hdr after osdblend */
+						BIT(15) | /* no bypass hdr */
+						BIT(16) | /* no bypass osd dolby */
+						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD3_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD4) {
 				reg_val = meson_drm_read_reg(VIU_OSD4_PATH_CTRL);
-				reg_val = reg_val | (0 << 4) | /*no bypass osdblend*/
-						(1 << 16) | /* bypass osd dolby */
-						(0 << 17) | /* zero-pad the lower bits */
-						(1 << 0) |  /* osd scaler before osdblend */
-						(1 << 15) | /* bypass hdr */
-						(1 << 12);  /* hdr before osdblend */
+				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
+				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+						BIT(12) | /* hdr after osdblend */
+						BIT(15) | /* no bypass hdr */
+						BIT(16) | /* no bypass osd dolby */
+						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD4_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD5) {
 				reg_val = meson_drm_read_reg(VIU_OSD5_PATH_CTRL);
-				reg_val = reg_val | (0 << 4) | /*no bypass osdblend*/
-						(1 << 16) | /* bypass osd dolby */
-						(0 << 17) | /* zero-pad the lower bits */
-						(1 << 0) |  /* osd scaler before osdblend */
-						(1 << 15) | /* bypass hdr */
-						(1 << 12) | /* hdr before osdblend */
-						(0 << 18);  /* osdblend45 to osdblend */
+				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
+				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+						BIT(12) | /* hdr after osdblend */
+						BIT(15) | /* no bypass hdr */
+						BIT(16) | /* no bypass osd dolby */
+						BIT(17) | /* zero-pad the lower bits */
+						BIT(18)); /* osdblend45 to osdblend */
 				reg_ops->rdma_write_reg(VIU_OSD5_PATH_CTRL, reg_val);
 			}
 		}

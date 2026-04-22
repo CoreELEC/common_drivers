@@ -45,6 +45,7 @@
 #define VPP2_BLOCK 26
 #define HDR3_BLOCK 27
 #define SLICE2PPC_BLOCK 28
+#define BLEND_CSC_BLOCK 29
 
 #define BLOCK_ID_MAX 32
 #define BLEND_D0_CSC_BLOCK 25

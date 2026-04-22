@@ -28,7 +28,7 @@
 		status = "disabled";
 		//compatible = "amlogic, meson-s6-vpu";
 		compatible = "amlogic, meson-a9-vpu";
-		osd_ver = /bits/ 8 <OSD_V4>;
+		osd_ver = /bits/ 8 <OSD_V7>;
 		reg = <0x0 0xff900000 0x0 0x40000>,
 			  <0x0 0xff63c000 0x0 0x2000>,
 			  <0x0 0xff638000 0x0 0x2000>;
@@ -80,6 +80,7 @@
 		afbc_aligned_size = <1>; /*0:fbdev alloc non-afbc memory 1:fbdev alloc afbc memory*/
 		//vpu_block_select = <&vpu_blocks>; /*default vpu_blocks*/
 		vpu_block_select = <&vpu_blocks_path2>;
+		//tx_venc = <&tx_venc>;
 
 		vpu_topology: vpu_topology {
 			vpu_blocks: vpu_blocks {
@@ -93,7 +94,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd_block>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C9F>;
 				};
 				osd2_block: block@1 {
 					id = /bits/ 8  <OSD2_BLOCK>;
@@ -103,7 +104,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <1 &gfcd_block>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C9F>;
 				};
 				osd3_block: block@2 {
 					id = /bits/ 8  <OSD3_BLOCK>;
@@ -113,7 +114,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd2_block>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C0F>;
 				};
 				osd4_block: block@3 {
 					id = /bits/ 8  <OSD4_BLOCK>;
@@ -123,7 +124,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd4_block>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C8E>;
 				};
 				osd5_block: block@4 {
 					id = /bits/ 8  <OSD5_BLOCK>;
@@ -133,7 +134,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd5_block>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C0E>;
 				};
 				gfcd_block: block@5 {
 					id = /bits/ 8  <GFCD_BLOCK>;
@@ -239,6 +240,16 @@
 						<0 &scaler_osd3_block>,
 						<0 &osd2_blend_block>;
 					num_out_links = /bits/ 8  <0x1>;
+					out_links = <0 &blend_csc_block>;
+				};
+				blend_csc_block: block@20 {
+					id = /bits/ 8  <BLEND_CSC_BLOCK>;
+					index = /bits/ 8  <0>;
+					block_name = "blend_csc_block";
+					type = /bits/ 8  <10>;
+					num_in_links = /bits/ 8  <0x1>;
+					in_links = <0 &osd_blend_block>;
+					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &vpp_postblend_block>;
 				};
 				osd2_blend_block: block@16 {
@@ -258,7 +269,7 @@
 					block_name = "vpp_postblend_block";
 					type = /bits/ 8  <6>;
 					num_in_links = /bits/ 8  <0x1>;
-					in_links = <0 &osd_blend_block>;
+					in_links = <0 &blend_csc_block>;
 					num_out_links = <0x0>;
 				};
 				//vpp2_postblend_block: block@18 {
@@ -299,7 +310,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd_block_path2>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C9F>;
 				};
 				osd2_block_path2: block@1 {
 					id = /bits/ 8  <OSD2_BLOCK>;
@@ -309,7 +320,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <1 &gfcd_block_path2>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C9F>;
 				};
 				osd3_block_path2: block@2 {
 					id = /bits/ 8  <OSD3_BLOCK>;
@@ -319,7 +330,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd2_block_path2>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x8000040F>;
 				};
 				osd4_block_path2: block@3 {
 					id = /bits/ 8  <OSD4_BLOCK>;
@@ -329,7 +340,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd4_block_path2>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C8E>;
 				};
 				osd5_block_path2: block@4 {
 					id = /bits/ 8  <OSD5_BLOCK>;
@@ -339,7 +350,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd5_block_path2>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C0E>;
 				};
 				gfcd_block_path2: block@5 {
 					id = /bits/ 8  <GFCD_BLOCK>;
@@ -444,6 +455,16 @@
 						<0 &hdr2_block_path2>,
 						<0 &osd2_blend_block_path2>;
 					num_out_links = /bits/ 8  <0x1>;
+					out_links = <0 &blend_csc_block>;
+				};
+				blend_csc_block_path2: block@21 {
+					id = /bits/ 8  <BLEND_CSC_BLOCK>;
+					index = /bits/ 8  <0>;
+					block_name = "blend_csc_block";
+					type = /bits/ 8  <10>;
+					num_in_links = /bits/ 8  <0x1>;
+					in_links = <0 &osd_blend_block>;
+					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &vpp_postblend_block_path2>;
 				};
 				osd2_blend_block_path2: block@16 {
@@ -463,7 +484,7 @@
 					block_name = "vpp_postblend_block";
 					type = /bits/ 8  <6>;
 					num_in_links = /bits/ 8  <0x1>;
-					in_links = <0 &osd_blend_block_path2>;
+					in_links = <0 &blend_csc_block_path2>;
 					num_out_links = <0x0>;
 				};
 				vpp2_postblend_block_path2: block@18 {
@@ -504,7 +525,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd_block_path3>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C9F>;
 				};
 				osd2_block_path3: block@1 {
 					id = /bits/ 8  <OSD2_BLOCK>;
@@ -514,7 +535,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <1 &gfcd_block_path3>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x8000049F>;
 				};
 				osd3_block_path3: block@2 {
 					id = /bits/ 8  <OSD3_BLOCK>;
@@ -524,7 +545,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &gfcd2_block_path3>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C0F>;
 				};
 				osd4_block_path3: block@3 {
 					id = /bits/ 8  <OSD4_BLOCK>;
@@ -534,7 +555,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd4_block_path3>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C8E>;
 				};
 				osd5_block_path3: block@4 {
 					id = /bits/ 8  <OSD5_BLOCK>;
@@ -544,7 +565,7 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &scaler_osd5_block_path3>;
-					capability = /bits/ 64 <0x3>;
+					capability = /bits/ 64 <0x80000C0E>;
 				};
 				gfcd_block_path3: block@5 {
 					id = /bits/ 8  <GFCD_BLOCK>;
@@ -699,7 +720,7 @@
 			};
 		};
 		vpu_hw_para: vpu_hw_para@0 {
-			osd_ver = /bits/ 8 <0x2>;
+			osd_ver = /bits/ 8 <OSD_V7>;
 			afbc_type = /bits/ 8 <0x2>;
 			has_deband = /bits/ 8 <0x1>;
 			has_lut = /bits/ 8 <0x1>;
@@ -723,3 +744,28 @@
 	};
 };
 
+//&dptx {
+//	ports {
+//		port {
+//			#address-cells = <1>;
+//			#size-cells = <0>;
+//			dptx_to_drm: endpoint@0 {
+//				reg = <0>;
+//				remote-endpoint = <&drm_to_dptx>;
+//			};
+//		};
+//	};
+//};
+
+//&edptx {
+//	ports {
+//		port {
+//			#address-cells = <1>;
+//			#size-cells = <0>;
+//			edp_to_drm: endpoint@0 {
+//				reg = <0>;
+//				remote-endpoint = <&drm_to_edp>;
+//			};
+//		};
+//	};
+//};

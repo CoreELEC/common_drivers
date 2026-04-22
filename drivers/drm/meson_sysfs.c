@@ -24,7 +24,8 @@ static const char osd0_group_name[] = "osd0";
 static const char osd1_group_name[] = "osd1";
 static const char osd2_group_name[] = "osd2";
 static const char osd3_group_name[] = "osd3";
-int osd_index[MESON_MAX_OSDS] = {0, 1, 2, 3};
+static const char osd4_group_name[] = "osd4";
+int osd_index[MESON_MAX_OSDS] = {0, 1, 2, 3, 4};
 static const char video0_group_name[] = "video0";
 static const char video1_group_name[] = "video1";
 static const char video2_group_name[] = "video2";
@@ -2270,6 +2271,110 @@ static struct bin_attribute *osd3_bin_attrs[] = {
 	NULL,
 };
 
+static struct bin_attribute osd4_attr[] = {
+	{
+		.attr.name = "osd_reverse",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_reverse_show,
+		.write = osd_reverse_store,
+	},
+	{
+		.attr.name = "osd_blend_bypass",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_blend_bypass_show,
+		.write = osd_blend_bypass_store,
+	},
+	{
+		.attr.name = "osd_read_port",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_read_port_show,
+		.write = osd_read_port_store,
+	},
+	{
+		.attr.name = "fbdump",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_fbdump_show,
+		.write = osd_fbdump_store,
+		.size = 36864000,
+	},
+	{
+		.attr.name = "blank",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_blank_show,
+		.write = osd_blank_store,
+	},
+	{
+		.attr.name = "pixel_blend",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_pixel_blend_show,
+		.write = osd_pixel_blend_store,
+	},
+	{
+		.attr.name = "resize_source",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_resize_src_show,
+		.write = osd_resize_src_store,
+	},
+	{
+		.attr.name = "resize_destination",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_resize_dst_show,
+		.write = osd_resize_dst_store,
+	},
+	{
+		.attr.name = "gfcd_hskip",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_gfcd_hskip_show,
+		.write = osd_gfcd_hskip_store,
+	},
+	{
+		.attr.name = "gfcd_vskip",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_gfcd_vskip_show,
+		.write = osd_gfcd_vskip_store,
+	},
+	{
+		.attr.name = "osd_zorder",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_zorder_show,
+		.write = osd_zorder_store,
+	},
+	{
+		.attr.name = "osd_dimm",
+		.attr.mode = 0664,
+		.private = &osd_index[4],
+		.read = osd_dimm_show,
+		.write = osd_dimm_store,
+	},
+};
+
+static struct bin_attribute *osd4_bin_attrs[] = {
+	&osd4_attr[0],
+	&osd4_attr[1],
+	&osd4_attr[2],
+	&osd4_attr[3],
+	&osd4_attr[4],
+	&osd4_attr[5],
+	&osd4_attr[6],
+	&osd4_attr[7],
+	&osd4_attr[8],
+	&osd4_attr[9],
+	&osd4_attr[10],
+	&osd4_attr[11],
+	NULL,
+};
+
 static struct bin_attribute video0_attr[] = {
 	{
 		.attr.name = "resize_source",
@@ -2355,6 +2460,10 @@ static const struct attribute_group osd_attr_group[MESON_MAX_OSDS] = {
 	{
 		.name = osd3_group_name,
 		.bin_attrs = osd3_bin_attrs,
+	},
+	{
+		.name = osd4_group_name,
+		.bin_attrs = osd4_bin_attrs,
 	},
 };
 
