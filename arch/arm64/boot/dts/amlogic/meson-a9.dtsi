@@ -264,6 +264,329 @@
 		assigned-clock-rates = <666666666>;
 	};
 
+	csi2_0: csi2_0@ff559000 {
+		compatible = "amlogic,csi2-0";
+		reg = <0x0 0xff558000 0x0 0x68>,
+		      <0x0 0xff559000 0x0 0x290>,
+		      <0x0 0xff55a000 0x0 0xd8>;
+		reg-names = "aphy", "dphy", "host";
+		clocks = <&clkc_mipi_csi_phy>;
+		clock-names = "phy";
+		assigned-clocks = <&clkc_mipi_csi_phy>;
+		assigned-clock-rates = <200000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+			};
+
+			port@1 {
+				reg = <1>;
+				csi2_0_out: endpoint {
+					remote-endpoint = <&adap0_in>;
+				};
+			};
+		};
+	};
+
+	csi2_1: csi2_1@ff559400 {
+		compatible = "amlogic,csi2-1";
+		reg = <0x0 0xff558000 0x0 0x68>,
+		      <0x0 0xff559400 0x0 0x290>,
+		      <0x0 0xff55a400 0x0 0xd8>;
+		reg-names = "aphy", "dphy", "host";
+		clocks = <&clkc_mipi_csi_phy>;
+		clock-names = "phy";
+		assigned-clocks = <&clkc_mipi_csi_phy>;
+		assigned-clock-rates = <200000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+			};
+
+			port@1 {
+				reg = <1>;
+				csi2_1_out: endpoint {
+					remote-endpoint = <&adap1_in>;
+				};
+			};
+		};
+	};
+
+	csi2_2: csi2_2@ff55d000 {
+		compatible = "amlogic,csi2-2";
+		reg = <0x0 0xff55c000 0x0 0x68>,
+		      <0x0 0xff55d000 0x0 0x290>,
+		      <0x0 0xff55e000 0x0 0xd8>;
+		reg-names = "aphy", "dphy", "host";
+		clocks = <&clkc_mipi_csi_phy>;
+		clock-names = "phy";
+		assigned-clocks = <&clkc_mipi_csi_phy>;
+		assigned-clock-rates = <200000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+			};
+
+			port@1 {
+				reg = <1>;
+				csi2_2_out: endpoint {
+					remote-endpoint = <&adap2_in>;
+				};
+			};
+		};
+	};
+
+	csi2_3: csi2_3@ff55d400 {
+		compatible = "amlogic,csi2-3";
+		reg = <0x0 0xff55c000 0x0 0x68>,
+		      <0x0 0xff55d400 0x0 0x290>,
+		      <0x0 0xff55e400 0x0 0xd8>;
+		reg-names = "aphy", "dphy", "host";
+		clocks = <&clkc_mipi_csi_phy>;
+		clock-names = "phy";
+		assigned-clocks = <&clkc_mipi_csi_phy>;
+		assigned-clock-rates = <200000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+			};
+
+			port@1 {
+				reg = <1>;
+				csi2_3_out: endpoint {
+					remote-endpoint = <&adap3_in>;
+				};
+			};
+		};
+	};
+
+	adap0: adap0@ff55b000 {
+		compatible = "amlogic,adap0";
+		reg = <0x0 0xff55b000 0x0 0xe4>;
+		reg-names = "adap";
+		power-domains = <&pwrdm PDID_A9_OPP>;
+		clocks = <&clkc_isp>;
+		clock-names = "isp";
+		assigned-clocks = <&clkc_isp>;
+		assigned-clock-rates = <400000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adap0_in: endpoint {
+					remote-endpoint = <&csi2_0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adap0_out: endpoint {
+					remote-endpoint = <&isp_virt0_in>;
+				};
+			};
+		};
+	};
+
+	adap1: adap1@ff55b400 {
+		compatible = "amlogic,adap1";
+		reg = <0x0 0xff55b400 0x0 0xe4>;
+		reg-names = "adap";
+		power-domains = <&pwrdm PDID_A9_OPP>;
+		clocks = <&clkc_isp>;
+		clock-names = "isp";
+		assigned-clocks = <&clkc_isp>;
+		assigned-clock-rates = <400000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adap1_in: endpoint {
+					remote-endpoint = <&csi2_1_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adap1_out: endpoint {
+					remote-endpoint = <&isp_virt1_in>;
+				};
+			};
+		};
+	};
+
+	adap2: adap2@ff55f000 {
+		compatible = "amlogic,adap2";
+		reg = <0x0 0xff55f000 0x0 0xe4>;
+		reg-names = "adap";
+		power-domains = <&pwrdm PDID_A9_OPP>;
+		clocks = <&clkc_isp>;
+		clock-names = "isp";
+		assigned-clocks = <&clkc_isp>;
+		assigned-clock-rates = <400000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adap2_in: endpoint {
+					remote-endpoint = <&csi2_2_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adap2_out: endpoint {
+					remote-endpoint = <&isp_virt2_in>;
+				};
+			};
+		};
+	};
+
+	adap3: adap3@ff55f400 {
+		compatible = "amlogic,adap3";
+		reg = <0x0 0xff55f400 0x0 0xe4>;
+		reg-names = "adap";
+		power-domains = <&pwrdm PDID_A9_OPP>;
+		clocks = <&clkc_isp>;
+		clock-names = "isp";
+		assigned-clocks = <&clkc_isp>;
+		assigned-clock-rates = <400000000>;
+		status = "disabled";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adap3_in: endpoint {
+					remote-endpoint = <&csi2_3_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adap3_out: endpoint {
+					remote-endpoint = <&isp_virt3_in>;
+				};
+			};
+		};
+	};
+
+	isp: isp@ff540000 {
+			compatible = "amlogic,isp";
+			reg = <0x0 0xff540000 0x0 0x17780>,
+			      <0x0 0xff566000 0x0 0x520>;
+			reg-names = "base", "disp";
+			interrupts = <GIC_SPI 382 IRQ_TYPE_EDGE_RISING>,
+				     <GIC_SPI 371 IRQ_TYPE_EDGE_RISING>,
+				     <GIC_SPI 372 IRQ_TYPE_EDGE_RISING>,
+				     <GIC_SPI 373 IRQ_TYPE_EDGE_RISING>,
+				     <GIC_SPI 379 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "fe_rst", "fe_done", "be_done",
+					  "opp_done", "intf";
+			status = "disabled";
+	};
+
+	isp_virt0: isp-virt0 {
+		compatible = "amlogic,isp-virt0";
+		isp = <&isp>;
+		power-domains = <&pwrdm PDID_A9_ISP>;
+		clocks = <&clkc_dewarp>, <&clkc_isp>;
+		clock-names = "dewarp", "isp";
+		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
+		assigned-clock-rates = <800000000>, <400000000>;
+		status = "disabled";
+
+		port {
+			isp_virt0_in: endpoint {
+				remote-endpoint = <&adap0_out>;
+			};
+		};
+	};
+
+	isp_virt1: isp-virt1 {
+		compatible = "amlogic,isp-virt1";
+		isp = <&isp>;
+		power-domains = <&pwrdm PDID_A9_ISP>;
+		clocks = <&clkc_dewarp>, <&clkc_isp>;
+		clock-names = "dewarp", "isp";
+		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
+		assigned-clock-rates = <800000000>, <400000000>;
+		status = "disabled";
+
+		port {
+			isp_virt1_in: endpoint {
+				remote-endpoint = <&adap1_out>;
+			};
+		};
+	};
+
+	isp_virt2: isp-virt2 {
+		compatible = "amlogic,isp-virt2";
+		isp = <&isp>;
+		power-domains = <&pwrdm PDID_A9_ISP>;
+		clocks = <&clkc_dewarp>, <&clkc_isp>;
+		clock-names = "dewarp", "isp";
+		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
+		assigned-clock-rates = <800000000>, <400000000>;
+		status = "disabled";
+
+		port {
+			isp_virt2_in: endpoint {
+				remote-endpoint = <&adap2_out>;
+			};
+		};
+	};
+
+	isp_virt3: isp-virt3 {
+		compatible = "amlogic,isp-virt3";
+		isp = <&isp>;
+		power-domains = <&pwrdm PDID_A9_ISP>;
+		clocks = <&clkc_dewarp>, <&clkc_isp>;
+		clock-names = "dewarp", "isp";
+		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
+		assigned-clock-rates = <800000000>, <400000000>;
+		status = "disabled";
+
+		port {
+			isp_virt3_in: endpoint {
+				remote-endpoint = <&adap3_out>;
+			};
+		};
+	};
+
 	secmon:secmon {
 		compatible = "amlogic, secmon";
 		memory-region = <&secmon_reserved>;

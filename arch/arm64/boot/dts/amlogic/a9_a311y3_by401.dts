@@ -245,6 +245,13 @@
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
+		isp_reserved:linux,isp {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x20000000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
+		};
 	};
 
 /* Audio Related start */
@@ -762,28 +769,6 @@
 	pinctrl-names="default";
 	pinctrl-0=<&i2c5_pins3>;
 	clock-frequency = <100000>;
-
-	amlsens_0: sensor0@1a {
-		compatible = "amlogic, sensor";
-		index = <1>;
-		reg = <0x1a>;
-		reg-addr-type = <2>;
-		reg-data-type = <1>;
-
-		// using cm_mclk_0 24M
-		//clocks = <&clkc CLKID_MCLK0>;
-		clock-names = "mclk0";
-
-		pwdn-gpios = <&gpio GPIOX_5 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio GPIOX_4 GPIO_ACTIVE_HIGH>;
-
-		port {
-			amlsens_0_ep: endpoint {
-				data-lanes = <0 1 2 3>;
-				link-frequencies = /bits/ 64 <222750000>;
-			};
-		};
-	};
 };
 
 &i2c0 {
@@ -839,6 +824,110 @@
 			b_io_number = <6>;
 		};
 	};
+};
+
+&i2c6 {
+	status = "disabled";
+	pinctrl-0=<&i2c6_pins2>;
+	pinctrl-names="default";
+	clock-frequency = <400000>;
+
+	amlsens_0: sensor0@1a {
+		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
+		reg = <0x1a>;
+		index = <0>;
+		status = "okay";
+
+		clocks = <&clkc_mclk CLKID_MCLK_0>;
+		clock-names = "mclk";
+
+		pwdn-gpios = <&gpio GPIOM_3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio GPIOM_2 GPIO_ACTIVE_HIGH>;
+
+		port {
+			amlsens_0_out: endpoint {
+				data-lanes = <2 3 4 5>;
+				link-frequencies = /bits/ 64 <222750000 148500000>;
+				remote-endpoint = <&csi2_0_in>;
+			};
+		};
+	};
+};
+
+&i2c7 {
+	status = "disabled";
+	pinctrl-0=<&i2c7_pins2>;
+	pinctrl-names="default";
+	clock-frequency = <400000>;
+
+	amlsens_2: sensor2@1a {
+		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
+		reg = <0x1a>;
+		index = <2>;
+		status = "okay";
+
+		clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
+		clock-names = "mclk";
+
+		pwdn-gpios = <&gpio GPIOM_5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio GPIOM_4 GPIO_ACTIVE_HIGH>;
+
+		port {
+			amlsens_2_out: endpoint {
+				data-lanes = <2 3 4 5>;
+				link-frequencies = /bits/ 64 <222750000 148500000>;
+				remote-endpoint = <&csi2_2_in>;
+			};
+		};
+	};
+};
+
+&csi2_0 {
+	status = "okay";
+
+	ports {
+		port@0 {
+			csi2_0_in: endpoint {
+				remote-endpoint = <&amlsens_0_out>;
+				clock-lanes = <0>;
+				data-lanes = <2 3 4 5>;
+			};
+		};
+	};
+};
+
+&csi2_2 {
+	status = "okay";
+
+	ports {
+		port@0 {
+			csi2_2_in: endpoint {
+				remote-endpoint = <&amlsens_2_out>;
+				clock-lanes = <0>;
+				data-lanes = <2 3 4 5>;
+			};
+		};
+	};
+};
+
+&adap0 {
+	memory-region = <&isp_reserved>;
+	status = "okay";
+};
+
+&adap2 {
+	memory-region = <&isp_reserved>;
+	status = "okay";
+};
+
+&isp_virt0 {
+	memory-region = <&isp_reserved>;
+	status = "okay";
+};
+
+&isp_virt2 {
+	memory-region = <&isp_reserved>;
+	status = "okay";
 };
 
 &vddcpu0_board2 {
