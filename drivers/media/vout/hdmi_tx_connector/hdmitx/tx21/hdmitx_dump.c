@@ -64,7 +64,7 @@ static int dump_hdmi_phy_pll_show(struct seq_file *s, void *p)
 		dump32(s, ANACTRL_HDMIPHY_CTRL0_A9, ANACTRL_HDMIPHY_STS_A9);
 		seq_puts(s, "\n--------ANACTRL_HDMIPLL registers--------\n");
 		/* ((0x00C0 << 2) + 0xfe008000) ~ ((0x00C3 << 2) + 0xfe008000) */
-		dump32(s, ANACTRL_HDMIPLL_CTRL0_A9, ANACTRL_HDMIPLL_CTRL0_A9);
+		dump32(s, ANACTRL_HDMIPLL_CTRL0_A9, ANACTRL_HDMIPLL_CTRL3_A9);
 		break;
 	case MESON_CPU_ID_S6:
 	case MESON_CPU_ID_S7D:

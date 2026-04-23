@@ -1308,7 +1308,6 @@
 
 &amhdmitx {
 	status = "okay";
-	pxp_mode = <1>;
 };
 
 &lcd {

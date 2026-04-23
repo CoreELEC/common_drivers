@@ -41,8 +41,8 @@ static const char od_map[9] = {
 
 void hdmitx_disable_a9_plls(struct hdmitx21_dev *hdev)
 {
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL0, 0);
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL3, 0);
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL0_A9, 0);
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL3_A9, 0);
 }
 
 /* htx pll VCO output: (3G, 6G), for tmds */
@@ -61,20 +61,23 @@ static void set_a9_htxpll_clk_other(const u32 clk, const bool frl_en)
 	/* remainder range: 0 ~ 23999, 0x5dbf, 15bits */
 	remainder *= 1 << 17;
 	remainder /= 12000;
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL0, 0x00017000 | (quotient << 0));
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL1, 0x9040137d);
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL2, 0x04000000);
-	hd21_write_reg(ANACTRL_HDMIPLL_CTRL3, 0x01160000 | remainder);
-	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0, 1, 28, 1);
+	/*
+	 * ctrl0 bit 14 set 0: tx_pll_load_en
+	 */
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL0_A9, 0x00013000 | (quotient << 0));
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL1_A9, 0x9040137d);
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL2_A9, 0x04000000);
+	hd21_write_reg(ANACTRL_HDMIPLL_CTRL3_A9, 0x01160000 | remainder);
+	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0_A9, 1, 28, 1);
 	usleep_range(10, 20);
-	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0, 1, 18, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0_A9, 1, 18, 1);
 	usleep_range(10, 20);
-	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0, 1, 30, 1);
-	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0, 0, 18, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0_A9, 1, 30, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0_A9, 0, 18, 1);
 	usleep_range(80, 90);
-	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0, 1, 29, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPLL_CTRL0_A9, 1, 29, 1);
 	usleep_range(80, 90);
-	WAIT_FOR_PLL_LOCKED(ANACTRL_HDMIPLL_CTRL0);
+	WAIT_FOR_PLL_LOCKED(ANACTRL_HDMIPLL_CTRL0_A9);
 }
 
 void hdmitx_set_a9_htxpll_clk_out(const u32 clk, u32 div)
@@ -189,23 +192,23 @@ void hdmitx_set_phy_by_mode_a9(u32 mode)
 	case HDMI_PHYPARA_6G:
 	case HDMI_PHYPARA_4p5G:
 	case HDMI_PHYPARA_3p7G:
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0, 0x8003cafb);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5, 0x2555);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3, 0x4ef00b);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0_A9, 0x8003cafb);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5_A9, 0x2555);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3_A9, 0x884ef241);
 		break;
 	/* 2.97Gbps */
 	case HDMI_PHYPARA_3G:
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0, 0x800380dd);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5, 0x2555);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3, 0x4ef00b);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0_A9, 0x800380dd);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5_A9, 0x2555);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3_A9, 0x884ef241);
 		break;
 	/* 1.485Gbps, and below */
 	case HDMI_PHYPARA_270M:
 	case HDMI_PHYPARA_DEF:
 	default:
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0, 0x82038088);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5, 0x2555);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3, 0x4ef00b);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0_A9, 0x82038088);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5_A9, 0x2555);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3_A9, 0x884ef241);
 		break;
 	}
 
@@ -215,19 +218,20 @@ void hdmitx_set_phy_by_mode_a9(u32 mode)
 	/* default value when efuse invalid, 0xff indicate efuse invalid */
 	if (rterm != 0xff) {
 		HDMITX_INFO("%s[%d] rterm = %d\n", __func__, __LINE__, rterm);
-		hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL0, rterm, 28, 4);
+		hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL0_A9, rterm, 28, 4);
 	} else {
 		HDMITX_INFO("efuse invalid, use default value\n");
 	}
 
 	/* The bit with resetn is configured later than other bits. */
 	usleep_range(100, 110);
-	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3, 3, 10, 2);
-	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3, 1, 4, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3_A9, 3, 10, 2);
+	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3_A9, 3, 3, 2);
+	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3_A9, 1, 1, 1);
 	/* finally config bit[30:28] */
 	usleep_range(1000, 1010);
-	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3, 3, 28, 2);
-	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3, 1, 30, 1);
+	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3_A9, 3, 28, 2);
+	hd21_set_reg_bits(ANACTRL_HDMIPHY_CTRL3_A9, 1, 30, 1);
 }
 
 void hdmitx21_sys_reset_a9(void)
@@ -279,7 +283,7 @@ void hdmitx_a9_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en)
 
 	HDMITX_INFO("gate_bit_mask = 0x%x, enable: %d\n", gate_bit_mask, en);
 	if (gate_bit_mask & BIT(1))
-		hd21_set_reg_bits(CLKCTRL_VID_PLL_CLK0_DIV, en, 19, 1);
+		hd21_set_reg_bits(CLKCTRL_VID_PLL_CLK0_DIV_A9, en, 19, 1);
 	if (gate_bit_mask & BIT(2))
 		hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, en, 4, 1);
 	if (gate_bit_mask & BIT(3))
@@ -287,29 +291,29 @@ void hdmitx_a9_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en)
 	if (gate_bit_mask & BIT(4))
 		hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, en, 12, 1);
 	if (gate_bit_mask & BIT(5))
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2, en, 3, 1);
+		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, en, 3, 1);
 	if (gate_bit_mask & BIT(6))
-		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, en, 8, 1);
+		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1_A9, en, 8, 1);
 	if (gate_bit_mask & BIT(7))
-		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0, en, 24, 1);
+		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0_A9, en, 24, 1);
 	if (gate_bit_mask & BIT(8))
 		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0, en, 8, 1);
 	if (gate_bit_mask & BIT(9))
-		hd21_set_reg_bits(CLKCTRL_HDMI_CLK_CTRL, en, 8, 1);
+		hd21_set_reg_bits(CLKCTRL_HDMI_CLK_CTRL_A9, en, 8, 1);
 
 	/* this will enable during the mode setting */
 	if (gate_bit_mask & BIT(10)) {
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0, 0x0);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5, 0x0);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL0_A9, 0x0);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL5_A9, 0x0);
 	}
 	/* power off need */
 	if (gate_bit_mask & BIT(11)) {
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3, 0x704efc1b);
-		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3, 0xc1b);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3_A9, 0x704efc1b);
+		hd21_write_reg(ANACTRL_HDMIPHY_CTRL3_A9, 0xc1b);
 	}
 	usleep_range(1, 10);
 	/* this will enable during the pll setting */
 	if (gate_bit_mask & BIT(12))
-		hd21_write_reg(ANACTRL_HDMIPLL_CTRL0, 0x0);
+		hd21_write_reg(ANACTRL_HDMIPLL_CTRL0_A9, 0x0);
 }
 
