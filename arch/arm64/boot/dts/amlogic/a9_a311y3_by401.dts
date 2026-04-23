@@ -837,11 +837,12 @@
 	amlsens_0: sensor0@1a {
 		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
 		reg = <0x1a>;
+		clock-frequency = <37125000>;
 		index = <0>;
 		status = "okay";
 
 		clocks = <&clkc_mclk CLKID_MCLK_0>;
-		clock-names = "mclk";
+		clock-names = "xclk";
 
 		pwdn-gpios = <&gpio GPIOM_3 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio GPIOM_2 GPIO_ACTIVE_HIGH>;
@@ -865,11 +866,12 @@
 	amlsens_2: sensor2@1a {
 		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
 		reg = <0x1a>;
+		clock-frequency = <37125000>;
 		index = <2>;
 		status = "okay";
 
 		clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
-		clock-names = "mclk";
+		clock-names = "xclk";
 
 		pwdn-gpios = <&gpio GPIOM_5 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio GPIOM_4 GPIO_ACTIVE_HIGH>;
@@ -919,6 +921,10 @@
 
 &adap2 {
 	memory-region = <&isp_reserved>;
+	status = "okay";
+};
+
+&isp {
 	status = "okay";
 };
 
