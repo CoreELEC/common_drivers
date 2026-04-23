@@ -3346,6 +3346,20 @@
 		reg = <0x0 0xfe09e080 0x0 0x100>;
 	};
 
+	cve {
+		compatible = "amlogic, cve";
+		reg = <0x0 0xFF561000 0x0 0x1000>;
+		reg-names = "cve";
+		interrupts = <GIC_SPI 218 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "cve";
+		clocks = <&clkc_cve_vge CLKID_CVE>,
+			<&clkc_cve_vge CLKID_VGE>;
+		clock-names = "clk_cve", "clk_vge";
+		clk-rate = <666000000>;
+		power-domains = <&pwrdm PDID_A9_CVE>;
+		status = "okay";
+	};
+
 	ge2d {
 		compatible = "amlogic, ge2d-a9";
 		status = "okay";
