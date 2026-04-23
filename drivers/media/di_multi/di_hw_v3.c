@@ -5161,16 +5161,18 @@ void set_di_mif_v3(struct DI_MIF_S *mif, enum DI_MIF0_ID mif_index,
 		}
 	}
 
-	if (DIM_IS_IC(A9)) {
+	if (DIM_IS_IC(A9) && mif_index == DI_MIF0_ID_INP) {
 		if (mif->src_vdin) {
 			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x60);
 		} else {
-			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x40);
-
-			if (burst_len > 0)
-				burst_len = burst_len - 1;
+			op->wr(DI_SC2_INP_LUMA_FIFO_SIZE, 0x90);
 		}
 	}
+
+	if (DIM_IS_IC(A9) && mif_index == DI_MIF0_ID_MEM)
+		op->wr(DI_SC2_MEM_LUMA_FIFO_SIZE, 0x60);
+	if (DIM_IS_IC(A9) && burst_len > 0 && !mif->src_vdin)
+		burst_len = burst_len - 1;
 
 	dim_print("burst_len=%d\n", burst_len);
 	if (mif->linear) {

@@ -5660,7 +5660,7 @@ void dip_init_pq_ops(void)
 
 	/* hw l1 ops*/
 	if (IS_IC_EF(ic_id, SC2)) {
-		if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4))
+		if (DIM_IS_IC(T6D) || DIM_IS_IC(GXLX4) || DIM_IS_IC(A9))
 			get_datal()->hop_l1 = &dim_ops_l1_v6_t6d;
 		else if (DIM_IS_IC(T3X))
 			get_datal()->hop_l1 = &dim_ops_l1_v5;

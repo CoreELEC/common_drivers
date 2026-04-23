@@ -12441,7 +12441,6 @@ void dim_set_di_flag(void)
 	    DIM_IS_IC(S5) ||
 	    DIM_IS_IC(T3) ||
 	    DIM_IS_IC(T6D)	||
-	    DIM_IS_IC(A9)	||
 	    DIM_IS_IC(T3X))//s4/sc2 box bypass nr from brian
 		di_cfg_set(ECFG_DIM_BYPASS_P, 0);//for t5 enable p
 

@@ -545,11 +545,11 @@
 	multi-di {
 		compatible = "amlogic, dim-a9";
 		/* s6 same as s7d */
-		status = "disabled";
+		status = "okay";
 		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
 		flag_cma = <4>;	//<1>;
 		//memory-region = <&di_reserved>;
-		//memory-region = <&di_cma_reserved>;
+		memory-region = <&di_cma_reserved>;
 		interrupts = <0 203 1
 				0 202 1>;
 		interrupt-names = "pre_irq", "post_irq";
@@ -562,7 +562,7 @@
 		buffer-size = <4074560>;/*yuv422 fullpack*/
 		/* reserve-iomap = "true"; */
 		/* if enable nr10bit, set nr10bit-support to 1 */
-		post-wr-support = <0>;
+		post-wr-support = <1>;
 		nr10bit-support = <1>;
 		nrds-enable = <1>;
 		pps-enable = <1>;
@@ -578,7 +578,7 @@
 		prelink_en = <1>;
 		ponly_mode = <1>;
 		t5db_afbcd_en = <1>;
-		postlink_en = <1>;
+		postlink_en = <0>;
 		/***************************************************
 		 * t5w t3 support 4k ,same with t7 ,no canvas,
 		 * post_nub---default is 11
