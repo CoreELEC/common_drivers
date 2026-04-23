@@ -50,6 +50,7 @@
 #include "hdmi_rx_hw_txhd2.h"
 #include "hdmi_rx_hw_t6w.h"
 #include "hdmi_rx_hw_t6x.h"
+#include "hdmi_rx_hw_a9.h"
 
 static int pow5v_max_cnt = 2;
 static int pll_unlock_max;
@@ -322,7 +323,8 @@ void hdmirx_phy_var_init(void)
 		rx_info.aml_phy.eye_height_min = 8;
 		rx_info.aml_phy.tap0_err_check_en = 0;
 		// for t3x 2.1 phy
-		if (rx_info.phy_ver >= PHY_VER_T3X && !rx_info.aml_phy.phy_debug_en) {
+		if (rx_info.phy_ver >= PHY_VER_T3X && rx_info.phy_ver != PHY_VER_A9 &&
+			!rx_info.aml_phy.phy_debug_en) {
 			rx_info.aml_phy_21.phy_bwth = 1;
 			rx_info.aml_phy_21.vga_gain = 0x10000;
 			rx_info.aml_phy_21.eq_stg1 = 0x1f;
@@ -427,6 +429,7 @@ void hdmirx_fsm_var_init(void)
 	case CHIP_ID_TXHD2:
 	case CHIP_ID_T6D:
 	case CHIP_ID_T6W:
+	case CHIP_ID_A9:
 		hbr_force_8ch = 1; //use it to enable hdr2spdif
 		sig_stable_err_max = 5;
 		sig_stable_max = 4;
@@ -8006,6 +8009,8 @@ void dump_phy_status(u8 port)
 		dump_aml_phy_sts_t3x(port);
 	else if (rx_info.phy_ver == PHY_VER_T6X)
 		dump_aml_phy_sts_t6x(port);
+	else if (rx_info.phy_ver == PHY_VER_A9)
+		dump_aml_phy_sts_a9();
 	else
 		dump_aml_phy_sts_tl1();
 }
@@ -8055,7 +8060,7 @@ static void dump_edid_status(u8 port)
 
 void dump_video_status(u8 port)
 {
-	//rx_get_video_info(port);
+	rx_get_video_info(port);
 	rx_pr("port%d [video info]\n", port);
 	rx_pr("timing: %d*%d-%d-%dbit\n", rx[port].cur.hactive,
 								rx[port].cur.vactive,
@@ -8791,18 +8796,21 @@ void hdmirx_timer(void)
 			//hdcp22_decrypt_monitor(port);
 			rx_ext_state_monitor(port);
 		}
+
 		if (rx[E_PORT0].hpd_cntl == EDID_UPDATE_READY)
 			rx_port0_main_state_machine();
-		if (rx[E_PORT1].hpd_cntl == EDID_UPDATE_READY)
-			rx_port1_main_state_machine();
-		if (rx[E_PORT2].hpd_cntl == EDID_UPDATE_READY)
-			rx_port2_main_state_machine();
-		if (rx[E_PORT3].hpd_cntl == EDID_UPDATE_READY)
-			rx_port3_main_state_machine();
+		if (rx_info.chip_id != CHIP_ID_A9) {
+			if (rx[E_PORT1].hpd_cntl == EDID_UPDATE_READY)
+				rx_port1_main_state_machine();
+			if (rx[E_PORT2].hpd_cntl == EDID_UPDATE_READY)
+				rx_port2_main_state_machine();
+			if (rx[E_PORT3].hpd_cntl == EDID_UPDATE_READY)
+				rx_port3_main_state_machine();
+		}
 	}
 	#ifdef K_TEST_CHK_ERR_CNT
 	if (err_chk_en) {
-		for (port = E_PORT0; port < E_PORT_NUM; port++)
+		for (port = E_PORT0; port < rx_info.port_num; port++)
 			rx_monitor_error_counter(port);
 	}
 	#endif

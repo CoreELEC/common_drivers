@@ -261,6 +261,12 @@ static struct notifier_block aml_hdcp22_pm_notifier = {
 	.notifier_call = aml_hdcp22_pm_notify,
 };
 
+static struct meson_hdmirx_data rx_a9_data = {
+	.chip_id = CHIP_ID_A9,
+	.phy_ver = PHY_VER_A9,
+	.port_num = PORT_NUM_1,
+};
+
 static struct meson_hdmirx_data rx_t6x_data = {
 	.chip_id = CHIP_ID_T6X,
 	.phy_ver = PHY_VER_T6X,
@@ -372,6 +378,10 @@ static struct meson_hdmirx_data rx_gxtvbb_data = {
 #endif
 
 static const struct of_device_id hdmirx_dt_match[] = {
+	{
+		.compatible		= "amlogic, hdmirx_a9",
+		.data			= &rx_a9_data
+	},
 	{
 		.compatible		= "amlogic, hdmirx_t6x",
 		.data			= &rx_t6x_data
@@ -4146,9 +4156,11 @@ static void hdmirx_early_suspend(struct early_suspend *h)
 	hdmi_rx_clr_frl_rate(E_PORT2);
 	hdmi_rx_clr_frl_rate(E_PORT3);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
-		rx_irq_en(0, E_PORT1);
-		rx_irq_en(0, E_PORT2);
-		rx_irq_en(0, E_PORT3);
+		if (rx_info.chip_id != CHIP_ID_A9) {
+			rx_irq_en(0, E_PORT1);
+			rx_irq_en(0, E_PORT2);
+			rx_irq_en(0, E_PORT3);
+		}
 	}
 	rx_emp_hw_enable(false);
 	hdmirx_output_en(false, ALL_PORTS);
@@ -4262,6 +4274,7 @@ static int rx_get_top_irq_table(enum chip_id_e chip)
 		break;
 	case CHIP_ID_T3X:
 	case CHIP_ID_T6X://to do
+	case CHIP_ID_A9:
 		memcpy(top_irq_tab, top_irq_mask_t3x, IRQ_TYPE_CNT * sizeof(u32));
 		break;
 	default:
@@ -4574,7 +4587,7 @@ static int hdmirx_probe(struct platform_device *pdev)
 	if (IS_ERR(hdevp->cfg_clk)) {
 		;//rx_sprintf(&boot_info_num, "get cfg_clk err");
 	} else {
-		if (rx_info.chip_id == CHIP_ID_T6X)
+		if (rx_info.chip_id >= CHIP_ID_T6X)
 			ret = clk_set_rate(hdevp->cfg_clk, 200000000);
 		else if (rx_info.chip_id >= CHIP_ID_T7)
 			ret = clk_set_rate(hdevp->cfg_clk, 50000000);

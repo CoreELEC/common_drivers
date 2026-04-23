@@ -1396,6 +1396,15 @@
 //	status = "disabled";
 //};
 
+&hdmirx {
+	status = "okay";
+	pinctrl-0 = <&hdmirx_a_mux>;
+	en_4k_2_2k = <0>;
+	hpd_low_cec_off = <1>;
+	arc_port = <0>;
+	/* bit4: enable feature, bit3~0: port number */
+	disable_port = <0x0>;
+};
 /*if you want to use vdin just modify status to "ok"*/
 &vdin0 {
 	/*compatible = "amlogic, vdin-s6";*/
