@@ -39,6 +39,8 @@
 		i3c1 = &i3c1;
 		tsensor0 = &p_tsensor;
 		tsensor1 = &c_tsensor;
+		ethernet0 = &ethmac_a;
+		ethernet1 = &ethmac_b;
 	};
 
 	memory@0 {
@@ -1104,36 +1106,67 @@
 	status = "disabled";
 };
 
-/*exphy setting*/
-&ext_mdio {
+/* MAC_A 1G exphy setting */
+&ext_mdio_a {
 	status = "disabled";
 };
 
-&ethmac {
-	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
+&ethmac_a {
+	pinctrl-0 = <&eth_a_pins>, <&eth_a_rgmii_pins>;
 	pinctrl-names = "default";
 	status = "disabled";
 	phy-mode = "rgmii";
-	phy-handle = <&external_phy>;
+	phy-handle = <&external_phy_a>;
+	phy-mii-clk-sel = <0x3>;
 	amlogic,tx-delay-ns = <2>;
-	internal_phy = <2>;
 	cali_val = <0x290000>;
-	wol = <1>;
-	mdns_wkup = <1>;
+	// wol = <1>;
+	// mdns_wkup = <1>;
 };
 
-/*inphy setting*/
-//&int_mdio {
+// /* MAC_A 2.5G exphy setting */
+// &ext_mdio_a {
 //	status = "okay";
-//};
-//&ethmac {
+// };
+
+// &external_phy_a {
+//	compatible = "ethernet-phy-ieee802.3-c45";
+//	max-speed = <2500>;
+// };
+
+// &serdes0 {
 //	status = "okay";
-//	phy-handle = <&internal_ephy>;
-//	phy-mode = "rmii";
-//	internal_phy = <1>;
-//	mac_wol = <1>;
-//	mdns_wkup = <1>;
-//};
+// };
+
+// &ethmac_a {
+//	pinctrl-0 = <&eth_a_mdio_pins>;
+//	pinctrl-names = "default";
+//	status = "okay";
+//	phys = <&serdes0>;
+//	phy-names = "serdes";
+//	phy-mode = "2500base-x";
+//	phy-handle = <&external_phy_a>;
+//	// wol = <1>;
+//	// mdns_wkup = <1>;
+// };
+
+/* MAC_B 1G exphy setting */
+&ext_mdio_b {
+	status = "disabled";
+};
+
+&ethmac_b {
+	pinctrl-0 = <&eth_b_pins>, <&eth_b_rgmii_pins>;
+	pinctrl-names = "default";
+	status = "disabled";
+	phy-mode = "rgmii";
+	phy-handle = <&external_phy_b>;
+	phy-mii-clk-sel = <0x3>;
+	amlogic,tx-delay-ns = <2>;
+	cali_val = <0x290000>;
+	// wol = <1>;
+	// mdns_wkup = <1>;
+};
 
 &ir {
 	status = "okay";

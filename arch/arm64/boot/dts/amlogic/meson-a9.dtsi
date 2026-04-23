@@ -1238,57 +1238,6 @@
 				status = "disabled";
 			};
 
-			eth_phy: mdio-multiplexer@360000 {
-				compatible = "amlogic,g12a-mdio-mux";
-				status = "disabled";
-				reg = <0x0 0x360000 0x0 0xa4>;
-
-				clocks = <&clkc_sys CLKID_SYS_ETH_PHY>,
-					 <&xtal>,
-					 <&scmi_clk CLKID_FCLK_50M>;
-				clock-names = "pclk", "clkin0", "clkin1";
-				mdio-parent-bus = <&mdio0>;
-				#address-cells = <1>;
-				#size-cells = <0>;
-				phy_pll_mode = <3>;
-				phy_mode = <6>;
-				tx_amp_src = <0xFE010330>;
-				led_setting = <0x42>;
-
-				ext_mdio: mdio@0 {
-					status = "disable";
-					reg = <0>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-					compatible = "snps,dwmac-mdio";
-					external_phy: ethernet_phy@0 {
-						reg = <0>;
-						max-speed = <1000>;
-
-						reset-assert-us = <20000>;
-						reset-deassert-us = <50000>;
-						reset-gpios = <&gpio GPIOZ_15 GPIO_ACTIVE_LOW>;
-						realtek,clkout-disable;
-						realtek,aldps-enable;
-					};
-				};
-
-				int_mdio: mdio@1 {
-					status = "disable";
-					reg = <1>;
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					internal_ephy: ethernet_phy@8 {
-						compatible = "ethernet-phy-id0180.3301",
-							     "ethernet-phy-ieee802.3-c22";
-						interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
-						reg = <8>;
-						max-speed = <100>;
-					};
-				};
-			};
-
 			reset: reset-controller@2000 {
 				compatible = "amlogic,meson-t7-reset";
 				reg = <0x0 0x2000 0x0 0x98>;
@@ -1914,25 +1863,102 @@
 			nand_clk_ctrl = <0xfe08c000>;
 		};
 
-		ethmac: ethernet@fe368000 {
+		serdes0: hsgmii-phy@fe4c2000 {
+			compatible = "amlogic,hsgmii-phy";
+			reg = <0x0 0xfe4c2000 0x0 0x22c>;
+			clocks = <&clkc_sys CLKID_SYS_U3HSG>;
+			clock-names = "hsg_general";
+			resets = <&reset RESET_HSG>,
+				 <&reset RESET_U3HSG_HSG>;
+			reset-names = "hsg_rst", "hsg_apb_rst";
+			hsg-trim-reg = <0xfe01034c>;
+			u3hsg-combo-reg = <0xfe0086e0>;
+			combo-hsg-sel-val = <0x0>;
+			#phy-cells = <0>;
+			power-domains=<&pwrdm PDID_A9_U3HSG_HSG>;
+			status = "disabled";
+		};
+
+		ethmac_a: ethernet@fe498000 {
 			compatible = "amlogic,meson-axg-dwmac",
 				     "snps,dwmac-4.00";
-			reg = <0x0 0xfe368000 0x0 0x12ec>,
-			      <0x0 0xfe364000 0x0 0x8>;
-			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
+			reg = <0x0 0xfe498000 0x0 0x12ec>,
+			      <0x0 0xfe494000 0x0 0x2c>;
+			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "macirq";
-			//clocks = <&clkc_sys CLKID_SYS_ETH_MAC>,
-			//	 <&scmi_clk CLKID_FCLK_DIV2>,
-			//	 <&scmi_clk CLKID_FCLK_50M>;
+			clocks = <&clkc_sys CLKID_SYS_ETH>,
+				 <&scmi_clk CLKID_FCLK_DIV2>,
+				 <&scmi_clk CLKID_FCLK_50M>;
 			clock-names = "stmmaceth", "clkin0", "clkin1";
+			// resets = <&reset RESET_ETH>;
+			// reset-names = "stmmaceth";
 			rx-fifo-depth = <4096>;
-			tx-fifo-depth = <2048>;
+			tx-fifo-depth = <4096>;
 			mboxes = <&mbox_fifo A9_REE2AO_ETH>;
+			internal_phy = <2>;
+			/* ignore integrated PCS link states */
+			amlogic,ignore-pcs-stats;
+			power-domains=<&pwrdm PDID_A9_ETH>;
 			status = "disabled";
-			mdio0: mdio {
+
+			ext_mdio_a: mdio {
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "snps,dwmac-mdio";
+				status = "disabled";
+
+				external_phy_a: ethernet-phy@0 {
+						reg = <0>;
+						max-speed = <1000>;
+
+						reset-assert-us = <20000>;
+						reset-deassert-us = <50000>;
+						reset-gpios = <&gpio GPIOZ_15 (GPIO_ACTIVE_LOW |
+									GPIO_OPEN_DRAIN)>;
+						realtek,clkout-disable;
+						realtek,aldps-enable;
+				};
+			};
+		};
+
+		ethmac_b: ethernet@fe4e8000 {
+			compatible = "amlogic,meson-axg-dwmac",
+				     "snps,dwmac-4.00";
+			reg = <0x0 0xfe4e8000 0x0 0x12ec>,
+			      <0x0 0xfe4e4000 0x0 0x2c>;
+			interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "macirq";
+			clocks = <&clkc_sys CLKID_SYS_ETH_MAC_1G>,
+				 <&scmi_clk CLKID_FCLK_DIV2>,
+				 <&scmi_clk CLKID_FCLK_50M>;
+			clock-names = "stmmaceth", "clkin0", "clkin1";
+			// resets = <&reset RESET_ETH_1G>;
+			// reset-names = "stmmaceth";
+			rx-fifo-depth = <4096>;
+			tx-fifo-depth = <4096>;
+			mboxes = <&mbox_fifo A9_REE2AO_ETH>;
+			// amlogic,smc-id = <0x8200009d>;
+			internal_phy = <2>;
+			power-domains=<&pwrdm PDID_A9_ETH_1G>;
+			status = "disabled";
+
+			ext_mdio_b: mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "snps,dwmac-mdio";
+				status = "disabled";
+
+				external_phy_b: ethernet-phy@0 {
+						reg = <0>;
+						max-speed = <1000>;
+
+						reset-assert-us = <20000>;
+						reset-deassert-us = <50000>;
+						reset-gpios = <&gpio GPIOA_15 (GPIO_ACTIVE_LOW |
+									GPIO_OPEN_DRAIN)>;
+						realtek,clkout-disable;
+						realtek,aldps-enable;
+				};
 			};
 		};
 
@@ -4276,31 +4302,71 @@
 		};
 	};
 
-	eth_pins: eth {
+	eth_a_mdio_pins: eth_a_mdio_pins {
 		mux {
-			groups = "eth_mdio",
-				 "eth_mdc",
-				 "eth_rgmii_rx_clk",
-				 "eth_rx_dv",
-				 "eth_rxd0",
-				 "eth_rxd1",
-				 "eth_txen",
-				 "eth_txd0",
-				 "eth_txd1";
-			function = "eth";
+			groups = "eth_a_mdio_z",
+				 "eth_a_mdc_z";
+			function = "eth_a";
 			drive-strength-microamp = <3000>;
 			bias-disable;
 		};
 	};
 
-	eth_rgmii_pins: eth-rgmii {
+	eth_a_pins: eth_a_pins {
 		mux {
-			groups = "eth_rxd2_rgmii",
-				 "eth_rxd3_rgmii",
-				 "eth_rgmii_tx_clk",
-				 "eth_txd2_rgmii",
-				 "eth_txd3_rgmii";
-			function = "eth";
+			groups = "eth_a_mdio_z",
+				 "eth_a_mdc_z",
+				 "eth_a_rgmii_rx_clk",
+				 "eth_a_rx_dv",
+				 "eth_a_rxd0",
+				 "eth_a_rxd1",
+				 "eth_a_txen",
+				 "eth_a_txd0",
+				 "eth_a_txd1";
+			function = "eth_a";
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+	};
+
+	eth_a_rgmii_pins: eth_a_rgmii_pins {
+		mux {
+			groups = "eth_a_rxd2_rgmii",
+				 "eth_a_rxd3_rgmii",
+				 "eth_a_rgmii_tx_clk",
+				 "eth_a_txd2_rgmii",
+				 "eth_a_txd3_rgmii";
+			function = "eth_a";
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+	};
+
+	eth_b_pins: eth_b_pins {
+		mux {
+			groups = "eth_b_mdio",
+				 "eth_b_mdc",
+				 "eth_b_rgmii_rx_clk",
+				 "eth_b_rx_dv",
+				 "eth_b_rxd0",
+				 "eth_b_rxd1",
+				 "eth_b_txen",
+				 "eth_b_txd0",
+				 "eth_b_txd1";
+			function = "eth_b";
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+	};
+
+	eth_b_rgmii_pins: eth_b_rgmii_pins {
+		mux {
+			groups = "eth_b_rxd2_rgmii",
+				 "eth_b_rxd3_rgmii",
+				 "eth_b_rgmii_tx_clk",
+				 "eth_b_txd2_rgmii",
+				 "eth_b_txd3_rgmii";
+			function = "eth_b";
 			drive-strength-microamp = <3000>;
 			bias-disable;
 		};
