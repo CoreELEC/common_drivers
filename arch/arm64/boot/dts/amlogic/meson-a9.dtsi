@@ -2776,33 +2776,34 @@
 	};
 
 	aocec: aocec {
-		compatible = "amlogic, aocec-s6";
+		compatible = "amlogic, aocec-a9";
 		dev_name = "aocec";
-		status = "disabled";
+		status = "okay";
 		vendor_name = "Amlogic"; /* Max Chars: 8     */
 		/* Refer to the following URL at:
 		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
 		 */
 		vendor_id = <0xffffff>;
-		product_desc = "S6"; /* Max Chars: 16    */
+		product_desc = "A9"; /* Max Chars: 16    */
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		cec_version = <5>;/*5:1.4;6:2.0*/
 		port_num = <1>;
-		output = <1>;
 		cec_sel = <1>;/*1:use one ip, 2:use 2 ip*/
 		ee_cec;
 		arc_port_mask = <0x1>;
-		interrupts = <GIC_SPI 180 IRQ_TYPE_EDGE_RISING>;/*1:ts*/
+		interrupts = <GIC_SPI 407 IRQ_TYPE_EDGE_RISING>;/*1:ts*/
 		interrupt-names = "hdmi_aocecb";
 		pinctrl-names = "default","hdmitx_aocecb","cec_pin_sleep";
 		pinctrl-0=<&eecec_b>;
 		pinctrl-1=<&eecec_b>;
 		pinctrl-2=<&eecec_b>;
-		//clocks = <&clkc_cecb CLKID_CECB_CLK>;
+		clocks = <&clkc_ao_cecb CLKID_AO_CECB_CLK>;
 		clock-names = "cecb_clk";
-		reg = <0x0 0xfe044000 0x0 0x2ff
+		assigned-clocks = <&clkc_ao_cecb CLKID_AO_CECB_DUAL>;
+		assigned-clock-rates = <32768>;
+		reg = <0x0 0xffa16000 0x0 0x2ff
 		       0x0 0xfe010000 0x0 0xfff
-		       0x0 0xfe000000 0x0 0xfff
+		       0x0 0xffa00000 0x0 0xfff
 		       0x0 0xfe004000 0x0 0x2000>;
 		reg-names = "ao","periphs","clock","pad_reg";
 		mbox-names = "mbox_cec";
@@ -4134,6 +4135,13 @@
 		};
 	};
 
+	eecec_b: ee_cecb {
+		mux {
+			groups = "cec_ao";
+			function = "cec_ao";
+			bias-pull-up;
+		};
+	};
 	i2c0_pins1:i2c0_pins1 {
 		mux {
 			groups = "i2c_a_scl_ao",
@@ -4887,20 +4895,6 @@
 			groups = "diseqc_in";
 			function = "diseqc_in";
 			bias-pull-down;
-		};
-	};
-
-	eecec_a: ee_ceca {
-		mux {
-			groups = "ao_cec_a";
-			function = "ao_cec_a";
-		};
-	};
-
-	eecec_b: ee_cecb {
-		mux {
-			groups = "ao_cec_h";
-			function = "ao_cec";
 		};
 	};
 

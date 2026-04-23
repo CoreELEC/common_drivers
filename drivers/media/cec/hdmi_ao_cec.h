@@ -57,6 +57,7 @@ enum cec_chip_ver {
 	CEC_CHIP_T6D,
 	CEC_CHIP_T6W,
 	CEC_CHIP_T6X,
+	CEC_CHIP_A9,
 };
 
 enum cecaver {
