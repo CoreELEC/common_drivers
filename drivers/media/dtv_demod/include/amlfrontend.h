@@ -239,6 +239,7 @@
 /*  V4.1.014 fix dtmb bch reset constantly */
 /*  V4.1.015 add ddr priority control */
 /*  V4.1.016 modify dvb-t2 status process to lock early */
+/*  V4.1.017 add J83B status jittering when locked to unlock */
 /****************************************************/
 /****************************************************************/
 /*               AMLDTVDEMOD_VER  Description:                  */
@@ -255,8 +256,8 @@
 /*->The last four digits indicate the release time              */
 /****************************************************************/
 #define KERNEL_4_9_EN		1
-#define AMLDTVDEMOD_VER "V4.1.016"
-#define DTVDEMOD_VER	"2026/04/07 modify dvb-t2 status process to lock early"
+#define AMLDTVDEMOD_VER "V4.1.017"
+#define DTVDEMOD_VER	"2026/04/23 add J83B status jittering when locked to unlock"
 #define AMLDTVDEMOD_T2_FW_VER "v1059.20250521"
 #define DEMOD_DEVICE_NAME  "dtvdemod"
 

@@ -156,7 +156,8 @@ unsigned char testbus_test_mode;
 	DEMOD_ATTR_ADD(auto_search_std, uint)	\
 	DEMOD_ATTR_ADD(dvb_j83b_count, int)	\
 	DEMOD_ATTR_ADD(dvbc_agc_target, unchar)	\
-	DEMOD_ATTR_ADD(j83b_agc_target, unchar)
+	DEMOD_ATTR_ADD(j83b_agc_target, unchar)	\
+	DEMOD_ATTR_ADD(j83b_lock_cnt, int)
 #endif
 
 #ifdef CONFIG_AMLOGIC_DEMOD_SUPPORT_DVBC
@@ -1508,7 +1509,8 @@ static ssize_t attr_store(const struct class *cls, const struct class_attribute 
 		if (fe->ops.tune)
 			fe->ops.tune(fe, true, 0, &delay, &sts);
 	} else if (!strcmp(parm[0], "tune")) {
-		fe->ops.tune(fe, val, 0, &delay, &sts);
+		if (fe->ops.tune)
+			fe->ops.tune(fe, val, 0, &delay, &sts);
 	} else if (!strcmp(parm[0], "retune")) {
 		if (fe->ops.tune)
 			fe->ops.tune(fe, true, 0, &delay, &sts);

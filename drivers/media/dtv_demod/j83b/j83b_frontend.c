@@ -41,6 +41,7 @@
 
 unsigned int auto_search_std;
 int dvb_j83b_count = 5;
+int j83b_lock_cnt = 5;
 /*come from j83b_speedup_func*/
 
 /*copy from dtvdemod_atsc_init*/
@@ -364,6 +365,12 @@ int j83b_read_status(struct dvb_frontend *fe, enum fe_status *status, bool re_tu
 	PR_ATSC("fsm %d, snr %d dBx10, time_passed %u\n", s,
 		demod->real_para.snr, demod->time_passed);
 
+	/* fsm_state: 0x31[bit0-3].
+	 * 0: IDLE.               1: AGC.
+	 * 2: COARSE_SYMBOL_RATE. 3: FINE_SYMBOL_RATE.
+	 * 4: EQ_MMA_RESET.       5: FEC_LOCK.
+	 * 6: FEC_LOST.           7: EQ_SMMA_RESET.
+	 */
 	if (s == 5) {
 		is_signal = true;
 		timeout = TIMEOUT_ATSC;
@@ -408,7 +415,7 @@ int j83b_read_status(struct dvb_frontend *fe, enum fe_status *status, bool re_tu
 
 		if ((demod->last_lock == 0 || is_signal) && demod->time_passed < timeout) {
 			*status = 0;
-		} else if (demod->last_status == 0x1F) {
+		} else if (demod->last_status == FE_LOCKED) {
 			*status = 0;
 			PR_ATSC("retry fsm 0x%x, snr %d dBx10\n",
 				qam_read_reg(demod, 0x31), demod->real_para.snr);
@@ -430,19 +437,26 @@ int j83b_read_status(struct dvb_frontend *fe, enum fe_status *status, bool re_tu
 	if (*status == 0) {
 		PR_ATSC("!! >> wait << !!\n");
 	} else if (*status == FE_TIMEDOUT) {
-		if (demod->last_lock == -1)
+		if (demod->last_lock < 0) {
 			PR_ATSC("!! >> lost again << !!\n");
-		else
+		} else if (demod->last_lock > 0) {
+			// locked to unlock, for jittering.
+			demod->last_lock--;
+			*status = 0;
+			PR_ATSC("!! >> wait %d << !!\n", demod->last_lock);
+		} else {
+			// last_lock == 0
+			demod->last_lock--;
 			PR_INFO("!! >> UNLOCK << !!, freq=%d, qam %d, time_passed:%u\n",
 				c->frequency, demod->auto_qam_mode, demod->time_passed);
-		demod->last_lock = -1;
+		}
 	} else {
-		if (demod->last_lock == 1)
+		if (demod->last_lock == j83b_lock_cnt)
 			PR_ATSC("!! >> lock continue << !!\n");
 		else
 			PR_INFO("!! >> LOCK << !!, freq=%d, time_passed:%u\n",
 				c->frequency, demod->time_passed);
-		demod->last_lock = 1;
+		demod->last_lock = j83b_lock_cnt;
 	}
 
 	return 0;
