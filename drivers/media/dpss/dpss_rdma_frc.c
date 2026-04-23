@@ -40,7 +40,7 @@ static unsigned int rdma_handle_irq_pre_vs = 0x2; // pre vs tri bit:1
 static unsigned int rdma_handle_irq_vs = 0x1; //vs tri bit:0 update 25/11/12
 static unsigned int frc_pv_rdma_err_cnt;
 static unsigned int frc_vs_rdma_err_cnt;
-
+static int dpss_rdma_reset_enable;
 //dbg
 static unsigned int rdma_dbg_en;
 
@@ -58,6 +58,16 @@ void dpss_rdma_dbg_level(u32 level)
 int show_dpss_rdma_dbg_level(void)
 {
 	return rdma_dbg_en;
+}
+
+int show_dpss_rdma_reset_status(void)
+{
+	return dpss_rdma_reset_enable;
+}
+
+void set_dpss_rdma_reset_enable(int enable)
+{
+	dpss_rdma_reset_enable = enable;
 }
 
 void dpss_rdma_force_chg_st(u32 en)
@@ -497,6 +507,7 @@ void pre_vsync_signal_to_dpss_rdma(void)
 	frc_pv_rdma_err_cnt = 0;
 	rdma_info_p->index_flag++;
 	DPSS_RDMA_WR_BIT_PRE_VS(FRC_REG_TOP_RESERVE11, rdma_info_p->index_flag, 0, 32);
+
 	dpss_rdma_auto_wr_tri(RDMA_IRQ_PRE_VSYNC);
 }
 
@@ -562,8 +573,8 @@ void dpss_rdma_auto_wr_tri(u32 handle)
 	else if (handle == RDMA_IRQ_VSYNC)
 		handle_irq = rdma_handle_irq_vs;
 
+	dbg_f1("before: 0xf120 =:%#x\n", rd(DPSS_RDMA_ACCESS_AUTO));
 	table_size = rdma_info_p->rdma_table_size;
-
 	if (rdma_info_p->rdma_item_count > 0) {
 		//auto RDMA
 		// w_reg_bit(rdma_regadr->trigger_mask_reg, 0,
@@ -604,6 +615,8 @@ void dpss_rdma_auto_wr_tri(u32 handle)
 			handle_irq_rd, handle_irq, rdma_info_p->rdma_item_count);
 		rdma_info_p->rdma_item_count = 0;
 	}
+	dbg_f1("after: 0xf120 =:%#x\n", rd(DPSS_RDMA_ACCESS_AUTO));
+
 }
 
 static void rdma_alloc_buf(struct dpss_dev_s *de_devp)
@@ -738,12 +751,14 @@ int dpss_rdma_init(void)
 	// data32 |= 0 << 2;
 	// data32 |= 0 << 1;
 	// data32 |= 0 << 0;
-
+	if (dpss_rdma_reset_enable)
+		data32 |= 1 << 1; /* reset */
 	// init clk
 	// w_reg_bit(FRC_RDMA_SYNC_CTRL, 1, 2, 1);
 	// w_reg_bit(FRC_RDMA_SYNC_CTRL, 1, 6, 1);
 	// rdma config
 	wr(rdma_ctrl, data32);
+	w_reg_bit(rdma_ctrl, 0, 1, 1);
 	pr_rdma(2, "dpss rdma init done\n");
 	return 1;
 }

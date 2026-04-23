@@ -56,6 +56,8 @@ void dpss_rdma_force_chg_st(u32 en);
 void dpss_rdma_dbg_level(u32 level);
 int show_dpss_rdma_dbg_level(void);
 int show_dpss_rdma_buf_alloc_st(void);
+int show_dpss_rdma_reset_status(void);
+void set_dpss_rdma_reset_enable(int enable);
 
 void irq_rdma(void);
 int  dpss_rdma_init(void);

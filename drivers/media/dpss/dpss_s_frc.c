@@ -713,6 +713,7 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	game_st->game_vrr_en = true;
 	game_st->inp_ctrl = true;
 	game_st->game_dae_byp_en = false;
+	set_dpss_rdma_reset_enable(1);
 
 	frc_dbg(DPSS_FRC_TOP, "%s init_version_20250905\n", __func__);
 	if (pdata && pdata->mdata) {
@@ -817,6 +818,11 @@ void hw_init_part1(struct vframe_s *vfrm)
 	if (pchip_st->encl_frc_ctrl == 0) {
 		DBG_ERR("%s encl_frc_ctrl reg null\n", __func__);
 		return;
+	}
+
+	if (show_dpss_rdma_reset_status() == 1) {
+		w_reg_bit(DPSS_RDMA_CTRL, 1, 1, 1);
+		w_reg_bit(DPSS_RDMA_CTRL, 0, 1, 1);
 	}
 
 	if (vinfo->sync_duration_den != 0)
