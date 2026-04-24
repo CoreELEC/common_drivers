@@ -258,6 +258,18 @@ static struct notifier_block panic_notifier = {
 	.notifier_call	= panic_notify,
 };
 
+static int reboot_die_callback(struct notifier_block *self,
+			unsigned long cmd, void *ptr)
+{
+	kernel_panic = "kernel_panic";
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block reboot_die_notifier = {
+	.notifier_call	= reboot_die_callback,
+};
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 ssize_t reboot_reason_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
@@ -475,7 +487,7 @@ static int aml_restart_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	ret = register_die_notifier(&panic_notifier);
+	ret = register_die_notifier(&reboot_die_notifier);
 	if (ret != 0) {
 		ret = -4;
 		goto error;
