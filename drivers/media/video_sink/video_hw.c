@@ -11959,9 +11959,10 @@ void vpp_blend_update_t7(const struct vinfo_s *vinfo)
 			cur_dev->rdma_func[vpp_index].rdma_wr
 				(VPP_MISC + vpp_off,
 				set_value);
-			cur_dev->rdma_func[vpp_index].rdma_wr_bits
-				(VPP_MISC2 + vpp_off,
-				vd_layer[2].layer_alpha, 0, 9);
+			if (vd_layer[2].layer_support)
+				cur_dev->rdma_func[vpp_index].rdma_wr_bits
+					(VPP_MISC2 + vpp_off,
+					vd_layer[2].layer_alpha, 0, 9);
 		}
 	}
 	vpp_misc_set_save = vpp_misc_set;
