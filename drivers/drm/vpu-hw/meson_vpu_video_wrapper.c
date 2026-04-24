@@ -53,7 +53,8 @@ static u32 video_bpp_get(u32 pixel_format)
 static void video_vfm_convert_to_vfminfo(struct meson_vpu_video_state *mvvs,
 	struct video_display_frame_info_t *vf_info)
 {
-	vf_info->dmabuf = mvvs->dmabuf[0];
+	vf_info->dmabuf[0] = mvvs->dmabuf[0];
+	vf_info->dmabuf[1] = mvvs->dmabuf[1];
 	vf_info->dst_x = mvvs->dst_x;
 	vf_info->dst_y = mvvs->dst_y;
 	vf_info->dst_w = mvvs->dst_w;
@@ -386,7 +387,8 @@ static void video_set_state(struct meson_vpu_block *vblk,
 			vf->flag |= VFRAME_FLAG_MIRROR_H | VFRAME_FLAG_MIRROR_V;
 
 		vf_info.release_fence = video->fence;
-		vf_info.dmabuf = mvvs->dmabuf[0];
+		vf_info.dmabuf[0] = mvvs->dmabuf[0];
+		vf_info.dmabuf[1] = mvvs->dmabuf[1];
 		vf_info.dst_x = mvvs->dst_x;
 		vf_info.dst_y = mvvs->dst_y;
 		vf_info.dst_w = mvvs->dst_w;
@@ -414,19 +416,20 @@ static void video_set_state(struct meson_vpu_block *vblk,
 			 * DRM does not process it.
 			 */
 			vf_info.present_fence = video->present_fence;
-			dma_resv_lock(vf_info.dmabuf->resv, NULL);
+			dma_resv_lock(vf_info.dmabuf[0]->resv, NULL);
 
-			ret = dma_resv_reserve_fences(vf_info.dmabuf->resv, 1);
-			if (!ret)
-				dma_resv_add_fence(vf_info.dmabuf->resv, vf_info.release_fence,
+			ret = dma_resv_reserve_fences(vf_info.dmabuf[0]->resv, 1);
+			if (!ret && vf_info.release_fence)
+				dma_resv_add_fence(vf_info.dmabuf[0]->resv, vf_info.release_fence,
 							DMA_RESV_USAGE_WRITE);
 
-			dma_resv_unlock(vf_info.dmabuf->resv);
+			dma_resv_unlock(vf_info.dmabuf[0]->resv);
 			video->frame_cnt++;
 		}
 
-		MESON_DRM_FENCE("dmabuf(%px), in-%px, release_fence(%px-%d)\n",
-				vf_info.dmabuf, vf_info.input_fence, vf_info.release_fence,
+		MESON_DRM_FENCE("dmabuf(%px-%px), in-%px, release_fence(%px-%d)\n",
+				vf_info.dmabuf[0], vf_info.dmabuf[1], vf_info.input_fence,
+				vf_info.release_fence,
 				vf_info.release_fence ?
 				kref_read(&vf_info.release_fence->refcount) : -1);
 
@@ -465,18 +468,19 @@ static void video_set_state(struct meson_vpu_block *vblk,
 			 * DRM does not process it.
 			 */
 			vf_info.present_fence = video->present_fence;
-			dma_resv_lock(vf_info.dmabuf->resv, NULL);
+			dma_resv_lock(vf_info.dmabuf[0]->resv, NULL);
 
-			ret = dma_resv_reserve_fences(vf_info.dmabuf->resv, 1);
-			if (!ret)
-				dma_resv_add_fence(vf_info.dmabuf->resv, vf_info.release_fence,
+			ret = dma_resv_reserve_fences(vf_info.dmabuf[0]->resv, 1);
+			if (!ret && vf_info.release_fence)
+				dma_resv_add_fence(vf_info.dmabuf[0]->resv, vf_info.release_fence,
 							DMA_RESV_USAGE_WRITE);
 
-			dma_resv_unlock(vf_info.dmabuf->resv);
+			dma_resv_unlock(vf_info.dmabuf[0]->resv);
 			video->frame_cnt++;
 		}
-		MESON_DRM_FENCE("dmabuf(%px), in-%px, release_fence(%px-%d)\n",
-				vf_info.dmabuf, vf_info.input_fence, vf_info.release_fence,
+		MESON_DRM_FENCE("dmabuf(%px-%px), in-%px, release_fence(%px-%d)\n",
+				vf_info.dmabuf[0], vf_info.dmabuf[1], vf_info.input_fence,
+				vf_info.release_fence,
 				vf_info.release_fence ?
 				kref_read(&vf_info.release_fence->refcount) : -1);
 
