@@ -38,6 +38,13 @@ static u32 deep_mode;
 static int deep_mode_init_done;
 bool is_clr_resume_reason;
 
+static unsigned int suspend_mode;
+#define SMCID_POWER_MANAGER	0x82000079
+#define SMCSUBID_PM_DDR_ASR	0x1000
+#define SMCSUBID_PM_DUMP_INFO	0x1001
+#define SMCSUBID_PM_DEEPCTRL	0x1002
+#define SMCSUBID_PM_GET_EE_STAT	0x1003
+
 #if IS_ENABLED(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND)
 
 static DEFINE_MUTEX(early_suspend_lock);
@@ -462,11 +469,28 @@ static void set_resume_method(unsigned int val)
 	resume_reason = val;
 }
 
+static void clr_deep_mode(void)
+{
+	if (deep_mode_init_done)
+		__invoke_psci_fn_smc(SMCID_POWER_MANAGER,
+				SMCSUBID_PM_DEEPCTRL, SYSTEM_COLD_BOOT, 0);
+}
+
+static void set_deep_mode(void)
+{
+	if (deep_mode_init_done)
+		__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
+}
+
 static int clr_suspend_notify(struct notifier_block *nb,
 				     unsigned long event, void *dummy)
 {
-	if (event == PM_SUSPEND_PREPARE)
+	if (event == PM_SUSPEND_PREPARE) {
 		set_resume_method(UNDEFINED_WAKEUP);
+		set_deep_mode();
+	} else if (event == PM_POST_SUSPEND) {
+		clr_deep_mode();
+	}
 
 	return NOTIFY_OK;
 }
@@ -526,13 +550,6 @@ ssize_t deep_suspend_show(const struct class *class,
 
 static CLASS_ATTR_RO(deep_suspend);
 
-static unsigned int suspend_mode;
-#define SMCID_POWER_MANAGER	0x82000079
-#define SMCSUBID_PM_DDR_ASR	0x1000
-#define SMCSUBID_PM_DUMP_INFO	0x1001
-#define SMCSUBID_PM_DEEPCTRL	0x1002
-#define SMCSUBID_PM_GET_EE_STAT	0x1003
-
 struct suspend_cmd_t {
 	const char *name;
 	int (*store)(void *data, const char *buf, size_t count);
@@ -585,7 +602,6 @@ static int suspend_ctrl_store(void *data, const char *buf, size_t count)
 
 	if (sscanf(buf, "%15s %x", cmd, &arg1) == 2) {
 		deep_mode = SET_MODULE_VAL(VERSION, PM_VERSION, arg1);
-		__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
 	} else {
 		return -EINVAL;
 	}
@@ -606,18 +622,12 @@ static int suspend_ctrl_show(void *data, char *buf)
 static inline int deep_mode_init(struct platform_device *pdev)
 {
 	if (!of_property_read_u32(pdev->dev.of_node, "deep_mode", &deep_mode)) {
-		__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
+		//__invoke_psci_fn_smc(SMCID_POWER_MANAGER, SMCSUBID_PM_DEEPCTRL, deep_mode, 0);
 		deep_mode_init_done = 1;
 	}
 
+	clr_deep_mode();
 	return 0;
-}
-
-static inline void clr_deep_mode(void)
-{
-	if (deep_mode_init_done)
-		__invoke_psci_fn_smc(SMCID_POWER_MANAGER,
-				SMCSUBID_PM_DEEPCTRL, SYSTEM_COLD_BOOT, 0);
 }
 
 static struct suspend_mode_cmd_t suspend_cmds = {
@@ -743,6 +753,7 @@ static int gx_pm_syscore_suspend(void)
 {
 	if (sys_time_out)
 		writel_relaxed(sys_time_out, debug_reg);
+
 	return 0;
 }
 
@@ -763,7 +774,6 @@ static void gx_pm_syscore_shutdown(void)
 		writel_relaxed(val, exit_reg);
 	}
 
-	clr_deep_mode();
 }
 
 static void gx_pm_syscore_resume(void)
