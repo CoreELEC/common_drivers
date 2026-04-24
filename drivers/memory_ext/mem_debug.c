@@ -43,6 +43,11 @@
 #include <linux/page_owner.h>
 #include <linux/cma.h>
 #include <cma.h>
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+#include <linux/swap.h>
+#include <linux/mmzone.h>
+#include <trace/hooks/vmscan.h>
+#endif
 
 static int pagemap_en;
 unsigned long mlock_fault_size;
@@ -502,8 +507,29 @@ static const struct proc_ops cma_stat_ops = {
 	.proc_release	= single_release,
 };
 
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+static int can_unmap_files(struct scan_control *sc, struct folio *folio)
+{
+	if (!current_is_kswapd())
+		return 1;
+	if (folio_mapcount(folio) > 1)
+		return 0;
+	return 1;
+}
+
+static void __maybe_unused unmap_folio_hook(void *data,
+		enum lru_list lru, struct scan_control *sc, struct folio *folio, bool *bypass)
+{
+	if (!is_active_lru(lru) && !can_unmap_files(sc, folio))
+		*bypass = 1;
+}
+#endif
+
 static int __init memory_debug_init(void)
 {
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+	int ret;
+#endif
 	struct proc_dir_entry *d_mdebug;
 
 	d_mdebug = proc_create("mem_debug", 0444, NULL, &mdebug_ops);
@@ -517,6 +543,14 @@ static int __init memory_debug_init(void)
 		pr_err("create /proc/cma_stat failed\n");
 		return -1;
 	}
+
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+	ret = register_trace_android_vh_may_unmap_folio(unmap_folio_hook, NULL);
+	if (ret < 0)
+		pr_err("register trace isolate file failed.\n");
+	else
+		pr_info("register trace isolate file success.\n");
+#endif
 
 	return 0;
 }
