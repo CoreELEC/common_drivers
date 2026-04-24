@@ -23,7 +23,7 @@
 #include <linux/amlogic/media/video_processor/video_composer_ext.h>
 
 struct video_display_frame_info_t {
-	struct dma_buf *dmabuf;
+	struct dma_buf *dmabuf[2];
 	struct dma_fence *input_fence;
 	struct dma_fence *release_fence;
 	struct dma_fence *present_fence;

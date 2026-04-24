@@ -35,7 +35,8 @@ int video_display_setframe(int layer_index, struct video_display_frame_info_t *f
 	frames_info.frame_count = 1;
 	frames_info.layer_index = layer_index;
 	frames_info.disp_zorder = frame_info->zorder;
-	frames_info.frame_info[layer_index].dmabuf = frame_info->dmabuf;
+	frames_info.frame_info[layer_index].dmabuf[0] = frame_info->dmabuf[0];
+	frames_info.frame_info[layer_index].dmabuf[1] = frame_info->dmabuf[1];
 	frames_info.frame_info[layer_index].input_fence = frame_info->input_fence;
 	frames_info.frame_info[layer_index].release_fence = frame_info->release_fence;
 	frames_info.frame_info[layer_index].present_fence = frame_info->present_fence;

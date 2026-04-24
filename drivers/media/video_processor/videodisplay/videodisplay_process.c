@@ -745,8 +745,8 @@ static void detect_vf_type(struct frame_info_t *frame_info, bool *is_dec_vf_ptr,
 		*is_v4l_vf_ptr = false;
 		return;
 	}
-	*is_dec_vf_ptr = is_valid_mod_type(frame_info->dmabuf, VF_SRC_DECODER);
-	*is_v4l_vf_ptr = is_valid_mod_type(frame_info->dmabuf, VF_PROCESS_V4LVIDEO);
+	*is_dec_vf_ptr = is_valid_mod_type(frame_info->dmabuf[0], VF_SRC_DECODER);
+	*is_v4l_vf_ptr = is_valid_mod_type(frame_info->dmabuf[0], VF_PROCESS_V4LVIDEO);
 }
 
 static void *video_timeline_create(struct videodisplay_dev *dev)
@@ -1080,7 +1080,7 @@ static void display_q_uninit(struct videodisplay_dev *dev)
 	struct vframe_s *vf = NULL;
 	struct vframe_s *dst_vf = NULL;
 	int i, repeat_count;
-	struct file *file_vf;
+	struct file *file_vf, *file_vf_ext;
 	struct vd_prepare_s *vd_prepare;
 	struct mbp_buffer_info_t *mpb_buf = NULL;
 
@@ -1122,40 +1122,45 @@ static void display_q_uninit(struct videodisplay_dev *dev)
 				continue;
 			}
 
-			repeat_count = vf->repeat_count;
-			if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_BYPASS) {
-				file_vf = vf->file_vf;
-				vd_print(dev->index, PRINT_FENCE,
-					"%s: frame_index=%d, repeat_count=%d.\n",
-					__func__,
-					vf->frame_index,
-					repeat_count);
-				for (i = 0; i <= repeat_count; i++) {
-					if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_DMA) {
-						vd_print(dev->index, PRINT_FENCE,
-							"%s:put dma buffer!!!\n",
-							__func__);
-						mpb_buf = (struct mbp_buffer_info_t *)file_vf;
-						vf->vc_private->unlock_buffer_cb(mpb_buf);
-
-					} else {
-						vd_print(dev->index, PRINT_FENCE,
-							"%s: release_fence = %px\n",
-							__func__,
-							vd_prepare->release_fence);
-						dma_buf_put((struct dma_buf *)file_vf);
-						dma_fence_signal(vd_prepare->release_fence);
-						dma_fence_put(vd_prepare->release_fence);
-					}
-
-					dev->fput_count++;
-					total_put_count++;
-				}
-			} else if (!(vf->flag & VFRAME_FLAG_VIDEO_COMPOSER)) {
+			if (!(vf->flag & VFRAME_FLAG_VIDEO_COMPOSER)) {
 				vd_print(dev->index, PRINT_ERROR,
 					"%s: flag is null, frame_index=%d\n",
 					__func__,
 					vf->frame_index);
+
+				continue;
+			}
+
+			repeat_count = vf->repeat_count;
+			file_vf = vf->file_vf;
+			file_vf_ext = vf->file_vf_ext;
+			vd_print(dev->index, PRINT_FENCE,
+				"%s: frame_index=%d, repeat_count=%d.\n",
+				__func__,
+				vf->frame_index,
+				repeat_count);
+			for (i = 0; i <= repeat_count; i++) {
+				if (vf->flag & VFRAME_FLAG_VIDEO_COMPOSER_DMA) {
+					vd_print(dev->index, PRINT_FENCE,
+						"%s:put dma buffer!!!\n",
+						__func__);
+					mpb_buf = (struct mbp_buffer_info_t *)file_vf;
+					vf->vc_private->unlock_buffer_cb(mpb_buf);
+
+				} else {
+					vd_print(dev->index, PRINT_FENCE,
+						"%s: release_fence = %px\n",
+						__func__,
+						vd_prepare->release_fence);
+					dma_buf_put((struct dma_buf *)file_vf);
+					if (file_vf_ext)
+						dma_buf_put((struct dma_buf *)file_vf_ext);
+					dma_fence_signal(vd_prepare->release_fence);
+					dma_fence_put(vd_prepare->release_fence);
+				}
+
+				dev->fput_count++;
+				total_put_count++;
 			}
 		}
 	}
@@ -1257,9 +1262,11 @@ static void ready_q_uninit(struct videodisplay_dev *dev)
 						"%s: release_fence = %px\n",
 						__func__,
 						vd_prepare->release_fence);
+					dma_buf_put((struct dma_buf *)file_vf);
+					if (vf->file_vf_ext)
+						dma_buf_put((struct dma_buf *)vf->file_vf_ext);
 					dma_fence_put(vd_prepare->release_fence);
 					dma_fence_signal(vd_prepare->release_fence);
-					dma_buf_put((struct dma_buf *)file_vf);
 				}
 
 				dev->fput_count++;
@@ -2337,7 +2344,7 @@ static bool detect_vf_usage(struct videodisplay_dev *dev,
 	frame_info = &frames_info->frame_info[num];
 	detect_vf_type(frame_info, &is_dec_vf, &is_v4l_vf);
 	if (is_dec_vf || is_v4l_vf) {
-		vf = vd_get_vf_from_buf(dev, frame_info->dmabuf);
+		vf = vd_get_vf_from_buf(dev, frame_info->dmabuf[0]);
 		if (!vf) {
 			vd_print(dev->index, PRINT_ERROR, "get NULL vf!!\n");
 			return false;
@@ -3241,8 +3248,10 @@ static void vframe_display(struct videodisplay_dev *dev,
 #endif
 
 	detect_vf_type(frame_info, &is_dec_vf, &is_v4l_vf);
-	get_dma_buf(frame_info->dmabuf);
-	if (dev->last_file == (struct file *)frame_info->dmabuf)
+	get_dma_buf(frame_info->dmabuf[0]);
+	if (frame_info->dmabuf[1])
+		get_dma_buf(frame_info->dmabuf[1]);
+	if (dev->last_file == (struct file *)frame_info->dmabuf[0])
 		is_repeat_vf = true;
 
 	if (is_repeat_vf) {
@@ -3250,25 +3259,31 @@ static void vframe_display(struct videodisplay_dev *dev,
 	} else {
 		vd_prepare = vd_prepare_data_q_get(dev);
 		if (!vd_prepare) {
-			vd_print(dev->index, PRINT_ERROR,
-				 "%s: get prepare_data failed.\n",
-				 __func__);
+			vd_print(dev->index, PRINT_ERROR, "get prepare_data failed.\n");
+			dma_buf_put(frame_info->dmabuf[0]);
+			if (frame_info->dmabuf[1])
+				dma_buf_put(frame_info->dmabuf[1]);
 			return;
 		}
 
 		if (is_dec_vf || is_v4l_vf) {
-			vf = vd_get_vf_from_buf(dev, frame_info->dmabuf);
+			vf = vd_get_vf_from_buf(dev, frame_info->dmabuf[0]);
 			if (!vf) {
 				vd_print(dev->index, PRINT_ERROR, "%s: get vf failed.\n", __func__);
+				dma_buf_put(frame_info->dmabuf[0]);
+				if (frame_info->dmabuf[1])
+					dma_buf_put(frame_info->dmabuf[1]);
 				return;
 			}
-			if (videodisplay_drop_frame(dev, vf, frame_info->dmabuf)) {
+			if (videodisplay_drop_frame(dev, vf, frame_info->dmabuf[0])) {
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 				ktime_get_real_ts64(&ts);
 				vc_notify_msg_to_mediaproxy(dev, vf,
 					MEDIA_VIDEO_METRICS_FRAME_TOGGLE_INFO, ts);
 #endif
-				dma_buf_put(frame_info->dmabuf);
+				dma_buf_put(frame_info->dmabuf[0]);
+				if (frame_info->dmabuf[1])
+					dma_buf_put(frame_info->dmabuf[1]);
 				dma_fence_signal(frame_info->release_fence);
 				dma_fence_put(frame_info->release_fence);
 				atomic_set(&received_frames->on_use, false);
@@ -3495,7 +3510,7 @@ static void vframe_display(struct videodisplay_dev *dev,
 		 vf->canvas0_config[0].height);
 	vd_print(dev->index, PRINT_AXIS, "===============================\n");
 
-	dev->last_file = (struct file *)frame_info->dmabuf;
+	dev->last_file = (struct file *)frame_info->dmabuf[0];
 	vf->vc_private = vd_private_q_pop(dev);
 	vf->vc_private->present_fence = frame_info->present_fence;
 
@@ -3503,11 +3518,13 @@ static void vframe_display(struct videodisplay_dev *dev,
 		(vf->flag & VFRAME_FLAG_CONTAIN_POST_FRAME))))
 		((struct vframe_s *)vf->vf_ext)->vc_private = vf->vc_private;
 
-	vf->file_vf = (struct file *)(frame_info->dmabuf);
+	vf->file_vf = (struct file *)(frame_info->dmabuf[0]);
+	if (frame_info->dmabuf[1])
+		vf->file_vf_ext = (struct file *)(frame_info->dmabuf[1]);
 	vf->repeat_count = 0;
 
 	if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
-		lcevc_data = vc_get_lcevc_data(dev, frame_info->dmabuf);
+		lcevc_data = vc_get_lcevc_data(dev, frame_info->dmabuf[0]);
 		if (!lcevc_data)
 			vd_print(dev->index, PRINT_ERROR,
 				"task: lcevc data is NULL!\n");
@@ -3589,9 +3606,10 @@ static void video_display_task(struct videodisplay_dev *dev)
 	num = received_frames->frames_info.layer_index;
 	fence_file = received_frames->frames_info.frame_info[num].input_fence;
 	vd_print(dev->index, PRINT_OTHER,
-		"%s:dmabuf:%px, input_fence:%px, release_fence:%px.\n",
+		"%s:dmabuf:%px %px, input_fence:%px, release_fence:%px.\n",
 		__func__,
-		received_frames->frames_info.frame_info[num].dmabuf,
+		received_frames->frames_info.frame_info[num].dmabuf[0],
+		received_frames->frames_info.frame_info[num].dmabuf[1],
 		received_frames->frames_info.frame_info[num].input_fence,
 		received_frames->frames_info.frame_info[num].release_fence);
 
@@ -4058,6 +4076,8 @@ static void vd_vf_put(struct vframe_s *vf, void *op_arg)
 			}
 			for (i = 0; i <= repeat_count; i++) {
 				dma_buf_put((struct dma_buf *)file_vf);
+				if (vf->file_vf_ext)
+					dma_buf_put((struct dma_buf *)vf->file_vf_ext);
 				dma_fence_signal(vd_prepare_tmp->release_fence);
 				dma_fence_put(vd_prepare_tmp->release_fence);
 				dev->fput_count++;
@@ -4671,12 +4691,13 @@ int vd_set_frames(int index, struct frames_info_t *frames_info)
 	vd_print(dev->index, PRINT_AXIS, "********src frame param********.\n");
 
 	vd_print(dev->index, PRINT_AXIS,
-		"%s: count:%d, index:%d, z:%d, dmabuf:%px, input_fence:%px, release_fence:%px.\n",
+		"%s: count:%d, index:%d, z:%d, dmabuf:%px %px, input_fence:%px, release_fence:%px.\n",
 		__func__,
 		frames_info->frame_count,
 		frames_info->layer_index,
 		frames_info->disp_zorder,
-		frames_info->frame_info[index].dmabuf,
+		frames_info->frame_info[index].dmabuf[0],
+		frames_info->frame_info[index].dmabuf[1],
 		frames_info->frame_info[index].input_fence,
 		frames_info->frame_info[index].release_fence);
 
