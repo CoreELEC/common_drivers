@@ -9,7 +9,7 @@
 #include "mesona9-panel.dtsi"
 //#include "hdr10plus.dtsi"
 #include "mesona9_drm_dual.dtsi"
-//#include "mesons6_audio.dtsi"
+#include "mesona9_audio.dtsi"
 #include "firmware_ab.dtsi"
 / {
 	amlogic-dt-id = "a9_a311y3_by409";
@@ -274,10 +274,19 @@
 /* Audio Related start */
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
-		status = "disabled";
-		spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
-		/*gpio high is enable spk,control by "SPK mute"*/
 		aml-audio-card,name = "AML-AUGESOUND";
+
+	//	avout_mute-gpios = <&gpio GPIOD_6 GPIO_ACTIVE_HIGH>;
+	//	av_mute_sleep_time = <600>;
+		/* spk_mute-gpios = <&gpio GPIOD_9 GPIO_ACTIVE_LOW>;*/
+	//	spk_mute_sleep_time = <800>;
+
+		/* headphone insert det */
+	//	hp-det-gpios = <&gpio_analog CDAC_IOUT GPIO_ACTIVE_HIGH>;
+
+	//	interrupts = <GIC_SPI 149 IRQ_TYPE_EDGE_RISING>;
+	//	interrupt-names = "audio_exception64";
+
 		aml-audio-card,dai-link@0 {
 			format = "dsp_b";
 			mclk-fs = <512>;
@@ -285,62 +294,54 @@
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
-			//bitclock-master = <&tdma>;
-			//frame-master = <&tdma>;
+			bitclock-master = <&tdma>;
+			frame-master = <&tdma>;
 			/* slave mode */
 			/*
 			 * bitclock-master = <&tdmacodec>;
 			 * frame-master = <&tdmacodec>;
 			 */
+			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-pcm";
 			tdmacpu: cpu {
-				//sound-dai = <&tdma>;
+				sound-dai = <&tdma>;
 				dai-tdm-slot-tx-mask =
-							<1>;
+							<1 1>;
 				dai-tdm-slot-rx-mask =
-							<1>;
+							<1 1>;
 				dai-tdm-slot-num = <2>;
 				dai-tdm-slot-width = <16>;
 				system-clock-frequency = <256000>;
 			};
 			tdmacodec: codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
 		aml-audio-card,dai-link@1 {
-			format = "i2s";//"dsp_a";
+			format = "i2s";
 			mclk-fs = <256>;
 			continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
-			//bitclock-master = <&tdmb>;
-			//frame-master = <&tdmb>;
+			bitclock-master = <&tdmb>;
+			frame-master = <&tdmb>;
 			/* slave mode */
 			//bitclock-master = <&tdmbcodec>;
 			//frame-master = <&tdmbcodec>;
-			/* suffix-name, sync with android audio hal
-			 * what's the dai link used for
-			 */
-			suffix-name = "alsaPORT-i2s2hdmi";
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-i2s-i2s4hdmirx";
 			cpu {
-				//sound-dai = <&tdmb>;
+				sound-dai = <&tdmb>;
 				dai-tdm-slot-tx-mask = <1 1>;
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
-				/*
-				 * dai-tdm-slot-tx-mask =
-				 *	<1 1 1 1 1 1 1 1>;
-				 * dai-tdm-slot-rx-mask =
-				 *	<1 1 1 1 1 1 1 1>;
-				 * dai-tdm-slot-num = <8>;
-				 */
 				dai-tdm-slot-width = <32>;
 				system-clock-frequency = <12288000>;
 			};
 			tdmbcodec: codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -351,15 +352,15 @@
 			//bitclock-inversion;
 			//frame-inversion;
 			/* master mode */
-			//bitclock-master = <&tdmc>;
-			//frame-master = <&tdmc>;
+			bitclock-master = <&tdmc>;
+			frame-master = <&tdmc>;
 			/* slave mode */
 			//bitclock-master = <&tdmccodec>;
 			//frame-master = <&tdmccodec>;
 			/* suffix-name, sync with android audio hal used for */
-			suffix-name = "alsaPORT-i2s";
+			suffix-name = "alsaPORT-i2s4parser";
 			cpu {
-				//sound-dai = <&tdmc>;
+				sound-dai = <&tdmc>;
 				dai-tdm-slot-tx-mask = <1 1>;
 				dai-tdm-slot-rx-mask = <1 1>;
 				dai-tdm-slot-num = <2>;
@@ -367,22 +368,19 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmccodec: codec {
-				prefix-names = "AMP";
-				sound-dai = <&sy602x_54>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
 		aml-audio-card,dai-link@3 {
 			mclk-fs = <64>;
-			/* suffix-name, sync with android audio hal
-			 * what's the dai link used for
-			 */
+			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-pdm-builtinmic";
 			cpu {
-				//sound-dai = <&pdma>;
+				sound-dai = <&pdma>;
 			};
 			codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -392,56 +390,52 @@
 			/* suffix-name, sync with android audio hal used for */
 			suffix-name = "alsaPORT-spdif";
 			cpu {
-				//sound-dai = <&spdifa>;
+				sound-dai = <&spdifa>;
 				system-clock-frequency = <6144000>;
 			};
 			codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
-		/* spdif_b to hdmi, only playback */
+
 		aml-audio-card,dai-link@5 {
-			mclk-fs = <128>;
+			mclk-fs = <256>;
 			continuous-clock;
-			/* suffix-name, sync with android audio hal
-			 * what's the dai link used for
-			 */
-			suffix-name = "alsaPORT-spdifb";
+			suffix-name = "alsaPORT-loopback";
 			cpu {
-				//sound-dai = <&spdifb>;
-				system-clock-frequency = <6144000>;
+				sound-dai = <&loopbacka>;
+				system-clock-frequency = <12288000>;
 			};
 			codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
 		aml-audio-card,dai-link@6 {
 			mclk-fs = <256>;
 			continuous-clock;
-			suffix-name = "alsaPORT-loopback";
+			suffix-name = "alsaPORT-mixer";
 			cpu {
-				//sound-dai = <&loopbacka>;
+				sound-dai = <&mixer>;
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				//sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
-		/* aml-audio-card,dai-link@7 {
-		 *	mclk-fs = <256>;
-		 *	suffix-name = "alsaPORT-earc";
-		 *	cpu {
-		 *		sound-dai = <&earc>;
-		 *		system-clock-frequency = <12288000>;
-		 *	};
-		 *	codec {
-		 *		sound-dai = <&dummy_codec>;
-		 *	};
-		 *};
-		 */
+		aml-audio-card,dai-link@7 {
+			mclk-fs = <256>;
+			suffix-name = "alsaPORT-Sed";
+			cpu {
+				sound-dai = <&sed>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
 	};
+	/* Audio Related end */
 
 	dvb-extern {
 		compatible = "amlogic, dvb-extern";
