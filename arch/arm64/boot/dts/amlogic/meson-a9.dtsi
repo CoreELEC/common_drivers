@@ -2853,12 +2853,14 @@
 
 	v2d {
 		compatible = "amlogic, v2d";
+		vpu_dma_mask = <1>;  /* 0: <= 4G, 1: > 4G*/
 		dev_name = "v2d";
 		status = "okay";
 	};
 
 	videodisplay {
 		compatible = "amlogic, videodisplay";
+		vpu_dma_mask = <1>;  /* 0: <= 4G, 1: > 4G*/
 		dev_name = "videodisplay";
 		status = "okay";
 	};
@@ -3137,6 +3139,12 @@
 		status = "disabled";
 	};
 
+	video_queue {
+		compatible = "amlogic, video_queue";
+		dev_name = "videoqueue";
+		status = "okay";
+	};
+
 	amlvideo2_0: amlvideo2_0 {
 		compatible = "amlogic, amlvideo2";
 		dev_name = "amlvideo2";
@@ -3153,8 +3161,7 @@
 		status = "okay";
 		amlvideo2_id = <1>;
 		cma_mode = <1>;
-		/*720P_NV21:1, 1080P_NV21:2, 4K_NV21:3, default:4*/
-		codec_mm_alloc = <1>;
+		support_4k = <1>;
 	};
 
 	amvdec_csi: amvdec_csi {
