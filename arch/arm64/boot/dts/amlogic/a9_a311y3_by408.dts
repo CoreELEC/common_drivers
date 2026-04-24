@@ -10,7 +10,7 @@
 //#include "hdr10plus.dtsi"
 #include "mesona9_drm_dual.dtsi"
 //#include "mesons6_audio.dtsi"
-//#include "firmware_ab.dtsi"
+#include "firmware_ab.dtsi"
 / {
 	amlogic-dt-id = "a9_a311y3_by408";
 	compatible = "a9_a311y3_by408";
