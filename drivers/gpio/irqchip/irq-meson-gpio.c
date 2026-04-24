@@ -182,11 +182,11 @@ struct meson_gpio_irq_params {
 			      meson_p1_gpio_irq_sel_type)	\
 	.support_edge_both = true,				\
 	.edge_both_offset = 0,					\
-	.edge_single_offset = 12,				\
+	.edge_single_offset = 0,				\
 	.pol_low_offset = 0,					\
 	.pin_sel_mask = 0xff,					\
 	.pin_sel_reg_base = 0x04,				\
-	.edge_sel_reg = 0x00,					\
+	.edge_sel_reg = 0x30,					\
 	.pol_low_sel_reg = 0x00,				\
 	.both_sel_reg =  0x2c,
 
