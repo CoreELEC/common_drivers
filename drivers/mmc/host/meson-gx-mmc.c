@@ -4523,7 +4523,7 @@ static int meson_mmc_restore(struct device *dev)
 	u32 reg;
 	int ret = 0;
 
-	if (!host || !host->mmc)
+	if (!host || !host->mmc || aml_card_type_sdio(host))
 		return ret;
 
 	reg = readl(host->regs + SD_EMMC_CLOCK);
