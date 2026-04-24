@@ -1264,6 +1264,7 @@ void _set_video_window(struct disp_info_s *layer, int *p)
 		if (layer->layer_id == 0) {
 			atomic_set(&axis_changed, 1);
 			vd_layer[0].property_changed = true;
+			vd_layer[0].axis_updated = true;
 		} else if (layer->layer_id == 1) {
 			if (vd_layer[1].vpp_index == VPP0)
 				vd_layer[1].property_changed = true;
