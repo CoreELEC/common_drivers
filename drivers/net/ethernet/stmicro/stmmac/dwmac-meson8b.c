@@ -602,7 +602,7 @@ static void amlogic_fix_mac_speed(void *priv, unsigned int speed, unsigned int m
 	val = readl(stmmac_priv->ioaddr + MAC_CTRL_REG);
 	val &= ~(MAC_CTRL_PORT_SEL | MAC_CTRL_SPEED_MODE);
 
-	pr_info("[amlogic] %s speed=%d, mode=%d\n", __func__, speed, mode);
+	pr_debug("[amlogic] %s speed=%d, mode=%d\n", __func__, speed, mode);
 	/* Disable MAC PCS ANE, enable SGMII RAL Control. */
 	stmmac_pcs_ctrl_ane(stmmac_priv, stmmac_priv->ioaddr, 0, 1, 0);
 

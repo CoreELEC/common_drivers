@@ -29,7 +29,7 @@
 /* Only for PHY Sync Link mode */
 #define HSG_WAIT_SPEED_DETECT_TIMER		0xA2C3
 
-// #define HSG_PHY_DEBUG
+#define HSG_PHY_DEBUG
 #ifdef HSG_PHY_DEBUG
 #define hsg_debug(fmt, args...)	pr_info(fmt, ##args)
 #else
@@ -38,7 +38,7 @@
 
 struct amlogic_hsgmii_phy_data {
 	struct regmap		*regmap;
-	struct clk		*hsg_general_clk;
+	struct clk		*hsg_general_clk; /* Warning: Must not disable the clk */
 	struct reset_control	*hsg_reset;	/* The Logic reset of HSGMII PHY */
 	struct reset_control	*hsg_apb_reset;	/* The Reg reset of HSGMII PHY */
 	void __iomem		*hsg_trim_reg;	/* HSGMII trim reg base */
@@ -87,17 +87,24 @@ amlogic_hsgmii_phy_poll_status(struct regmap *regmap, unsigned int reg,
 static inline int amlogic_hsgmii_phy_reset(struct phy *phy)
 {
 	struct amlogic_hsgmii_phy_data *data = phy_get_drvdata(phy);
+	struct device *dev = phy->dev.parent;
+	int ret;
 
 	/* Reset hsgmii initial fsm and flow */
-	aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
-			       HSG_INIT_CTRL_RESET,
-			       HSG_INIT_CTRL_RESET);
+	ret = reset_control_reset(data->hsg_reset);
+	if (ret) {
+		dev_err(dev, "failed to reset HSGMII PHY: %d\n", ret);
+		return ret;
+	}
+	// aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
+	//		       HSG_INIT_CTRL_RESET,
+	//		       HSG_INIT_CTRL_RESET);
 
 	udelay(HSG_RESET_TIME_US);
 
-	aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
-			       HSG_INIT_CTRL_RESET,
-			       0);
+	// aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
+	//		       HSG_INIT_CTRL_RESET,
+	//		       0);
 
 	return 0;
 }
@@ -106,7 +113,6 @@ static int amlogic_hsgmii_phy_calibrate(struct phy *phy)
 {
 	struct amlogic_hsgmii_phy_data *data = phy_get_drvdata(phy);
 	struct device *dev = phy->dev.parent;
-	int ret;
 
 	switch (data->speed) {
 	case SPEED_10:
@@ -120,12 +126,7 @@ static int amlogic_hsgmii_phy_calibrate(struct phy *phy)
 	}
 
 	/* HSGMII reset */
-	// ret = amlogic_hsgmii_phy_reset(phy);
-	ret = reset_control_reset(data->hsg_reset);
-	if (ret) {
-		dev_err(dev, "failed to reset HSGMII PHY: %d\n", ret);
-		return ret;
-	}
+	amlogic_hsgmii_phy_reset(phy);
 
 	if (amlogic_hsgmii_phy_poll_status(data->regmap,
 					   AML_PHY_HSG_PLL_INIT_DEBUG,
@@ -148,12 +149,12 @@ static int amlogic_hsgmii_phy_calibrate(struct phy *phy)
 		return -ETIMEDOUT;
 	}
 
-	if (amlogic_hsgmii_phy_poll_status(data->regmap,
-					   AML_PHY_HSG_RX_CTRL_DEBUG,
-					   HSG_RX_CTRL_DEBUG_PCS_SYNC_CDC)) {
-		dev_err(dev, "HSGMII_PCS_SYNC_CDC timed-out");
-		return -ETIMEDOUT;
-	}
+	// if (amlogic_hsgmii_phy_poll_status(data->regmap,
+	//				   AML_PHY_HSG_RX_CTRL_DEBUG,
+	//				   HSG_RX_CTRL_DEBUG_PCS_SYNC_CDC)) {
+	//	dev_err(dev, "HSGMII_PCS_SYNC_CDC timed-out");
+	//	return -ETIMEDOUT;
+	// }
 
 	return 0;
 }
@@ -172,7 +173,7 @@ static int amlogic_hsgmii_phy_trim(struct phy *phy)
 	if (!(raw & BIT(6))) {
 		dev_err(dev, "No HSGMII PHY TX impedance trim? Skip.\n");
 	} else {
-		val = readl(data->hsg_trim_reg + AML_PHY_HSG_TX_CFG2);
+		regmap_read(data->regmap, AML_PHY_HSG_TX_CFG2, &val);
 		val &= (~HSG_UPCTX_PDIO_MAIN_MASK) & (~HSG_UPCTX_PUIO_MAIN_MASK);
 
 		/* set upctx_pdio_main in tx_cfg2. */
@@ -182,36 +183,36 @@ static int amlogic_hsgmii_phy_trim(struct phy *phy)
 		otp_val = (raw & (u32)GENMASK(5, 3)) >> 3;
 		val |= (otp_val << HSG_UPCTX_PUIO_MAIN_SHIFT);
 
-		writel(val, data->hsg_trim_reg + AML_PHY_HSG_TX_CFG2);
+		regmap_write(data->regmap, AML_PHY_HSG_TX_CFG2, val);
 	}
 
-	if (!(raw & BIT(11))) {
+	if (!(raw & BIT(12))) {
 		dev_err(dev, "No HSGMII PHY TX amplitude trim? Skip.\n");
 	} else {
 		/* set upctx_boost_ctrl in tx_cfg2. */
-		otp_val = (raw & (u32)GENMASK(10, 7)) >> 7;
-		val = readl(data->hsg_trim_reg + AML_PHY_HSG_TX_CFG2);
+		otp_val = (raw & (u32)GENMASK(11, 7)) >> 7;
+		regmap_read(data->regmap, AML_PHY_HSG_TX_CFG2, &val);
 		val &= ~HSG_UPCTX_BOOST_CTRL_MASK;
-		writel(val | (otp_val << HSG_UPCTX_BOOST_CTRL_SHIFT),
-				data->hsg_trim_reg + AML_PHY_HSG_TX_CFG2);
+		regmap_write(data->regmap, AML_PHY_HSG_TX_CFG2,
+				val | (otp_val << HSG_UPCTX_BOOST_CTRL_SHIFT));
 
 		/* set upctx_boost_en in tx_cfg0. */
-		val = readl(data->hsg_trim_reg + AML_PHY_HSG_TX_CFG0);
-		writel(val | HSG_UPCTX_BOOST_EN, data->hsg_trim_reg + AML_PHY_HSG_TX_CFG0);
+		regmap_read(data->regmap, AML_PHY_HSG_TX_CFG0, &val);
+		regmap_write(data->regmap, AML_PHY_HSG_TX_CFG0, val | HSG_UPCTX_BOOST_EN);
 		/* set upctx_boost_en in tx_cfg1. */
-		val = readl(data->hsg_trim_reg + AML_PHY_HSG_TX_CFG1);
-		writel(val | HSG_UPCTX_BOOST_EN, data->hsg_trim_reg + AML_PHY_HSG_TX_CFG1);
+		regmap_read(data->regmap, AML_PHY_HSG_TX_CFG1, &val);
+		regmap_write(data->regmap, AML_PHY_HSG_TX_CFG1, val | HSG_UPCTX_BOOST_EN);
 	}
 
-	if (!(raw & BIT(16))) {
+	if (!(raw & BIT(17))) {
 		dev_err(dev, "No HSGMII PHY RX impedance trim? Skip.\n");
 	} else {
 		/* set usb3_upc_reg_dxxx in rx_cfg1. */
-		otp_val = (raw & (u32)GENMASK(15, 12)) >> 12;
-		val = readl(data->hsg_trim_reg + AML_PHY_HSG_RX_CFG1);
+		otp_val = (raw & (u32)GENMASK(16, 13)) >> 13;
+		regmap_read(data->regmap, AML_PHY_HSG_RX_CFG1, &val);
 		val &= ~HSG_DCHA_AFE_UPCRX_MASK;
-		writel(val | (otp_val << HSG_DCHA_AFE_UPCRX_SHIFT),
-				data->hsg_trim_reg + AML_PHY_HSG_RX_CFG1);
+		regmap_write(data->regmap, AML_PHY_HSG_RX_CFG1,
+				val | (otp_val << HSG_DCHA_AFE_UPCRX_SHIFT));
 	}
 
 	return 0;
@@ -272,8 +273,6 @@ static int amlogic_hsgmii_phy_power_on(struct phy *phy)
 	ret = amlogic_hsgmii_phy_trim(phy);
 	if (ret)
 		dev_err(dev, "failed to trim HSGMII PHY: %d\n", ret);
-
-	amlogic_hsgmii_phy_reset(phy);
 
 	/* Switch u3hsg combo to select HSGMII mode */
 	if (data->u3hsg_combo_reg)
@@ -337,27 +336,12 @@ static int amlogic_hsgmii_phy_init(struct phy *phy)
 	if (ret)
 		return ret;
 
-	ret = reset_control_reset(data->hsg_reset);
-	if (ret) {
-		clk_disable_unprepare(data->hsg_general_clk);
-		return ret;
-	}
-
-	udelay(HSG_RESET_TIME_US);
-
-	return 0;
+	return amlogic_hsgmii_phy_reset(phy);
 }
 
 static int amlogic_hsgmii_phy_exit(struct phy *phy)
 {
-	struct amlogic_hsgmii_phy_data *data = phy_get_drvdata(phy);
-	int ret;
-
-	ret = reset_control_reset(data->hsg_reset);
-	if (!ret)
-		clk_disable_unprepare(data->hsg_general_clk);
-
-	return ret;
+	return amlogic_hsgmii_phy_reset(phy);
 }
 
 static const struct phy_ops amlogic_hsgmii_phy_ops = {
@@ -485,7 +469,7 @@ static int amlogic_hsgmii_phy_probe(struct platform_device *pdev)
 
 #define HSG_PRINT_FIELD(var, field) do { \
 	int _ret = snprintf(buf + len, PAGE_SIZE - len, \
-			"  %-24s = %u\n", \
+			"  %-24s = %x\n", \
 			#field, ((stats->var).reg).field); \
 	len += _ret; \
 } while (0)

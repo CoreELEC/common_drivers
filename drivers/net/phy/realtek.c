@@ -1099,17 +1099,25 @@ static void rtl822xb_update_interface(struct phy_device *phydev)
 
 static int rtl822x_read_status(struct phy_device *phydev)
 {
-	if (phydev->autoneg == AUTONEG_ENABLE) {
-		int lpadv = phy_read_paged(phydev, 0xa5d, 0x13);
+	int lpadv, ret;
 
-		if (lpadv < 0)
-			return lpadv;
+	mii_10gbt_stat_mod_linkmode_lpa_t(phydev->lp_advertising, 0);
 
-		mii_10gbt_stat_mod_linkmode_lpa_t(phydev->lp_advertising,
-						  lpadv);
-	}
+	ret = rtlgen_read_status(phydev);
+	if (ret < 0)
+		return ret;
 
-	return rtlgen_read_status(phydev);
+	if (phydev->autoneg == AUTONEG_DISABLE ||
+	    !phydev->autoneg_complete)
+		return 0;
+
+	lpadv = phy_read_paged(phydev, 0xa5d, 0x13);
+	if (lpadv < 0)
+		return lpadv;
+
+	mii_10gbt_stat_mod_linkmode_lpa_t(phydev->lp_advertising, lpadv);
+
+	return 0;
 }
 
 static int rtl822xb_read_status(struct phy_device *phydev)
@@ -1164,22 +1172,25 @@ static int rtl822x_c45_read_status(struct phy_device *phydev)
 {
 	int ret, val;
 
-	ret = genphy_c45_read_status(phydev);
-	if (ret < 0)
-		return ret;
-
 	/* Vendor register as C45 has no standardized support for 1000BaseT */
-	if (phydev->autoneg == AUTONEG_ENABLE) {
+	if (phydev->autoneg == AUTONEG_ENABLE && phy_aneg_done(phydev)) {
 		val = phy_read_mmd(phydev, MDIO_MMD_VEND2,
 				   RTL822X_VND2_GANLPAR);
 		if (val < 0)
 			return val;
-
-		mii_stat1000_mod_linkmode_lpa_t(phydev->lp_advertising, val);
+	} else {
+		val = 0;
 	}
+	mii_stat1000_mod_linkmode_lpa_t(phydev->lp_advertising, val);
 
-	if (!phydev->link)
+	ret = genphy_c45_read_status(phydev);
+	if (ret < 0)
+		return ret;
+
+	if (!phydev->link) {
+		phydev->master_slave_state = MASTER_SLAVE_STATE_UNKNOWN;
 		return 0;
+	}
 
 	/* Read actual speed from vendor register. */
 	val = phy_read_mmd(phydev, MDIO_MMD_VEND2, RTL822X_VND2_PHYSR);
