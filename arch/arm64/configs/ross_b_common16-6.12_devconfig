@@ -1,2 +1,0 @@
-# aml-zram.ko (support amfc)
-CONFIG_AMLOGIC_ZRAM_BACKEND_AMFC=y

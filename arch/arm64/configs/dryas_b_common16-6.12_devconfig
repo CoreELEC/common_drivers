@@ -2,9 +2,6 @@
 CONFIG_AMFC_T6X=y
 CONFIG_AMFC_BASE=0xFE092000
 
-# aml-zram.ko (support amfc)
-CONFIG_AMLOGIC_ZRAM_BACKEND_AMFC=y
-
 # amlogic-soc-erofs.ko and amlogic-soc-f2fs.ko
 # already add them in amlogic_gki.fragment
 
