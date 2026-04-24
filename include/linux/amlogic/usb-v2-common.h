@@ -80,7 +80,7 @@ struct amlogic_otg_helper {
 };
 
 #define USB_PHY_MAX_NUMBER  0x8
-#define AML_USB_PHY_MAX_CLK_NUMBER  0x3
+#define AML_USB_PHY_MAX_CLK_NUMBER  0x5
 
 struct amlogic_usb_v2 {
 	struct usb_phy		phy;
@@ -145,10 +145,12 @@ struct amlogic_usb_v2 {
 	u32 phy_apb_reset_bit;
 	u32 pm_controller:1;
 	u32 sw_hsp:1;
-	u32 u3_companinon:1;
+	u32 u3_companion:1;
 	u32 otg_phy_index;
 	u32 reset_level;
 	u32 reset_initcount;
+	u32 pipe_clk_sel;
+	u32 phy_clk_sel_reg_off;
 	struct clk_bulk_data clks[AML_USB_PHY_MAX_CLK_NUMBER];
 	int clk_num;
 	/* TODO: Remove all clk stuffs. */
@@ -185,6 +187,7 @@ struct aml_usb3_phy {
 	void __iomem	*ctrl_reg;
 	void __iomem	*reset_reg;
 	void __iomem	*trim_reg;
+	void __iomem	*combo_phy_mux_reg;
 	struct meson_aml_u3phy_priv {
 		void (*set_power)(struct aml_usb3_phy *phy, bool on);
 		void (*trim)(struct aml_usb3_phy *phy);
@@ -192,6 +195,7 @@ struct aml_usb3_phy {
 		int (*pll_init)(struct aml_usb3_phy *phy);
 		bool (*wait_pll_locked)(struct aml_usb3_phy *phy);
 		void (*ssc_set)(struct aml_usb3_phy *phy, bool on);
+		int (*secondary_pipe_clk_set)(struct aml_usb3_phy *phy, bool on);
 	} *priv;
 	u64 cfg_reg_phy;
 	u64 ctrl_reg_phy;
@@ -218,6 +222,14 @@ struct aml_usb3_phy {
 	bool off;
 	bool pll_sw_cfg;
 	bool suspend;
+	bool lane_muxed;
+	bool tc_plug_connected;
+	struct notifier_block typec_mux_nb;
+	bool combo_phy;
+	u32 combo_phy_mux_reg_phy;
+
+	u32	pipe_clk_sel;
+	u32 phy_clk_sel_reg_off;
 };
 
 static inline void

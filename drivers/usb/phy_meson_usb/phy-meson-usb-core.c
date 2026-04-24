@@ -453,6 +453,7 @@ static const struct of_device_id meson_uphy_id_table[] = {
 	{ .compatible = "amlogic,u2phy-t6w", .data = &meson_uphy_t6w_pdata },
 	{ .compatible = "amlogic,uphy-t6x", .data = &meson_uphy_t6x_pdata },
 	{ .compatible = "amlogic,u2phy-c4", .data = &meson_u2phy_c4_pdata },
+	{ .compatible = "amlogic,uphy-a9", .data = &meson_uphy_a9_pdata },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, meson_uphy_id_table);
@@ -558,7 +559,7 @@ static struct platform_driver meson_uphy_driver = {
 	.remove		= meson_uphy_remove,
 	.driver		= {
 		.name	= "meson-usbphy",
-		.of_match_table = meson_uphy_id_table,
+		.of_match_table = of_match_ptr(meson_uphy_id_table),
 		.pm = &meson_uphy_pm_ops,
 	},
 };

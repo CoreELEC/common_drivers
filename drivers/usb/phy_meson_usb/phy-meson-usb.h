@@ -125,6 +125,7 @@ extern struct meson_uphy_pdata meson_uphy_t6d_pdata;
 extern struct meson_uphy_pdata meson_uphy_t6w_pdata;
 extern struct meson_uphy_pdata meson_uphy_t6x_pdata;
 extern struct meson_uphy_pdata meson_u2phy_c4_pdata;
+extern struct meson_uphy_pdata meson_uphy_a9_pdata;
 
 struct meson_u2phy_priv {
 	int (*set_mode)(struct amlogic_usb_v2 *phy, enum meson_uphy_mode mode);
@@ -137,6 +138,7 @@ struct meson_u2phy_priv {
 extern bool meson_u2phy_960m;
 
 inline bool meson_uphy_of_device_pci_available(void);
+inline bool meson_uphy_of_device_eth_hsgmii_phy_available(void);
 int meson_u2phy_usb_reset(struct amlogic_usb_v2 *phy);
 void meson_u2phy_set_reset_count(void);
 //int meson_u2phy_usb_hold_reset(struct amlogic_usb_v2 *phy, bool on);

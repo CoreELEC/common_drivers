@@ -269,10 +269,18 @@ int meson_aml_u2phy_t6x_init_clks(struct amlogic_usb_v2 *mphy)
 	case 0:
 		mphy->clk_num = 1;
 		/* T6X usb drd controller still needs 250m clk in usb2.0 device mode. */
-		if (mphy->u3_companinon) {
-			mphy->usb_clk = devm_clk_get(mphy->dev, "usb_clk_250m");
-			if (IS_ERR(mphy->usb_clk))
-				return PTR_ERR_OR_ZERO(mphy->usb_clk);
+		if (mphy->pipe_clk_sel != -1U && mphy->phy_clk_sel_reg_off != -1U) {
+			int i = mphy->clk_num;
+
+			while (i--) {
+				if (strstr(mphy->clks[i].id, "usb_clk_250m"))
+					break;
+			}
+
+			if (!i) {
+				dev_err(mphy->dev, "no usb_clk_250m.");
+				return -ENODEV;
+			}
 		}
 		break;
 	/* HSP mode.*/

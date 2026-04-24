@@ -11,6 +11,8 @@
 #include <linux/delay.h>
 #include <linux/amlogic/usbtype.h>
 #include <linux/amlogic/cpu_version.h>
+#include <linux/amlogic/typec_mux_meson.h>
+#include <linux/usb/typec.h>
 #include "phy-meson-usb.h"
 
 static inline bool  meson_aml_u3phy_is_sw_on(struct aml_usb3_phy *phy)
@@ -20,12 +22,12 @@ static inline bool  meson_aml_u3phy_is_sw_on(struct aml_usb3_phy *phy)
 
 static inline bool  meson_aml_u3phy_is_hw_on(struct aml_usb3_phy *phy)
 {
-	return phy->suspend ? false : true;
+	return !READ_ONCE(phy->suspend);
 }
 
 static inline void  meson_aml_u3phy_set_hw_on(struct aml_usb3_phy *phy, bool on)
 {
-	phy->suspend = !on;
+	WRITE_ONCE(phy->suspend, !on);
 }
 
 static inline phys_addr_t  meson_aml_u3phy_virt_to_phy(struct aml_usb3_phy *phy,
@@ -42,6 +44,10 @@ static inline phys_addr_t  meson_aml_u3phy_virt_to_phy(struct aml_usb3_phy *phy,
 
 	if (reg >= phy->trim_reg && reg < phy->trim_reg + phy->trim_reg_size)
 		return phy->trim_reg_phy + (phys_addr_t)reg - (phys_addr_t)phy->trim_reg;
+
+	if (reg >= phy->combo_phy_mux_reg && reg < phy->combo_phy_mux_reg + 4)
+		return phy->combo_phy_mux_reg_phy + (phys_addr_t)reg -
+			(phys_addr_t)phy->combo_phy_mux_reg;
 
 	return (phys_addr_t)(-1);
 }
@@ -127,6 +133,28 @@ static bool meson_aml_u3phy_wait_pll_locked(struct aml_usb3_phy *phy)
 	return ret;
 }
 
+static int meson_aml_u3phy_pll_hw_init(struct aml_usb3_phy *phy)
+{
+	int ret = 0;
+
+	meson_aml_u3phy_write_reg32(phy, BIT(phy->usb3_phy_reset_bit),
+			phy->reset_reg);
+	/* Reset usb3_phy_reset_bit trigger HWs pll cfg. Wait for it. */
+	if (phy->priv->wait_pll_locked) {
+		if (!phy->priv->wait_pll_locked(phy)) {
+			ret = -ETIMEDOUT;
+			dev_err(phy->dev, "Pre Wait HW PLL init failed.\n");
+		}
+	} else {
+		if (!meson_aml_u3phy_wait_pll_locked(phy)) {
+			ret = -ETIMEDOUT;
+			dev_err(phy->dev, "Pre Wait HW PLL init failed.\n");
+		}
+	}
+
+	return ret;
+}
+
 /* RESET_reg, write each bit to 1 can reset related module, the reset will auto-cover to 0 by HW.
  * RESETn_module(low active) = (~RESET_reg & RESET_LEVEL) | RESET_MASK.
  */
@@ -140,6 +168,12 @@ static inline void  meson_aml_u3phy_pre_reset(struct aml_usb3_phy *phy)
 			phy->reset_reg + phy->apb_reset_offset);
 	meson_aml_u3phy_write_reg32(phy, BIT(phy->usb3_phy_reset_bit),
 			phy->reset_reg);
+
+	/* usb3 phy with lane muxed by usbcdp should trigger hw pll init after
+	 * typec plug is insert and flip state is detected.
+	 */
+	if (phy->lane_muxed)
+		return;
 
 	/* Reset usb3_phy_reset_bit trigger HWs pll cfg. Wait for it. */
 	if (phy->priv->wait_pll_locked) {
@@ -189,9 +223,22 @@ static int meson_aml_u3phy_pll_init(struct aml_usb3_phy *phy)
 {
 	int ret = 0;
 
-	ret = phy->priv->pll_init(phy);
-	if (ret)
+	/* usb3 phy with lane muxed by usbcdp should trigger hw pll init after
+	 * typec plug is insert and flip state is detected.
+	 */
+	if (phy->lane_muxed)
 		return ret;
+
+	if (phy->priv->pll_init) {
+		ret = phy->priv->pll_init(phy);
+		if (ret)
+			return ret;
+	} else {
+		/* Common pll init flow. the pll init should be done by hw, which is
+		 * triggered by usb3_phy_reset in meson_aml_u3phy_pre_reset().
+		 */
+		WARN(phy->pll_sw_cfg, "does not support sw pll flow!\n");
+	}
 
 	if (phy->priv->wait_pll_locked) {
 		if (!phy->priv->wait_pll_locked(phy))
@@ -268,6 +315,19 @@ static void  meson_aml_u3phy_cali(struct aml_usb3_phy *phy)
 	phy->priv->txrx_cali(phy);
 }
 
+static void meson_aml_u3phy_typec_post_init(struct aml_usb3_phy *phy)
+{
+	int ret = 0;
+
+	ret = meson_aml_u3phy_pll_hw_init(phy);
+
+	if (phy->priv->secondary_pipe_clk_set) {
+		ret = phy->priv->secondary_pipe_clk_set(phy, false);
+		if (ret)
+			dev_err(phy->dev, "%s secondary_pipe_clk_set failed %d.\n", __func__, ret);
+	}
+}
+
 int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 {
 	int ret = 0;
@@ -298,6 +358,12 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 	meson_aml_u3phy_post_reset(phy);
 
 	meson_aml_u3phy_set_hw_on(phy, true);
+
+	/* Reordering hw_on after pll_hw_init may cause pll init lost.
+	 */
+	smp_mb();
+	if (phy->lane_muxed && READ_ONCE(phy->tc_plug_connected))
+		meson_aml_u3phy_typec_post_init(phy);
 
 	return ret;
 
@@ -330,12 +396,64 @@ int meson_aml_u3phy_exit(struct aml_usb3_phy *phy)
 	return 0;
 }
 
+static int meson_aml_u3phy_typec_mux_notifier(struct notifier_block *nb,
+				  unsigned long action, void *data)
+{
+	struct aml_usb3_phy *phy = container_of(nb, struct aml_usb3_phy, typec_mux_nb);
+	enum typec_orientation orient = 0;
+	int ret;
+
+	dev_info(phy->dev, "notify from typec mux: action = %lu\n", action);
+	switch (action) {
+	case TYPEC_MESON_ORIENT:
+		orient = *(enum typec_orientation *)data;
+
+		if (orient == TYPEC_ORIENTATION_NONE) {
+			WRITE_ONCE(phy->tc_plug_connected, 0);
+			if (phy->priv->secondary_pipe_clk_set) {
+				ret = phy->priv->secondary_pipe_clk_set(phy, true);
+				if (ret)
+					dev_err(phy->dev, "%s secondary_pipe_clk_set failed %d.\n",
+						__func__, ret);
+			}
+		} else {
+			WRITE_ONCE(phy->tc_plug_connected, 1);
+			/* Pairing with smp_mb() in meson_aml_u3phy_init(). */
+			smp_mb();
+			/* connected & orient change & phy on => pll reinit. */
+			if (meson_aml_u3phy_is_hw_on(phy))
+				meson_aml_u3phy_typec_post_init(phy);
+		}
+		dev_info(phy->dev, "tc_plug_connected = %d\n", phy->tc_plug_connected);
+		break;
+	case TYPEC_MESON_PIN_STATE:
+		break;
+	case TYPEC_MESON_DP_STATE_DATA:
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+
+static inline void meson_aml_u3phy_register_nb(struct aml_usb3_phy *phy)
+{
+	phy->typec_mux_nb.notifier_call = meson_aml_u3phy_typec_mux_notifier;
+	typec_mux_meson_register_notify(&phy->typec_mux_nb);
+}
+
+static bool meson_aml_u3phy_repurposed(struct aml_usb3_phy *phy)
+{
+	return phy->combo_phy && (meson_uphy_of_device_pci_available() ||
+		meson_uphy_of_device_eth_hsgmii_phy_available());
+}
+
 int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instance,
 				struct meson_aml_u3phy_priv *priv)
 {
 	struct aml_usb3_phy *phy;
 	int i, cnt, addr_i = 0, ret = 0;
-	bool phy_off = true;
 	bool pll_sw_cfg = true;
 	void __iomem *cfg_reg = NULL;
 	void __iomem *reset_reg = NULL;
@@ -359,7 +477,7 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	get_device(dev);
 
 	phy->priv = priv;
-	if (!phy->priv || !phy->priv->pll_init || !phy->priv->txrx_cali) {
+	if (!phy->priv || !phy->priv->txrx_cali) {
 		dev_err(phy->dev, "No necessary callback(s).\n");
 		return -EINVAL;
 	}
@@ -424,7 +542,12 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	dev_dbg(dev, "USB3 phy probe:trim_phy:%llx, iomap trim_reg:%px, s:%llx\n",
 			phy->trim_reg_phy, trim_reg, phy->trim_reg_size);
 
-	phy_off = of_property_read_bool(dev->of_node, "off");
+	phy->combo_phy = of_property_read_bool(dev->of_node, "combo-phy");
+	phy->off =	meson_aml_u3phy_repurposed(phy);
+	if (!phy->off)
+		phy->off = of_property_read_bool(dev->of_node, "off");
+
+	phy->lane_muxed = of_property_read_bool(dev->of_node, "lane-muxed");
 
 	pll_sw_cfg = of_property_read_bool(dev->of_node, "pll-sw-cfg");
 
@@ -448,6 +571,22 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 							&usb3_controller_reset_bit);
 	if (ret)
 		return ret;
+
+	ret = of_property_read_u32(dev->of_node, "combo-phy-mux-reg", &phy->combo_phy_mux_reg_phy);
+	if (ret)
+		phy->combo_phy_mux_reg_phy = 0;
+
+	dev_dbg(dev, "combo_phy_mux_reg_phy: 0x%x\n", phy->combo_phy_mux_reg_phy);
+
+	if (phy->combo_phy_mux_reg_phy) {
+		phy->combo_phy_mux_reg =
+			devm_ioremap(dev, (resource_size_t)phy->combo_phy_mux_reg_phy,
+				(resource_size_t)4);
+		dev_dbg(dev, "combo_phy_mux_reg: %px\n", phy->combo_phy_mux_reg);
+
+		if (IS_ERR(phy->combo_phy_mux_reg))
+			return PTR_ERR(phy->combo_phy_mux_reg);
+	}
 
 	cnt = of_property_count_strings(dev->of_node, "clock-names");
 	if (cnt < 0) {
@@ -479,10 +618,12 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 
 	dev_dbg(dev, "USB3 phy_off:%d, pll_sw_cfg:%d, phy_id:%d, clk_num:%d\n"
 						 "reset_level_shift:0x%x, usb3-apb-reset-bit:%d\n"
-						 "usb3-phy-reset-bit:%d, usb3-controller-reset-bit:%d\n",
-						phy_off, pll_sw_cfg, phy->phy_id, phy->clk_num,
+						 "usb3-phy-reset-bit:%d, usb3-controller-reset-bit:%d\n"
+						 "combo:%d, lane_muxed:%d\n",
+						phy->off, pll_sw_cfg, phy->phy_id, phy->clk_num,
 						reset_level_shift, usb3_apb_reset_bit,
-						usb3_phy_reset_bit, usb3_controller_reset_bit);
+						usb3_phy_reset_bit, usb3_controller_reset_bit,
+						phy->combo_phy, phy->lane_muxed);
 
 	phy->cfg_reg = cfg_reg;
 	phy->ctrl_reg = ctrl_reg;
@@ -493,7 +634,6 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	phy->apb_reset_offset = apb_reset_offset;
 	phy->usb3_phy_reset_bit = usb3_phy_reset_bit;
 	phy->usb3_controller_reset_bit = usb3_controller_reset_bit;
-	phy->off = phy_off;
 	phy->pll_sw_cfg = pll_sw_cfg;
 	phy->ic_ver = ic_ver;
 
@@ -501,6 +641,11 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	if (meson_aml_u3phy_is_sw_on(phy)) {
 		meson_aml_u3phy_set_power(phy, false);
 		meson_aml_u3phy_set_hw_on(phy, false);
+		if (phy->lane_muxed)
+			meson_aml_u3phy_register_nb(phy);
+	} else {
+		/* For u3h u2h only mode. */
+		meson_aml_u3phy_set_power(phy, false);
 	}
 
 	return 0;

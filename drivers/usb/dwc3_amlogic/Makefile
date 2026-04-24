@@ -39,4 +39,4 @@ endif
 # and make sure it compiles fine. This will also help with allmodconfig
 # and allyesconfig builds.
 ##
-$(MODULE_NAME)-$(CONFIG_AMLOGIC_USB_DWC3_OTG)		+= dwc3_amlogic/dwc3-otg.o
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_USB_DWC3_OTG)				+= dwc3_amlogic/dwc3-otg.o

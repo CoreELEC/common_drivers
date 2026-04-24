@@ -12,7 +12,7 @@
 
 #define CRG_DRD_INDEX_MASK ((u32)GENMASK(14, 13))
 #define CRG_DRD_INDEX_SHIFT 13
-/* MAX 4 drd indexs because we only have 3 bits left in the trim reg. */
+/* MAX 4 drd indexes because we only have 3 bits left in the trim reg. */
 #define CRG_DRD_INDEX_VALID_DEF (BIT(15))
 
 struct crg_drd_glue {

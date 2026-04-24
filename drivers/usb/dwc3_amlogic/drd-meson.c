@@ -506,7 +506,9 @@ static int dwc3_setup_role_switch(struct aml_dwc3 *dwc)
 	u32 mode, force_mode;
 
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
-	if (!dwc->role_switch_default_mode) {
+	if (device_property_read_bool(dwc->dev, "typec-usb-controller")) {
+		dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
+	} else if (!dwc->role_switch_default_mode) {
 		force_mode = get_otg_mode();
 		if (force_mode == 1)
 			dwc->role_switch_default_mode = USB_DR_MODE_PERIPHERAL;
@@ -523,6 +525,7 @@ static int dwc3_setup_role_switch(struct aml_dwc3 *dwc)
 		dwc->role_switch_default_mode = USB_DR_MODE_PERIPHERAL;
 		mode = DWC3_GCTL_PRTCAP_DEVICE;
 	}
+
 	aml_dwc3_set_mode(dwc, mode);
 
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)

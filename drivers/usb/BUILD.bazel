@@ -38,9 +38,14 @@ ddk_module(
                 "xhci_amlogic/xhci-plat-meson.c",
             ],
         },
-        "CONFIG_AMLOGIC_USB_DWC3_TRACE": {
+        "CONFIG_AMLOGIC_USB_DWC3": {
             True: [
-                "dwc3_amlogic/trace-meson.c",
+                "dwc3_amlogic/core-meson.c",
+            ],
+        },
+        "CONFIG_TRACING": {
+            True: [
+                 "dwc3_amlogic/trace-meson.c",
             ],
         },
         "CONFIG_AMLOGIC_USB_DWC3_HOST": {
@@ -48,14 +53,33 @@ ddk_module(
                 "dwc3_amlogic/host-meson.c",
             ],
         },
+        "CONFIG_AMLOGIC_USB_DWC3_GADGET": {
+            True: [
+                "dwc3_amlogic/gadget-meson.c",
+                "dwc3_amlogic/ep0-meson.c",
+            ],
+        },
         "CONFIG_AMLOGIC_USB_DWC3_DUAL_ROLE": {
             True: [
-             	"dwc3_amlogic/core-meson.c",
-            	"dwc3_amlogic/host-meson.c",
+                "dwc3_amlogic/host-meson.c",
                 "dwc3_amlogic/gadget-meson.c",
                 "dwc3_amlogic/ep0-meson.c",
                 "dwc3_amlogic/drd-meson.c",
-                "dwc3_amlogic/trace-meson.c",
+            ],
+        },
+        "CONFIG_AMLOGIC_USB_DWC3_ULPI": {
+            True: [
+                "dwc3_amlogic/ulpi-meson.c",
+            ],
+        },
+        "CONFIG_AMLOGIC_USB_DWC3_DEBUGFS": {
+            True: [
+                "dwc3_amlogic/debugfs-meson.c",
+            ],
+        },
+        "CONFIG_AMLOGIC_USB_DWC3_OTG": {
+            True: [
+                "dwc3_amlogic/dwc3-otg.c",
             ],
         },
         "CONFIG_AMLOGIC_BC": {
@@ -84,29 +108,9 @@ ddk_module(
                 "crgdrdphy/phy-aml-m31-usb3.c",
             ],
         },
-        "CONFIG_AMLOGIC_USB_DWC3": {
-            True: [
-                "dwc3_amlogic/dwc3-otg.c",
-            ],
-        },
-        "CONFIG_AMLOGIC_USB_DWC3_DRD": {
-            True: [
-                "dwc3_amlogic/drd-meson.c",
-            ],
-        },
-        "CONFIG_AMLOGIC_USB_DWC3_ULPI": {
-            True: [
-                "dwc3_amlogic/ulpi-meson.c",
-            ],
-        },
         "CONFIG_DEBUG_FS": {
             True: [
                 "xhci_amlogic/xhci-debugfs-meson.c",
-            ],
-        },
-        "CONFIG_AMLOGIC_USB_DWC3_DEBUGFS": {
-            True: [
-                "dwc3_amlogic/debugfs-meson.c",
             ],
         },
         "CONFIG_MESON_USBPHY": {
@@ -136,6 +140,7 @@ ddk_module(
                 "phy_meson_usb/socs/phy-meson-t6w-usb.c",
                 "phy_meson_usb/socs/phy-meson-t6x-usb.c",
                 "phy_meson_usb/socs/phy-meson-c4-usb.c",
+                "phy_meson_usb/socs/phy-meson-a9-usb.c",
             ],
         },
         "CONFIG_AMLOGIC_USB2PHY": {
@@ -205,6 +210,7 @@ ddk_module(
         "//common_drivers/drivers/power:amlogic-power",
         "//common_drivers/drivers/pm:amlogic-pm",
         "//common_drivers/drivers/cpu_info:amlogic-cpuinfo",
+        "//common_drivers/drivers/usb:typec-mux-meson",
     ]
 )
 
@@ -269,7 +275,7 @@ ddk_module(
         },
     },
     hdrs = [
-	"//common:drivers/usb/typec/class.h",
+        "//common:drivers/usb/typec/class.h",
     ],
     local_defines = [
         "AW_HAVE_SNK",
@@ -282,10 +288,10 @@ ddk_module(
         "AW_DEBUG_CODE",
         "AW_HAVE_DP",
         "AW_HAVE_PD",
-	"MESON_AW",
+        "MESON_AW",
     ],
     linux_includes = [
-	# tell define_trace.h where to find the typec-aw35615 trace header
+        # tell define_trace.h where to find the typec-aw35615 trace header
         "typec/aw35615/",
         "typec/aw35615/modules/",
         "typec/aw35615/vdm/",

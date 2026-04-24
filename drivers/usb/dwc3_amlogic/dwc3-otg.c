@@ -37,15 +37,6 @@ struct dwc3_otg {
 };
 
 #define DWC3_MESON_IDDIG_DEBOUNCE_MS 1000
-//static const struct property_entry dwc3_meson_dr_mode_host_property[] = {
-//	PROPERTY_ENTRY_STRING("role-switch-default-mode", "host"),
-//};
-
-//static const struct property_entry dwc3_meson_dr_mode_peripheral_property[] = {
-//	PROPERTY_ENTRY_STRING("role-switch-default-mode", "peripheral"),
-//};
-
-//DECLARE_WAIT_QUEUE_HEAD(dwc3_meson_wait);
 
 static const char *const usb_dr_modes[] = {
 	[USB_DR_MODE_UNKNOWN]		= "",
@@ -307,6 +298,9 @@ static int dwc3_otg_mode_configure(struct dwc3_otg	*dwc3_otg)
 	else
 		dwc3_otg->dr_mode = usb_get_dr_mode_from_string(dr_mode);
 
+	if (dwc3_otg->dr_mode == USB_DR_MODE_UNKNOWN)
+		return -EINVAL;
+
 	dwc3_otg->is_drd = dwc3_otg->dr_mode == USB_DR_MODE_OTG;
 
 	if (dwc3_otg->is_drd) {
@@ -366,13 +360,15 @@ static int dwc3_otg_probe(struct platform_device *pdev)
 
 	ret = dwc3_otg_mode_configure(dwc3_otg);
 	if (ret < 0)
-		goto disable_rpm;
+		goto put_usb_role;
 
 	device_set_wakeup_capable(dev, true);
 	pm_runtime_put(dev);
 
 	return 0;
 
+put_usb_role:
+	usb_role_switch_put(dwc3_otg->dwc3_core_role_sw);
 disable_rpm:
 	pm_runtime_disable(dev);
 	pm_runtime_put_noidle(dev);
@@ -387,6 +383,7 @@ static void dwc3_otg_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(dev);
 	dwc3_meson_dr_deconfig(dwc3_otg);
+	usb_role_switch_put(dwc3_otg->dwc3_core_role_sw);
 
 	pm_runtime_disable(dev);
 	pm_runtime_put_noidle(dev);

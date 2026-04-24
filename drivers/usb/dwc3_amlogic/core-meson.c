@@ -51,6 +51,60 @@ static int dwc3_phy_init(struct aml_dwc3 *dwc);
 
 #define DWC3_DEFAULT_AUTOSUSPEND_DELAY	5000 /* ms */
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+/* meson DWORD trim reg for drd controller index exist only one per platform. */
+static void __iomem *trim_reg;
+#define DWC3_INDEX_MASK ((u32)GENMASK(14, 13))
+#define DWC3_INDEX_SHIFT 13
+/* MAX 4 drd indexes because we only have 3 bits left in the trim reg. */
+#define DWC3_INDEX_VALID_DEF (BIT(15))
+
+/**
+ * dwc3_drd_meson_is_drd - If a meson dwc3 which sets dr_mode = "otg"
+ * can be finally approved.
+ * @dwc: pointer to our context structure
+ */
+static bool dwc3_drd_meson_is_drd(struct aml_dwc3 *dwc)
+{
+	u32 drd_index;
+
+	if (!trim_reg) {
+		u32 trim_reg_addr;
+
+		if (!device_property_read_u32(dwc->dev, "trim-reg",
+					 &trim_reg_addr)) {
+			trim_reg = ioremap(trim_reg_addr, 0x4);
+			if (!trim_reg) {
+				dev_err(dwc->dev, "%s trim reg map failed.\n", __func__);
+				return false;
+			}
+		} else {
+			/* Normal drd dwc3 nodes have no such property. Prevent false alarming. */
+			return true;
+		}
+	}
+
+	/* Normal drd dwc3 nodes have no such property. Prevent false alarming. */
+	if (device_property_read_u32(dwc->dev, "drd-index", &drd_index))
+		return true;
+
+	if (readl(trim_reg) & DWC3_INDEX_VALID_DEF)
+		return (((readl(trim_reg) & DWC3_INDEX_MASK) >> DWC3_INDEX_SHIFT) == drd_index);
+	else if (device_property_read_bool(dwc->dev, "def-drd-controller"))
+		return true;
+	else
+		return false;
+}
+
+void dwc3_drd_meson_is_drd_exit(void)
+{
+	if (trim_reg) {
+		iounmap(trim_reg);
+		trim_reg = 0;
+	}
+}
+#endif
+
 /**
  * dwc3_get_dr_mode - Validates and sets dr_mode
  * @dwc: pointer to our context structure
@@ -100,6 +154,11 @@ static int dwc3_get_dr_mode(struct aml_dwc3 *dwc)
 		     !device_property_read_bool(dwc->dev, "usb-role-switch")) &&
 		    !DWC3_VER_IS_PRIOR(DWC3, 330A))
 			mode = USB_DR_MODE_PERIPHERAL;
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		/* If the meson trim register thinks we should not be drd, set to host. */
+		if (!dwc3_drd_meson_is_drd(dwc))
+			mode = USB_DR_MODE_HOST;
+#endif
 	}
 
 	if (mode != dwc->dr_mode) {
@@ -1751,6 +1810,8 @@ static int dwc3_core_init_mode(struct aml_dwc3 *dwc)
 			if (phy_set_mode(dwc->usb3_generic_phy[i], PHY_MODE_USB_HOST) >= 0)
 				dwc->super_speed_support = true;
 		}
+
+		dev_dbg(dev, "super_speed_support is %d\n", dwc->super_speed_support);
 #else
 		for (i = 0; i < dwc->num_usb3_ports; i++)
 			phy_set_mode(dwc->usb3_generic_phy[i], PHY_MODE_USB_HOST);
@@ -1761,6 +1822,14 @@ static int dwc3_core_init_mode(struct aml_dwc3 *dwc)
 			return dev_err_probe(dev, ret, "failed to initialize host\n");
 		break;
 	case USB_DR_MODE_OTG:
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		/* The drd controller doesn't use combo phy for now. */
+		if (dwc->num_usb3_ports)
+			dwc->super_speed_support = true;
+
+		dev_dbg(dev, "super_speed_support is %d\n", dwc->super_speed_support);
+#endif
+
 		INIT_WORK(&dwc->drd_work, __dwc3_set_mode);
 		ret = aml_dwc3_drd_init(dwc);
 		if (ret)
@@ -2347,6 +2416,16 @@ static int dwc3_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_put_psy;
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	ret = reset_control_assert(dwc->reset);
+	if (ret)
+		goto err_put_psy;
+
+	ret = reset_control_deassert(dwc->reset);
+	if (ret)
+		goto err_put_psy;
+#endif
+
 	ret = dwc3_clk_enable(dwc);
 	if (ret)
 		goto err_assert_reset;
@@ -2470,6 +2549,9 @@ static void dwc3_shutdown(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_noidle(&pdev->dev);
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	dwc3_drd_meson_is_drd_exit();
+#endif
 	/*
 	 * HACK: Clear the driver data, which is currently accessed by parent
 	 * glue drivers, before allowing the parent to suspend.
@@ -2501,6 +2583,9 @@ static void dwc3_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_put_noidle(&pdev->dev);
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	dwc3_drd_meson_is_drd_exit();
+#endif
 	/*
 	 * HACK: Clear the driver data, which is currently accessed by parent
 	 * glue drivers, before allowing the parent to suspend.

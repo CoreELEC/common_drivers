@@ -142,31 +142,31 @@ int meson_u2phy_hold_reset(struct amlogic_usb_v2 *phy, bool on)
 {
 	u32 val = 0, temp = 0;
 	size_t mask = 0;
+	int off = (phy->phy_reset_level_bit[0] / 32) * 0x4;
 
-	if (phy->phy_reset_level_bit[0] == -1U ||
-			phy->phy_reset_level_bit[0] > 31) {
+	if (phy->phy_reset_level_bit[0] == -1U) {
 		WARN_ON(1);
 		return -EINVAL;
 	}
 
 	dev_dbg(phy->dev, "%s initial: 0x%x.\n", __func__,
-				readl(phy->reset_regs + phy->reset_level));
+				readl(phy->reset_regs + off + phy->reset_level));
 	mask = (size_t)phy->reset_regs & 0xf;
 
-	temp = temp | (1 << phy->phy_reset_level_bit[0]);
+	temp = temp | (1 << phy->phy_reset_level_bit[0] % 32);
 
 	val = readl((void __iomem		*)
-		((unsigned long)phy->reset_regs + (phy->reset_level - mask)));
+		((unsigned long)phy->reset_regs + off + (phy->reset_level - mask)));
 
 	if (on) {
 		writel(val | temp, (void __iomem	*)
-			((unsigned long)phy->reset_regs + (phy->reset_level - mask)));
+			((unsigned long)phy->reset_regs + off + (phy->reset_level - mask)));
 	} else {
 		writel(val & ~temp, (void __iomem	*)
-			((unsigned long)phy->reset_regs + (phy->reset_level - mask)));
+			((unsigned long)phy->reset_regs + off + (phy->reset_level - mask)));
 	}
 	dev_dbg(phy->dev, "%s after: 0x%x.\n", __func__,
-				readl(phy->reset_regs + phy->reset_level));
+				readl(phy->reset_regs + off + phy->reset_level));
 
 	return 0;
 }
@@ -755,34 +755,26 @@ int meson_u2phy_set_mode(struct amlogic_usb_v2 *phy, enum meson_uphy_mode mode)
 	return ret;
 }
 
-/* For u3drd usb2 only mode. Since t6x. */
+/* For u3drd usb2 only mode. Since t6x, a9. */
 int meson_u2phy_u3drdu2o_set(struct amlogic_usb_v2 *phy, bool on)
 {
 	int ret = 0;
 	void __iomem *phy_clk_sel_reg;
 	u32 pipe_clk_sel;
-#define PIPE_CLK_GATE 13
-#define PIPE_CLK_GATE_REG 0x9c
 
-	/* TODO: Port it by dts if it changed. */
-	pipe_clk_sel = 1 << PIPE_CLK_GATE;
-	phy_clk_sel_reg = phy->regs + PIPE_CLK_GATE_REG;
+	if (phy->pipe_clk_sel != -1U && phy->phy_clk_sel_reg_off != -1U) {
+		pipe_clk_sel = phy->pipe_clk_sel;
+		phy_clk_sel_reg = phy->regs + phy->phy_clk_sel_reg_off;
 
-	if (phy->usb_clk) {
 		if (on) {
-			ret = clk_prepare_enable(phy->usb_clk);
-			if (ret) {
-				dev_err(phy->dev, "Failed to enable usb 250m clock at %d\n",
-							__LINE__);
-				return ret;
-			}
-			/* set to 1 for usb2 only mode. */
 			writel(readl(phy_clk_sel_reg) | pipe_clk_sel, phy_clk_sel_reg);
+			dev_dbg(phy->dev, "enabled secondary usb_pipe_clk\n");
 		} else {
 			writel(readl(phy_clk_sel_reg) & ~pipe_clk_sel, phy_clk_sel_reg);
-			clk_disable_unprepare(phy->usb_clk);
+			dev_dbg(phy->dev, "disabled secondary usb_pipe_clk\n");
 		}
 	}
+
 	return ret;
 }
 
@@ -855,9 +847,18 @@ int meson_u2phy_aml_2t_init(struct amlogic_usb_v2 *phy, struct meson_u2phy_priv 
 		return 0;
 	}
 
-	ret = priv->enable_clock_src(phy);
-	if (ret)
-		return ret;
+	if (priv->enable_clock_src) {
+		ret = priv->enable_clock_src(phy);
+		if (ret)
+			return ret;
+	} else {
+		ret = clk_bulk_prepare_enable(phy->clk_num, phy->clks);
+		if (ret) {
+			dev_err(phy->dev, "Failed to enable usb2 phy bus clock at %d\n",
+								__LINE__);
+			return ret;
+		}
+	}
 
 	meson_u2phy_hold_reset(phy, false);
 	usleep_range(49, 50);
@@ -1104,11 +1105,21 @@ int meson_aml_u2phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	ret = of_property_read_u32(dev->of_node, "clk-mux", &aml_u2phy->clk_mux);
 
 	aml_u2phy->sw_hsp = of_property_read_bool(dev->of_node, "sw-hsp");
-	aml_u2phy->u3_companinon = of_property_read_bool(dev->of_node, "u3-companinon");
 
 	aml_u2phy->ic_ver = get_cpu_type();
 
 	ret = 0;
+
+	ret = of_property_read_u32(dev->of_node, "pipe-clk-sel", &aml_u2phy->pipe_clk_sel);
+	if (ret < 0)
+		aml_u2phy->pipe_clk_sel = -1U;
+	dev_dbg(dev, "pipe_clk_sel: 0x%x\n", aml_u2phy->pipe_clk_sel);
+
+	ret = of_property_read_u32(dev->of_node, "phy-clk-sel-reg-off",
+		&aml_u2phy->phy_clk_sel_reg_off);
+	if (ret < 0)
+		aml_u2phy->phy_clk_sel_reg_off = -1U;
+	dev_dbg(dev, "phy-clk-sel-reg-off: 0x%x\n", aml_u2phy->phy_clk_sel_reg_off);
 
 	cnt = of_property_count_strings(dev->of_node, "clock-names");
 	if (cnt < 0) {
