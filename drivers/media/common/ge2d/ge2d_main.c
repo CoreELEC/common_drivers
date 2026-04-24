@@ -71,6 +71,7 @@ void __iomem *backup_init_reg_vaddr;
 phys_addr_t backup_init_reg_paddr;
 void __iomem *cmd_queue_vaddr;
 dma_addr_t cmd_queue_paddr;
+struct clk *clk_cve;
 
 struct ge2d_device_data_s ge2d_meson_dev;
 
@@ -2095,6 +2096,24 @@ static int ge2d_probe(struct platform_device *pdev)
 		goto failed1;
 	}
 
+	/* for the A9 chip, ge2d depends on the cve_arb clock */
+	if (ge2d_meson_dev.chip_type == MESON_CPU_MAJOR_ID_A9) {
+		clk_cve = devm_clk_get(&pdev->dev, "cve_arb");
+		if (IS_ERR_OR_NULL(clk_cve)) {
+			ge2d_log_err("cannot get cve_arb\n");
+			goto failed1;
+		} else {
+			int clk_rate = 0;
+
+			clk_set_rate(clk_cve, 800000000);
+			clk_prepare_enable(clk_cve);
+			clk_rate =  clk_get_rate(clk_cve);
+			ge2d_log_info("ge2d cve_arb is %d MHZ\n", clk_rate / 1000000);
+		}
+
+		clk_cnt -= 1;
+	}
+
 	if (clk_cnt == 3 || clk_cnt == 2) {
 		clk_gate = devm_clk_get(&pdev->dev, "clk_ge2d_gate");
 		if (IS_ERR_OR_NULL(clk_gate)) {
@@ -2263,6 +2282,8 @@ static void ge2d_remove(struct platform_device *pdev)
 	if (ge2d_meson_dev.cmd_queue_mode)
 		release_cmd_queue_buffer(&pdev->dev, max_cmd_cnt);
 	ge2d_wq_deinit();
+	if (!IS_ERR_OR_NULL(clk_cve))
+		clk_disable_unprepare(clk_cve);
 	remove_ge2d_device();
 }
 
