@@ -183,8 +183,17 @@ extern int gdc_uv_swap_enable;
 #define C4_ISP_DWAP_TOP_DST_V_CTRL0        ((0x13 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_TOP_DST_V_STRD0        ((0x14 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_TOP_SRC_Y_CTRL1        ((0x67 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_STRD1        ((0x72 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_TOP_SRC_U_CTRL1        ((0x77 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_STRD1        ((0x82 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_TOP_SRC_V_CTRL1        ((0x87 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_CTRL2        ((0x68 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_CTRL2        ((0x78 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_CTRL2        ((0x88 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_STRD1        ((0x92 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_Y_CTRL3        ((0x69 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_U_CTRL3        ((0x79 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_TOP_SRC_V_CTRL3        ((0x89 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_PPS_CTRL               ((0xc2 << 2) | ISP_DWAP_REG_MARK)
 
 #define ISP_DWAP_CMD_SWAP                  ((0x2b << 2) | ISP_DWAP_REG_MARK)
@@ -627,6 +636,10 @@ static inline void gdc_data1in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					(((u64)msb << 32) + data[0]) >> 4, core_id);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_CTRL1,
 					(((u64)msb << 32) + data[1]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_CTRL2,
+					(((u64)msb << 32) + data[2]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_CTRL3,
+					(((u64)msb << 32) + data[3]) >> 4, core_id);
 	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_Y_CTRL0,
 				    (((u64)msb << 32) + data[0]) >> 4, core_id);
@@ -666,6 +679,10 @@ static inline void gdc_data1in_line_offset_write(u32 *data, u32 dev_type,
 		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_STRD0,
 				(tmp1 << 16) | tmp, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[2]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[3]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_Y_STRD1,
+				(tmp1 << 16) | tmp, core_id);
 	} else {
 		tmp = DEWARP_STRIDE_ALIGN(data[0]);
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_Y_CTRL1, tmp, core_id);
@@ -703,6 +720,10 @@ static inline void gdc_data2in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					(((u64)msb << 32) + data[0]) >> 4, core_id);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_CTRL1,
 					(((u64)msb << 32) + data[1]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_CTRL2,
+					(((u64)msb << 32) + data[2]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_CTRL3,
+					(((u64)msb << 32) + data[3]) >> 4, core_id);
 	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_U_CTRL0,
 				    (((u64)msb << 32) + data[0]) >> 4, core_id);
@@ -742,6 +763,10 @@ static inline void gdc_data2in_line_offset_write(u32 *data, u32 dev_type,
 		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_STRD0,
 				(tmp1 << 16) | tmp, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[2]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[3]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_U_STRD1,
+				(tmp1 << 16) | tmp, core_id);
 	} else {
 		tmp = DEWARP_STRIDE_ALIGN(data[0]);
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_U_CTRL1, tmp, core_id);
@@ -779,6 +804,10 @@ static inline void gdc_data3in_addr_write(u32 msb, u32 *data, u32 dev_type,
 					(((u64)msb << 32) + data[0]) >> 4, core_id);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_CTRL1,
 					(((u64)msb << 32) + data[1]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_CTRL2,
+					(((u64)msb << 32) + data[2]) >> 4, core_id);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_CTRL3,
+					(((u64)msb << 32) + data[3]) >> 4, core_id);
 	} else {
 		system_gdc_write_32(ISP_DWAP_TOP_SRC_V_CTRL0,
 				    (((u64)msb << 32) + data[0]) >> 4, core_id);
@@ -818,6 +847,10 @@ static inline void gdc_data3in_line_offset_write(u32 *data, u32 dev_type,
 		tmp = DEWARP_STRIDE_ALIGN(data[0]);
 		tmp1 = DEWARP_STRIDE_ALIGN(data[1]);
 		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_STRD0,
+				   (tmp1 << 16) | tmp, core_id);
+		tmp = DEWARP_STRIDE_ALIGN(data[2]);
+		tmp1 = DEWARP_STRIDE_ALIGN(data[3]);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_SRC_V_STRD1,
 				   (tmp1 << 16) | tmp, core_id);
 	} else {
 		tmp = DEWARP_STRIDE_ALIGN(data[0]);

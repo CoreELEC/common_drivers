@@ -86,6 +86,8 @@ struct gdc_settings_ex {
 	struct gdc_config_s gdc_config;
 	struct gdc_buffer_info input_buffer;
 	struct gdc_buffer_info input2_buffer;
+	struct gdc_buffer_info input3_buffer;
+	struct gdc_buffer_info input4_buffer;
 	struct gdc_buffer_info config_buffer;
 	struct gdc_buffer_info output_buffer;
 };

@@ -78,6 +78,7 @@ static int kthread_created;
 static struct gdc_irq_handle_wq irq_handle_wq[CORE_NUM];
 static struct gdc_fw_func_ptr *g_fw_func_ptr;
 static int fw_size_alloc = 300 * 1024; /* 300KB */
+struct clk *clk_cve_arb;
 
 #define DEF_CLK_RATE 800000000
 
@@ -372,11 +373,12 @@ static int meson_gdc_set_buff(struct gdc_context_s *context,
 }
 
 static int meson_gdc_set_input_addr(u32 start_addr,
-				    struct gdc_cmd_s *gdc_cmd)
+				    struct gdc_cmd_s *gdc_cmd,
+				    int idx)
 {
 	struct gdc_config_s *gc = NULL;
 
-	if (!gdc_cmd || start_addr == 0) {
+	if (!gdc_cmd || start_addr == 0  || idx < 0 || idx >= 4) {
 		gdc_log(LOG_ERR, "meson_gdc_set_input_addr: Error input param\n");
 		return -EINVAL;
 	}
@@ -385,91 +387,38 @@ static int meson_gdc_set_input_addr(u32 start_addr,
 
 	switch (gc->format & FORMAT_TYPE_MASK) {
 	case NV12:
-		gdc_cmd->y_base_addr[0] = start_addr;
-		gdc_cmd->uv_base_addr[0] = start_addr +
-			gc->input_y_stride[0] * gc->input_height[0];
+		gdc_cmd->y_base_addr[idx] = start_addr;
+		gdc_cmd->uv_base_addr[idx] = start_addr +
+			gc->input_y_stride[idx] * gc->input_height[idx];
 	break;
 	case YV12:
-		gdc_cmd->y_base_addr[0] = start_addr;
-		gdc_cmd->u_base_addr[0] = start_addr +
-			gc->input_y_stride[0] * gc->input_height[0];
-		gdc_cmd->v_base_addr[0] = gdc_cmd->u_base_addr[0] +
-			gc->input_c_stride[0] * gc->input_height[0] / 2;
+		gdc_cmd->y_base_addr[idx] = start_addr;
+		gdc_cmd->u_base_addr[idx] = start_addr +
+			gc->input_y_stride[idx] * gc->input_height[idx];
+		gdc_cmd->v_base_addr[idx] = gdc_cmd->u_base_addr[idx] +
+			gc->input_c_stride[idx] * gc->input_height[idx] / 2;
 	break;
 	case Y_GREY:
-		gdc_cmd->y_base_addr[0] = start_addr;
-		gdc_cmd->u_base_addr[0] = 0;
-		gdc_cmd->v_base_addr[0] = 0;
+		gdc_cmd->y_base_addr[idx] = start_addr;
+		gdc_cmd->u_base_addr[idx] = 0;
+		gdc_cmd->v_base_addr[idx] = 0;
 	break;
 	case YUV444_P:
-		gdc_cmd->y_base_addr[0] = start_addr;
-		gdc_cmd->u_base_addr[0] = start_addr +
-			gc->input_y_stride[0] * gc->input_height[0];
-		gdc_cmd->v_base_addr[0] = gdc_cmd->u_base_addr[0] +
-			gc->input_c_stride[0] * gc->input_height[0];
+		gdc_cmd->y_base_addr[idx] = start_addr;
+		gdc_cmd->u_base_addr[idx] = start_addr +
+			gc->input_y_stride[idx] * gc->input_height[idx];
+		gdc_cmd->v_base_addr[idx] = gdc_cmd->u_base_addr[idx] +
+			gc->input_c_stride[idx] * gc->input_height[idx];
 	break;
 	case RGB444_P:
-		gdc_cmd->y_base_addr[0] = start_addr;
-		gdc_cmd->u_base_addr[0] = start_addr +
-			gc->input_y_stride[0] * gc->input_height[0];
-		gdc_cmd->v_base_addr[0] = gdc_cmd->u_base_addr[0] +
-			gc->input_c_stride[0] * gc->input_height[0];
+		gdc_cmd->y_base_addr[idx] = start_addr;
+		gdc_cmd->u_base_addr[idx] = start_addr +
+			gc->input_y_stride[idx] * gc->input_height[idx];
+		gdc_cmd->v_base_addr[idx] = gdc_cmd->u_base_addr[idx] +
+			gc->input_c_stride[idx] * gc->input_height[idx];
 	break;
 	default:
-		gdc_log(LOG_ERR, "Error config format\n");
-		return -EINVAL;
-	break;
-	}
-
-	return 0;
-}
-
-static int meson_gdc_set_input2_addr(u32 start_addr,
-				    struct gdc_cmd_s *gdc_cmd)
-{
-	struct gdc_config_s *gc = NULL;
-
-	if (!gdc_cmd || start_addr == 0) {
-		gdc_log(LOG_ERR, "Error input param\n");
-		return -EINVAL;
-	}
-
-	gc = &gdc_cmd->gdc_config;
-
-	switch (gc->format & FORMAT_TYPE_MASK) {
-	case NV12:
-		gdc_cmd->y_base_addr[1] = start_addr;
-		gdc_cmd->uv_base_addr[1] = start_addr +
-			gc->input_y_stride[1] * gc->input_height[1];
-	break;
-	case YV12:
-		gdc_cmd->y_base_addr[1] = start_addr;
-		gdc_cmd->u_base_addr[1] = start_addr +
-			gc->input_y_stride[1] * gc->input_height[1];
-		gdc_cmd->v_base_addr[1] = gdc_cmd->u_base_addr[1] +
-			gc->input_c_stride[1] * gc->input_height[1] / 2;
-	break;
-	case Y_GREY:
-		gdc_cmd->y_base_addr[1] = start_addr;
-		gdc_cmd->u_base_addr[1] = 0;
-		gdc_cmd->v_base_addr[1] = 0;
-	break;
-	case YUV444_P:
-		gdc_cmd->y_base_addr[1] = start_addr;
-		gdc_cmd->u_base_addr[1] = start_addr +
-			gc->input_y_stride[1] * gc->input_height[1];
-		gdc_cmd->v_base_addr[1] = gdc_cmd->u_base_addr[1] +
-			gc->input_c_stride[1] * gc->input_height[1];
-	break;
-	case RGB444_P:
-		gdc_cmd->y_base_addr[1] = start_addr;
-		gdc_cmd->u_base_addr[1] = start_addr +
-			gc->input_y_stride[1] * gc->input_height[1];
-		gdc_cmd->v_base_addr[1] = gdc_cmd->u_base_addr[1] +
-			gc->input_c_stride[1] * gc->input_height[1];
-	break;
-	default:
-		gdc_log(LOG_ERR, "meson_gdc_set_input_addr: Error config format\n");
+		gdc_log(LOG_ERR, "idx:%d Error config format\n", idx);
 		return -EINVAL;
 	break;
 	}
@@ -807,7 +756,8 @@ static int gdc_set_output_addr(int plane_id,
 	return 0;
 }
 
-static int gdc_set_input_addr(int plane_id,
+static int gdc_set_input_addr(int idx,
+			      int plane_id,
 			      u32 addr,
 			      struct gdc_cmd_s *gdc_cmd)
 {
@@ -815,7 +765,7 @@ static int gdc_set_input_addr(int plane_id,
 	long size;
 	int ret = 0;
 
-	if (!gdc_cmd || addr == 0) {
+	if (!gdc_cmd || addr == 0 || idx < 0 || idx >= 4) {
 		ret = -1;
 		goto error;
 	}
@@ -825,11 +775,11 @@ static int gdc_set_input_addr(int plane_id,
 	switch (gc->format & FORMAT_TYPE_MASK) {
 	case NV12:
 		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[0] = addr;
-			size = gc->input_y_stride[0] * gc->input_height[0];
+			gdc_cmd->y_base_addr[idx] = addr;
+			size = gc->input_y_stride[idx] * gc->input_height[idx];
 		} else if (plane_id == 1) {
-			gdc_cmd->uv_base_addr[0] = addr;
-			size = gc->input_y_stride[0] * gc->input_height[0] / 2;
+			gdc_cmd->uv_base_addr[idx] = addr;
+			size = gc->input_y_stride[idx] * gc->input_height[idx] / 2;
 		} else {
 			ret = -2;
 			goto error;
@@ -837,14 +787,14 @@ static int gdc_set_input_addr(int plane_id,
 		break;
 	case YV12:
 		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[0] = addr;
-			size = gc->input_y_stride[0] * gc->input_height[0];
+			gdc_cmd->y_base_addr[idx] = addr;
+			size = gc->input_y_stride[idx] * gc->input_height[idx];
 		} else if (plane_id == 1) {
-			gdc_cmd->u_base_addr[0] = addr;
-			size = gc->input_c_stride[0] * gc->input_height[0] / 2;
+			gdc_cmd->u_base_addr[idx] = addr;
+			size = gc->input_c_stride[idx] * gc->input_height[idx] / 2;
 		} else if (plane_id == 2) {
-			gdc_cmd->v_base_addr[0] = addr;
-			size = gc->input_c_stride[0] * gc->input_height[0] / 2;
+			gdc_cmd->v_base_addr[idx] = addr;
+			size = gc->input_c_stride[idx] * gc->input_height[idx] / 2;
 		} else {
 			ret = -3;
 			goto error;
@@ -852,10 +802,10 @@ static int gdc_set_input_addr(int plane_id,
 		break;
 	case Y_GREY:
 		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[0] = addr;
-			gdc_cmd->u_base_addr[0] = 0;
-			gdc_cmd->v_base_addr[0] = 0;
-			size = gc->input_y_stride[0] * gc->input_height[0];
+			gdc_cmd->y_base_addr[idx] = addr;
+			gdc_cmd->u_base_addr[idx] = 0;
+			gdc_cmd->v_base_addr[idx] = 0;
+			size = gc->input_y_stride[idx] * gc->input_height[idx];
 		} else {
 			ret = -4;
 			goto error;
@@ -863,13 +813,13 @@ static int gdc_set_input_addr(int plane_id,
 		break;
 	case YUV444_P:
 	case RGB444_P:
-		size = gc->input_y_stride[0] * gc->input_height[0];
+		size = gc->input_y_stride[idx] * gc->input_height[idx];
 		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[0] = addr;
+			gdc_cmd->y_base_addr[idx] = addr;
 		} else if (plane_id == 1) {
-			gdc_cmd->u_base_addr[0] = addr;
+			gdc_cmd->u_base_addr[idx] = addr;
 		} else if (plane_id == 2) {
-			gdc_cmd->v_base_addr[0] = addr;
+			gdc_cmd->v_base_addr[idx] = addr;
 		} else {
 			ret = -5;
 			goto error;
@@ -879,99 +829,20 @@ static int gdc_set_input_addr(int plane_id,
 		ret = -6;
 		goto error;
 	}
-	return 0;
+	return size;
 
 error:
-	gdc_log(LOG_ERR, "gdc_set_input0_addr fail! ret: %d\n", ret);
+	gdc_log(LOG_ERR, "gdc_set_input%d_addr fail! ret: %d\n", idx, ret);
 	return -1;
 }
 
-static int gdc_set_input2_addr(int plane_id,
-			      u32 addr,
+static int gdc_get_input_size(int idx,
 			      struct gdc_cmd_s *gdc_cmd)
 {
 	struct gdc_config_s *gc = NULL;
 	long size;
-	int ret = 0;
 
-	if (!gdc_cmd || addr == 0) {
-		ret = -1;
-		goto error;
-	}
-
-	gc = &gdc_cmd->gdc_config;
-
-	switch (gc->format & FORMAT_TYPE_MASK) {
-	case NV12:
-		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[1] = addr;
-			size = gc->input_y_stride[1] * gc->input_height[1];
-		} else if (plane_id == 1) {
-			gdc_cmd->uv_base_addr[1] = addr;
-			size = gc->input_y_stride[1] * gc->input_height[1] / 2;
-		} else {
-			ret = -2;
-			goto error;
-		}
-		break;
-	case YV12:
-		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[1] = addr;
-			size = gc->input_y_stride[1] * gc->input_height[1];
-		} else if (plane_id == 1) {
-			gdc_cmd->u_base_addr[1] = addr;
-			size = gc->input_c_stride[1] * gc->input_height[1] / 2;
-		} else if (plane_id == 2) {
-			gdc_cmd->v_base_addr[1] = addr;
-			size = gc->input_c_stride[1] * gc->input_height[1] / 2;
-		} else {
-			ret = -3;
-			goto error;
-		}
-		break;
-	case Y_GREY:
-		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[1] = addr;
-			gdc_cmd->u_base_addr[1] = 0;
-			gdc_cmd->v_base_addr[1] = 0;
-			size = gc->input_y_stride[1] * gc->input_height[1];
-		} else {
-			ret = -4;
-			goto error;
-		}
-		break;
-	case YUV444_P:
-	case RGB444_P:
-		size = gc->input_y_stride[1] * gc->input_height[1];
-		if (plane_id == 0) {
-			gdc_cmd->y_base_addr[1] = addr;
-		} else if (plane_id == 1) {
-			gdc_cmd->u_base_addr[1] = addr;
-		} else if (plane_id == 2) {
-			gdc_cmd->v_base_addr[1] = addr;
-		} else {
-			ret = -5;
-			goto error;
-		}
-		break;
-	default:
-		ret = -6;
-		goto error;
-	}
-	return 0;
-
-error:
-	gdc_log(LOG_ERR, "gdc_set_input2_addr fail! ret: %d\n", ret);
-	return -1;
-}
-
-
-static int gdc_get_input_size(struct gdc_cmd_s *gdc_cmd)
-{
-	struct gdc_config_s *gc = NULL;
-	long size;
-
-	if (!gdc_cmd) {
+	if (!gdc_cmd || idx < 0 || idx >= 4) {
 		gdc_log(LOG_ERR, "gdc_get_input_size: Error input param\n");
 		return -EINVAL;
 	}
@@ -981,14 +852,14 @@ static int gdc_get_input_size(struct gdc_cmd_s *gdc_cmd)
 	switch (gc->format & FORMAT_TYPE_MASK) {
 	case NV12:
 	case YV12:
-		size = gc->input_y_stride[0] * gc->input_height[0] * 3 / 2;
+		size = gc->input_y_stride[idx] * gc->input_height[idx] * 3 / 2;
 		break;
 	case Y_GREY:
-		size = gc->input_y_stride[0] * gc->input_height[0];
+		size = gc->input_y_stride[idx] * gc->input_height[idx];
 		break;
 	case YUV444_P:
 	case RGB444_P:
-		size = gc->input_y_stride[0] * gc->input_height[0] * 3;
+		size = gc->input_y_stride[idx] * gc->input_height[idx] * 3;
 		break;
 	default:
 		gdc_log(LOG_ERR, "Error config format\n");
@@ -997,39 +868,9 @@ static int gdc_get_input_size(struct gdc_cmd_s *gdc_cmd)
 	return 0;
 }
 
-static int gdc_get_input2_size(struct gdc_cmd_s *gdc_cmd)
-{
-	struct gdc_config_s *gc = NULL;
-	long size;
-
-	if (!gdc_cmd) {
-		gdc_log(LOG_ERR, "Error input param\n");
-		return -EINVAL;
-	}
-
-	gc = &gdc_cmd->gdc_config;
-
-	switch (gc->format & FORMAT_TYPE_MASK) {
-	case NV12:
-	case YV12:
-		size = gc->input_y_stride[1] * gc->input_height[1] * 3 / 2;
-		break;
-	case Y_GREY:
-		size = gc->input_y_stride[1] * gc->input_height[1];
-		break;
-	case YUV444_P:
-	case RGB444_P:
-		size = gc->input_y_stride[1] * gc->input_height[1] * 3;
-		break;
-	default:
-		gdc_log(LOG_ERR, "gdc_get_input_size: Error config format\n");
-		return -EINVAL;
-	}
-	return 0;
-}
-
 static int gdc_process_input_dma_info(struct gdc_context_s *context,
-				      struct gdc_settings_ex *gs_ex)
+				      struct gdc_settings_ex *gs_ex,
+				      int idx)
 {
 	int ret = 0;
 	dma_addr_t addr;
@@ -1039,25 +880,48 @@ static int gdc_process_input_dma_info(struct gdc_context_s *context,
 	int i, plane_number;
 	struct device *dev = NULL;
 
+	struct gdc_buffer_info *buffer = NULL;
+	struct gdc_dmabuf_cfg_s *dma_cfg = NULL;
+
 	if (!context || !gs_ex) {
 		ret = -1;
 		goto error;
 	}
 
+	switch (idx) {
+	case 0:
+		buffer = &gs_ex->input_buffer;
+		dma_cfg = context->dma_cfg.input_cfg;
+		break;
+	case 1:
+		buffer = &gs_ex->input2_buffer;
+		dma_cfg = context->dma_cfg.input2_cfg;
+		break;
+	case 2:
+		buffer = &gs_ex->input3_buffer;
+		dma_cfg = context->dma_cfg.input3_cfg;
+		break;
+	case 3:
+		buffer = &gs_ex->input4_buffer;
+		dma_cfg = context->dma_cfg.input4_cfg;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	gdc_cmd = &context->cmd;
 	dev = GDC_DEVICE(context->cmd.dev_type);
 
-	if (gs_ex->input_buffer.plane_number < 1 ||
-	    gs_ex->input_buffer.plane_number > 3) {
+	if (buffer->plane_number < 1 || buffer->plane_number > 3) {
 		ret = -2;
 		goto error;
 	}
 
-	plane_number = gs_ex->input_buffer.plane_number;
+	plane_number = buffer->plane_number;
 	for (i = 0; i < plane_number; i++) {
-		context->dma_cfg.input_cfg[i].dma_used = 1;
-		cfg = &context->dma_cfg.input_cfg[i].dma_cfg;
-		cfg->fd = gdc_get_buffer_fd(i, &gs_ex->input_buffer);
+		dma_cfg[i].dma_used = 1;
+		cfg = &dma_cfg[i].dma_cfg;
+		cfg->fd = gdc_get_buffer_fd(i, buffer);
 		cfg->dev = dev;
 		cfg->dir = DMA_TO_DEVICE;
 		ret = gdc_buffer_get_phys(cfg, &addr);
@@ -1074,7 +938,7 @@ static int gdc_process_input_dma_info(struct gdc_context_s *context,
 				context->dma_cfg.input_cfg[j].paddr_8g_msb =
 							gdc_dma_msb(addr);
 
-			ret = meson_gdc_set_input_addr(addr, gdc_cmd);
+			ret = meson_gdc_set_input_addr(addr, gdc_cmd, idx);
 			if (ret != 0) {
 				ret = -4;
 				goto error;
@@ -1084,16 +948,16 @@ static int gdc_process_input_dma_info(struct gdc_context_s *context,
 			context->dma_cfg.input_cfg[i].paddr_8g_msb =
 							gdc_dma_msb(addr);
 
-			size = gdc_set_input_addr(i, addr, gdc_cmd);
+			size = gdc_set_input_addr(idx, i, addr, gdc_cmd);
 			if (size < 0) {
 				ret = -5;
 				goto error;
 			}
 		}
-		gdc_log(LOG_DEBUG, "plane[%d] get input addr=%pad\n",
-			i, &addr);
+		gdc_log(LOG_DEBUG, "idx:%d plane[%d] get input addr=%pad\n",
+			idx, i, &addr);
 		if (plane_number == 1) {
-			size = gdc_get_input_size(gdc_cmd);
+			size = gdc_get_input_size(idx, gdc_cmd);
 			if (size < 0) {
 				ret = -6;
 				goto error;
@@ -1104,88 +968,8 @@ static int gdc_process_input_dma_info(struct gdc_context_s *context,
 
 	return 0;
 error:
-	gdc_log(LOG_ERR, "gdc_process_input_dma_info fail! ret: %d\n", ret);
+	gdc_log(LOG_ERR, "gdc input dma info fail! idx:%d ret:%d\n", idx, ret);
 	return -1;
-}
-
-static int gdc_process_input2_dma_info(struct gdc_context_s *context,
-				      struct gdc_settings_ex *gs_ex)
-{
-	int ret = -1;
-	dma_addr_t addr;
-	long size = 0;
-	struct aml_dma_cfg *cfg = NULL;
-	struct gdc_cmd_s *gdc_cmd = NULL;
-	int i, plane_number;
-	struct device *dev = NULL;
-
-	if (!context || !gs_ex) {
-		gdc_log(LOG_ERR, "Error input2 param\n");
-		return -EINVAL;
-	}
-
-	gdc_cmd = &context->cmd;
-	dev = GDC_DEVICE(context->cmd.dev_type);
-
-	if (gs_ex->input2_buffer.plane_number < 1 ||
-	    gs_ex->input2_buffer.plane_number > 3) {
-		gdc_log(LOG_ERR, "%s, plane_number=%d invalid\n",
-			__func__, gs_ex->input2_buffer.plane_number);
-		return -EINVAL;
-	}
-
-	plane_number = gs_ex->input2_buffer.plane_number;
-	for (i = 0; i < plane_number; i++) {
-		context->dma_cfg.input2_cfg[i].dma_used = 1;
-		cfg = &context->dma_cfg.input2_cfg[i].dma_cfg;
-		cfg->fd = gdc_get_buffer_fd(i, &gs_ex->input2_buffer);
-		cfg->dev = dev;
-		cfg->dir = DMA_TO_DEVICE;
-		ret = gdc_buffer_get_phys(cfg, &addr);
-		if (ret < 0) {
-			gdc_log(LOG_ERR,
-				"dma import input2 fd %d err\n",
-				cfg->fd);
-			return -EINVAL;
-		}
-
-		if (plane_number == 1) {
-			int j;
-
-			/* set MSB val */
-			for (j = 0; j < GDC_MAX_PLANE; j++)
-				context->dma_cfg.input2_cfg[j].paddr_8g_msb =
-							gdc_dma_msb(addr);
-
-			ret = meson_gdc_set_input2_addr(addr, gdc_cmd);
-			if (ret != 0) {
-				gdc_log(LOG_ERR, "set input2 addr err\n");
-				return ret;
-			}
-		} else {
-			/* set MSB val */
-			context->dma_cfg.input2_cfg[i].paddr_8g_msb =
-							gdc_dma_msb(addr);
-
-			size = gdc_set_input2_addr(i, addr, gdc_cmd);
-			if (size < 0) {
-				gdc_log(LOG_ERR, "set input2 addr err\n");
-				return ret;
-			}
-		}
-		gdc_log(LOG_DEBUG, "plane[%d] get input2 addr=%pad\n",
-			i, &addr);
-		if (plane_number == 1) {
-			size = gdc_get_input2_size(gdc_cmd);
-			if (size < 0) {
-				gdc_log(LOG_ERR, "set input2 addr err\n");
-				return ret;
-			}
-		}
-		meson_gdc_dma_flush(dev, addr, size);
-	}
-
-	return 0;
 }
 
 static int gdc_process_output_dma_info(struct gdc_context_s *context,
@@ -1314,7 +1098,7 @@ static int gdc_process_ex_info(struct gdc_context_s *context,
 	gdc_cmd->gdc_config.config_addr = addr;
 	gdc_log(LOG_DEBUG, "config addr=%pad\n", &addr);
 
-	ret = gdc_process_input_dma_info(context, gs_ex);
+	ret = gdc_process_input_dma_info(context, gs_ex, 0);
 	if (ret < 0) {
 		ret = -EINVAL;
 		goto unlock_return;
@@ -1322,7 +1106,25 @@ static int gdc_process_ex_info(struct gdc_context_s *context,
 
 	if (gs_ex->gdc_config.input_width[1] &&
 		gs_ex->gdc_config.input_height[1]) {
-		ret = gdc_process_input2_dma_info(context, gs_ex);
+		ret = gdc_process_input_dma_info(context, gs_ex, 1);
+		if (ret < 0) {
+			ret = -EINVAL;
+			goto unlock_return;
+		}
+	}
+
+	if (gs_ex->gdc_config.input_width[2] &&
+		gs_ex->gdc_config.input_height[2]) {
+		ret = gdc_process_input_dma_info(context, gs_ex, 2);
+		if (ret < 0) {
+			ret = -EINVAL;
+			goto unlock_return;
+		}
+	}
+
+	if (gs_ex->gdc_config.input_width[3] &&
+		gs_ex->gdc_config.input_height[3]) {
+		ret = gdc_process_input_dma_info(context, gs_ex, 3);
 		if (ret < 0) {
 			ret = -EINVAL;
 			goto unlock_return;
@@ -1557,7 +1359,7 @@ int gdc_process_with_fw(struct gdc_context_s *context,
 
 	ret = gdc_process_input_dma_info(context,
 					 (struct gdc_settings_ex *)
-					 gs_with_fw);
+					 gs_with_fw, 0);
 	if (ret < 0) {
 		ret = -4;
 		goto release_fw_name;
@@ -1868,7 +1670,7 @@ int gdc_process_phys(struct gdc_context_s *context,
 						gdc_dma_msb((u64)gs->in_paddr[0]);
 
 			ret = meson_gdc_set_input_addr(gs->in_paddr[0],
-						       gdc_cmd);
+						       gdc_cmd, 0);
 			if (ret != 0) {
 				ret = -5;
 				mutex_unlock(&context->d_mutext);
@@ -1879,7 +1681,7 @@ int gdc_process_phys(struct gdc_context_s *context,
 			context->dma_cfg.input_cfg[i].paddr_8g_msb =
 						gdc_dma_msb(gs->in_paddr[i]);
 
-			ret = gdc_set_input_addr(i, gs->in_paddr[i], gdc_cmd);
+			ret = gdc_set_input_addr(0, i, gs->in_paddr[i], gdc_cmd);
 			if (ret < 0) {
 				ret = -6;
 				mutex_unlock(&context->d_mutext);
@@ -1989,7 +1791,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 			mutex_unlock(&context->d_mutext);
 			return -EINVAL;
 		}
-		ret = meson_gdc_set_input_addr(addr, gdc_cmd);
+		ret = meson_gdc_set_input_addr(addr, gdc_cmd, 0);
 		if (ret != 0) {
 			gdc_log(LOG_ERR, "set input addr failed\n");
 			mutex_unlock(&context->d_mutext);
@@ -2027,7 +1829,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 
 		gc->config_addr = context->c_paddr;
 
-		ret = meson_gdc_set_input_addr(context->i_paddr, gdc_cmd);
+		ret = meson_gdc_set_input_addr(context->i_paddr, gdc_cmd, 0);
 		if (ret != 0) {
 			gdc_log(LOG_ERR, "set input addr failed\n");
 			mutex_unlock(&context->d_mutext);
@@ -2578,6 +2380,7 @@ static void gdc_irq_init(struct meson_gdc_dev_t *gdc_dev, u32 dev_type)
 			goto error;
 		}
 	}
+	return;
 error:
 	gdc_log(LOG_ERR, "gdc_irq_init fail! ret: %d\n", ret);
 	return;
@@ -2719,6 +2522,19 @@ static int gdc_platform_probe(struct platform_device *pdev)
 	rc = of_property_read_u32(pdev->dev.of_node, "clk-rate", &clk_rate);
 	if (rc < 0)
 		clk_rate = DEF_CLK_RATE;
+
+	/* for the A9 chip, dewarp depends on the cve_arb*/
+	if (dev_type == 2) {
+		clk_cve_arb = devm_clk_get(&pdev->dev, "cve_arb");
+		if (IS_ERR(clk_cve_arb)) {
+			gdc_log(LOG_ERR, "cannot get cve_arb\n");
+		} else {
+			clk_set_rate(clk_cve_arb, clk_rate);
+			clk_prepare_enable(clk_cve_arb);
+			rc =  clk_get_rate(clk_cve_arb);
+			gdc_log(LOG_INFO, "gdc cve_arb is %d MHZ\n", rc / 1000000);
+		}
+	}
 
 	for (i = 0; i < gdc_dev->core_cnt; i++) {
 		if (gdc_data->clk_type == CORE_AXI) {
@@ -2895,6 +2711,8 @@ static void gdc_platform_remove(struct platform_device *pdev)
 	kfree(gdc_dev->config_out_file);
 	gdc_dev->config_out_file = NULL;
 	gdc_wq_deinit();
+	if (clk_cve_arb)
+		clk_disable_unprepare(clk_cve_arb);
 	gdc_pwr_remove(gdc_dev->pd);
 	misc_deregister(misc_dev);
 }

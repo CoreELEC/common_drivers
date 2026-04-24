@@ -18,7 +18,7 @@
 #define AXI_WORD_ALIGN(size) (((size) + WORD_SIZE - 1) & WORD_MASK)
 
 #define UVSWAP_ENABLE 0x100
-#define INPUT_MAX 2
+#define INPUT_MAX 4
 
 enum {
 	ARM_GDC,
@@ -61,6 +61,8 @@ struct gdc_dma_cfg_t {
 	struct gdc_dmabuf_cfg_s config_cfg;
 	struct gdc_dmabuf_cfg_s input_cfg[GDC_MAX_PLANE];
 	struct gdc_dmabuf_cfg_s input2_cfg[GDC_MAX_PLANE];
+	struct gdc_dmabuf_cfg_s input3_cfg[GDC_MAX_PLANE];
+	struct gdc_dmabuf_cfg_s input4_cfg[GDC_MAX_PLANE];
 	struct gdc_dmabuf_cfg_s output_cfg[GDC_MAX_PLANE];
 };
 
