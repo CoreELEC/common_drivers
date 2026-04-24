@@ -325,7 +325,7 @@ int codec_mm_compaction_thread(void *data)
 				if (codec_mm_compact_range(cma, PHYS_PFN(pos),
 					PHYS_PFN(min(pos + step, cma_base + cma_size)))) {
 					count++;
-					msleep(once_sleep_time);
+					msleep_interruptible(once_sleep_time);
 				}
 			}
 			if (print_debug)
@@ -346,7 +346,7 @@ int codec_mm_compaction_thread(void *data)
 				break;
 			}
 
-			msleep(loop_sleep_time);
+			msleep_interruptible(loop_sleep_time);
 		}
 	}
 
