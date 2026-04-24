@@ -573,6 +573,8 @@ static int g12a_sys_pll_notifier_cb(struct notifier_block *nb,
 		 *          \- sys_pll_dco
 		 */
 
+		/* Set the CPU transition clock frequency to 1GHz. */
+		clk_set_rate(nb_data->cpu_clk_dyn->clk, 1000000000);
 		/* Configure cpu_clk to use cpu_clk_dyn */
 		clk_hw_set_parent(nb_data->cpu_clk,
 				  nb_data->cpu_clk_dyn);
