@@ -7168,7 +7168,7 @@ static void hdmitx_set_hw(struct hdmitx20_dev *hdev)
 {
 	const struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
 
-	HDMITX_INFO(" config hdmitx IP vic = %d cd:%d cs: %d\n",
+	HDMITX_INFO("config hdmitx IP vic = %d cd: %d cs: %d\n",
 		para->vic, para->cd, para->cs);
 
 	config_hdmi20_tx(para->vic, hdev,

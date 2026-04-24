@@ -1069,8 +1069,6 @@ static void hdmi_hwp_init(struct hdmitx21_dev *hdev, bool reset)
 		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 1, 24, 1);
 	}
 
-	HDMITX_INFO("%s%d\n", __func__, __LINE__);
-
 	if (!hdmitx21_is_basic_clk_en(hdev))
 		hdmitx21_set_default_clk();
 
@@ -1425,7 +1423,6 @@ void hdmitx21_meson_init(struct hdmitx_hw_common *hw_comm)
 	struct hdmitx_common *tx_comm = &h21_dev->tx_comm;
 	u32 arg = CLR_AVMUTE;
 
-	HDMITX_INFO("%s%d\n", __func__, __LINE__);
 	h21_dev->tx21_hw.base = hw_comm;
 	global_tx_hw = &h21_dev->tx21_hw;
 	h21_dev->tx21_hw.infoframe = &tx_comm->infoframe;
@@ -2170,7 +2167,6 @@ static int emp_dbg_en;
 
 void hdmitx_soft_reset(u32 bits_nr)
 {
-	HDMITX_INFO("%s[%d]\n", __func__, __LINE__);
 	if (bits_nr & BIT(0)) {
 		/* 18or10to20 fifos Software reset */
 		hdmitx21_set_reset_reg_bit(PWD_SRST_IVCTX, 2);
@@ -2306,7 +2302,6 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct hdmi_forma
 	// --------------------------------------------------------
 	// Set TV encoder for HDMI
 	// --------------------------------------------------------
-	HDMITX_INFO("configure venc\n");
 	//              enc_index   output_type enable)
 	// only 480i / 576i use the ENCI
 	if (para->timing.pi_mode == 0 &&
@@ -5966,7 +5961,7 @@ static void hdmitx_set_hw(struct hdmitx21_dev *hdev)
 {
 	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
 
-	HDMITX_INFO(" config hdmitx IP vic = %d cd:%d cs: %d\n",
+	HDMITX_INFO("config hdmitx IP vic = %d cd: %d cs: %d\n",
 		para->timing.vic, para->cd, para->cs);
 
 	config_hdmi21_tx(hdev);

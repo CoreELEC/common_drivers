@@ -396,7 +396,7 @@ int hdmitx_common_init_bootup_format_para(struct hdmitx_common *tx_comm,
 	ret = hdmitx_hw_cntl(tx_comm->tx_hw, QMS_GET_INFO, NULL, NULL);
 	HDMITX_INFO("qms: uboot brr %d qms_en %d\n", ret & 0xffff, ret >> 16);
 
-	HDMITX_INFO("%s hdmi is not enabled\n", __func__);
+	HDMITX_INFO("uboot hdmitx is not enabled\n");
 	return hdmitx_format_para_reset(para);
 }
 

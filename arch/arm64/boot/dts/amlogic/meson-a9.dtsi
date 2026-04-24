@@ -2471,7 +2471,7 @@
 		hdmitx-gpios-sda = <&gpio GPIOH_0 GPIO_ACTIVE_HIGH>;
 		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH
 			GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
-		interrupt-names = "hdmitx_hpd", "vrr_vsync";
+		interrupt-names = "hdmitx_hpd", "hdmitx_vsync";
 		enc_idx = <0>;
 		//max_refresh_rate = <120>; /* the max fresh_rate of S6 is upto 120hz */
 		reg =	<0x0 0xff500000 0x0 0x40000>,

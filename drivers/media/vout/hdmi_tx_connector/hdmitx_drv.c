@@ -445,7 +445,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 			   "hdcp_ctl_lvl", &tx_comm->hdcptx_comm.hdcp_ctl_lvl);
 		if (ret)
 			tx_comm->hdcptx_comm.hdcp_ctl_lvl = 0;
-		HDMITX_INFO("hdcp_ctl_lvl[%d-%d]\n", tx_comm->hdcptx_comm.hdcp_ctl_lvl, ret);
+		HDMITX_INFO("hdcp_ctl_lvl[%d]\n", tx_comm->hdcptx_comm.hdcp_ctl_lvl);
 		/* Get vendor information */
 		ret = of_property_read_u32(pdev->dev.of_node,
 					   "vend-data", &val);
@@ -472,7 +472,7 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 			tx_comm->frac_enable = val;
 		else
 			tx_comm->frac_enable = 0;
-		HDMITX_INFO("frac_enable[%d-%d]\n", tx_comm->frac_enable, ret);
+		HDMITX_INFO("frac_enable[%d]\n", tx_comm->frac_enable);
 
 		/* Get reg information */
 		ret = hw_comm->chip_data->hdmitx_ops->init_reg_map(pdev);
