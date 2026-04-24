@@ -1673,7 +1673,7 @@ static int ad82120b_get_ram2_param(struct snd_kcontrol *kcontrol,
 
 	for (i = 0; i < AD82120B_RAM2_TABLE_COUNT; i++) {
 		regmap_write(ad82120b->regmap, CFADDR, m_ram2_tab[i][0]);
-		regmap_write(ad82120b->regmap, CFUD, 0x04);
+		regmap_write(ad82120b->regmap, CFUD, 0x44);
 
 		regmap_read(ad82120b->regmap, A1CF1, &m_ram2_tab[i][1]);
 		regmap_read(ad82120b->regmap, A1CF2, &m_ram2_tab[i][2]);
