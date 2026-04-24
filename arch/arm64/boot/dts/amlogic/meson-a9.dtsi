@@ -1305,7 +1305,7 @@
 
 			pwm_a: pwm@10000 {
 				compatible = "amlogic,meson-pwm-tee";
-				reg = <0x0 10000 0x0 0x24>;
+				reg = <0x0 0x10000 0x0 0x24>;
 				#pwm-cells = <3>;
 				clocks = <&clkc_ao_pwm CLKID_AO_PWM_A>;
 				clock-names = "clkin0";
