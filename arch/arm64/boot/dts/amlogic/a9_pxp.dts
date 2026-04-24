@@ -881,40 +881,6 @@
 	};
 }; /* end of periphs_pinctrl */
 
-&usbphy0 {
-	status = "disabled";
-	u2p@0 {
-		status = "disabled";
-		controller-type = <1>; /* 0~3: normal, host, device, otg */
-	};
-};
-
-&usbphy1 {
-	status = "disabled";
-	u2p@0 {
-		status = "disabled";
-		/* otg & 3.0 share the vbus power.*/
-		gpio-vbus-power = "GPIOH_8";
-		// TODO: must check! // gpios = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
-	};
-
-	u3p@80 {
-		status = "disabled";
-	};
-};
-
-&crg_drd {
-	status = "disabled";
-};
-
-&crg_udc {
-	status = "disabled";
-};
-
-&crg {
-	status = "disabled";
-};
-
 &pcie_a {
 	/* reset-gpio = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>; */
 	max-link-speed=<3>;

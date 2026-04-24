@@ -2099,13 +2099,15 @@
 								0x0
 								0x0
 								0x7>;
+				/* Enable fake usb_250m pipe clk for crg in device mode. */
+				phy-clk-sel-reg = <0x9c>;
+				pipe-clk-sel = <0x2000>;
 				/* misnamed, is CLKID_SYS_USB_U3DRD */
 				clocks = <&clkc CLKID_SYS_USB_U2H>,
 							<&clkc CLKID_USB3_250M>;
 				clock-names = "crg_general",
 							"usb_clk_250m";
 				interrupts = <GIC_SPI 130 IRQ_TYPE_EDGE_RISING>;
-				u3-companinon;
 			};
 
 			u3paport0: u3p@80 {

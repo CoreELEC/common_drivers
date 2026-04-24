@@ -853,6 +853,67 @@
 	};
 };
 
+&i2c3 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c3_pins4>;
+	clock-frequency = <400000>;
+
+	usbc0: aw35615@22 {
+		compatible = "awinic,aw35615";
+		reg = <0x22>;
+		awinic,int_n = <&gpio_ao GPIOD_15 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpio GPIOA_17 GPIO_ACTIVE_HIGH>;
+		aw35615,port_id = <0>;
+		aw35615,vbus_name = "otg-vbus"; /*otg vbus regulator name*/
+		aw35615,snk_pdo_size = <1>; /* set sink pdo num*/
+		aw35615,snk_pdo_vol = <5000>; /* set sink pdo voltage mV*/
+		aw35615,snk_pdo_cur = <2000>; /* set sink pdo current mA*/
+		aw35615,snk_pps_size = <0>; /* set sink pps num*/
+		aw35615,snk_pps_vol = <0>; /* set sink pps voltage mV*/
+		aw35615,snk_pps_cur = <0>; /* set sink pps current mA*/
+		aw35615,src_pdo_size = <1>; /* set source pdo num*/
+		aw35615,src_pdo_vol = <5000>; /* set source pdo voltage mV*/
+		aw35615,src_pdo_cur = <1000>; /* set source pdo current mA*/
+		aw35615,src_pps_size = <0>; /* set sink pps num*/
+		aw35615,src_pps_vol = <0>; /* set sink pps voltage mV*/
+		aw35615,src_pps_cur = <0>; /* set sink pps current mA*/
+		aw35615,snk_tog_time = <0x36>; /* set toggle sink time */
+		aw35615,src_tog_time = <0x36>; /* set toggle source time */
+		aw35615,cc1_ov_th = <0x7>; /* set cc1 ov threshold */
+		aw35615,cc2_ov_th = <0x7>; /* set cc2 ov threshold */
+		aw35615,lpd_tim_set = <0x4>; /* set the LPD sensitivity */
+		status = "okay";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				data-role = "dual";
+				power-role = "dual";
+				try-power-role = "sink";
+
+				port@0 {
+					reg = <0>;
+					usbc0_mux: endpoint {
+						remote-endpoint = <&usbdp_phy0_mux>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					usbc0_role_sw: endpoint {
+						remote-endpoint = <&usb3_0_role_switch>;
+					};
+				};
+			};
+		};
+	};
+};
+
 &i2c6 {
 	status = "okay";
 	pinctrl-0=<&i2c6_pins2>;
@@ -1007,38 +1068,70 @@
 	};
 }; /* end of periphs_pinctrl */
 
-&usbphy0 {
-	status = "disabled";
-	u2p@0 {
-		status = "disabled";
-		controller-type = <1>; /* 0~3: normal, host, device, otg */
+&typec_mux {
+	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		usbdp_phy0_mux: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usbc0_mux>;
+		};
 	};
 };
 
-&usbphy1 {
-	status = "disabled";
-	u2p@0 {
-		status = "disabled";
-		/* otg & 3.0 share the vbus power.*/
-		gpio-vbus-power = "GPIOH_8";
-		// TODO: must check! // gpios = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
-	};
+&usbphya {
+	status = "okay";
+};
 
-	u3p@80 {
-		status = "disabled";
+&usbphyb {
+	status = "okay";
+	u2p@fe4cc000 {
+		gpio-vbus-power = "GPIOA_18";
+		gpios = <&gpio GPIOA_18 GPIO_ACTIVE_HIGH>;
 	};
 };
 
-&crg_drd {
-	status = "disabled";
+&usbphyc {
+	status = "okay";
+	u2p@fe4ac000 {
+		gpio-vbus-power = "GPIOA_19";
+		gpios = <&gpio GPIOA_19 GPIO_ACTIVE_HIGH>;
+	};
 };
 
-&crg_udc {
-	status = "disabled";
+&usbphyd {
+	status = "okay";
+	u2p@fe4a4000 {
+		gpio-vbus-power = "GPIOD_12";
+		gpios = <&gpio GPIOD_12 GPIO_ACTIVE_HIGH>;
+	};
 };
 
-&crg {
-	status = "disabled";
+&dwc3a {
+	typec-usb-controller;
+	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb3_0_role_switch: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usbc0_role_sw>;
+		};
+	};
+};
+
+&dwc3b {
+	status = "okay";
+};
+
+&dwc3c {
+	status = "okay";
+};
+
+&dwc3d {
+	status = "okay";
 };
 
 &pcie_a {
