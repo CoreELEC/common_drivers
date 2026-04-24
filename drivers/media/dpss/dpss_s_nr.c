@@ -3809,6 +3809,8 @@ struct vframe_s *dpss_get_vfm(unsigned int ch, unsigned int mode,
 			return NULL;
 
 		nr_i = lk_get_nr_i(vfm_in);
+		if (!nr_i)
+			return NULL;
 		vfm = nr_i->in_vfm;
 	}
 	return vfm;

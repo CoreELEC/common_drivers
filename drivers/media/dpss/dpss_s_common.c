@@ -3200,6 +3200,8 @@ void dpss_s2_recycle_back(struct dpss_ch_s *pch)
 
 			type = lk_owner_get(vfm);
 
+			if (!nr_i)
+				continue;
 			if (type == DPSS_VF_OWNER_NR) {
 				vfm_in = nr_i->in_vfm;
 				if (!vfm_in) {
