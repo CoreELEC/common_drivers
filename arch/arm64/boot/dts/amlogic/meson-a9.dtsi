@@ -2010,10 +2010,8 @@
 				 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
 				 <&clkc_sd_emmc CLKID_SD_EMMC_C>,
 				 <&xtal>,
-				 <&scmi_clk CLKID_FCLK_DIV2>,
-				 <&scmi_clk CLKID_FCLK_DIV2>;
-			//	 <&gp0_pll>,
-			//	 <&gp0_pll>;
+				 <&gp0_pll>,
+				 <&gp0_pll>;
 			clock-names = "core", "mux0", "mux1",
 					"clkin0", "clkin1", "clkin2";
 			no-sdio;
@@ -2021,11 +2019,11 @@
 			card_type = <1>;
 			ignore_desc_busy;
 			mmc_debug_flag;
-			//src_clk_rate = <1152000000>;
-			//assigned-clocks = <&gp0_pll>,
-			//		    <&clkc_sd_emmc CLKID_SD_EMMC_C>;
-			//assigned-clock-rates = <1152000000>,
-			//			 <1152000000>;
+			src_clk_rate = <1152000000>;
+			assigned-clocks = <&gp0_pll>,
+					    <&clkc_sd_emmc CLKID_SD_EMMC_C>;
+			assigned-clock-rates = <1152000000>,
+						 <1152000000>;
 			tx_delay = <16>;
 			cap-mmc-crypto;
 			aml-non-cqe-64bit-dma;
