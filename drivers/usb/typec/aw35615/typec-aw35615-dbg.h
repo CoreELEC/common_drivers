@@ -2,10 +2,10 @@
 /*
  * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
  */
-
 #ifndef __TYPEC_AW35615_DBG_H
 #define __TYPEC_AW35615_DBG_H
 
+#ifdef MESON_AW
 #define AW35615_MSG_MAX	500
 
 void aw35615_dbg_trace(void (*trace)(struct va_format *),
@@ -19,4 +19,5 @@ const char *aw35615_protocol_decode_tx_msg(char *str, unsigned char *msg,
 	unsigned char size);
 const char *aw35615_protocol_decode_rx_msg(char *str, unsigned char *msg,
 	unsigned char size, bool is_hdr, bool have_crc);
+#endif
 #endif /* __TYPEC_AW35615_DBG_H */

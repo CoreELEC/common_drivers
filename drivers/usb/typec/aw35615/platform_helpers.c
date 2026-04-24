@@ -1521,23 +1521,8 @@ void aw_InitializeCore(struct aw35615_chip *chip)
 		return;
 	}
 
-	chip->port.First_check_Rd = AW_FALSE;
-	core_initialize(&chip->port);
-	chip->port.First_check_Rd = AW_TRUE;
-	usleep_range(4000, 5000);
-	chip->sink_timer = 25000;
-	chip->source_timer = 25000;
-	chip->source_end_timer = 3;
-	chip->port.sink_bist_reg = 0x60;
-	chip->sink_reg_bist = 0x50;
-	chip->source_reg_bist = 0x65;
-	chip->lpd_check_enable = AW_TRUE;
-	chip->lpd_check_num_bak = 20;
-	chip->lpd_check_timer = 5000; /* unit ms */
-	chip->lpd_check_num = chip->lpd_check_num_bak;
-	chip->toggle_check_num = chip->lpd_check_num_bak;
-
-	pr_err("typec-aw35615: trace event enable %d\n", aw35615_trace_enable);
+#ifdef MESON_AW
+	pr_info("typec-aw35615: trace event enable %d\n", aw35615_trace_enable);
 
 	if (aw35615_trace_enable) {
 		int i = 0, ret;
@@ -1553,6 +1538,23 @@ void aw_InitializeCore(struct aw35615_chip *chip)
 
 		pr_info("typec-aw35615: trace event enabled via module param\n");
 	}
+#endif
+
+	chip->port.First_check_Rd = AW_FALSE;
+	core_initialize(&chip->port);
+	chip->port.First_check_Rd = AW_TRUE;
+	usleep_range(4000, 5000);
+	chip->sink_timer = 25000;
+	chip->source_timer = 25000;
+	chip->source_end_timer = 3;
+	chip->port.sink_bist_reg = 0x60;
+	chip->sink_reg_bist = 0x50;
+	chip->source_reg_bist = 0x65;
+	chip->lpd_check_enable = AW_TRUE;
+	chip->lpd_check_num_bak = 20;
+	chip->lpd_check_timer = 5000; /* unit ms */
+	chip->lpd_check_num = chip->lpd_check_num_bak;
+	chip->toggle_check_num = chip->lpd_check_num_bak;
 
 	AW_LOG(" Core is initialized!\n");
 }

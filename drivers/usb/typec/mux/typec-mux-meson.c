@@ -204,6 +204,63 @@ err:
 	return ret;
 }
 
+static ssize_t orient_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct typec_mux_meson *cmux_meson = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%d\n", cmux_meson->state.orient);
+}
+
+static ssize_t orient_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct typec_mux_meson *cmux_meson = dev_get_drvdata(dev);
+	u8 orientation;
+	int ret;
+
+	if (kstrtou8(buf, 0, &orientation) != 0)
+		return -EINVAL;
+
+	ret = typec_meson_switch_set(cmux_meson->sw, (enum typec_orientation)orientation);
+
+	return ret ? 0 : count;
+}
+
+DEVICE_ATTR_RW(orient);
+
+static ssize_t mode_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct typec_mux_meson *cmux_meson = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%lu\n", cmux_meson->state.typec_pins_state);
+}
+
+static ssize_t mode_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct typec_mux_meson *cmux_meson = dev_get_drvdata(dev);
+	unsigned long mode;
+	struct typec_mux_state state;
+	int ret;
+
+	if (kstrtoul(buf, 0, &mode) != 0)
+		return -EINVAL;
+
+	state.mode = mode;
+
+	ret = typec_meson_mux_set(cmux_meson->mux, &state);
+
+	return ret ? 0 : count;
+}
+
+DEVICE_ATTR_RW(mode);
+
 static const struct regmap_config typec_mux_meson_regmap = {
 	.reg_bits = 8,
 	.val_bits = 32,
@@ -226,7 +283,7 @@ static int typec_mux_meson_probe(struct platform_device *pdev)
 
 	cmux_meson->dev = dev;
 
-	base = devm_platform_ioremap_resource(pdev, 0); //0xFE0086DC
+	base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
@@ -264,6 +321,12 @@ static int typec_mux_meson_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, cmux_meson);
 
+	ret = device_create_file(&pdev->dev, &dev_attr_orient);
+	if (ret)
+		return dev_err_probe(dev, ret, "Cannot create dev_attr\n");
+	ret = device_create_file(&pdev->dev, &dev_attr_mode);
+	if (ret)
+		return dev_err_probe(dev, ret, "Cannot create dev_attr\n");
 	return 0;
 }
 
@@ -271,6 +334,8 @@ static void typec_mux_meson_remove(struct platform_device *pdev)
 {
 	struct typec_mux_meson *cmux_meson = platform_get_drvdata(pdev);
 
+	device_remove_file(&pdev->dev, &dev_attr_mode);
+	device_remove_file(&pdev->dev, &dev_attr_orient);
 	typec_mux_unregister(cmux_meson->mux);
 	typec_switch_unregister(cmux_meson->sw);
 }

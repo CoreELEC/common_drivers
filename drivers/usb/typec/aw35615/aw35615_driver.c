@@ -353,6 +353,19 @@ static int aw35615_probe(struct i2c_client *client, const struct i2c_device_id *
 		return -EIO;
 	}
 
+#ifdef MESON_AW
+	chip->role_sw = usb_role_switch_get(&client->dev);
+	if (!chip->role_sw)
+		chip->role_sw = fwnode_usb_role_switch_get(aw35615_fwnode_get(&client->dev));
+	if (IS_ERR(chip->role_sw)) {
+		AW_LOG("could not find usb_role_switch.\n");
+		return -EPROBE_DEFER;
+		/* If Some platforms have no drd typec port, set as following. */
+		//#define DR_Swap_To_UFP_Supported NO
+		//#define Attempt_DR_Swap_to_Dfp_As_Sink YES
+	}
+#endif
+
 #ifdef AW_KERNEL_VER_OVER_5_7_0
 	cpu_latency_qos_add_request(&chip->pm_gos_request, PM_QOS_DEFAULT_VALUE);
 #else
@@ -421,16 +434,6 @@ static int aw35615_probe(struct i2c_client *client, const struct i2c_device_id *
 	chip->typec_caps.ops = &typec_ops;
 	chip->typec_caps.driver_data = chip;
 	chip->partner_desc.identity = &chip->partner_identity;
-
-#ifdef MESON_AW
-	chip->role_sw = usb_role_switch_get(&client->dev);
-	if (!chip->role_sw)
-		chip->role_sw = fwnode_usb_role_switch_get(aw35615_fwnode_get(&client->dev));
-	if (IS_ERR(chip->role_sw)) {
-		AW_LOG("could not find usb_role_switch.\n");
-		return PTR_ERR(chip->role_sw);
-	}
-#endif
 
 	chip->typec_port = typec_register_port(chip->dev, &chip->typec_caps);
 	if (IS_ERR(chip->typec_port)) {

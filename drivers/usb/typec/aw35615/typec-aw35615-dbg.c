@@ -3,6 +3,7 @@
  * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
  */
 
+#ifdef MESON_AW
 #include <linux/kernel.h>
 #include "TypeC_Types.h"
 #include "PD_Types.h"
@@ -883,3 +884,4 @@ const char *aw35615_protocol_decode_rx_msg(char *str, unsigned char *msg, unsign
 
 	return str;
 }
+#endif

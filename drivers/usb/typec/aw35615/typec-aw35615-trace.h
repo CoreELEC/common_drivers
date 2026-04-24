@@ -3,6 +3,7 @@
  * Copyright (c) 2025 Amlogic, Inc. All rights reserved.
  */
 
+#ifdef MESON_AW
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM typec-aw35615
 
@@ -406,3 +407,4 @@ TRACE_EVENT(aw35615_core_event,
 #define TRACE_INCLUDE_FILE typec-aw35615-trace
 
 #include <trace/define_trace.h>
+#endif
