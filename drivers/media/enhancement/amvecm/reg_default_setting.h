@@ -112,7 +112,7 @@ static struct am_regs_s cm_default = {
 	{REG_TYPE_INDEX_VPPCHROMA,	0x201,    0xffffffff, 0x0   },
 	{REG_TYPE_INDEX_VPPCHROMA,	0x202,    0xffffffff, 0x0   },
 	{REG_TYPE_INDEX_VPPCHROMA,	0x203,    0xffffffff, 0x8000400},
-	{REG_TYPE_INDEX_VPPCHROMA,	0x204,    0xffffffff, 0x0   },
+	{REG_TYPE_INDEX_VPPCHROMA,	0x204,    0xffffffff, 0x200 },
 	{REG_TYPE_INDEX_VPPCHROMA,	0x206,    0xffffffff, 0x0   },
 	{REG_TYPE_INDEX_VPPCHROMA,	0x207,    0xffffffff, 0x2000000},
 	{REG_TYPE_INDEX_VPPCHROMA,	0x208,    0xffffffff, 0x1d   },
