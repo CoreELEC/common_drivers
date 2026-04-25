@@ -2208,6 +2208,7 @@
 			mmc_debug_flag;
 			no-mmc;
 			no-sdio;
+			power-domains=<&pwrdm PDID_A9_SD_EMMC_B>;
 			//resets = <&reset RESET_SD_EMMC_B>;
 		};
 

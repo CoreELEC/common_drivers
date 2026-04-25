@@ -1314,17 +1314,17 @@
 	//		"ao_to_sd_jtag_pins";
 	bus-width = <4>;
 	cap-sd-highspeed;
-//	sd-uhs-sdr12;
-//	sd-uhs-sdr25;
-//	sd-uhs-sdr50;
-//	sd-uhs-sdr104;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
 	max-frequency = <200000000>;
 	disable-wp;
 
 	cd-gpios = <&gpio_ao GPIOC_6 GPIO_ACTIVE_HIGH>;
 	//dat1-gpios = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
-	//vmmc-supply = <&vddao_3v3>;
-	//vqmmc-supply = <&emmc_1v8>;
+	vmmc-supply = <&sdcard_3v3_reg>;
+	vqmmc-supply = <&vddio_c_p_reg>;
 };
 
 &sd_emmc_c {
