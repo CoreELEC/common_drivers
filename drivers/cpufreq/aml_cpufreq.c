@@ -37,6 +37,14 @@ static DEFINE_MUTEX(cluster_list_lock);
 static DEFINE_MUTEX(cpufreq_target_lock);
 
 static unsigned int freqmax[CLUSTER_MAX];
+
+enum master {
+	MASTER_CPU = 1,
+	MASTER_DSU,
+};
+
+#define VOLT_GAP  50000
+
 static int freqmax0_param_v2(char *buff)
 {
 	if (!buff)
@@ -114,10 +122,61 @@ static void get_suggested_dsuopp_by_cpuopp(struct cluster_data *data,
 	if (i < 0) {
 		dsuopp->rate = cpuopp->rate;
 		dsuopp->volt = cpuopp->volt;
+		dsuopp->sram_volt = cpuopp->sram_volt;
 	} else {
 		dsuopp->rate = table[i].dsurate;
 		dsuopp->volt = table[i].dsuvolt;
+		dsuopp->sram_volt = table[i].dsu_sramvolt;
 	}
+}
+
+static int aml_regulator_set_voltage(struct cluster_data *cdata,
+					struct opp_node *oppset, int master)
+{
+	u32 cur_lvolt;
+	u32 cur_mvolt;
+	struct regulator *l_reg, *m_reg;
+
+	switch (master) {
+	case MASTER_CPU:
+		l_reg = cdata->cpureg;
+		cur_lvolt = regulator_get_voltage(cdata->cpureg);
+		m_reg = cdata->cpu_sramreg;
+		cur_mvolt = regulator_get_voltage(cdata->cpu_sramreg);
+		break;
+	case MASTER_DSU:
+		l_reg = cdata->dsureg;
+		cur_lvolt = regulator_get_voltage(cdata->dsureg);
+		m_reg = cdata->dsu_sramreg;
+		cur_mvolt = regulator_get_voltage(cdata->dsu_sramreg);
+		break;
+	default:
+		pr_err("%s not support master %d\n", __func__, master);
+		return -EINVAL;
+	};
+
+	if (cur_mvolt <= oppset->sram_volt) {
+		while (oppset->sram_volt - cur_lvolt > VOLT_GAP) {
+			cur_lvolt = oppset->volt > cur_mvolt ? cur_mvolt : oppset->volt;
+			regulator_set_voltage(l_reg, cur_lvolt, MAX_VOLTAGE);
+			cur_mvolt = oppset->sram_volt > cur_lvolt + VOLT_GAP ?
+					cur_lvolt + VOLT_GAP : oppset->sram_volt;
+			regulator_set_voltage(m_reg, cur_mvolt, MAX_VOLTAGE);
+		}
+		regulator_set_voltage(m_reg, oppset->sram_volt, MAX_VOLTAGE);
+		regulator_set_voltage(l_reg, oppset->volt, MAX_VOLTAGE);
+	} else {
+		while (cur_mvolt - oppset->volt > VOLT_GAP) {
+			cur_mvolt = oppset->sram_volt > cur_lvolt ? oppset->sram_volt : cur_lvolt;
+			regulator_set_voltage(m_reg, cur_mvolt, MAX_VOLTAGE);
+			cur_lvolt = oppset->volt > cur_mvolt - VOLT_GAP ?
+					oppset->volt : cur_mvolt - VOLT_GAP;
+			regulator_set_voltage(l_reg, cur_lvolt, MAX_VOLTAGE);
+		}
+		regulator_set_voltage(l_reg, oppset->volt, MAX_VOLTAGE);
+		regulator_set_voltage(m_reg, oppset->sram_volt, MAX_VOLTAGE);
+	}
+	return 0;
 }
 
 static void aml_dsu_freq_volt_set(struct cluster_data *cdata,
@@ -125,15 +184,23 @@ static void aml_dsu_freq_volt_set(struct cluster_data *cdata,
 {
 	if (!cdata->dsuclk)
 		return;
-	if (cdata->dsureg && mode == SCALING_UP)
-		regulator_set_voltage(cdata->dsureg, dsuopp->volt, MAX_VOLTAGE);
+	if (cdata->dsureg && mode == SCALING_UP) {
+		if (cdata->dsu_sramreg)
+			aml_regulator_set_voltage(cdata, dsuopp, MASTER_DSU);
+		else
+			regulator_set_voltage(cdata->dsureg, dsuopp->volt, MAX_VOLTAGE);
+	}
 
 	if (cdata->dsuclk_shared)
 		clk_set_min_rate(cdata->dsuclk, dsuopp->rate * 1000);
 	clk_set_rate(cdata->dsuclk, dsuopp->rate * 1000);
 
-	if (cdata->dsureg && mode == SCALING_DOWN)
-		regulator_set_voltage(cdata->dsureg, dsuopp->volt, MAX_VOLTAGE);
+	if (cdata->dsureg && mode == SCALING_DOWN) {
+		if (cdata->dsu_sramreg)
+			aml_regulator_set_voltage(cdata, dsuopp, MASTER_DSU);
+		else
+			regulator_set_voltage(cdata->dsureg, dsuopp->volt, MAX_VOLTAGE);
+	}
 }
 
 static int aml_dvfs_algorithm_default(struct cluster_data *data,
@@ -145,6 +212,7 @@ static int aml_dvfs_algorithm_default(struct cluster_data *data,
 
 	oppold.rate = clk_get_rate(data->cpuclk) / 1000;
 	oppold.volt = data->cpureg ? regulator_get_voltage(data->cpureg) : 0;
+	oppold.sram_volt = data->cpu_sramreg ? regulator_get_voltage(data->cpu_sramreg) : 0;
 	oppnew = &data->opp_table[index];
 	pr_debug("[cluster%d]scaling from[%lu %d] to [%lu %d]\n", data->clusterid, oppold.rate,
 		oppold.volt, oppnew->rate, oppnew->volt);
@@ -152,8 +220,10 @@ static int aml_dvfs_algorithm_default(struct cluster_data *data,
 	get_suggested_dsuopp_by_cpuopp(data, &dsuopp, oppnew);
 
 	if (oppnew->rate > oppold.rate) {
-		if (data->cpureg && regulator_set_voltage(data->cpureg, oppnew->volt,
-			MAX_VOLTAGE)) {
+		if (data->cpu_sramreg) {
+			aml_regulator_set_voltage(data, oppnew, MASTER_CPU);
+		} else if (data->cpureg && regulator_set_voltage(data->cpureg, oppnew->volt,
+					MAX_VOLTAGE)) {
 			pr_err("scale voltage up to %duv failed. ret=%d\n", oppnew->volt, ret);
 			goto out;
 		}
@@ -165,15 +235,21 @@ static int aml_dvfs_algorithm_default(struct cluster_data *data,
 		if (oppnew->rate > oppold.rate) {
 			get_suggested_dsuopp_by_cpuopp(data, &dsuopp, &oppold);
 			aml_dsu_freq_volt_set(data, &dsuopp, SCALING_DOWN);
-			if (data->cpureg)
+			if (data->cpu_sramreg)
+				aml_regulator_set_voltage(data, &oppold, MASTER_CPU);
+			else if (data->cpureg)
 				regulator_set_voltage(data->cpureg, oppold.volt, MAX_VOLTAGE);
 		}
 		goto out;
 	}
 	if (oppnew->rate < oppold.rate) {
 		aml_dsu_freq_volt_set(data, &dsuopp, SCALING_DOWN);
-		if (data->cpureg && regulator_set_voltage(data->cpureg, oppnew->volt, MAX_VOLTAGE))
+		if (data->cpu_sramreg) {
+			aml_regulator_set_voltage(data, oppnew, MASTER_CPU);
+		} else if (data->cpureg && regulator_set_voltage(data->cpureg,
+						oppnew->volt, MAX_VOLTAGE)) {
 			goto out;
+		}
 	}
 	pr_debug("[cluster%d]cpuget[%lu %d],dsuget[%lu %d]\n",
 		data->clusterid, clk_get_rate(data->cpuclk) / 1000,
@@ -265,6 +341,15 @@ static bool aml_setup_regulator(struct cluster_data *cdata)
 		cdata->cpureg = NULL;
 		goto out;
 	}
+
+	sprintf(regname, "cluster%d-cpu-sram", cdata->clusterid);
+	cdata->cpu_sramreg = devm_regulator_get_optional(cdata->dev, regname);
+	if (PTR_ERR_OR_ZERO(cdata->cpu_sramreg)) {
+		pr_debug("%s:failed to get %s regulator, ret=%ld\n", __func__,
+			regname, PTR_ERR(cdata->cpu_sramreg));
+		cdata->cpu_sramreg = NULL;
+	}
+
 	sprintf(regname, "cluster%d-dsu", cdata->clusterid);
 	cdata->dsureg = devm_regulator_get_optional(cdata->dev, regname);
 	if (PTR_ERR_OR_ZERO(cdata->dsureg)) {
@@ -274,6 +359,14 @@ static bool aml_setup_regulator(struct cluster_data *cdata)
 		sprintf(regname, "cluster%d-dsu-supply", cdata->clusterid);
 		if (!cdata->dsureg && of_find_property(cdata->dev->of_node, regname, NULL))
 			goto out;
+	}
+
+	sprintf(regname, "cluster%d-dsu-sram", cdata->clusterid);
+	cdata->dsu_sramreg = devm_regulator_get_optional(cdata->dev, regname);
+	if (PTR_ERR_OR_ZERO(cdata->dsu_sramreg)) {
+		pr_debug("%s:failed to get %s regulator, ret=%ld\n", __func__, regname,
+		       PTR_ERR(cdata->dsu_sramreg));
+		cdata->dsu_sramreg = NULL;
 	}
 	ret = true;
 out:
@@ -314,7 +407,7 @@ static bool aml_setup_opptable(struct cluster_data *data)
 	struct dev_pm_opp *opp;
 	bool ret = false;
 	int table_index = 0, i = 0, cpu;
-	u32 rate, rate1, volt;
+	u32 rate, rate1, volt, nums;
 	char dsutable_name[20] = {0};
 	int dsuopp_len;
 
@@ -352,6 +445,10 @@ static bool aml_setup_opptable(struct cluster_data *data)
 		pr_debug("%lu %lu\n", opp->rates[0], opp->supplies[0].u_volt);
 		data->opp_table[i].rate = opp->rates[0] / 1000;
 		data->opp_table[i].volt = opp->supplies[0].u_volt;
+		if (of_property_read_bool(opp->np, "opp-microvolt-sram")) {
+			of_property_read_u32(opp->np, "opp-microvolt-sram", &volt);
+			data->opp_table[i].sram_volt = volt;
+		}
 		i++;
 	}
 	dev_pm_opp_put_opp_table(opptable);
@@ -367,6 +464,11 @@ static bool aml_setup_opptable(struct cluster_data *data)
 	} else {
 		dsuopp_len = 2;
 		sprintf(dsutable_name, "dsu-opp-table");
+	}
+
+	if (!of_property_read_u32(np, "dsu-opp-nums", &nums)) {
+		dsuopp_len = nums;
+		sprintf(dsutable_name, "dsu-opp-table%d", data->table_index);
 	}
 
 	data->dsu_opp_cnt = of_property_count_u32_elems(np, dsutable_name) / dsuopp_len;
@@ -392,6 +494,12 @@ static bool aml_setup_opptable(struct cluster_data *data)
 				goto out;
 			data->dsu_opp_table[i].dsuvolt = volt;
 		}
+		if (data->dsu_sramreg) {
+			if (of_property_read_u32_index(np, dsutable_name, dsuopp_len * i + 2 + 1,
+				&volt))
+				goto out;
+			data->dsu_opp_table[i].dsu_sramvolt = volt;
+		}
 	}
 
 	return true;
@@ -408,13 +516,24 @@ static int opptable_show(struct seq_file *m, void *v)
 	seq_printf(m, "table_index: %d\n", data->table_index);
 
 	seq_puts(m, "opp table:\n");
-	for (i = 0; i < data->opp_cnt; i++)
-		seq_printf(m, "%lu %d\n", data->opp_table[i].rate, data->opp_table[i].volt);
+	for (i = 0; i < data->opp_cnt; i++) {
+		if (data->cpu_sramreg)
+			seq_printf(m, "%lu %d %d\n", data->opp_table[i].rate,
+				data->opp_table[i].volt, data->opp_table[i].sram_volt);
+		else
+			seq_printf(m, "%lu %d\n", data->opp_table[i].rate,
+				data->opp_table[i].volt);
+	}
+
 	if (!data->dsuclk)
 		return 0;
 	seq_puts(m, "dsu_opp table:\n");
 	for (i = 0; i < data->dsu_opp_cnt; i++) {
-		if (data->dsureg)
+		if (data->dsureg && data->dsu_sramreg)
+			seq_printf(m, "%lu %lu %d %d\n", data->dsu_opp_table[i].cpurate,
+				data->dsu_opp_table[i].dsurate, data->dsu_opp_table[i].dsuvolt,
+				data->dsu_opp_table[i].dsu_sramvolt);
+		else if (data->dsureg)
 			seq_printf(m, "%lu %lu %d\n", data->dsu_opp_table[i].cpurate,
 				data->dsu_opp_table[i].dsurate, data->dsu_opp_table[i].dsuvolt);
 		else
@@ -680,7 +799,8 @@ static int aml_cpufreq_probe(struct platform_device *pdev)
 		if (!aml_setup_opptable(&clusterdata[i]))
 			goto free;
 
-		aml_validate_cpu_voltage(&clusterdata[i]);
+		if (!of_property_read_bool(cluster_np, "bypass_voltage_validate"))
+			aml_validate_cpu_voltage(&clusterdata[i]);
 
 		mutex_lock(&cluster_list_lock);
 		list_add_tail(&clusterdata[i].node, &cluster_list);

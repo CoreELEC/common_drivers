@@ -16,6 +16,7 @@
 struct opp_node {
 	unsigned long rate; //unit khz
 	int volt; //unit uv
+	int sram_volt; //unit uv
 };
 
 /*this is dsu vote related structure read from dts*/
@@ -23,6 +24,7 @@ struct cpudsu_threshold_node {
 	unsigned long cpurate; //unit khz
 	unsigned long dsurate; //unit khz
 	int dsuvolt; //init uv
+	int dsu_sramvolt; //init uv
 };
 
 enum cpufreq_scaling_mode {
@@ -40,7 +42,9 @@ struct cluster_data {
 	struct clk *cpuclk;
 	struct clk *dsuclk;
 	struct regulator *cpureg;
+	struct regulator *cpu_sramreg;
 	struct regulator *dsureg;
+	struct regulator *dsu_sramreg;
 	bool skip_volt_scaling;
 	bool suspended;
 	bool dsuclk_shared;

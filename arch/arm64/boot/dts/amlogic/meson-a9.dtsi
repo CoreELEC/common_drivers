@@ -4967,4 +4967,4 @@
 };
 
 #include "amlogic-a9-clock.dtsi"
-#include "mesons6_cpufreq.dtsi"
+#include "mesona9_cpufreq.dtsi"

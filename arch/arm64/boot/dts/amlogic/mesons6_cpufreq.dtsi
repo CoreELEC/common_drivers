@@ -313,7 +313,7 @@
 		compatible = "amlogic, aml-cpufreq";
 		status = "okay";
 
-		//cluster0-cpu-supply = <&vddcpu0_board2>;
+		cluster0-cpu-supply = <&vddcpu0_board2>;
 
 		cluster0 {
 			clocks = <&scmi_clk CLKID_CPU_CLK>, <&scmi_clk CLKID_DSU_CLK>;
@@ -336,7 +336,7 @@
 
 	update-pdvfs {
 		status = "disabled";
-		//supply = <&vddcpu0_board0>;
+		supply = <&vddcpu0_board0>;
 		operating-points-v2 = <&cpu_opp_table1_2000>,
 						<&cpu_opp_table2_2000>,
 						<&cpu_opp_table3_2000>;

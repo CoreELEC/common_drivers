@@ -1132,13 +1132,6 @@
 	status = "okay";
 };
 
-&CPU0 {
-	operating-points-v2 = <&cpu_opp_table0>,
-						<&cpu_opp_table1_2400>,
-						<&cpu_opp_table2_2400>,
-						<&cpu_opp_table3_2400>;
-};
-
 //&tdma {
 //	pinctrl-names = "tdm_pins";
 //	pinctrl-0 = <&bt_pcm_gpio_x_pins

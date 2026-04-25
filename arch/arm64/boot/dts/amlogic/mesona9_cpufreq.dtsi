@@ -1,0 +1,189 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
+ */
+/ {
+	a55_opp_table0: a55_opp_table0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp00 {
+			opp-hz = /bits/ 64 <100000000>;
+			opp-microvolt = <769000>;
+			opp-microvolt-sram = <799000>;
+		};
+		opp01 {
+			opp-hz = /bits/ 64 <250000000>;
+			opp-microvolt = <769000>;
+			opp-microvolt-sram = <799000>;
+		};
+		opp02 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <769000>;
+			opp-microvolt-sram = <799000>;
+		};
+		opp03 {
+			opp-hz = /bits/ 64 <666666666>;
+			opp-microvolt = <769000>;
+			opp-microvolt-sram = <799000>;
+		};
+		opp04 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <769000>;
+			opp-microvolt-sram = <799000>;
+		};
+		opp05 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <809000>;
+			opp-microvolt-sram = <839000>;
+		};
+		opp06 {
+			opp-hz = /bits/ 64 <1404000000>;
+			opp-microvolt = <829000>;
+			opp-microvolt-sram = <859000>;
+		};
+		opp07 {
+			opp-hz = /bits/ 64 <1608000000>;
+			opp-microvolt = <849000>;
+			opp-microvolt-sram = <879000>;
+		};
+		opp08 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <879000>;
+			opp-microvolt-sram = <909000>;
+		};
+		opp09 {
+			opp-hz = /bits/ 64 <2004000000>;
+			opp-microvolt = <889000>;
+			opp-microvolt-sram = <919000>;
+		};
+	};
+
+	a78_opp_table0: a78_opp_table0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp00 {
+			opp-hz = /bits/ 64 <100000000>;
+			opp-microvolt = <759000>;
+			opp-microvolt-sram = <789000>;
+		};
+		opp01 {
+			opp-hz = /bits/ 64 <250000000>;
+			opp-microvolt = <759000>;
+			opp-microvolt-sram = <789000>;
+		};
+		opp02 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <759000>;
+			opp-microvolt-sram = <789000>;
+		};
+		opp03 {
+			opp-hz = /bits/ 64 <666666666>;
+			opp-microvolt = <759000>;
+			opp-microvolt-sram = <789000>;
+		};
+		opp04 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <759000>;
+			opp-microvolt-sram = <789000>;
+		};
+		opp05 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <779000>;
+			opp-microvolt-sram = <809000>;
+		};
+		opp06 {
+			opp-hz = /bits/ 64 <1404000000>;
+			opp-microvolt = <799000>;
+			opp-microvolt-sram = <829000>;
+		};
+		opp07 {
+			opp-hz = /bits/ 64 <1608000000>;
+			opp-microvolt = <819000>;
+			opp-microvolt-sram = <849000>;
+		};
+		opp08 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <849000>;
+			opp-microvolt-sram = <879000>;
+		};
+		opp09 {
+			opp-hz = /bits/ 64 <2004000000>;
+			opp-microvolt = <869000>;
+			opp-microvolt-sram = <899000>;
+		};
+		opp10 {
+			opp-hz = /bits/ 64 <2208000000>;
+			opp-microvolt = <919000>;
+			opp-microvolt-sram = <949000>;
+		};
+		opp11 {
+			opp-hz = /bits/ 64 <2304000000>;
+			opp-microvolt = <939000>;
+			opp-microvolt-sram = <969000>;
+		};
+		//opp10 {
+		//	opp-hz = /bits/ 64 <2400000000>;
+		//	opp-microvolt = <1009000>;
+		//	opp-microvolt-sram = <1009000>;
+		//};
+	};
+
+	meson-cpufreq {
+		compatible = "amlogic, aml-cpufreq";
+		status = "okay";
+
+		cluster0-cpu-supply = <&vddcpu0>;
+		cluster0-cpu-sram-supply = <&vddcpu0_sram>;
+		cluster1-cpu-supply = <&vddcpu1>;
+		cluster1-cpu-sram-supply = <&vddcpu1_sram>;
+		cluster1-dsu-supply = <&vddcpu0>;
+		cluster1-dsu-sram-supply = <&vddcpu0_sram>;
+
+		cluster0 {
+			clocks = <&scmi_clk CLKID_CPU_CLK>,
+				 <&scmi_clk CLKID_DSU_CLK>;
+			clock-names = "cpuclk",
+				      "dsuclk";
+			dsuclk_shared;
+			transition_delay_us = <10000>;
+			bypass_voltage_validate;
+			//skip_volt_scaling;
+			cluster_cores = <0 1 2 3 4 5>;
+			dsu-opp-table = <1200000 1000000>,
+					<1404000 1128000>,
+					<1608000 1296000>,
+					<1800000 1440000>,
+					<2004000 1608000>;
+		};
+
+		cluster1 {
+			clocks = <&scmi_clk CLKID_A78_CLK>,
+				 <&scmi_clk CLKID_DSU_CLK>;
+			clock-names = "cpuclk",
+				      "dsuclk";
+			dsuclk_shared;
+			transition_delay_us = <10000>;
+			bypass_voltage_validate;
+			//skip_volt_scaling;
+			cluster_cores = <6 7>;
+			dsu-opp-nums = <4>;
+			dsu-opp-table0 = <1200000 1000000 769000 799000>,
+					 <1404000 1128000 789000 819000>,
+					 <1608000 1296000 819000 849000>,
+					 <1800000 1440000 839000 869000>,
+					 <2004000 1608000 849000 879000>,
+					 <2208000 1776000 869000 899000>,
+					 <2304000 1800000 879000 909000>;
+		};
+	};
+};/* end of / */
+
+&CPU0 {
+	operating-points-v2 = <&a55_opp_table0>;
+};
+
+&CPU6 {
+	operating-points-v2 = <&a78_opp_table0>;
+};
