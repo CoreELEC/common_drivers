@@ -64,7 +64,7 @@
 			size = <0x210000>;
 			reg = <0x07df0000 0x210000>;
 			no-map;
-			status = "okay";
+			status = "disabled";
 		};
 
 		secmon_reserved:linux,secmon {
