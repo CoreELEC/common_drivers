@@ -1358,7 +1358,7 @@
 			i2c0: i2c@e000 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe000 0x0 0x3c>;
-				interrupts = <GIC_SPI 408 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_A>;
@@ -1368,7 +1368,7 @@
 			i2c1: i2c@e100 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe100 0x0 0x3c>;
-				interrupts = <GIC_SPI 409 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_B>;
@@ -1378,7 +1378,7 @@
 			i2c2: i2c@e200 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe200 0x0 0x3c>;
-				interrupts = <GIC_SPI 410 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 410 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_C>;
@@ -1388,7 +1388,7 @@
 			i2c3: i2c@e300 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe300 0x0 0x3c>;
-				interrupts = <GIC_SPI 411 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 411 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc_sys_ao CLKID_AO_SYS_I2C_M_D>;
