@@ -204,23 +204,27 @@
 
 /* MCLK */
 #define CLKID_MCLK_0_PRE_DIV			0
-#define CLKID_MCLK_0_SEL			1
-#define CLKID_MCLK_0_DIV			2
-#define CLKID_MCLK_0				3
-#define CLKID_MCLK_1_PRE_DIV			4
-#define CLKID_MCLK_1_SEL			5
-#define CLKID_MCLK_1_DIV			6
-#define CLKID_MCLK_1				7
+#define CLKID_MCLK_0_PRE			1
+#define CLKID_MCLK_0_SEL			2
+#define CLKID_MCLK_0_DIV			3
+#define CLKID_MCLK_0				4
+#define CLKID_MCLK_1_PRE_DIV			5
+#define CLKID_MCLK_1_PRE			6
+#define CLKID_MCLK_1_SEL			7
+#define CLKID_MCLK_1_DIV			8
+#define CLKID_MCLK_1				9
 
 /* MCLK1 */
 #define CLKID_MCLK1_0_PRE_DIV			0
-#define CLKID_MCLK1_0_SEL			1
-#define CLKID_MCLK1_0_DIV			2
-#define CLKID_MCLK1_0				3
-#define CLKID_MCLK1_1_PRE_DIV			4
-#define CLKID_MCLK1_1_SEL			5
-#define CLKID_MCLK1_1_DIV			6
-#define CLKID_MCLK1_1				7
+#define CLKID_MCLK1_0_PRE			1
+#define CLKID_MCLK1_0_SEL			2
+#define CLKID_MCLK1_0_DIV			3
+#define CLKID_MCLK1_0				4
+#define CLKID_MCLK1_1_PRE_DIV			5
+#define CLKID_MCLK1_1_PRE			6
+#define CLKID_MCLK1_1_SEL			7
+#define CLKID_MCLK1_1_DIV			8
+#define CLKID_MCLK1_1				9
 
 /* AO CECB */
 #define CLKID_AO_CECB_DUAL			0

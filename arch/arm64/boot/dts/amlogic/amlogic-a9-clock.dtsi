@@ -478,17 +478,33 @@
 		#clock-cells = <0>;
 	};
 
-	mclk_parents: mclk_parents {
+	mclk_0_parents: mclk_0_parents {
 		clock-mult-parents;
-		clock-parents = <&clkc_mclk CLKID_MCLK_0_PRE_DIV>,
+		clock-parents = <&clkc_mclk CLKID_MCLK_0_PRE>,
 				<&xtal>,
 				<&scmi_clk CLKID_FCLK_50M>;
 		#clock-cells = <0>;
 	};
 
-	mclk1_parents: mclk1_parents {
+	mclk_1_parents: mclk_1_parents {
 		clock-mult-parents;
-		clock-parents = <&clkc_mclk1 CLKID_MCLK1_0_PRE_DIV>,
+		clock-parents = <&clkc_mclk CLKID_MCLK_1_PRE>,
+				<&xtal>,
+				<&scmi_clk CLKID_FCLK_50M>;
+		#clock-cells = <0>;
+	};
+
+	mclk1_0_parents: mclk1_0_parents {
+		clock-mult-parents;
+		clock-parents = <&clkc_mclk1 CLKID_MCLK1_0_PRE>,
+				<&xtal>,
+				<&scmi_clk CLKID_FCLK_50M>;
+		#clock-cells = <0>;
+	};
+
+	mclk1_1_parents: mclk1_1_parents {
+		clock-mult-parents;
+		clock-parents = <&clkc_mclk1 CLKID_MCLK1_1_PRE>,
 				<&xtal>,
 				<&scmi_clk CLKID_FCLK_50M>;
 		#clock-cells = <0>;
@@ -1694,11 +1710,10 @@
 		compatible = "amlogic,pll";
 		reg = <0x0 0x8330 0x0 0xc>;
 		pll-dco-range = <0 1400000000 0 2800000000>;  /* min_dco max_dco */
-		clock-init-regs = <0x4  0x00402000 0>,  /* regoffset value delay_us */
+		clock-init-regs = <0x4  0x00422000 0>,  /* regoffset value delay_us */
 				  <0x8  0x60000100 0>;
-		pll-special-parms = <(AML_PLL_SPEC_PARM_OD |
-				      AML_PLL_SPEC_PARM_LOCK_DETECT)>;
-		pll-max-od = <4>;
+		clock-flags = <AML_PLL_M_EN0P5 0>;
+		pll-special-parms = <AML_PLL_SPEC_PARM_LOCK_DETECT>;
 		clock-output-names = "mclk_pll";
 		clocks = <&xtal>;
 		#clock-cells = <0>;
@@ -1708,52 +1723,64 @@
 		compatible = "amlogic,basic-clk";
 		reg = <0x0 0x833c 0x0 0x8>;
 		#clock-cells = <1>;
-		clock-init-regs = <0x0  0x04000400 0>,  /* regoffset value delay_us */
-				  <0x4  0x96169616 0>;
+		clock-init-regs = <0x0  0x02000200 0>,  /* regoffset value delay_us */
+				  <0x4  0xd616d616 0>;
 		clock-output-names = "mclk_0_pre_div",
+				     "mclk_0_pre",
 				     "mclk_0_sel",
 				     "mclk_0_div",
 				     "mclk_0",
 				     "mclk_1_pre_div",
+				     "mclk_1_pre",
 				     "mclk_1_sel",
 				     "mclk_1_div",
 				     "mclk_1";
 		clock-basic-types = <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_MUX>,
 				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_GATE>,
 				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_MUX>,
 				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_GATE>;
-		clock-reg-offsets = <0x0 3  5>,  /* regoffset shift width */
+		clock-reg-offsets = <0x0 0  2>,  /* regoffset shift width */
+				    <0x0 3  5>,
 				    <0x0 12 3>,
-				    <0x0 9  1>,
+				    <0x0 10 1>,
 				    <0x0 8  1>,
+				    <0x0 16 2>,
 				    <0x0 19 5>,
 				    <0x0 28 3>,
-				    <0x0 25 1>,
+				    <0x0 26 1>,
 				    <0x0 24 1>;
 		clock-indices = <CLKID_MCLK_0_PRE_DIV>,
+				<CLKID_MCLK_0_PRE>,
 				<CLKID_MCLK_0_SEL>,
 				<CLKID_MCLK_0_DIV>,
 				<CLKID_MCLK_0>,
 				<CLKID_MCLK_1_PRE_DIV>,
+				<CLKID_MCLK_1_PRE>,
 				<CLKID_MCLK_1_SEL>,
 				<CLKID_MCLK_1_DIV>,
 				<CLKID_MCLK_1>;
 		clock-parents = <&mclk_pll>,
-				<&mclk_parents>,
+				<&clkc_mclk CLKID_MCLK_0_PRE_DIV>,
+				<&mclk_0_parents>,
 				<&clkc_mclk CLKID_MCLK_0_SEL>,
 				<&clkc_mclk CLKID_MCLK_0_DIV>,
 				<&mclk_pll>,
-				<&mclk_parents>,
+				<&clkc_mclk CLKID_MCLK_1_PRE_DIV>,
+				<&mclk_1_parents>,
 				<&clkc_mclk CLKID_MCLK_1_SEL>,
 				<&clkc_mclk CLKID_MCLK_1_DIV>;
-		clock-flags = <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
+		clock-flags = <CLK_DIVIDER_POWER_OF_TWO 0>,
+			      <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
 			      <0 0>,
 			      <CLK_DIVIDER_POWER_OF_TWO CLK_SET_RATE_PARENT>,
 			      <0 CLK_SET_RATE_PARENT>,
+			      <CLK_DIVIDER_POWER_OF_TWO 0>,
 			      <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
 			      <0 0>,
 			      <CLK_DIVIDER_POWER_OF_TWO CLK_SET_RATE_PARENT>,
@@ -1767,11 +1794,10 @@
 		compatible = "amlogic,pll";
 		reg = <0x0 0x8344 0x0 0xc>;
 		pll-dco-range = <0 1400000000 0 2800000000>;  /* min_dco max_dco */
-		clock-init-regs = <0x4  0x00402000 0>,  /* regoffset value delay_us */
+		clock-init-regs = <0x4  0x00422000 0>,  /* regoffset value delay_us */
 				  <0x8  0x60000100 0>;
-		pll-special-parms = <(AML_PLL_SPEC_PARM_OD |
-				      AML_PLL_SPEC_PARM_LOCK_DETECT)>;
-		pll-max-od = <4>;
+		clock-flags = <AML_PLL_M_EN0P5 0>;
+		pll-special-parms = <AML_PLL_SPEC_PARM_LOCK_DETECT>;
 		clock-output-names = "mclk1_pll";
 		clocks = <&xtal>;
 		#clock-cells = <0>;
@@ -1781,52 +1807,64 @@
 		compatible = "amlogic,basic-clk";
 		reg = <0x0 0x8350 0x0 0x8>;
 		#clock-cells = <1>;
-		clock-init-regs = <0x0  0x04000400 0>,  /* regoffset value delay_us */
-				  <0x4  0x96169616 0>;
+		clock-init-regs = <0x0  0x02000200 0>,  /* regoffset value delay_us */
+				  <0x4  0xd616d616 0>;
 		clock-output-names = "mclk1_0_pre_div",
+				     "mclk1_0_pre",
 				     "mclk1_0_sel",
 				     "mclk1_0_div",
 				     "mclk1_0",
 				     "mclk1_1_pre_div",
+				     "mclk1_1_pre",
 				     "mclk1_1_sel",
 				     "mclk1_1_div",
 				     "mclk1_1";
 		clock-basic-types = <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_MUX>,
 				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_GATE>,
 				    <AML_CLKTYPE_DIV>,
+				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_MUX>,
 				    <AML_CLKTYPE_DIV>,
 				    <AML_CLKTYPE_GATE>;
-		clock-reg-offsets = <0x0 3  5>,  /* regoffset shift width */
+		clock-reg-offsets = <0x0 0  2>,  /* regoffset shift width */
+				    <0x0 3  5>,
 				    <0x0 12 3>,
-				    <0x0 9  1>,
+				    <0x0 10 1>,
 				    <0x0 8  1>,
+				    <0x0 16 2>,
 				    <0x0 19 5>,
 				    <0x0 28 3>,
-				    <0x0 25 1>,
+				    <0x0 26 1>,
 				    <0x0 24 1>;
 		clock-indices = <CLKID_MCLK1_0_PRE_DIV>,
+				<CLKID_MCLK1_0_PRE>,
 				<CLKID_MCLK1_0_SEL>,
 				<CLKID_MCLK1_0_DIV>,
 				<CLKID_MCLK1_0>,
 				<CLKID_MCLK1_1_PRE_DIV>,
+				<CLKID_MCLK1_1_PRE>,
 				<CLKID_MCLK1_1_SEL>,
 				<CLKID_MCLK1_1_DIV>,
 				<CLKID_MCLK1_1>;
 		clock-parents = <&mclk1_pll>,
-				<&mclk1_parents>,
+				<&clkc_mclk1 CLKID_MCLK1_0_PRE_DIV>,
+				<&mclk1_0_parents>,
 				<&clkc_mclk1 CLKID_MCLK1_0_SEL>,
 				<&clkc_mclk1 CLKID_MCLK1_0_DIV>,
 				<&mclk1_pll>,
-				<&mclk1_parents>,
+				<&clkc_mclk1 CLKID_MCLK1_0_PRE_DIV>,
+				<&mclk1_1_parents>,
 				<&clkc_mclk1 CLKID_MCLK1_1_SEL>,
 				<&clkc_mclk1 CLKID_MCLK1_1_DIV>;
-		clock-flags = <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
+		clock-flags = <CLK_DIVIDER_POWER_OF_TWO 0>,
+			      <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
 			      <0 0>,
 			      <CLK_DIVIDER_POWER_OF_TWO CLK_SET_RATE_PARENT>,
 			      <0 CLK_SET_RATE_PARENT>,
+			      <CLK_DIVIDER_POWER_OF_TWO 0>,
 			      <CLK_DIVIDER_MAX_AT_ZERO CLK_SET_RATE_PARENT>,
 			      <0 0>,
 			      <CLK_DIVIDER_POWER_OF_TWO CLK_SET_RATE_PARENT>,
