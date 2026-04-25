@@ -75,6 +75,8 @@ struct meson_clk_pll_data {
 	u16 flags;
 	unsigned long saved_rate;
 	int saved_is_enabled;
+	struct reg_sequence *save_regs;
+	unsigned int save_reg_count;
 };
 
 extern const struct clk_ops meson_clk_pll_ro_ops;

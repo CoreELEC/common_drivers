@@ -620,10 +620,15 @@ static int meson_clk_pll_save_context(struct clk_hw *hw)
 {
 	struct clk_regmap *clk = to_clk_regmap(hw);
 	struct meson_clk_pll_data *pll = meson_clk_pll_data(clk);
+	int i;
 
 	pll->saved_rate = meson_clk_pll_recalc_rate(hw,
 			    clk_hw_get_rate(clk_hw_get_parent(hw)));
 	pll->saved_is_enabled = meson_clk_pll_is_enabled(hw);
+
+	for (i = 0; i < pll->save_reg_count; i++)
+		regmap_read(clk->map, pll->save_regs[i].reg,
+			    &pll->save_regs[i].def);
 
 	return 0;
 }
@@ -632,12 +637,19 @@ static void meson_clk_pll_restore_context(struct clk_hw *hw)
 {
 	struct clk_regmap *clk = to_clk_regmap(hw);
 	struct meson_clk_pll_data *pll = meson_clk_pll_data(clk);
+	int i;
 
 	if (!meson_clk_pll_is_enabled(hw) && pll->init_count) {
 		meson_parm_write(clk->map, &pll->rst, 1);
 		regmap_multi_reg_write(clk->map, pll->init_regs,
 				pll->init_count);
 		meson_parm_write(clk->map, &pll->rst, 0);
+
+		for (i = 0; i < pll->save_reg_count; i++) {
+			regmap_write(clk->map, pll->save_regs[i].reg,
+				     pll->save_regs[i].def);
+			udelay(pll->save_regs[i].delay_us);
+		}
 	}
 
 	meson_clk_pll_set_rate(hw, pll->saved_rate,

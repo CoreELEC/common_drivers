@@ -180,6 +180,10 @@ static const struct reg_sequence mclk_pll_init_regs[] = {
 	{ .reg = ANACTRL_MPLL_CTRL4, .def = 0x00000202 }
 };
 
+static struct reg_sequence mclk_pll_save_regs[] = {
+	{ .reg = ANACTRL_MPLL_CTRL4, .def = 0x00000202 }
+};
+
 static struct clk_regmap mclk_pll = {
 	.data = &(struct meson_clk_pll_data) {
 		.en = {
@@ -220,6 +224,8 @@ static struct clk_regmap mclk_pll = {
 		.table = mclk_pll_table,
 		.init_regs = mclk_pll_init_regs,
 		.init_count = ARRAY_SIZE(mclk_pll_init_regs),
+		.save_regs = mclk_pll_save_regs,
+		.save_reg_count = ARRAY_SIZE(mclk_pll_save_regs),
 	},
 	.hw.init = &(struct clk_init_data) {
 		.name = "mclk_pll",
