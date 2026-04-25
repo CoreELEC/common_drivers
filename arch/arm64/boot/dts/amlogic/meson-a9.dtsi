@@ -3341,8 +3341,28 @@
 
 	gpu_opp_table: gpu_opp_table {
 		compatible = "operating-points-v2";
+		opp-285 {
+			opp-hz = /bits/ 64 <285714281>;
+			opp-microvolt = <1150>;
+		};
+		opp-400 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <1150>;
+		};
 		opp-500 {
 			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <1150>;
+		};
+		opp-666 {
+			opp-hz = /bits/ 64 <666666666>;
+			opp-microvolt = <1150>;
+		};
+		opp-800 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <1150>;
+		};
+		opp-1000 {
+			opp-hz = /bits/ 64 <1000000000>;
 			opp-microvolt = <1150>;
 		};
 	};
@@ -4780,13 +4800,9 @@
 	clock-names = "gpu_mux", "gpu_stack";
 
 	assigned-clocks = <&clkc_mali CLKID_MALI>,
-			  <&clkc_mali CLKID_MALI_STACK>,
-			  <&scmi_clk CLKID_GP1_PLL>;
+			  <&clkc_mali CLKID_MALI_STACK>;
 	assigned-clock-rates = <400000000>,
-			       <400000000>,
-			       <852000000>;
-
-	tbl = <&dvfs500_cfg>;//bringup s6 use fix clock 500M
+			       <400000000>;
 
 };
 
