@@ -487,8 +487,15 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 			tx_comm->enc_idx = 1;
 		else
 			tx_comm->enc_idx = 0;
-
 		HDMITX_INFO("enc_idx %d\n", tx_comm->enc_idx);
+
+		ret = of_property_read_u32(pdev->dev.of_node,
+					   "clk_source_idx", &val);
+		if (!ret && val == 1)
+			tx_comm->clk_source_idx = 1;
+		else
+			tx_comm->clk_source_idx = 0;
+		HDMITX_INFO("clk_source_idx %d\n", tx_comm->clk_source_idx);
 	}
 #else
 	hdmi_pdata = pdev->dev.platform_data;

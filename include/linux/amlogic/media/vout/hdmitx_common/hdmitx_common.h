@@ -389,6 +389,7 @@ struct hdmitx_common {
 	u32 hdmi_repeater;
 	/* enc index: for non-ott product*/
 	u32 enc_idx;
+	int clk_source_idx;
 	/*soc limitation config*/
 	u32 res_1080p;
 	/* efuse ctrl state

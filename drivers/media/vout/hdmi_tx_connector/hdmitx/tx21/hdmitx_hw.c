@@ -1565,16 +1565,27 @@ static void set_vid_clk_div(u32 div)
 	struct hdmitx21_dev *hdev = get_hdmitx21_device();
 
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 0, 16, 3);
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV_A9, div - 1, 0, 8);
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 7, 0, 3);
-		/*
-		 * bit[18:16]:sel clk source.3'h0:vid_pll_clk, 3'h3:vid_pix_clk
-		 * [49]hdmi_vx1_pix_clk
-		 * A9 clk path different with before, need set 0
-		 */
-		if (hdev->tx21_hw.clk_analog_path)
-			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 0, 16, 3);
+		if (hdev->tx_comm.enc_idx == 1 && hdev->tx_comm.clk_source_idx == 1) {
+			/* enc1 clk sel div1, use v2 clk config */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, 8, 8, 4);
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, 0, 0, 1);
+			/* enc1 clk gate */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 11, 1);
+		} else if (hdev->tx_comm.enc_idx == 1 && hdev->tx_comm.clk_source_idx == 0) {
+			/* enc1 clk sel div1, use v0 clk config */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, 0, 8, 4);
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 11, 1);
+		} else if (hdev->tx_comm.enc_idx == 0 && hdev->tx_comm.clk_source_idx == 1) {
+			/* enc0 clk sel div1, use v2 clk config*/
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, 8, 12, 4);
+			/* enc0 clk gate */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 10, 1);
+		} else {
+			/* enc0 clk sel div1 */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, 0, 12, 4);
+			/* enc0 clk gate */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 10, 1);
+		}
 	} else {
 		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 0, 16, 3);
 		hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV, div - 1, 0, 8);
@@ -1613,13 +1624,21 @@ static void set_hdmi_tx_pixel_div(u32 div)
 	//for s7
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6 ||
-		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
+		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
 		if (hdev->tx_comm.fmt_para.cs == HDMI_COLORSPACE_YUV420) {
 			hd21_set_reg_bits(vid_clk_ctrl0, 1, 1, 1);
 			hd21_set_reg_bits(hdmi_clk_ctrl0, 1, 16, 1);
 		} else {
 			hd21_set_reg_bits(hdmi_clk_ctrl0, 0, 16, 4);
+		}
+	} else if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
+		if (hdev->tx_comm.fmt_para.cs == HDMI_COLORSPACE_YUV420) {
+			hd21_set_reg_bits(vid_clk_ctrl0, 1, 1, 1);
+			hd21_set_reg_bits(hdmi_clk_ctrl0,
+				hdev->tx_comm.clk_source_idx == 1 ? 9 : 1, 16, 4);
+		} else {
+			hd21_set_reg_bits(hdmi_clk_ctrl0,
+				hdev->tx_comm.clk_source_idx == 1 ? 8 : 0, 16, 4);
 		}
 	}
 }
@@ -1632,8 +1651,13 @@ static void set_encp_div(struct hdmitx21_dev *hdev)
 {
 	switch (hdev->tx_comm.tx_hw->chip_data->chip_type) {
 	case MESON_CPU_ID_A9:
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV_A9, 0, 24, 4);
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 1, 19, 1);
+		if (hdev->tx_comm.clk_source_idx == 1) {
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_CTRL_A9, 1, 19, 1);
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_CTRL_A9, 1, 0, 1);
+		} else {
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV_A9, 0, 24, 4);
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 1, 19, 1);
+		}
 		break;
 	case MESON_CPU_ID_S5:
 	case MESON_CPU_ID_T7:
@@ -1695,12 +1719,17 @@ static void set_hdmitx_fe_clk(void)
 	}
 
 	hd21_set_reg_bits(vid_clk_cntl2, 1, 9, 1);
-	/* divider same as encp */
-	tmp = (hd21_read_reg(vid_clk_div) >> 24) & 0xf;
-	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S1A)
-		hd21_set_reg_bits(hdmi_clk_cntl, 0, 20, 4);
-	else
-		hd21_set_reg_bits(hdmi_clk_cntl, tmp, 20, 4);
+
+	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
+		hd21_set_reg_bits(hdmi_clk_cntl, hdev->tx_comm.clk_source_idx == 1 ? 8 : 0, 20, 4);
+	} else {
+		/* divider same as encp */
+		tmp = (hd21_read_reg(vid_clk_div) >> 24) & 0xf;
+		if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S1A)
+			hd21_set_reg_bits(hdmi_clk_cntl, 0, 20, 4);
+		else
+			hd21_set_reg_bits(hdmi_clk_cntl, tmp, 20, 4);
+	}
 }
 
 static void _hdmitx21_set_clk(struct hdmitx21_dev *hdev)
@@ -1744,38 +1773,18 @@ void enable_crt_video_encl2(u32 enable, u32 in_sel)
 //Enable CLK_ENCL
 void enable_crt_video_encl(u32 enable, u32 in_sel)
 {
-	struct hdmitx21_dev *hdev = get_hdmitx21_device();
-
-	switch (hdev->tx_comm.tx_hw->chip_data->chip_type) {
-	case MESON_CPU_ID_A9:
-		/* RE bit[15:12] encl_clk_sel, 0: vid_pll0_clk */
-		//encl_clk_sel:hi_viid_clk_div[15:12]
-		hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, in_sel,  12, 4);
-		if (in_sel <= 4) {
-			/* RA bit[1:0] div2/1 */
-			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 1, in_sel, 1);
-		} else {
-			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 1, in_sel - 8, 1);
-		}
-		/* RD bit[3]: ENCL gated clock */
-		//gclk_encl_clk:hi_vid_clk_cntl2[3]
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, enable, 3, 1);
-		break;
-	default:
-		/* RE bit[15:12] encl_clk_sel, 0: vid_pll0_clk */
-		//encl_clk_sel:hi_viid_clk_div[15:12]
-		hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV, in_sel,  12, 4);
-		if (in_sel <= 4) {
-			/* RA bit[1:0] div2/1 */
-			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 1, in_sel, 1);
-		} else {
-			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 1, in_sel - 8, 1);
-		}
-		/* RD bit[3]: ENCL gated clock */
-		//gclk_encl_clk:hi_vid_clk_cntl2[3]
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2, enable, 3, 1);
-		break;
+	/* RE bit[15:12] encl_clk_sel, 0: vid_pll0_clk */
+	//encl_clk_sel:hi_viid_clk_div[15:12]
+	hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV, in_sel,  12, 4);
+	if (in_sel <= 4) {
+		/* RA bit[1:0] div2/1 */
+		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 1, in_sel, 1);
+	} else {
+		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 1, in_sel - 8, 1);
 	}
+	/* RD bit[3]: ENCL gated clock */
+	//gclk_encl_clk:hi_vid_clk_cntl2[3]
+	hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2, enable, 3, 1);
 }
 
 //Enable CLK_ENCP, no use for S5, already configure previously
@@ -1882,66 +1891,6 @@ void enable_crt_video_hdmi(u32 enable, u32 in_sel, u8 enc_sel)
 	struct hdmitx21_dev *hdev = get_hdmitx21_device();
 	struct hdmi_format_para *para = &hdev->tx_comm.fmt_para;
 
-	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
-		addr_vid_clk02 = (enc_sel == 0) ? CLKCTRL_VID_CLK0_CTRL_A9 : CLKCTRL_VID_CLK2_CTRL;
-		addr_viid_clk02 = (enc_sel == 0) ? CLKCTRL_VIID_CLK0_CTRL : CLKCTRL_VIID_CLK2_CTRL;
-		addr_vid_clk022 = (enc_sel == 0) ? CLKCTRL_VID_CLK0_CTRL2 : CLKCTRL_VID_CLK2_CTRL2;
-
-		if (in_sel <= 4) { //V1
-			if (in_sel == 1)
-				// If 420 mode, need to turn on div1_clk for hdmi_tx_fe_clk
-				// For hdmi_tx_fe_clk and hdmi_tx_pnx_clk
-				hd21_set_reg_bits(addr_vid_clk02, 3, 0, 2);
-		} else if (in_sel <= 9) { //V2
-			// For hdmi_tx_pixel_clk
-			hd21_set_reg_bits(addr_viid_clk02, 1, in_sel - 8, 1);
-		}
-
-		/* RD bit[10,9,5] for pnx/fe/pixel clk gate */
-		// Enable hdmi_tx_pnx_clk
-		hd21_set_reg_bits(addr_vid_clk022, enable, 10, 1);
-		// Enable hdmi_tx_fe_clk
-		hd21_set_reg_bits(addr_vid_clk022, enable, 9, 1);
-		// Enable hdmi_tx_pixel_clk
-		hd21_set_reg_bits(addr_vid_clk022, enable, 5, 1);
-
-		/* RF */
-		// [22:21] clk_sl: 0=enc0_hdmi_tx_pnx_clk, 1=enc2_hdmi_tx_pnx_clk.
-		// [   20] clk_en for hdmi_tx_pnx_clk
-		// [19:16] clk_div for hdmi_tx_pnx_clk
-		// [14:13] clk_sl: 0=enc0_hdmi_tx_fe_clk, 1=enc2_hdmi_tx_fe_clk.
-		// [   12] clk_en for hdmi_tx_fe_clk
-		// [11: 8] clk_div for hdmi_tx_fe_clk
-		// [ 6: 5] clk_sl: 0=enc0_hdmi_tx_pixel_clk, 1=enc2_hdmi_tx_pixel_clk.
-		// [    4] clk_en for hdmi_tx_pixel_clk
-		// [ 3: 0] clk_div for hdmi_tx_pixel_clk
-
-		/* this bit13 of CLKCTRL_ENC_HDMI_CLK_CTRL will select source from
-		 * enc0_hdmi_tx_fe_clk, while it need to select source from gp2
-		 */
-		data32 = 0;
-		data32 = (enc_sel << 21) |
-			 (0 << 20) |
-			 (0 << 16) |
-			 (enc_sel << 13) |
-			 (0 << 12) |
-			 (0 << 8) |
-			 (enc_sel << 5) |
-			 (0 << 4) |
-			 (0 << 0);
-		if (hdev->tx_comm.tx_hw->chip_data->chip_type >= MESON_CPU_ID_S5 &&
-		    (para->cs == HDMI_COLORSPACE_YUV420 && !hdev->frl_rate)) {
-			data32 |= (1 << 0); /* pixel_clk DIV */
-			data32 |= (1 << 8); /* fe_clk DIV */
-			data32 |= (1 << 16); /* pnx_clk DIV */
-		}
-		hd21_write_reg(CLKCTRL_ENC_HDMI_CLK_CTRL, data32);
-		hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, 1, 20, 1);
-		hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, 1, 12, 1);
-		hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, 1, 4, 1);
-		return;
-	}
-
 	addr_vid_clk02 = (enc_sel == 0) ? CLKCTRL_VID_CLK0_CTRL : CLKCTRL_VID_CLK2_CTRL;
 	addr_viid_clk02 = (enc_sel == 0) ? CLKCTRL_VIID_CLK0_CTRL : CLKCTRL_VIID_CLK2_CTRL;
 	addr_vid_clk022 = (enc_sel == 0) ? CLKCTRL_VID_CLK0_CTRL2 : CLKCTRL_VID_CLK2_CTRL2;
@@ -2045,10 +1994,7 @@ static void hdmitx_mux_gp2_pll(struct hdmitx21_dev *hdev)
 	hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV, 1, 16, 1);
 
 	/* RD bit[3] ENC gate enable */
-	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9)
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 3, 1);
-	else
-		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2, 1, 3, 1);
+	hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2, 1, 3, 1);
 
 	/* RF fe_clk mux to gp2_pll_clk */
 	hd21_set_reg_bits(CLKCTRL_ENC_HDMI_CLK_CTRL, 1, 13, 2); /* mux */
