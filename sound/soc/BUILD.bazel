@@ -449,6 +449,31 @@ ddk_module(
 )
 
 ddk_module(
+    name = "amlogic-snd-codec-es8389",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOIC_SND_SOC_ES8389": {
+            True: [
+                "codecs/amlogic/es8389.c",
+            ],
+        },
+    },
+    hdrs = [
+    ],
+
+    local_defines = [
+        "pr_fmt(fmt)=\"[snd-codec-es8389]: \" fmt",
+    ],
+    out = "amlogic-snd-codec-es8389.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+    ],
+)
+
+ddk_module(
     name = "amlogic-snd-vad",
     srcs = glob([
         "**/*.h",

@@ -127,7 +127,7 @@
 			#address-cells = <2>;
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xFFAE0000 0x0 0x1000>;
-			chip_id = <0x4B>;
+			chip_id = <0x4D>;
 			status = "okay";
 			audio_ddr_manager: ddr_manager {
 				compatible =
@@ -509,7 +509,9 @@
 				"tdm_fs1_a",
 				"tdm_d2",
 				"tdm_d3",
-				"tdm_d4_a";
+				"tdm_d4_a",
+				"tdm_d5_a",
+				"tdm_d6_a";
 			function = "tdm";
 		};
 	};
@@ -520,9 +522,18 @@
 				"GPIOA_2",
 				"GPIOA_3",
 				"GPIOA_4",
-				"GPIOA_5";
+				"GPIOA_5",
+				"GPIOA_6",
+				"GPIOA_7";
 			function = "gpio_periphs";
 			output-low;
+		};
+	};
+
+	mclk_1_pad: mclk1_pins {
+		mux { /* GPIOA_0*/
+			groups = "mclk_1_a";
+			function = "mclk";
 		};
 	};
 };
@@ -565,6 +576,20 @@
 		mux {
 			groups = "tdm_d3";
 			function = "tdmoutb_lane1";
+		};
+	};
+
+	tdm_d5_pins: tdm_d5_pin {
+		mux {
+			groups = "tdm_d5";
+			function = "tdminb_lane0";
+		};
+	};
+
+	tdm_d6_pins: tdm_d6_pin {
+		mux {
+			groups = "tdm_d6";
+			function = "tdmoutb_lane2";
 		};
 	};
 

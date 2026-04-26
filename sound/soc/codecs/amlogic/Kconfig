@@ -304,4 +304,14 @@ config AMLOGIC_SND_SOC_CS42528
 	  Enable Support for Cirrus Logic CS42528 CODEC.
 	  Select this if your CS42528 is connected via an I2C bus.
 
+config AMLOIC_SND_SOC_ES8389
+	tristate "ES8389"
+	depends on AMLOGIC_SND_SOC_CODECS
+	depends on I2C
+	default n
+	help
+	  Enable Support for ES8389 CODEC.
+	  Select this if your ES8389 is connected via an I2C bus.
+	  Enable Support for ES8389 CODEC.
+	  Select this if your ES8389 is connected via an I2C bus.
 #endif #AMLOGIC_SND_SOC_CODECS
