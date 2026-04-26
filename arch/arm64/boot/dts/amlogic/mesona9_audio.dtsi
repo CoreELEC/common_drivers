@@ -494,8 +494,8 @@
 			<0x0 0xe1000 0x0 0x400>;
 		reg-names = "sed_reg", "audio_top_reg";
 		interrupts = <
-					GIC_SPI 21 IRQ_TYPE_EDGE_RISING
-					GIC_SPI 22 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 405 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 406 IRQ_TYPE_EDGE_RISING
 					>;
 		interrupt-names ="irq_wakeup", "sed_err_irq";
 		mic-src = <&pdma>;

@@ -1112,7 +1112,14 @@ void aml_tdm_sclk_pad_select(struct aml_audio_controller *actrl,
 void i2s_to_hdmitx_ctrl(int i2s_tohdmitxen_separated, int tdm_index,
 	int mclk_sel)
 {
-	audiobus_write(EE_AUDIO_TOHDMITX_CTRL0,
+	unsigned int reg;
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+
+	audiobus_write(reg,
 		1 << 20 | /* tohdmitx mclk div */
 		1 << 19 | /* tohdmitx mclk enable */
 		mclk_sel << 16 | /* mclk_sel */
@@ -1128,12 +1135,12 @@ void i2s_to_hdmitx_ctrl(int i2s_tohdmitxen_separated, int tdm_index,
 		 * step1: enable/disable clk
 		 * step2: enable/disable dat
 		 */
-		audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+		audiobus_update_bits(reg,
 				     0x1 << 28, 0x1 << 28);
-		audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+		audiobus_update_bits(reg,
 				     0x1 << 29, 0x1 << 29);
 	} else {
-		audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+		audiobus_update_bits(reg,
 				     0x1 << 31, 0x1 << 31);
 	}
 }

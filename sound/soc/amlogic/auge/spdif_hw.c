@@ -5,6 +5,7 @@
 
 #define DEBUG
 #include <sound/soc.h>
+#include <linux/amlogic/media/registers/cpu_version.h>
 
 #include "iomap.h"
 #include "spdif_hw.h"
@@ -351,8 +352,13 @@ void aml_spdifout_get_aed_info(int spdifout_id,	int *bitwidth, int *frddrtype)
 void enable_spdif_to_hdmitx_dat(bool enable)
 {
 	int val = !!enable;
+	unsigned int reg;
 
-	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+	audiobus_update_bits(reg,
 			     1 << 31 | 1 << 3 | 1 << 2,
 			     val << 31 | 1 << 3);
 }
@@ -360,8 +366,13 @@ void enable_spdif_to_hdmitx_dat(bool enable)
 void enable_spdif_to_hdmitx_clk(bool enable)
 {
 	int val = !!enable;
+	unsigned int reg;
 
-	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+	audiobus_update_bits(reg,
 			0x1 << 30, val << 30);
 }
 
@@ -371,12 +382,19 @@ void enable_spdifout_to_hdmitx(int separated)
 	 * step1: enable/disable clk
 	 * step2: enable/disable dat
 	 */
+	unsigned int reg;
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+
 	if (separated) {
-		audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+		audiobus_update_bits(reg,
 				0x1 << 30, 0x1 << 30);
 	}
 
-	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+	audiobus_update_bits(reg,
 			     1 << 31 | 1 << 3 | 1 << 2,
 			     1 << 31 | 1 << 3);
 }
@@ -679,7 +697,14 @@ void aml_spdifin_sample_mode_filter_en(void)
 
 int get_spdif_to_hdmitx_id(void)
 {
-	int val = audiobus_read(EE_AUDIO_TOHDMITX_CTRL0) & 0x3;
+	unsigned int reg;
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+
+	int val = audiobus_read(reg) & 0x3;
 	int ret = 0;
 
 	if (val == 3)
@@ -694,7 +719,14 @@ int get_spdif_to_hdmitx_id(void)
 
 void set_spdif_to_hdmitx_id(int spdif_id)
 {
-	audiobus_update_bits(EE_AUDIO_TOHDMITX_CTRL0,
+	unsigned int reg;
+
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_A9)
+		reg = EE_AUDIO_TOHDMITX_CTRL_A;
+	else
+		reg = EE_AUDIO_TOHDMITX_CTRL0;
+
+	audiobus_update_bits(reg,
 			     0x3, spdif_id << 1 | spdif_id);
 }
 
