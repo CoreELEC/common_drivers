@@ -131,7 +131,7 @@
 			status = "okay";
 			audio_ddr_manager: ddr_manager {
 				compatible =
-					"amlogic, t5-audio-ddr-manager";
+					"amlogic, a9-audio-ddr-manager";
 				interrupts = <
 					GIC_SPI 264 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 265 IRQ_TYPE_EDGE_RISING
@@ -475,8 +475,8 @@
 		compatible = "amlogic, sed";
 		#sound-dai-cells = <0>;
 		clocks = <
-			&extclk
-			&extclk
+			&xtal
+			&xtal
 			&scmi_clk CLKID_FCLK_DIV4
 			&hifi_pll
 			&clkaudio CLKID_AUDIO2_PDM_DCLK
