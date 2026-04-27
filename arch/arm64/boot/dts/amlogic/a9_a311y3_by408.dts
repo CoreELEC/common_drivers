@@ -265,7 +265,7 @@
 		isp_reserved:linux,isp {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x20000000>;
+			size = <0x0 0xa000000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
