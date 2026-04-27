@@ -971,6 +971,7 @@ static void meson_tsensor_shutdown(struct platform_device *pdev)
 	struct meson_tsensor_data *data = platform_get_drvdata(pdev);
 	struct thermal_zone_device *tzd = data->tzd;
 
+	cancel_work_sync(&data->irq_work);
 	devm_thermal_of_zone_unregister(&pdev->dev, tzd);
 
 	meson_tsensor_suspend(&pdev->dev);
