@@ -325,9 +325,9 @@ void meson_u2phy_set_vbus_power(struct amlogic_usb_v2 *phy, bool is_power_on)
 		return;
 
 	if (is_power_on)
-		gpiod_direction_output(phy->usb_gpio_desc, 1);
+		gpiod_set_value(phy->usb_gpio_desc, 1);
 	else
-		gpiod_direction_output(phy->usb_gpio_desc, 0);
+		gpiod_set_value(phy->usb_gpio_desc, 0);
 }
 
 int meson_usb2phy_wait_ready(struct amlogic_usb_v2 *phy, unsigned int timeout)

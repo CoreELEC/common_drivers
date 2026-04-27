@@ -2,7 +2,7 @@
 /*
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
-
+//#define AML_U3P_DBG_DUMP
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/of.h>
@@ -84,6 +84,218 @@ inline void  meson_aml_u3phy_write_reg32(struct aml_usb3_phy *phy,
 	dev_dbg(phy->dev, "written: %pa, 0x%x.\n", &pa, readl(reg));
 	pa = 0;
 }
+
+#ifdef AML_U3P_DBG_DUMP
+#define DUMP_CDR_INIT
+#define DUMP_CDR_CODE
+#define DUMP_DFE
+#define DUMP_OFST
+#define DUMP_EQ
+#define DUMP_EYE
+
+/* For t6x */
+void aml_usb3_phy_dump_status(struct aml_usb3_phy *phy)
+{
+	u32 val;
+
+	if (!meson_aml_u3phy_is_hw_on(phy))
+		return;
+
+#ifdef DUMP_CDR_INIT
+	val = readl(phy->ctrl_reg + 0x14);
+	val &= ~(u32)GENMASK(23, 22);
+	val |= 0x2 << 22;
+	writel(val, phy->ctrl_reg + 0x14);
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)BIT(31);
+	val |= (u32)BIT(19);
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("cdr0_init %s:%s0x%x.\n",
+			readl(phy->ctrl_reg + 0x154) & (u32)BIT(7) ? "O" : "X",
+			readl(phy->ctrl_reg + 0x154) & (u32)BIT(6) ? "-" : "+",
+			readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(5, 0));
+#endif
+
+#ifdef DUMP_CDR_CODE
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)BIT(19);
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("cdr0_code 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+#endif
+
+#ifdef DUMP_DFE
+	/* DFE */
+	val = readl(phy->ctrl_reg + 0x14);
+	val &= ~(u32)GENMASK(23, 22);
+	writel(val, phy->ctrl_reg + 0x14);
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)BIT(31);
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 0 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("dfe0_tap0 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 1 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("dfe0_tap1 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 2 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("dfe0_tap2 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 3 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("dfe0_tap3 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 4 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("dfe0_tap4 0x%x.\n", readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	/* 5,6,7,8 not used. */
+#endif
+
+#ifdef DUMP_OFST
+	/* OFST */
+	val = readl(phy->ctrl_reg + 0x14);
+	val &= ~(u32)GENMASK(23, 22);
+	val |= 0x1 << 22;
+	writel(val, phy->ctrl_reg + 0x14);
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)BIT(31);
+	val |= (u32)BIT(19);
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 0 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("sli0_ofst0 0x%x.\n",
+		readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 1 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("sli0_ofst1 0x%x.\n",
+		readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 2 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("sli0_ofst2 0x%x.\n",
+		readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+#endif
+
+#ifdef DUMP_EQ
+	pr_debug("upcrx_dbg_eq 0x%x.\n",
+		(readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(17, 13)) >> 13);
+#endif
+
+#ifdef DUMP_EYE
+	/* force upcrx_eyem_en setting. */
+	val = readl(phy->ctrl_reg + 0x20);
+	if (!(val & BIT(13))) {
+		val |= BIT(13);
+		writel(val, phy->ctrl_reg + 0x20);
+	}
+
+	usleep_range(200, 300);
+	/* upcrx_eyem_en->1 */
+	val = readl(phy->ctrl_reg + 0x28);
+	val |= BIT(19);
+	writel(val, phy->ctrl_reg + 0x28);
+
+	val = readl(phy->ctrl_reg + 0x14);
+	val &= ~(u32)GENMASK(23, 22);
+	val |= 0x0 << 22;
+	writel(val, phy->ctrl_reg + 0x14);
+
+	val = readl(phy->ctrl_reg + 0x10);
+	val |= (u32)BIT(31);
+	writel(val, phy->ctrl_reg + 0x10);
+
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 2 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("eye0_eh_p 0x%x.\n",
+		readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+
+	val = readl(phy->ctrl_reg + 0x10);
+	val &= ~(u32)GENMASK(30, 28);
+	val |= 3 << 28;
+	writel(val, phy->ctrl_reg + 0x10);
+	pr_debug("eye0_eh_n 0x%x.\n",
+		readl(phy->ctrl_reg + 0x154) & (u32)GENMASK(7, 0));
+
+	/* upcrx_eyem_en->0 */
+	val = readl(phy->ctrl_reg + 0x28);
+	val &= ~(BIT(19));
+	writel(val, phy->ctrl_reg + 0x28);
+#endif
+}
+
+static int aml_usb3_phy_rthread(void *data)
+{
+	struct aml_usb3_phy *phy = data;
+
+	if (!meson_aml_u3phy_is_hw_on(phy))
+		return 0;
+
+	while (!kthread_should_stop() && phy->dbg_thread)
+		aml_usb3_phy_dump_status(phy);
+
+	return 0;
+}
+
+static ssize_t dump_show(struct device *_dev, struct device_attribute *attr, char *buf)
+{
+	struct meson_uphy_instance *instance = dev_get_drvdata(_dev);
+	struct aml_usb3_phy *phy = instance->meson_uphy;
+
+	phy->dbg_thread = false;
+	if (phy->dbg_dump_task) {
+		kthread_stop(phy->dbg_dump_task);
+		phy->dbg_dump_task = NULL;
+	}
+	aml_usb3_phy_dump_status(phy);
+
+	return sprintf(buf, "done.\n");
+}
+
+static DEVICE_ATTR_RO(dump);
+
+static ssize_t rtdump_show(struct device *_dev, struct device_attribute *attr, char *buf)
+{
+	struct meson_uphy_instance *instance = dev_get_drvdata(_dev);
+	struct aml_usb3_phy *phy = instance->meson_uphy;
+
+	return sprintf(buf, "thread on: %d.\n", phy->dbg_thread);
+}
+
+static ssize_t rtdump_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct meson_uphy_instance *instance = dev_get_drvdata(dev);
+	struct aml_usb3_phy *phy = instance->meson_uphy;
+	int ret;
+
+	ret = kstrtobool(buf, &phy->dbg_thread);
+	if (ret)
+		return ret;
+
+	if (phy->dbg_thread) {
+		if (!phy->dbg_dump_task) {
+			phy->dbg_dump_task = kthread_run(aml_usb3_phy_rthread,
+							phy, "aml_usb3_phy_dbg_dump");
+			if (IS_ERR(phy->dbg_dump_task))
+				phy->dbg_dump_task = NULL;
+		}
+	} else {
+		if (phy->dbg_dump_task) {
+			kthread_stop(phy->dbg_dump_task);
+			phy->dbg_dump_task = NULL;
+		}
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR_RW(rtdump);
+#endif
 
 static int  meson_aml_u3phy_set_clk(struct aml_usb3_phy *phy, bool on)
 {
@@ -223,12 +435,6 @@ static int meson_aml_u3phy_pll_init(struct aml_usb3_phy *phy)
 {
 	int ret = 0;
 
-	/* usb3 phy with lane muxed by usbcdp should trigger hw pll init after
-	 * typec plug is insert and flip state is detected.
-	 */
-	if (phy->lane_muxed)
-		return ret;
-
 	if (phy->priv->pll_init) {
 		ret = phy->priv->pll_init(phy);
 		if (ret)
@@ -321,6 +527,13 @@ static void meson_aml_u3phy_typec_post_init(struct aml_usb3_phy *phy)
 
 	ret = meson_aml_u3phy_pll_hw_init(phy);
 
+	if (!WARN_ON(!phy->priv->ssc_set || !phy->priv->ssc_fliped_set)) {
+		if (phy->orient == TYPEC_ORIENTATION_NORMAL)
+			phy->priv->ssc_set(phy, true);
+		else if (phy->orient == TYPEC_ORIENTATION_REVERSE)
+			phy->priv->ssc_fliped_set(phy, true);
+	}
+
 	if (phy->priv->secondary_pipe_clk_set) {
 		ret = phy->priv->secondary_pipe_clk_set(phy, false);
 		if (ret)
@@ -347,6 +560,12 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 	else
 		meson_aml_u3phy_set_power(phy, true);
 
+	/* usb3 phy with lane muxed by usbcdp should trigger hw pll init after
+	 * typec plug is insert and flip state is detected.
+	 */
+	if (phy->lane_muxed)
+		goto pll_done;
+
 	ret = meson_aml_u3phy_pll_init(phy);
 	if (ret)
 		goto cleanup;
@@ -354,6 +573,7 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 	if (phy->priv->ssc_set)
 		phy->priv->ssc_set(phy, true);
 
+pll_done:
 	meson_aml_u3phy_cali(phy);
 	meson_aml_u3phy_post_reset(phy);
 
@@ -383,6 +603,15 @@ int meson_aml_u3phy_exit(struct aml_usb3_phy *phy)
 	if (!meson_aml_u3phy_is_hw_on(phy))
 		return -ENODEV;
 
+#ifdef AML_U3P_DBG_DUMP
+	device_remove_file(dev, &dev_attr_dump);
+	device_remove_file(dev, &dev_attr_rtdump);
+
+	if (phy->dbg_dump_task) {
+		kthread_stop(phy->dbg_dump_task);
+		phy->dbg_dump_task = NULL;
+	}
+#endif
 	if (phy->priv->set_power)
 		phy->priv->set_power(phy, false);
 	else
@@ -407,7 +636,7 @@ static int meson_aml_u3phy_typec_mux_notifier(struct notifier_block *nb,
 	switch (action) {
 	case TYPEC_MESON_ORIENT:
 		orient = *(enum typec_orientation *)data;
-
+		phy->orient = orient;
 		if (orient == TYPEC_ORIENTATION_NONE) {
 			WRITE_ONCE(phy->tc_plug_connected, 0);
 			if (phy->priv->secondary_pipe_clk_set) {
@@ -643,6 +872,16 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 		meson_aml_u3phy_set_hw_on(phy, false);
 		if (phy->lane_muxed)
 			meson_aml_u3phy_register_nb(phy);
+#ifdef AML_U3P_DBG_DUMP
+		ret = device_create_file(dev, &dev_attr_dump);
+		if (ret)
+			return ret;
+		ret = device_create_file(dev, &dev_attr_rtdump);
+		if (ret) {
+			device_remove_file(dev, &dev_attr_dump);
+			return ret;
+		}
+#endif
 	} else {
 		/* For u3h u2h only mode. */
 		meson_aml_u3phy_set_power(phy, false);

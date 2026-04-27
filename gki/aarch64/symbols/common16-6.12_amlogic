@@ -24,6 +24,7 @@
 #amlogic-usb.ko
   of_add_property
   usb_role_switch_get
+  usb_role_switch_put
 
 #aml_media.ko
   __vmalloc_array_noprof
@@ -157,6 +158,15 @@
   typec_set_mode
   typec_set_orientation
   usb_role_switch_get
+  trace_set_clr_event
+
+#typec-mux-meson.ko
+  typec_mux_get_drvdata
+  typec_mux_register
+  typec_mux_unregister
+  typec_switch_get_drvdata
+  typec_switch_register
+  typec_switch_unregister
 
 #amlogic-realtek.ko
   devm_clk_get_optional_enabled

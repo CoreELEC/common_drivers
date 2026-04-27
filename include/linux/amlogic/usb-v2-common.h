@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <linux/clk.h>
+#include <linux/usb/typec.h>
 #include <linux/amlogic/usb-v2.h>
 
 enum aml_usb_phy_mode {
@@ -195,6 +196,7 @@ struct aml_usb3_phy {
 		int (*pll_init)(struct aml_usb3_phy *phy);
 		bool (*wait_pll_locked)(struct aml_usb3_phy *phy);
 		void (*ssc_set)(struct aml_usb3_phy *phy, bool on);
+		void (*ssc_fliped_set)(struct aml_usb3_phy *phy, bool on);
 		int (*secondary_pipe_clk_set)(struct aml_usb3_phy *phy, bool on);
 	} *priv;
 	u64 cfg_reg_phy;
@@ -224,12 +226,17 @@ struct aml_usb3_phy {
 	bool suspend;
 	bool lane_muxed;
 	bool tc_plug_connected;
+	enum typec_orientation orient;
 	struct notifier_block typec_mux_nb;
 	bool combo_phy;
 	u32 combo_phy_mux_reg_phy;
 
 	u32	pipe_clk_sel;
 	u32 phy_clk_sel_reg_off;
+#ifdef AML_U3P_DBG_DUMP
+	bool dbg_thread;
+	struct task_struct *dbg_dump_task;
+#endif
 };
 
 static inline void

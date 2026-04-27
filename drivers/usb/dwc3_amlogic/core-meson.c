@@ -88,6 +88,11 @@ static bool dwc3_drd_meson_is_drd(struct aml_dwc3 *dwc)
 	if (device_property_read_u32(dwc->dev, "drd-index", &drd_index))
 		return true;
 
+	dev_dbg(dwc->dev, "%s drd index expected (%s)0x%x actual 0x%x def drd %d.\n",
+		__func__, readl(trim_reg) & DWC3_INDEX_VALID_DEF ? "valid" : "invalid",
+		(readl(trim_reg) & DWC3_INDEX_MASK) >> DWC3_INDEX_SHIFT,
+		drd_index, device_property_read_bool(dwc->dev, "def-drd-controller"));
+
 	if (readl(trim_reg) & DWC3_INDEX_VALID_DEF)
 		return (((readl(trim_reg) & DWC3_INDEX_MASK) >> DWC3_INDEX_SHIFT) == drd_index);
 	else if (device_property_read_bool(dwc->dev, "def-drd-controller"))

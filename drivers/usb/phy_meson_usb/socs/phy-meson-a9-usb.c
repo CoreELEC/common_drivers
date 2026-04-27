@@ -79,36 +79,63 @@ static int meson_u2phy_a9_cali_disc_squelch
 	void __iomem *cfg = mphy->phy_cfg[0];
 
 	/* usb2_squelch_trim:
-	 * usb2.0: reg32_03[3:0] (MSB->LSB) default 4'b0110.
-	 * usb2t: reg32_24[11:8] default 4b'0101.
+	 * usb2.0: reg32_03[3:0] (MSB->LSB) default 4'b1111.
+	 * usb2t: reg32_24[11:8] default 4b'0111.
 	 * usb2_disc_trim:
-	 *	usb2.0 & 2t: reg32_03[6:4] (MSB->LSB) default 3b'110.
+	 *	usb2.0 & 2t: reg32_03[6:4] (MSB->LSB) default 3b'111.
 	 */
 #define DISCONNECT_MASK ((u32)GENMASK(6, 4))
 #define DISCONNECT_VAL(x) ((0x7 & (x)) << 4)
 	val = readl(cfg + 0xc);
-	/* Set to the MAX. */
-	val = (val & ~DISCONNECT_MASK) | DISCONNECT_VAL(0x7);
+	val = (val & ~DISCONNECT_MASK) | DISCONNECT_VAL(0x6);
 	writel(val, cfg + 0xc);
 
 	/* Trimming for squelch detect threshold. */
 	if (mphy->portspeed == MESON_USB_SPEED_HIGH_PLUS) {
 		val = readl(cfg + 0x60);
-		val = (val & ~((u32)GENMASK(11, 8))) | (0xf << 0);
+		val = (val & ~((u32)GENMASK(11, 8))) | (0x5 << 8);
 		writel(val, cfg + 0x60);
 	} else if (mphy->portspeed == MESON_USB_SPEED_HIGH) {
 		val = readl(cfg + 0xc);
-		val = (val & ~((u32)GENMASK(3, 0))) | (0xf << 0);
+		val = (val & ~((u32)GENMASK(3, 0))) | (0x6 << 0);
 		writel(val, cfg + 0xc);
 	}
 
 	return 0;
 }
 
+static void meson_u2phy_a9_cali_misc(struct amlogic_usb_v2 *mphy)
+{
+	u32 val = 0;
+	void __iomem *cfg = mphy->phy_cfg[0];
+
+	/* reg32_24 <11:0> usb2_reg_cfg
+	 * <0>: usb2_hs_term_sel enable signal.
+	 * <1>: chirpK enable signal.
+	 */
+#define USB2_HS_TERM_SEL_EN (BIT(0))
+#define CHIRPK_EN (BIT(1))
+	/* Fix chripk & jk voltage. */
+	val = readl(cfg + 0x60);
+	val |= USB2_HS_TERM_SEL_EN | CHIRPK_EN;
+	writel(val, cfg + 0x60);
+
+	/* reg32_24 <11:0> usb2_reg_cfg
+	 * <6:5>: Edge driver strength triming@960M
+	 * default 2'b10.
+	 */
+	if (mphy->portspeed == MESON_USB_SPEED_HIGH_PLUS) {
+		val = readl(cfg + 0x60);
+		val = (val & ~((u32)GENMASK(6, 5))) | (0x1 << 5);
+		writel(val, cfg + 0x60);
+	}
+}
+
 static void meson_u2phy_a9_cali(struct amlogic_usb_v2 *mphy)
 {
 	meson_usb2phy_set_calibration_trim(mphy);
 	meson_u2phy_a9_cali_disc_squelch(mphy);
+	meson_u2phy_a9_cali_misc(mphy);
 }
 
 static struct meson_u2phy_priv meson_u2phy_a9_priv = {
@@ -234,6 +261,75 @@ int meson_aml_u2phy_a9_parse(struct device *dev, struct meson_uphy_instance *ins
 
 /* usb3 phy*/
 
+static void  meson_u3phy_a9_trim(struct aml_usb3_phy *phy)
+{
+	u32 raw = meson_aml_u3phy_read_reg32(phy, phy->trim_reg);
+	u32 val = 0;
+
+	if (!(raw & BIT(6))) {
+		dev_err(phy->dev, "No TX termination impedance trim? Skip.\n");
+	} else {
+		/* software force value, need to set upctx_pdio_main en in tx_cfg0. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
+				BIT(14), BIT(14));
+		/* TX termination impedance trim: upctx_pdio_main. */
+		val = raw & (u32)GENMASK(2, 0) >> 0;
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
+			(u32)GENMASK(28, 26), val << 26);
+
+		/* software force value, need to set upctx_puio_main en in tx_cfg0. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
+			BIT(17), BIT(17));
+		/* TX termination impedance trim: upctx_puio_main */
+		val = (raw & (u32)GENMASK(5, 3)) >> 3;
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
+			(u32)GENMASK(25, 23), val << 23);
+	}
+
+	if (!(raw & BIT(12))) {
+		dev_err(phy->dev, "No TX amplitude trim? Skip.\n");
+	} else {
+		/* The upctx_boost_en should not be set in RXdetect.
+		 * Don't use bypass reg or the upctx_boost_en field in the
+		 * bypass reg will overwrite upctx_boost_en in all ltssm states.
+		 * The bypass setting are enabled by enable bits in the tx_cfg0,
+		 * so don't set upctx_boost_en en in tx_cfg0 to avoid overwriting.
+		 */
+//		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
+//				BIT(1), BIT(1));
+		/* TX amplitude trim: upctx_boost_en. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc8,
+			BIT(0), BIT(0));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xd0,
+			BIT(0), BIT(0));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xd8,
+			BIT(0), BIT(0));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xe0,
+			BIT(0), BIT(0));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xe8,
+			BIT(0), BIT(0));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xf8,
+			BIT(0), BIT(0));
+
+		/* software force value, need to set upctx_boost_ctrl en in tx_cfg0. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
+			BIT(0), BIT(0));
+		/* TX amplitude trim: upctx_boost_ctrl. 0xc0 [4:0] */
+		val = (raw & (u32)GENMASK(11, 7)) >> 7;
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
+			(u32)GENMASK(4, 0), val  << 0);
+	}
+
+	if (!(raw & BIT(17))) {
+		dev_err(phy->dev, "No RX termination impedance trim? Skip.\n");
+	} else {
+		/* RX impedance trim: rterm_cal_cn field of reg_dcha_afe   */
+		val = (raw & (u32)GENMASK(16, 13)) >> 13;
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4,
+			(u32)GENMASK(7, 4), val << 4);
+	}
+}
+
 /* RX config from vlsi:
  * reg_dcha_afe 0x4 0xE9943075 -> 0xe994_3075 default ok
  * reg_dcha_dfe 0x8 0x54147E68 -> 0x5414_4268
@@ -292,22 +388,79 @@ static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 
 static void meson_u3phy_a9_ssc_set(struct aml_usb3_phy *phy, bool on)
 {
-//	if (on) {
-		/* [29]sec_spll_lock force -> 1'b1 && [5,4]secpll lock window->2'b11 */
-//		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x2C, GENMASK(5, 4) |
-//			BIT(29), GENMASK(5, 4) | BIT(29));
-		/* [23:20] SSC amplitude set to 1*9*500 ppm. [19] ssc_on -> 1. */
-//		meson_aml_u3phy_write_reg32(phy, 0x51980000, phy->ctrl_reg + 0x34);
-//		meson_aml_u3phy_write_reg32(phy, 0x10020, phy->ctrl_reg + 0x38);
+	if (on) {
+		/* U3P2PLL1_CNTL0
+		 * <2> R/W 0 u3p2pll0_bias_en
+		 * <3> R/W 1 u3p2pll0_clk_output_select
+		 * <27> R/W 0 u3p2pll0_lock_en
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x38, BIT(2), BIT(2));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x38, BIT(27), BIT(27));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x38, BIT(3), BIT(3));
 
-		/* [25] clk power source 1: Avdd 1.8V, 0:Vddee 0.8V. */
-//		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(25), BIT(25));
-//	} else {
-//		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x34, BIT(29), 0);
-//	}
+		/* U3P2PLL1_CNTL2 <13> R/W 0 u3p2pll1_rstn */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(13), BIT(13));
+		/* U3P2PLL1_CNTL2 <14> R/W 0 u3p2pll1_rstn_lock */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(14), BIT(14));
+
+		/* U3P2PLL1_CNTL2 <15> R/W 1 u3p2pll1_sdm_en */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(15), BIT(15));
+		/* U3P2PLL1_CNTL2 <20:19> R/W u3p2pll1_ss_mode(ssc dir).
+		 * 2b'10:negative 2b'01:positive
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(20, 19), 0x2 << 19);
+		/* U3P2PLL1_CNTL2 <24:21> R/W 0 u3p2pll1_ssc_dep_sel(ssc amplitude step).
+		 * 4b'1001: 4500ppm.
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(24, 21), 0x9 << 21);
+		/* U3P2PLL1_CNTL2 <28:25> R/W u3p2pll1_ssc_str_m (ssc amplitude). 4'b0001*/
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(28, 25), 0x1 << 25);
+		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en(ssc on). 1'b1. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(29), BIT(29));
+	} else {
+		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(29), 0);
+	}
 }
 
-int meson_u3phy_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
+static void meson_u3phy_a9_ssc_fliped_set(struct aml_usb3_phy *phy, bool on)
+{
+	if (on) {
+		/* U3P2PLL1_CNTL0
+		 * <2> R/W 0 u3p2pll0_bias_en
+		 * <3> R/W 1 u3p2pll0_clk_output_select
+		 * <27> R/W 0 u3p2pll0_lock_en
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(2), BIT(2));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(27), BIT(27));
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(3), BIT(3));
+
+		/* U3P2PLL1_CNTL2 <13> R/W 0 u3p2pll1_rstn */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(13), BIT(13));
+		/* U3P2PLL1_CNTL2 <14> R/W 0 u3p2pll1_rstn_lock */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(14), BIT(14));
+
+		/* U3P2PLL1_CNTL2 <15> R/W 1 u3p2pll1_sdm_en */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(15), BIT(15));
+		/* U3P2PLL1_CNTL2 <20:19> R/W u3p2pll1_ss_mode(ssc dir).
+		 * 2b'10:negative 2b'01:positive
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(20, 19), 0x2 << 19);
+		/* U3P2PLL1_CNTL2 <24:21> R/W 0 u3p2pll1_ssc_dep_sel(ssc amplitude step).
+		 * 4b'1001: 4500ppm.
+		 */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(24, 21), 0x9 << 21);
+		/* U3P2PLL1_CNTL2 <28:25> R/W u3p2pll1_ssc_str_m (ssc amplitude). 4'b0001*/
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(28, 25), 0x1 << 25);
+		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en(ssc on). 1'b1. */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(29), BIT(29));
+	} else {
+		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en */
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(29), 0);
+	}
+}
+
+int meson_u3phy_a9_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
 {
 	int ret = 0;
 	void __iomem *phy_clk_sel_reg;
@@ -330,9 +483,11 @@ int meson_u3phy_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
 }
 
 static struct meson_aml_u3phy_priv meson_u3phy_a9_priv = {
+	.trim = meson_u3phy_a9_trim,
 	.txrx_cali = meson_u3phy_a9_txrx_cali,
 	.ssc_set = meson_u3phy_a9_ssc_set,
-	.secondary_pipe_clk_set = meson_u3phy_secondary_pipe_clk_set,
+	.ssc_fliped_set = meson_u3phy_a9_ssc_fliped_set,
+	.secondary_pipe_clk_set = meson_u3phy_a9_secondary_pipe_clk_set,
 };
 
 static int meson_u3phy_a9_set_mode(void *phy, enum meson_uphy_mode mode)

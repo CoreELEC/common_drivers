@@ -62,10 +62,8 @@ static int dwc3_meson_otg_u2p_init(struct amlogic_otg_helper	*otg)
 	union u2p_r2_v2 reg2;
 	union u2p_r0_v2 reg0;
 
-	/* The hw otg configuration is slightly different. The otg helper must firstly
-	 * configure the phy reg to enable otg irq but the otg config in the reg maybe
-	 * reset during phy init called by controller driver afterwards so init the phy
-	 * here then do the otg stuffs.
+	/* The controller driver always probes before this otg driver,
+	 * the phy reg won't be reset, so it is safe not to init here.
 	 */
 	//ret = phy_init(dwc3_otg->u2phy);
 	//if (ret) {
@@ -144,7 +142,7 @@ static void dwc3_meson_otg_work(struct work_struct *work)
 static void dwc3_meson_set_m_work(struct work_struct *work)
 {
 	struct amlogic_otg_helper *otg = container_of(work, struct amlogic_otg_helper,
-								work.work);
+								set_mode_work.work);
 	struct dwc3_otg *dwc3_otg =  container_of(otg, struct dwc3_otg,
 								otg_helper);
 	union u2p_r2_v2 reg2;
@@ -156,13 +154,12 @@ static void dwc3_meson_set_m_work(struct work_struct *work)
 	writel(reg2.d32, &otg->u2p_aml_regs->r2);
 
 	if (reg2.b.iddig_curr == 0) {
-		dwc3_otg->cur_role = USB_ROLE_DEVICE;
-		usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_DEVICE);
-	} else {
 		dwc3_otg->cur_role = USB_ROLE_HOST;
 		usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_HOST);
+	} else {
+		dwc3_otg->cur_role = USB_ROLE_DEVICE;
+		usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_DEVICE);
 	}
-	//wake_up_interruptible(&dwc3_meson_wait);
 	mutex_unlock(otg->otg_mutex);
 }
 
@@ -238,46 +235,22 @@ static void dwc3_meson_dr_deconfig(struct dwc3_otg	*dwc3_otg)
 		return;
 
 #if IS_ENABLED(CONFIG_USB_ROLE_SWITCH)
-	if (dwc3_otg->otg_helper.hwotg)
-		dwc3_meson_hw_otg_deinit(&dwc3_otg->otg_helper);
+	dwc3_meson_hw_otg_deinit(&dwc3_otg->otg_helper);
 #endif
 }
 
 static int dwc3_otg_dr_configure(struct dwc3_otg	*dwc3_otg)
 {
+	if (!dwc3_otg->is_drd)
+		return 0;
+
 #if IS_ENABLED(CONFIG_USB_ROLE_SWITCH)
 	int ret = 0;
-	struct amlogic_otg_helper *otg;
 
-	otg = &dwc3_otg->otg_helper;
-	/* get default drd mode */
-	ret = of_property_read_u32(dwc3_otg->dev->of_node,
-								"controller-type",
-								&otg->controller_type);
-	if (ret < 0) {
-		dev_err(dwc3_otg->dev, "no prop controller-type default to HOST.\n");
-		otg->controller_type = USB_HOST_ONLY;
-	}
-
-	ret = 0;
-
-	if (otg->controller_type == USB_OTG)
-		otg->hwotg = true;
-
-	if (otg->hwotg == 0) {
-		if (get_otg_mode() || otg->controller_type == USB_DEVICE_ONLY) {
-			dwc3_otg->cur_role = USB_ROLE_DEVICE;
-			usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_DEVICE);
-		} else if (otg->controller_type == USB_HOST_ONLY) {
-			dwc3_otg->cur_role = USB_ROLE_HOST;
-			usb_role_switch_set_role(dwc3_otg->dwc3_core_role_sw, USB_ROLE_HOST);
-		}
-	} else {
-		ret = dwc3_meson_hw_otg_init(&dwc3_otg->otg_helper);
-		if (ret) {
-			dev_err(dwc3_otg->dev, "hw_otg_init failed %d.\n", ret);
-			dwc3_meson_hw_otg_deinit(&dwc3_otg->otg_helper);
-		}
+	ret = dwc3_meson_hw_otg_init(&dwc3_otg->otg_helper);
+	if (ret) {
+		dev_err(dwc3_otg->dev, "hw_otg_init failed %d.\n", ret);
+		dwc3_meson_hw_otg_deinit(&dwc3_otg->otg_helper);
 	}
 
 	return ret;
@@ -322,6 +295,7 @@ static int dwc3_otg_probe(struct platform_device *pdev)
 {
 	struct device		*dev = &pdev->dev;
 	struct dwc3_otg	*dwc3_otg;
+	struct resource *res;
 	struct amlogic_otg_helper	*otg;
 	int			ret;
 
@@ -339,11 +313,12 @@ static int dwc3_otg_probe(struct platform_device *pdev)
 		return PTR_ERR(dwc3_otg->u2phy);
 	}
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	otg = &dwc3_otg->otg_helper;
-	otg->u2p_aml_regs = devm_platform_ioremap_resource(to_platform_device(dwc3_otg->dev), 0);
-	if (IS_ERR(dwc3_otg->otg_helper.u2p_aml_regs)) {
+	otg->u2p_aml_regs = devm_ioremap(dwc3_otg->dev, res->start, resource_size(res));
+	if (IS_ERR_OR_NULL(dwc3_otg->otg_helper.u2p_aml_regs)) {
 		dev_err(dwc3_otg->dev, "Cannot get phy reg, check dts reg?\n");
-		return PTR_ERR(dwc3_otg->otg_helper.u2p_aml_regs);
+		return -EINVAL;
 	}
 
 	pm_runtime_set_active(dev);
@@ -353,8 +328,10 @@ static int dwc3_otg_probe(struct platform_device *pdev)
 		goto disable_rpm;
 
 	dwc3_otg->dwc3_core_role_sw = usb_role_switch_get(dwc3_otg->dev);
-	if (IS_ERR(dwc3_otg->dwc3_core_role_sw)) {
+	if (IS_ERR_OR_NULL(dwc3_otg->dwc3_core_role_sw)) {
 		dev_err(dwc3_otg->dev, "get role-switch----fail\n");
+		//ret = PTR_ERR(dwc3_otg->dwc3_core_role_sw);
+		ret = -EPROBE_DEFER;
 		goto disable_rpm;
 	}
 
