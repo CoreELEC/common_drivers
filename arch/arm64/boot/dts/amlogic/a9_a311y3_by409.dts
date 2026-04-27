@@ -140,8 +140,10 @@
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* android16 dual-display main 4K secondary 1080p, size 320+88=408M */
-			size = <0x0 0xa400000>;
+			/* android16 dual-display main 4K secondary 1080p, size 108+56=164M,
+			 * and mirror display need 192M, total size 164+192=356M
+			 */
+			size = <0x0 0x16400000>;
 			alignment = <0x0 0x400000>;
 		};
 
