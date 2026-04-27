@@ -3437,6 +3437,11 @@ int amdolby_vision_process_hw5(struct vframe_s *vf_top1,
 	if (!module_installed && !hw5_reg_from_file)
 		return -1;
 
+	if (!amdv_check_mem() && (vf_top1 || vf_top2)) {
+		pr_dv_dbg("amdv no mem!\n");
+		return -1;
+	}
+
 	if (is_amdv_dpss_path()) {
 		h_size = prm_dolby.dpss_real_h;
 		v_size = prm_dolby.dpss_real_v;

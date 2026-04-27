@@ -3161,8 +3161,8 @@ void amdv_alloc_mem(void)
 				(lut_dma_info[i].dma_total_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 			lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-			lut_dma_info[i].dma_vaddr = codec_mm_vmap(lut_dma_info[i].dma_paddr,
-				alloc_size);
+			lut_dma_info[i].dma_vaddr =
+				codec_mm_vmap_noncache(lut_dma_info[i].dma_paddr, alloc_size);
 			lut_dma_info[i].dma_paddr_top2 =
 				lut_dma_info[i].dma_paddr + top1_lut_num * LUT_SIZE;
 			lut_dma_info[i].dma_vaddr_top2 =
@@ -3182,8 +3182,8 @@ void amdv_alloc_mem(void)
 				(lut_dma_info[i].dma_top1_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 			lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-			lut_dma_info[i].dma_vaddr = codec_mm_vmap(lut_dma_info[i].dma_paddr,
-				alloc_size);
+			lut_dma_info[i].dma_vaddr =
+				codec_mm_vmap_noncache(lut_dma_info[i].dma_paddr, alloc_size);
 
 			pr_dv_dbg("top1 dma_vaddr %px %pad,size %d,alloc size %d\n",
 					lut_dma_info[i].dma_vaddr,
@@ -3197,7 +3197,7 @@ void amdv_alloc_mem(void)
 			lut_dma_info[i].dma_paddr_top2 = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
 			lut_dma_info[i].dma_vaddr_top2 =
-				codec_mm_vmap(lut_dma_info[i].dma_paddr_top2, alloc_size);
+				codec_mm_vmap_noncache(lut_dma_info[i].dma_paddr_top2, alloc_size);
 
 			pr_dv_dbg("dma_vaddr %px %pad,size %d,alloc size %d\n",
 					lut_dma_info[i].dma_vaddr_top2,
@@ -3211,10 +3211,10 @@ void amdv_alloc_mem(void)
 	alloc_size = dv5_md_hist.hist_size;
 	dv5_md_hist.hist_paddr[0] = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-	dv5_md_hist.hist_vaddr[0] = codec_mm_vmap(dv5_md_hist.hist_paddr[0], alloc_size);
+	dv5_md_hist.hist_vaddr[0] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[0], alloc_size);
 	dv5_md_hist.hist_paddr[1] = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-	dv5_md_hist.hist_vaddr[1] = codec_mm_vmap(dv5_md_hist.hist_paddr[1], alloc_size);
+	dv5_md_hist.hist_vaddr[1] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[1], alloc_size);
 
 	if ((!(efuse_mode & 2) && !device_disable_pd)) {
 		if (is_aml_t3x())
@@ -3228,7 +3228,8 @@ void amdv_alloc_mem(void)
 				py_size[6];
 			py_addr[i].top1_py_paddr[0] = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-			py_addr[i].py_vaddr[0] = codec_mm_vmap(py_addr[i].top1_py_paddr[0],
+			py_addr[i].py_vaddr[0] =
+				codec_mm_vmap_noncache(py_addr[i].top1_py_paddr[0],
 				alloc_size);
 
 			if (py_addr[i].py_vaddr[0])
@@ -3263,7 +3264,8 @@ void amdv_alloc_mem(void)
 					(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0,
 					CODEC_MM_FLAGS_DMA);
 				top_info.up_buf[i].pyup_vaddr =
-					codec_mm_vmap(top_info.up_buf[i].pyup_paddr, alloc_size);
+					codec_mm_vmap_noncache(top_info.up_buf[i].pyup_paddr,
+					alloc_size);
 
 				if (top_info.up_buf[i].pyup_vaddr) {
 					memset(top_info.up_buf[i].pyup_vaddr, 0,
@@ -3292,19 +3294,24 @@ void amdv_free_mem(void)
 		for (i = 0; i < DMA_BUF_CNT; i++) {
 			if (lut_dma_info[i].dma_paddr)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
+			lut_dma_info[i].dma_paddr = 0;
 		}
 	} else if (is_aml_t6w() || is_aml_t6x()) {
 		for (i = 0; i < DMA_BUF_CNT; i++) {
 			if (lut_dma_info[i].dma_paddr)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
+			lut_dma_info[i].dma_paddr = 0;
 			if (lut_dma_info[i].dma_paddr_top2)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr_top2);
+			lut_dma_info[i].dma_paddr_top2 = 0;
 		}
 	}
 	if (dv5_md_hist.hist_paddr[0])
 		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[0]);
+	dv5_md_hist.hist_paddr[0] = 0;
 	if (dv5_md_hist.hist_paddr[1])
 		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[1]);
+	dv5_md_hist.hist_paddr[1] = 0;
 
 	if (is_aml_t3x())
 		py_buf_cnt = PYRAMID_BUF_CNT;
@@ -3314,27 +3321,48 @@ void amdv_free_mem(void)
 	for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
 		if (py_addr[i].top1_py_paddr[0])
 			codec_mm_free_for_dma("amdv", py_addr[i].top1_py_paddr[0]);
+		py_addr[i].top1_py_paddr[0] = 0;
 	}
 	if (is_aml_t6w() || is_aml_t6x()) {
 		for (i = 0; i < TOP_BUF_CNT; i++) {
 			if (top_info.up_buf[i].pyup_paddr)
 				codec_mm_free_for_dma("amdv", top_info.up_buf[i].pyup_paddr);
+			top_info.up_buf[i].pyup_paddr = 0;
 		}
 	}
+}
+
+bool amdv_check_mem(void)
+{
+	if (!is_aml_hw5())
+		return true;
+
+	if (!lut_dma_info[0].dma_paddr || !lut_dma_info[0].dma_paddr_top2 ||
+		!dv5_md_hist.hist_paddr[0] || !py_addr[0].top1_py_paddr[0] ||
+		!top_info.up_buf[0].pyup_paddr)
+		return false;
+
+	return true;
 }
 
 static DEFINE_MUTEX(amdv_dev_mutex);
 static int amdv_mem_alloc_count;
 void amdv_mem_alloc_control(enum vd_module_type_e type, int enable)
 {
+	int last_count;
+
+	if (!is_aml_hw5() || !dolby_vision_enable)
+		return;
+
 	mutex_lock(&amdv_dev_mutex);
-	int last_count = amdv_mem_alloc_count;
+	last_count = amdv_mem_alloc_count;
 
 	if (enable)
 		amdv_mem_alloc_count++;
-	else
+	else if (amdv_mem_alloc_count > 0)
 		amdv_mem_alloc_count--;
-	pr_dv_dbg("amdv mem alloc status:%d, %d\n", amdv_mem_alloc_count, enable);
+	pr_dv_dbg("amdv_mem_alloc: owner %d, cnt %d %d, enable %d\n",
+			  type, last_count, amdv_mem_alloc_count, enable);
 	if (last_count == 0 && amdv_mem_alloc_count == 1)
 		amdv_alloc_mem();
 	else if (last_count == 1 && amdv_mem_alloc_count == 0)
@@ -17425,6 +17453,7 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo rgb2yuv_offset2 value > /sys/class/amdolby_vision/debug;\n"
 	"echo postblend_w value > /sys/class/amdolby_vision/debug;\n"
 	"echo postblend_h value > /sys/class/amdolby_vision/debug;\n"
+	"echo alloc_mem value > /sys/class/amdolby_vision/debug;\n"
 };
 
 static ssize_t  amdolby_vision_debug_show
@@ -18033,6 +18062,14 @@ static ssize_t amdolby_vision_debug_store
 			return -EINVAL;
 		postblend_h = val;
 		pr_info("postblend_h 0x%x\n", postblend_h);
+	} else if (!strcmp(parm[0], "alloc_mem")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		pr_info("set alloc_mem %d\n", (u32)val);
+		if (val)
+			amdv_mem_alloc_control(module_amdv, 1);
+		else
+			amdv_mem_alloc_control(module_amdv, 0);
 	} else {
 		pr_info("unsupport cmd\n");
 	}

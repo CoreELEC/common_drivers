@@ -1527,4 +1527,5 @@ bool vf_is_fel(struct vframe_s *vf);
 void calculate_gdbs_delay(struct vframe_s *vf, u32 w, u32 h);
 void amdv_alloc_mem(void);
 void amdv_free_mem(void);
+bool amdv_check_mem(void);
 #endif

@@ -174,7 +174,8 @@ enum OSD_INDEX {
 enum vd_module_type_e {
 	module_dpss = 0,
 	module_vc = 1,
-	module_amvideo = 2
+	module_amvideo = 2,
+	module_amdv = 3
 };
 
 struct apo_value_s {
