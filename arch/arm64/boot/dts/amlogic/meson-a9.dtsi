@@ -3330,6 +3330,7 @@
 		kt_offset = <0x80 0x88 0x8c 0x90 0x94 0x98 0x9c>;
 		kt_cap = <0x2597 0x6bf 0 64 0 32>;
 		kt_reserved = <0>;
+		kt_host_key_max_len = <32>;
 		status = "okay";
 	};
 
