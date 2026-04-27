@@ -3255,7 +3255,8 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	}
 
 	if (WARN_ON(!host->cmd)) {
-		dev_err(host->dev, "host->cmd is NULL.\n");
+		dev_err(host->dev, "HOST->CMD is NULL.\n");
+		writel(0x7fff, host->regs + SD_EMMC_STATUS);
 		return IRQ_HANDLED;
 	}
 	cmd = host->cmd;
