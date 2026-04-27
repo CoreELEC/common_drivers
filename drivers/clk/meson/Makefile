@@ -240,3 +240,12 @@ PR_FMT_DEFINE_C5="-Dpr_fmt(fmt)= \"[$(PR_FMT_C5)]: \" fmt"
 CFLAGS_c5.o += $(PR_FMT_DEFINE_C5)
 CFLAGS_c5-aoclk.o += $(PR_FMT_DEFINE_C5)
 CFLAGS_c5-main.o += $(PR_FMT_DEFINE_C5)
+
+A9_MODULE_NAME = amlogic-clk-soc-a9
+obj-$(CONFIG_AMLOGIC_COMMON_CLK_A9) += $(A9_MODULE_NAME).o
+$(A9_MODULE_NAME)-y += a9.o a9-aoclk.o a9-main.o
+PR_FMT_A9 = $(subst amlogic-,,$(A9_MODULE_NAME))
+PR_FMT_DEFINE_A9="-Dpr_fmt(fmt)= \"[$(PR_FMT_A9)]: \" fmt"
+CFLAGS_a9.o += $(PR_FMT_DEFINE_A9)
+CFLAGS_a9-aoclk.o += $(PR_FMT_DEFINE_A9)
+CFLAGS_a9-main.o += $(PR_FMT_DEFINE_A9)

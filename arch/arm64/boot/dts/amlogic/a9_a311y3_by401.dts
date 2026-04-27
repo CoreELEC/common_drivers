@@ -593,8 +593,8 @@
 		interrupts = <0 203 1
 				0 202 1>;
 		interrupt-names = "pre_irq", "post_irq";
-		clocks = <&clkc_vpu_clkb CLKID_VPU_CLKB>,
-			 <&clkc_vpu>;
+		clocks = <&clkc CLKID_VPU_CLKB>,
+			 <&clkc CLKID_VPU>;
 		clock-names = "vpu_clkb",
 			"vpu_mux";
 		clock-range = <334 400>;
@@ -1086,11 +1086,11 @@
 		index = <0>;
 		status = "okay";
 
-		clocks = <&mclk_pll>,
-				<&clkc_mclk CLKID_MCLK_0_PRE>,
-				<&clkc_mclk CLKID_MCLK_0>;
+		clocks = <&clkc CLKID_MCLK_PLL>,
+				<&clkc CLKID_MCLK_0_PRE>,
+				<&clkc CLKID_MCLK_0>;
 		clock-names = "mclk_pll", "mclk_pre", "xclk";
-		assigned-clocks = <&clkc_mclk CLKID_MCLK_0>;
+		assigned-clocks = <&clkc CLKID_MCLK_0>;
 		assigned-clock-rates = <24000000>;
 
 		pwdn-gpios = <&gpiom 3 GPIO_ACTIVE_HIGH>;
@@ -1121,11 +1121,11 @@
 		index = <2>;
 		status = "okay";
 
-		clocks =  <&mclk1_pll>,
-				<&clkc_mclk1 CLKID_MCLK1_0_PRE>,
-				<&clkc_mclk1 CLKID_MCLK1_0>;
+		clocks =  <&clkc CLKID_MCLK1_PLL>,
+				<&clkc CLKID_MCLK1_0_PRE>,
+				<&clkc CLKID_MCLK1_0>;
 		clock-names = "mclk_pll", "mclk_pre", "xclk";
-		assigned-clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
+		assigned-clocks = <&clkc CLKID_MCLK1_0>;
 		assigned-clock-rates = <24000000>;
 
 		pwdn-gpios = <&gpiom 5 GPIO_ACTIVE_HIGH>;
@@ -1779,8 +1779,8 @@
 
 &tdmb {
 	clocks = <&clkaudio CLKID_AUDIO_MCLK_B
-				&hifi_pll
-				&hifi1_pll
+				&clkc CLKID_HIFI_PLL
+				&clkc CLKID_HIFI1_PLL
 				&clkaudio CLKID_AUDIO_MCLK_PAD1>;
 	clock-names = "mclk", "clk_srcpll", "clk_src_cd", "mclk_pad";
 	pinctrl-names = "tdm_pins","tdm_gpio";

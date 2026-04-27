@@ -379,4 +379,14 @@ config AMLOGIC_COMMON_CLK_C5
         help
           Support for the clock controller on Amlogic C5
           devices, aka C5. Say Y if you want peripherals to work.
+
+config AMLOGIC_COMMON_CLK_A9
+        tristate "Meson A9 clock controller"
+        depends on AMLOGIC_COMMON_CLK_MESON_REGMAP
+        depends on AMLOGIC_COMMON_CLK_MESON_DUALDIV
+        depends on AMLOGIC_COMMON_CLK_MESON_PLL
+        help
+          Support for the clock controller on Amlogic A9
+          devices, aka A9. Say Y if you want peripherals to work.
+
 endmenu

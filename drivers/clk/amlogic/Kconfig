@@ -1,8 +1,0 @@
-# SPDX-License-Identifier: GPL-2.0-only
-# common clock support for Amlogic SoC family.
-
-config AMLOGIC_COMMON_CLK_V2
-	tristate "Amlogic clock driver v2"
-	default n
-	help
-	  Common clock support for Amlogic SoC family.
