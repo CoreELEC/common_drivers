@@ -70,6 +70,11 @@ unsigned int early_suspend_debug;
 unsigned int suspend_debug_flag;
 /* deep suspend enter flag */
 static unsigned int deep_suspend;
+/* get power event from input */
+static int power_event_available;
+/* get device name which send power event */
+static char dev_name_event[128];
+#define DRIVER_NAME "GX_PM"
 
 void register_early_suspend(struct early_suspend *handler)
 {
@@ -730,6 +735,81 @@ static ssize_t time_out_store(const struct class *class,
 
 static CLASS_ATTR_RW(time_out);
 
+/* The sys file interface: read state*/
+static ssize_t power_event_state_show(const struct class *class,
+								const struct class_attribute *attr,
+								char *buf)
+{
+	char def[] = "NULL";
+	char msg[] = "POWER_PRESSED";
+	unsigned int len = -1;
+
+	if (power_event_available == 1) {
+		len = snprintf(buf, sizeof(msg) + 1, "%s\n", msg);
+		return len;
+	}
+
+	len = snprintf(buf, sizeof(def) + 1, "%s\n", def);
+
+	return len;
+}
+
+static ssize_t power_event_state_store(const struct class *class,
+								const struct class_attribute *attr,
+								const char *buf, size_t count)
+{
+	char cmd[16];
+
+	memset(cmd, 0, sizeof(cmd));
+	size_t copy_len = min(count, sizeof(cmd) - 1);
+
+	if (!buf) {
+		pr_err("input buf is null.\n");
+		return -EFAULT;
+	}
+
+	memcpy(cmd, buf, copy_len);
+	cmd[copy_len] = '\0';
+
+	// check input command: "clear" or "reset"
+	if (strncmp(cmd, "clear", 5) == 0 || strncmp(cmd, "reset", 5) == 0) {
+		power_event_available = 0;
+		pr_info("Event flag cleared by user write\n");
+		return copy_len;
+	}
+
+	return -EFAULT;
+}
+
+static CLASS_ATTR_RW(power_event_state);
+
+/* The sys file interface: read name*/
+static ssize_t power_event_name_show(const struct class *class,
+								const struct class_attribute *attr,
+								char *buf)
+{
+	char def[] = "NULL";
+	unsigned int len = -1;
+
+	if (power_event_available == 1) {
+		len = snprintf(buf, sizeof(dev_name_event) + 1, "%s\n", dev_name_event);
+		return len;
+	}
+
+	len = snprintf(buf, sizeof(def) + 1, "%s\n", def);
+
+	return len;
+}
+
+static ssize_t power_event_name_store(const struct class *class,
+								const struct class_attribute *attr,
+								const char *buf, size_t count)
+{
+	return -EFAULT;
+}
+
+static CLASS_ATTR_RW(power_event_name);
+
 static struct attribute *meson_pm_attrs[] = {
 	&class_attr_suspend_reason.attr,
 	&class_attr_suspend_mode.attr,
@@ -739,6 +819,8 @@ static struct attribute *meson_pm_attrs[] = {
 	&class_attr_early_suspend_trigger.attr,
 #endif
 	&class_attr_suspend_debug.attr,
+	&class_attr_power_event_state.attr,
+	&class_attr_power_event_name.attr,
 	NULL,
 };
 
@@ -747,6 +829,93 @@ ATTRIBUTE_GROUPS(meson_pm);
 static struct class meson_pm_class = {
 	.name		= "meson_pm",
 	.class_groups = meson_pm_groups,
+};
+
+/* power down action */
+static void do_custom_power_action(void)
+{
+	power_event_available = 1;
+}
+
+/* Input Handler: do event */
+static void power_handler_event(struct input_handle *handle,
+								unsigned int type,
+								unsigned int code, int value)
+{
+	size_t copy_len;
+
+	if (type == EV_KEY && code == KEY_POWER && value == 1) {
+		if (handle && handle->dev && handle->dev->name) {
+			memset(dev_name_event, 0, sizeof(dev_name_event));
+			copy_len = min(strlen(handle->dev->name), sizeof(dev_name_event) - 1);
+			memcpy(dev_name_event, handle->dev->name, copy_len);
+			dev_name_event[copy_len] = '\0';
+		}
+		pr_info("Power key pressed from device: (%s)\n", dev_name_event);
+		do_custom_power_action();
+	}
+}
+
+/* connect function: when handler match devices */
+static int power_handler_connect(struct input_handler *handler,
+								struct input_dev *dev,
+								const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int ret;
+
+	handle = kzalloc(sizeof(*handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = DRIVER_NAME;
+
+	ret = input_open_device(handle);
+	if (ret) {
+		pr_err("%s: Failed to open device %s\n", DRIVER_NAME, dev->name);
+		kfree(handle);
+		return ret;
+	}
+
+	ret = input_register_handle(handle);
+	if (ret) {
+		input_close_device(handle);
+		kfree(handle);
+		return ret;
+	}
+
+	pr_info("%s: Connected to device: %s\n", DRIVER_NAME, dev->name);
+	return 0;
+}
+
+/* disconnect devices */
+static void power_handler_disconnect(struct input_handle *handle)
+{
+	pr_info("%s: Disconnected from device: %s\n", DRIVER_NAME, handle->dev->name);
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+/* match all input devices */
+static const struct input_device_id power_handler_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.keybit = { [BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER) },
+		.driver_info = 1 },
+	{ },
+};
+MODULE_DEVICE_TABLE(input, power_handler_ids);
+
+/* Input Handler */
+static struct input_handler power_input_handler = {
+	.event      = power_handler_event,
+	.connect    = power_handler_connect,
+	.disconnect = power_handler_disconnect,
+	.name       = DRIVER_NAME,
+	.id_table   = power_handler_ids,
 };
 
 static int gx_pm_syscore_suspend(void)
@@ -799,6 +968,8 @@ static int meson_pm_probe(struct platform_device *pdev)
 	unsigned int irq_pwrctrl;
 	int err;
 
+	power_event_available = 0;
+
 	if (!of_property_read_u32(pdev->dev.of_node,
 				  "irq_pwrctrl", &irq_pwrctrl)) {
 		pwr_ctrl_irq_set(irq_pwrctrl, 1, 0);
@@ -831,6 +1002,13 @@ static int meson_pm_probe(struct platform_device *pdev)
 	err = class_register(&meson_pm_class);
 	if (unlikely(err))
 		return err;
+
+	// register input handler
+	err = input_register_handler(&power_input_handler);
+	if (err) {
+		pr_err("%s: Failed to register input handler\n", DRIVER_NAME);
+		return err;
+	}
 
 	gx_pm_init_ops();
 
@@ -872,6 +1050,7 @@ static __maybe_unused void meson_pm_remove(struct platform_device *pdev)
 		iounmap(exit_reg);
 
 	class_unregister(&meson_pm_class);
+	input_unregister_handler(&power_input_handler);
 
 #if IS_ENABLED(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND)
 	lgcy_early_suspend_exit(pdev);
