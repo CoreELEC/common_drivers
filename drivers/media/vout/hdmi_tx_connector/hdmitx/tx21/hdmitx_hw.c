@@ -4490,12 +4490,15 @@ static void hdmi_phy_suspend(void)
 		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S1A ||
 		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7 ||
 		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S7D ||
-		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6)
+		hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S6) {
 		phy_cntl5 = ANACTRL_HDMIPHY_CTRL5;
-	else if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9)
+	} else if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
+		phy_cntl0 = ANACTRL_HDMIPHY_CTRL0_A9;
+		phy_cntl3 = ANACTRL_HDMIPHY_CTRL3_A9;
 		phy_cntl5 = ANACTRL_HDMIPHY_CTRL5_A9;
-	else
+	} else {
 		phy_cntl5 = ANACTRL_HDMIPHY_CTRL6;
+	}
 	/* When HDMI PHY is turned off, the arc power
 	 * supply module still need to work, otherwise
 	 * hdmi arc disables, no audio during HEACT 5-18
