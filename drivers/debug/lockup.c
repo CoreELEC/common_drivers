@@ -1378,7 +1378,8 @@ static int sysrq_ipi_sleep_thread(void *unused)
 
 static void sysrq_trigger_handler(char c)
 {
-	static struct work_struct works[8];
+	struct work_struct works[NR_CPUS];
+	struct work_struct *w;
 	int cpu;
 	struct task_struct *sleep_task;
 
@@ -1413,11 +1414,12 @@ static void sysrq_trigger_handler(char c)
 		break;
 	case 'w':
 		pr_emerg("trigger workqueue lockup\n");
+		w = kmalloc(sizeof(*w) * 2, GFP_KERNEL);
 		preempt_disable();
-		INIT_WORK(&works[0], sysrq_deadloop_work_func);
-		schedule_work(&works[0]);
-		INIT_WORK(&works[1], sysrq_deadloop_work_func);
-		schedule_work(&works[1]);
+		INIT_WORK(&w[0], sysrq_deadloop_work_func);
+		schedule_work(&w[0]);
+		INIT_WORK(&w[1], sysrq_deadloop_work_func);
+		schedule_work(&w[1]);
 		preempt_enable();
 		break;
 	case 't':
