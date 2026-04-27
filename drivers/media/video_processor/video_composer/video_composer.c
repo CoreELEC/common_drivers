@@ -3460,7 +3460,8 @@ static void vframe_composer(struct composer_dev *dev)
 
 	if (!kfifo_put(&dev->ready_q, (const struct vframe_s *)dst_vf))
 		vc_print(dev->index, PRINT_ERROR, "ready_q is full\n");
-
+	vf_notify_receiver(dev->vf_provider_name,
+		VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	vc_print(dev->index, PRINT_PERFORMANCE,
 		 "ready len=%d\n", kfifo_len(&dev->ready_q));
 
@@ -4666,6 +4667,8 @@ static void video_composer_task(struct composer_dev *dev)
 				       (const struct vframe_s *)vf))
 				vc_print(dev->index, PRINT_ERROR,
 					 "by_pass ready_q is full\n");
+			vf_notify_receiver(dev->vf_provider_name,
+				VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 			if (is_video_process_in_thread()) {
 				calculate_low_latency_case(dev, vf);
 			} else {

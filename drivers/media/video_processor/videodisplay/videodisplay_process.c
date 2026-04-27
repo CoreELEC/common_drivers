@@ -3538,6 +3538,8 @@ static void vframe_display(struct videodisplay_dev *dev,
 		vd_print(dev->index, PRINT_ERROR, "%s: put to ready_q failed.\n", __func__);
 		return;
 	}
+	vf_notify_receiver(dev->vf_provider_name,
+		VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 	if (is_video_process_in_thread()) {
 		calculate_low_latency_case(dev, vf);
 	} else {
