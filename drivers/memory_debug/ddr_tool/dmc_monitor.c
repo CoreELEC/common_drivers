@@ -613,9 +613,9 @@ void set_port_to_mon_comm(void *data, int port, int subport)
 	}
 }
 
-unsigned int get_all_dev_mask(void)
+u64 get_all_dev_mask(void)
 {
-	unsigned int ret = 0;
+	u64 ret = 0;
 	int i;
 
 	if (dmc_dev_is_byte(dmc_mon))	/* not supported */
@@ -624,14 +624,32 @@ unsigned int get_all_dev_mask(void)
 	for (i = 0; i < dmc_mon->port_num; i++) {
 		if (dmc_mon->port[i].sub_id != -1)
 			continue;
-		ret |= (1 << dmc_mon->port[i].port_id);
+		ret |= (1ULL << dmc_mon->port[i].port_id);
 	}
 	return ret;
 }
 
-static unsigned int get_other_dev_mask(void)
+static u64 get_reserved_mode_mask(void)
 {
-	unsigned int ret = 0;
+	u64 ret = 0;
+	int i;
+
+	if (dmc_dev_is_byte(dmc_mon))	/* not supported */
+		return 0;
+
+	for (i = 0; i < dmc_mon->port_num; i++) {
+		if (dmc_mon->port[i].sub_id != -1)
+			continue;
+		if (strstr(dmc_mon->port[i].port_name, "ARM"))
+			continue;
+		ret |= (1ULL << dmc_mon->port[i].port_id);
+	}
+	return ret;
+}
+
+static u64 get_other_dev_mask(void)
+{
+	u64 ret = 0;
 	int i;
 
 	for (i = 0; i < dmc_mon->port_num; i++) {
@@ -655,7 +673,7 @@ static unsigned int get_other_dev_mask(void)
 		    strstr(dmc_mon->port[i].port_name, "NNA"))
 			continue;
 
-		ret |= (1 << dmc_mon->port[i].port_id);
+		ret |= (1ULL << dmc_mon->port[i].port_id);
 	}
 	return ret;
 }
@@ -915,8 +933,7 @@ static void dmc_enabled_reserved_memory(struct platform_device *pdev, struct dmc
 		mon->device = 0x0102;
 		mon->debug &= ~DMC_DEBUG_INCLUDE;
 	} else {
-		mon->device = get_all_dev_mask();
-		mon->device &= 0xfffffffffffffffe;
+		mon->device = get_reserved_mode_mask();
 	}
 
 	mon->debug &= ~DMC_DEBUG_TRACE;

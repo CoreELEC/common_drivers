@@ -153,7 +153,7 @@ int dmc_set_monitor(unsigned long start, unsigned long end,
 int dmc_set_monitor_by_name(unsigned long start, unsigned long end,
 			    const char *port_name, int en);
 
-unsigned int get_all_dev_mask(void);
+u64 get_all_dev_mask(void);
 
 /*
  * Following functions are internal used only
