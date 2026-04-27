@@ -515,7 +515,8 @@ struct dvb_frontend *dvb_dummy_fe_attach(const struct demod_config *config)
 }
 
 static const struct dvb_frontend_ops dvb_dummy_fe_ops = {
-	.delsys = { SYS_DVBT, SYS_DVBC_ANNEX_A, SYS_DVBS },
+	.delsys = { SYS_DVBT, SYS_DVBC_ANNEX_A, SYS_DVBS, SYS_ATSC,
+		SYS_ISDBC, SYS_ISDBS, SYS_ISDBT },
 	.info = {
 		.name			= "Dummy FE",
 		.caps = FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4 |
@@ -524,7 +525,7 @@ static const struct dvb_frontend_ops dvb_dummy_fe_ops = {
 				FE_CAN_QAM_16 | FE_CAN_QAM_64 | FE_CAN_QAM_AUTO |
 				FE_CAN_TRANSMISSION_MODE_AUTO |
 				FE_CAN_GUARD_INTERVAL_AUTO |
-				FE_CAN_HIERARCHY_AUTO,
+				FE_CAN_HIERARCHY_AUTO | FE_CAN_8VSB | FE_CAN_16VSB,
 		.frequency_min_hz = 40000000,
 		.frequency_max_hz = 2147000000,
 	},
