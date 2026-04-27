@@ -6,7 +6,7 @@
 #ifdef CONFIG_AML_VPP
 #include <linux/amlogic/media/vpp/vpp.h>
 #endif
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "dptx_venc.h"
 #include "../dptx_reg_op.h"
 #include "../dptx_common.h"
@@ -141,7 +141,7 @@ static void dptx_venc_set_timing(struct dptx_drv_s *dptx)
 	dptx_vcbus_write(ENCL_VIDEO_VSO_ELINE + offset, dptx->venc_cfg.vs_ve_addr);
 
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		dptx_vcbus_write(ENCL_INBUF_CNTL1 + offset,
 			(5 << 13) | (dptx->act_timing.h_act - 1));
 		dptx_vcbus_write(ENCL_INBUF_CNTL0 + offset, 0x200);
@@ -155,7 +155,7 @@ static void dptx_venc_set_timing(struct dptx_drv_s *dptx)
 
 static void dptx_dual_set_t7(struct dptx_drv_s *dptx, u8 en, u8 to_port, u8 dual_mode)
 {
-	// uint16_t single_ha = pdrv->config.timing.act_timing.h_active / 2;
+	// u16 single_ha = pdrv->config.timing.act_timing.h_active / 2;
 
 	if (dptx->idx != 0) {
 		DPTX_PR(dptx, "dual-port on VENC %u not supported", dptx->idx);

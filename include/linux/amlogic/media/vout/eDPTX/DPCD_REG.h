@@ -3,8 +3,8 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#ifndef _AMLOGIC_DisplayPort_DPCD_REG_H
-#define _AMLOGIC_DisplayPort_DPCD_REG_H
+#ifndef _AMLOGIC_eDPTX_DPCD_REG_H
+#define _AMLOGIC_eDPTX_DPCD_REG_H
 
 #define DPCD_DPCD_REV					0x00000
 #define DPCD_MAX_LINK_RATE				0x00001
@@ -160,6 +160,17 @@
 #define DPCD_TEST_CRC_B_Cb_0				0x00244
 #define DPCD_TEST_CRC_B_Cb_1				0x00245
 #define DPCD_TEST_SINK_MISC				0x00246
+
+#define DPCD_TEST_80B_COS_0				0x00250
+#define DPCD_TEST_80B_COS_1				0x00251
+#define DPCD_TEST_80B_COS_2				0x00252
+#define DPCD_TEST_80B_COS_3				0x00253
+#define DPCD_TEST_80B_COS_4				0x00254
+#define DPCD_TEST_80B_COS_5				0x00255
+#define DPCD_TEST_80B_COS_6				0x00256
+#define DPCD_TEST_80B_COS_7				0x00257
+#define DPCD_TEST_80B_COS_8				0x00258
+#define DPCD_TEST_80B_COS_9				0x00259
 //00248h LINK_QUAL_PATTERN_SELECT ...
 #define DPCD_TEST_RESPONSE				0x00260
 #define DPCD_TEST_EDID_CHECKSUM				0x00261

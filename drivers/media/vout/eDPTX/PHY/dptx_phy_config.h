@@ -6,7 +6,7 @@
 #ifndef _AML_DPTX_PHY_CONFIG_H
 #define _AML_DPTX_PHY_CONFIG_H
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/types.h>
 
 struct dptx_phy_ctrl_s {
@@ -17,5 +17,6 @@ struct dptx_phy_ctrl_s {
 };
 
 struct dptx_phy_ctrl_s *dptx_phy_config_init_t7(void);
+struct dptx_phy_ctrl_s *dptx_phy_config_init_a9(void);
 
 #endif

@@ -6,7 +6,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
 #include "dptx_log.h"
 #include "dptx_internal.h"
@@ -248,11 +248,11 @@ void edptx_set_lane_config_to_core(struct dptx_drv_s *dptx, u8 port)
 		return;
 
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SAVE_LINK_RATE,
-		&dptx->sink.link[port]->link_rate, NULL);
+		&dptx->sink.link[port].link_rate, NULL);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SAVE_LANE_COUNT,
-		&dptx->sink.link[port]->lane_count, NULL);
+		&dptx->sink.link[port].lane_count, NULL);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_ENABLE_ENHANCED_FRAME,
-		&dptx->sink.link[port]->enh_frame_en, NULL);
+		&dptx->sink.link[port].enh_frame_en, NULL);
 }
 EXPORT_SYMBOL(edptx_set_lane_config_to_core);
 
@@ -305,8 +305,8 @@ EXPORT_SYMBOL(edptx_transmitter_init);
 void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
 		u8 lane_mask, u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2)
 {
-	unsigned char dptx_ip_pat_sets[11] = {
-		0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+	unsigned char dptx_ip_pat_sets[13] = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x6, 0x7};
 	u32 cos_80b[3] = {0};
 	unsigned int reg_val;
 	u32 sr_disable = 0;
@@ -319,30 +319,30 @@ void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
 	if (!tx_comm)
 		return;
 
-	if (pattern == DPTX_TPS_DISABLE ||
-		pattern == DPTX_QUAL_PAT_DISABLE ||
-		pattern == DPTX_SYMBOL_ERROR_MSR ||
-		pattern == DPTX_HBR2_EYE)
+	if (pattern == eDPTX_TPS_DISABLE ||
+		pattern == eDPTX_QUAL_PAT_DISABLE ||
+		pattern == eDPTX_SYMBOL_ERROR_MSR ||
+		pattern == eDPTX_HBR2_EYE)
 		sr_disable = 0;
-	else if (pattern == DPTX_TPS1 ||
-		pattern == DPTX_TPS2 ||
-		pattern == DPTX_TPS3 ||
-		pattern == DPTX_TPS4 ||
-		pattern == DPTX_D10P2 ||
-		pattern == DPTX_PRBS7 ||
-		pattern == DPTX_80BIT_CUSTOM ||
-		pattern == DPTX_CP2520_2 ||
-		pattern == DPTX_CP2520_3)
+	else if (pattern == eDPTX_TPS1 ||
+		pattern == eDPTX_TPS2 ||
+		pattern == eDPTX_TPS3 ||
+		pattern == eDPTX_TPS4 ||
+		pattern == eDPTX_D10P2 ||
+		pattern == eDPTX_PRBS7 ||
+		pattern == eDPTX_80BIT_CUSTOM ||
+		pattern == eDPTX_CP2520_2 ||
+		pattern == eDPTX_CP2520_3)
 		sr_disable = 1;
 	else
 		sr_disable = 0;
 
 	switch (pattern) {
-	case DPTX_TPS_DISABLE:
-	case DPTX_TPS1:
-	case DPTX_TPS2:
-	case DPTX_TPS3:
-	case DPTX_TPS4:
+	case eDPTX_TPS_DISABLE:
+	case eDPTX_TPS1:
+	case eDPTX_TPS2:
+	case eDPTX_TPS3:
+	case eDPTX_TPS4:
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_SCRAMBLE_DISABLE, &sr_disable, NULL);
 		reg_val = 0;
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_QUAL_PATTERN, &reg_val, NULL);
@@ -350,13 +350,13 @@ void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN_VALUE,
 			&reg_val, NULL);
 		break;
-	case DPTX_QUAL_PAT_DISABLE:
-	case DPTX_D10P2:
-	case DPTX_SYMBOL_ERROR_MSR:
-	case DPTX_PRBS7:
-	case DPTX_HBR2_EYE:
-	case DPTX_CP2520_2:
-	case DPTX_CP2520_3:
+	case eDPTX_QUAL_PAT_DISABLE:
+	case eDPTX_D10P2:
+	case eDPTX_SYMBOL_ERROR_MSR:
+	case eDPTX_PRBS7:
+	case eDPTX_HBR2_EYE:
+	case eDPTX_CP2520_2:
+	case eDPTX_CP2520_3:
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_SCRAMBLE_DISABLE, &sr_disable, NULL);
 		reg_val = 0;
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN_VALUE,
@@ -368,7 +368,7 @@ void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_QUAL_PATTERN,
 			&reg_val, NULL);
 		break;
-	case DPTX_80BIT_CUSTOM:
+	case eDPTX_80BIT_CUSTOM:
 		cos_80b[0] = cos_80b_0;
 		cos_80b[1] = cos_80b_1;
 		cos_80b[2] = cos_80b_2;

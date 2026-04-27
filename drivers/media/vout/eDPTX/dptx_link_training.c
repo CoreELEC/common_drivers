@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPCD_REG.h>
 #include "dptx_common.h"
 
@@ -42,8 +42,8 @@ static void dptx_training_status_print(struct dptx_drv_s *dptx)
 	unsigned char aux_data[3] = {0, 0, 0}, port;
 	int ret;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		ret = dptx_if_aux_read(dptx, port, DPCD_LANE0_1_STATUS, 3, aux_data);
 		if (ret == 0) {
@@ -62,16 +62,16 @@ static int dptx_link_rate_config_reduce(struct dptx_drv_s *dptx)
 {
 	u8 link_rate, lane_cnt, port;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 
-		if (dptx->sink.link[port]->link_rate_update != 2) {
-			dptx->sink.link[port]->link_rate_update = 0;
+		if (dptx->sink.link[port].link_rate_update != 2) {
+			dptx->sink.link[port].link_rate_update = 0;
 			continue;
 		}
-		link_rate = dptx->sink.link[port]->link_rate;
-		lane_cnt = dptx->sink.link[port]->lane_count;
+		link_rate = dptx->sink.link[port].link_rate;
+		lane_cnt = dptx->sink.link[port].lane_count;
 
 		if (link_rate > DP_LINK_RATE_HBR2) {
 			link_rate = DP_LINK_RATE_HBR2;
@@ -86,8 +86,8 @@ static int dptx_link_rate_config_reduce(struct dptx_drv_s *dptx)
 		DPTX_P_PR(dptx, port, "%s: link_rate: 0x%x, lane: %d",
 			__func__, link_rate, lane_cnt);
 
-		dptx->sink.link[port]->link_rate = link_rate;
-		dptx->sink.link[port]->link_rate_update = 1;
+		dptx->sink.link[port].link_rate = link_rate;
+		dptx->sink.link[port].link_rate_update = 1;
 	}
 
 	return 0;
@@ -100,7 +100,7 @@ static int dptx_link_rate_config_reduce(struct dptx_drv_s *dptx)
  */
 static int dptx_training_phy_adj_req_process(struct dptx_drv_s *dptx, u8 port)
 {
-	struct dptx_link_cfg_s *link_s = dptx->sink.link[port];
+	struct dptx_link_cfg_s *link_s = &dptx->sink.link[port];
 	unsigned char adj_req[2] = {0, 0}, i;
 
 	if (dptx_if_aux_read(dptx, port, DPCD_ADJUST_REQUEST_LANE0_1, 2, adj_req)) {
@@ -138,7 +138,7 @@ static int dptx_training_phy_adj_req_process(struct dptx_drv_s *dptx, u8 port)
 
 static void dptx_training_phy_update_apply(struct dptx_drv_s *dptx, u8 port)
 {
-	struct dptx_link_cfg_s *cfg = dptx->sink.link[port];
+	struct dptx_link_cfg_s *cfg = &dptx->sink.link[port];
 	u8 i;
 
 	if (cfg->phy_update == 0)
@@ -153,7 +153,8 @@ static void dptx_training_phy_update_apply(struct dptx_drv_s *dptx, u8 port)
 }
 
 /* *************** full link training ****************** */
-static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
+static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, unsigned char pattern,
+				u32 cos_80b_0,  u32 cos_80b_1, u32 cos_80b_2)
 {
 	unsigned char _data;//, scrambling_en, encoding_en;
 	int ret = 0;
@@ -173,11 +174,12 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 	 */
 
 	switch (pattern) {
-	case DPTX_TPS_DISABLE:
-	case DPTX_TPS1:
-	case DPTX_TPS2:
-	case DPTX_TPS3:
-		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, 0x0, 0x0, 0x0);
+	case eDPTX_TPS_DISABLE:
+	case eDPTX_TPS1:
+	case eDPTX_TPS2:
+	case eDPTX_TPS3:
+	case eDPTX_TPS4:
+		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, 0, 0, 0);
 		_data = (DP_test_pat[pattern].data & 0x3) |
 			(DP_test_pat[pattern].SR_disable << 5) |
 			(0x3 << 6);
@@ -186,16 +188,16 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 			DPTX_P_PR(dptx, port, "%s: %s %s", __func__,
 				DP_test_pat[pattern].name, ret ? "failed" : "");
 		break;
-	case DPTX_QUAL_PAT_DISABLE:
-	case DPTX_D10P2:
-	case DPTX_SYMBOL_ERROR_MSR:
-	case DPTX_PRBS7:
-	case DPTX_HBR2_EYE:
-		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, 0x0, 0x0, 0x0);
+	case eDPTX_QUAL_PAT_DISABLE:
+	case eDPTX_D10P2:
+	case eDPTX_SYMBOL_ERROR_MSR:
+	case eDPTX_PRBS7:
+	case eDPTX_HBR2_EYE:
+		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, cos_80b_0, cos_80b_1, cos_80b_2);
 		_data = (DP_test_pat[pattern].SR_disable << 5) | (0x3 << 6);
 		ret = dptx_if_aux_write_single(dptx, port, DPCD_TRAINING_PATTERN_SET, _data);
-		//! DPCD1.0/1.1 should use DPCD_TRAINING_PATTERN_SET[2:3]
-		//in case of year 2024, no device using DPCD1.0/1.1? ignore
+		// ! DPCD1.0/1.1 should use DPCD_TRAINING_PATTERN_SET[2:3]
+		// in case of year 2024, no device using DPCD1.0/1.1? ignore
 		_data = (DP_test_pat[pattern].data & 0x7);
 		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE0_SET, _data);
 		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE1_SET, _data);
@@ -205,9 +207,38 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 			DPTX_P_PR(dptx, port, "%s: %s %s", __func__,
 				DP_test_pat[pattern].name, ret ? "failed" : "");
 		break;
-	case DPTX_80BIT_CUSTOM:
-	case DPTX_TPS4:
-		DPTX_P_ERR(dptx, port, "%s: %s unsupported", __func__, DP_test_pat[pattern].name);
+	case eDPTX_80BIT_CUSTOM:
+		dptx_if_transmit_pattern(dptx, port, pattern, 0xf, cos_80b_0, cos_80b_1, cos_80b_2);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_0,
+			cos_80b_0 & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_1,
+			(cos_80b_0 >> 8) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_2,
+			(cos_80b_0 >> 16) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_3,
+			(cos_80b_0 >> 24) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_4,
+			cos_80b_1 & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_5,
+			(cos_80b_1 >> 8) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_6,
+			(cos_80b_1 >> 16) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_7,
+			(cos_80b_1 >> 24) & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_8,
+			cos_80b_2 & 0xff);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TEST_80B_COS_9,
+			(cos_80b_2 >> 8) & 0xff);
+
+		_data = (DP_test_pat[pattern].SR_disable << 5) | (0x3 << 6);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_TRAINING_PATTERN_SET, _data);
+		// ! DPCD1.0/1.1 should use DPCD_TRAINING_PATTERN_SET[2:3]
+		// in case of year 2026, no device using DPCD1.0/1.1? ignore
+		_data = (DP_test_pat[pattern].data & 0x7);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE0_SET, _data);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE1_SET, _data);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE2_SET, _data);
+		ret = dptx_if_aux_write_single(dptx, port, DPCD_LINK_QUAL_LANE3_SET, _data);
 		break;
 	default:
 		DPTX_P_ERR(dptx, port, "%s: (%u) invalid", __func__, pattern);
@@ -217,45 +248,50 @@ static int dptx_set_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern)
 	return ret;
 }
 
-static void dptx_set_pattern_to_all_port(struct dptx_drv_s *dptx, u8 pattern)
+void edptx_set_pattern_to_all_port(struct dptx_drv_s *dptx, unsigned char pattern,
+			u32 cos_80b_0,  u32 cos_80b_1, u32 cos_80b_2)
 {
 	u8 port, pat;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
-			continue;
-		switch (pattern) {
-		case DPTX_TPS_DISABLE:
-		case DPTX_TPS1: // DPTX_TRP_CR
-		case DPTX_TPS2:
-		case DPTX_TPS3:
-		case DPTX_QUAL_PAT_DISABLE:
-		case DPTX_D10P2:
-		case DPTX_SYMBOL_ERROR_MSR:
-		case DPTX_PRBS7:
-		case DPTX_HBR2_EYE:
-			pat = pattern;
-			break;
-		case DPTX_TRP_EQ:
-			if (dptx->sink.link[port]->link_cap & BIT(1) &&
-			    dptx->data->TPS_support & BIT(1))
-				pat = DPTX_TPS4;
-			else if (dptx->sink.link[port]->link_cap & BIT(0) &&
-			    dptx->data->TPS_support & BIT(0))
-				pat = DPTX_TPS3;
-			else
-				pat = DPTX_TPS2;
-			break;
-		case DPTX_80BIT_CUSTOM:
-		case DPTX_TPS4:
-			DPTX_ERR(dptx, "%s: %s unsupported", __func__, DP_test_pat[pattern].name);
-			continue;
-		default:
-			DPTX_ERR(dptx, "%s: (%u) invalid", __func__, pattern);
-			continue;
-		}
+	switch (pattern) {
+	case eDPTX_TPS_DISABLE:
+	case eDPTX_TPS1: // DPTX_TRP_CR
+	case eDPTX_TPS2:
+	case eDPTX_TPS3:
+	case eDPTX_QUAL_PAT_DISABLE:
+	case eDPTX_D10P2:
+	case eDPTX_SYMBOL_ERROR_MSR:
+	case eDPTX_PRBS7:
+	case eDPTX_HBR2_EYE:
+	case eDPTX_CP2520_2:
+	case eDPTX_CP2520_3:
+	case eDPTX_TPS4:
+	case eDPTX_80BIT_CUSTOM:
+		pat = pattern;
+		break;
+	case eDPTX_TRP_EQ:
+		if (dptx->sink.link[0].cap.link_cap & BIT(1) &&
+			dptx->data->TPS_support & BIT(1))
+			pat = eDPTX_TPS4;
+		else if (dptx->sink.link[0].cap.link_cap & BIT(0) &&
+			dptx->data->TPS_support & BIT(0))
+			pat = eDPTX_TPS3;
+		else
+			pat = eDPTX_TPS2;
+		break;
+	default:
+		DPTX_ERR(dptx, "%s: (%u) invalid", __func__, pattern);
+		return;
+	}
 
-		dptx_set_pattern(dptx, port, pat);
+	DPTX_PR(dptx, "%s [0x%x 0x%x 0x%x]", DP_test_pat[pat].name,
+		cos_80b_0, cos_80b_1, cos_80b_2);
+
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
+			continue;
+
+		dptx_set_pattern(dptx, port, pat, cos_80b_0, cos_80b_1, cos_80b_2);
 	}
 }
 
@@ -275,7 +311,7 @@ static int dptx_check_channel_equalization(struct dptx_drv_s *dptx, u8 port)
 	unsigned char lane_cnt;
 	unsigned char ret;
 
-	lane_cnt = dptx->sink.link[port]->lane_count;
+	lane_cnt = dptx->sink.link[port].lane_count;
 
 	ret = dptx_if_aux_read(dptx, port, DPCD_LANE0_1_STATUS, 3, aux_data);
 	if (ret) {
@@ -321,17 +357,17 @@ static int dptx_run_channel_equalization_loop(struct dptx_drv_s *dptx)
 	int i = 0, ret = -1;
 	u8 port, res = 0;
 
-	dptx_set_pattern_to_all_port(dptx, DPTX_TRP_EQ);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TRP_EQ, 0, 0, 0);
 
 	//channel equalization & symbol lock loop
 	while (i++ < DP_TRAINING_EQ_ATTEMPTS) {
 		res = 0;
-		for (port = 0; port < 4; port++) {
-			if (!dptx->sink.link[port])
+		for (port = 0; port < eDPTX_MAX_PORT; port++) {
+			if (!(dptx->sink.port_mask & BIT(port)))
 				continue;
 			dptx_training_phy_update_apply(dptx, port);
 
-			dptx_delay_us(dptx_train_rd_intv[dptx->sink.link[port]->train_rd_interval]);
+			dptx_delay_us(dptx_train_rd_intv[dptx->sink.link[port].cap.train_rd_intv]);
 			ret = dptx_check_channel_equalization(dptx, port);
 			if (ret < 0)
 				DPTX_P_ERR(dptx, port, "%s: aux error at loop[%u]", __func__, i);
@@ -341,8 +377,8 @@ static int dptx_run_channel_equalization_loop(struct dptx_drv_s *dptx)
 		if (res == dptx->sink.port_mask)
 			return 0;
 
-		for (port = 0; port < 4; port++) {
-			if (!dptx->sink.link[port])
+		for (port = 0; port < eDPTX_MAX_PORT; port++) {
+			if (!(dptx->sink.port_mask & BIT(port)))
 				continue;
 			//if ((dptx->config.control.edp_cfg.curr_vswing[0] & 0x03) !=
 			//		VAL_DP_std_LEVEL_3)
@@ -352,23 +388,23 @@ static int dptx_run_channel_equalization_loop(struct dptx_drv_s *dptx)
 		}
 	}
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		if (res & (1 << port))
-			dptx->sink.link[port]->link_rate_update = 2;
+			dptx->sink.link[port].link_rate_update = 2;
 	}
 
 	return res;
 }
 
-static int dptx_check_clk_recovery(struct dptx_drv_s *dptx, u8 port)
+static int edptx_check_cr(struct dptx_drv_s *dptx, u8 port)
 {
 	unsigned char cr_done[4], aux_data[2] = {0, 0};
 	unsigned char lane_cnt, cr_all_done = 0;
 	int ret;
 
-	lane_cnt = dptx->sink.link[port]->lane_count;
+	lane_cnt = dptx->sink.link[port].lane_count;
 
 	ret = dptx_if_aux_read(dptx, port, DPCD_LANE0_1_STATUS, 2, aux_data);
 	if (ret) { //clear cr_done flags on failure of AUX transaction
@@ -397,17 +433,17 @@ static int dptx_run_clk_recovery_loop(struct dptx_drv_s *dptx)
 	int ret;
 	u8 i = 0, port, res;
 
-	dptx_set_pattern_to_all_port(dptx, DPTX_TRP_CR);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TRP_CR, 0, 0, 0);
 
 	while (i++ < DP_TRAINING_CR_ATTEMPTS) {
 		res = 0;
-		for (port = 0; port < 4; port++) {
-			if (!dptx->sink.link[port])
+		for (port = 0; port < eDPTX_MAX_PORT; port++) {
+			if (!(dptx->sink.port_mask & BIT(port)))
 				continue;
 			dptx_training_phy_update_apply(dptx, port);
 
 			dptx_delay_ms(DP_CLOCK_REC_TIMEOUT); //wait for clock recovery
-			ret = dptx_check_clk_recovery(dptx, port); //0=success
+			ret = edptx_check_cr(dptx, port); //0=success
 			if (ret < 0)
 				DPTX_P_ERR(dptx, port, "%s: aux error at loop[%u]", __func__, i);
 			res |= (ret ? 0 : 1) << port;
@@ -416,8 +452,8 @@ static int dptx_run_clk_recovery_loop(struct dptx_drv_s *dptx)
 		if (res == dptx->sink.port_mask)
 			return 0;
 
-		for (port = 0; port < 4; port++) {
-			if (!dptx->sink.link[port])
+		for (port = 0; port < eDPTX_MAX_PORT; port++) {
+			if (!(dptx->sink.port_mask & BIT(port)))
 				continue;
 			// TODO: check for max vswing level
 			//if ((dptx->config.control.edp_cfg.preset_vswing_rx[0] & 0x07) != 0x07)
@@ -426,11 +462,11 @@ static int dptx_run_clk_recovery_loop(struct dptx_drv_s *dptx)
 		}
 	}
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		if (res & (1 << port))
-			dptx->sink.link[port]->link_rate_update = 2;
+			dptx->sink.link[port].link_rate_update = 2;
 	}
 
 	return res;
@@ -440,18 +476,18 @@ static int dptx_link_config_update(struct dptx_drv_s *dptx)
 {
 	u8 port;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 
-		if (dptx->sink.link[port]->link_rate_update != 1) {
-			dptx->sink.link[port]->link_rate_update = 0;
+		if (dptx->sink.link[port].link_rate_update != 1) {
+			dptx->sink.link[port].link_rate_update = 0;
 			continue;
 		}
 
-		dptx_clk_set_link_clk(dptx, port, dptx->sink.link[port]->link_rate);
+		dptx_clk_set_link_clk(dptx, port, dptx->sink.link[port].link_rate);
 
-		__dptx_set_lane_config(dptx, port);
+		edptx_set_lane_config(dptx, port);
 	}
 
 	return 0;
@@ -464,12 +500,12 @@ static int dptx_run_training_loop(struct dptx_drv_s *dptx, unsigned int retry_cn
 	int ret;
 	u8 j, port;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		for (j = 0; j < 4; j++)	{
-			dptx->sink.link[port]->curr_ds[j]    = 0;
-			dptx->sink.link[port]->adj_req_ds[j] = 0;
+			dptx->sink.link[port].curr_ds[j]    = 0;
+			dptx->sink.link[port].adj_req_ds[j] = 0;
 		}
 	}
 
@@ -542,7 +578,7 @@ static int dptx_run_training_loop(struct dptx_drv_s *dptx, unsigned int retry_cn
 	}
 
 	//training pattern off
-	dptx_set_pattern_to_all_port(dptx, DPTX_TPS_DISABLE);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TPS_DISABLE, 0, 0, 0);
 
 	if (dptx_print_level >= LOG_I)
 		dptx_training_status_print(dptx);
@@ -566,10 +602,10 @@ int __dptx_full_link_training(struct dptx_drv_s *dptx)
 		retry_cnt++;
 	}
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
-		memset(aux_data, 0, 4 * sizeof(uint8_t));
+		memset(aux_data, 0, 4 * sizeof(u8));
 		ret = dptx_if_aux_read(dptx, port, DPCD_TRAINING_SCORE_LANE0, 4, aux_data);
 		DPTX_P_PR(dptx, port, "%s: result: [0x%02x, 0x%02x, 0x%02x, 0x%02x]", __func__,
 			aux_data[0], aux_data[1], aux_data[2], aux_data[3]);
@@ -589,23 +625,23 @@ int __dptx_fast_link_training(struct dptx_drv_s *dptx)
 	u8 ret = 0, port;
 
 	//set training pattern for CR
-	dptx_set_pattern_to_all_port(dptx, DPTX_TRP_CR);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TRP_CR, 0, 0, 0);
 	dptx_delay_ms(1);
 
 	//set training pattern for EQ
-	dptx_set_pattern_to_all_port(dptx, DPTX_TRP_EQ);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TRP_EQ, 0, 0, 0);
 	dptx_delay_ms(1);
 
 	// check result
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		if (dptx_check_channel_equalization(dptx, port)) // 0 on success
 			ret++;
 	}
 
 	//disable the training pattern
-	dptx_set_pattern_to_all_port(dptx, DPTX_TPS_DISABLE);
+	edptx_set_pattern_to_all_port(dptx, eDPTX_TPS_DISABLE, 0, 0, 0);
 
 	DPTX_PR(dptx, "%s: res=%u", __func__, ret);
 
@@ -619,13 +655,13 @@ int __dptx_link_training(struct dptx_drv_s *dptx)
 	int ret;
 	u8 port;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
-		dptx_clk_set_link_clk(dptx, port, dptx->sink.link[port]->link_rate);
+		dptx_clk_set_link_clk(dptx, port, dptx->sink.link[port].link_rate);
 	}
 
-	switch (dptx->sink.link[0]->training_mode) {
+	switch (dptx->panel_data.eDP.training_mode) {
 	case DPTX_FAST_LINK_TRAINING:
 		ret = __dptx_fast_link_training(dptx);
 		break;

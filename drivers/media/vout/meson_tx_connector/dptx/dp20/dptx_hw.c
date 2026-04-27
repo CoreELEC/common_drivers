@@ -15,6 +15,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/clk/meson_tx_clk.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
 #include "meson_tx_task_mgr.h"
 #include "dptx_log.h"

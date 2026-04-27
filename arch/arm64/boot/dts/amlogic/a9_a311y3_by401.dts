@@ -1562,11 +1562,15 @@
 	connectors_dev: port@1 {
 		drm_to_lcd0: endpoint@1 {
 			reg = <1>;
-			remote-endpoint = <0>;
+			remote-endpoint = <&lcd0_to_drm>;
 		};
 		drm_to_lcd1: endpoint@2 {
 			reg = <2>;
-			remote-endpoint = <0>;
+			remote-endpoint = <&lcd1_to_drm>;
+		};
+		drm_to_edptx0: endpoint@3 {
+			reg = <3>;
+			remote-endpoint = <&edptx0_to_drm>;
 		};
 	};
 };
@@ -1580,6 +1584,20 @@
 	status = "okay";
 };
 
+&eDPTX0 {
+	status = "okay";
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			edptx0_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_edptx0>;
+			};
+		};
+	};
+};
+
 &lcd {
 	status = "okay";
 	ports {
@@ -1588,7 +1606,7 @@
 			#size-cells = <0>;
 			lcd0_to_drm: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <0>;
+				remote-endpoint = <&drm_to_lcd0>;
 			};
 		};
 	};
@@ -1600,7 +1618,7 @@
 		port {
 			lcd1_to_drm: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <0>;
+				remote-endpoint = <&drm_to_lcd1>;
 			};
 		};
 	};

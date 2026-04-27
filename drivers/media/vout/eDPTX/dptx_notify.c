@@ -5,7 +5,7 @@
 
 #include <linux/module.h>
 #include <linux/notifier.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #include "dptx_common.h"
 

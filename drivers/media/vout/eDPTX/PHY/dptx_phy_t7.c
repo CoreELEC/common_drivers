@@ -4,7 +4,7 @@
  */
 
 #include <linux/types.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "dptx_phy_config.h"
 #include "../dptx_common.h"
 #include "../dptx_reg_op.h"

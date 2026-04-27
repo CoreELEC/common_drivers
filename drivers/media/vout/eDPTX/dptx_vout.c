@@ -31,7 +31,7 @@
 #include <linux/amlogic/pm.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_export.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #ifdef CONFIG_AMLOGIC_VPU
@@ -41,14 +41,14 @@
 #include "dptx_common.h"
 #include "dptx_reg_op.h"
 
-#define DPTX_CDEV_NAME  "eDPTX"
+#define eDPTX_CDEV_NAME  "eDPTX"
 
 unsigned char dptx_print_level = LOG_I;
 
 static unsigned char dptx_global_init_flag;
-static struct dptx_drv_s *dptx_driver[DPTX_MAX_DRV];
+static struct dptx_drv_s *dptx_driver[eDPTX_MAX_DRV];
 
-char eDP_propname[DPTX_MAX_DRV][32];
+char eDP_propname[eDPTX_MAX_DRV][32];
 struct dptx_cdev_s {
 	dev_t           devno;
 	struct class    *class;
@@ -56,9 +56,9 @@ struct dptx_cdev_s {
 
 static struct dptx_cdev_s *dptx_cdev;
 
-struct dptx_boot_ctrl_s dptx_uboot_configs[DPTX_MAX_DRV] = {
+struct dptx_boot_ctrl_s dptx_uboot_configs[eDPTX_MAX_DRV] = {
 	{
-		.link = {{0, 0}, {0, 0}, {0, 0}, {0, 0}},
+		.link = {{0, 0}, {0, 0}},
 		.vmode_sel_idx = 0,
 		.vmode_cfmt_sel = 0,
 		.tx_prepared = 0,
@@ -66,7 +66,7 @@ struct dptx_boot_ctrl_s dptx_uboot_configs[DPTX_MAX_DRV] = {
 		.uboot_edid_crc = 0,
 		.user_debug_port_count = 0,
 	}, {
-		.link = {{0, 0}, {0, 0}, {0, 0}, {0, 0}},
+		.link = {{0, 0}, {0, 0}},
 		.vmode_sel_idx = 0,
 		.vmode_cfmt_sel = 0,
 		.tx_prepared = 0,
@@ -113,7 +113,7 @@ static struct dptx_drv_s *dptx_driver_add(u8 index)
 {
 	struct dptx_drv_s *dptx = NULL;
 
-	if (index >= DPTX_MAX_DRV)
+	if (index >= eDPTX_MAX_DRV)
 		return NULL;
 
 	dptx = kzalloc(sizeof(*dptx), GFP_KERNEL);
@@ -128,7 +128,7 @@ static struct dptx_drv_s *dptx_driver_add(u8 index)
 
 struct dptx_drv_s *aml_get_dptx_driver(u8 index)
 {
-	if (index >= DPTX_MAX_DRV)
+	if (index >= eDPTX_MAX_DRV)
 		return NULL;
 
 	return dptx_driver[index];
@@ -317,7 +317,7 @@ static int dptx_cdev_add(struct dptx_drv_s *dptx, struct device *parent)
 		goto lcd_cdev_add_failed0;
 	}
 
-	dptx->dev = device_create(dptx_cdev->class, parent, devno, NULL, "dptx%d", dptx->idx);
+	dptx->dev = device_create(dptx_cdev->class, parent, devno, NULL, "edptx%d", dptx->idx);
 	if (IS_ERR_OR_NULL(dptx->dev)) {
 		ret = 3;
 		goto lcd_cdev_add_failed0;
@@ -364,7 +364,7 @@ static int dptx_global_init_once(struct platform_device *pdev)
 	if (!dptx_cdev)
 		return -1;
 
-	ret = alloc_chrdev_region(&dptx_cdev->devno, 0, DPTX_MAX_DRV, DPTX_CDEV_NAME);
+	ret = alloc_chrdev_region(&dptx_cdev->devno, 0, eDPTX_MAX_DRV, eDPTX_CDEV_NAME);
 	if (ret) {
 		ret = 1;
 		goto lcd_cdev_init_once_err;
@@ -379,7 +379,7 @@ static int dptx_global_init_once(struct platform_device *pdev)
 	return 0;
 
 lcd_cdev_init_once_err_1:
-	unregister_chrdev_region(dptx_cdev->devno, DPTX_MAX_DRV);
+	unregister_chrdev_region(dptx_cdev->devno, eDPTX_MAX_DRV);
 lcd_cdev_init_once_err:
 	kfree(dptx_cdev);
 	dptx_cdev = NULL;
@@ -401,7 +401,7 @@ static void dptx_global_remove_once(void)
 		return;
 
 	class_destroy(dptx_cdev->class);
-	unregister_chrdev_region(dptx_cdev->devno, DPTX_MAX_DRV);
+	unregister_chrdev_region(dptx_cdev->devno, eDPTX_MAX_DRV);
 	kfree(dptx_cdev);
 	dptx_cdev = NULL;
 }
@@ -411,7 +411,7 @@ static int dptx_irq_init(struct dptx_drv_s *dptx)
 {
 	//init_completion(&pdrv->vsync_done);
 	if (dptx->vsync_irq[0]) {
-		snprintf(dptx->vsync_name[0], 15, "dptx%d_vsync", dptx->idx);
+		snprintf(dptx->vsync_name[0], 15, "eDP%d_vsync", dptx->idx);
 		if (request_irq(dptx->vsync_irq[0], dptx_vsync1_isr, IRQF_SHARED,
 				dptx->vsync_name[0], (void *)dptx)) {
 			DPTX_ERR(dptx, "can't request %s", dptx->vsync_name[0]);
@@ -421,7 +421,7 @@ static int dptx_irq_init(struct dptx_drv_s *dptx)
 	}
 
 	if (dptx->vsync_irq[1]) {
-		snprintf(dptx->vsync_name[1], 15, "dptx%d_vsync2", dptx->idx);
+		snprintf(dptx->vsync_name[1], 15, "eDP%d_vsync2", dptx->idx);
 		if (request_irq(dptx->vsync_irq[1], dptx_vsync2_isr, IRQF_SHARED,
 				dptx->vsync_name[1], (void *)dptx)) {
 			DPTX_ERR(dptx, "can't request %s", dptx->vsync_name[1]);
@@ -431,7 +431,7 @@ static int dptx_irq_init(struct dptx_drv_s *dptx)
 	}
 
 	if (dptx->vsync_irq[2]) {
-		snprintf(dptx->vsync_name[2], 15, "dptx%d_vsync3", dptx->idx);
+		snprintf(dptx->vsync_name[2], 15, "eDP%d_vsync3", dptx->idx);
 		if (request_irq(dptx->vsync_irq[2], dptx_vsync3_isr, IRQF_SHARED,
 				dptx->vsync_name[2], (void *)dptx)) {
 			DPTX_ERR(dptx, "can't request %s", dptx->vsync_name[2]);
@@ -441,7 +441,7 @@ static int dptx_irq_init(struct dptx_drv_s *dptx)
 	}
 
 	if (dptx->HPD_irq) {
-		snprintf(dptx->HPD_name, 12, "DPTX%d-HPD", dptx->idx);
+		snprintf(dptx->HPD_name, 12, "eDPTX%d-HPD", dptx->idx);
 		if (request_threaded_irq(dptx->HPD_irq,
 				dptx_HPD_isr, dptx_HPD_post_handler, IRQF_SHARED,
 				dptx->HPD_name, (void *)dptx)) {
@@ -510,46 +510,32 @@ static void dptx_bootup_config_init(struct dptx_drv_s *dptx)
 	if (dptx_uboot_configs[dptx->idx].user_hpd_debug)
 		dptx->setting.user_hpd_ignore = 255;
 
-	for (port = 0; port < 4; port++) {
-		if (dptx->sink.port_mask & BIT(port)) {
-			if (!dptx->sink.link[port])
-				dptx->sink.link[port] =
-					kzalloc(sizeof(struct dptx_link_cfg_s), GFP_KERNEL);
-			if (!dptx->sink.link[port]) {
-				DPTX_ERR(dptx, "link[%d] malloc failed", port);
-				continue;
-			}
-			memset(dptx->sink.link[port], 0, sizeof(struct dptx_link_cfg_s));
-		} else {
-			if (!dptx->sink.link[port])
-				continue;
-			kfree(dptx->sink.link[port]);
-			dptx->sink.link[port] = NULL;
-			DPTX_PR(dptx, "clean unused link[%d]", port);
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
-		}
 
+		memset(&dptx->sink.link[port], 0, sizeof(struct dptx_link_cfg_s));
 		dptx_if_link_get(dptx, port, &link_rate, &lane);
 
-		dptx->sink.link[port]->link_rate = link_rate;
-		dptx->sink.link[port]->lane_count = lane;
+		dptx->sink.link[port].link_rate = link_rate;
+		dptx->sink.link[port].lane_count = lane;
 
 		link_rate *= 27;
 		DPTX_P_DBG(dptx, port, "uboot: %u lane, %u.%u GHz",
-			dptx->sink.link[port]->lane_count, link_rate / 100, link_rate % 100);
+			dptx->sink.link[port].lane_count, link_rate / 100, link_rate % 100);
 	}
 
 	DPTX_PR(dptx, "uboot: port:0x%x, sta=0x%x", dptx->sink.port_mask, dptx->status);
 }
 
-void dptx_pinmux_set(struct dptx_drv_s *dptx, u8 status)
+void edptx_pinmux_set(struct dptx_drv_s *dptx, u8 status)
 {
 	struct pinctrl *pin_sel;
 	//unsigned int index;
 
 	DPTX_PR(dptx, "%s: %u", __func__, status);
 
-	pin_sel = devm_pinctrl_get_select(dptx->dev, status ? "DPTX-ON" : "DPTX-OFF");
+	pin_sel = devm_pinctrl_get_select(dptx->dev, status ? "edptx_hpd" : "edptx_hpd_off");
 	if (IS_ERR(pin_sel))
 		DPTX_ERR(dptx, "%s %u error", __func__, status);
 	else
@@ -571,48 +557,48 @@ static u8 dptx_panel_config_load_timing(struct dptx_drv_s *dptx, const struct de
 		ret = of_property_read_u32_array(child, snode, &para[0], 12);
 		if (ret)
 			return i;
-		dptx->sink.timing[i].h_period = (u16)para[0];
-		dptx->sink.timing[i].h_act    = (u16)para[1];
-		dptx->sink.timing[i].h_pw     = (u16)para[2];
-		dptx->sink.timing[i].h_bp     = (u16)para[3];
-		dptx->sink.timing[i].ctrl    |= (u16)para[4] ? CTRL_HSYNC_POS : 0;
-		dptx->sink.timing[i].v_period = (u16)para[5];
-		dptx->sink.timing[i].v_act    = (u16)para[6];
-		dptx->sink.timing[i].v_pw     = (u16)para[7];
-		dptx->sink.timing[i].v_bp     = (u16)para[8];
-		dptx->sink.timing[i].ctrl    |= (u16)para[9] ? CTRL_VSYNC_POS : 0;
-		dptx->sink.timing[i].h_blank  =
-			dptx->sink.timing[i].h_period - dptx->sink.timing[i].h_act;
-		dptx->sink.timing[i].v_blank  =
-			dptx->sink.timing[i].v_period - dptx->sink.timing[i].v_act;
-		dptx->sink.timing[i].h_fp = dptx->sink.timing[i].h_blank -
-			(dptx->sink.timing[i].h_pw + dptx->sink.timing[i].h_bp);
-		dptx->sink.timing[i].v_fp = dptx->sink.timing[i].v_blank -
-			(dptx->sink.timing[i].v_pw + dptx->sink.timing[i].v_bp);
+		dptx->panel_data.timing[i].h_period = (u16)para[0];
+		dptx->panel_data.timing[i].h_act    = (u16)para[1];
+		dptx->panel_data.timing[i].h_pw     = (u16)para[2];
+		dptx->panel_data.timing[i].h_bp     = (u16)para[3];
+		dptx->panel_data.timing[i].ctrl    |= (u16)para[4] ? CTRL_HSYNC_POS : 0;
+		dptx->panel_data.timing[i].v_period = (u16)para[5];
+		dptx->panel_data.timing[i].v_act    = (u16)para[6];
+		dptx->panel_data.timing[i].v_pw     = (u16)para[7];
+		dptx->panel_data.timing[i].v_bp     = (u16)para[8];
+		dptx->panel_data.timing[i].ctrl    |= (u16)para[9] ? CTRL_VSYNC_POS : 0;
+		dptx->panel_data.timing[i].h_blank  =
+			dptx->panel_data.timing[i].h_period - dptx->panel_data.timing[i].h_act;
+		dptx->panel_data.timing[i].v_blank  =
+			dptx->panel_data.timing[i].v_period - dptx->panel_data.timing[i].v_act;
+		dptx->panel_data.timing[i].h_fp = dptx->panel_data.timing[i].h_blank -
+			(dptx->panel_data.timing[i].h_pw + dptx->panel_data.timing[i].h_bp);
+		dptx->panel_data.timing[i].v_fp = dptx->panel_data.timing[i].v_blank -
+			(dptx->panel_data.timing[i].v_pw + dptx->panel_data.timing[i].v_bp);
 		tmp = (u16)para[10];
 		if (tmp == 30)
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_RGB_10bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_RGB_10bit;
 		else if (tmp == 18)
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_RGB_6bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_RGB_6bit;
 		else if (tmp == 12)
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_Y_only_12bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_Y_only_12bit;
 		else if (tmp == 10)
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_Y_only_10bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_Y_only_10bit;
 		else if (tmp == 8)
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_Y_only_8bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_Y_only_8bit;
 		else
-			dptx->sink.timing[i].cfmt = DPTX_CFMT_RGB_8bit;
+			dptx->panel_data.timing[i].cfmt = DPTX_CFMT_RGB_8bit;
 
 		tmp = (u16)para[11];
-		dptx->sink.timing[i].fr1000 =  tmp * 1000L;
+		dptx->panel_data.timing[i].fr1000 =  tmp * 1000L;
 
-		tmp = dptx->sink.timing[i].v_period * dptx->sink.timing[i].h_period * tmp;
-		dptx->sink.timing[i].pclk = tmp;
+		tmp *= dptx->panel_data.timing[i].v_period * dptx->panel_data.timing[i].h_period;
+		dptx->panel_data.timing[i].pclk = tmp;
 
 		DPTX_PR(dptx, "Panel Config add Timing[%u]: %ux%u@%uhz", i,
-			dptx->sink.timing[i].h_act, dptx->sink.timing[i].v_act,
-			dptx->sink.timing[i].fr1000 / 1000);
-		dptx->sink.dt_cnt++;
+			dptx->panel_data.timing[i].h_act, dptx->panel_data.timing[i].v_act,
+			dptx->panel_data.timing[i].fr1000 / 1000);
+		dptx->panel_data.timing_cnt++;
 
 		memset(snode, 0, 24 * sizeof(char));
 		sprintf(snode, "timing-%u-fr", i);
@@ -626,10 +612,10 @@ static u8 dptx_panel_config_load_timing(struct dptx_drv_s *dptx, const struct de
 				return i;
 			// DPTX_PR(dptx, "lenp=%d", lenp);
 			for (j = 0; j < (lenp / sizeof(u32)); j++) {
-				if (dptx->sink.timing[i].vmode_add_fr[j] == 0) {
-					dptx->sink.timing[i].vmode_add_fr[j] = (u16)para[j];
+				if (dptx->panel_data.timing[i].vmode_add_fr[j] == 0) {
+					dptx->panel_data.timing[i].vmode_add_fr[j] = (u16)para[j];
 					DPTX_DBG(dptx, "Panel Config Timing[%u] add fr[%u]=%u",
-						i, j, dptx->sink.timing[i].vmode_add_fr[j]);
+						i, j, dptx->panel_data.timing[i].vmode_add_fr[j]);
 					break;
 				}
 			}
@@ -639,26 +625,26 @@ static u8 dptx_panel_config_load_timing(struct dptx_drv_s *dptx, const struct de
 
 		ret = of_property_read_u32_array(child, snode, &para[0], 2);
 		if (!ret) {
-			dptx->sink.timing[i].frame_rate_range[0] = (u16)para[0];
-			dptx->sink.timing[i].frame_rate_range[1] = (u16)para[1];
+			dptx->panel_data.timing[i].frame_rate_range[0] = (u16)para[0];
+			dptx->panel_data.timing[i].frame_rate_range[1] = (u16)para[1];
 			DPTX_DBG(dptx, "Panel Config Timing[%u] range=[%u~%u]", i,
-				dptx->sink.timing[i].frame_rate_range[0],
-				dptx->sink.timing[i].frame_rate_range[1]);
+				dptx->panel_data.timing[i].frame_rate_range[0],
+				dptx->panel_data.timing[i].frame_rate_range[1]);
 		}
 
 		memset(snode, 0, 24 * sizeof(char));
 		sprintf(snode, "timing-%u-range-limit", i);
 		ret = of_property_read_u32_array(child, snode, &para[0], 6);
 		if (!ret) {
-			dptx->sink.timing[i].v_period_range[0] = (u16)para[2];
-			dptx->sink.timing[i].v_period_range[1] = (u16)para[3];
-			dptx->sink.timing[i].pclk_range[0] = (u16)para[4];
-			dptx->sink.timing[i].pclk_range[1] = (u16)para[5];
+			dptx->panel_data.timing[i].v_period_range[0] = (u16)para[2];
+			dptx->panel_data.timing[i].v_period_range[1] = (u16)para[3];
+			dptx->panel_data.timing[i].pclk_range[0] = (u16)para[4];
+			dptx->panel_data.timing[i].pclk_range[1] = (u16)para[5];
 			DPTX_DBG(dptx, "Panel Config Timing[%u] limit vl=[%u~%u] pclk=[%u~%u]", i,
-				dptx->sink.timing[i].v_period_range[0],
-				dptx->sink.timing[i].v_period_range[1],
-				dptx->sink.timing[i].pclk_range[0],
-				dptx->sink.timing[i].pclk_range[1]);
+				dptx->panel_data.timing[i].v_period_range[0],
+				dptx->panel_data.timing[i].v_period_range[1],
+				dptx->panel_data.timing[i].pclk_range[0],
+				dptx->panel_data.timing[i].pclk_range[1]);
 		}
 	}
 	return i;
@@ -671,9 +657,9 @@ static u8 dptx_panel_config_load_from_dts(struct dptx_drv_s *dptx)
 	int ret;
 	const char *prop_name = NULL;
 
-	np = of_find_node_by_name(NULL, "eDP_Groups");
+	np = of_find_node_by_name(NULL, "Panel_Groups");
 	if (!np) {
-		DPTX_ERR(dptx, "failed to get eDP_Groups");
+		DPTX_ERR(dptx, "failed to get Panel_Groups");
 		return 1;
 	}
 
@@ -685,7 +671,7 @@ static u8 dptx_panel_config_load_from_dts(struct dptx_drv_s *dptx)
 
 	child = of_get_child_by_name(np, prop_name);
 	if (!child) {
-		DPTX_ERR(dptx, "[%s] is not in eDP_Groups", prop_name);
+		DPTX_ERR(dptx, "[%s] is not in Panel_Groups", prop_name);
 		return 1;
 	}
 
@@ -695,6 +681,8 @@ static u8 dptx_panel_config_load_from_dts(struct dptx_drv_s *dptx)
 		if (dptx->setting.user_hpd_ignore)
 			DPTX_PR(dptx, "HPD ignore: %ums", dptx->setting.user_hpd_ignore);
 	}
+	dptx->setting.user_hpd_ignore = 100;
+
 
 	ret = of_property_read_u16(child, "assigned-link-rate", &val);
 	if (!ret) {
@@ -767,7 +755,6 @@ static u8 dptx_panel_config_load_from_dts(struct dptx_drv_s *dptx)
 int dptx_config_load_from_dts(struct dptx_drv_s *dptx)
 {
 	const struct device_node *np;
-	//const char *str = "none";
 	unsigned short para[30];
 	unsigned char i;
 	int ret = 0;
@@ -778,11 +765,21 @@ int dptx_config_load_from_dts(struct dptx_drv_s *dptx)
 	}
 	np = dptx->dev->of_node;
 
-	//dptx->PWR_gpio = devm_gpiod_get(dptx->dev, "edptx_vcc", GPIOD_OUT_HIGH);
-	//if (IS_ERR(dptx->PWR_gpio)) {
-	//	DPTX_ERR(dptx, "regist PWR gpio: %p, err: %d",
-	//	       dptx->PWR_gpio, IS_ERR(dptx->PWR_gpio));
-	//}
+	dptx->board_data.edptx_vcc_gpio_desc =
+		devm_gpiod_get(dptx->dev, "edptx_vcc", GPIOD_OUT_LOW);
+	if (IS_ERR(dptx->board_data.edptx_vcc_gpio_desc)) {
+		DPTX_ERR(dptx, "regist vcc gpio: %p, err: %d",
+		       dptx->board_data.edptx_vcc_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_vcc_gpio_desc));
+	}
+
+	dptx->board_data.edptx_bist_gpio_desc =
+		devm_gpiod_get(dptx->dev, "edptx_bist", GPIOD_OUT_LOW);
+	if (IS_ERR(dptx->board_data.edptx_bist_gpio_desc)) {
+		DPTX_ERR(dptx, "regist bist gpio: %p, err: %d",
+		       dptx->board_data.edptx_bist_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_bist_gpio_desc));
+	}
 
 	memset(&para[0], 0, 30 * sizeof(unsigned char));
 	ret = of_property_read_u16_array(np, "drive-strength-lut", &para[0], 30);
@@ -790,7 +787,7 @@ int dptx_config_load_from_dts(struct dptx_drv_s *dptx)
 		DPTX_ERR(dptx, "DPCD level to PHY LUT not set");
 	} else {
 		for (i = 0; i < 30; i++)
-			dptx->phy_cfg.level_to_phy_lut[i / 10][i % 3] = para[i];
+			dptx->board_data.driver_strength_lut[i / 10][i % 3] = para[i];
 	}
 
 	i = dptx_panel_config_load_from_dts(dptx);
@@ -817,7 +814,7 @@ static int dptx_config_probe(struct dptx_drv_s *dptx, struct platform_device *pd
 	dptx->vsync_irq[0] = platform_get_irq_byname(pdev, "vsync");
 	dptx->vsync_irq[1] = platform_get_irq_byname(pdev, "vsync2");
 	dptx->vsync_irq[2] = platform_get_irq_byname(pdev, "vsync3");
-	dptx->HPD_irq      = platform_get_irq_byname(pdev, "DPTX-HPD");
+	dptx->HPD_irq      = platform_get_irq_byname(pdev, "eDPTX-HPD");
 
 	dptx_clk_config_probe(dptx);
 	dptx_phy_probe(dptx);
@@ -833,9 +830,9 @@ static int dptx_config_probe(struct dptx_drv_s *dptx, struct platform_device *pd
 	if (dptx->viu_sel || dptx->status & DPTX_STA_LINK_ON) {
 		dptx_driver_panel_power_ctrl(dptx, 1);
 
-		dptx_pinmux_set(dptx, 1);
+		edptx_pinmux_set(dptx, 1);
 
-		dptx_drv_check_HPD(dptx);
+		edptx_drv_check_HPD(dptx);
 
 		dptx_timing_config_restore(dptx);
 	}
@@ -851,7 +848,7 @@ static int dptx_config_probe(struct dptx_drv_s *dptx, struct platform_device *pd
 
 	dptx_drm_add(dptx->dev);
 
-	dptx_drv_check_HPD(dptx);
+	edptx_drv_check_HPD(dptx);
 	// if (dptx->viu_sel & 0xf)
 	dptx_HPD_trigger_set(dptx, 1);
 
@@ -859,8 +856,8 @@ static int dptx_config_probe(struct dptx_drv_s *dptx, struct platform_device *pd
 }
 
 #ifdef CONFIG_OF
-static struct dptx_chip_data_s dptx_data_t7 = {
-	.chip_type = DPTX_CHIP_T7,
+static struct edptx_chip_data_s dptx_data_t7 = {
+	.chip_type = eDPTX_CHIP_T7,
 	.chip_name = "T7",
 	//.reg_map_table = &lcd_reg_t7[0],
 	.drv_max = 2,
@@ -876,18 +873,18 @@ static struct dptx_chip_data_s dptx_data_t7 = {
 	.pixel_clk_limit = 667,
 };
 
-static struct dptx_chip_data_s dptx_data_a9 = {
-	// .chip_type = DPTX_CHIP_T7,
+static struct edptx_chip_data_s dptx_data_a9 = {
+	.chip_type = eDPTX_CHIP_A9,
 	.chip_name = "A9",
 	//.reg_map_table = &lcd_reg_t7[0],
-	.drv_max = 2,
+	.drv_max = 1,
 	.offset_venc      = {0x0},
 	.offset_venc_if   = {0x0},
 	.offset_venc_data = {0x0},
-	// .venc_clk_msr_id  = {222, 221},
-	.link_rate        = {{DP_LINK_RATE_HBR2, 0}, {DP_LINK_RATE_HBR2, 0}},
-	.lane_count       = {{4, 0}, {4, 0}},
-	.TPS_support      = BIT(0),
+	.venc_clk_msr_id  = {53},
+	.link_rate        = {{DP_LINK_RATE_HBR2, 0}},
+	.lane_count       = {{4, 0}},
+	.TPS_support      = BIT(0) | BIT(1),
 	.DACP_support     = BIT(2),
 	.pixel_clk_limit  = 667,
 };
@@ -909,7 +906,7 @@ static int dptx_probe(struct platform_device *pdev)
 {
 	struct dptx_drv_s *dptx;
 	const struct of_device_id *match;
-	struct dptx_chip_data_s *pdata;
+	struct edptx_chip_data_s *pdata;
 	unsigned int index = 0;
 	int ret = 0;
 
@@ -922,7 +919,7 @@ static int dptx_probe(struct platform_device *pdev)
 		DPTX_ERR(NULL, "no index exist");
 		return 0;
 	}
-	if (index >= DPTX_MAX_DRV) {
+	if (index >= eDPTX_MAX_DRV) {
 		DPTX_ERR(NULL, "%s: invalid index %d", __func__, index);
 		return -1;
 	}
@@ -932,7 +929,7 @@ static int dptx_probe(struct platform_device *pdev)
 		DPTX_ERR(NULL, "%s: no match table", __func__);
 		return -1;
 	}
-	pdata = (struct dptx_chip_data_s *)match->data;
+	pdata = (struct edptx_chip_data_s *)match->data;
 	pr_info("[eDP:%u]: %s: driver version: %s(%d-%s)", index, __func__,
 		DPTX_DRV_VERSION, pdata->chip_type, pdata->chip_name);
 	if (index >= pdata->drv_max) {
@@ -951,7 +948,7 @@ static int dptx_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_AMLOGIC_VPU
 	/*vpu dev register for lcd*/
-	dptx->vpu_dev = vpu_dev_register(VPU_VENCL, DPTX_CDEV_NAME);
+	dptx->vpu_dev = vpu_dev_register(VPU_VENCL, eDPTX_CDEV_NAME);
 #endif
 	ret = dptx_ioremap(dptx, pdev);
 	if (ret)
@@ -969,7 +966,7 @@ static int dptx_probe(struct platform_device *pdev)
 
 	dptx->status |= DPTX_STA_PROBE_DONE;
 
-	DPTX_PR(dptx, "%s ok, status:0x0%2x", __func__, dptx->status);
+	DPTX_PR(dptx, "%s ok, status:0x%02x", __func__, dptx->status);
 
 	return 0;
 
@@ -1065,7 +1062,7 @@ static struct platform_driver eDP_platform_driver = {
 	.resume   = dptx_resume,
 	.shutdown = dptx_shutdown,
 	.driver = {
-		.name = "Meson-eDPTX",
+		.name = "meson-eDPTX",
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
 		.of_match_table = of_match_ptr(dptx_dt_match_table),
@@ -1076,7 +1073,7 @@ static struct platform_driver eDP_platform_driver = {
 int __init eDPTX_init(void)
 {
 	if (platform_driver_register(&eDP_platform_driver)) {
-		DPTX_ERR(NULL, "failed to register DisplayPort driver module\n");
+		DPTX_ERR(NULL, "failed to register eDPTX driver module\n");
 		return -ENODEV;
 	}
 
@@ -1131,7 +1128,7 @@ __setup("eDPTX=", __dptx_bootargs_setup);
 
 struct dptx_drv_s *aml_dptx_get_driver(u8 drv_idx)
 {
-	if (drv_idx >= DPTX_MAX_DRV)
+	if (drv_idx >= eDPTX_MAX_DRV)
 		return NULL;
 
 	return dptx_driver[drv_idx];

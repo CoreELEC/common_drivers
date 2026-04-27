@@ -5,7 +5,7 @@
 
 #ifndef __DPTX_VENC_H__
 #define __DPTX_VENC_H__
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/types.h>
 
 #define DPTX_DUAL_PORT_L_R        0
@@ -27,5 +27,6 @@ struct dptx_venc_op_s {
 };
 
 void dptx_venc_op_init_t7(struct dptx_venc_op_s *venc_op);
+void dptx_venc_op_init_a9(struct dptx_venc_op_s *venc_op);
 
 #endif

@@ -6,7 +6,7 @@
 #ifndef _DPTX_IP_CTRLS_H_
 #define _DPTX_IP_CTRLS_H_
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "../dptx_common.h"
 
 //Source: Table 2-58: uPacket TX AUX CH State and Event Descriptions
@@ -63,6 +63,7 @@ struct dptx_if_ctrl_s {
 };
 
 struct dptx_if_ctrl_s *dptx_if_bind_t7(struct dptx_drv_s *dptx);
-struct dptx_if_ctrl_s *dptx_if_bind_DP14(struct dptx_drv_s *dptx);
+struct dptx_if_ctrl_s *dptx_if_bind_tr14(struct dptx_drv_s *dptx);
+struct dptx_if_ctrl_s *dptx_if_bind_tx_connector_api(struct dptx_drv_s *dptx);
 
 #endif

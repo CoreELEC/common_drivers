@@ -12,7 +12,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "../dptx_common.h"
 #include "./dptx_IP_ctrls.h"
 
@@ -140,19 +140,19 @@ void dptx_if_PSR2_ctrl(struct dptx_drv_s *dptx, u8 port, u8 flag)
 		((struct dptx_if_ctrl_s *)dptx->if_ctrls)->PSR2_SDP_ctrl(dptx, port, flag);
 }
 
-void dptx_if_reg_store(struct dptx_drv_s *dptx, uint8_t port, u32 d0, u32 d1)
+void dptx_if_reg_store(struct dptx_drv_s *dptx, u8 port, u32 d0, u32 d1)
 {
 	if (likely(((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_store))
 		((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_store(dptx, port, d0, d1);
 }
 
-void dptx_if_reg_store_get(struct dptx_drv_s *dptx, uint8_t port, u32 *d0, u32 *d1)
+void dptx_if_reg_store_get(struct dptx_drv_s *dptx, u8 port, u32 *d0, u32 *d1)
 {
 	if (likely(((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_store_get))
 		((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_store_get(dptx, port, d0, d1);
 }
 
-void dptx_if_link_get(struct dptx_drv_s *dptx, uint8_t port, uint32_t *link_rate, uint8_t *lane)
+void dptx_if_link_get(struct dptx_drv_s *dptx, u8 port, u32 *link_rate, u8 *lane)
 {
 	if (likely(((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_link_get))
 		((struct dptx_if_ctrl_s *)dptx->if_ctrls)->reg_link_get(dptx,
@@ -162,11 +162,14 @@ void dptx_if_link_get(struct dptx_drv_s *dptx, uint8_t port, uint32_t *link_rate
 void dptx_if_IP_probe(struct dptx_drv_s *dptx)
 {
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		dptx->if_ctrls = dptx_if_bind_t7(dptx);
 		break;
-	case DPTX_CHIP_A9:
-		dptx->if_ctrls = dptx_if_bind_DP14(dptx);
+	case eDPTX_CHIP_A9:
+		if (1)
+			dptx->if_ctrls = dptx_if_bind_tr14(dptx);
+		else
+			dptx->if_ctrls = dptx_if_bind_tx_connector_api(dptx);
 		break;
 	default:
 		dptx->if_ctrls = NULL;

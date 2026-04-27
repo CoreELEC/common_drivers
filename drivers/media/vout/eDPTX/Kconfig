@@ -3,12 +3,12 @@
 #
 # Video output configuration
 #
-menu "Amlogic DisplayPort Output Module"
+menu "Amlogic embedded DisplayPort Output Module"
 
 config AMLOGIC_eDPTX
-	bool "DisplayPort Output Module"
+	bool "embedded DisplayPort Output Module"
 	default n
 	help
-		Support for DisplayPort/eDP output
+		Support for eDP output
 
 endmenu

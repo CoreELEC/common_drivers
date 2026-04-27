@@ -17,7 +17,7 @@
 #ifdef CONFIG_AMLOGIC_VPU
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #include "dptx_reg_op.h"
 #include "dptx_debug.h"
@@ -75,11 +75,12 @@ static ssize_t dptx_link_cfg_info_print(struct dptx_drv_s *dptx, u8 port, char *
 		"DACP_support    %u\n"
 		"training_mode   %u\n"
 		"sync_clk_mode   %u\n",
-		dptx->sink.link[port]->max_lane_count, dptx->sink.link[port]->max_link_rate * 270,
-		dptx->sink.link[port]->lane_count,     dptx->sink.link[port]->link_rate * 270,
-		dptx->sink.link[port]->DACP_support,
-		dptx->sink.link[port]->training_mode,
-		dptx->sink.link[port]->sync_clk_mode);
+		dptx->sink.link[port].cap.max_lane_count,
+		dptx->sink.link[port].cap.max_link_rate * 270,
+		dptx->sink.link[port].lane_count, dptx->sink.link[port].link_rate * 270,
+		dptx->sink.link[port].cap.DACP_support,
+		dptx->panel_data.eDP.training_mode,
+		dptx->sink.link[port].cap.sync_clk_mode);
 
 	return len;
 }
@@ -153,6 +154,18 @@ static struct dptx_debug_info_reg_s dptx_debug_info_reg_t7_1 = {
 	.reg_dptx_IP    = dptx_reg_dptx_IP,
 };
 
+static struct dptx_debug_info_reg_s dptx_debug_info_reg_a9_0 = {
+	.reg_pll        = dptx_regs_pll_a9_0,
+	.reg_clk        = dptx_regs_clk_a9_0,
+	.reg_combo_dphy = dptx_regs_combo_dphy_a9_0,
+	.reg_encl       = dptx_reg_venc_a9,
+	.reg_encl_if    = dptx_reg_venc_if_a9,
+	.reg_encl_data  = dptx_reg_venc_data_a9,
+	.reg_vpu        = dptx_reg_vpu_a9,
+	.reg_analog_phy = dptx_regs_analog_phy_a9,
+	.reg_dptx_IP    = dptx_reg_dptx_IP_tr14,
+};
+
 static ssize_t dptx_regs_pr(struct dptx_drv_s *dptx, u8 port, u8 reg_t,
 			    struct reg_sets_s *reg_sets, char *buf)
 {
@@ -197,7 +210,7 @@ static ssize_t dptx_regs_pr(struct dptx_drv_s *dptx, u8 port, u8 reg_t,
 			break;
 		case DPTX_REG_TYPE_DP_IP:
 			reg_addr = reg_sets[idx].addr;
-			reg_val  = __dptx_reg_read(dptx, port, reg_addr);
+			reg_val  = edptx_reg_read(dptx, port, reg_addr);
 			break;
 		case DPTX_REG_TYPE_COMBO_DPHY:
 			reg_addr = reg_sets[idx].addr;
@@ -234,13 +247,16 @@ static ssize_t dptx_debug_reg_dump_show(struct device *dev,
 	struct dptx_debug_info_reg_s *debug_info_reg = NULL;
 
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		if (dptx->idx == 0)
 			debug_info_reg = &dptx_debug_info_reg_t7_0;
 		else if (dptx->idx == 1)
 			debug_info_reg = &dptx_debug_info_reg_t7_1;
 		else
 			return 0;
+		break;
+	case eDPTX_CHIP_A9:
+		debug_info_reg = &dptx_debug_info_reg_a9_0;
 		break;
 	default:
 		return 0;
@@ -287,8 +303,8 @@ void dptx_debug_reset(struct dptx_drv_s *dptx, u8 port_mask, u8 reset_part)
 {
 	u8 port;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_path_reset(dptx, port, reset_part);
 	}

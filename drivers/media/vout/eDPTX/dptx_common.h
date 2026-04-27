@@ -6,8 +6,8 @@
 #ifndef __DPTX_COMMON_H_
 #define __DPTX_COMMON_H_
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
-//#include <div64.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
+#include <linux/math64.h>
 
 /* 20240704: lcd tcon support user info */
 #define DPTX_DRV_VERSION    "20250820"
@@ -25,17 +25,18 @@ static inline u32 count_bit(u32 n)
 
 static inline unsigned long long dptx_div(unsigned long long num, u32 den)
 {
-	unsigned long long ret = num;
+	unsigned long long ret;
 
-	do_div(ret, den);
+	ret = div_u64(num, den);
 	return ret;
 }
 
 static inline unsigned long long dptx_div_around(unsigned long long num, u32 den)
 {
-	unsigned long long ret = num + den / 2;
+	unsigned long long ret;
 
-	do_div(ret, den);
+	num = num + (den >> 1);
+	ret = div_u64(num, den);
 	return ret;
 }
 
@@ -66,7 +67,7 @@ enum DP_link_rate_e {
 #define DPTX_AUX_CMD_I2C_READ_MOT     0x5
 #define DPTX_AUX_CMD_I2C_WRITE_STATUS 0x2
 
-extern struct dptx_boot_ctrl_s dptx_uboot_configs[DPTX_MAX_DRV];
+extern struct dptx_boot_ctrl_s dptx_uboot_configs[eDPTX_MAX_DRV];
 
 struct dptx_aux_req_s {
 	u32 address; //20bit for DPCD and 8 bit for I2C
@@ -140,9 +141,9 @@ void dptx_if_set_hpd_interrupt_mask(struct dptx_drv_s *dptx, u8 port, u8 mask);
 void dptx_if_scramble_reset_set(struct dptx_drv_s *dptx, u8 port, u8 sr_type);
 void dptx_if_PSR1_ctrl(struct dptx_drv_s *dptx, u8 port, u8 flag);
 void dptx_if_PSR2_ctrl(struct dptx_drv_s *dptx, u8 port, u8 flag);
-void dptx_if_reg_store(struct dptx_drv_s *dptx, uint8_t port, uint32_t d0, uint32_t d1);
-void dptx_if_reg_store_get(struct dptx_drv_s *dptx, uint8_t port, uint32_t *d0, uint32_t *d1);
-void dptx_if_link_get(struct dptx_drv_s *dptx, uint8_t port, uint32_t *link_rate, uint8_t *lane);
+void dptx_if_reg_store(struct dptx_drv_s *dptx, u8 port, u32 d0, u32 d1);
+void dptx_if_reg_store_get(struct dptx_drv_s *dptx, u8 port, u32 *d0, u32 *d1);
+void dptx_if_link_get(struct dptx_drv_s *dptx, u8 port, u32 *link_rate, u8 *lane);
 
 void dptx_if_IP_probe(struct dptx_drv_s *dptx);
 /* IP-interface END */
@@ -165,7 +166,7 @@ int __dptx_fast_link_training(struct dptx_drv_s *dptx);
 /* dptx_EDID_DisplayID.c */
 void dptx_edid_print_raw(unsigned char *_buf);  //?
 void dptx_edid_print_parsed(struct dptx_drv_s *dptx, u8 port); //?
-int __dptx_EDID_probe(struct dptx_drv_s *dptx, u8 check_crc);
+int edptx_EDID_probe(struct dptx_drv_s *dptx, u8 check_crc);
 // int dptx_EDID_load_dts_probe(struct dptx_drv_s *dptx);
 
 /* dptx_vmode_mgr.c */
@@ -192,7 +193,7 @@ int dptx_connector_check(struct dptx_drv_s *dptx);
 int dptx_outputmode_check(struct dptx_drv_s *dptx, char *mode);
 
 void __dptx_set_phy_config(struct dptx_drv_s *dptx, u8 port, u8 use_preset);
-void __dptx_set_lane_config(struct dptx_drv_s *dptx, u8 port);
+void edptx_set_lane_config(struct dptx_drv_s *dptx, u8 port);
 void dptx_eDP_PSR1(struct dptx_drv_s *dptx, u8 port, u8 flag);
 void dptx_eDP_PSR2(struct dptx_drv_s *dptx, u8 port, u8 flag);
 
@@ -234,12 +235,12 @@ void dptx_vout_notify_mode_change(struct dptx_drv_s *dptx);
 ////! Content Protect
 void dptx_set_content_protection(struct dptx_drv_s *dptx, u8 port);
 
-void dptx_drv_check_HPD(struct dptx_drv_s *dptx);
+void edptx_drv_check_HPD(struct dptx_drv_s *dptx);
 void dptx_driver_ready(struct dptx_drv_s *dptx);
 void dptx_driver_panel_power_ctrl(struct dptx_drv_s *dptx, u8 en);
 void dptx_drv_start(struct dptx_drv_s *dptx);
-void dptx_drv_disp_on(struct dptx_drv_s *dptx);
-void dptx_drv_disp_off(struct dptx_drv_s *dptx);
+void edptx_drv_disp_on(struct dptx_drv_s *dptx);
+void edptx_drv_disp_off(struct dptx_drv_s *dptx);
 void dptx_driver_close(struct dptx_drv_s *dptx);
 void dptx_drv_eDP_PSR1_en(struct dptx_drv_s *dptx, u8 port_mask, u8 en);
 void dptx_drv_eDP_PSR2_en(struct dptx_drv_s *dptx, u8 port_mask, u8 en);

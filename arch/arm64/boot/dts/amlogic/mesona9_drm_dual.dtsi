@@ -56,7 +56,10 @@
 			drm_to_lcd1: endpoint@2 {
 				reg = <2>;
 				remote-endpoint = <0>;
-
+			};
+			drm_to_edptx0: endpoint@3 {
+				reg = <3>;
+				remote-endpoint = <0>;
 			};
 		};
 	};

@@ -11,7 +11,7 @@
 #include <drm/drm_panel.h>
 #include <drm/display/drm_dp_helper.h>
 #include <drm/amlogic/meson_connector_dev.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
 struct meson_eDP {
 	struct meson_connector base;

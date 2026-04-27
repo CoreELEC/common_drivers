@@ -15,7 +15,7 @@
 #ifdef CONFIG_AMLOGIC_VPU
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "../dptx_common.h"
 #include "./dptx_clk_ctrl.h"
 
@@ -65,8 +65,11 @@ void dptx_clk_set_ssc(struct dptx_drv_s *dptx, u8 status)
 void dptx_clk_config_probe(struct dptx_drv_s *dptx)
 {
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		dptx_clk_op_s = dptx_clk_op_init_t7(dptx);
+		break;
+	case eDPTX_CHIP_A9:
+		dptx_clk_op_s = dptx_clk_op_init_a9(dptx);
 		break;
 	default:
 		DPTX_ERR(dptx, "%s: invalid chip type", __func__);

@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_timing.h>
 #include "dptx_common.h"
 
@@ -114,23 +114,23 @@ void dptx_edid_print_parsed(struct dptx_drv_s *dptx, u8 port)
 			edid->range.hfreq[0], edid->range.hfreq[1], edid->range.h_blank_min,
 			edid->range.pclk[0] / 1000, edid->range.pclk[1] / 1000);
 	}
-	for (i = 0; i < dptx->sink.dt_cnt; i++) {
+	for (i = 0; i < dptx->panel_data.timing_cnt; i++) {
 		pr_info("Detail Timing Descriptor[%d]:  * Pixel Clock: %u.%u MHz\n"
 			"  H: Active:%4u Blank:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n"
 			"  V: Active:%4u Blank:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n",
-			i, dptx->sink.timing[i].pclk / 1000000,
-			(dptx->sink.timing[i].pclk % 1000000) / 1000,
-			dptx->sink.timing[i].h_act, dptx->sink.timing[i].h_blank,
-			dptx->sink.timing[i].h_fp, dptx->sink.timing[i].h_pw,
-			dptx->sink.timing[i].ctrl & 0x1 ? "P" : "N",
-			dptx->sink.timing[i].h_size,
-			//dptx->sink.timing[i].h_border,
+			i, dptx->panel_data.timing[i].pclk / 1000000,
+			(dptx->panel_data.timing[i].pclk % 1000000) / 1000,
+			dptx->panel_data.timing[i].h_act, dptx->panel_data.timing[i].h_blank,
+			dptx->panel_data.timing[i].h_fp, dptx->panel_data.timing[i].h_pw,
+			dptx->panel_data.timing[i].ctrl & 0x1 ? "P" : "N",
+			dptx->panel_data.timing[i].h_size,
+			//dptx->panel_data.timing[i].h_border,
 			0,
-			dptx->sink.timing[i].v_act, dptx->sink.timing[i].v_blank,
-			dptx->sink.timing[i].v_fp, dptx->sink.timing[i].v_pw,
-			dptx->sink.timing[i].ctrl & 0x2 ? "P" : "N",
-			dptx->sink.timing[i].v_size,
-			//dptx->sink.timing[i].v_border);
+			dptx->panel_data.timing[i].v_act, dptx->panel_data.timing[i].v_blank,
+			dptx->panel_data.timing[i].v_fp, dptx->panel_data.timing[i].v_pw,
+			dptx->panel_data.timing[i].ctrl & 0x2 ? "P" : "N",
+			dptx->panel_data.timing[i].v_size,
+			//dptx->panel_data.timing[i].v_border);
 			0);
 	}
 }
@@ -243,24 +243,24 @@ void temp_timing_add_to_timing_list(struct dptx_drv_s *dptx, struct dptx_detail_
 	timing->h_blank  *= port_cnt;
 	timing->pclk     *= port_cnt;
 
-	for (i = 0; i < dptx->sink.dt_cnt; i++) {
-		h_period    = dptx->sink.timing[i].h_period;
-		h_active    = dptx->sink.timing[i].h_act;
-		hsync_bp    = dptx->sink.timing[i].h_bp;
-		hsync_width = dptx->sink.timing[i].h_bp;
-		// hsync_fp    = dptx->sink.timing[i].h_fp;
-		// h_blank     = dptx->sink.timing[i].h_blank;
-		// hsync_pol   = dptx->sink.timing[i].hsync_pol;
+	for (i = 0; i < dptx->panel_data.timing_cnt; i++) {
+		h_period    = dptx->panel_data.timing[i].h_period;
+		h_active    = dptx->panel_data.timing[i].h_act;
+		hsync_bp    = dptx->panel_data.timing[i].h_bp;
+		hsync_width = dptx->panel_data.timing[i].h_bp;
+		// hsync_fp    = dptx->panel_data.timing[i].h_fp;
+		// h_blank     = dptx->panel_data.timing[i].h_blank;
+		// hsync_pol   = dptx->panel_data.timing[i].hsync_pol;
 
-		v_period    = dptx->sink.timing[i].v_period;
-		v_active    = dptx->sink.timing[i].v_act;
-		vsync_bp    = dptx->sink.timing[i].v_bp;
-		vsync_width = dptx->sink.timing[i].v_pw;
-		// vsync_fp    = dptx->sink.timing[i].v_fp;
-		// v_blank     = dptx->sink.timing[i].v_blank;
-		// vsync_pol   = dptx->sink.timing[i].vsync_pol;
+		v_period    = dptx->panel_data.timing[i].v_period;
+		v_active    = dptx->panel_data.timing[i].v_act;
+		vsync_bp    = dptx->panel_data.timing[i].v_bp;
+		vsync_width = dptx->panel_data.timing[i].v_pw;
+		// vsync_fp    = dptx->panel_data.timing[i].v_fp;
+		// v_blank     = dptx->panel_data.timing[i].v_blank;
+		// vsync_pol   = dptx->panel_data.timing[i].vsync_pol;
 
-		// pclk        = dptx->sink.timing[i].pclk;
+		// pclk        = dptx->panel_data.timing[i].pclk;
 
 		if (timing->h_period == h_period && timing->h_act == h_active &&
 		    timing->h_bp == hsync_bp && timing->h_pw  == hsync_width &&
@@ -273,10 +273,10 @@ void temp_timing_add_to_timing_list(struct dptx_drv_s *dptx, struct dptx_detail_
 			fr_temp = dptx_div_around(fr_temp, 1000);
 
 			for (k = 0; k < 8; k++) {
-				if (dptx->sink.timing[i].vmode_add_fr[k] == fr_temp)
+				if (dptx->panel_data.timing[i].vmode_add_fr[k] == fr_temp)
 					return;
-				if (dptx->sink.timing[i].vmode_add_fr[k] == 0) {
-					dptx->sink.timing[i].vmode_add_fr[k] = fr_temp;
+				if (dptx->panel_data.timing[i].vmode_add_fr[k] == 0) {
+					dptx->panel_data.timing[i].vmode_add_fr[k] = fr_temp;
 					DPTX_DBG(dptx, "%s: EDID timing[%u] add fr[%u]=%llu",
 						__func__, i, k, fr_temp);
 					return;
@@ -285,14 +285,14 @@ void temp_timing_add_to_timing_list(struct dptx_drv_s *dptx, struct dptx_detail_
 		}
 	}
 	//add new timing
-	if (dptx->sink.dt_cnt == DPTX_DRV_TIMING_MAX) {
+	if (dptx->panel_data.timing_cnt == DPTX_DRV_TIMING_MAX) {
 		DPTX_ERR(dptx, "%s: EDID timing full", __func__);
 		return;
 	}
 
-	memcpy(&dptx->sink.timing[i], timing, sizeof(struct dptx_detail_timing_s));
-	DPTX_DBG(dptx, "%s: EDID add timing[%u]", __func__, dptx->sink.dt_cnt);
-	dptx->sink.dt_cnt++;
+	memcpy(&dptx->panel_data.timing[i], timing, sizeof(struct dptx_detail_timing_s));
+	DPTX_DBG(dptx, "%s: EDID add timing[%u]", __func__, dptx->panel_data.timing_cnt);
+	dptx->panel_data.timing_cnt++;
 }
 
 static char dptx_edid_base_block_parse(struct dptx_drv_s *dptx, u8 port, unsigned char *_buf)
@@ -770,7 +770,7 @@ static void dptx_edid_crc_cal(struct dptx_drv_s *dptx)
 */
 
 //read & parse EDID
-int __dptx_EDID_probe(struct dptx_drv_s *dptx, u8 check_crc)
+int edptx_EDID_probe(struct dptx_drv_s *dptx, u8 check_crc)
 {
 	unsigned char *edid_buf;
 	int ret;

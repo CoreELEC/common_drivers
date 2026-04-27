@@ -9,7 +9,7 @@
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/io.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/vout/vclk_serve.h>
 #include <linux/amlogic/media/vpu/vpu.h>
@@ -32,6 +32,12 @@ int dptx_reg_t7[] = {
 	DPTX_REG_MAP_MAX,
 };
 
+int dptx_reg_a9[] = {
+	DPTX_REG_MAP_COMBO_DPHY,
+	DPTX_REG_MAP_EDP_A,
+	DPTX_REG_MAP_MAX,
+};
+
 #define DPTX_REG_OFFSET(reg)                   (((reg) << 2))
 
 /* for lcd reg access */
@@ -50,8 +56,11 @@ int dptx_ioremap(struct dptx_drv_s *dptx, struct platform_device *pdev)
 	}
 
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		table = dptx_reg_t7;
+		break;
+	case eDPTX_CHIP_A9:
+		table = dptx_reg_a9;
 		break;
 	default:
 		DPTX_ERR(dptx, "%s: unknown chip", __func__);
@@ -338,7 +347,7 @@ void dptx_periphs_write(struct dptx_drv_s *dptx, u32 reg, u32 val)
 	spin_unlock_irqrestore(&dptx_reg_spinlock, flags);
 };
 
-u32 __dptx_reg_read(struct dptx_drv_s *dptx, u8 port, u32 reg)
+u32 edptx_reg_read(struct dptx_drv_s *dptx, u8 port, u32 reg)
 {
 	void __iomem *p;
 	u32 temp = 0;
@@ -356,7 +365,7 @@ u32 __dptx_reg_read(struct dptx_drv_s *dptx, u8 port, u32 reg)
 	return temp;
 };
 
-void __dptx_reg_write(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 val)
+void edptx_reg_write(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 val)
 {
 	void __iomem *p;
 	unsigned long flags = 0;

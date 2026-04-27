@@ -18,7 +18,7 @@
 #endif
 
 #include <linux/clk.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "./dptx_clk_ctrl.h"
 #include "../dptx_common.h"
 #include "../dptx_reg_op.h"
@@ -105,4 +105,55 @@ unsigned long long dptx_clk_pll_div_calc(unsigned long long clk, u8 div_sel, u8 
 	clk_ret = dptx_div_around(clk * num, den);
 
 	return clk_ret;
+}
+
+static inline unsigned long long edptx_pll_fvco_calc(unsigned long long pll_fvco,
+							struct dptx_clk_cfg_s *pll_config,
+							struct dptx_pll_data_s *pll_data)
+{
+	static const u8 od_fb_table[2] = {1, 2};
+
+	pll_fvco = dptx_div(pll_fvco, od_fb_table[pll_data->pll_od_fb]);
+	if (pll_data->pll_0_5_div_en)
+		pll_fvco = pll_fvco * 2;
+	return pll_fvco;
+}
+
+void edptx_check_vco(struct dptx_clk_cfg_s *cconf, unsigned long long pll_fvco)
+{
+	struct dptx_pll_data_s *pll_data = (struct dptx_pll_data_s *)cconf->pll_data;
+	unsigned int m, n;
+	unsigned int pll_frac;
+	unsigned long long temp;
+
+	if (!pll_data)
+		return;
+
+	if (pll_fvco < pll_data->pll_vco_range[0] || pll_fvco > pll_data->pll_vco_range[1]) {
+		DPTX_PR(0, LOG_E, "pll_fvco %lld is out of range\n", pll_fvco);
+		return;
+	}
+
+	cconf->pll_fvco = pll_fvco;
+	n = 1;
+	pll_fvco = edptx_pll_fvco_calc(pll_fvco, cconf, pll_data);
+	m = dptx_div(pll_fvco, pll_data->fin_base);
+	temp = pll_data->fin_base;
+	temp *= m;
+	temp = pll_fvco - temp;
+	pll_frac = dptx_div_around((temp * pll_data->pll_frac_range * 10), cconf->fin);
+	pll_frac = dptx_div_around(pll_frac, 10);
+	cconf->pll_m = m;
+	cconf->pll_n = n;
+	cconf->pll_frac = pll_frac;
+	if (cconf->pll_mode & LCD_PLL_MODE_FRAC_SHIFT) {
+		if (pll_frac == (pll_data->pll_frac_range >> 1) ||
+		    pll_frac == (pll_data->pll_frac_range >> 2)) {
+			pll_frac |= 0x66;
+			cconf->pll_frac_half_shift = 1;
+		} else {
+			cconf->pll_frac_half_shift = 0;
+		}
+	}
+	pr_info("m=%d, n=%d, frac=0x%x, pll_fvco=%lld", m, n, pll_frac, pll_fvco);
 }

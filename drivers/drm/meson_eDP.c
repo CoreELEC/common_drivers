@@ -45,10 +45,8 @@ static int meson_eDP_get_eDPTX_aux_bl_available(int type)
 
 	if (!dptx)
 		return 0;
-	if (dptx->sink.link[0]) {
-		if (dptx->setting.use_aux_bl_as_possible)
-			return dptx->sink.link[0]->DPCD_reg_func & BIT(2);
-	}
+	if (dptx->setting.use_aux_bl_as_possible)
+		return dptx->sink.link[0].cap.DPCD_reg_func & BIT(2);
 
 	return 0;
 }

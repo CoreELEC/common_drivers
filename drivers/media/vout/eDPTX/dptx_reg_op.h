@@ -6,7 +6,7 @@
 #ifndef __DPTX_REG_H__
 #define __DPTX_REG_H__
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
 #ifndef EDPTX0_A_BASE
 #define EDPTX0_A_BASE          EDPTX0_BASE
@@ -1126,6 +1126,57 @@
 #define VPU_VLOCK_CTRL                             0x3000
 #define VPU_VLOCK_ADJ_EN_SYNC_CTRL                 0x301d
 #define VPU_VLOCK_GCLK_EN                          0x301e
+
+#define CLKCTRL_VID_CLK_CTRL_A9    0x0130
+#define CLKCTRL_VID_CLK_CTRL2_A9   0x0131
+#define CLKCTRL_VID_CLK_DIV_A9     0x0132
+#define CLKCTRL_VIID_CLK_DIV_A9    0x0133
+#define CLKCTRL_VIID_CLK_CTRL_A9   0x0134
+
+#define ANACTRL_DIF_PHY_CNTL1_A9   0x0002
+#define ANACTRL_DIF_PHY_CNTL2_A9   0x0003
+#define ANACTRL_DIF_PHY_CNTL3_A9   0x0004
+#define ANACTRL_DIF_PHY_CNTL4_A9   0x0005
+#define ANACTRL_DIF_PHY_CNTL5_A9   0x0006
+#define ANACTRL_DIF_PHY_CNTL6_A9   0x0007
+#define ANACTRL_DIF_PHY_CNTL7_A9   0x0008
+#define ANACTRL_DIF_PHY_CNTL8_A9   0x0009
+#define ANACTRL_DIF_PHY_CNTL9_A9   0x000a
+
+#define ANACTRL_TCON_PLL0_CNTL0_A9	0x0020
+#define ANACTRL_TCON_PLL0_CNTL1_A9	0x0021
+#define ANACTRL_TCON_PLL0_CNTL2_A9	0x0022
+#define ANACTRL_TCON_PLL0_CNTL3_A9	0x0023
+#define ANACTRL_TCON_PLL0_CNTL4_A9	0x0024
+#define ANACTRL_TCON_PLL1_CNTL0_A9	0x0025
+#define ANACTRL_TCON_PLL1_CNTL1_A9	0x0026
+#define ANACTRL_TCON_PLL1_CNTL2_A9	0x0027
+#define ANACTRL_TCON_PLL1_CNTL3_A9	0x0028
+#define ANACTRL_TCON_PLL1_CNTL4_A9	0x0029
+#define ANACTRL_TCON_PLL2_CNTL0_A9	0x002a
+#define ANACTRL_TCON_PLL2_CNTL1_A9	0x002b
+#define ANACTRL_TCON_PLL2_CNTL2_A9	0x002c
+#define ANACTRL_TCON_PLL2_CNTL3_A9	0x002d
+#define ANACTRL_TCON_PLL2_CNTL4_A9	0x002e
+#define ANACTRL_TCON_PLL3_CNTL0_A9	0x0030
+#define ANACTRL_TCON_PLL3_CNTL1_A9	0x0031
+#define ANACTRL_TCON_PLL3_CNTL2_A9	0x0032
+#define ANACTRL_TCON_PLL3_CNTL3_A9	0x0033
+
+#define ANACTRL_TCON_PLL0_STS_A9	0x0035
+#define ANACTRL_TCON_PLL1_STS_A9	0x0036
+#define ANACTRL_TCON_PLL2_STS_A9	0x0037
+#define ANACTRL_TCON_PLL3_STS_A9	0x0038
+#define ANACTRL_TCON_PLL_VLOCK_A9	0x0039
+#define ANACTRL_LVDS_TX_PHY_CNTL0_A9	0x003a
+#define ANACTRL_LVDS_TX_PHY_CNTL1_A9	0x003b
+#define ANACTRL_LVDS_TX_PHY_CNTL2_A9	0x003c
+#define ANACTRL_LVDS_TX_PHY_CNTL3_A9	0x003d
+#define ANACTRL_VID_PLL0_CLK_DIV_A9	0x003e
+#define ANACTRL_VID_PLL1_CLK_DIV_A9	0x003f
+
+#define CLKCTRL_HDMI_CLK_CTRL_A9	0x0121
+
 /* ******************************** */
 
 /* ***********************************************
@@ -1152,8 +1203,8 @@ u32 dptx_ana_getb(u32 reg, u32 start, u32 len);
 u32 dptx_periphs_read(struct dptx_drv_s *dptx, u32 reg);
 void dptx_periphs_write(struct dptx_drv_s *dptx, u32 reg, u32 value);
 
-u32 __dptx_reg_read(struct dptx_drv_s *dptx, u8 port, u32 reg);
-void __dptx_reg_write(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 value);
+u32 edptx_reg_read(struct dptx_drv_s *dptx, u8 port, u32 reg);
+void edptx_reg_write(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 value);
 void __dptx_reg_setb(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 value, u32 start, u32 len);
 u32 __dptx_reg_getb(struct dptx_drv_s *dptx, u8 port, u32 reg, u32 start, u32 len);
 

@@ -19,7 +19,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/reset.h>
 #include <linux/clk.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPCD_REG.h>
 #include "dptx_common.h"
 
@@ -91,7 +91,7 @@ void __dptx_set_phy_config(struct dptx_drv_s *dptx, u8 port, u8 use_preset)
 
 	for (i = 0; i < 4; i++)
 		data[i] = use_preset ?
-			dptx->sink.link[port]->preset_ds[i] : dptx->sink.link[port]->curr_ds[i];
+			dptx->sink.link[port].preset_ds[i] : dptx->sink.link[port].curr_ds[i];
 
 	dptx_if_set_phy_cfg(dptx, port, use_preset);
 
@@ -107,29 +107,29 @@ void __dptx_set_phy_config(struct dptx_drv_s *dptx, u8 port, u8 use_preset)
 		DPTX_P_ERR(dptx, port, "DP sink set phy failed");
 }
 
-void __dptx_set_lane_config(struct dptx_drv_s *dptx, u8 port)
+void edptx_set_lane_config(struct dptx_drv_s *dptx, u8 port)
 {
 	unsigned char auxdata[2];
 
 	DPTX_P_PR(dptx, port, "%s: %d lane, %u.%u GHz, ss_en: %d, enhanced_frame: %d",
-		__func__, dptx->sink.link[port]->lane_count,
-		(dptx->sink.link[port]->link_rate * 27) / 100,
-		(dptx->sink.link[port]->link_rate * 27) % 100,
-		dptx->sink.link[port]->link_cap & BIT(5) ? 1 : 0,
-		dptx->sink.link[port]->enh_frame_en);
+		__func__, dptx->sink.link[port].lane_count,
+		(dptx->sink.link[port].link_rate * 27) / 100,
+		(dptx->sink.link[port].link_rate * 27) % 100,
+		dptx->sink.link[port].cap.link_cap & BIT(5) ? 1 : 0,
+		dptx->sink.link[port].enh_frame_en);
 
 	dptx_if_set_lane_cfg(dptx, port);
 
 	//sink Link-rate and Lane_count
-	auxdata[0] = dptx->sink.link[port]->link_rate;  //DPCD_LINK_BANDWIDTH_SET
+	auxdata[0] = dptx->sink.link[port].link_rate;  //DPCD_LINK_BANDWIDTH_SET
 	//DPCD_LANE_COUNT_SET
-	auxdata[1] = dptx->sink.link[port]->lane_count |
-		     (dptx->sink.link[port]->enh_frame_en ? BIT(7) : 0);
+	auxdata[1] = dptx->sink.link[port].lane_count |
+		     (dptx->sink.link[port].enh_frame_en ? BIT(7) : 0);
 
 	if (dptx_if_aux_write(dptx, port, DPCD_LINK_BW_SET, 2, auxdata))
 		DPTX_P_ERR(dptx, port, "sink set lane rate & count failed");
 
-	auxdata[0] = dptx->sink.link[port]->link_cap & BIT(5) ? BIT(4) : 0; // down_ss
+	auxdata[0] = dptx->sink.link[port].cap.link_cap & BIT(5) ? BIT(4) : 0; // down_ss
 	if (dptx_if_aux_write(dptx, port, DPCD_DOWNSPREAD_CONTROL, 1, auxdata))
 		DPTX_P_ERR(dptx, port, "sink set down-spread failed.");
 }
@@ -158,31 +158,35 @@ void dptx_user_set_vmode(struct dptx_drv_s *dptx, u8 vmd_idx)
 	dptx_vmode_apply_to_act_timing(dptx, dp_vmode);
 	dptx_act_timing_apply(dptx);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_set_MSA(dptx, port);
 		dptx_set_content_protection(dptx, port);
 
-		dptx_if_path_reset(dptx, port, DPTX_RESET_eDP_PIPE);
+		// dptx_if_path_reset(dptx, port, DPTX_RESET_eDP_PIPE);
 	}
 
 	dptx_venc_enable(dptx, 1);
 
-	mdelay(10);
+	dptx_delay_ms(10);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_transmitter_output(dptx, port, 1);
 	}
+	////????????????????????????uboooooooot
+	// dptx_venc_enable(dptx, 1);
+
+	// dptx_delay_ms(10);
 }
 
 void dptx_eDP_PSR1(struct dptx_drv_s *dptx, u8 port, u8 flag)
 {
 	u8 auxdata[4] = {0, 0, 0, 0};
 
-	if (!dptx->sink.link[port])
+	if (!(dptx->sink.port_mask & BIT(port)))
 		return;
 
 	if (dptx_if_aux_write_single(dptx, port,
@@ -192,7 +196,7 @@ void dptx_eDP_PSR1(struct dptx_drv_s *dptx, u8 port, u8 flag)
 	dptx_if_PSR1_ctrl(dptx, port, 1);
 
 	// // error, should check vbp time
-	udelay(dptx_PSR_setup_time[dptx->sink.link[port]->eDP_cap.PSR_setup_time] + 20);
+	dptx_delay_us(dptx_PSR_setup_time[dptx->sink.link[port].cap.eDP.PSR_setup_time] + 20);
 	dptx_if_aux_write_single(dptx, port, DPCD_eDP_PSR_ENABLE_AND_CONF, BIT(0) | BIT(3));
 
 	dptx_if_aux_read(dptx, port, DPCD_PSR_ERROR_STATUS, 4, auxdata);
@@ -204,7 +208,7 @@ void dptx_eDP_PSR2(struct dptx_drv_s *dptx, u8 port, u8 flag)
 {
 	u8 auxdata[4] = {0, 0, 0, 0};
 
-	if (!dptx->sink.link[port])
+	if (!(dptx->sink.port_mask & BIT(port)))
 		return;
 
 	if (dptx_if_aux_write_single(dptx, port,
@@ -214,8 +218,8 @@ void dptx_eDP_PSR2(struct dptx_drv_s *dptx, u8 port, u8 flag)
 	dptx_if_PSR1_ctrl(dptx, port, 1);
 
 	// // error, should check vbp time
-	udelay(dptx_PSR_setup_time[dptx->sink.link[port]->eDP_cap.PSR_setup_time] + 20);
-	mdelay(100);
+	dptx_delay_us(dptx_PSR_setup_time[dptx->sink.link[port].cap.eDP.PSR_setup_time] + 20);
+	dptx_delay_ms(100);
 	//dptx_if_aux_write_single(dptx, port, DPCD_eDP_PSR_ENABLE_AND_CONF, BIT(0) | BIT(3));
 
 	dptx_if_aux_read(dptx, port, DPCD_PSR_ERROR_STATUS, 4, auxdata);

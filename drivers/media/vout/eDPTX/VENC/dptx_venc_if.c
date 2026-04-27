@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #ifdef CONFIG_AML_VPP
 #include <linux/amlogic/media/vpp/vpp.h>
 #endif
@@ -138,8 +138,11 @@ void dptx_mute_set(struct dptx_drv_s *dptx, u8 flag)
 int dptx_venc_probe(struct dptx_drv_s *dptx)
 {
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		dptx_venc_op_init_t7(&dptx_venc_op);
+		break;
+	case eDPTX_CHIP_A9:
+		dptx_venc_op_init_a9(&dptx_venc_op);
 		break;
 	default:
 		break;

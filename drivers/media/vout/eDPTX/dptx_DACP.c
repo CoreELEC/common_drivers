@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPCD_REG.h>
 #include "dptx_common.h"
 
@@ -25,6 +25,6 @@ static void dptx_set_eDP_ASSR(struct dptx_drv_s *dptx, u8 port)
 
 void dptx_set_content_protection(struct dptx_drv_s *dptx, u8 port)
 {
-	if (dptx->sink.link[port]->DACP_support & 0x4)
+	if (dptx->sink.link[port].cap.DACP_support & 0x4)
 		dptx_set_eDP_ASSR(dptx, port);
 }

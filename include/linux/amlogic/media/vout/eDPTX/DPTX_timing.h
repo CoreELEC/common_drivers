@@ -31,7 +31,7 @@ struct dptx_color_format_s {
 };
 
 #define DPTX_COLOR_TYPE_MAX  17
-extern struct dptx_color_format_s dptx_cfmt_table[DPTX_COLOR_TYPE_MAX];
+extern struct dptx_color_format_s edp_cfmt_tb[DPTX_COLOR_TYPE_MAX];
 
 #define CTRL_HSYNC_POS          BIT(0)
 #define CTRL_VSYNC_POS          BIT(1)

@@ -2,3 +2,4 @@
 
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_eDPTX) += vout/eDPTX/VENC/dptx_venc_if.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_eDPTX) += vout/eDPTX/VENC/dptx_venc_t7.o
+$(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_eDPTX) += vout/eDPTX/VENC/dptx_venc_a9.o

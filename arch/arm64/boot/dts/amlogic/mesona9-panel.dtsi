@@ -11,6 +11,92 @@
 		memory-region-names = "lcd_cma_reserved";
 	};
 
+	Panel_Groups {
+		eDP_0 {
+			model_name = "eDP-LM156LFGL";
+			interface = "eDP"; /*lcd_interface(lvds, vbyone)*/
+			HPD-ignore = <100>;
+
+			assigned-link-rate = <0>;
+			assigned-lane-count = <0>;
+			assigned-port-count = <0>;
+			assigned-vmode = <0>;
+			assigned-disable-PSR = <0>;
+			use-aux-backlight = <0>;
+
+			assigned-preset-timing = <0>;
+
+			///*h(period active sync bp pol) v(period active sync bp pol) dft fr*/
+			//timing-0 = <2180 1920 32 180 0 1282 1080 5 194 0 24 48>;
+			//timing-0-fr = <48 50 60>; /* timing with fixed fr */
+			//timing-0-range-limit = <
+			//	2132 2650  /*h_period_min,max*/
+			//	1120 1480  /*v_period_min,max*/
+			//	120000000 160000000>; /*pclk_min,max*/
+			//timing-0-range = <48 60>; /* timing with fixed fr */
+
+			phy_attr=<1 2 0>; /*Fast-LT vswing, Pre-Em, Post-Cur*/
+			bl-wrapper-id = <0xff000000>;
+		};
+	};
+
+	eDPTX0:eDPTX0 {
+		compatible = "amlogic, eDPTX-A9";
+		status = "okay";
+		index = <0>;
+
+		reg = <0x0 0xfe016000 0x0 0x0f9>,    /* combo dphy */
+		      <0x0 0xfe074000 0x0 0x1000>;  /* edp_a host */
+		//power-domains = <&pwrdm PDID_T7_EDP0>;
+		interrupts = <0 197 1>,<0 194 1>,<0 287 1>;
+		interrupt-names = "vsync","vsync2","eDPTX-HPD";
+		pinctrl-names = "edptx_hpd","edptx_hpd_off";
+		pinctrl-0 = <&edptx_0_hpd_pins>;
+		pinctrl-1 = <&edptx_0_hpd_off_pins>;
+		device_name = "amlogic-eDPTX0";
+
+		HPD-ignore = <100>;
+
+		//edptx_vcc-gpio      = <&gpio GPIOY_0 GPIO_ACTIVE_HIGH>;
+		//edptx_vcc-gpio-name = "GPIOY_0";
+		//edptx_vcc_on_dir = <1>;
+		//edptx_vcc-off_dir = <0>;
+
+		edptx_bl_en-gpio      = <&gpio GPIOY_0 GPIO_ACTIVE_HIGH>;
+		edptx_bl_en-gpio-name = "GPIOY_0";
+		edptx_bl_en_on_dir = <1>;
+		edptx_bl_en-off_dir = <0>;
+		edptx_bl_pwm-gpio      = <&gpio GPIOY_1 GPIO_ACTIVE_HIGH>;
+		edptx_bl_pwm-gpio-name = "GPIOY_1";
+		edptx_bl_pwm_on_dir = <1>;
+		edptx_bl_pwm-off_dir = <0>;
+
+		edptx_bist-gpio      = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
+		edptx_bist-gpio-name = "GPIOY_3";
+		edptx_bist_on_dir = <1>;
+		edptx_bist-off_dir = <0>;
+
+		//edptx_hpd-gpio      = <&gpio GPIOY_7 GPIO_ACTIVE_HIGH>;
+		//edptx_hpd-gpio-name = "GPIOY_7";
+
+		drive-strength-lut =
+			<0x3 0x3 0x0>,<0x3 0x7 0x0>,<0x3 0xb 0x0>,<0x3 0xf 0x0>,
+			<0x7 0x3 0x0>,<0x7 0x8 0x0>,<0x8 0xc 0x0>,
+			<0xa 0x4 0x0>,<0xa 0x8 0x0>,
+			<0xf 0x5 0x0>;
+
+		ports {
+			port {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				edptx0_to_drm: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <0>;
+				};
+			};
+		};
+	};
+
 	lcd:lcd {
 		compatible = "amlogic, lcd-a9";
 		status = "okay";
@@ -649,7 +735,7 @@
 			clk_attr = <2 0 1 164000000>;
 			/* <lane, bit_rate, /, mode_init(0=video,1=cmd), mode_disp(0=video,1=cmd)*/
 			/* video_mode(0=sync_pulse,1=sync_event,2=burst), clk_hs, />*/
-			mipi_attr = <4 995 0 1 0 2 1 0>;
+			mipi_attr = <4 1020 0 1 0 2 1 0>;
 			/* dsi_init: data_type, num, data... */
 			dsi_init_on = <
 				0xfd 1 150

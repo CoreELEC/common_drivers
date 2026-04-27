@@ -24,7 +24,7 @@
 #endif
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #include <drm/amlogic/meson_connector_dev.h>
 #include "./dptx_common.h"
@@ -289,27 +289,27 @@ static int dptx_late_resume(void *data)
 void dptx_vout_server_init(struct dptx_drv_s *dptx)
 {
 	char *curr_vout_connector;//, *curr_vout_mode;
-	char dptx_edp_connector[8];
+	char edp_connector[8];
 	dptx->viu_sel = 0;
 
-	snprintf(dptx_edp_connector, 7, "EDP-%c", 'A' + dptx->idx);
+	snprintf(edp_connector, 7, "EDP-%c", 'A' + dptx->idx);
 
 #ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	curr_vout_connector = get_uboot_connector0_type();
 	// curr_vout_mode = get_vout_mode_uboot();
-	if (!strcmp(dptx_edp_connector, curr_vout_connector))
+	if (!strcmp(edp_connector, curr_vout_connector))
 		dptx->viu_sel = 1;
 #endif
 #ifdef CONFIG_AMLOGIC_VOUT2_SERVE
 	curr_vout_connector = get_uboot_connector1_type();
 	// curr_vout_mode = get_vout2_mode_uboot();
-	if (!strcmp(dptx_edp_connector, curr_vout_connector))
+	if (!strcmp(edp_connector, curr_vout_connector))
 		dptx->viu_sel = 2;
 #endif
 #ifdef CONFIG_AMLOGIC_VOUT3_SERVE
 	curr_vout_connector = get_uboot_connector2_type();
 	// curr_vout_mode = get_vout3_mode_uboot();
-	if (!strcmp(dptx_edp_connector, curr_vout_connector))
+	if (!strcmp(edp_connector, curr_vout_connector))
 		dptx->viu_sel = 3;
 #endif
 
@@ -335,7 +335,7 @@ void dptx_vout_server_init(struct dptx_drv_s *dptx)
 	dptx->vout_server.data = (void *)dptx;
 	dptx->vout_server.name = kzalloc(32, GFP_KERNEL);
 	if (dptx->vout_server.name)
-		snprintf(dptx->vout_server.name, 30, "%s_vout_server", dptx_edp_connector);
+		snprintf(dptx->vout_server.name, 30, "edptx_%c_vout_server", '0' + dptx->idx);
 
 #ifdef CONFIG_AMLOGIC_VOUT_SERVE
 	DPTX_PR(dptx, "regist: %s", dptx->vout_server.name);

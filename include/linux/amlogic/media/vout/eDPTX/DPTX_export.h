@@ -6,7 +6,7 @@
 #ifndef _AMLOGIC_eDPTX_EXPORT_H
 #define _AMLOGIC_eDPTX_EXPORT_H
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <drm/amlogic/meson_connector_dev.h>
 
 // char *lcd_get_dt_addr(void);

@@ -7,7 +7,7 @@
 #define _DPTX_CLK_CTRL_H
 
 #include <linux/types.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
 #define PLL_CLK_CHECK_MAX    1000000000 /* Hz */
 u8 dptx_clk_msr_check(u32 msr_id, u32 freq);
@@ -17,6 +17,9 @@ u8 dptx_pll_wait_lock(u32 reg, u8 lock_bit);
 unsigned long long dptx_clk_pll_div_calc(unsigned long long clk, u8 div_sel, u8 dir);
 
 struct dptx_clk_op_s *dptx_clk_op_init_t7(struct dptx_drv_s *dptx);
+struct dptx_clk_op_s *dptx_clk_op_init_a9(struct dptx_drv_s *dptx);
+
+void edptx_check_vco(struct dptx_clk_cfg_s *cconf, unsigned long long pll_fvco);
 
 #define PLL_RETRY_MAX        20
 #define LCD_CLK_CTRL_EN      0
@@ -26,9 +29,16 @@ struct dptx_clk_op_s *dptx_clk_op_init_t7(struct dptx_drv_s *dptx);
 
 #define LCD_CLK_REG_END      0xffff
 #define LCD_CLK_CTRL_CNT_MAX 10
+
+#define LCD_PLL_MODE_DEFAULT         BIT(0)
+#define LCD_PLL_MODE_SPECIAL_CNTL    BIT(1)
+#define LCD_PLL_MODE_FRAC_SHIFT      BIT(2)
+
 struct dptx_pll_data_s {
 	/* clk path node parameters */
 	u32 pll_od_fb;
+	u32 fin_base;
+
 	u16 pll_m_range[2];
 	u32 pll_frac_range;
 	u8  pll_frac_sign_bit;
@@ -50,6 +60,8 @@ struct dptx_pll_data_s {
 	u16 ss_dep_base;
 	u16 ss_dep_sel_max;
 	u16 ss_str_m_max;
+
+	u8 pll_0_5_div_en;
 };
 
 struct dptx_clk_op_s {

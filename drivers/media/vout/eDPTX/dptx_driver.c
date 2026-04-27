@@ -21,7 +21,7 @@
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
 #include <linux/amlogic/media/vout/vinfo.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #include <linux/amlogic/media/vout/eDPTX/DPCD_REG.h>
 #include <drm/amlogic/meson_connector_dev.h>
@@ -99,8 +99,8 @@ int dptx_timing_config_restore(struct dptx_drv_s *dptx)
 	struct dptx_vmode_s *vmd_p;
 
 	if (dptx->status & DPTX_STA_HPD_HIGH) {
-		for (port = 0; port < 4; port++) {
-			if (!dptx->sink.link[port])
+		for (port = 0; port < eDPTX_MAX_PORT; port++) {
+			if (!(dptx->sink.port_mask & BIT(port)))
 				continue;
 
 			if (dptx_DPCD_capability_to_link_cfg(dptx, port))
@@ -111,10 +111,10 @@ int dptx_timing_config_restore(struct dptx_drv_s *dptx)
 		}
 	}
 
-	if (dptx->sink.dt_cnt) {
+	if (dptx->panel_data.timing_cnt) {
 		dptx_config_timing_probe(dptx);
 	} else {
-		ret = __dptx_EDID_probe(dptx, 0);
+		ret = edptx_EDID_probe(dptx, 0);
 		if (ret)
 			vmd_p = &DPTX_SafeMode_640x480_vmode;
 	}
@@ -144,24 +144,24 @@ void dptx_driver_ready(struct dptx_drv_s *dptx)
 	}
 
 	DPTX_PR(dptx, "driver init(ver %s)", DPTX_DRV_VERSION);
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_phy_enable(dptx, port);
 		//dptx_power_init(dptx, port, 1);
 	}
 	dptx_venc_enable(dptx, 0);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_transmitter_init(dptx, port);
 	}
 
-	dptx->pin_c = devm_pinctrl_get_select(dptx->dev, "DPTX-ON");
-	if (IS_ERR_OR_NULL(dptx->pin_c)) {
+	dptx->board_data.pin_hpd_c = pinctrl_get_select(dptx->dev, "edptx_hpd");
+	if (IS_ERR_OR_NULL(dptx->board_data.pin_hpd_c)) {
 		DPTX_ERR(dptx, "pinctrl mux: %p, err: %d",
-		       dptx->pin_c, IS_ERR(dptx->pin_c));
+		       dptx->board_data.pin_hpd_c, IS_ERR(dptx->board_data.pin_hpd_c));
 	}
 
 	dptx->status |= DPTX_STA_DRV_READY;
@@ -169,19 +169,20 @@ void dptx_driver_ready(struct dptx_drv_s *dptx)
 
 void dptx_driver_panel_power_ctrl(struct dptx_drv_s *dptx, u8 en)
 {
-	if (IS_ERR_OR_NULL(dptx->PWR_gpio))
-		dptx->PWR_gpio = devm_gpiod_get(dptx->dev, "edptx_vcc",
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_vcc_gpio_desc))
+		dptx->board_data.edptx_vcc_gpio_desc = devm_gpiod_get(dptx->dev, "edptx_vcc",
 			en ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW);
-	if (IS_ERR_OR_NULL(dptx->PWR_gpio)) {
-		DPTX_ERR(dptx, "regist PWR gpio: %p, err: %d",
-		       dptx->PWR_gpio, IS_ERR(dptx->PWR_gpio));
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_vcc_gpio_desc)) {
+		DPTX_ERR(dptx, "regist vcc gpio: %p, err: %d",
+		       dptx->board_data.edptx_vcc_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_vcc_gpio_desc));
 		return;
 	}
-	gpiod_direction_output(dptx->PWR_gpio, en);
-	DPTX_DBG(dptx, "panel vcc gpio: %p, %d", dptx->PWR_gpio, en);
+	gpiod_direction_output(dptx->board_data.edptx_vcc_gpio_desc, en);
+	DPTX_DBG(dptx, "panel vcc gpio: %p, %d", dptx->board_data.edptx_vcc_gpio_desc, en);
 }
 
-void dptx_drv_check_HPD(struct dptx_drv_s *dptx)
+void edptx_drv_check_HPD(struct dptx_drv_s *dptx)
 {
 	u16 i = 0;
 	u8 data;
@@ -214,7 +215,7 @@ void dptx_drv_check_HPD(struct dptx_drv_s *dptx)
 		i++;
 	}
 
-	DPTX_PR(dptx, "DPTX HPD is LOW");
+	DPTX_PR(dptx, "eDP HPD is LOW");
 	dptx->status &= ~DPTX_STA_HPD_HIGH;
 }
 
@@ -233,8 +234,8 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 
 	dptx_venc_enable(dptx, 0);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_transmitter_init(dptx, port);
 		__dptx_set_phy_config(dptx, port, 1); // ?
@@ -242,7 +243,7 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 		// Power up link
 		if (dptx_if_aux_write_single(dptx, port, DPCD_SET_POWER, 0x1))
 			DPTX_P_ERR(dptx, port, "DPCD SET POWER ERROR");
-		mdelay(20);
+		dptx_delay_ms(20);
 
 		// dptx_link_cfg_dft(dptx, port);
 		// DP protocol: EDID -> DPCD, Intel: DPCD -> EDID
@@ -254,19 +255,19 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 
 	// multi port config check;
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
-		__dptx_set_lane_config(dptx, port);
+		edptx_set_lane_config(dptx, port);
 		__dptx_set_phy_config(dptx, port, 1); // ?
 	}
 
 	__dptx_link_training(dptx);
 
-	if (dptx->sink.dt_cnt) {
+	if (dptx->panel_data.timing_cnt) {
 		dptx_config_timing_probe(dptx);
 	} else {
-		ret = __dptx_EDID_probe(dptx, 0);
+		ret = edptx_EDID_probe(dptx, 0);
 		if (ret)
 			dp_vmode = &DPTX_SafeMode_640x480_vmode;
 	}
@@ -285,8 +286,8 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 	dptx_vmode_apply_to_act_timing(dptx, dp_vmode);
 	dptx_act_timing_apply(dptx);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_set_MSA(dptx, port);
 		dptx_set_content_protection(dptx, port);
@@ -295,10 +296,10 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 	dptx_venc_enable(dptx, 1);
 
 	//dptx_if_path_reset(dptx, 0, DPTX_RESET_VENC);
-	mdelay(1);
+	dptx_delay_ms(1);
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_transmitter_output(dptx, port, 1);
 	}
@@ -307,50 +308,70 @@ void dptx_drv_start(struct dptx_drv_s *dptx)
 	DPTX_PR(dptx, "%s enable main stream[0x%x] video finished", __func__, dptx->sink.port_mask);
 }
 
-void dptx_drv_disp_on(struct dptx_drv_s *dptx)
+void edptx_drv_disp_on(struct dptx_drv_s *dptx)
 {
 	if (!(dptx->status &
 	      (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY | DPTX_STA_HPD_HIGH | DPTX_STA_LINK_ON))) {
 		DPTX_ERR(dptx, "sta=0x%x, not ready for %s", dptx->status, __func__);
 		return;
 	}
-	//if (dptx->idx == 0)
-	//	run_command("gpio set GPIOY_1", 0);
-	//else
-	//	run_command("gpio set GPIOY_8", 0);
 
-	if (IS_ERR_OR_NULL(dptx->bl_gpio))
-		dptx->bl_gpio = devm_gpiod_get(dptx->dev, "edptx_bl", GPIOD_OUT_HIGH);
-	if (IS_ERR_OR_NULL(dptx->bl_gpio)) {
-		DPTX_ERR(dptx, "regist bl gpio: %p, err: %d",
-		       dptx->bl_gpio, IS_ERR(dptx->bl_gpio));
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_en_gpio_desc))
+		dptx->board_data.edptx_bl_en_gpio_desc = devm_gpiod_get(dptx->dev,
+			"edptx_bl_en", GPIOD_OUT_HIGH);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_en_gpio_desc)) {
+		DPTX_ERR(dptx, "regist bl en: %p, err: %d", dptx->board_data.edptx_bl_en_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_bl_en_gpio_desc));
 		return;
 	}
-	gpiod_direction_output(dptx->bl_gpio, 1);
-	DPTX_DBG(dptx, "panel bl gpio: %p, %d", dptx->bl_gpio, 1);
+	gpiod_direction_output(dptx->board_data.edptx_bl_en_gpio_desc, 1);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_pwm_gpio_desc))
+		dptx->board_data.edptx_bl_pwm_gpio_desc = devm_gpiod_get(dptx->dev,
+			"edptx_bl_pwm", GPIOD_OUT_LOW);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_pwm_gpio_desc)) {
+		DPTX_ERR(dptx, "regist bl pwm: %p, err: %d",
+		       dptx->board_data.edptx_bl_pwm_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_bl_pwm_gpio_desc));
+		return;
+	}
+	gpiod_direction_output(dptx->board_data.edptx_bl_pwm_gpio_desc, 1);
+	DPTX_DBG(dptx, "panel bl pwm: %p:%d, %p:%d", dptx->board_data.edptx_bl_en_gpio_desc, 1,
+						     dptx->board_data.edptx_bl_pwm_gpio_desc, 1);
 
 	dptx_mute_set(dptx, 0);
 
 	dptx->status |= DPTX_STA_DISP_ON;
 }
 
-void dptx_drv_disp_off(struct dptx_drv_s *dptx)
+void edptx_drv_disp_off(struct dptx_drv_s *dptx)
 {
 	if (!(dptx->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY))) {
 		DPTX_ERR(dptx, "sta=0x%x, not ready for %s", dptx->status, __func__);
 		return;
 	}
 
-	if (IS_ERR_OR_NULL(dptx->bl_gpio))
-		dptx->bl_gpio = devm_gpiod_get(dptx->dev, "edptx_bl", GPIOD_OUT_LOW);
-	if (IS_ERR_OR_NULL(dptx->bl_gpio)) {
-		DPTX_ERR(dptx, "regist bl gpio: %p, err: %d",
-		       dptx->bl_gpio, IS_ERR(dptx->bl_gpio));
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_en_gpio_desc))
+		dptx->board_data.edptx_bl_en_gpio_desc = devm_gpiod_get(dptx->dev,
+			"edptx_bl_en", GPIOD_OUT_LOW);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_en_gpio_desc)) {
+		DPTX_ERR(dptx, "regist bl en: %p, err: %d", dptx->board_data.edptx_bl_en_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_bl_en_gpio_desc));
 		return;
 	}
+	gpiod_direction_output(dptx->board_data.edptx_bl_en_gpio_desc, 0);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_pwm_gpio_desc))
+		dptx->board_data.edptx_bl_pwm_gpio_desc = devm_gpiod_get(dptx->dev,
+			"edptx_bl_pwm", GPIOD_OUT_HIGH);
+	if (IS_ERR_OR_NULL(dptx->board_data.edptx_bl_pwm_gpio_desc)) {
+		DPTX_ERR(dptx, "regist bl pwm: %p, err: %d",
+		       dptx->board_data.edptx_bl_pwm_gpio_desc,
+		       IS_ERR(dptx->board_data.edptx_bl_pwm_gpio_desc));
+		return;
+	}
+	gpiod_direction_output(dptx->board_data.edptx_bl_pwm_gpio_desc, 0);
+	DPTX_DBG(dptx, "panel bl pwm: %p:%d, %p:%d", dptx->board_data.edptx_bl_en_gpio_desc, 0,
+						     dptx->board_data.edptx_bl_pwm_gpio_desc, 0);
 
-	gpiod_direction_output(dptx->bl_gpio, 0);
-	DPTX_DBG(dptx, "panel bl gpio: %p, %d", dptx->bl_gpio, 0);
 
 	dptx_mute_set(dptx, 1);
 
@@ -380,7 +401,7 @@ void dptx_driver_close(struct dptx_drv_s *dptx)
 	// 010b = Set all link to D3 (power-down mode).
 	// 101b = Set Main-Link D3, keep AUX block fully powered
 	for (port = 3; port > 0; port--) {
-		if (!dptx->sink.link[port])
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		ret = dptx_if_aux_write(dptx, port, DPCD_SET_POWER, 1, &auxdata);
 		if (ret)
@@ -390,8 +411,8 @@ void dptx_driver_close(struct dptx_drv_s *dptx)
 
 	DPTX_PR(dptx, "disable main stream video");
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_if_transmitter_output(dptx, port, 0);
 		dptx_if_path_reset(dptx, port, DPTX_RESET_ALL);
@@ -418,8 +439,8 @@ void dptx_drv_eDP_PSR1_en(struct dptx_drv_s *dptx, u8 port_mask, u8 en)
 		return;
 	}
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_eDP_PSR1(dptx, port, en);
 	}
@@ -435,8 +456,8 @@ void dptx_drv_eDP_PSR2_en(struct dptx_drv_s *dptx, u8 port_mask, u8 en)
 		return;
 	}
 
-	for (port = 0; port < 4; port++) {
-		if (!dptx->sink.link[port])
+	for (port = 0; port < eDPTX_MAX_PORT; port++) {
+		if (!(dptx->sink.port_mask & BIT(port)))
 			continue;
 		dptx_eDP_PSR2(dptx, port, en);
 	}
@@ -447,7 +468,7 @@ void dptx_notify_check_HPD(struct dptx_drv_s *dptx)
 	if (!(dptx->status & DPTX_STA_DRV_READY))
 		return;
 
-	dptx_drv_check_HPD(dptx);
+	edptx_drv_check_HPD(dptx);
 }
 
 void dptx_notify_set_backlight(struct dptx_drv_s *dptx, u8 en)
@@ -462,9 +483,9 @@ void dptx_notify_set_screen_mute(struct dptx_drv_s *dptx, u8 en)
 		return;
 
 	if (en)
-		dptx_drv_disp_off(dptx);
+		edptx_drv_disp_off(dptx);
 	else
-		dptx_drv_disp_on(dptx);
+		edptx_drv_disp_on(dptx);
 }
 
 void dptx_notify_set_HPD_trigger(struct dptx_drv_s *dptx, u8 en)
@@ -483,7 +504,7 @@ void dptx_notify_set_link(struct dptx_drv_s *dptx, u8 en)
 	}
 
 	if (!(dptx->status & DPTX_STA_HPD_HIGH))
-		dptx_drv_check_HPD(dptx);
+		edptx_drv_check_HPD(dptx);
 
 	if (dptx->status & DPTX_STA_HPD_HIGH)
 		dptx_drv_start(dptx);

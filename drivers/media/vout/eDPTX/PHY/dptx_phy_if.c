@@ -3,7 +3,7 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
 
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include "dptx_phy_config.h"
 #include "../dptx_common.h"
 
@@ -47,8 +47,11 @@ void dptx_phy_probe(struct dptx_drv_s *dptx)
 	dptx_phy_ctrl = NULL;
 
 	switch (dptx->data->chip_type) {
-	case DPTX_CHIP_T7:
+	case eDPTX_CHIP_T7:
 		dptx_phy_ctrl = dptx_phy_config_init_t7();
+		break;
+	case eDPTX_CHIP_A9:
+		dptx_phy_ctrl = dptx_phy_config_init_a9();
 		break;
 	default:
 		break;

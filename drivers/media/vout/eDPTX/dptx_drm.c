@@ -18,7 +18,7 @@
 #include <linux/clk.h>
 #include <linux/amlogic/media/vout/vinfo.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/DPTX_notify.h>
 #include "dptx_common.h"
 #include <linux/component.h>
@@ -36,7 +36,7 @@ struct drm_eDP_wrapper_s {
 
 #define to_drm_dptx_wrapper(x)	container_of(x, struct drm_eDP_wrapper_s, drm_eDPTX_instance)
 
-static struct drm_eDP_wrapper_s drm_eDP_wrappers[DPTX_MAX_DRV];
+static struct drm_eDP_wrapper_s drm_eDP_wrappers[eDPTX_MAX_DRV];
 
 static int dptx_drm_add_modes(struct meson_panel_dev *dptx_drm_dev,
 				struct drm_display_mode *pmode, u8 vmd_idx)
@@ -53,7 +53,7 @@ static int dptx_drm_add_modes(struct meson_panel_dev *dptx_drm_dev,
 		raw_timing = &DPTX_SafeMode_640x480_timing;
 	} else {
 		vmd_p = &dptx->vmode_mgr.vmodes[vmd_idx];
-		raw_timing = &dptx->sink.timing[vmd_p->base_dtd_idx];
+		raw_timing = &dptx->panel_data.timing[vmd_p->base_dtd_idx];
 	}
 
 	pmode->type        = DRM_MODE_TYPE_DRIVER;
@@ -82,23 +82,23 @@ static int dptx_drm_add_modes(struct meson_panel_dev *dptx_drm_dev,
 		pclk = vmd_p->fr100_int;
 		pclk *= 10;
 		pclk = pclk * raw_timing->h_period * raw_timing->v_period;
-		pclk = pclk / 1001;
+		pclk = dptx_div_around(pclk, 1001);
 		break;
 	case 2: //raw fr
 	default:
 		pclk = raw_timing->pclk;
 		break;
 	}
-	pmode->clock = pclk / 1000;
+	pmode->clock = dptx_div_around(pclk, 1000);
 	//dptx->act_timing.pclk = pclk;
 	pclk = dptx_div_around(pclk * 1000, dptx->act_timing.v_period);
 	pclk = dptx_div_around(pclk, dptx->act_timing.h_period);
 
-	//dptx->act_timing.cfmt = dptx_cfmt_table[dptx->vmode_mgr.vmode_cfmt_sel].cfmt_id;
+	//dptx->act_timing.cfmt = edp_cfmt_tb[dptx->vmode_mgr.vmode_cfmt_sel].cfmt_id;
 
 	//str_add_vmode ??
 	//sprintf(&pmode->name, "%ux%up%uhz")
-	__str_add_vmode(dptx, pmode->name, vmd_p, pclk / 1000);
+	__str_add_vmode(dptx, pmode->name, vmd_p, dptx_div_around(pclk, 1000));
 
 	DPTX_PR(dptx, "%s: %s, clock=%dkHz, htotal=%d, vtotal=%d",
 		__func__, pmode->name, pmode->clock, pmode->htotal, pmode->vtotal);
@@ -181,7 +181,7 @@ u8 dptx_drm_timing_find(struct dptx_drv_s *dptx, struct drm_display_mode *pmode)
 		if (!(vmode_p->flag & VMODE_FLAG_VALID))
 			continue;
 
-		v_tm = &dptx->sink.timing[vmode_p->base_dtd_idx];
+		v_tm = &dptx->panel_data.timing[vmode_p->base_dtd_idx];
 
 		if (v_tm->h_act != h_active || v_tm->v_act != v_active ||
 				v_tm->h_period != htotal || v_tm->v_period != vtotal)
