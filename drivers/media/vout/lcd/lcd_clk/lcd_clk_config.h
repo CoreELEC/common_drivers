@@ -91,6 +91,7 @@ struct lcd_pll_data_s {
 	unsigned int od_cnt;
 	unsigned int pll_od_sel_max;
 	unsigned int have_tcon_div;
+	unsigned int pll_od_div_5_7;
 
 	/*pll freq limit*/
 	unsigned int pll_ref_fmax;

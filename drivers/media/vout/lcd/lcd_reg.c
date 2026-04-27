@@ -109,6 +109,16 @@ int lcd_reg_t6x[] = {
 	LCD_MAP_MAX,
 };
 
+int lcd_reg_a9[] = {
+	LCD_MAP_DSI_A_HOST,
+	LCD_MAP_DSI_A_PHY,
+	LCD_MAP_DSI_B_HOST,
+	LCD_MAP_DSI_B_PHY,
+	LCD_MAP_VX1_LVDS_CTRL,
+	LCD_MAP_PERIPHS,
+	LCD_MAP_MAX,
+};
+
 /* for lcd reg access */
 spinlock_t lcd_reg_spinlock;
 

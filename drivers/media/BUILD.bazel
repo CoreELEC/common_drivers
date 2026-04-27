@@ -501,6 +501,7 @@ ddk_module(
                 "vout/lcd/lcd_phy/lcd_phy_txhd2.c",
                 "vout/lcd/lcd_phy/lcd_phy_t6w.c",
                 "vout/lcd/lcd_phy/lcd_phy_t6x.c",
+                "vout/lcd/lcd_phy/lcd_phy_a9.c",
                 "vout/lcd/lcd_phy/lcd_phy_if.c",
                 "vout/lcd/lcd_phy/lcd_phy_utils.c",
             ],

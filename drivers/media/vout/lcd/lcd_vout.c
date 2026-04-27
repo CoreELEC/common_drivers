@@ -2089,7 +2089,7 @@ lcd_ioctl_end:
 static long lcd_compat_ioctl(struct file *file, unsigned int cmd,
 			     unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = lcd_ioctl(file, cmd, arg);
@@ -2694,7 +2694,7 @@ static struct lcd_data_s lcd_data_a9 = {
 	.chip_type = LCD_CHIP_A9,
 	.chip_name = "a9",
 	.rev_type = 0,
-	.reg_map_table = &lcd_reg_g12a[0],
+	.reg_map_table = &lcd_reg_a9[0],
 	.drv_max = 1,
 	.offset_venc = {0x0},
 	.offset_venc_if = {0x0},

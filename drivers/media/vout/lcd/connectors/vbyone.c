@@ -236,6 +236,15 @@ void lcd_vbyone_sw_reset(struct aml_lcd_drv_s *pdrv)
 		/* release PHY */
 		lcd_vx1_lvds_ctrl_write(pdrv, reg_phy_tx_ctrl1, 0x3000000);
 		lcd_vcbus_write(reg_rst, 0);
+	} else if (pdrv->data->chip_type == LCD_CHIP_A9) {
+		/* force PHY to 0 */
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 0, 0, 1);
+		lcd_vcbus_write(VBO_SOFT_RST_T7, 0x1ff);
+		udelay(5);
+		/* release PHY */
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 1, 0, 1);
+		lcd_vcbus_write(VBO_SOFT_RST_T7, 0);
+
 	} else {
 		/* force PHY to 0 */
 		lcd_ana_setb(HHI_LVDS_TX_PHY_CNTL0, 3, 8, 2);
@@ -606,7 +615,8 @@ static void lcd_vbyone_enable_t7(struct aml_lcd_drv_s *pdrv)
 	lcd_vbyone_interrupt_enable(pdrv, 0);
 
 	/*lsb first for t6w*/
-	if (pdrv->data->chip_type == LCD_CHIP_T6W)
+	if (pdrv->data->chip_type == LCD_CHIP_T6W ||
+		pdrv->data->chip_type == LCD_CHIP_A9)
 		lcd_vcbus_setb(VBO_LANE_OUTPUT_T7 + offset, 0xff, 0, 8);
 	else if (pdrv->data->chip_type == LCD_CHIP_T6X)
 		lcd_vcbus_setb(VBO_LANE_OUTPUT_T7 + offset, 0xffff, 0, 8);
@@ -1412,6 +1422,7 @@ void lcd_vbyone_enable(struct aml_lcd_drv_s *pdrv)
 	case LCD_CHIP_T5W:
 	case LCD_CHIP_T5M:
 	case LCD_CHIP_T6W:
+	case LCD_CHIP_A9:
 		lcd_vbyone_enable_t7(pdrv);
 		break;
 	case LCD_CHIP_T3X:
@@ -1432,6 +1443,7 @@ void lcd_vbyone_probe(struct aml_lcd_drv_s *pdrv)
 	case LCD_CHIP_T5W:
 	case LCD_CHIP_T5M:
 	case LCD_CHIP_T6W:
+	case LCD_CHIP_A9:
 		vx1_reg = &vbo_reg_t7;
 		break;
 	case LCD_CHIP_T3X:

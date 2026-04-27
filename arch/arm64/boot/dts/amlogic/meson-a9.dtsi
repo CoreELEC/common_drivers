@@ -4597,6 +4597,21 @@
 		};
 	};
 
+	lcd_vbyone_a_pins: lcd_vbyone_a_pin {
+		mux {
+			groups = "vx1_htpdn_y","vx1_lockn_y";
+			function = "vx1";
+		};
+	};
+
+	lcd_vbyone_a_off_pins: lcd_vbyone_a_off_pin {
+		mux {
+			groups = "GPIOY_7","GPIOY_9";
+			function = "gpio_periphs";
+			input-enable;
+		};
+	};
+
 	hdmitx_ddc: hdmitx_ddc {
 		mux {
 			groups = "hdmitx_sda",

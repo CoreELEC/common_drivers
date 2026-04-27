@@ -4,6 +4,13 @@
  */
 
 / {
+	lcd_resman {
+		compatible = "amlogic, lcd-resman";
+		status = "okay";
+		memory-region = <&lcd_cma_reserved>;
+		memory-region-names = "lcd_cma_reserved";
+	};
+
 	lcd:lcd {
 		compatible = "amlogic, lcd-a9";
 		status = "okay";
@@ -11,17 +18,18 @@
 		mode = "tablet";
 		fr_auto_policy = <0>; /* 0=disable, 1=60/50hz, 2=60/50/48hz */
 		key_valid = <0>;
-		pxp = <1>;
-		reg = <0x0 0xfe018000 0x0 0x60     /* combo dphy */
-			0x0 0xfe0b0000 0x0 0x10b0  /* edp_a host */
-			0x0 0xfe074000 0x0 0x400   /* mipi_dsi0-A host */
-			0x0 0xfe014000 0x0 0x200   /* mipi_dsi0-A phy */
+		reg = <0x0 0xfe01e000 0x0 0x400   /* mipi_dsi0-A host */
+			0x0 0xfe01c000 0x0 0x200   /* mipi_dsi0-A phy */
 			0x0 0xfe072000 0x0 0x400   /* mipi_dsi0-B host */
-			0x0 0xfe016000 0x0 0x200   /* mipi_dsi0-B phy */
-			0x0 0xfe002000 0x0 0xa0    /* reset */
-			0x0 0xfe004000 0x0 0x70>;  /* periphs */
-		interrupts = <0 197 1>, <0 194 1>, <0 82 1>, <0 282 1>;
-		interrupt-names = "vsync","vsync2","vsync3","vbyone";
+			0x0 0xfe018000 0x0 0x200   /* mipi_dsi0-B phy */
+			0x0 0xfe016000 0x0 0x3e4
+			0x0 0xfe004000 0x0 0x070>;  /* vx1_lvds_ctrl */
+		interrupts = <0 197 1>, <0 194 1>, <0 208 1>;
+		interrupt-names = "vsync","vsync2","vbyone";
+		pinctrl-names = "vbyone","vbyone_off";
+		pinctrl-0 = <&lcd_vbyone_a_pins>;
+		pinctrl-1 = <&lcd_vbyone_a_off_pins>;
+
 		config_check_glb = <1>;
 		display_timing_req_min = <1  /*alert_level: 0:disable, 1:warning, 2:fatal error*/
 			45   /*hsw+hbp*/

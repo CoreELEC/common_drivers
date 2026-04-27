@@ -368,6 +368,9 @@ int lcd_phy_config_init(struct lcd_data_s *pdata)
 	case LCD_CHIP_T6X:
 		lcd_phy_ctrl = lcd_phy_config_init_t6x(pdata);
 		break;
+	case LCD_CHIP_A9:
+		lcd_phy_ctrl = lcd_phy_config_init_a9(pdata);
+		break;
 	default:
 		break;
 	}

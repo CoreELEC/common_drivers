@@ -96,6 +96,12 @@
 			reg = <0x0 0x7f800000 0x0 0x800000>;
 		};
 
+		lcd_cma_reserved:linux,lcd-reserved {
+			compatible = "amlogic, lcd_rsvd";
+			reg = <0x0 0x40000000 0x0 0x00a80000>;
+			tcon-size = <0x0 0x00a02840>;
+		};
+
 		dsp_fw_reserved:linux,dsp_fw {
 			compatible = "amlogic, dsp";
 			size = <0x0 0x800000>;

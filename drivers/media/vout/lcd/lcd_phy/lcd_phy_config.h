@@ -60,6 +60,7 @@ struct lcd_phy_ctrl_s *lcd_phy_config_init_s6(struct lcd_data_s *pdata);
 struct lcd_phy_ctrl_s *lcd_phy_config_init_t6d(struct lcd_data_s *pdata);
 struct lcd_phy_ctrl_s *lcd_phy_config_init_t6w(struct lcd_data_s *pdata);
 struct lcd_phy_ctrl_s *lcd_phy_config_init_t6x(struct lcd_data_s *pdata);
+struct lcd_phy_ctrl_s *lcd_phy_config_init_a9(struct lcd_data_s *pdata);
 unsigned int lcd_phy_vswing_level_to_value_dft(struct aml_lcd_drv_s *pdrv,
 			struct aml_lcd_device_s *dev_p, unsigned int level);
 unsigned int lcd_phy_preem_level_to_value_dft(struct aml_lcd_drv_s *pdrv,

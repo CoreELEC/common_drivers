@@ -55,7 +55,8 @@ void lcd_lvds_enable(struct aml_lcd_drv_s *pdrv)
 	    pdrv->data->chip_type == LCD_CHIP_T3X ||
 	    pdrv->data->chip_type == LCD_CHIP_T6D ||
 	    pdrv->data->chip_type == LCD_CHIP_T6W ||
-	    pdrv->data->chip_type == LCD_CHIP_T6X) {
+	    pdrv->data->chip_type == LCD_CHIP_T6X ||
+	    pdrv->data->chip_type == LCD_CHIP_A9) {
 		reg_lvds_pack_ctrl = LVDS_PACK_CNTL_ADDR_T7 + offset;
 		reg_lvds_gen_ctrl = LVDS_GEN_CNTL_T7 + offset;
 		lcd_vcbus_write(LVDS_SER_EN + offset, 0xfff);
@@ -65,7 +66,8 @@ void lcd_lvds_enable(struct aml_lcd_drv_s *pdrv)
 	}
 	if (pdrv->data->chip_type == LCD_CHIP_T6D ||
 		pdrv->data->chip_type == LCD_CHIP_T6W ||
-		pdrv->data->chip_type == LCD_CHIP_T6X)
+		pdrv->data->chip_type == LCD_CHIP_T6X ||
+		pdrv->data->chip_type == LCD_CHIP_A9)
 		lsb_first = 1;
 	lcd_vcbus_write(reg_lvds_pack_ctrl,
 			(lvds_repack << 0) | // repack //[1:0]

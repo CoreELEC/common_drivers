@@ -37,6 +37,7 @@ int lcd_clk_config_print_dft(struct aml_lcd_drv_s *pdrv, char *buf, int offset);
 void lcd_pll_frac_generate_dft(struct aml_lcd_drv_s *pdrv);
 void lcd_clk_config_init_print_dft(struct aml_lcd_drv_s *pdrv);
 void lcd_clk_generate_dft(struct aml_lcd_drv_s *pdrv);
+void lcd_clk_generate_od_div_5_7(struct aml_lcd_drv_s *pdrv);
 void lcd_clk_generate_prbs_clk(struct aml_lcd_drv_s *pdrv,
 		unsigned int enc_clk, unsigned long long bit_rate);
 void lcd_set_vid_pll_div_dft(struct aml_lcd_drv_s *pdrv);

@@ -67,4 +67,10 @@ static unsigned int lcd_reg_dump_pinmux_c3[] = {
 	LCD_DEBUG_REG_END
 };
 
+static unsigned int lcd_reg_dump_pinmux_a9[] = {
+	PADCTRL_PIN_MUX_REGC,
+	PADCTRL_PIN_MUX_REGI,
+	LCD_DEBUG_REG_END
+};
+
 #endif
