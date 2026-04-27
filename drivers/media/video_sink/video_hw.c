@@ -13360,6 +13360,11 @@ void vpp1_blend_update(u32 vpp_index)
 		} else {
 			blend_en = 0;
 		}
+
+		// VPP1_VD1_BLEND_SRC_CTRL 1:VIU_VPP_VD_DIN3_CTRL 2:VIU_VPP_VD_DIN4_CTRL
+		if (video_is_meson_a9_cpu())
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits(VPP1_VD1_BLEND_SRC_CTRL,
+				blend_en, 0, 3);
 		cur_dev->rdma_func[vpp_index].rdma_wr(viu_misc_reg.vd_path_misc_ctrl,
 			vd_path_msic_ctrl);
 		/* 0:use vpp0_go_field 1:use vpp1_go_field 2:use vpp2_go_field  */
@@ -16485,8 +16490,12 @@ int vpp_crc_viu2_check(u32 vpp_crc_en)
 
 	if (cur_dev->display_module == S5_DISPLAY_MODULE)
 		return 0;
-	if (vpp_crc_en)
-		vpp_crc_result = READ_VCBUS_REG(VPP2_RO_CRCSUM);
+	if (vpp_crc_en) {
+		if (video_is_meson_a9_cpu())
+			vpp_crc_result = READ_VCBUS_REG(VPP1_CRC_RO);
+		else
+			vpp_crc_result = READ_VCBUS_REG(VPP2_RO_CRCSUM);
+	}
 
 	return vpp_crc_result;
 }
@@ -16495,8 +16504,12 @@ void enable_vpp_crc_viu2(u32 vpp_crc_en)
 {
 	if (cur_dev->display_module == S5_DISPLAY_MODULE)
 		return;
-	if (vpp_crc_en)
-		WRITE_VCBUS_REG_BITS(VPP2_CRC_CHK, 1, 0, 1);
+	if (vpp_crc_en) {
+		if (video_is_meson_a9_cpu())
+			WRITE_VCBUS_REG_BITS(VPP1_TOP_CTRL, 1, 0, 1);
+		else
+			WRITE_VCBUS_REG_BITS(VPP2_CRC_CHK, 1, 0, 1);
+	}
 }
 
 #ifdef TMP_DISABLE
@@ -19195,6 +19208,25 @@ static void vd_set_go_field_default(void)
 	}
 }
 
+static void vd_set_vpp1_postblend_reg(void)
+{
+	/* a9 select vd2 to vpp1 path */
+	if (video_is_meson_a9_cpu() && cur_dev->display_device_cnt == 2) {
+		/*
+		 * VIU_VPP_VD_DIN1_CTRL ~ VIU_VPP_VD_DIN3_CTRL used to vpp0
+		 * VIU_VPP_VD_DIN4_CTRL ~ VIU_VPP_VD_DIN5_CTRL used to vpp0
+		 * bit0~2 1:vd1 2:vd2 3:vd3
+		 */
+		WRITE_VCBUS_REG_BITS(VIU_VPP_VD_DIN1_CTRL, 0, 0, 2);
+		WRITE_VCBUS_REG_BITS(VIU_VPP_VD_DIN3_CTRL, 2, 0, 2);
+		/* clear VPP1_VD1/2_BLEND_SRC_CTRL, otherwise vpp1 osd can not display */
+		WRITE_VCBUS_REG_BITS(VPP1_VD1_BLEND_SRC_CTRL, 0, 0, 3);
+		WRITE_VCBUS_REG_BITS(VPP1_VD2_BLEND_SRC_CTRL, 0, 0, 3);
+		/* set vd2 select vpp1 timing */
+		WRITE_VCBUS_REG_BITS(VIU_VD2_PATH_CTRL, 1, 24, 2);
+	}
+}
+
 void vd1_set_go_field(void)
 {
 	if (cur_dev->prevsync_support) {
@@ -19401,6 +19433,7 @@ static int _video_hw_init(void)
 		WRITE_VCBUS_REG(VD2_SCO_FIFO_CTRL, 0xffff0800);
 	}
 	vd_set_go_field_default();
+	vd_set_vpp1_postblend_reg();
 	return 0;
 }
 
@@ -19993,6 +20026,7 @@ int video_early_init(struct amvideo_device_data_s *p_amvideo)
 	cur_dev->vsf_mode_support =
 		p_amvideo->dev_property.vsf_mode_support;
 	cur_dev->yuv_sharpen_support = p_amvideo->dev_property.yuv_sharpen_support;
+	cur_dev->display_device_cnt = p_amvideo->display_device_cnt;
 	if (cur_dev->aisr_support)
 		cur_dev->pps_auto_calc = 1;
 	if (cur_dev->display_module == T6W_DISPLAY_MODULE) {

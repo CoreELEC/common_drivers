@@ -382,6 +382,10 @@
 #define VPP2_CRC_CHK            0x1eb0
 #define VPP2_RO_CRCSUM          0x1eb1
 
+/* vpp1 crc A9 new add */
+#define VPP1_TOP_CTRL           0x6480
+#define VPP1_CRC_RO             0x6483
+
 /* pip alpha gen */
 #define VD1_PIP_ALPH_CTRL                          0x5880
 #define VD1_PIP_ALPH_SCP_H_0                       0x5881
@@ -2239,5 +2243,16 @@
 #define VD2_1_HDR_IN_SIZE                          0x1aa6
 #define VPU_AXIRD_FG_CTRL_1                        0x6d39
 #define VPU_HDR2_FRM2_SIZE                         0x4518
+
+#define VIU_VPP_VD_DIN0_CTRL                       0x1ae0
+#define VIU_VPP_VD_DIN1_CTRL                       0x1ae1
+#define VIU_VPP_VD_DIN2_CTRL                       0x1ae2
+#define VIU_VPP_VD_DIN3_CTRL                       0x1ae3
+#define VIU_VPP_VD_DIN4_CTRL                       0x1ae4
+
+#define VPP1_VD1_BLEND_SRC_CTRL                    0x64af
+#define VPP1_VD2_BLEND_SRC_CTRL                    0x64b0
+#define VPP1_OSD1_BLEND_SRC_CTRL                   0x64b1
+#define VPP1_OSD2_BLEND_SRC_CTRL                   0x64b2
 #endif
 

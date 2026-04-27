@@ -16677,7 +16677,6 @@ static struct amvideo_device_data_s amvideo_a9 = {
 	.display_module = T7_DISPLAY_MODULE,
 	.max_vd_layers = 3,
 	.has_vpp1 = 1,
-	.has_vpp2 = 1,
 	.is_tv_panel = 0,
 };
 

@@ -344,6 +344,7 @@ static void dump_mif_reg(void)
 		j = 0;
 	}
 	for (i = 0; i < cur_dev->max_vd_layers; i++) {
+		pr_info("vd%d mif regs:\n", i);
 		for (j = 0; j < MIF_REG_CNT; j++) {
 			reg_addr = mif_reg[i][j];
 			if (!reg_addr)
@@ -353,6 +354,7 @@ static void dump_mif_reg(void)
 				   reg_addr, reg_val);
 		}
 		if (cur_dev->mif_linear) {
+			pr_info("vd%d mif linear regs:\n", i);
 			for (j = 0; j < MIF_LINEAR_REG_CNT; j++) {
 				reg_addr = mif_linear_reg[i][j];
 				if (!reg_addr)
@@ -400,16 +402,14 @@ static void dump_afbc_reg(void)
 		if (!glayer_info[i].afbc_support)
 			continue;
 		pr_info("vd%d afbc regs:\n", i);
-		for (i = 0; i < cur_dev->max_vd_layers; i++) {
-			for (j = 0; j < AFBC_REG_CNT; j++) {
-				/*coverity[UNINIT]*/
-				reg_addr = afbc_reg[i][j];
-				if (!reg_addr)
-					continue;
-				reg_val = READ_VCBUS_REG(reg_addr);
-				pr_info("[0x%x] = 0x%X\n",
-					   reg_addr, reg_val);
-			}
+		for (j = 0; j < AFBC_REG_CNT; j++) {
+			/*coverity[UNINIT]*/
+			reg_addr = afbc_reg[i][j];
+			if (!reg_addr)
+				continue;
+			reg_val = READ_VCBUS_REG(reg_addr);
+			pr_info("[0x%x] = 0x%X\n",
+				   reg_addr, reg_val);
 		}
 	}
 }
