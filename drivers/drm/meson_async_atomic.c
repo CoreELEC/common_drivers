@@ -156,7 +156,6 @@ static struct drm_crtc_state *
 meson_drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 			  struct drm_crtc *crtc)
 {
-	int ret;
 	int index = drm_crtc_index(crtc);
 	struct drm_crtc_state *crtc_state;
 
@@ -166,11 +165,8 @@ meson_drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 	if (crtc_state)
 		return crtc_state;
 
-	if (!state->async_update || is_am_osd_async_commit(state)) {
-		ret = drm_modeset_lock(&crtc->mutex, state->acquire_ctx);
-		if (ret)
-			return ERR_PTR(ret);
-	}
+	DRM_DEBUG("legacy-%d, async-%d, osd-%d\n", state->async_update,
+		  state->legacy_cursor_update, is_am_osd_async_commit(state));
 
 	crtc_state = crtc->funcs->atomic_duplicate_state(crtc);
 	if (!crtc_state)
@@ -435,6 +431,10 @@ meson_atomic_helper_check_crtcs(struct drm_device *dev,
 		if (!funcs || !funcs->atomic_check)
 			continue;
 
+		ret = drm_modeset_lock(&crtc->mutex, state->acquire_ctx);
+		if (ret)
+			return ret;
+
 		ret = funcs->atomic_check(crtc, state);
 		if (ret) {
 			drm_dbg_atomic(crtc->dev,
@@ -666,6 +666,7 @@ int meson_async_atomic_ioctl(struct drm_device *dev,
 
 	state->allow_modeset = false;
 	state->acquire_ctx = &ctx;
+	state->legacy_cursor_update = true;
 
 retry:
 	copied_objs = 0;
@@ -760,7 +761,6 @@ retry:
 		drm_mode_object_put(obj);
 	}
 
-	state->legacy_cursor_update = true;
 	ret = meson_atomic_helper_check_planes(dev, state);
 	if (ret)
 		goto out;
@@ -770,9 +770,11 @@ retry:
 	else
 		state->async_update = !meson_atomic_helper_async_check(dev, state);
 
-	ret = meson_atomic_helper_check_crtcs(dev, state);
-	if (ret)
-		goto out;
+	if (!state->async_update || is_am_osd_async_commit(state)) {
+		ret = meson_atomic_helper_check_crtcs(dev, state);
+		if (ret)
+			goto out;
+	}
 
 	meson_video_bypass_vblank_wait(state);
 
