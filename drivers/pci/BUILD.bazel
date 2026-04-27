@@ -10,36 +10,43 @@ ddk_module(
     ]),
     conditional_srcs = {
         "CONFIG_AMLOGIC_PCIE": {
-            True: [
-                "main.c",
-                "amlogic-pcie-v3-comm.c",
-            ],
+            True: ["main.c",],
         },
         "CONFIG_AMLOGIC_PCIE_V2_HOST": {
             True: [
-                "amlogic-pcie-v2-host.c",
+                "controller/amlogic-pcie-v2-host.c",
             ],
         },
         "CONFIG_AMLOGIC_PCIE_V3_HOST": {
-            True: ["amlogic-pcie-v3-host.c"],
+            True: [
+		"controller/amlogic-pcie-v3-host.c",
+                "controller/amlogic-pcie-v3-comm.c",
+	    ],
         },
         "CONFIG_AMLOGIC_PCIE_V3_EP": {
             True: [
-                "amlogic-pcie-v3-ep.c",
-                "pci_endpoint_test.c",
+                "controller/amlogic-pcie-v3-comm.c",
+                "controller/amlogic-pcie-v3-ep.c",
+                "controller/pci_endpoint_test.c",
             ],
         },
         "CONFIG_AMLOGIC_PCIE_V4_HOST": {
-            True: ["amlogic-pcie-v4-host.c"],
+            True: ["controller/amlogic-pcie-v4-host.c",],
         },
+        "CONFIG_AMLOGIC_PCIE_PHY_A9": {
+            True: [
+		"phy/amlogic-pcie-phy.c",
+		"phy/amlogic-pcie-phy-a9.c",
+	    ],
+         },
     },
     hdrs = [
         "//common:drivers/pci/controller/dwc/pcie-designware.h",
         "//common:drivers/pci/pci.h",
     ],
     linux_includes = [
-        "../../../../common/drivers/pci/controller/dwc",
-        "../../../../common/drivers/pci",
+        "../../../common/drivers/pci/controller/dwc",
+        "../../../common/drivers/pci",
     ],
     local_defines = [
         "pr_fmt(fmt)=\"[pcie]: \" fmt",
@@ -53,5 +60,7 @@ ddk_module(
         "//common_drivers/drivers/debug:amlogic-debug",
         "//common_drivers/drivers/cpu_info:amlogic-cpuinfo",
         "//common_drivers/drivers/secmon:amlogic-secmon",
+        "//common_drivers/drivers/pm:amlogic-pm",
+        "//common_drivers/drivers/power:amlogic-power",
     ],
 )

@@ -66,6 +66,7 @@ struct amlogic_pcie {
 	struct clk *pcie_mac_clk;
 	struct clk *pcie_phy_clk;
 	struct clk *pcie_tl_clk;
+	struct clk *pp_clk;
 
 	struct reset_control *mac_apb_rst;
 	struct reset_control *por_rst;
@@ -87,6 +88,7 @@ struct amlogic_pcie {
 
 	int reset_gpio;
 	u32 gpio_type;
+	u32 port_num;
 	u32 phy_type;
 	u32 msi_mask;
 	bool do_reset_gpio;
@@ -129,8 +131,22 @@ static int amlogic_pcie_enable_clocks(struct amlogic_pcie *aml_pcie)
 		goto err_phy_clk;
 	}
 
+	ret = clk_set_rate(aml_pcie->pp_clk, 400000000);
+	if (ret) {
+		dev_err(dev, "set pp clk rate failed, ret = %d\n", ret);
+		goto err_tl_clk;
+	}
+
+	ret = clk_prepare_enable(aml_pcie->pp_clk);
+	if (ret) {
+		dev_err(dev, "unable to enable pp_clk clock\n");
+		goto err_tl_clk;
+	}
+
 	return 0;
 
+err_tl_clk:
+	clk_disable_unprepare(aml_pcie->pcie_tl_clk);
 err_phy_clk:
 	clk_disable_unprepare(aml_pcie->pcie_phy_clk);
 err_mac_clk:
@@ -158,6 +174,11 @@ static int amlogic_pcie_get_clocks(struct amlogic_pcie *aml_pcie)
 	if (IS_ERR(aml_pcie->pcie_tl_clk))
 		return dev_err_probe(dev, PTR_ERR(aml_pcie->pcie_tl_clk),
 				     "refpll_clk clock source missing or invalid\n");
+
+	aml_pcie->pp_clk = devm_clk_get(dev, "pp_clk");
+	if (IS_ERR(aml_pcie->pp_clk))
+		return dev_err_probe(dev, PTR_ERR(aml_pcie->pp_clk),
+				     "pp_clk clock source missing or invalid\n");
 	return 0;
 }
 
@@ -195,10 +216,42 @@ static int amlogic_pcie_get_mems(struct amlogic_pcie *aml_pcie)
 	return 0;
 }
 
+static int amlogic_pcie_do_pll_set(struct amlogic_pcie *aml_pcie, int cnt)
+{
+	struct device *dev = aml_pcie->pci.dev;
+	u32 reg[2];
+	int ret;
+
+	ret = of_property_read_u32_array(dev_of_node(dev),
+					 kasprintf(GFP_KERNEL, "phy_pll_setting_%d", cnt),
+					 reg, ARRAY_SIZE(reg));
+	if (ret) {
+		dev_err(dev, "amlogic phy pll setting read failed\n");
+		return ret;
+	}
+
+	if (cnt != aml_pcie->pll_setting_number) {
+		writel(reg[1], aml_pcie->phy_base + reg[0]);
+		usleep_range(100, 200);
+	} else {
+		if (!(readl(aml_pcie->phy_base + reg[0]) & reg[1]))
+			dev_err(dev, "aml pcie phy pll lock failed\n");
+		else
+			dev_dbg(dev, "aml pcie phy pll locked\n");
+	}
+	dev_dbg(dev, "aml pcie phy pll cnt=%d, reg[0]=0x%x, reg[1]=0x%x\n", cnt, reg[0], reg[1]);
+
+	return ret;
+}
+
 static int amlogic_pcie_phy_init(struct amlogic_pcie *aml_pcie)
 {
 	struct device *dev = aml_pcie->pci.dev;
-	int ret = 0;
+	struct device_node *node = dev->of_node;
+	struct dw_pcie *pci = &aml_pcie->pci;
+	/* void __iomem *comb_phy_base; */
+	int ret = 0, i;
+	u32 val;
 
 	if (IS_ERR(aml_pcie->phy))
 		goto set_phy_reg;
@@ -225,6 +278,53 @@ set_phy_reg:
 	case AMLOGIC_PHY:
 		dev_dbg(dev, " pcie init port and AMLOGIC_PHY\n");
 		/* TODO: pll and phy init */
+		if (pci->num_lanes == 1) {
+			val = readl(aml_pcie->phy_base);
+			val |= 1;
+			writel(val, aml_pcie->phy_base);
+
+			val = readl(aml_pcie->phy_base + 0x1b8);
+			val &= ~BIT(21);
+			writel(val, aml_pcie->phy_base + 0x1b8);
+
+			/*
+			 * PORT B X1
+			 * if (aml_pcie->port_num == 1) {
+			 *         val = readl(aml_pcie->phy_base + 0x1000);
+			 *         val |= 1;
+			 *         writel(val, aml_pcie->phy_base + 0x1000);
+			 * }
+			 */
+		}
+
+		/* port B X1 */
+/*                 do {
+ *                         val = readl(aml_pcie->phy_base + 0x17c);
+ *                         usleep_range(10, 20);
+ *                         pr_info("%s %d port_num=0x%x\n", __func__, __LINE__, aml_pcie->port_num);
+ *
+ *                 } while((aml_pcie->port_num == 1) && !(val & 0x3000000));
+ *                 if (aml_pcie->port_num == 1)
+ *                         usleep_range(200000, 300000);
+ */
+
+		/* comb_phy */
+		/* if (aml_pcie->port_num == 1) {
+		 *         comb_phy_base = ioremap(0xfe0086e0, 0x4);
+		 *         val = readl(comb_phy_base);
+		 *         val |= 1;
+		 *         writel(val, comb_phy_base);
+		 *         val = readl(comb_phy_base);
+		 * }
+		 */
+
+		ret = of_property_read_u32(node, "pll_setting_number",
+					   &aml_pcie->pll_setting_number);
+		if (ret)
+			return ret;
+
+		for (i = 1; i <= aml_pcie->pll_setting_number; i++)
+			ret = amlogic_pcie_do_pll_set(aml_pcie, i);
 
 		break;
 	case DW_PHY:
@@ -388,6 +488,9 @@ static int amlogic_pcie_set_reset_gpio(struct amlogic_pcie *aml_pcie)
 		dev_info(dev, "pad gpio\n");
 		if (gpio_is_valid(aml_pcie->reset_gpio)) {
 			dev_info(dev, "GPIO pad: assert reset\n");
+			ret = gpio_direction_input(aml_pcie->reset_gpio);
+			if (ret)
+				return ret;
 			ret = gpio_direction_output(aml_pcie->reset_gpio, 0);
 			if (ret)
 				return ret;
@@ -400,6 +503,7 @@ static int amlogic_pcie_set_reset_gpio(struct amlogic_pcie *aml_pcie)
 		dev_dbg(dev, "normal gpio\n");
 		if (gpio_is_valid(aml_pcie->reset_gpio)) {
 			dev_info(dev, "GPIO normal: assert reset\n");
+			gpio_set_value_cansleep(aml_pcie->reset_gpio, 0);
 			usleep_range(100000, 110000);
 			gpio_set_value_cansleep(aml_pcie->reset_gpio, 1);
 		}
@@ -564,6 +668,8 @@ set_rst_reg:
 
 static int amlogic_pcie_parse_dt(struct amlogic_pcie *aml_pcie)
 {
+	struct device *dev = aml_pcie->pci.dev;
+	struct device_node *node = dev->of_node;
 	int err;
 
 	err = amlogic_pcie_get_clocks(aml_pcie);
@@ -585,6 +691,11 @@ static int amlogic_pcie_parse_dt(struct amlogic_pcie *aml_pcie)
 	err = amlogic_pcie_get_reset_gpio(aml_pcie);
 	if (err)
 		return err;
+
+	err = of_property_read_u32(node, "port-num", &aml_pcie->port_num);
+	if (err)
+		aml_pcie->port_num = 0;
+	dev_dbg(dev, "pcie port_num = %d\n", aml_pcie->port_num);
 
 	return 0;
 }
@@ -876,6 +987,9 @@ static int amlogic_pcie_probe(struct platform_device *pdev)
 
 	if (link_speed_v4)
 		pci->max_link_speed = link_speed_v4;
+
+	if (of_property_read_u32(dev->of_node, "num-lanes", &pci->num_lanes))
+		dev_err(dev, "failed to get num-lanes\n");
 
 	/* pcie dev memory protect check*/
 	if (!of_property_read_bool(dev->of_node, "iommu-map"))

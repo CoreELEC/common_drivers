@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+config AMLOGIC_PCIE_PHY_A9
+	tristate "Meson PCIE PHY A9"
+	depends on AMLOGIC_PCIE
+	default n
+	help
+	  Say Y here if you want to enable PCIE support on Amlogic SoCs.

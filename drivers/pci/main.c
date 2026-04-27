@@ -11,6 +11,7 @@
 static int __init pcie_main_init(void)
 {
 	pr_debug("### %s() start\n", __func__);
+	call_sub_init(aml_pcie_phy_a9_init);
 	call_sub_init(aml_pcie_rc_v2_init);
 	call_sub_init(aml_pcie_rc_v3_init);
 	call_sub_init(aml_pcie_rc_v4_init);
@@ -22,6 +23,7 @@ static int __init pcie_main_init(void)
 
 static void __exit pcie_main_exit(void)
 {
+	aml_pcie_phy_a9_exit();
 	aml_pcie_rc_v2_exit();
 	aml_pcie_rc_v3_exit();
 	aml_pcie_rc_v4_exit();

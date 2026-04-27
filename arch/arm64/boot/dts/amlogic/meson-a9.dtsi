@@ -1875,7 +1875,7 @@
 				/* non-prefetchable memory */
 				<0x82000000 0 0xf4800000 0x0 0xf4800000 0 0x3800000>;
 			num-lanes = <1>;
-			pcie-num = <1>;
+			port-num = <0>;
 			phy-type = <0>;
 			/*
 			 * pinctrl-names = "default";
@@ -1884,28 +1884,24 @@
 
 			clocks = <&clkc_sys CLKID_SYS_PCIE_MAC_A>,
 				 <&clkc_sys CLKID_SYS_PCIE_PHY>,
-				 <&clkc_pcie_tl CLKID_PCIE_TL_0>;
-			clock-names = "pcie_mac", "pcie_phy", "pcie_tl";
+				 <&clkc_pcie_tl CLKID_PCIE_TL_0>,
+				 <&clkc_pp>;
+			clock-names = "pcie_mac", "pcie_phy", "pcie_tl", "pp_clk";
 			/* amlogic pcie phy pll */
 			aml_phy_pll_version = <1>;
-			pll_setting_number = <12>;
+			pll_setting_number = <7>;
 			/* <reg_offset vlaue> */
-			phy_pll_setting_1 = <0x0000 0x03e855e9>;
-			phy_pll_setting_2 = <0x0004 0x0009e085>;
-			phy_pll_setting_3 = <0x0008 0x40000079>; /* bias_en=1 */
-			phy_pll_setting_4 = <0x000c 0x3843a320>;
-			phy_pll_setting_5 = <0x0010 0x50>;
-			phy_pll_setting_6 = <0x0014 0x0009978b>;
-			phy_pll_setting_7 = <0x0018 0x0>; /* select pll0 for debug */
-			phy_pll_setting_8 = <0x0000 0x03e855ed>;
-			phy_pll_setting_9 = <0x0004 0x0809e085>;
-			phy_pll_setting_10 = <0x0000 0x0be855ed>;
-			phy_pll_setting_11 = <0x0014 0x000b978b>;
+			phy_pll_setting_1 = <0x0018 0x1f455ed>;
+			phy_pll_setting_2 = <0x001c 0x809e7e5>;
+			phy_pll_setting_3 = <0x0018 0xdf455ed>;
+			phy_pll_setting_4 = <0x0020 0xa01b9788>;
+			phy_pll_setting_5 = <0x000c 0x40000071>;
+			phy_pll_setting_6 = <0x000c 0x4000007d>;
 			/* open ssc 5000 ppm
 			 * phy_pll_setting_12 = <0x0008 0x4800007d>;
 			 * phy_pll_setting_13 = <0x0010 0x2150e050>;
 			 */
-			phy_pll_setting_12 = <0x017c 0x3000000 >;
+			phy_pll_setting_7 = <0x017c 0x3000000>;
 
 			/*reset-gpio-type
 			 *0:Shared pad(no reset)
@@ -1926,7 +1922,8 @@
 			reg = <0x0 0xf8000000 0x0 0x400000
 				0x0 0xfe4d2000 0x0 0x1000
 				0x0 0xf8400000 0x0 0x200000
-				0x0 0xfe4d5000 0x0 0x800
+				/* 0x0 0xfe4d4000 0x0 0x1800 */
+				0x0 0xfe4c4000 0x0 0x800 /* comb phy*/
 				0x0 0xfe002040 0x0 0x10
 				0x0 0xfe01034c 0x0 0x4>;
 			reg-names = "dbi", "cfg", "config", "phy", "reset", "efuse";
@@ -1946,7 +1943,7 @@
 				/* non-prefetchable memory */
 				<0x82000000 0 0xf8800000 0x0 0xf8800000 0 0x3800000>;
 			num-lanes = <1>;
-			pcie-num = <1>;
+			port-num = <1>;
 			phy-type = <0>;
 			/*
 			 * pinctrl-names = "default";
@@ -1955,34 +1952,35 @@
 
 			clocks = <&clkc_sys CLKID_SYS_PCIE_MAC_B>,
 				 <&clkc_sys CLKID_SYS_PCIE_PHY>,
-				 <&clkc_pcie_tl CLKID_PCIE_TL_1>;
-			clock-names = "pcie_mac", "pcie_phy", "pcie_tl";
+				 <&clkc_pcie_tl CLKID_PCIE_TL_1>,
+				 <&clkc_pp>;
+			clock-names = "pcie_mac", "pcie_phy", "pcie_tl", "pp_clk";
 			/* amlogic pcie phy pll */
 			aml_phy_pll_version = <1>;
-			pll_setting_number = <12>;
+			/* port B X1 */
+			/* pll_setting_number = <4>; */
 			/* <reg_offset vlaue> */
-			phy_pll_setting_1 = <0x0000 0x03e855e9>;
-			phy_pll_setting_2 = <0x0004 0x0009e085>;
-			phy_pll_setting_3 = <0x0008 0x40000079>; /* bias_en=1 */
-			phy_pll_setting_4 = <0x000c 0x3843a320>;
-			phy_pll_setting_5 = <0x0010 0x50>;
-			phy_pll_setting_6 = <0x0014 0x0009978b>;
-			phy_pll_setting_7 = <0x0018 0x0>; /* select pll0 for debug */
-			phy_pll_setting_8 = <0x0000 0x03e855ed>;
-			phy_pll_setting_9 = <0x0004 0x0809e085>;
-			phy_pll_setting_10 = <0x0000 0x0be855ed>;
-			phy_pll_setting_11 = <0x0014 0x000b978b>;
-			/* open ssc 5000 ppm
-			 * phy_pll_setting_12 = <0x0008 0x4800007d>;
-			 * phy_pll_setting_13 = <0x0010 0x2150e050>;
-			 */
-			phy_pll_setting_12 = <0x017c 0x3000000 >;
+			/* phy_pll_setting_1 = <0x1020 0xa01b9788>; */
+			/* phy_pll_setting_2 = <0x100c 0x40000071>; */
+			/* phy_pll_setting_3 = <0x100c 0x4000007d>; */
+			/* phy_pll_setting_4 = <0x117c 0x3000000>; */
+
+			//comb phy pll
+			pll_setting_number = <7>;
+			/* <reg_offset vlaue> */
+			phy_pll_setting_1 = <0x0014 0x01fa55ed>;
+			phy_pll_setting_2 = <0x0018 0x0809e7e5>;
+			phy_pll_setting_3 = <0x0014 0x0df455ed>;
+			phy_pll_setting_4 = <0x0028 0xa01b9788>;
+			phy_pll_setting_5 = <0x001c 0x40000071>;
+			phy_pll_setting_6 = <0x001c 0x4000007d>;
+			phy_pll_setting_7 = <0x017c 0x3000000>;
 
 			/*reset-gpio-type
 			 *0:Shared pad(no reset)
 			 *1:OD pad2:Normal pad
 			 */
-			gpio-type = <2>;
+			gpio-type = <1>;
 			pcie_rst_number = <2>;
 			/* <reg_offset vlaue> */
 			pcie_rst_1 = <0x04 0x18>;

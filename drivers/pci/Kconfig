@@ -10,5 +10,6 @@ config AMLOGIC_PCIE
 	  Amlogic PCIE controller drivers support
 
 source "$(COMMON_DRIVERS_DIR)/drivers/pci/controller/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/pci/phy/Kconfig"
 
 endmenu
