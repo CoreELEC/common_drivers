@@ -212,3 +212,6 @@ dtb-y += a9_a311y3_by401_linux.dtb
 dtb-y += a9_a311y3_by401_hdmi-only_linux.dtb
 dtb-y += a9_a311y3_by401_venus.dtb
 dtb-y += c5_pxp.dtb
+dtb-y += c5_c305x2_cb400.dtb
+dtb-y += c5_c305x2_cb401.dtb
+dtb-y += c5_c305x2_cb409.dtb
