@@ -3390,15 +3390,15 @@
 		wifi_pwm_tee;
 		irq_trigger_type = "IRQF_TRIGGER_LOW";
 		wifi_static_buf = <0>;
-		//pinctrl-0 = <&pwm_e_pins>;
+		//pinctrl-0 = <&pwm_k_pins>;
 		//pinctrl-names = "default";
 		pwm_channel1_conf {
-			pwms = <&pwm_e 0 30541 0>;
+			pwms = <&pwm_k 0 30541 0>;
 			duty-cycle = <15270>;
 			times = <7>;
 		};
 		pwm_channel2_conf {
-			pwms = <&pwm_e 1 30500 0>;
+			pwms = <&pwm_k 1 30500 0>;
 			duty-cycle = <15250>;
 			times = <10>;
 		};
