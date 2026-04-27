@@ -172,3 +172,7 @@
 
 #dwmac-meson8b.ko
   devm_phy_optional_get
+  phy_set_speed
+
+#amlogic-hsg-phy.ko
+  of_phy_simple_xlate
