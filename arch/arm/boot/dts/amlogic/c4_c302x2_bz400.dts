@@ -59,17 +59,10 @@
 			status = "disabled"; /* disabled as default */
 		};
 
-		skip_range_1 {
+		skip_range {
 			compatible = "skip_mem";
-			size = <0x00100000>;
-			reg = <0x10000000 0x00100000>;
-			no-map;
-			status = "okay";
-		};
-		skip_range_2 {
-			compatible = "skip_mem";
-			size = <0x00100000>;
-			reg = <0x07ef0000 0x110000>;
+			size = <0x210000>;
+			reg = <0x07df0000 0x210000>;
 			no-map;
 			status = "okay";
 		};
