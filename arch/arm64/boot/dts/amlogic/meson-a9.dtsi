@@ -272,14 +272,14 @@
 
 	amfc {
 		compatible = "amlogic,amfc-s7d";
-		status = "disabled";
+		status = "okay";
 		/* registers and clk */
 		reg = <0x0 0xfe024000 0x0 0x200
 		       0x0 0xfe000000 0x0 0x400>;
 		interrupts = <0 185 IRQ_TYPE_EDGE_RISING
 			      0 186 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amfc0", "amfc1";
-		//power-domains=<&pwrdm PDID_S6_AMFC>;
+		power-domains=<&pwrdm PDID_A9_AMFC>;
 		clocks = <&clkc_amfc>;
 		assigned-clocks = <&clkc_amfc>;
 		assigned-clock-rates = <666666666>;

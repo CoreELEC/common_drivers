@@ -230,6 +230,7 @@ static inline int amfc_supported(void)
 	case MESON_CPU_MAJOR_ID_T6D:
 	case MESON_CPU_MAJOR_ID_T6X:
 	case MESON_CPU_MAJOR_ID_C4:
+	case MESON_CPU_MAJOR_ID_A9:
 		return 1;
 	}
 	return 0;
