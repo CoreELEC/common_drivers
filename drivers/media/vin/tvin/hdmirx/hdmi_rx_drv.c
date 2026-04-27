@@ -5200,9 +5200,11 @@ static int hdmirx_suspend(struct platform_device *pdev, pm_message_t state)
 	hdmi_rx_clr_frl_rate(E_PORT2);
 	hdmi_rx_clr_frl_rate(E_PORT3);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
-		rx_irq_en(0, E_PORT1);
-		rx_irq_en(0, E_PORT2);
-		rx_irq_en(0, E_PORT3);
+		if (rx_info.chip_id != CHIP_ID_A9) {
+			rx_irq_en(0, E_PORT1);
+			rx_irq_en(0, E_PORT2);
+			rx_irq_en(0, E_PORT3);
+		}
 	}
 	rx_emp_hw_enable(false);
 	hdmirx_output_en(false, ALL_PORTS);
@@ -5301,9 +5303,11 @@ static void hdmirx_shutdown(struct platform_device *pdev)
 		hdcp_22_off();
 	rx_irq_en(0, E_PORT0);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
-		rx_irq_en(0, E_PORT1);
-		rx_irq_en(0, E_PORT2);
-		rx_irq_en(0, E_PORT3);
+		if (rx_info.chip_id != CHIP_ID_A9) {
+			rx_irq_en(0, E_PORT1);
+			rx_irq_en(0, E_PORT2);
+			rx_irq_en(0, E_PORT3);
+		}
 	}
 	rx_emp_hw_enable(false);
 	hdmirx_output_en(false, ALL_PORTS);

@@ -400,9 +400,9 @@ void aml_phy_offset_cal_a9(void)
 	usleep_range(10, 20);
 	hdmirx_wr_amlphy(A9_HDMIRX20PHY_DCHA_DFE, 0x5409f843);
 	usleep_range(10, 20);
-	hdmirx_wr_amlphy(A9_HDMIRX20PHY_DCHD_CDR, 0x040010d3);
+	hdmirx_wr_amlphy(A9_HDMIRX20PHY_DCHD_CDR, 0x040050d3);
 	usleep_range(10, 20);
-	hdmirx_wr_amlphy(A9_HDMIRX20PHY_DCHD_EQ, 0x2001104f);
+	hdmirx_wr_amlphy(A9_HDMIRX20PHY_DCHD_EQ, 0x30211050);
 	usleep_range(10, 20);
 
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHA_MISC1, A9_DCH_RSTN, 0x7);
@@ -418,7 +418,7 @@ void aml_phy_offset_cal_a9(void)
 	usleep_range(10, 20);
 	hdmirx_wr_amlphy(A9_RG_RX20PLL_0, 0x0500a707);
 	usleep_range(100, 200);
-	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHA_DFE, A9_DCHA_DFE, 0x0);
+	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHA_DFE, A9_DCHA_DFE, 0x1);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_CDR_FR_EN, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_CDR_RSTB, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_CDR_LKDET_EN, 0x0);
@@ -430,6 +430,14 @@ void aml_phy_offset_cal_a9(void)
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_OFSET_CAL_START, 0x1);
 	usleep_range(100, 200);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_CDR_RSTB, 0x1);
+	/* ofset stop */
+	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_OFSET_CAL_START, 0x0);
+	usleep_range(100, 110);
+	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHA_DFE, A9_DFE_OFST_CAL_START, 0x0);
+	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHA_DFE, A9_DCHA_DFE, 0x1f);
+	/* turn off pll*/
+	hdmirx_wr_amlphy(A9_RG_RX20PLL_0, 0x0);
+	hdmirx_wr_amlphy(A9_RG_RX20PLL_1, 0x0);
 	if (log_level & PHY_LOG)
 		rx_pr("ofst cal\n");
 }
@@ -733,20 +741,20 @@ void dump_aml_phy_sts_a9(void)
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_DFE_OFST_DBG_SEL, 0x0);
 	usleep_range(100, 110);
 	data32 = hdmirx_rd_amlphy(A9_HDMIRX20PHY_DCHD_STAT);
-	dfe0_tap0 = data32 & 0x7f;
-	dfe1_tap0 = (data32 >> 8) & 0x7f;
-	dfe2_tap0 = (data32 >> 16) & 0x7f;
-	dfe3_tap0 = (data32 >> 24) & 0x7f;
+	dfe0_tap0 = graytodecimal_a9(data32 & 0x7f);
+	dfe1_tap0 = graytodecimal_a9((data32 >> 8) & 0x7f);
+	dfe2_tap0 = graytodecimal_a9((data32 >> 16) & 0x7f);
+	dfe3_tap0 = graytodecimal_a9((data32 >> 24) & 0x7f);
 	/* dfe tap1 sts */
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_EHM_DBG_SEL, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_EQ, A9_STATUS_MUX_SEL, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_DFE_OFST_DBG_SEL, 0x1);
 	usleep_range(100, 110);
 	data32 = hdmirx_rd_amlphy(A9_HDMIRX20PHY_DCHD_STAT);
-	dfe0_tap1 = data32 & 0x3f;
-	dfe1_tap1 = (data32 >> 8) & 0x3f;
-	dfe2_tap1 = (data32 >> 16) & 0x3f;
-	dfe3_tap1 = (data32 >> 24) & 0x3f;
+	dfe0_tap1 = graytodecimal_a9(data32 & 0x3f);
+	dfe1_tap1 = graytodecimal_a9((data32 >> 8) & 0x3f);
+	dfe2_tap1 = graytodecimal_a9((data32 >> 16) & 0x3f);
+	dfe3_tap1 = graytodecimal_a9((data32 >> 24) & 0x3f);
 	/* dfe tap2 sts */
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_EHM_DBG_SEL, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_EQ, A9_STATUS_MUX_SEL, 0x0);
@@ -763,20 +771,20 @@ void dump_aml_phy_sts_a9(void)
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_DFE_OFST_DBG_SEL, 0x3);
 	usleep_range(100, 110);
 	data32 = hdmirx_rd_amlphy(A9_HDMIRX20PHY_DCHD_STAT);
-	dfe0_tap3 = data32 & 0xf;
-	dfe1_tap3 = (data32 >> 8) & 0xf;
-	dfe2_tap3 = (data32 >> 16) & 0xf;
-	dfe3_tap3 = (data32 >> 24) & 0xf;
+	dfe0_tap3 = graytodecimal_a9(data32 & 0xf);
+	dfe1_tap3 = graytodecimal_a9((data32 >> 8) & 0xf);
+	dfe2_tap3 = graytodecimal_a9((data32 >> 16) & 0xf);
+	dfe3_tap3 = graytodecimal_a9((data32 >> 24) & 0xf);
 	/* dfe tap4 sts */
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_EHM_DBG_SEL, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_EQ, A9_STATUS_MUX_SEL, 0x0);
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_DFE_OFST_DBG_SEL, 0x4);
 	usleep_range(100, 110);
 	data32 = hdmirx_rd_amlphy(A9_HDMIRX20PHY_DCHD_STAT);
-	dfe0_tap4 = data32 & 0xf;
-	dfe1_tap4 = (data32 >> 8) & 0xf;
-	dfe2_tap4 = (data32 >> 16) & 0xf;
-	dfe3_tap4 = (data32 >> 24) & 0xf;
+	dfe0_tap4 = graytodecimal_a9(data32 & 0xf);
+	dfe1_tap4 = graytodecimal_a9((data32 >> 8) & 0xf);
+	dfe2_tap4 = graytodecimal_a9((data32 >> 16) & 0xf);
+	dfe3_tap4 = graytodecimal_a9((data32 >> 24) & 0xf);
 
 	/* CDR status */
 	hdmirx_wr_bits_amlphy(A9_HDMIRX20PHY_DCHD_CDR, A9_EHM_DBG_SEL, 0x0);

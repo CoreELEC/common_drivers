@@ -4316,6 +4316,9 @@ void aml_phy_offset_cal_handler(struct kthread_work *work)
 	case PHY_VER_T6X:
 		aml_phy_offset_cal_t6x();
 		break;
+	case PHY_VER_A9:
+		aml_phy_offset_cal_a9();
+		break;
 	default:
 		break;
 	}
@@ -5843,8 +5846,22 @@ void hdmirx_set_vp_mapping(enum colorspace_e cs, u8 port)
 	if (rx_info.chip_id < CHIP_ID_T7)
 		return;
 
-	if (rx_info.chip_id >= CHIP_ID_T6X)
+	if (rx_info.chip_id == CHIP_ID_T6X)
 		return;
+
+	if (rx_info.chip_id == CHIP_ID_A9) {
+		data32 = 0;
+		if (cs == E_COLOR_YUV444)
+			data32 |= 2 << 14;
+		else if (cs == E_COLOR_YUV422)
+			data32 |= 0 << 14;
+		else if (cs == E_COLOR_YUV420)
+			data32 |= 1 << 21;
+		else
+			data32 = 0;
+		hdmirx_wr_top_common(TOP_VID_CNTL, data32);
+		return;
+	}
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
 		data32 = 0;
 		if (cs == E_COLOR_YUV422) {
@@ -5999,8 +6016,10 @@ void hdmirx_late_config_video(u8 port)
 		!rx[port].amdv_type &&
 		!rx[port].dsc_flag) {
 		hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(20), 1);
-		if (rx_info.chip_id >= CHIP_ID_T6X) {
+		if (rx_info.chip_id == CHIP_ID_T6X) {
 			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(16), 1);
+			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(24), 1);
+		} else {
 			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(24), 1);
 		}
 		hdmirx_wr_bits_top_common_1(TOP_VID_CNTL2, _BIT(30), 0);
@@ -6022,8 +6041,10 @@ void hdmirx_late_config_video(u8 port)
 				hdmirx_wr_bits_top_common(TOP_VID_CNTL3, MSK(4, 0), 0x0);
 		}
 		hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(20), 0);
-		if (rx_info.chip_id >= CHIP_ID_T6X) {
+		if (rx_info.chip_id == CHIP_ID_T6X) {
 			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(16), 0);
+			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(24), 0);
+		} else {
 			hdmirx_wr_bits_top_common_1(TOP_VID_CNTL, _BIT(24), 0);
 		}
 		hdmirx_wr_bits_top_common_1(TOP_VID_CNTL2, _BIT(30), 0);
