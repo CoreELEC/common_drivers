@@ -191,21 +191,24 @@ int ldim_spi_init_dma_trig(struct spi_device *spi)
 		return -EIO;
 
 	if (is_spicc_capable(cdata, CAP_DMA_TRIG_PWM_VS) &&
-		is_spicc_capable(cdata, CAP_TRIG_DELAY)) {
+		is_spicc_capable(cdata, CAP_TRIG_DELAY) &&
+		(dev_drv->spi_conf.trig_mode == 2)) {
 		cdata->dma_trig_delay = dev_drv->spi_conf.vs2cs_delay * 1000 / 6;
 		ret = cdata->dirspi_dma_trig(spi, priv->tx_dma, priv->rx_dma,
 			priv->xlen, DMA_TRIG_PWM_VS);
 	} else if (is_spicc_capable(cdata, CAP_DMA_TRIG_VSYNC) &&
-		is_spicc_capable(cdata, CAP_TRIG_DELAY)) {
+		is_spicc_capable(cdata, CAP_TRIG_DELAY) &&
+		(dev_drv->spi_conf.trig_mode == 1)) {
 		cdata->dma_trig_delay = dev_drv->spi_conf.vs2cs_delay * 1000 / 6;
 		ret = cdata->dirspi_dma_trig(spi, priv->tx_dma, priv->rx_dma,
 			priv->xlen, DMA_TRIG_VSYNC);
-	} else if (is_spicc_capable(cdata, CAP_DMA_TRIG_LINE_N)) {
+	} else if (is_spicc_capable(cdata, CAP_DMA_TRIG_LINE_N) &&
+		(dev_drv->spi_conf.trig_mode == 3)) {
 		ret = cdata->dirspi_dma_trig(spi, priv->tx_dma, priv->rx_dma,
 			priv->xlen, DMA_TRIG_LINE_N);
 	} else {
 		LDIMERR("%s spi(0x%p) init dma trig error!\n", __func__, spi);
-		ret = -1;
+		return -1;
 	}
 
 	priv->trig_init = 1;
@@ -755,6 +758,9 @@ struct spi_controller *spi_aliases_to_ctlr(const char *spi_aliases, int spicc_ve
 	}
 
 	for_each_property_of_node(of_aliases, pp) {
+		if (!pp->name || !pp->value)
+			continue;
+
 		alias_name = pp->name;
 
 		if (!strncmp(alias_name, spi_aliases, strlen(pp->name))) {
