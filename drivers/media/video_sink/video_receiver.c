@@ -414,6 +414,9 @@ static void common_vf_unreg_provider(struct video_recv_s *ins)
 		schedule();
 	}
 	switch_from_lcevc_to_nonlcevc(true);
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+	amdv_mem_alloc_control(module_dpss, 0);
+#endif
 	if (debug_flag & DEBUG_FLAG_BASIC_INFO)
 		pr_info("%s %s: unreg cost %d ms\n",
 			__func__, ins->recv_name,
@@ -496,6 +499,9 @@ static int common_receiver_event_fun(int type,
 		ins->request_exit = false;
 		ins->do_exit = false;
 		ins->exited = false;
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		amdv_mem_alloc_control(module_dpss, 1);
+#endif
 	}
 	return 0;
 }
