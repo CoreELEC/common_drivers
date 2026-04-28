@@ -3137,6 +3137,7 @@ void hdmi_packet_process(int signal_change_flag,
 		!(signal_change_flag & SIG_FORCE_CHG) &&
 		!(signal_change_flag & SIG_PRI_INFO) &&
 		(cur_output_format == BT2020_PQ ||
+		cur_output_format == BT2020_HLG ||
 		cur_output_format == BT2020 ||
 		cur_output_format == BT709 ||
 		cur_output_format == BT_BYPASS) &&
