@@ -6986,8 +6986,7 @@ RERTY:
 		wide_mode = VIDEO_WIDEOPTION_NORMAL;
 
 	if ((vf->flag & VFRAME_FLAG_COMPOSER_DONE) &&
-		!(vf->type_ext & VIDTYPE_EXT_SCALER) &&
-		(vf->flag & VFRAME_FLAG_FIX_TUNNEL)) {
+		!(vf->type_ext & VIDTYPE_EXT_SCALER)) {
 		wide_mode = VIDEO_WIDEOPTION_FULL_STRETCH;
 		local_input.crop_top = vf->crop[0];
 		local_input.crop_left = vf->crop[1];
