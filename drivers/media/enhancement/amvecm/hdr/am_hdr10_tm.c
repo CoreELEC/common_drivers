@@ -425,8 +425,8 @@ int hdr10_tm_dynamic_proc(struct vframe_master_display_colour_s *p)
 	u32 primary_maxl;
 	u32 panel_luma;
 	u64 sx, sy;
-	u64 anchor[MAX_BEIZER_ORDER - 1];
-	u32 P_init[MAX_BEIZER_ORDER - 1] = {
+	static u64 anchor[MAX_BEIZER_ORDER - 1];
+	static u32 P_init[MAX_BEIZER_ORDER - 1] = {
 		181, 406, 607, 796, 834, 863, 890, 917, 938
 	};
 	int scn_chang_flag = 1;

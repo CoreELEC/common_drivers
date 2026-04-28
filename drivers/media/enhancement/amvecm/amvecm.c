@@ -444,6 +444,7 @@ static int nn_coring[11] = {
 };
 
 static int vsr_update_flag = 1;
+int dump_flag;
 #endif
 
 #define AIPQ_SCENE_MAX 25
@@ -2005,7 +2006,6 @@ void vpp_get_vframe_hist_info(struct vframe_s *vf,
 			divid, vpp_luma_max, vp->vpp_luma_max);
 		vpp_luma_max = vp->vpp_luma_max;
 	}
-
 }
 
 static void ioctrl_get_hdr_metadata(struct vframe_s *vf)
@@ -4047,6 +4047,9 @@ static void hdr_test_set_regs(unsigned int test_case, int vpp_index)
 unsigned int hdr_test_case_set_flag;
 struct am_regs_s *test_case_reg;
 struct hdr_test_case_lut_s *test_case_lut;
+int hdr_core_test_flag;
+int hdr_core_test_sel;
+int hdr_core_test_mode;
 
 static void set_hdr_test_case(int vpp_index)
 {
@@ -4061,6 +4064,9 @@ static void set_hdr_test_case(int vpp_index)
 	unsigned int reg_ogain_data;
 	unsigned int reg_ogain_ext_addr;
 	unsigned int reg_ogain_ext_data;
+	int offset_addr_vd1 = 0;
+	int offset_addr_vd2 = 0x1700;
+//	int offset_addr_vd3 = 0;
 
 	if (!hdr_test_case_set_flag)
 		return;
@@ -4068,32 +4074,37 @@ static void set_hdr_test_case(int vpp_index)
 	pr_info("%s: hdr_test_case_set_flag = %d\n", __func__,
 		hdr_test_case_set_flag);
 
-	reg_eotf_addr = 0x4c1e;
-	reg_eotf_data = 0x4c1f;
-	reg_oetf_addr = 0x4c20;
-	reg_oetf_data = 0x4c21;
-	reg_ogain_addr = 0x4c26;
-	reg_ogain_data = 0x4c27;
-	reg_ogain_ext_addr = 0x4c40;
-	reg_ogain_ext_data = 0x4c41;
-	reg_cgain_addr = 0x4c22;
-	reg_cgain_data = 0x4c23;
+	if (chip_type_id == chip_a9) {
+		offset_addr_vd1 = 0x1600;
+		offset_addr_vd2 = 0x80;
+	}
+
+	reg_eotf_addr = 0x4c1e + offset_addr_vd1;
+	reg_eotf_data = 0x4c1f + offset_addr_vd1;
+	reg_oetf_addr = 0x4c20 + offset_addr_vd1;
+	reg_oetf_data = 0x4c21 + offset_addr_vd1;
+	reg_ogain_addr = 0x4c26 + offset_addr_vd1;
+	reg_ogain_data = 0x4c27 + offset_addr_vd1;
+	reg_ogain_ext_addr = 0x4c40 + offset_addr_vd1;
+	reg_ogain_ext_data = 0x4c41 + offset_addr_vd1;
+	reg_cgain_addr = 0x4c22 + offset_addr_vd1;
+	reg_cgain_data = 0x4c23 + offset_addr_vd1;
 
 	if (hdr_test_case_set_flag == EN_HDR_TEST_CASE_VD2_CUVA_SDR_SC1 ||
 		hdr_test_case_set_flag == EN_HDR_TEST_CASE_VD2_CUVAHLG_SDR_SC1 ||
 		hdr_test_case_set_flag == EN_HDR_TEST_CASE_VD2_CUVAHLG_SDR_STATIC) {
-		reg_eotf_addr += 0x1700;
-		reg_eotf_data += 0x1700;
-		reg_oetf_addr += 0x1700;
-		reg_oetf_data += 0x1700;
-		reg_ogain_addr += 0x1700;
-		reg_ogain_data += 0x1700;
-		reg_ogain_ext_addr += 0x1700;
-		reg_ogain_ext_data += 0x1700;
-		reg_cgain_addr += 0x1700;
-		reg_cgain_data += 0x1700;
+		reg_eotf_addr += offset_addr_vd2;
+		reg_eotf_data += offset_addr_vd2;
+		reg_oetf_addr += offset_addr_vd2;
+		reg_oetf_data += offset_addr_vd2;
+		reg_ogain_addr += offset_addr_vd2;
+		reg_ogain_data += offset_addr_vd2;
+		reg_ogain_ext_addr += offset_addr_vd2;
+		reg_ogain_ext_data += offset_addr_vd2;
+		reg_cgain_addr += offset_addr_vd2;
+		reg_cgain_data += offset_addr_vd2;
 		for (i = 0; i < test_case_reg->length; i++)
-			test_case_reg->am_reg[i].addr += 0x1700;
+			test_case_reg->am_reg[i].addr += offset_addr_vd2;
 	} else if (hdr_test_case_set_flag == EN_HDR_TEST_CASE_VD1_1_CUVA_SDR_SC1) {
 		reg_eotf_addr += 0x80;
 		reg_eotf_data += 0x80;
@@ -4139,6 +4150,12 @@ static void set_hdr_test_case(int vpp_index)
 		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_ADPSCL1_COEF1,
 			0xc8000400, vpp_index);
 		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_RGB_GM_CTRL, 0x4, vpp_index);
+	} else if (chip_type_id == chip_a9) {
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF0,
+			0x04000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF1,
+			0xc8000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_RGB_GM_CTRL, 0x4, vpp_index);
 	}
 
 	am_set_regmap(test_case_reg, 0);
@@ -4202,6 +4219,40 @@ static void set_hdr_test_case(int vpp_index)
 	}
 
 	hdr_test_case_set_flag = 0;
+}
+
+void test_hdr_core(int path_idx, int proc_mode, enum vpp_index_e vpp_index)
+{
+	enum hdr_module_sel module_sel;
+	enum hdr_process_sel hdr_process_select;
+
+	if (!path_idx || !proc_mode)
+		return;
+
+	if (path_idx == 2)
+		module_sel = VD2_HDR;
+	else if (path_idx == 3)
+		module_sel = VD3_HDR;
+	else if (path_idx == 4)
+		module_sel = OSD1_HDR;
+	else if (path_idx == 5)
+		module_sel = OSD2_HDR;
+	else
+		module_sel = VD1_HDR;
+
+	if (proc_mode == 2)
+		hdr_process_select = SDR_HDR;
+	else if (proc_mode == 3)
+		hdr_process_select = HDR_SDR;
+	else if (proc_mode == 4)
+		hdr_process_select = SDR_HLG;
+	else if (proc_mode == 5)
+		hdr_process_select = HLG_SDR;
+	else
+		hdr_process_select = HDR_BYPASS;
+
+	hdr_func(module_sel, hdr_process_select,
+		NULL, NULL, vpp_index);
 }
 
 unsigned int dpss_test_case_set_flag;
@@ -4438,6 +4489,7 @@ int amvecm_on_vs(struct vframe_s *vf,
 	int result = 0;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	int vf_state = 0;
+	int i = 0;
 #endif
 #ifdef T7_BRINGUP_MULTI_VPP
 	// to do, t7 vecm bringup,
@@ -4660,8 +4712,20 @@ int amvecm_on_vs(struct vframe_s *vf,
 	amvecm_dump_output_data();
 
 	set_dpss_hdr_test_case(vpp_index);
-#endif
 
+	if (chip_type_id == chip_a9 && dump_flag == 1) {
+		WRITE_VPP_REG_BITS(VPP_PST_STA_CTRL, 0, 16, 16);
+		for (i = 0; i < 64; i++)
+			pr_info("[%d] 0x%08x\n",
+				i, READ_VPP_REG(VPP_PST_STA_RO_HIST));
+		dump_flag = 0;
+	}
+
+	if (hdr_core_test_flag) {
+		test_hdr_core(hdr_core_test_sel, hdr_core_test_mode, vpp_index);
+		hdr_core_test_flag = 0;
+	}
+#endif
 	return result;
 }
 EXPORT_SYMBOL(amvecm_on_vs);
@@ -13953,11 +14017,19 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	} else if (!strcmp(parm[0], "set_gamma_lut_65")) {
 		if (!strcmp(parm[1], "default"))
-			set_gamma_regs(1, 0);
+			set_gamma_regs(1, 0, 0);
 		else if (!strcmp(parm[1], "straight"))
-			set_gamma_regs(1, 1);
+			set_gamma_regs(1, 1, 0);
+		if (!strcmp(parm[1], "default1"))
+			set_gamma_regs(1, 0, 1);
+		else if (!strcmp(parm[1], "straight1"))
+			set_gamma_regs(1, 1, 1);
 		else
 			pr_info("unsupport cmd\n");
+	} else if (!strcmp(parm[0], "dump_post_sta")) {
+		dump_flag = 1;
+	} else if (!strcmp(parm[0], "force_toggle")) {
+		force_toggle();
 #endif
 	} else if (!strcmp(parm[0], "pd_fix_lvl")) {
 		if (parm[1]) {
@@ -14850,6 +14922,19 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 		force_eotf_type = val;
 		force_oetf_type = val;
 		vecm_latch_flag2 |= FLAG_HDR_OOTF_LATCH;
+	} else if (!strcmp(parm[0], "hdr_core_test")) {
+		if (!parm[1] ||
+			kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		hdr_core_test_sel = val;
+		if (!parm[2] ||
+			kstrtoul(parm[2], 10, &val) < 0)
+			goto free_buf;
+		hdr_core_test_mode = val;
+		if (!parm[3] ||
+			kstrtoul(parm[3], 10, &val) < 0)
+			goto free_buf;
+		hdr_core_test_flag = val;
 #endif
 	} else {
 		pr_info("unsupport cmd\n");
@@ -15334,7 +15419,7 @@ void amvecm_slt_pre_gamma_enable(void)
 	int i;
 
 	if (chip_type_id == chip_t3x) {
-		set_gamma_regs(1, 0);
+		set_gamma_regs(1, 0, 0);
 		amvecm_pre_gamma_enable(1);
 		return;
 	}
@@ -16472,13 +16557,19 @@ void hdr_hist_config_int(void)
 		addr_offset_vd1 = 0x1400;
 		addr_offset_vd2 = 0x2a30;
 		default_val = 0x10010;
-		WRITE_VPP_REG(DOLBY_HDR2_HIST_SLC_X_ST_ED_0, 0x20000eff);
 	} else if (chip_type_id == chip_t6x) {
 		addr_offset_vd1 = 0x1400;
 		addr_offset_vd2 = 0x2ab0;
 		default_val = 0x10010;
-		WRITE_VPP_REG(DOLBY_HDR2_HIST_SLC_X_ST_ED_0, 0x20000eff);
 	}
+
+	if (chip_type_id == chip_t6w ||
+		chip_type_id == chip_t6x)
+		WRITE_VPP_REG(DOLBY_HDR2_HIST_SLC_X_ST_ED_0, 0x20000eff);
+
+	if (chip_type_id == chip_a9)
+		WRITE_VPP_REG(VD1_HDR2_HIST_SLC_X_ST_ED_0 + addr_offset_vd1,
+			0x20000eff);
 
 	if (chip_type_id != chip_t3x) {
 		WRITE_VPP_REG(VD1_HDR2_HIST_CTRL + addr_offset_vd1, default_val);

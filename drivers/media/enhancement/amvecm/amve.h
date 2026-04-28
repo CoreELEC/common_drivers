@@ -212,7 +212,7 @@ void vpp_lut3d_base_table_init(void);
 void update_lut3d_base_data(unsigned int p3dlut_in[][3]);
 
 void amvecm_gamma_init(bool en);
-void set_gamma_regs(int en, int sel);
+void set_gamma_regs(int en, int sel, int index);
 void set_viu2_gamma_regs(int en, int sel);
 void amvecm_wb_enable(int enable);
 void amvecm_wb_enable_sub(int enable);

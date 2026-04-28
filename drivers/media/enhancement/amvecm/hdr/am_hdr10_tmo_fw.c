@@ -1221,11 +1221,9 @@ int hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode,
 	}
 
 	if (hist_flag) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 		if (chip_type_id == chip_t3x || chip_type_id == chip_s5)
 			hist_hdr = &s5_hdr_hist[NUM_HDR_HIST - 1][0];
 		else
-#endif
 			hist_hdr = &hdr_hist[NUM_HDR_HIST - 1][0];
 
 		if (!check_hist_available(hist_hdr)) {
@@ -1243,6 +1241,7 @@ int hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode,
 	memcpy(cgain, hdr_luts.hdr_cgain_lut, sizeof(int) * 65);
 	if (tmo_force_ootf1_mode)
 		memcpy(oo_gain1, hdr_luts.hdr_ogain_lut1, sizeof(int) * 149);
+
 	return 1;
 }
 

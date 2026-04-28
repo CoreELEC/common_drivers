@@ -3487,10 +3487,11 @@ void dump_plut3d_reg_table(void)
 	}
 }
 
-void set_gamma_regs(int en, int sel)
+void set_gamma_regs(int en, int sel, int index)
 {
 	int i;
 	int *gamma_lut = NULL;
+	int offset = 0;
 
 	static int gamma_lut_default[66] =  {
 	0, 0, 0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 26, 31,
@@ -3515,6 +3516,9 @@ void set_gamma_regs(int en, int sel)
 	else
 		gamma_lut = gamma_lut_straight;
 
+	if (index && chip_type_id == chip_a9)
+		offset = 0x2ae1;
+
 	if (en) {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 		if (chip_type_id == chip_s5 ||
@@ -3523,20 +3527,20 @@ void set_gamma_regs(int en, int sel)
 		} else
 #endif
 		{
-			WRITE_VPP_REG(VPP_GAMMA_BIN_ADDR, 0);
+			WRITE_VPP_REG(VPP_GAMMA_BIN_ADDR + offset, 0);
 			for (i = 0; i < 33; i = i + 1)
-				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA,
+				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA + offset,
 					      (((gamma_lut[i * 2 + 1] << 2) & 0xffff) << 16 |
 					      ((gamma_lut[i * 2] << 2) & 0xffff)));
 			for (i = 0; i < 33; i = i + 1)
-				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA,
+				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA + offset,
 					      (((gamma_lut[i * 2 + 1] << 2) & 0xffff) << 16 |
 					      ((gamma_lut[i * 2] << 2) & 0xffff)));
 			for (i = 0; i < 33; i = i + 1)
-				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA,
+				WRITE_VPP_REG(VPP_GAMMA_BIN_DATA + offset,
 					      (((gamma_lut[i * 2 + 1] << 2) & 0xffff) << 16 |
 					      ((gamma_lut[i * 2] << 2) & 0xffff)));
-			WRITE_VPP_REG_BITS(VPP_GAMMA_CTRL, 0x3, 0, 2);
+			WRITE_VPP_REG_BITS(VPP_GAMMA_CTRL + offset, 0x3, 0, 2);
 		}
 	}
 }
@@ -3640,8 +3644,8 @@ void vpp_pst_hist_sta_config(int en,
 	struct vinfo_s *vinfo)
 {
 	int cfg = 0;
-	unsigned int height = 0;
-	unsigned int width = 0;
+	unsigned int height = 1079;
+	unsigned int width = 1919;
 
 	/*config*/
 	cfg = (0 << 16) | /*rd index*/
