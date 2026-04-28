@@ -1315,7 +1315,7 @@
 };
 
 &saradc {
-	status = "disabled";
+	status = "okay";
 };
 
 /* MAC_A 1G exphy setting */

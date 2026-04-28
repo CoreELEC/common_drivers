@@ -860,17 +860,15 @@
 		reg = <0x00 0xfe026000 0x00 0x84>;
 
 		saradc: saradc {
-			compatible = "amlogic,saradc", "amlogic,s7d-saradc";
+			compatible = "amlogic,saradc", "amlogic,a9-saradc";
 			interrupts = <GIC_SPI 181 IRQ_TYPE_EDGE_RISING>;
 			clock-names = "src", "core", "gate", "mux";
-			//clocks = <&xtal>,
-			//	 <&clkc_sys CLKID_SYS_SAR_ADC>,
-			//	 <&clkc_sar_adc>,
-			//	 <&clkc_sar_adc>;
+			clocks = <&xtal>,
+				 <&clkc_sys CLKID_SYS_SAR_ADC>,
+				 <&clkc_sar_adc>,
+				 <&clkc_sar_adc>;
 			#io-channel-cells = <1>;
 			amlogic,clock-frequency = <3000000>;
-			//assigned-clocks = <&clkc_sar_adc>;
-			//assigned-clock-rates = <3000000>;
 			amlogic,test-channel = <7>;
 			amlogic,fifo-data-width = <16>;
 			/* Filter control */
@@ -878,14 +876,12 @@
 			amlogic,reg8-init = <0x0280614d>;
 			/* Delay configure */
 			amlogic,reg3-init = <0x10a02403>;
-			amlogic,reg4-init = <0x001dd080>;
+			amlogic,reg4-init = <0x021dd080>;
 			/* Set aux and external vref */
 			amlogic,reg9-init = <0x0000f0f0>;
 			amlogic,reg10-init = <0x70503010>;
 			amlogic,reg11-init = <0xf0d0b090>;
-			reset-names = "analog";
-			//resets = <&reset RESET_SAR_ANA>;
-			status = "disabled";
+			status = "okay";
 		};
 
 		pdd: pdd {
