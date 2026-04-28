@@ -155,7 +155,10 @@
  */
 #define DPTX20_FEC_ENABLE                      0x098
 
-/* bit0: write 0/1 value to hpd, bit1: pd_over enable */
+/* RW   HPD_OVER
+ *    1 hpd_over enable
+ *    0 write 0/1 value to hpd
+ */
 #define DPTX20_HPD_OVER                        0x09C
 
 /* WO   FORCE_SCRAMBLER_RESET
@@ -241,13 +244,26 @@
 
 /*
  * RW   AUX_REPLY_SYNC_SET
- *  5:0 aux reply sync set: aux sync pattern clk number
  *    6 aux data invert
+ *  5:0 aux reply sync set: aux sync pattern clk number
  */
 #define DPTX20_AUX_REPLY_SYNC_SET              0x114
 
+/*
+ * RW   AUX_GTC_AUTO_CTRL
+ * 20:17 gtc_10ms_value_for_1ms
+ * 16:12 gtc_1ms_value_for_1mhz
+ *  11:4 gtc_1ms_value_for_1mhz
+ *     3 apb_aux_process_byp: enable for interruppt ignore aux process gtc
+ *     2 gtc_auto_10ms_mode: 10ms mode sel
+ *     1 gtc_auto_1ms_mode: 1ms mode sel
+ *     0 gtc_auto_en: hw auto send gtc enable
+ */
 #define TR_DPTX_AUX_GTC_AUTO_CTRL              0x118
 
+/* RW   AUX_APB_WR_RD_DONE
+ *  0   apb_wr_rd_aux_done: stop state of aux transition process
+ */
 #define TR_DPTX_AUX_APB_WR_RD_DONE             0x11c
 
 /* RO   HPD_INPUT_STATE
@@ -674,21 +690,69 @@
  */
 #define DPTX20_HDCP_CONTENT_TYPE_SELECT_63_32  0x49c
 
+/*
+ * RW   HDCP_BINFO
+ * 16   cfg_tx_hdcp.rpt_dsdevcnt0
+ * 15:0 cfg_tx_hdcp.binfo
+ */
 #define DPTX20_HDCP_BINFO                      0x4a0
+
+/*
+ * RW   HDCP_SHA_START
+ *  0   cfg_tx_hdcp.sha_start
+ */
 #define DPTX20_HDCP_SHA_START                  0x4a4
+
+/*
+ * RW   HDCP_KSV_FIFO
+ * 7:0  cfg_tx_hdcp.ksv_fifo
+ */
 #define DPTX20_HDCP_KSV_FIFO                   0x4a8
+
+/*
+ * RO  HDCP_SHA_STATUS
+ */
 #define DPTX20_HDCP_SHA_STATUS                 0x4ac
+
+/*
+ * RO  HDCP_RPT_VH0
+ */
 #define DPTX20_HDCP_RPT_VH0                    0x4b0
-#define DPTX20_HDCP_RPT_VH2                    0x4b8
+
+/*
+ * RO  HDCP_RPT_VH1
+ */
 #define DPTX20_HDCP_RPT_VH1                    0x4b4
+
+/*
+ * RO  HDCP_RPT_VH2
+ */
+#define DPTX20_HDCP_RPT_VH2                    0x4b8
+
+/*
+ * RO  HDCP_RPT_VH3
+ */
 #define DPTX20_HDCP_RPT_VH3                    0x4bc
+
+/*
+ * RO  HDCP_RPT_VH4
+ */
 #define DPTX20_HDCP_RPT_VH4                    0x4d0
+
+/*
+ * RO  HDCP2_SND_FIFO
+ */
 #define DPTX20_HDCP2_SND_FIFO                  0x4e0
+
+/*
+ * RO  HDCP2_RCV_FIFO
+ *  7:0 cfg_tx_hdcp2.rcvfifo_data
+ */
 #define DPTX20_HDCP2_RCV_FIFO                  0x4e4
 #define DPTX20_HDCP2_HPD_CFG                   0x4e8
 #define DPTX20_HDCP2_CFG                       0x4ec
 #define DPTX20_HDCP2_FIFO_STATUS               0x4f0
-#define DPTX20_HDCP2_TYPE_SET                  0x4f4
+#define DPTX20_HDCP_CONTENT_CONFIG             0x4f4
 
 /* RW   MST_ENABLE
  *    0 Writing a 1 to this bit enables the MST function.
@@ -758,6 +822,8 @@
  *        11 – 2 links of 1 lane each, 1 link of 2 lanes (not DisplayPort compliant)
  */
 #define DPTX20_MSO_CONFIG                      0x528
+
+#define DPTX20_MST_LANE_CT_ENABLE              0x52c
 
 /* RW   DSC_COMPRESSION_ENABLE
  *    0 Set to a 1 to indicate that the transported video is compressed.
@@ -1040,12 +1106,49 @@
  */
 #define DPTX20_SRCX_FRAMING_STATUS             0x870
 
-#define TR_DPTX_SRC0_INFO_POS01                0x880
-#define TR_DPTX_SRC0_INFO_POS23                0x884
-#define TR_DPTX_SRC0_INFO_POS45                0x888
-#define TR_DPTX_SRC0_INFO_POS67                0x88C
-#define TR_DPTX_SRC0_INFO_CTRL                 0x890
-#define TR_DPTX_SRC0_VID_INTR_TH               0x894
+/*
+ * RW   SRCX_INFO_POS01
+ * 31:16 info_pos1
+ *  15:0 informe_packet pos0 in vblank count
+ */
+#define TR_DPTX_SRCX_INFO_POS01                0x880
+
+/*
+ * RW   SRCX_INFO_POS23
+ * 31:16 info_pos3
+ *  15:0 info_pos2
+ */
+#define TR_DPTX_SRCX_INFO_POS23                0x884
+
+/*
+ * RW   SRCX_INFO_POS45
+ * 31:16 info_pos5
+ *  15:0 info_pos4
+ */
+#define TR_DPTX_SRCX_INFO_POS45                0x888
+
+/*
+ * RW   SRCX_INFO_POS67
+ * 31:16 info_pos7
+ *  15:0 info_pos6
+ */
+#define TR_DPTX_SRCX_INFO_POS67                0x88C
+
+/*
+ * RW   SRCX_INFO_CTRL
+ * 23:16 info_pos_en: inforame_packet position 0~7 enable
+ *     9 info_afs_once: 1 for update every line;0 for update every frame
+ *     8 info_vblank_auto:
+ *           enable for hw gen vblank flag pix counter > i_hback + win_cfg after hsync
+ *   7:0 info_hback_win :value for win_cfg
+ */
+#define TR_DPTX_SRCX_INFO_CTRL                 0x890
+
+/*
+ * RW   SRCX_VID_INTR_TH
+ * 15:0 vid_intr_th:line cnt throld to gen intr
+ */
+#define TR_DPTX_SRCX_VID_INTR_TH               0x894
 
 /* RW   SEC0_AUDIO_ENABLE
  *    1 AUDIO_MUTE: Determines the state of the audio mute bit in the VBID packet.
@@ -1239,8 +1342,17 @@
  */
 #define DPTX20_SECX_SPDIF_STATUS_READBACK     0x96c
 
-#define TR_DPTX_SEC0_INFOFRAME_ENABLE1         0x970
-#define TR_DPTX_SEC0_INFOFRAME_RATE1           0x974
+/*
+ * RW   SECX_INFOFRAME_ENABLE1
+ * 31:0 infoframe_enable[63:32]
+ */
+#define TR_DPTX_SECX_INFOFRAME_ENABLE1         0x970
+
+/*
+ * RW   SEC0_INFOFRAME_RATE1
+ * 31:0 infoframe_rate: 1 for send every frame; 0 for send once
+ */
+#define TR_DPTX_SECX_INFOFRAME_RATE1           0x974
 
 /* RW   SEC0_GTC_COUNT_CONFIG
  *23:16 GTC_COUNT_INT: Integer portion of the GTC accumulator count.
@@ -1338,5 +1450,103 @@
  * 15:0 Width of the selective update region in pixels.
  */
 #define DPTX20_SECX_PSR2_UPDATE_WIDTH         0x9bc
+
+/*
+ * WR   SRCX_TDMIN_CTRL
+ *    31 reg_work_enable;
+ *    30 reg_i2s_mode; 0:tdm; 1:i2s
+ *    29 reg_rst_afifo_out_n;
+ *    28 reg_rst_afifo_in_n;
+ *    26 reg_tdmin_in_resync;
+ *    25 reg_tdmin_in_rev_ws;
+ *    24 reg_tdmin_in_rev_dat;
+ * 23:20 reg_tdmin_in_sel;
+ * 18:16 reg_tdmin_in_bit_skew;
+ * 15:13 reg_stable_mask;
+ *  12:8 reg_tdmin_slot_num;
+ *   7:6 reg_tdmin_chnum_mode;
+ *     5 reg_lsb_first;
+ *   4:0 reg_tdmin_bit_num;
+ */
+#define DPTX20_SRCX_TDMIN_CTRL                0x9C0
+
+/*
+ * RW   SRCX_TDMIN_MUTE_VAL
+ * 31:0 reg_mute_val
+ */
+#define DPTX20_SRCX_TDMIN_MUTE_VAL            0x9C4
+
+/*
+ * RW   SRCX_TDMIN_SWAP
+ */
+#define DPTX20_SRCX_TDMIN_SWAP	0x9C8
+
+/*
+ * RW   SRCX_TDMIN_MUTE0
+ * 31:0 ch swap
+ */
+#define DPTX20_SRCX_TDMIN_MUTE0	0x9CC
+
+/*
+ * RW   SRCX_TDMIN_MUTE1
+ *      ch mute sel
+ */
+#define DPTX20_SRCX_TDMIN_MUTE1	0x9D0
+
+/*
+ * RW   SRCX_TDMIN_MUTE2
+ *      ch mute sel
+ */
+#define DPTX20_SRCX_TDMIN_MUTE2	0x9D4
+
+/*
+ * RW   SRCX_TDMIN_MUTE3
+ *      ch mute sel
+ */
+#define DPTX20_SRCX_TDMIN_MUTE3	0x9D8
+
+/*
+ * RW   SRCX_TDMIN_MASK0
+ *      ch mask sel
+ */
+#define DPTX20_SRCX_TDMIN_MASK0	0x9DC
+
+/*
+ * RW   SRCX_TDMIN_MASK1
+ *      ch mask sel
+ */
+#define DPTX20_SRCX_TDMIN_MASK1	0x9E0
+
+/*
+ * RW   SRCX_TDMIN_MASK2
+ *      ch mask sel
+ */
+#define DPTX20_SRCX_TDMIN_MASK2	0x9E4
+
+/*
+ * RW   SRCX_TDMIN_MASK3
+ *      ch mask sel
+ */
+#define DPTX20_SRCX_TDMIN_MASK3	0x9E8
+
+/*
+ * RO  SRCX_TDMIN_STAT
+ *     state
+ */
+#define DPTX20_SRCX_TDMIN_STAT 0x9EC
+
+/* WR  SRCX_AUDIN_CTRL
+ *   20 mclk_en
+ * 16:8 mclk_div for gen WS
+ *    4 audin_sw_rst
+ *    0 audin_fifo_bypass
+ */
+#define DPTX20_SRCX_AUDIN_CTRL 0x9F0
+
+/*
+ * RO   SRCX_EDP_CRC_COUNT
+ *      crc count frame number
+ */
+#define DPTX20_SRCX_EDP_CRC_COUNT 0x9F4
 
 #endif

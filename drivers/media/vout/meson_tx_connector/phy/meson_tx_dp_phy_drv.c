@@ -20,7 +20,7 @@
 
 #include "meson_tx_dp_phy_register.h"
 
-#define DEVICE_NAME "meson_tx_dp_phy"
+#define DEVICE_NAME "tx_phy"
 
 static inline void dptx_phy_notify_hpd_plugin(struct meson_tx_phy *tx_phy);
 static inline void dptx_phy_notify_hpd_plugout(struct meson_tx_phy *tx_phy);
@@ -135,15 +135,6 @@ static int meson_tx_dp_phy_power_off(void *data)
 	return 0;
 }
 
-static u32 get_phy_level1(struct meson_tx_phy *tx_phy)
-{
-	struct arm_smccc_res res;
-
-	/* Here will call arm smc to get level1 */
-	arm_smccc_smc(0x82000010, 0x20, 0, 0, 0, 0, 0, 0, &res);
-	return (u32)((res.a0) & 0x3);
-}
-
 static u32 get_phy_level2(struct meson_tx_phy *tx_phy)
 {
 	struct arm_smccc_res res;
@@ -158,35 +149,13 @@ static u32 get_phy_level2(struct meson_tx_phy *tx_phy)
  */
 static u32 dptx_get_phy_types(struct meson_tx_phy *tx_phy)
 {
-	u32 data32 = 0;
-	u32 types = 0;
-
-	data32 |= 0x0b;
-	types = get_phy_level1(tx_phy);
-	switch (types) {
-	case 1:
-		data32 |= 0x1 << 8;
-		data32 |= 0x1 << 5;
-		break;
-	case 2:
-		data32 |= 0x3 << 8;
-		data32 |= 0x3 << 5;
-		break;
-	case 0:
-	default:
-		data32 |= 0x4 << 8;
-		data32 |= 0x4 << 5;
-		break;
-	}
-	return data32;
+	/* TODO, remove later */
+	return 0x48b;
 }
 
 static void dptx_aux_phy_output_enable(struct meson_tx_phy *tx_phy, bool en)
 {
 	dptx_phy_usbdp_write(tx_phy, DP_RG_AUX, en ? 0x2481 : 0);
-	/* reserved, may debug */
-	if (0)
-		dptx_phy_ana_write(tx_phy, ANACTRL_DPAUX_CTRL, en ? 0x2481 : 0);
 }
 
 static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
@@ -212,6 +181,17 @@ static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
 	if (!data || mode != PHY_DP || !opts)
 		return -1;
 
+	/* TODO, below should be controlled by USB PD and need remove later */
+	dptx_phy_ana_write(tx_phy, ANACTRL_USBCDP_CTRL, 0x138);
+	dptx_phy_usbdp_write(tx_phy, DATA_MUX_CFG0, 0x11ff);
+
+	pr_info("alt_mux %d linkrate %d lanecount %d\n",
+		alt_mux, opts->dp_ops.link_rate, opts->dp_ops.lanes);
+	if (!opts->dp_ops.link_rate || !opts->dp_ops.lanes) {
+		pr_info("dptx: need check parameters, use fixed lc=1 lr=6\n");
+		opts->dp_ops.link_rate = 1620;
+		opts->dp_ops.lanes = 1;
+	}
 	if (tx_phy->usb_dp_state.flip == TYPEC_ORIENTATION_REVERSE)
 		flip = 1;
 	/* below value needs fine tune */
@@ -226,7 +206,7 @@ static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
 	switch (opts->dp_ops.link_rate) {
 	case 1620:
 		pll_dp_m    = 32;
-		pll_dp_frac = ((3240 - 16 * 200) * 131072 * 2) / 200;
+		pll_dp_frac = 0;
 		div2        = BIT(15);
 		break;
 	case 2700:
@@ -304,14 +284,26 @@ static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
 
 	/* PLL for A9, pll pre */
 	pr_info("dptx A9 PLL addr = %x\n", DP_RG_USBCDP_PLL0_CNTL0);
-	dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x01f455e9);
-	dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0009e7e5);
-	dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x01f455ed);
-	dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0809e7e5);
-	dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x0df455ed);
-
+	if (opts->dp_ops.link_rate == 1620) {
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x016855e9);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0009e665);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x016855ed);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0809e665);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x0d6855ed);
+	} else { /* for 2.7G or 5.4G */
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x01f455e9);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0009e7e5);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x01f455ed);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL1, 0x0809e7e5);
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL0_CNTL0, 0x0df455ed);
+	}
 	/* pll1_0 */
 	if (pll1_0_en == 1) {
+		u32 pll1_0_cntl1 = 0x1842a360;
+
+		if (opts->dp_ops.link_rate == 1620)
+			pll1_0_cntl1 = 0x1842a240;
+
 		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL0,
 			(0x40000071 & 0xFC00007F) | (pll1_0_frac << 7));
 		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL1,
@@ -322,8 +314,7 @@ static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
 			(0x4000007d & 0xFC00007F) | (pll1_0_frac << 7));
 		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL2, 0x00002050);
 		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL2, 0x00006050);
-		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL1,
-			(0x184aa360 & 0xFFFFE00F) | (pll1_0_m << 4));
+		dptx_phy_usbdp_write(tx_phy, DP_RG_USBCDP_PLL1_0_CNTL1, pll1_0_cntl1);
 	}
 
 	/* pll1_1 */
@@ -356,6 +347,7 @@ static int meson_tx_dp_phy_set_mode(void *data, enum meson_tx_phy_mode mode,
 	/* aux phy */
 	dptx_aux_phy_output_enable(tx_phy, 1);
 	dptx_phy_usbdp_write(tx_phy, DP_RG_AUX, 0x2481);
+	pr_info("dptx phy probe done\n");
 	return 0;
 }
 
@@ -453,10 +445,9 @@ static int meson_tx_dp_phy_configure(void *phy, struct meson_tx_phy_cfg_opts *op
 	if (!phy || !opts)
 		return -1;
 	link_lanes = opts->dp_ops.lanes;
-	for (i = 0; i < link_lanes; i++) {
+	for (i = 0; i < link_lanes; i++)
 		dptx_phy_set_prem_vswing(phy, phy_4lane_ctrl_reg[i], opts->dp_ops.pre[i],
 			opts->dp_ops.voltage[i]);
-	}
 
 	return 0;
 }
@@ -551,8 +542,9 @@ int meson_tx_dp_dump_regs(void *phy, struct seq_file *s)
 		break;
 	}
 	seq_printf(s, "        Pin Assignment: %s\n", info);
-	reg = ANACTRL_DPAUX_CTRL;
-	seq_printf(s, "[0x%08x] = 0x%08x\n", reg, dptx_phy_ana_read(tx_phy, reg));
+	seq_puts(s, "AUX CTRL %s\n");
+	reg = DP_RG_AUX;
+	seq_printf(s, "  [0x%08x] = 0x%08x\n", reg, dptx_phy_usbdp_read(tx_phy, reg));
 	reg = ANACTRL_USBCDP_CTRL;
 	seq_printf(s, "[0x%08x] = 0x%08x\n", reg, dptx_phy_ana_read(tx_phy, reg));
 	for (reg = DP_RG_USBCDP_PLL0_CNTL0; reg < USBCDPRX_LANE2_RO0 + 1; reg += 4)
@@ -811,7 +803,6 @@ static int dptx_init_reg_map(struct platform_device *pdev, struct meson_tx_phy *
 		return ret;
 	}
 	tx_phy->regmap_dpphy_ctrl = regmap;
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, ANACTRL_USBCDP_NAME);
 	if (!res) {
 		dev_err(dev, "Failed to get %s address\n", ANACTRL_USBCDP_NAME);
@@ -953,8 +944,10 @@ static int usb_to_dptx_notifier(struct notifier_block *nb,
 		pr_info("[dptxphy] dp_status = 0x%x dp_conf = 0x%x\n", dp_data->status,
 			dp_data->conf);
 		pr_info("[dptxphy] %s connected\n", typec_dp_get_devices_connect_st(tx_phy));
-		if (!typec_dp_sink_device_is_connected(tx_phy))
+		if (!typec_dp_sink_device_is_connected(tx_phy)) {
+			dptx_phy_notify_hpd_plugin(tx_phy);
 			break;
+		}
 		if (typec_dp_get_hpd_irq_state(tx_phy)) {
 			dptx_phy_notify_hpd_irq(tx_phy);
 			break;
@@ -982,12 +975,12 @@ static int meson_tx_dp_phy_probe(struct platform_device *pdev)
 	/* 1. Try to get config from device tree match */
 	data = of_device_get_match_data(&pdev->dev);
 	if (data) {
-		pr_info("%s use dt\n", __func__);
+		pr_info("dp phy probe use dt\n");
 	} else {
 		/* 2. Fall back to legacy platform_data */
 		data = dev_get_platdata(&pdev->dev);
 		if (data) {
-			pr_info("%s use legacy platform_data\n", __func__);
+			pr_info("dp phy use legacy platform_data\n");
 		} else {
 			pr_err("No config found in DT or platform_data\n");
 			return -EINVAL;
@@ -1005,8 +998,8 @@ static int meson_tx_dp_phy_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, tx_phy);
 	tx_phy->usbpd_to_dp_nb.notifier_call = usb_to_dptx_notifier;
 	typec_mux_meson_register_notify(&tx_phy->usbpd_to_dp_nb);
-
-	pr_info("%s %px\n", __func__, tx_phy);
+	/* TODO, below will remove when USB PD is ready */
+	dptx_aux_phy_output_enable(tx_phy, 1);
 
 	return 0;
 }
@@ -1015,7 +1008,7 @@ static void meson_tx_phy_remove(struct platform_device *pdev)
 {
 	struct device *device = &pdev->dev;
 
-	pr_info("%s %s\n", __func__, dev_name(device));
+	pr_info("dp phy remove %s\n", dev_name(device));
 }
 
 static const struct meson_tx_phy_data normal_phy_data = {

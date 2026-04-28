@@ -13,28 +13,225 @@
 #include "meson_tx_clk_reg.h"
 #include "meson_tx_clk_internal.h"
 
+/* unit: kHz */
+#define PIXEL_PLL_VCO_MIN  1400000
+#define PIXEL_PLL_VCO_MAX  2800000
+#define XTAL_BASE_CLK      24000
+
 /*
  * set path and divider between analog pll output(hdmitx_clk_out2
  * or pll_pix_clk) and CRT_VIDEO
  */
-static void tx_vid_pll_pix_div_set(u8 div)
+static void tx_vid_pll_pix_div_set(struct meson_tx_clk *tx_clk, u8 pll_idx, u8 div)
 {
-	pr_info("%s TODO\n", __func__);
+	u32 pll_ctrl0_reg = ANACTRL_TCON_PLL2_CNTL0;
+	u32 pll_od1 = 0;
+	u32 pll_od2 = 0;
+
+	if (!tx_clk)
+		return;
+	if (div > 128) {
+		pr_err("meson_tx_clk pixel pll div(%d) not supported\n", div);
+		return;
+	}
+
+	/* Note: there are two pixel pll,
+	 * ANACTRL_TCON_PLL2_CNTLx(pixel_pll0) is same as ANACTRL_TCON_PLL3_CNTLx(pixel_pll1)
+	 */
+	if (pll_idx > 1) {
+		pr_err("%d exceed a9 pixel pll index(0/1)\n", pll_idx);
+		return;
+	} else if (pll_idx == 1) {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL3_CNTL0;
+	} else {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL2_CNTL0;
+	}
+
+	/* pixel_pll_ctrl0[21:19]: pll_od1 */
+	if ((div % 16) == 0) {
+		/* div16 */
+		pll_od1 = 4;
+		div /= 16;
+	} else if ((div % 8) == 0) {
+		/* div8 */
+		pll_od1 = 3;
+		div /= 8;
+	} else if ((div % 4) == 0) {
+		/* div4 */
+		pll_od1 = 2;
+		div /= 4;
+	} else if ((div % 2) == 0) {
+		/* div2 */
+		pll_od1 = 1;
+		div /= 2;
+	} else {
+		pll_od1 = 0;
+		div = 1;
+	}
+
+	/* pixel_pll_ctrl0[23:22]: pll_od2 */
+	if ((div % 8) == 0) {
+		/* div8 */
+		pll_od2 = 3;
+		div /= 8;
+	} else if ((div % 4) == 0) {
+		/* div4 */
+		pll_od2 = 2;
+		div /= 4;
+	} else if ((div % 2) == 0) {
+		/* div2 */
+		pll_od2 = 1;
+		div /= 2;
+	} else {
+		pll_od2 = 0;
+		div = 1;
+	}
+
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, pll_od1, 19, 3);
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, pll_od2, 22, 2);
 }
 
-/* for example 148.5M = set_pix_pll0(148500); */
-static int tx_clk_set_tcon_pll(struct meson_tx_clk *tx_clk, u32 clk_feq, u8 path_sel)
+static int wait_for_pll_lock(struct meson_tx_clk *tx_clk, u32 st_reg, u8 lock_bit, u32 loop_cnt)
 {
-	/* for pixel0_pll_clk, force output 594Mhz */
-	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG],
-		ANACTRL_TCON_PLL0_CNTL0, 1, 28, 1);
-	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG],
-		ANACTRL_TCON_PLL0_CNTL0, 0, 30, 1);
-	/* for pixel1_pll_clk, force output 594Mhz */
-	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG],
-		ANACTRL_TCON_PLL1_CNTL0, 1, 28, 1);
-	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG],
-		ANACTRL_TCON_PLL1_CNTL0, 0, 30, 1);
+	unsigned int st = 0;
+	u32 cnt = loop_cnt;
+
+	if (!tx_clk || lock_bit >= 32)
+		return -1;
+
+	while (cnt > 0) {
+		usleep_range(50, 60);
+		st = (tx_clk_read_reg(tx_clk->reg_io_base[ANACTRL_REG], st_reg) >> lock_bit) & 0x1;
+		if (st == 0x1)
+			break;
+		cnt--;
+	}
+	if (cnt == 0)
+		return -1;
+
+	if (cnt < loop_cnt)
+		pr_info("warning: pll[0x%x] lock retry %d times\n", st_reg, loop_cnt - cnt);
+
+	return 0;
+}
+
+/*
+ * clk_freq: VCO frequency, for example: 1485M set_pix_pll0(clk_freq = 148500)
+ * pll_idx 0/1 for pixel_pll0/1
+ */
+static int tx_clk_set_tcon_pll(struct meson_tx_clk *tx_clk, u8 pll_idx,  u32 clk_feq)
+{
+	u32 pll_m = 0;
+	u32 pll_frac = 0;
+	u32 tmp = 0;
+	u32 pll_ctrl0_reg, pll_ctrl1_reg, pll_ctrl2_reg, pll_sts_reg;
+
+	/* for pll frac part */
+	u32 remainder = 0;
+	u32 rem_1 = 0;
+	u32 rem_2 = 0;
+
+	u32 clk_base = XTAL_BASE_CLK;
+
+	if (!tx_clk)
+		return -1;
+	if (clk_feq < PIXEL_PLL_VCO_MIN || clk_feq > PIXEL_PLL_VCO_MAX) {
+		pr_info("meson_tx_connector: clk_feq %d is out of VCO range (%d ~ %d)\n", clk_feq,
+			PIXEL_PLL_VCO_MIN, PIXEL_PLL_VCO_MAX);
+		return -1;
+	}
+
+	/* Note: there are two pixel pll,
+	 * ANACTRL_TCON_PLL2_CNTLx(pixel_pll0) is same as ANACTRL_TCON_PLL3_CNTLx(pixel_pll1)
+	 */
+	if (pll_idx > 1) {
+		pr_err("%d exceed a9 pixel pll index(0/1)\n", pll_idx);
+		return -1;
+	} else if (pll_idx == 1) {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL3_CNTL0;
+		pll_ctrl1_reg = ANACTRL_TCON_PLL3_CNTL1;
+		pll_ctrl2_reg = ANACTRL_TCON_PLL3_CNTL2;
+		pll_sts_reg = ANACTRL_TCON_PLL3_STS;
+	} else {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL2_CNTL0;
+		pll_ctrl1_reg = ANACTRL_TCON_PLL2_CNTL1;
+		pll_ctrl2_reg = ANACTRL_TCON_PLL2_CNTL2;
+		pll_sts_reg = ANACTRL_TCON_PLL2_STS;
+	}
+
+	clk_base = XTAL_BASE_CLK / 2;
+	if (clk_feq % clk_base == 0) {
+		pll_m = clk_feq / clk_base;
+		pll_frac = 0;
+	} else {
+		pll_m = clk_feq / clk_base;
+		remainder = clk_feq - pll_m * clk_base;
+		/* remainder range: 0 ~ 99999, 0x1869f, 17bits */
+		/* convert remainder to 0 ~ 2^17 */
+		if (remainder) {
+			rem_1 = remainder / 16;
+			rem_2 = remainder - rem_1 * 16;
+			rem_1 *= 1 << 17;
+			rem_1 /= 750;
+			rem_2 *= 1 << 13;
+			rem_2 /= 750;
+			pll_frac = rem_1 + rem_2;
+		}
+	}
+
+	/* bit27: div0.5 enable, bit16: N, bit[8:0]: M */
+	tmp = (0x1 << 27) |
+		(0x1 << 26) |
+		(0x1 << 25) |
+		(0x0 << 22) |
+		(0x0 << 19) |
+		(0x0 << 16) |
+		(0x1 << 15) |
+		(0x1 << 13) |
+		(0x0 << 9) |
+		(pll_m << 0);
+	tx_clk_write_reg(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, tmp);
+
+	tmp = (0x1 << 28) |
+		(0x0 << 26) |
+		(0x5 << 22) |
+		(0x1 << 19) |
+		(pll_frac << 0);
+	tx_clk_write_reg(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl1_reg, tmp);
+
+	tmp = (0x1 << 31) |
+		(0x1 << 30) |
+		(0x1 << 28) |
+		(0x0 << 27) |
+		(0x1 << 25) |
+		(0x0 << 24) |
+		(0x0 << 23) |
+		(0x0 << 20) |
+		(0x0 << 18) |
+		(0x0 << 17) |
+		(0x0 << 13) |
+		(0x4 << 10) |
+		(0x2 << 8) |
+		(0x0 << 6) |
+		(0x1 << 5) |
+		(0x1 << 4) |
+		(0 << 0);
+	tx_clk_write_reg(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl2_reg, tmp);
+
+	usleep_range(8, 12);
+	/* [28] pll enable */
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, 1, 28, 1);
+	usleep_range(8, 12);
+	/* [29] pll reset_n for sdm_div release reset */
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, 1, 29, 1);
+	usleep_range(45, 55);
+	/* [30] pll lock reset_n */
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, 1, 30, 1);
+	usleep_range(75, 85);
+
+	/* bit31 lock bit, retry lock loop cnt: 10 */
+	if (wait_for_pll_lock(tx_clk, pll_sts_reg, 31, 10) < 0)
+		pr_err("meson_tx_connector: video pixel_pll%d unlock!\n", pll_idx);
 	return 0;
 }
 
@@ -47,32 +244,76 @@ static int tx_clk_set_tcon_pll(struct meson_tx_clk *tx_clk, u32 clk_feq, u8 path
  * and may be for tmds_clk in special case.
  * clk_to_crt_video is divided from vco_clk
  */
-
-int tx_pixel_pll_set_a9(struct meson_tx_clk *tx_clk,
-	enum tx_clk_type clk_type, u32 vco_clk, u32 clk_to_crt_video)
+static int tx_pixel_pll_set_a9(struct meson_tx_clk *tx_clk,
+	enum tx_clk_type clk_type, u8 pll_idx, u32 vco_clk, u32 clk_to_crt_video)
 {
-	u8 div = 5;
+	u8 div = 1;
+	u32 vco_clk_tmp = vco_clk;
 
 	if (!tx_clk) {
 		pr_err("%s NULL tx_clk\n", __func__);
 		return -EINVAL;
 	}
 
-	tx_clk_set_tcon_pll(tx_clk, vco_clk, 0);
+	pr_info("clk_type: %d, pixel_pll_idx: %d, vco_clk: %d, crt_video_clk: %d\n",
+		clk_type, pll_idx, vco_clk, clk_to_crt_video);
 
-	pr_info("%s TODO for VCO\n", __func__);
-	tx_vid_pll_pix_div_set(div);
+	div = DIV_ROUND_CLOSEST_ULL(vco_clk_tmp, clk_to_crt_video);
+
+	/* 1. pixel PLL OD: pixel_pll_ctrl0[21:19] for(1/2/4/8/16) and [23:22] for (1/2/4/8),
+	 * the maximum PLL OD is 16 * 8 = 128;
+	 * 2. video pixel clk range:
+	 * PIXEL_PLL_VCO_MIN / 128 ~ PIXEL_PLL_VCO_MAX / 1, 11.937MHz ~ 2.8GHz
+	 */
+	do {
+		if (vco_clk_tmp >= PIXEL_PLL_VCO_MIN && vco_clk_tmp <= PIXEL_PLL_VCO_MAX)
+			break;
+		div *= 2;
+		vco_clk_tmp *= 2;
+	} while (div <= 128);
+
+	if (div > 128) {
+		pr_err("divider(%d) for pixel pll OD abnormal!\n", div);
+		return -1;
+	}
+	if (clk_type == CLK_DPTX) {
+		tx_clk_set_tcon_pll(tx_clk, pll_idx, vco_clk_tmp);
+		tx_vid_pll_pix_div_set(tx_clk, pll_idx, div);
+	} else {
+		pr_err("only for dptx PLL!\n");
+	}
 	return 0;
 }
 
-int tx_pixel_pll_disable_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type)
+static int tx_pixel_pll_disable_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type)
 {
+	struct meson_tx_clk_data *clk_cfg = NULL;
+	u32 pll_ctrl0_reg = ANACTRL_TCON_PLL2_CNTL0;
+	u32 pll_idx = 0;
+
 	if (!tx_clk) {
 		pr_err("%s NULL tx_clk\n", __func__);
 		return -EINVAL;
 	}
 
-	pr_info("%s TODO for VCO\n", __func__);
+	clk_cfg = &tx_clk->tx_clk_cfg;
+	/* assume video_pll_idx = venc index, that's to say
+	 * venc0(V1 crt divider) use pixel_pll0,
+	 * venc1(V2 crt divider) use pixel_pll1
+	 */
+	pll_idx = clk_cfg->clk_div_path & BIT(0);
+
+	if (pll_idx > 1) {
+		pr_err("%d exceed a9 pixel pll index(0/1)\n", pll_idx);
+		return -1;
+	} else if (pll_idx == 1) {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL3_CNTL0;
+	} else {
+		pll_ctrl0_reg = ANACTRL_TCON_PLL2_CNTL0;
+	}
+
+	/* disable pll & set reset pll */
+	tx_clk_set_reg_bits(tx_clk->reg_io_base[ANACTRL_REG], pll_ctrl0_reg, 0, 28, 3);
 	return 0;
 }
 
@@ -85,7 +326,8 @@ int tx_pixel_pll_disable_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_ty
  * from pixel pll which is set by pixel_pll_set;
  */
 
-int tx_phy_clk_set_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type, u32 clk_todig_phy)
+static int tx_phy_clk_set_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type,
+			     u32 clk_todig_phy)
 {
 	if (!tx_clk) {
 		pr_err("%s NULL tx_clk\n", __func__);
@@ -95,7 +337,7 @@ int tx_phy_clk_set_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type, u3
 	return 0;
 }
 
-int tx_phy_clk_disable_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type)
+static int tx_phy_clk_disable_a9(struct meson_tx_clk *tx_clk, enum tx_clk_type clk_type)
 {
 	if (!tx_clk) {
 		pr_err("%s NULL tx_clk\n", __func__);
@@ -408,6 +650,7 @@ int tx_bulk_clk_set_a9(struct meson_tx_clk *tx_clk, u32 clk_mask)
 {
 	u32 crt_video_clk_out;
 	struct meson_tx_clk_data *clk_cfg = NULL;
+	u8 venc_idx = 0;
 
 	if (!tx_clk) {
 		pr_err("%s NULL tx_clk\n", __func__);
@@ -416,10 +659,15 @@ int tx_bulk_clk_set_a9(struct meson_tx_clk *tx_clk, u32 clk_mask)
 
 	clk_cfg = &tx_clk->tx_clk_cfg;
 	crt_video_clk_out = clk_cfg->venc_clk;
+	/* assume video_pll_idx = venc index, that's to say
+	 * venc0(V1 crt divider) use pixel_pll0,
+	 * venc1(V2 crt divider) use pixel_pll1
+	 */
+	venc_idx = clk_cfg->clk_div_path & BIT(0);
 
 	if (clk_mask & PIXEL_PLL_MASK)
-		tx_pixel_pll_set_a9(tx_clk, clk_cfg->clk_type, clk_cfg->pixel_vco_clk,
-			clk_cfg->clk_to_crt_video);
+		tx_pixel_pll_set_a9(tx_clk, clk_cfg->clk_type, venc_idx,
+			clk_cfg->pixel_vco_clk, clk_cfg->clk_to_crt_video);
 
 	/* crt_video_clk: set clk source for venc and pixel clk,
 	 * here set the crt_video divider to output clk at venc clk rate

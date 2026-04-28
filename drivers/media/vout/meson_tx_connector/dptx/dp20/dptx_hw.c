@@ -1666,20 +1666,20 @@ static int dptx20_set_info_pos(struct dptx_hw_common *hw_comm, u8 vc_id, u32 pos
 	for (i = 0; i < 8; i++) {
 		if ((pos_en >> i) & 0x1) {
 			pos_y = dptx20_reg_read(hw_comm, CORE_LEVEL,
-			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRC0_INFO_POS01) + (i / 2) * 4);
+			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRCX_INFO_POS01) + (i / 2) * 4);
 			pos_y |= new_pos_y[i] << (i % 2) * 16;
 			dptx20_reg_write(hw_comm, CORE_LEVEL, dptx20_hw_calc_mst_reg(vc_id,
-				TR_DPTX_SRC0_INFO_POS01) + (i / 2) * 4, pos_y);
+				TR_DPTX_SRCX_INFO_POS01) + (i / 2) * 4, pos_y);
 		}
 	}
 
 	/* info_ctrl [23:16] pos_en [8]: vauto; [7:0]: hback_win */
 	info_ctrl = dptx20_reg_read(hw_comm, CORE_LEVEL,
-		dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRC0_INFO_CTRL));
+		dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRCX_INFO_CTRL));
 	info_ctrl |= (pos_en << 16);
 	/* pos_en */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
-		dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRC0_INFO_CTRL), info_ctrl);
+		dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRCX_INFO_CTRL), info_ctrl);
 
 	return 0;
 }
@@ -1774,10 +1774,10 @@ static int dptx20_hw_set_vid_mode(struct dptx_hw_common *hw_comm,
 	/* config intr_vid position, active + 5 */
 	if (hw_comm->hdcp_sec_en > 0)
 		dptx20_reg_write(hw_comm, CORE_LEVEL,
-			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRC0_VID_INTR_TH), 11);
+			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRCX_VID_INTR_TH), 11);
 	else
 		dptx20_reg_write(hw_comm, CORE_LEVEL,
-			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRC0_VID_INTR_TH),
+			dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SRCX_VID_INTR_TH),
 			para->timing.v_back + 5);
 	return 0;
 }
@@ -2701,20 +2701,20 @@ static int dptx20_hw_cntl_platform(struct meson_tx_hw *tx_hw, u32 cmd,
 				break;
 			}
 			tx_clk->tx_clk_cfg.clk_div_path = fmt_para->vid_clk_path;
-			DPTX_INFO("%s TODO build PLL rate\n", __func__);
+			tx_clk->tx_clk_cfg.clk_type = CLK_DPTX;
 			/* for DPTX/eDPTX, note that vco_clk need to be multiplied by
 			 * pll_div(5 or 10) later according to pll application note.
-			 * clk_to_crt_video/venc_clk equals pixel clk.
+			 * clk_to_crt_video/venc_clk equals pixel clk or twice pixel clk(y420).
 			 */
-			/* tx_clk->tx_clk_cfg.pixel_vco_clk = 5940000 */
+			tx_clk->tx_clk_cfg.pixel_vco_clk = fmt_para->timing.pixel_freq;
 
-			/* for PXP, force clk output from PLL top to 594000Khz,
+			/* only for A9 PXP, force clk output from PLL top to 594000Khz,
 			 * and then output to clk_to_crt_video
 			 */
-			if (tx_hw->pxp_mode)
-				tx_clk->tx_clk_cfg.clk_to_crt_video = 594000;
-			else
-				tx_clk->tx_clk_cfg.clk_to_crt_video = fmt_para->timing.pixel_freq;
+			/* if (tx_hw->pxp_mode) */
+				/* tx_clk->tx_clk_cfg.clk_to_crt_video = 594000; */
+			/* else */
+			tx_clk->tx_clk_cfg.clk_to_crt_video = fmt_para->timing.pixel_freq;
 			if (fmt_para->cs == HDMI_COLORSPACE_YUV420)
 				tx_clk->tx_clk_cfg.pixel_clk = fmt_para->timing.pixel_freq / 2;
 			else
@@ -2729,10 +2729,10 @@ static int dptx20_hw_cntl_platform(struct meson_tx_hw *tx_hw, u32 cmd,
 				tx_clk->tx_clk_cfg.phy_clk = 2700000;
 				break;
 			case DPTX_LINK_RATE_5P40GHZ:
-				tx_clk->tx_clk_cfg.phy_clk = 5400;
+				tx_clk->tx_clk_cfg.phy_clk = 5400000;
 				break;
 			case DPTX_LINK_RATE_8P10GHZ:
-				tx_clk->tx_clk_cfg.phy_clk = 8100;
+				tx_clk->tx_clk_cfg.phy_clk = 8100000;
 				break;
 			default:
 				DPTX_ERROR("%s invalid link rate, force 1.62Ghz\n", __func__);
@@ -2793,9 +2793,9 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 			para->colorimetry = DPTX_COLORIMETRY_BT2020_YCC;
 		DPTX_DEBUG_PACKET("colorimetry = 0x%x, vc_id = %d\n",
 				para->colorimetry, para->vc_id);
-		dptx20_hw_set_msa(hw_comm, para->vc_id, para);
-		dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
-		dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
+		//dptx20_hw_set_msa(hw_comm, para->vc_id, para);
+		//dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
+		//dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
 		break;
 	/* To disable DPTX HDR, need to clear BT2020 */
 	case AUX_PKT_CLR_BT2020:
@@ -2806,9 +2806,9 @@ static int dptx20_hw_cntl_aux_pkt(struct meson_tx_hw *tx_hw, u32 cmd,
 			para->colorimetry = DPTX_COLORIMETRY_BT709_YCC;
 		DPTX_DEBUG_PACKET("colorimetry = 0x%x, vc_id = %d\n",
 				para->colorimetry, para->vc_id);
-		dptx20_hw_set_msa(hw_comm, para->vc_id, para);
-		dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
-		dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
+		//dptx20_hw_set_msa(hw_comm, para->vc_id, para);
+		//dptx20_hw_set_vsc_colorimetry(hw_comm, para->vc_id, para);
+		//dptx_vsc_pkt_for_pixel_enc(hw_comm, para, (INFOFRAME_TYPE_NTSC_VBI & 0x7) - 1);
 		break;
 	default:
 		break;
@@ -2900,22 +2900,10 @@ static void dptx20_link_lane_remap(struct dptx_hw_common *hw_comm, bool flip, u3
 {
 	u32 data32 = 0;
 
-	/*
-	 * this is specific with the RTL design, please refer to ANACTRL_USBCDP_CTRL definition
-	 */
-	if ((alt_mux == 0 || alt_mux == 1) && flip == 1) {
-		data32 = LANE_REMAP_EN | (0x0 << REMAP_LANE_3_NUM) | (0x1 << REMAP_LANE_2_NUM) |
-			 (0x2 << REMAP_LANE_1_NUM) | (0x3 << REMAP_LANE_0_NUM);
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, data32);
-	}
-
-	/* revert aux and data when flip */
-	if (flip == 1) {
-		/* [19:16] revert main data lane */
-		dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, 0xf, 16, 4);
-		/* [7] revert aux data lane */
-		dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_AUX_REPLY_SYNC_SET, 1, 6, 1);
-	}
+	/* TODO, currently fixed value, remove after USB PD is OK */
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, data32);
+	pr_info("dptx: fixed lane remap\n");
+	return;
 }
 
 static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,

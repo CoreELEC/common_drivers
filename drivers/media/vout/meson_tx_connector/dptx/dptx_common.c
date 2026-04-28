@@ -84,7 +84,7 @@ int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	/* clear hdr packet */
-	dptx_drm_infoframe_set(tx_comm->hw_comm, 0, NULL);
+	//dptx_drm_infoframe_set(tx_comm->hw_comm, 0, NULL);
 	return 0;
 }
 
@@ -317,6 +317,7 @@ int dptx_calc_hw_fmt_para(struct meson_tx_dev *tx_base, struct meson_tx_format_p
 
 	hw_para->total_bandwidth = bandwidth;
 	/* choose low rate firstly, then count */
+	/* TODO, restore after 4lane works
 	if (bandwidth <= 1620000) {
 		rate = DPTX_LINK_RATE_1P62GHZ;
 		count = DPTX_LANE_COUNT_1;
@@ -340,9 +341,27 @@ int dptx_calc_hw_fmt_para(struct meson_tx_dev *tx_base, struct meson_tx_format_p
 			sw_para->cs, sw_para->cd);
 		return -1;
 	}
+	*/
+
+	/* remove later, currently choose 1 lane firstly */
+	if (bandwidth <= 1620000) {
+		rate = DPTX_LINK_RATE_1P62GHZ;
+		count = DPTX_LANE_COUNT_1;
+	} else if (bandwidth <= 2700000) {
+		rate = DPTX_LINK_RATE_2P70GHZ;
+		count = DPTX_LANE_COUNT_1;
+	} else if (bandwidth <= 5400000) {
+		rate = DPTX_LINK_RATE_5P40GHZ;
+		count = DPTX_LANE_COUNT_1;
+	} else {
+		DPTX_ERROR("Only 1 lane, high bandwidth %d %s cs %d cd %d\n", bandwidth,
+			   sw_para->name, sw_para->cs, sw_para->cd);
+		return -1;
+	}
 
 	DPTX_INFO("bandwidth: %s cs %d cd %d bandwidth %dkHz Rate %d Count %d\n",
 		sw_para->name, sw_para->cs, sw_para->cd, bandwidth, rate, count);
+
 	/* use force link rate and lane count if it's enabled */
 	if (tx_comm->link_train->force_lr >= DPTX_LINK_RATE_1P62GHZ &&
 		tx_comm->link_train->force_lr < DPTX_LINK_RATE_MAX)
@@ -355,12 +374,26 @@ int dptx_calc_hw_fmt_para(struct meson_tx_dev *tx_base, struct meson_tx_format_p
 	else
 		hw_para->lane_count = count;
 
+	DPTX_INFO("finial use bandwidth %dkHz Rate %d Count %d\n",
+		bandwidth, hw_para->link_rate, hw_para->lane_count);
+
 	return 0;
 }
 
 static int dptx_pre_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_para *para)
 {
 	return dptx_hw_cntl(tx_dev->tx_hw_base, MODE_FLOW_PRE_ENABLE_MODE, para, NULL);
+}
+
+static int dptx_hw_fmt_para_to_phy_conf(struct dptx_hw_fmt_para *hw_para,
+					struct meson_tx_phy_cfg_opts *phy_conf)
+{
+	if (!hw_para || !phy_conf)
+		return -1;
+	/* note: in the dp_ops, here need to multiple 10 */
+	phy_conf->dp_ops.link_rate = hw_para->link_rate * 270;
+	phy_conf->dp_ops.lanes = hw_para->lane_count;
+	return 0;
 }
 
 static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_para *para)
@@ -370,6 +403,7 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 	int ret = -EINVAL;
 	u8 i = 0;
 	struct meson_tx_hw *tx_hw_base;
+	struct meson_tx_phy_cfg_opts *ops;
 
 	if (!tx_dev || !para)
 		return ret;
@@ -381,6 +415,9 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 	tx_clk = tx_dev->tx_hw_base->tx_clk;
 	tx_hw_base = tx_dev->tx_hw_base;
 
+	dptx_hw_fmt_para_to_phy_conf(&tx_dev->sw_fmt_para.tx_hw_para.dptx_hw_para,
+				     &tx_hw_base->tx_phy_conf);
+
 	/* check the parameters of tx_hw_base->tx_phy_conf is valid or not */
 	ret = meson_tx_phy_validate(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 	if (ret < 0) {
@@ -388,6 +425,10 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 		dump_stack();
 		return -EINVAL;
 	}
+	ops = &tx_hw_base->tx_phy_conf;
+	pr_info("dptx %s[%d] lr %d lc %d\n", __func__, __LINE__,
+		ops->dp_ops.link_rate, ops->dp_ops.lanes);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_LINK_LANE_REMAP, (void *)&ops, NULL);
 	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 
 	for (i = 0; i <= tx_comm->link_train->lt_retry_cnt; i++) {

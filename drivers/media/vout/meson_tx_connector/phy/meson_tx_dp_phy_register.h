@@ -324,23 +324,6 @@
  */
 #define USBCDPRX_LANE2_RO0                        (0xb8)
 
-/*
- * bit[14:12]: aux_vref_sel     vref for vcm buffer select:
- *                                  x00 ~ x11: 0.35/0.8/1.0/1.2
- * bit[11:10]: aux_vcm_mode     rx vcm mode select <1>:  0: p-rterm, 1: n-rterm
- *                                                 <0>: 0: vref/2, 1: vref
- * bit[9:7]: aux_tx_trim        tx swing trim bits from efuse
- * bit[6:5]: aux_rxhys_sel      00/01/10/10: hys = 0 / 0 / 50mV / 100mV
- * bit[4:3]: aux_rx_mode        00: differential rx input, padp - padn
- *                              01: single ended rx input, padp - vcm
- *                              10: single ended rx input, vcm - padn
- *                              11: vcm - vcm
- * bit[2]: aux_en_txswap        tx data polarity reverse; 0: padp = din, padn = ~din
- * bit[1]: aux_en_rxswap        rx data polarity reverse; 0: dout = padp - padn
- * bit[0]: aux_en               enable aux
- */
-#define ANACTRL_DPAUX_CTRL                        (0x01b6  << 2)
-
 // Below register will control by USB driver
 /*
  * ANACTRL_USBCDP_CTRL, 0xFE0086DC

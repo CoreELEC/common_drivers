@@ -32,8 +32,6 @@ static void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 s
 	if (!hw_comm || sel >= BUFFER_MAX_NUM)
 		return;
 
-	for (i = 0; i < DP_INFOFRAME_TOTAL_SZ; i++)
-		DPTX_DEBUG_PACKET("data[%d] = %d\n", i, data[i]);
 	spin_lock_irqsave(&hw_comm->sdp_lock, flags);
 	reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_SELECT);
 	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, sel); // buf selection

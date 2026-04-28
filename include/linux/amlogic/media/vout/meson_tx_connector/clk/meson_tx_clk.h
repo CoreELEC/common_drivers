@@ -23,7 +23,7 @@ enum tx_clk_type {
 
 struct meson_tx_clk_data {
 	enum tx_clk_type clk_type;
-	/* vco clk for tx connector digital, such as pixel/venc clk */
+	/* vco clk for tx connector digital, such as pixel/venc clk, unit: kHz */
 	u32 pixel_vco_clk;
 	/* divide from pixel_vco_clk */
 	u32 clk_to_crt_video;

@@ -1044,10 +1044,10 @@ int dptx_update_link_fmt_para(struct dptx_common *tx_comm, struct meson_tx_forma
 		tx_clk->tx_clk_cfg.phy_clk = 2700000;
 		break;
 	case DPTX_LINK_RATE_5P40GHZ:
-		tx_clk->tx_clk_cfg.phy_clk = 5400;
+		tx_clk->tx_clk_cfg.phy_clk = 5400000;
 		break;
 	case DPTX_LINK_RATE_8P10GHZ:
-		tx_clk->tx_clk_cfg.phy_clk = 8100;
+		tx_clk->tx_clk_cfg.phy_clk = 8100000;
 		break;
 	default:
 		DPTX_ERROR("%s invalid link rate, force 1.62Ghz\n", __func__);
