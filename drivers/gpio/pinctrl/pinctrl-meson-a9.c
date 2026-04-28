@@ -1270,8 +1270,11 @@ static const char * const debug_groups[] = {
 };
 
 static const char * const dp_hpd_groups[] = {
-	"dp_hpd",    "edp_hpd", "dp_hpd_m", "dp_hpd_y", "edp_hpd_m",
-	"edp_hpd_y"
+	"dp_hpd",    "dp_hpd_m", "dp_hpd_y"
+};
+
+static const char * const edp_hpd_groups[] = {
+	"edp_hpd", "edp_hpd_m",  "edp_hpd_y"
 };
 
 static const char * const emmc_groups[] = {
@@ -1554,6 +1557,7 @@ static struct meson_pmx_func meson_a9_periphs_functions[] __initdata = {
 	FUNCTION(can_b),
 	FUNCTION(debug),
 	FUNCTION(dp_hpd),
+	FUNCTION(edp_hpd),
 	FUNCTION(emmc),
 	FUNCTION(eth_a),
 	FUNCTION(eth_b),
