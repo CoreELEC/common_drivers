@@ -620,29 +620,29 @@
 		spectrum = <1>;
 		cma_mem_size = <0>; //MB
 	};
+
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "disabled";
-		key_name = "vol-", "vol+", "power";
-		key_num = <3>;
-		io-channels = <&saradc 3>;
-		io-channel-names = "key-chan-3";
-		key_chan = <SARADC_CH3 SARADC_CH3 SARADC_CH3>;
-		key_code = <KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_POWER>;
-		key_val = <1600 1050 50>;	/* Unit: millivolt */
-		key_tolerance = <70 70 70>;	/* Unit: millivolt */
+		status = "okay";
+		key_name = "update", "vol-", "vol+", "ok";
+		key_num = <4>;
+		io-channels = <&saradc SARADC_CH2>;
+		io-channel-names = "key-chan-2";
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2 SARADC_CH2>;
+		key_code = <KEY_SETUP KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_ENTER>;
+		key_val = <0 252 468 684>;	// Unit: millivolt
+		key_tolerance = <70 70 70 70>;	// Unit: millivolt
 	};
 
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
-		status = "disabled";
+		status = "okay";
 		scan_period = <20>;
-		key_num = <2>;
-		key_name = "bluetooth", "mute";
-		key_code = <600 SW_MUTE_DEVICE>;
-		key_type = <EV_KEY EV_SW>;
-		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
-			     &gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		key_num = <1>;
+		key_name = "power";
+		key_code = <KEY_POWER>;
+		key_type = <EV_KEY>;
+		key-gpios = <&gpio_ao GPIOD_3 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
 	};
