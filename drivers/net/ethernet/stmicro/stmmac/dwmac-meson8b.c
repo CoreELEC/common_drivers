@@ -879,9 +879,6 @@ static int meson8b_restore(struct device *dev)
 	struct phy_device *phydev = ndev->phydev;
 	int ret;
 
-	if (!phydev)
-		return 0;
-
 	if (dwmac->mc_val)
 		writel(dwmac->mc_val, dwmac->regs + PRG_ETH0);
 	else
@@ -892,9 +889,11 @@ static int meson8b_restore(struct device *dev)
 
 	g12a_resume_enable_internal_mdio(priv->eth_priv.mdio_dev);
 	/*our phy not support wol by now*/
-	phydev->irq_suspended = 0;
+	if (phydev)
+		phydev->irq_suspended = 0;
 	ret = stmmac_resume(dev);
-	gxl_resume_internal_registers(phydev);
+	if (phydev)
+		gxl_resume_internal_registers(phydev);
 
 	priv->amlogic_task_action = 100;
 	stmmac_trigger_amlogic_task(priv);
@@ -921,7 +920,8 @@ static int meson8b_resume(struct device *dev)
 				input_sync(dwmac->input_dev);
 			}
 			set_wol_notify_bl31(dwmac, false);
-			phydev->irq_suspended = 0;
+			if (phydev)
+				phydev->irq_suspended = 0;
 		} else {
 			/* if it is not an external phy */
 			if (priv->eth_priv.internal_phy != 2 && dwmac->data->resume)
