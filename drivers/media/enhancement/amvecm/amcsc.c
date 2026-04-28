@@ -12101,12 +12101,17 @@ int amvecm_hdr_dbg(u32 sel)
 {
 	int i, j, k;
 	struct vframe_content_light_level_s *content_light_level;
+
+	for (k = 0; k < VD_PATH_MAX; k++) {
+		if (!dbg_vf[k]) {
+			pr_info("hdr_dbg: NULL dbg_vf, skip unsafe access\n");
+			goto hdr_dump;
+		}
+	}
+
 	/* select debug information */
 	if (sel == 1) /* dump reg */
 		goto reg_dump;
-
-	if (!dbg_vf[VD1_PATH] && !dbg_vf[VD2_PATH] && !dbg_vf[VD3_PATH])
-		goto hdr_dump;
 
 	for (k = 0; k < VD_PATH_MAX; k++) {
 		if (!dbg_vf[k])
