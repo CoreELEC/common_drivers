@@ -1133,6 +1133,7 @@ static void frc_state_init(void)
 	state_st->dae0_available_cnt = 0;
 	state_st->fast_pat_set_n2m = false;
 	state_st->fast_pat_set_phase0 = false;
+	state_st->disable_mc_link_intf = false;
 	if (state_st->force_n2m == 0)
 		memset(&state_st->n2m_status, 0, sizeof(state_st->n2m_status));
 	memset(&state_st->me_pcn_st, 0, sizeof(state_st->me_pcn_st));
