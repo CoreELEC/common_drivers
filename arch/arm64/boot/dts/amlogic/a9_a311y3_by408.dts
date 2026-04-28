@@ -1838,3 +1838,7 @@
 		pinctrl-0 = <&spdifout_a>;
 		pinctrl-1 = <&spdifout_a_mute>;
 };
+
+&gpu {
+	//mali-supply = <&vddgpu>;
+};
