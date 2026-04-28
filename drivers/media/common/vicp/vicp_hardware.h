@@ -418,6 +418,7 @@ void init_vicp_module_reg(enum meson_cpuid_type_e cpuid);
 void set_module_enable(u32 is_enable);
 void set_module_start(u32 is_start);
 void set_module_reset(void);
+void set_frm_en_ctrl(void);
 void set_rdmif_enable(u32 is_enable);
 void set_afbcd_enable(u32 is_enable);
 void set_input_path(enum vicp_input_path_e path);

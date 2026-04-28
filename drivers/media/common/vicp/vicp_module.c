@@ -74,7 +74,7 @@ int vicp_clock_config(int is_enable)
 		} else {
 			clk_set_rate(config.clk_gate, config.gate_rate);
 			clk_prepare_enable(config.clk_gate);
-			pr_debug("vicp gate clock is %luMHZ.\n",
+			vicp_print(VICP_INFO, "vicp gate clock is %luMHZ.\n",
 				clk_get_rate(config.clk_gate) / 1000000);
 			ret = 0;
 		}
@@ -85,17 +85,29 @@ int vicp_clock_config(int is_enable)
 		} else {
 			clk_set_rate(config.clk_vapb0, config.vapb0_rate);
 			clk_prepare_enable(config.clk_vapb0);
-			pr_debug("vicp vapb0 clock is %luMHZ.\n",
+			vicp_print(VICP_INFO, "vicp vapb0 clock is %luMHZ.\n",
 				clk_get_rate(config.clk_vapb0) / 1000000);
 			ret = 0;
 		}
+
+		if (IS_ERR_OR_NULL(config.clk_cve)) {
+			pr_err("vicp cve clock is null.\n");
+			ret = -1;
+		} else {
+			clk_set_rate(config.clk_cve, config.cve_rate);
+			clk_prepare_enable(config.clk_cve);
+			vicp_print(VICP_INFO, "vicp cve clock is %luMHZ.\n",
+				clk_get_rate(config.clk_cve) / 1000000);
+			ret = 0;
+		}
 	} else {
+		vicp_print(VICP_INFO, "debug, no need disab clock.\n");
 		if (IS_ERR_OR_NULL(config.clk_gate)) {
 			pr_err("vicp gate clock is null.\n");
 			ret = -1;
 		} else {
 			clk_disable_unprepare(config.clk_gate);
-			pr_debug("disable vicp gate clock.\n");
+			vicp_print(VICP_INFO, "disable vicp gate clock.\n");
 			ret = 0;
 		}
 
@@ -104,11 +116,19 @@ int vicp_clock_config(int is_enable)
 			ret = -1;
 		} else {
 			clk_disable_unprepare(config.clk_vapb0);
-			pr_debug("disable vicp vapb0 clock.\n");
+			vicp_print(VICP_INFO, "disable vicp vapb0 clock.\n");
+			ret = 0;
+		}
+
+		if (IS_ERR_OR_NULL(config.clk_cve)) {
+			pr_err("vicp cve clock is null.\n");
+			ret = -1;
+		} else {
+			clk_disable_unprepare(config.clk_cve);
+			vicp_print(VICP_INFO, "disable vicp cve clock.\n");
 			ret = 0;
 		}
 	}
-
 	return ret;
 }
 

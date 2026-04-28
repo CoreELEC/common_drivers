@@ -14,12 +14,18 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include "v2d_vicp_composer.h"
+#include "v2d_util.h"
 
-bool check_vicp_status(void)
+static int dev_index;
+
+bool check_vicp_status(int index)
 {
 	int cpu_type = 0;
 
+	dev_index = index;
+
 	cpu_type = get_cpu_type();
+	v2d_print(dev_index, PRINT_OTHER, "%s: cpu_type is %d.\n", __func__, cpu_type);
 	if (cpu_type == MESON_CPU_MAJOR_ID_S5 ||
 		cpu_type == MESON_CPU_MAJOR_ID_T3X ||
 		cpu_type == MESON_CPU_MAJOR_ID_S6 ||
@@ -27,8 +33,6 @@ bool check_vicp_status(void)
 		return true;
 	else
 		return false;
-
-	return false;
 }
 
 enum vicp_rotation_mode_e map_rotationmode_from_v2d_to_vicp(int v2d_rotation)
@@ -120,6 +124,77 @@ int v2d_config_vicp_output_data(int fbc_out_en, int mif_out_en, ulong *phy_addr,
 		output_data->phy_addr[2] = phy_addr[2];
 		output_data->fbc_init_ctrl = init_ctrl;
 		output_data->fbc_pip_mode = pip_mode;
+	}
+
+	return 0;
+}
+
+int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotate_mode,
+	int i, int count, int rotate_part, int vicp_transform, struct output_axis_s *display_axis,
+	struct crop_info_s *crop_info, struct vframe_s *src_vf)
+{
+	if (!data_config || !src_vf || !display_axis || !crop_info) {
+		pr_info("%s: src_vf is NULL, please check.\n", __func__);
+		return -1;
+	}
+
+	if (vicp_rotate_mode == 0 || vicp_rotate_mode == 1) {
+		data_config->data_option.input_source_count = count;
+		data_config->data_option.input_source_number = i;
+		data_config->data_option.crop_info.left = crop_info->left;
+		data_config->data_option.crop_info.top = crop_info->top;
+		data_config->data_option.crop_info.width = crop_info->width;
+		data_config->data_option.crop_info.height = crop_info->height;
+		data_config->data_option.output_axis.left = display_axis->left;
+		data_config->data_option.output_axis.top = display_axis->top;
+		if (vicp_rotate_mode == 0) {
+			data_config->data_option.output_axis.width = display_axis->width;
+			data_config->data_option.output_axis.height = display_axis->height;
+		} else {
+			data_config->data_option.output_axis.width = src_vf->compHeight;
+			data_config->data_option.output_axis.height = src_vf->compWidth;
+		}
+	} else {
+		data_config->data_option.input_source_count = 2;
+		data_config->data_option.input_source_number = rotate_part;
+
+		if (rotate_part == 0) {
+			data_config->data_option.crop_info.left = 0;
+			data_config->data_option.crop_info.top = 0;
+			data_config->data_option.crop_info.width = src_vf->compWidth;
+			data_config->data_option.crop_info.height = src_vf->compHeight / 2;
+			data_config->data_option.output_axis.width = src_vf->compHeight / 2;
+			data_config->data_option.output_axis.height = src_vf->compWidth;
+
+			if (vicp_transform == 4 ||
+				vicp_transform == 5 ||
+				vicp_transform == 6) {
+				data_config->data_option.output_axis.left = src_vf->compHeight / 2;
+				data_config->data_option.output_axis.top = 0;
+			} else {
+				data_config->data_option.output_axis.left = 0;
+				data_config->data_option.output_axis.top = 0;
+			}
+		} else {
+			data_config->output_data.fbc_init_ctrl = 0;
+
+			data_config->data_option.crop_info.left = 0;
+			data_config->data_option.crop_info.top = src_vf->compHeight / 2;
+			data_config->data_option.crop_info.width = src_vf->compWidth;
+			data_config->data_option.crop_info.height = src_vf->compHeight / 2;
+			data_config->data_option.output_axis.width = src_vf->compHeight / 2;
+			data_config->data_option.output_axis.height = src_vf->compWidth;
+
+			if (vicp_transform == 4 ||
+				vicp_transform == 5 ||
+				vicp_transform == 6) {
+				data_config->data_option.output_axis.left = 0;
+				data_config->data_option.output_axis.top = 0;
+			} else {
+				data_config->data_option.output_axis.left = src_vf->compHeight / 2;
+				data_config->data_option.output_axis.top = 0;
+			}
+		}
 	}
 
 	return 0;

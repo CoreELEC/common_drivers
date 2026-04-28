@@ -218,8 +218,8 @@ struct vid_cmpr_afbcd_s {
 	u32 index;//3bit: 0-5 for di_m0/m5, 6:vd1 7:vd2
 	u32 hsize;//input size
 	u32 vsize;
-	u32 head_baddr;
-	u32 body_baddr;
+	u64 head_baddr;
+	u64 body_baddr;
 	u32 compbits_y;//2 bits   0-8bits 1-9bits 2-10bits
 	u32 compbits_u;//2 bits   0-8bits 1-9bits 2-10bits
 	u32 compbits_v;//2 bits   0-8bits 1-9bits 2-10bits

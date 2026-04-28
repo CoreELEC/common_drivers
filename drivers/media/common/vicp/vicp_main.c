@@ -645,7 +645,7 @@ static long vicp_ioctl(struct file *file, unsigned int cmd, unsigned long args)
 #ifdef CONFIG_COMPAT
 static long vicp_compat_ioctl(struct file *file, unsigned int cmd, unsigned long args)
 {
-	unsigned long ret;
+	long ret = 0;
 
 	args = (unsigned long)compat_ptr(args);
 	ret = vicp_ioctl(file, cmd, args);
@@ -701,6 +701,8 @@ static struct vicp_device_data_s vicp_s6 = {
 
 static struct vicp_device_data_s vicp_a9 = {
 	.rate = 800000000,
+	.vapb0_rate = 667000000,
+	.cve_rate = 667000000,
 	.cpu_type = MESON_CPU_MAJOR_ID_A9,
 	.film_grain_support = true,
 	.cr_lossy_support = true,
@@ -746,17 +748,153 @@ static void vicp_param_uninit(void)
 	vicp_hdr_remove(vicp_hdr);
 }
 
-static int vicp_probe(struct platform_device *pdev)
+int vicp_irq_init(struct platform_device *pdev)
 {
 	int ret = 0;
 	int irq = 0;
-	struct device *dev;
-	struct resource res;
-	int clk_cnt = 0;
+
+	if (IS_ERR_OR_NULL(pdev)) {
+		vicp_print(VICP_ERROR, "irq_init: invalid param.\n");
+		return -1;
+	}
+
+	irq = platform_get_irq_byname(pdev, "vicp_proc");
+	if (irq  == -ENXIO) {
+		pr_err("cannot get vicp irq resource.\n");
+		return -1;
+	}
+
+	pr_info("vicp driver probe: irq-1:%d.\n", irq);
+	ret = request_irq(irq, &vicp_isr_handle, IRQF_SHARED, "vicp_proc", (void *)"vicp-dev");
+	if (ret < 0) {
+		pr_err("cannot get vicp irq resource.\n");
+		return -1;
+	}
+
+	irq = platform_get_irq_byname(pdev, "vicp_rdma");
+	if (irq  == -ENXIO) {
+		pr_err("cannot get vicp rdma resource.\n");
+		return -1;
+	}
+
+	pr_info("vicp driver probe: irq-2:%d.\n", irq);
+	ret = request_irq(irq, &vicp_rdma_handle, IRQF_SHARED, "vicp_rdma", (void *)"vicp-dev");
+	if (ret < 0) {
+		pr_err("cannot get vicp rdma resource.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int vicp_clock_init(struct platform_device *pdev, struct vicp_device_data_s *dev_data,
+	struct vicp_clock_config_s *clock_cfg)
+{
+	int clk_cnt = 0, vicp_rate = 0, vapb0_rate = 0, cve_rate = 0;
 	struct clk *clk_gate = NULL;
 	struct clk *clk_vapb0 = NULL;
+	struct clk *clk_cve = NULL;
+
+	if (IS_ERR_OR_NULL(pdev) || !clock_cfg || !dev_data) {
+		vicp_print(VICP_ERROR, "clock_init: invalid param.\n");
+		return -1;
+	}
+
+	clk_cnt = of_property_count_strings(pdev->dev.of_node, "clock-names");
+	if (clk_cnt < 0) {
+		pr_err("count clock-names err.\n");
+		return -1;
+	}
+
+	if (clk_cnt == 3) {
+		clk_cve = devm_clk_get(&pdev->dev, "clk_cve");
+		if (IS_ERR_OR_NULL(clk_cve)) {
+			pr_err("cannot get clk_cve.\n");
+			clk_cve = NULL;
+			return -1;
+		}
+		cve_rate =  clk_get_rate(clk_cve);
+		pr_info("vicp: clk_cve = %p, rate=%d MHZ.\n", clk_cve, cve_rate / 1000000);
+
+		clk_gate = devm_clk_get(&pdev->dev, "clk_vicp_gate");
+		if (IS_ERR_OR_NULL(clk_gate)) {
+			pr_err("cannot get clock_gate.\n");
+			clk_gate = NULL;
+			return -1;
+		}
+		vicp_rate =  clk_get_rate(clk_gate);
+		pr_info("vicp: clk_gate = %p, rate=%d MHZ.\n", clk_gate, vicp_rate / 1000000);
+
+		clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
+		if (IS_ERR_OR_NULL(clk_vapb0)) {
+			pr_err("cannot get clk_vapb0.\n");
+			clk_vapb0 = NULL;
+			return -1;
+		}
+		vapb0_rate =  clk_get_rate(clk_vapb0);
+		pr_info("vicp: clk_vapb0 = %p, rate=%d MHZ.\n", clk_vapb0, vapb0_rate / 1000000);
+
+	} else if (clk_cnt == 2) {
+		clk_gate = devm_clk_get(&pdev->dev, "clk_vicp_gate");
+		if (IS_ERR_OR_NULL(clk_gate)) {
+			pr_err("cannot get clock_gate.\n");
+			clk_gate = NULL;
+			return -1;
+		}
+		vicp_rate =  clk_get_rate(clk_gate);
+		pr_info("vicp: clk_gate = %p, rate=%d MHZ.\n", clk_gate, vicp_rate / 1000000);
+
+		clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
+		if (IS_ERR_OR_NULL(clk_vapb0)) {
+			pr_err("cannot get clk_vapb0.\n");
+			clk_vapb0 = NULL;
+			return -1;
+		}
+		vapb0_rate =  clk_get_rate(clk_vapb0);
+		pr_info("vicp: clk_vapb0 = %p, rate=%d MHZ.\n", clk_vapb0, vapb0_rate / 1000000);
+	} else if (clk_cnt == 1) {
+		clk_gate = devm_clk_get(&pdev->dev, "clk_vicp");
+		if (IS_ERR_OR_NULL(clk_gate)) {
+			pr_err("cannot get clock_gate.\n");
+			clk_gate = NULL;
+			return -1;
+		}
+		vicp_rate =  clk_get_rate(clk_gate);
+		pr_info("vicp: clk_gate = %p, rate=%d MHZ.\n", clk_gate, vicp_rate / 1000000);
+	} else {
+		pr_err("unsupported clk cnt.\n");
+		return -1;
+	}
+
+	clock_cfg->enable = 0;
+	clock_cfg->clk_count = clk_cnt;
+	clock_cfg->clk_gate = clk_gate;
+	if (vicp_rate <= 0)
+		clock_cfg->gate_rate = dev_data->rate;
+	else
+		clock_cfg->gate_rate = vicp_rate;
+	clock_cfg->clk_vapb0 = clk_vapb0;
+	if (vicp_rate <= 0)
+		clock_cfg->vapb0_rate = dev_data->vapb0_rate;
+	else
+		clock_cfg->vapb0_rate = vapb0_rate;
+	clock_cfg->clk_cve = clk_cve;
+	if (cve_rate <= 0)
+		clock_cfg->cve_rate = dev_data->cve_rate;
+	else
+		clock_cfg->cve_rate = cve_rate;
+
+	return 0;
+}
+
+static int vicp_probe(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct device *dev;
+	struct resource res;
 	struct vicp_device_s vicp_device;
 	struct vicp_device_data_s *vicp_meson;
+	struct vicp_clock_config_s clock_cfg;
 
 	ret = class_register(&vicp_class);
 	if (ret < 0) {
@@ -771,18 +909,18 @@ static int vicp_probe(struct platform_device *pdev)
 	}
 
 	dev = device_create(&vicp_class,
-			NULL,
+			&pdev->dev,
 			MKDEV(VICP_MAJOR, 0),
 			NULL,
 			VICP_DEVICE_NAME);
 	if (IS_ERR_OR_NULL(dev)) {
 		pr_err("create vicp  device error.\n");
 		ret = PTR_ERR(dev);
-		return ret;
+		goto error;
 	}
 
-	dev->coherent_dma_mask = ULLONG_MAX;
-	dev->dma_mask = &dev->coherent_dma_mask;
+	pdev->dev.coherent_dma_mask = ULLONG_MAX;
+	pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
 	if (pdev->dev.of_node) {
 		const struct of_device_id *match;
 
@@ -791,98 +929,50 @@ static int vicp_probe(struct platform_device *pdev)
 			vicp_meson = (struct vicp_device_data_s *)match->data;
 			if (!vicp_meson) {
 				pr_err("%s data NOT match\n", __func__);
-				return -ENODEV;
+				ret = -ENODEV;
+				goto error;
 			}
 		} else {
 			pr_err("%s NOT match\n", __func__);
-			return -ENODEV;
-		}
-	}
-
-	/* get interrupt resource */
-	irq = platform_get_irq_byname(pdev, "vicp_proc");
-	if (irq  == -ENXIO) {
-		pr_err("cannot get vicp irq resource.\n");
-		ret = -ENXIO;
-		goto error;
-	}
-
-	pr_debug("vicp driver probe: irq-1:%d.\n", irq);
-	ret = request_irq(irq, &vicp_isr_handle, IRQF_SHARED, "vicp_proc", (void *)"vicp-dev");
-	if (ret < 0) {
-		pr_err("cannot get vicp irq resource.\n");
-		ret = -ENXIO;
-		goto error;
-	}
-
-	irq = platform_get_irq_byname(pdev, "vicp_rdma");
-	if (irq  == -ENXIO) {
-		pr_err("cannot get vicp rdma resource.\n");
-		ret = -ENXIO;
-		goto error;
-	}
-
-	pr_debug("vicp driver probe: irq-2:%d.\n", irq);
-	ret = request_irq(irq, &vicp_rdma_handle, IRQF_SHARED, "vicp_rdma", (void *)"vicp-dev");
-	if (ret < 0) {
-		pr_err("cannot get vicp rdma resource.\n");
-		ret = -ENXIO;
-		goto error;
-	}
-
-	/* clock config */
-	clk_cnt = of_property_count_strings(pdev->dev.of_node, "clock-names");
-	if (clk_cnt < 0) {
-		pr_err("count clock-names err.\n");
-		ret = -ENOENT;
-		goto error;
-	}
-
-	if (clk_cnt == 2) {
-		clk_gate = devm_clk_get(&pdev->dev, "clk_vicp_gate");
-		if (IS_ERR_OR_NULL(clk_gate)) {
-			pr_err("cannot get clock_gate.\n");
-			clk_gate = NULL;
-			ret = -ENOENT;
+			ret = -ENODEV;
 			goto error;
 		}
-		pr_debug("clock source clk_vicp_gate %p.\n", clk_gate);
-
-		clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
-		if (IS_ERR_OR_NULL(clk_vapb0)) {
-			pr_err("cannot get clk_vapb0.\n");
-			clk_vapb0 = NULL;
-			ret = -ENOENT;
-			goto error;
-		}
-		pr_debug("clock source clk_vapb0 %p.\n", clk_vapb0);
-	} else if (clk_cnt == 1) {
-		clk_gate = devm_clk_get(&pdev->dev, "clk_vicp");
-		if (IS_ERR_OR_NULL(clk_gate)) {
-			pr_err("cannot get clock_gate.\n");
-			clk_gate = NULL;
-			ret = -ENOENT;
-			goto error;
-		}
-		pr_debug("clock source clk_vicp %p.\n", clk_gate);
 	} else {
-		pr_err("unsupported clk cnt.\n");
-		ret = -EINVAL;
+		pr_err("vicp: of_node is null.\n");
+		ret = -ENODEV;
 		goto error;
 	}
 
+	ret = vicp_irq_init(pdev);
+	if (ret < 0) {
+		pr_err("config vicp irq failed.\n");
+		ret = -ENXIO;
+		goto error;
+	}
+
+	memset(&clock_cfg, 0, sizeof(struct vicp_clock_config_s));
+	ret = vicp_clock_init(pdev, vicp_meson, &clock_cfg);
+	if (ret < 0) {
+		pr_err("config vicp clock failed.\n");
+		ret = -ENXIO;
+		goto error;
+	}
+
+	memset(&vicp_device, 0, sizeof(struct vicp_device_s));
 	strscpy(vicp_device.name, VICP_DEVICE_NAME, sizeof(VICP_DEVICE_NAME));
 	vicp_device.major = VICP_MAJOR;
 	vicp_device.dbg_enable = 0;
 	vicp_device.pdev = pdev;
 	vicp_device.cla = &vicp_class;
 	vicp_device.dev = dev;
-	vicp_device.clock_cfg.enable = 0;
-	vicp_device.clock_cfg.clk_count = clk_cnt;
-	vicp_device.clock_cfg.clk_gate = clk_gate;
-	vicp_device.clock_cfg.gate_rate = vicp_meson->rate;
-	vicp_device.clock_cfg.clk_vapb0 = clk_vapb0;
-	vicp_device.clock_cfg.vapb0_rate = vicp_meson->rate;
+	vicp_device.clock_cfg.enable = clock_cfg.enable;
+	vicp_device.clock_cfg.clk_count = clock_cfg.clk_count;
+	vicp_device.clock_cfg.clk_gate = clock_cfg.clk_gate;
+	vicp_device.clock_cfg.gate_rate = clock_cfg.gate_rate;
+	vicp_device.clock_cfg.clk_vapb0 = clock_cfg.clk_vapb0;
+	vicp_device.clock_cfg.vapb0_rate = clock_cfg.vapb0_rate;
+	vicp_device.clock_cfg.clk_cve = clock_cfg.clk_cve;
+	vicp_device.clock_cfg.cve_rate = clock_cfg.cve_rate;
 	vicp_dev_init(vicp_device);
 
 	ret = of_address_to_resource(pdev->dev.of_node, 0, &res);
@@ -890,21 +980,21 @@ static int vicp_probe(struct platform_device *pdev)
 		if (res.start != 0) {
 			vicp_reg_map = ioremap(res.start, resource_size(&res));
 			if (vicp_reg_map) {
-				pr_debug("map io source 0x%p,size=%d to 0x%p.\n",
+				pr_info("map io source 0x%p,size=%d to 0x%p.\n",
 						(void *)res.start,
 						(int)resource_size(&res),
 						vicp_reg_map);
 			}
 		} else {
 			vicp_reg_map = 0;
-			pr_debug("ignore io source start %p, size=%d.\n",
+			pr_info("ignore io source start %p, size=%d.\n",
 					  (void *)res.start,
 					  (int)resource_size(&res));
 		}
 	}
 	ret = of_reserved_mem_device_init(&pdev->dev);
 	if (ret < 0)
-		pr_debug("reserved mem is not used.\n");
+		pr_info("reserved mem is not used.\n");
 
 	vicp_pwr_init(&pdev->dev);
 	vicp_param_init(*vicp_meson);

@@ -72,6 +72,8 @@ struct vicp_device_data_s {
 	bool ddr16_support;
 	u64 reg_addr_base;
 	bool enhance_sec_support;
+	int vapb0_rate;
+	int cve_rate;
 };
 
 struct vicp_clock_config_s {
@@ -81,6 +83,8 @@ struct vicp_clock_config_s {
 	int gate_rate;
 	struct clk *clk_vapb0;
 	int vapb0_rate;
+	struct clk *clk_cve;
+	int cve_rate;
 };
 
 struct output_axis_s {

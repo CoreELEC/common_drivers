@@ -21,6 +21,8 @@
 #define GDC_FIRMWARE_PATH    "/vendor/lib/firmware/gdc/"
 
 static unsigned int dewarp_com_dump_last;
+static int v2d_index;
+
 int v2d_get_dewarp_format(int index, struct vframe_s *vf)
 {
 	int format = NV12;
@@ -230,6 +232,7 @@ bool check_dewarp_status(struct vframe_s *input_vf, int count, int work_mode, in
 {
 	int src_formate;
 
+	v2d_index = index;
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
 	if (!is_aml_gdc_supported())
 		return false;
@@ -243,10 +246,15 @@ bool check_dewarp_status(struct vframe_s *input_vf, int count, int work_mode, in
 	if (work_mode != 1)
 		return false;
 
-	if (!input_vf)
+	if (!input_vf) {
 		src_formate = NV12;
-	else
+	} else {
+		if (work_mode == 1 && (input_vf->type & VIDTYPE_COMPRESS))
+			return false;
+
 		src_formate = v2d_get_dewarp_format(index, input_vf);
+	}
+
 	if (src_formate != NV12)
 		return false;
 

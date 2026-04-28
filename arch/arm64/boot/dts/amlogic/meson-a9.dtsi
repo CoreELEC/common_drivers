@@ -3610,10 +3610,18 @@
 			<GIC_SPI 261 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "vicp_err", "vicp_rdma", "vicp_proc";
 		clocks = <&clkc_vapb_ge2d CLKID_VAPB>,
-			 <&clkc_cmpr>;
+			<&clkc_cve_vge CLKID_CVE>,
+			<&clkc_cmpr>;
 		clock-names = "clk_vapb_0",
+			"clk_cve",
 			"clk_vicp_gate";
-		reg = <0x0 0xfe094000 0x0 0xe80>;
+		assigned-clocks = <&clkc_vapb_ge2d CLKID_VAPB>,
+			<&clkc_cve_vge CLKID_CVE>,
+			<&clkc_cmpr>;
+		assigned-clock-rates = <666666666>,
+			<666666666>,
+			<800000000>;
+		reg = <0x0 0xff564000 0x0 0xe80>;
 		power-domains = <&pwrdm PDID_A9_VICP>;
 	};
 

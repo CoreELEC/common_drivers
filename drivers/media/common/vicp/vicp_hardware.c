@@ -153,8 +153,15 @@ void set_module_reset(void)
 {
 	if (meson_cpuid == MESON_CPU_MAJOR_ID_S6)
 		write_vicp_reg_bits(S6_VID_CMPR_RESET, 1, 0, 1);
+	else if (meson_cpuid == MESON_CPU_MAJOR_ID_A9)
+		write_vicp_reg_bits(A9_VID_CMPR_RESET, 1, 0, 1);
 	else
 		write_vicp_reg_bits(VID_CMPR_SW_RESETS, 1, 15, 1);
+}
+
+void set_frm_en_ctrl(void)
+{
+	return write_vicp_reg_bits(VID_CMPR_FRM_EN_CTRL, 0, 0, 1);//wrmif start sel
 }
 
 void set_rdma_start(u32 input_count)
@@ -413,9 +420,15 @@ void set_afbcd_burst_control(struct vicp_afbcd_burst_ctrl_reg_s burst_ctrl_reg)
 {
 	u32 value = 0;
 
-	value = ((burst_ctrl_reg.ofset_burst4_en & 0x1) << 4) |
-		((burst_ctrl_reg.burst_length_add_en & 0x1) << 3) |
-		((burst_ctrl_reg.burst_length_add_value & 0x7) << 0);
+	if (meson_cpuid == MESON_CPU_MAJOR_ID_A9)
+		value = (32 << 16) |
+			((burst_ctrl_reg.ofset_burst4_en & 0x1) << 4) |
+			((burst_ctrl_reg.burst_length_add_en & 0x1) << 3) |
+			((burst_ctrl_reg.burst_length_add_value & 0x7) << 0);
+	else
+		value = ((burst_ctrl_reg.ofset_burst4_en & 0x1) << 4) |
+			((burst_ctrl_reg.burst_length_add_en & 0x1) << 3) |
+			((burst_ctrl_reg.burst_length_add_value & 0x7) << 0);
 
 	return write_vicp_reg(VID_CMPR_AFBCD_BURST_CTRL, value);
 }
