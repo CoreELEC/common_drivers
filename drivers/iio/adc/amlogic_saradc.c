@@ -42,7 +42,10 @@
 #define SARADC_REG2_NUM_SAMPLES_MASK(_chan)	(GENMASK(1, 0) << ((_chan) * 2))
 
 #define SARADC_REG3				0x0c
+
 #define SARADC_REG4				0x10
+#define SARADC_REG4_ADC_RESET			BIT(25)		/* reset analog (a9 only) */
+
 #define SARADC_REG5				0x14
 #define SARADC_REG6				0x18
 #define SARADC_REG7				0x1c
@@ -91,6 +94,10 @@
 /* For IIO_VAL_FRACTIONAL use */
 #define THOUSAND				1000
 
+#define WORKAROUND_ID_NONE			0
+#define WORKAROUND_ID_S7D			1
+#define WORKAROUND_ID_A9			2
+
 enum amlogic_saradc_avg_mode {
 	NO_AVERAGING = 0x0,
 	MEAN_AVERAGING = 0x1,
@@ -122,7 +129,7 @@ struct amlogic_saradc_priv {
 	 * the controller at the same time.
 	 */
 	struct mutex lock;
-	bool apply_workaround;
+	u8 workaround;
 	struct reset_control *resets;
 	bool hw_dis;
 };
@@ -210,20 +217,35 @@ static int amlogic_saradc_read_fifo(struct amlogic_saradc_priv *priv, int *value
 	return 0;
 }
 
+static void amlogic_saradc_analog_reset(struct amlogic_saradc_priv *priv)
+{
+	switch (priv->workaround) {
+	case WORKAROUND_ID_S7D:
+		reset_control_reset(priv->resets);
+		break;
+	case WORKAROUND_ID_A9:
+		regmap_update_bits(priv->regmap, SARADC_REG4, SARADC_REG4_ADC_RESET, 0);
+		usleep_range(10, 20);
+		regmap_update_bits(priv->regmap, SARADC_REG4, SARADC_REG4_ADC_RESET,
+				   SARADC_REG4_ADC_RESET);
+		break;
+	}
+}
+
 static void amlogic_saradc_start_sample(struct amlogic_saradc_priv *priv)
 {
 	reinit_completion(&priv->sample_done);
 
-	if (priv->apply_workaround)
+	if (priv->workaround)
 		usleep_range(50, 60);
 
 	regmap_update_bits(priv->regmap, SARADC_REG0,
 			   SARADC_REG0_ADC_EN,
 			   SARADC_REG0_ADC_EN);
 
-	if (priv->apply_workaround) {
+	if (priv->workaround) {
 		usleep_range(200, 210);
-		reset_control_reset(priv->resets);
+		amlogic_saradc_analog_reset(priv);
 	}
 
 	usleep_range(20, 30);
@@ -292,7 +314,7 @@ static int amlogic_saradc_get_sample(struct iio_dev *indio_dev,
 	int ret;
 	int count;
 
-	if (!priv->apply_workaround || !en_avg)
+	if (!priv->workaround || !en_avg)
 		return amlogic_saradc_get_sample_once(indio_dev, chan, val, en_avg);
 
 	for (count = 0; count < SARADC_SOFT_AVG_NUM; count++) {
@@ -745,12 +767,15 @@ static int amlogic_saradc_probe(struct platform_device *pdev)
 			return dev_err_probe(dev, ret, "failed to get mux clk\n");
 	}
 
-	priv->apply_workaround = !!of_device_is_compatible(np, "amlogic,s7d-saradc");
-	if (priv->apply_workaround) {
+	if (of_device_is_compatible(np, "amlogic,s7d-saradc")) {
 		priv->resets = devm_reset_control_get(dev, "analog");
 		if (IS_ERR(priv->resets))
 			return dev_err_probe(dev, PTR_ERR(priv->resets), "failed to get resets\n");
-		dev_info(dev, "Apply workaround\n");
+		dev_info(dev, "Apply S7D workaround\n");
+		priv->workaround = WORKAROUND_ID_S7D;
+	} else if (of_device_is_compatible(np, "amlogic,a9-saradc")) {
+		dev_info(dev, "Apply A9 workaround\n");
+		priv->workaround = WORKAROUND_ID_A9;
 	}
 
 	ret = amlogic_saradc_init(indio_dev);
