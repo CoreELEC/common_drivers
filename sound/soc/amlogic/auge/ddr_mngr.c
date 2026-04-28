@@ -2243,6 +2243,31 @@ struct toddr_src_conf toddr_srcs_v5[] = {
 	{ /* sentinel */ }
 };
 
+struct toddr_src_conf toddr_srcs_v6[] = {
+	TODDR_SRC_CONFIG("tdmin_a", 0, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("tdmin_b", 1, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("tdmin_c", 2, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("spdifin", 3, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("pdmin", 31, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("fratv", 5, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("tdmin_lb", 6, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("loopback_a", 7, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("frhdmirx", 8, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("loopback_b", 9, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("spdifin_lb", 10, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("earc_rx_dmac", 11, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f), /* for t7 earcrx */
+	TODDR_SRC_CONFIG("frhdmirx_pao", 12, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("resample_a", 13, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("resample_b", 14, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("vad", 15, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("pdmin_b", 16, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("tdminb_lb", 17, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("tdmin_d", 18, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("fdhdmirx_b", 19, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	TODDR_SRC_CONFIG("resample_c", 20, EE_AUDIO_TODDR_A_CTRL1, 26, 0x1f),
+	{ /* sentinel */ }
+};
+
 /* frddr A, B, C */
 int fr_reset_reg_offset_array_v1[] = {0x9, 0x9, 0x9};
 int fr_reset_reg_shift_array_v1[]  = {9, 10, 11};
@@ -2516,7 +2541,7 @@ static struct ddr_chipinfo a9_ddr_chipinfo = {
 	.fifo_depth            = FIFO_DEPTH_1K,
 	.chnum_sync            = true,
 	.burst_finished_flag   = true,
-	.to_srcs               = &toddr_srcs_v4[0],
+	.to_srcs               = &toddr_srcs_v6[0],
 	.use_arb               = true,
 	.fr_reset_reg_offset   = &fr_reset_reg_offset_array_v2[0],
 	.fr_reset_reg_shift    = &fr_reset_reg_shift_array_v2[0],
