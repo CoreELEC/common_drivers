@@ -320,8 +320,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmbcodec: codec {
-				prefix-names = "ad82128_c_30", "ad82128_c_31";
-				sound-dai = <&ad82128_30 &ad82128_31>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -731,7 +730,7 @@
 		compatible = "ESMT,ad82128";
 		#sound-dai-cells = <0>;
 		reg = <0x30>;
-		status = "okay";
+		status = "disabled";
 		reset_pin-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
 	};
 
@@ -739,9 +738,8 @@
 		compatible = "ESMT,ad82128";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "okay";
+		status = "disabled";
 	};
-
 };
 
 &i2c4 {
@@ -867,13 +865,12 @@
 &tdmb {
 	samesource_sel = <3>;
 	pinctrl-names = "tdm_pins";
-	pinctrl-0 =
-			<&tdmb_pins
-			&tdmb_clk_pins
-			&tdm_d7_pins
-			&tdm_d8_pins
-			&tdm_d9_pins
-			&tdm_d10_pins>;
+	pinctrl-0 = <&wm_tdm_b_pins
+		&wm_tdm_d8_pins
+		&wm_tdm_d9_pins
+		&wm_tdm_d6_pins
+		&wm_tdm_d7_pins
+		&wm_tdmb_clk_pins>;
 };
 
 &tdmc {
@@ -951,6 +948,41 @@
 			function = "tdminc_lane0";
 		};
 	};
+
+	wm_tdm_d8_pins: wm_tdm_d8_pin {
+		mux {
+			groups = "tdm_d8";
+			function = "tdmoutb_lane0";
+		};
+	};
+
+	wm_tdm_d9_pins: wm_tdm_d9_pin {
+		mux {
+			groups = "tdm_d9";
+			function = "tdmoutb_lane1";
+		};
+	};
+
+	wm_tdm_d6_pins: wm_tdm_d6_pin {
+		mux {
+			groups = "tdm_d6";
+			function = "tdmoutb_lane2";
+		};
+	};
+
+	wm_tdm_d7_pins: wm_tdm_d7_pin {
+		mux {
+			groups = "tdm_d7";
+			function = "tdmoutb_lane3";
+		};
+	};
+
+	wm_tdmb_clk_pins: wm_tdmb_clk_pin {
+		mux {
+			groups = "tdm_sclk1", "tdm_lrclk1";
+			function = "tdm_clk_outb";
+		};
+	};
 };
 
 &periphs_pinctrl {
@@ -968,6 +1000,18 @@
 		mux {
 			groups = "mclk_2_z";
 			function = "mclk";
+		};
+	};
+
+	wm_tdm_b_pins: wm_tdm_b_pins {
+		mux { //GPIOC_3 GPIOC_2 GPIOC_6, GPIOC_5, GPIOC_1, GPIOC_0
+			groups = "tdm_sclk1_c",
+				"tdm_fs1_c",
+				"tdm_d8_c",
+				"tdm_d9_c",
+				"tdm_d6_c",
+				"tdm_d7_c";
+			function = "tdm";
 		};
 	};
 
@@ -1065,8 +1109,8 @@
 /* SD card */
 &sd_emmc_b {
 	status = "okay";
-	pinctrl-0 = <&sdcard_pins>;
-	pinctrl-1 = <&sdcard_clk_gate_pins>;
+	//pinctrl-0 = <&sdcard_pins>;
+	//pinctrl-1 = <&sdcard_clk_gate_pins>;
 	pinctrl-2 = <&sd_1bit_pins>;
 	//pinctrl-3 = <&sd_to_ao_uart_clr_pins
 	//	&sdcard_pins &ao_to_sd_uart_pins>;
