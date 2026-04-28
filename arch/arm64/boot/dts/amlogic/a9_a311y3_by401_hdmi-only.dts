@@ -1030,14 +1030,20 @@
 	clock-frequency = <400000>;
 
 	amlsens_0: sensor0@1a {
-		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
+		compatible = "amlogic, sensor-a9", "sony,imx290", "sony,imx415",
+				"ov,ov5640", "max,max96712",
+				"ovti,ov13855", "ovti,ov51a40";
 		reg = <0x1a>;
 		clock-frequency = <37125000>;
 		index = <0>;
 		status = "okay";
 
-		clocks = <&clkc_mclk CLKID_MCLK_0>;
-		clock-names = "xclk";
+		clocks = <&mclk_pll>,
+				<&clkc_mclk CLKID_MCLK_0_PRE>,
+				<&clkc_mclk CLKID_MCLK_0>;
+		clock-names = "mclk_pll", "mclk_pre", "xclk";
+		assigned-clocks = <&clkc_mclk CLKID_MCLK_0>;
+		assigned-clock-rates = <24000000>;
 
 		pwdn-gpios = <&gpio GPIOM_3 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio GPIOM_2 GPIO_ACTIVE_HIGH>;
@@ -1059,14 +1065,20 @@
 	clock-frequency = <400000>;
 
 	amlsens_2: sensor2@1a {
-		compatible = "amlogic, sensor-a9", "sony,imx290", "ov,ov5640", "max,max96712";
+		compatible = "amlogic, sensor-a9", "sony,imx290", "sony,imx415",
+				"ov,ov5640", "max,max96712",
+				"ovti,ov13855", "ovti,ov51a40";
 		reg = <0x1a>;
 		clock-frequency = <37125000>;
 		index = <2>;
 		status = "okay";
 
-		clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
-		clock-names = "xclk";
+		clocks =  <&mclk1_pll>,
+				<&clkc_mclk1 CLKID_MCLK1_0_PRE>,
+				<&clkc_mclk1 CLKID_MCLK1_0>;
+		clock-names = "mclk_pll", "mclk_pre", "xclk";
+		assigned-clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
+		assigned-clock-rates = <24000000>;
 
 		pwdn-gpios = <&gpio GPIOM_5 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio GPIOM_4 GPIO_ACTIVE_HIGH>;

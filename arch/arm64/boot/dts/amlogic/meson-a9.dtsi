@@ -547,7 +547,7 @@
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
-		assigned-clock-rates = <800000000>, <400000000>;
+		assigned-clock-rates = <800000000>, <800000000>;
 		status = "disabled";
 
 		port {
@@ -564,7 +564,7 @@
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
-		assigned-clock-rates = <800000000>, <400000000>;
+		assigned-clock-rates = <800000000>, <800000000>;
 		status = "disabled";
 
 		port {
@@ -581,7 +581,7 @@
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
-		assigned-clock-rates = <800000000>, <400000000>;
+		assigned-clock-rates = <800000000>, <800000000>;
 		status = "disabled";
 
 		port {
@@ -598,7 +598,7 @@
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
-		assigned-clock-rates = <800000000>, <400000000>;
+		assigned-clock-rates = <800000000>, <800000000>;
 		status = "disabled";
 
 		port {
