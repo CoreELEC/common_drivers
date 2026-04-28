@@ -1897,38 +1897,23 @@ static void vpu_hdmi_set_matrix_ycbcr2rgb(void)
 	//regVPP_MATRIX_EN_CTRL = VPU_HDMI_MATRIX_EN_CTRL;
 
 	HDMITX_INFO("ycbcr2rgb matrix\n");
-	//ycbcr not full range, 601 conversion
-	if (0) {
-		hd21_write_reg(VPU_HDMI_MATRIX_PRE_OFFSET0_1,
-			((0x0) << 16) | (0xe00)); //0xfc00e00);
-		hd21_write_reg(VPU_HDMI_MATRIX_PRE_OFFSET2, (0xe00)); //0x0e00);
-
-		//1     0       1.402
-		//1   -0.34414  -0.71414
-		//1   1.772     0
-		hd21_write_reg(VPU_HDMI_MATRIX_COEF00_01, (0x400 << 16) | 0);
-		hd21_write_reg(VPU_HDMI_MATRIX_COEF02_10, (0x59c << 16) | 0x400);
-		hd21_write_reg(VPU_HDMI_MATRIX_COEF11_12, (0x1ea0 << 16) | 0x1d25);
-		hd21_write_reg(VPU_HDMI_MATRIX_COEF20_21, (0x400 << 16) | 0x717);
-		hd21_write_reg(VPU_HDMI_MATRIX_COEF22, 0x0);
-		hd21_write_reg(VPU_HDMI_MATRIX_OFFSET0_1, 0x0);
-		hd21_write_reg(VPU_HDMI_MATRIX_OFFSET2, 0x0);
-	}
-	//ycbcr full range, 601 conversion
+	//ycbcr not full range, 601 conversion		/* vd1/post */
 	hd21_write_reg(VPU_HDMI_MATRIX_PRE_OFFSET0_1,
-		((0xfc0) << 16) | (0xe00)); //0xfc00e00
-	hd21_write_reg(VPU_HDMI_MATRIX_PRE_OFFSET2, (0xe00)); //0x0e00);
+		(0x1e00 << 16) | 0x1fc0);
+	hd21_write_reg(VPU_HDMI_MATRIX_PRE_OFFSET2, 0x1e00);
 
-	//1.164     0       1.596
-	//1.164   -0.392    -0.813
-	//1.164   2.017     0
-	hd21_write_reg(VPU_HDMI_MATRIX_COEF00_01, (0x4a8 << 16) | 0);
-	hd21_write_reg(VPU_HDMI_MATRIX_COEF02_10, (0x662 << 16) | 0x4a8);
-	hd21_write_reg(VPU_HDMI_MATRIX_COEF11_12, (0x1e6f << 16) | 0x1cbf);
-	hd21_write_reg(VPU_HDMI_MATRIX_COEF20_21, (0x4a8 << 16) | 0x811);
-	hd21_write_reg(VPU_HDMI_MATRIX_COEF22, 0x0);
-	hd21_write_reg(VPU_HDMI_MATRIX_OFFSET0_1, 0x0);
-	hd21_write_reg(VPU_HDMI_MATRIX_OFFSET2, 0x0);
+	/*
+	 * -512  [1577    1024    0   ]   [Cr] [64]   [R]
+	 * -64   [-469    1024    -188] * [Y ] [64] = [G]
+	 * -512  [0       1024    1858]   [Cb] [64]   [B]
+	 */
+	hd21_write_reg(VPU_HDMI_MATRIX_COEF00_01, (0x0615 << 16) | 0x0400);
+	hd21_write_reg(VPU_HDMI_MATRIX_COEF02_10, (0x0000 << 16) | 0x1e2b);
+	hd21_write_reg(VPU_HDMI_MATRIX_COEF11_12, (0x0400 << 16) | 0x1f44);
+	hd21_write_reg(VPU_HDMI_MATRIX_COEF20_21, (0x0000 << 16) | 0x0400);
+	hd21_write_reg(VPU_HDMI_MATRIX_COEF22, 0x0742);
+	hd21_write_reg(VPU_HDMI_MATRIX_OFFSET0_1, (0x0040 << 16) | 0x0040);
+	hd21_write_reg(VPU_HDMI_MATRIX_OFFSET2, 0x0040);
 
 	//enable matrix_ycbcr2rgb
 	hd21_set_reg_bits(VPU_HDMI_FMT_CTRL, 3, 0, 2);
@@ -4475,7 +4460,8 @@ static int hdmitx21_hw_cntl_hdcp(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		if (ret < 0)
 			break;
 		arg = *((bool *)input_argv);
-		p_hdcp->hdcp14_key_loaded = !!arg;
+		if (p_hdcp)
+			p_hdcp->hdcp14_key_loaded = !!arg;
 		break;
 	case HDCP_PARAM_RESET:
 		hdmitx21_reset_hdcp_param(tx_comm);
@@ -6676,8 +6662,7 @@ static void vpu_hdmi_setting_config(struct hdmitx21_dev *hdev)
 			data32 |= 2;
 		data32 |= (para->timing.h_pol << 2);
 		data32 |= (para->timing.v_pol << 3);
-		data32 |= (((para->cs == HDMI_COLORSPACE_YUV420) ? 4 :
-					(para->cs == HDMI_COLORSPACE_RGB) ? 1 : 0) << 5);
+		data32 |= (((para->cs == HDMI_COLORSPACE_YUV420) ? 4 : 0) << 5);
 		data32 |= (((para->cs == HDMI_COLORSPACE_YUV420) ? 1 : 0) << 20);
 		break;
 	case MESON_CPU_ID_S7D:
@@ -6692,7 +6677,6 @@ static void vpu_hdmi_setting_config(struct hdmitx21_dev *hdev)
 		//bit[5]  = 0 output CrYCb(BRG)
 		//bit[16] = 1 comp_map_pre
 		data32 |= (((para->cs == HDMI_COLORSPACE_YUV420) ? 4 : 0) << 5);
-		data32 |= (((para->cs == HDMI_COLORSPACE_RGB) ? 1 : 0) << 16);
 		data32 |= (((para->cs == HDMI_COLORSPACE_YUV420) ? 1 : 0) << 20);
 		break;
 	case MESON_CPU_ID_S5:
@@ -6821,19 +6805,6 @@ void hdmitx21_color_convert(struct hdmitx21_dev *hdev, u32 output_color_format)
 		case MESON_CPU_ID_T7:
 		case MESON_CPU_ID_S5:
 			hdmitx21_vp_conf(COLORDEPTH_24B, HDMI_COLORSPACE_RGB);
-			break;
-		default:
-			break;
-		}
-		/* 4. VPU_HDMI_SETTING */
-		switch (hdev->tx_comm.tx_hw->chip_data->chip_type) {
-		case MESON_CPU_ID_S1A:
-		case MESON_CPU_ID_S7:
-			hd21_set_reg_bits(VPU_HDMI_SETTING, 1, 5, 1);
-			break;
-		case MESON_CPU_ID_S7D:
-		case MESON_CPU_ID_S6:
-			hd21_set_reg_bits(VPU_HDMI_SETTING, 1, 16, 1);
 			break;
 		default:
 			break;
