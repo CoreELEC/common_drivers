@@ -673,7 +673,9 @@
 		compatible = "amlogic,meson-rtc";
 		reg = <0x0 0xffa08000 0x0 0x38>;
 		interrupts = <GIC_SPI 404 IRQ_TYPE_EDGE_RISING>;
-		clocks = <&xtal>, <&clkc_sys_ao CLKID_AO_SYS_RTC_DIG>;
+		pinctrl-0 = <&rtc_32k_pins>;
+		pinctrl-names = "default";
+		clocks = <&xtal_32k>, <&clkc_sys_ao CLKID_AO_SYS_RTC_DIG>;
 		clock-names = "osc", "sys";
 		time-storage-format-gray;
 		status = "okay";
@@ -4935,6 +4937,13 @@
 				 "spi_d_sclk_ao";
 			function = "spi_d_ao";
 			drive-strength-microamp = <3000>;
+		};
+	};
+
+	rtc_32k_pins: rtc_32k_pins {
+		mux {
+			groups = "clk_32k_in_ao";
+			function = "clk_ao";
 		};
 	};
 };
