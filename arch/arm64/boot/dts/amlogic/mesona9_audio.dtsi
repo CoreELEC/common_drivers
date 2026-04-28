@@ -330,14 +330,14 @@
 	};
 
 	extn:extn {
-		compatible = "amlogic, t5m-snd-extn";
+		compatible = "amlogic, t6d-snd-extn";
 		#sound-dai-cells = <0>;
 
 		interrupts =
 				<GIC_SPI 42 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "irq_frhdmirx";
 
-		status = "disabled";
+		status = "okay";
 	};
 
 	aed:effect {
@@ -405,7 +405,7 @@
 	};
 
 	loopbacka:loopback@0 {
-		compatible = "amlogic, a5-loopbacka";
+		compatible = "amlogic, a9-loopbacka";
 		#sound-dai-cells = <0>;
 
 		clocks = <&clkaudio CLKID_AUDIO2_GATE_PDM
@@ -562,6 +562,12 @@
 			function = "gpio_aobus";
 		};
 	};
+	spdifin_a: spdifin_a {
+		mux { /* GPIOD_13 */
+			groups = "spdif_in_ao_d";
+			function = "spdif_ao";
+		};
+	};
 };
 
 &pinctrl_audio {
@@ -579,16 +585,16 @@
 		};
 	};
 
-	tdm_d5_pins: tdm_d5_pin {
+	tdm_d6_pins: tdm_d6_pin {
 		mux {
-			groups = "tdm_d5";
+			groups = "tdm_d6";
 			function = "tdminb_lane0";
 		};
 	};
 
-	tdm_d6_pins: tdm_d6_pin {
+	tdm_d5_pins: tdm_d5_pin {
 		mux {
-			groups = "tdm_d6";
+			groups = "tdm_d5";
 			function = "tdmoutb_lane2";
 		};
 	};

@@ -287,8 +287,8 @@
 		aml-audio-card,name = "AML-AUGESOUND";
 		/* headphone insert det */
 		hp-det-gpios = <&gpio_ao GPIOD_10 GPIO_ACTIVE_HIGH>;
-	//	interrupts = <GIC_SPI 149 IRQ_TYPE_EDGE_RISING>;
-	//	interrupt-names = "audio_exception64";
+		interrupts = <GIC_SPI 91 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "audio_exception64";
 
 		aml-audio-card,dai-link@0 {
 			format = "dsp_b";
@@ -433,6 +433,18 @@
 			suffix-name = "alsaPORT-Sed";
 			cpu {
 				sound-dai = <&sed>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@8 {
+			mclk-fs = <256>;
+			suffix-name = "alsaPORT-tv";
+			cpu {
+				sound-dai = <&extn>;
+				system-clock-frequency = <12288000>;
 			};
 			codec {
 				sound-dai = <&dummy_codec>;
