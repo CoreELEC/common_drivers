@@ -457,7 +457,7 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 			 * total max_buffer_num
 			 */
 			devp->afbce_info->frame_table_size =
-				PAGE_ALIGN((devp->vf_mem_size * 4) / PAGE_SIZE);
+				roundup(((devp->vf_mem_size * 4) / PAGE_SIZE), 4);
 			devp->afbce_info->frame_body_size = devp->vf_mem_size;
 			if (devp->is_vfce_en) {
 				h_tmp = roundup(devp->h_active, 64);
