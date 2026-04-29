@@ -886,6 +886,8 @@ void aml_phy_cfg_t5(u32 cable_clk)
 			aml_phy_offset_cal_t5();
 		clk_rate = rx_get_scdc_clkrate_sts(port);
 		idx = aml_cable_clk_band(cable_clk, clk_rate, port);
+		if (idx >= 6)
+			idx = 5;
 		usleep_range(20, 30);
 		data32 = phy_misci_t5[idx][0];
 		hdmirx_wr_amlphy(T5_HHI_RX_PHY_MISC_CNTL0, data32);

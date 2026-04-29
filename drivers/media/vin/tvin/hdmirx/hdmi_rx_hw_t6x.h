@@ -154,7 +154,7 @@ extern int debug_port;
 extern int bist_lvl;
 extern int bist_mode;
 extern int l_bist_en;
-extern u8 frl_rate_id;
+extern int frl_rate_id;
 /*--------------------------function declare------------------*/
 /* T6X */
 void aml_phy_init_t6x(u8 port);

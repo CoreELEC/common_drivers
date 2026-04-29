@@ -8111,12 +8111,8 @@ void rx_ddc_active_monitor(u8 port)
 	case E_PORT3:
 		temp = hdmirx_rd_top(TOP_EDID_GEN_STAT_D, E_PORT3);
 		break;
-	default:
-		break;
 	}
 
-	if (port >= HDMIRX_PORT_MAX)
-		return;
 	temp = temp & 0xff;
 	/*0x0a, 0x15 for hengyi ops-pc. refer to 88378
 	 *0x4  mac mini refer to: 138517
@@ -8439,6 +8435,8 @@ bool rx_is_edid_read_done(u8 port)
 	u32 temp = 0;
 	static u32 edid_stb_offset[E_PORT_NUM], cnt[E_PORT_NUM];
 
+	if (port >= E_PORT_NUM)
+		return true;
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
 		temp = hdmirx_rd_top(TOP_EDID_GEN_STAT, port);
 	} else {
@@ -8455,8 +8453,6 @@ bool rx_is_edid_read_done(u8 port)
 		case E_PORT3:
 			temp = hdmirx_rd_top(TOP_EDID_GEN_STAT_D, E_PORT3);
 			break;
-		default:
-			break;
 		}
 	}
 	if (temp != edid_stb_offset[port]) {
@@ -8465,8 +8461,7 @@ bool rx_is_edid_read_done(u8 port)
 	} else {
 		cnt[port]++;
 	}
-	if (port >= HDMIRX_PORT_MAX)
-		return true;
+
 	if (temp == EDID_OFFSET_512 || cnt[port] >= EDID_WAIT_STABLE_MAX) {
 		cnt[port] = 0;
 		return true;

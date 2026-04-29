@@ -39,7 +39,7 @@
 int bist_lvl;
 int bist_mode = 3;
 int l_bist_en;
-u8 frl_rate_id = FRL_12G_4LANE;
+int frl_rate_id = FRL_12G_4LANE;
 u32 top_irq_mask_t6x[IRQ_TYPE_CNT] = {
 	_BIT(0),	//IRQ_AON_CTL = 0,
 	0,		//IRQ_EDID_SLT,

@@ -109,7 +109,7 @@ static cec_callback cec_hdmirx5v_update;
 
 /* for debug */
 //bool clk_debug_en;
-bool vtem_interval_debug;
+int vtem_interval_debug;
 u32 rx5v_debug_en;
 u32 err_chk_en;
 u32 force_vic;
@@ -201,7 +201,7 @@ struct rx_s rx[HDMIRX_PORT_MAX];
  * in companion with vlock phase = 84
  */
 u32 vpp_mute_enable = 1;
-static bool game_unmute_enable = 1;
+static int game_unmute_enable = 1;
 int clk_chg_cnt;
 int clk_chg_max = 3;
 static int edid_auto_chk_max = 4;
@@ -4717,6 +4717,8 @@ void rx_5v_monitor(void)
 			cec_hdmirx5v_update(pwr_sts);
 		rx_5v_sts_to_esm(pwr_sts);
 		for (i = 0; i < rx_info.port_num; i++) {
+			if (i >= E_PORT_NUM)
+				continue;
 			if (rx[i].cur_5v_sts == ((pwr_sts >> i) & 1))
 				continue;
 			rx_pr("Hotplug-0x%x, port%d plug-%s\n", pwr_sts, i,

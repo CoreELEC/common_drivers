@@ -2334,6 +2334,8 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 		return -ENOIOCTLCMD;
 	src_buff = &pkt_info;
 	devp = file->private_data;
+	if (!devp)
+		return -EINVAL;
 	switch (cmd) {
 	case HDMI_IOC_HDCP_GET_KSV:{
 		struct _hdcp_ksv ksv;
@@ -2706,7 +2708,7 @@ static long hdmirx_compat_ioctl(struct file *file,
 				unsigned int cmd,
 				unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = hdmirx_ioctl(file, cmd, arg);
@@ -2836,7 +2838,8 @@ int rx_pr(const char *fmt, ...)
 
 		strncpy(buf + 5, fmt + pos, (sizeof(buf) - 5));
 	} else {
-		strncpy(buf, fmt, strlen(fmt) + 1);
+		strncpy(buf, fmt, sizeof(buf) - 1);
+		buf[PRINT_TEMP_BUF_SIZE - 1] = '\0';
 	}
 	//if (fmt[strlen(fmt) - 1] == '\n')
 		//last_break = 1;
