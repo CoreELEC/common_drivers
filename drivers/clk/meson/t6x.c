@@ -11,6 +11,8 @@
 #include <linux/module.h>
 #include <linux/of_address.h>
 #include <linux/clkdev.h>
+#include <linux/syscore_ops.h>
+#include <linux/suspend.h>
 #include "clk-pll.h"
 #include "clk-regmap.h"
 #include "clk-dualdiv.h"
@@ -6061,11 +6063,123 @@ static struct t6x_vpu_nb_data t6x_vpu_nb_data = {
 	.hevcb = &t6x_hevcb.hw,
 };
 
+static const char * const scmi_clk_name[] = {"cpu_clk", "dsu_clk", "aclkm",
+					     "pwm_a", "pwm_b"};
+static unsigned long scmi_clk_saved_rate[ARRAY_SIZE(scmi_clk_name)];
+/* Distinguish between std and str, syscore_ops is no need called when str */
+static int hib_enable;
+
+static int meson_t6x_syscore_suspend(void)
+{
+	int ret = 0;
+
+	/* Do nothing in str */
+	if (!hib_enable)
+		return 0;
+
+	ret = clk_save_context();
+	if (ret)
+		return ret;
+
+	return ret;
+}
+
+static void meson_t6x_syscore_resume(void)
+{
+	/* Do nothing in str */
+	if (!hib_enable)
+		return;
+
+	clk_restore_context();
+}
+
+static struct syscore_ops meson_t6x_syscore_ops = {
+	.suspend	= meson_t6x_syscore_suspend,
+	.resume		= meson_t6x_syscore_resume,
+};
+
+static int meson_t6x_pm_notify(struct notifier_block *notifier,
+			      unsigned long pm_event,
+			      void *unused)
+{
+	switch (pm_event) {
+	case PM_HIBERNATION_PREPARE:
+		hib_enable = 1;
+		break;
+	case PM_POST_HIBERNATION:
+		hib_enable = 0;
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block meson_t6x_pm_nb = {
+	.notifier_call = meson_t6x_pm_notify,
+};
+
+static int meson_t6x_freeze(struct device *dev)
+{
+	struct clk *scmi_clk;
+	int i;
+
+	/*
+	 * scmi clk does not provide save_context/restore_context ops,
+	 * so saved scmi clk rate at freeze and set it back at restore.
+	 * there is IRQ warning if store SCMI clock in syscore callback.
+	 * So do it in std call back.
+	 */
+	for (i = 0; i < ARRAY_SIZE(scmi_clk_name); ++i) {
+		scmi_clk = devm_clk_get(dev, scmi_clk_name[i]);
+		if (IS_ERR(scmi_clk))
+			return PTR_ERR(scmi_clk);
+		scmi_clk_saved_rate[i] = clk_get_rate(scmi_clk);
+		devm_clk_put(dev, scmi_clk);
+	}
+
+	return 0;
+}
+
+static int meson_t6x_restore(struct device *dev)
+{
+	struct clk *scmi_clk;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(scmi_clk_name); ++i) {
+		scmi_clk = devm_clk_get(dev, scmi_clk_name[i]);
+		if (IS_ERR(scmi_clk))
+			return PTR_ERR(scmi_clk);
+		/*
+		 * CLK_SET_RATE_NOCACHE flag does not take effect when clk_set_rate,
+		 * setting rate will be compared with the cached rate,  actual rate cannot
+		 * be setted. before setting rate, using clk_get_rate to recalculate
+		 * the scmi clk rate and update the cache.
+		 */
+		clk_get_rate(scmi_clk);
+		clk_set_rate(scmi_clk, scmi_clk_saved_rate[i]);
+		devm_clk_put(dev, scmi_clk);
+	}
+
+	return 0;
+}
+
+/*
+ * scmi clk rate needs to be saved using clk_get_rate(), but interrupts are
+ * enabled when the scmi clk rate is fetched, and syscore_suspend() is called
+ * when interrupts are turned off, so scmi clk needs to be placed in freeze_noirq
+ * to save state.
+ */
+const struct dev_pm_ops meson_t6x_pm_ops = {
+	.freeze_noirq	= meson_t6x_freeze,
+	.restore_noirq	= meson_t6x_restore,
+};
+
 static int meson_t6x_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct regmap *basic_map, *pll_map;
-	int ret, i, ssc_size = 0;
+	int ret = 0, i, ssc_size = 0;
 
 	/* Get regmap for different clock area */
 	basic_map = meson_clk_regmap_resource(pdev, dev, 0);
@@ -6130,8 +6244,22 @@ static int meson_t6x_probe(struct platform_device *pdev)
 		regmap_update_bits(pll_map, ANACTRL_GP0PLL_CTRL2, 0xf << 4, 0);
 	}
 
-	return devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
+	ret = devm_of_clk_add_hw_provider(dev, of_clk_hw_onecell_get,
 					   &t6x_hw_onecell_data);
+	if (ret)
+		return ret;
+
+	/* register syscore ops to save clk status at std */
+	register_syscore_ops(&meson_t6x_syscore_ops);
+	/*
+	 * register pm notify, distinguish between std and str, and ensure
+	 * that syscore_ops is called only when std is used.
+	 */
+	ret = register_pm_notifier(&meson_t6x_pm_nb);
+	if (ret)
+		return ret;
+
+	return ret;
 }
 
 static const struct of_device_id clkc_match_table[] = {
@@ -6146,6 +6274,7 @@ static struct platform_driver t6x_driver = {
 	.driver		= {
 		.name	= "t6x-clkc",
 		.of_match_table = clkc_match_table,
+		.pm	= &meson_t6x_pm_ops,
 	},
 };
 

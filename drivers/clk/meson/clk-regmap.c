@@ -332,30 +332,16 @@ static void clk_regmap_mux_restore_context(struct clk_hw *hw)
 {
 	struct clk_regmap *clk = to_clk_regmap(hw);
 	struct clk_regmap_mux_data *mux = clk_get_regmap_mux_data(clk);
-	struct clk_hw *now_parent_hw, *res_parent_hw;
-	u8 now_parent_id;
-	int now_parent_is_enabled, res_parent_is_enabled;
+	u8 idx = mux->saved_parent;
 
-	if (!mux->smc_id) {
-		now_parent_id = clk_regmap_mux_get_parent(hw);
-		if (mux->saved_parent != now_parent_id) {
-			if (clk_hw_get_flags(hw) & CLK_OPS_PARENT_ENABLE) {
-				now_parent_hw = clk_hw_get_parent_by_index(hw, now_parent_id);
-				res_parent_hw = clk_hw_get_parent_by_index(hw, mux->saved_parent);
-				now_parent_is_enabled = clk_regmap_gate_is_enabled(now_parent_hw);
-				res_parent_is_enabled = clk_regmap_gate_is_enabled(res_parent_hw);
+	if (mux->smc_id)
+		return;
 
-				clk_regmap_gate_enable(now_parent_hw);
-				clk_regmap_gate_enable(res_parent_hw);
-				clk_regmap_mux_set_parent(hw, mux->saved_parent);
-				if (!now_parent_is_enabled)
-					clk_regmap_gate_disable(now_parent_hw);
-				if (!res_parent_is_enabled)
-					clk_regmap_gate_disable(res_parent_hw);
-			} else {
-				clk_regmap_mux_set_parent(hw, mux->saved_parent);
-			}
-		}
+	if (clk_hw_get_parent_by_index(hw, idx) && (clk_hw_get_flags(hw) & CLK_OPS_PARENT_ENABLE)) {
+		clk_hw_set_parent(hw, clk_hw_get_parent_by_index(hw, !idx));
+		clk_hw_set_parent(hw, clk_hw_get_parent_by_index(hw, idx));
+	} else {
+		clk_regmap_mux_set_parent(hw, mux->saved_parent);
 	}
 }
 

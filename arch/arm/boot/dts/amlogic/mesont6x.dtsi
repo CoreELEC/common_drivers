@@ -607,8 +607,19 @@
 				reg = <0x0 0x244>,
 				      <0x8000 0xe0>;
 				reg-names = "basic", "pll";
-				clocks = <&xtal>;
-				clock-names = "xtal";
+				clocks = <&xtal>,
+					 <&scmi_clk CLKID_SCMI_CPU_CLK>,
+					 <&scmi_clk CLKID_SCMI_DSU_CLK>,
+					 <&scmi_clk CLKID_SCMI_ACLKM>,
+					 <&scmi_clk CLKID_SCMI_PWM_A>,
+					 <&scmi_clk CLKID_SCMI_PWM_B>;
+				clock-names = "xtal",
+					      "cpu_clk",
+					      "dsu_clk",
+					      "aclkm",
+					      "pwm_a",
+					      "pwm_b";
+				gp0-spread-spectrum = <0>; /* 500,1000,1500...*/
 			};
 
 			meson_clk_msr@48000 {
