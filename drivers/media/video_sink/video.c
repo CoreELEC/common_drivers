@@ -3073,8 +3073,7 @@ struct vframe_s *dv_toggle_frame(struct vframe_s *vf, enum vd_path_e vd_path, bo
 		int ret = amdv_update_metadata(vf, vd_path, false);
 
 		if ((!is_amdv_el_disable() ||
-		    for_amdv_certification()) &&
-		    !is_multi_dv_mode())
+		    for_amdv_certification()))
 			cur_dispbuf2 = amdv_vf_peek_el(vf);
 		if (ret == 0) {
 			/* setting generated for this frame */

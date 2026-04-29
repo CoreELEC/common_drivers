@@ -1605,8 +1605,8 @@ static int dv_core1a_set(u32 dm_count,
 {
 	u32 count;
 	u32 bypass_flag = 0;
-	int el_enable = 0;/*default 0?*/
-	int el_41_mode = 0;/*default 0?*/
+	int el_enable = !!new_m_dovi_setting.input[0].el_flag;
+	int el_41_mode = !!new_m_dovi_setting.input[0].el_halfsize_flag;
 	int composer_enable =
 		core1a_enable && el_enable && (amdv_mask & 1);
 	int i;
@@ -1640,6 +1640,16 @@ static int dv_core1a_set(u32 dm_count,
 			pr_dv_dbg("((%s %d, enable core1a, AMDV_PATH_CTRL: %x))\n",
 				__func__, __LINE__,
 				VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
+		}
+		if (el_enable) {
+			if ((VSYNC_RD_DV_REG(AMDV_PATH_CTRL) & 0x2) != 0) {
+				pr_dv_dbg("((%s %d enable el))\n",
+					__func__, __LINE__);
+				VSYNC_WR_DV_REG_BITS(AMDV_PATH_CTRL, 0, 1, 1);
+				pr_dv_dbg("((%s %d, enable_el, AMDV_PATH_CTRL: %x))\n",
+					__func__, __LINE__,
+					VSYNC_RD_DV_REG(AMDV_PATH_CTRL));
+			}
 		}
 	}
 	set_dovi_setting_update_flag(true);
@@ -2211,8 +2221,8 @@ static int dv_core1b_set(u32 dm_count,
 {
 	u32 count;
 	u32 bypass_flag = 0;
-	int el_enable = 0;/*default 0?*/
-	int el_41_mode = 0;/*default 0?*/
+	int el_enable = !!new_m_dovi_setting.input[0].el_flag;
+	int el_41_mode = !!new_m_dovi_setting.input[0].el_halfsize_flag;
 	int composer_enable =
 		core1b_enable && el_enable && (amdv_mask & 1);
 	int i;
