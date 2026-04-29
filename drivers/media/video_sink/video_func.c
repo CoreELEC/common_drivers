@@ -609,7 +609,7 @@ bool dvel_status;
 int dolby_vision_need_wait(u8 path_index)
 {
 	struct vframe_s *vf;
-	int ret = 0;
+
 #ifdef AMLOGIC_MEDIA_DPSS
 	if (!is_amdv_enable() && !is_amdv_dpss_path())
 #else
@@ -618,13 +618,9 @@ int dolby_vision_need_wait(u8 path_index)
 		return 0;
 
 	vf = video_vf_peek(path_index);
-	if (!vf) {
+	if (!vf || (amdv_wait_metadata(vf, VD1_PATH) == 1))
 		return 1;
-	} else {
-		ret = amdv_wait_metadata(vf, VD1_PATH);
-		if (ret > 0)
-			return ret;
-	}
+
 	return 0;
 }
 
