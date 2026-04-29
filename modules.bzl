@@ -287,6 +287,7 @@ AMLOGIC_COMMON_MODULES = [
     "common_drivers/sound/soc/amlogic/auge/vad/amlogic-snd-vad.ko",
     "//common_drivers/sound/soc:amlogic-snd-vad",
     "sound/drivers/snd-aloop.ko",
+    "common_drivers/drivers/dma/amlogic-dma.ko",
 ]
 
 AMLOGOC_COMMON_MODULES_REMOVE = (

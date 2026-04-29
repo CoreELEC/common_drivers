@@ -9,6 +9,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/a9-pd.h>
+#include <dt-bindings/dma/amlogic,a9-dma.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-a9-gpio.h>
 #include <dt-bindings/reset/amlogic,meson-a9-reset.h>
@@ -1424,6 +1425,15 @@
 			cpu_version {
 				compatible = "amlogic,meson-gx-ao-secure", "syscon";
 				reg=<0x0 0x10220 0x0 0x4>;
+			};
+
+			dma: dma@3a0000 {
+				compatible = "amlogic,a9-dma";
+				reg = <0 0x3a0000 0 0x4000>;
+				interrupts = <GIC_SPI 149 IRQ_TYPE_EDGE_RISING>;
+				#dma-cells = <2>;
+				dma-channels = <24>;
+				clocks = <&clkc_sys CLKID_SYS_PP_DMA>;
 			};
 
 			aml_hwspinlock_regs: syscon@e300 {

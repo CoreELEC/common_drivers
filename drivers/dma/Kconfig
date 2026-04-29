@@ -1,0 +1,14 @@
+if DMADEVICES
+
+comment "DMA Devices"
+
+config AMLOGIC_DMA
+	tristate "Amlogic general DMA support"
+	select DMA_ENGINE
+	select DMA_VIRTUAL_CHANNELS
+	select REGMAP_MMIO
+	help
+          Enable support for the Amlogic general DMA engines. THis DMA
+          controller is used some Amlogic SoCs, such as A9.
+endif
+

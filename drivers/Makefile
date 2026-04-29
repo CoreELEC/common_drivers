@@ -26,6 +26,7 @@ obj-$(CONFIG_CPU_FREQ)			+= cpufreq/
 obj-$(CONFIG_THERMAL)			+= thermal/
 obj-y					+= mmc/
 obj-$(CONFIG_AMLOGIC_EFUSE_UNIFYKEY)	+= efuse_unifykey/
+obj-y					+= dma/
 obj-y					+= i2c/
 obj-y					+= i3c/
 obj-$(CONFIG_SPI)			+= spi/
