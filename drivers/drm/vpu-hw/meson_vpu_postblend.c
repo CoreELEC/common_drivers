@@ -1762,11 +1762,12 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 		if (crtcmask_osd[i] == crtc_index) {
 			if (i == MESON_OSD1) {
 				reg_val = meson_drm_read_reg(VIU_OSD1_PATH_CTRL);
-				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
+				reg_val = reg_val |
+						BIT(0)	| /* osd scaler before osdblend */
+						BIT(16);  /* bypass osd dolby */
 				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
 						BIT(12) | /* hdr after osdblend */
 						BIT(15) | /* no bypass hdr */
-						BIT(16) | /* no bypass osd dolby */
 						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD1_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD2) {
@@ -1787,8 +1788,6 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
 				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
 						BIT(12) | /* hdr after osdblend */
-						BIT(15) | /* no bypass hdr */
-						BIT(16) | /* no bypass osd dolby */
 						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD3_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD4) {
@@ -1812,6 +1811,11 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 				reg_ops->rdma_write_reg(VIU_OSD5_PATH_CTRL, reg_val);
 			}
 		}
+	}
+
+	if (crtc_index == 1) {
+		reg_ops->rdma_write_reg(VPP1_OSD2_BLEND_SRC_CTRL, 0);
+		reg_ops->rdma_write_reg(A9_VPP1_BLEND_DUMMY_ALPHA, 0x10080100);
 	}
 
 	vblk->init_done = 1;

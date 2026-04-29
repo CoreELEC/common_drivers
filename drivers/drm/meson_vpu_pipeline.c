@@ -1016,7 +1016,8 @@ static int get_venc_type(struct meson_vpu_pipeline *pipeline, u32 viu_type)
 {
 	u32 venc_type = 0;
 
-	if (pipeline->priv->vpu_data->enc_method == 1) {
+	if (pipeline->priv->vpu_data->enc_method == 1 ||
+		pipeline->priv->vpu_data->enc_method == 2) {
 		u32 venc_mux = 3;
 		u32 venc_addr = VPU_VENC_CTRL;
 
@@ -1083,6 +1084,42 @@ int vpu_pipeline_read_scanout_pos(struct meson_vpu_pipeline *pipeline,
 			break;
 		case 2:
 			reg = VPU_VENCL_STAT;
+			break;
+		}
+
+		reg_val = aml_read_vcbus(reg + offset);
+		if (!venc_type)
+			*vpos = (reg_val >> 16) & 0xfff;
+		else
+			*vpos = (reg_val >> 16) & 0x1fff;
+
+		*hpos = (reg_val & 0x1fff);
+	} else if (pipeline->priv->vpu_data->enc_method == 2) {
+		u32 venc_mux = 3;
+
+		venc_mux = aml_read_vcbus(VPU_VIU_VENC_MUX_CTRL) & 0x3f;
+		venc_mux >>= (viu_type * 2);
+		venc_mux &= 0x3;
+		switch (venc_mux) {
+		case 0:
+			offset = 0;
+			break;
+		case 1:
+			offset = 0x600;
+			break;
+		case 2:
+			offset = 0x800;
+			break;
+		}
+		switch (venc_type) {
+		case 0:
+			reg = VPU_VENCI_STAT;
+			break;
+		case 1:
+			reg = A9_VPU_VENCP_STAT;
+			break;
+		case 2:
+			reg = A9_VPU_VENCL_STAT;
 			break;
 		}
 

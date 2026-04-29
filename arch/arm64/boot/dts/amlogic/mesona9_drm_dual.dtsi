@@ -61,6 +61,10 @@
 				reg = <3>;
 				remote-endpoint = <0>;
 			};
+			drm_to_dummyl: endpoint@4 {
+				reg = <4>;
+				remote-endpoint = <&dummyl_to_drm>;
+			};
 		};
 	};
 
@@ -75,7 +79,7 @@
 		primary_plane_index = <0>; /* primary plane index for crtcs */
 		crtc_masks = <3 1 1>; /*for encoder: 0:hdmi 1:lcd 2:cvbs*/
 		crtcmask_of_osd = <0 0 1 0 0>; /* indicate the crtc mask of osd plane */
-		crtcmask_of_video = <0 0 1>; /* indicate the crtc mask of video plane */
+		crtcmask_of_video = <0 1 0>; /* indicate the crtc mask of video plane */
 		gamma_ctl = <0>; /*0:skip gamma init 1:gamma init*/
 		pxp_mode = <0>;
 		osd_afbc_mask = <7>;
@@ -300,6 +304,14 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x0>;
 				};
+				video3_block: block@21 {
+					id = /bits/ 8 <VIDEO3_BLOCK>;
+					index = /bits/ 8  <2>;
+					type = /bits/ 8  <7>;
+					block_name = "video3_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
 			};
 
 			vpu_blocks_path2: vpu_blocks_path2 {
@@ -466,7 +478,7 @@
 					block_name = "blend_csc_block";
 					type = /bits/ 8  <10>;
 					num_in_links = /bits/ 8  <0x1>;
-					in_links = <0 &osd_blend_block>;
+					in_links = <0 &osd_blend_block_path2>;
 					num_out_links = /bits/ 8  <0x1>;
 					out_links = <0 &vpp_postblend_block_path2>;
 				};
@@ -512,6 +524,14 @@
 					index = /bits/ 8  <1>;
 					type = /bits/ 8  <7>;
 					block_name = "video2_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
+				video3_block_path2: block@22 {
+					id = /bits/ 8 <VIDEO3_BLOCK>;
+					index = /bits/ 8  <2>;
+					type = /bits/ 8  <7>;
+					block_name = "video3_block";
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x0>;
 				};
@@ -720,6 +740,14 @@
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x0>;
 				};
+				video3_block_path3: block@21 {
+					id = /bits/ 8 <VIDEO3_BLOCK>;
+					index = /bits/ 8  <2>;
+					type = /bits/ 8  <7>;
+					block_name = "video3_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
 			};
 		};
 		vpu_hw_para: vpu_hw_para@0 {
@@ -772,3 +800,17 @@
 //		};
 //	};
 //};
+
+&dummy_venc {
+	default_venc_index = <1>;
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			dummyl_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_dummyl>;
+			};
+		};
+	};
+};

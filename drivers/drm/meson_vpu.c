@@ -672,6 +672,7 @@ static const struct meson_vpu_data vpu_a9_data = {
 	.video_formats = &video_formats,
 	.policy = s7d_policy,
 	.has_gfcd = 1,
+	.enc_method = 2,
 };
 #endif
 

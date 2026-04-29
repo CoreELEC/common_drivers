@@ -143,6 +143,7 @@
 #define A9_VPP1_BLEND_BLEND_DUMMY_DATA             0x64a9
 #define A9_VPP1_BLEND_DUMMY_ALPHA                  0x64aa
 #define A9_VPP1_OSD1_BLEND_SRC_CTRL                0x64b1
+#define VPP1_OSD2_BLEND_SRC_CTRL                   0x64b2
 
 struct postblend_reg_s {
 	u32 vpp_osd1_bld_h_scope;

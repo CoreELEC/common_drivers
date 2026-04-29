@@ -1177,6 +1177,8 @@
 #define VPU_VENC_CTRL				0x1cef
 #define VPU1_VENC_CTRL				0x22ef
 #define VPU2_VENC_CTRL				0x24ef
+#define A9_VPU_VENCL_STAT			0x1ced
+#define A9_VPU_VENCP_STAT			0x1cec
 
 #define OSD_DOLBY_BYPASS_EN            0x6077
 
@@ -1186,5 +1188,52 @@
 #define VIU_OSD3_PATH_CTRL                     0x1a78
 
 /* reg definition */
+
+/* A9 register */
+/* VPP WRAP OSD1 matrix */
+#define VPP_WRAP_OSD1_MATRIX_COEF00_01             0x3d60
+#define VPP_WRAP_OSD1_MATRIX_COEF02_10             0x3d61
+#define VPP_WRAP_OSD1_MATRIX_COEF11_12             0x3d62
+#define VPP_WRAP_OSD1_MATRIX_COEF20_21             0x3d63
+#define VPP_WRAP_OSD1_MATRIX_COEF22                0x3d64
+#define VPP_WRAP_OSD1_MATRIX_COEF13_14             0x3d65
+#define VPP_WRAP_OSD1_MATRIX_COEF23_24             0x3d66
+#define VPP_WRAP_OSD1_MATRIX_COEF15_25             0x3d67
+#define VPP_WRAP_OSD1_MATRIX_CLIP                  0x3d68
+#define VPP_WRAP_OSD1_MATRIX_OFFSET0_1             0x3d69
+#define VPP_WRAP_OSD1_MATRIX_OFFSET2               0x3d6a
+#define VPP_WRAP_OSD1_MATRIX_PRE_OFFSET0_1         0x3d6b
+#define VPP_WRAP_OSD1_MATRIX_PRE_OFFSET2           0x3d6c
+#define VPP_WRAP_OSD1_MATRIX_EN_CTRL               0x3d6d
+
+#define VPP_WRAP_OSD2_MATRIX_COEF00_01             0x3d70
+#define VPP_WRAP_OSD2_MATRIX_COEF02_10             0x3d71
+#define VPP_WRAP_OSD2_MATRIX_COEF11_12             0x3d72
+#define VPP_WRAP_OSD2_MATRIX_COEF20_21             0x3d73
+#define VPP_WRAP_OSD2_MATRIX_COEF22                0x3d74
+#define VPP_WRAP_OSD2_MATRIX_COEF13_14             0x3d75
+#define VPP_WRAP_OSD2_MATRIX_COEF23_24             0x3d76
+#define VPP_WRAP_OSD2_MATRIX_COEF15_25             0x3d77
+#define VPP_WRAP_OSD2_MATRIX_CLIP                  0x3d78
+#define VPP_WRAP_OSD2_MATRIX_OFFSET0_1             0x3d79
+#define VPP_WRAP_OSD2_MATRIX_OFFSET2               0x3d7a
+#define VPP_WRAP_OSD2_MATRIX_PRE_OFFSET0_1         0x3d7b
+#define VPP_WRAP_OSD2_MATRIX_PRE_OFFSET2           0x3d7c
+#define VPP_WRAP_OSD2_MATRIX_EN_CTRL               0x3d7d
+
+#define VIU_OSD3_MATRIX_COEF00_01                  0x3db0
+#define VIU_OSD3_MATRIX_COEF02_10                  0x3db1
+#define VIU_OSD3_MATRIX_COEF11_12                  0x3db2
+#define VIU_OSD3_MATRIX_COEF20_21                  0x3db3
+#define VIU_OSD3_MATRIX_COEF22                     0x3db4
+#define VIU_OSD3_MATRIX_COEF13_14                  0x3db5
+#define VIU_OSD3_MATRIX_COEF23_24                  0x3db6
+#define VIU_OSD3_MATRIX_COEF15_25                  0x3db7
+#define VIU_OSD3_MATRIX_CLIP                       0x3db8
+#define VIU_OSD3_MATRIX_OFFSET0_1                  0x3db9
+#define VIU_OSD3_MATRIX_OFFSET2                    0x3dba
+#define VIU_OSD3_MATRIX_PRE_OFFSET0_1              0x3dbb
+#define VIU_OSD3_MATRIX_PRE_OFFSET2                0x3dbc
+#define VIU_OSD3_MATRIX_EN_CTRL                    0x3dbd
 
 #endif

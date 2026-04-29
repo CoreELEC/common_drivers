@@ -1580,6 +1580,7 @@
 
 &amhdmitx {
 	status = "okay";
+	enc_idx = <1>;
 };
 
 &eDPTX0 {
