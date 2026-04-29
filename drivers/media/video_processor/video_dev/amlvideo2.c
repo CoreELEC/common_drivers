@@ -3812,6 +3812,11 @@ int amlvideo2_ge2d_pre_process(struct vframe_s *vf,
 		src_left = 0;
 		src_width = vf->width;
 		src_height = vf->height;
+	} else {
+		src_top = 0;
+		src_left = 0;
+		src_width = 0;
+		src_height = 0;
 	}
 
 	if (amlvideo2_dbg_en & 4)
