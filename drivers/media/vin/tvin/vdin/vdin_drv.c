@@ -36,8 +36,8 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/dma-map-ops.h>
 #include <linux/sched/clock.h>
-#include <linux/hrtimer.h>
 #include <linux/ktime.h>
+#include <linux/hrtimer.h>
 /*#include <linux/amlogic/iomap.h>*/
 /*#include <linux/amlogic/media/registers/register_map.h>*/
 #include <linux/fdtable.h>
@@ -585,11 +585,37 @@ void vdin_frame_lock_check(struct vdin_dev_s *devp, int state)
 	}
 }
 
+#ifdef CONFIG_AMLOGIC_LCD
 static enum hrtimer_restart vdin_game_frc_timer_callback(struct hrtimer *timer)
 {
-	// unmute vpp
-	set_video_mute(FRC_MUTE_SET, false);
+	// struct vdin_dev_s *devp =
+	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
+
+	if (!pdrv)
+		return HRTIMER_NORESTART;
+
+	lcd_mute_set(pdrv, 0);
+
 	return HRTIMER_NORESTART;
+}
+#endif
+
+/*set lcd mute for game frc*/
+void game_frc_set_lcd_mute(struct vdin_dev_s *devp)
+{
+#ifdef CONFIG_AMLOGIC_LCD
+	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
+
+	if (!pdrv || !devp)
+		return;
+	// frc vpp mute
+	lcd_mute_set(pdrv, 1);
+	vdin_game_frc_hrtimer.function = vdin_game_frc_timer_callback;
+	if (!devp->game_frc_mute_time)
+		devp->game_frc_mute_time = 600;
+	hrtimer_start(&vdin_game_frc_hrtimer,
+		ms_to_ktime(devp->game_frc_mute_time), HRTIMER_MODE_REL);
+#endif
 }
 
 void vdin_game_frc_check(struct vdin_dev_s *devp, int state)
@@ -655,6 +681,8 @@ static bool vdin_need_game_mode(struct vdin_dev_s *devp)
 
 static void vdin_game_mode_check(struct vdin_dev_s *devp)
 {
+	static int pre_game_frc_config;
+
 	devp->vrr_frame_rate_min = vrr_check_frame_rate_min_hz();
 	if (game_mode == 1 && vdin_need_game_mode(devp)) {
 		vdin_get_in_out_fps(devp);
@@ -716,11 +744,17 @@ static void vdin_game_mode_check(struct vdin_dev_s *devp)
 		else
 			devp->vdin_game_frc = 0;
 	}
+
+	if (pre_game_frc_config != devp->vdin_game_frc_config) {
+		game_frc_set_lcd_mute(devp); //mute
+		pre_game_frc_config = devp->vdin_game_frc_config;
+	}
+
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_GAME)
-		pr_info("%s: game_mode_cfg=0x%x;cur:%#x,force mode:0x%x,fps:%d,vout:%d,frc:%d\n",
+		pr_info("%s:game_cfg=0x%x;cur:%#x,force_md:0x%x,fps:%d,vout:%d,frc:%d,frc_cfg:%d\n",
 			__func__, game_mode, devp->game_mode,
 			vdin_force_game_mode, devp->vdin_std_duration,
-			devp->vinfo_std_duration, devp->vdin_game_frc);
+			devp->vinfo_std_duration, devp->vdin_game_frc, devp->vdin_game_frc_config);
 }
 
 static inline void vdin_game_mode_dynamic_check(struct vdin_dev_s *devp)
@@ -5922,9 +5956,9 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		game_mode_cfg = tmp;
 		game_mode = tmp;
 		devp->auto_game_flag = false;
+		mutex_unlock(&devp->fe_lock);
 		if (!tmp && devp->vdin_game_frc)
 			vdin_set_game_frc_on_off(devp, 0);
-		mutex_unlock(&devp->fe_lock);
 		break;
 	}
 	case TVIN_IOC_S_TUNER_ID:
@@ -6489,25 +6523,17 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (devp->debug.vdin_dbg_en)
 			pr_info("TVIN_IOC_S_GAME_FRC_ON_OFF(cur:%d->%d)\n",
 				devp->vdin_game_frc, tmp);
-		if (devp->debug.bypass_game_frc || (tmp && !devp->game_mode) ||
+		if (devp->vdin_game_frc_config != tmp)
+			game_frc_set_lcd_mute(devp); //mute
+		devp->vdin_game_frc_config = tmp;
+		if (devp->debug.bypass_game_frc || (tmp && !devp->game_mode && !game_mode_cfg) ||
 		    (tmp && vdin_is_dolby_signal_in(devp)))
 			break;
-		devp->vdin_game_frc_config = tmp;
 		if (devp->vdin_game_frc != tmp) {
-			// frc vpp mute
-			set_video_mute(FRC_MUTE_SET, true);
-			vdin_game_frc_hrtimer.function = vdin_game_frc_timer_callback;
-			if (!devp->game_frc_mute_time)
-				devp->game_frc_mute_time = 600;
-			hrtimer_start(&vdin_game_frc_hrtimer,
-				ms_to_ktime(devp->game_frc_mute_time), HRTIMER_MODE_REL);
-
-			mutex_lock(&devp->fe_lock);
 			vdin_set_game_frc_on_off(devp, tmp);
 			if (devp->debug.vdin_dbg_en)
 				pr_info("(update_game_frc:%d,%d), game_frc_config:%d\n",
 					devp->vdin_game_frc, tmp, devp->vdin_game_frc_config);
-			mutex_unlock(&devp->fe_lock);
 		}
 		break;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT

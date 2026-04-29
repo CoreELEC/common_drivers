@@ -1551,5 +1551,6 @@ void vdin_dyn_fmt(struct vdin_dev_s *devp);
 void vdin_get_secure_state(struct vdin_dev_s *devp);
 unsigned int vdin_check_secure_write_error(struct vdin_dev_s *devp);
 void rx_mute_vpp(u8 port_type);
+void game_frc_set_lcd_mute(struct vdin_dev_s *devp);
 #endif /* __TVIN_VDIN_DRV_H */
 

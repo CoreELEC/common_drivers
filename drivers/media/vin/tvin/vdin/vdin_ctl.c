@@ -8980,6 +8980,8 @@ bool vdin_is_auto_game_mode(struct vdin_dev_s *devp)
 
 void vdin_set_game_frc_on_off(struct vdin_dev_s *devp, bool on_off)
 {
+	game_frc_set_lcd_mute(devp);
+	mutex_lock(&devp->fe_lock);
 	if (devp->debug.vdin_dbg_en & VDIN_DBG_CNTL_IOCTL)
 		pr_info("game_frc:%d, on_off:%d\n", devp->vdin_game_frc, on_off);
 	if ((devp->vdin_function_sel & VDIN_SELF_STOP_START) &&
@@ -8994,6 +8996,7 @@ void vdin_set_game_frc_on_off(struct vdin_dev_s *devp, bool on_off)
 	} else {
 		devp->vdin_game_frc = on_off;
 	}
+	mutex_unlock(&devp->fe_lock);
 }
 
 /*
