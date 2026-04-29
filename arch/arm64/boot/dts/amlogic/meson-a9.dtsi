@@ -2183,7 +2183,9 @@
 						 <1152000000>;
 			tx_delay = <16>;
 			cap-mmc-crypto;
-			aml-non-cqe-64bit-dma;
+			cap-mmc-64bit-dma;
+			mmc-hs400-enhanced-strobe;
+		//	power-domains=<&pwrdm PDID_A9_SD_EMMC_C>;
 		//	nwr_cnt = <0>;
 		//	resets = <&reset RESET_SD_EMMC_C>;
 		};
