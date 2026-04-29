@@ -48,6 +48,9 @@
 unsigned int dpss_dbg_tst_case;	//force g_dpss_tst_case
 module_param_named(dpss_dbg_tst_case, dpss_dbg_tst_case, uint, 0664);
 
+unsigned int dpss_force_bypss;	//force g_dpss_tst_case
+module_param_named(dpss_force_bypss, dpss_force_bypss, uint, 0664);
+
 unsigned int dpss_dbg_in_fmt;
 module_param_named(dpss_dbg_in_fmt, dpss_dbg_in_fmt, uint, 0664);
 
@@ -1269,12 +1272,15 @@ void dpss_val_user(struct dpss_ch_s *pch,
 	}
 
 	if (!pch->c.ch &&
-	    vfs->duration_overflow &&
-	    !vfs->is_i) {
+	    ((vfs->duration_overflow &&
+	    !vfs->is_i) || (vfs->dpss_flag & DPSS_FLG_HIGH_BANDWIDTH) ||
+			dpss_force_bypss)) {
 		prm_user->dae_nr_mode = DAE_BYPS_MODE;
 		prm_user->dpe_nr_mode = DPE_NR_BYPS;
 		pch->d->state_nr_bypass = true;
 		DBG_INF("bypass nr\n");
+	} else {
+		pch->d->state_nr_bypass = false;
 	}
 #ifdef _HIS_CODE_	//1002 move out:
 	if (vfs->width > DPSS_SLC_THD2_M)
@@ -1297,11 +1303,6 @@ void dpss_val_user(struct dpss_ch_s *pch,
 	if (dpss_f_mode_get(5, &val))
 		prm_user->cfg_slc = val;
 #endif
-	if (vfs->dpss_flag & DPSS_FLG_HIGH_BANDWIWH) {
-		prm_user->dae_nr_mode = DAE_BYPS_MODE;
-		prm_user->dpe_nr_mode = DPE_NR_BYPS;
-	}
-
 	dbg_i1("%s:%d,%d,%d,%d,%d\n",
 	       __func__, prm_user->dpss_mode,
 	       prm_user->dae_nr_mode,
@@ -2356,8 +2357,8 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	dbg_i1("%s: start init.light = %d source_type:%d vf_dpss_flg:0x%x\n",
 		__func__, light_chg, vf->source_type, vf->dpss_flg);
 
-	if (vf->dpss_flg & DPSS_FLG_HIGH_BANDWIWH)
-		vfs->dpss_flag |= DPSS_FLG_HIGH_BANDWIWH;
+	if (vf->dpss_flg & DPSS_FLG_HIGH_BANDWIDTH)
+		vfs->dpss_flag |= DPSS_FLG_HIGH_BANDWIDTH;
 
 	if (light_chg) {
 		prm_top->trig_byp_dae0 = true;
@@ -2951,6 +2952,10 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		prm_top->mode_drct = false;
 	}
 
+	if (pch->d->state_nr_bypass)
+		dpss_en_dct = 0;
+	else
+		dpss_en_dct = 1;
 	if (dpss_dct_force & C_BIT31) {
 		if (dpss_dct_force & C_BIT8)
 			dpss_en_dct = 1;
@@ -2959,7 +2964,7 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		else
 			dpss_en_dct = 0;
 	}
-
+	prm_dae->dctgrd_en = dpss_en_dct;
 	dbg_i0("init:direct =%d\n", pch->d->mode_drct);
 	if ((((dpss_en_dct & C_BIT0) && !pch->c.ch) ||
 	    ((dpss_en_dct & C_BIT1) && pch->c.ch)) &&

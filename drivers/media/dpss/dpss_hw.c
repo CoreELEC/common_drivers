@@ -2839,7 +2839,7 @@ void irq_dae0(void)
 	}
 
 #ifdef FUNC_EN_PQ
-	if (prm_top->dpss_mode != DPSS_FRC_MODE && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
+	if (!(is_vd1_link_state()) && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
 		dpss_me_ro_data_update();
 #endif
 	if (pfw_data->dae_irq_handler)
@@ -2923,7 +2923,7 @@ void irq_dae1(void)
 	dbg_h2("%s: ro_index=%d, ro_index=%d\n", __func__,
 		dpss_dae_frm_cnt_src1, ro_index);
 
-	if (!prm_top->frc_en && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
+	if (is_vd1_link_state() && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE)
 		dpss_me_ro_data_update();
 	if (dpss_dae_frm_cnt_src1 >= 2 && prm_dpss_top->dae_nr_mode != DAE_BYPS_MODE) {
 		pq_update_ro_dae(ro_index, DPSS_MAIN_CHANNEL);
