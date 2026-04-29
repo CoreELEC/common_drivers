@@ -306,6 +306,13 @@ static inline int scatter_get_pages_swap_threshold(void)
 	return scatter_swap_threshold_size;
 }
 
+static inline void trace_scatter_counter(struct codec_mm_scatter_mgt *smgt)
+{
+	if (get_atrace_tag_enabled(KERNEL_ATRACE_TAG))
+		ATRACE_COUNTER("scatter_alloc_from_sys_size", (smgt->alloc_from_sys_sc_cnt +
+			smgt->one_page_cnt) << PAGE_SHIFT);
+}
+
 static inline int codec_mm_scatter_align_count(int start_id)
 {
 	int tail_pages_start = start_id;
@@ -629,6 +636,7 @@ static int codec_mm_scatter_cache_page_free(struct codec_mm_scatter_mgt *smgt,
 	codec_mm_queue_tail_unlock(cache->queue);
 
 	codec_mm_list_lock(smgt);
+	trace_scatter_counter(smgt);
 	smgt->alloced_page_num -= real_free;
 	smgt->cached_pages -= real_free;
 	ATRACE_COUNTER("mmu cache size", smgt->cached_pages);
@@ -837,6 +845,7 @@ static int codec_mm_set_slot_in_hash(struct codec_mm_scatter_mgt *smgt,
 	smgt->slot_cnt++;
 	if (slot->from_type == SLOT_FROM_GET_FREE_PAGES) {
 		smgt->alloc_from_sys_sc_cnt++;
+		trace_scatter_counter(smgt);
 		smgt->alloc_from_sys_page_cnt += slot->page_num;
 		if (smgt->alloc_from_sys_page_cnt >
 			smgt->alloc_from_sys_max_page_cnt)
@@ -922,6 +931,7 @@ static int codec_mm_slot_free(struct codec_mm_scatter_mgt *smgt,
 	if (slot->from_type == SLOT_FROM_GET_FREE_PAGES) {
 		smgt->alloc_from_sys_sc_cnt--;
 		smgt->alloc_from_sys_page_cnt -= slot->page_num;
+		trace_scatter_counter(smgt);
 	}
 	codec_mm_list_unlock(smgt);
 	switch (slot->from_type) {
@@ -1419,6 +1429,7 @@ static int codec_mm_page_alloc_from_one_pages(struct codec_mm_scatter_mgt *smgt,
 	codec_mm_list_lock(smgt);
 	smgt->total_page_num += alloced;
 	smgt->one_page_cnt += alloced;
+	trace_scatter_counter(smgt);
 	smgt->alloced_page_num += alloced;
 	codec_mm_list_unlock(smgt);
 
@@ -1818,6 +1829,7 @@ static int codec_mm_scatter_free_pages_in_locked(struct codec_mm_scatter *mms,
 		mms->pages_list[i] = (phy_addr_type)0;
 	}
 	codec_mm_list_lock(smgt);
+	trace_scatter_counter(smgt);
 	smgt->alloced_page_num -= free_num;
 	codec_mm_list_unlock(smgt);
 	return 0;
@@ -3335,6 +3347,7 @@ int codec_mm_scatter_mgt_delay_free_switch(int on, int delay_ms,
 
 	smgt = codec_mm_get_scatter_mgt(is_tvp);
 	codec_mm_list_lock(smgt);
+	trace_scatter_counter(smgt);
 	if (on) {
 		smgt->delay_free_on++;
 		smgt->delay_free_timeout_jiffies64 =
