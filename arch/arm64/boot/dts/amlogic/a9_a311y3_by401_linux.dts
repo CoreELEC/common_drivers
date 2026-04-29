@@ -207,7 +207,7 @@
 		secure_vdec_reserved:linux,secure_vdec_reserved {
 			compatible = "amlogic, secure-vdec-reserved";
 			no-map;
-			size = <0x0 0x1000000>;
+			size = <0x0 0x1800000>;
 			alignment = <0x0 0x100000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
@@ -268,7 +268,7 @@
 		isp_reserved:linux,isp {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x20000000>;
+			size = <0x0 0xa000000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
@@ -278,15 +278,8 @@
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
 		aml-audio-card,name = "AML-AUGESOUND";
-
-	//	avout_mute-gpios = <&gpio GPIOD_6 GPIO_ACTIVE_HIGH>;
-	//	av_mute_sleep_time = <600>;
-		/* spk_mute-gpios = <&gpio GPIOD_9 GPIO_ACTIVE_LOW>;*/
-	//	spk_mute_sleep_time = <800>;
-
 		/* headphone insert det */
-	//	hp-det-gpios = <&gpio_analog CDAC_IOUT GPIO_ACTIVE_HIGH>;
-
+		hp-det-gpios = <&gpio_ao GPIOD_10 GPIO_ACTIVE_HIGH>;
 	//	interrupts = <GIC_SPI 149 IRQ_TYPE_EDGE_RISING>;
 	//	interrupt-names = "audio_exception64";
 
@@ -345,7 +338,7 @@
 			};
 			tdmbcodec: codec {
 				prefix-names = "AMP", "AMP1";
-				sound-dai = <&ad82120b_68 &ad82120b_6c &dummy_codec>;
+				sound-dai = <&ad82120b_68 &ad82120b_6c &es8939_10 &dummy_codec>;
 			};
 		};
 
@@ -508,7 +501,7 @@
 	dvb-demux {
 		compatible = "amlogic sc2, dvb-demux";
 		dev_name = "dvb-demux";
-		status = "disabled";
+		status = "okay";
 
 		reg = <0x0 0xfe000000 0x0 0x480000>;
 
@@ -630,135 +623,245 @@
 		spectrum = <1>;
 		cma_mem_size = <0>; //MB
 	};
+
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "disabled";
-		key_name = "vol-", "vol+", "power";
-		key_num = <3>;
-		io-channels = <&saradc 3>;
-		io-channel-names = "key-chan-3";
-		key_chan = <SARADC_CH3 SARADC_CH3 SARADC_CH3>;
-		key_code = <KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_POWER>;
-		key_val = <1600 1050 50>;	/* Unit: millivolt */
-		key_tolerance = <70 70 70>;	/* Unit: millivolt */
+		status = "okay";
+		key_name = "update", "vol-", "vol+", "ok";
+		key_num = <4>;
+		io-channels = <&saradc SARADC_CH2>;
+		io-channel-names = "key-chan-2";
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2 SARADC_CH2>;
+		key_code = <KEY_SETUP KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_ENTER>;
+		key_val = <0 252 468 684>;	// Unit: millivolt
+		key_tolerance = <70 70 70 70>;	// Unit: millivolt
 	};
 
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
-		status = "disabled";
+		status = "okay";
 		scan_period = <20>;
-		key_num = <2>;
-		key_name = "bluetooth", "mute";
-		key_code = <600 SW_MUTE_DEVICE>;
-		key_type = <EV_KEY EV_SW>;
-		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
-			     &gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		key_num = <1>;
+		key_name = "power";
+		key_code = <KEY_POWER>;
+		key_type = <EV_KEY>;
+		key-gpios = <&gpio_ao GPIOD_3 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
 	};
 
-	vin_12v_reg: fixed@vin_12v_reg {
+	vin_12v_standby_reg: fixed@vin_12v_reg {
 		compatible = "regulator-fixed";
-		regulator-name = "DC_IN";
+		regulator-name = "VMIN_12V_STANDBY";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vddao_5v_reg: fixed@vddao_5v_reg {
-		vin-supply = <&vin_12v_reg>;
-		compatible = "regulator-fixed";
-		regulator-name = "VDDAO_5V";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		regulator-boot-on;
-		regulator-always-on;
-	};
-
 	vdd3v3_ao_reg: fixed@vdd3v3_ao_reg {
-		vin-supply = <&vin_12v_reg>;
+		vin-supply = <&vin_12v_standby_reg>;
 		compatible = "regulator-fixed";
-		regulator-name = "VDDAO_3.3V";
+		regulator-name = "VDDAO_3V3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vdd1v8_dcdc_reg: fixed@vdd1v8_dcdc_reg {
+	vdd1v8_ao_reg: fixed@vdd1v8_ao_reg {
+		vin-supply = <&vin_12v_standby_reg>;
 		compatible = "regulator-fixed";
-		vin-supply = <&vin_12v_reg>;
-		regulator-name = "VDD1V8_DCDC";
+		regulator-name = "VDD1V8_AO";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vdd2h_reg: fixed@vdd2h_reg {
-		vin-supply = <&vin_12v_reg>;
+	vdd0v75_ao_reg: fixed@vdd0v75_ao_reg {
+		vin-supply = <&vdd1v8_ao_reg>;
 		compatible = "regulator-fixed";
-		regulator-name = "VDD2H";
-		regulator-min-microvolt = <1100000>;
-		regulator-max-microvolt = <1100000>;
+		regulator-name = "VDD0V75_AO";
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <750000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vddq_lpddr4x_reg: fixed@vddq_lpddr4x_reg {
+	vcc5v_ext_reg: fixed@vcc5v_ext_reg {
+		vin-supply = <&vin_12v_standby_reg>;
 		compatible = "regulator-fixed";
-		vin-supply = <&vin_12v_reg>;
-		regulator-name = "VDDQ_LPDDR4X";
-		regulator-min-microvolt = <600000>;
-		regulator-max-microvolt = <600000>;
-		regulator-boot-on;
-		regulator-always-on;
-	};
-
-	vcc5v_reg: fixed@vcc5v_reg {
-		vin-supply = <&vddao_5v_reg>;
-		compatible = "regulator-fixed";
-		regulator-name = "VCC5V";
+		regulator-name = "VCC5V_EXT";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		// GPIOH_7(Down) Output H/L= Enable/Disable VCC5V
-		gpio = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vcc3v3_reg: fixed@vcc3v3_reg {
+	vdd_3v3_reg: fixed@vdd_3v3_reg {
 		vin-supply = <&vdd3v3_ao_reg>;
 		compatible = "regulator-fixed";
-		regulator-name = "VCC3V3";
+		regulator-name = "VDD_3V3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		// GPIOF_2(Down) Output L/H= Enable/Disable VCC3V3
-		// TODO: must check! // gpio = <&gpio GPIOF_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vdd3v3_soc_reg: fixed@vdd3v3_soc_reg {
+	avdd1v8_reg: fixed@avdd1v8_reg {
 		vin-supply = <&vdd3v3_ao_reg>;
 		compatible = "regulator-fixed";
-		regulator-name = "VDDIO_SOC";
-		regulator-min-microvolt = <3100000>;
-		regulator-max-microvolt = <3100000>;
+		regulator-name = "AVDD1V8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		pinctrl-names = "default";
+		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
 
-	vdd1v8_ldo_reg: fixed@vdd1v8_ldo_reg {
+	vdd1v8_reg: fixed@vdd1v8_reg {
+		vin-supply = <&vdd1v8_ao_reg>;
 		compatible = "regulator-fixed";
+		regulator-name = "VDD1V8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		pinctrl-names = "default";
+		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd3v3_m2_reg: fixed@vdd3v3_m2_reg {
+		vin-supply = <&vin_12v_standby_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDD3V3_M2";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		pinctrl-names = "default";
+		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddio_3v3_reg: fixed@vddio_3v3_reg {
 		vin-supply = <&vdd3v3_ao_reg>;
-		regulator-name = "VDD1V8_LDO";
+		compatible = "regulator-fixed";
+		regulator-name = "VDDIO_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		pinctrl-names = "default";
+		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddio_1v8_reg: fixed@vddio_1v8_reg {
+		vin-supply = <&vdd1v8_ao_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDDIO_1V8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		pinctrl-names = "default";
+		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd_12v_etx_reg: fixed@vdd_12v_etx_reg {
+		vin-supply = <&vin_12v_standby_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_12V_ETX";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	sdcard_3v3_reg: sdcard_3v3_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "SDCARD_3V3";
+		vin-supply = <&vdd_3v3_reg>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio GPIOA_16 GPIO_ACTIVE_LOW>;	//Default DWN
+		enable-active-low;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+	};
+
+	vddio_c_p_reg: vddio_c_p_reg {
+		compatible = "regulator-gpio";
+		vin-supply = <&vdd3v3_ao_reg>;
+		regulator-name = "VDDIO_C_P";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_ao GPIOD_12 GPIO_ACTIVE_LOW>;	//L=3.3V H=1.8V
+		gpios-states = <1>;
+		states = <1800000 1 3300000 0>;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+	};
+
+	vdd2h_p_reg: fixed@vdd2h_p_reg {
+		vin-supply = <&vin_12v_standby_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDD2H_P";
+		regulator-min-microvolt = <1050000>;
+		regulator-max-microvolt = <1050000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddq_reg: fixed@vddq_reg {
+		vin-supply = <&vin_12v_standby_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "VDDQ";
+		regulator-min-microvolt = <500000>;
+		regulator-max-microvolt = <500000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	panel_12v_reg: fixed@panel_12v_reg {
+		vin-supply = <&vin_12v_standby_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "PANEL_12V";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	wifi_vddio_reg: fixed@wifi_vddio_reg {
+		vin-supply = <&vdd1v8_reg>;
+		compatible = "regulator-fixed";
+		regulator-name = "WIFI_VDDIO";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		regulator-boot-on;
@@ -783,6 +886,12 @@
 		#sound-dai-cells = <0>;
 		//reset_pin-gpios = <&gpio GPIOA_12 GPIO_ACTIVE_HIGH>;
 		reg = <0x6c>;
+		status = "okay";
+	};
+	es8939_10: es8939@10 {
+		compatible = "everest,es8389";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
 		status = "okay";
 	};
 };
@@ -1027,10 +1136,6 @@
 	status = "okay";
 };
 
-&vddcpu0_board2 {
-	status = "disabled";
-};
-
 &CPU0 {
 	operating-points-v2 = <&cpu_opp_table0>,
 						<&cpu_opp_table1_2400>,
@@ -1099,16 +1204,16 @@
 &usbphyc {
 	status = "okay";
 	u2p@fe4ac000 {
-		gpio-vbus-power = "GPIOA_19";
-		gpios = <&gpio GPIOA_19 GPIO_ACTIVE_HIGH>;
+		gpio-vbus-power = "GPIOD_17";
+		gpios = <&gpio_ao GPIOD_17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 	};
 };
 
 &usbphyd {
 	status = "okay";
 	u2p@fe4a4000 {
-		gpio-vbus-power = "GPIOD_12";
-		gpios = <&gpio GPIOD_12 GPIO_ACTIVE_HIGH>;
+		gpio-vbus-power = "GPIOA_19";
+		gpios = <&gpio GPIOA_19 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -1138,7 +1243,16 @@
 };
 
 &pcie_a {
-	/* reset-gpio = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>; */
+	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	max-link-speed=<3>;
+	num-lanes = <1>;
+	/* iommu-map = <0x100 &smmu 0x5 0x10>; */
+	status = "disabled";
+};
+
+&pcie_b {
+	/* reset-gpio = <&gpio GPIOA_9 GPIO_ACTIVE_HIGH>; */
+	reset-gpio = <&gpio GPIOZ_15 GPIO_ACTIVE_HIGH>; // combphy
 	max-link-speed=<3>;
 	/* iommu-map = <0x100 &smmu 0x5 0x10>; */
 	status = "disabled";
@@ -1219,8 +1333,8 @@
 
 	bus-width = <8>;
 	cap-mmc-highspeed;
-//	mmc-ddr-1_8v;
-//	mmc-hs200-1_8v;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
 //	mmc-hs400-1_8v;
 	max-frequency = <200000000>;
 	non-removable;
@@ -1325,7 +1439,7 @@
 };
 
 &saradc {
-	status = "disabled";
+	status = "okay";
 };
 
 /* MAC_A 1G exphy setting */
@@ -1602,11 +1716,19 @@
 };
 
 &tdmb {
+	clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&hifi_pll
+				&hifi1_pll
+				&clkaudio CLKID_AUDIO_MCLK_PAD1>;
+	clock-names = "mclk", "clk_srcpll", "clk_src_cd", "mclk_pad";
 	pinctrl-names = "tdm_pins","tdm_gpio";
 	pinctrl-0 = <
+			&mclk_1_pad
 			&tdmb_pin
 			&tdm_d2_pins
 			&tdm_d3_pins
+			&tdm_d5_pins
+			&tdm_d6_pins
 			&tdmb_clk_pins>;
 	pinctrl-1 = <&tdmout_b_gpio>;
 };
@@ -1618,8 +1740,8 @@
 
 &spdifa {
 
-		//pinctrl-names = "spdif_pins",
-		//	"spdif_pins_mute";
-		//pinctrl-0 = <&spdifout_a>;
-		//pinctrl-1 = <&spdifout_a_mute>;
+		pinctrl-names = "spdif_pins",
+			"spdif_pins_mute";
+		pinctrl-0 = <&spdifout_a>;
+		pinctrl-1 = <&spdifout_a_mute>;
 };
