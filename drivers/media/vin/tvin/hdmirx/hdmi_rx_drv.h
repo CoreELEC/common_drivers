@@ -1159,6 +1159,7 @@ struct rx_s {
 	bool need_add_one;
 	bool game_mode;
 	bool irq_all_en;
+	bool is_cta_signal;
 };
 
 struct reg_map {

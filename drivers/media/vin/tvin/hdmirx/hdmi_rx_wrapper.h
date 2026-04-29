@@ -91,7 +91,8 @@
 /* 2026.03.16 add dsc check for mac */
 /* 2026.03.23 add scdc frl rate monitor */
 /* 2026.04.07 fix pip port color unnormal */
-#define RX_WRAPPER_VER "ver.2026/04/07"
+/* 2026.05.06 Remove unnecessary mute when no AVI */
+#define RX_WRAPPER_VER "ver.2026/05/06"
 
 struct freq_ref_s {
 	bool interlace;

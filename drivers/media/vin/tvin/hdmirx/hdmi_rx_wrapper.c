@@ -1140,6 +1140,7 @@ static int rx_cor_irq_handler(u8 port)
 		}
 		if (rx_get_bits(intr_2, INTR2_BIT0_AVI)) {
 			rx[port].irq_flag |= IRQ_AVI_CHG_FLAG;
+			rx[port].is_cta_signal = true;
 			rx[port].game_mode =
 				tvin_get_game_mode_status(rx_get_port_type(port));
 		}
@@ -1301,7 +1302,8 @@ reisr:hdmirx_top_intr_stat = hdmirx_rd_top(TOP_INTR_STAT, port);
 					rx[port].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
 					rx[port].irq_flag &= ~IRQ_AVI_CHG_FLAG;
 				}
-				if (rx[port].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+				if (rx[port].is_cta_signal &&
+					rx[port].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
 					if (video_mute_enabled(port)) {
 						hdmirx_mute_vpp_pkt(true, port);
 						rx[port].vpp_mute_cnt = vpp_mute_cnt;
@@ -1487,7 +1489,8 @@ irqreturn_t irq1_handler(int irq, void *params)
 				rx[E_PORT1].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
 				rx[E_PORT1].irq_flag &= ~IRQ_AVI_CHG_FLAG;
 			}
-			if (rx[E_PORT1].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+			if (rx[E_PORT1].is_cta_signal &&
+					rx[E_PORT1].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
 				if (video_mute_enabled(E_PORT1)) {
 					hdmirx_mute_vpp_pkt(true, E_PORT1);
 					rx[E_PORT1].vpp_mute_cnt = vpp_mute_cnt;
@@ -1664,7 +1667,8 @@ irqreturn_t irq2_handler(int irq, void *params)
 				rx[E_PORT2].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
 				rx[E_PORT2].irq_flag &= ~IRQ_AVI_CHG_FLAG;
 			}
-			if (rx[E_PORT2].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+			if (rx[E_PORT2].is_cta_signal &&
+					rx[E_PORT2].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
 				if (video_mute_enabled(E_PORT2)) {
 					hdmirx_mute_vpp_pkt(true, E_PORT2);
 					rx[E_PORT2].vpp_mute_cnt = vpp_mute_cnt;
@@ -1885,7 +1889,8 @@ irqreturn_t irq3_handler(int irq, void *params)
 				rx[E_PORT3].avi_pkt_st = HDMIRX_PACKET_STATUS_UPDATED;
 				rx[E_PORT3].irq_flag &= ~IRQ_AVI_CHG_FLAG;
 			}
-			if (rx[E_PORT3].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
+			if (rx[E_PORT3].is_cta_signal &&
+					rx[E_PORT3].avi_pkt_st == HDMIRX_PACKET_STATUS_STOPPED) {
 				if (video_mute_enabled(E_PORT3)) {
 					hdmirx_mute_vpp_pkt(true, E_PORT3);
 					rx[E_PORT3].vpp_mute_cnt = vpp_mute_cnt;
@@ -5155,6 +5160,7 @@ void rx_main_state_machine(void)
 		rx_get_video_info(port);
 		if (rx_is_timing_stable(port)) {
 			if (++rx[port].var.sig_stable_cnt >= sig_stable_max) {
+				rx[port].is_cta_signal = false;
 				rx_emp_hw_enable(true);
 				rx_irq_en(IRQ_EN_ALL, port);
 				get_timing_fmt(port);
@@ -5640,6 +5646,7 @@ void rx_port0_main_state_machine(void)
 					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					rx[port].min_time_detect_done)
 					break;
+				rx[port].is_cta_signal = false;
 				if (port == rx_info.main_port) {
 					rx_emp_hw_enable(true);
 					rx_irq_en(IRQ_EN_ALL, port);
@@ -6100,6 +6107,7 @@ void rx_port1_main_state_machine(void)
 					(port != rx_info.main_port || !rx_info.main_port_open) &&
 					rx[port].min_time_detect_done)
 					break;
+				rx[port].is_cta_signal = false;
 				if (port == rx_info.main_port) {
 					rx_emp_hw_enable(true);
 					rx_irq_en(IRQ_EN_ALL, port);
@@ -6685,6 +6693,7 @@ void rx_port2_main_state_machine(void)
 					rx[port].min_time_detect_done)
 					break;
 				get_timing_fmt(port);
+				rx[port].is_cta_signal = false;
 				if (port == rx_info.main_port) {
 					rx_emp_hw_enable(true);
 					rx_irq_en(IRQ_EN_ALL, port);
@@ -7381,6 +7390,7 @@ void rx_port3_main_state_machine(void)
 					rx[port].min_time_detect_done)
 					break;
 				get_timing_fmt(port);
+				rx[port].is_cta_signal = false;
 				if (port == rx_info.main_port) {
 					rx_emp_hw_enable(true);
 					rx_irq_en(IRQ_EN_ALL, port);
