@@ -3106,14 +3106,12 @@ static int dvel_receiver_event_fun(int type, void *data, void *arg)
 		pr_dv_dbg("receiver: provider %s type %d\n", provider_name, type);
 
 	if (type == VFRAME_EVENT_PROVIDER_UNREG) {
-		if (!multi_dv_mode)/*dvel is not used for multi-mode*/
-			dv_vf_light_unreg_provider();
+		dv_vf_light_unreg_provider();
 		return -1;
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
 		return RECEIVER_ACTIVE;
 	} else if (type == VFRAME_EVENT_PROVIDER_REG) {
-		if (!multi_dv_mode)/*dvel is not used for multi-mode*/
-			dv_vf_light_reg_provider();
+		dv_vf_light_reg_provider();
 	}
 	return 0;
 }
