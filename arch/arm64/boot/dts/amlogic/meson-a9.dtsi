@@ -1659,7 +1659,7 @@
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
 				reg = <0xfe488000 0x100
 						0xfe002000 0x100
-						0xfe000330 0x4
+						0xfe010330 0x4
 						0xfe48e000 0x64>;
 				reset-level = <0x40>;
 				phy-reset-level-bits = <4>;
@@ -1753,7 +1753,7 @@
 			snps,incr-burst-type-adjustment = <4>;
 			usb-role-switch;
 //			def-drd-controller;
-//			trim-reg = <0xfe000330>;
+//			trim-reg = <0xfe010330>;
 //			drd-index = <0x0>;
 		};
 
@@ -1769,7 +1769,7 @@
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
 				reg = <0xfe4cc000 0x100
 						0xfe002000 0x100
-						0xfe000330 0x4
+						0xfe010330 0x4
 						0xfe4ce000 0x64>;
 				reset-level = <0x4c>;
 				phy-reset-level-bits = <30>;
@@ -1871,7 +1871,7 @@
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
 				reg = <0xfe4ac000 0x100
 						0xfe002000 0x100
-						0xfe000330 0x4
+						0xfe010330 0x4
 						0xfe4ae000 0x64>;
 				reset-level = <0x48>;
 				phy-reset-level-bits = <11>;
@@ -1947,7 +1947,7 @@
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
 				reg = <0xfe4a4000 0x100
 						0xfe002000 0x100
-						0xfe000330 0x4
+						0xfe010330 0x4
 						0xfe4a6000 0x64>;
 				reset-level = <0x40>;
 				phy-reset-level-bits = <75>;
@@ -2005,7 +2005,7 @@
 			tx-fifo-resize;
 			tx-fifo-max-num = <3>;
 			snps,incr-burst-type-adjustment = <4>;
-//			trim-reg = <0xfe000330>;
+//			trim-reg = <0xfe010330>;
 //			drd-index = <0x1>;
 		};
 

@@ -891,6 +891,59 @@
 		reg = <0x6c>;
 		status = "okay";
 	};
+	usbc0: aw35615@22 {
+		compatible = "awinic,aw35615";
+		reg = <0x22>;
+		awinic,int_n = <&gpio_ao GPIOD_15 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpio GPIOA_17 GPIO_ACTIVE_HIGH>;
+		aw35615,port_id = <0>;
+		aw35615,vbus_name = "otg-vbus"; /*otg vbus regulator name*/
+		aw35615,snk_pdo_size = <1>; /* set sink pdo num*/
+		aw35615,snk_pdo_vol = <5000>; /* set sink pdo voltage mV*/
+		aw35615,snk_pdo_cur = <2000>; /* set sink pdo current mA*/
+		aw35615,snk_pps_size = <0>; /* set sink pps num*/
+		aw35615,snk_pps_vol = <0>; /* set sink pps voltage mV*/
+		aw35615,snk_pps_cur = <0>; /* set sink pps current mA*/
+		aw35615,src_pdo_size = <1>; /* set source pdo num*/
+		aw35615,src_pdo_vol = <5000>; /* set source pdo voltage mV*/
+		aw35615,src_pdo_cur = <1000>; /* set source pdo current mA*/
+		aw35615,src_pps_size = <0>; /* set sink pps num*/
+		aw35615,src_pps_vol = <0>; /* set sink pps voltage mV*/
+		aw35615,src_pps_cur = <0>; /* set sink pps current mA*/
+		aw35615,snk_tog_time = <0x36>; /* set toggle sink time */
+		aw35615,src_tog_time = <0x36>; /* set toggle source time */
+		aw35615,cc1_ov_th = <0x7>; /* set cc1 ov threshold */
+		aw35615,cc2_ov_th = <0x7>; /* set cc2 ov threshold */
+		aw35615,lpd_tim_set = <0x4>; /* set the LPD sensitivity */
+		status = "okay";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				data-role = "dual";
+				power-role = "dual";
+				try-power-role = "sink";
+
+				port@0 {
+					reg = <0>;
+					usbc0_mux: endpoint {
+						remote-endpoint = <&usbdp_phy0_mux>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+
+					usbc0_role_sw: endpoint {
+						remote-endpoint = <&usb3_0_role_switch>;
+					};
+				};
+			};
+		};
+	};
 };
 
 &i2c4 {
@@ -958,67 +1011,6 @@
 			r_io_number = <1>;
 			g_io_number = <13>;
 			b_io_number = <6>;
-		};
-	};
-};
-
-&i2c3 {
-	status = "okay";
-	pinctrl-names="default";
-	pinctrl-0=<&i2c3_pins4>;
-	clock-frequency = <400000>;
-
-	usbc0: aw35615@22 {
-		compatible = "awinic,aw35615";
-		reg = <0x22>;
-		awinic,int_n = <&gpio_ao GPIOD_15 GPIO_ACTIVE_HIGH>;
-		gpios = <&gpio GPIOA_17 GPIO_ACTIVE_HIGH>;
-		aw35615,port_id = <0>;
-		aw35615,vbus_name = "otg-vbus"; /*otg vbus regulator name*/
-		aw35615,snk_pdo_size = <1>; /* set sink pdo num*/
-		aw35615,snk_pdo_vol = <5000>; /* set sink pdo voltage mV*/
-		aw35615,snk_pdo_cur = <2000>; /* set sink pdo current mA*/
-		aw35615,snk_pps_size = <0>; /* set sink pps num*/
-		aw35615,snk_pps_vol = <0>; /* set sink pps voltage mV*/
-		aw35615,snk_pps_cur = <0>; /* set sink pps current mA*/
-		aw35615,src_pdo_size = <1>; /* set source pdo num*/
-		aw35615,src_pdo_vol = <5000>; /* set source pdo voltage mV*/
-		aw35615,src_pdo_cur = <1000>; /* set source pdo current mA*/
-		aw35615,src_pps_size = <0>; /* set sink pps num*/
-		aw35615,src_pps_vol = <0>; /* set sink pps voltage mV*/
-		aw35615,src_pps_cur = <0>; /* set sink pps current mA*/
-		aw35615,snk_tog_time = <0x36>; /* set toggle sink time */
-		aw35615,src_tog_time = <0x36>; /* set toggle source time */
-		aw35615,cc1_ov_th = <0x7>; /* set cc1 ov threshold */
-		aw35615,cc2_ov_th = <0x7>; /* set cc2 ov threshold */
-		aw35615,lpd_tim_set = <0x4>; /* set the LPD sensitivity */
-		status = "okay";
-
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				data-role = "dual";
-				power-role = "dual";
-				try-power-role = "sink";
-
-				port@0 {
-					reg = <0>;
-					usbc0_mux: endpoint {
-						remote-endpoint = <&usbdp_phy0_mux>;
-					};
-				};
-
-				port@1 {
-					reg = <1>;
-
-					usbc0_role_sw: endpoint {
-						remote-endpoint = <&usb3_0_role_switch>;
-					};
-				};
-			};
 		};
 	};
 };
