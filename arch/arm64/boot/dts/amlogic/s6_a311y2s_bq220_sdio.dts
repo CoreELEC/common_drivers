@@ -13,8 +13,8 @@
 #include "mesons6_BQ20X_panel.dtsi"
 
 / {
-	amlogic-dt-id = "s6_a311y2s_bq220_sdio-8g";
-	compatible = "s6_a311y2s_bq220_sdio-8g";
+	amlogic-dt-id = "s6_a311y2s_bq220sdio-8g";
+	compatible = "s6_a311y2s_bq220sdio-8g";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;

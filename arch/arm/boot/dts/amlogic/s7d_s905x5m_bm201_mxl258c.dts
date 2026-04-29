@@ -11,8 +11,8 @@
 #include "mesons7d_audio.dtsi"
 #include "firmware_ab.dtsi"
 / {
-	amlogic-dt-id = "s7d_s905x5m_bm201_mxl258c";
-	compatible = "s7d_s905x5m_bm201_mxl258c";
+	amlogic-dt-id = "s7d_s905x5m_bm201-mxl258c";
+	compatible = "s7d_s905x5m_bm201-mxl258c";
 	interrupt-parent = <&gic>;
 	#address-cells = <1>;
 	#size-cells = <1>;
