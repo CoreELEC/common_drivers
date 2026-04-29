@@ -120,14 +120,14 @@
 		};
 		opp11 {
 			opp-hz = /bits/ 64 <2304000000>;
+			opp-microvolt = <929000>;
+			opp-microvolt-sram = <959000>;
+		};
+		opp12 {
+			opp-hz = /bits/ 64 <2400000000>;
 			opp-microvolt = <939000>;
 			opp-microvolt-sram = <969000>;
 		};
-		//opp10 {
-		//	opp-hz = /bits/ 64 <2400000000>;
-		//	opp-microvolt = <1009000>;
-		//	opp-microvolt-sram = <1009000>;
-		//};
 	};
 
 	meson-cpufreq {
