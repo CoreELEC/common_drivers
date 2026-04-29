@@ -61,6 +61,14 @@
 			no-map;
 			status = "okay";
 		};
+		skip_range_2 {
+			compatible = "skip_mem";
+			size = <0x00100000>;
+			reg = <0x07ef0000 0x110000>;
+			no-map;
+			status = "okay";
+		};
+
 
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
@@ -122,7 +130,7 @@
 
 		ramoops@8400000 {
 			compatible = "ramoops";
-			status = "okay";
+			status = "disabled";
 			reg = <0x08400000 0x00100000>;
 			record-size = <0x20000>;
 			console-size = <0x20000>;
