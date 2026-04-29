@@ -35,6 +35,7 @@ obj-$(CONFIG_AMLOGIC_PM)		+= pm/
 obj-$(CONFIG_IIO)			+= iio/
 obj-$(CONFIG_INPUT)			+= input/
 obj-$(CONFIG_WATCHDOG)			+= watchdog/
+obj-$(CONFIG_AMLOGIC_MEDIA_WRAPPER)	+= dhp/
 obj-$(CONFIG_AMLOGIC_UVM)		+= uvm/
 obj-y					+= dvb/
 obj-y					+= dvb_ci/

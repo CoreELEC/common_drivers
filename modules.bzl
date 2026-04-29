@@ -106,6 +106,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/drm:aml_drm",
 	"common_drivers/drivers/uboot_env/amlogic-env.ko",
 	"//common_drivers/drivers/uboot_env:amlogic-env",
+    "common_drivers/drivers/dhp/aml_dhp_interface.ko",
+    "//common_drivers/drivers/dhp:aml_dhp_interface",
     "common_drivers/drivers/uvm/aml_uvm.ko",
     "//common_drivers/drivers/uvm:aml_uvm",
     "common_drivers/drivers/dvb/amlogic-dvb.ko",

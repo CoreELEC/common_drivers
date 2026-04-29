@@ -31,6 +31,7 @@
 #include <linux/amlogic/media/dev_ion.h>
 #include <linux/amlogic/media/dmabuf_heaps/amlogic_dmabuf_heap.h>
 #include <linux/amlogic/media/registers/cpu_version.h>
+#include <linux/amlogic/dhp_interface.h>
 #include <linux/amlogic/meson_uvm_allocator.h>
 #include <linux/amlogic/meson_uvm_interface.h>
 
@@ -561,6 +562,8 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 	struct vframe_s *vf = NULL;
 	struct avbc_input *in;
 	struct avbc_output *out;
+	struct dhp_input *in_dhp;
+	struct dhp_output *out_dhp;
 	int ret = -1;
 	size_t buf_size = 0;
 
@@ -582,10 +585,29 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 		return -ENOMEM;
 	}
 
-	if ((vf->bitdepth & BITDEPTH_YMASK) == BITDEPTH_Y10)
+	in_dhp = kzalloc(sizeof(*in_dhp), GFP_KERNEL);
+	if (!in_dhp) {
+		kfree(in);
+		kfree(out);
+		return -ENOMEM;
+	}
+	out_dhp = kzalloc(sizeof(*out_dhp), GFP_KERNEL);
+	if (!out_dhp) {
+		kfree(in);
+		kfree(out);
+		kfree(in_dhp);
+		return -ENOMEM;
+	}
+
+	if ((vf->bitdepth & BITDEPTH_YMASK) == BITDEPTH_Y10) {
 		in->img.bitdep = 10;
-	else
+		in_dhp->img.bit_depth = 10;
+	} else {
 		in->img.bitdep = 8;
+		in_dhp->img.bit_depth = 8;
+	}
+
+	/* avbc wrapper interface config input */
 	in->img.data = vf->compHeadAddr;
 	in->img.size = get_header_size(vf->compWidth, vf->compHeight);
 	in->img.rect.x = 0;
@@ -598,6 +620,28 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 		in->img.crop.bottom = vf->src_crop.bottom;
 		in->img.crop.right = vf->src_crop.right;
 	}
+
+	/* dhp interface config input */
+	in_dhp->img.roi.x = 0;
+	in_dhp->img.roi.y = 0;
+	in_dhp->img.roi.width = vf->compWidth;
+	in_dhp->img.roi.height = vf->compHeight;
+	in_dhp->img.width = vf->compWidth;
+	in_dhp->img.height = vf->compHeight;
+	in_dhp->img.planes[0].data = vf->compHeadAddr;
+	in_dhp->img.planes[0].size = get_header_size(vf->compWidth, vf->compHeight);
+	in_dhp->img.secure = 0;
+	in_dhp->img.memory_type = DHP_MEM_PHYADDR;
+	in_dhp->img.plane_count = 1;
+	in_dhp->img.total_size = in_dhp->img.planes[0].size;
+
+	if (is_src_crop_valid(vf->src_crop)) {
+		in_dhp->img.crop.top = vf->src_crop.top;
+		in_dhp->img.crop.left = vf->src_crop.left;
+		in_dhp->img.crop.bottom = vf->src_crop.bottom;
+		in_dhp->img.crop.right = vf->src_crop.right;
+	}
+
 	MUA_PRINTK(MUA_INFO,
 		"wrapper copy: addr=0x%llx size=%u width=%u height=%u bitdepth=%u\n",
 		in->img.data, in->img.size,
@@ -614,6 +658,7 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 	dma_sync_single_for_device(uvmdev, phys_to_dma(uvmdev, buffer->realloc_paddr),
 				   buf_size * 3 / 2, DMA_BIDIRECTIONAL);
 
+	/* avbc wrapper interface config output */
 	out->img.bitdep = in->img.bitdep;
 	if (buffer->byte_stride == buffer->width && in->img.bitdep == 10) {
 		MUA_PRINTK(MUA_DBG, "memory not enough, convert 10bit to 8bit\n");
@@ -632,16 +677,49 @@ static int avbcd_uvm_fill_pattern(struct mua_buffer *buffer, struct dma_buf *dma
 	else
 		out->img.rect.width = buffer->byte_stride;
 	out->img.rect.height = ALIGN(buffer->height, buffer->align);
+
+	/* dhp interface config output */
+	out_dhp->img.bit_depth = in_dhp->img.bit_depth;
+	if (buffer->byte_stride == buffer->width && in_dhp->img.bit_depth == 10) {
+		MUA_PRINTK(MUA_DBG, "memory not enough, convert 10bit to 8bit\n");
+		out_dhp->img.bit_depth = 8;
+	}
+	out_dhp->img.format = (out_dhp->img.bit_depth == 10) ? AML_PIX_FMT_P010 :
+				((vf->type & VIDTYPE_VIU_NV12) ?
+					AML_PIX_FMT_NV12 : AML_PIX_FMT_NV21);
+	out_dhp->img.memory_type = DHP_MEM_PHYADDR;
+	out_dhp->img.planes[0].data = buffer->realloc_paddr;
+	out_dhp->img.planes[0].size = buffer->idmabuf[1]->size;
+	out_dhp->img.roi.x = 0;
+	out_dhp->img.roi.y = 0;
+	if (out_dhp->img.bit_depth == 10)
+		out_dhp->img.roi.width = buffer->byte_stride / 2;
+	else
+		out_dhp->img.roi.width = buffer->byte_stride;
+	out_dhp->img.roi.height = ALIGN(buffer->height, buffer->align);
+	out_dhp->img.width = out_dhp->img.roi.width;
+	out_dhp->img.height = out_dhp->img.roi.height;
+	out_dhp->img.secure = 0;
+	out_dhp->img.plane_count = 1;
+	out_dhp->img.total_size = out_dhp->img.planes[0].size;
 	MUA_PRINTK(MUA_INFO, "addr=0x%llx size=%u width=%u height=%u bitdepth=%u\n",
 		out->img.data, out->img.size,
 		out->img.rect.width, out->img.rect.height, out->img.bitdep);
 
-	ret = AMLOGIC_AVBC_WRAPPER_vframe_decoder(out, in, AVBC_FLAG_IO_BLOCKING);
-	if (ret < 0)
-		MUA_PRINTK(MUA_ERROR, "aml_avbc_decode() fail\n");
+	ret = AMLOGIC_DHP_PROCESS(out_dhp, in_dhp,
+		DHP_FLAG_IO_BLOCKING | DHP_FLAG_AVBCD | DHP_FLAG_FROM_KERNEL);
+	if (ret < 0) {
+		MUA_PRINTK(MUA_INFO, "AMLOGIC_DHP_PROCESS() fail\n");
+		ret = AMLOGIC_AVBC_WRAPPER_vframe_decoder(out, in, AVBC_FLAG_IO_BLOCKING);
+		if (ret < 0)
+			MUA_PRINTK(MUA_ERROR, "aml_avbc_decode() fail\n");
+	}
 
 	kfree(in);
 	kfree(out);
+	kfree(in_dhp);
+	kfree(out_dhp);
+
 	return ret;
 }
 
@@ -1513,6 +1591,8 @@ static long mua_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	unsigned int sync_size = 0;
 
 	md = file->private_data;
+	if (!md)
+		return -EINVAL;
 
 	if (_IOC_SIZE(cmd) > sizeof(data))
 		return -EINVAL;
@@ -1946,3 +2026,4 @@ module_init(mua_init);
 module_exit(mua_exit);
 MODULE_IMPORT_NS(DMA_BUF);
 MODULE_LICENSE("GPL v2");
+MODULE_SOFTDEP("pre: aml_dhp_interface");

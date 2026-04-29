@@ -6,6 +6,7 @@
 config AMLOGIC_UVM
 	tristate "UVM support"
 	default n
+	depends on AMLOGIC_MEDIA_WRAPPER
 	help
 		Select to enable AMLOGIC UVM driver
 
@@ -25,12 +26,4 @@ config AMLOGIC_UVM_CORE
 	  say y to enable Amlogic unified video memory management.
 	  The uvm core is dmabuf wrap vframe framework.
 
-#
-# media wrapper support configuration
-#
 
-config AMLOGIC_MEDIA_WRAPPER
-	tristate "MediaWrapper support"
-	default n
-	help
-		Select to enable AMLOGIC MediaWrapper

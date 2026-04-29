@@ -18,9 +18,7 @@ ddk_module(
                 "meson_uvm_interface.c",
             ],
         },
-        "CONFIG_AMLOGIC_MEDIA_WRAPPER": {
-            True: ["avbc_wrapper_interface.c"],
-        },
+
     },
     hdrs = [
     ],
@@ -34,6 +32,7 @@ ddk_module(
     kernel_build = kernel_select(),
     visibility = ["//visibility:public"],
     deps = [
+        "//common_drivers/drivers/dhp:aml_dhp_interface",
         "//common_drivers/drivers/cpu_info:amlogic-cpuinfo",
         "//common_drivers/drivers/secmon:amlogic-secmon",
         "//common_drivers/drivers/debug:amlogic-debug",

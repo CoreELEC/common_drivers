@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#
+# dhp interface configuration
+#
+
+config AMLOGIC_MEDIA_WRAPPER
+	tristate "MediaWrapper support"
+	default n
+	help
+	  Select to enable AMLOGIC MediaWrapper
