@@ -112,8 +112,6 @@ int rx22_ver;
 MODULE_PARM_DESC(rx22_ver, "\n rx22_ver\n");
 module_param(rx22_ver, int, 0664);
 
-/* test for HBR CTS, audio module can set it to force 8ch */
-int hbr_force_8ch;
 /*
  * hdcp14_key_mode:hdcp1.4 key handle method select
  * NORMAL_MODE:systemcontrol path
@@ -2157,17 +2155,17 @@ EXPORT_SYMBOL(rx_get_audio_status_1);
 
 int rx_set_audio_param(u32 param)
 {
-	if (rx_info.chip_id == CHIP_ID_NONE)
+	if (rx_info.chip_id < CHIP_ID_T7)
 		return 0;
-	if (rx_info.chip_id < CHIP_ID_T7) {
-		hbr_force_8ch = param & 1;
-	} else if (rx_info.chip_id < CHIP_ID_T3X) {
+	if (rx_info.chip_id < CHIP_ID_T3X) {
 		rx_set_aud_output_t7(param);
-	} else {
+	} else if (rx_info.chip_id == CHIP_ID_T3X || rx_info.chip_id == CHIP_ID_T6X) {
 		rx_set_aud_output_t3x(param, E_PORT0);
 		rx_set_aud_output_t3x(param, E_PORT1);
 		rx_set_aud_output_t3x(param, E_PORT2);
 		rx_set_aud_output_t3x(param, E_PORT3);
+	} else if (rx_info.chip_id == CHIP_ID_A9) {
+		rx_set_aud_output_a9(param);
 	}
 	return 1;
 }
@@ -2375,7 +2373,6 @@ u32 hdmirx_audio_fifo_rst(u8 port)
 	case CHIP_ID_TXHD2:
 	case CHIP_ID_T6D:
 	case CHIP_ID_T6W:
-	case CHIP_ID_A9:
 		if (rx_info.chip_id != CHIP_ID_A9) {
 			hdmirx_wr_bits_cor(RX_PWD_SRST_PWD_IVCRX, _BIT(1), 1, port);
 			udelay(1);
@@ -2386,6 +2383,7 @@ u32 hdmirx_audio_fifo_rst(u8 port)
 		hdmirx_wr_cor(RX_AUDIO_FIFO_RST, 0x0, port);
 		break;
 	case CHIP_ID_T6X:
+	case CHIP_ID_A9:
 		if (!rx_info.aud_sck_clk) {
 			hdmirx_wr_cor(HDMIRX_FSW_SRST, 0x14, port);
 			udelay(1);
@@ -2883,6 +2881,14 @@ void top_common_init(void)
 		hdmirx_edid_intr_cfg();
 	if (rx_info.chip_id < CHIP_ID_T3X)
 		return;
+	data32	= 0;
+	data32 |= 1 << 5;
+	data32 |= 1 << 4;
+	data32 |= 7 << 0;
+	hdmirx_wr_top_common(TOP_ACR_CNTL2_T3X, data32);
+	if (rx_info.chip_id == CHIP_ID_T3X)
+		/* sub port */
+		hdmirx_wr_top_common_1(TOP_ACR_CNTL2_T3X, data32);
 	if (rx_info.chip_id == CHIP_ID_A9)
 		return;
 	for (i = 0; i < 4; i++) {
@@ -2911,15 +2917,6 @@ void top_config(u8 port)
 		/* Enable channel output */
 		data32 = hdmirx_rd_top(TOP_CHAN_SWITCH_0, port);
 		hdmirx_wr_top(TOP_CHAN_SWITCH_0, data32 | (1 << 0), port);
-		if (rx_info.chip_id >= CHIP_ID_T3X) {
-			data32	= 0;
-			data32 |= 1 << 4;
-			data32 |= 7 << 0;
-			hdmirx_wr_top(TOP_ACR_CNTL2_T3X, data32, port);// to do
-		}
-		/* bit'15 hbr_spdif_en: 1-spdif, 0- hbr */
-		if (rx_info.chip_id >= CHIP_ID_T7)
-			hdmirx_wr_bits_top(TOP_CLK_CNTL, _BIT(15), 0, port);
 	}
 }
 
@@ -2951,6 +2948,13 @@ static int top_init(u8 port)
 		hdmirx_wr_top(TOP_TL1_ACR_CNTL2, data32, port);// to do
 	else
 		hdmirx_wr_top(TOP_ACR_CNTL2, data32, port);//change
+	if (rx_info.chip_id <= CHIP_ID_T6W) {
+		data32 = hdmirx_rd_top(TOP_CLK_CNTL, port);
+		if (rx_info.chip_id >= CHIP_ID_T7)
+			data32 &= (~(1 << 15));/* bit'15 hbr_spdif_en: 1-spdif, 0- i2s */
+		data32 |= (1 << 4);/* force_pll4x */
+		hdmirx_wr_top(TOP_CLK_CNTL, data32, port);
+	}
 	if (rx_info.chip_id >= CHIP_ID_TL1) {
 		/* Configure channel switch */
 		data32  = 0;
@@ -4843,7 +4847,7 @@ void cor_init(u8 port)
 	hdmirx_wr_cor(RX_SW_HDMI_MODE_PWD_IVCRX, 0x04, port);//register address: 0x1022
 
 	//[0] reg_ext_mclk_en; 1 select external mclk; 0: select internal dacr mclk
-	if (rx_info.chip_id == CHIP_ID_T6X) {
+	if (rx_info.chip_id >= CHIP_ID_T6X) {
 		hdmirx_wr_cor(EXT_MCLK_SEL_PWD_IVCRX_T6X, 0x01, port);//register address: 0x1701
 		/* dacr reset */
 		data8 = 0;
@@ -4960,7 +4964,7 @@ void cor_init(u8 port)
 	data8 = 0;
 	data8 |= (0 << 7);//[7] enable overwrite length ralated cbit
 	data8 |= (0 << 6);//[6] enable sine wave
-	data8 |= (1 << 5);//[5] enable hardware mute
+	data8 |= (0 << 5);//[5] enable hardware mute
 	data8 |= (1 << 4);//[4] pass spdif error
 	data8 |= (1 << 3);//[3] pass aud error
 	data8 |= (1 << 2);//[2] reg_i2s_mode
@@ -4977,8 +4981,8 @@ void cor_init(u8 port)
 	data8 |= (1 << 6);//aac exp sel
 	data8 |= (0 << 5);//[5] reg_aac_out_off_en
 	data8 |= (0 << 2);//[2] reserved
-	data8 |= (1 << 1);//[1] aac hw auto unmute enable
-	data8 |= (1 << 0);//[0] aac hw auto mute enable
+	data8 |= (0 << 1);//[1] aac hw auto unmute enable
+	data8 |= (0 << 0);//[0] aac hw auto mute enable
 	hdmirx_wr_cor(AEC0_CTRL_AUD_IVCRX, data8, port); //AEC0 CTRL
 
 	data8 = 0;
@@ -5245,11 +5249,11 @@ bool is_aud_fifo_error(void)
 	case CHIP_ID_TXHD2:
 	case CHIP_ID_T6D:
 	case CHIP_ID_T6W:
-	case CHIP_ID_A9:
 		if (hdmirx_rd_bits_cor(RX_PWD_SRST_PWD_IVCRX, _BIT(1), rx_info.main_port))
 			ret = true;
 		break;
 	case CHIP_ID_T6X:
+	case CHIP_ID_A9:
 		if (hdmirx_rd_bits_cor(HDMIRX_FSW_SRST, _BIT(1), rx_info.main_port))
 			ret = true;
 		break;
@@ -5332,7 +5336,7 @@ void rx_internal_dacr_mclk_en(bool en, u8 port)
 {
 	if (rx_info.chip_id <= CHIP_ID_T5D)
 		return;
-	if (rx_info.chip_id == CHIP_ID_T6X)
+	if (rx_info.chip_id >= CHIP_ID_T6X)
 		hdmirx_wr_bits_cor(EXT_MCLK_SEL_PWD_IVCRX_T6X, EXT_MCLK_SEL,
 			!en, port);
 	else

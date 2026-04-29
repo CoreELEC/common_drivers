@@ -3451,7 +3451,6 @@ extern int eq_try_cnt;
 extern int pll_rst_max;
 extern int cdr_lock_level;
 extern int top_intr_maskn_value;
-extern int hbr_force_8ch;
 extern bool term_cal_en;
 extern int clock_lock_th;
 extern int scdc_force_en;

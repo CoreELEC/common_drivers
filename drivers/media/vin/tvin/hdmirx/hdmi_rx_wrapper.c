@@ -430,7 +430,6 @@ void hdmirx_fsm_var_init(void)
 	case CHIP_ID_T6D:
 	case CHIP_ID_T6W:
 	case CHIP_ID_A9:
-		hbr_force_8ch = 1; //use it to enable hdr2spdif
 		sig_stable_err_max = 5;
 		sig_stable_max = 4;
 		dwc_rst_wait_cnt_max = 30;
@@ -458,7 +457,6 @@ void hdmirx_fsm_var_init(void)
 		fps_unready_max = 3;
 		break;
 	case CHIP_ID_T3X:
-		hbr_force_8ch = 1; //use it to enable hdr2spdif
 		sig_stable_err_max = 5;
 		sig_stable_max = 20;
 		fps_unready_max = 3;
@@ -487,7 +485,6 @@ void hdmirx_fsm_var_init(void)
 		detect_time_min = 20;
 		break;
 	case CHIP_ID_T6X:
-		hbr_force_8ch = 1; //use it to enable hdr2spdif
 		sig_stable_err_max = 5;
 		sig_stable_max = 4;
 		sig_unnormal_max = 90;
@@ -519,7 +516,6 @@ void hdmirx_fsm_var_init(void)
 	case CHIP_ID_T3:
 	case CHIP_ID_T5W:
 	default:
-		hbr_force_8ch = 1; //use it to enable hdr2spdif
 		sig_stable_err_max = 5;
 		sig_stable_max = 4;
 		dwc_rst_wait_cnt_max = 5; //for repeater
@@ -3495,7 +3491,6 @@ void rx_get_global_variable(const char *buf)
 	pr_var(eq_try_cnt, i++);
 	pr_var(pll_rst_max, i++);
 	pr_var(hdcp_enc_mode, i++);
-	pr_var(hbr_force_8ch, i++);
 	pr_var(cdr_lock_level, i++);
 	pr_var(top_intr_maskn_value, i++);
 	pr_var(pll_lock_max, i++);
@@ -3874,8 +3869,6 @@ int rx_set_global_variable(const char *buf, int size)
 		return pr_var(pll_rst_max, index);
 	if (set_pr_var(tmpbuf, var_to_str(hdcp_enc_mode), &hdcp_enc_mode, value))
 		return pr_var(hdcp_enc_mode, index);
-	if (set_pr_var(tmpbuf, var_to_str(hbr_force_8ch), &hbr_force_8ch, value))
-		return pr_var(hbr_force_8ch, index);
 	if (set_pr_var(tmpbuf, var_to_str(cdr_lock_level), &cdr_lock_level, value))
 		return pr_var(cdr_lock_level, index);
 	if (set_pr_var(tmpbuf, var_to_str(top_intr_maskn_value), &top_intr_maskn_value, value))
