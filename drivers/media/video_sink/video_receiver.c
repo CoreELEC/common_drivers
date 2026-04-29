@@ -536,7 +536,7 @@ static int dolby_vision_need_wait_common(struct video_recv_s *ins)
 	struct vframe_s *vf;
 	enum vd_path_e vd_path;
 	int layer_info_id = 0;
-	int ret = 0;
+
 #ifdef AMLOGIC_MEDIA_DPSS
 	if (!is_amdv_enable() || !ins || is_amdv_dpss_path())
 #else
@@ -554,13 +554,9 @@ static int dolby_vision_need_wait_common(struct video_recv_s *ins)
 	vd_path = glayer_info[layer_info_id].display_path_id ==
 		VFM_PATH_VIDEO_RENDER0 ? VD1_PATH : VD2_PATH;
 
-	if (!vf) {
+	if (!vf || (amdv_wait_metadata(vf, vd_path) == 1))
 		return 1;
-	} else {
-		ret = amdv_wait_metadata(vf, vd_path);
-		if (ret > 0)
-			return ret;
-	}
+
 	return 0;
 }
 #endif
