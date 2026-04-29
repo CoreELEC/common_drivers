@@ -809,7 +809,7 @@
 		vin-supply = <&vdd_3v3_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio GPIOA_16 GPIO_ACTIVE_LOW>;	//Default DWN
+		gpio = <&gpio GPIOA_16 GPIO_ACTIVE_HIGH>;	//Default DWN
 		enable-active-low;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -821,8 +821,8 @@
 		regulator-name = "VDDIO_C_P";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio_ao GPIOD_12 GPIO_ACTIVE_LOW>;	//L=3.3V H=1.8V
-		gpios-states = <1>;
+		gpio = <&gpio_ao GPIOD_12 GPIO_ACTIVE_HIGH>;	//L=3.3V H=1.8V
+		gpios-states = <0>;
 		states = <1800000 1 3300000 0>;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -854,7 +854,7 @@
 		regulator-name = "PANEL_12V";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
