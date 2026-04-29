@@ -29,7 +29,9 @@
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 		spi0 = &spifc;
-		tsensor0 = &tsensor;
+		tsensor0 = &nna_tsensor;
+		tsensor1 = &isp_tsensor;
+		tsensor2 = &pll_tsensor;
 	};
 
 	chosen {
