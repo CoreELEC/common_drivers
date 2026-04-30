@@ -811,6 +811,8 @@ void dpss_frc_prob(struct dpss_dev_s *devp)
 			goto fail_attr_create;
 		}
 	}
+	// disable mc_sub_mif
+	w_reg_bit(DPSS_DPE_MC_MIF_CTRL0, 0x0, 20, 8);
 	frc_drv_initial(devp);
 	dpss_frc_sync_status(1);
 
@@ -3129,6 +3131,7 @@ void frc_unreg_hw(u32 ch)
 	}
 
 	w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1); //off frc hw
+
 	/* wait fixed vsync frames before release buf*/
 	if (vsync_us && state_st->frc_off_delay_vs_cnt) {
 		delay_us = vsync_us * state_st->frc_off_delay_vs_cnt;
@@ -3142,6 +3145,7 @@ void frc_unreg_hw(u32 ch)
 						(unsigned int)delay_us + 100);
 		}
 	}
+	w_reg_bit(DPSS_DPE_MC_MIF_CTRL0, 0x0, 20, 8);
 
 	dbg_h1("frc unreg wait_cnt:%d(%dms), wait_cnt_max:%d wait frc stop(%dms)\n",
 		wait_cnt, wait_cnt * 500 / 1000, wait_cnt_max, delay_us / 1000);
