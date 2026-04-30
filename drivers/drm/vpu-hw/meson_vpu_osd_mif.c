@@ -24,6 +24,7 @@
 #include "meson_crtc.h"
 #include "meson_vpu_reg.h"
 #include "meson_vpu_util.h"
+#include <linux/amlogic/media/rdma/reg_shadow.h>
 
 u32 frame_seq[MESON_MAX_OSDS];
 
@@ -1144,10 +1145,23 @@ void a9_osd_in_out_cfg(struct meson_vpu_block *vblk,
 		     struct osd_mif_reg_s *reg, u8 osd_index, bool flag)
 {
 		int val = flag ? 3 : 0;
+		int reg_val;
+		u32 mask, field_val;
+		struct meson_reg_shadow *ctx;
+
+		ctx = meson_reg_shadow_get();
 
 		switch (osd_index) {
 		case MESON_OSD1:
-			reg_ops->rdma_write_reg_bits(VIU_OSD1_PATH_CTRL, val, 26, 2);
+			reg_val = meson_drm_read_reg(VIU_OSD1_PATH_CTRL);
+			mask = GENMASK(27, 26);
+			field_val = (val << 26) & mask;
+			reg_val = meson_reg_shadow_update_bits(ctx,
+						VIU_OSD1_PATH_CTRL,
+						reg_val,
+						mask,
+						field_val);
+			reg_ops->rdma_write_reg(VIU_OSD1_PATH_CTRL, reg_val);
 			break;
 		case MESON_OSD2:
 			reg_ops->rdma_write_reg_bits(VIU_OSD2_PATH_CTRL, val, 26, 2);

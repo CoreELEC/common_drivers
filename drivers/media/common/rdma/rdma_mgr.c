@@ -4611,7 +4611,7 @@ static int __init rdma_probe(struct platform_device *pdev)
 		pr_info("rdma_mbuf_register failed\n");
 #endif
 	create_rdma_mgr_class();
-
+	meson_reg_shadow_init(&rdma_meson_dev);
 	rdma_init();
 	if (support_mbuf) {
 		int i, count_max;

@@ -136,4 +136,6 @@ int PRE_VSYNC_WR_MPEG_REG(u32 adr, u32 val);
 int VSYNC_WR_MPEG_REG_BITS_VPP1(u32 adr, u32 val, u32 start, u32 len);
 int VSYNC_WR_MPEG_REG_BITS_VPP2(u32 adr, u32 val, u32 start, u32 len);
 int PRE_VSYNC_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
+
+int meson_reg_shadow_init(struct rdma_device_data_s *rdma_dev);
 #endif

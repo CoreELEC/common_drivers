@@ -71,6 +71,7 @@ ddk_module(
         "CONFIG_AMLOGIC_MEDIA_RDMA": {
             True: [
                 "common/rdma/rdma_mgr.c",
+                "common/rdma/reg_shadow.c",
             ],
         },
         "CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA": {

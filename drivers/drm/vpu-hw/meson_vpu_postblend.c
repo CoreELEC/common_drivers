@@ -19,6 +19,8 @@
 #endif
 #include <linux/amlogic/media/registers/cpu_version.h>
 
+#include <linux/amlogic/media/rdma/reg_shadow.h>
+
 #include "meson_crtc.h"
 #include "meson_vpu_pipeline.h"
 #include "meson_vpu_util.h"
@@ -1812,12 +1814,15 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 	struct meson_vpu_block_state *state)
 {
 	int i;
-	u32 reg_val;
+	u32 reg_val, reg_set, reg_clr;
 	struct meson_vpu_postblend *postblend = to_postblend_block(vblk);
 	int crtc_index = vblk->index;
 	struct rdma_reg_ops *reg_ops = state->sub->reg_ops;
 	struct am_meson_crtc *amc;
 	u32 *crtcmask_osd = NULL;
+	struct meson_reg_shadow *ctx;
+
+	ctx = meson_reg_shadow_get();
 
 	if (vblk->init_done)
 		return;
@@ -1829,13 +1834,18 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 		if (crtcmask_osd[i] == crtc_index) {
 			if (i == MESON_OSD1) {
 				reg_val = meson_drm_read_reg(VIU_OSD1_PATH_CTRL);
-				reg_val = reg_val |
-						BIT(0)	| /* osd scaler before osdblend */
-						BIT(16);  /* bypass osd dolby */
-				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+
+				reg_set = BIT(0); /* osd scaler before osdblend */
+				reg_clr = (BIT(4)  | /*no bypass osdblend*/
 						BIT(12) | /* hdr after osdblend */
-						BIT(15) | /* no bypass hdr */
 						BIT(17)); /* zero-pad the lower bits */
+
+				reg_val = meson_reg_shadow_update_bits(ctx,
+						VIU_OSD1_PATH_CTRL,
+						reg_val,
+						reg_set | reg_clr,
+						reg_set);
+
 				reg_ops->rdma_write_reg(VIU_OSD1_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD2) {
 				reg_val = meson_drm_read_reg(VIU_OSD2_PATH_CTRL);
