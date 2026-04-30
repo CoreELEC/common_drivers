@@ -431,6 +431,7 @@ int hdr10_tm_dynamic_proc(struct vframe_master_display_colour_s *p)
 	};
 	int scn_chang_flag = 1;
 	struct aml_tmo_reg_sw *pre_tmo_reg;
+	int tmo_ret;
 
 	primary_maxl = p->luminance[0];
 
@@ -492,11 +493,12 @@ int hdr10_tm_dynamic_proc(struct vframe_master_display_colour_s *p)
 		dynamic_hdr_sdr_ootf(maxl, panel_luma, sx, sy, anchor);
 		memcpy(oo_y_lut_hdr_sdr, oo_gain, sizeof(u32) * OE_X);
 	} else if (hdr10_tm_sel == 2) {
-		hdr10_tmo_gen(oo_gain, tm_cgain, oo_gain1, HDR_MODE_HDR102SDR_SR_MODE, 1);
-		memcpy(oo_y_lut_hdr_sdr, oo_gain, sizeof(u32) * OE_X);
-//		memcpy(cgain_lut_hdr_sdr, tm_cgain, sizeof(u32) * TM_CGAIN_SIZE);
-		if (tmo_force_ootf1_mode)
-			memcpy(oo_y_lut1, oo_gain1, sizeof(u32) * OE_X);
+		tmo_ret = hdr10_tmo_gen(oo_gain, tm_cgain, oo_gain1, HDR_MODE_HDR102SDR_SR_MODE, 1);
+		if (tmo_ret) {
+			memcpy(oo_y_lut_hdr_sdr, oo_gain, sizeof(u32) * OE_X);
+			if (tmo_force_ootf1_mode)
+				memcpy(oo_y_lut1, oo_gain1, sizeof(u32) * OE_X);
+		}
 	} else {
 		memcpy(oo_y_lut_hdr_sdr, oo_y_lut_hdr_sdr_def,
 			sizeof(u32) * OE_X);

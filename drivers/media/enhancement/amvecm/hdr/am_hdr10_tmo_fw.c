@@ -1205,7 +1205,7 @@ int check_hist_available(int *hist_hdr)
 	return ret;
 }
 
-void hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode, int hist_flag)
+int hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode, int hist_flag)
 {
 	struct aml_tmo_reg_sw *pre_tmo_reg;
 	struct vpp_hist_param_s *p = get_vpp_hist();
@@ -1215,14 +1215,14 @@ void hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode
 	struct aml_tmo_hdr_hdr_reg_sw *sbtm_hdr_tmo_reg = tmo_hdr_hdr_reg_get();
 
 	pre_tmo_reg = tmo_fw_param_get();
-	if (!pre_tmo_reg->pre_hdr10_tmo_alg) {
+	if (pre_tmo_reg && !pre_tmo_reg->pre_hdr10_tmo_alg) {
 		pr_tmo_dbg("hdr10_tmo alg func is NULL\n");
-		return;
+		return 0;
 	}
 
 	if (hist_flag) {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-		if (chip_type_id == chip_t3x)
+		if (chip_type_id == chip_t3x || chip_type_id == chip_s5)
 			hist_hdr = &s5_hdr_hist[NUM_HDR_HIST - 1][0];
 		else
 #endif
@@ -1230,17 +1230,20 @@ void hdr10_tmo_gen(u32 *oo_gain, u32 *cgain, u32 *oo_gain1, u32 hdr_convert_mode
 
 		if (!check_hist_available(hist_hdr)) {
 			pr_tmo_dbg("hdr_hist unavailable\n");
-			return;
+			return 0;
 		}
 	}
 
-	tmo_reg.pre_hdr10_tmo_alg(&hdr_luts, pre_tmo_reg, sbtm_hdr_tmo_reg, hist_hdr,
-		vpp_hist, hdr_convert_mode);
+	if (tmo_reg.pre_hdr10_tmo_alg)
+		tmo_reg.pre_hdr10_tmo_alg(&hdr_luts, pre_tmo_reg,
+			sbtm_hdr_tmo_reg, hist_hdr,
+			vpp_hist, hdr_convert_mode);
 
 	memcpy(oo_gain, hdr_luts.hdr_ogain_lut, sizeof(int) * 149);
 	memcpy(cgain, hdr_luts.hdr_cgain_lut, sizeof(int) * 65);
 	if (tmo_force_ootf1_mode)
 		memcpy(oo_gain1, hdr_luts.hdr_ogain_lut1, sizeof(int) * 149);
+	return 1;
 }
 
 void hdr10_tmo_parm_show(void)
