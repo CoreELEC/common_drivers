@@ -334,7 +334,7 @@ struct pq_ctrl_s pq_cfg_init[PQ_CFG_MAX] = {
 
 static int debug_amvecm;
 unsigned int probe_ok;/* probe ok or not */
-unsigned int pq_load_en;// = 1;/*load pq table enable/disable*/
+unsigned int pq_load_en = 1;  /*load pq table enable/disable*/
 unsigned int vecm_latch_flag;
 unsigned int vecm_latch_flag2;
 unsigned int pq_user_latch_flag;
