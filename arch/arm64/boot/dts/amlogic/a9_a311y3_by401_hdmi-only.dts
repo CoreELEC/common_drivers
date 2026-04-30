@@ -21,7 +21,10 @@
 	aliases {
 		serial0 = &uart_AO_B;
 		serial1 = &uart_A;
-		serial2 = &uart_C;
+		serial2 = &uart_AO_C;
+		serial3 = &uart_AO_D;
+		serial4 = &uart_AO_E;
+		serial5 = &uart_F;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
