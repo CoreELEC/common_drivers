@@ -229,7 +229,7 @@ enum SGM415XX_POWER_TYPE {
 struct sgm415xx_state {
 	u8 vbus_type;	 //REG0x08 D[7:5]
 	u8 chrg_stat;	 //REG0x08 D[4:3]
-	bool online;	 //REG0x08 D[2]
+	bool vbus_pg;	 //REG0x08 D[2]
 	bool vsys_stat;  //REG0x08 D[0]
 	bool therm_stat; //REG0x08 D[1]
 	bool wdt_fault;  //REG0x09 D[7]

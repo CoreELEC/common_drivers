@@ -17,14 +17,14 @@
 #include <linux/workqueue.h>
 #include "cw2015.h"
 
-int cw_capacity;
+int cw_capacity = 100;
 static int dbg_enable;
 module_param_named(battery_dbg_level, dbg_enable, int, 0644);
 
 #define cw_printk(fmt, args...) \
 	do { \
 		if (dbg_enable) { \
-			pr_info("[CW2015] " fmt, ##args); \
+			pr_info("[BATTERY] " fmt, ##args); \
 		} \
 	} while (0)
 
@@ -595,7 +595,7 @@ static int cw_init_data(struct cw_battery *cw_bat)
 }
 
 static const struct power_supply_desc cw2015_bat_desc = {
-	.name		= "rk-bat",
+	.name		= "battery",
 	.type		= POWER_SUPPLY_TYPE_BATTERY,
 	.properties	= cw_battery_properties,
 	.num_properties	= ARRAY_SIZE(cw_battery_properties),

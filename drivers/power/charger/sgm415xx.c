@@ -34,7 +34,7 @@
 #include <linux/iio/iio.h>
 
 #define SGM_DRV_VERSION		"V1.2"
-#define SGM_LOG		"SGMICRO "
+#define SGM_LOG		"CHARGER "
 
 static int dbg_enable;
 module_param_named(charger_dbg_level, dbg_enable, int, 0644);
@@ -42,7 +42,7 @@ module_param_named(charger_dbg_level, dbg_enable, int, 0644);
 #define SGM_INFO(fmt, args...) \
 	do { \
 		if (dbg_enable) { \
-			pr_info("[SGMICRO] " fmt, ##args); \
+			pr_info("[CHARGER] " fmt, ##args); \
 		} \
 	} while (0)
 
@@ -107,6 +107,16 @@ static struct sgm_vendor_info s_chg_vendor[MAX_PN_ID] = {
 	[SGM41543D_PN_ID]  = { "sgm41543D", (BIT(6) | BIT(3))},
 	[SGM41512S_PN_ID]  = { "sgm41512S", (BIT(6) | BIT(5) | BIT(4) | BIT(3)) },
 	[SGM41512SD_PN_ID] = { "sgm41512SD", (BIT(6) | BIT(5) | BIT(4))},
+};
+
+static const char *const sgm415xx_ntc_fault[] = {
+	"Normal",
+	"Reserved",
+	"warm",
+	"cool",
+	"reserved",
+	"cold",
+	"hot",
 };
 
 #ifdef OTG_ENABLE
@@ -632,16 +642,16 @@ static int sgm415xx_check_fault_status(struct sgm415xx_device *sgm, struct sgm41
 	state->bat_fault = !!(reg_val & SGM415XX_BAT_FAULT_MASK);
 	state->ntc_fault = FIELD_GET(SGM415XX_TEMP_MASK, reg_val);
 
-	SGM_INFO("fault status = %x\n", reg_val);
+	SGM_INFO("fault status = 0x%x\n", reg_val);
 
 	return ret;
 }
 
 enum SGM415XX_POWER_TYPE sgm415xx_get_power_type(struct sgm415xx_device *sgm)
 {
-	if (sgm->state.vbus_type == 0 && sgm->state.online == 0) {
+	if (sgm->state.vbus_type == 0 && sgm->state.vbus_pg == 0) {
 		return POWER_TYPE_BATTERY;
-	} else if ((sgm->state.vbus_type != 0) && (sgm->state.online == 1)) {
+	} else if ((sgm->state.vbus_type != 0) && (sgm->state.vbus_pg == 1)) {
 		int val, ret;
 
 		if (sgm->adc_ch) {
@@ -677,7 +687,7 @@ static int sgm415xx_get_state(struct sgm415xx_device *sgm, struct sgm415xx_state
 
 	state->vbus_type = FIELD_GET(SGM415XX_VBUS_STAT_MASK, reg_val);
 	state->chrg_stat = FIELD_GET(SGM415XX_CHG_STAT_MASK, reg_val);
-	state->online = !!(reg_val & SGM415XX_PG_STAT);
+	state->vbus_pg = !!(reg_val & SGM415XX_PG_STAT);
 	state->therm_stat = !!(reg_val & SGM415XX_THERM_STAT);
 	state->vsys_stat = !!(reg_val & SGM415XX_VSYS_STAT);
 	ret = sgm415xx_get_power_type(sgm);
@@ -735,13 +745,20 @@ static int sgm415xx_dump_register(struct sgm415xx_device *sgm)
 	unsigned char sgm415xx_reg[SGM415XX_REG_NUM + 1] = { 0 };
 
 	SGM_INFO("[%s]\n", __func__);
-	for (i = 0; i < SGM415XX_REG_NUM + 1; i++) {
+	for (i = 0; i < SGM415XX_REG_NUM; i += 4) {
 		ret = sgm415xx_read_reg(sgm, i, &sgm415xx_reg[i]);
+		ret = sgm415xx_read_reg(sgm, i + 1, &sgm415xx_reg[i + 1]);
+		ret = sgm415xx_read_reg(sgm, i + 2, &sgm415xx_reg[i + 2]);
+		ret = sgm415xx_read_reg(sgm, i + 3, &sgm415xx_reg[i + 3]);
 		if (ret != 0) {
 			SGM_INFO("i2c transfor error\n");
 			return 1;
 		}
-		SGM_INFO("[0x%x]=0x%x ", i, sgm415xx_reg[i]);
+		SGM_INFO(" [0x%02x]=0x%02x [0x%02x]=0x%02x [0x%02x]=0x%02x [0x%02x]=0x%02x\n",
+			i, sgm415xx_reg[i],
+			i + 1, sgm415xx_reg[i + 1],
+			i + 2, sgm415xx_reg[i + 2],
+			i + 3, sgm415xx_reg[i + 3]);
 	}
 
 	return 0;
@@ -1221,7 +1238,7 @@ static int sgm415xx_charger_get_property(struct power_supply *psy,
 		break;
 
 	case POWER_SUPPLY_PROP_ONLINE:
-		val->intval = state.online;
+		val->intval = state.vbus_pg;
 		break;
 
 	case POWER_SUPPLY_PROP_TYPE:
@@ -1354,21 +1371,22 @@ static void charger_monitor_work_func(struct work_struct *work)
 
 	get_charger_type(sgm);
 	if (!sgm->state.vbus_gd || sgm->state.ntc_fault || sgm->state.bat_fault) {
-		SGM_INFO("vbus_gd:%d,ntc_fault:%d,bat_fault:%d, disable charge\n",
+		SGM_INFO("vbus_gd:%d,ntc_fault:%s,bat_fault:%d,capacity:%d, disable charge\n",
 			sgm->state.vbus_gd,
-			sgm->state.ntc_fault,
-			sgm->state.bat_fault);
+			sgm415xx_ntc_fault[sgm->state.ntc_fault],
+			sgm->state.bat_fault,
+			cw_capacity);
 		sgm415xx_set_charger_en(sgm, 0);
 	} else if ((last_ntc_fault && !state.ntc_fault) ||
 			(last_bat_fault && !state.bat_fault)) {
 		sgm415xx_set_charger_en(sgm, 1);
 	}
 
-	if (!state.online) {
-		SGM_INFO("Vbus not online\n");
+	if (!state.vbus_gd && state.power_type == POWER_TYPE_BATTERY) {
+		SGM_INFO("Vbus not vbus_gd\n");
 		if (cw_capacity == 0) {
 			msleep(3000);
-			pr_emerg(SGM_LOG "battery capacity: 0, run shutdown!!!\n");
+			pr_emerg(SGM_LOG "battery capacity: %d, run shutdown!\n", cw_capacity);
 			kernel_power_off();
 		}
 		goto OUT;
@@ -1422,15 +1440,15 @@ static void charger_detect_work_func(struct work_struct *work)
 	}
 
 	if (!state.vbus_gd || state.ntc_fault || state.bat_fault) {
-		dev_err(sgm->dev, "vbus_gd:%d,ntc_fault:%d,bat_fault:%d, disable charge\n",
+		dev_err(sgm->dev, "vbus_gd:%d,ntc_fault:%s,bat_fault:%d, disable charge\n",
 			state.vbus_gd,
-			state.ntc_fault,
+			sgm415xx_ntc_fault[state.ntc_fault],
 			state.bat_fault);
 		sgm415xx_set_charger_en(sgm, 0);
 		goto err;
 	}
-	if (!state.online) {
-		dev_err(sgm->dev, "Vbus not online\n");
+	if (!state.vbus_pg) {
+		dev_err(sgm->dev, "Vbus not vbus_pg\n");
 		goto err;
 	}
 
@@ -1762,7 +1780,7 @@ static char *sgm415xx_charger_supplied_to[] = {
 };
 
 static struct power_supply_desc sgm415xx_power_supply_desc = {
-	.name = "sgm415xx-charger",
+	.name = "charger",
 	.type = POWER_SUPPLY_TYPE_USB,
 	.usb_types = BIT(POWER_SUPPLY_USB_TYPE_SDP) |
 		BIT(POWER_SUPPLY_USB_TYPE_CDP) |
