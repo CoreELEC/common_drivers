@@ -92,6 +92,9 @@
 #define RTL822X_VND1_SERDES_CTRL3			0x7580
 #define RTL822X_VND1_SERDES_CTRL3_MODE_MASK		GENMASK(5, 0)
 #define RTL822X_VND1_SERDES_CTRL3_MODE_SGMII			0x02
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+#define RTL822X_VND1_SERDES_CTRL3_MODE_HiSGMII			0x12
+#endif
 #define RTL822X_VND1_SERDES_CTRL3_MODE_2500BASEX		0x16
 
 /* RTL822X_VND2_XXXXX registers are only accessible when phydev->is_c45
@@ -922,6 +925,21 @@ static int rtl822x_write_mmd(struct phy_device *phydev, int devnum, u16 regnum,
 }
 
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+static int rtl822x_c45_soft_reset(struct phy_device *phydev)
+{
+	int ret, val;
+
+	ret = phy_modify_mmd_changed(phydev, MDIO_MMD_PMAPMD, MDIO_CTRL1,
+			     MDIO_CTRL1_RESET, MDIO_CTRL1_RESET);
+	if (ret < 0)
+		return ret;
+
+	return phy_read_mmd_poll_timeout(phydev, MDIO_MMD_PMAPMD,
+					 MDIO_CTRL1, val,
+					 !(val & MDIO_CTRL1_RESET),
+					 5000, 100000, true);
+}
+
 static int rtl822x_serdes_write(struct phy_device *phydev, u16 reg, u16 val)
 {
 	int ret, poll;
@@ -953,6 +971,14 @@ static int rtl822xb_config_init(struct phy_device *phydev)
 	u16 mode;
 	int ret;
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	if (phydev->interface == PHY_INTERFACE_MODE_2500BASEX) {
+		/* MAC support SGMII/2500BASEX to fill possible interfaces */
+		__set_bit(PHY_INTERFACE_MODE_SGMII, phydev->host_interfaces);
+		__set_bit(PHY_INTERFACE_MODE_2500BASEX, phydev->host_interfaces);
+	}
+#endif
+
 	has_2500 = test_bit(PHY_INTERFACE_MODE_2500BASEX,
 			    phydev->host_interfaces) ||
 		   phydev->interface == PHY_INTERFACE_MODE_2500BASEX;
@@ -970,7 +996,7 @@ static int rtl822xb_config_init(struct phy_device *phydev)
 	if (!has_2500 && !has_sgmii)
 		return 0;
 
-	pr_info("%s: has_2500: %d, has_sgmii: %d\n", __func__, has_2500, has_sgmii);
+	pr_debug("%s: has_2500: %d, has_sgmii: %d\n", __func__, has_2500, has_sgmii);
 	/* determine SerDes option mode */
 	if (has_2500 && !has_sgmii) {
 		mode = RTL822X_VND1_SERDES_OPTION_MODE_2500BASEX;
@@ -1088,10 +1114,17 @@ static void rtl822xb_update_interface(struct phy_device *phydev)
 		return;
 
 	switch (val & RTL822X_VND1_SERDES_CTRL3_MODE_MASK) {
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	case RTL822X_VND1_SERDES_CTRL3_MODE_HiSGMII:
+		pr_debug("%s: serdes mode: HiSGMII\n", __func__);
+		phydev->interface = PHY_INTERFACE_MODE_2500BASEX;
+		break;
+#endif
 	case RTL822X_VND1_SERDES_CTRL3_MODE_2500BASEX:
 		phydev->interface = PHY_INTERFACE_MODE_2500BASEX;
 		break;
 	case RTL822X_VND1_SERDES_CTRL3_MODE_SGMII:
+		pr_debug("%s: serdes mode: SGMII\n", __func__);
 		phydev->interface = PHY_INTERFACE_MODE_SGMII;
 		break;
 	}
@@ -1614,6 +1647,9 @@ static struct phy_driver realtek_drvs[] = {
 	}, {
 		.match_phy_device = rtl8221b_vb_cg_c22_match_phy_device,
 		.name           = "RTL8221B-VB-CG 2.5Gbps PHY (C22)",
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		.soft_reset     = genphy_soft_reset,
+#endif
 		.get_features   = rtl822x_get_features,
 		.config_aneg    = rtl822x_config_aneg,
 		.config_init    = rtl822xb_config_init,
@@ -1626,6 +1662,9 @@ static struct phy_driver realtek_drvs[] = {
 	}, {
 		.match_phy_device = rtl8221b_vb_cg_c45_match_phy_device,
 		.name           = "RTL8221B-VB-CG 2.5Gbps PHY (C45)",
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		.soft_reset     = rtl822x_c45_soft_reset,
+#endif
 		.config_init    = rtl822xb_config_init,
 		.get_rate_matching = rtl822xb_get_rate_matching,
 		.get_features   = rtl822x_c45_get_features,

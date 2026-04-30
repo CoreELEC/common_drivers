@@ -1291,6 +1291,18 @@ static int stmmac_phy_setup(struct stmmac_priv *priv)
 	 */
 	__set_bit(mode, priv->phylink_config.supported_interfaces);
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	/* If serdes is present, add serdes-specific interfaces */
+	if (priv->plat->serdes_powerup) {
+		if (mode == PHY_INTERFACE_MODE_2500BASEX) {
+			__set_bit(PHY_INTERFACE_MODE_SGMII,
+				priv->phylink_config.supported_interfaces);
+			__set_bit(PHY_INTERFACE_MODE_2500BASEX,
+				priv->phylink_config.supported_interfaces);
+		}
+	}
+#endif
+
 	/* If we have an xpcs, it defines which PHY interfaces are supported. */
 	if (priv->hw->xpcs)
 		xpcs_get_interfaces(priv->hw->xpcs,

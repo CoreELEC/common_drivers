@@ -697,14 +697,6 @@ static int meson8b_dwmac_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	dwmac->serdes_phy = devm_phy_optional_get(&pdev->dev, "serdes");
-	if (IS_ERR(dwmac->serdes_phy))
-		return dev_err_probe(&pdev->dev, PTR_ERR(dwmac->serdes_phy),
-				     "Failed to get serdes phy\n");
-
-	dwmac->speed = SPEED_1000;
-	dwmac->serdes_speed = SPEED_1000;
-
 	/* use 2ns as fallback since this value was previously hardcoded */
 	if (of_property_read_u32(pdev->dev.of_node, "amlogic,tx-delay-ns",
 				 &dwmac->tx_delay_ns))
@@ -768,21 +760,20 @@ static int meson8b_dwmac_probe(struct platform_device *pdev)
 		return dev_err_probe(&pdev->dev, PTR_ERR(dwmac->serdes_phy),
 				     "Failed to get serdes phy\n");
 
-	dwmac->speed = SPEED_1000;
-
-	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
-	if (ret)
-		return ret;
-	aml_custom_setting(pdev, dwmac);
-
-	/* HSGMII serdes callback function */
+	/* serdes callback function */
 	if (dwmac->serdes_phy) {
+		dwmac->speed = SPEED_1000;
 		dwmac->serdes_speed = SPEED_1000;
 
 		plat_dat->serdes_powerup = amlogic_serdes_powerup;
 		plat_dat->serdes_powerdown = amlogic_serdes_powerdown;
 		plat_dat->fix_mac_speed = amlogic_fix_mac_speed;
 	}
+
+	ret = stmmac_dvr_probe(&pdev->dev, plat_dat, &stmmac_res);
+	if (ret)
+		return ret;
+	aml_custom_setting(pdev, dwmac);
 
 #ifdef CONFIG_PM_SLEEP
 	device_init_wakeup(&pdev->dev, true);
