@@ -58,7 +58,8 @@
 /* 20251225：Increase PGA adjustment frequency */
 /* 20260114：remove ntscm and palm switch flow, reduce pal threshold */
 /* 20260205: Fix pattern flickering during switching */
-#define TVAFE_VER "20260205: Fix pattern flickering during switching"
+/* 20260430: Clear try_format_cnt after frequency channel search completes */
+#define TVAFE_VER "0260430: Clear try_format_cnt after frequency channel search completes"
 
 /* used to set the flag of tvafe_dev_s */
 #define TVAFE_FLAG_DEV_OPENED 0x00000010

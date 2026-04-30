@@ -335,6 +335,7 @@ static bool tvafe_work_mode(int mode)
 	} else if (mode == 0) {
 		tvafe_mode = false;
 		reinit_scan = false;
+		try_format_cnt = 0;
 		//if (tvafe_atv_search_channel) {
 			//if (g_tvafe_info) {
 				//g_tvafe_info->cvd2.manual_fmt =

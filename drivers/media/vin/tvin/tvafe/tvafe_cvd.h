@@ -279,6 +279,6 @@ extern unsigned int try_avin_max;
 extern unsigned int av_fmt;
 extern unsigned int atv_fmt;
 extern u8 check_twice;
-
+extern unsigned int try_format_cnt;
 #endif /* _TVAFE_CVD_H */
 

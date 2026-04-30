@@ -198,7 +198,7 @@ unsigned int ntscm_cvd_2e = 0x7a;//0x82;
 static unsigned int cvd_2e_l1 = 0x5c;
 static unsigned int acd_128 = 0x14;
 static unsigned int acd_128_l1 = 0x1f;
-static unsigned int try_format_cnt;
+unsigned int try_format_cnt;
 static unsigned int always_try_format;
 
 //ntsc+pal-i+pal-m+pal-nc+secam+pak-60+n443
