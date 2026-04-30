@@ -3021,8 +3021,8 @@
 			};
 			cooling-maps {
 				a78_cooling_map {
-					trip = <&c_control>;
-					cooling-device = <&CPU6 0 6>;
+					trip = <&a55_control>;
+					cooling-device = <&CPU6 0 8>;
 					contribution = <1024>;
 				};
 			};
@@ -3059,7 +3059,7 @@
 				};
 				a55_cooling_map {
 					trip = <&c_control>;
-					cooling-device = <&CPU7 0 6>;
+					cooling-device = <&CPU0 0 6>;
 					contribution = <1024>;
 				};
 			};
