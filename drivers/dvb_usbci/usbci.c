@@ -384,9 +384,15 @@ static ssize_t aml_intf_read(struct file *filp, char *buff, size_t size, loff_t 
 	usbcam_dev->in_transfor += chunk;
 	spin_unlock_irqrestore(&usbcam_dev->read_lock, flag);
 
+	if (!usbcam_dev->read_buf) {
+		ret = -EFAULT;
+		err_val = -8;
+		goto error_handle;
+	}
+
 	ret = copy_to_user(buff, usbcam_dev->read_buf + transfor, chunk);
 	if (ret) {
-		err_val = -8;
+		err_val = -9;
 		goto error_handle;
 	}
 
@@ -629,10 +635,16 @@ static ssize_t aml_intf_write(struct file *filp, const char *buff, size_t size, 
 	}
 	spin_unlock_irqrestore(&usbcam_dev->write_lock, flag);
 
+	if (!usbcam_dev->write_buf) {
+		ret = -EFAULT;
+		err_val = -8;
+		goto error_handle;
+	}
+
 	size = min(size, usbcam_dev->buf_size);
 	if (copy_from_user(usbcam_dev->write_buf, buff, size)) {
 		ret = -EFAULT;
-		err_val = -8;
+		err_val = -9;
 		goto error_handle;
 	}
 
@@ -642,12 +654,12 @@ static ssize_t aml_intf_write(struct file *filp, const char *buff, size_t size, 
 		usbcam_dev->write_status != WRITE_STATUS_WAIT_EMPTY_DONE) {
 		ret = aml_write_usb_submit(usbcam_dev, size);//bulk transfer
 		if (ret) {
-			err_val = -9;
+			err_val = -10;
 			goto error_handle;
 		}
 	} else {
 		ret = -EAGAIN;
-		err_val = -10;
+		err_val = -11;
 		goto error_handle;
 	}
 
@@ -1097,14 +1109,10 @@ static int aml_usbcam_probe(struct usb_interface *intf, const struct usb_device_
 	if (pdev->manufacturer) {
 		usbcam_dbg("pdev->manufacturer = %s\n", pdev->manufacturer);
 		temp = strlen(pdev->manufacturer);
-		len = temp < AML_USBCAM_MAX_NAME_LEN ? temp : AML_USBCAM_MAX_NAME_LEN;
+		len = temp < AML_USBCAM_MAX_NAME_LEN ? temp : (AML_USBCAM_MAX_NAME_LEN - 1);
 		strncpy(usbcam_dev->usbcam_module_capabilities.ci_manufacturer_name,
 							pdev->manufacturer, len);
-		if (len == AML_USBCAM_MAX_NAME_LEN)
-			usbcam_dev->usbcam_module_capabilities.ci_manufacturer_name[len - 1] = '\0';
-		else
-			usbcam_dev->usbcam_module_capabilities.ci_manufacturer_name[len] = '\0';
-
+		usbcam_dev->usbcam_module_capabilities.ci_manufacturer_name[len] = '\0';
 	} else {
 		err_val = -13;
 		ret = -ENOMEM;
@@ -1114,13 +1122,10 @@ static int aml_usbcam_probe(struct usb_interface *intf, const struct usb_device_
 	if (pdev->product) {
 		usbcam_dbg("pdev->product = %s\n", pdev->product);
 		temp = strlen(pdev->product);
-		len = temp < AML_USBCAM_MAX_NAME_LEN ? temp : AML_USBCAM_MAX_NAME_LEN;
+		len = temp < AML_USBCAM_MAX_NAME_LEN ? temp : (AML_USBCAM_MAX_NAME_LEN - 1);
 		strncpy(usbcam_dev->usbcam_module_capabilities.ci_product_name,
 								pdev->product, len);
-		if (len == AML_USBCAM_MAX_NAME_LEN)
-			usbcam_dev->usbcam_module_capabilities.ci_product_name[len - 1] = '\0';
-		else
-			usbcam_dev->usbcam_module_capabilities.ci_product_name[len] = '\0';
+		usbcam_dev->usbcam_module_capabilities.ci_product_name[len] = '\0';
 	} else {
 		err_val = -14;
 		ret = -ENOMEM;

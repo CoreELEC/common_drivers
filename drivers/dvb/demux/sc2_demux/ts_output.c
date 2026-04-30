@@ -469,9 +469,9 @@ static int out_sec_cb_list(struct out_elem *pout, char *buf, int size)
 		w_size = ptmp->cb(pout, buf, size, ptmp->udata[0], 0, 0);
 		if (last_w_size != -1 && w_size != last_w_size) {
 			dprint("ref:%d ", pout->ref);
-			dprint("add pid:%d cache for filter ",
-			       pout->pid_list->pid);
 			dprint("w:%d,last_w:%d\n", w_size, last_w_size);
+			if (pout->pid_list)
+				dprint("add pid:%d cache for filter ", pout->pid_list->pid);
 		}
 		last_w_size = w_size;
 		ptmp = ptmp->next;

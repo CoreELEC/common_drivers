@@ -211,7 +211,7 @@ static unsigned int dummy_fe_wrapper_poll(struct file *filep, poll_table *wait)
 static long _dummy_fe_wrapper_compat_ioctl(struct file *filp,
 				  unsigned int cmd, unsigned long args)
 {
-	unsigned long ret;
+	long ret;
 
 	args = (unsigned long)compat_ptr(args);
 	ret = dummy_fe_wrapper_ioctl(filp, cmd, args);

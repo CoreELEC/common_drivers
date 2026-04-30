@@ -3161,7 +3161,7 @@ static long smc_ioctl(struct file *file, unsigned int cmd, ulong arg)
 static long smc_ioctl_compat(struct file *filp,
 			     unsigned int cmd, unsigned long args)
 {
-	unsigned long ret;
+	long ret;
 
 	args = (unsigned long)compat_ptr(args);
 	ret = smc_ioctl(filp, cmd, args);
