@@ -1272,6 +1272,7 @@
 };
 
 &dwc3a {
+	usb-role-switch;
 	typec-usb-controller;
 	status = "okay";
 	port {
@@ -1292,8 +1293,29 @@
 	status = "okay";
 };
 
-&dwc3d {
+&dwc3dotg {
 	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb_otg_ep: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usb2_1_role_switch>;
+		};
+	};
+};
+
+&dwc3d {
+	usb-role-switch;
+	status = "okay";
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb2_1_role_switch: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&usb_otg_ep>;
+		};
+	};
 };
 
 &pcie_phy0 {

@@ -1814,10 +1814,9 @@
 			tx-fifo-resize;
 			tx-fifo-max-num = <3>;
 			snps,incr-burst-type-adjustment = <4>;
-			usb-role-switch;
-//			def-drd-controller;
-//			trim-reg = <0xfe010330>;
-//			drd-index = <0x0>;
+			def-drd-controller;
+			trim-reg = <0xfe010330>;
+			drd-index = <0x0>;
 		};
 
 		usbphyb: usb-phy@fe4cc000 {
@@ -2034,7 +2033,7 @@
 			status = "disable";
 			compatible = "snps,dwc3-meson";
 			maximum-speed = "high-speed";
-			dr_mode = "host";
+			dr_mode = "otg";
 			phy_type = "utmi";
 			reg = <0x0 0xf3f00000 0x0 0x100000>;
 			interrupts = <GIC_SPI 133 IRQ_TYPE_LEVEL_HIGH>;
@@ -2068,8 +2067,18 @@
 			tx-fifo-resize;
 			tx-fifo-max-num = <3>;
 			snps,incr-burst-type-adjustment = <4>;
-//			trim-reg = <0xfe010330>;
-//			drd-index = <0x1>;
+			trim-reg = <0xfe010330>;
+			drd-index = <0x1>;
+		};
+
+		dwc3dotg: dwc3otg@fe4a4000{
+			status = "disable";
+			compatible = "amlogic,dwc3-meson-drd";
+			dr_mode = "otg";
+			reg = <0x0 0xfe4a4000 0x0 0x100>;
+			phys = <&u2pdport0>;
+			phy-names = "usb2-phy";
+			interrupts = <GIC_SPI 134 IRQ_TYPE_EDGE_RISING>;
 		};
 
 		dolby_fw: dolby_fw {

@@ -1234,6 +1234,7 @@
 };
 
 &dwc3a {
+	usb-role-switch;
 	typec-usb-controller;
 	status = "okay";
 	port {
