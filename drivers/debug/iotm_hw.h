@@ -255,6 +255,7 @@ struct iotm_ops {
 	void (*trace_time_loop_check)(void *trace_start, void *trace_end, u64 *prev_time);
 	void (*clean_buf)(void);
 	int  (*axi_mode_enable)(struct iotm *iotm, int iotm_en);
+	void (*update_monitor_mode)(struct iotm *iotm);
 };
 
 extern struct iotm iotm;

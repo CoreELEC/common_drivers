@@ -238,6 +238,10 @@ static int axi_mode_enable_v2(struct iotm *iotm, int iotm_en)
 	return 0;
 }
 
+static inline void update_monitor_mode_v2(struct iotm *iotm)
+{
+}
+
 struct iotm_ops iotm_v2_ops = {
 	.ddr_range_set = ddr_range_set_v2,
 	.etb_coresight_clk = etb_coresight_clk_v2,
@@ -252,4 +256,5 @@ struct iotm_ops iotm_v2_ops = {
 	.trace_time_loop_check = trace_time_loop_check_v2,
 	.clean_buf = clean_buf_v2,
 	.axi_mode_enable = axi_mode_enable_v2,
+	.update_monitor_mode = update_monitor_mode_v2,
 };

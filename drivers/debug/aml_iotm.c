@@ -902,6 +902,8 @@ static int iotm_hw_init(void)
 				iotm.range[i].start, iotm.range[i].end, res);
 	}
 
+	iotm.ops->update_monitor_mode(&iotm);
+
 	if (iotm.monitor_mode == AXI_MODE) {
 		ret = ddr_trace_magic_set();
 
@@ -937,7 +939,7 @@ static int iotm_hw_init(void)
 	writel(val, iotm.cssys_base + IOTM_CTRL_MODE);
 
 	if (iotm.monitor_mode == AXI_MODE) {
-		ret = iotm.ops->axi_mode_enable(&iotm, iotm.monitor_mode);
+		ret = iotm.ops->axi_mode_enable(&iotm, iotm_en);
 
 		if (ret) {
 			pr_err("IOTM: iotm trace enable fail\n");

@@ -295,6 +295,9 @@ static int axi_mode_enable_v1(struct iotm *iotm, int iotm_en)
 			IOTM_CTRL_MODE_TRACE_ENABLE);
 	writel(val, iotm->cssys_base + IOTM_CTRL_MODE);
 
+	for (i = 0; i < CONTINUOUS_PULSE; i++)
+		readl(iotm->cssys_base + IOTM_AXI_ADDR);
+
 	/* When disable record trace, the axi_addr can't be changed. */
 	if (iotm_en != IOTM_ENABLE_NO_TRACE) {
 		/* Check whether 0x0 is written in the trace */
@@ -315,6 +318,25 @@ static int axi_mode_enable_v1(struct iotm *iotm, int iotm_en)
 	return 0;
 }
 
+static inline void update_monitor_mode_v1(struct iotm *iotm)
+{
+	struct device_node *dmc_monitor_reserved;
+	struct reserved_mem *rmem;
+
+	dmc_monitor_reserved = of_find_compatible_node(NULL, NULL, "amlogic,dmc_monitor-reserved");
+	if (!dmc_monitor_reserved)
+		goto FAIL;
+
+	rmem = of_reserved_mem_lookup(dmc_monitor_reserved);
+	if (!rmem || !rmem->size)
+		goto FAIL;
+
+	return;
+
+FAIL:
+	iotm->monitor_mode = ETB_MODE;
+}
+
 struct iotm_ops iotm_v1_ops = {
 	.ddr_range_set = ddr_range_set_v1,
 	.etb_coresight_clk = etb_coresight_clk_v1,
@@ -329,4 +351,5 @@ struct iotm_ops iotm_v1_ops = {
 	.trace_time_loop_check = trace_time_loop_check_v1,
 	.clean_buf = clean_buf_v1,
 	.axi_mode_enable = axi_mode_enable_v1,
+	.update_monitor_mode = update_monitor_mode_v1,
 };
