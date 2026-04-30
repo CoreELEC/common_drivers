@@ -245,6 +245,13 @@
 		#clock-cells = <0>;
 	};
 
+	osc_32m: osc-32m-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <32000000>;
+		clock-output-names = "osc_32m";
+		#clock-cells = <0>;
+	};
+
 	rtc: rtc@ffa08000 {
 		compatible = "amlogic,meson-rtc";
 		reg = <0x0 0xffa08000 0x0 0x38>;
@@ -615,20 +622,30 @@
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xfe000000 0x0 0x480000>;
 
-			clkc: clock-controller {
+			clkc: clock-controller@0 {
 				compatible = "amlogic,c5-clkc";
 				#clock-cells = <1>;
 				reg = <0x0 0x0 0x0 0x4a0>,
 				      <0x0 0x8000 0x0 0x38c>;
 				reg-names = "basic", "pll";
 				clocks = <&xtal>,
+					 <&scmi_clk CLKID_GP0_PLL_OSC>,
+					 <&scmi_clk CLKID_HIFI_PLL_OSC>,
+					 <&scmi_clk CLKID_DSI_PLL_OSC>,
 					 <&scmi_clk CLKID_FIXED_PLL>,
 					 <&scmi_clk CLKID_SYS_CLK>,
-					 <&scmi_clk CLKID_AXI_CLK>;
+					 <&scmi_clk CLKID_AXI_CLK>,
+					 <&scmi_clk CLKID_SYS_PLL_DIV16>,
+					 <&scmi_clk CLKID_CPU_CLK_DIV16>;
 				clock-names = "xtal",
+					      "gp0_pll_osc",
+					      "hifi_pll_osc",
+					      "dsi_pll_osc",
 					      "fixed_pll",
 					      "sys_clk",
-					      "axi_clk";
+					      "axi_clk",
+					      "sys_pll_div16",
+					      "cpu_clk_div16";
 				status = "okay";
 			};
 
@@ -965,19 +982,25 @@
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xffa00000 0x0 0x100000>;
 
-			ao_clkc: clock-controller {
+			ao_clkc: clock-controller@1 {
 				compatible = "amlogic,c5-aoclkc";
 				reg = <0x0 0x0 0x0 0x5c>;
 				reg-names = "basic";
 				#clock-cells = <1>;
 				clocks = <&xtal>,
 					<&xtal_32k>,
+					<&osc_32m>,
 					<&scmi_clk CLKID_SYS_CLK>,
 					<&clkc CLKID_FCLK_DIV5>,
 					<&clkc CLKID_FCLK_DIV4>,
 					<&clkc CLKID_FCLK_DIV3>;
-				clock-names = "xtal", "xtal_32k", "sys_clk",
-					      "fclk_div5", "fclk_div4", "fclk_div3";
+				clock-names = "xtal",
+					      "xtal_32k",
+					      "osc_32m",
+					      "sys_clk",
+					      "fclk_div5",
+					      "fclk_div4",
+					      "fclk_div3";
 				status = "okay";
 			};
 

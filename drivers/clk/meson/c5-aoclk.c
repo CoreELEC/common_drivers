@@ -18,9 +18,60 @@
 #include "c5.h"
 #include <dt-bindings/clock/amlogic,c5-clkc.h>
 
+static struct clk_regmap ao_rough_32k_div = {
+	.data = &(struct clk_regmap_div_data) {
+		.offset = AO_CLKCTRL_ROUGH_32K_CTRL,
+		.shift = 0,
+		.width = 20,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "ao_rough_32k_div",
+		.ops = &clk_regmap_divider_ops,
+		.parent_data = &(const struct clk_parent_data) {
+			.fw_name = "osc_32m"
+		},
+		.num_parents = 1,
+	},
+};
+
+static struct clk_regmap ao_rough_32k = {
+	.data = &(struct clk_regmap_gate_data) {
+		.offset = AO_CLKCTRL_ROUGH_32K_CTRL,
+		.bit_idx = 20,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "ao_rough_32k",
+		.ops = &clk_regmap_gate_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+			&ao_rough_32k_div.hw,
+		},
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static const struct clk_parent_data ao_oscin32k_clk_parent_data[] = {
+	{ .hw = &ao_rough_32k.hw },
+	{ .fw_name = "xtal_32k" }
+};
+
+static struct clk_regmap ao_oscin32k_clk = {
+	.data = &(struct clk_regmap_mux_data) {
+		.offset = AO_CLKCTRL_OSCIN_CTRL,
+		.mask = 0x1,
+		.shift = 2,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "ao_oscin32k_clk",
+		.ops = &clk_regmap_mux_ops,
+		.parent_data = ao_oscin32k_clk_parent_data,
+		.num_parents = ARRAY_SIZE(ao_oscin32k_clk_parent_data),
+	},
+};
+
 static const struct clk_parent_data ao_oscin_clk_parent_data[] = {
 	{ .fw_name = "xtal" },
-	{ .fw_name = "xtal_32k" }
+	{ .hw = &ao_oscin32k_clk.hw }
 };
 
 static struct clk_regmap ao_oscin_clk = {
@@ -57,7 +108,7 @@ static struct clk_regmap ao_sys_clk = {
 };
 
 static const struct clk_parent_data ao_psram_parent_data[] = {
-	{ .fw_name = "xtal" },
+	{ .hw = &ao_oscin_clk.hw },
 	{ .fw_name = "fclk_div5" },
 	{ .fw_name = "fclk_div4" },
 	{ .fw_name = "fclk_div3" }
@@ -111,10 +162,10 @@ static struct clk_regmap ao_psram = {
 };
 
 static const struct clk_parent_data ao_pwm_parent_data[] = {
-	{ .fw_name = "xtal" },
-	{ .fw_name = "fclk_div5" },
-	{ .fw_name = "fclk_div4" },
-	{ .fw_name = "fclk_div3" }
+	{ .hw = &ao_oscin_clk.hw },
+	{ .hw = &ao_sys_clk.hw },
+	{ .hw = &ao_oscin32k_clk.hw },
+	{ .fw_name = "fclk_div5" }
 };
 
 static struct clk_regmap ao_pwm_a_mux = {
@@ -211,100 +262,6 @@ static struct clk_regmap ao_pwm_b = {
 	},
 };
 
-static struct clk_regmap ao_pwm_c_mux = {
-	.data = &(struct clk_regmap_mux_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_C_CTRL,
-		.mask = 0x3,
-		.shift = 9,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_c_mux",
-		.ops = &clk_regmap_mux_ops,
-		.parent_data = ao_pwm_parent_data,
-		.num_parents = ARRAY_SIZE(ao_pwm_parent_data),
-	},
-};
-
-static struct clk_regmap ao_pwm_c_div = {
-	.data = &(struct clk_regmap_div_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_C_CTRL,
-		.shift = 0,
-		.width = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_c_div",
-		.ops = &clk_regmap_divider_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&ao_pwm_c_mux.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static struct clk_regmap ao_pwm_c = {
-	.data = &(struct clk_regmap_gate_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_C_CTRL,
-		.bit_idx = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_c",
-		.ops = &clk_regmap_gate_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&ao_pwm_c_div.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static struct clk_regmap ao_pwm_d_mux = {
-	.data = &(struct clk_regmap_mux_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_D_CTRL,
-		.mask = 0x3,
-		.shift = 9,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_d_mux",
-		.ops = &clk_regmap_mux_ops,
-		.parent_data = ao_pwm_parent_data,
-		.num_parents = ARRAY_SIZE(ao_pwm_parent_data),
-	},
-};
-
-static struct clk_regmap ao_pwm_d_div = {
-	.data = &(struct clk_regmap_div_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_D_CTRL,
-		.shift = 0,
-		.width = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_d_div",
-		.ops = &clk_regmap_divider_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&ao_pwm_d_mux.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
-static struct clk_regmap ao_pwm_d = {
-	.data = &(struct clk_regmap_gate_data) {
-		.offset = AO_CLKCTRL_PWM_CLK_D_CTRL,
-		.bit_idx = 8,
-	},
-	.hw.init = &(struct clk_init_data) {
-		.name = "ao_pwm_d",
-		.ops = &clk_regmap_gate_ops,
-		.parent_hws = (const struct clk_hw *[]) {
-			&ao_pwm_d_div.hw,
-		},
-		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
-	},
-};
-
 #define MESON_CLK_GATE_AO_SYS_CLK(_name, _reg, _bit)                  \
 struct clk_regmap _name = {                                           \
 	.data = &(struct clk_regmap_gate_data) {                      \
@@ -332,7 +289,7 @@ MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwrctrl, AO_CLKCTRL_RTC_SYS_CLK0, 7);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwm_a, AO_CLKCTRL_RTC_SYS_CLK0, 8);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_pwm_b, AO_CLKCTRL_RTC_SYS_CLK0, 9);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i3c, AO_CLKCTRL_RTC_SYS_CLK0, 10);
-MESON_CLK_GATE_AO_SYS_CLK(ao_sys_spisg_0, AO_CLKCTRL_RTC_SYS_CLK0, 11);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_spisg0, AO_CLKCTRL_RTC_SYS_CLK0, 11);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_ir_ctrl, AO_CLKCTRL_RTC_SYS_CLK0, 12);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i2c_m_a, AO_CLKCTRL_RTC_SYS_CLK0, 15);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_i2c_m_b, AO_CLKCTRL_RTC_SYS_CLK0, 16);
@@ -341,13 +298,16 @@ MESON_CLK_GATE_AO_SYS_CLK(ao_sys_uart_a, AO_CLKCTRL_RTC_SYS_CLK0, 20);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_uart_b, AO_CLKCTRL_RTC_SYS_CLK0, 21);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_ao_spi, AO_CLKCTRL_RTC_SYS_CLK0, 25);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_rtc_secure, AO_CLKCTRL_RTC_SYS_CLK0, 26);
-MESON_CLK_GATE_AO_SYS_CLK(ao_sys_isp, AO_CLKCTRL_RTC_SYS_CLK0, 27);
+MESON_CLK_GATE_AO_SYS_CLK(ao_sys_ao_isp, AO_CLKCTRL_RTC_SYS_CLK0, 27);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_aocpu, AO_CLKCTRL_RTC_SYS_CLK0, 28);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_sram, AO_CLKCTRL_RTC_SYS_CLK0, 29);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_psram_apb, AO_CLKCTRL_RTC_SYS_CLK0, 30);
 MESON_CLK_GATE_AO_SYS_CLK(ao_sys_psram_axi, AO_CLKCTRL_RTC_SYS_CLK0, 31);
 
 static struct clk_regmap *const aoclk_regmaps[] = {
+	&ao_rough_32k_div,
+	&ao_rough_32k,
+	&ao_oscin32k_clk,
 	&ao_oscin_clk,
 	&ao_sys_clk,
 	&ao_psram_mux,
@@ -359,12 +319,6 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 	&ao_pwm_b_mux,
 	&ao_pwm_b_div,
 	&ao_pwm_b,
-	&ao_pwm_c_mux,
-	&ao_pwm_c_div,
-	&ao_pwm_c,
-	&ao_pwm_d_mux,
-	&ao_pwm_d_div,
-	&ao_pwm_d,
 	&ao_sys_rtc_reg,
 	&ao_sys_clktree,
 	&ao_sys_rst_ctrl,
@@ -375,7 +329,7 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 	&ao_sys_pwm_a,
 	&ao_sys_pwm_b,
 	&ao_sys_i3c,
-	&ao_sys_spisg_0,
+	&ao_sys_spisg0,
 	&ao_sys_ir_ctrl,
 	&ao_sys_i2c_m_a,
 	&ao_sys_i2c_m_b,
@@ -384,7 +338,7 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 	&ao_sys_uart_b,
 	&ao_sys_ao_spi,
 	&ao_sys_rtc_secure,
-	&ao_sys_isp,
+	&ao_sys_ao_isp,
 	&ao_sys_aocpu,
 	&ao_sys_sram,
 	&ao_sys_psram_apb,
@@ -392,6 +346,9 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 };
 
 static struct clk_hw *c5_aoclk_hw_clks[] = {
+	[CLKID_AO_ROUGH_32K_DIV]      = &ao_rough_32k_div.hw,
+	[CLKID_AO_ROUGH_32K]          = &ao_rough_32k.hw,
+	[CLKID_AO_OSCIN32K_CLK]       = &ao_oscin32k_clk.hw,
 	[CLKID_AO_OSCIN_CLK]          = &ao_oscin_clk.hw,
 	[CLKID_AO_SYS_CLK]            = &ao_sys_clk.hw,
 	[CLKID_AO_PSRAM_MUX]          = &ao_psram_mux.hw,
@@ -403,12 +360,6 @@ static struct clk_hw *c5_aoclk_hw_clks[] = {
 	[CLKID_AO_PWM_B_MUX]          = &ao_pwm_b_mux.hw,
 	[CLKID_AO_PWM_B_DIV]          = &ao_pwm_b_div.hw,
 	[CLKID_AO_PWM_B]              = &ao_pwm_b.hw,
-	[CLKID_AO_PWM_C_MUX]          = &ao_pwm_c_mux.hw,
-	[CLKID_AO_PWM_C_DIV]          = &ao_pwm_c_div.hw,
-	[CLKID_AO_PWM_C]              = &ao_pwm_c.hw,
-	[CLKID_AO_PWM_D_MUX]          = &ao_pwm_d_mux.hw,
-	[CLKID_AO_PWM_D_DIV]          = &ao_pwm_d_div.hw,
-	[CLKID_AO_PWM_D]              = &ao_pwm_d.hw,
 	[CLKID_AO_SYS_RTC_REG]        = &ao_sys_rtc_reg.hw,
 	[CLKID_AO_SYS_CLKTREE]        = &ao_sys_clktree.hw,
 	[CLKID_AO_SYS_RST_CTRL]       = &ao_sys_rst_ctrl.hw,
@@ -419,7 +370,7 @@ static struct clk_hw *c5_aoclk_hw_clks[] = {
 	[CLKID_AO_SYS_PWM_A]          = &ao_sys_pwm_a.hw,
 	[CLKID_AO_SYS_PWM_B]          = &ao_sys_pwm_b.hw,
 	[CLKID_AO_SYS_I3C]            = &ao_sys_i3c.hw,
-	[CLKID_AO_SYS_SPISG_0]        = &ao_sys_spisg_0.hw,
+	[CLKID_AO_SYS_SPISG0]         = &ao_sys_spisg0.hw,
 	[CLKID_AO_SYS_IR_CTRL]        = &ao_sys_ir_ctrl.hw,
 	[CLKID_AO_SYS_I2C_M_A]        = &ao_sys_i2c_m_a.hw,
 	[CLKID_AO_SYS_I2C_M_B]        = &ao_sys_i2c_m_b.hw,
@@ -428,7 +379,7 @@ static struct clk_hw *c5_aoclk_hw_clks[] = {
 	[CLKID_AO_SYS_UART_B]         = &ao_sys_uart_b.hw,
 	[CLKID_AO_SYS_AO_SPI]         = &ao_sys_ao_spi.hw,
 	[CLKID_AO_SYS_RTC_SECURE]     = &ao_sys_rtc_secure.hw,
-	[CLKID_AO_SYS_ISP]            = &ao_sys_isp.hw,
+	[CLKID_AO_SYS_AO_ISP]         = &ao_sys_ao_isp.hw,
 	[CLKID_AO_SYS_AOCPU]          = &ao_sys_aocpu.hw,
 	[CLKID_AO_SYS_SRAM]           = &ao_sys_sram.hw,
 	[CLKID_AO_SYS_PSRAM_APB]      = &ao_sys_psram_apb.hw,
