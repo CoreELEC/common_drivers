@@ -360,6 +360,7 @@ struct dpss_ch_d_s1 {
 	bool mode_drct; // from t6x
 	// unsigned int fmt;
 	bool frc_ds_scale_en;
+	bool need_dis_light_chg;
 
 	bool is_10bit; //for input
 	bool proc_as_i;

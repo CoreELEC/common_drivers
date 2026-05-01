@@ -2081,7 +2081,7 @@ void irq_pre_vs(void)
 		if (state_st->enable_mc_cnt == 0)
 			state_st->mc_byp_switch_off = true;
 	}
-	if (state_st->mc_byp_switch_off) {
+	if (state_st->mc_byp_switch_off && !state_st->need_force_mc_pre) {
 		frc_set_mc_bypass_rdma(0);
 		state_st->bypass_chg = true;
 		state_st->mc_byp_switch_off = false;

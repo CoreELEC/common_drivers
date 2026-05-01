@@ -2350,10 +2350,13 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	if (pch->d->nr_reset &&
 	    !VFM_IS_I_SRC(vf->type) &&
 	    (dpss_light_chg & C_BIT0) &&
-		!VFM_IS_HDMI_SRC(vf->source_type)) {
+		!VFM_IS_HDMI_SRC(vf->source_type) &&
+		!pch->d->need_dis_light_chg) {
 		//not support i / p
+		//not support small window memc
 		light_chg = true;
 	}
+
 	dbg_i1("%s: start init.light = %d source_type:%d vf_dpss_flg:0x%x\n",
 		__func__, light_chg, vf->source_type, vf->dpss_flg);
 

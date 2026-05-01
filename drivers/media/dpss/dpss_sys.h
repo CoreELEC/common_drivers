@@ -549,12 +549,15 @@ struct frc_state_s {
 	bool used_seq_vfm;
 	bool phs_swth;
 	u8 check_fallback;//0:init 1:start force 2:maintain state 3:end
+	u8 check_light_chg_mc;
 	u8 dae0_available_cnt;
 	u8 detect_threshold;
 	u8 dae0_bypass_mode;
 	u8 dst_buf_th;
 	u8 enable_frclink_cnt;
 	u8 nr_buf_idx;
+	u8 need_force_mc_pre;
+	u8 force_mc_pre_idx;
 	u8 force_mc_cur_idx;
 	u8 mc_drop_idx;
 	u8 mc_switch_adj_idx;
@@ -569,6 +572,7 @@ struct frc_state_s {
 	u32 src_frm_width;
 	u32 src_frm_height;
 	u32 frc_off_delay_vs_cnt;
+	u32 display_buf_info_cnt;
 	unsigned int put_frame_cnt;
 	enum compress_fmt_s compr_sel;
 	unsigned int pre_idx;

@@ -40,8 +40,9 @@
 // dpss:20260407 frc set fast pat mode"
 // dpss:20260415 add dpss_flag_info
 // dpss:20260424 add rdma reset when start
+// dpss:20260424 frc set rev mode
 
-#define DPSS_FRC_FW_VER			"20260507 frc set rev mode"
+#define DPSS_FRC_FW_VER			"20260508 frc not support light chg in small win"
 #define DPSS_FRC_KERDRV_VER                  1000
 
 //#define DPSS_FRC_DEVNO		1

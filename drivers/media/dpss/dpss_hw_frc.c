@@ -1147,8 +1147,13 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 
 	state_st->mc_disp_st.wr_pre_idx = dpe_pre_pixl_buf;
 	state_st->mc_disp_st.wr_cur_idx = dpe_cur_pixl_buf;
-
 	mc_res_switch_begin();
+	if (state_st->need_force_mc_pre) {
+		if (state_st->force_mc_pre_idx == dpe_pre_pixl_buf)
+			state_st->need_force_mc_pre = 0;
+		else
+			dpe_pre_pixl_buf = state_st->force_mc_pre_idx;
+	}
 
 	pr_frc(1, "display_buf_q:drop_idx=%d, disp_idx=%d, mc_idx=%d, inp_idx=%d\n",
 		display_buf_q.drop_idx, display_buf_q.disp_idx,
@@ -2567,11 +2572,13 @@ void hw_update_display_info(struct display_buffer_info_s *display_buf_info)
 	}
 	display_buf_info->mv_buf = pchip_st->state_st.mv_buf_idx;
 	state_st->mv_buf_idx = (state_st->mv_buf_idx + 1) % DPSS_SML_NUB;
+	display_buf_info->frame_index = state_st->display_buf_info_cnt++;
 
-	pr_frc(2, "dae_mix=%d, pcn=(%d,%d,%d), logo=(%d,%d,%d), mc_phase=%3d\n",
-		display_buf_info->dae_mix, display_buf_info->p, display_buf_info->c,
-		display_buf_info->n, display_buf_info->logo_pre, display_buf_info->logo_cur,
-		display_buf_info->mv_buf, display_buf_info->mc_phase);
+	pr_frc(2, "%s:dae_mix=%d, pcn=(%d,%d,%d), logo=(%d,%d,%d), mc_phase=%3d, frame_idx=%8d\n",
+		"set_disp_info", display_buf_info->dae_mix, display_buf_info->p,
+		display_buf_info->c, display_buf_info->n, display_buf_info->logo_pre,
+		display_buf_info->logo_cur, display_buf_info->mv_buf, display_buf_info->mc_phase,
+		display_buf_info->frame_index);
 }
 
 void hw_mc_reverse_update(void)

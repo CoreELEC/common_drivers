@@ -1179,6 +1179,9 @@ static void frc_state_init(void)
 	state_st->fast_pat_set_n2m = false;
 	state_st->fast_pat_set_phase0 = false;
 	state_st->disable_mc_link_intf = false;
+	state_st->display_buf_info_cnt = 0;
+	state_st->check_light_chg_mc = 0;
+	state_st->need_force_mc_pre = 0;
 	if (state_st->force_n2m == 0)
 		memset(&state_st->n2m_status, 0, sizeof(state_st->n2m_status));
 	memset(&state_st->me_pcn_st, 0, sizeof(state_st->me_pcn_st));
@@ -1188,40 +1191,50 @@ static void frc_state_init(void)
 	memset(&state_st->frc_int_st, 0, sizeof(state_st->frc_int_st));
 	memset(&g_frc_work_stats, 0, sizeof(struct frc_state_s));
 	vpu_initqueue(&inp_bufQ);
-	display_init_queue(&display_buf_q);
 }
 
 static void frc_compress_fmt_parse(struct dpss_sub_vf_s *vfs)
 {
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
+	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 
 	if (!pchip_st || !vfs)
 		return;
 
 	state_st = &pchip_st->state_st;
 
-	if (VFM_IS_COMP_MODE(vfs->type))
-		if (VFM_IS_COMP_AFRC(vfs->type_ext))
+	if (prm_top->dpss_mode != DPSS_FRC_MODE) {
+		if (prm_top->nro_fs_fmt.src_cmpr == CMPR_UN)
+			state_st->compr_sel = DDR_MIF;
+		else if (prm_top->nro_fs_fmt.src_cmpr == CMPR_AFRC)
 			state_st->compr_sel = DDR_AFRC;
+		state_st->big_fmt = prm_top->nro_fs_fmt.src_fmt;
+		state_st->big_bits = prm_top->nro_fs_fmt.src_bit;
+		state_st->big_plane = prm_top->nro_fs_fmt.src_plan;
+	} else {
+		if (VFM_IS_COMP_MODE(vfs->type))
+			if (VFM_IS_COMP_AFRC(vfs->type_ext))
+				state_st->compr_sel = DDR_AFRC;
+			else
+				state_st->compr_sel = DDR_AFBC;
 		else
-			state_st->compr_sel = DDR_AFBC;
-	else
-		state_st->compr_sel = DDR_MIF;
+			state_st->compr_sel = DDR_MIF;
 
-	if (VFM_IS_FMT_420(vfs->type))
-		state_st->big_fmt = YUV420;
-	else if (VFM_IS_FMT_422(vfs->type))
-		state_st->big_fmt = YUV422;
-	else if (VFM_IS_FMT_444(vfs->type))
-		state_st->big_fmt = YUV444;
+		if (VFM_IS_FMT_420(vfs->type))
+			state_st->big_fmt = YUV420;
+		else if (VFM_IS_FMT_422(vfs->type))
+			state_st->big_fmt = YUV422;
+		else if (VFM_IS_FMT_444(vfs->type))
+			state_st->big_fmt = YUV444;
 
-	if (vfs->bitdepth & BITDEPTH_Y10)
-		state_st->big_bits = BIT_010;
-	else
-		state_st->big_bits = BIT_008;
+		if (vfs->bitdepth & BITDEPTH_Y10)
+			state_st->big_bits = BIT_010;
+		else
+			state_st->big_bits = BIT_008;
 
-	state_st->big_plane = vfs->plane_num;
+		state_st->big_plane = vfs->plane_num;
+	}
 	dbg_h2("frc compr_sel:%d\n", state_st->compr_sel);
 }
 
@@ -2621,9 +2634,9 @@ bool is_vd1_link_state(void)
 
 	if (is_vd1_link && !state_st->is_frc_vpp_link)
 		ret = true;
-
-	dbg_f1("vd1_link_state_sw=%d(%d,%d)\n",
-		ret, is_vd1_link, !state_st->is_frc_vpp_link);
+	if (is_vd1_link == state_st->is_frc_vpp_link)
+		dbg_f1("vd1_link_state_sw=%d(%d,%d)\n",
+			ret, is_vd1_link, !state_st->is_frc_vpp_link);
 	return ret;
 }
 
@@ -5075,6 +5088,8 @@ void mc_res_switch_begin(void)
 			(prm_top->idx_done + 1) % DPSS_DPS_NUB) {
 			prm_top->trig_byp_mc = false;
 			state_st->src_chg = 1;
+			state_st->force_mc_pre_idx = state_st->mc_disp_st.wr_cur_idx;
+			state_st->need_force_mc_pre = 1;
 			update_frc_state();
 			dbg_h2("cur_idx:%d, idx_done:%d, new size idx:%d\n",
 				state_st->mc_disp_st.wr_cur_idx, prm_top->idx_done,

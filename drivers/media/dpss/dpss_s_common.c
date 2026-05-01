@@ -410,6 +410,11 @@ unsigned int dpss_sub_vf_check(struct dpss_ch_s *pch,
 	sub_vf_2_vinfo(vinf_c, vfms);
 	ret = dpss_is_vinfo_chg(vinf_c, vinf_l, true);
 
+	if (ret == 1)
+		pch->d->need_dis_light_chg = true;
+	else if (ret != 0)
+		pch->d->need_dis_light_chg = false;
+
 	if (VFM_IS_I_SRC(vfms->type))
 		pch->d->is_i = 1;
 	else
@@ -452,7 +457,9 @@ static unsigned int dpss_is_vinfo_chg(struct dpss_vinfo_s *v1,	/* new */
 {
 	unsigned int ret = 0;
 
-	if (v1->src_type != v2->src_type ||
+	if (((v1->dpss_flg ^ v2->dpss_flg) & (DPSS_FLG_NEED_SKIP | DPSS_FLG_USE_DW)) != 0) {
+		ret = 1; //small win memc case not run light chg, tmp
+	} else if (v1->src_type != v2->src_type ||
 	    !D_COM_M(DPSS_VFM_T_MASK_CHANGE, v1->vtype, v2->vtype) ||
 	    v1->v != v2->v ||
 	    v1->h != v2->h ||
@@ -461,20 +468,16 @@ static unsigned int dpss_is_vinfo_chg(struct dpss_vinfo_s *v1,	/* new */
 	    v1->canvas0_config[0].width != v2->canvas0_config[0].width ||
 	    v1->canvas0_config[0].height != v2->canvas0_config[0].height) {
 		/* video format changed */
-		ret = 1;
+		ret = 2;
 	} else if (!D_COM_M(VIDTYPE_VIU_FIELD, v1->vtype, v2->vtype)) {
 		/* just scan mode changed */
-		ret = 2;
+		ret = 3;
 	} else if (v1->duration_overflow != v2->duration_overflow) {
 		/* */
-		ret = 3;
-	} else if (v1->fg != v2->fg) {
 		ret = 4;
-	} else if ((v1->dpss_flg & DPSS_FLG_NEED_SKIP) !=
-		(v2->dpss_flg & DPSS_FLG_NEED_SKIP)) {
+	} else if (v1->fg != v2->fg) {
 		ret = 5;
-	} else if ((v1->dpss_flg & DPSS_FLG_HIGH_BANDWIDTH) !=
-		(v2->dpss_flg & DPSS_FLG_HIGH_BANDWIDTH)) {
+	} else if (v1->dpss_flg != v2->dpss_flg) {
 		ret = 6;
 	}
 	dbg_h1("v2->dpss_flg:%x %x", v1->dpss_flg, v2->dpss_flg);
@@ -488,6 +491,9 @@ void dpss_vfm_cp(struct vframe_s *vfm_t, struct vframe_s *vfm_f)
 //      u32 dpss_id; //when have dpss, set this val from top
 	void *dpss_data;
 //      void *caller_data;
+
+	if (WARN_ON(!vfm_f))
+		return;
 
 	dpss_flg = vfm_t->dpss_flg;
 //      dpss_id = vfm_t->dpss_id;
@@ -1731,8 +1737,16 @@ void dpss_s2_parser_input_new(struct dpss_ch_s *pch)
 	vfm_in = nr_i->in_vfm;
 	//copy and back
 	dpss_vfm_cp(vfm, vfm_in);
-	vfm->dpss_flg = (vfm_in->dpss_flg) & (DPSS_FLG_NEW_TRIG | DPSS_FLG_NEED_SKIP |
-		DPSS_FLG_HIGH_BANDWIDTH); //keep input
+	if (likely(vfm_in)) {
+		vfm->dpss_flg = vfm_in->dpss_flg &
+			(DPSS_FLG_NEW_TRIG |
+			DPSS_FLG_NEED_SKIP |
+			DPSS_FLG_USE_DW |
+			DPSS_FLG_HIGH_BANDWIDTH);
+	} else {
+		WARN_ON(1);
+		vfm->dpss_flg = 0;
+	}
 	w_mode = dpss_work_mode_count(pch, vfm);
 
 	chg = dpss_m_chg_count(pch, vfm);
@@ -2006,7 +2020,8 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 		if ((dpss_light_chg & C_BIT0) &&
 		     pch->d->nr_reset &&
 		     !VFM_IS_I_SRC(vfm->type) &&
-			 !VFM_IS_HDMI_SRC(vfm->source_type))
+			 !VFM_IS_HDMI_SRC(vfm->source_type) &&
+			!pch->d->need_dis_light_chg)
 			light_chg = true;
 
 		if (pch->c.ch == 0 && pch->d->frc_link &&

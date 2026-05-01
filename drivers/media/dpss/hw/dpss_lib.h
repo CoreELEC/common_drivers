@@ -19,6 +19,7 @@ struct display_buffer_info_s {
 	u8 logo_cur;
 	u8 mv_buf;
 	u8 mc_phase;
+	u32 frame_index;
 };
 
 struct display_queue {
