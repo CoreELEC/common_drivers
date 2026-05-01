@@ -14892,7 +14892,9 @@ static bool update_frc_link_state(struct video_layer_s *layer,
 			pr_info("%s:trigger need_disable_plink to false\n", __func__);
 	}
 	if (layer->need_disable_frc_link) {
-		if (is_frc_link_on(layer) &&
+		if (!is_frc_link_on(layer)) {
+			layer->need_disable_frc_link = false;
+		} else if (is_frc_link_on(layer) &&
 			/*is_frc_link_source(vf) && */
 			layer->dispbuf) {
 			memset(&frc_in_p, 0, sizeof(struct pvpp_dis_frc_para_in_s));
