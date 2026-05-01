@@ -3479,11 +3479,11 @@ static const struct of_device_id vpu_of_table[] = {
 	{}
 };
 
-#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-static void vpu_early_suspend(struct early_suspend *h)
+static void vpu_suspend_interface(void)
 {
 	if (!vpu_conf.data || suspend_status)
 		return;
+
 	if (vpu_conf.data->chip_type >= VPU_CHIP_SC2) {
 		unsigned int clk;
 
@@ -3496,11 +3496,9 @@ static void vpu_early_suspend(struct early_suspend *h)
 		set_vpu_clk(clk);
 	}
 	suspend_status = true;
-	VPUPR("early_suspend clk: %uHz(0x%x) suspend_status = %d\n",
-	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 }
 
-static void vpu_late_resume(struct early_suspend *h)
+static void vpu_resume_interface(void)
 {
 	unsigned int clk;
 	int ret;
@@ -3536,6 +3534,19 @@ static void vpu_late_resume(struct early_suspend *h)
 		ret = init_arb_urgent_table();
 
 	suspend_status = false;
+}
+
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+static void vpu_early_suspend(struct early_suspend *h)
+{
+	vpu_suspend_interface();
+	VPUPR("early suspend clk: %uHz(0x%x) suspend_status = %d\n",
+	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
+}
+
+static void vpu_late_resume(struct early_suspend *h)
+{
+	vpu_resume_interface();
 	VPUPR("late_resume clk: %uHz(0x%x) suspend_status = %d\n",
 	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 }
@@ -3661,59 +3672,9 @@ static void vpu_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int restore_clk(int restore_flag)
-{
-	int ret;
-
-	if (!IS_ERR_OR_NULL(vpu_conf.vpu_intr))
-		clk_prepare_enable(vpu_conf.vpu_intr);
-	if (restore_flag) {
-		if ((IS_ERR_OR_NULL(vpu_conf.vapb_clk0)) ||
-			(IS_ERR_OR_NULL(vpu_conf.vapb_clk1)) ||
-			(IS_ERR_OR_NULL(vpu_conf.vapb_clk))) {
-			if (IS_ERR_OR_NULL(vpu_conf.vapb_clk))
-				VPUERR("%s: vapb_clk\n", __func__);
-			else
-				clk_prepare_enable(vpu_conf.vapb_clk);
-		} else {
-			ret = clk_set_parent(vpu_conf.vapb_clk, vpu_conf.vapb_clk0);
-			if (ret)
-				VPUERR("%s: %d clk_set_parent error\n", __func__, __LINE__);
-
-			clk_prepare_enable(vpu_conf.vapb_clk);
-			ret = clk_set_rate(vpu_conf.vapb_clk1, 50000000);
-			if (ret)
-				VPUERR("%s: clk_set_rate error\n", __func__);
-		}
-	}
-	if ((!IS_ERR_OR_NULL(vpu_conf.vpu_clk0)) ||
-		(!IS_ERR_OR_NULL(vpu_conf.vpu_clk1)) ||
-		(!IS_ERR_OR_NULL(vpu_conf.vpu_clk))) {
-		ret = clk_set_parent(vpu_conf.vpu_clk, vpu_conf.vpu_clk0);
-		if (ret)
-			VPUERR("%s: %d clk_set_parent error\n", __func__, __LINE__);
-		clk_prepare_enable(vpu_conf.vpu_clk);
-	}
-		return 0;
-}
-
 static int vpu_suspend(struct device *dev)
 {
-	if (!vpu_conf.data || suspend_status)
-		return 0;
-
-	if (vpu_conf.data->chip_type >= VPU_CHIP_SC2) {
-		unsigned int clk;
-
-		/* down vpu clk when suspend */
-		vpu_clk_level_saved = vpu_conf.clk_level;
-		vapb_clk_level_saved = clk_get_rate(vpu_conf.vapb_clk);
-
-		clk = vpu_clk_suspend.freq;
-		vapb_clk_switch(0);
-		set_vpu_clk(clk);
-	}
-	suspend_status = true;
+	vpu_suspend_interface();
 	VPUPR("suspend clk: %uHz(0x%x) suspend_status = %d\n",
 	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 	return 0;
@@ -3721,90 +3682,34 @@ static int vpu_suspend(struct device *dev)
 
 static int vpu_resume(struct device *dev)
 {
-	unsigned int clk;
-	int ret;
-
-	if (!suspend_status)
-		return 0;
-	ret = vpu_power_init_check();
-	vpu_clktree_init(dev);
-	if (ret)
-		vpu_power_init();
-
-	if (!vpu_conf.data)
-		return 0;
-
-	if (vpu_conf.data->chip_type >= VPU_CHIP_SC2) {
-		clk = vpu_clk_level_saved;
-
-		vapb_clk_switch(1);
-		set_vpu_clk(clk);
-	}
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	set_vpu_sideband_init();
-#endif
-	if (vpu_conf.data->chip_type == VPU_CHIP_T7 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S6 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7D ||
-		vpu_conf.data->chip_type == VPU_CHIP_TXHD2 ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6D ||
-		vpu_conf.data->chip_type == VPU_CHIP_T5M ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6W ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6X)
-		ret = init_arb_urgent_table();
-
-	suspend_status = false;
-	VPUPR("resume clk: %uHz(0x%x) suspend_status = %d\n",
+	vpu_resume_interface();
+	VPUPR("late_resume clk: %uHz(0x%x) suspend_status = %d\n",
 	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 	return 0;
 }
 
 static int vpu_freeze(struct device *dev)
 {
-	if (!IS_ERR_OR_NULL(vpu_conf.vpu_clk) &&
-		__clk_is_enabled(vpu_conf.vpu_clk))
-		clk_disable_unprepare(vpu_conf.vpu_clk);
-
-	if (!IS_ERR_OR_NULL(vpu_conf.vpu_intr))
-		clk_disable_unprepare(vpu_conf.vpu_intr);
-
+	vpu_suspend_interface();
+	VPUPR("freeze clk: %uHz(0x%x) suspend_status = %d\n",
+	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 	return 0;
 }
 
 static int vpu_thaw(struct device *dev)
 {
-	int ret;
+	vpu_resume_interface();
+	VPUPR("thaw clk: %uHz(0x%x) suspend_status = %d\n",
+	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 
-	ret = restore_clk(0);
-	return ret;
+	return 0;
 }
 
 static int vpu_restore(struct device *dev)
 {
-	int ret;
-
-	ret = vpu_power_init_check();
-	restore_clk(1);
-	mutex_lock(&vpu_clk_mutex);
-	set_vpu_clk(vpu_conf.clk_level);
-	mutex_unlock(&vpu_clk_mutex);
-	if (ret)
-		vpu_power_init();
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	set_vpu_sideband_init();
-#endif
-	if (vpu_conf.data->chip_type == VPU_CHIP_T7 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S6 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7 ||
-		vpu_conf.data->chip_type == VPU_CHIP_S7D ||
-		vpu_conf.data->chip_type == VPU_CHIP_TXHD2 ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6D ||
-		vpu_conf.data->chip_type == VPU_CHIP_T5M ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6W ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6X)
-		ret = init_arb_urgent_table();
-
+	vpu_resume_interface();
+	VPUPR("thaw clk: %uHz(0x%x) suspend_status = %d\n",
+	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
 	return 0;
 }
 
