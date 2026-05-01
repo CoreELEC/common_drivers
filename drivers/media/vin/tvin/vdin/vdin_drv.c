@@ -2412,6 +2412,9 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 		devp->self_stop_start) || devp->re_cfg) {
 		devp->self_stop_start = false;
 		devp->re_cfg = false;
+		/* If the frontend has relevant content, it will be updated; if not, no update */
+		memset(&devp->prop.emp_data, 0, sizeof(devp->prop.emp_data));
+		memset(&devp->pre_prop.emp_data, 0, sizeof(devp->pre_prop.emp_data));
 	} else {
 		/* clear color para*/
 		memset(&devp->pre_prop, 0, sizeof(devp->pre_prop));
@@ -7576,19 +7579,18 @@ static int vdin_get_vinfo_notify_callback(struct notifier_block *block,
 		return 0;
 
 	if (devp->vdin_function_sel & VDIN_SELF_STOP_START &&
-		devp->flags & VDIN_FLAG_DEC_STARTED) {
-		if (vinfo && devp->hw_core == VDIN_HW_CORE_NORMAL &&
-			vinfo->height != devp->v_active &&
-			devp->dtdata->hw_ver == VDIN_HW_T6X) {
-			mutex_lock(&devp->fe_lock);
+		devp->dtdata->hw_ver == VDIN_HW_T6X && devp->hw_core == VDIN_HW_CORE_NORMAL) {
+		mutex_lock(&devp->fe_lock);
+		if (devp->flags & VDIN_FLAG_DEC_STARTED &&
+			vinfo && vinfo->height != devp->v_active) {
 			devp->self_stop_start = 1;
 			vdin_self_stop_dec(devp);
 			vdin_self_start_dec(devp);
 			devp->self_stop_start = 0;
-			pr_info("vout mode change need to self start_dec\n");
+			pr_info("1-vout mode change need to self start_dec\n");
 			mutex_unlock(&devp->fe_lock);
-			return 0;
 		}
+		mutex_unlock(&devp->fe_lock);
 	}
 
 	devp->vinfo_std_duration = vinfo->sync_duration_num / vinfo->sync_duration_den;
