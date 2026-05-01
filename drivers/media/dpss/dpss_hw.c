@@ -2093,7 +2093,8 @@ void irq_pre_vs(void)
 		pfw_data->pre_vsync_irq_handler(pfw_data);
 
 	if (state_st->mc_bypass && state_st->have_update_vfcd &&
-		!state_st->mc_bypass_always && frc_top->memc_enable) {
+		!state_st->mc_bypass_always && frc_top->memc_enable &&
+		state_st->enable_mc_cnt == 0) {
 		if (state_st->mc_bypass_cnt) {
 			state_st->mc_bypass_cnt--;
 		} else if (fallback_st == 0 || fallback_st == 3) {

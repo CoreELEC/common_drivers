@@ -965,6 +965,24 @@ void hw_cfg_dpss_mc_bbd(u32 frm_hsize, u32 frm_vsize, u32 bbd_en, u32 bbd_sel, u
 	w_reg_bit(FRC_BBD_MISC, 10, 4, 4);
 }
 
+static bool check_mc_cur_is_res_change(u32 pre_id, u32 cur_id)
+{
+	bool ret = false;
+	u32 chg_id;
+	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
+
+	if (prm_top->is_i || prm_top->trig_byp_mc)
+		return ret;
+
+	chg_id = (prm_top->idx_done + 1) % DPSS_DPS_NUB;
+	if (cur_id >= chg_id)
+		ret = true;
+	else if (cur_id < pre_id)
+		ret = true;
+
+	return ret;
+}
+
 bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 {
 	u32 data32;
@@ -1014,6 +1032,7 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	bool is_pause_state = false;
 	u8 display_mc_idx;
 	u8 tmp_idx = 0;
+	bool need_update_res_swth = false;
 
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct frc_state_s *state_st;
@@ -1126,6 +1145,8 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 	}
 
 	if (!state_st->force_disable_check_fallback && state_st->check_fallback == 1) {
+		need_update_res_swth =
+			check_mc_cur_is_res_change(dpe_cur_pixl_buf, state_st->force_mc_cur_idx);
 		dpe_cur_pixl_buf = state_st->force_mc_cur_idx;
 		pr_frc(1, "need force mc cur id=%d\n", dpe_cur_pixl_buf);
 		state_st->check_fallback = 2;
@@ -1147,7 +1168,9 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 
 	state_st->mc_disp_st.wr_pre_idx = dpe_pre_pixl_buf;
 	state_st->mc_disp_st.wr_cur_idx = dpe_cur_pixl_buf;
-	mc_res_switch_begin();
+
+	mc_res_switch_begin(need_update_res_swth);
+
 	if (state_st->need_force_mc_pre) {
 		if (state_st->force_mc_pre_idx == dpe_pre_pixl_buf)
 			state_st->need_force_mc_pre = 0;

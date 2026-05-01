@@ -2310,9 +2310,6 @@ void nr_lcevc_vf_parser(struct dpss_ch_s *pch, struct vframe_s *vf,
 unsigned int dpss_dbg_0709; //disable reset
 module_param_named(dpss_dbg_0709, dpss_dbg_0709, uint, 0664);
 
-unsigned int dpss_dbg_nr_sleep; //disable reset
-module_param_named(dpss_dbg_nr_sleep, dpss_dbg_nr_sleep, uint, 0664);
-
 void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		 struct vframe_s *vf)
 {
@@ -2367,10 +2364,6 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		prm_top->trig_byp_dae0 = true;
 		prm_top->trig_byp_mc = true;
 		dbg_h2("%s trig byp dae0 and mc\n", __func__);
-		if (dpss_dbg_nr_sleep) {
-			usleep_range(dpss_dbg_nr_sleep, dpss_dbg_nr_sleep + 1000);
-			dbg_h2("%s sleep done\n", __func__);
-		}
 	} else {
 		prm_top->reset_path = true;
 		dbg_h2("%s do reset path\n", __func__);

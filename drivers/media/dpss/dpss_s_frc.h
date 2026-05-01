@@ -65,7 +65,7 @@ void dpss_frc_resume(void);
 int dpss_frc_fpp_memc_set_level(u8 level, u8 num);
 void update_frc_state(void);
 struct vframe_s *frc_get_vfm(void);
-void mc_res_switch_begin(void);
+void mc_res_switch_begin(bool need_update_res_swth);
 //reverse
 void frc_transform_check(struct vframe_s *vfm);
 

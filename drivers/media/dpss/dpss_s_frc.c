@@ -5074,11 +5074,13 @@ void get_eos_from_dp(bool en)
 		 state_st->compr_sel);
 }
 
-void mc_res_switch_begin(void)
+void mc_res_switch_begin(bool need_update_res_swth)
 {
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	struct frc_chip_st *pchip_st;
 	struct frc_state_s *state_st;
+	u32 new_size_id;
+	u32 mc_cur_id;
 
 	pchip_st = dpss_get_frc_st();
 
@@ -5086,17 +5088,17 @@ void mc_res_switch_begin(void)
 		return;
 
 	state_st = &pchip_st->state_st;
+	mc_cur_id = state_st->mc_disp_st.wr_cur_idx;
+	new_size_id = (prm_top->idx_done + 1) % DPSS_DPS_NUB;
 	if (prm_top->trig_byp_mc) {
-		if (state_st->mc_disp_st.wr_cur_idx ==
-			(prm_top->idx_done + 1) % DPSS_DPS_NUB) {
+		if (mc_cur_id == new_size_id || need_update_res_swth) {
 			prm_top->trig_byp_mc = false;
 			state_st->src_chg = 1;
-			state_st->force_mc_pre_idx = state_st->mc_disp_st.wr_cur_idx;
+			state_st->force_mc_pre_idx = mc_cur_id;
 			state_st->need_force_mc_pre = 1;
 			update_frc_state();
-			dbg_h2("cur_idx:%d, idx_done:%d, new size idx:%d\n",
-				state_st->mc_disp_st.wr_cur_idx, prm_top->idx_done,
-				(prm_top->idx_done + 1) % DPSS_DPS_NUB);
+			dbg_h2("cur_idx:%d, new size idx:%d, update:%d\n",
+				mc_cur_id, new_size_id, need_update_res_swth);
 		}
 		state_st->mc_byp_switch_on = true;
 		dbg_h2("trig byp mc\n");
