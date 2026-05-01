@@ -3331,7 +3331,8 @@ void earc_hpd_handler(struct work_struct *work)
 	if (rx_info.chip_id != CHIP_ID_T6X)
 		return;
 	mdelay(delay_dbg);
-	earc_hdmirx_hpdst(rx_info.arc_port, 4);
+	if (earc_hdmirx_hpdst)
+		earc_hdmirx_hpdst(rx_info.arc_port, 4);
 }
 
 void aml_earc_recovery(void)
@@ -3369,10 +3370,11 @@ int rx_set_port_hpd(u8 port_id, bool val)
 			rx[port_id].var.hpd_low_cnt = 0;
 		} else {
 			rx_i2c_edid_cfg_with_port(port_id, false);
-			if (port_id == rx_info.arc_port) {
+			if (port_id == rx_info.arc_port && rx_info.chip_id == CHIP_ID_T6X) {
 				if (log_level & PHY_LOG)
 					rx_pr("earc protect start\n");
-				earc_hdmirx_hpdst(rx_info.arc_port, 3);
+				if (earc_hdmirx_hpdst)
+					earc_hdmirx_hpdst(rx_info.arc_port, 3);
 				mdelay(delay_dbg1);
 			}
 			hdmirx_wr_bits_top_common(TOP_HPD_PWR5V, _BIT(port_id), 0);
