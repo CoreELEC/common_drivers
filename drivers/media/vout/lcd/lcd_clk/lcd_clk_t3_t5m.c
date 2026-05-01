@@ -33,7 +33,7 @@ static void lcd_pll_ss_enable(struct aml_lcd_drv_s *pdrv, int status)
 	if (!cconf)
 		return;
 
-	offset = cconf->pll_config[0].pll_offset;
+	offset = cconf->data->pll_data[0]->pll_offset;
 	pll_ctrl2 = lcd_ana_read(ANACTRL_TCON_PLL0_CNTL2 + offset);
 	pll_ctrl2 &= ~((1 << 15) | (0xf << 16) | (0xf << 28));
 
@@ -68,7 +68,7 @@ static void lcd_set_pll_ss(struct aml_lcd_drv_s *pdrv, unsigned int ss_flag)
 	if (!cconf)
 		return;
 
-	offset = cconf->pll_config[0].pll_offset;
+	offset = cconf->data->pll_data[0]->pll_offset;
 	pll_ctrl2 = lcd_ana_read(ANACTRL_TCON_PLL0_CNTL2 + offset);
 
 	if (ss_flag & LCD_SSC_LEVEL) {
@@ -114,8 +114,8 @@ static void lcd_pll_frac_set(struct aml_lcd_drv_s *pdrv, unsigned int frac)
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
-	offset = cconf->pll_config[0].pll_offset;
 
+	offset = cconf->data->pll_data[0]->pll_offset;
 	val = lcd_ana_read(ANACTRL_TCON_PLL0_CNTL1 + offset);
 	lcd_ana_setb(ANACTRL_TCON_PLL0_CNTL1 + offset, frac, 0, 19);
 	LCD_DBG(pdrv, "%s: reg 0x%x: 0x%08x->0x%08x, pll_frac=0x%x", __func__,
@@ -131,8 +131,8 @@ static void lcd_pll_m_set(struct aml_lcd_drv_s *pdrv, unsigned int m)
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
-	offset = cconf->pll_config[0].pll_offset;
 
+	offset = cconf->data->pll_data[0]->pll_offset;
 	val = lcd_ana_read(ANACTRL_TCON_PLL0_CNTL0 + offset);
 	lcd_ana_setb(ANACTRL_TCON_PLL0_CNTL0 + offset, m, 0, 8);
 	LCD_DBG(pdrv, "%s: reg 0x%x: 0x%08x->0x%08x, pll_m=0x%x",
@@ -149,8 +149,8 @@ static void lcd_pll_reset(struct aml_lcd_drv_s *pdrv)
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
-	offset = cconf->pll_config[0].pll_offset;
 
+	offset = cconf->data->pll_data[0]->pll_offset;
 	lcd_ana_setb(ANACTRL_TCON_PLL0_CNTL0 + offset, 1, 29, 1);
 	usleep_range(10, 11);
 	lcd_ana_setb(ANACTRL_TCON_PLL0_CNTL0 + offset, 0, 29, 1);
@@ -255,7 +255,7 @@ static void lcd_clk_disable(struct aml_lcd_drv_s *pdrv)
 		reg_vid2_clk_ctrl = CLKCTRL_VIID_CLK0_CTRL;
 		break;
 	}
-	offset = cconf->pll_config[0].pll_offset;
+	offset = cconf->data->pll_data[0]->pll_offset;
 
 	lcd_clk_setb(reg_vid_clk_ctrl2, 0, ENCL_GATE_VCLK, 1);
 
@@ -297,7 +297,7 @@ static void lcd_set_pll_t3(struct aml_lcd_drv_s *pdrv)
 		((1 << 20) | /* sdm_en */
 		(cconf->pll_config[0].pll_frac << 0));
 
-	offset = cconf->pll_config[0].pll_offset;
+	offset = cconf->data->pll_data[0]->pll_offset;
 	pll_stts = ANACTRL_TCON_PLL0_STS;
 
 set_pll_retry_t3:

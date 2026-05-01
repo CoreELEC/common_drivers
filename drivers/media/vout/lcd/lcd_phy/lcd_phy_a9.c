@@ -96,15 +96,29 @@ static int lcd_phy_param_get_from_reg(struct aml_lcd_drv_s *pdrv,
 	return 0;
 }
 
-#define CH_NUM_EACH_GROUP 5
-
 static void lcd_phy_common_update(struct aml_lcd_drv_s *pdrv, unsigned int common0,
 					unsigned int common1, unsigned int common2)
 {
-	struct phy_config_s *phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
 	struct phy_attr_s *phy = pdrv->curr_dev->dev_cfg.phy_cfg.act_phy;
+	unsigned int dual_port = 0;
 
-	if (phy_cfg->lane_num > CH_NUM_EACH_GROUP) {
+	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
+	case LCD_LVDS:
+		if (pdrv->curr_dev->dev_cfg.control.lvds_cfg.dual_port)
+			dual_port = 1;
+		break;
+	case LCD_MIPI:
+		if (pdrv->curr_dev->dev_cfg.control.mipi_cfg.multi_port_cfg & BIT(0))
+			dual_port = 1;
+		break;
+	case LCD_VBYONE:
+		dual_port = 1;
+		break;
+	default:
+		break;
+	}
+
+	if (dual_port) {
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL6_A9, common0, 0, 16);
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL6_A9, common0, 16, 16);
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL7_A9,
@@ -136,35 +150,46 @@ static void lcd_phy_bias_common_update(struct aml_lcd_drv_s *pdrv, unsigned int 
 static void lcd_phy_serializer_common_update(struct aml_lcd_drv_s *pdrv)
 {
 	unsigned char model_set = 0;
-	struct phy_config_s *phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
+	unsigned int dual_port = 0;
 
 	switch (pdrv->curr_dev->dev_cfg.basic.lcd_type) {
 	case LCD_LVDS:
 		model_set = 0;
+		if (pdrv->curr_dev->dev_cfg.control.lvds_cfg.dual_port)
+			dual_port = 1;
 		break;
 	case LCD_MIPI:
+		if (pdrv->curr_dev->dev_cfg.control.mipi_cfg.multi_port_cfg & BIT(0))
+			dual_port = 1;
 		model_set = 1;
 		break;
 	case LCD_VBYONE:
+		dual_port = 1;
 		model_set = 2;
 		break;
 	default:
 		break;
 	}
 
-	if (phy_cfg->lane_num > CH_NUM_EACH_GROUP) {
+	if (dual_port) {
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1 | (model_set << 2), 16, 4);
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1 | (model_set << 2), 20, 4);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 0, 24, 1);
 	} else {
-		if (pdrv->index)
+		if (pdrv->index) {
 			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9,
 						1 | (model_set << 2), 20, 4);
-		else
+			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1, 24, 1);
+		} else {
 			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9,
 						1 | (model_set << 2), 16, 4);
+			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 0, 24, 1);
+		}
 	}
-	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 2, 24, 3);
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1, 25, 2);
 }
+
+#define CH_NUM_EACH_GROUP 5
 
 static void lcd_phy_ch_set(struct aml_lcd_drv_s *pdrv)
 {
@@ -198,7 +223,7 @@ static void lcd_lvds_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 	unsigned int common0 = 0;
 	unsigned int common1 = 0x4020;
 	unsigned int common2 = 0x4026;
-	unsigned int bias_common = 0x2450;
+	unsigned int bias_common = 0xe450;
 
 	lcd_phy_common_update(pdrv, common0, common1, common2);
 	lcd_phy_bias_common_update(pdrv, bias_common);

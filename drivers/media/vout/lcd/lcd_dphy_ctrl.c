@@ -717,6 +717,8 @@ void lcd_lane_map_set(struct aml_lcd_drv_s *pdrv)
 #ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 void lcd_mipi_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 {
+	struct dsi_config_s *mipi_cfg;
+
 	LCD_DBG(pdrv, "%s: %u", __func__, on_off);
 
 	switch (pdrv->data->chip_type) {
@@ -747,6 +749,51 @@ void lcd_mipi_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 			lcd_lane_map_set(pdrv);
 		}
 		break;
+	case LCD_CHIP_A9:
+		mipi_cfg = &pdrv->curr_dev->dev_cfg.control.mipi_cfg;
+		if (on_off) {
+			if (pdrv->index) {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 1, 5, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 6, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 3, 2, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2, 0, 10, 10);
+			} else {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 1, 2, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 3, 0, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2, 0, 0, 10);
+				if (mipi_cfg->multi_port_cfg & BIT(0)) {
+					lcd_vx1_lvds_ctrl_setb(pdrv,
+								ANACTRL_LVDS_TX_PHY_CNTL0,
+								1, 5, 1);
+					lcd_vx1_lvds_ctrl_setb(pdrv,
+								ANACTRL_LVDS_TX_PHY_CNTL0,
+								0, 6, 2);
+					lcd_vx1_lvds_ctrl_setb(pdrv,
+								ANACTRL_LVDS_TX_PHY_CNTL1,
+								3, 2, 2);
+					lcd_vx1_lvds_ctrl_setb(pdrv,
+								ANACTRL_LVDS_TX_PHY_CNTL2,
+								0, 10, 10);
+				}
+			}
+			lcd_lane_map_set(pdrv);
+		} else {
+			if (pdrv->index) {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 5, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 2, 2);
+			} else {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 2, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 0, 2);
+				if (mipi_cfg->multi_port_cfg & BIT(0)) {
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0,
+								0, 5, 1);
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1,
+								0, 2, 2);
+				}
+			}
+		}
+		break;
+
 	default:
 		break;
 	}
@@ -925,12 +972,37 @@ void lcd_lvds_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		break;
 	case LCD_CHIP_A9:
 		if (on_off) {
-			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 1, 0, 1);
-			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9, 3, 0, 2);
-			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9, 0x55555, 0, 20);
+			if (pdrv->index) {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
+							1, 3, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
+							0, 6, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9,
+							3, 2, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
+							0x2aa, 10, 10);
+			} else {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
+							1, 0, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
+							3, 6, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9,
+							3, 0, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
+							0x155, 0, 10);
+				if (pdrv->curr_dev->dev_cfg.control.lvds_cfg.dual_port)
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
+								0x155, 10, 10);
+			}
 			lcd_lane_map_set(pdrv);
 		} else {
-			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 0, 2);
+			if (pdrv->index) {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 3, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 2, 2);
+			} else {
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 1, 0, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 0, 2);
+			}
 		}
 		break;
 	default:
@@ -1116,6 +1188,7 @@ void lcd_vbyone_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9, 0x55555, 0, 20);
 			lcd_lane_map_set(pdrv);
 		} else {
+			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 0, 1);
 			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 0, 2);
 		}
 		break;

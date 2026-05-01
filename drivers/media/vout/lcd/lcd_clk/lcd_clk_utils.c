@@ -278,6 +278,25 @@ int lcd_pll_wait_lock_hiu(unsigned int reg, unsigned int lock_bit)
 	return ret;
 }
 
+int lcd_pll_wait_lvds_vx1(unsigned int reg, unsigned int lock_bit)
+{
+	unsigned int pll_lock;
+	int wait_loop = PLL_WAIT_LOCK_CNT; /* 200 */
+	int ret = 0;
+
+	do {
+		usleep_range(100, 120);
+		pll_lock = lcd_hiu_getb(reg, lock_bit, 1);
+		wait_loop--;
+	} while ((pll_lock == 0) && (wait_loop > 0));
+	if (pll_lock == 0)
+		ret = -1;
+	LCD_PR(NULL, "PLL: lock=%d, wait_loop=%d",
+		pll_lock, (PLL_WAIT_LOCK_CNT - wait_loop));
+
+	return ret;
+}
+
 /* ****************************************************
  * lcd clk parameters calculate
  * ****************************************************
@@ -1900,6 +1919,7 @@ void lcd_clk_config_init_print_dft(struct aml_lcd_drv_s *pdrv)
 		pll_config = &cconf->pll_config[i];
 		pll_data = cconf->data->pll_data[i];
 		LCD_PR(pdrv, "pll[%d] data init:\n"
+			"pll_offset:     0x%x\n"
 			"pll_m:       [%3d %3d]\n"
 			"pll_n:       [%3d %3d]\n"
 			"pll_od_fb:      %d\n"
@@ -1912,6 +1932,7 @@ void lcd_clk_config_init_print_dft(struct aml_lcd_drv_s *pdrv)
 			"div_in_fmax:  %lld\n"
 			"div_out_fmax: %d\n",
 			pll_config->pll_id,
+			pll_data->pll_offset,
 			pll_data->pll_m_max, pll_data->pll_m_min,
 			pll_data->pll_n_max, pll_data->pll_n_min,
 			pll_data->pll_od_fb, pll_data->pll_0_5_div_en,
@@ -1941,7 +1962,6 @@ int lcd_clk_config_print_dft(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 		n = lcd_debug_info_len(len + offset);
 		len += snprintf((buf + len), n,
 			"[%d]: pll[%d] config:\n"
-			"  pll_offset: 0x%x\n"
 			"  pll_m:      %d\n"
 			"  pll_n:      %d\n"
 			"  pll_frac:   0x%x\n"
@@ -1952,7 +1972,6 @@ int lcd_clk_config_print_dft(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 			"  div_sel:    %s(index %d)\n"
 			"  pll_div_fout: %uHz\n\n",
 			pdrv->index, pll_config->pll_id,
-			pll_config->pll_offset,
 			pll_config->pll_m, pll_config->pll_n,
 			pll_config->pll_frac, pll_config->pll_frac_half_shift,
 			pll_config->pll_fvco,

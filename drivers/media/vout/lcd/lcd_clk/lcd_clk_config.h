@@ -86,6 +86,7 @@ struct lcd_pll_data_s {
 	unsigned int pll_n_min;
 	unsigned int pll_frac_range;
 	unsigned int pll_frac_sign_bit;
+	unsigned int pll_offset;
 
 	/*od and tcon_div*/
 	unsigned int od_cnt;
@@ -162,7 +163,6 @@ struct lcd_clk_data_s {
 struct lcd_pll_config_s {
 	/* pll parameters */
 	unsigned int pll_id;
-	unsigned int pll_offset;
 	unsigned int pll_m;
 	unsigned int pll_n;
 	unsigned long long pll_fvco;

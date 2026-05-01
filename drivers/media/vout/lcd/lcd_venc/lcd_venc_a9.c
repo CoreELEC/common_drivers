@@ -504,11 +504,11 @@ static void lcd_venc_mute_set(struct aml_lcd_drv_s *pdrv, unsigned char flag)
 		lcd_vcbus_write(ENCL_TST_Y + offset, 0);
 		lcd_vcbus_write(ENCL_TST_CB + offset, 0);
 		lcd_vcbus_write(ENCL_TST_CR + offset, 0);
-		lcd_vcbus_write(ENCL_TST_EN + offset, 1);
+		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL9, 0, 24, 2);
 		lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV + offset, 0, 3, 1);
 	} else {
 		lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV + offset, 1, 3, 1);
-		lcd_vcbus_write(ENCL_TST_EN + offset, 0);
+		lcd_vcbus_setb(ENCL_TST_EN + offset, 0, 0, 1);
 	}
 }
 
@@ -673,7 +673,7 @@ static int lcd_venc_reg_dump(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 		LCD_DITH_CNTL_ADDR + 0x100
 	};
 
-	if (!pdrv)
+	if (!pdrv || !pdrv->data)
 		return 0;
 
 	if (pdrv->index == 1) {

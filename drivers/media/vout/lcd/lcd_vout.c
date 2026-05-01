@@ -2695,10 +2695,10 @@ static struct lcd_data_s lcd_data_a9 = {
 	.chip_name = "a9",
 	.rev_type = 0,
 	.reg_map_table = &lcd_reg_a9[0],
-	.drv_max = 1,
-	.offset_venc = {0x0},
-	.offset_venc_if = {0x0},
-	.offset_venc_data = {0x0},
+	.drv_max = 2,
+	.offset_venc = {0x0, 0x600},
+	.offset_venc_if = {0x0, 0x500},
+	.offset_venc_data = {0x0, 0x100},
 };
 
 static const struct of_device_id lcd_dt_match_table[] = {
