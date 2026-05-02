@@ -1073,7 +1073,10 @@ static void hdmi_hwp_init(struct hdmitx21_dev *hdev, bool reset)
 		hdmitx21_set_default_clk();
 
 	/* Bring HDMITX MEM output of power down */
-	hd21_set_reg_bits(PWRCTRL_MEM_PD11, 0, 8, 8);
+	if (hdev->hw_comm.chip_data->chip_type == MESON_CPU_ID_A9)
+		hd21_set_reg_bits(PWRCTRL_MEM_PD11_A9, 0, 8, 8);
+	else
+		hd21_set_reg_bits(PWRCTRL_MEM_PD11, 0, 8, 8);
 	/* Bring out of reset */
 	hdmitx21_wr_reg(HDMITX_TOP_SW_RESET, 0);
 	/* Test after initial out of reset, cannot write to IP register, unless enable access */

@@ -100,6 +100,7 @@ void init_reg_map(u32 type);
 //  PWR_CTRL
 #define PWRCTRL_PWR_ACK0              PWRCTRL_REG_ADDR(0x0000)
 #define PWRCTRL_MEM_PD11              PWRCTRL_REG_ADDR(0x001b)
+#define PWRCTRL_MEM_PD11_A9           PWRCTRL_REG_ADDR(0x001a)
 #define PWRCTRL_CPUTOP_FSM_JUMP       PWRCTRL_REG_ADDR(0x012f)
 #define PWRCTRL_A73TOP_FSM_JUMP       PWRCTRL_REG_ADDR(0x02f7)
 //  RESET_CTRL - Registers
