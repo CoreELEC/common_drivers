@@ -21,6 +21,9 @@
 #include "videodisplay_drv.h"
 
 #define VIDEODISPLAY_DEVICE_NAME   "videodisplay"
+static const char videodisplay_group_name0[] = "vd0_debug";
+static const char videodisplay_group_name1[] = "vd1_debug";
+static const char videodisplay_group_name2[] = "vd2_debug";
 static u32 videodisplay_instance_num;
 
 static int videodisplay_open(struct inode *inode, struct file *file)
@@ -1281,6 +1284,32 @@ static ssize_t vd_drop_hdmi_count_store(const struct class *cla,
 	return count;
 }
 
+static ssize_t continue_dump_num_store(const struct class *cla,
+				const struct class_attribute *attr,
+				const char *buf,
+				size_t count)
+{
+	long tmp;
+	int ret;
+
+	ret = kstrtol(buf, 0, &tmp);
+	if (ret != 0) {
+		pr_err("ERROR converting %s to long int!\n", buf);
+		return ret;
+	}
+
+	set_debug_flag_val(VD_DEBUG_CLASS_CONTINUE_DUMP_NUM, tmp);
+	return count;
+}
+
+static ssize_t continue_dump_num_show(const struct class *cla,
+				const struct class_attribute *attr,
+				char *buf)
+{
+	return snprintf(buf, 80, "continue_dump_num is %d.\n",
+		get_debug_flag_val(VD_DEBUG_CLASS_CONTINUE_DUMP_NUM));
+}
+
 static CLASS_ATTR_RW(debug_axis_pip);
 static CLASS_ATTR_RW(debug_crop_pip);
 static CLASS_ATTR_RW(force_composer);
@@ -1336,6 +1365,7 @@ static CLASS_ATTR_RW(use_low_latency);
 static CLASS_ATTR_RW(vd_composer_en);
 static CLASS_ATTR_RW(vd_drop_org_i);
 static CLASS_ATTR_RW(vd_drop_hdmi_count);
+static CLASS_ATTR_RW(continue_dump_num);
 
 static struct attribute *videodisplay_class_attrs[] = {
 	&class_attr_debug_crop_pip.attr,
@@ -1393,6 +1423,7 @@ static struct attribute *videodisplay_class_attrs[] = {
 	&class_attr_vd_composer_en.attr,
 	&class_attr_vd_drop_org_i.attr,
 	&class_attr_vd_drop_hdmi_count.attr,
+	&class_attr_continue_dump_num.attr,
 	NULL
 };
 ATTRIBUTE_GROUPS(videodisplay_class);
@@ -1456,6 +1487,46 @@ struct videodisplay_port_s *videodisplay_get_port(u32 index)
 
 	return &vd_ports[i];
 }
+
+static struct bin_attribute videodisplay_attr[] = {
+	{
+		.attr.name = "dump_yuv",
+		.attr.mode = 0664,
+		.private = NULL,
+		.read = vd_dump_yuv_show,
+		.write = NULL,
+	},
+};
+
+static struct bin_attribute *videodisplay_bin_attrs0[] = {
+	&videodisplay_attr[0],
+	NULL,
+};
+
+static struct bin_attribute *videodisplay_bin_attrs1[] = {
+	&videodisplay_attr[0],
+	NULL,
+};
+
+static struct bin_attribute *videodisplay_bin_attrs2[] = {
+	&videodisplay_attr[0],
+	NULL,
+};
+
+static const struct attribute_group videodisplay_attr_group[] = {
+	{
+		.name = videodisplay_group_name0,
+		.bin_attrs = videodisplay_bin_attrs0,
+	},
+	{
+		.name = videodisplay_group_name1,
+		.bin_attrs = videodisplay_bin_attrs1,
+	},
+	{
+		.name = videodisplay_group_name2,
+		.bin_attrs = videodisplay_bin_attrs2,
+	},
+};
 
 static int videodisplay_probe(struct platform_device *pdev)
 {
@@ -1523,6 +1594,9 @@ static int videodisplay_probe(struct platform_device *pdev)
 				goto error1;
 			}
 		}
+		ret = sysfs_create_group(&port->class_dev->kobj, &videodisplay_attr_group[i]);
+		if (ret)
+			pr_err("videodisplay creat dump node fail, ret=%d.\n", ret);
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 		if (!vd_mediaproxy_display_info[i].k_producer_session) {
 			media_proxy_produce_init(&vd_mediaproxy_display_info[i].k_producer_session,

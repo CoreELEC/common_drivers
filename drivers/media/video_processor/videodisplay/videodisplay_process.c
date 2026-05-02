@@ -102,6 +102,7 @@ static u32 force_comp_h;
 static u32 lossy_compress_rate;//0: 100% copress; 1: 67% compress; 2: 83% compress
 static u32 enable_frc_pattern;
 static u32 low_latency_en;
+static int continue_dump_num;
 static enum vc_fence_status last_buffer_status;
 static struct vframe_s *last_normal_vf;
 static struct videodisplay_dev *dev_array[MAX_VD_LAYERS];
@@ -509,6 +510,9 @@ void set_debug_flag_val(enum videodisplay_debug_class_type debug_type, int value
 	case VD_DEBUG_CLASS_DROP_HDMI_COUNT:
 		vd_drop_hdmi_count = value;
 		break;
+	case VD_DEBUG_CLASS_CONTINUE_DUMP_NUM:
+		continue_dump_num = value;
+		break;
 	default:
 		pr_info("%s: invalid debug type.\n", __func__);
 		break;
@@ -687,6 +691,9 @@ int get_debug_flag_val(enum videodisplay_debug_class_type debug_type)
 		break;
 	case VD_DEBUG_CLASS_DROP_HDMI_COUNT:
 		ret = vd_drop_hdmi_count;
+		break;
+	case VD_DEBUG_CLASS_CONTINUE_DUMP_NUM:
+		ret = continue_dump_num;
 		break;
 	default:
 		pr_info("%s: invalid debug type.\n", __func__);
@@ -3212,6 +3219,159 @@ static int videodisplay_drop_frame(struct videodisplay_dev *dev,
 	return false;
 }
 
+static void config_dump_yuv_data(struct vframe_s *vf, struct videodisplay_dev *dev)
+{
+	struct canvas_s cs0;
+	struct canvas_s cs1;
+	struct canvas_s cs2;
+
+	if (!vf || !dev)
+		return;
+	if (vf->canvas0Addr == (u32)-1) {
+		dev->dump_info_yuv.width = vf->canvas0_config[0].width;
+		dev->dump_info_yuv.height = vf->canvas0_config[0].height;
+		dev->dump_info_yuv.phy_addr[0] = vf->canvas0_config[0].phy_addr;
+		if (vf->plane_num == 1) {
+			dev->dump_info_yuv.sizeimage = vf->canvas0_config[0].width *
+				vf->canvas0_config[0].height;
+		} else if (vf->plane_num == 2) {
+			if (vf->type & VIDTYPE_VIU_422)
+				dev->dump_info_yuv.sizeimage = vf->canvas0_config[0].width *
+					vf->canvas0_config[0].height * 2;
+			else
+				dev->dump_info_yuv.sizeimage = vf->canvas0_config[0].width *
+					vf->canvas0_config[0].height * 3 / 2;
+			dev->dump_info_yuv.phy_addr[1] = vf->canvas0_config[1].phy_addr;
+		} else if (vf->plane_num == 3) {
+			dev->dump_info_yuv.sizeimage = vf->canvas0_config[0].width *
+				vf->canvas0_config[0].height * 3 / 2;
+			dev->dump_info_yuv.phy_addr[1] = vf->canvas0_config[1].phy_addr;
+			dev->dump_info_yuv.phy_addr[2] = vf->canvas0_config[2].phy_addr;
+		}
+	} else {
+		canvas_read(vf->canvas0Addr & 0xff, &cs0);
+		canvas_read((vf->canvas0Addr >> 8) & 0xff, &cs1);
+		canvas_read((vf->canvas0Addr >> 16) & 0xff, &cs2);
+
+		dev->dump_info_yuv.width = cs0.width;
+		dev->dump_info_yuv.height = cs0.height;
+		dev->dump_info_yuv.phy_addr[0] = cs0.addr;
+		if (vf->plane_num == 1) {
+			dev->dump_info_yuv.sizeimage = cs0.width * cs0.height;
+		} else if (vf->plane_num == 2) {
+			dev->dump_info_yuv.sizeimage = cs0.width * cs0.height * 3 / 2;
+			dev->dump_info_yuv.phy_addr[1] = cs1.addr;
+		} else if (vf->plane_num == 3) {
+			dev->dump_info_yuv.sizeimage = cs0.width * cs0.height * 3 / 2;
+			dev->dump_info_yuv.phy_addr[1] = cs1.addr;
+			dev->dump_info_yuv.phy_addr[2] = cs2.addr;
+		}
+	}
+	dev->dump_info_yuv.plane_num = vf->plane_num;
+}
+
+ssize_t vd_dump_yuv_show(struct file *filp, struct kobject *kobj,
+	struct bin_attribute *attr, char *buf, loff_t off, size_t count)
+{
+	int ret = 0;
+	struct device *dev = kobj_to_dev(kobj);
+	struct videodisplay_dev *vd_dev = dev_get_drvdata(dev);
+	struct vd_dump_info_s *info = &vd_dev->dump_info_yuv;
+	u32 sizeimage, y_size = 0, uv_size = 0;
+	size_t to_copy;
+	loff_t cur_off = off;
+	size_t copied = 0;
+
+	if (!info->vir_addr[0] && off == 0) {
+		ret = mutex_lock_interruptible(&info->mutex);
+		if (ret < 0) {
+			pr_info("dump yuv: interrupted while waiting for mutex\n");
+			return ret;
+		}
+		info->is_dump = 1;
+		ret = wait_event_interruptible_timeout(info->dump_wq,
+							info->config_dump_done,
+							msecs_to_jiffies(500000));
+		if (ret <= 0) {
+			pr_info("dump yuv: wait interrupted by signal or timeout, ret=%d\n", ret);
+			info->is_dump = 0;
+			mutex_unlock(&info->mutex);
+			return ret;
+		}
+
+		pr_info("yuv phy_addr[0]:%llx phy_addr[1]:%llx width:%d height:%d sizeimage:%d plane:%d\n",
+			info->phy_addr[0], info->phy_addr[1], info->width, info->height,
+			info->sizeimage, info->plane_num);
+
+		y_size = info->width * info->height;
+		info->vir_addr[0] = codec_mm_vmap(info->phy_addr[0], y_size);
+		if (!info->vir_addr[0]) {
+			pr_info("vmap failed. vir_addr[0] is null\n");
+			info->is_dump = 0;
+			mutex_unlock(&info->mutex);
+			return -EINVAL;
+		}
+		if (info->plane_num == 2) {
+			uv_size = info->sizeimage - y_size;
+			info->vir_addr[1] = codec_mm_vmap(info->phy_addr[1], uv_size);
+			if (!info->vir_addr[1]) {
+				pr_info("vmap failed. vir_addr[1] is null\n");
+				codec_mm_unmap_phyaddr(info->vir_addr[0]);
+				info->is_dump = 0;
+				mutex_unlock(&info->mutex);
+				return -EINVAL;
+			}
+		}
+	}
+
+	sizeimage = info->sizeimage;
+	y_size = info->width * info->height;
+	uv_size = sizeimage - y_size;
+
+	if (off >= sizeimage) {
+		mutex_unlock(&info->mutex);
+		return 0;
+	}
+
+	to_copy = min_t(size_t, count, sizeimage - off);
+
+	while (to_copy > 0) {
+		if (cur_off < y_size) {
+			size_t y_remain = y_size - cur_off;
+			size_t y_copy = min(to_copy, y_remain);
+
+			memcpy(buf + copied, info->vir_addr[0] + cur_off, y_copy);
+			copied += y_copy;
+			cur_off += y_copy;
+			to_copy -= y_copy;
+		} else {
+			loff_t uv_off = cur_off - y_size;
+			size_t uv_remain = uv_size - uv_off;
+			size_t uv_copy = min(to_copy, uv_remain);
+
+			memcpy(buf + copied, info->vir_addr[1] + uv_off, uv_copy);
+			copied += uv_copy;
+			cur_off += uv_copy;
+			to_copy -= uv_copy;
+		}
+	}
+
+	if ((off + copied) >= sizeimage) {
+		codec_mm_unmap_phyaddr(info->vir_addr[0]);
+		info->vir_addr[0] = NULL;
+		if (info->plane_num == 2) {
+			codec_mm_unmap_phyaddr(info->vir_addr[1]);
+			info->vir_addr[1] = NULL;
+		}
+		info->is_dump = 0;
+		info->config_dump_done = 0;
+		mutex_unlock(&info->mutex);
+	}
+
+	return copied;
+}
+EXPORT_SYMBOL(vd_dump_yuv_show);
+
 static void vframe_display(struct videodisplay_dev *dev,
 				struct received_frames_t *received_frames)
 {
@@ -3563,6 +3723,17 @@ static void vframe_display(struct videodisplay_dev *dev,
 		dev->low_latency_case = 0;
 		vd_print(dev->index, PRINT_OTHER,
 			"latency2 mode and normal logic.\n");
+	}
+	if (dev->dump_info_yuv.is_dump) {
+		vd_print(dev->index, PRINT_OTHER,
+			"videodisplay:dump frame_index=%d, type=%x, flag=%x, plane_num=%d, %s\n",
+			vf->frame_index, vf->type, vf->flag, vf->plane_num,
+			(vf->bitdepth & BITDEPTH_Y10) ? "10bit" : "8bit");
+		config_dump_yuv_data(vf, dev);
+		dev->dump_info_yuv.config_dump_done = 1;
+		wake_up_interruptible(&dev->dump_info_yuv.dump_wq);
+		mutex_lock(&dev->dump_info_yuv.mutex);
+		mutex_unlock(&dev->dump_info_yuv.mutex);
 	}
 
 	ready_count = kfifo_len(&dev->ready_q);
@@ -4522,6 +4693,7 @@ static int video_display_open(int index)
 {
 	struct videodisplay_dev *dev;
 	struct videodisplay_port_s *port = videodisplay_get_port(index);
+	struct device *class_dev = port->class_dev;
 	struct sched_param param = {.sched_priority = 2};
 	u32 layer_cap = 0;
 
@@ -4556,7 +4728,9 @@ static int video_display_open(int index)
 	dev->need_empty_ready = false;
 	dev->thread_need_stop = false;
 	dev->vframe_dump_flag = 0;
+	mutex_init(&dev->dump_info_yuv.mutex);
 
+	dev_set_drvdata(class_dev, dev);
 	memcpy(dev->vf_provider_name, port->name, strlen(port->name) + 1);
 	dev->video_render_index = vd_render_index_get(dev);
 	do_gettimeofday(&dev->start_time);
@@ -4569,6 +4743,7 @@ static int video_display_open(int index)
 	}
 
 	init_waitqueue_head(&dev->wq);
+	init_waitqueue_head(&dev->dump_info_yuv.dump_wq);
 	if (sched_setscheduler_nocheck(dev->kthread, SCHED_FIFO, &param))
 		vd_print(index, PRINT_ERROR, "%s: Could not set realtime priority.\n", __func__);
 

@@ -139,6 +139,22 @@ struct mediaproxy_info_t {
 	char k_producer_name[32];
 };
 
+struct vd_dump_info_s {
+	u32 plane_num;
+	u32 bit_10;
+	u32 width;
+	u32 height;
+	u32 sizeimage;
+	u64 phy_addr[3];
+	ulong headAddr;
+	void *vir_addr[3];
+	wait_queue_head_t dump_wq;
+	bool is_dump;
+	bool config_dump_done;
+	bool allow_dump;
+	struct mutex mutex;/*for dump finish then user layer to dq*/
+};
+
 struct videodisplay_dev {
 	u32 index;
 	struct videodisplay_port_s *port;
@@ -224,9 +240,12 @@ struct videodisplay_dev {
 	u32 drop_org_i_count;
 	u32 hdmi_drop_count;
 	int last_frc_delay;
+	struct vd_dump_info_s dump_info_yuv;
 };
 
 struct videodisplay_port_s *videodisplay_get_port(u32 index);
 struct mediaproxy_info_t *videodisplay_get_mediaproxy(u32 index);
-
+ssize_t vd_dump_yuv_show(struct file *filp,
+	struct kobject *kobj, struct bin_attribute *attr,
+	char *buf, loff_t off, size_t count);
 #endif
