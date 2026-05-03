@@ -224,7 +224,8 @@ void dbg_slt_crc_count(struct di_ch_s *pch, unsigned int postcrc,
 		       unsigned int nrcrc, unsigned int mtncrc);
 
 int seq_file_dvfm(struct seq_file *seq, void *v, struct dvfm_s *pvfm);
-void print_dvfm(struct dvfm_s *pvfm, char *name);
 void di_attr_create(struct class *di_class);
-
+ssize_t di_dump_yuv_show(struct file *filp, struct kobject *kobj,
+	struct bin_attribute *attr, char *buf, loff_t off, size_t count);
+void dump_yuv_time(struct vframe_s *vf, struct di_buf_s *di_buf);
 #endif	/*__DI_DBG_H__*/

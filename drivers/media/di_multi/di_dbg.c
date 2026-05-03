@@ -25,6 +25,7 @@
 #include "di_sys.h"
 #include "../deinterlace/deinterlace.h"
 #include "../deinterlace/nr_drv.h"
+#include <linux/amlogic/media/codec_mm/codec_mm.h>
 
 /********************************
  *trace:
@@ -38,6 +39,156 @@
 
 #define TRACE_INCLUDE_FILE dim_trace
 #include <trace/define_trace.h>
+
+static void config_dump_yuv_data(struct vframe_s *vf, struct di_buf_s *di_buf)
+{
+	struct di_dev_s *dev = get_dim_de_devp();
+
+	if (!dev) {
+		pr_err("dev is NULL\n");
+		return;
+	}
+	dev->dump_info_yuv.width = 1920;
+	dev->dump_info_yuv.height = 1080;
+	if (dump_di == 2)
+		dev->dump_info_yuv.height = 540;
+	dev->dump_info_yuv.phy_addr[0] =  di_buf->nr_adr;
+	dev->dump_info_yuv.sizeimage =
+		dev->dump_info_yuv.width * dev->dump_info_yuv.height * 2 * 10 / 8;
+	dev->dump_info_yuv.plane_num = 1;
+	dbg_dbg("cur dump di frame <%d * %d 0x%x>",
+		dev->dump_info_yuv.width,
+		dev->dump_info_yuv.height,
+		dev->dump_info_yuv.sizeimage);
+}
+
+void dump_yuv_time(struct vframe_s *vf, struct di_buf_s *di_buf)
+{
+	struct di_dev_s *de_devp = get_dim_de_devp();
+
+	if (!de_devp) {
+		pr_err("config_dump_yuv_data: de_devp is NULL\n");
+		return;
+	}
+	if (de_devp->dump_info_yuv.is_dump) {
+		PR_INF("di_dump ready:1\n");
+		if (de_devp->dump_info_yuv.is_dump) {
+			PR_INF("cat dump mem\n");
+			config_dump_yuv_data(vf, di_buf);
+			de_devp->dump_info_yuv.config_dump_done = 1;
+			wake_up_interruptible(&de_devp->dump_info_yuv.dump_wq);
+			mutex_lock(&de_devp->dump_info_yuv.mutex);
+			mutex_unlock(&de_devp->dump_info_yuv.mutex);
+		}
+	}
+}
+
+ssize_t di_dump_yuv_show(struct file *filp, struct kobject *kobj,
+	struct bin_attribute *attr, char *buf, loff_t off, size_t count)
+{
+	int ret = 0;
+	struct di_dev_s *de_devp = get_dim_de_devp();
+	struct di_dump_info_s *info = &de_devp->dump_info_yuv;
+	u32 sizeimage, y_size = 0, uv_size = 0;
+	size_t to_copy;
+	loff_t cur_off = off;
+	size_t copied = 0;
+
+	if (!de_devp) {
+		pr_err("config_dump_yuv_data: de_devp is NULL\n");
+		return 0;
+	}
+	ret = mutex_lock_interruptible(&info->mutex);
+
+	if (ret < 0) {
+		pr_info("dump yuv: interrupted while waiting for mutex\n");
+		return ret;
+	}
+
+	if (!info->vir_addr[0] && off == 0) {
+		info->is_dump = 1;
+		ret = wait_event_interruptible_timeout(info->dump_wq,
+							info->config_dump_done,
+							msecs_to_jiffies(500000));
+		if (ret <= 0) {
+			pr_info("dump yuv: wait interrupted by signal or timeout, ret=%d\n", ret);
+			info->is_dump = 0;
+			mutex_unlock(&info->mutex);
+			return ret;
+		}
+
+		pr_info("yuv phy_addr[0]:%llx phy_addr[1]:%llx width:%d height:%d sizeimage:%d plane:%d\n",
+			info->phy_addr[0], info->phy_addr[1], info->width, info->height,
+			info->sizeimage, info->plane_num);
+
+		y_size = info->width * info->height * 10 * 2 / 8;
+		info->vir_addr[0] = codec_mm_vmap(info->phy_addr[0], y_size);
+		if (!info->vir_addr[0]) {
+			pr_info("vmap failed. vir_addr[0] is null\n");
+			info->is_dump = 0;
+			mutex_unlock(&info->mutex);
+			return -EINVAL;
+		}
+		if (info->plane_num == 2) {
+			uv_size = info->sizeimage - y_size;
+			info->vir_addr[1] = codec_mm_vmap(info->phy_addr[1], uv_size);
+			if (!info->vir_addr[1]) {
+				pr_info("vmap failed. vir_addr[1] is null\n");
+				codec_mm_unmap_phyaddr(info->vir_addr[0]);
+				info->is_dump = 0;
+				mutex_unlock(&info->mutex);
+				return -EINVAL;
+			}
+		}
+	}
+
+	sizeimage = info->sizeimage;
+
+	if (off >= sizeimage) {
+		mutex_unlock(&info->mutex);
+		return 0;
+	}
+
+	y_size = info->width * info->height * 10 * 2 / 8;
+	uv_size = sizeimage - y_size;
+	to_copy = min_t(size_t, count, sizeimage - off);
+
+	while (to_copy > 0) {
+		if (cur_off < y_size) {
+			size_t y_remain = y_size - cur_off;
+			size_t y_copy = min(to_copy, y_remain);
+
+			memcpy(buf + copied, info->vir_addr[0] + cur_off, y_copy);
+			copied += y_copy;
+			cur_off += y_copy;
+			to_copy -= y_copy;
+		} else {
+			loff_t uv_off = cur_off - y_size;
+			size_t uv_remain = uv_size - uv_off;
+			size_t uv_copy = min(to_copy, uv_remain);
+
+			memcpy(buf + copied, info->vir_addr[1] + uv_off, uv_copy);
+			copied += uv_copy;
+			cur_off += uv_copy;
+			to_copy -= uv_copy;
+		}
+	}
+
+	if ((off + copied) >= sizeimage) {
+		codec_mm_unmap_phyaddr(info->vir_addr[0]);
+		info->vir_addr[0] = NULL;
+		if (info->plane_num == 2) {
+			codec_mm_unmap_phyaddr(info->vir_addr[1]);
+			info->vir_addr[1] = NULL;
+		}
+		info->is_dump = 0;
+		info->config_dump_done = 0;
+	}
+
+	mutex_unlock(&info->mutex);
+	return copied;
+}
+EXPORT_SYMBOL(di_dump_yuv_show);
 
 /**********************/
 /* data get */
@@ -3387,7 +3538,8 @@ static struct di_class_debug_s di_debugfs_class_files[] = {
 	{"s4dw_buf_h", &s4dw_buf_h, 1, 0},
 	#endif
 	{"dim_dbg_o_b", &dim_dbg_o_b, 1, 0},
-	{"di_reverse", &di_reverse, 1, 0}
+	{"di_reverse", &di_reverse, 1, 0},
+	{"dump_di", &dump_di, 1, 0}
 };
 
 static struct di_class_debug_s *search_class_param(char *name)

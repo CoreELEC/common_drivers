@@ -21,6 +21,21 @@
 #include "../deinterlace/di_pqa.h"
 //#include "di_pqa.h"
 
+struct di_dump_info_s {
+	u32 plane_num;
+	u32 bit_10;
+	u32 width;
+	u32 height;
+	u32 sizeimage;
+	u64 phy_addr[3];
+	ulong headAddr;
+	void *vir_addr[3];
+	wait_queue_head_t dump_wq;
+	bool is_dump;
+	bool config_dump_done;
+	bool allow_dump;
+	struct mutex mutex;/*for dump finish then user layer to dq*/
+};
 /************************************************
  * config define
  ***********************************************/
@@ -522,6 +537,7 @@ struct di_dev_s {
 	unsigned int tb_detect_init_mute;
 	unsigned int tb_flag_int;
 #endif
+	struct di_dump_info_s dump_info_yuv;
 };
 
 struct di_pre_stru_s {
@@ -878,6 +894,7 @@ extern unsigned int pldn_dly;
 extern unsigned int di_reverse;
 extern bool di_rev;
 extern bool rotation;
+extern unsigned int dump_di;
 
 void dim_dbg_pre_cnt(unsigned int channel, char *item);
 

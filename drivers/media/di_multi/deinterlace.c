@@ -46,6 +46,7 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vpu/vpu.h>
 #include <linux/amlogic/media/di/di.h>
+#include <linux/wait.h>
 
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
@@ -112,6 +113,7 @@ int ON_420_10;
 #endif
 int nv_21_10bit;
 
+unsigned int dump_di;
 static bool fg_bypass;
 
 #undef module_param
@@ -4383,6 +4385,7 @@ void dim_pre_de_done_buf_config(unsigned int channel, bool flg_timeout)
 		dim_tr_ops.pre_ready(ppre->di_wr_buf->vframe->index_disp);
 		ATRACE_COUNTER("dim_pre_ready", 0);
 		ATRACE_COUNTER("dim_post_ready", 1);
+
 		ppre->di_wr_buf->flg_nr = 1;
 		if (ppre->pre_throw_flag > 0) {
 			ppre->di_wr_buf->throw_flag = 1;
@@ -4440,7 +4443,8 @@ void dim_pre_de_done_buf_config(unsigned int channel, bool flg_timeout)
 			dim_print("dim:dec vf:l[%d]\n",
 				  ppre->di_wr_buf->in_buf->vframe->index_disp);
 		}
-
+		if (dump_di == 2)
+			dump_yuv_time(NULL, ppre->di_wr_buf);
 		if (!di_pre_rdma_enable)
 			ppre->di_post_wr_buf = ppre->di_wr_buf;
 		post_wr_buf = ppre->di_post_wr_buf;
@@ -9864,6 +9868,8 @@ void dim_post_de_done_buf_config(unsigned int channel)
 	ATRACE_COUNTER("dim_total", 0);
 	ATRACE_COUNTER("dim_index_disp", 0);
 
+	if (dump_di == 1)
+		dump_yuv_time(NULL, ppost->cur_post_buf);
 	if (dimp_get(edi_mp_pstcrc_ctrl) == 1) {
 		if (DIM_IS_IC(T5) || DIM_IS_IC(T5DB) ||
 		    DIM_IS_IC(T5D)) {
@@ -11793,6 +11799,9 @@ void di_reg_setting(unsigned int channel, struct vframe_s *vframe)
 		PR_ERR("%s:have setting?do nothing\n", __func__);
 		return;
 	}
+
+	mutex_init(&de_devp->dump_info_yuv.mutex);
+	init_waitqueue_head(&de_devp->dump_info_yuv.dump_wq);
 	/*set flg*/
 	set_hw_reg_flg(true);
 
