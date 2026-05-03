@@ -4156,7 +4156,7 @@ void bypass_pps_sr_gamma_gainoff(int flag)
 		}
 	} else {
 		if (flag & 1) {
-			if (is_aml_t3() || is_aml_t5w() || is_aml_t5m()) {
+			if (is_aml_t3() || is_aml_t5w() || is_aml_t5m() || is_aml_a9()) {
 				/*from t3, 1d93 bit0 change to 1d26 bit8*/
 				VSYNC_WR_DV_REG_BITS(VPP_MISC, 1, 8, 1);
 				force_bypass_from_prebld_to_vadj1 = true;

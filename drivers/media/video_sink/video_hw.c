@@ -11949,7 +11949,7 @@ void vpp_blend_update_t7(const struct vinfo_s *vinfo)
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 			if (get_force_bypass_from_prebld_to_vadj1() &&
 			    for_amdv_certification()) {
-				/* t3/t5w, 1d93 bit0 -> 1d26 bit8*/
+				/* t3/t5w/t6w/a9, 1d93 bit0 -> 1d26 bit8*/
 				set_value |= (1 << 8);
 			}
 #endif
@@ -12877,7 +12877,7 @@ void vpp_blend_update(const struct vinfo_s *vinfo, u8 vpp_index)
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 			if (get_force_bypass_from_prebld_to_vadj1() &&
 			    for_amdv_certification()) {
-				/* t3/t5w, 1d93 bit0 -> 1d26 bit8*/
+				/* t3/t5w/t6w/a9, 1d93 bit0 -> 1d26 bit8*/
 				set_value |= (1 << 8);
 			}
 #endif

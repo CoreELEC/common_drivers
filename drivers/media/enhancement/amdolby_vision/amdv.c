@@ -13032,21 +13032,24 @@ static void bypass_pps_path(u8 pps_state)
 		}
 	} else if (is_amdv_stb_mode()) {
 		/*not bypass:hdmi pip case may need pps scaler even if in cert mode*/
-		if (force_bypass_pps_sr_cm == 2)
-			VSYNC_WR_DV_REG_BITS(VPP_AMDV_CTRL, 0, 0, 1);
-		/*bypass: force_bypass_pps_sr_cm =1 or in cert mode*/
-		else if (force_bypass_pps_sr_cm == 1 ||
-			   (dolby_vision_flags & FLAG_CERTIFICATION))
-			VSYNC_WR_DV_REG_BITS(VPP_AMDV_CTRL, 1, 0, 1);
-#ifdef REMOVE_OLD_DV_FUNC
-		else
-			if (pps_state == 2)
-				VSYNC_WR_DV_REG_BITS
-				(VPP_AMDV_CTRL, 1, 0, 1);
-			else if (pps_state == 1)
-				VSYNC_WR_DV_REG_BITS
-				(VPP_AMDV_CTRL, 0, 0, 1);
-#endif
+		if (force_bypass_pps_sr_cm == 2) {
+			if (is_aml_a9()) {
+				/*1d93 bit0 change to 1d26 bit8*/
+				VSYNC_WR_DV_REG_BITS(VPP_MISC, 0, 8, 1);
+			} else {
+				VSYNC_WR_DV_REG_BITS(VPP_AMDV_CTRL, 0, 0, 1);
+			}
+			force_bypass_from_prebld_to_vadj1 = false;
+		} else if (force_bypass_pps_sr_cm == 1 ||
+			   (dolby_vision_flags & FLAG_CERTIFICATION)) {
+			if (is_aml_a9()) {
+				/*1d93 bit0 change to 1d26 bit8*/
+				VSYNC_WR_DV_REG_BITS(VPP_MISC, 1, 8, 1);
+			} else {
+				VSYNC_WR_DV_REG_BITS(VPP_AMDV_CTRL, 1, 0, 1);
+			}
+			force_bypass_from_prebld_to_vadj1 = true;
+		}
 	}
 	if (pps_state && last_pps_state != pps_state) {
 		pr_dv_dbg("pps_state %d => %d\n",
