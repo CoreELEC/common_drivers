@@ -1233,6 +1233,7 @@ void set_vid_cmpr_rmif(struct vid_cmpr_mif_s *rd_mif, int urgent, int hold_line)
 		pr_info("vicp: endian = %d.\n", rd_mif->endian);
 		pr_info("vicp: block_mode = %d.\n", rd_mif->block_mode);
 		pr_info("vicp: burst_len = %d.\n", rd_mif->burst_len);
+		pr_info("vicp: swap_cbcr = %d.\n", rd_mif->swap_cbcr);
 		pr_info("vicp: #################################.\n");
 	};
 
@@ -1371,10 +1372,7 @@ void set_vid_cmpr_rmif(struct vid_cmpr_mif_s *rd_mif, int urgent, int hold_line)
 	set_rdmif_general_reg(general_reg);
 
 	memset(&general_reg2, 0x0, sizeof(struct vicp_rdmif_general_reg2_s));
-	if (rd_mif->swap_cbcr)
-		general_reg2.color_map = 1;/* 1: NV12  2:NV21*/
-	else
-		general_reg2.color_map = 2;
+	general_reg2.color_map = rd_mif->swap_cbcr;/* 1: NV21  2:NV12*/
 	general_reg2.x_rev0 = rd_mif->rev_x;
 	general_reg2.y_rev0 = rd_mif->rev_x;
 	set_rdmif_general_reg2(general_reg2);
@@ -1716,11 +1714,11 @@ static int get_input_color_bitdepth(struct vframe_s *vf, bool need_use_dw)
 		bitdepth = vf->bitdepth;
 	}
 
-	if (bitdepth & BITDEPTH_Y9)
+	if (BITDEPTH_HAS(bitdepth, BITDEPTH_Y9))
 		ret = 9;
-	else if (bitdepth & BITDEPTH_Y10)
+	else if (BITDEPTH_HAS(bitdepth, BITDEPTH_Y10))
 		ret = 10;
-	else if (bitdepth & BITDEPTH_Y12)
+	else if (BITDEPTH_HAS(bitdepth, BITDEPTH_Y12))
 		ret = 12;
 	else
 		ret = 8;
@@ -2324,6 +2322,8 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 		}
 
 		if (input_vframe->type & VIDTYPE_VIU_NV12)
+			vid_cmpr_top->src_need_swap_cbcr = 2;
+		else if (input_vframe->type & VIDTYPE_VIU_NV21)
 			vid_cmpr_top->src_need_swap_cbcr = 1;
 		else
 			vid_cmpr_top->src_need_swap_cbcr = 0;
