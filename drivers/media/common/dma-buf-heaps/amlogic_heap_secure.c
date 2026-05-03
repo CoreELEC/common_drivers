@@ -328,9 +328,7 @@ int __init amlogic_heap_secure_dma_buf_init(void)
 
 	if (mem->base > 0 && mem->size > 0) {
 		err = tee_protect_mem_by_type(TEE_MEM_TYPE_GPU,
-						(u32)mem->base,
-						(u32)mem->size,
-						&secure_heap_handle);
+				mem->base, mem->size, &secure_heap_handle);
 		if (err)
 			pr_err("%s: tee protect gpu mem fail!\n", __func__);
 		else
