@@ -1586,6 +1586,21 @@ static void set_vid_clk_div(u32 div)
 			/* enc0 clk gate */
 			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL2_A9, 1, 10, 1);
 		}
+		if (hdev->tx_comm.clk_source_idx == 1) {
+			/* select vid_pll_clk_pre */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_CTRL_A9, 0, 16, 3);
+			/* for clk div */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_DIV_A9, div - 1, 0, 8);
+			/* clk div gate */
+			hd21_set_reg_bits(CLKCTRL_VIID_CLK0_CTRL_A9, 1, 0, 1);
+		} else {
+			/* select vid_pll_clk_pre */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 0, 16, 3);
+			/* for clk div */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV_A9, div - 1, 0, 8);
+			/* clk div gate */
+			hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL_A9, 7, 0, 3);
+		}
 	} else {
 		hd21_set_reg_bits(CLKCTRL_VID_CLK0_CTRL, 0, 16, 3);
 		hd21_set_reg_bits(CLKCTRL_VID_CLK0_DIV, div - 1, 0, 8);
