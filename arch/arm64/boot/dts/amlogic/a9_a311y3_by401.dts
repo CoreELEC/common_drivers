@@ -131,14 +131,14 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* a9 android16 size 320+88=408M */
+			/* android16 dual-display main 4K secondary 1080p, size 320+88=408M */
 			size = <0x0 0x19800000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* android16 mian 4K secondary 1080p, total size 164M */
+			/* android16 dual-display main 4K secondary 1080p, size 108+56=164M */
 			size = <0x0 0xa400000>;
 			alignment = <0x0 0x400000>;
 		};

@@ -133,15 +133,15 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 1080p STB android16 size 88M */
-			size = <0x0 0x3000000>;
+			/* linux yocto 4K+direct render, size 176M */
+			size = <0x0 0xb000000>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* android16 mian 4K secondary 1080p, total size 164M */
-			size = <0x0 0xa400000>;
+			/* linux yocto size 0M */
+			size = <0x0 0x0>;
 			alignment = <0x0 0x400000>;
 		};
 		dmaheap_secure_reserved:heap-secure {
