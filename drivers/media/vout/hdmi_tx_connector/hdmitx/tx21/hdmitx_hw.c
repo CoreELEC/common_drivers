@@ -1626,7 +1626,10 @@ static void set_hdmi_tx_pixel_div(u32 div)
 	u32 hdmi_clk_ctrl0;
 
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
-		vid_clk_ctrl0 = CLKCTRL_VID_CLK0_CTRL_A9;
+		if (hdev->tx_comm.clk_source_idx == 1)
+			vid_clk_ctrl0 = CLKCTRL_VIID_CLK0_CTRL_A9;
+		else
+			vid_clk_ctrl0 = CLKCTRL_VID_CLK0_CTRL_A9;
 		vid_clk_ctrl2 = CLKCTRL_VID_CLK0_CTRL2_A9;
 		hdmi_clk_ctrl0 = CLKCTRL_HDMI_CLK_CTRL_A9;
 	} else {
