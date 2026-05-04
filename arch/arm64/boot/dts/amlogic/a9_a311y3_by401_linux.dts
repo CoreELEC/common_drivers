@@ -1572,6 +1572,8 @@
 
 &amhdmitx {
 	status = "okay";
+	enc_idx = <1>;
+	clk_source_idx = <1>;
 };
 
 &eDPTX0 {
