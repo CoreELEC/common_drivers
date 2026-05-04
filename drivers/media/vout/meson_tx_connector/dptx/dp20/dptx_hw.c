@@ -32,6 +32,7 @@
 #include "dptx_hdcp_hw.h"
 
 static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para);
+static void dptx_audio_init(struct dptx_hw_common *hw_comm);
 
 static struct dptx_intr dptx_all_intr = {
 	.cp2tx_intr0 = {
@@ -1842,6 +1843,7 @@ static int dptx20_hw_core_config(struct dptx_hw_common *hw_comm, struct meson_tx
 	dptx_fec_enable(hw_comm);
 	/* enable sec when MST config done */
 	/* dptx_sec_enable(hw_comm, para->vc_id); */
+	dptx_audio_init(hw_comm);
 	return 0;
 }
 
@@ -3501,3 +3503,165 @@ struct meson_tx_hw *dptx20_alloc_tx_hw(void)
 	return &hw_comm->hw_base;
 }
 
+static void _dptx_audio_init(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 1);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_AUDIO_ENABLE), 1); // mute
+}
+
+static void _config_spdif_for(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	u32 spdif_clock_count = 200 * 1000 / (128 * 48000 / 1000);
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_SPDIF_CLOCK_COUNT), spdif_clock_count);
+}
+
+static void _dptx_audio_set_interface(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INPUT_SELECT), 0); // 3: SPDIF, 0: I2S
+	_config_spdif_for(hw_comm, vc_id);
+}
+
+static void _dptx_set_sdp_window(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	u32 hblank;
+
+	hblank = 16 + 96 + 48;
+	hblank = (hblank * 1000) / 25200;
+	hblank = ((hblank * 1620) / 40);
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_DATA_WINDOW), hblank);
+}
+
+static void _dptx_audio_setup(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_CHANNEL_COUNT), 2);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_AUDIO_CHANNEL_MAP), 0x87654321ul);
+	_dptx_set_sdp_window(hw_comm, vc_id);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_CS_CATEGORY_CODE), 0x00b5ul);
+}
+
+static void _dptx_audio_set_timing(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	u32 maud;
+	u32 naud;
+	u32 ats_interval;
+
+	/* initial values for programming */
+	maud = 53024; /* (512 * 512 * 32768) / (1620 * 100) */
+	naud = 32768;
+	/* one audio time-stamp every sample */
+	ats_interval = (32768 * 1000) / (1620 * 100);
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_TIMESTAMP_INTERVAL), ats_interval);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_MAUD), 0x200);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_NAUD), 0xd2f);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_AUDIO_CLOCK_MODE), 0);
+}
+
+struct infoframe_packet {
+	u8 sdp_id;
+	u8 sdp_type;
+	u16 count;
+	u8 data[32];
+};
+
+static void _dptx_infoframe_write_packet(struct dptx_hw_common *hw_comm, u8 vc_id)
+{
+	struct infoframe_packet pkt;
+	struct infoframe_packet *info;
+	int i;
+
+	info = &pkt;
+	memset(info, 0, sizeof(*info));
+	info->sdp_id = 0;
+	info->sdp_type = 0x84;
+	info->count = 0x1b;
+	info->data[0] = (1 << 4) | (2 - 1); // PCM, 2ch
+	info->data[1] = (0x3 << 2) | (3 << 0); // 48k, 24bit
+	info->data[2] = 0;
+	info->data[3] = 0; // FR, FL
+	info->data[4] = 0;
+
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_SELECT), 4);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA), info->sdp_id);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA), info->sdp_type);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA), info->count & 0xff);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA),
+		((info->count >> 8) & 0x3) | (0x12 << 2));
+
+	for (i = 0; i < 32; i++)
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA), info->data[i]);
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_ENABLE), BIT(4));
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_RATE), BIT(4));
+}
+
+static void dptx_hard_code_for_aud(struct dptx_hw_common *hw_comm)
+{
+	void __iomem *reg_base;
+
+	reg_base = ioremap(0xffae0000, 0x1000);
+	if (!reg_base) {
+		DPTX_INFO("ioremap error\n");
+		return;
+	}
+
+	DPTX_INFO("test aud hard code 0\n");
+	/* spdif output */
+	writel(0xc0000008, reg_base + 0x75c);
+	writel(0xc0000008, reg_base + 0x760);
+	DPTX_INFO("test aud hard code 1\n");
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_TIMESTAMP_INTERVAL, 0x411b);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_CLOCK_MODE, 0);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_SOURCE_FORMAT, 0);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_CATEGORY_CODE, 0x1);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_LENGTH_ORIG_FREQ, 0xb);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_FIFO_LAST, 0);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_ENABLE, 0x7f9);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, 0x9f0, 0x108001);
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_INPUT_SELECT, 0x3);
+
+	/* i2s output */
+	/* dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_TIMESTAMP_INTERVAL, 0x411b);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_CLOCK_MODE, 0);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_SOURCE_FORMAT, 0);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_CATEGORY_CODE, 0x1);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_CS_LENGTH_ORIG_FREQ, 0xb);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_FIFO_LAST, 0);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_ENABLE, 0x7f9);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, 0x9f0, 0x8001);
+	 * dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_INPUT_SELECT, 0x4);
+	 */
+}
+
+static void dptx_audio_init(struct dptx_hw_common *hw_comm)
+{
+	_dptx_audio_init(hw_comm, 0);
+
+	_dptx_audio_set_interface(hw_comm, 0);
+	_dptx_audio_setup(hw_comm, 0);
+	_dptx_audio_set_timing(hw_comm, 0);
+	_dptx_infoframe_write_packet(hw_comm, 0);
+	dptx_hard_code_for_aud(hw_comm);
+	DPTX_INFO("dptx: audio init done\n");
+}
