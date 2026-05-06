@@ -672,6 +672,18 @@
 	};
 };
 
+&ethmac {
+	status = "okay";
+	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
+	pinctrl-names = "default";
+	phy-mode = "rgmii";
+	phy-handle = <&external_phy>;
+	mc_val = <0x1621>;
+	cali_val = <0x80000>;
+	/* 1:inphy; 2:exphy; */
+	internal_phy = <2>;
+};
+
 &saradc {
 	status = "disabled";
 };
