@@ -2050,6 +2050,7 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	struct dpss_cmd_a_s dpss_para;
 	bool is_interlace = false;
 	bool is_high_fps = false;
+	bool is_high_bandwidth = false;
 	bool is_4k = false;
 	bool need_enable_direct_mode = false;
 	u32 duration = 0;
@@ -2068,6 +2069,9 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	if (vf->type & VIDTYPE_INTERLACE_BOTTOM)
 		is_interlace = true;
 
+	if (vf->flag & VFRAME_FLAG_HIGH_BANDWIDTH)
+		is_high_bandwidth = true;
+
 	duration = find_standard_duration(dev, vf->duration);
 	if (duration >= 667 && duration < 1600)
 		is_high_fps = true;
@@ -2076,7 +2080,9 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	src_h = (vf->type & VIDTYPE_COMPRESS) ? vf->compHeight : vf->height;
 	is_4k = (src_w > 2560 || src_h > 1440);
 
-	need_enable_direct_mode = (is_4k && is_high_fps) || is_dual_channel_enabled ||
+	need_enable_direct_mode = (is_4k && is_high_fps) ||
+		is_high_bandwidth ||
+		is_dual_channel_enabled ||
 		temperature_control_en;
 
 	if (force_direct_mode == DIRECT_MODE_FORCED_ENABLE)
