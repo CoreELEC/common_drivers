@@ -1779,6 +1779,9 @@ static int dwc3_core_get_phy(struct aml_dwc3 *dwc)
 				return dev_err_probe(dev, ret, "failed to lookup phy %s\n",
 							phy_name);
 		}
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		dwc->super_speed_support = true;
+#endif
 	}
 
 	return 0;

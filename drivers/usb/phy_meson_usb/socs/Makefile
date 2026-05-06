@@ -17,3 +17,4 @@ $(MODULE_NAME)-$(CONFIG_MESON_USBPHY) += phy_meson_usb/socs/phy-meson-t6w-usb.o
 $(MODULE_NAME)-$(CONFIG_MESON_USBPHY) += phy_meson_usb/socs/phy-meson-t6x-usb.o
 $(MODULE_NAME)-$(CONFIG_MESON_USBPHY) += phy_meson_usb/socs/phy-meson-c4-usb.o
 $(MODULE_NAME)-$(CONFIG_MESON_USBPHY) += phy_meson_usb/socs/phy-meson-a9-usb.o
+$(MODULE_NAME)-$(CONFIG_MESON_USBPHY) += phy_meson_usb/socs/phy-meson-c5-usb.o

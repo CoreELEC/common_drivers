@@ -1096,153 +1096,218 @@
 			};
 		};
 
-		usb_phy20: usbphy20@fe348000 {
-			compatible = "amlogic, amlogic-crg-drd-usb2";
-			status = "disable";
-			reg = <0x0 0xfe348000 0x0 0x10
-					0x0 0xfe002000 0x0 0x100
-					0x0 0xfe34c000 0x0 0x60>;
-			pll-setting-4 = <0x7e18>;
-			pll-setting-5 = <0x7>;
-			pll-version = <3>;
-			phy0-reset-level-bit = <9>;
-			usb-reset-bit = <7>;
-			usb-comb-reset-bit = <8>;
-			reset-level = <0x40>;
-			usb-phy-trim-reg = <0xfe010330>;
-			phy-id = <0>;
-			//clocks = <&clkc CLKID_SYS_USB_GENERAL_U3DRD>;
-			//clock-names = "crg_general";
-			pm-controller;
-		};
-
-		crg_otg: crgotg@fe348000 {
-			compatible = "amlogic, amlogic-crg-otg";
-			status = "disabled";
-			usb2-phy-reg = <0xfe348000>;
-			usb2-phy-reg-size = <0x80>;
-			usb3-phy-reg = <0xfe348080>;
-			usb3-phy-reg-size = <0x20>;
-			interrupts = <0 129 IRQ_TYPE_EDGE_RISING>;
-			udc-name = "fe340000.crgudc";
-		};
-
-		usbphy0: usbphy0@fe348000 {
-			compatible = "amlogic,uphy-s6";
+		usbphy0: usbphy0@fe310000 {
+			compatible = "amlogic,uphy-c5";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "disabled";
 			u2p0port0: u2p@0 {
 				#phy-cells = <0>;
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
-				reg = <0xfe348000 0x10
+				reg = <0xfe310000 0x10
 						0xfe002000 0x100
 						0xfe010330 0x4
-						0xfe34c000 0x60>;
+						0xfe314000 0x60>;
 				reset-level = <0x40>;
-				phy-reset-level-bits = <9>;
-				usb-reset-bit = <7>;
-				usb-comb-reset-bit = <8>;
+				phy-reset-level-bits = <4>;
+				usb-comb-reset-bit = <6>;
+				phy-apb-reset-bit = <7>;
 				pll-settings = <0x0
 								0x0
 								0x0
 								0x7e18
 								0x7>;
-				//clocks = <&clkc CLKID_SYS_USB2DRD>;
-				//clock-names = "crg_general";
-				phy-otg;
-				interrupts = <0 129 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <0 139 IRQ_TYPE_EDGE_RISING>;
+				clocks = <&clkc CLKID_SYS_USB_U3DRD>;
+				clock-names = "sys_usb3";
+				power-domains = <&pwrdm PDID_C5_USB3>;
+			};
+
+			u3p0port0: u3p@80 {
+				#phy-cells = <0>;
+				port-speed = <0x3>; /* 0~2: HS HSP SS */
+				reg = <0xfe310080 0x20		/* phy3 cfg base */
+						0xfe002000 0x100	/* reset base */
+						0xfe312000 0x184	/* phy3 ctrl base */
+						0xfe01034c 0x4>;	/* phy3 trim base */
+				usb3-phy-reset-bit = /bits/ 8 <0x3>;
+				usb3-apb-reset-bit = /bits/ 8 <0x2>;
+				usb3-controller-reset-bit = /bits/ 8 <0x5>;
+				reset-level-shift = <0x40>;
+				clocks = <&clkc CLKID_SYS_USB_U3DRD>;
+				clock-names = "sys_usb3";
+				//pll-sw-cfg;
 			};
 		};
 
-		usbphy1: usbphy1@fe358000 {
-			compatible = "amlogic,uphy-s6";
+		usbphy1: usbphy1@fe300000 {
+			compatible = "amlogic,uphy-c5";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "disabled";
 			u2p1port0: u2p@0 {
 				#phy-cells = <0>;
 				port-speed = <0x0>; /* 0~2: HS HSP SS */
-				reg = <0xfe358000 0x10
+				reg = <0xfe300000 0x10
 						0xfe002000 0x100
 						0xfe010330 0x4
-						0xfe35c000 0x60>;
+						0xfe302000 0x60>;
 				reset-level = <0x40>;
-				phy-reset-level-bits = <4>;
-				usb-reset-bit = <5>;
-				usb-comb-reset-bit = <6>;
+				phy-reset-level-bits = <0xb>;
+				usb-comb-reset-bit = <0x9>;
+				phy-apb-reset-bit = <0xa>;
 				pll-settings = <0x0
 								0x0
 								0x0
 								0x7e18
 								0x7>;
-				//clocks = <&clkc CLKID_SYS_USB3DRD>;
-				//clock-names = "crg_general";
+				clocks = <&clkc CLKID_SYS_USB_U2H>;
+				clock-names = "usb_general";
+				power-domains = <&pwrdm PDID_C5_USB2>;
 			};
 
-			u3p1port0: u3p@80 {
-				#phy-cells = <0>;
-				port-speed = <0x3>; /* 0~2: HS HSP SS */
-				reg = <0xfe358080 0x20		/* phy3 cfg base */
-						0xfe002000 0x100	/* reset base */
-						0xfe35a000 0x184	/* phy3 ctrl base */
-						0xfe01034c 0x4>;	/* phy3 trim base */
-				usb3-phy-reset-bit = /bits/ 8 <3>;
-				usb3-apb-reset-bit = /bits/ 8 <2>;
-				usb3-controller-reset-bit = /bits/ 8 <5>;
-				reset-level-shift = <0x40>;
-				//clocks = <&clkc CLKID_SYS_USB3DRD>,
-				//			<&clkc CLKID_USB_250M>;
-				//clock-names = "u3p_clk_0",
-				//				"u3p_clk_1";
-				pll-sw-cfg;
-			};
 		};
 
-		crg_drd: crgdrd@fe340000 {
-			compatible = "amlogic, crg-drd";
-			status = "disabled";
-			reg = <0x0 0xfe340000 0x0 0x8000>;
-			interrupts = <GIC_SPI 131 IRQ_TYPE_EDGE_RISING>;
+		dwc3otg1: dwc3otg1@0xfe310000{
+			status = "disable";
+			compatible = "amlogic,dwc3-meson-drd";
+			reg = <0x0 0xfe310000 0x0 0x100>;
 			phys = <&u2p0port0>;
 			phy-names = "usb2-phy";
-			//clocks = <&clkc CLKID_SYS_USB2DRD>;
-			//clock-names = "crg_general";
-			dma-64bit-support = <1>;
-			in-nak-rty = <0x5>;
-			reset-names = "udrd";
-			//resets = <&reset RESET_U2DRD>;
+			interrupts = <GIC_SPI 139 IRQ_TYPE_EDGE_RISING>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					usb_otg1_ep: endpoint {
+						remote-endpoint = <&usba_role_switch>;
+					};
+				};
+			};
 		};
 
-		crg_udc: crgudc@fe340000 {
-			compatible = "amlogic, crg_udc";
+		dwc3a: dwc3a@f3f00000 {
 			status = "disable";
-			controller-type = <1>; /* 1: aml phy 4: m31 phy */
-			reg = <0x0 0xfe340000 0x0 0x8000>;
-			interrupts = <0 131 IRQ_TYPE_EDGE_RISING>;
-			port-speed = <3>; /* 0~3: unknown, low, full, high */
-			phys = <&u2p0port0>;
-			//clocks = <&clkc CLKID_SYS_USB2DRD>;
-			//clock-names = "usb_general";
-			version = <1>; /* 1: forbid vbus detect */
-			dma-64bit-support = <1>;
-			reset-names = "udrd";
-			//resets = <&reset RESET_U2DRD>;
-		};
-
-		crg: crg@fe350000 {
-			compatible = "amlogic, crg-host-drd";
-			status = "disable";
-			reg = <0x0 0xfe350000 0x0 0x8000>;
-			interrupts = <0 130 IRQ_TYPE_EDGE_RISING>;
-			phys = <&u2p1port0>, <&u3p1port0>;
+			compatible = "snps,dwc3-meson";
+			maximum-speed = "super-speed";
+			dr_mode = "host"; /*using role control mode, this must be otg*/
+			//dr_mode = "peripheral";
+			phy_type = "utmi";
+			reg = <0x0 0xf3f00000 0x0 0x10000>;
+			interrupts = <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "dwc_usb3";
+			clocks = <&clkc CLKID_SYS_USB_U3DRD>, <&xtal>, <&xtal>;
+			clock-names = "bus_early", "ref", "suspend";
+			phys = <&u2p0port0>, <&u3p0port0>;
 			phy-names = "usb2-phy", "usb3-phy";
-			//clocks = <&clkc CLKID_SYS_USB3DRD>;
-			//clock-names = "crg_general";
-			dma-64bit-support = <1>;
-			in-nak-rty = <0x5>;
-			reset-names = "udrd";
+			power-domains = <&pwrdm PDID_C5_USB3>;
 			//resets = <&reset RESET_U3DRD>;
+			snps,usb2-lpm-disable;
+			//snps,usb3_lpm_capable;
+			snps,usb2-gadget-lpm-disable;
+			snps,has-lpm-erratum;
+			/* better try */
+			//snps,rx_detect_poll_quirk;
+			snps,dis_u3_susphy_quirk;
+			snps,dis_u2_susphy_quirk;
+			snps,dis_enblslpm_quirk;
+			/* why we do this? dwc3_ref_clk_period() */
+			/* must enable GFLADJ_REFCLK_LPM_SEL */
+			//snps,dis-u2-freeclk-exists-quirk;
+			//snps,gfladj-refclk-lpm-sel-quirk;
+			/* need post-silicon test. */
+			//snps,quirk-frame-length-adjustment;
+			snps,rx-thr-num-pkt = <2>;
+			snps,rx-max-burst = <16>;
+			snps,tx-thr-num-pkt = <2>;
+			snps,tx-max-burst = <16>;
+			tx-fifo-resize;
+			tx-fifo-max-num = <3>;
+			snps,incr-burst-type-adjustment = <4>;
+			usb-role-switch;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					usba_role_switch: endpoint {
+						remote-endpoint = <&usb_otg1_ep>;
+					};
+				};
+			};
+		};
+
+		dwc3otg2: dwc3otg2@0xfe300000{
+			status = "disable";
+			compatible = "amlogic,dwc3-meson-drd";
+			reg = <0x0 0xfe300000 0x0 0x100>;
+			phys = <&u2p1port0>;
+			phy-names = "usb2-phy";
+			interrupts = <GIC_SPI 139 IRQ_TYPE_EDGE_RISING>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					usb_otg2_ep: endpoint {
+						remote-endpoint = <&usbb_role_switch>;
+					};
+				};
+			};
+		};
+
+		dwc3b: dwc3b@f3c80000 {
+			status = "disable";
+			compatible = "snps,dwc3-meson";
+			maximum-speed = "super-speed";
+			dr_mode = "otg"; /*using role control mode, this must be otg*/
+			//dr_mode = "peripheral";
+			phy_type = "utmi";
+			reg = <0x0 0xf3c80000 0x0 0x10000>;
+			interrupts = <GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "dwc_usb3";
+			clocks = <&clkc CLKID_SYS_USB_U2H>, <&xtal>, <&xtal>;
+			clock-names = "bus_early", "ref", "suspend";
+			phys = <&u2p1port0>;
+			phy-names = "usb2-phy";
+			power-domains = <&pwrdm PDID_C5_USB2>;
+			//resets = <&reset RESET_U3DRD>;
+			snps,usb2-lpm-disable;
+			//snps,usb3_lpm_capable;
+			snps,usb2-gadget-lpm-disable;
+			snps,has-lpm-erratum;
+			/* better try */
+			//snps,rx_detect_poll_quirk;
+			snps,dis_u3_susphy_quirk;
+			snps,dis_u2_susphy_quirk;
+			snps,dis_enblslpm_quirk;
+			/* why we do this? dwc3_ref_clk_period() */
+			/* must enable GFLADJ_REFCLK_LPM_SEL */
+			//snps,dis-u2-freeclk-exists-quirk;
+			//snps,gfladj-refclk-lpm-sel-quirk;
+			/* need post-silicon test. */
+			//snps,quirk-frame-length-adjustment;
+			snps,rx-thr-num-pkt = <2>;
+			snps,rx-max-burst = <16>;
+			snps,tx-thr-num-pkt = <2>;
+			snps,tx-max-burst = <16>;
+			tx-fifo-resize;
+			tx-fifo-max-num = <3>;
+			snps,incr-burst-type-adjustment = <4>;
+			usb-role-switch;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					usbb_role_switch: endpoint {
+						remote-endpoint = <&usb_otg2_ep>;
+					};
+				};
+			};
 		};
 
 		dolby_fw: dolby_fw {

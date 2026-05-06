@@ -716,3 +716,41 @@
 	pinctrl-names = "default";
 };
 
+&usbphy0 {
+		status = "okay";
+		u2p@0 {
+			status = "okay";
+			gpio-vbus-power = "GPIOD_5";
+			gpios = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		};
+		u3p@80 {
+				status = "okay";
+		};
+};
+
+&usbphy1 {
+		status = "okay";
+		u2p@0 {
+				status = "okay";
+		};
+};
+
+&dwc3otg1 {
+		status = "disabled";
+		dr_mode = "otg"; /*otg, host,peripheral */
+		controller-type = <1>; /*3:otg, 1: host,2:peripheral */
+};
+
+&dwc3otg2 {
+		status = "disabled";
+		dr_mode = "otg"; /*otg, host,peripheral */
+		controller-type = <1>; /*3:otg, 1: host,2:peripheral */
+};
+
+&dwc3a {
+		status = "okay";
+};
+
+&dwc3b {
+		status = "okay";
+};

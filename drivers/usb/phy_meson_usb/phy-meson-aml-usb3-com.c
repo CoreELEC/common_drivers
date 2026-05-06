@@ -446,7 +446,7 @@ static int meson_aml_u3phy_pll_init(struct aml_usb3_phy *phy)
 		WARN(phy->pll_sw_cfg, "does not support sw pll flow!\n");
 	}
 
-	if (phy->priv->wait_pll_locked) {
+	if (phy->priv && phy->priv->wait_pll_locked) {
 		if (!phy->priv->wait_pll_locked(phy))
 			ret = -ETIMEDOUT;
 	} else {
