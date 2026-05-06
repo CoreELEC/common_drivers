@@ -33,6 +33,7 @@ enum uvm_alloc_flag {
 	UVM_SIZE_SKIP,
 	UVM_READONLY_ALLOC,
 	UVM_DMABUF_REPLACE,
+	UVM_BUFFER_UPDATE,
 	UVM_DETACH_FLAG = 30
 };
 
@@ -247,4 +248,7 @@ int dmabuf_get_uvm_buf_real_size(struct dma_buf *dmabuf);
 
 void uvm_realloc_dmabuf_put_flag(struct dma_buf *dmabuf);
 
+int uvm_bufffer_flag_is_busy(struct dma_buf *dmabuf);
+void uvm_bufffer_flag_set(struct dma_buf *dmabuf);
+void uvm_buffer_flag_clear(struct dma_buf *dmabuf);
 #endif

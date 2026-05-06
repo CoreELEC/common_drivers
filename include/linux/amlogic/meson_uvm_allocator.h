@@ -78,6 +78,8 @@ struct mua_buffer {
 	u32 ion_flags;
 	u32 align;
 	u32 slot_id;
+	int frame_flag;
+	struct mutex flag_lock; /* flag mutex */
 };
 
 struct realloc_buffer_work_data {

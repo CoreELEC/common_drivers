@@ -111,6 +111,7 @@ static struct sg_table
 	struct sg_table *sgt = NULL;
 	bool gpu_access = false;
 	bool skip_realloc = false;
+	int ret = 0;
 
 	if (!attachment || !attachment->dev)
 		goto err_out;
@@ -147,14 +148,17 @@ static struct sg_table
 	}
 
 	if (ua->flags & BIT(UVM_IMM_ALLOC) && gpu_access && !skip_realloc) {
-		UVM_PRINTK(UVM_INFO, "begin ua->gpu_realloc. size:%zu scalar:%d\n",
-			ua->size, ua->scalar);
-		if (ua->gpu_realloc(dmabuf, ua->obj, ua->scalar)) {
-			UVM_PRINTK(UVM_INFO, "gpu_realloc fail\n");
-			goto err_out;
-		} else {
-			sgt = ua->sgt[1];
+		UVM_PRINTK(UVM_INFO, "begin ua->gpu_realloc. size:%zu scalar:%d flag:0x%llx\n",
+			ua->size, ua->scalar, ua->flags);
+		if (ua->flags & BIT(UVM_BUFFER_UPDATE)) {
+			ret = ua->gpu_realloc(dmabuf, ua->obj, ua->scalar);
+			ua->flags &= ~BIT(UVM_BUFFER_UPDATE);
+			UVM_PRINTK(UVM_DBG, "ua->flags=0x%llx.\n", ua->flags);
 		}
+		if (ret)
+			UVM_PRINTK(UVM_INFO, "gpu_realloc fail\n");
+		else
+			sgt = ua->sgt[1];
 	}
 
 	if (ua->flags & BIT(UVM_FBC_DEC) && ua->sgt[1]) {
@@ -937,6 +941,8 @@ int dmabuf_set_vframe(struct dma_buf *dmabuf, struct vframe_s *vf,
 			return 0;
 		}
 	}
+	ua->flags |= BIT(UVM_BUFFER_UPDATE);
+	UVM_PRINTK(UVM_DBG, "ua->flags=0x%llx.\n", ua->flags);
 	return 0;
 }
 EXPORT_SYMBOL(dmabuf_set_vframe);
@@ -1278,3 +1284,66 @@ void uvm_realloc_dmabuf_put_flag(struct dma_buf *dmabuf)
 	mutex_unlock(&mua_dev->mua_rec_buf_lock[i]);
 }
 EXPORT_SYMBOL(uvm_realloc_dmabuf_put_flag);
+
+/* check mua_buffer flag is busy or not:
+ * if busy, choose fill dummy data flow;
+ * if not busy, then set mua_buffer flag=1, and do afbc_soft_decode;
+ */
+int uvm_bufffer_flag_is_busy(struct dma_buf *dmabuf)
+{
+	int ret = 0;
+	struct uvm_buf_obj *obj = NULL;
+	struct mua_buffer *buffer = NULL;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return -EINVAL;
+
+	obj = dmabuf_get_uvm_buf_obj(dmabuf);
+	buffer = container_of(obj, struct mua_buffer, base);
+
+	if (buffer->frame_flag == 1)
+		ret = 1;
+	UVM_PRINTK(UVM_INFO, "is_busy: ret=%d frame_flag=%d, %s called\n",
+		ret, buffer->frame_flag, current->comm);
+
+	return ret;
+}
+EXPORT_SYMBOL(uvm_bufffer_flag_is_busy);
+
+void uvm_bufffer_flag_set(struct dma_buf *dmabuf)
+{
+	struct uvm_buf_obj *obj = NULL;
+	struct mua_buffer *buffer = NULL;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return;
+
+	obj = dmabuf_get_uvm_buf_obj(dmabuf);
+	buffer = container_of(obj, struct mua_buffer, base);
+
+	mutex_lock(&buffer->flag_lock);
+	buffer->frame_flag = 1;
+	mutex_unlock(&buffer->flag_lock);
+	UVM_PRINTK(UVM_INFO, "set: frame_flag=%d, %s called\n",
+		buffer->frame_flag, current->comm);
+}
+EXPORT_SYMBOL(uvm_bufffer_flag_set);
+
+void uvm_buffer_flag_clear(struct dma_buf *dmabuf)
+{
+	struct uvm_buf_obj *obj = NULL;
+	struct mua_buffer *buffer = NULL;
+
+	if (IS_ERR_OR_NULL(dmabuf) || !dmabuf_is_uvm(dmabuf))
+		return;
+
+	obj = dmabuf_get_uvm_buf_obj(dmabuf);
+	buffer = container_of(obj, struct mua_buffer, base);
+
+	mutex_lock(&buffer->flag_lock);
+	buffer->frame_flag = 0;
+	mutex_unlock(&buffer->flag_lock);
+	UVM_PRINTK(UVM_INFO, "clear: frame_flag=%d, %s called\n",
+		buffer->frame_flag, current->comm);
+}
+EXPORT_SYMBOL(uvm_buffer_flag_clear);
