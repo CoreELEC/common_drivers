@@ -130,23 +130,21 @@ static void update_vinfo_from_format_para(struct hdmitx_common *tx_comm)
 	vinfo->cs = fmtpara->cs;
 	vinfo->cd = fmtpara->cd;
 	/* update ppc and color fmt info for vpp, only for FRL/DSC */
-	if (tx_comm->tx_hw->chip_data->chip_type >= MESON_CPU_ID_T7) {
-		vinfo->cur_enc_ppc = 1;
-		if (fmtpara->frl_rate > FRL_NONE)
-			vinfo->cur_enc_ppc = 4;
+	vinfo->cur_enc_ppc = 1;
+	if (fmtpara->frl_rate > FRL_NONE)
+		vinfo->cur_enc_ppc = 4;
 #ifdef CONFIG_AMLOGIC_DSC
-		if (fmtpara->dsc_en) {
-			if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB)
-				vinfo->vpp_post_out_color_fmt = 1;
-			else
-				vinfo->vpp_post_out_color_fmt = 0;
-		} else {
+	if (fmtpara->dsc_en) {
+		if (tx_comm->fmt_para.cs == HDMI_COLORSPACE_RGB)
+			vinfo->vpp_post_out_color_fmt = 1;
+		else
 			vinfo->vpp_post_out_color_fmt = 0;
-		}
-#endif
-		HDMITX_INFO("vinfo: set cur_enc_ppc as %d, vpp color: %d\n",
-			vinfo->cur_enc_ppc, vinfo->vpp_post_out_color_fmt);
+	} else {
+		vinfo->vpp_post_out_color_fmt = 0;
 	}
+#endif
+	HDMITX_INFO("vinfo: set cur_enc_ppc as %d, vpp color: %d\n",
+		vinfo->cur_enc_ppc, vinfo->vpp_post_out_color_fmt);
 }
 
 void hdmitx_update_vinfo(struct hdmitx_common *tx_comm)

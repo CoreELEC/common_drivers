@@ -295,9 +295,7 @@ void hdmitx_top_intr_handler(struct work_struct *work)
 			HDMITX_INFO("HDMI hpd locked\n");
 			if (gpio_get_value(hdev->hw_comm.hdmitx_gpios_hpd)) {
 				if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S5) {
-					hdev->frl_rate = hdmitx_hw_cntl(hdev->tx_comm.tx_hw,
-							FRL_GET_MODE, NULL, NULL);
-					if (hdev->frl_rate)
+					if (hdev->tx_comm.fmt_para.frl_rate)
 						frl_tx_training_handler(hdev);
 					else if (hdev->tx_comm.fmt_para.tmds_clk_div40)
 						/* if current mode is TMDS/nonFRL, send_div40 */

@@ -230,9 +230,9 @@ void hdmitx_set_s5_htxpll_clk_out(const u32 clk, const u32 div)
 	 * 3. 6G
 	 */
 	if (clk == 6000000 || clk == 5000000 || clk == 4000000)
-		set_s5_htxpll_clk_4_5_6g(clk, hdev->frl_rate ? 1 : 0);
+		set_s5_htxpll_clk_4_5_6g(clk, hdev->tx_comm.fmt_para.frl_rate ? 1 : 0);
 	else
-		set_s5_htxpll_clk_other(clk, hdev->frl_rate ? 1 : 0);
+		set_s5_htxpll_clk_other(clk, hdev->tx_comm.fmt_para.frl_rate ? 1 : 0);
 
 	WAIT_HDMIPLL_LOCK(ANACTRL_HDMIPLL_CTRL3, 1);
 
@@ -372,8 +372,10 @@ void hdmitx_set_s5_tmds_clk_div(struct hdmitx21_dev *hdev)
 	/* RJ for cts_htx_tmds_clk[92]
 	 * bit[26:25] source, bit[24] enable, bit[22:16] div
 	 */
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, hdev->frl_rate ? 1 : 0, 25, 2);
-	if (!hdev->frl_rate && hdev->tx_comm.fmt_para.cs == HDMI_COLORSPACE_YUV420)
+	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1,
+			hdev->tx_comm.fmt_para.frl_rate ? 1 : 0, 25, 2);
+	if (!hdev->tx_comm.fmt_para.frl_rate &&
+			hdev->tx_comm.fmt_para.cs == HDMI_COLORSPACE_YUV420)
 		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 1, 16, 7);
 	else
 		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 0, 16, 7);
@@ -423,7 +425,7 @@ void hdmitx_s5_phy_keep_clk_todig(bool en)
 
 void hdmitx_s5_phy_pre_init(struct hdmitx21_dev *hdev)
 {
-	enum frl_rate_enum frl_rate = hdev->frl_rate;
+	enum frl_rate_enum frl_rate = hdev->tx_comm.fmt_para.frl_rate;
 
 	hdmitx_s5_phy_keep_clk_todig(true);
 

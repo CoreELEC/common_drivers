@@ -716,7 +716,7 @@ void frl_tx_training_handler(struct hdmitx21_dev *hdev)
 	/* configured in dts, maximum FRL_10G4L */
 	p_frl_train->user_max_frl_rate = hdev->hw_comm.hdmi_tx_cap.tx_max_frl_rate;
 	p_frl_train->max_frl_rate = hdev->hw_comm.hdmi_tx_cap.tx_max_frl_rate;
-	p_frl_train->frl_rate = hdev->frl_rate;
+	p_frl_train->frl_rate = hdev->tx_comm.fmt_para.frl_rate;
 	p_frl_train->flt_tx_state = FLT_TX_LTS_L;
 	frl_tx_frl_mode_init(p_frl_train, rxcap, false);
 }

@@ -108,7 +108,7 @@ void hdmitx_set_a9_htxpll_clk_out(const u32 clk, u32 div)
 		return;
 	}
 
-	set_a9_htxpll_clk_other(clk, hdev->frl_rate ? 1 : 0);
+	set_a9_htxpll_clk_other(clk, para->frl_rate ? 1 : 0);
 
 	/* pll_od00 */
 	if ((div % 8) == 0) {

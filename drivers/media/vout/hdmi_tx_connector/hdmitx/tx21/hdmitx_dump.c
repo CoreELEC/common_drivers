@@ -31,9 +31,9 @@ static int dump_hdmi_phy_pll_show(struct seq_file *s, void *p)
 	hdmitx_format_para_rebuild_fmt_attr_str(&tx_comm->fmt_para, fmt_attr, sizeof(fmt_attr));
 	seq_printf(s, "attr: %s\n", fmt_attr);
 	seq_printf(s, "tmds clock: %dkhz\n", tx_comm->fmt_para.tmds_clk);
-	if (hdev->frl_rate != FRL_NONE) {
-		seq_printf(s, "frl rate: %d\n", hdev->frl_rate);
-		switch (hdev->frl_rate) {
+	if (hdev->tx_comm.fmt_para.frl_rate != FRL_NONE) {
+		seq_printf(s, "frl rate: %d\n", hdev->tx_comm.fmt_para.frl_rate);
+		switch (hdev->tx_comm.fmt_para.frl_rate) {
 		case FRL_3G3L:
 			seq_puts(s, "FRL_3G3L\n");
 			break;
@@ -991,8 +991,8 @@ static int dump_frl_status_show(struct seq_file *s, void *p)
 	};
 
 	seq_puts(s, "\n--------frl status--------\n");
-	seq_printf(s, "FRL rate: %s\n", hdev->frl_rate < FRL_RATE_MAX ?
-		rate_string[hdev->frl_rate] : rate_string[FRL_RATE_MAX]);
+	seq_printf(s, "FRL rate: %s\n", hdev->tx_comm.fmt_para.frl_rate < FRL_RATE_MAX ?
+		rate_string[hdev->tx_comm.fmt_para.frl_rate] : rate_string[FRL_RATE_MAX]);
 	val = hdmitx21_rd_reg(INTR5_SW_TPI_IVCTX);
 	seq_printf(s, "INTR5_SW_TPI[0x%x] 0x%x\n", INTR5_SW_TPI_IVCTX, val);
 	hdmitx21_wr_reg(INTR5_SW_TPI_IVCTX, val);
@@ -1012,7 +1012,7 @@ static int dump_frl_status_show(struct seq_file *s, void *p)
 			u8 val[9] = {0};
 			u8 i;
 
-			if (hdev->frl_rate >= FRL_6G4L)
+			if (hdev->tx_comm.fmt_para.frl_rate >= FRL_6G4L)
 				len = 9;
 
 			scdc21_sequential_rd_sink(SCDC_CH0_ERRCNT_0, val, len);
