@@ -429,11 +429,27 @@
 	/* Audio Related end */
 };
 
-&i2c2 {
-	status = "disabled";
+&i2c0 {
+	status = "okay";
 	pinctrl-names = "default", "sleep";
-	//pinctrl-0 = <&i2c2_master_pins1>;
-	//pinctrl-1 = <&i2c2_master_sleep_pins1>;
+	pinctrl-0 = <&i2c0_ao_pins1>;
+	pinctrl-1 = <&i2c0_ao_pins1_sleep>;
+	clock-frequency = <100000>; /* default 100k */
+};
+
+&i2c2 {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&i2c2_ao_pins1>;
+	pinctrl-1 = <&i2c2_ao_pins1_sleep>;
+	clock-frequency = <100000>; /* default 100k */
+};
+
+&i2c3 {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&i2c3_pins2>;
+	pinctrl-1 = <&i2c3_pins2_sleep>;
 	clock-frequency = <100000>; /* default 100k */
 };
 
