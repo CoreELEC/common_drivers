@@ -394,100 +394,426 @@
 			     <MAILBOX_ARM>;
 	};
 
-	vddcpu0_board2: pwm_f_board2-regulator {
-		compatible = "pwm-regulator";
-		pwms = <&pwm_f MESON_PWM_0 1512 0>;
-		regulator-name = "vddcpu0_board2";
-		regulator-min-microvolt = <669000>;
-		regulator-max-microvolt = <1029000>;
+	dc12v: fixed@dc12v {
+		compatible = "regulator-fixed";
+		regulator-name = "DC12V";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		regulator-boot-on;
 		regulator-always-on;
-		max-duty-cycle = <1512>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		/* Voltage Duty-Cycle */
-		voltage-table = <1029000 0>,
-				<1019000 3>,
-				<1009000 6>,
-				<999000 8>,
-				<989000 11>,
-				<979000 14>,
-				<969000 17>,
-				<959000 19>,
-				<949000 22>,
-				<939000 25>,
-				<929000 28>,
-				<919000 31>,
-				<909000 33>,
-				<899000 36>,
-				<889000 39>,
-				<879000 42>,
-				<869000 44>,
-				<859000 47>,
-				<849000 50>,
-				<839000 53>,
-				<829000 56>,
-				<819000 58>,
-				<809000 61>,
-				<799000 64>,
-				<789000 67>,
-				<779000 69>,
-				<769000 72>,
-				<759000 75>,
-				<749000 78>,
-				<739000 81>,
-				<729000 83>,
-				<719000 86>,
-				<709000 89>,
-				<699000 92>,
-				<689000 94>,
-				<679000 97>,
-				<669000 100>;
-		status = "disabled";
 	};
 
-	vddcpu0_board0: pwm_f_board0-regulator {
-		compatible = "pwm-regulator";
-		pwms = <&pwm_f MESON_PWM_0 1260 0>;
-		regulator-name = "vddcpu0_board0";
-		regulator-min-microvolt = <679000>;
-		regulator-max-microvolt = <979000>;
+	ext_5v: fixed@ext_5v { //to charger ic
+		compatible = "regulator-fixed";
+		vin-supply = <&dc12v>;
+		regulator-name = "EXT_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	typec_ext_5v: fixed@typec_ext_5v {
+		compatible = "regulator-fixed";
+		vin-supply = <&ext_5v>;
+		regulator-name = "TYPEC_5V_EXT";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vsys_ao: fixed@vsys_ao { //charger ic out
+		compatible = "regulator-fixed";
+		vin-supply = <&ext_5v>;
+		regulator-name = "VSYS_AO";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	//Power ON/OFF for Debug Test
+	vsys_stb: fixed@vsys_stb { //Slide_Switch_PWR
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_ao>;
+		regulator-name = "VSYS_STB";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc_sys: fixed@vcc_sys {
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "VCC_SYS";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		//PWR_UP to PWR_EE_CTRL
+		gpio = <&gpio_ao GPIOAO_24 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc_5v: fixed@vcc_5v {
+		compatible = "regulator-fixed";
+		vin-supply = <&vcc_sys>;
+		regulator-name = "Boost VCC_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddee: pwm_c-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc_sys>;
+		pwms = <&pwm_c MESON_PWM_0 630 0>;//GPIOE_0
+		regulator-name = "VDD_EE";
+		regulator-min-microvolt = <680000>;
+		regulator-max-microvolt = <830000>;
+		regulator-always-on;
+		max-duty-cycle = <630>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <830000 0>,
+				<820000 7>,
+				<810000 13>,
+				<800000 20>,
+				<790000 27>,
+				<780000 33>,
+				<770000 40>,
+				<760000 47>,
+				<750000 53>,
+				<740000 60>,
+				<730000 67>,
+				<720000 73>,
+				<710000 80>,
+				<700000 87>,
+				<690000 93>,
+				<680000 100>;
+		status = "okay";
+	};
+
+	vddcpu0: pwm_d-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc_sys>;
+		pwms = <&pwm_d MESON_PWM_0 1260 0>;//GPIOE_1
+		regulator-name = "VDDCPU_A320";
+		regulator-min-microvolt = <680000>;
+		regulator-max-microvolt = <980000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
 		amlogic,vsel-step = <3>;
 		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;	//pwm 1nF
 		/* Voltage Duty-Cycle */
-		voltage-table = <979000 0>,
-				<969000 3>,
-				<959000 7>,
-				<949000 10>,
-				<939000 13>,
-				<929000 17>,
-				<919000 20>,
-				<909000 23>,
-				<899000 27>,
-				<889000 30>,
-				<879000 33>,
-				<869000 37>,
-				<859000 40>,
-				<849000 43>,
-				<839000 47>,
-				<829000 50>,
-				<819000 53>,
-				<809000 57>,
-				<799000 60>,
-				<789000 63>,
-				<779000 67>,
-				<769000 70>,
-				<759000 73>,
-				<749000 77>,
-				<739000 80>,
-				<729000 83>,
-				<719000 87>,
-				<709000 90>,
-				<699000 93>,
-				<689000 97>,
-				<679000 100>;
-		status = "disabled";
+		voltage-table = <980000 0>,
+				<970000 3>,
+				<960000 7>,
+				<950000 10>,
+				<940000 13>,
+				<930000 17>,
+				<920000 20>,
+				<910000 23>,
+				<900000 27>,
+				<890000 30>,
+				<880000 33>,
+				<870000 37>,
+				<860000 40>,
+				<850000 43>,
+				<840000 47>,
+				<830000 50>,
+				<820000 53>,
+				<810000 57>,
+				<800000 60>,
+				<790000 63>,
+				<780000 67>,
+				<770000 70>,
+				<760000 73>,
+				<750000 77>,
+				<740000 80>,
+				<730000 83>,
+				<720000 87>,
+				<710000 90>,
+				<700000 93>,
+				<690000 97>,
+				<680000 100>;
+		status = "okay";
+	};
+
+	vdd_ddr: pwm_e-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc_sys>;
+		pwms = <&pwm_e MESON_PWM_0 630 0>;//GPIOE_2
+		regulator-name = "VDD_DDR";
+		regulator-min-microvolt = <680000>;
+		regulator-max-microvolt = <830000>;
+		regulator-always-on;
+		max-duty-cycle = <630>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <830000 0>,
+				<820000 7>,
+				<810000 13>,
+				<800000 20>,
+				<790000 27>,
+				<780000 33>,
+				<770000 40>,
+				<760000 47>,
+				<750000 53>,
+				<740000 60>,
+				<730000 67>,
+				<720000 73>,
+				<710000 80>,
+				<700000 87>,
+				<690000 93>,
+				<680000 100>;
+		status = "okay";
+	};
+
+	vdd_npu3: pwm_f-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc_sys>;
+		pwms = <&pwm_f MESON_PWM_0 840 0>;//GPIOE_3
+		regulator-name = "VDD_NPU3";
+		regulator-min-microvolt = <660000>;
+		regulator-max-microvolt = <860000>;
+		regulator-always-on;
+		max-duty-cycle = <840>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <860000 0>,
+				<850000 5>,
+				<840000 10>,
+				<830000 15>,
+				<820000 20>,
+				<810000 25>,
+				<800000 30>,
+				<790000 35>,
+				<780000 40>,
+				<770000 45>,
+				<760000 50>,
+				<750000 55>,
+				<740000 60>,
+				<730000 65>,
+				<720000 70>,
+				<710000 75>,
+				<700000 80>,
+				<690000 85>,
+				<680000 90>,
+				<670000 95>,
+				<660000 100>;
+		status = "okay";
+	};
+
+	vdd_npu2: pwm_g-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc_sys>;
+		pwms = <&pwm_g MESON_PWM_0 840 0>;//GPIOE_4
+		regulator-name = "VDD_NPU2";
+		regulator-min-microvolt = <660000>;
+		regulator-max-microvolt = <860000>;
+		regulator-always-on;
+		max-duty-cycle = <840>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <860000 0>,
+				<850000 5>,
+				<840000 10>,
+				<830000 15>,
+				<820000 20>,
+				<810000 25>,
+				<800000 30>,
+				<790000 35>,
+				<780000 40>,
+				<770000 45>,
+				<760000 50>,
+				<750000 55>,
+				<740000 60>,
+				<730000 65>,
+				<720000 70>,
+				<710000 75>,
+				<700000 80>,
+				<690000 85>,
+				<680000 90>,
+				<670000 95>,
+				<660000 100>;
+		status = "okay";
+	};
+
+	vddq: fixed@vddq { //Option
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "VDDQ";
+		regulator-min-microvolt = <500000>;
+		regulator-max-microvolt = <500000>;
+		//STR_EN
+		gpio = <&gpio_ao GPIOAO_16 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd2h2l: fixed@vdd2h2l { //Option
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "VDD2H/VDD2L";
+		regulator-min-microvolt = <1050000>;
+		regulator-max-microvolt = <1050000>;
+		//STR_EN
+		gpio = <&gpio_ao GPIOAO_16 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd33_ao: fixed@vdd33_ao {
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "VDD33_AO";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd33_str: fixed@vdd33_str { //Only needed in the AOV camera scenario.
+		compatible = "regulator-fixed";
+		vin-supply = <&vdd33_ao>;
+		regulator-name = "VDD33_STR";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		//STR_EN
+		gpio = <&gpio_ao GPIOAO_16 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd_3v1_ao: fixed@vdd_3v1_ao { //Option 3.1V
+		compatible = "regulator-fixed";
+		vin-supply = <&vdd33_ao>;
+		regulator-name = "VDD_3V1_AO";
+		regulator-min-microvolt = <3100000>;
+		regulator-max-microvolt = <3100000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc3v3: fixed@vcc3v3 {
+		compatible = "regulator-fixed";
+		vin-supply = <&vdd33_ao>;
+		regulator-name = "VCC3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		//VDD33_CTRL
+		gpio = <&gpio_ao GPIOAO_25 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	card_3v3: fixed@card_3v3 {
+		compatible = "regulator-fixed";
+		vin-supply = <&vcc3v3>;
+		regulator-name = "3V3_CARD";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		//SD_PWR_EN
+		gpio = <&gpio GPIOC_7 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vddio_c: vddio_c {
+		compatible = "regulator-gpio";
+		vin-supply = <&vcc3v3>;
+		regulator-name = "VDDIO_C";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		//L=3.3V H=1.8V (GPIOE_6 (HiZ)(PWM_I))
+		gpio = <&gpio GPIOE_6 GPIO_ACTIVE_HIGH>;
+		gpios-states = <0>;
+		states = <1800000 1 3300000 0>;
+		startup-delay-us = <7000>;
+		regulator-boot-on;
+		//regulator-always-on;
+	};
+
+	vcc_3v1: fixed@vcc_3v1 { //Option 3.1V
+		compatible = "regulator-fixed";
+		vin-supply = <&vcc3v3>;
+		regulator-name = "VCC_3V1";
+		regulator-min-microvolt = <3100000>;
+		regulator-max-microvolt = <3100000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	avdd18_ao: fixed@avdd18_ao {
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "AVDD18_AO";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd18_str: fixed@vdd18_str { //Only needed in the AOV camera scenario.
+		compatible = "regulator-fixed";
+		vin-supply = <&avdd18_ao>;
+		regulator-name = "VDD18_STR";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		//STR_EN
+		gpio = <&gpio_ao GPIOAO_16 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc1v8: fixed@vcc1v8 {
+		compatible = "regulator-fixed";
+		vin-supply = <&avdd18_ao>;
+		regulator-name = "VCC1V8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		//VDD18_CTRL
+		gpio = <&gpio_ao GPIOAO_23 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <7000>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vdd1v2: fixed@vdd1v2 { //Option: Removable if Not use PSRAM
+		compatible = "regulator-fixed";
+		vin-supply = <&vsys_stb>;
+		regulator-name = "VDD1V2";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-boot-on;
+		regulator-always-on;
 	};
 
 	saradc_common: saradc-common@fe026000 {
@@ -730,7 +1056,9 @@
 				clocks = <&clkc CLKID_PWM_C>;
 				clock-names = "clkin0";
 				tee_id = <2>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_c_pins1>;
 			};
 
 			pwm_d: pwm@58100 {
@@ -740,7 +1068,9 @@
 				clocks = <&clkc CLKID_PWM_D>;
 				clock-names = "clkin0";
 				tee_id = <3>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_d_pins1>;
 			};
 
 			pwm_e: pwm@58200 {
@@ -750,7 +1080,9 @@
 				clocks = <&clkc CLKID_PWM_E>;
 				clock-names = "clkin0";
 				tee_id = <4>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_e_pins1>;
 			};
 
 			pwm_f: pwm@58300 {
@@ -760,7 +1092,9 @@
 				clocks = <&clkc CLKID_PWM_F>;
 				clock-names = "clkin0";
 				tee_id = <5>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_f_pins1>;
 			};
 
 			pwm_g: pwm@58400 {
@@ -770,7 +1104,9 @@
 				clocks = <&clkc CLKID_PWM_G>;
 				clock-names = "clkin0";
 				tee_id = <6>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_g_pins1>;
 			};
 
 			pwm_h: pwm@58500 {
@@ -780,7 +1116,9 @@
 				clocks = <&clkc CLKID_PWM_H>;
 				clock-names = "clkin0";
 				tee_id = <7>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_h_pins1>;
 			};
 
 			pwm_i: pwm@58600 {
@@ -800,7 +1138,9 @@
 				clocks = <&clkc CLKID_PWM_J>;
 				clock-names = "clkin0";
 				tee_id = <9>;
-				status = "disabled";
+				status = "okay";
+				pinctrl-names="default";
+				pinctrl-0=<&pwm_j_pins1>;
 			};
 
 			pwm_k: pwm@58800 {
