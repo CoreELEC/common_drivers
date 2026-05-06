@@ -35,7 +35,7 @@
 	chosen {
 		linux,initrd-start = <0x0 0x0 0x0 0xc000000>;
 		linux,initrd-end = <0x0  0x0 0x0  0xe000000>;
-		bootargs = "console=ttyS0,115200 no_console_suspend earlycon=aml_uart,0xffa1e000
+		bootargs = "console=ttyS0,921600 no_console_suspend earlycon=aml_uart,0xffa1e000
 			initcall_debug loglevel=7
 			connector0_type=MIPI-A lcd0=0x0,,dsi_pxp outputmode=1080p60hz,enabled
 			lcd_debug=0xf
