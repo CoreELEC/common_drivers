@@ -1,0 +1,87 @@
+From 416b206a77782d627ae6e205c4dda3b7d80e339c Mon Sep 17 00:00:00 2001
+From: Udipto Goswami <udipto.goswami@oss.qualcomm.com>
+Date: Wed, 18 Mar 2026 22:39:21 +0530
+Subject: [PATCH 38/63] ANDROID: usb: xhci: Add vendor hook for xhci offload
+ event handling
+
+Add android_vh_xhci_handle_offload vendor hook to allow vendor-specific
+processing of xhci offload events. Hook provides access to xhci_hcd,
+interrupter, and offload flag for custom implementations and early bail
+out.
+
+Bug: 494307525
+Bug: 487900539
+Bug: 497692253
+Change-Id: I4dc807ae8f70f7374e1deed6a04e0ca48bf8184e
+Signed-off-by: Udipto Goswami <udipto.goswami@oss.qualcomm.com>
+---
+ drivers/android/vendor_hooks.c | 1 +
+ drivers/usb/host/xhci-ring.c   | 7 +++++++
+ include/trace/hooks/usb.h      | 7 +++++++
+ 3 files changed, 15 insertions(+)
+
+diff --git a/drivers/android/vendor_hooks.c b/drivers/android/vendor_hooks.c
+index 2b4636829551..a8b69d039928 100644
+--- a/drivers/android/vendor_hooks.c
++++ b/drivers/android/vendor_hooks.c
+@@ -646,6 +646,7 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_gzvm_handle_demand_page_post);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_gzvm_destroy_vm_post_process);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_usb_dev_suspend);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_usb_dev_resume);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_xhci_handle_offload);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_swap_bio_charge);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mm_customize_alloc_anon_thp);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mm_customize_ac);
+diff --git a/drivers/usb/host/xhci-ring.c b/drivers/usb/host/xhci-ring.c
+index d18922acd70f..5cc0fc32546a 100644
+--- a/drivers/usb/host/xhci-ring.c
++++ b/drivers/usb/host/xhci-ring.c
+@@ -59,6 +59,8 @@
+ #include "xhci.h"
+ #include "xhci-trace.h"
+ 
++#include <trace/hooks/usb.h>
++
+ static int queue_command(struct xhci_hcd *xhci, struct xhci_command *cmd,
+ 			 u32 field1, u32 field2,
+ 			 u32 field3, u32 field4, bool command_must_succeed);
+@@ -3127,6 +3129,11 @@ static int xhci_handle_events(struct xhci_hcd *xhci, struct xhci_interrupter *ir
+ 	int event_loop = 0;
+ 	int err = 0;
+ 	u64 temp;
++	bool offload = false;
++
++	trace_android_vh_xhci_handle_offload(xhci, ir, &offload);
++	if (offload)
++		return 0;
+ 
+ 	xhci_clear_interrupt_pending(ir);
+ 
+diff --git a/include/trace/hooks/usb.h b/include/trace/hooks/usb.h
+index 1a1b4c5e8a64..876656f8ee0f 100644
+--- a/include/trace/hooks/usb.h
++++ b/include/trace/hooks/usb.h
+@@ -11,6 +11,8 @@
+ #include <trace/hooks/vendor_hooks.h>
+ 
+ struct usb_device;
++struct xhci_hcd;
++struct xhci_interrupter;
+ 
+ /*
+  * Following tracepoints are not exported in tracefs and provide a
+@@ -24,6 +26,11 @@ DECLARE_HOOK(android_vh_usb_dev_resume,
+ 	TP_PROTO(struct usb_device *udev, pm_message_t msg, bool *bypass),
+ 	TP_ARGS(udev, msg, bypass));
+ 
++DECLARE_HOOK(android_vh_xhci_handle_offload,
++	TP_PROTO(struct xhci_hcd *xhci, struct xhci_interrupter *ir,
++		bool *offload),
++	TP_ARGS(xhci, ir, offload));
++
+ #endif /*  _TRACE_HOOK_USB_H */
+ /*  This part must be outside protection */
+ #include <trace/define_trace.h>
+-- 
+2.50.1
+

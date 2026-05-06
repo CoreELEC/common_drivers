@@ -1,0 +1,179 @@
+From b48c4992cb8ed2f7bb19d58ca45b8cd851602b10 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Tue, 3 Mar 2026 13:49:50 +0000
+Subject: [PATCH 56/63] ANDROID: rust_binder: reserve space in
+ RUST_BINDER_LAYOUT
+
+To avoid exposing layout of internal Rust types to vendor hooks, Rust
+Binder defines a RUST_BINDER_LAYOUT constant with offsets to certain
+fields. By using this constant from vendor hooks, it is ensured that if
+a new rust_binder.ko changes these offsets, vendor hooks continue
+working.
+
+However, this means that RUST_BINDER_LAYOUT needs to be on the KMI, and
+for this we need to reserve space for adding additional offsets in the
+future.
+
+Bug: 486143390
+Change-Id: I769c5f3edab4ea4580a4fcf87b5024910ebc4c18
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit fff35f28cb750d10aef7015466699da1ac051254)
+Bug: 498496487
+---
+ drivers/android/binder/node.rs             |  4 ++++
+ drivers/android/binder/process.rs          |  4 ++++
+ drivers/android/binder/rust_binder.h       | 25 ++++++++++++++++++++++
+ drivers/android/binder/rust_binder_main.rs |  8 +++++++
+ drivers/android/binder/thread.rs           |  4 ++++
+ drivers/android/binder/transaction.rs      |  4 ++++
+ 6 files changed, 49 insertions(+)
+
+diff --git a/drivers/android/binder/node.rs b/drivers/android/binder/node.rs
+index 61f483b6ed0c..fa9e409c1474 100644
+--- a/drivers/android/binder/node.rs
++++ b/drivers/android/binder/node.rs
+@@ -185,6 +185,10 @@ struct NodeInner {
+     arc_offset: Arc::<Node>::DATA_OFFSET + offset_of!(DTRWrap<Node>, wrapped),
+     debug_id: offset_of!(Node, debug_id),
+     ptr: offset_of!(Node, ptr),
++    __kabi_reserved_backport0: 0,
++    __kabi_reserved_backport1: 0,
++    __kabi_reserved_backport2: 0,
++    __kabi_reserved_backport3: 0,
+ };
+ 
+ #[pin_data]
+diff --git a/drivers/android/binder/process.rs b/drivers/android/binder/process.rs
+index 628813d8cb82..f72ceaaf6d66 100644
+--- a/drivers/android/binder/process.rs
++++ b/drivers/android/binder/process.rs
+@@ -429,6 +429,10 @@ fn new() -> Self {
+ pub(crate) const PROCESS_LAYOUT: rb_process_layout = rb_process_layout {
+     arc_offset: Arc::<Process>::DATA_OFFSET,
+     task: offset_of!(Process, task),
++    __kabi_reserved_backport0: 0,
++    __kabi_reserved_backport1: 0,
++    __kabi_reserved_backport2: 0,
++    __kabi_reserved_backport3: 0,
+ };
+ 
+ /// A process using binder.
+diff --git a/drivers/android/binder/rust_binder.h b/drivers/android/binder/rust_binder.h
+index cc1317a46a95..dfcaea1e5624 100644
+--- a/drivers/android/binder/rust_binder.h
++++ b/drivers/android/binder/rust_binder.h
+@@ -4,6 +4,7 @@
+ 
+ #include <uapi/linux/android/binder.h>
+ #include <uapi/linux/android/binderfs.h>
++#include <linux/android_kabi.h>
+ 
+ /*
+  * These symbols are exposed by `rust_binderfs.c` and exist here so that Rust
+@@ -33,23 +34,39 @@ struct rb_transaction_layout {
+ 	size_t from_thread;
+ 	size_t to_proc;
+ 	size_t target_node;
++	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_RESERVE(1);
++	ANDROID_BACKPORT_RESERVE(2);
++	ANDROID_BACKPORT_RESERVE(3);
+ };
+ 
+ struct rb_thread_layout {
+ 	size_t arc_offset;
+ 	size_t process;
+ 	size_t id;
++	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_RESERVE(1);
++	ANDROID_BACKPORT_RESERVE(2);
++	ANDROID_BACKPORT_RESERVE(3);
+ };
+ 
+ struct rb_process_layout {
+ 	size_t arc_offset;
+ 	size_t task;
++	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_RESERVE(1);
++	ANDROID_BACKPORT_RESERVE(2);
++	ANDROID_BACKPORT_RESERVE(3);
+ };
+ 
+ struct rb_node_layout {
+ 	size_t arc_offset;
+ 	size_t debug_id;
+ 	size_t ptr;
++	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_RESERVE(1);
++	ANDROID_BACKPORT_RESERVE(2);
++	ANDROID_BACKPORT_RESERVE(3);
+ };
+ 
+ struct rust_binder_layout {
+@@ -57,6 +74,14 @@ struct rust_binder_layout {
+ 	struct rb_thread_layout th;
+ 	struct rb_process_layout p;
+ 	struct rb_node_layout n;
++	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_RESERVE(1);
++	ANDROID_BACKPORT_RESERVE(2);
++	ANDROID_BACKPORT_RESERVE(3);
++	ANDROID_BACKPORT_RESERVE(4);
++	ANDROID_BACKPORT_RESERVE(5);
++	ANDROID_BACKPORT_RESERVE(6);
++	ANDROID_BACKPORT_RESERVE(7);
+ };
+ 
+ extern struct rust_binder_layout RUST_BINDER_LAYOUT;
+diff --git a/drivers/android/binder/rust_binder_main.rs b/drivers/android/binder/rust_binder_main.rs
+index a5bd7edd3258..33945d3e423c 100644
+--- a/drivers/android/binder/rust_binder_main.rs
++++ b/drivers/android/binder/rust_binder_main.rs
+@@ -89,6 +89,14 @@ fn default() -> Self {
+     th: thread::THREAD_LAYOUT,
+     p: process::PROCESS_LAYOUT,
+     n: node::NODE_LAYOUT,
++    __kabi_reserved_backport0: 0,
++    __kabi_reserved_backport1: 0,
++    __kabi_reserved_backport2: 0,
++    __kabi_reserved_backport3: 0,
++    __kabi_reserved_backport4: 0,
++    __kabi_reserved_backport5: 0,
++    __kabi_reserved_backport6: 0,
++    __kabi_reserved_backport7: 0,
+ };
+ 
+ fn next_debug_id() -> usize {
+diff --git a/drivers/android/binder/thread.rs b/drivers/android/binder/thread.rs
+index eca468264f97..01ce32f647d5 100644
+--- a/drivers/android/binder/thread.rs
++++ b/drivers/android/binder/thread.rs
+@@ -428,6 +428,10 @@ pub(crate) struct ThreadPrioState {
+     arc_offset: Arc::<Thread>::DATA_OFFSET,
+     process: offset_of!(Thread, process),
+     id: offset_of!(Thread, id),
++    __kabi_reserved_backport0: 0,
++    __kabi_reserved_backport1: 0,
++    __kabi_reserved_backport2: 0,
++    __kabi_reserved_backport3: 0,
+ };
+ 
+ /// This represents a thread that's used with binder.
+diff --git a/drivers/android/binder/transaction.rs b/drivers/android/binder/transaction.rs
+index 1fdb1942ad0c..2473be68c39e 100644
+--- a/drivers/android/binder/transaction.rs
++++ b/drivers/android/binder/transaction.rs
+@@ -34,6 +34,10 @@
+     from_thread: offset_of!(Transaction, from),
+     to_proc: offset_of!(Transaction, to),
+     target_node: offset_of!(Transaction, target_node),
++    __kabi_reserved_backport0: 0,
++    __kabi_reserved_backport1: 0,
++    __kabi_reserved_backport2: 0,
++    __kabi_reserved_backport3: 0,
+ };
+ 
+ #[pin_data(PinnedDrop)]
+-- 
+2.50.1
+

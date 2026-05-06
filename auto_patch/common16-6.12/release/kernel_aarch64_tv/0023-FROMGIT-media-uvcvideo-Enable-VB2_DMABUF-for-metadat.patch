@@ -1,0 +1,56 @@
+From 591da62999ebcc4ae768928e660db3f1f249922a Mon Sep 17 00:00:00 2001
+From: Ricardo Ribalda <ribalda@chromium.org>
+Date: Mon, 9 Mar 2026 15:01:54 +0000
+Subject: [PATCH 23/63] FROMGIT: media: uvcvideo: Enable VB2_DMABUF for
+ metadata stream
+
+The UVC driver has two video streams, one for the frames and another one
+for the metadata. Both streams share most of the codebase, but only the
+data stream declares support for DMABUF transfer mode.
+
+I have tried the DMABUF transfer mode with CONFIG_DMABUF_HEAPS_SYSTEM
+and the frames looked correct.
+
+This patch announces the support for DMABUF for the metadata stream.
+This is useful for apps/HALs that only want to support DMABUF.
+
+Cc: stable@vger.kernel.org
+Fixes: 088ead2552458 ("media: uvcvideo: Add a metadata device node")
+Change-Id: Ic3960479439f73a348c5eb96151ee704d897a70d
+Signed-off-by: Ricardo Ribalda <ribalda@chromium.org>
+Reviewed-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Link: https://lore.kernel.org/linux-media/20260309-uvc-metadata-dmabuf-v1-1-fc8b87bd29c5@chromium.org/
+Bug: 491598167
+Bug: 496193343
+(cherry picked from commit fbac03467e53d8d72e5099c03df26d9adae11416
+ https://gitlab.freedesktop.org/linux-media/media-committers.git next)
+Signed-off-by: Ricardo Ribalda <ribalda@google.com>
+---
+ drivers/media/usb/uvc/uvc_queue.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/media/usb/uvc/uvc_queue.c b/drivers/media/usb/uvc/uvc_queue.c
+index 53494d6a1de0..3ae2c86d91ba 100644
+--- a/drivers/media/usb/uvc/uvc_queue.c
++++ b/drivers/media/usb/uvc/uvc_queue.c
+@@ -237,7 +237,7 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
+ 	int ret;
+ 
+ 	queue->queue.type = type;
+-	queue->queue.io_modes = VB2_MMAP | VB2_USERPTR;
++	queue->queue.io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF;
+ 	queue->queue.drv_priv = queue;
+ 	queue->queue.buf_struct_size = sizeof(struct uvc_buffer);
+ 	queue->queue.mem_ops = &vb2_vmalloc_memops;
+@@ -250,7 +250,6 @@ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
+ 		queue->queue.ops = &uvc_meta_queue_qops;
+ 		break;
+ 	default:
+-		queue->queue.io_modes |= VB2_DMABUF;
+ 		queue->queue.ops = &uvc_queue_qops;
+ 		break;
+ 	}
+-- 
+2.50.1
+

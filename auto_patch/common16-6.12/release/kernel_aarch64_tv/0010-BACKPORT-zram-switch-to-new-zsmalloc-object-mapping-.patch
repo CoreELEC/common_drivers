@@ -1,0 +1,75 @@
+From a1a41180a16f946d23c2d62f7c3660a2c03bd00e Mon Sep 17 00:00:00 2001
+From: Sergey Senozhatsky <senozhatsky@chromium.org>
+Date: Mon, 3 Mar 2025 11:03:24 +0900
+Subject: [PATCH 10/63] BACKPORT: zram: switch to new zsmalloc object mapping
+ API
+
+Use new read/write zsmalloc object API.  For cases when RO mapped object
+spans two physical pages (requires temp buffer) compression streams now
+carry around one extra physical page.
+
+Link: https://lkml.kernel.org/r/20250303022425.285971-16-senozhatsky@chromium.org
+Signed-off-by: Sergey Senozhatsky <senozhatsky@chromium.org>
+Cc: Hillf Danton <hdanton@sina.com>
+Cc: Kairui Song <ryncsn@gmail.com>
+Cc: Minchan Kim <minchan@kernel.org>
+Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Cc: Yosry Ahmed <yosry.ahmed@linux.dev>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+
+Bug: 495288884
+(cherry picked from commit 82f91900c7222c6fae7884da133c5c81dca28d19)
+[richardycc: only pick the zcomp local_copy part, not break the api]
+Bug: 278101072
+Signed-off-by: Richard Chang <richardycc@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:d4567fa7658c892403f8a11c03286c638457b1e7
+Merged-In: I49d18a023c13716de0f97ee9d737f352de7b192f
+Change-Id: I49d18a023c13716de0f97ee9d737f352de7b192f
+---
+ drivers/block/zram/zcomp.c | 4 +++-
+ drivers/block/zram/zcomp.h | 2 ++
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/block/zram/zcomp.c b/drivers/block/zram/zcomp.c
+index bb514403e305..a247e7b2e752 100644
+--- a/drivers/block/zram/zcomp.c
++++ b/drivers/block/zram/zcomp.c
+@@ -46,6 +46,7 @@ static const struct zcomp_ops *backends[] = {
+ static void zcomp_strm_free(struct zcomp *comp, struct zcomp_strm *zstrm)
+ {
+ 	comp->ops->destroy_ctx(&zstrm->ctx);
++	vfree(zstrm->local_copy);
+ 	vfree(zstrm->buffer);
+ 	zstrm->buffer = NULL;
+ }
+@@ -58,12 +59,13 @@ static int zcomp_strm_init(struct zcomp *comp, struct zcomp_strm *zstrm)
+ 	if (ret)
+ 		return ret;
+ 
++	zstrm->local_copy = vzalloc(PAGE_SIZE);
+ 	/*
+ 	 * allocate 2 pages. 1 for compressed data, plus 1 extra for the
+ 	 * case when compressed size is larger than the original one
+ 	 */
+ 	zstrm->buffer = vzalloc(2 * PAGE_SIZE);
+-	if (!zstrm->buffer) {
++	if (!zstrm->buffer || !zstrm->local_copy) {
+ 		zcomp_strm_free(comp, zstrm);
+ 		return -ENOMEM;
+ 	}
+diff --git a/drivers/block/zram/zcomp.h b/drivers/block/zram/zcomp.h
+index ad5762813842..301f8f19d850 100644
+--- a/drivers/block/zram/zcomp.h
++++ b/drivers/block/zram/zcomp.h
+@@ -34,6 +34,8 @@ struct zcomp_strm {
+ 	local_lock_t lock;
+ 	/* compression buffer */
+ 	void *buffer;
++	/* local copy of handle memory */
++	void *local_copy;
+ 	struct zcomp_ctx ctx;
+ };
+ 
+-- 
+2.50.1
+

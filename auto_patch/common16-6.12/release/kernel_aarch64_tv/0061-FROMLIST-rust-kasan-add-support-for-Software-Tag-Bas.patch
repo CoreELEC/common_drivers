@@ -1,0 +1,55 @@
+From d8158c94ce24a074557ef628d94a17432204827a Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Tue, 31 Mar 2026 12:09:29 +0000
+Subject: [PATCH 61/63] FROMLIST: rust: kasan: add support for Software
+ Tag-Based KASAN
+
+This adds support for Software Tag-Based KASAN (KASAN_SW_TAGS) when
+CONFIG_RUST is enabled. This requires that rustc includes support for
+the kernel-hwaddress sanitizer, which is available since 1.96.0 [1].
+
+Unlike with clang, we need to pass -Zsanitizer-recover in addition to
+-Zsanitizer because the option is not implied automatically.
+
+Link: https://github.com/rust-lang/rust/pull/153049 [1]
+Reviewed-by: Danilo Krummrich <dakr@kernel.org>
+Link: https://lore.kernel.org/r/20260331-kasan-rust-sw-tags-v2-1-f6765e3e1a2f@google.com
+Bug: 493254381
+Bug: 500416959
+Change-Id: Icbe302adf0b8358668760a621570eeba76e10019
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit f2435d765f35e62e77a78a115ce53a135e9df010)
+---
+ init/Kconfig           | 2 +-
+ scripts/Makefile.kasan | 2 --
+ 2 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/init/Kconfig b/init/Kconfig
+index 7a2026dc1608..db7d5fb5862a 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -2024,7 +2024,7 @@ config RUST
+ 	depends on !CFI_CLANG || HAVE_CFI_ICALL_NORMALIZE_INTEGERS_RUSTC
+ 	select CFI_ICALL_NORMALIZE_INTEGERS if CFI_CLANG
+ 	depends on !CALL_PADDING || RUSTC_VERSION >= 108100
+-	depends on !KASAN_SW_TAGS
++	depends on !KASAN_SW_TAGS || RUSTC_VERSION >= 109600
+ 	# ANDROID: This version number has been changed due to backports in Android's compiler.
+ 	depends on !(MITIGATION_RETHUNK && KASAN) || RUSTC_VERSION >= 108200
+ 	help
+diff --git a/scripts/Makefile.kasan b/scripts/Makefile.kasan
+index 0ba2aac3b8dc..91504e81247a 100644
+--- a/scripts/Makefile.kasan
++++ b/scripts/Makefile.kasan
+@@ -71,8 +71,6 @@ ifdef CONFIG_KASAN_SW_TAGS
+ 
+ CFLAGS_KASAN := -fsanitize=kernel-hwaddress
+ 
+-# This sets flags that will enable SW_TAGS KASAN once enabled in Rust. These
+-# will not work today, and is guarded against in dependencies for CONFIG_RUST.
+ RUSTFLAGS_KASAN := -Zsanitizer=kernel-hwaddress \
+ 		   -Zsanitizer-recover=kernel-hwaddress
+ 
+-- 
+2.50.1
+

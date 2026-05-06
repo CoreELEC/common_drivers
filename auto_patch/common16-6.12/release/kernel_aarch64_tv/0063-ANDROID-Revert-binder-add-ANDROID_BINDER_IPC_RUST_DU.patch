@@ -1,0 +1,77 @@
+From 310de68cc759908971af1c5a2e35bd69174e1f40 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Wed, 1 Apr 2026 13:09:57 +0000
+Subject: [PATCH 63/63] ANDROID: Revert "binder: add
+ ANDROID_BINDER_IPC_RUST_DUMMY"
+
+This reverts commit 6c96f52eb04fdfe2ee59883389907bbb15456a49.
+
+Bug: 419603781
+Bug: 493254381
+Bug: 500416959
+Change-Id: I70a3433754c3c4ed6e3e25ce5373ac21abb32761
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit d059ed15d1f05e8c9ec40d9362c4c6b8801987fd)
+---
+ drivers/android/binder/Kconfig  | 10 ----------
+ drivers/android/binder/Makefile |  3 ---
+ drivers/android/binder/dummy.c  | 15 ---------------
+ 3 files changed, 28 deletions(-)
+ delete mode 100644 drivers/android/binder/dummy.c
+
+diff --git a/drivers/android/binder/Kconfig b/drivers/android/binder/Kconfig
+index d7d7e86b19cd..95dead4edd61 100644
+--- a/drivers/android/binder/Kconfig
++++ b/drivers/android/binder/Kconfig
+@@ -11,13 +11,3 @@ config ANDROID_BINDER_IPC_RUST
+ 	  then the Rust implementation is used instead.
+ 
+ 	  To build this as a GKI module, choose m.
+-
+-config ANDROID_BINDER_IPC_RUST_DUMMY
+-	tristate "Empty module called rust_binder.ko"
+-	depends on ANDROID_BINDER_IPC && !ANDROID_BINDER_IPC_RUST
+-	help
+-	  This creates an empty module of the same name as the Rust Binder
+-	  module. This option can be used to trick the build system into
+-	  thinking that Rust Binder was successfully built in cases where Rust
+-	  support is unavailable.
+-
+diff --git a/drivers/android/binder/Makefile b/drivers/android/binder/Makefile
+index a41ea7e14c9c..c32dc649d04a 100644
+--- a/drivers/android/binder/Makefile
++++ b/drivers/android/binder/Makefile
+@@ -9,9 +9,6 @@ rust_binder-$(CONFIG_ANDROID_BINDER_IPC_RUST) := \
+ 	rust_binder_events.o	\
+ 	page_range_helper.o
+ 
+-obj-$(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY) += rust_binder.o
+-rust_binder-$(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY) := dummy.o
+-
+ # Hooks needs to be built-in always so that DDK modules with vendor hooks do
+ # not form a hard dependency on rust_binder.ko
+ ifdef CONFIG_ANDROID_BINDER_IPC_RUST
+diff --git a/drivers/android/binder/dummy.c b/drivers/android/binder/dummy.c
+deleted file mode 100644
+index 7e9f6ea3a474..000000000000
+--- a/drivers/android/binder/dummy.c
++++ /dev/null
+@@ -1,15 +0,0 @@
+-// SPDX-License-Identifier: GPL-2.0
+-
+-#include <linux/module.h>
+-#include <linux/init.h>
+-
+-static int __init rbd_init(void)
+-{
+-	pr_warn("Using Rust Binder dummy module");
+-	return 0;
+-}
+-
+-module_init(rbd_init);
+-MODULE_DESCRIPTION("Dummy Rust Binder module");
+-MODULE_LICENSE("GPL");
+-MODULE_AUTHOR("Alice Ryhl <aliceryhl@google.com>");
+-- 
+2.50.1
+

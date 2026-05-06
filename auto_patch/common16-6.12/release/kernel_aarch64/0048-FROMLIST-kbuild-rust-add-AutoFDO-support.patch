@@ -1,0 +1,74 @@
+From 09a9b22ce716a057e38d11c946ee142799b1c961 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Fri, 6 Mar 2026 15:31:34 +0000
+Subject: [PATCH 48/63] FROMLIST: kbuild: rust: add AutoFDO support
+
+This patch enables AutoFDO build support for Rust code within the Linux
+kernel. This allows Rust code to be profiled and optimized based on the
+profile.
+
+This was verified by inspecting the object files and confirming that
+they look correct. It was also verified in conjuction with my helpers
+inlining series, and it also appears to have worked correctly when
+combined with that series once one missing thing [1] was fixed in the
+helpers inlining series.
+
+Bug: 488413117
+Link: https://lore.kernel.org/all/aasPsbMEsX6iGUl8@google.com/ [1]
+Change-Id: If7978468adf56d045ad1fc215abc93cba82655fe
+Link: https://lore.kernel.org/r/20260319-autofdo-v1-1-51ee2a7290cd@google.com
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit e8665172af28140d5b4e08b2ff803b496237d28f)
+Bug: 498166901
+---
+ scripts/Makefile.autofdo | 6 +++++-
+ scripts/Makefile.lib     | 4 ++++
+ 2 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/scripts/Makefile.autofdo b/scripts/Makefile.autofdo
+index 1caf2457e585..3f08acab4549 100644
+--- a/scripts/Makefile.autofdo
++++ b/scripts/Makefile.autofdo
+@@ -3,14 +3,18 @@
+ # Enable available and selected Clang AutoFDO features.
+ 
+ CFLAGS_AUTOFDO_CLANG := -fdebug-info-for-profiling -mllvm -enable-fs-discriminator=true -mllvm -improved-fs-discriminator=true
++RUSTFLAGS_AUTOFDO_CLANG := -Zdebug-info-for-profiling -Cllvm-args=-enable-fs-discriminator=true -Cllvm-args=-improved-fs-discriminator=true
+ 
+ ifndef CONFIG_DEBUG_INFO
+   CFLAGS_AUTOFDO_CLANG += -gmlt
++  RUSTFLAGS_AUTOFDO_CLANG += -Cdebuginfo=line-tables-only
+ endif
+ 
+ ifdef CLANG_AUTOFDO_PROFILE
+   CFLAGS_AUTOFDO_CLANG += -fprofile-sample-use=$(CLANG_AUTOFDO_PROFILE) -ffunction-sections
+   CFLAGS_AUTOFDO_CLANG += -fsplit-machine-functions
++  RUSTFLAGS_AUTOFDO_CLANG += -Zprofile-sample-use=$(CLANG_AUTOFDO_PROFILE) -Zfunction-sections=y
++  RUSTFLAGS_AUTOFDO_CLANG += -Cllvm-args=-split-machine-functions
+ endif
+ 
+ ifdef CONFIG_LTO_CLANG_THIN
+@@ -21,4 +25,4 @@ ifdef CONFIG_LTO_CLANG_THIN
+   KBUILD_LDFLAGS += -plugin-opt=-split-machine-functions
+ endif
+ 
+-export CFLAGS_AUTOFDO_CLANG
++export CFLAGS_AUTOFDO_CLANG RUSTFLAGS_AUTOFDO_CLANG
+diff --git a/scripts/Makefile.lib b/scripts/Makefile.lib
+index 9b264f2fd433..67c4ce99a9d7 100644
+--- a/scripts/Makefile.lib
++++ b/scripts/Makefile.lib
+@@ -202,6 +202,10 @@ ifeq ($(CONFIG_AUTOFDO_CLANG),y)
+ _c_flags += $(if $(patsubst n%,, \
+ 	$(AUTOFDO_PROFILE_$(target-stem).o)$(AUTOFDO_PROFILE)$(is-kernel-object)), \
+ 	$(CFLAGS_AUTOFDO_CLANG))
++
++_rust_flags += $(if $(patsubst n%,, \
++	$(AUTOFDO_PROFILE_$(target-stem).o)$(AUTOFDO_PROFILE)$(is-kernel-object)), \
++	$(RUSTFLAGS_AUTOFDO_CLANG))
+ endif
+ 
+ # $(src) for including checkin headers from generated source files
+-- 
+2.50.1
+

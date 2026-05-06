@@ -1,0 +1,103 @@
+From 1b35988cf44a6fd5a2153af978f7d0ac243a84d8 Mon Sep 17 00:00:00 2001
+From: Daeho Jeong <daehojeong@google.com>
+Date: Tue, 30 Dec 2025 09:38:45 -0800
+Subject: [PATCH 31/63] BACKPORT: f2fs: flush plug periodically during GC to
+ maximize readahead effect
+
+During the garbage collection process, F2FS submits readahead I/Os for
+valid blocks. However, since the GC loop runs within a single plug scope
+without intermediate flushing, these readahead I/Os often accumulate in
+the block layer's plug list instead of being dispatched to the device
+immediately.
+
+Consequently, when the GC thread attempts to lock the page later, the
+I/O might not have completed (or even started), leading to a "read try
+and wait" scenario. This negates the benefit of readahead and causes
+unnecessary delays in GC latency.
+
+This patch addresses this issue by introducing an intermediate
+blk_finish_plug() and blk_start_plug() pair within the GC loop. This
+forces the dispatch of pending I/Os, ensuring that readahead pages are
+fetched in time, thereby reducing GC latency.
+
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Reviewed-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+
+Bug: 454359948
+Bug: 496525647
+(cherry picked from commit 7ec199117c32543e0fa8787a6eedd9126523a8d4)
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:e6e78274c5b1de3a9977c28902a501a4217e5e5e
+Merged-In: I33633881efffd1e8fcf93760d1aab304f6c2890f
+Change-Id: I33633881efffd1e8fcf93760d1aab304f6c2890f
+---
+ fs/f2fs/gc.c | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/fs/f2fs/gc.c b/fs/f2fs/gc.c
+index c91a25fd9fcd..0547f5616a87 100644
+--- a/fs/f2fs/gc.c
++++ b/fs/f2fs/gc.c
+@@ -1038,7 +1038,8 @@ static int check_valid_map(struct f2fs_sb_info *sbi,
+  * ignore that.
+  */
+ static int gc_node_segment(struct f2fs_sb_info *sbi,
+-		struct f2fs_summary *sum, unsigned int segno, int gc_type)
++		struct f2fs_summary *sum, unsigned int segno, int gc_type,
++		struct blk_plug *plug)
+ {
+ 	struct f2fs_summary *entry;
+ 	block_t start_addr;
+@@ -1107,8 +1108,11 @@ static int gc_node_segment(struct f2fs_sb_info *sbi,
+ 		stat_inc_node_blk_count(sbi, 1, gc_type);
+ 	}
+ 
+-	if (++phase < 3)
++	if (++phase < 3) {
++		blk_finish_plug(plug);
++		blk_start_plug(plug);
+ 		goto next_step;
++	}
+ 
+ 	if (fggc)
+ 		atomic_dec(&sbi->wb_sync_req[NODE]);
+@@ -1539,7 +1543,7 @@ static int move_data_page(struct inode *inode, block_t bidx, int gc_type,
+  */
+ static int gc_data_segment(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
+ 		struct gc_inode_list *gc_list, unsigned int segno, int gc_type,
+-		bool force_migrate)
++		bool force_migrate, struct blk_plug *plug)
+ {
+ 	struct super_block *sb = sbi->sb;
+ 	struct f2fs_summary *entry;
+@@ -1707,8 +1711,11 @@ static int gc_data_segment(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
+ 		}
+ 	}
+ 
+-	if (++phase < 5)
++	if (++phase < 5) {
++		blk_finish_plug(plug);
++		blk_start_plug(plug);
+ 		goto next_step;
++	}
+ 
+ 	return submitted;
+ }
+@@ -1840,11 +1847,11 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
+ 		 */
+ 		if (type == SUM_TYPE_NODE)
+ 			submitted += gc_node_segment(sbi, sum->entries, segno,
+-								gc_type);
++								gc_type, &plug);
+ 		else
+ 			submitted += gc_data_segment(sbi, sum->entries, gc_list,
+ 							segno, gc_type,
+-							force_migrate);
++							force_migrate, &plug);
+ 
+ 		stat_inc_gc_seg_count(sbi, data_type, gc_type);
+ 		sbi->gc_reclaimed_segs[sbi->gc_mode]++;
+-- 
+2.50.1
+

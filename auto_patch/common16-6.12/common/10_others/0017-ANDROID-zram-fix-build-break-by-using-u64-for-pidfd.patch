@@ -1,0 +1,37 @@
+From ca82f646f6e17197fb7519bd453531000708e764 Mon Sep 17 00:00:00 2001
+From: Richard Chang <richardycc@google.com>
+Date: Wed, 15 Apr 2026 03:28:00 +0000
+Subject: [PATCH] ANDROID: zram: fix build break by using u64 for pidfd
+
+While alignment attributes are necessary for struct members in UAPI to
+ensure ABI compatibility between 32-bit and 64-bit systems, some
+compilers like GCC and some versions of Clang strictly prohibits them on
+function parameters.
+
+Replace the UAPI-specific __aligned_u64 type with the standard u64 type
+for the pidfd parameter in the zram_ioctl_process_scan function.
+
+Fixes: 160a4092db67 ("ANDROID: zram: Add ZRAM_ANDROID_IOC_PROCESS_PREFETCH ioctl")
+Bug: 502746353
+Change-Id: I9abf6896d52355c39c27a9373bdbf9991f2c1b70
+Signed-off-by: Richard Chang <richardycc@google.com>
+---
+ drivers/block/zram/zram_ioctl.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/block/zram/zram_ioctl.c b/drivers/block/zram/zram_ioctl.c
+index 0abb6345d286..52a25336b61d 100644
+--- a/drivers/block/zram/zram_ioctl.c
++++ b/drivers/block/zram/zram_ioctl.c
+@@ -125,7 +125,7 @@ static const struct mm_walk_ops zram_walk_ops = {
+ };
+ 
+ static int zram_ioctl_process_scan(struct zram *zram, unsigned int cmd,
+-	__aligned_u64 pidfd,
++	u64 pidfd,
+ 	struct zram_android_ioc_process_range_writeback *prwb,
+ 	struct zram_pp_ctl *ctl)
+ {
+-- 
+2.50.1
+

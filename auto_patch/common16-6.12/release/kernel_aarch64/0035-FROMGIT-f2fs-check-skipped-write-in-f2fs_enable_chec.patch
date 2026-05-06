@@ -1,0 +1,173 @@
+From 956df9f6def4ae5704c0f2a65261fd6c8a9dda65 Mon Sep 17 00:00:00 2001
+From: Chao Yu <chao@kernel.org>
+Date: Mon, 26 Jan 2026 06:32:03 +0000
+Subject: [PATCH 35/63] FROMGIT: f2fs: check skipped write in
+ f2fs_enable_checkpoint()
+
+This patch introduces sbi->nr_pages[F2FS_SKIPPED_WRITE] to record any
+skipped write during data flush in f2fs_enable_checkpoint().
+
+So in the loop of data flush, if there is any skipped write in previous
+flush, let's retry sync_inode_sb(), otherwise, all dirty data written
+before f2fs_enable_checkpoint() should have been persisted, then break
+the retry loop.
+
+Bug: 477022593
+Bug: 493380797
+Bug: 495273251
+Bug: 496755631
+(cherry picked from commit ab59919c8a041bf0fc6c8fe65dd10729e19de88c
+https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs.git dev)
+Link: https://lore.kernel.org/linux-f2fs-devel/20260126063203.1508295-1-chao@kernel.org
+Change-Id: I7dba8e75ffd76b6afc638350966989355551d75f
+Signed-off-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+(cherry picked from commit ab59919c8a041bf0fc6c8fe65dd10729e19de88c)
+[Chao: fix code conflict]
+Signed-off-by: Chao Yu <chao@kernel.org>
+(cherry picked from commit 03b9be044acf707bc510462229b1130e56ecb22d)
+---
+ fs/f2fs/data.c  | 19 +++++++++++++++++++
+ fs/f2fs/debug.c |  1 +
+ fs/f2fs/f2fs.h  |  2 ++
+ fs/f2fs/super.c | 37 +++++++++++++++++++++++++++++++++----
+ 4 files changed, 55 insertions(+), 4 deletions(-)
+
+diff --git a/fs/f2fs/data.c b/fs/f2fs/data.c
+index 8d05edad0520..b6fb4b0b7182 100644
+--- a/fs/f2fs/data.c
++++ b/fs/f2fs/data.c
+@@ -3524,6 +3524,16 @@ static inline void account_writeback(struct inode *inode, bool inc)
+ 	f2fs_up_read(&F2FS_I(inode)->i_sem);
+ }
+ 
++static inline void update_skipped_write(struct f2fs_sb_info *sbi,
++						struct writeback_control *wbc)
++{
++	long skipped = wbc->pages_skipped;
++
++	if (is_sbi_flag_set(sbi, SBI_ENABLE_CHECKPOINT) && skipped &&
++		wbc->sync_mode == WB_SYNC_ALL)
++		atomic_add(skipped, &sbi->nr_pages[F2FS_SKIPPED_WRITE]);
++}
++
+ static int __f2fs_write_data_pages(struct address_space *mapping,
+ 						struct writeback_control *wbc,
+ 						enum iostat_type io_type)
+@@ -3588,10 +3598,19 @@ static int __f2fs_write_data_pages(struct address_space *mapping,
+ 	 */
+ 
+ 	f2fs_remove_dirty_inode(inode);
++
++	/*
++	 * f2fs_write_cache_pages() has retry logic for EAGAIN case which is
++	 * common when racing w/ checkpoint, so only update skipped write
++	 * when ret is non-zero.
++	 */
++	if (ret)
++		update_skipped_write(sbi, wbc);
+ 	return ret;
+ 
+ skip_write:
+ 	wbc->pages_skipped += get_dirty_pages(inode);
++	update_skipped_write(sbi, wbc);
+ 	trace_f2fs_writepages(mapping->host, wbc, DATA);
+ 	return 0;
+ }
+diff --git a/fs/f2fs/debug.c b/fs/f2fs/debug.c
+index 16c2dfb4f595..308d92568cb9 100644
+--- a/fs/f2fs/debug.c
++++ b/fs/f2fs/debug.c
+@@ -422,6 +422,7 @@ static const char *s_flag[MAX_SBI_FLAG] = {
+ 	[SBI_IS_RESIZEFS]	= "resizefs",
+ 	[SBI_IS_FREEZING]	= "freezefs",
+ 	[SBI_IS_WRITABLE]	= "writable",
++	[SBI_ENABLE_CHECKPOINT]	= "enable_checkpoint",
+ };
+ 
+ static const char *ipu_mode_names[F2FS_IPU_MAX] = {
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index fed87f7cf4ac..6e5562c154b3 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -1154,6 +1154,7 @@ enum count_type {
+ 	F2FS_RD_META,
+ 	F2FS_DIO_WRITE,
+ 	F2FS_DIO_READ,
++	F2FS_SKIPPED_WRITE,	/* skip or fail during f2fs_enable_checkpoint() */
+ 	NR_COUNT_TYPE,
+ };
+ 
+@@ -1389,6 +1390,7 @@ enum {
+ 	SBI_IS_RESIZEFS,			/* resizefs is in process */
+ 	SBI_IS_FREEZING,			/* freezefs is in process */
+ 	SBI_IS_WRITABLE,			/* remove ro mountoption transiently */
++	SBI_ENABLE_CHECKPOINT,			/* indicate it's during f2fs_enable_checkpoint() */
+ 	MAX_SBI_FLAG,
+ };
+ 
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 564b8aea25d7..600511849010 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -2366,6 +2366,7 @@ static int f2fs_enable_checkpoint(struct f2fs_sb_info *sbi)
+ 	int retry = DEFAULT_RETRY_IO_COUNT;
+ 	long long start, writeback, end;
+ 	int ret;
++	long long skipped_write, dirty_data;
+ 	struct f2fs_lock_context lc;
+ 
+ 	f2fs_info(sbi, "f2fs_enable_checkpoint() starts, meta: %lld, node: %lld, data: %lld",
+@@ -2375,17 +2376,45 @@ static int f2fs_enable_checkpoint(struct f2fs_sb_info *sbi)
+ 
+ 	start = ktime_get();
+ 
++	set_sbi_flag(sbi, SBI_ENABLE_CHECKPOINT);
++
+ 	/* we should flush all the data to keep data consistency */
+ 	do {
++		skipped_write = get_pages(sbi, F2FS_SKIPPED_WRITE);
++		dirty_data = get_pages(sbi, F2FS_DIRTY_DATA);
++
+ 		sync_inodes_sb(sbi->sb);
+ 		f2fs_io_schedule_timeout(DEFAULT_IO_TIMEOUT);
+-	} while (get_pages(sbi, F2FS_DIRTY_DATA) && retry--);
++
++		f2fs_info(sbi, "sync_inode_sb done, dirty_data: %lld, %lld, "
++				"skipped write: %lld, %lld, retry: %d",
++				get_pages(sbi, F2FS_DIRTY_DATA),
++				dirty_data,
++				get_pages(sbi, F2FS_SKIPPED_WRITE),
++				skipped_write, retry);
++
++		/*
++		 * sync_inodes_sb() has retry logic, so let's check dirty_data
++		 * in prior to skipped_write in case there is no dirty data.
++		 */
++		if (!get_pages(sbi, F2FS_DIRTY_DATA))
++			break;
++		if (get_pages(sbi, F2FS_SKIPPED_WRITE) == skipped_write)
++			break;
++	} while (retry--);
++
++	clear_sbi_flag(sbi, SBI_ENABLE_CHECKPOINT);
+ 
+ 	writeback = ktime_get();
+ 
+-	if (unlikely(get_pages(sbi, F2FS_DIRTY_DATA)))
+-		f2fs_warn(sbi, "checkpoint=enable has some unwritten data: %lld",
+-					get_pages(sbi, F2FS_DIRTY_DATA));
++	if (unlikely(get_pages(sbi, F2FS_DIRTY_DATA) ||
++			get_pages(sbi, F2FS_SKIPPED_WRITE)))
++		f2fs_warn(sbi, "checkpoint=enable unwritten data: %lld, skipped data: %lld, retry: %d",
++				get_pages(sbi, F2FS_DIRTY_DATA),
++				get_pages(sbi, F2FS_SKIPPED_WRITE), retry);
++
++	if (get_pages(sbi, F2FS_SKIPPED_WRITE))
++		atomic_set(&sbi->nr_pages[F2FS_SKIPPED_WRITE], 0);
+ 
+ 	f2fs_down_write_trace(&sbi->gc_lock, &lc);
+ 	f2fs_dirty_to_prefree(sbi);
+-- 
+2.50.1
+

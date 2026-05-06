@@ -1,0 +1,182 @@
+From c8366273ff73f3794018cd64ea13cbd6f5f5286a Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Tue, 17 Mar 2026 10:42:55 +0000
+Subject: [PATCH 59/63] ANDROID: rust_binder: add rust_binder_thread_task()
+
+In cases where the sender of a transaction can't find a target
+transaction, it's not possible to immediately set the priority for
+inheritance purposes. Instead, this is done in the receiving process on
+receive. This means that the set_priority vendorhook can't use 'current'
+to find the thread of the sender, as 'current' is instead equal to the
+target thread in this edge case.
+
+For this reason, we need to be able to obtain the 'struct task_struct'
+of a binder thread's task.
+
+Bug: 486143390
+Change-Id: I6c9a076f319262f4c5bb8fbb0cbfbb2506058b1c
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit c27baa2eb103f379b0edb09d9260508f0179a67a)
+Bug: 498496487
+---
+ drivers/android/binder/rust_binder.h | 15 ++++++++++-
+ drivers/android/binder/thread.rs     |  4 ++-
+ gki/aarch64/abi.stg                  | 39 +++++++++++++++++++++++++++-
+ gki/aarch64/abi.stg.allowed_breaks   |  4 +++
+ 4 files changed, 59 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/android/binder/rust_binder.h b/drivers/android/binder/rust_binder.h
+index e0a2c4503a64..a956964c457e 100644
+--- a/drivers/android/binder/rust_binder.h
++++ b/drivers/android/binder/rust_binder.h
+@@ -45,7 +45,7 @@ struct rb_thread_layout {
+ 	size_t arc_offset;
+ 	size_t process;
+ 	size_t id;
+-	ANDROID_BACKPORT_RESERVE(0);
++	ANDROID_BACKPORT_USE(0, size_t task);
+ 	ANDROID_BACKPORT_RESERVE(1);
+ 	ANDROID_BACKPORT_RESERVE(2);
+ 	ANDROID_BACKPORT_RESERVE(3);
+@@ -134,6 +134,19 @@ static inline s32 rust_binder_thread_id(rust_binder_thread t)
+ 	return * (s32 *) (t + RUST_BINDER_LAYOUT.th.id);
+ }
+ 
++/*
++ * Binder thread exit (BINDER_THREAD_EXIT) or process deferred_release may set
++ * this field to NULL. So unless you are called from ioctl context of this
++ * specific thread, the task may be null and should be used under
++ * rcu_read_lock().
++ */
++static inline struct task_struct *rust_binder_thread_task(rust_binder_thread t)
++{
++	struct task_struct **task = (struct task_struct **) (t + RUST_BINDER_LAYOUT.th.task);
++
++	return READ_ONCE(*task);
++}
++
+ /*
+  * Binder process deferred_release may set this field to NULL, so unless you
+  * are called from ioctl context on the process itself, this may be null and
+diff --git a/drivers/android/binder/thread.rs b/drivers/android/binder/thread.rs
+index 01ce32f647d5..2f1e371e37a0 100644
+--- a/drivers/android/binder/thread.rs
++++ b/drivers/android/binder/thread.rs
+@@ -428,7 +428,9 @@ pub(crate) struct ThreadPrioState {
+     arc_offset: Arc::<Thread>::DATA_OFFSET,
+     process: offset_of!(Thread, process),
+     id: offset_of!(Thread, id),
+-    __kabi_reserved_backport0: 0,
++    __bindgen_anon_1: kernel::bindings::rb_thread_layout__bindgen_ty_1 {
++        task: offset_of!(Thread, task),
++    },
+     __kabi_reserved_backport1: 0,
+     __kabi_reserved_backport2: 0,
+     __kabi_reserved_backport3: 0,
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index d16e28b3d47c..2edb913397f4 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -49388,6 +49388,10 @@ member {
+   type_id: 0x0c479d40
+   offset: 904
+ }
++member {
++  id: 0x20de3186
++  type_id: 0x0c56b609
++}
+ member {
+   id: 0x20fd5371
+   type_id: 0x0cdb3dd6
+@@ -51732,6 +51736,11 @@ member {
+   id: 0x3fb35474
+   type_id: 0x71e321c1
+ }
++member {
++  id: 0x3fba1dc5
++  type_id: 0x71c62421
++  offset: 192
++}
+ member {
+   id: 0x3fc4fd06
+   type_id: 0x703d8408
+@@ -58536,6 +58545,11 @@ member {
+   type_id: 0x92233392
+   offset: 384
+ }
++member {
++  id: 0x50ebcb4a
++  name: "__kabi_reserved_backport0"
++  type_id: 0x92233392
++}
+ member {
+   id: 0x112ba0a2
+   name: "__kabi_reserved_backport1"
+@@ -239406,6 +239420,11 @@ member {
+   type_id: 0xf435685e
+   offset: 64
+ }
++member {
++  id: 0x9cd30fc6
++  name: "task"
++  type_id: 0xf435685e
++}
+ member {
+   id: 0xcfbd6d30
+   name: "task"
+@@ -268133,6 +268152,14 @@ struct_union {
+     member_id: 0x17f11969
+   }
+ }
++struct_union {
++  id: 0x0c56b609
++  kind: STRUCT
++  definition {
++    bytesize: 8
++    member_id: 0x50ebcb4a
++  }
++}
+ struct_union {
+   id: 0x0c78e744
+   kind: STRUCT
+@@ -275455,6 +275482,16 @@ struct_union {
+     member_id: 0x5613a1d4
+   }
+ }
++struct_union {
++  id: 0x71c62421
++  kind: UNION
++  definition {
++    bytesize: 8
++    member_id: 0x9cd30fc6
++    member_id: 0x20de3186
++    member_id: 0x36752b74
++  }
++}
+ struct_union {
+   id: 0x71e321c1
+   kind: UNION
+@@ -331315,7 +331352,7 @@ struct_union {
+     member_id: 0x97e60d62
+     member_id: 0x0d4ede51
+     member_id: 0xccdb103b
+-    member_id: 0x50ebc383
++    member_id: 0x3fba1dc5
+     member_id: 0x112ba325
+     member_id: 0xd16b3ef9
+     member_id: 0x93a89c68
+diff --git a/gki/aarch64/abi.stg.allowed_breaks b/gki/aarch64/abi.stg.allowed_breaks
+index 0a69b11b9427..a7b8a0f84aed 100644
+--- a/gki/aarch64/abi.stg.allowed_breaks
++++ b/gki/aarch64/abi.stg.allowed_breaks
+@@ -134,3 +134,7 @@ type 'struct bindings::bindings_raw::files_struct' changed
+     type changed from 'u32[8]' to 'u32[6]'
+       number of elements changed from 8 to 6
+ 
++type 'struct rb_thread_layout' changed
++  member 'u64 __kabi_reserved_backport0' was removed
++  member 'union { size_t task; struct { u64 __kabi_reserved_backport0; }; union { }; }' was added
++
+-- 
+2.50.1
+

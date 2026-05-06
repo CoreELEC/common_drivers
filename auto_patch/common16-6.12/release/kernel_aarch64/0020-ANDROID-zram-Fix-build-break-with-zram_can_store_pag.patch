@@ -1,0 +1,66 @@
+From a3e5e2f9bb61183b0395a47e6b49820b76638fd7 Mon Sep 17 00:00:00 2001
+From: Richard Chang <richardycc@google.com>
+Date: Tue, 24 Mar 2026 04:53:55 +0000
+Subject: [PATCH 20/63] ANDROID: zram: Fix build break with
+ zram_can_store_pages w/o CONFIG_ZRAM_WRITEBACK
+
+The zram_can_store_page() function was added in commit
+160a4092db67 ("ANDROID: zram: Add ZRAM_ANDROID_IOC_PROCESS_PREFETCH
+ioctl") but only used in logic enabled w/ CONFIG_ZRAM_WRITEBACK.
+
+This causes build errors when CONFIG_ZRAM_WRITEBACK is disabled:
+  error: unused function 'zram_can_store_page' [-Werror,-Wunused-function]
+
+So move the function in CONFIG_ZRAM_WRITEBACK as well.
+
+Fixes: 160a4092db67 ("ANDROID: zram: Add ZRAM_ANDROID_IOC_PROCESS_PREFETCH ioctl")
+Bug: 495288884
+Bug: 495197959
+Change-Id: If6e1bcce9ea31811367e3b481a886ffbfca3fda4
+Signed-off-by: Richard Chang <richardycc@google.com>
+(cherry picked from commit d671506859f7d94850bd3c4d112169e45942ed98)
+---
+ drivers/block/zram/zram_drv.c | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index 99f9ac79e483..55f52f917fb3 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -279,16 +279,6 @@ static inline void update_used_max(struct zram *zram,
+ 					  &cur_max, pages));
+ }
+ 
+-static bool zram_can_store_page(struct zram *zram)
+-{
+-	unsigned long alloced_pages;
+-
+-	alloced_pages = zs_get_total_pages(zram->mem_pool);
+-	update_used_max(zram, alloced_pages);
+-
+-	return !zram->limit_pages || alloced_pages <= zram->limit_pages;
+-}
+-
+ static inline void zram_fill_page(void *ptr, unsigned long len,
+ 					unsigned long value)
+ {
+@@ -1087,6 +1077,16 @@ int zram_prefetch_cache_drop(struct zram *zram, u32 index)
+ }
+ #endif
+ 
++static bool zram_can_store_page(struct zram *zram)
++{
++	unsigned long alloced_pages;
++
++	alloced_pages = zs_get_total_pages(zram->mem_pool);
++	update_used_max(zram, alloced_pages);
++
++	return !zram->limit_pages || alloced_pages <= zram->limit_pages;
++}
++
+ static int zram_populate_table(struct zram *zram, struct page *page, u32 index)
+ {
+ 	unsigned long handle;
+-- 
+2.50.1
+

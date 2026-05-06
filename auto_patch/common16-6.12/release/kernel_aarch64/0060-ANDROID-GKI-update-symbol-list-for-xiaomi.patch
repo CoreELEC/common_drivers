@@ -1,0 +1,106 @@
+From 117d16a910b8f619a56c9d0c3802a7f8fdbe409d Mon Sep 17 00:00:00 2001
+From: Wenjie <qiwenjie@xiaomi.corp-partner.google.com>
+Date: Thu, 2 Apr 2026 19:12:27 +0800
+Subject: [PATCH 60/63] ANDROID: GKI: update symbol list for xiaomi
+
+2 function symbol(s) added
+
+'LZ4_compress_default'
+'find_inode_nowait'
+
+Bug: 498888512
+Bug: 500523067
+
+Change-Id: I531a1320f29e6722b64282e70a60e8a1808113f3
+Signed-off-by: Wenjie <qiwenjie@xiaomi.corp-partner.google.com>
+(cherry picked from commit e2fdf65124505a205b23ae28ab10611e3943b310)
+---
+ gki/aarch64/abi.stg        | 30 ++++++++++++++++++++++++++++++
+ gki/aarch64/symbols/xiaomi |  2 ++
+ 2 files changed, 32 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index 2edb913397f4..6762d13007da 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -20433,6 +20433,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9ba95149
+ }
++pointer_reference {
++  id: 0x2c7aa6d4
++  kind: POINTER
++  pointee_type_id: 0x9baa7dce
++}
+ pointer_reference {
+   id: 0x2c7b32f9
+   kind: POINTER
+@@ -380086,6 +380091,14 @@ function {
+   parameter_id: 0x2c50e503
+   parameter_id: 0x18bd6530
+ }
++function {
++  id: 0x12101ef3
++  return_type_id: 0x1b8590a8
++  parameter_id: 0x26ee682a
++  parameter_id: 0x33756485
++  parameter_id: 0x2c7aa6d4
++  parameter_id: 0x18bd6530
++}
+ function {
+   id: 0x1210c1fa
+   return_type_id: 0x1b8590a8
+@@ -419099,6 +419112,13 @@ function {
+   parameter_id: 0x00abf683
+   parameter_id: 0x1d5bae2a
+ }
++function {
++  id: 0x9baa7dce
++  return_type_id: 0x6720d32f
++  parameter_id: 0x1b8590a8
++  parameter_id: 0x33756485
++  parameter_id: 0x18bd6530
++}
+ function {
+   id: 0x9baa8508
+   return_type_id: 0x6720d32f
+@@ -476673,6 +476693,15 @@ elf_symbol {
+   type_id: 0x3a251008
+   full_name: "find_get_pid"
+ }
++elf_symbol {
++  id: 0xf5a1bc09
++  name: "find_inode_nowait"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x6a31d709
++  type_id: 0x12101ef3
++  full_name: "find_inode_nowait"
++}
+ elf_symbol {
+   id: 0x90d375c5
+   name: "find_pid_ns"
+@@ -531352,6 +531381,7 @@ interface {
+   symbol_id: 0x8bbdb127
+   symbol_id: 0x2a0ee731
+   symbol_id: 0x02b1ce77
++  symbol_id: 0xf5a1bc09
+   symbol_id: 0x90d375c5
+   symbol_id: 0xdc16d76a
+   symbol_id: 0x5b7736f5
+diff --git a/gki/aarch64/symbols/xiaomi b/gki/aarch64/symbols/xiaomi
+index d32be247183a..71841ae0b50c 100644
+--- a/gki/aarch64/symbols/xiaomi
++++ b/gki/aarch64/symbols/xiaomi
+@@ -537,6 +537,8 @@ __tracepoint_android_vh_remove_mapping_failed
+ __tracepoint_android_vh_filemap_get_folio_end
+ __tracepoint_android_vh_do_new_mount_fc
+ __tracepoint_android_vh_put_super
++LZ4_compress_default
++find_inode_nowait
+ 
+ #required by mi_mempool.ko
+ __traceiter_android_vh_mmput
+-- 
+2.50.1
+

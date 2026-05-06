@@ -1,0 +1,55 @@
+From 9633e1f07c81b767bc2652afa8a1fcbef4c44086 Mon Sep 17 00:00:00 2001
+From: Daeho Jeong <daehojeong@google.com>
+Date: Thu, 29 May 2025 15:25:32 -0700
+Subject: [PATCH 29/63] UPSTREAM: f2fs: make sure zoned device GC to use FG_GC
+ in shortage of free section
+
+We already use FG_GC when we have free sections under
+gc_boost_zoned_gc_percent. So, let's make it consistent.
+
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Reviewed-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+
+Bug: 325517257
+Bug: 496525647
+(cherry picked from commit 24bf3ee37fb8ed736094247133d00cb2c3bab3ce)
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:da0bdf1a6449f41ca22869e404fa0854697660b0
+Merged-In: I752ecc095b390d40c7dbab671f56806e21a5b0ae
+Change-Id: I752ecc095b390d40c7dbab671f56806e21a5b0ae
+---
+ fs/f2fs/gc.c      | 2 +-
+ fs/f2fs/segment.c | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/fs/f2fs/gc.c b/fs/f2fs/gc.c
+index 030585ace069..6fcdea931d6a 100644
+--- a/fs/f2fs/gc.c
++++ b/fs/f2fs/gc.c
+@@ -149,7 +149,7 @@ static int gc_thread_func(void *data)
+ 			(gc_boost && gc_th->boost_gc_greedy);
+ 
+ 		/* foreground GC was been triggered via f2fs_balance_fs() */
+-		if (foreground)
++		if (foreground && !f2fs_sb_has_blkzoned(sbi))
+ 			sync_mode = false;
+ 
+ 		gc_control.init_gc_type = sync_mode ? FG_GC : BG_GC;
+diff --git a/fs/f2fs/segment.c b/fs/f2fs/segment.c
+index cb0d831ed76a..d0c20049e1ae 100644
+--- a/fs/f2fs/segment.c
++++ b/fs/f2fs/segment.c
+@@ -456,7 +456,8 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi, bool need)
+ 	} else {
+ 		struct f2fs_gc_control gc_control = {
+ 			.victim_segno = NULL_SEGNO,
+-			.init_gc_type = BG_GC,
++			.init_gc_type = f2fs_sb_has_blkzoned(sbi) ?
++				FG_GC : BG_GC,
+ 			.no_bg_gc = true,
+ 			.should_migrate_blocks = false,
+ 			.err_gc_skipped = false,
+-- 
+2.50.1
+

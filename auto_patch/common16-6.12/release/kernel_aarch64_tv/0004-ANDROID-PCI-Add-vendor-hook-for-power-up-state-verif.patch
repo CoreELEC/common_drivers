@@ -1,0 +1,122 @@
+From d023b0c5aac752a2263aba0b5afd585343aab8c1 Mon Sep 17 00:00:00 2001
+From: Bala M T <mtbala@google.com>
+Date: Sun, 15 Mar 2026 22:24:37 -0700
+Subject: [PATCH 04/63] ANDROID: PCI: Add vendor hook for power-up state
+ verification
+
+Introduce a new tracepoint `android_vh_pci_pm_verify_state` to allow
+vendor-specific checks after a PCI device is powered up. The
+`pci_pm_power_up_and_verify_state` function is modified to return an
+error code and uses this hook. Subsequent power management operations
+like state restoration are now conditional on the success of the
+power-up and verification.
+
+This was attempted to be upstreamed and still not accepted yet. Will
+continue working with the upstream maintainers to find a solution for
+future kernel versions.
+
+Link: https://lore.kernel.org/all/20250821075812.1.I2dbf483156c328bc4a89085816b453e436c06eb5@changeid/
+
+Bug: 433328678
+Bug: 456059538
+Bug: 493839773
+Test: tools/bazel run //common-modules/virtual-device:virtual_device_x86_64_dist
+  launch_cvd -kernel_path out/virtual_device_x86_64/dist/bzImage -initramfs_path out/virtual_device_x86_64/dist/initramfs.img
+  adb shell "cat /proc/kallsyms | grep android_vh_pci_pm_verify_state"
+Change-Id: Ib8a44b794118ecd4990adb4e10999f258d699347
+Signed-off-by: Bala M T <mtbala@google.com>
+Signed-off-by: Will McVicker <willmcvicker@google.com>
+Signed-off-by: Robin Peng <robinpeng@google.com>
+(cherry picked from commit fc86a6fc0647e6f534e7c2f2ea51e3f3960be4e6)
+---
+ drivers/android/vendor_hooks.c |  1 +
+ drivers/pci/pci-driver.c       | 29 ++++++++++++++++++++++-------
+ include/trace/hooks/pci.h      |  3 +++
+ 3 files changed, 26 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/android/vendor_hooks.c b/drivers/android/vendor_hooks.c
+index d1c823cf111f..2b4636829551 100644
+--- a/drivers/android/vendor_hooks.c
++++ b/drivers/android/vendor_hooks.c
+@@ -724,3 +724,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_dwc3_xhci_soft_reset);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cma_release_bypass);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cma_alloc_end);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_typec_tcpm_log);
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_pci_pm_verify_state);
+diff --git a/drivers/pci/pci-driver.c b/drivers/pci/pci-driver.c
+index a00a2ce01045..eacaf6884788 100644
+--- a/drivers/pci/pci-driver.c
++++ b/drivers/pci/pci-driver.c
+@@ -24,6 +24,10 @@
+ #include "pci.h"
+ #include "pcie/portdrv.h"
+ 
++#include <trace/hooks/pci.h>
++#include <linux/android_kabi.h>
++ANDROID_KABI_DECLONLY(trace_eval_map);
++
+ struct pci_dynid {
+ 	struct list_head node;
+ 	struct pci_device_id id;
+@@ -555,17 +559,28 @@ static void pci_pm_default_resume(struct pci_dev *pci_dev)
+ 	pci_enable_wake(pci_dev, PCI_D0, false);
+ }
+ 
+-static void pci_pm_power_up_and_verify_state(struct pci_dev *pci_dev)
++static int pci_pm_power_up_and_verify_state(struct pci_dev *pci_dev)
+ {
+-	pci_power_up(pci_dev);
++	int ret, state_ret = 0;
++
++	ret = pci_power_up(pci_dev);
+ 	pci_update_current_state(pci_dev, PCI_D0);
++
++	trace_android_vh_pci_pm_verify_state(&state_ret, &pci_dev->current_state);
++	if (ret && state_ret) {
++		dev_err(&pci_dev->dev, "Failed to power up device: %d\n", ret);
++		return ret;
++	}
++
++	return 0;
+ }
+ 
+ static void pci_pm_default_resume_early(struct pci_dev *pci_dev)
+ {
+-	pci_pm_power_up_and_verify_state(pci_dev);
+-	pci_restore_state(pci_dev);
+-	pci_pme_restore(pci_dev);
++	if (!pci_pm_power_up_and_verify_state(pci_dev)) {
++		pci_restore_state(pci_dev);
++		pci_pme_restore(pci_dev);
++	}
+ }
+ 
+ static void pci_pm_bridge_power_up_actions(struct pci_dev *pci_dev)
+@@ -1108,8 +1123,8 @@ static int pci_pm_thaw_noirq(struct device *dev)
+ 	 * in case the driver's "freeze" callbacks put it into a low-power
+ 	 * state.
+ 	 */
+-	pci_pm_power_up_and_verify_state(pci_dev);
+-	pci_restore_state(pci_dev);
++	if (!pci_pm_power_up_and_verify_state(pci_dev))
++		pci_restore_state(pci_dev);
+ 
+ 	if (pci_has_legacy_pm_support(pci_dev))
+ 		return 0;
+diff --git a/include/trace/hooks/pci.h b/include/trace/hooks/pci.h
+index ee5840ecc7ba..29a741d36151 100644
+--- a/include/trace/hooks/pci.h
++++ b/include/trace/hooks/pci.h
+@@ -23,6 +23,9 @@ DECLARE_HOOK(android_vh_platform_pci_get_power_state,
+ DECLARE_HOOK(android_vh_platform_pci_choose_state,
+ 		TP_PROTO(struct pci_dev *dev, pci_power_t *state),
+ 		TP_ARGS(dev, state));
++DECLARE_HOOK(android_vh_pci_pm_verify_state,
++		TP_PROTO(int *state_ret, pci_power_t *state),
++		TP_ARGS(state_ret, state));
+ 
+ #endif /* _TRACE_HOOK_PCI_VH_H */
+ /* This part must be outside protection */
+-- 
+2.50.1
+

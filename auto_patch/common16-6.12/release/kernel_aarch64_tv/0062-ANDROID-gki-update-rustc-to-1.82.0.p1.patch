@@ -1,0 +1,51 @@
+From 3e1f3f252af3ca160fcd929835a3bae802ad8386 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Wed, 1 Apr 2026 13:02:37 +0000
+Subject: [PATCH 62/63] ANDROID: gki: update rustc to 1.82.0.p1
+
+This rustc respin contains some upstream Rust changes that have been
+backported to use in the kernel:
+* Support for KASAN_SW_TAGS
+* Fix bug in CoercePointee
+
+Bug: 493254381
+Bug: 429126947
+Bug: 500416959
+Change-Id: I51314ddfb00301bb30249f3b92d73e3430f241a5
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit 2969b9451541560b6e55efaea399656acc6bb990)
+---
+ build.config.constants | 2 +-
+ init/Kconfig           | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/build.config.constants b/build.config.constants
+index 64b4392f1010..8143651801c7 100644
+--- a/build.config.constants
++++ b/build.config.constants
+@@ -1,7 +1,7 @@
+ BRANCH=android16-6.12
+ KMI_GENERATION=6
+ CLANG_VERSION=r536225
+-RUSTC_VERSION=1.82.0
++RUSTC_VERSION=1.82.0.p1
+ AARCH64_NDK_TRIPLE=aarch64-linux-android31
+ X86_64_NDK_TRIPLE=x86_64-linux-android31
+ ARM_NDK_TRIPLE=arm-linux-androideabi31
+diff --git a/init/Kconfig b/init/Kconfig
+index db7d5fb5862a..1df5a154c5d3 100644
+--- a/init/Kconfig
++++ b/init/Kconfig
+@@ -2024,7 +2024,8 @@ config RUST
+ 	depends on !CFI_CLANG || HAVE_CFI_ICALL_NORMALIZE_INTEGERS_RUSTC
+ 	select CFI_ICALL_NORMALIZE_INTEGERS if CFI_CLANG
+ 	depends on !CALL_PADDING || RUSTC_VERSION >= 108100
+-	depends on !KASAN_SW_TAGS || RUSTC_VERSION >= 109600
++	# ANDROID: This version number has been changed due to backports in Android's compiler.
++	depends on !KASAN_SW_TAGS || RUSTC_VERSION >= 108200
+ 	# ANDROID: This version number has been changed due to backports in Android's compiler.
+ 	depends on !(MITIGATION_RETHUNK && KASAN) || RUSTC_VERSION >= 108200
+ 	help
+-- 
+2.50.1
+

@@ -1,0 +1,126 @@
+From 2617c06cd4830680588866be6bf8f422e8253694 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Tue, 10 Mar 2026 08:34:12 +0000
+Subject: [PATCH 55/63] ANDROID: rust_binder: make rust_binder_hooks built-in
+
+Currently, if you attempt to attach to a Rust Binder vendor hook from a
+DDK vendor module, it will fail with unknown symbol errors because GKI
+modules apparently can't export symbols for use by vendor modules.
+
+However, even if it worked, it would form a hard dependency from the
+vendor module to Rust Binder, and vendor modules are usually loaded
+during first-stage-init, and it's not possible to load a GKI module that
+early unless you place it on the vendor_boot partition, which is not
+designed for GKI modules. So this is undesirable to begin with.
+
+Therefore, we move the hooks into the core kernel, and export the hook
+from the core kernel. This means that the vendor module can attach to
+the vendor hook at any time - even before loading rust_binder.ko. Then,
+once Rust Binder gets loaded it can start triggering the vendor hook via
+the rust_do_trace_* symbols (which are exported to GKI modules only).
+
+We also need to export the layout of Rust structs, which is done by
+moving the definition to core kernel, making it mutable, and writing the
+right values to it during module init. This means it contains invalid
+values until Rust Binder is loaded, but nobody should attempt to access
+internal Rust Binder data structures before rust_binder.ko gets loaded
+to begin with, so this is not a problem.
+
+Bug: 486143390
+Change-Id: I2ed0bb8d080c28b919c4b7d15920ef3c9157e3d4
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit a4ca8aebedb19ec6733a911706a453fe882e9b28)
+Bug: 498496487
+---
+ drivers/android/binder/Makefile            |  7 ++++++-
+ drivers/android/binder/rust_binder.h       |  2 +-
+ drivers/android/binder/rust_binder_hooks.c | 12 ++++++++++++
+ drivers/android/binder/rust_binder_main.rs |  7 +++++--
+ 4 files changed, 24 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/android/binder/Makefile b/drivers/android/binder/Makefile
+index 03785108af54..a41ea7e14c9c 100644
+--- a/drivers/android/binder/Makefile
++++ b/drivers/android/binder/Makefile
+@@ -7,8 +7,13 @@ rust_binder-$(CONFIG_ANDROID_BINDER_IPC_RUST) := \
+ 	rust_binder_main.o	\
+ 	rust_binderfs.o		\
+ 	rust_binder_events.o	\
+-	rust_binder_hooks.o	\
+ 	page_range_helper.o
+ 
+ obj-$(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY) += rust_binder.o
+ rust_binder-$(CONFIG_ANDROID_BINDER_IPC_RUST_DUMMY) := dummy.o
++
++# Hooks needs to be built-in always so that DDK modules with vendor hooks do
++# not form a hard dependency on rust_binder.ko
++ifdef CONFIG_ANDROID_BINDER_IPC_RUST
++obj-y += rust_binder_hooks.o
++endif
+diff --git a/drivers/android/binder/rust_binder.h b/drivers/android/binder/rust_binder.h
+index 742cf348bddd..cc1317a46a95 100644
+--- a/drivers/android/binder/rust_binder.h
++++ b/drivers/android/binder/rust_binder.h
+@@ -59,7 +59,7 @@ struct rust_binder_layout {
+ 	struct rb_node_layout n;
+ };
+ 
+-extern const struct rust_binder_layout RUST_BINDER_LAYOUT;
++extern struct rust_binder_layout RUST_BINDER_LAYOUT;
+ 
+ static inline size_t rust_binder_transaction_debug_id(rust_binder_transaction t)
+ {
+diff --git a/drivers/android/binder/rust_binder_hooks.c b/drivers/android/binder/rust_binder_hooks.c
+index 4dda768d7df3..5f70f7c8813e 100644
+--- a/drivers/android/binder/rust_binder_hooks.c
++++ b/drivers/android/binder/rust_binder_hooks.c
+@@ -15,9 +15,21 @@
+ 
+ #include "rust_binder_hooks.h"
+ 
++/*
++ * Used by vendor hooks to access Rust Binder data structures.
++ */
++struct rust_binder_layout RUST_BINDER_LAYOUT = {};
++EXPORT_SYMBOL_GPL(RUST_BINDER_LAYOUT);
++
+ /*
+  * Export tracepoints that act as a bare tracehook (ie: have no trace event
+  * associated with them) to allow external modules to probe them.
+  */
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rust_binder_set_priority);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rust_binder_restore_priority);
++
++/*
++ * Rust Binder itself calls these methods to trigger the vendor hook.
++ */
++EXPORT_SYMBOL_GPL(rust_do_trace_android_vh_rust_binder_set_priority);
++EXPORT_SYMBOL_GPL(rust_do_trace_android_vh_rust_binder_restore_priority);
+diff --git a/drivers/android/binder/rust_binder_main.rs b/drivers/android/binder/rust_binder_main.rs
+index 1e205cf9dd5d..a5bd7edd3258 100644
+--- a/drivers/android/binder/rust_binder_main.rs
++++ b/drivers/android/binder/rust_binder_main.rs
+@@ -84,8 +84,7 @@ fn default() -> Self {
+ }
+ 
+ use kernel::bindings::rust_binder_layout;
+-#[no_mangle]
+-static RUST_BINDER_LAYOUT: rust_binder_layout = rust_binder_layout {
++const RUST_BINDER_LAYOUT: rust_binder_layout = rust_binder_layout {
+     t: transaction::TRANSACTION_LAYOUT,
+     th: thread::THREAD_LAYOUT,
+     p: process::PROCESS_LAYOUT,
+@@ -298,6 +297,10 @@ fn init(_module: &'static kernel::ThisModule) -> Result<Self> {
+         // SAFETY: The module initializer never runs twice, so we only call this once.
+         unsafe { crate::context::CONTEXTS.init() };
+ 
++        // SAFETY: Nobody will access this except through tracepoints triggered by this driver, so
++        // currently safe to write.
++        unsafe { bindings::RUST_BINDER_LAYOUT = RUST_BINDER_LAYOUT };
++
+         // SAFETY: This just accesses global booleans.
+         #[cfg(CONFIG_ANDROID_BINDER_IPC)]
+         unsafe {
+-- 
+2.50.1
+

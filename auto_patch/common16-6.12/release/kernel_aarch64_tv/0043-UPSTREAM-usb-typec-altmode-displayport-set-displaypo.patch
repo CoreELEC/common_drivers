@@ -1,0 +1,58 @@
+From 55682a6d9bccb8f323386351f763b065bee385e0 Mon Sep 17 00:00:00 2001
+From: RD Babiera <rdbabiera@google.com>
+Date: Tue, 10 Mar 2026 20:41:05 +0000
+Subject: [PATCH 43/63] UPSTREAM: usb: typec: altmode/displayport: set
+ displayport signaling rate in configure message
+
+dp_altmode_configure sets the signaling rate to the current
+configuration's rate and then shifts the value to the Select
+Configuration bitfield. On the initial configuration, dp->data.conf
+is 0 to begin with, so the signaling rate field is never set, which
+leads to some DisplayPort Alt Mode partners sending NAK to the
+Configure message.
+
+Set the signaling rate to the capabilities supported by both the
+port and the port partner. If the cable supports DisplayPort Alt Mode,
+then include its capabilities as well.
+
+Fixes: a17fae8fc38e ("usb: typec: Add Displayport Alternate Mode 2.1 Support")
+Cc: stable <stable@kernel.org>
+Signed-off-by: RD Babiera <rdbabiera@google.com>
+Acked-by: Heikki Krogerus <heikki.krogerus@linux.intel.com>
+Link: https://patch.msgid.link/20260310204106.3939862-2-rdbabiera@google.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+Bug: 488234500
+Bug: 496675558
+(cherry picked from commit e8557acfa079a54b59a21f447c82a31aec7717df)
+Signed-off-by: RD Babiera <rdbabiera@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:a9dda76c0353e9b0f5c0b78601c3c424d257037f
+Merged-In: Id7d78a4efe75747f3371118e19694ec99a2342d8
+Change-Id: Id7d78a4efe75747f3371118e19694ec99a2342d8
+---
+ drivers/usb/typec/altmodes/displayport.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/typec/altmodes/displayport.c b/drivers/usb/typec/altmodes/displayport.c
+index 65f34322c80c..6102700fddf0 100644
+--- a/drivers/usb/typec/altmodes/displayport.c
++++ b/drivers/usb/typec/altmodes/displayport.c
+@@ -100,9 +100,14 @@ static int dp_altmode_configure(struct dp_altmode *dp, u8 con)
+ {
+ 	u8 pin_assign = 0;
+ 	u32 conf;
++	u32 signal;
+ 
+ 	/* DP Signalling */
+-	conf = (dp->data.conf & DP_CONF_SIGNALLING_MASK) >> DP_CONF_SIGNALLING_SHIFT;
++	signal = DP_CAP_DP_SIGNALLING(dp->port->vdo) & DP_CAP_DP_SIGNALLING(dp->alt->vdo);
++	if (dp->plug_prime)
++		signal &= DP_CAP_DP_SIGNALLING(dp->plug_prime->vdo);
++
++	conf = signal << DP_CONF_SIGNALLING_SHIFT;
+ 
+ 	switch (con) {
+ 	case DP_STATUS_CON_DISABLED:
+-- 
+2.50.1
+

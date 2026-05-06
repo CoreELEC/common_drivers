@@ -41,17 +41,6 @@
 #amlogic-pm.ko
   pm_suspend_target_state
 
-#amlogic-snd-vad.ko
-  pm_suspend
-
-#amlogic-input.ko
-  input_close_device
-  input_open_device
-  input_register_handle
-  input_register_handler
-  input_unregister_handle
-  input_unregister_handler
-
 #amlogic-iotrace.ko
   stop_one_cpu_nowait
 
@@ -75,13 +64,9 @@
   drmm_kmalloc
   hdmi_infoframe_pack
   drm_mode_destroy
-  drm_event_cancel_free
-  drm_event_reserve_init
   drm_client_dev_hotplug
 
 # f81232.ko
-  __tty_insert_flip_string_flags
-  __usb_serial_register_drivers
   usb_control_msg_send
 
 #amlogic-phy-debug.ko

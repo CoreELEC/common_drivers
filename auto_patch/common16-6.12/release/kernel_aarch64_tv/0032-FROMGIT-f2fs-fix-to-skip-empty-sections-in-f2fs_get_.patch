@@ -1,0 +1,54 @@
+From 997ee2c64ae2eefa5436eca0615318fe82cc2e3a Mon Sep 17 00:00:00 2001
+From: Daeho Jeong <daehojeong@google.com>
+Date: Mon, 16 Mar 2026 11:59:21 -0700
+Subject: [PATCH 32/63] FROMGIT: f2fs: fix to skip empty sections in
+ f2fs_get_victim
+
+In age-based victim selection (ATGC, AT_SSR, or GC_CB), f2fs_get_victim
+can encounter sections with zero valid blocks. This situation often
+arises when checkpoint is disabled or due to race conditions between
+SIT updates and dirty list management.
+
+In such cases, f2fs_get_section_mtime() returns INVALID_MTIME, which
+subsequently triggers a fatal f2fs_bug_on(sbi, mtime == INVALID_MTIME)
+in add_victim_entry() or get_cb_cost().
+
+This patch adds a check in f2fs_get_victim's selection loop to skip
+sections with no valid blocks. This prevents unnecessary age
+calculations for empty sections and avoids the associated kernel panic.
+This change also allows removing redundant checks in add_victim_entry().
+
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Reviewed-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+
+Bug: 495395382
+Bug: 496525647
+(cherry picked from commit 3dd8312599c473ce68e765f5f9c7f676e6537101
+https: //git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs.git dev)
+Link: https://lore.kernel.org/linux-f2fs-devel/20260316185922.2184759-1-daeho43@gmail.com
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:9719875a2572855475adda3cf7a153297eb24f50
+Merged-In: I3a229023c75cd6804dc64c3f60b9504b8ce069d5
+Change-Id: I3a229023c75cd6804dc64c3f60b9504b8ce069d5
+---
+ fs/f2fs/gc.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/fs/f2fs/gc.c b/fs/f2fs/gc.c
+index 0547f5616a87..3b7f4f62ec7c 100644
+--- a/fs/f2fs/gc.c
++++ b/fs/f2fs/gc.c
+@@ -912,6 +912,9 @@ int f2fs_get_victim(struct f2fs_sb_info *sbi, unsigned int *result,
+ 				if (!f2fs_segment_has_free_slot(sbi, segno))
+ 					goto next;
+ 			}
++
++			if (!get_valid_blocks(sbi, segno, true))
++				goto next;
+ 		}
+ 
+ 		if (gc_type == BG_GC && test_bit(secno, dirty_i->victim_secmap))
+-- 
+2.50.1
+

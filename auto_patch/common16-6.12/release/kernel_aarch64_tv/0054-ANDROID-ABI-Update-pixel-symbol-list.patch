@@ -1,0 +1,95 @@
+From 0ab91dc8196e389d7f655e84a7297267ff982849 Mon Sep 17 00:00:00 2001
+From: Henry Dong <donghenry@google.com>
+Date: Sat, 28 Mar 2026 06:57:06 +0000
+Subject: [PATCH 54/63] ANDROID: ABI: Update pixel symbol list
+
+Adding the following symbols:
+  - __traceiter_android_vh_do_sync_mmap_readahead
+  - __tracepoint_android_vh_do_sync_mmap_readahead
+
+Bug: 496697696
+Bug: 498398295
+
+Change-Id: I309adc37d28ee79a1662cc910b19bd4ec2e72c21
+Signed-off-by: Henry Dong <donghenry@google.com>
+(cherry picked from commit 78ed8f185cad6f76ded49e9d59b7cf1ae401c0f7)
+---
+ gki/aarch64/abi.stg       | 20 ++++++++++++++++++++
+ gki/aarch64/symbols/pixel |  2 ++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index 93285a5b5495..d8c16ffc9e77 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -442254,6 +442254,15 @@ elf_symbol {
+   type_id: 0x9b2612dc
+   full_name: "__traceiter_android_vh_do_swap_page"
+ }
++elf_symbol {
++  id: 0x02ccf9e7
++  name: "__traceiter_android_vh_do_sync_mmap_readahead"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x22838122
++  type_id: 0x9b664ae7
++  full_name: "__traceiter_android_vh_do_sync_mmap_readahead"
++}
+ elf_symbol {
+   id: 0x9dbd7b92
+   name: "__traceiter_android_vh_do_wake_up_sync"
+@@ -450102,6 +450111,15 @@ elf_symbol {
+   type_id: 0x18ccbd2c
+   full_name: "__tracepoint_android_vh_do_swap_page"
+ }
++elf_symbol {
++  id: 0x1b92a821
++  name: "__tracepoint_android_vh_do_sync_mmap_readahead"
++  is_defined: true
++  symbol_type: OBJECT
++  crc: 0x7c5aa8a7
++  type_id: 0x18ccbd2c
++  full_name: "__tracepoint_android_vh_do_sync_mmap_readahead"
++}
+ elf_symbol {
+   id: 0xe2d7542c
+   name: "__tracepoint_android_vh_do_wake_up_sync"
+@@ -527161,6 +527179,7 @@ interface {
+   symbol_id: 0xb12728da
+   symbol_id: 0x20f34a30
+   symbol_id: 0x54bc5972
++  symbol_id: 0x02ccf9e7
+   symbol_id: 0x9dbd7b92
+   symbol_id: 0x2576f1c7
+   symbol_id: 0xdd171ab0
+@@ -528033,6 +528052,7 @@ interface {
+   symbol_id: 0x474d211c
+   symbol_id: 0xe66acad6
+   symbol_id: 0xeb9f1c78
++  symbol_id: 0x1b92a821
+   symbol_id: 0xe2d7542c
+   symbol_id: 0x15374b6d
+   symbol_id: 0x0ec5d99e
+diff --git a/gki/aarch64/symbols/pixel b/gki/aarch64/symbols/pixel
+index ef67a9eb833f..120bdbf07ba9 100644
+--- a/gki/aarch64/symbols/pixel
++++ b/gki/aarch64/symbols/pixel
+@@ -2816,6 +2816,7 @@
+   __traceiter_android_vh_cpu_idle_enter
+   __traceiter_android_vh_cpu_idle_exit
+   __traceiter_android_vh_do_async_mmap_readahead
++  __traceiter_android_vh_do_sync_mmap_readahead
+   __traceiter_android_vh_dump_throttled_rt_tasks
+   __traceiter_android_vh_dup_task_struct
+   __traceiter_android_vh_dwc3_core_soft_reset
+@@ -2972,6 +2973,7 @@
+   __tracepoint_android_vh_cpu_idle_enter
+   __tracepoint_android_vh_cpu_idle_exit
+   __tracepoint_android_vh_do_async_mmap_readahead
++  __tracepoint_android_vh_do_sync_mmap_readahead
+   __tracepoint_android_vh_dump_throttled_rt_tasks
+   __tracepoint_android_vh_dup_task_struct
+   __tracepoint_android_vh_dwc3_core_soft_reset
+-- 
+2.50.1
+

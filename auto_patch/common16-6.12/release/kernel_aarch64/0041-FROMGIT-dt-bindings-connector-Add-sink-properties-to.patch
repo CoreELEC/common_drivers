@@ -1,0 +1,120 @@
+From 3dfc8647bc4138387dc9765f60efd9ee8d067b5a Mon Sep 17 00:00:00 2001
+From: Amit Sunil Dhamne <amitsd@google.com>
+Date: Mon, 23 Feb 2026 20:05:37 +0000
+Subject: [PATCH 41/63] FROMGIT: dt-bindings: connector: Add sink properties to
+ comply with PD 3.1 spec
+
+Add additional properties for ports supporting sink mode. The properties
+define certain hardware and electrical properties such as sink load
+step, sink load characteristics, sink compliance and charging adapter
+Power Delivery Profile (PDP) for the connector. These properties need to
+be defined for a Type-C port in compliance with the PD 3.1 spec.
+
+Signed-off-by: Amit Sunil Dhamne <amitsd@google.com>
+Reviewed-by: Rob Herring (Arm) <robh@kernel.org>
+Link: https://patch.msgid.link/20260223-skedb-v2-1-60675765bc7e@google.com
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+
+Bug: 483567668
+Bug: 497986541
+(cherry picked from commit ef22555fbee7c284a6ab55238fcbe4eea9dbb2a4
+ https://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git usb-next)
+Change-Id: I9e4c41075648a96e497be14875189c329d2f63a8
+Signed-off-by: Amit Sunil Dhamne <amitsd@google.com>
+(cherry picked from commit e34608848261e223c3b3701e713e84f39e45a66a)
+---
+ .../bindings/connector/usb-connector.yaml     | 34 +++++++++++++++++++
+ .../bindings/usb/maxim,max33359.yaml          |  4 +++
+ include/dt-bindings/usb/pd.h                  | 18 ++++++++++
+ 3 files changed, 56 insertions(+)
+
+diff --git a/Documentation/devicetree/bindings/connector/usb-connector.yaml b/Documentation/devicetree/bindings/connector/usb-connector.yaml
+index 11e40d225b9f..901986de3e2b 100644
+--- a/Documentation/devicetree/bindings/connector/usb-connector.yaml
++++ b/Documentation/devicetree/bindings/connector/usb-connector.yaml
+@@ -300,6 +300,40 @@ properties:
+     $ref: /schemas/types.yaml#/definitions/uint8-array
+     maxItems: 4
+ 
++  sink-load-step:
++    description: Indicates the preferred load step slew rate in mA/usec for
++      the port (in sink mode). This property is defined in "6.5.13.7" of
++      "USB Power Delivery Specification Revision 3.1 Version 1.8".
++    $ref: /schemas/types.yaml#/definitions/uint32
++    enum: [150, 500]
++    default: 150
++
++  sink-load-characteristics:
++    description: Indicates the port's (in sink mode) preferred load
++      characteristics. Users can leverage SINK_LOAD_CHAR() defined in
++      dt-bindings/usb/pd.h to populate this field. This property is defined in
++      "6.5.13.8" of "USB Power Delivery Specification Revision 3.1 Version 1.8".
++    $ref: /schemas/types.yaml#/definitions/uint16
++
++  sink-compliance:
++    description: Represents the types of sources the sink device has been tested
++      and certified with. This property is defined in "6.5.13.9" of
++      "USB Power Delivery Specification Revision 3.1 Version 1.8"
++      Bit 0 when set indicates it has been tested on LPS compliant source
++      Bit 1 when set indicates it has been tested on PS1 compliant source
++      Bit 2 when set indicates it has been tested on PS2 compliant source
++    $ref: /schemas/types.yaml#/definitions/uint8
++    maximum: 7
++
++  charging-adapter-pdp-milliwatt:
++    description: This corresponds to the Power Delivery Profile rating of the
++      charging adapter shipped or recommended for use with the connector port.
++      This property is a requirement to infer the USB PD property
++      "SPR Sink Operational PDP" given in "6.5.13.14" of
++      "USB Power Delivery Specification Revision 3.1 Version 1.8".
++    minimum: 0
++    maximum: 100000
++
+ dependencies:
+   sink-vdos-v1: [ sink-vdos ]
+   sink-vdos: [ sink-vdos-v1 ]
+diff --git a/Documentation/devicetree/bindings/usb/maxim,max33359.yaml b/Documentation/devicetree/bindings/usb/maxim,max33359.yaml
+index 350d39fbf2dc..dab69fcf61ef 100644
+--- a/Documentation/devicetree/bindings/usb/maxim,max33359.yaml
++++ b/Documentation/devicetree/bindings/usb/maxim,max33359.yaml
+@@ -71,6 +71,10 @@ examples:
+                                        PDO_FIXED(9000, 2000, 0)>;
+                 sink-bc12-completion-time-ms = <500>;
+                 pd-revision = /bits/ 8 <0x03 0x01 0x01 0x08>;
++                sink-load-step = <150>;
++                sink-load-characteristics = /bits/ 16 <SINK_LOAD_CHAR(0, 1, 1, 2)>;
++                sink-compliance = /bits/ 8 <(COMPLIANCE_LPS | COMPLIANCE_PS1)>;
++                charging-adapter-pdp-milliwatt = <18000>;
+             };
+         };
+     };
+diff --git a/include/dt-bindings/usb/pd.h b/include/dt-bindings/usb/pd.h
+index e6526b138174..6cff2339bda3 100644
+--- a/include/dt-bindings/usb/pd.h
++++ b/include/dt-bindings/usb/pd.h
+@@ -465,4 +465,22 @@
+ 	 | ((vbm) & 0x3) << 15 | (curr) << 14 | ((vbi) & 0x3f) << 7	\
+ 	 | ((gi) & 0x3f) << 1 | (ct))
+ 
++/*
++ * Sink Load Characteristics
++ * -------------------------
++ *  <15>    :: Can tolerate vbus voltage droop
++ *  <11:14> :: Duty cycle in 5% increments when bits 4:0 are non-zero
++ *  <10:5>  :: Overload period in 20ms when bits 4:0 are non-zero
++ *  <4:0>   :: Percent overload in 10% increments. Values higher than 25 are
++ *             clipped to 250%
++ */
++#define SINK_LOAD_CHAR(vdroop, duty_cycle, period, percent_ol)		\
++	(((vdroop) & 0x1) << 15 | ((duty_cycle) & 0xf) << 11 |		\
++	 ((period) & 0x3f) << 5 | ((percent_ol) & 0x1f))
++
++/* Compliance */
++#define COMPLIANCE_LPS		(1 << 0)
++#define COMPLIANCE_PS1		(1 << 1)
++#define COMPLIANCE_PS2		(1 << 2)
++
+ #endif /* __DT_POWER_DELIVERY_H */
+-- 
+2.50.1
+

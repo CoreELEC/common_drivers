@@ -1,0 +1,118 @@
+From d6aaade7fd3f6fe434e0a3c1bc49ec8c03117db8 Mon Sep 17 00:00:00 2001
+From: Sergey Senozhatsky <senozhatsky@chromium.org>
+Date: Thu, 19 Mar 2026 12:44:56 +0900
+Subject: [PATCH 15/63] BACKPORT: FROMGIT: zram: do not slot_free()
+ written-back slots
+
+slot_free() basically completely resets the slots by clearing all of
+its flags and attributes.  While zram_writeback_complete() restores
+some of flags back (those that are necessary for async read
+decompression) we still lose a lot of slot's metadata.  For example,
+slot's ac-time, or ZRAM_INCOMPRESSIBLE.
+
+More importantly, restoring flags/attrs requires extra attention as
+some of the flags are directly affecting zram device stats.  And the
+original code did not pay that attention.  Namely ZRAM_HUGE slots
+handling in zram_writeback_complete().  The call to slot_free() would
+decrement ->huge_pages, however when zram_writeback_complete() restored
+the slot's ZRAM_HUGE flag, it would not get reflected in an incremented
+->huge_pages.  So when the slot would finally get freed, slot_free()
+would decrement ->huge_pages again, leading to underflow.
+
+Fix this by open-coding the required memory free and stats updates in
+zram_writeback_complete(), rather than calling the destructive
+slot_free().  Since we now preserve the ZRAM_HUGE flag on written-back
+slots (for the deferred decompression path), we also update slot_free()
+to skip decrementing ->huge_pages if ZRAM_WB is set.
+
+Link: https://lkml.kernel.org/r/20260320023143.2372879-1-senozhatsky@chromium.org
+Link: https://lkml.kernel.org/r/20260319034912.1894770-1-senozhatsky@chromium.org
+Fixes: d38fab605c667 ("zram: introduce compressed data writeback")
+Signed-off-by: Sergey Senozhatsky <senozhatsky@chromium.org>
+Acked-by: Minchan Kim <minchan@kernel.org>
+Cc: Brian Geffon <bgeffon@google.com>
+Cc: Richard Chang <richardycc@google.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+
+Bug: 495288884
+Bug: 278101072
+(cherry picked from commit b0377ee8042985b0d91bf579afcc4ee9150db14d
+ https://git.kernel.org/pub/scm/linux/kernel/git/akpm/mm.git mm-hotfixes-stable)
+[richardycc: refactor to use previous slot apis]
+Change-Id: I733cce1c7cf60bb6ef26709469362f612e742a4d
+Signed-off-by: Richard Chang <richardycc@google.com>
+(cherry picked from commit 37b72d52550213151d56ddf04f65200d27d847fa)
+---
+ drivers/block/zram/zram_drv.c | 40 +++++++++++++----------------------
+ 1 file changed, 15 insertions(+), 25 deletions(-)
+
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index abaf13383e02..af88a684d911 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -866,9 +866,8 @@ static void zram_account_writeback_submit(struct zram *zram)
+ 
+ static int zram_writeback_complete(struct zram *zram, struct zram_wb_req *req)
+ {
+-	u32 size, index = req->pps->index;
+-	int err, prio;
+-	bool huge;
++	u32 index = req->pps->index;
++	int err;
+ 
+ 	err = blk_status_to_errno(req->bio.bi_status);
+ 	if (err) {
+@@ -895,28 +894,14 @@ static int zram_writeback_complete(struct zram *zram, struct zram_wb_req *req)
+ 		goto out;
+ 	}
+ 
+-	if (zram->compressed_wb) {
+-		/*
+-		 * ZRAM_WB slots get freed, we need to preserve data required
+-		 * for read decompression.
+-		 */
+-		size = zram_get_obj_size(zram, index);
+-		prio = zram_get_priority(zram, index);
+-		huge = zram_test_flag(zram, index, ZRAM_HUGE);
+-	}
+-
+-	zram_free_page(zram, index);
+-	zram_set_flag(zram, index, ZRAM_WB);
++	zram_clear_flag(zram, index, ZRAM_IDLE);
++	if (zram_test_flag(zram, index, ZRAM_HUGE))
++		atomic64_dec(&zram->stats.huge_pages);
++	atomic64_sub(zram_get_obj_size(zram, index),
++		     &zram->stats.compr_data_size);
++	zs_free(zram->mem_pool, zram_get_handle(zram, index));
+ 	zram_set_handle(zram, index, req->blk_idx);
+-
+-	if (zram->compressed_wb) {
+-		if (huge)
+-			zram_set_flag(zram, index, ZRAM_HUGE);
+-		zram_set_obj_size(zram, index, size);
+-		zram_set_priority(zram, index, prio);
+-	}
+-
+-	atomic64_inc(&zram->stats.pages_stored);
++	zram_set_flag(zram, index, ZRAM_WB);
+ 
+ out:
+ 	zram_slot_unlock(zram, index);
+@@ -2039,8 +2024,13 @@ static void zram_free_page(struct zram *zram, size_t index)
+ 	zram_set_priority(zram, index, 0);
+ 
+ 	if (zram_test_flag(zram, index, ZRAM_HUGE)) {
++		/*
++		 * Writeback completion decrements ->huge_pages but keeps
++		 * ZRAM_HUGE flag for deferred decompression path.
++		 */
++		if (!zram_test_flag(zram, index, ZRAM_WB))
++			atomic64_dec(&zram->stats.huge_pages);
+ 		zram_clear_flag(zram, index, ZRAM_HUGE);
+-		atomic64_dec(&zram->stats.huge_pages);
+ 	}
+ 
+ 	if (zram_test_flag(zram, index, ZRAM_WB)) {
+-- 
+2.50.1
+

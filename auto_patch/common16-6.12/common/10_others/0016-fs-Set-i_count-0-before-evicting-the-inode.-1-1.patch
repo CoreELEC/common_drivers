@@ -1,4 +1,4 @@
-From 68869fd857cc36dfb78d709de4669105889430c3 Mon Sep 17 00:00:00 2001
+From 1cec051c3fbc286c23097d4f25744ce49091df14 Mon Sep 17 00:00:00 2001
 From: yao zhang1 <yao.zhang1@amlogic.com>
 Date: Thu, 9 Apr 2026 15:26:34 +0800
 Subject: [PATCH] fs: Set i_count=0 before evicting the inode. [1/1]
@@ -21,12 +21,12 @@ Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
  1 file changed, 19 insertions(+)
 
 diff --git a/fs/super.c b/fs/super.c
-index 6a8a1b67a35a..b5cb9f445d0f 100644
+index ba8c02f73e25..c0a005e33a8b 100644
 --- a/fs/super.c
 +++ b/fs/super.c
-@@ -40,6 +40,10 @@
- #include <uapi/linux/mount.h>
- #include "internal.h"
+@@ -42,6 +42,10 @@
+ 
+ #include <trace/hooks/fs.h>
  
 +#ifdef CONFIG_AMLOGIC_PIN_LOCKED_FILE
 +/* the macro must large than enum mapping_flags in include/linux/pagemap.h */
@@ -35,7 +35,7 @@ index 6a8a1b67a35a..b5cb9f445d0f 100644
  static int thaw_super_locked(struct super_block *sb, enum freeze_holder who);
  
  static LIST_HEAD(super_blocks);
-@@ -618,6 +622,9 @@ EXPORT_SYMBOL(retire_super);
+@@ -620,6 +624,9 @@ EXPORT_SYMBOL(retire_super);
  void generic_shutdown_super(struct super_block *sb)
  {
  	const struct super_operations *sop = sb->s_op;
@@ -45,7 +45,7 @@ index 6a8a1b67a35a..b5cb9f445d0f 100644
  
  	if (sb->s_root) {
  		shrink_dcache_for_umount(sb);
-@@ -626,6 +633,18 @@ void generic_shutdown_super(struct super_block *sb)
+@@ -628,6 +635,18 @@ void generic_shutdown_super(struct super_block *sb)
  
  		cgroup_writeback_umount(sb);
  
@@ -65,5 +65,5 @@ index 6a8a1b67a35a..b5cb9f445d0f 100644
  		evict_inodes(sb);
  
 -- 
-2.46.0
+2.50.1
 

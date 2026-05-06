@@ -1,0 +1,137 @@
+From 9b5153a95e13f591072a099a4650dd8169d5e086 Mon Sep 17 00:00:00 2001
+From: Ricardo Ribalda <ribalda@chromium.org>
+Date: Mon, 9 Mar 2026 15:01:56 +0000
+Subject: [PATCH 25/63] BACKPORT: FROMGIT: media: uvcvideo: Allow userspace to
+ increase the meta buffersize
+
+Now we have the metadata size hardcoded to 10 KiB, this is a value that
+works fine for bulk cameras or frames with no extra metadata. But not
+for all usecases.
+
+We have seen some cameras that produce more metadata per frame. Eg:
+Frame 1 captured (Bytes: 11154)
+Frame 2 captured (Bytes: 11616)
+Frame 3 captured (Bytes: 11374)
+Frame 4 captured (Bytes: 11132)
+Frame 5 captured (Bytes: 11594)
+Frame 6 captured (Bytes: 11352)
+Frame 7 captured (Bytes: 11110)
+Frame 8 captured (Bytes: 11572)
+Frame 9 captured (Bytes: 11308)
+
+When this happens, the driver (correctly) marks the metadata as ERROR.
+
+This patch let userspace set bigger buffersize via S_FMT.
+
+Change-Id: I6679ddc6e57bc04a01def757faf9ae89871bf7d8
+Signed-off-by: Ricardo Ribalda <ribalda@chromium.org>
+Reviewed-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Link: https://lore.kernel.org/linux-media/20260309-uvc-metadata-dmabuf-v1-3-fc8b87bd29c5@chromium.org/
+Bug: 491598167
+Bug: 496193343
+(cherry picked from commit 2ac27db04608a7ce4d46a3bf23d2262c7b20db38
+ https://gitlab.freedesktop.org/linux-media/media-committers.git next)
+[Minor changes in uvc_queue.c because vb2-fop in uvc is missing in 6.12]
+Signed-off-by: Ricardo Ribalda <ribalda@google.com>
+---
+ drivers/media/usb/uvc/uvc_metadata.c | 14 ++++++++++----
+ drivers/media/usb/uvc/uvc_queue.c    |  2 +-
+ drivers/media/usb/uvc/uvcvideo.h     |  3 ++-
+ 3 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/media/usb/uvc/uvc_metadata.c b/drivers/media/usb/uvc/uvc_metadata.c
+index 8256c39fc8e8..3067695d629b 100644
+--- a/drivers/media/usb/uvc/uvc_metadata.c
++++ b/drivers/media/usb/uvc/uvc_metadata.c
+@@ -52,7 +52,7 @@ static int uvc_meta_v4l2_get_format(struct file *file, void *fh,
+ 	memset(fmt, 0, sizeof(*fmt));
+ 
+ 	fmt->dataformat = stream->meta.format;
+-	fmt->buffersize = UVC_METADATA_BUF_SIZE;
++	fmt->buffersize = stream->meta.buffersize;
+ 
+ 	return 0;
+ }
+@@ -65,6 +65,7 @@ static int uvc_meta_v4l2_try_format(struct file *file, void *fh,
+ 	struct uvc_device *dev = stream->dev;
+ 	struct v4l2_meta_format *fmt = &format->fmt.meta;
+ 	u32 fmeta = V4L2_META_FMT_UVC;
++	u32 buffersize;
+ 
+ 	if (format->type != vfh->vdev->queue->type)
+ 		return -EINVAL;
+@@ -75,10 +76,12 @@ static int uvc_meta_v4l2_try_format(struct file *file, void *fh,
+ 			break;
+ 		}
+ 
++	buffersize = max(UVC_METADATA_BUF_MIN_SIZE, fmt->buffersize);
++
+ 	memset(fmt, 0, sizeof(*fmt));
+ 
+ 	fmt->dataformat = fmeta;
+-	fmt->buffersize = UVC_METADATA_BUF_SIZE;
++	fmt->buffersize = buffersize;
+ 
+ 	return 0;
+ }
+@@ -102,10 +105,12 @@ static int uvc_meta_v4l2_set_format(struct file *file, void *fh,
+ 	 */
+ 	mutex_lock(&stream->mutex);
+ 
+-	if (uvc_queue_allocated(&stream->queue))
++	if (uvc_queue_allocated(&stream->queue)) {
+ 		ret = -EBUSY;
+-	else
++	} else {
+ 		stream->meta.format = fmt->dataformat;
++		stream->meta.buffersize = fmt->buffersize;
++	}
+ 
+ 	mutex_unlock(&stream->mutex);
+ 
+@@ -236,6 +241,7 @@ int uvc_meta_register(struct uvc_streaming *stream)
+ 	struct uvc_video_queue *queue = &stream->meta.queue;
+ 
+ 	stream->meta.format = V4L2_META_FMT_UVC;
++	stream->meta.buffersize = UVC_METADATA_BUF_MIN_SIZE;
+ 
+ 	/*
+ 	 * The video interface queue uses manual locking and thus does not set
+diff --git a/drivers/media/usb/uvc/uvc_queue.c b/drivers/media/usb/uvc/uvc_queue.c
+index 02cc4e8f0e97..0a39e5bf070d 100644
+--- a/drivers/media/usb/uvc/uvc_queue.c
++++ b/drivers/media/usb/uvc/uvc_queue.c
+@@ -83,7 +83,7 @@ static int uvc_queue_setup(struct vb2_queue *vq,
+ 
+ 	switch (vq->type) {
+ 	case V4L2_BUF_TYPE_META_CAPTURE:
+-		size = UVC_METADATA_BUF_SIZE;
++		size = stream->meta.buffersize;
+ 		break;
+ 
+ 	default:
+diff --git a/drivers/media/usb/uvc/uvcvideo.h b/drivers/media/usb/uvc/uvcvideo.h
+index bfe6b9e81e94..f9ad605305cc 100644
+--- a/drivers/media/usb/uvc/uvcvideo.h
++++ b/drivers/media/usb/uvc/uvcvideo.h
+@@ -403,7 +403,7 @@ struct uvc_stats_stream {
+ 	unsigned int max_sof;		/* Maximum STC.SOF value */
+ };
+ 
+-#define UVC_METADATA_BUF_SIZE 10240
++#define UVC_METADATA_BUF_MIN_SIZE 10240
+ 
+ /**
+  * struct uvc_copy_op: Context structure to schedule asynchronous memcpy
+@@ -484,6 +484,7 @@ struct uvc_streaming {
+ 		struct video_device vdev;
+ 		struct uvc_video_queue queue;
+ 		u32 format;
++		u32 buffersize;
+ 	} meta;
+ 
+ 	/* Context data used by the bulk completion handler. */
+-- 
+2.50.1
+

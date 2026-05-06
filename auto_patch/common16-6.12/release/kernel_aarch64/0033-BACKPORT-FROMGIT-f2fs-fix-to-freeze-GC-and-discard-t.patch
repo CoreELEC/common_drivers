@@ -1,0 +1,119 @@
+From b8b96bfd4cec3e8239a4267bddc9c2c16b699547 Mon Sep 17 00:00:00 2001
+From: Daeho Jeong <daehojeong@google.com>
+Date: Mon, 16 Mar 2026 11:59:54 -0700
+Subject: [PATCH 33/63] BACKPORT: FROMGIT: f2fs: fix to freeze GC and discard
+ threads quickly
+
+Suspend can fail if kernel threads do not freeze for a while.
+f2fs_gc and f2fs_discard threads can perform long-running operations
+that prevent them from reaching a freeze point in a timely manner.
+
+This patch adds explicit freezing checks in the following locations:
+1. f2fs_gc: Added a check at the 'retry' label to exit the loop quickly
+   if freezing is requested, especially during heavy GC rounds.
+2. __issue_discard_cmd: Added a 'suspended' flag to break both inner and
+   outer loops during discard command issuance if freezing is detected
+   after at least one command has been issued.
+3. __issue_discard_cmd_orderly: Added a similar check for orderly discard
+   to ensure responsiveness.
+
+These checks ensure that the threads release locks safely and enter the
+frozen state.
+
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Reviewed-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+
+Bug: 486579857
+Bug: 496525647
+(cherry picked from commit 62b45b0ad4cddebbba1ad5e7c48cf7b5e42c2377
+https: //git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs.git dev)
+Link: https://lore.kernel.org/linux-f2fs-devel/20260316185954.2185806-1-daeho43@gmail.com
+Signed-off-by: Daeho Jeong <daehojeong@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:d73a8ddf419e5ee819fff624cf35bfedd85b5609
+Merged-In: Ia2c9de504800b7588fa05da4fd2102d9e7cafb0d
+Change-Id: Ia2c9de504800b7588fa05da4fd2102d9e7cafb0d
+---
+ fs/f2fs/gc.c      | 10 ++++++++++
+ fs/f2fs/segment.c | 12 +++++++++++-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/fs/f2fs/gc.c b/fs/f2fs/gc.c
+index 3b7f4f62ec7c..1cb796910337 100644
+--- a/fs/f2fs/gc.c
++++ b/fs/f2fs/gc.c
+@@ -1869,10 +1869,16 @@ static int do_garbage_collect(struct f2fs_sb_info *sbi,
+ 			sbi->next_victim_seg[gc_type] =
+ 				(segno + 1 < sec_end_segno) ?
+ 					segno + 1 : NULL_SEGNO;
++
++		if (unlikely(freezing(current))) {
++			f2fs_put_page(sum_page, 0);
++			goto stop;
++		}
+ skip:
+ 		f2fs_put_page(sum_page, 0);
+ 	}
+ 
++stop:
+ 	if (submitted)
+ 		f2fs_submit_merged_write(sbi, data_type);
+ 
+@@ -1946,6 +1952,10 @@ int f2fs_gc(struct f2fs_sb_info *sbi, struct f2fs_gc_control *gc_control)
+ 		goto stop;
+ 	}
+ retry:
++	if (unlikely(freezing(current))) {
++		ret = 0;
++		goto stop;
++	}
+ 	ret = __get_victim(sbi, &segno, gc_type, gc_control->one_time);
+ 	if (ret) {
+ 		/* allow to search victim from sections has pinned data */
+diff --git a/fs/f2fs/segment.c b/fs/f2fs/segment.c
+index d0c20049e1ae..4c2c37bf9f2c 100644
+--- a/fs/f2fs/segment.c
++++ b/fs/f2fs/segment.c
+@@ -1622,6 +1622,9 @@ static void __issue_discard_cmd_orderly(struct f2fs_sb_info *sbi,
+ 		if (dc->state != D_PREP)
+ 			goto next;
+ 
++		if (*issued > 0 && unlikely(freezing(current)))
++			break;
++
+ 		if (dpolicy->io_aware && !is_idle(sbi, DISCARD_TIME)) {
+ 			io_interrupted = true;
+ 			break;
+@@ -1661,6 +1664,7 @@ static int __issue_discard_cmd(struct f2fs_sb_info *sbi,
+ 	struct blk_plug plug;
+ 	int i, issued;
+ 	bool io_interrupted = false;
++	bool suspended = false;
+ 
+ 	if (dpolicy->timeout)
+ 		f2fs_update_time(sbi, UMOUNT_DISCARD_TIMEOUT);
+@@ -1691,6 +1695,11 @@ static int __issue_discard_cmd(struct f2fs_sb_info *sbi,
+ 		list_for_each_entry_safe(dc, tmp, pend_list, list) {
+ 			f2fs_bug_on(sbi, dc->state != D_PREP);
+ 
++			if (issued > 0 && unlikely(freezing(current))) {
++				suspended = true;
++				break;
++			}
++
+ 			if (dpolicy->timeout &&
+ 				f2fs_time_over(sbi, UMOUNT_DISCARD_TIMEOUT))
+ 				break;
+@@ -1710,7 +1719,8 @@ static int __issue_discard_cmd(struct f2fs_sb_info *sbi,
+ next:
+ 		mutex_unlock(&dcc->cmd_lock);
+ 
+-		if (issued >= dpolicy->max_requests || io_interrupted)
++		if (issued >= dpolicy->max_requests || io_interrupted ||
++					suspended)
+ 			break;
+ 	}
+ 
+-- 
+2.50.1
+

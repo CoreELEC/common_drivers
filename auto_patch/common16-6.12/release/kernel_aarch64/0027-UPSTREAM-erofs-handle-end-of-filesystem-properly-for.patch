@@ -1,0 +1,67 @@
+From c7953f9157261add9151aab61c59fcf1af2be1b0 Mon Sep 17 00:00:00 2001
+From: Gao Xiang <hsiangkao@linux.alibaba.com>
+Date: Fri, 30 Jan 2026 15:54:22 +0800
+Subject: [PATCH 27/63] UPSTREAM: erofs: handle end of filesystem properly for
+ file-backed mounts
+
+I/O requests beyond the end of the filesystem should be zeroed out,
+similar to loopback devices and that is what we expect.
+
+Fixes: ce63cb62d794 ("erofs: support unencoded inodes for fileio")
+Signed-off-by: Gao Xiang <hsiangkao@linux.alibaba.com>
+
+Bug: 492364087
+Bug: 496117844
+(cherry picked from commit bc804a8d7e865ef47fb7edcaf5e77d18bf444ebc)
+Change-Id: Idf2c3106a9b89e473e9231263a0070f1a4b7dac4
+Signed-off-by: Carlos Llamas <cmllamas@google.com>
+Signed-off-by: Sheng Yong <shengyong1@xiaomi.corp-partner.google.com>
+---
+ fs/erofs/fileio.c | 20 ++++++++------------
+ 1 file changed, 8 insertions(+), 12 deletions(-)
+
+diff --git a/fs/erofs/fileio.c b/fs/erofs/fileio.c
+index ff5b55b7e36d..df013d91cb3b 100644
+--- a/fs/erofs/fileio.c
++++ b/fs/erofs/fileio.c
+@@ -25,21 +25,17 @@ static void erofs_fileio_ki_complete(struct kiocb *iocb, long ret)
+ 			container_of(iocb, struct erofs_fileio_rq, iocb);
+ 	struct folio_iter fi;
+ 
+-	if (ret > 0) {
+-		if (ret != rq->bio.bi_iter.bi_size) {
+-			bio_advance(&rq->bio, ret);
+-			zero_fill_bio(&rq->bio);
+-		}
+-		ret = 0;
++	if (ret >= 0 && ret != rq->bio.bi_iter.bi_size) {
++		bio_advance(&rq->bio, ret);
++		zero_fill_bio(&rq->bio);
+ 	}
+-	if (rq->bio.bi_end_io) {
+-		if (ret < 0 && !rq->bio.bi_status)
+-			rq->bio.bi_status = errno_to_blk_status(ret);
+-	} else {
++	if (!rq->bio.bi_end_io) {
+ 		bio_for_each_folio_all(fi, &rq->bio) {
+ 			DBG_BUGON(folio_test_uptodate(fi.folio));
+-			erofs_onlinefolio_end(fi.folio, ret, false);
++			erofs_onlinefolio_end(fi.folio, ret < 0, false);
+ 		}
++	} else if (ret < 0 && !rq->bio.bi_status) {
++		rq->bio.bi_status = errno_to_blk_status(ret);
+ 	}
+ 	bio_endio(&rq->bio);
+ 	bio_uninit(&rq->bio);
+@@ -51,7 +47,7 @@ static void erofs_fileio_rq_submit(struct erofs_fileio_rq *rq)
+ {
+ 	const struct cred *old_cred;
+ 	struct iov_iter iter;
+-	int ret;
++	ssize_t ret;
+ 
+ 	if (!rq)
+ 		return;
+-- 
+2.50.1
+

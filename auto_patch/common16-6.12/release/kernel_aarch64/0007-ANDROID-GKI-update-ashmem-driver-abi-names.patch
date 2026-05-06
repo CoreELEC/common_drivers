@@ -1,0 +1,60 @@
+From 6d741d27626df65518a490544e2b1be2ee4efbc6 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Fri, 13 Mar 2026 14:18:52 +0000
+Subject: [PATCH 07/63] ANDROID: GKI: update ashmem driver abi names
+
+The full struct names were not updated when the ashmem driver was
+renamed. Thus, fix it.
+
+Fixes: 0104b0412b0a ("ANDROID: ashmem: Cleanup ashmem kconfig options")
+Change-Id: Ia9a51048edbd5108ef88b84863c3142ce4eb3347
+Bug: 493839773
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit 9c847ac1c56b0a9df60bc2780a1bf26dfce38d85)
+---
+ gki/aarch64/abi.stg | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index 94bd668fc175..5fc2770e6621 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -456507,7 +456507,7 @@ elf_symbol {
+   symbol_type: FUNCTION
+   crc: 0x0bdc7772
+   type_id: 0x7e9586be
+-  full_name: "ashmem_rust::ashmem_area_name"
++  full_name: "ashmem::ashmem_area_name"
+ }
+ elf_symbol {
+   id: 0x8e36b8ab
+@@ -456516,7 +456516,7 @@ elf_symbol {
+   symbol_type: FUNCTION
+   crc: 0x823718bd
+   type_id: 0x469873b1
+-  full_name: "ashmem_rust::ashmem_area_size"
++  full_name: "ashmem::ashmem_area_size"
+ }
+ elf_symbol {
+   id: 0x64c484a8
+@@ -456525,7 +456525,7 @@ elf_symbol {
+   symbol_type: FUNCTION
+   crc: 0xbdb982a0
+   type_id: 0xab633df4
+-  full_name: "ashmem_rust::ashmem_area_vmfile"
++  full_name: "ashmem::ashmem_area_vmfile"
+ }
+ elf_symbol {
+   id: 0xac417394
+@@ -485186,7 +485186,7 @@ elf_symbol {
+   symbol_type: FUNCTION
+   crc: 0x0505a219
+   type_id: 0xbbca391d
+-  full_name: "ashmem_rust::is_ashmem_file"
++  full_name: "ashmem::is_ashmem_file"
+ }
+ elf_symbol {
+   id: 0x65d49acf
+-- 
+2.50.1
+

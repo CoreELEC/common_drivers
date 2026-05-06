@@ -1,0 +1,62 @@
+From b2bb3b062c7b1e74109b61771f6598b9ef53c098 Mon Sep 17 00:00:00 2001
+From: Robin Peng <robinpeng@google.com>
+Date: Tue, 17 Mar 2026 04:22:28 +0000
+Subject: [PATCH 05/63] ANDROID: ABI: Update pixel symbol list
+
+Adding the following symbols:
+  - dev_set_mtu
+  - disable_delayed_work_sync
+  - __kfifo_to_user
+  - __traceiter_android_vh_vmscan_kswapd_done
+  - __traceiter_mm_vmscan_kswapd_wake
+  - __tracepoint_android_vh_vmscan_kswapd_done
+  - __tracepoint_mm_vmscan_kswapd_wake
+
+Bug: 456059538
+Bug: 493839773
+Change-Id: I4d412050928d25794ee2a2a101523769bdd41cc1
+Signed-off-by: Robin Peng <robinpeng@google.com>
+(cherry picked from commit 3fd0aec7bafcc427cce86c1876fa5eee10c943fc)
+---
+ gki/aarch64/symbols/pixel | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/gki/aarch64/symbols/pixel b/gki/aarch64/symbols/pixel
+index 9c1e2db9ebc8..7d47a64bc75e 100644
+--- a/gki/aarch64/symbols/pixel
++++ b/gki/aarch64/symbols/pixel
+@@ -2864,6 +2864,7 @@
+   __traceiter_android_vh_ufs_update_sysfs
+   __traceiter_android_vh_update_thermal_trip_flag
+   __traceiter_android_vh_use_amu_fie
++  __traceiter_android_vh_vmscan_kswapd_done
+   __traceiter_clock_set_rate
+   __traceiter_cma_alloc_finish
+   __traceiter_cma_alloc_start
+@@ -2878,6 +2879,7 @@
+   __traceiter_mmap_lock_start_locking
+   __traceiter_mm_vmscan_direct_reclaim_begin
+   __traceiter_mm_vmscan_direct_reclaim_end
++  __traceiter_mm_vmscan_kswapd_wake
+   __traceiter_pelt_cfs_tp
+   __traceiter_pelt_dl_tp
+   __traceiter_pelt_irq_tp
+@@ -3016,6 +3018,7 @@
+   __tracepoint_android_vh_ufs_update_sysfs
+   __tracepoint_android_vh_update_thermal_trip_flag
+   __tracepoint_android_vh_use_amu_fie
++  __tracepoint_android_vh_vmscan_kswapd_done
+   __tracepoint_clock_set_rate
+   __tracepoint_cma_alloc_finish
+   __tracepoint_cma_alloc_start
+@@ -3030,6 +3033,7 @@
+   __tracepoint_mmap_lock_start_locking
+   __tracepoint_mm_vmscan_direct_reclaim_begin
+   __tracepoint_mm_vmscan_direct_reclaim_end
++  __tracepoint_mm_vmscan_kswapd_wake
+   __tracepoint_pelt_cfs_tp
+   __tracepoint_pelt_dl_tp
+   __tracepoint_pelt_irq_tp
+-- 
+2.50.1
+

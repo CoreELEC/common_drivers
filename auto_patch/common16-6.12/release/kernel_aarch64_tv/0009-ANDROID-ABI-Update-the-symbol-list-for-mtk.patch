@@ -1,0 +1,109 @@
+From e749f7ac59a994f53af7706abd47476bbafeab1b Mon Sep 17 00:00:00 2001
+From: Seiya Wang <seiya.wang@mediatek.com>
+Date: Mon, 23 Mar 2026 11:50:40 +0800
+Subject: [PATCH 09/63] ANDROID: ABI: Update the symbol list for mtk
+
+3 function symbol(s) added
+  'struct socket* tun_get_socket(struct file*)'
+  'struct ptr_ring* tun_get_tx_ring(struct file*)'
+  'void tun_ptr_free(void*)'
+
+Bug: 495192359
+Bug: 495557459
+Change-Id: I7f87b26fc74b24dcebdac138d4154f085ebc3c77
+Signed-off-by: Seiya Wang <seiya.wang@mediatek.com>
+(cherry picked from commit c77dc98143521f8761dda88c7b8d04fc0e35c5fc)
+---
+ gki/aarch64/abi.stg     | 40 ++++++++++++++++++++++++++++++++++++++++
+ gki/aarch64/symbols/mtk |  3 +++
+ 2 files changed, 43 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index f9aec4147f73..d9f2bee52ed9 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -13408,6 +13408,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x4d998a91
+ }
++pointer_reference {
++  id: 0x19f68db9
++  kind: POINTER
++  pointee_type_id: 0x4d9ad078
++}
+ pointer_reference {
+   id: 0x19fa9e98
+   kind: POINTER
+@@ -398760,6 +398765,11 @@ function {
+   parameter_id: 0x377043cf
+   parameter_id: 0x21530c77
+ }
++function {
++  id: 0x83085622
++  return_type_id: 0x19f68db9
++  parameter_id: 0x18ea6ae3
++}
+ function {
+   id: 0x832143d7
+   return_type_id: 0x11e6864c
+@@ -515987,6 +515997,33 @@ elf_symbol {
+   type_id: 0xc564dee2
+   full_name: "tty_write_room"
+ }
++elf_symbol {
++  id: 0xa46589d6
++  name: "tun_get_socket"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xec1cd5d7
++  type_id: 0x229f1818
++  full_name: "tun_get_socket"
++}
++elf_symbol {
++  id: 0x3d3dcefb
++  name: "tun_get_tx_ring"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x97bdf84d
++  type_id: 0x83085622
++  full_name: "tun_get_tx_ring"
++}
++elf_symbol {
++  id: 0x7219254d
++  name: "tun_ptr_free"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xe03724d1
++  type_id: 0x16b708df
++  full_name: "tun_ptr_free"
++}
+ elf_symbol {
+   id: 0x15f59e38
+   name: "typec_altmode2port"
+@@ -534950,6 +534987,9 @@ interface {
+   symbol_id: 0x6590f3a5
+   symbol_id: 0x8e95f895
+   symbol_id: 0x30438a62
++  symbol_id: 0xa46589d6
++  symbol_id: 0x3d3dcefb
++  symbol_id: 0x7219254d
+   symbol_id: 0x15f59e38
+   symbol_id: 0xfb5efe2e
+   symbol_id: 0xf4ad9ab3
+diff --git a/gki/aarch64/symbols/mtk b/gki/aarch64/symbols/mtk
+index 76d06e795750..ce28cdee33ba 100644
+--- a/gki/aarch64/symbols/mtk
++++ b/gki/aarch64/symbols/mtk
+@@ -3311,6 +3311,9 @@
+   tty_vhangup
+   tty_wakeup
+   tty_write_room
++  tun_get_socket
++  tun_get_tx_ring
++  tun_ptr_free
+   typec_get_drvdata
+   typec_mux_get_drvdata
+   typec_mux_put
+-- 
+2.50.1
+

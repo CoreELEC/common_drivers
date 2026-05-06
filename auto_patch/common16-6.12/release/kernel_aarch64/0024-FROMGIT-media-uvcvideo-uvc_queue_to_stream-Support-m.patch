@@ -1,0 +1,123 @@
+From b021f925d481e7dda5f1524d0e930bae90fcda6a Mon Sep 17 00:00:00 2001
+From: Ricardo Ribalda <ribalda@chromium.org>
+Date: Mon, 9 Mar 2026 15:01:55 +0000
+Subject: [PATCH 24/63] FROMGIT: media: uvcvideo: uvc_queue_to_stream():
+ Support meta queues
+
+The stream data structure has two queues: the metadata and the data
+queues, but uvc_queue_to_stream() only supports the data queue. If we
+pass the metadata queue the function will return an invalid pointer.
+
+This patch add a parameter to the function to explicitly tell the
+function which queue are we using.
+
+Change-Id: I15938038adf973fe33e54db59a1f557f7a64e749
+Signed-off-by: Ricardo Ribalda <ribalda@chromium.org>
+Reviewed-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Signed-off-by: Hans de Goede <johannes.goede@oss.qualcomm.com>
+Link: https://lore.kernel.org/linux-media/20260309-uvc-metadata-dmabuf-v1-2-fc8b87bd29c5@chromium.org/
+Bug: 491598167
+Bug: 496193343
+(cherry picked from commit 33dd4bb261bd4e539551d60511574cd64845bf84
+ https://gitlab.freedesktop.org/linux-media/media-committers.git next)
+Signed-off-by: Ricardo Ribalda <ribalda@google.com>
+---
+ drivers/media/usb/uvc/uvc_isight.c |  3 ++-
+ drivers/media/usb/uvc/uvc_queue.c  | 12 ++++++------
+ drivers/media/usb/uvc/uvcvideo.h   |  4 +++-
+ 3 files changed, 11 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/media/usb/uvc/uvc_isight.c b/drivers/media/usb/uvc/uvc_isight.c
+index 43cda5e760a3..ea9dc31dfbad 100644
+--- a/drivers/media/usb/uvc/uvc_isight.c
++++ b/drivers/media/usb/uvc/uvc_isight.c
+@@ -41,7 +41,8 @@ static int isight_decode(struct uvc_video_queue *queue, struct uvc_buffer *buf,
+ 		0xde, 0xad, 0xfa, 0xce
+ 	};
+ 
+-	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
++	struct uvc_streaming *stream = uvc_queue_to_stream(queue,
++						V4L2_BUF_TYPE_VIDEO_CAPTURE);
+ 	unsigned int maxlen, nbytes;
+ 	u8 *mem;
+ 	int is_header = 0;
+diff --git a/drivers/media/usb/uvc/uvc_queue.c b/drivers/media/usb/uvc/uvc_queue.c
+index 3ae2c86d91ba..02cc4e8f0e97 100644
+--- a/drivers/media/usb/uvc/uvc_queue.c
++++ b/drivers/media/usb/uvc/uvc_queue.c
+@@ -78,7 +78,7 @@ static int uvc_queue_setup(struct vb2_queue *vq,
+ 			   unsigned int sizes[], struct device *alloc_devs[])
+ {
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+-	struct uvc_streaming *stream;
++	struct uvc_streaming *stream = uvc_queue_to_stream(queue, vq->type);
+ 	unsigned int size;
+ 
+ 	switch (vq->type) {
+@@ -87,7 +87,6 @@ static int uvc_queue_setup(struct vb2_queue *vq,
+ 		break;
+ 
+ 	default:
+-		stream = uvc_queue_to_stream(queue);
+ 		size = stream->ctrl.dwMaxVideoFrameSize;
+ 		break;
+ 	}
+@@ -113,7 +112,7 @@ static int uvc_buffer_prepare(struct vb2_buffer *vb)
+ 
+ 	if (vb->type == V4L2_BUF_TYPE_VIDEO_OUTPUT &&
+ 	    vb2_get_plane_payload(vb, 0) > vb2_plane_size(vb, 0)) {
+-		uvc_dbg(uvc_queue_to_stream(queue)->dev, CAPTURE,
++		uvc_dbg(uvc_queue_to_stream(queue, vb->type)->dev, CAPTURE,
+ 			"[E] Bytes used out of bounds\n");
+ 		return -EINVAL;
+ 	}
+@@ -160,7 +159,7 @@ static void uvc_buffer_finish(struct vb2_buffer *vb)
+ {
+ 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vb->vb2_queue);
+-	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
++	struct uvc_streaming *stream = uvc_queue_to_stream(queue, vb->type);
+ 	struct uvc_buffer *buf = uvc_vbuf_to_buffer(vbuf);
+ 
+ 	if (vb->state == VB2_BUF_STATE_DONE)
+@@ -170,7 +169,7 @@ static void uvc_buffer_finish(struct vb2_buffer *vb)
+ static int uvc_start_streaming_video(struct vb2_queue *vq, unsigned int count)
+ {
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+-	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
++	struct uvc_streaming *stream = uvc_queue_to_stream(queue, vq->type);
+ 	int ret;
+ 
+ 	lockdep_assert_irqs_enabled();
+@@ -189,10 +188,11 @@ static int uvc_start_streaming_video(struct vb2_queue *vq, unsigned int count)
+ static void uvc_stop_streaming_video(struct vb2_queue *vq)
+ {
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
++	struct uvc_streaming *stream = uvc_queue_to_stream(queue, vq->type);
+ 
+ 	lockdep_assert_irqs_enabled();
+ 
+-	uvc_video_stop_streaming(uvc_queue_to_stream(queue));
++	uvc_video_stop_streaming(stream);
+ 
+ 	uvc_queue_return_buffers(queue, UVC_BUF_STATE_ERROR);
+ }
+diff --git a/drivers/media/usb/uvc/uvcvideo.h b/drivers/media/usb/uvc/uvcvideo.h
+index cfc03660f6cb..bfe6b9e81e94 100644
+--- a/drivers/media/usb/uvc/uvcvideo.h
++++ b/drivers/media/usb/uvc/uvcvideo.h
+@@ -740,8 +740,10 @@ static inline int uvc_queue_streaming(struct uvc_video_queue *queue)
+ }
+ 
+ static inline struct uvc_streaming *
+-uvc_queue_to_stream(struct uvc_video_queue *queue)
++uvc_queue_to_stream(struct uvc_video_queue *queue, unsigned int type)
+ {
++	if (type == V4L2_BUF_TYPE_META_CAPTURE)
++		return container_of(queue, struct uvc_streaming, meta.queue);
+ 	return container_of(queue, struct uvc_streaming, queue);
+ }
+ 
+-- 
+2.50.1
+

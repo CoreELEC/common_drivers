@@ -1,0 +1,113 @@
+From 2493fb133b9f8f2138c28873d57fd27405fb33f4 Mon Sep 17 00:00:00 2001
+From: Badhri Jagan Sridharan <badhri@google.com>
+Date: Mon, 31 May 2021 15:19:54 -0700
+Subject: [PATCH 02/63] ANDROID: usb: typec: tcpm: Add vendor hook for tcpm
+ logs
+
+Link: https://lore.kernel.org/lkml/2025110336-hummus-stank-e5ff@gregkh/
+
+Logs in /sys/kernel/debug/usb/tcpm* are key to debug issues related to
+USB charging or data. However, tcpm logbuffer logs do not wraparound
+once full. Whereas we want it to wrap around so that we capture relevant
+info in the bugreport when the user collects one. While trying to
+upstream the approach mentioned in [1], the feedback
+from GregKH in the above lkml thread was to move to standard trace
+mechanisms and deprecate the custom tcpm logbuffer. We are now looking
+at migrating tcpm to standard trace event mechanism and use trace
+instances to enable these events by default in downstream drivers,
+however, we need this vendor hook to still be in place in the interim.
+
+Link: https://android-review.git.corp.google.com/c/kernel/common/+/3143219/comments/03bf73fd_e75cbe2c
+
+Bug: 492013726
+Bug: 189792358
+Bug: 271294543
+Bug: 348469018
+Bug: 493839773
+Change-Id: Icacfed2264b6c49b8e803c62f8bd820a146c169a
+Signed-off-by: Badhri Jagan Sridharan <badhri@google.com>
+(ported from commit a8403c07e3cce0bfb5c4e5426c9245677622993b)
+(cherry picked from commit e0f457a0a9eb4d1eb35c855e54f83b1f7a4681bc)
+---
+ drivers/android/vendor_hooks.c |  3 ++-
+ drivers/usb/typec/tcpm/tcpm.c  |  7 +++++++
+ include/trace/hooks/typec.h    | 15 +++++++++++++++
+ 3 files changed, 24 insertions(+), 1 deletion(-)
+ create mode 100644 include/trace/hooks/typec.h
+
+diff --git a/drivers/android/vendor_hooks.c b/drivers/android/vendor_hooks.c
+index 81865ed4d239..d1c823cf111f 100644
+--- a/drivers/android/vendor_hooks.c
++++ b/drivers/android/vendor_hooks.c
+@@ -83,6 +83,7 @@
+ #include <trace/hooks/vb2.h>
+ #include <trace/hooks/rcu.h>
+ #include <trace/hooks/dwc3.h>
++#include <trace/hooks/typec.h>
+ 
+ /*
+  * Export tracepoints that act as a bare tracehook (ie: have no trace event
+@@ -722,4 +723,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_dwc3_core_soft_reset);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_dwc3_xhci_soft_reset);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cma_release_bypass);
+ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_cma_alloc_end);
+-
++EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_typec_tcpm_log);
+diff --git a/drivers/usb/typec/tcpm/tcpm.c b/drivers/usb/typec/tcpm/tcpm.c
+index 52d7d7be5bd1..a7a8751c2c05 100644
+--- a/drivers/usb/typec/tcpm/tcpm.c
++++ b/drivers/usb/typec/tcpm/tcpm.c
+@@ -32,8 +32,11 @@
+ #include <linux/usb/tcpm.h>
+ #include <linux/usb/typec_altmode.h>
+ 
++#include <trace/hooks/typec.h>
+ #include <uapi/linux/sched/types.h>
+ 
++ANDROID_KABI_DECLONLY(trace_eval_map);
++
+ #define FOREACH_STATE(S)			\
+ 	S(INVALID_STATE),			\
+ 	S(TOGGLING),			\
+@@ -704,6 +707,7 @@ static void _tcpm_log(struct tcpm_port *port, const char *fmt, va_list args)
+ 	char tmpbuffer[LOG_BUFFER_ENTRY_SIZE];
+ 	u64 ts_nsec = local_clock();
+ 	unsigned long rem_nsec;
++	bool bypass_log = false;
+ 
+ 	mutex_lock(&port->logbuffer_lock);
+ 	if (!port->logbuffer[port->logbuffer_head]) {
+@@ -716,6 +720,9 @@ static void _tcpm_log(struct tcpm_port *port, const char *fmt, va_list args)
+ 	}
+ 
+ 	vsnprintf(tmpbuffer, sizeof(tmpbuffer), fmt, args);
++	trace_android_vh_typec_tcpm_log(tmpbuffer, &bypass_log);
++	if (bypass_log)
++		goto abort;
+ 
+ 	if (tcpm_log_full(port)) {
+ 		port->logbuffer_head = max(port->logbuffer_head - 1, 0);
+diff --git a/include/trace/hooks/typec.h b/include/trace/hooks/typec.h
+new file mode 100644
+index 000000000000..e55218503e46
+--- /dev/null
++++ b/include/trace/hooks/typec.h
+@@ -0,0 +1,15 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#undef TRACE_SYSTEM
++#define TRACE_SYSTEM typec
++#define TRACE_INCLUDE_PATH trace/hooks
++#if !defined(_TRACE_HOOK_TYPEC_H) || defined(TRACE_HEADER_MULTI_READ)
++#define _TRACE_HOOK_TYPEC_H
++#include <trace/hooks/vendor_hooks.h>
++
++DECLARE_HOOK(android_vh_typec_tcpm_log,
++	     TP_PROTO(const char *log, bool *bypass),
++	     TP_ARGS(log, bypass));
++
++#endif /* _TRACE_HOOK_TYPEC_H */
++/* This part must be outside protection */
++#include <trace/define_trace.h>
+-- 
+2.50.1
+

@@ -1,0 +1,145 @@
+From f92c7049e3f41befb9c4738a9b4f586871424b66 Mon Sep 17 00:00:00 2001
+From: Richard Chang <richardycc@google.com>
+Date: Mon, 1 Dec 2025 18:47:49 +0900
+Subject: [PATCH 12/63] BACKPORT: zram: introduce writeback_compressed device
+ attribute
+
+Introduce witeback_compressed device attribute to toggle compressed
+writeback (decompression on demand) feature.
+
+[senozhatsky@chromium.org: rewrote original patch, added documentation]
+Link: https://lkml.kernel.org/r/20251201094754.4149975-3-senozhatsky@chromium.org
+Signed-off-by: Richard Chang <richardycc@google.com>
+Co-developed-by: Sergey Senozhatsky <senozhatsky@chromium.org>
+Signed-off-by: Sergey Senozhatsky <senozhatsky@chromium.org>
+Cc: Brian Geffon <bgeffon@google.com>
+Cc: David Stevens <stevensd@google.com>
+Cc: Minchan Kim <minchan@google.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+
+Bug: 495288884
+(cherry picked from commit 4c1d61389e8e4307449eb2ebad997241cbf08fef)
+[richardycc: resolved minor conflict in zram.rst]
+Bug: 278101072
+Signed-off-by: Richard Chang <richardycc@google.com>
+Cherrypick-From: https://android-review.googlesource.com/q/commit:97179f799ff8744991a548e9535f2a9d20eb5519
+Merged-In: I1d8df45f884d4f5d6e96357759459aa22e590db0
+Change-Id: I1d8df45f884d4f5d6e96357759459aa22e590db0
+---
+ Documentation/ABI/testing/sysfs-block-zram  |  7 ++++
+ Documentation/admin-guide/blockdev/zram.rst | 13 +++++++
+ drivers/block/zram/zram_drv.c               | 38 +++++++++++++++++++++
+ 3 files changed, 58 insertions(+)
+
+diff --git a/Documentation/ABI/testing/sysfs-block-zram b/Documentation/ABI/testing/sysfs-block-zram
+index 1ef69e0271f9..e7d2db3275eb 100644
+--- a/Documentation/ABI/testing/sysfs-block-zram
++++ b/Documentation/ABI/testing/sysfs-block-zram
+@@ -158,3 +158,10 @@ Contact:	Sergey Senozhatsky <senozhatsky@chromium.org>
+ Description:
+ 		The algorithm_params file is write-only and is used to setup
+ 		compression algorithm parameters.
++
++What:		/sys/block/zram<id>/writeback_compressed
++Date:		Decemeber 2025
++Contact:	Richard Chang <richardycc@google.com>
++Description:
++		The writeback_compressed device atrribute toggles compressed
++		writeback feature.
+diff --git a/Documentation/admin-guide/blockdev/zram.rst b/Documentation/admin-guide/blockdev/zram.rst
+index 007e682cbd30..852dbe813e5a 100644
+--- a/Documentation/admin-guide/blockdev/zram.rst
++++ b/Documentation/admin-guide/blockdev/zram.rst
+@@ -228,6 +228,7 @@ mem_limit         	WO	specifies the maximum amount of memory ZRAM can
+ writeback_limit   	WO	specifies the maximum amount of write IO zram
+ 				can write out to backing device as 4KB unit
+ writeback_limit_enable  RW	show and set writeback_limit feature
++writeback_compressed	RW	show and set compressed writeback feature
+ max_comp_streams  	RW	the number of possible concurrent compress
+ 				operations
+ comp_algorithm    	RW	show and change the compression algorithm
+@@ -447,6 +448,18 @@ system reboot, echo 1 > /sys/block/zramX/reset) so keeping how many of
+ writeback happened until you reset the zram to allocate extra writeback
+ budget in next setting is user's job.
+ 
++By default zram stores written back pages in decompressed (raw) form, which
++means that writeback operation involves decompression of the page before
++writing it to the backing device.  This behavior can be changed by enabling
++`writeback_compressed` feature, which causes zram to write compressed pages
++to the backing device, thus avoiding decompression overhead.  To enable
++this feature, execute::
++
++	$ echo yes > /sys/block/zramX/writeback_compressed
++
++Note that this feature should be configured before the `zramX` device is
++initialized.
++
+ If admin wants to measure writeback count in a certain period, they could
+ know it via /sys/block/zram0/bd_stat's 3rd column.
+ 
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index 6b5ff3060c26..c9f2bfffbb05 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -486,6 +486,42 @@ struct zram_rb_req {
+ 	u32 index;
+ };
+ 
++static ssize_t writeback_compressed_store(struct device *dev,
++					  struct device_attribute *attr,
++					  const char *buf, size_t len)
++{
++	struct zram *zram = dev_to_zram(dev);
++	bool val;
++
++	if (kstrtobool(buf, &val))
++		return -EINVAL;
++
++	down_write(&zram->init_lock);
++	if (init_done(zram)) {
++		up_write(&zram->init_lock);
++		return -EBUSY;
++	}
++
++	zram->wb_compressed = val;
++	up_write(&zram->init_lock);
++
++	return len;
++}
++
++static ssize_t writeback_compressed_show(struct device *dev,
++					 struct device_attribute *attr,
++					 char *buf)
++{
++	bool val;
++	struct zram *zram = dev_to_zram(dev);
++
++	down_read(&zram->init_lock);
++	val = zram->wb_compressed;
++	up_read(&zram->init_lock);
++
++	return sysfs_emit(buf, "%d\n", val);
++}
++
+ static ssize_t writeback_limit_enable_store(struct device *dev,
+ 					    struct device_attribute *attr,
+ 					    const char *buf, size_t len)
+@@ -3014,6 +3050,7 @@ static DEVICE_ATTR_WO(writeback);
+ static DEVICE_ATTR_RW(writeback_limit);
+ static DEVICE_ATTR_RW(writeback_limit_enable);
+ static DEVICE_ATTR_RW(writeback_batch_size);
++static DEVICE_ATTR_RW(writeback_compressed);
+ #endif
+ #ifdef CONFIG_ZRAM_MULTI_COMP
+ static DEVICE_ATTR_RW(recomp_algorithm);
+@@ -3037,6 +3074,7 @@ static struct attribute *zram_disk_attrs[] = {
+ 	&dev_attr_writeback_limit.attr,
+ 	&dev_attr_writeback_limit_enable.attr,
+ 	&dev_attr_writeback_batch_size.attr,
++	&dev_attr_writeback_compressed.attr,
+ #endif
+ 	&dev_attr_io_stat.attr,
+ 	&dev_attr_mm_stat.attr,
+-- 
+2.50.1
+

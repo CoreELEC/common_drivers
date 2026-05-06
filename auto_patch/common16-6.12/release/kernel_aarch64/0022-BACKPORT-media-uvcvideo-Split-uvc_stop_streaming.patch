@@ -1,0 +1,94 @@
+From e29c384f740e78d7110105ade56e031aef690a1c Mon Sep 17 00:00:00 2001
+From: Ricardo Ribalda <ribalda@chromium.org>
+Date: Mon, 16 Jun 2025 15:24:40 +0000
+Subject: [PATCH 22/63] BACKPORT: media: uvcvideo: Split uvc_stop_streaming()
+
+uvc_stop_streaming() is used for meta and video nodes. Split the function
+in two to avoid confusion.
+
+Use this opportunity to rename uvc_start_streaming() to
+uvc_start_streaming_video(), as it is only called by the video nodes.
+
+Reviewed-by: Hans de Goede <hansg@kernel.org>
+Change-Id: I8bfaf15c9ddb126c1724286d9644f52061e3cac3
+Signed-off-by: Ricardo Ribalda <ribalda@chromium.org>
+Link: https://lore.kernel.org/r/20250616-uvc-fop-v4-3-250286570ee7@chromium.org
+Reviewed-by: Hans Verkuil <hverkuil@xs4all.nl>
+Signed-off-by: Hans de Goede <hansg@kernel.org>
+Signed-off-by: Hans Verkuil <hverkuil@xs4all.nl>
+(cherry picked from commit 54828c0d4f909bd706e15cfaa29758f2c1d59212)
+[Minor changes due to vb2-fop for uvc changes not landed in 6.12]
+Bug: 491598167
+Bug: 496193343
+Signed-off-by: Ricardo Ribalda <ribalda@google.com>
+---
+ drivers/media/usb/uvc/uvc_queue.c | 27 ++++++++++++++++++++-------
+ 1 file changed, 20 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/media/usb/uvc/uvc_queue.c b/drivers/media/usb/uvc/uvc_queue.c
+index 8a39ea7dc95b..53494d6a1de0 100644
+--- a/drivers/media/usb/uvc/uvc_queue.c
++++ b/drivers/media/usb/uvc/uvc_queue.c
+@@ -167,7 +167,7 @@ static void uvc_buffer_finish(struct vb2_buffer *vb)
+ 		uvc_video_clock_update(stream, vbuf, buf);
+ }
+ 
+-static int uvc_start_streaming(struct vb2_queue *vq, unsigned int count)
++static int uvc_start_streaming_video(struct vb2_queue *vq, unsigned int count)
+ {
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+ 	struct uvc_streaming *stream = uvc_queue_to_stream(queue);
+@@ -186,14 +186,22 @@ static int uvc_start_streaming(struct vb2_queue *vq, unsigned int count)
+ 	return ret;
+ }
+ 
+-static void uvc_stop_streaming(struct vb2_queue *vq)
++static void uvc_stop_streaming_video(struct vb2_queue *vq)
+ {
+ 	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
+ 
+ 	lockdep_assert_irqs_enabled();
+ 
+-	if (vq->type != V4L2_BUF_TYPE_META_CAPTURE)
+-		uvc_video_stop_streaming(uvc_queue_to_stream(queue));
++	uvc_video_stop_streaming(uvc_queue_to_stream(queue));
++
++	uvc_queue_return_buffers(queue, UVC_BUF_STATE_ERROR);
++}
++
++static void uvc_stop_streaming_meta(struct vb2_queue *vq)
++{
++	struct uvc_video_queue *queue = vb2_get_drv_priv(vq);
++
++	lockdep_assert_irqs_enabled();
+ 
+ 	uvc_queue_return_buffers(queue, UVC_BUF_STATE_ERROR);
+ }
+@@ -205,8 +213,8 @@ static const struct vb2_ops uvc_queue_qops = {
+ 	.buf_finish = uvc_buffer_finish,
+ 	.wait_prepare = vb2_ops_wait_prepare,
+ 	.wait_finish = vb2_ops_wait_finish,
+-	.start_streaming = uvc_start_streaming,
+-	.stop_streaming = uvc_stop_streaming,
++	.start_streaming = uvc_start_streaming_video,
++	.stop_streaming = uvc_stop_streaming_video,
+ };
+ 
+ static const struct vb2_ops uvc_meta_queue_qops = {
+@@ -215,7 +223,12 @@ static const struct vb2_ops uvc_meta_queue_qops = {
+ 	.buf_queue = uvc_buffer_queue,
+ 	.wait_prepare = vb2_ops_wait_prepare,
+ 	.wait_finish = vb2_ops_wait_finish,
+-	.stop_streaming = uvc_stop_streaming,
++	/*
++	 * .start_streaming is not provided here. Metadata relies on video
++	 * streaming being active. If video isn't streaming, then no metadata
++	 * will arrive either.
++	 */
++	.stop_streaming = uvc_stop_streaming_meta,
+ };
+ 
+ int uvc_queue_init(struct uvc_video_queue *queue, enum v4l2_buf_type type,
+-- 
+2.50.1
+

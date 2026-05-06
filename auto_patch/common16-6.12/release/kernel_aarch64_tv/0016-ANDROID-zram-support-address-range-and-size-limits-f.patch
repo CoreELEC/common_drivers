@@ -1,0 +1,284 @@
+From b18a15a9eff2c1a5c901c1a12036e93a71a2153b Mon Sep 17 00:00:00 2001
+From: Richard Chang <richardycc@google.com>
+Date: Tue, 3 Mar 2026 07:30:24 +0000
+Subject: [PATCH 16/63] ANDROID: zram: support address range and size limits
+ for process writeback
+
+Add the ZRAM_ANDROID_IOC_PROCESS_RANGE_WRITEBACK IOCTL to allow more
+granular control over memory regions scanned and data processed.
+
+Add 'start_addr' and 'size' to support a limited size of process
+writeback. The userspace can use the 'next_addr' as the new 'start_addr'
+for the next ioctl calls.
+
+This enhancement allows userspace to manage zram writeback more
+efficiently by processing large address spaces in smaller, manageable
+chunks without holding locks for excessive periods.
+
+For kernel backward compatibility, we maintained for the legacy
+ZRAM_ANDROID_IOC_PROCESS_WRITEBACK IOCTL by
+mapping the legacy ioctl call into an unlimited range of
+ZRAM_ANDROID_IOC_PROCESS_RANGE_WRITEBACK ioctl call internally.
+
+Bug: 495288884
+Bug: 340137613
+Change-Id: I8c41115d45ab17d628120e160d6af0815bbcd7b1
+Signed-off-by: Richard Chang <richardycc@google.com>
+(cherry picked from commit 9adb7407e128a3fa16e2cc232cfb8cb71443c70c)
+---
+ drivers/block/zram/zram_ioctl.c | 93 ++++++++++++++++++++++++++-------
+ include/uapi/linux/zram_ioctl.h | 39 +++++++++++++-
+ 2 files changed, 112 insertions(+), 20 deletions(-)
+
+diff --git a/drivers/block/zram/zram_ioctl.c b/drivers/block/zram/zram_ioctl.c
+index 92544bc73a56..80ec70967a9f 100644
+--- a/drivers/block/zram/zram_ioctl.c
++++ b/drivers/block/zram/zram_ioctl.c
+@@ -21,10 +21,14 @@
+ #include "zram_drv.h"
+ #include "zram_ioctl.h"
+ 
++#define NR_PAGES_UNLIMITED U64_MAX
++
+ /* Private data for the page table walker. */
+ struct zram_process_walk_private {
+ 	struct zram *zram;
+ 	struct zram_pp_ctl *pp_ctl;
++	u64 nr_remaining_pages;
++	unsigned long next_addr;
+ };
+ 
+ static inline bool can_do_file_pageout(struct vm_area_struct *vma)
+@@ -64,6 +68,11 @@ static int zram_process_walker(pmd_t *pmd, unsigned long start,
+ 	u64 nr_pages = zram->disksize >> PAGE_SHIFT;
+ 
+ 	for (addr = start; addr < end; addr += PAGE_SIZE) {
++		if (private->nr_remaining_pages == 0) {
++			private->next_addr = addr;
++			return 1;
++		}
++
+ 		ptep = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
+ 		if (!ptep)
+ 			break;
+@@ -92,6 +101,8 @@ static int zram_process_walker(pmd_t *pmd, unsigned long start,
+ 
+ 		/* Use PAGE_WRITEBACK for single index */
+ 		scan_slots_for_writeback(zram, 0, index, index+1, pp_ctl);
++		if (private->nr_remaining_pages != NR_PAGES_UNLIMITED)
++			private->nr_remaining_pages--;
+ 
+ unlock_swap_device:
+ 		put_swap_device(sis);
+@@ -107,21 +118,27 @@ static const struct mm_walk_ops zram_walk_ops = {
+ };
+ 
+ static int zram_ioctl_process_writeback_scan(struct zram *zram,
+-	struct zram_android_ioc_data_process_writeback *ioc_data_pwb,
++	struct zram_android_ioc_process_range_writeback *ioc_prwb,
+ 	struct zram_pp_ctl *ctl)
+ {
+ 	struct mm_struct *mm;
+ 	struct vm_area_struct *vma;
+ 	struct task_struct *task;
++	unsigned long start_addr = (unsigned long)ioc_prwb->start_addr;
+ 	unsigned int f_flags;
+ 	int ret = 0;
+ 
+ 	struct zram_process_walk_private private = {
+ 		.zram = zram,
+-		.pp_ctl = ctl
++		.pp_ctl = ctl,
++		.nr_remaining_pages = DIV_ROUND_UP_POW2(ioc_prwb->size,
++							PAGE_SIZE),
+ 	};
+ 
+-	task = pidfd_get_task(ioc_data_pwb->pidfd, &f_flags);
++	if (!private.nr_remaining_pages)
++		private.nr_remaining_pages = NR_PAGES_UNLIMITED;
++
++	task = pidfd_get_task(ioc_prwb->pidfd, &f_flags);
+ 	if (IS_ERR(task))
+ 		return PTR_ERR(task);
+ 
+@@ -131,21 +148,41 @@ static int zram_ioctl_process_writeback_scan(struct zram *zram,
+ 		goto release_task;
+ 	}
+ 
+-	VMA_ITERATOR(vmi, mm, 0);
++	if (start_addr >= mm->task_size) {
++		ret = -EINVAL;
++		goto release_mm;
++	}
++
++	if (!IS_ALIGNED(start_addr, PAGE_SIZE)) {
++		ret = -EINVAL;
++		goto release_mm;
++	}
++
++	VMA_ITERATOR(vmi, mm, start_addr);
+ 	/* Iterates through all the VMAs of the process */
+ 	mmap_read_lock(mm);
+ 	for_each_vma(vmi, vma) {
++		unsigned long start = max(vma->vm_start, start_addr);
++
+ 		if (!vma_is_anonymous(vma) && (!can_do_file_pageout(vma) &&
+ 					       (vma->vm_flags & VM_MAYSHARE)))
+ 			continue;
+ 
+-		ret = walk_page_range(mm, vma->vm_start, vma->vm_end,
++		ret = walk_page_range(mm, start, vma->vm_end,
+ 				      &zram_walk_ops, &private);
+ 		if (ret)
+ 			break;
+ 	}
+-	mmap_read_unlock(mm);
+ 
++	if (ret > 0) {
++		ioc_prwb->next_addr = private.next_addr;
++		ret = 0;
++	} else {
++		ioc_prwb->next_addr = 0;
++	}
++
++	mmap_read_unlock(mm);
++release_mm:
+ 	mmput(mm);
+ release_task:
+ 	put_task_struct(task);
+@@ -154,7 +191,7 @@ static int zram_ioctl_process_writeback_scan(struct zram *zram,
+ }
+ 
+ static int zram_ioctl_process_writeback(struct zram *zram,
+-	struct zram_android_ioc_data_process_writeback *ioc_data_pwb)
++	struct zram_android_ioc_process_range_writeback *ioc_prwb)
+ {
+ 	struct zram_pp_ctl *pp_ctl = NULL;
+ 	struct zram_wb_ctl *wb_ctl = NULL;
+@@ -187,11 +224,11 @@ static int zram_ioctl_process_writeback(struct zram *zram,
+ 		goto clear_pp_ctl;
+ 	}
+ 
+-	ret = zram_ioctl_process_writeback_scan(zram, ioc_data_pwb, pp_ctl);
++	ret = zram_ioctl_process_writeback_scan(zram, ioc_prwb, pp_ctl);
+ 	if (!ret)
+ 		ret = zram_writeback_slots(zram, pp_ctl, wb_ctl);
+ 
+-	ioc_data_pwb->written_bytes = wb_ctl->processed_bytes;
++	ioc_prwb->written_bytes = wb_ctl->processed_bytes;
+ 
+ 	release_wb_ctl(wb_ctl);
+ clear_pp_ctl:
+@@ -207,19 +244,37 @@ int zram_ioctl(struct block_device *bdev, blk_mode_t mode,
+ {
+ 	struct zram *zram = bdev->bd_disk->private_data;
+ 	void __user *argp = (void __user *)arg;
+-	struct zram_android_ioc_data ioc_data;
+-	int ret;
++	int ret = -ENOIOCTLCMD;
+ 
+-	if (cmd != ZRAM_ANDROID_IOC_PROCESS_WRITEBACK)
+-		return -EINVAL;
++	if (cmd == ZRAM_ANDROID_IOC_PROCESS_RANGE_WRITEBACK) {
++		struct zram_android_ioc_process_range_writeback prwb;
++
++		if (copy_from_user(&prwb, argp, sizeof(prwb)))
++			return -EFAULT;
+ 
+-	if (copy_from_user(&ioc_data, argp, sizeof(ioc_data)))
+-		return -EFAULT;
++		ret = zram_ioctl_process_writeback(zram, &prwb);
+ 
+-	ret = zram_ioctl_process_writeback(zram,
+-					   &ioc_data.data.process_writeback);
++		if (copy_to_user(argp, &prwb, sizeof(prwb)))
++			ret = -EFAULT;
++	} else if (cmd == ZRAM_ANDROID_IOC_PROCESS_WRITEBACK) {
++		/* Legacy: map to unlimited process_range_writeback */
++		struct zram_android_ioc_data ioc_data;
++		struct zram_android_ioc_process_range_writeback prwb;
++
++		if (copy_from_user(&ioc_data, argp, sizeof(ioc_data)))
++			return -EFAULT;
++
++		prwb.pidfd = ioc_data.data.process_writeback.pidfd;
++		prwb.start_addr = 0;
++		prwb.size = 0;
++
++		ret = zram_ioctl_process_writeback(zram, &prwb);
++		ioc_data.data.process_writeback.written_bytes =
++			prwb.written_bytes;
++
++		if (copy_to_user(argp, &ioc_data, sizeof(ioc_data)))
++			ret = -EFAULT;
++	}
+ 
+-	if (copy_to_user(argp, &ioc_data, sizeof(ioc_data)))
+-		ret = -EFAULT;
+ 	return ret;
+ }
+diff --git a/include/uapi/linux/zram_ioctl.h b/include/uapi/linux/zram_ioctl.h
+index 4408a133610a..99519690f904 100644
+--- a/include/uapi/linux/zram_ioctl.h
++++ b/include/uapi/linux/zram_ioctl.h
+@@ -6,19 +6,56 @@
+ #include <linux/types.h>
+ #include <linux/ioctl.h>
+ 
++/* Legacy for process writeback */
+ struct zram_android_ioc_data_process_writeback {
+ 	__aligned_u64	pidfd;
+ 	__u64		written_bytes;
+ };
+ 
++/*
++ * Legacy for process writeback.
++ * Modify the members or the size of the 'data' union can break the ABI
++ * compatibility.
++ *
++ * Deprecated: Use struct zram_android_ioc_process_range_writeback for new
++ * implementations.
++ */
+ struct zram_android_ioc_data {
+ 	union {
+ 		struct zram_android_ioc_data_process_writeback process_writeback;
+ 	} data;
+ };
+ 
++struct zram_android_ioc_process_range_writeback {
++	/* The pidfd of the process to scan for writeback candidates */
++	__aligned_u64	pidfd;
++	/* The starting virtual address for the scan */
++	__u64		start_addr;
++	/**
++	 * Maximum number of candidate bytes to scan for writeback. The scan
++	 * process will iterate the process address space from the @start_addr,
++	 * and stop when the number of writeback candidates is larger than
++	 * @size. If the @size is zero, the scan range is unlimited.
++	 */
++	__u64		size;
++	/**
++	 * The address where the scan stopped exclusively. Can be used as the
++	 * @start_addr for the next call. If the scan reaches the end of the
++	 * address space, it will be set to zero.
++	 */
++	__u64		next_addr;
++	/* Total number of bytes successfully written back */
++	__u64		written_bytes;
++};
++
+ #define ZRAM_ANDROID_IOC_MAGIC 0xBB
+-#define ZRAM_ANDROID_IOC_PROCESS_WRITEBACK _IOWR(ZRAM_ANDROID_IOC_MAGIC, 1, struct zram_android_ioc_data)
++
++/* Legacy API: keep it for compatibility */
++#define ZRAM_ANDROID_IOC_PROCESS_WRITEBACK \
++	_IOWR(ZRAM_ANDROID_IOC_MAGIC, 1, struct zram_android_ioc_data)
++
++#define ZRAM_ANDROID_IOC_PROCESS_RANGE_WRITEBACK \
++	_IOWR(ZRAM_ANDROID_IOC_MAGIC, 2, struct zram_android_ioc_process_range_writeback)
+ 
+ #endif /* _UAPI_LINUX_ZRAM_IOCTL_H */
+ 
+-- 
+2.50.1
+

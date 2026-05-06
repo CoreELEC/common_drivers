@@ -1,0 +1,59 @@
+From f440b0f38bf46390f038e83984f03afbd610ef5d Mon Sep 17 00:00:00 2001
+From: Richard Chang <richardycc@google.com>
+Date: Wed, 11 Mar 2026 10:30:56 +0000
+Subject: [PATCH 19/63] ANDROID: zram: support versioning for Android-specific
+ ioctl API
+
+Extend the zram Android-specific ioctl API with versioning support to
+allow for future extensions while maintaining backward compatibility.
+
+Add ZRAM_ANDROID_IOC_GET_VERSION ioctl to allow userspace to query the
+supported API version.
+
+Bug: 495288884
+Bug: 340137613
+Change-Id: I1290833c2fc51b1ab52533a7a3cf616fc5247c9a
+Signed-off-by: Richard Chang <richardycc@google.com>
+(cherry picked from commit 037660b116cb733997f7aac8aa34d76a7da7905e)
+---
+ drivers/block/zram/zram_ioctl.c | 2 ++
+ include/uapi/linux/zram_ioctl.h | 4 ++++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/drivers/block/zram/zram_ioctl.c b/drivers/block/zram/zram_ioctl.c
+index c288cfa326f2..0abb6345d286 100644
+--- a/drivers/block/zram/zram_ioctl.c
++++ b/drivers/block/zram/zram_ioctl.c
+@@ -344,6 +344,8 @@ int zram_ioctl(struct block_device *bdev, blk_mode_t mode,
+ 
+ 		if (copy_to_user(argp, &ioc_data, sizeof(ioc_data)))
+ 			ret = -EFAULT;
++	} else if (cmd == ZRAM_ANDROID_IOC_GET_VERSION) {
++		return ZRAM_ANDROID_IOC_VERSION;
+ 	}
+ 
+ 	return ret;
+diff --git a/include/uapi/linux/zram_ioctl.h b/include/uapi/linux/zram_ioctl.h
+index 5838dbc809eb..1e804bf5b72e 100644
+--- a/include/uapi/linux/zram_ioctl.h
++++ b/include/uapi/linux/zram_ioctl.h
+@@ -6,6 +6,8 @@
+ #include <linux/types.h>
+ #include <linux/ioctl.h>
+ 
++#define ZRAM_ANDROID_IOC_VERSION 1
++
+ /* Legacy for process writeback */
+ struct zram_android_ioc_data_process_writeback {
+ 	__aligned_u64	pidfd;
+@@ -64,5 +66,7 @@ struct zram_android_ioc_process_prefetch {
+ #define ZRAM_ANDROID_IOC_PROCESS_PREFETCH \
+ 	_IOW(ZRAM_ANDROID_IOC_MAGIC, 3, struct zram_android_ioc_process_prefetch)
+ 
++#define ZRAM_ANDROID_IOC_GET_VERSION _IO(ZRAM_ANDROID_IOC_MAGIC, 4)
++
+ #endif /* _UAPI_LINUX_ZRAM_IOCTL_H */
+ 
+-- 
+2.50.1
+

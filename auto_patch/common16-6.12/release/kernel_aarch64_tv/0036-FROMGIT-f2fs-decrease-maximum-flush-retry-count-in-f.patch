@@ -1,0 +1,57 @@
+From a2c6c634c6d416dfea7601fdc373b9120afbe61c Mon Sep 17 00:00:00 2001
+From: Chao Yu <chao@kernel.org>
+Date: Wed, 21 Jan 2026 05:14:04 +0000
+Subject: [PATCH 36/63] FROMGIT: f2fs: decrease maximum flush retry count in
+ f2fs_enable_checkpoint()
+
+It's rare case that sync_inodes_sb() always skips to flush some drity
+datas, so it's enough to give extra three more chances to flush data.
+
+Bug: 477022593
+Bug: 493380797
+Bug: 495273251
+Bug: 496755631
+(cherry picked from commit 6bb9010f78d7f0ff0e4a17b1be951e76d96757a5
+https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs.git dev)
+Link: https://lore.kernel.org/linux-f2fs-devel/20260121051404.2056730-1-chao@kernel.org
+Change-Id: I8cd38e6c1e1473df65c49fd2f47c25c79fd57221
+Signed-off-by: Chao Yu <chao@kernel.org>
+Signed-off-by: Jaegeuk Kim <jaegeuk@kernel.org>
+(cherry picked from commit 6bb9010f78d7f0ff0e4a17b1be951e76d96757a5)
+[Chao: fix code conflict]
+Signed-off-by: Chao Yu <chao@kernel.org>
+(cherry picked from commit 376529f3e7392c8492316324c97214345b5a830a)
+---
+ fs/f2fs/f2fs.h  | 2 ++
+ fs/f2fs/super.c | 2 +-
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/fs/f2fs/f2fs.h b/fs/f2fs/f2fs.h
+index 6e5562c154b3..5e120b0ac9e4 100644
+--- a/fs/f2fs/f2fs.h
++++ b/fs/f2fs/f2fs.h
+@@ -619,6 +619,8 @@ enum {
+ 
+ #define DEFAULT_RETRY_IO_COUNT	8	/* maximum retry read IO or flush count */
+ 
++#define MAX_FLUSH_RETRY_COUNT	3	/* maximum flush retry count in f2fs_enable_checkpoint() */
++
+ /* congestion wait timeout value, default: 20ms */
+ #define	DEFAULT_IO_TIMEOUT	(msecs_to_jiffies(20))
+ 
+diff --git a/fs/f2fs/super.c b/fs/f2fs/super.c
+index 600511849010..774b04c756f6 100644
+--- a/fs/f2fs/super.c
++++ b/fs/f2fs/super.c
+@@ -2363,7 +2363,7 @@ static int f2fs_disable_checkpoint(struct f2fs_sb_info *sbi)
+ 
+ static int f2fs_enable_checkpoint(struct f2fs_sb_info *sbi)
+ {
+-	int retry = DEFAULT_RETRY_IO_COUNT;
++	int retry = MAX_FLUSH_RETRY_COUNT;
+ 	long long start, writeback, end;
+ 	int ret;
+ 	long long skipped_write, dirty_data;
+-- 
+2.50.1
+

@@ -1,0 +1,1507 @@
+From 884f489d5829afc8441c91d71c09cc71dc97f322 Mon Sep 17 00:00:00 2001
+From: Badhri Jagan Sridharan <badhri@google.com>
+Date: Mon, 16 Mar 2026 14:28:24 +0000
+Subject: [PATCH 03/63] ANDROID: ABI: Update pixel symbol list
+
+15 function symbol(s) added
+  'int __traceiter_android_vh_typec_tcpm_log(void*, const char*, bool*)'
+  'void debugfs_create_file_size(const char*, umode_t, struct dentry*, void*, const struct file_operations*, loff_t)'
+  'void devlink_flash_update_status_notify(struct devlink*, const char*, const char*, unsigned long, unsigned long)'
+  'void devlink_health_reporter_state_update(struct devlink_health_reporter*, enum devlink_health_reporter_state)'
+  'struct devlink_region* devlink_region_create(struct devlink*, const struct devlink_region_ops*, u32, u64)'
+  'void devlink_region_destroy(struct devlink_region*)'
+  'void pci_dev_lock(struct pci_dev*)'
+  'void pci_dev_unlock(struct pci_dev*)'
+  'int pcie_capability_write_word(struct pci_dev*, int, u16)'
+  'struct wwan_port* wwan_create_port(struct device*, enum wwan_port_type, const struct wwan_port_ops*, struct wwan_port_caps*, void*)'
+  'void* wwan_port_get_drvdata(struct wwan_port*)'
+  'void wwan_port_rx(struct wwan_port*, struct sk_buff*)'
+  'int wwan_register_ops(struct device*, const struct wwan_ops*, void*, u32)'
+  'void wwan_remove_port(struct wwan_port*)'
+  'void wwan_unregister_ops(struct device*)'
+
+1 variable symbol(s) added
+  'struct tracepoint __tracepoint_android_vh_typec_tcpm_log'
+
+Bug: 492013726
+Bug: 493839773
+Change-Id: Ie49f30831ecfd032ff12485a75bb72ca12fa1caf
+Signed-off-by: Badhri Jagan Sridharan <badhri@google.com>
+(cherry picked from commit 18ca40f8c454986a4e52dd4ffcc9c2c9582fd718)
+---
+ gki/aarch64/abi.stg       | 599 ++++++++++++++++++++++++++++++++++++++
+ gki/aarch64/symbols/pixel |  68 +++++
+ 2 files changed, 667 insertions(+)
+
+diff --git a/gki/aarch64/abi.stg b/gki/aarch64/abi.stg
+index 41538080444b..b25f951f38b4 100644
+--- a/gki/aarch64/abi.stg
++++ b/gki/aarch64/abi.stg
+@@ -1318,6 +1318,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x247022a8
+ }
++pointer_reference {
++  id: 0x038cdd3b
++  kind: POINTER
++  pointee_type_id: 0x24739271
++}
+ pointer_reference {
+   id: 0x038d519d
+   kind: POINTER
+@@ -4103,6 +4108,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x07bc4c78
+ }
++pointer_reference {
++  id: 0x0b7f62fc
++  kind: POINTER
++  pointee_type_id: 0x07bd6d6c
++}
+ pointer_reference {
+   id: 0x0b85846c
+   kind: POINTER
+@@ -5803,6 +5813,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x1edfcb66
+ }
++pointer_reference {
++  id: 0x0d27dc9d
++  kind: POINTER
++  pointee_type_id: 0x1edf94e9
++}
+ pointer_reference {
+   id: 0x0d2958f6
+   kind: POINTER
+@@ -6503,6 +6518,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x1c27fd26
+ }
++pointer_reference {
++  id: 0x0d9a04b9
++  kind: POINTER
++  pointee_type_id: 0x1c28f47b
++}
+ pointer_reference {
+   id: 0x0d9a8731
+   kind: POINTER
+@@ -6803,6 +6823,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x1d4da256
+ }
++pointer_reference {
++  id: 0x0dc3cfbb
++  kind: POINTER
++  pointee_type_id: 0x1d4fd870
++}
+ pointer_reference {
+   id: 0x0dc4baf0
+   kind: POINTER
+@@ -8708,6 +8733,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x1672d25d
+ }
++pointer_reference {
++  id: 0x0f0cbb90
++  kind: POINTER
++  pointee_type_id: 0x167208de
++}
+ pointer_reference {
+   id: 0x0f0d3052
+   kind: POINTER
+@@ -9398,6 +9428,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x17b5cc93
+ }
++pointer_reference {
++  id: 0x0f7d9380
++  kind: POINTER
++  pointee_type_id: 0x17b6a89e
++}
+ pointer_reference {
+   id: 0x0f7dcc52
+   kind: POINTER
+@@ -14203,6 +14238,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x58912da5
+ }
++pointer_reference {
++  id: 0x1cbbe434
++  kind: POINTER
++  pointee_type_id: 0x58af764e
++}
+ pointer_reference {
+   id: 0x1cc05376
+   kind: POINTER
+@@ -19238,6 +19278,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9aacb204
+ }
++pointer_reference {
++  id: 0x2c3bbf2f
++  kind: POINTER
++  pointee_type_id: 0x9aae1a22
++}
+ pointer_reference {
+   id: 0x2c3be0fd
+   kind: POINTER
+@@ -19293,6 +19338,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9ab95d2b
+ }
++pointer_reference {
++  id: 0x2c3ef046
++  kind: POINTER
++  pointee_type_id: 0x9abb2786
++}
+ pointer_reference {
+   id: 0x2c3f2dba
+   kind: POINTER
+@@ -19433,6 +19483,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9b555e72
+ }
++pointer_reference {
++  id: 0x2c45e642
++  kind: POINTER
++  pointee_type_id: 0x9b577f95
++}
+ pointer_reference {
+   id: 0x2c45eb05
+   kind: POINTER
+@@ -21748,6 +21803,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9e768332
+ }
++pointer_reference {
++  id: 0x2d0e067a
++  kind: POINTER
++  pointee_type_id: 0x9e78ff75
++}
+ pointer_reference {
+   id: 0x2d0e4401
+   kind: POINTER
+@@ -21763,6 +21823,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0x9e792fe6
+ }
++pointer_reference {
++  id: 0x2d0e9268
++  kind: POINTER
++  pointee_type_id: 0x9e7aaf3f
++}
+ pointer_reference {
+   id: 0x2d0e9efd
+   kind: POINTER
+@@ -28643,6 +28708,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xeac8f2c9
+ }
++pointer_reference {
++  id: 0x3023ae49
++  kind: POINTER
++  pointee_type_id: 0xeace5fb9
++}
+ pointer_reference {
+   id: 0x3027a66a
+   kind: POINTER
+@@ -29553,6 +29623,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xed225d89
+ }
++pointer_reference {
++  id: 0x31d9e79a
++  kind: POINTER
++  pointee_type_id: 0xed2778f4
++}
+ pointer_reference {
+   id: 0x31da1e83
+   kind: POINTER
+@@ -32453,6 +32528,11 @@ pointer_reference {
+   kind: POINTER
+   pointee_type_id: 0xf175ec0a
+ }
++pointer_reference {
++  id: 0x36cf7d65
++  kind: POINTER
++  pointee_type_id: 0xf17d1308
++}
+ pointer_reference {
+   id: 0x36d078a0
+   kind: POINTER
+@@ -43268,6 +43348,11 @@ qualified {
+   qualifier: CONST
+   qualified_type_id: 0xdb526eee
+ }
++qualified {
++  id: 0xeace5fb9
++  qualifier: CONST
++  qualified_type_id: 0xdb7ec86e
++}
+ qualified {
+   id: 0xeade7f35
+   qualifier: CONST
+@@ -43458,6 +43543,11 @@ qualified {
+   qualifier: CONST
+   qualified_type_id: 0xc460028a
+ }
++qualified {
++  id: 0xed2778f4
++  qualifier: CONST
++  qualified_type_id: 0xc4da5559
++}
+ qualified {
+   id: 0xed32e285
+   qualifier: CONST
+@@ -43718,6 +43808,11 @@ qualified {
+   qualifier: CONST
+   qualified_type_id: 0xb5f35143
+ }
++qualified {
++  id: 0xf17d1308
++  qualifier: CONST
++  qualified_type_id: 0xb5b3faa9
++}
+ qualified {
+   id: 0xf186b679
+   qualifier: CONST
+@@ -95696,6 +95791,12 @@ member {
+   type_id: 0x92233392
+   offset: 15168
+ }
++member {
++  id: 0xb36073d0
++  name: "dellink"
++  type_id: 0x0f0cbb90
++  offset: 192
++}
+ member {
+   id: 0xb362d7b2
+   name: "dellink"
+@@ -96856,6 +96957,12 @@ member {
+   type_id: 0x0d27055d
+   offset: 128
+ }
++member {
++  id: 0xa4170b6e
++  name: "destructor"
++  type_id: 0x0d27dc9d
++  offset: 64
++}
+ member {
+   id: 0xa4b58726
+   name: "destructor"
+@@ -119678,6 +119785,11 @@ member {
+   type_id: 0xe62ebf07
+   offset: 64
+ }
++member {
++  id: 0x504edabc
++  name: "frag_len"
++  type_id: 0xf435685e
++}
+ member {
+   id: 0xce6a9610
+   name: "frag_max_size"
+@@ -129200,6 +129312,12 @@ member {
+   type_id: 0x914dbfdc
+   offset: 80
+ }
++member {
++  id: 0x354ace7c
++  name: "headroom_len"
++  type_id: 0x4585663f
++  offset: 64
++}
+ member {
+   id: 0xdcbe69b8
+   name: "heads"
+@@ -170307,6 +170425,12 @@ member {
+   type_id: 0x2e23ac1e
+   offset: 192
+ }
++member {
++  id: 0x4a428178
++  name: "newlink"
++  type_id: 0x2c45e642
++  offset: 128
++}
+ member {
+   id: 0x4a43cc8b
+   name: "newlink"
+@@ -195417,6 +195541,11 @@ member {
+   type_id: 0x914dbfdc
+   offset: 64
+ }
++member {
++  id: 0x989b73ef
++  name: "priv_size"
++  type_id: 0x4585663f
++}
+ member {
+   id: 0x98b9d6f1
+   name: "priv_size"
+@@ -202758,6 +202887,12 @@ member {
+   name: "read"
+   type_id: 0x2d65237b
+ }
++member {
++  id: 0x4870594b
++  name: "read"
++  type_id: 0x2d0e067a
++  offset: 192
++}
+ member {
+   id: 0x487076fb
+   name: "read"
+@@ -222495,6 +222630,12 @@ member {
+   type_id: 0x0aee7ba0
+   offset: 384
+ }
++member {
++  id: 0x84c4d57f
++  name: "setup"
++  type_id: 0x0d9c4ffe
++  offset: 64
++}
+ member {
+   id: 0x84c4d659
+   name: "setup"
+@@ -227231,6 +227372,12 @@ member {
+   type_id: 0xe52a3418
+   offset: 416
+ }
++member {
++  id: 0x0c805fde
++  name: "snapshot"
++  type_id: 0x2d0e9268
++  offset: 128
++}
+ member {
+   id: 0x0cc02546
+   name: "snapshot"
+@@ -230411,6 +230558,11 @@ member {
+   type_id: 0x2ddf4eb6
+   offset: 1920
+ }
++member {
++  id: 0x463708ef
++  name: "start"
++  type_id: 0x2c3bbf2f
++}
+ member {
+   id: 0x4637bb5b
+   name: "start"
+@@ -232929,6 +233081,12 @@ member {
+   type_id: 0x0e996219
+   offset: 1984
+ }
++member {
++  id: 0x6987032e
++  name: "stop"
++  type_id: 0x0f7d9380
++  offset: 64
++}
+ member {
+   id: 0x69877542
+   name: "stop"
+@@ -245657,6 +245815,12 @@ member {
+   type_id: 0x3b007e79
+   offset: 320
+ }
++member {
++  id: 0x65f4b6b1
++  name: "tx"
++  type_id: 0x2c3ef046
++  offset: 128
++}
+ member {
+   id: 0x65ff358a
+   name: "tx"
+@@ -245752,6 +245916,12 @@ member {
+   type_id: 0x6d7f5ff6
+   offset: 64
+ }
++member {
++  id: 0x1e314bb8
++  name: "tx_blocking"
++  type_id: 0x2c3ef046
++  offset: 192
++}
+ member {
+   id: 0xa2a430f0
+   name: "tx_buf"
+@@ -246490,6 +246660,12 @@ member {
+   type_id: 0xe62ebf07
+   offset: 256
+ }
++member {
++  id: 0x72e13c17
++  name: "tx_poll"
++  type_id: 0x038cdd3b
++  offset: 256
++}
+ member {
+   id: 0x8953c4eb
+   name: "tx_post_eom"
+@@ -300985,6 +301161,11 @@ struct_union {
+     member_id: 0xc099cc3c
+   }
+ }
++struct_union {
++  id: 0x1c28f47b
++  kind: STRUCT
++  name: "devlink_health_reporter"
++}
+ struct_union {
+   id: 0x089f3885
+   kind: STRUCT
+@@ -301237,6 +301418,24 @@ struct_union {
+     member_id: 0xc15c7f60
+   }
+ }
++struct_union {
++  id: 0x07bd6d6c
++  kind: STRUCT
++  name: "devlink_region"
++}
++struct_union {
++  id: 0xc4da5559
++  kind: STRUCT
++  name: "devlink_region_ops"
++  definition {
++    bytesize: 40
++    member_id: 0x0de57ce8
++    member_id: 0xa4170b6e
++    member_id: 0x0c805fde
++    member_id: 0x4870594b
++    member_id: 0x5911980a
++  }
++}
+ struct_union {
+   id: 0x89deb938
+   kind: STRUCT
+@@ -351301,6 +351500,50 @@ struct_union {
+     member_id: 0xecb5c06c
+   }
+ }
++struct_union {
++  id: 0xdb7ec86e
++  kind: STRUCT
++  name: "wwan_ops"
++  definition {
++    bytesize: 48
++    member_id: 0x989b73ef
++    member_id: 0x84c4d57f
++    member_id: 0x4a428178
++    member_id: 0xb36073d0
++    member_id: 0x415b0c17
++    member_id: 0xb116ed8f
++  }
++}
++struct_union {
++  id: 0x58af764e
++  kind: STRUCT
++  name: "wwan_port"
++}
++struct_union {
++  id: 0x1d4fd870
++  kind: STRUCT
++  name: "wwan_port_caps"
++  definition {
++    bytesize: 16
++    member_id: 0x504edabc
++    member_id: 0x354ace7c
++  }
++}
++struct_union {
++  id: 0xb5b3faa9
++  kind: STRUCT
++  name: "wwan_port_ops"
++  definition {
++    bytesize: 56
++    member_id: 0x463708ef
++    member_id: 0x6987032e
++    member_id: 0x65f4b6b1
++    member_id: 0x1e314bb8
++    member_id: 0x72e13c17
++    member_id: 0x415b0b7b
++    member_id: 0xb116ebda
++  }
++}
+ struct_union {
+   id: 0xff4bed97
+   kind: STRUCT
+@@ -358301,6 +358544,20 @@ enumeration {
+     }
+   }
+ }
++enumeration {
++  id: 0x1afd1fe8
++  name: "devlink_health_reporter_state"
++  definition {
++    underlying_type_id: 0x4585663f
++    enumerator {
++      name: "DEVLINK_HEALTH_REPORTER_STATE_HEALTHY"
++    }
++    enumerator {
++      name: "DEVLINK_HEALTH_REPORTER_STATE_ERROR"
++      value: 1
++    }
++  }
++}
+ enumeration {
+   id: 0x8505851b
+   name: "devlink_param_cmode"
+@@ -373286,6 +373543,52 @@ enumeration {
+     }
+   }
+ }
++enumeration {
++  id: 0x8c83654d
++  name: "wwan_port_type"
++  definition {
++    underlying_type_id: 0x4585663f
++    enumerator {
++      name: "WWAN_PORT_AT"
++    }
++    enumerator {
++      name: "WWAN_PORT_MBIM"
++      value: 1
++    }
++    enumerator {
++      name: "WWAN_PORT_QMI"
++      value: 2
++    }
++    enumerator {
++      name: "WWAN_PORT_QCDM"
++      value: 3
++    }
++    enumerator {
++      name: "WWAN_PORT_FIREHOSE"
++      value: 4
++    }
++    enumerator {
++      name: "WWAN_PORT_XMMRPC"
++      value: 5
++    }
++    enumerator {
++      name: "WWAN_PORT_FASTBOOT"
++      value: 6
++    }
++    enumerator {
++      name: "__WWAN_PORT_MAX"
++      value: 7
++    }
++    enumerator {
++      name: "WWAN_PORT_MAX"
++      value: 6
++    }
++    enumerator {
++      name: "WWAN_PORT_UNKNOWN"
++      value: 7
++    }
++  }
++}
+ enumeration {
+   id: 0x7ebb2c72
+   name: "xdp_mem_type"
+@@ -379360,6 +379663,11 @@ function {
+   return_type_id: 0x48b5725f
+   parameter_id: 0x0b7c4f67
+ }
++function {
++  id: 0x1247892c
++  return_type_id: 0x48b5725f
++  parameter_id: 0x0b7f62fc
++}
+ function {
+   id: 0x124b9548
+   return_type_id: 0x48b5725f
+@@ -380221,6 +380529,15 @@ function {
+   parameter_id: 0x054f691a
+   parameter_id: 0x391f15ea
+ }
++function {
++  id: 0x1353a05d
++  return_type_id: 0x48b5725f
++  parameter_id: 0x0cf3d8fe
++  parameter_id: 0x3e10b518
++  parameter_id: 0x3e10b518
++  parameter_id: 0x33756485
++  parameter_id: 0x33756485
++}
+ function {
+   id: 0x1353c771
+   return_type_id: 0x48b5725f
+@@ -380487,6 +380804,12 @@ function {
+   return_type_id: 0x48b5725f
+   parameter_id: 0x0c33e64c
+ }
++function {
++  id: 0x139524c2
++  return_type_id: 0x48b5725f
++  parameter_id: 0x0d9a04b9
++  parameter_id: 0x1afd1fe8
++}
+ function {
+   id: 0x139c8318
+   return_type_id: 0x48b5725f
+@@ -382870,6 +383193,13 @@ function {
+   parameter_id: 0x18bd6530
+   parameter_id: 0x31b3e3b8
+ }
++function {
++  id: 0x167208de
++  return_type_id: 0x48b5725f
++  parameter_id: 0x18bd6530
++  parameter_id: 0x32a623d7
++  parameter_id: 0x3e6239e1
++}
+ function {
+   id: 0x16727d19
+   return_type_id: 0x48b5725f
+@@ -383914,6 +384244,12 @@ function {
+   parameter_id: 0x1e820193
+   parameter_id: 0x15a30023
+ }
++function {
++  id: 0x17a3953a
++  return_type_id: 0x48b5725f
++  parameter_id: 0x1cbbe434
++  parameter_id: 0x054f691a
++}
+ function {
+   id: 0x17a6fad3
+   return_type_id: 0x48b5725f
+@@ -384015,6 +384351,11 @@ function {
+   parameter_id: 0x1d63cfed
+   parameter_id: 0x1d63cfed
+ }
++function {
++  id: 0x17b6a89e
++  return_type_id: 0x48b5725f
++  parameter_id: 0x1cbbe434
++}
+ function {
+   id: 0x17b79b8a
+   return_type_id: 0x48b5725f
+@@ -390133,6 +390474,16 @@ function {
+   parameter_id: 0x120540d1
+   parameter_id: 0x02b3baf5
+ }
++function {
++  id: 0x1f51df80
++  return_type_id: 0x48b5725f
++  parameter_id: 0x3e10b518
++  parameter_id: 0x1253769c
++  parameter_id: 0x120540d1
++  parameter_id: 0x18bd6530
++  parameter_id: 0x36d130d1
++  parameter_id: 0x27a7c613
++}
+ function {
+   id: 0x1f51eecd
+   return_type_id: 0x48b5725f
+@@ -390983,6 +391334,13 @@ function {
+   parameter_id: 0xc9082b19
+   parameter_id: 0xc9082b19
+ }
++function {
++  id: 0x24739271
++  return_type_id: 0xb94e10c7
++  parameter_id: 0x1cbbe434
++  parameter_id: 0x18ea6ae3
++  parameter_id: 0x28ddd932
++}
+ function {
+   id: 0x2475a0e9
+   return_type_id: 0x27a7c613
+@@ -394001,6 +394359,15 @@ function {
+   return_type_id: 0x18bd6530
+   parameter_id: 0x19680155
+ }
++function {
++  id: 0x50d96087
++  return_type_id: 0x1cbbe434
++  parameter_id: 0x0258f96e
++  parameter_id: 0x8c83654d
++  parameter_id: 0x36cf7d65
++  parameter_id: 0x0dc3cfbb
++  parameter_id: 0x18bd6530
++}
+ function {
+   id: 0x50f3b181
+   return_type_id: 0x18ea6ae3
+@@ -394083,6 +394450,11 @@ function {
+   parameter_id: 0x0d6b4ee3
+   parameter_id: 0x18bd6530
+ }
++function {
++  id: 0x51b848fc
++  return_type_id: 0x18bd6530
++  parameter_id: 0x1cbbe434
++}
+ function {
+   id: 0x51cfb24c
+   return_type_id: 0x18bd6530
+@@ -409917,6 +410289,13 @@ function {
+   parameter_id: 0xc9082b19
+   parameter_id: 0x17b22970
+ }
++function {
++  id: 0x9841929f
++  return_type_id: 0x6720d32f
++  parameter_id: 0x11e6864c
++  parameter_id: 0x6720d32f
++  parameter_id: 0x914dbfdc
++}
+ function {
+   id: 0x9841f322
+   return_type_id: 0x6720d32f
+@@ -413946,6 +414325,11 @@ function {
+   parameter_id: 0x198099dc
+   parameter_id: 0x6d7f5ff6
+ }
++function {
++  id: 0x9aae1a22
++  return_type_id: 0x6720d32f
++  parameter_id: 0x1cbbe434
++}
+ function {
+   id: 0x9aaf4bc3
+   return_type_id: 0x6720d32f
+@@ -414099,6 +414483,12 @@ function {
+   parameter_id: 0x18bd6530
+   parameter_id: 0x4585663f
+ }
++function {
++  id: 0x9abb2786
++  return_type_id: 0x6720d32f
++  parameter_id: 0x1cbbe434
++  parameter_id: 0x054f691a
++}
+ function {
+   id: 0x9abc5077
+   return_type_id: 0x6720d32f
+@@ -415991,6 +416381,13 @@ function {
+   parameter_id: 0x1a5d0549
+   parameter_id: 0x052fac00
+ }
++function {
++  id: 0x9b538b4c
++  return_type_id: 0x6720d32f
++  parameter_id: 0x18bd6530
++  parameter_id: 0x3e10b518
++  parameter_id: 0x11cfee5a
++}
+ function {
+   id: 0x9b54a4cc
+   return_type_id: 0x6720d32f
+@@ -416099,6 +416496,14 @@ function {
+   parameter_id: 0x13580d6c
+   parameter_id: 0x13580d6c
+ }
++function {
++  id: 0x9b577f95
++  return_type_id: 0x6720d32f
++  parameter_id: 0x18bd6530
++  parameter_id: 0x32a623d7
++  parameter_id: 0xc9082b19
++  parameter_id: 0x07dcdbe1
++}
+ function {
+   id: 0x9b57e4f6
+   return_type_id: 0x6720d32f
+@@ -424478,6 +424883,14 @@ function {
+   parameter_id: 0x0258f96e
+   parameter_id: 0x310ec01d
+ }
++function {
++  id: 0x9dd358b4
++  return_type_id: 0x6720d32f
++  parameter_id: 0x0258f96e
++  parameter_id: 0x3023ae49
++  parameter_id: 0x18bd6530
++  parameter_id: 0xc9082b19
++}
+ function {
+   id: 0x9dd45602
+   return_type_id: 0x6720d32f
+@@ -425691,6 +426104,16 @@ function {
+   parameter_id: 0x0483e6f8
+   parameter_id: 0x1d44326e
+ }
++function {
++  id: 0x9e78ff75
++  return_type_id: 0x6720d32f
++  parameter_id: 0x0cf3d8fe
++  parameter_id: 0x31d9e79a
++  parameter_id: 0x07dcdbe1
++  parameter_id: 0x92233392
++  parameter_id: 0xc9082b19
++  parameter_id: 0x00c72527
++}
+ function {
+   id: 0x9e792fe6
+   return_type_id: 0x6720d32f
+@@ -425714,6 +426137,14 @@ function {
+   return_type_id: 0x6720d32f
+   parameter_id: 0x0fe9f911
+ }
++function {
++  id: 0x9e7aaf3f
++  return_type_id: 0x6720d32f
++  parameter_id: 0x0cf3d8fe
++  parameter_id: 0x31d9e79a
++  parameter_id: 0x07dcdbe1
++  parameter_id: 0x0aa1f0ee
++}
+ function {
+   id: 0x9e7bd8f3
+   return_type_id: 0x6720d32f
+@@ -433129,6 +433560,14 @@ function {
+   parameter_id: 0x3399c453
+   parameter_id: 0x6720d32f
+ }
++function {
++  id: 0xf3ef3eef
++  return_type_id: 0x0b7f62fc
++  parameter_id: 0x0cf3d8fe
++  parameter_id: 0x31d9e79a
++  parameter_id: 0xc9082b19
++  parameter_id: 0x92233392
++}
+ function {
+   id: 0xf3f7a0bb
+   return_type_id: 0x32a623d7
+@@ -445166,6 +445605,15 @@ elf_symbol {
+   type_id: 0x9be2da56
+   full_name: "__traceiter_android_vh_tune_swappiness"
+ }
++elf_symbol {
++  id: 0x8af2b51e
++  name: "__traceiter_android_vh_typec_tcpm_log"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x5cc3a608
++  type_id: 0x9b538b4c
++  full_name: "__traceiter_android_vh_typec_tcpm_log"
++}
+ elf_symbol {
+   id: 0xaa213206
+   name: "__traceiter_android_vh_uclamp_validate"
+@@ -452978,6 +453426,15 @@ elf_symbol {
+   type_id: 0x18ccbd2c
+   full_name: "__tracepoint_android_vh_tune_swappiness"
+ }
++elf_symbol {
++  id: 0x6436c788
++  name: "__tracepoint_android_vh_typec_tcpm_log"
++  is_defined: true
++  symbol_type: OBJECT
++  crc: 0x7c5aa8a7
++  type_id: 0x18ccbd2c
++  full_name: "__tracepoint_android_vh_typec_tcpm_log"
++}
+ elf_symbol {
+   id: 0xf09ef4d0
+   name: "__tracepoint_android_vh_uclamp_validate"
+@@ -463114,6 +463571,15 @@ elf_symbol {
+   type_id: 0x83b87db5
+   full_name: "debugfs_create_file"
+ }
++elf_symbol {
++  id: 0xcb004430
++  name: "debugfs_create_file_size"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xda79b916
++  type_id: 0x1f51df80
++  full_name: "debugfs_create_file_size"
++}
+ elf_symbol {
+   id: 0xdd8fe9d8
+   name: "debugfs_create_file_unsafe"
+@@ -465455,6 +465921,15 @@ elf_symbol {
+   type_id: 0x5bbe2188
+   full_name: "devlink_alloc_ns"
+ }
++elf_symbol {
++  id: 0xb54be30e
++  name: "devlink_flash_update_status_notify"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x8b1e254e
++  type_id: 0x1353a05d
++  full_name: "devlink_flash_update_status_notify"
++}
+ elf_symbol {
+   id: 0x266ac51c
+   name: "devlink_free"
+@@ -465464,6 +465939,15 @@ elf_symbol {
+   type_id: 0x13a4a7ac
+   full_name: "devlink_free"
+ }
++elf_symbol {
++  id: 0x70ca4fad
++  name: "devlink_health_reporter_state_update"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x8ba8ff57
++  type_id: 0x139524c2
++  full_name: "devlink_health_reporter_state_update"
++}
+ elf_symbol {
+   id: 0xfde6c99d
+   name: "devlink_params_register"
+@@ -465491,6 +465975,24 @@ elf_symbol {
+   type_id: 0x55aa47ce
+   full_name: "devlink_priv"
+ }
++elf_symbol {
++  id: 0xb4634233
++  name: "devlink_region_create"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xa566ea95
++  type_id: 0xf3ef3eef
++  full_name: "devlink_region_create"
++}
++elf_symbol {
++  id: 0x0a058c0b
++  name: "devlink_region_destroy"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x095c02a7
++  type_id: 0x1247892c
++  full_name: "devlink_region_destroy"
++}
+ elf_symbol {
+   id: 0x5603c10b
+   name: "devlink_register"
+@@ -494937,6 +495439,15 @@ elf_symbol {
+   type_id: 0x832143d7
+   full_name: "pci_dev_get"
+ }
++elf_symbol {
++  id: 0xcfb414d4
++  name: "pci_dev_lock"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xd8e54526
++  type_id: 0x14e1f000
++  full_name: "pci_dev_lock"
++}
+ elf_symbol {
+   id: 0x9252d1d7
+   name: "pci_dev_present"
+@@ -494964,6 +495475,15 @@ elf_symbol {
+   type_id: 0xfaddfa97
+   full_name: "pci_dev_run_wake"
+ }
++elf_symbol {
++  id: 0x86ee1bbd
++  name: "pci_dev_unlock"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xd8e54526
++  type_id: 0x14e1f000
++  full_name: "pci_dev_unlock"
++}
+ elf_symbol {
+   id: 0xd115b1d3
+   name: "pci_device_group"
+@@ -496017,6 +496537,15 @@ elf_symbol {
+   type_id: 0x985783fa
+   full_name: "pcie_capability_write_dword"
+ }
++elf_symbol {
++  id: 0x1070f731
++  name: "pcie_capability_write_word"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x3acb7118
++  type_id: 0x9841929f
++  full_name: "pcie_capability_write_word"
++}
+ elf_symbol {
+   id: 0x9c45e831
+   name: "pcie_flr"
+@@ -524123,6 +524652,60 @@ elf_symbol {
+   type_id: 0x14e943e8
+   full_name: "ww_mutex_unlock"
+ }
++elf_symbol {
++  id: 0x547c4277
++  name: "wwan_create_port"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xd3cad2c9
++  type_id: 0x50d96087
++  full_name: "wwan_create_port"
++}
++elf_symbol {
++  id: 0x4c0df935
++  name: "wwan_port_get_drvdata"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xa095b2a0
++  type_id: 0x51b848fc
++  full_name: "wwan_port_get_drvdata"
++}
++elf_symbol {
++  id: 0xab69ce9d
++  name: "wwan_port_rx"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x80cab4f2
++  type_id: 0x17a3953a
++  full_name: "wwan_port_rx"
++}
++elf_symbol {
++  id: 0x2a89bc21
++  name: "wwan_register_ops"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xf584dafb
++  type_id: 0x9dd358b4
++  full_name: "wwan_register_ops"
++}
++elf_symbol {
++  id: 0x4c8de33f
++  name: "wwan_remove_port"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0x4a5e39ff
++  type_id: 0x17b6a89e
++  full_name: "wwan_remove_port"
++}
++elf_symbol {
++  id: 0xb39bbb16
++  name: "wwan_unregister_ops"
++  is_defined: true
++  symbol_type: FUNCTION
++  crc: 0xb5ecf541
++  type_id: 0x100e6fc8
++  full_name: "wwan_unregister_ops"
++}
+ elf_symbol {
+   id: 0x272e7885
+   name: "x509_load_certificate_list"
+@@ -526484,6 +527067,7 @@ interface {
+   symbol_id: 0x351ae4d8
+   symbol_id: 0x39155e73
+   symbol_id: 0x3947ecb4
++  symbol_id: 0x8af2b51e
+   symbol_id: 0xaa213206
+   symbol_id: 0xd184256d
+   symbol_id: 0x14ef37c5
+@@ -527352,6 +527936,7 @@ interface {
+   symbol_id: 0xfa2b4906
+   symbol_id: 0x49b955bd
+   symbol_id: 0xfe6b6962
++  symbol_id: 0x6436c788
+   symbol_id: 0xf09ef4d0
+   symbol_id: 0xb66d855b
+   symbol_id: 0x84f2b553
+@@ -528479,6 +529064,7 @@ interface {
+   symbol_id: 0xa40a487c
+   symbol_id: 0x58e45beb
+   symbol_id: 0x69f4e209
++  symbol_id: 0xcb004430
+   symbol_id: 0xdd8fe9d8
+   symbol_id: 0x256655e9
+   symbol_id: 0x54a91370
+@@ -528739,10 +529325,14 @@ interface {
+   symbol_id: 0x4f9dd1db
+   symbol_id: 0x4f430414
+   symbol_id: 0x884a3a76
++  symbol_id: 0xb54be30e
+   symbol_id: 0x266ac51c
++  symbol_id: 0x70ca4fad
+   symbol_id: 0xfde6c99d
+   symbol_id: 0xa6bc8e1d
+   symbol_id: 0xa164371a
++  symbol_id: 0xb4634233
++  symbol_id: 0x0a058c0b
+   symbol_id: 0x5603c10b
+   symbol_id: 0x7520d018
+   symbol_id: 0xa2a47944
+@@ -532010,9 +532600,11 @@ interface {
+   symbol_id: 0xe99b6d83
+   symbol_id: 0x97a2a455
+   symbol_id: 0x04525af5
++  symbol_id: 0xcfb414d4
+   symbol_id: 0x9252d1d7
+   symbol_id: 0x4f0ba1d7
+   symbol_id: 0x41cb19ff
++  symbol_id: 0x86ee1bbd
+   symbol_id: 0xd115b1d3
+   symbol_id: 0x3937523a
+   symbol_id: 0x80238a68
+@@ -532130,6 +532722,7 @@ interface {
+   symbol_id: 0x34e52832
+   symbol_id: 0xf1513a2c
+   symbol_id: 0x4a25ef35
++  symbol_id: 0x1070f731
+   symbol_id: 0x9c45e831
+   symbol_id: 0xb7c9d0b8
+   symbol_id: 0x8897c24a
+@@ -535252,6 +535845,12 @@ interface {
+   symbol_id: 0x6f9f10f2
+   symbol_id: 0x99941051
+   symbol_id: 0x4ff86851
++  symbol_id: 0x547c4277
++  symbol_id: 0x4c0df935
++  symbol_id: 0xab69ce9d
++  symbol_id: 0x2a89bc21
++  symbol_id: 0x4c8de33f
++  symbol_id: 0xb39bbb16
+   symbol_id: 0x272e7885
+   symbol_id: 0xeb9a524c
+   symbol_id: 0x8b920e03
+diff --git a/gki/aarch64/symbols/pixel b/gki/aarch64/symbols/pixel
+index 745801d15178..9c1e2db9ebc8 100644
+--- a/gki/aarch64/symbols/pixel
++++ b/gki/aarch64/symbols/pixel
+@@ -62,6 +62,7 @@
+   bio_end_io_acct_remapped
+   bio_init
+   bio_start_io_acct
++  bitmap_alloc
+   __bitmap_andnot
+   __bitmap_clear
+   __bitmap_equal
+@@ -73,6 +74,7 @@
+   bitmap_parselist
+   bitmap_parse_user
+   bitmap_print_to_pagebuf
++  __bitmap_replace
+   __bitmap_set
+   bitmap_to_arr32
+   __bitmap_weight
+@@ -312,6 +314,7 @@
+   debugfs_create_devm_seqfile
+   debugfs_create_dir
+   debugfs_create_file
++  debugfs_create_file_size
+   debugfs_create_file_unsafe
+   debugfs_create_regset32
+   debugfs_create_size_t
+@@ -400,6 +403,7 @@
+   device_property_read_u8_array
+   device_register
+   device_remove_file
++  device_remove_file_self
+   device_remove_groups
+   device_rename
+   device_set_node
+@@ -412,6 +416,15 @@
+   _dev_info
+   dev_iommu_priv_set
+   dev_kfree_skb_any_reason
++  devlink_alloc_ns
++  devlink_flash_update_status_notify
++  devlink_free
++  devlink_health_reporter_state_update
++  devlink_priv
++  devlink_region_create
++  devlink_region_destroy
++  devlink_register
++  devlink_unregister
+   __devm_add_action
+   devm_backlight_device_register
+   devm_backlight_device_unregister
+@@ -502,6 +515,7 @@
+   devm_register_sys_off_handler
+   devm_regmap_add_irq_chip
+   devm_regmap_field_alloc
++  devm_regmap_field_bulk_alloc
+   __devm_regmap_init
+   __devm_regmap_init_i2c
+   __devm_regmap_init_mmio_clk
+@@ -509,6 +523,7 @@
+   __devm_regmap_init_spmi_ext
+   devm_regulator_bulk_get
+   devm_regulator_bulk_get_const
++  devm_regulator_bulk_get_enable
+   devm_regulator_get
+   devm_regulator_get_exclusive
+   devm_regulator_get_optional
+@@ -530,6 +545,7 @@
+   devm_usb_get_phy_by_phandle
+   devm_watchdog_register_device
+   _dev_notice
++  dev_open
+   dev_pm_clear_wake_irq
+   dev_pm_domain_attach
+   dev_pm_domain_attach_by_id
+@@ -537,6 +553,7 @@
+   dev_pm_domain_detach
+   dev_pm_genpd_add_notifier
+   dev_pm_genpd_remove_notifier
++  dev_pm_genpd_synced_poweroff
+   dev_pm_opp_add_dynamic
+   dev_pm_opp_clear_config
+   dev_pm_opp_disable
+@@ -571,9 +588,12 @@
+   devres_add
+   __devres_alloc_node
+   devres_free
++  dev_set_mtu
+   dev_set_name
++  dev_set_threaded
+   dev_vprintk_emit
+   _dev_warn
++  disable_delayed_work_sync
+   disable_irq
+   disable_irq_nosync
+   disable_percpu_irq
+@@ -644,6 +664,7 @@
+   dma_mmap_attrs
+   dmam_pool_create
+   dma_pool_alloc
++  dma_pool_create
+   dma_pool_destroy
+   dma_pool_free
+   dma_release_channel
+@@ -681,6 +702,7 @@
+   driver_find_device
+   driver_for_each_device
+   driver_register
++  driver_set_override
+   driver_unregister
+   drm_add_modes_noedid
+   drm_atomic_add_affected_connectors
+@@ -1025,6 +1047,7 @@
+   finish_wait
+   firmware_kobj
+   firmware_request_nowarn
++  fixed_size_llseek
+   flush_dcache_page
+   flush_delayed_work
+   flush_work
+@@ -1358,6 +1381,7 @@
+   ip_send_check
+   iput
+   __ipv6_addr_type
++  ipv6_skip_exthdr
+   __irq_alloc_descs
+   __irq_apply_affinity_hint
+   irq_check_status_bit
+@@ -1425,7 +1449,9 @@
+   __kfifo_out
+   __kfifo_out_linear
+   __kfifo_out_peek
++  __kfifo_to_user
+   kfree
++  kfree_const
+   kfree_sensitive
+   kfree_skb_list_reason
+   kill_fasync
+@@ -1679,6 +1705,7 @@
+   nbcon_device_release
+   nbcon_device_try_acquire
+   __ndelay
++  __netdev_alloc_frag_align
+   __netdev_alloc_skb
+   netdev_core_stats_inc
+   netdev_err
+@@ -1690,6 +1717,7 @@
+   netdev_update_features
+   netif_carrier_off
+   netif_carrier_on
++  netif_device_attach
+   netif_napi_add_weight
+   __netif_napi_del
+   netif_receive_skb
+@@ -1814,6 +1842,7 @@
+   __of_parse_phandle_with_args
+   of_phandle_iterator_init
+   of_phandle_iterator_next
++  of_phy_simple_xlate
+   of_platform_depopulate
+   of_platform_populate
+   of_property_count_elems_of_size
+@@ -1835,6 +1864,7 @@
+   of_reserved_mem_device_release
+   of_reserved_mem_lookup
+   of_root
++  of_translate_dma_region
+   of_usb_host_tpl_support
+   __oom_reap_task_mm
+   oops_in_progress
+@@ -1843,6 +1873,11 @@
+   page_frag_free
+   page_pinner_inited
+   __page_pinner_put_page
++  page_pool_alloc_frag
++  page_pool_alloc_pages
++  page_pool_create
++  page_pool_destroy
++  page_pool_put_unrefed_netmem
+   panic
+   panic_notifier_list
+   param_array_ops
+@@ -1858,10 +1893,12 @@
+   param_ops_uint
+   param_ops_ullong
+   param_ops_ulong
++  param_ops_ushort
+   param_set_copystring
+   param_set_int
+   param_set_uint_minmax
+   path_put
++  pci_aer_clear_nonfatal_status
+   pci_alloc_irq_vectors
+   pci_alloc_irq_vectors_affinity
+   pci_assign_resource
+@@ -1869,12 +1906,18 @@
+   pci_bus_read_config_dword
+   pci_bus_type
+   pci_clear_master
++  pci_dev_get
+   pci_device_group
++  pci_device_is_present
++  pci_dev_lock
+   pci_dev_put
++  pci_dev_unlock
+   pci_disable_ats
+   pci_disable_device
+   pci_disable_msi
++  pcie_capability_clear_and_set_word_unlocked
+   pcie_capability_read_word
++  pcie_capability_write_word
+   pcie_get_speed_cap
+   pcie_get_width_cap
+   pcie_link_speed
+@@ -1899,6 +1942,10 @@
+   pci_load_and_free_saved_state
+   pci_load_saved_state
+   pci_lock_rescan_remove
++  pcim_enable_device
++  pcim_iomap_regions
++  pcim_iomap_table
++  pcim_iounmap_regions
+   pci_msi_create_irq_domain
+   pci_msi_mask_irq
+   pci_msi_unmask_irq
+@@ -1921,6 +1968,7 @@
+   pci_unlock_rescan_remove
+   pci_unregister_driver
+   pci_wake_from_d3
++  pci_walk_bus
+   pci_write_config_dword
+   pci_write_config_word
+   pcpu_alloc_noprof
+@@ -1928,6 +1976,7 @@
+   percpu_counter_add_batch
+   percpu_counter_batch
+   __per_cpu_offset
++  perf_allow_kernel
+   perf_aux_output_begin
+   perf_aux_output_end
+   perf_aux_output_flag
+@@ -2032,6 +2081,7 @@
+   __pm_runtime_set_status
+   __pm_runtime_suspend
+   __pm_runtime_use_autosuspend
++  pm_schedule_suspend
+   __pm_stay_awake
+   pm_stay_awake
+   pm_system_wakeup
+@@ -2099,6 +2149,8 @@
+   pwrseq_power_on
+   queue_delayed_work_on
+   queue_work_on
++  radix_tree_delete
++  radix_tree_gang_lookup
+   radix_tree_insert
+   radix_tree_iter_delete
+   radix_tree_lookup
+@@ -2185,11 +2237,13 @@
+   regmap_bulk_read
+   regmap_bulk_write
+   regmap_check_range_table
++  regmap_exit
+   regmap_field_read
+   regmap_field_update_bits_base
+   regmap_get_device
+   regmap_get_reg_stride
+   __regmap_init
++  __regmap_init_i2c
+   regmap_irq_get_virq
+   regmap_multi_reg_write
+   regmap_multi_reg_write_bypassed
+@@ -2213,7 +2267,9 @@
+   regulator_is_enabled
+   regulator_is_enabled_regmap
+   regulator_list_voltage_linear
++  regulator_list_voltage_linear_range
+   regulator_map_voltage_linear
++  regulator_map_voltage_linear_range
+   regulator_notifier_call_chain
+   regulator_put
+   regulator_set_active_discharge_regmap
+@@ -2403,10 +2459,12 @@
+   skb_set_owner_w
+   skb_store_bits
+   skb_trim
++  skb_unlink
+   sk_free
+   skip_spaces
+   sk_skb_reason_drop
+   smp_call_function
++  smp_call_function_any
+   smp_call_function_single
+   smp_call_on_cpu
+   snd_compr_stop_error
+@@ -2671,6 +2729,7 @@
+   time64_to_tm
+   timer_delete
+   timer_delete_sync
++  timer_shutdown_sync
+   topology_update_hw_pressure
+   topup_hyp_memcache
+   _totalram_pages
+@@ -2791,6 +2850,7 @@
+   __traceiter_android_vh_sysrq_crash
+   __traceiter_android_vh_timerfd_create
+   __traceiter_android_vh_tune_swappiness
++  __traceiter_android_vh_typec_tcpm_log
+   __traceiter_android_vh_uclamp_validate
+   __traceiter_android_vh_ufs_check_int_errors
+   __traceiter_android_vh_ufs_compl_command
+@@ -2942,6 +3002,7 @@
+   __tracepoint_android_vh_sysrq_crash
+   __tracepoint_android_vh_timerfd_create
+   __tracepoint_android_vh_tune_swappiness
++  __tracepoint_android_vh_typec_tcpm_log
+   __tracepoint_android_vh_uclamp_validate
+   __tracepoint_android_vh_ufs_check_int_errors
+   __tracepoint_android_vh_ufs_compl_command
+@@ -2997,6 +3058,7 @@
+   trace_set_clr_event
+   __trace_trigger_soft_disabled
+   try_module_get
++  try_wait_for_completion
+   tty_flip_buffer_push
+   tty_get_char_size
+   __tty_insert_flip_string_flags
+@@ -3273,6 +3335,12 @@
+   wireless_send_event
+   woken_wake_function
+   work_busy
++  wwan_create_port
++  wwan_port_get_drvdata
++  wwan_port_rx
++  wwan_register_ops
++  wwan_remove_port
++  wwan_unregister_ops
+   ww_mutex_lock
+   ww_mutex_unlock
+   x509_load_certificate_list
+-- 
+2.50.1
+

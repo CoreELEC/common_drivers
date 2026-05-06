@@ -1,0 +1,53 @@
+From 9a47846e5e8ef02aa7e9364c1032f6c19dccf403 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Tue, 3 Mar 2026 13:54:10 +0000
+Subject: [PATCH 58/63] ANDROID: rust_binder: future proof
+ rust_binder_process_task()
+
+A currently in-progress change to reduce memory usage of dead processes
+means that process->task may become NULL on deferred_release(). Thus,
+document for vendor hooks that they should be careful when reading this
+field.
+
+Bug: 486143390
+Change-Id: I7795548d0d80f4192ee18c625d15ee7467e28473
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit bce68d9b1399e93aadeedc1507dd2c1d0379854e)
+Bug: 498496487
+---
+ drivers/android/binder/rust_binder.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/android/binder/rust_binder.h b/drivers/android/binder/rust_binder.h
+index dfcaea1e5624..e0a2c4503a64 100644
+--- a/drivers/android/binder/rust_binder.h
++++ b/drivers/android/binder/rust_binder.h
+@@ -5,6 +5,7 @@
+ #include <uapi/linux/android/binder.h>
+ #include <uapi/linux/android/binderfs.h>
+ #include <linux/android_kabi.h>
++#include <linux/compiler.h>
+ 
+ /*
+  * These symbols are exposed by `rust_binderfs.c` and exist here so that Rust
+@@ -133,9 +134,16 @@ static inline s32 rust_binder_thread_id(rust_binder_thread t)
+ 	return * (s32 *) (t + RUST_BINDER_LAYOUT.th.id);
+ }
+ 
++/*
++ * Binder process deferred_release may set this field to NULL, so unless you
++ * are called from ioctl context on the process itself, this may be null and
++ * should be used under rcu_read_lock().
++ */
+ static inline struct task_struct *rust_binder_process_task(rust_binder_process t)
+ {
+-	return * (struct task_struct **) (t + RUST_BINDER_LAYOUT.p.task);
++	struct task_struct **task = (struct task_struct **) (t + RUST_BINDER_LAYOUT.p.task);
++
++	return READ_ONCE(*task);
+ }
+ 
+ static inline size_t rust_binder_node_debug_id(rust_binder_node t)
+-- 
+2.50.1
+

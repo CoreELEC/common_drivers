@@ -1,0 +1,183 @@
+From 60f87cd4e711efcead9b9e40887d4b17fde4aec5 Mon Sep 17 00:00:00 2001
+From: Alice Ryhl <aliceryhl@google.com>
+Date: Fri, 20 Mar 2026 13:56:39 +0000
+Subject: [PATCH 46/63] ANDROID: build: rust: Partially revert changes to
+ inline C helpers in Rust"
+
+This reverts commit 315f8edb95b151e3e2de05d5ca2102fa44e2ca7b, except for
+the changes to rust/helpers/. A newer version of the same patchset will
+be applied immediately on top of this revert.
+
+The changes to rust/helpers/ are not reverted because these changes are
+not longer part of this series upstream. Adding __rust_helper
+annotations to helpers landed across ~40 different commits through
+various different maintainer trees.
+
+Bug: 454054050
+Change-Id: I73decf9f5ef68fbc50e556eee02e0396b2d81d32
+Signed-off-by: Alice Ryhl <aliceryhl@google.com>
+(cherry picked from commit 3c041be6114dc37ee3e3ce9333a92e1ab655ee34)
+Bug: 498166901
+---
+ Makefile               |  4 +---
+ lib/Kconfig.debug      | 15 ---------------
+ rust/Makefile          | 26 ++++----------------------
+ rust/exports.c         |  5 +----
+ scripts/Makefile.build |  5 +----
+ 5 files changed, 7 insertions(+), 48 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 696268533a0d..b096f3cc52b7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -502,8 +502,6 @@ OBJCOPY		= $(LLVM_PREFIX)llvm-objcopy$(LLVM_SUFFIX)
+ OBJDUMP		= $(LLVM_PREFIX)llvm-objdump$(LLVM_SUFFIX)
+ READELF		= $(LLVM_PREFIX)llvm-readelf$(LLVM_SUFFIX)
+ STRIP		= $(LLVM_PREFIX)llvm-strip$(LLVM_SUFFIX)
+-LLVM_LINK	= $(LLVM_PREFIX)llvm-link$(LLVM_SUFFIX)
+-LLVM_AS		= $(LLVM_PREFIX)llvm-as$(LLVM_SUFFIX)
+ else
+ CC		= $(CROSS_COMPILE)gcc
+ LD		= $(CROSS_COMPILE)ld
+@@ -611,7 +609,7 @@ export RUSTC_BOOTSTRAP := 1
+ export CLIPPY_CONF_DIR := $(srctree)
+ 
+ export ARCH SRCARCH CONFIG_SHELL BASH HOSTCC KBUILD_HOSTCFLAGS CROSS_COMPILE LD CC HOSTPKG_CONFIG
+-export RUSTC RUSTDOC RUSTFMT RUSTC_OR_CLIPPY_QUIET RUSTC_OR_CLIPPY BINDGEN LLVM_LINK LLVM_AS
++export RUSTC RUSTDOC RUSTFMT RUSTC_OR_CLIPPY_QUIET RUSTC_OR_CLIPPY BINDGEN
+ export HOSTRUSTC KBUILD_HOSTRUSTFLAGS
+ export CPP AR NM STRIP OBJCOPY OBJDUMP READELF PAHOLE RESOLVE_BTFIDS LEX YACC AWK INSTALLKERNEL
+ export PERL PYTHON3 CHECK CHECKFLAGS MAKE UTS_MACHINE HOSTCXX
+diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
+index ec375f621e8d..35a3bfe5f005 100644
+--- a/lib/Kconfig.debug
++++ b/lib/Kconfig.debug
+@@ -3111,21 +3111,6 @@ config RUST_KERNEL_DOCTESTS
+ 
+ 	  If unsure, say N.
+ 
+-config RUST_INLINE_HELPERS
+-    bool "Inline C helpers into Rust crates (EXPERIMENTAL)"
+-    depends on RUST && RUSTC_CLANG_LLVM_COMPATIBLE
+-    depends on EXPERT
+-    help
+-        Links C helpers into Rust crates through LLVM IR.
+-
+-        If this option is enabled, instead of generating object files directly,
+-        rustc is asked to produce LLVM IR, which is then linked together with
+-        the LLVM IR of C helpers, before object file is generated.
+-
+-        This requires a matching LLVM version for Clang and rustc.
+-
+-        If unsure, say N.
+-
+ endmenu # "Rust"
+ 
+ endmenu # Kernel hacking
+diff --git a/rust/Makefile b/rust/Makefile
+index 108248f299e5..32bafaa4ebb2 100644
+--- a/rust/Makefile
++++ b/rust/Makefile
+@@ -6,14 +6,9 @@ rustdoc_output := $(objtree)/Documentation/output/rust/rustdoc
+ obj-$(CONFIG_RUST) += core.o compiler_builtins.o ffi.o
+ always-$(CONFIG_RUST) += exports_core_generated.h
+ 
+-ifdef CONFIG_RUST_INLINE_HELPERS
+-always-$(CONFIG_RUST) += helpers/helpers.bc
+-else
+-obj-$(CONFIG_RUST) += helpers/helpers.o
+-always-$(CONFIG_RUST) += exports_helpers_generated.h
+-endif
+ # Missing prototypes are expected in the helpers since these are exported
+ # for Rust only, thus there is no header nor prototypes.
++obj-$(CONFIG_RUST) += helpers/helpers.o
+ CFLAGS_REMOVE_helpers/helpers.o = -Wmissing-prototypes -Wmissing-declarations
+ 
+ always-$(CONFIG_RUST) += libmacros.so
+@@ -21,7 +16,8 @@ no-clean-files += libmacros.so
+ 
+ always-$(CONFIG_RUST) += bindings/bindings_generated.rs bindings/bindings_helpers_generated.rs
+ obj-$(CONFIG_RUST) += bindings.o kernel.o
+-always-$(CONFIG_RUST) += exports_bindings_generated.h exports_kernel_generated.h
++always-$(CONFIG_RUST) += exports_helpers_generated.h \
++    exports_bindings_generated.h exports_kernel_generated.h
+ 
+ always-$(CONFIG_RUST) += uapi/uapi_generated.rs
+ obj-$(CONFIG_RUST) += uapi.o
+@@ -355,13 +351,6 @@ $(obj)/bindings/bindings_helpers_generated.rs: private bindgen_target_extra = ;
+ $(obj)/bindings/bindings_helpers_generated.rs: $(src)/helpers/helpers.c FORCE
+ 	$(call if_changed_dep,bindgen)
+ 
+-quiet_cmd_rust_helper = HELPER  $@
+-      cmd_rust_helper = \
+-	$(CC) $(filter-out $(CFLAGS_REMOVE_helpers/helpers.o), $(c_flags)) -c -g0 $< -emit-llvm -o $@
+-
+-$(obj)/helpers/helpers.bc: $(obj)/helpers/helpers.c FORCE
+-	+$(call if_changed_dep,rust_helper)
+-
+ rust_exports = $(NM) -p --defined-only $(1) | awk '$$2~/(T|R|D|B)/ && $$3!~/__cfi/ && $$3!~/__odr_asan/ { printf $(2),$$3 }'
+ 
+ quiet_cmd_exports = EXPORTS $@
+@@ -407,13 +396,11 @@ quiet_cmd_rustc_library = $(if $(skip_clippy),RUSTC,$(RUSTC_OR_CLIPPY_QUIET)) L
+ 	OBJTREE=$(abspath $(objtree)) \
+ 	$(if $(skip_clippy),$(RUSTC),$(RUSTC_OR_CLIPPY)) \
+ 		$(filter-out $(skip_flags),$(rust_flags)) $(rustc_target_flags) \
+-		--emit=dep-info=$(depfile) --emit=$(if $(link_helper),llvm-bc=$(patsubst %.o,%.bc,$@),obj=$@) \
++		--emit=dep-info=$(depfile) --emit=obj=$@ \
+ 		--emit=metadata=$(dir $@)$(patsubst %.o,lib%.rmeta,$(notdir $@)) \
+ 		--crate-type rlib -L$(objtree)/$(obj) \
+ 		--crate-name $(patsubst %.o,%,$(notdir $@)) $< \
+ 		--sysroot=/dev/null \
+-	$(if $(link_helper),;$(LLVM_LINK) --internalize --suppress-warnings $(patsubst %.o,%.bc,$@) $(obj)/helpers/helpers.bc -o $(patsubst %.o,%.m.bc,$@); \
+-		$(CC) $(CLANG_FLAGS) $(KBUILD_CFLAGS) -c $(patsubst %.o,%.m.bc,$@) -o $@) \
+ 	$(if $(rustc_objcopy),;$(OBJCOPY) $(rustc_objcopy) $@) \
+ 	$(cmd_objtool)
+ 
+@@ -520,9 +507,4 @@ ifdef CONFIG_JUMP_LABEL
+ $(obj)/kernel.o: $(obj)/kernel/generated_arch_static_branch_asm.rs
+ endif
+ 
+-ifdef CONFIG_RUST_INLINE_HELPERS
+-$(obj)/kernel.o: private link_helper = 1
+-$(obj)/kernel.o: $(obj)/helpers/helpers.bc
+-endif
+-
+ endif # CONFIG_RUST
+diff --git a/rust/exports.c b/rust/exports.c
+index e09af604947f..82a037381798 100644
+--- a/rust/exports.c
++++ b/rust/exports.c
+@@ -16,13 +16,10 @@
+ #define EXPORT_SYMBOL_RUST_GPL(sym) extern int sym; EXPORT_SYMBOL_GPL(sym)
+ 
+ #include "exports_core_generated.h"
++#include "exports_helpers_generated.h"
+ #include "exports_bindings_generated.h"
+ #include "exports_kernel_generated.h"
+ 
+-#ifndef CONFIG_RUST_INLINE_HELPERS
+-#include "exports_helpers_generated.h"
+-#endif
+-
+ // For modules using `rust/build_error.rs`.
+ #ifdef CONFIG_RUST_BUILD_ASSERT_ALLOW
+ EXPORT_SYMBOL_RUST_GPL(rust_build_error);
+diff --git a/scripts/Makefile.build b/scripts/Makefile.build
+index 4bed52f3049f..6b2a7cd5890f 100644
+--- a/scripts/Makefile.build
++++ b/scripts/Makefile.build
+@@ -285,10 +285,7 @@ rust_common_cmd = \
+ # would not match each other.
+ 
+ quiet_cmd_rustc_o_rs = $(RUSTC_OR_CLIPPY_QUIET) $(quiet_modtag) $@
+-      cmd_rustc_o_rs = $(rust_common_cmd) --emit=$(if $(CONFIG_RUST_INLINE_HELPERS),llvm-bc=$(patsubst %.o,%.bc,$@),obj=$@) $< \
+-	$(if $(CONFIG_RUST_INLINE_HELPERS),;$(LLVM_LINK) --internalize --suppress-warnings $(patsubst %.o,%.bc,$@) $(objtree)/rust/helpers/helpers.bc -o $(patsubst %.o,%.m.bc,$@); \
+-		$(CC) $(CLANG_FLAGS) $(KBUILD_CFLAGS) -c $(patsubst %.o,%.m.bc,$@) -o $@) \
+-	$(cmd_objtool)
++      cmd_rustc_o_rs = $(rust_common_cmd) --emit=obj=$@ $< $(cmd_objtool)
+ 
+ define rule_rustc_o_rs
+ 	$(call cmd_and_fixdep,rustc_o_rs)
+-- 
+2.50.1
+
