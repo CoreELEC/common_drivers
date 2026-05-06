@@ -52,7 +52,6 @@ unsigned int vout_vcbus_read(unsigned int _reg)
 #else
 	ret = aml_read_vcbus(_reg);
 #endif
-
 	return ret;
 };
 

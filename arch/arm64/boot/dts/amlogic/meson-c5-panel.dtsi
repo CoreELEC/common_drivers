@@ -9,7 +9,7 @@
 		status = "okay";
 		index = <0>;
 		mode = "tablet";
-		pxp = <1>;
+		// pxp = <10>;
 		fr_auto_policy = <0>; /* 0=disable, 1=enable */
 		// clocks = <&clkc CLKID_MIPI_DSI_MEAS>;
 		// clock-names = "dsi_meas";
@@ -20,10 +20,16 @@
 		/* power index:(gpios_index, or extern_index, 0xff=invalid) */
 		/* power value:(0=output low, 1=output high, 2=input) */
 		/* power delay:(unit in ms) */
-		/*
-		 * lcd_cpu-gpios = <&gpio GPIOA_4  GPIO_ACTIVE_HIGH>;
-		 * lcd_cpu_gpio_names = "GPIOA_4";
-		 */
+
+		lcd_cpu-gpios = <&gpio GPIOD_0 GPIO_ACTIVE_HIGH>, <&gpio GPIOD_1 GPIO_ACTIVE_HIGH>,
+				<&gpio GPIOD_6 GPIO_ACTIVE_HIGH>, <&gpio GPIOD_7 GPIO_ACTIVE_HIGH>,
+				<&gpio GPIOX_10 GPIO_ACTIVE_HIGH>,
+				<&gpio GPIOX_11 GPIO_ACTIVE_HIGH>,
+				<&gpio GPIOX_12 GPIO_ACTIVE_HIGH>,
+				<&gpio GPIOX_13 GPIO_ACTIVE_HIGH>;
+		lcd_cpu_gpio_names = "GPIOD_0", "GPIOD_1","GPIOD_6","GPIOD_7",
+				"GPIOX_10","GPIOX_11","GPIOX_12","GPIOX_13";
+
 		dsi_pxp{
 			model_name = "1080p-fixed";
 			interface = "mipi";
@@ -78,7 +84,7 @@
 				47250000>; /*pixel_clk(unit in Hz)*/
 			mipi_attr = <
 				4   /*lane_num*/
-				300 /*bit_rate_max(MHz)*/
+				285 /*bit_rate_max(MHz)*/
 				0   /*unused*/
 				1   /*operation_mode_init(0=video, 1=command)*/
 				0   /*operation_mode_display(0=video, 1=command)*/
@@ -101,21 +107,18 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
-				0 2 1 0
-				0 0 1 10
-				0 1 0 10
-				0 1 1 20
+				0 2 1 1 /* GPIOD_6 3v3 */
+				0 4 1 10 /* GPIOX_10 rst */
 				2 0 0 10
-				0 2 1 0
-				0 3 0 0
-				7 0 1 0
+				0 3 0 0 /* GPIOD_7 bl_pwm */
+				0 0 1 0 /* GPIOD_0 bl_en */
 				0xff 0 0 0>; /*ending*/
 			power_off_step = <
-				7 0 0 0
-				2 0 0 5
-				0 2 0 0
-				0 1 0 10
-				0 0 0 100
+				0 3 1 100 /* GPIOD_7 bl_pwm */
+				0 0 0 0 /* GPIOD_0 bl_en */
+				2 0 0 10
+				0 2 0 0 /* GPIOD_6 3v3 */
+				0 4 0 10 /* GPIOX_10 rst */
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0xff>;
 		};
@@ -161,7 +164,7 @@
 			basic_setting = <1200 1920 1380 1960 8 135 216>;
 			/*hs_width, hs_bp, hs_pol, vs_width, vs_bp, vs_pol*/
 			lcd_timing = <50 80 0 4 20 0>;
-			clk_attr = <2 0 1 164000000>;
+			clk_attr = <2 0 1 60>;
 			/* <lane, bit_rate, /, mode_init(0=video,1=cmd), mode_disp(0=video,1=cmd)*/
 			/* video_mode(0=sync_pulse,1=sync_event,2=burst), clk_hs, />*/
 			mipi_attr = <4 995 0 1 0 2 1 0>;
@@ -257,19 +260,14 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
-				0 2 1 0
-				0 3 0 0
-				0 0 1 100
-				0 1 0 10
-				0 1 1 20
+				0 0 1 0
+				0 1 1 0
+				0 3 1 100
+				0 2 0 10
 				2 0 0 0
-				7 0 1 0
 				0xff 0 0 0>; /*ending*/
 			power_off_step = <
-				7 0 0 0
 				2 0 0 50
-				0 1 0 10
-				0 0 0 100
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0xff>;
 		};

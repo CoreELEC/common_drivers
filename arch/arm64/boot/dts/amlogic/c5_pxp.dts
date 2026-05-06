@@ -10,7 +10,7 @@
 #include "mesonc5_drm.dtsi"
 //#include "mesons6_audio.dtsi"
 //#include "firmware_ab.dtsi"
-#include "mesonc5-panel.dtsi"
+#include "meson-c5-panel.dtsi"
 
 / {
 	amlogic-dt-id = "c5_pxp";

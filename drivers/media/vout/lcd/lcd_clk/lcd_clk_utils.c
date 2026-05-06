@@ -1615,6 +1615,7 @@ void lcd_clk_generate_dft(struct aml_lcd_drv_s *pdrv)
 	case LCD_MIPI:
 		switch (pdrv->data->chip_type) {
 		case LCD_CHIP_S6:
+		case LCD_CHIP_C5:
 			done = lcd_dsi_generate_DSI_PLL_s6_model(pdrv);
 			if (done)
 				done = pll_od_setting_generate(cconf,

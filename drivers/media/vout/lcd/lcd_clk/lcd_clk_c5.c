@@ -22,69 +22,80 @@
 #include "lcd_clk_ctrl.h"
 #include "lcd_clk_utils.h"
 
-static unsigned int fclk_div_table[][2] = {
-/*  sel,  divclk */
-	// {0, 666667}, // dsi pll
-	{1, 666667},
-	{2, 500000},
-	{3, 400000},
-	{6, 800000},
-	{LCD_CLK_CTRL_END, LCD_CLK_CTRL_END}
-};
-
-static inline unsigned long long lcd_abs(unsigned long long a, unsigned long long b)
-{
-	return (a >= b) ? (a - b) : (b - a);
-}
-
-static void lcd_set_fclk_div(struct aml_lcd_drv_s *pdrv)
+static void lcd_set_pll(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_clk_config_s *cconf;
-	unsigned int f_target;
-	unsigned int max_div = 256;
-	unsigned int i = 0, div = 0, min_err_sel_idx = 0, min_err_div = 1;
-	unsigned int min_err = 100000, error;
+	unsigned int pll_ctrl0;
+	int ret, cnt = 0;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
 
-	f_target = pdrv->curr_dev->dev_cfg.timing.act_timing.pixel_clk / 1000;
-	if (f_target >= cconf->data->xd_out_fmax) {
-		LCDERR("%s: freq(%dKHz) out of limit(%dkHz)\n", __func__,
-			f_target, 75000000);
-		return;
+	pll_ctrl0 = (cconf->pll_config[0].pll_m << 0) | (cconf->pll_config[0].pll_od1_sel << 20);
+set_pll_retry:
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL0_C5, pll_ctrl0 | 0x01010000);
+	// lcd_ana_write(ANACTRL_DSIPLL_CTRL0_C5, pll_ctrl0 | 0x10010000);
+
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL1_C5, 0x11480000 | cconf->pll_config[0].pll_frac);
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL2_C5, 0x1219b010);
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL3_C5, 0x00008010);
+
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL1_C5, 0x19480000 | cconf->pll_config[0].pll_frac);
+
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL0_C5, pll_ctrl0 |  0x31010000);
+
+	lcd_delay_us(10);
+	lcd_ana_write(ANACTRL_DSIPLL_CTRL3_C5, 0x20008010);
+	lcd_delay_us(20);
+
+	ret = lcd_pll_wait_lock(cconf->pll_config[0].pll_id, ANACTRL_DSIPLL_CTRL0_C5, 31);
+	if (ret) {
+		if (cnt++ < PLL_RETRY_MAX)
+			goto set_pll_retry;
+		LCD_ERR(pdrv, "pll lock failed");
 	}
-
-	while (fclk_div_table[i][0] != LCD_CLK_CTRL_END) {
-		for (div = 1; div <= max_div; div++) {
-			error = lcd_abs((fclk_div_table[i][1]) / div, f_target);
-			if (error < min_err) {
-				min_err_sel_idx = i;
-				min_err_div = div;
-				min_err = error;
-				if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-					LCDPR("_sel:%d, _div:%d, err:%d\n",
-						fclk_div_table[i][0], min_err_div, min_err);
-			}
-		}
-		i++;
-	}
-
-	cconf->xd = min_err_div;
-	cconf->data->vclk_sel = fclk_div_table[min_err_sel_idx][0];
-	cconf->fout = fclk_div_table[min_err_sel_idx][1] / min_err_div;
-
-	LCDPR("[%d]: f_tar:%d, f_out:%d, fclk:%dkHz, div:%d, error:%d\n", pdrv->index,
-		f_target, cconf->fout, fclk_div_table[min_err_sel_idx][1], min_err_div, min_err);
 }
 
 static void lcd_clk_set_c5(struct aml_lcd_drv_s *pdrv)
 {
 	/* gp0 used by emmc, no permission for gp1, used fix clk */
-	lcd_set_fclk_div(pdrv);
+	lcd_set_pll(pdrv);
+	// lcd_set_fclk_div(pdrv);
+}
+
+static void lcd_set_vid_pll_div_c5(struct aml_lcd_drv_s *pdrv)
+{
+	struct lcd_clk_config_s *cconf;
+	unsigned int shift_val, shift_sel;
+
+	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	cconf = get_lcd_clk_config(pdrv);
+	if (!cconf)
+		return;
+
+	if (cconf->data->pll_data[0]->div_sel_max == CLK_DIV_SEL_1 ||
+	    cconf->pll_config->div_sel > cconf->data->pll_data[0]->div_sel_max ||
+	    cconf->pll_config->div_sel >= ARRAY_SIZE(lcd_clk_div_table)) {
+		LCD_ERR(pdrv, "invalid clk divider");
+		return;
+	}
+
+	shift_val = lcd_clk_div_table[cconf->pll_config->div_sel].shift_val;
+	shift_sel = lcd_clk_div_table[cconf->pll_config->div_sel].shift_sel;
+
+	if (shift_val == 0xffff) { /* if divide by 1 */
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, 1, 18, 1);
+	} else {
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, 0, 18, 1);
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, shift_sel, 16, 2);
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, 1, 15, 1);
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, shift_val, 0, 15);
+		lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, 0, 15, 1);
+	}
+	/* Enable the final output clock */
+	lcd_clk_setb(CLKCTRL_DSI_PLL_CLK_DIV_C5, 1, 19, 1);
 }
 
 static void lcd_set_vclk_crt_c5(struct aml_lcd_drv_s *pdrv)  /* from c3 */
@@ -96,9 +107,10 @@ static void lcd_set_vclk_crt_c5(struct aml_lcd_drv_s *pdrv)  /* from c3 */
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
-	lcd_set_fclk_div(pdrv);
+	// lcd_set_fclk_div(pdrv);
+	lcd_set_vid_pll_div_c5(pdrv);
 
-	/* cts_vout_clk */
+	// /* cts_vout_clk */
 	lcd_clk_setb(CLKCTRL_VOUTENC_CLK_CTRL_C5, (cconf->xd - 1), 16, 7);
 	lcd_clk_setb(CLKCTRL_VOUTENC_CLK_CTRL_C5, cconf->data->vclk_sel, 25, 3);
 	lcd_clk_setb(CLKCTRL_VOUTENC_CLK_CTRL_C5, 1, 24, 1);  /* cts_vout_mclk en */
@@ -112,7 +124,11 @@ static void lcd_clk_disable_c5(struct aml_lcd_drv_s *pdrv)
 static int lcd_clk_config_print_c5(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 {
 	struct lcd_clk_config_s *cconf;
-	int n, len = 0;
+	int n, len = 0, i;
+	u8 clk_ids[7] = {43, 44, 45, 46, 47, 49, 50,};
+	char *clk_name[7] = {
+		"vout_venc", "venc_clk_ph", "dsi_phy", "dsi_meas", "vout", "dsi_pll_div", "dsi_pll"
+	};
 
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
@@ -127,33 +143,63 @@ static int lcd_clk_config_print_c5(struct aml_lcd_drv_s *pdrv, char *buf, int of
 		cconf->data->vclk_sel,
 		cconf->xd, cconf->fout);
 
+	for (i = 0; i < 7; i++) {
+		n = lcd_debug_info_len(len + offset);
+		len += snprintf((buf + len), n,
+			"%s:%u ====      %d\n",
+			clk_name[i],
+			clk_ids[i],
+			meson_clk_measure(clk_ids[i]));
+	}
 	return len;
 }
 
 static int lcd_clk_reg_print_c5(struct aml_lcd_drv_s *pdrv, char *buf, int offset)
 {
-	//struct lcd_clk_config_s *cconf;
-	//int n, len = 0;
+	struct lcd_clk_config_s *cconf;
+	int n, len = 0, i;
+	unsigned int *table = NULL, size = 0;
 
-	//cconf = get_lcd_clk_config(pdrv);
-	//if (!cconf)
-	//	return -1;
+	unsigned int pll_reg_table[] = {
+		ANACTRL_DSIPLL_CTRL0_C5,
+		ANACTRL_DSIPLL_CTRL1_C5,
+		ANACTRL_DSIPLL_CTRL2_C5,
+		ANACTRL_DSIPLL_CTRL3_C5,
+		ANACTRL_DSIPLL_STS_C5,
+	};
+	unsigned int clk_reg_table[] = {
+		CLKCTRL_VOUTENC_CLK_CTRL_C5,
+		CLKCTRL_MIPIDSI_PHY_CLK_CTRL_C5,
+		CLKCTRL_DSI_MEAS_CLK_CTRL_C5,
+		CLKCTRL_DSI_PLL_CLK_DIV_C5,
+	};
 
-	//table = pll_reg_table;
-	//size = ARRAY_SIZE(pll_reg_table);
-	//for (i = 0; i < size; i++) {
-	//	n = lcd_debug_info_len(len + offset);
-	//	len += snprintf((buf + len), n, "pll [0x%02x] = 0x%08x\n",
-	//		table[i], lcd_vx1_lvds_ctrl_read(pdrv, table[i]));
-	//}
 
-	//return len;
-	return 0;
+	cconf = get_lcd_clk_config(pdrv);
+	if (!cconf)
+		return -1;
+
+	table = pll_reg_table;
+	size = ARRAY_SIZE(pll_reg_table);
+	for (i = 0; i < size; i++) {
+		n = lcd_debug_info_len(len + offset);
+		len += snprintf((buf + len), n, "pll [0x%02x] = 0x%08x\n",
+			table[i], lcd_ana_read(table[i]));
+	}
+	table = clk_reg_table;
+	size = ARRAY_SIZE(clk_reg_table);
+	for (i = 0; i < size; i++) {
+		n = lcd_debug_info_len(len + offset);
+		len += snprintf((buf + len), n, "clk [0x%02x] = 0x%08x\n",
+			table[i], lcd_clk_read(table[i]));
+	}
+
+	return len;
 }
 
 static struct lcd_pll_data_s lcd_pll_data_c5 = {
 	.pll_od_fb = 0,
-	.pll_0_5_div_en = 0,
+	.pll_0_5_div_en = 1,
 	.pll_m_max = 511,
 	.pll_m_min = 2,
 	.pll_n_max = 1,
@@ -178,11 +224,12 @@ static struct lcd_clk_data_s lcd_clk_data_c5 = {
 	.pll_data[0] = &lcd_pll_data_c5,
 	// .pll_data[0] = &lcd_pll_data_s6,
 	.pll_data[1] = NULL,
-	.xd_out_fmax = 666000000,
+	.xd_out_fmax = 200000000,
 	.phy_clk_location = 1,
 
-	.vclk_sel = 3, //dsi_pll_clk
-	.enc_clk_msr_id = 53,
+	// .vclk_sel = 3, //dsi_pll_clk
+	.vclk_sel = 0, //dsi_pll_clk
+	.enc_clk_msr_id = 43,
 	.fifo_clk_msr_id = 71,
 	.tcon_clk_msr_id = LCD_CLK_MSR_INVALID,
 
@@ -201,8 +248,7 @@ static struct lcd_clk_data_s lcd_clk_data_c5 = {
 	.clktree_index = {0, 0, 0, 0, 0, 0},
 
 	.clk_parameter_init = NULL,
-	.clk_generate_parameter = NULL,
-	.clk_generate_parameter = NULL,
+	.clk_generate_parameter = lcd_clk_generate_dft,
 	.pll_frac_generate = NULL,
 	.set_ss = NULL,
 	.clk_ss_enable = NULL,

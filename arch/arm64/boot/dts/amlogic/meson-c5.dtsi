@@ -1956,9 +1956,9 @@
 
 	vclk_serve: vclk_serve {
 		compatible = "amlogic, vclk_serve";
-		status = "disabled";
-		reg = <0x0 0xfe008000 0x0 0x400    /* ana reg */
-			0x0 0xfe000000 0x0 0x4a0>; /* clk reg */
+		status = "okay";
+		reg = <0x0 0xfe008000 0x0 0x800    /* ana reg */
+			0x0 0xfe000000 0x0 0x800>; /* clk reg */
 	};
 
 	vout_sys: vout_sys {
