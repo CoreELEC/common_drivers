@@ -69,7 +69,6 @@
   drmm_kmalloc
   hdmi_infoframe_pack
   drm_mode_destroy
-  drm_client_dev_hotplug
 
 # f81232.ko
   usb_control_msg_send

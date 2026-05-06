@@ -1,4 +1,4 @@
-From d913a961bbf899b6eb80f07d26e510c55f67490c Mon Sep 17 00:00:00 2001
+From 2cb6ea5dc7599c49cee406a92afd9ddf4a59b879 Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Thu, 28 Nov 2024 15:15:07 +0800
 Subject: [PATCH] mm: add amlogic vmap stack for arm64. [1/1]
@@ -43,10 +43,10 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  23 files changed, 351 insertions(+), 1 deletion(-)
 
 diff --git a/Makefile b/Makefile
-index 1ae65494bac7..ca95f4304faa 100644
+index 8237627e2d3e..f58101c6092c 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -889,9 +889,11 @@ ifdef CONFIG_READABLE_ASM
+@@ -888,9 +888,11 @@ ifdef CONFIG_READABLE_ASM
  KBUILD_CFLAGS += -fno-reorder-blocks -fno-ipa-cp-clone -fno-partial-inlining
  endif
  
@@ -58,7 +58,7 @@ index 1ae65494bac7..ca95f4304faa 100644
  
  KBUILD_CFLAGS += $(stackp-flags-y)
  
-@@ -901,6 +903,11 @@ KBUILD_RUSTFLAGS += $(KBUILD_RUSTFLAGS-y)
+@@ -900,6 +902,11 @@ KBUILD_RUSTFLAGS += $(KBUILD_RUSTFLAGS-y)
  ifdef CONFIG_FRAME_POINTER
  KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
  KBUILD_RUSTFLAGS += -Cforce-frame-pointers=y
@@ -71,7 +71,7 @@ index 1ae65494bac7..ca95f4304faa 100644
  # Some targets (ARM with Thumb2, for example), can't be built with frame
  # pointers.  For those, we don't have FUNCTION_TRACER automatically
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index 53c4d169c3fa..646e5fb5379b 100644
+index 7d4566807b43..44629e6be503 100644
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
 @@ -189,7 +189,7 @@ config ARM64
@@ -178,11 +178,10 @@ index 2b112f3b7510..411d0b295240 100644
  # When KASAN is enabled, a stack trace is recorded for every alloc/free, which
  # can significantly impact performance. Avoid instrumenting the stack trace
 diff --git a/arch/arm64/kernel/entry-common.c b/arch/arm64/kernel/entry-common.c
-index 4d541320e011..29b97b126b1f 100644
+index 4d541320e011..353f2f6c120b 100644
 --- a/arch/arm64/kernel/entry-common.c
 +++ b/arch/arm64/kernel/entry-common.c
-@@ -31,6 +31,9 @@
- #include <trace/hooks/traps.h>
+@@ -32,6 +32,10 @@
  #include <trace/hooks/gic.h>
  #include <trace/hooks/dtask.h>
 +#ifdef CONFIG_AMLOGIC_VMAP
@@ -191,7 +190,8 @@ index 4d541320e011..29b97b126b1f 100644
  
  /*
   * Handle IRQ/context state management when entering from kernel mode.
-@@ -526,6 +529,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+  * Before this function is called it is not safe to call regular kernel code,
+@@ -526,6 +530,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  	switch (ESR_ELx_EC(esr)) {
  	case ESR_ELx_EC_DABT_CUR:
  	case ESR_ELx_EC_IABT_CUR:
@@ -201,7 +201,7 @@ index 4d541320e011..29b97b126b1f 100644
  		el1_abort(regs, esr);
  		break;
  	/*
-@@ -537,6 +543,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+@@ -537,6 +544,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  		break;
  	case ESR_ELx_EC_SYS64:
  	case ESR_ELx_EC_UNKNOWN:
@@ -211,7 +211,7 @@ index 4d541320e011..29b97b126b1f 100644
  		el1_undef(regs, esr);
  		break;
  	case ESR_ELx_EC_BTI:
-@@ -546,6 +555,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+@@ -546,6 +556,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  	case ESR_ELx_EC_SOFTSTP_CUR:
  	case ESR_ELx_EC_WATCHPT_CUR:
  	case ESR_ELx_EC_BRK64:
@@ -221,7 +221,7 @@ index 4d541320e011..29b97b126b1f 100644
  		el1_dbg(regs, esr);
  		break;
  	case ESR_ELx_EC_FPAC:
-@@ -590,6 +602,9 @@ static void noinstr el1_interrupt(struct pt_regs *regs,
+@@ -590,6 +603,9 @@ static void noinstr el1_interrupt(struct pt_regs *regs,
  
  asmlinkage void noinstr el1h_64_irq_handler(struct pt_regs *regs)
  {
@@ -655,10 +655,10 @@ index d1627b530849..607d260d707a 100644
  	seq_printf(m, "ShadowCallStack:%8lu kB\n",
  		   global_node_page_state(NR_KERNEL_SCS_KB));
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 3a1188d8da0d..cf4cd416be96 100644
+index 89afa3ae26b6..f6a5ea75f8ee 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1986,7 +1986,13 @@ extern unsigned long init_stack[THREAD_SIZE / sizeof(unsigned long)];
+@@ -1992,7 +1992,13 @@ extern unsigned long init_stack[THREAD_SIZE / sizeof(unsigned long)];
  #ifdef CONFIG_THREAD_INFO_IN_TASK
  # define task_thread_info(task)	(&(task)->thread_info)
  #elif !defined(__HAVE_THREAD_FUNCTIONS)
@@ -722,7 +722,7 @@ index 9660e0a2d82d..e3fcfda5a5e1 100644
  
  #endif /* _LINUX_VMALLOC_H */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 74d9443a7f7c..93670c70fec3 100644
+index 128a70001c33..85be4597ffb3 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -115,6 +115,10 @@
@@ -798,7 +798,7 @@ index 74d9443a7f7c..93670c70fec3 100644
  }
  
  void exit_task_stack_account(struct task_struct *tsk)
-@@ -1087,7 +1110,9 @@ void set_task_stack_end_magic(struct task_struct *tsk)
+@@ -1090,7 +1113,9 @@ void set_task_stack_end_magic(struct task_struct *tsk)
  	unsigned long *stackend;
  
  	stackend = end_of_stack(tsk);
@@ -809,7 +809,7 @@ index 74d9443a7f7c..93670c70fec3 100644
  
  static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
 diff --git a/lib/Kconfig.debug b/lib/Kconfig.debug
-index ec375f621e8d..a7e59cecf14a 100644
+index d9a740e1123e..8bc3ac5548c3 100644
 --- a/lib/Kconfig.debug
 +++ b/lib/Kconfig.debug
 @@ -788,6 +788,7 @@ config SHRINKER_DEBUG
