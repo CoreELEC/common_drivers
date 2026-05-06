@@ -30,6 +30,7 @@
 #include <linux/amlogic/gki_module.h>
 #include <linux/amlogic/symbols.h>
 #include <linux/xattr.h>
+#include <linux/cred.h>
 
 #include <linux/proc_fs.h>
 
@@ -435,6 +436,7 @@ static int fill_module_symbols(struct proc_node *node, struct ksymbol *sym)
 	void *p;
 	int fixed_symbols = 0;
 
+	f.f_cred = current_cred();
 	ops = (struct proc_ops *)node->proc_ops;
 	ret = ops->proc_open(NULL, &f);
 	if (ret) {
