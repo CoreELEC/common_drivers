@@ -136,8 +136,8 @@ static int tx_clk_set_tcon_pll(struct meson_tx_clk *tx_clk, u8 pll_idx,  u32 clk
 	if (!tx_clk)
 		return -1;
 	if (clk_feq < PIXEL_PLL_VCO_MIN || clk_feq > PIXEL_PLL_VCO_MAX) {
-		pr_info("meson_tx_connector: clk_feq %d is out of VCO range (%d ~ %d)\n", clk_feq,
-			PIXEL_PLL_VCO_MIN, PIXEL_PLL_VCO_MAX);
+		pr_err("meson_tx_clk/a9: pixel clk_feq %d is out of VCO range (%d ~ %d)\n",
+			clk_feq, PIXEL_PLL_VCO_MIN, PIXEL_PLL_VCO_MAX);
 		return -1;
 	}
 

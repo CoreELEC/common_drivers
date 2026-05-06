@@ -12,8 +12,8 @@
 struct dpcd_cap {
 	/* DPCD version, not DP version. 10h: r1.0, ... 14h: r1.4 */
 	u8 dpcd_ver;
-	/* unit: kHz  5.4Gbps/lane, 5400000 */
-	u32 max_link_rate;
+	/* 0x06/0xa/0x14/0x1e for 1.62/2.7/5.4/8.1Gbps per lane */
+	u8 max_link_rate;
 	/* 4, 2, or 1 lanes */
 	u8 max_lane_count;
 };

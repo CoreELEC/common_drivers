@@ -42,6 +42,7 @@ static bool dptx_check_tx_cap(struct tx_timing *timing, enum hdmi_colorspace cs,
 	 * currently treat cs/cd is supported by default,
 	 * add limitation check if necessary
 	 */
+	/* TODO: check if link rate/lane count supported by SOC */
 	return true;
 }
 
@@ -90,9 +91,11 @@ static bool dptx_check_bandwidth_cap(enum number_of_links lane_cnt, enum dp_link
 	}
 	/* check max lane count and link rate in DPCD */
 	if (lane_cnt > dpcd_cap->max_lane_count ||
-	    link_rate_khz(link_rate) > dpcd_cap->max_link_rate)
+		link_rate > dpcd_cap->max_link_rate) {
+		DPTX_DEBUG_EDID("lane count/link_rate(%d %d) exceed rx cap(%d %d)\n",
+			lane_cnt, link_rate, dpcd_cap->max_lane_count, dpcd_cap->max_link_rate);
 		return false;
-
+	}
 	return true;
 }
 

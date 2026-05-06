@@ -1624,6 +1624,17 @@
 	};
 };
 
+&dptx {
+	status = "disabled";
+	pxp_mode = <0>;
+	enc_idx = <0>;
+};
+
+&edptx {
+	status = "disabled";
+	pxp_mode = <0>;
+};
+
 &lcd {
 	status = "okay";
 	ports {
@@ -1649,16 +1660,6 @@
 		};
 	};
 };
-
-//&dptx {
-//	status = "okay";
-//	pxp_mode = <1>;
-//};
-
-//&edptx {
-//	status = "okay";
-//	pxp_mode = <1>;
-//};
 
 //&drm_amhdmitx {
 //	status = "disabled";

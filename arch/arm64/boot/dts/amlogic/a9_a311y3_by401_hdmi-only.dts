@@ -1607,12 +1607,13 @@
 
 &dptx {
 	status = "okay";
-	pxp_mode = <1>;
+	pxp_mode = <0>;
+	enc_idx = <0>;
 };
 
 &edptx {
-	status = "okay";
-	pxp_mode = <1>;
+	status = "disabled";
+	pxp_mode = <0>;
 };
 //&lcd {
 //	status = "disable";
@@ -1622,15 +1623,6 @@
 //	status = "disable";
 //};
 
-//&dptx {
-//	status = "okay";
-//	pxp_mode = <1>;
-//};
-
-//&edptx {
-//	status = "okay";
-//	pxp_mode = <1>;
-//};
 
 //&drm_amhdmitx {
 //	status = "disabled";

@@ -242,7 +242,7 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 		tx_comm->enc_idx = 1;
 	else
 		tx_comm->enc_idx = 0;
-	DPTX_DEBUG("enc_idx %d\n", tx_comm->enc_idx);
+	DPTX_INFO("enc_idx %d\n", tx_comm->enc_idx);
 
 	hw_comm->hw_base.regs_region = kzalloc(sizeof(*hw_comm->hw_base.regs_region) * REG_IDX_MAX,
 		GFP_KERNEL);

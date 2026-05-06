@@ -29,6 +29,18 @@ static struct vout_device_s dptx_vdev = {
 	.disable_tx_packet = dptx_disable_tx_packet,
 };
 
+/* parse DPCD cap per DP1.4 spec chapter2.9.32 */
+static void dptx_cap_parse(u8 *dpcd_buf, struct dpcd_cap *tx_dpcd_cap)
+{
+	if (!dpcd_buf || !tx_dpcd_cap) {
+		DPTX_INFO("dptx cap parse: buf NULL\n");
+		return;
+	}
+
+	tx_dpcd_cap->dpcd_ver = (dpcd_buf[0] >> 0x4);
+	tx_dpcd_cap->max_link_rate = dpcd_buf[1];
+	tx_dpcd_cap->max_lane_count = dpcd_buf[2] & 0x1F;
+}
 /*
  * Per dp1.4a spec chapter 5.1.4:
  * The Source device shall respond to Hot Plug event/Hot Re-plug
@@ -58,7 +70,8 @@ int dptx_hpd_plugin(struct meson_tx_dev *tx_dev)
 		tx_dev->dpcd_buf, sizeof(tx_dev->dpcd_buf));
 	if (ret < 0)
 		DPTX_INFO("read dpcd cap failed\n");
-
+	else
+		dptx_cap_parse(tx_dev->dpcd_buf, &tx_dev->dpcd_cap);
 	for (i = 0; i < EDID_READ_MAX_RETRY; i++) {
 		ret = dptx_aux_read_edid_data(tx_comm->tx_aux, tx_dev->edid_buf,
 			sizeof(tx_dev->edid_buf));

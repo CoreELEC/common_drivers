@@ -1328,6 +1328,7 @@
 &dptx {
 	status = "okay";
 	pxp_mode = <1>;
+	enc_idx = <0>;
 };
 
 &edptx {

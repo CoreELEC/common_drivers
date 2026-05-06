@@ -2688,7 +2688,6 @@
 		tx_phy = <&tx_phy>;
 		tx_clk = <&dptx_clk>;
 		dev_index = <1>;
-		pxp_mode = <1>;
 		interrupts = <0 287 4>;
 		interrupt-names = "apb_int_edptx";
 
