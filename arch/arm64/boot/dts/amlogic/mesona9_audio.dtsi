@@ -69,9 +69,14 @@
 			#size-cells = <2>;
 			ranges = <0x0 0x0 0x0 0xFFAE5000 0x0 0x1000>;
 			earc: earc@0 {
-				compatible = "amlogic, t6w-snd-earc";
+				compatible = "amlogic, a9-snd-earc";
 				#sound-dai-cells = <0>;
 				suspend-clk-off = <1>;
+				/*EARC_TX_DISABLE_MASK 0x1*/
+				/*earc_rx_tx_bit_dis_mask = <0x1>;*/
+
+				/*EARC_RX_DISABLE_MASK 0x2*/
+				earc_rx_tx_bit_dis_mask = <0x2>;
 				reg =<0x0 0x0 0x0 0x400>,
 					<0x0 0x400 0x0 0x200>,
 					<0x0 0x600 0x0 0x200>,
@@ -109,7 +114,7 @@
 					GIC_SPI 280 IRQ_TYPE_LEVEL_HIGH
 					GIC_SPI 281 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "earc_rx", "earc_tx";
-				status = "disabled";
+				status = "okay";
 			};
 		};
 		clkaudio: audio_clocks {

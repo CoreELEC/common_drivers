@@ -13,6 +13,7 @@
 #include "extn.h"
 #include "hdmirx_arc_iomap.h"
 #include "earc.h"
+#include <linux/amlogic/media/registers/cpu_version.h>
 
 void frhdmirx_afifo_reset(void)
 {
@@ -339,7 +340,7 @@ void arc_earc_source_select(int src)
 		/* earctx_spdif*/
 		if (version == TM2_ARC)
 			aml_write_hiubus(HHI_HDMIRX_ARC_CNTL, 0x0);
-		else
+		else if (get_cpu_type() < MESON_CPU_MAJOR_ID_A9)
 			hdmirx_arc_write_reg(HDMIRX_ARC_CNTL, 0x0);
 	}
 }

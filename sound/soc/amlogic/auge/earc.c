@@ -54,6 +54,10 @@
 
 #define EARCRX_DEFAULT_LATENCY 100
 
+/* EARC modules mask, when set 1, means disable related module */
+#define EARC_RX_DISABLE_MASK 0x2
+#define EARC_TX_DISABLE_MASK 0x1
+
 static DEFINE_MUTEX(earc_mutex);
 
 u8 default_rx_cds[] = {
@@ -219,6 +223,8 @@ struct earc {
 	/* get from hdmirx */
 	int earctx_5v;
 	int suspend_clk_off;
+	/* earc_rx_tx_disable_mask: bit0[tx_disable], bit1[rx_disable] */
+	int earc_rx_tx_bit_dis_mask;
 	/* ui earc/arc rx switch */
 	int rx_ui_flag;
 	/* get from hdmitx */
@@ -863,6 +869,9 @@ static irqreturn_t earc_rx_isr(int irq, void *data)
 				dev_info(p_earc->dev, "ARCRX_C_CH_STATUS_CHANGE, mute %d,\n", mute);
 			}
 		}
+		if (p_earc->rx_status1 & INT_EARCRX_BIPHASE_DECODE_NEW_C_CH_STATUS_CHANGE)
+			/* add new channel status change int for A9, maybe use for some case */
+			dev_dbg(p_earc->dev, "INT_EARCRX_BIPHASE_DECODE_NEW_C_CH_STATUS_CHANGE with block size\n");
 		if (p_earc->rx_status1 & INT_ARCRX_BIPHASE_DECODE_I_SAMPLE_MODE_CHANGE)
 			dev_dbg(p_earc->dev, "ARCRX_I_SAMPLE_MODE_CHANGE\n");
 		if (p_earc->chipinfo->rx_dmac_sync_int &&
@@ -1299,7 +1308,7 @@ static int earc_dai_prepare(struct snd_pcm_substream *substream,
 				 p_earc->chipinfo->unstable_tick_sel,
 				 p_earc->chipinfo->chnum_mult_mode,
 				 fmt.ch_num);
-		earcrx_arc_init(p_earc->rx_dmac_map);
+		earcrx_arc_init(p_earc->rx_dmac_map, p_earc->chipinfo->rx_pcpd_hw_ecc_check);
 	}
 
 	return 0;
@@ -2069,6 +2078,7 @@ static int earcrx_get_audio_coding_type(struct snd_kcontrol *kcontrol,
 	enum attend_type type;
 	unsigned long flags;
 	int cs = 0;
+	bool soft_ecc_pcpd_check = false;
 
 	if (!p_earc || IS_ERR_OR_NULL(p_earc->rx_cmdc_map))
 		return 0;
@@ -2079,12 +2089,17 @@ static int earcrx_get_audio_coding_type(struct snd_kcontrol *kcontrol,
 	type = earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map);
 	spin_lock_irqsave(&p_earc->rx_lock, flags);
 	if (p_earc->stream_stable) {
+		if (!p_earc->chipinfo->rx_pcpd_hw_ecc_check && type == ATNDTYP_EARC)
+			/* only eARC use soft ecc check before chip A9*/
+			soft_ecc_pcpd_check = true;
+
 		/* eARC mode && cs is 0, set undefine */
 		if (type == ATNDTYP_EARC)
 			cs = earcrx_get_cs_iec958(p_earc->rx_dmac_map, 0);
 
 		if (type == ATNDTYP_ARC || cs)
-			coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, type);
+			coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map,
+						soft_ecc_pcpd_check);
 		else
 			coding_type = AUDIO_CODING_TYPE_UNDEFINED;
 
@@ -2121,6 +2136,7 @@ static int earcrx_get_freq(struct snd_kcontrol *kcontrol,
 	enum attend_type type;
 	int freq = 0;
 	unsigned long flags;
+	bool soft_ecc_pcpd_check = false;
 
 	if (!p_earc || IS_ERR_OR_NULL(p_earc->rx_cmdc_map))
 		return 0;
@@ -2131,7 +2147,11 @@ static int earcrx_get_freq(struct snd_kcontrol *kcontrol,
 	type = earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map);
 	spin_lock_irqsave(&p_earc->rx_lock, flags);
 	if (p_earc->rx_dmac_clk_on) {
-		coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, type);
+		if (!p_earc->chipinfo->rx_pcpd_hw_ecc_check && type == ATNDTYP_EARC)
+			/* only eARC use soft ecc check before chip A9*/
+			soft_ecc_pcpd_check = true;
+
+		coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map, soft_ecc_pcpd_check);
 		freq = earcrx_get_cs_freq(p_earc->rx_dmac_map, coding_type);
 	}
 	spin_unlock_irqrestore(&p_earc->rx_lock, flags);
@@ -2645,6 +2665,7 @@ static int earcrx_get_ca(struct snd_kcontrol *kcontrol,
 	struct earc *p_earc = dev_get_drvdata(component->dev);
 	enum audio_coding_types coding_type;
 	unsigned long flags;
+	bool soft_ecc_pcpd_check = false;
 
 	if (!p_earc || IS_ERR_OR_NULL(p_earc->rx_cmdc_map)) {
 		ucontrol->value.integer.value[0] = 0xff;
@@ -2658,9 +2679,12 @@ static int earcrx_get_ca(struct snd_kcontrol *kcontrol,
 
 	spin_lock_irqsave(&p_earc->rx_lock, flags);
 	if (p_earc->rx_dmac_clk_on) {
+		if (!p_earc->chipinfo->rx_pcpd_hw_ecc_check &&
+			earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map) == ATNDTYP_EARC)
+			/* only eARC use soft ecc check before chip A9 */
+			soft_ecc_pcpd_check = true;
 		coding_type = earcrx_get_cs_fmt(p_earc->rx_dmac_map,
-					earcrx_cmdc_get_attended_type(p_earc->rx_cmdc_map));
-
+					soft_ecc_pcpd_check);
 		ucontrol->value.integer.value[0] =
 			earcrx_get_cs_ca(p_earc->rx_dmac_map);
 	} else {
@@ -3227,6 +3251,24 @@ struct earc_chipinfo t6w_earc_chipinfo = {
 	.tx_pll_new = true,
 };
 
+struct earc_chipinfo a9_earc_chipinfo = {
+	.earc_spdifout_lane_mask = EARC_SPDIFOUT_LANE_MASK_V2,
+	.rx_dmac_sync_int = false,
+	.rterm_on = true,
+	.chnum_mult_mode = true,
+	.unstable_tick_sel = true,
+	.rx_enable = true,
+	.tx_enable = true,
+	.arc_version = T5M_ARC,
+	.tx_pll_new = true,
+	.idr_trim_val = 0xc,
+	.dmac_slew_con = 0x3,
+	.rterm_trim_val = 0x11,
+	.rx_pll_new = true,
+	/* hw pcpd check after ecc, A9 for the first IP with HW ecc check */
+	.rx_pcpd_hw_ecc_check = true,
+};
+
 static const struct of_device_id earc_device_id[] = {
 	{
 		.compatible = "amlogic, sm1-snd-earc",
@@ -3282,6 +3324,10 @@ static const struct of_device_id earc_device_id[] = {
 	{
 		.compatible = "amlogic, t6w-snd-earc",
 		.data = &t6w_earc_chipinfo,
+	},
+	{
+		.compatible = "amlogic, a9-snd-earc",
+		.data = &a9_earc_chipinfo,
 	},
 	{}
 };
@@ -3566,6 +3612,20 @@ static int earc_platform_probe(struct platform_device *pdev)
 	p_earc->clk_src_cd = devm_clk_get(&pdev->dev, "clk_src_cd");
 	if (IS_ERR_OR_NULL(p_earc->clk_src_cd))
 		dev_info(&pdev->dev, "no clk_src_cd clock for 44k case\n");
+
+	/* earc tx or rx module selection */
+	ret = of_property_read_u32(node, "earc_rx_tx_bit_dis_mask",
+		&p_earc->earc_rx_tx_bit_dis_mask);
+	if (ret < 0) {
+		p_earc->earc_rx_tx_bit_dis_mask = 0;
+		dev_err(&pdev->dev, "Can't earc_rx_tx_bit_mask\n");
+	}
+
+	if (p_earc->earc_rx_tx_bit_dis_mask & EARC_TX_DISABLE_MASK)
+		p_earc->chipinfo->tx_enable = false;
+
+	if (p_earc->earc_rx_tx_bit_dis_mask & EARC_RX_DISABLE_MASK)
+		p_earc->chipinfo->rx_enable = false;
 
 	if (p_earc->chipinfo->rx_enable) {
 		p_earc->rx_cmdc_map = regmap_resource(dev, "rx_cmdc");

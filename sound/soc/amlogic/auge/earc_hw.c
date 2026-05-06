@@ -275,7 +275,8 @@ void earcrx_dmac_init(struct regmap *top_map,
 {
 	/* can't open bit 5 as it will cause stuck on t7 chips */
 	mmio_update_bits(top_map, EARCRX_DMAC_INT_MASK,
-			 0x3FFFF,
+			 0x4003ffff,
+			 (0x1 << 30) | /* arcrx_biphase_decode c_ch_status_change in block*/
 			 (0x1 << 17) | /* earcrx_ana_rst c_new_format_set */
 			 (0x1 << 16) | /* earcrx_ana_rst c_earcrx_div2_hold_set */
 			 (0x1 << 15) | /* earcrx_err_correct c_bcherr_int_set */
@@ -316,9 +317,11 @@ void earcrx_dmac_init(struct regmap *top_map,
 	}
 }
 
-void earcrx_arc_init(struct regmap *dmac_map)
+void earcrx_arc_init(struct regmap *dmac_map, bool hw_ecc_pcpd_check)
 {
 	unsigned int spdifin_clk = 500000000;
+	/* default check position */
+	u8 hw_pcpd_check_pos = 0x13;
 
 	/* sysclk/rate/32(bit)/2(ch)/2(bmc) */
 	unsigned int counter_32k  = (spdifin_clk / (32000  * 64));
@@ -392,6 +395,11 @@ void earcrx_arc_init(struct regmap *dmac_map)
 		   0xFFF << 12 |  /* reg_nonpcm2pcm_th */
 		   0x1 << 2    /* reg_check_parity */
 		  );
+
+	/* earc_papb_msb ecc check add in A9*/
+	if (hw_ecc_pcpd_check)
+		hw_pcpd_check_pos = 0x1B;
+
 	mmio_write(dmac_map,
 		   EARCRX_SPDIFIN_CTRL2,
 		   (1 << 16) | /* auto clear compress mode if cs not compress */
@@ -399,7 +407,7 @@ void earcrx_arc_init(struct regmap *dmac_map)
 		   (1 << 14) | /* earc_auto */
 		   (1 << 13) | /* earcin_papb_lr */
 		   (1 << 12) | /* earcin_check_papb */
-		   (19 << 4)   /* earc_papb_msb */
+		   (hw_pcpd_check_pos << 4)   /* earc_papb_msb */
 		  );
 	mmio_write(dmac_map,
 		   EARCRX_SPDIFIN_CTRL3,
@@ -519,20 +527,20 @@ static unsigned int ecc_syndrome(unsigned int val1, unsigned int val2)
 	return val1;
 }
 
-static int earcrx_get_cs_pcpd(struct regmap *dmac_map, bool ecc_check)
+static int earcrx_get_cs_pcpd(struct regmap *dmac_map, bool soft_ecc_pcpd_check)
 {
 	unsigned int val = earcrx_get_cs_bits(dmac_map, 192, 0xffffffff);
 	unsigned int pc_e = (val >> 16) & 0xffff;
 	unsigned int pd_e = val & 0xffff;
 
-	if (ecc_check)
+	if (soft_ecc_pcpd_check)
 		return ecc_syndrome(pc_e, pd_e) << 16 |
 			ecc_syndrome(pd_e, pc_e);
 	else
 		return val;
 }
 
-unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map, enum attend_type type)
+unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map, bool soft_ecc_pcpd_check)
 {
 	enum audio_coding_types coding_type = AUDIO_CODING_TYPE_UNDEFINED;
 	unsigned int val, layout;
@@ -583,7 +591,7 @@ unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map, enum attend_type type)
 					0x1 << 9, 0x1 << 9);
 			else
 				mmio_update_bits(dmac_map, EARCRX_SPDIFIN_CTRL2, 0x1 << 9, 0);
-			pcpd = earcrx_get_cs_pcpd(dmac_map, type == ATNDTYP_EARC);
+			pcpd = earcrx_get_cs_pcpd(dmac_map, soft_ecc_pcpd_check);
 			pc_v = (pcpd >> 16) & 0xffff;
 
 			/* compressed audio  type */
@@ -929,6 +937,10 @@ void earctx_set_for_hpd(struct regmap *top_map, struct earc_chipinfo *chipinfo, 
 
 void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chipinfo)
 {
+	u8 idr_trim = 0x10;
+	u8 dmac_slew = 0x4;
+	u8 rterm_trim = 0x10;
+
 	/* always set bit[16] = 0 from T5M for Txs */
 	mmio_update_bits(top_map,
 			 EARCTX_ANA_CTRL1,
@@ -936,13 +948,12 @@ void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chi
 			 0 << 16);
 	/* ana */
 	if (chipinfo->rterm_on) {
-		u8 idr_trim = 0x10;
-		u8 dmac_slew = 0x4;
-
 		if (chipinfo->idr_trim_val > 0)
 			idr_trim = chipinfo->idr_trim_val;
 		if (chipinfo->dmac_slew_con > 0)
 			dmac_slew = chipinfo->dmac_slew_con;
+		if (chipinfo->rterm_trim_val > 0)
+			rterm_trim = chipinfo->rterm_trim_val;
 
 		mmio_write(top_map, EARCTX_ANA_CTRL0,
 			   en << 31   |  /* earctx_en_d2a */
@@ -950,7 +961,7 @@ void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chi
 			   0x4 << 24  |  /* earctx_cmdcrx_hystrim */
 			   idr_trim << 19 |  /* earctx_idr_trim */
 			   0x1 << 17  |  /* earctx_rterm_on */
-			   0x10 << 12 |  /* earctx_rterm_trim */
+			   rterm_trim << 12 |  /* earctx_rterm_trim */
 			   dmac_slew << 8   |  /* earctx_dmac_slew_con */
 			   0x4 << 5   |  /* earctx_cmdctx_ack_hystrim */
 			   0x10 << 0     /* earctx_cmdctx_ack_reftrim */
@@ -1013,11 +1024,11 @@ void earctx_cmdc_init(struct regmap *top_map, bool en, struct earc_chipinfo *chi
 			   0x1 << 30   |
 			   0x1 << 28  |
 			   0x4 << 24  |
-			   0x10 << 19 |
+			   idr_trim << 19 |
 			   0x0 << 18  |
 			   0x1 << 17  |
-			   0x10 << 12 |
-			   0x4 << 8	|
+			   rterm_trim << 12 |
+			   dmac_slew << 8 |
 			   0x4 << 5   |
 			   0x10 << 0);
 	}

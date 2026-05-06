@@ -37,6 +37,8 @@
 #define INT_EARCRX_CMDC_RECV_PACKET         (0x1 << 1)
 #define INT_EARCRX_CMDC_REC_TIME_OUT        (0x1 << 0)
 
+#define INT_EARCRX_BIPHASE_DECODE_NEW_C_CH_STATUS_CHANGE   (0x1 << 30)
+#define INT_EARCRX_BIPHASE_STABLE_TIMEOUTstable            (0x1 << 29)
 #define INT_EARCRX_DMAC_VALID_AUTO_NEG_INT_SET             (0x1 << 28)
 #define INT_EARCRX_ANA_RST_C_NEW_FORMAT_SET                (0x1 << 17)
 #define INT_EARCRX_ANA_RST_C_EARCRX_DIV2_HOLD_SET          (0x1 << 16)
@@ -246,10 +248,13 @@ struct earc_chipinfo {
 	bool rx_enable;
 	bool tx_enable;
 	bool rx_pll_new;
+	/* hw pcpd check after ecc, A9 for the first IP with HW ecc check */
+	bool rx_pcpd_hw_ecc_check;
 	bool tx_pll_new;
 	int arc_version;
 	u8 idr_trim_val;
 	u8 dmac_slew_con;
+	u8 rterm_trim_val;
 };
 
 void aml_earc_auto_gain_enable(struct regmap *dmac_map, int value);
@@ -272,12 +277,13 @@ void earcrx_dmac_init(struct regmap *top_map,
 		      bool unstable_tick_sel,
 		      bool chnum_mult_mode,
 			  int ch_num);
-void earcrx_arc_init(struct regmap *dmac_map);
+void earcrx_arc_init(struct regmap *dmac_map, bool hw_ecc_pcpd_check);
 unsigned int earcrx_get_cs_iec958(struct regmap *dmac_map, int offset);
 unsigned int earcrx_get_cs_ca(struct regmap *dmac_map);
 unsigned int earcrx_get_cs_mute(struct regmap *dmac_map);
 void earcrx_spdifin_mute(struct regmap *dmac_map, bool mute);
-unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map, enum attend_type type);
+unsigned int earcrx_get_cs_fmt(struct regmap *dmac_map,
+				bool soft_ecc_pcpd_check);
 unsigned int earcrx_get_cs_freq(struct regmap *dmac_map,
 				enum audio_coding_types coding_type);
 unsigned int earcrx_get_cs_word_length(struct regmap *dmac_map);
