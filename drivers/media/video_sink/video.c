@@ -5837,6 +5837,7 @@ static char *check_media_sei(char *sei, u32 sei_size, u32 fmt_type, u32 *ret_siz
 	u32 user_id;
 	u32 user_type_code;
 	u32 sei_type;
+	int zero_count = 0;
 
 	if (ret_size)
 		*ret_size = 0;
@@ -5913,6 +5914,11 @@ static char *check_media_sei(char *sei, u32 sei_size, u32 fmt_type, u32 *ret_siz
 			if (nal_type == PREFIX_SEI_NUT) {
 				sei_payload_type = *(p + 2);
 				sei_payload_size = *(p + 3);
+				while (zero_count < MAX_ZERO_COUNT &&
+					(p + 40 + zero_count < sei + sei_size) &&
+					p[40 + zero_count] == 0) {
+					zero_count++;
+				}
 				if (sei_payload_type == SEI_ITU_T_T35 &&
 				    sei_payload_size >= 8) {
 					country_code = *(p + 4);
@@ -5931,7 +5937,8 @@ static char *check_media_sei(char *sei, u32 sei_size, u32 fmt_type, u32 *ret_siz
 					    DVB_T35_PROV_CODE &&
 					    user_id == DVB_USER_ID_CODE)) &&
 					    user_type_code ==
-					    DM_MD_USER_TYPE_CODE)
+					    DM_MD_USER_TYPE_CODE &&
+						zero_count != MAX_ZERO_COUNT)
 						len_2094_sei = sei_payload_size;
 				}
 				if (len_2094_sei > 0) {
@@ -5969,6 +5976,7 @@ static char *check_media_sei(char *sei, u32 sei_size, u32 fmt_type, u32 *ret_siz
 #endif
 		}
 		p += size;
+		zero_count = 0;
 	}
 	if (!ret && ret_size)
 		*ret_size = 0;

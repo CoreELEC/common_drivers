@@ -17,6 +17,8 @@
 #define AMDV_OUTPUT_MODE_SDR8			4
 #define AMDV_OUTPUT_MODE_BYPASS			5
 
+#define MAX_ZERO_COUNT  40
+
 enum OSD_INDEX {
 	OSD1_INDEX = 0,
 	OSD2_INDEX = 1,

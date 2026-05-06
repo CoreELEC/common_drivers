@@ -51,6 +51,8 @@ struct vframe_s;
 
 #define AMDV_UPDATE_OSD_MODE 0x00000001
 
+#define MAX_ZERO_COUNT  40
+
 enum py_level {
 	PY_SIX_LEVEL = 0,
 	PY_SEVEN_LEVEL = 1,
