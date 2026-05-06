@@ -5428,4 +5428,4 @@
 
 };
 
-//#include "mesons6_cpufreq.dtsi"
+#include "mesonc5_cpufreq.dtsi"
