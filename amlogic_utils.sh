@@ -1863,7 +1863,7 @@ function build_kernel_with_bazel() {
 	echo "    BUILD_TIME = \"${BUILD_TIME}\","		>> ${PROJECT_DIR}/project.bzl
 
 	cd ${ROOT_DIR}/${KERNEL_DIR}/${COMMON_DRIVERS_DIR}/
-	COMMON_DRIVERS_RELEASE=$(git rev-parse --verify HEAD)
+	COMMON_DRIVERS_RELEASE=$(git rev-parse --verify HEAD 2>/dev/null || echo "")
 	cd - >> /dev/null
 	echo "    COMMON_DRIVERS_RELEASE = \"${COMMON_DRIVERS_RELEASE}\"," >> ${PROJECT_DIR}/project.bzl
 
