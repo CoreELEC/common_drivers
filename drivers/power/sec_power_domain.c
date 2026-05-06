@@ -1201,6 +1201,10 @@ static struct sec_pm_private_domain c5_pm_domains[] __initdata = {
 			DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 	[PDID_C5_AUDIO_TOP] = POWER_DOMAIN(audio_top, PDID_C5_AUDIO_TOP,
 			DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C5_CAN0] = POWER_DOMAIN(can0, PDID_C5_CAN0,
+			DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
+	[PDID_C5_CAN1] = POWER_DOMAIN(can1, PDID_C5_CAN1,
+			DOMAIN_INIT_ON, GENPD_FLAG_ALWAYS_ON),
 };
 
 static struct sec_pm_domain_data c5_pm_domain_data __initdata = {

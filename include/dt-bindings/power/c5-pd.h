@@ -38,3 +38,5 @@
 #define PDID_C5_AO_PWM_B		32
 #define PDID_C5_AO_PSRAM		33
 #define PDID_C5_AUDIO_TOP		34
+#define PDID_C5_CAN0                    35
+#define PDID_C5_CAN1                    36
