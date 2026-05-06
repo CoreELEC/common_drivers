@@ -105,11 +105,11 @@ static void gdc_endian_config(struct gdc_cmd_s *gdc_cmd, u32 core_id)
 		return;
 
 	if (gdc_endian_debug_enable) {
-		gdc_datain_swap_64bit_write(gdc_in_swap_64bit, core_id);
-		gdc_dataout_swap_64bit_write(gdc_out_swap_64bit, core_id);
+		gdc_datain_swap_64bit_write(gdc_in_swap_64bit, dev_type, core_id);
+		gdc_dataout_swap_64bit_write(gdc_out_swap_64bit, dev_type, core_id);
 
-		gdc_datain_swap_endian_write(gdc_in_swap_endian, core_id);
-		gdc_dataout_swap_endian_write(gdc_out_swap_endian, core_id);
+		gdc_datain_swap_endian_write(gdc_in_swap_endian, dev_type, core_id);
+		gdc_dataout_swap_endian_write(gdc_out_swap_endian, dev_type, core_id);
 	} else {
 		u32 in_swap_64bit = 0, out_swap_64bit = 0;
 		u32 in_swap_endian = 0, out_swap_endian = 0;
@@ -181,10 +181,10 @@ static void gdc_endian_config(struct gdc_cmd_s *gdc_cmd, u32 core_id)
 			}
 		}
 
-		gdc_datain_swap_64bit_write(in_swap_64bit, core_id);
-		gdc_dataout_swap_64bit_write(out_swap_64bit, core_id);
-		gdc_datain_swap_endian_write(in_swap_endian, core_id);
-		gdc_dataout_swap_endian_write(out_swap_endian, core_id);
+		gdc_datain_swap_64bit_write(in_swap_64bit, dev_type, core_id);
+		gdc_dataout_swap_64bit_write(out_swap_64bit, dev_type, core_id);
+		gdc_datain_swap_endian_write(in_swap_endian, dev_type, core_id);
+		gdc_dataout_swap_endian_write(out_swap_endian, dev_type, core_id);
 
 		gdc_log(LOG_DEBUG, "in_endian:%d, out_endian:%d",
 			in_endian, out_endian);
@@ -204,12 +204,12 @@ static void gdc_uvswap_config(struct gdc_cmd_s *gdc_cmd, u32 core_id)
 		return;
 
 	if (gdc_uvswap_debug_enable) {
-		gdc_uv_swap_write(gdc_uv_swap_enable, core_id);
+		gdc_uv_swap_write(gdc_uv_swap_enable, dev_type, core_id);
 	} else {
 		u32 uv_swap_enable = 0;
 
 		uv_swap_enable = gdc_cmd->uvswap_enable;
-		gdc_uv_swap_write(uv_swap_enable, core_id);
+		gdc_uv_swap_write(uv_swap_enable, dev_type, core_id);
 		gdc_log(LOG_DEBUG, "uv_swap_enable:%d\n", uv_swap_enable);
 	}
 }

@@ -195,6 +195,8 @@ extern int gdc_uv_swap_enable;
 #define C4_ISP_DWAP_TOP_SRC_U_CTRL3        ((0x79 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_TOP_SRC_V_CTRL3        ((0x89 << 2) | ISP_DWAP_REG_MARK)
 #define C4_ISP_DWAP_PPS_CTRL               ((0xc2 << 2) | ISP_DWAP_REG_MARK)
+#define C4_ISP_DWAP_CMD_SWAP               ((0x27 << 2) | ISP_DWAP_REG_MARK)
+//C4 ISP_DWAP_WMIF_CTRL1 and ISP_DWAP_RMIF_CTRL1 address are same as before chip
 
 #define ISP_DWAP_CMD_SWAP                  ((0x2b << 2) | ISP_DWAP_REG_MARK)
 #define ISP_DWAP_WMIF_CTRL1                ((0x40 << 2) | ISP_DWAP_REG_MARK)
@@ -461,23 +463,41 @@ static inline u32 gdc_config_size_read(void)
 }
 
 // args: enable (1-swap endian  0-do not swap)
-static inline void gdc_datain_swap_endian_write(u32 enable, u32 core_id)
+static inline void gdc_datain_swap_endian_write(u32 enable, u32 dev_type, u32 core_id)
 {
-	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
-		u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+	u32 swap_reg;
+
+	if (dev_type == AML_GDC)
+		swap_reg = ISP_DWAP_CMD_SWAP;
+	else if (dev_type == AML_GDC_V2)
+		swap_reg = C4_ISP_DWAP_CMD_SWAP;
+	else
+		return;
+
+	if (dev_type == AML_GDC || dev_type == AML_GDC_V2) {
+		u32 curr = system_gdc_read_32(swap_reg, core_id);
 
 		curr &= ~(1 << 6);
 		if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG)
 			curr |= ((enable ? 0 : 1) << 6);
 		else
 			curr |= (enable << 6);
-		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		system_gdc_write_32(swap_reg, curr, core_id);
 	}
 }
 
-static inline void gdc_dataout_swap_endian_write(u32 enable, u32 core_id)
+static inline void gdc_dataout_swap_endian_write(u32 enable, u32 dev_type, u32 core_id)
 {
-	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+	u32 swap_reg;
+
+	if (dev_type == AML_GDC)
+		swap_reg = ISP_DWAP_CMD_SWAP;
+	else if (dev_type == AML_GDC_V2)
+		swap_reg = C4_ISP_DWAP_CMD_SWAP;
+	else
+		return;
+
+	if (dev_type == AML_GDC || dev_type == AML_GDC_V2) {
 		u32 curr = system_gdc_read_32(ISP_DWAP_WMIF_CTRL1, core_id);
 
 		curr &= ~(1 << 6);
@@ -485,37 +505,54 @@ static inline void gdc_dataout_swap_endian_write(u32 enable, u32 core_id)
 		system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
 
 		if (GDC_DEV_T(AML_GDC)->endian_config == OLD_ENDIAN_CONFIG) {
-			curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+			curr = system_gdc_read_32(swap_reg, core_id);
 			curr &= ~(1 << 8);
 			curr |= (enable << 8);
-			system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+			system_gdc_write_32(swap_reg, curr, core_id);
 		}
 	}
 }
 
 // args: enable (1-uv swap  0-do not uv swap)
-static inline void gdc_uv_swap_write(u32 enable, u32 core_id)
+static inline void gdc_uv_swap_write(u32 enable, u32 dev_type, u32 core_id)
 {
-	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
-		u32 curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+	u32 swap_reg;
+
+	if (dev_type == AML_GDC)
+		swap_reg = ISP_DWAP_CMD_SWAP;
+	else if (dev_type == AML_GDC_V2)
+		swap_reg = C4_ISP_DWAP_CMD_SWAP;
+	else
+		return;
+
+	if (dev_type == AML_GDC || dev_type == AML_GDC_V2) {
+		u32 curr = system_gdc_read_32(swap_reg, core_id);
 
 		curr &= ~(1 << 7);
 		curr |= (enable << 7);
-		system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+		system_gdc_write_32(swap_reg, curr, core_id);
 	}
 }
 
 // args: enable (1-swap 64bit of 128bit  0-do not swap)
-static inline void gdc_datain_swap_64bit_write(u32 enable, u32 core_id)
+static inline void gdc_datain_swap_64bit_write(u32 enable, u32 dev_type, u32 core_id)
 {
 	u32 curr;
+	u32 swap_reg;
 
-	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+	if (dev_type == AML_GDC)
+		swap_reg = ISP_DWAP_CMD_SWAP;
+	else if (dev_type == AML_GDC_V2)
+		swap_reg = C4_ISP_DWAP_CMD_SWAP;
+	else
+		return;
+
+	if (dev_type == AML_GDC || dev_type == AML_GDC_V2) {
 		if (GDC_DEV_T(AML_GDC)->endian_config == NEW_ENDIAN_CONFIG) {
-			curr = system_gdc_read_32(ISP_DWAP_CMD_SWAP, core_id);
+			curr = system_gdc_read_32(swap_reg, core_id);
 			curr &= ~(1 << 11);
 			curr |= (enable << 11);
-			system_gdc_write_32(ISP_DWAP_CMD_SWAP, curr, core_id);
+			system_gdc_write_32(swap_reg, curr, core_id);
 		} else {
 			curr = system_gdc_read_32(ISP_DWAP_RMIF_CTRL1, core_id);
 			curr &= ~(1 << 7);
@@ -529,11 +566,11 @@ static inline void gdc_datain_swap_64bit_write(u32 enable, u32 core_id)
 	}
 }
 
-static inline void gdc_dataout_swap_64bit_write(u32 enable, u32 core_id)
+static inline void gdc_dataout_swap_64bit_write(u32 enable, u32 dev_type, u32 core_id)
 {
 	u32 curr = system_gdc_read_32(ISP_DWAP_WMIF_CTRL1, core_id);
 
-	if (gdc_manager.aml_gdc_dev->dev_type == AML_GDC) {
+	if (dev_type == AML_GDC || dev_type == AML_GDC_V2) {
 		curr &= ~(1 << 7);
 		curr |= (enable << 7);
 		system_gdc_write_32(ISP_DWAP_WMIF_CTRL1, curr, core_id);
@@ -1539,6 +1576,14 @@ static inline void gdc_secure_set(u8 data, u32 dev_type, u32 core_id)
 		else
 			val &= ~(1 << 5);
 		system_gdc_write_32(ISP_DWAP_TOP_CTRL0, val, core_id);
+	} else if (dev_type == AML_GDC_V2) {
+		u32 val = system_gdc_read_32(C4_ISP_DWAP_TOP_CTRL0, core_id);
+
+		if (data)
+			val |= 1 << 5;
+		else
+			val &= ~(1 << 5);
+		system_gdc_write_32(C4_ISP_DWAP_TOP_CTRL0, val, core_id);
 	}
 	gdc_log(LOG_DEBUG, "secure mode:%d, dev_type:%d\n", data, dev_type);
 }
