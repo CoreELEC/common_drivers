@@ -299,11 +299,11 @@ static int pwm_regulator_set_voltage_time_sel(struct regulator_dev *rdev,
 	steps += selector % drvdata->desc.vsel_step ? 1 : 0;
 	delay = ustep_time * steps;
 
-	if (delay > 60) {
+	if (delay > 60)
 		usleep_range(delay - 10, delay);
-		delay = 0;
-	}
-	return delay;
+	else
+		udelay(delay);
+	return 0;
 }
 #endif
 

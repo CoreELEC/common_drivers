@@ -43,7 +43,7 @@ enum master {
 	MASTER_DSU,
 };
 
-#define VOLT_GAP  50000
+#define VOLT_GAP  60000
 
 static int freqmax0_param_v2(char *buff)
 {
