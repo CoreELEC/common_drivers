@@ -1445,9 +1445,9 @@
 			      <0x0 0xfe364000 0x0 0x8>;
 			interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "macirq";
-			clocks = <&clkc CLKID_SYS_ETH_1G_MAC>,
+			clocks = <&clkc CLKID_SYS_ETH_MAC>,
 				 <&clkc CLKID_FCLK_DIV2>,
-				 <&clkc CLKID_FCLK_50M>;
+				 <&clkc CLKID_FCLK_DIV50M>;
 			clock-names = "stmmaceth", "clkin0", "clkin1";
 			rx-fifo-depth = <4096>;
 			tx-fifo-depth = <2048>;
