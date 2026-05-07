@@ -251,7 +251,7 @@ err:
 
 static int pdm_set_clk(struct sed *p_sed)
 {
-	unsigned int ret;
+	int ret;
 	unsigned int rate, pdm_sysclk, pdm_dclk, by_pass;
 	unsigned int source_clk =  clk_get_rate(p_sed->rc_pll);
 
@@ -423,7 +423,15 @@ static int sed_enable_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = sed_p->sed_enable;
 	return 0;
@@ -433,9 +441,16 @@ static int sed_enable_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	if (value > 1) {
 		pr_info("invalid value:%d\n", value);
 		return 0;
@@ -460,8 +475,15 @@ static int sed_pdm_sample_count_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	ucontrol->value.enumerated.item[0] = sed_p->pdm_sample_cnt;
 	return 0;
 }
@@ -470,9 +492,16 @@ static int sed_pdm_sample_count_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	sed_p->pdm_sample_cnt = value;
 	pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	return 0;
@@ -482,7 +511,15 @@ static int sed_pdm_sample_train_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = sed_p->pdm_sample_cnt;
 	return 0;
@@ -492,9 +529,16 @@ static int sed_pdm_sample_train_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	if (sed_p->sed_enable)
 		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value,
 					sed_p->max_sample_cnt);
@@ -517,8 +561,15 @@ static int sed_mic_rate_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	ucontrol->value.enumerated.item[0] = sed_p->mic_rate;
 	return 0;
 }
@@ -527,11 +578,18 @@ static int sed_mic_rate_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	if (value > 2)
-		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
+		pr_err("%s: Invalid value %d\n", __func__, value);
 	sed_p->mic_rate = value;
 
 	if (sed_p->mic_rate == MIC_16K)
@@ -557,7 +615,15 @@ static int sed_mic_suspend_type_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = sed_p->suspend_type;
 	return 0;
@@ -567,11 +633,19 @@ static int sed_mic_suspend_type_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 
 	if (value > 2)
-		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
+		pr_err("%s: Invalid value %d\n", __func__, value);
 	sed_p->suspend_type = value;
 
 	return 0;
@@ -590,8 +664,15 @@ static int sed_mic_source_type_get(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	ucontrol->value.enumerated.item[0] = sed_p->sed_source;
 	return 0;
 }
@@ -600,11 +681,18 @@ static int sed_mic_source_type_set(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p  = snd_soc_component_get_drvdata(component);
 	unsigned int value = ucontrol->value.enumerated.item[0];
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p  = snd_soc_component_get_drvdata(component);
+	if (!sed_p)
+		return 0;
 	if (value > 2)
-		dev_err(sed_p->dev, "%s: Invalid value %d\n", __func__, value);
+		pr_err("%s: Invalid value %d\n", __func__, value);
 	sed_p->sed_source = value;
 	if (sed_p->sed_source == 0) {
 		sed_p->mic_src = sed_p->pdm_src;
@@ -620,8 +708,13 @@ static int sed_channel_get_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p = dev_get_drvdata(component->dev);
+	struct sed *sed_p;
 
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p = dev_get_drvdata(component->dev);
 	if (!sed_p)
 		return 0;
 
@@ -634,7 +727,13 @@ static int sed_channel_set_enum(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
-	struct sed *sed_p = dev_get_drvdata(component->dev);
+	struct sed *sed_p;
+
+	if (!component) {
+		pr_err("%s: component is null\n", __func__);
+		return 0;
+	}
+	sed_p = dev_get_drvdata(component->dev);
 
 	if (!sed_p)
 		return 0;
@@ -1059,7 +1158,7 @@ static int pcm_read(struct sed *p_sed, void *buffer, int bytes)
 		if (ret < 0) {
 			p_sed->prepared = false;
 			p_sed->running = false;
-			if (ret == EPIPE) {
+			if (ret == -EPIPE) {
 					/* we failed to make our window -- try to restart */
 				p_sed->xruns++;
 				continue;
@@ -1106,7 +1205,7 @@ static bool aml_asr_feed(void *buffer, unsigned int bytes)
 	/*only test*/
 	if (count > 100)
 		return true;
-	return true;
+	return false;
 }
 
 static int algorithm_data_process(struct sed *p_sed, unsigned int bytes)
@@ -1194,15 +1293,26 @@ static int sed_freeze_thread(void *data)
 static int sed_platform_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct device *dev = &pdev->dev;
+	struct snd_pcm_substream *substream = NULL;
+	struct snd_pcm_runtime *runtime = NULL;
 	struct sed *p_sed = dev_get_drvdata(dev);
-	struct snd_pcm_substream *substream = p_sed->substream;
-	struct snd_pcm_runtime *runtime = substream->runtime;
+
 
 	dev_pm_set_wake_irq(dev, p_sed->irq_wakeup);
 	if (!p_sed->sed_load_bin)
 		pr_info("%s:no load bin!, need load\n", __func__);
 
 	if (is_pm_s2idle_mode()) {
+		substream = p_sed->substream;
+		if (!substream) {
+			dev_err(p_sed->dev, "sed device not to open\n");
+			return 0;
+		}
+		runtime = substream->runtime;
+		if (!runtime) {
+			dev_err(p_sed->dev, "sed device open failed ?\n");
+			return 0;
+		}
 		dev_info(p_sed->dev, "%s:freeze mode\n", __func__);
 		if (!p_sed->thread) {
 			p_sed->thread =
