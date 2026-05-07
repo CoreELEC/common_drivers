@@ -3846,7 +3846,10 @@ RESTART:
 			goto RESTART;
 		}
 	}
-
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+	if (video_is_meson_t6x_cpu())
+		skip_policy = 0x0;
+#endif
 	if ((skip_policy & 0xf0) && skip_policy_check) {
 		skip_policy_check = false;
 		if (skip_policy & 0x40) {
