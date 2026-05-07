@@ -830,7 +830,13 @@ static int meson8b_suspend(struct device *dev)
 			amlogic_wol_enter(dev);
 		} else {
 			set_wol_notify_bl31(dwmac, false);
-			set_wol_notify_bl30(dwmac, false);
+			/* BIT[0]: 0:E-PHY  1:I-PHY
+			 * BIT[1]: 0:EN_WOL 1:DIS_WOL
+			 */
+			if (priv->eth_priv.internal_phy == 2)
+				set_wol_notify_bl30(dwmac, 0x2);
+			else
+				set_wol_notify_bl30(dwmac, 0x3);
 			/* if it is not an external phy */
 			if (priv->eth_priv.internal_phy != 2 && dwmac->data->suspend)
 				dwmac->data->suspend(dwmac);
