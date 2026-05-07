@@ -60,6 +60,8 @@ static struct dpss_game_n2m_t frc_n2m_list[GAME_N2M_LIST_MAX] = {
 
 unsigned int dpss_force_v;
 module_param_named(dpss_force_v, dpss_force_v, uint, 0664);
+unsigned int dpss_force_h;
+module_param_named(dpss_force_h, dpss_force_h, uint, 0664);
 
 static void _ch_releas_data_fifo(struct dpss_ch_d_s1 *pch_d)
 {
@@ -858,7 +860,7 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 	struct dpss_nr_i_s *nr_i;
 	struct dpss_frc_i_s *frc_i;
 	unsigned int len_nr, len_in, len_frc;
-	unsigned int alig_height;
+	unsigned int alig_height, tmp_ratio;
 
 	if (!pch || !pch->d) {
 		DBG_ERR("%s 01\n", __func__);
@@ -889,11 +891,22 @@ enum DPSS_ERRORTYPE _input_buffer(struct dpss_ch_s *pch, struct vframe_s *vfm)
 		if (dpss_force_v) {
 			if (VFM_IS_COMP_MODE(vfm->type)) {
 				vfm->compHeight = dpss_force_v;
-				vfm->height = dpss_force_v / 4;
+				tmp_ratio = vfm->compHeight / vfm->height;
+				vfm->height = dpss_force_v / tmp_ratio;
 			} else {
 				vfm->height = dpss_force_v;
 			}
 		}
+		if (dpss_force_h) {
+			if (VFM_IS_COMP_MODE(vfm->type)) {
+				vfm->compWidth = dpss_force_h;
+				tmp_ratio = vfm->compWidth / vfm->width;
+				vfm->width = dpss_force_h / tmp_ratio;
+			} else {
+				vfm->width = dpss_force_h;
+			}
+		}
+
 		nr_i->in_vfm = vfm;
 		if (check_need_enable_4k1k(nr_i->in_vfm)) {
 			if (VFM_IS_COMP_MODE(vfm->type)) {

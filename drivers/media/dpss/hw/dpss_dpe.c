@@ -2721,8 +2721,8 @@ void hw_cfg_dpe_size(enum DPSS_WORK_MODE dpe_mode,
 	cur_lft_pad[3] = amdv_lft_pad[3] + dcntr_pad + vbe_pad;
 
 	cur_rgt_pad[0] = amdv_rgt_pad[0] + dcntr_pad + vbe_pad;
-	cur_rgt_pad[1] = amdv_rgt_pad[0] + dcntr_pad + vbe_pad;
-	cur_rgt_pad[2] = amdv_rgt_pad[0] + dcntr_pad + vbe_pad;
+	cur_rgt_pad[1] = amdv_rgt_pad[1] + dcntr_pad + vbe_pad;
+	cur_rgt_pad[2] = amdv_rgt_pad[2] + dcntr_pad + vbe_pad;
 	cur_rgt_pad[3] = 0;
 
 	pre_pad = vbe_pad;

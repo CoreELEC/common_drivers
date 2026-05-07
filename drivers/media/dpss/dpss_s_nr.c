@@ -2942,6 +2942,16 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	} else {
 		prm_top->mode_drct = false;
 	}
+
+	if (dpss_dct_force & C_BIT31) {
+		if (dpss_dct_force & C_BIT8)
+			dpss_en_dct = 1;
+		else if (dpss_dct_force & C_BIT9)
+			dpss_en_dct = 2;
+		else
+			dpss_en_dct = 0;
+	}
+
 	dbg_i0("init:direct =%d\n", pch->d->mode_drct);
 	if ((((dpss_en_dct & C_BIT0) && !pch->c.ch) ||
 	    ((dpss_en_dct & C_BIT1) && pch->c.ch)) &&
