@@ -94,7 +94,7 @@ static void a1_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	unsigned int val;
 
 	/* enable all channel */
-	val =  (db->mode << 31) |	/* enable bit */
+	val =  (db->mode ? BIT(31) : 0) |	/* enable bit */
 	       (0x01 << 20) |	/* use timer  */
 	       (0x03 <<  0);
 

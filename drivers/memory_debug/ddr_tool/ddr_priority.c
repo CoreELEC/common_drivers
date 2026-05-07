@@ -18,14 +18,23 @@
 #include <linux/bits.h>
 #include <linux/bitfield.h>
 #include <linux/overflow.h>
+#include <linux/vmalloc.h>
 #include "ddr_port.h"
 #include "ddr_bandwidth.h"
 
 #define DDR_PRIORITY_FORCE_RW(_bus, _mask, _off, _lsb, _nbits)				\
 	{										\
 		.bus = (_bus),								\
-		.force_mask = (_mask),							\
-		.offset = (_off), .lsb = (_lsb), .nbits = (_nbits),			\
+		.r_force_mask = (_mask),						\
+		.w_force_mask = (_mask),						\
+		.r_force_mask_offset = (_off),						\
+		.w_force_mask_offset = (_off),						\
+		.r_offset = (_off),							\
+		.w_offset = (_off),							\
+		.r_lsb = (_lsb),							\
+		.w_lsb = (_lsb),							\
+		.r_nbits = (_nbits),							\
+		.w_nbits = (_nbits),							\
 	}										\
 
 #define DDR_PRIORITY_NIC_FIXED(_port_id, _sub_id, _fixed_w, _fixed_r)			\
@@ -1931,22 +1940,118 @@ static struct ddr_priority_info ddr_priority_info_c4 __initdata = {
 };
 
 static struct ddr_priority_force ddr_priority_force_a9[] __initdata = {
-	DDR_PRIORITY_FORCE_RW(0, BIT(15), (0x80 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(1, BIT(15), (0x84 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(2, BIT(15), (0x88 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(3, BIT(15), (0x8c << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(4, BIT(15), (0x90 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(5, BIT(15), (0x94 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(6, BIT(15), (0x98 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(7, BIT(15), (0x9c << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(8, BIT(15), (0xa0 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(9, BIT(15), (0xa4 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(10, BIT(15), (0xa8 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(11, BIT(15), (0xac << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(12, BIT(15), (0xb0 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(13, BIT(15), (0xb4 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(14, BIT(15), (0xb8 << 2), 16, 4),
-	DDR_PRIORITY_FORCE_RW(15, BIT(15), (0xbc << 2), 16, 4),
+	{ .bus = 0,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x80 << 2), .w_force_mask_offset = (0x80 << 2),
+	  .r_offset = (0x80 << 2),            .w_offset = (0x83 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 1,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x84 << 2), .w_force_mask_offset = (0x84 << 2),
+	  .r_offset = (0x84 << 2),            .w_offset = (0x87 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 2,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x88 << 2), .w_force_mask_offset = (0x88 << 2),
+	  .r_offset = (0x88 << 2),            .w_offset = (0x8b << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 3,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x8c << 2), .w_force_mask_offset = (0x8c << 2),
+	  .r_offset = (0x8c << 2),            .w_offset = (0x8f << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 4,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x90 << 2), .w_force_mask_offset = (0x90 << 2),
+	  .r_offset = (0x90 << 2),            .w_offset = (0x93 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 5,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x94 << 2), .w_force_mask_offset = (0x94 << 2),
+	  .r_offset = (0x94 << 2),            .w_offset = (0x97 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 6,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x98 << 2), .w_force_mask_offset = (0x98 << 2),
+	  .r_offset = (0x98 << 2),            .w_offset = (0x9b << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 7,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0x9c << 2), .w_force_mask_offset = (0x9c << 2),
+	  .r_offset = (0x9c << 2),            .w_offset = (0x9f << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 8,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xa0 << 2), .w_force_mask_offset = (0xa0 << 2),
+	  .r_offset = (0xa0 << 2),            .w_offset = (0xa3 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 9,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xa4 << 2), .w_force_mask_offset = (0xa4 << 2),
+	  .r_offset = (0xa4 << 2),            .w_offset = (0xa7 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 10,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xa8 << 2), .w_force_mask_offset = (0xa8 << 2),
+	  .r_offset = (0xa8 << 2),            .w_offset = (0xab << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 11,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xac << 2), .w_force_mask_offset = (0xac << 2),
+	  .r_offset = (0xac << 2),            .w_offset = (0xaf << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 12,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xb0 << 2), .w_force_mask_offset = (0xb0 << 2),
+	  .r_offset = (0xb0 << 2),            .w_offset = (0xb3 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 13,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xb4 << 2), .w_force_mask_offset = (0xb4 << 2),
+	  .r_offset = (0xb4 << 2),            .w_offset = (0xb7 << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 14,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xb8 << 2), .w_force_mask_offset = (0xb8 << 2),
+	  .r_offset = (0xb8 << 2),            .w_offset = (0xbb << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 15,
+	  .r_force_mask = BIT(15),            .w_force_mask = BIT(14),
+	  .r_force_mask_offset = (0xbc << 2), .w_force_mask_offset = (0xbc << 2),
+	  .r_offset = (0xbc << 2),            .w_offset = (0xbf << 2),
+	  .r_lsb = 16,                        .w_lsb = 4,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	}
 };
 
 static struct ddr_priority_info ddr_priority_info_a9 __initdata = {
@@ -2831,15 +2936,26 @@ static struct ddr_priority_force *find_force_by_bus(struct ddr_priority_info *in
 }
 
 static int priority_force_write(void __iomem *base, struct ddr_priority_force *force,
-				unsigned char value, bool clr_force_mask)
+				unsigned char value, int is_w, bool clr_force_mask)
 {
-	u32 reg;
-	unsigned long off;
+	u32 reg, mask_reg;
+	long force_mask;
+	unsigned long off, mask_off;
 	u8 lsb, nbits;
 
-	off = force->offset;
-	lsb = force->lsb;
-	nbits = force->nbits;
+	if (is_w) {
+		off = force->w_offset;
+		lsb = force->w_lsb;
+		nbits = force->w_nbits;
+		force_mask = force->w_force_mask;
+		mask_off = force->w_force_mask_offset;
+	} else {
+		off = force->r_offset;
+		lsb = force->r_lsb;
+		nbits = force->r_nbits;
+		force_mask = force->r_force_mask;
+		mask_off = force->r_force_mask_offset;
+	}
 
 	if (!nbits || nbits >= 32 || value >= (1U << nbits)) {
 		pr_err("invalid value: %d nbits: %u\n", value, nbits);
@@ -2849,17 +2965,22 @@ static int priority_force_write(void __iomem *base, struct ddr_priority_force *f
 	reg = readl(base + off);
 	reg &= ~GENMASK_U32(lsb + nbits - 1, lsb);
 	reg |= value << lsb;
-	if (clr_force_mask && force->force_mask > 0)
-		reg &= ~force->force_mask;
-	else if (force->force_mask > 0)
-		reg |= force->force_mask;
-
 	writel(reg, base + off);
+
+	mask_reg = readl(base + mask_off);
+
+	if (clr_force_mask && force_mask > 0)
+		mask_reg &= ~force_mask;
+	else if (force_mask > 0)
+		mask_reg |= force_mask;
+
+	writel(mask_reg, base + mask_off);
+
 	return 0;
 }
 
 static int set_force_priority(unsigned char dmc, unsigned char bus,
-			      unsigned char value, bool clr_force_mask)
+			      unsigned char value, int is_w, bool clr_force_mask)
 {
 	struct ddr_priority_info *info;
 	struct ddr_priority_force *force;
@@ -2870,21 +2991,25 @@ static int set_force_priority(unsigned char dmc, unsigned char bus,
 
 	info = aml_db->priority->v1;
 	base = aml_db->ddr_reg[dmc];
+
 	if (!base)
 		return -ENODEV;
 	force = find_force_by_bus(info, bus);
 	if (!force)
 		return -EINVAL;
 
-	return priority_force_write(base, force, value, clr_force_mask);
+	return priority_force_write(base, force, value, is_w, clr_force_mask);
 }
 
-static int get_force_priority(unsigned char dmc, unsigned char bus)
+static int get_force_priority(unsigned char dmc, unsigned char bus, int is_w)
 {
 	struct ddr_priority_info *info;
 	struct ddr_priority_force *force;
 	void __iomem *base;
-	u32 val, mask, priority;
+	u32 reg, mask_reg, mask, priority;
+	long force_mask;
+	unsigned long off, mask_off;
+	u8 lsb, nbits;
 
 	if (!aml_db || !aml_db->priority || !aml_db->priority->v1 || dmc >= aml_db->dmc_number)
 		return -EINVAL;
@@ -2898,12 +3023,34 @@ static int get_force_priority(unsigned char dmc, unsigned char bus)
 	if (!force)
 		return -EINVAL;
 
-	val = readl(base + force->offset);
-	mask = GENMASK_U32(force->lsb + force->nbits - 1, force->lsb);
-	priority = (val & mask) >> force->lsb;
+	if (is_w) {
+		off = force->w_offset;
+		lsb = force->w_lsb;
+		nbits = force->w_nbits;
+		force_mask = force->w_force_mask;
+		mask_off = force->w_force_mask_offset;
+	} else {
+		off = force->r_offset;
+		lsb = force->r_lsb;
+		nbits = force->r_nbits;
+		force_mask = force->r_force_mask;
+		mask_off = force->r_force_mask_offset;
+	}
 
-	if (force->force_mask > 0 && !(val & force->force_mask) && priority != 0)
-		pr_err("dmc=%d bus=%d force bit clear but val is %d\n", dmc, bus, priority);
+	if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+		pr_info("force dmc:%d, off:%lx, lsb:%d, nbits:%d\n",
+					dmc, off, lsb, nbits);
+
+	reg = readl(base + off);
+	mask = GENMASK_U32(lsb + nbits - 1, lsb);
+	priority = (reg & mask) >> lsb;
+
+	mask_reg = readl(base + mask_off);
+	if (force_mask > 0 && !(mask_reg & force_mask) && priority != 0)
+		pr_err("dmc=%d bus=%d %c force bit clear but val is %d\n",
+			dmc, bus,
+			is_w ? 'w' : 'r',
+			priority);
 
 	return priority;
 }
@@ -2986,7 +3133,7 @@ int force_format_buf(char *buf, ssize_t *poff, const char *fmt, ...)
 	return 0;
 }
 
-static int force_format_header(char *buf, ssize_t *poff, bool show_reg)
+static int force_format_header(char *buf, ssize_t *poff)
 {
 	int i, err;
 	char header_buf[2][12];
@@ -2996,20 +3143,20 @@ static int force_format_header(char *buf, ssize_t *poff, bool show_reg)
 		return err;
 
 	for (i = 0; i < aml_db->dmc_number; i++) {
-		scnprintf(header_buf[0], sizeof(header_buf[0]), "f%d", i);
-		scnprintf(header_buf[1], sizeof(header_buf[1]), "f%dM", i);
+		scnprintf(header_buf[0], sizeof(header_buf[0]), "f%dr", i);
+		scnprintf(header_buf[1], sizeof(header_buf[1]), "f%drM", i);
+		err = force_format_buf(buf, poff, " %-*s %-*s", 6,
+						header_buf[0], 6, header_buf[1]);
+		if (err)
+			return err;
+		scnprintf(header_buf[0], sizeof(header_buf[0]), "f%dw", i);
+		scnprintf(header_buf[1], sizeof(header_buf[1]), "f%dwM", i);
 		err = force_format_buf(buf, poff, " %-*s %-*s", 6,
 						header_buf[0], 6, header_buf[1]);
 		if (err)
 			return err;
 	}
 
-	if (show_reg) {
-		err = force_format_buf(buf, poff, " %-*s %-*s %-*s",
-						9, "offset", 6, "lsb", 6, "nbits");
-		if (err)
-			return err;
-	}
 	return force_format_buf(buf, poff, "\n");
 }
 
@@ -3074,40 +3221,42 @@ static int force_format_priority(char *buf, ssize_t *poff,
 				     struct ddr_priority_force *force,
 				     char *format_buf)
 {
-	int i, err, priority;
-	u32 max;
+	int i, err, rprio, wprio;
+	u32 rmax, wmax;
 
 	for (i = 0; i < aml_db->dmc_number; i++) {
 		if (!force || !aml_db->ddr_reg[i]) {
-			err = force_format_buf(buf, poff, " %-*s %-*s", 6, "-", 6, "-");
+			err = force_format_buf(buf, poff,
+					       " %-*s %-*s %-*s %-*s",
+					       6, "-", 6, "-",
+					       6, "-", 6, "-");
 			if (err)
 				return err;
 			continue;
 		}
 
-		priority = get_force_priority(i, force->bus);
-		max = force->nbits < 32 ? ((1U << force->nbits) - 1U) : 0;
-		if (priority < 0)
+		rprio = get_force_priority(i, force->bus, DMC_READ);
+		wprio = get_force_priority(i, force->bus, DMC_WRITE);
+		rmax = force->r_nbits < 32 ? ((1U << force->r_nbits) - 1U) : 0;
+		wmax = force->w_nbits < 32 ? ((1U << force->w_nbits) - 1U) : 0;
+
+		if (rprio < 0)
 			strscpy(format_buf, "-", 16);
 		else
-			scnprintf(format_buf, 16, "%x", priority);
+			scnprintf(format_buf, 16, "%x", rprio);
+		err = force_format_buf(buf, poff, " %-*s %-*x", 6, format_buf, 6, rmax);
+		if (err)
+			return err;
 
-		err = force_format_buf(buf, poff, " %-*s %-*x", 6, format_buf, 6, max);
+		if (wprio < 0)
+			strscpy(format_buf, "-", 16);
+		else
+			scnprintf(format_buf, 16, "%x", wprio);
+		err = force_format_buf(buf, poff, " %-*s %-*x", 6, format_buf, 6, wmax);
 		if (err)
 			return err;
 	}
 	return 0;
-}
-
-static int force_format_reg(char *buf, ssize_t *poff, struct ddr_priority_force *force)
-{
-	char reg_off_str[24];
-
-	scnprintf(reg_off_str, sizeof(reg_off_str), "0x%lx", force->offset);
-	return force_format_buf(buf, poff, " %-*s %-*u %-*u",
-					9, reg_off_str,
-					6, force->lsb,
-					6, force->nbits);
 }
 
 static ssize_t ddr_priority_info_force_show(char *buf)
@@ -3115,7 +3264,7 @@ static ssize_t ddr_priority_info_force_show(char *buf)
 	struct ddr_priority_info *info;
 	ssize_t buf_offset = 0;
 	ssize_t ret = 0;
-	unsigned char show_reg, asym_flag;
+	unsigned char asym_flag;
 	int i, j;
 	struct ddr_priority_force *force;
 	const char *format_name;
@@ -3134,7 +3283,6 @@ static ssize_t ddr_priority_info_force_show(char *buf)
 		return 0;
 
 	asym_flag = aml_db->soc_feature & DMC_ASYMMETRY ? 1 : 0;
-	show_reg = aml_db->priority->flag & DDR_PRIORITY_DEBUG ? 1 : 0;
 
 	if (asym_flag) {
 		bus_port_pool = kmalloc(MAX_BUS_PORT * 32, GFP_KERNEL);
@@ -3142,7 +3290,7 @@ static ssize_t ddr_priority_info_force_show(char *buf)
 			asym_flag = false;
 	}
 
-	ret = force_format_header(buf, &buf_offset, show_reg);
+	ret = force_format_header(buf, &buf_offset);
 	if (ret)
 		goto err;
 
@@ -3166,11 +3314,6 @@ static ssize_t ddr_priority_info_force_show(char *buf)
 		if (ret)
 			goto err;
 
-		if (show_reg) {
-			ret = force_format_reg(buf, &buf_offset, force);
-			if (ret)
-				goto err;
-		}
 		ret = force_format_buf(buf, &buf_offset, "\n");
 		if (ret)
 			goto err;
@@ -3206,7 +3349,7 @@ static const struct ddr_port_desc *find_desc_by_map(const struct ddr_port_map *m
 {
 	unsigned int i;
 
-	if (map->type == DDR_PORT_ROW_MASTER && map->desc)
+	if (map->type == DDR_PORT_MAP_MASTER && map->desc)
 		return map->desc;
 
 	for (i = 0; i < aml_db->real_ports; i++) {
@@ -3238,31 +3381,50 @@ static struct ddr_priority_force *find_force_by_map(struct ddr_priority_info *in
 	return NULL;
 }
 
-static bool get_force_prio_by_dmc(unsigned char dmc, struct ddr_priority_force *force, u32 *prio)
+static bool get_force_prio_by_dmc(unsigned char dmc, struct ddr_priority_force *force,
+				  int is_w, u32 *prio)
 {
 	void __iomem *base;
-	u32 val, pri;
+	u32 reg, mask_reg, pri;
+	unsigned long off, mask_off;
+	u8 lsb, nbits;
+	long force_mask;
 
 	if (!force || dmc >= aml_db->dmc_number || !aml_db->ddr_reg[dmc])
 		return false;
 
-	if (!force->nbits || force->nbits >= 32)
+	if (is_w) {
+		off = force->w_offset;
+		lsb = force->w_lsb;
+		nbits = force->w_nbits;
+		force_mask = force->w_force_mask;
+		mask_off = force->w_force_mask_offset;
+	} else {
+		off = force->r_offset;
+		lsb = force->r_lsb;
+		nbits = force->r_nbits;
+		force_mask = force->r_force_mask;
+		mask_off = force->r_force_mask_offset;
+	}
+
+	if (!nbits || nbits >= 32)
 		return false;
 
 	base = aml_db->ddr_reg[dmc];
-	val = readl(base + force->offset);
-	pri = (val & GENMASK_U32(force->lsb + force->nbits - 1, force->lsb)) >> force->lsb;
+	reg = readl(base + off);
+	pri = (reg & GENMASK_U32(lsb + nbits - 1, lsb)) >> lsb;
 	if (prio)
 		*prio = pri;
 
-	if (force->force_mask == -1L)
+	mask_reg = readl(base + mask_off);
+	if (force_mask == -1L)
 		return pri != 0;
 
-	return (val & force->force_mask) != 0;
+	return (mask_reg & force_mask) != 0;
 }
 
-static unsigned int get_force_en_mask(struct ddr_priority_force *force,
-					     unsigned int *dmc_mask)
+static unsigned int get_force_en_mask_dir(struct ddr_priority_force *force, int is_w,
+					  unsigned int *dmc_mask)
 {
 	unsigned char i;
 	unsigned int dmc_m = 0, en_m = 0;
@@ -3278,7 +3440,7 @@ static unsigned int get_force_en_mask(struct ddr_priority_force *force,
 		if (!aml_db->ddr_reg[i])
 			continue;
 		dmc_m |= BIT(i);
-		if (get_force_prio_by_dmc(i, force, NULL))
+		if (get_force_prio_by_dmc(i, force, is_w, NULL))
 			en_m |= BIT(i);
 	}
 	*dmc_mask = dmc_m;
@@ -3345,25 +3507,24 @@ static bool prio_reg_power_en(unsigned int type)
 	return aml_db->priority->flag & DDR_PRIORITY_POWER;
 }
 
-static bool prio_reg_get_en(unsigned int type, int is_w)
+static bool prio_reg_get_en(unsigned int type)
 {
 	if (!prio_type_is_reg(type))
 		return false;
 	if (!prio_reg_power_en(type))
 		return false;
-	if (!is_w && (type & PRIO_REG_WO))
+	if (type & PRIO_REG_WO)
 		return false;
 	return true;
 }
 
-static bool prio_reg_set_en(unsigned int type, int is_w)
+static bool prio_reg_set_en(unsigned int type)
 {
 	if (!prio_type_is_reg(type))
 		return false;
 	if (!prio_reg_power_en(type))
 		return false;
-	if (!is_w && (type & PRIO_REG_WO) && !(type & PRIO_REG_RW))
-		return false;
+
 	return true;
 }
 
@@ -3433,13 +3594,17 @@ static int get_ddr_dev_priority(const struct ddr_priority_dev *dev, int is_w)
 		return val & GENMASK_U32(dev->fixed_nbits - 1, 0);
 	}
 
-	if (prio_reg_get_en(dev->type, is_w)) {
+	if (prio_reg_get_en(dev->type)) {
 		lsb = is_w ? dev->w_lsb : dev->r_lsb;
 		nbits = is_w ? dev->w_nbits : dev->r_nbits;
 		offset = is_w ? dev->w_offset : dev->r_offset;
 
 		if (!nbits || nbits >= 32)
 			return -EINVAL;
+
+		if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+			pr_info("dev reg_base:%lx, off:%lx, lsb:%d, nbits:%d\n",
+					dev->reg_base, offset, lsb, nbits);
 
 		if (reg_access(dev->reg_base + offset, dev->reg_mode, READ, &val))
 			return -EFAULT;
@@ -3470,7 +3635,7 @@ static int set_ddr_dev_priority(struct ddr_priority_dev *dev, unsigned int prio,
 	if ((dev->type & PRIO_HANDLER) && dev->handle_set)
 		val = dev->handle_set(dev, prio, is_w);
 
-	if (prio_reg_set_en(dev->type, is_w)) {
+	if (prio_reg_set_en(dev->type)) {
 		lsb = is_w ? dev->w_lsb : dev->r_lsb;
 		nbits = is_w ? dev->w_nbits : dev->r_nbits;
 		offset = is_w ? dev->w_offset : dev->r_offset;
@@ -3518,7 +3683,7 @@ static int get_nic_priority(const struct ddr_priority_nic *nic, int is_w)
 		return (int)(val & GENMASK_U32(nic->fixed_nbits - 1, 0));
 	}
 
-	if (!prio_reg_get_en(nic->type, is_w)) {
+	if (!prio_reg_get_en(nic->type)) {
 		if (!prio_type_is_reg(nic->type))
 			return -EINVAL;
 		return -EIO;
@@ -3531,6 +3696,10 @@ static int get_nic_priority(const struct ddr_priority_nic *nic, int is_w)
 
 	if (!nbits || nbits >= 32)
 		return -EINVAL;
+
+	if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+		pr_info("nic reg_base:%lx, off:%lx, lsb:%d, nbits:%d\n",
+					nic->reg_base, offset, lsb, nbits);
 
 	if (reg_access(nic->reg_base + offset, nic->reg_mode, READ, &val))
 		return -EFAULT;
@@ -3552,11 +3721,8 @@ static int set_nic_priority(struct ddr_priority_nic *nic, unsigned int prio, int
 		return -EINVAL;
 	if (nic->type & PRIO_FIXED)
 		return -EINVAL;
-	if (!prio_reg_set_en(nic->type, is_w)) {
-		if (!prio_type_is_reg(nic->type))
-			return -EINVAL;
+	if (!prio_reg_set_en(nic->type))
 		return -EIO;
-	}
 
 	lsb = is_w ? nic->w_lsb : nic->r_lsb;
 	nbits = is_w ? nic->w_nbits : nic->r_nbits;
@@ -3601,7 +3767,7 @@ static int get_mdc_priority(const struct ddr_priority_mdc *mdc, int is_w)
 		return val & GENMASK_U32(mdc->fixed_nbits - 1, 0);
 	}
 
-	if (!prio_reg_get_en(mdc->type, is_w)) {
+	if (!prio_reg_get_en(mdc->type)) {
 		if (!prio_type_is_reg(mdc->type))
 			return -EINVAL;
 		return -EIO;
@@ -3613,6 +3779,10 @@ static int get_mdc_priority(const struct ddr_priority_mdc *mdc, int is_w)
 
 	if (!nbits || nbits >= 32)
 		return -EINVAL;
+
+	if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+		pr_info("mdc reg_base:%lx, off:%lx, lsb:%d, nbits:%d\n",
+					mdc->reg_base, offset, lsb, nbits);
 
 	if (reg_access(mdc->reg_base + offset, mdc->reg_mode, READ, &val))
 		return -EFAULT;
@@ -3633,11 +3803,8 @@ static int set_mdc_priority(struct ddr_priority_mdc *mdc, unsigned int prio, int
 		return -EINVAL;
 	if (mdc->type & PRIO_FIXED)
 		return -EINVAL;
-	if (!prio_reg_set_en(mdc->type, is_w)) {
-		if (!prio_type_is_reg(mdc->type))
-			return -EINVAL;
+	if (!prio_reg_set_en(mdc->type))
 		return -EIO;
-	}
 
 	lsb = is_w ? mdc->w_lsb : mdc->r_lsb;
 	nbits = is_w ? mdc->w_nbits : mdc->r_nbits;
@@ -3674,27 +3841,34 @@ static unsigned int prio_nbits_max(unsigned char nb)
 
 static void priority_type_format(char *buf, size_t sz, unsigned int type)
 {
-	size_t pos = 0;
+	size_t pos = 0, pos1 = 0;
 
 	if (type & PRIO_NOT_SUPPORT) {
 		strscpy(buf, "-", sz);
 		return;
 	}
 	/* (high -> low): dev, nic, mdc, fix */
+	if (type & PRIO_AUTO)
+		pos += scnprintf(buf + pos, sz - pos, "a(");
+
+	pos1 = pos;
+
 	if (type & PRIO_FROM_DEV)
 		pos += scnprintf(buf + pos, sz - pos, "d");
+
 	if (type & PRIO_FROM_NIC)
-		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|n" : "n");
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos != pos1 ? "|n" : "n");
 	if (type & PRIO_FROM_MDC)
-		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|m" : "m");
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos != pos1 ? "|m" : "m");
 	if (type & PRIO_HANDLER)
-		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|h" : "h");
-	if (type & PRIO_AUTO)
-		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|a" : "a");
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos != pos1 ? "|h" : "h");
 	if (type & PRIO_FIXED)
-		pos += scnprintf(buf + pos, sz - pos, "%s", pos ? "|fix" : "fix");
-	if (!pos)
-		strscpy(buf, "-", sz);
+		pos += scnprintf(buf + pos, sz - pos, "%s", pos != pos1 ? "|fix" : "fix");
+	if (pos1 == pos)
+		pos += scnprintf(buf + pos, sz - pos, "%s", "-");
+
+	if (type & PRIO_AUTO)
+		pos += scnprintf(buf + pos, sz - pos, ")");
 }
 
 static void priority_shift_dev(struct ddr_priority_info *info, struct ddr_priority_entry *entry,
@@ -3723,7 +3897,7 @@ static void priority_shift_dev(struct ddr_priority_info *info, struct ddr_priori
 		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
 		*out_nb = nbits;
 		*miss = false;
-	} else if (prio_reg_get_en(dev->type, is_w)) {
+	} else if (prio_reg_get_en(dev->type)) {
 		ret = get_ddr_dev_priority(dev, is_w);
 		if (ret < 0)
 			return;
@@ -3763,7 +3937,7 @@ static void priority_shift_nic(struct ddr_priority_info *info, struct ddr_priori
 		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
 		*out_nb = nbits;
 		*miss = false;
-	} else if (prio_reg_get_en(nic->type, is_w)) {
+	} else if (prio_reg_get_en(nic->type)) {
 		ret = get_nic_priority(nic, is_w);
 		if (ret < 0)
 			return;
@@ -3803,7 +3977,7 @@ static void priority_shift_mdc(struct ddr_priority_info *info, struct ddr_priori
 		*out_v = (raw >> lsb) & GENMASK_U32(nbits - 1, 0);
 		*out_nb = nbits;
 		*miss = false;
-	} else if (prio_reg_get_en(mdc->type, is_w)) {
+	} else if (prio_reg_get_en(mdc->type)) {
 		ret = get_mdc_priority(mdc, is_w);
 		if (ret < 0)
 			return;
@@ -3974,9 +4148,9 @@ static int priority_format_nic(char *buf, ssize_t *poff, struct ddr_priority_nic
 	int ret;
 	char tmp[16];
 
-	if (map_type == DDR_PORT_ROW_VPU_R)
+	if (map_type == DDR_PORT_MAP_SUB_R)
 		show_w = false;
-	else if (map_type == DDR_PORT_ROW_VPU_W)
+	else if (map_type == DDR_PORT_MAP_SUB_W)
 		show_r = false;
 
 	if (!nic)
@@ -4003,7 +4177,7 @@ static int priority_format_nic(char *buf, ssize_t *poff, struct ddr_priority_nic
 		} else {
 			ret = get_nic_priority(nic, 0);
 			if (ret == -EIO) {
-				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 			} else if (ret < 0) {
 				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 			} else {
@@ -4023,7 +4197,7 @@ static int priority_format_nic(char *buf, ssize_t *poff, struct ddr_priority_nic
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
 		ret = get_nic_priority(nic, 1);
 		if (ret == -EIO)
-			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 		if (ret < 0)
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 		w = (unsigned int)ret;
@@ -4042,9 +4216,9 @@ static int priority_format_dev(char *buf, ssize_t *poff, struct ddr_priority_dev
 	int ret;
 	char tmp[16];
 
-	if (map_type == DDR_PORT_ROW_VPU_R)
+	if (map_type == DDR_PORT_MAP_SUB_R)
 		show_w = false;
-	else if (map_type == DDR_PORT_ROW_VPU_W)
+	else if (map_type == DDR_PORT_MAP_SUB_W)
 		show_r = false;
 
 	if (!dev)
@@ -4071,7 +4245,7 @@ static int priority_format_dev(char *buf, ssize_t *poff, struct ddr_priority_dev
 		} else {
 			ret = get_ddr_dev_priority(dev, 0);
 			if (ret == -EIO) {
-				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 			} else if (ret < 0) {
 				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 			} else {
@@ -4091,7 +4265,7 @@ static int priority_format_dev(char *buf, ssize_t *poff, struct ddr_priority_dev
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
 		ret = get_ddr_dev_priority(dev, 1);
 		if (ret == -EIO)
-			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 		if (ret < 0)
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 		w = (unsigned int)ret;
@@ -4110,9 +4284,9 @@ static int priority_format_mdc(char *buf, ssize_t *poff, struct ddr_priority_mdc
 	int ret;
 	char tmp[16];
 
-	if (map_type == DDR_PORT_ROW_VPU_R)
+	if (map_type == DDR_PORT_MAP_SUB_R)
 		show_w = false;
-	else if (map_type == DDR_PORT_ROW_VPU_W)
+	else if (map_type == DDR_PORT_MAP_SUB_W)
 		show_r = false;
 
 	if (!mdc)
@@ -4139,7 +4313,7 @@ static int priority_format_mdc(char *buf, ssize_t *poff, struct ddr_priority_mdc
 		} else {
 			ret = get_mdc_priority(mdc, 0);
 			if (ret == -EIO) {
-				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 			} else if (ret < 0) {
 				ret = force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 			} else {
@@ -4159,7 +4333,7 @@ static int priority_format_mdc(char *buf, ssize_t *poff, struct ddr_priority_mdc
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "power", 6, "-");
 		ret = get_mdc_priority(mdc, 1);
 		if (ret == -EIO)
-			return force_format_buf(buf, poff, " %-*s %-*s", 6, "ro", 6, "-");
+			return force_format_buf(buf, poff, " %-*s %-*s", 6, "wo", 6, "-");
 		if (ret < 0)
 			return force_format_buf(buf, poff, " %-*s %-*s", 6, "*", 6, "-");
 		w = (unsigned int)ret;
@@ -4198,7 +4372,7 @@ static int priority_format_entry_head(char *buf, ssize_t *poff, int map_id, cons
 }
 
 static void priority_format_force_rw(char *rstr, size_t sz, unsigned int dmc_mask,
-					 struct ddr_priority_force *force)
+				     struct ddr_priority_force *force, int is_w)
 {
 	unsigned int idx, count, i;
 	u32 f_prio;
@@ -4217,7 +4391,7 @@ static void priority_format_force_rw(char *rstr, size_t sz, unsigned int dmc_mas
 	for (idx = 0; idx < aml_db->dmc_number; idx++) {
 		if (!(dmc_mask & BIT(idx)))
 			continue;
-		if (get_force_prio_by_dmc(idx, force, &f_prio)) {
+		if (get_force_prio_by_dmc(idx, force, is_w, &f_prio)) {
 			prio[count] = f_prio;
 			is_force[count] = true;
 			if (count > 0 && prio[count] != prio[0])
@@ -4254,7 +4428,7 @@ static void priority_format_force_rw(char *rstr, size_t sz, unsigned int dmc_mas
 		}
 	}
 
-	pos += scnprintf(rstr + pos, sz - pos, "[%u]", force->nbits);
+	pos += scnprintf(rstr + pos, sz - pos, "[%u]", is_w ? force->w_nbits : force->r_nbits);
 }
 
 static void priority_format_type_rw(struct ddr_priority_info *info,
@@ -4264,27 +4438,46 @@ static void priority_format_type_rw(struct ddr_priority_info *info,
 					char *tbuf, char *rstr, char *wstr, size_t sz)
 {
 	unsigned int dmc_mask;
+	unsigned int r_en, w_en;
 
-	if (get_force_en_mask(force, &dmc_mask)) {
-		strscpy(tbuf, "f", sz);
-		priority_format_force_rw(rstr, sz, dmc_mask, force);
-		if (map->type == DDR_PORT_ROW_VPU_R) {
-			strscpy(wstr, "-", sz);
+	r_en = get_force_en_mask_dir(force, false, &dmc_mask);
+	w_en = get_force_en_mask_dir(force, true, &dmc_mask);
+
+	if (r_en || w_en) {
+		if (r_en && w_en)
+			strscpy(tbuf, "f", sz);
+		else if (r_en)
+			strscpy(tbuf, "fr", sz);
+		else
+			strscpy(tbuf, "fw", sz);
+
+		if (map->type == DDR_PORT_MAP_SUB_W) {
+			strscpy(rstr, "-", sz);
+		} else if (r_en) {
+			priority_format_force_rw(rstr, sz, dmc_mask, force, false);
 		} else {
-			strscpy(wstr, rstr, sz);
-			if (map->type == DDR_PORT_ROW_VPU_W)
-				strscpy(rstr, "-", sz);
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+					      false, rstr, sz);
+		}
+
+		if (map->type == DDR_PORT_MAP_SUB_R) {
+			strscpy(wstr, "-", sz);
+		} else if (w_en) {
+			priority_format_force_rw(wstr, sz, dmc_mask, force, true);
+		} else {
+			priority_entry_format(info, entry, map->port_id, map->sub_id,
+					      true, wstr, sz);
 		}
 		return;
 	}
 
 	priority_type_format(tbuf, sz, entry->type);
 	if (entry->type & (PRIO_FIXED | PRIO_FROM_MDC | PRIO_FROM_NIC | PRIO_FROM_DEV)) {
-		if (map->type == DDR_PORT_ROW_VPU_R) {
+		if (map->type == DDR_PORT_MAP_SUB_R) {
 			priority_entry_format(info, entry, map->port_id, map->sub_id,
 						false, rstr, sz);
 			strscpy(wstr, "-", sz);
-		} else if (map->type == DDR_PORT_ROW_VPU_W) {
+		} else if (map->type == DDR_PORT_MAP_SUB_W) {
 			strscpy(rstr, "-", sz);
 			priority_entry_format(info, entry, map->port_id, map->sub_id,
 						true, wstr, sz);
@@ -4308,16 +4501,16 @@ static void priority_map_display_name(char *out, size_t osz, const struct ddr_po
 		nm = "-";
 
 	switch (map->type) {
-	case DDR_PORT_ROW_DESC_SUB:
+	case DDR_PORT_MAP_DESC_SUB:
 		scnprintf(out, osz, "  %s", nm);
 		break;
-	case DDR_PORT_ROW_VPU_R:
+	case DDR_PORT_MAP_SUB_R:
 		scnprintf(out, osz, "  R:%s", nm);
 		break;
-	case DDR_PORT_ROW_VPU_W:
+	case DDR_PORT_MAP_SUB_W:
 		scnprintf(out, osz, "  W:%s", nm);
 		break;
-	case DDR_PORT_ROW_MASTER:
+	case DDR_PORT_MAP_MASTER:
 	default:
 		strscpy(out, nm, osz);
 		break;
@@ -4360,11 +4553,19 @@ static ssize_t ddr_priority_info_entry_show(char *buf)
 	if (err)
 		return err;
 	for (i = 0; i < aml_db->dmc_number; i++) {
-		scnprintf(tmp, sizeof(tmp), "f%d", i);
+		scnprintf(tmp, sizeof(tmp), "f%dr", i);
 		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
 		if (err)
 			return err;
-		scnprintf(tmp, sizeof(tmp), "f%dM", i);
+		scnprintf(tmp, sizeof(tmp), "f%drM", i);
+		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
+		if (err)
+			return err;
+		scnprintf(tmp, sizeof(tmp), "f%dw", i);
+		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
+		if (err)
+			return err;
+		scnprintf(tmp, sizeof(tmp), "f%dwM", i);
 		err = force_format_buf(buf, &off, " %-*s", 6, tmp);
 		if (err)
 			return err;
@@ -4393,7 +4594,7 @@ static ssize_t ddr_priority_info_entry_show(char *buf)
 		priority_map_display_name(name_buf, sizeof(name_buf), map);
 
 		entry = priority_find_entry(info, port_id);
-		if ((map_type == DDR_PORT_ROW_VPU_R || map_type == DDR_PORT_ROW_VPU_W) && !entry) {
+		if ((map_type == DDR_PORT_MAP_SUB_R || map_type == DDR_PORT_MAP_SUB_W) && !entry) {
 			err = priority_format_entry_head(buf, &off, i, name_buf, show_mdc);
 			if (err)
 				return err;
@@ -4447,7 +4648,7 @@ static ssize_t ddr_priority_info_entry_show(char *buf)
 	return off;
 }
 
-static int priority_entry_write_force(int dmc, unsigned char bus, unsigned int value,
+static int priority_entry_write_force(int dmc, unsigned char bus, unsigned int value, int rw,
 				      bool clr_force_mask)
 {
 	int i, ret;
@@ -4459,17 +4660,34 @@ static int priority_entry_write_force(int dmc, unsigned char bus, unsigned int v
 		for (i = 0; i < aml_db->dmc_number; i++) {
 			if (!aml_db->ddr_reg[i])
 				continue;
-			ret = set_force_priority(i, bus, (unsigned char)value, clr_force_mask);
-			if (ret < 0)
-				return ret;
+			if (rw < 0 || rw == 0) {
+				ret = set_force_priority(i, bus, value, DMC_READ, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
+			if (rw < 0 || rw == 1) {
+				ret = set_force_priority(i, bus, value, DMC_WRITE, clr_force_mask);
+				if (ret < 0)
+					return ret;
+			}
 		}
 		return 0;
 	}
 
 	if (dmc >= aml_db->dmc_number)
 		return -EINVAL;
-	return set_force_priority((unsigned char)dmc, bus, (unsigned char)value,
-				  clr_force_mask);
+
+	if (rw < 0 || rw == 0) {
+		ret = set_force_priority(dmc, bus, value, DMC_READ, clr_force_mask);
+		if (ret < 0)
+			return ret;
+	}
+	if (rw < 0 || rw == 1) {
+		ret = set_force_priority(dmc, bus, value, DMC_WRITE, clr_force_mask);
+		if (ret < 0)
+			return ret;
+	}
+	return 0;
 }
 
 static unsigned int prio_get_real_val(unsigned int val, unsigned char lsb,
@@ -4509,11 +4727,11 @@ static int priority_set_by_type(struct ddr_priority_entry *entry,
 		write_w = true;
 	}
 
-	if (map_type == DDR_PORT_ROW_VPU_R) {
+	if (map_type == DDR_PORT_MAP_SUB_R) {
 		if (rw == 1)
 			return -EINVAL;
 		write_w = false;
-	} else if (map_type == DDR_PORT_ROW_VPU_W) {
+	} else if (map_type == DDR_PORT_MAP_SUB_W) {
 		if (rw == 0)
 			return -EINVAL;
 		write_r = false;
@@ -4532,13 +4750,13 @@ static int priority_set_by_type(struct ddr_priority_entry *entry,
 		if (entry->type & PRIO_FROM_DEV) {
 			if (!dev || (dev->type & PRIO_FIXED))
 				return -EINVAL;
-			if (write_r && prio_reg_set_en(dev->type, 0) && dev->r_nbits) {
+			if (write_r && prio_reg_set_en(dev->type) && dev->r_nbits) {
 				prio = prio_get_real_val(val, entry->dev_lsb_r, dev->r_nbits);
 				ret = set_ddr_dev_priority(dev, prio, 0, clr_force_mask);
 				if (ret < 0)
 					return ret;
 			}
-			if (write_w && prio_reg_set_en(dev->type, 1) && dev->w_nbits) {
+			if (write_w && prio_reg_set_en(dev->type) && dev->w_nbits) {
 				prio = prio_get_real_val(val, entry->dev_lsb_w, dev->w_nbits);
 				ret = set_ddr_dev_priority(dev, prio, 1, clr_force_mask);
 				if (ret < 0)
@@ -4552,13 +4770,13 @@ static int priority_set_by_type(struct ddr_priority_entry *entry,
 		if (entry->type & PRIO_FROM_NIC) {
 			if (!nic || (nic->type & PRIO_FIXED))
 				return -EINVAL;
-			if (write_r && prio_reg_set_en(nic->type, 0) && nic->r_nbits) {
+			if (write_r && prio_reg_set_en(nic->type) && nic->r_nbits) {
 				prio = prio_get_real_val(val, entry->nic_lsb_r, nic->r_nbits);
 				ret = set_nic_priority(nic, prio, 0);
 				if (ret < 0)
 					return ret;
 			}
-			if (write_w && prio_reg_set_en(nic->type, 1) && nic->w_nbits) {
+			if (write_w && prio_reg_set_en(nic->type) && nic->w_nbits) {
 				prio = prio_get_real_val(val, entry->nic_lsb_w, nic->w_nbits);
 				ret = set_nic_priority(nic, prio, 1);
 				if (ret < 0)
@@ -4572,13 +4790,13 @@ static int priority_set_by_type(struct ddr_priority_entry *entry,
 		if (entry->type & PRIO_FROM_MDC) {
 			if (!mdc || (mdc->type & PRIO_FIXED))
 				return -EINVAL;
-			if (write_r && prio_reg_set_en(mdc->type, 0) && mdc->r_nbits) {
+			if (write_r && prio_reg_set_en(mdc->type) && mdc->r_nbits) {
 				prio = prio_get_real_val(val, entry->mdc_lsb_r, mdc->r_nbits);
 				ret = set_mdc_priority(mdc, prio, 0, clr_force_mask);
 				if (ret < 0)
 					return ret;
 			}
-			if (write_w && prio_reg_set_en(mdc->type, 1) && mdc->w_nbits) {
+			if (write_w && prio_reg_set_en(mdc->type) && mdc->w_nbits) {
 				prio = prio_get_real_val(val, entry->mdc_lsb_w, mdc->w_nbits);
 				ret = set_mdc_priority(mdc, prio, 1, clr_force_mask);
 				if (ret < 0)
@@ -4601,9 +4819,10 @@ static int priority_entry_set(unsigned int map_id, unsigned int pack_val, int rw
 	struct ddr_priority_nic *nic;
 	struct ddr_priority_dev *dev;
 	struct ddr_priority_mdc *mdc;
-	unsigned int dmc_mask;
 	bool is_auto = false;
-	bool use_force = false;
+	unsigned int dmc_mask;
+	unsigned int r_en = 0, w_en = 0;
+	int ret;
 
 	if (!aml_db || !aml_db->priority || !aml_db->priority->v1 || !aml_db->port_map_table)
 		return -EINVAL;
@@ -4625,20 +4844,61 @@ static int priority_entry_set(unsigned int map_id, unsigned int pack_val, int rw
 	dev = priority_find_dev(info, map->port_id, map->sub_id);
 	mdc = priority_find_mdc(info, map->port_id, map->sub_id);
 
-	if (type == 'f')
-		use_force = true;
-
 	if (type == 'a')
 		is_auto = true;
 
-	if (is_auto && get_force_en_mask(force, &dmc_mask))
-		use_force = true;
-
-	if (use_force) {
+	if (type == 'f') {
 		if (!force)
 			return -EINVAL;
 
-		return priority_entry_write_force(dmc, force->bus, pack_val, clr_force_mask);
+		return priority_entry_write_force(dmc, force->bus, pack_val, rw, clr_force_mask);
+	}
+
+	if (is_auto && force) {
+		r_en = get_force_en_mask_dir(force, false, &dmc_mask);
+		w_en = get_force_en_mask_dir(force, true, &dmc_mask);
+	}
+
+	if (is_auto && (r_en || w_en)) {
+		/* only R */
+		if (rw == 0) {
+			if (r_en)
+				return priority_entry_write_force(dmc, force->bus,
+								  pack_val, 0, clr_force_mask);
+			return priority_set_by_type(entry, nic, dev, mdc, pack_val,
+						    0, type, map->type,
+						    clr_force_mask);
+		}
+		/* only W */
+		if (rw == 1) {
+			if (w_en)
+				return priority_entry_write_force(dmc, force->bus,
+								  pack_val, 1, clr_force_mask);
+			return priority_set_by_type(entry, nic, dev, mdc, pack_val,
+						    1, type, map->type,
+						    clr_force_mask);
+		}
+
+		/* R + W (rw < 0) */
+		ret = 0;
+		if (r_en)
+			ret = priority_entry_write_force(dmc, force->bus,
+							 pack_val, 0, clr_force_mask);
+		else
+			ret = priority_set_by_type(entry, nic, dev, mdc, pack_val,
+						   0, type, map->type,
+						   clr_force_mask);
+		if (ret < 0)
+			return ret;
+
+		if (w_en)
+			ret = priority_entry_write_force(dmc, force->bus,
+							 pack_val, 1, clr_force_mask);
+		else
+			ret = priority_set_by_type(entry, nic, dev, mdc, pack_val,
+						   1, type, map->type,
+						   clr_force_mask);
+		return ret;
 	}
 
 	if (type == 'm' || type == 'n' || type == 'd' || is_auto)
@@ -4659,11 +4919,11 @@ ssize_t ddr_priority_info_show(char *buf)
 
 	count = scnprintf(buf, PRIO_V1_BUF_SZ,
 		      "usage: echo <id> <val> [r|w] [dmc] [type] > priority\n"
-		      "  <val> -1: write priority 0 and clear force_mask bits\n"
-		      "  <r|w> read or write, ignore set read and write\n"
+		      "  <val> -1: set priority 0 and clear force_mask bits\n"
+		      "  <r|w> r=set read only, w=set write only, ignore set read+write\n"
 		      "  <dmc> dmc number, ignore set all dmc\n"
 		      "  <type> f=force m=mdc n=nic d=dev, ignore set auto\n"
-		      "  example: echo 0 f [r] [1] [f] > priority\n\n");
+		      "  example: echo 0 0xf [r] [1] [f] > priority\n\n");
 	if (count < 0)
 		return -EINVAL;
 
@@ -4697,7 +4957,7 @@ int ddr_priority_info_write(unsigned int id, int value, int rw, int dmc, char ty
 	eff = clr_force_mask ? 0U : (unsigned int)value;
 
 	if (!aml_db->priority->v1->entry)
-		return priority_entry_write_force(dmc, id, eff, clr_force_mask);
+		return priority_entry_write_force(dmc, id, eff, rw, clr_force_mask);
 
 	return priority_entry_set(id, eff, rw, dmc, type, clr_force_mask);
 }
@@ -5381,19 +5641,17 @@ static int get_vpu_super_urgent_info(unsigned char axi, unsigned char rw, char *
 
 static char *get_vpu_name(unsigned char axi, unsigned char rw, unsigned char sid)
 {
-	struct vpu_sub_desc *desc;
-	struct vpu_sub **vpu_subs;
-	struct vpu_sub *sub;
+	struct sub_dev_desc *desc;
+	struct sub_dev *sub;
 	char rw_char = rw ? 'w' : 'r';
 	char *name;
 	unsigned char port_id;
 
-	desc = aml_db ? aml_db->vpu_sub : NULL;
-	if (!desc || axi >= VPU_SUB_CNT)
+	desc = aml_db ? aml_db->sub_dev : NULL;
+	if (!desc || axi >= desc->num)
 		return NULL;
 
-	vpu_subs = (struct vpu_sub **)&desc->vpu0_sub;
-	sub = vpu_subs[axi];
+	sub = desc->subs[axi];
 	if (!sub)
 		return NULL;
 
@@ -5402,9 +5660,9 @@ static char *get_vpu_name(unsigned char axi, unsigned char rw, unsigned char sid
 	else
 		port_id = sub->sub_r.port_id;
 
-	name = vpu_to_sub_port(port_id, sid, rw_char);
+	name = sub_dev_to_port(port_id, sid, rw_char);
 	if (!name)
-		name = vpu_to_sub_port(port_id, sid & 0x0f, rw_char);
+		name = sub_dev_to_port(port_id, sid & 0x0f, rw_char);
 	return name;
 }
 
@@ -5870,14 +6128,14 @@ ssize_t priority_display(char *buf, loff_t pos, size_t count)
 		ddr_priority.v1_buf = NULL;
 		ddr_priority.v1_buf_size = 0;
 
-		ddr_priority.v1_buf = kzalloc(PRIO_V1_BUF_SZ, GFP_KERNEL);
+		ddr_priority.v1_buf = kvzalloc(PRIO_V1_BUF_SZ, GFP_KERNEL);
 		if (!ddr_priority.v1_buf) {
 			mutex_unlock(&prio_v1_buf_mutex);
 			return -ENOMEM;
 		}
 		info_len = ddr_priority_info_show(ddr_priority.v1_buf);
 		if (info_len < 0) {
-			kfree(ddr_priority.v1_buf);
+			kvfree(ddr_priority.v1_buf);
 			ddr_priority.v1_buf = NULL;
 			mutex_unlock(&prio_v1_buf_mutex);
 			return info_len;
@@ -5896,7 +6154,7 @@ ssize_t priority_display(char *buf, loff_t pos, size_t count)
 	info_len = memory_read_from_buffer(buf, count, &ppos, ddr_priority.v1_buf,
 					   ddr_priority.v1_buf_size);
 	if (info_len > 0 && ppos >= ddr_priority.v1_buf_size) {
-		kfree(ddr_priority.v1_buf);
+		kvfree(ddr_priority.v1_buf);
 		ddr_priority.v1_buf = NULL;
 	}
 	mutex_unlock(&prio_v1_buf_mutex);

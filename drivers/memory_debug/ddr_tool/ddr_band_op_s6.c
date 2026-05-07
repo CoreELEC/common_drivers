@@ -43,9 +43,12 @@ static void s6_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id
 {
 	unsigned int i, val;
 
+	pr_info("S6 can not set port, default be set\n");
+
 	/* s6 can not se port, default be set */
 	for (i = 0; i < db->channels; i++) {
-		ddr_set_map_select(i, i);
+		ddr_set_map_select(i, -1);
+		ddr_set_map_select(i, port_to_map_id(i, -1));
 		db->range[i].start = 0;
 		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
 	}
@@ -76,7 +79,7 @@ static void s6_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 
 	for (i = 0; i < db->dmc_number; i++) {
 		io = db->ddr_reg[i];
-		val = db->mode << 31;
+		val = db->mode ? BIT(31) : 0;
 		val |= (readl(io + DMC_MON_CTRL0) & ~BIT(31));
 		writel(val, io + DMC_MON_CTRL0);
 	}

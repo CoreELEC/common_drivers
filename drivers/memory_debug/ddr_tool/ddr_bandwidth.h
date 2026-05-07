@@ -6,9 +6,8 @@
 #ifndef __AML_DDR_BANDWIDTH_H__
 #define __AML_DDR_BANDWIDTH_H__
 
-#define MODE_DISABLE			0
-#define MODE_ENABLE			1
-#define MODE_AUTODETECT			2
+#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_DDR_BW
+#include <trace/events/meson_atrace.h>
 
 #ifdef ARM
 #define DEFAULT_RANGE_LARGE_DDR		0xffffffff
@@ -117,6 +116,15 @@
 #define DDR_PRIORITY_DEBUG		BIT(31)
 #define DDR_PRIORITY_POWER		BIT(30)
 
+enum mode_type {
+	MODE_DISABLE = 0,
+	MODE_ENABLE,
+	MODE_AUTODETECT,
+	MODE_ONLY_DDR,
+	MODE_ONLY_VPU,
+	MODE_TYPE_MAX,
+};
+
 #if IS_ENABLED(CONFIG_AMLOGIC_DDR_SSR)
 enum ddr_ssr_type {
 	ENABLE_SET = 1,
@@ -154,10 +162,10 @@ enum property_type {
 };
 
 enum ddr_port_map_type {
-	DDR_PORT_ROW_MASTER = 0,
-	DDR_PORT_ROW_DESC_SUB,
-	DDR_PORT_ROW_VPU_R,
-	DDR_PORT_ROW_VPU_W,
+	DDR_PORT_MAP_MASTER = 0,
+	DDR_PORT_MAP_DESC_SUB,
+	DDR_PORT_MAP_SUB_R,
+	DDR_PORT_MAP_SUB_W,
 };
 
 struct ddr_bandwidth;
@@ -174,11 +182,11 @@ struct ddr_port_map {
 	enum ddr_port_map_type type;
 	u8 rw;
 	u8 port_id;
-	/* MASTER: -1; DESC_SUB: ddr_port_desc.sub_id; VPU_R/W: vpu_sub_list.id */
+	/* MASTER: -1; DESC_SUB: ddr_port_desc.sub_id; SUB_R/W: sub_port_list.id */
 	int sub_id;
 	union {
 		struct ddr_port_desc *desc;
-		struct vpu_sub_list *vpu_sub;
+		struct sub_port_list *sub_port;
 	};
 };
 
@@ -206,6 +214,7 @@ struct ddr_bandwidth_ops {
 	int (*ddr_ssr_control)(unsigned char value, enum ddr_ssr_type type);
 #endif
 	int (*axi_sts_init)(struct ddr_bandwidth *db);
+	void (*vpu_status)(int is_init);
 };
 
 struct ddr_bandwidth_sample {
@@ -312,7 +321,7 @@ struct ddr_bandwidth {
 	unsigned short cpu_type;
 	unsigned short real_ports;
 	char busy;
-	char mode;
+	enum mode_type mode;
 	char bytes_per_cycle;
 	char soc_feature;		/* some special feature of it */
 	int mali_port[2];
@@ -352,7 +361,7 @@ struct ddr_bandwidth {
 	struct class *class;
 	struct ddr_port_desc *port_desc;
 	struct ddr_priority *priority;
-	struct vpu_sub_desc *vpu_sub;
+	struct sub_dev_desc *sub_dev;
 	struct ddr_bandwidth_ops *ops;
 	struct work_struct work_bandwidth;
 	struct ddr_increase_tool increase_tool;
@@ -364,7 +373,8 @@ struct ddr_bandwidth {
 };
 
 unsigned int ddr_get_ch_set_num(int ch);
-void ddr_set_map_select(int ch, int map_id);
+int ddr_set_map_select(int ch, int map_id);
+int port_to_map_id(int port, int sub_id);
 
 extern struct ddr_bandwidth *aml_db;
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_G12

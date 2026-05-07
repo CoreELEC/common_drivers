@@ -47,7 +47,21 @@ static unsigned int ots_levels[] __initdata = {
 
 static void a9_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
+	unsigned int i, val;
+
 	pr_info("A9 can not set port, default be set\n");
+
+	/* a9 can not set port, default be set */
+	for (i = 0; i < db->channels; i++) {
+		ddr_set_map_select(i, -1);
+		ddr_set_map_select(i, port_to_map_id(i, -1));
+		db->range[i].start = 0;
+		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
+	}
+
+	val = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
+	val |= 0xffffff;
+	writel(val,  db->ddr_reg[0] + DMC_MON_CTRL0);
 }
 
 static unsigned long a9_get_dmc_freq_quick(struct ddr_bandwidth *db)
@@ -68,29 +82,18 @@ static void a9_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 {
 	unsigned int val;
 
-	val = db->mode << 31;
+	val = db->mode ? BIT(31) : 0;
 	val |= (readl(db->ddr_reg[0] + DMC_MON_CTRL0) & ~BIT(31));
 	writel(val, db->ddr_reg[0] + DMC_MON_CTRL0);
 }
 
 static void a9_dmc_bandwidth_init(struct ddr_bandwidth *db)
 {
-	unsigned int i, val;
-
 	/* set timer trigger clock_cnt */
 	writel(db->clock_count, db->ddr_reg[0] + DMC_MON_TIMER);
 	a9_dmc_bandwidth_enable(db);
 
-	/* a9 can not set port, default be set */
-	for (i = 0; i < db->channels; i++) {
-		ddr_set_map_select(i, i);
-		db->range[i].start = 0;
-		db->range[i].end   = DEFAULT_RANGE_LARGE_DDR;
-	}
-
-	val = readl(db->ddr_reg[0] + DMC_MON_CTRL0);
-	val |= 0xffffff;
-	writel(val,  db->ddr_reg[0] + DMC_MON_CTRL0);
+	a9_dmc_port_config(db, -1, -1);
 }
 
 static int a9_handle_irq(struct ddr_bandwidth *db, struct ddr_grant *dg)
@@ -306,6 +309,36 @@ static int side_band(struct ddr_bandwidth *db, unsigned char dmc, unsigned char 
 	return 0;
 }
 
+static unsigned int vpu_venc_offset[] = {
+	(0x1cea << 2), (0x22ea << 2)
+};
+
+static void vpu_status(int is_init)
+{
+	unsigned int i, venc, val;
+	char label[] = "ddr_bw venc0";
+	static void __iomem *vpu_base;
+
+#define VPU_REG_BASE		0xff500000
+#define VPU_RGE_MAP_SIZE	0x40000
+
+	if (is_init) {
+		vpu_base = (void *)ioremap(VPU_REG_BASE, VPU_RGE_MAP_SIZE);
+	} else {
+		if (!vpu_base) {
+			pr_err("vpu_base is invalid\n");
+			return;
+		}
+
+		for (i = 0; i < ARRAY_SIZE(vpu_venc_offset); i++) {
+			label[11] = '0' + i;
+			venc = readl_relaxed(vpu_base + vpu_venc_offset[i]);
+			val = (venc >> 8) & 0xff;
+			ATRACE_COUNTER(label, val);
+		}
+	}
+}
+
 struct ddr_bandwidth_ops a9_ddr_bw_ops = {
 	.init             = a9_dmc_bandwidth_init,
 	.config_port      = a9_dmc_port_config,
@@ -319,4 +352,5 @@ struct ddr_bandwidth_ops a9_ddr_bw_ops = {
 #endif
 	.property_access  = property_access,
 	.side_band	  = side_band,
+	.vpu_status	  = vpu_status,
 };

@@ -1279,8 +1279,8 @@ static struct ddr_port_desc ddr_port_desc_c4[] __initdata = {
 };
 
 static struct ddr_port_desc ddr_port_desc_a9_prot[] __initdata = {
-	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM_A78"),
-	PORT_DESC(.port_id =  1, .bus =  1, .port_name = "ARM_A55"),
+	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM_IF0"),
+	PORT_DESC(.port_id =  1, .bus =  1, .port_name = "ARM_IF1"),
 	PORT_DESC(.port_id =  2, .bus =  2, .port_name = "VPU0"),
 	PORT_DESC(.port_id =  3, .bus =  3, .port_name = "VPU1"),
 	PORT_DESC(.port_id =  4, .bus =  4, .port_name = "NNA"),
@@ -1317,8 +1317,8 @@ static struct ddr_port_desc ddr_port_desc_a9_prot[] __initdata = {
 };
 
 static struct ddr_port_desc ddr_port_desc_a9_mon[] __initdata = {
-	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM_A78"),
-	PORT_DESC(.port_id =  1, .bus =  1, .port_name = "ARM_A55"),
+	PORT_DESC(.port_id =  0, .bus =  0, .port_name = "ARM_IF0"),
+	PORT_DESC(.port_id =  1, .bus =  1, .port_name = "ARM_IF1"),
 	PORT_DESC(.port_id =  2, .bus =  2, .port_name = "VPU0"),
 	PORT_DESC(.port_id =  3, .bus =  3, .port_name = "VPU1"),
 	PORT_DESC(.port_id =  4, .bus =  4, .port_name = "NNA"),

@@ -155,7 +155,7 @@ static void t6w_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	unsigned int val;
 
 	/* enable all channel */
-	val =  (0x01 << 31) |	/* enable bit */
+	val =  (db->mode ? BIT(31) : 0) |	/* enable bit */
 	       (((1 << db->channels) - 1) <<  0);
 	writel(val, db->ddr_reg[0] + DMC_MON_CTRL0);
 }

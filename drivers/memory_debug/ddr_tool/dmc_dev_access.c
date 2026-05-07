@@ -10,7 +10,6 @@
 #include "dmc_monitor.h"
 #include <linux/amlogic/aml_ddr_tool.h>
 
-#define MAX_NAME	15
 struct dmc_notifier_list {
 	char port_name[MAX_NAME];
 	char port_id;

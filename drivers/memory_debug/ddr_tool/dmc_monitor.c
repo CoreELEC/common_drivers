@@ -583,7 +583,7 @@ char *to_sub_ports_name(int mid, int sid, char rw)
 		return NULL;
 
 	if (strstr(port_name, "VPU")) {
-		name = vpu_to_sub_port(mid, sid, rw);
+		name = sub_dev_to_port(mid, sid, rw);
 	} else {
 		sid &= 0x1f;
 		for (i = 0; i < dmc_mon->port_num; i++) {
@@ -1943,7 +1943,7 @@ static int __init dmc_monitor_probe(struct platform_device *pdev)
 	dmc_mon->port = desc;
 	get_dmc_ops(dmc_mon->chip, dmc_mon);
 
-	vpu_sub_desc_init(tmp, &dmc_mon->vpu_sub);
+	sub_dev_desc_init(tmp, &dmc_mon->sub_dev);
 
 	node = pdev->dev.of_node;
 	r = of_property_read_u32(node, "reg_base", &tmp);

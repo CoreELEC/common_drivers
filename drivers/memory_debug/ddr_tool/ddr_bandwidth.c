@@ -30,9 +30,6 @@
 #include "ddr_bandwidth.h"
 #include "dmc.h"
 
-#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_DDR_BW
-#include <trace/events/meson_atrace.h>
-
 #define PXP_DEBUG	1
 #if PXP_DEBUG
 static unsigned long pxp_debug_dmc_freq, pxp_debug_ddr_freq;
@@ -121,33 +118,31 @@ static int dmc_dev_is_byte(struct ddr_bandwidth *db)
 	return 0;
 }
 
-static int ddr_fill_port_map_vpu(struct vpu_sub_desc *vpu,
-				 unsigned char port_id,
-				 struct ddr_port_map *map,
-				 int idx)
+static int ddr_fill_port_map_sub_dev(struct sub_dev_desc *sub_dev,
+				     unsigned char port_id,
+				     struct ddr_port_map *map,
+				     int idx)
 {
-	struct vpu_sub **vpu_subs;
-	struct vpu_sub *sub;
-	struct vpu_sub_port *vsp;
+	struct sub_dev *sub;
+	struct sub_dev_port *vsp;
 	int i, j;
 
-	if (!vpu)
+	if (!sub_dev)
 		return idx;
 
-	vpu_subs = (struct vpu_sub **)&vpu->vpu0_sub;
-	for (i = 0; i < VPU_SUB_CNT; i++) {
-		sub = vpu_subs[i];
+	for (i = 0; i < sub_dev->num; i++) {
+		sub = sub_dev->subs[i];
 		if (!sub)
 			continue;
 		if (sub->sub_r.port_id == port_id && sub->sub_r.list) {
 			vsp = &sub->sub_r;
 			for (j = 0; j < vsp->num; j++) {
 				if (map) {
-					map[idx].type = DDR_PORT_ROW_VPU_R;
+					map[idx].type = DDR_PORT_MAP_SUB_R;
 					map[idx].port_id = port_id;
 					map[idx].sub_id = (s16)vsp->list[j].id;
 					map[idx].rw = 0;
-					map[idx].vpu_sub = &vsp->list[j];
+					map[idx].sub_port = &vsp->list[j];
 				}
 				idx++;
 			}
@@ -156,11 +151,11 @@ static int ddr_fill_port_map_vpu(struct vpu_sub_desc *vpu,
 			vsp = &sub->sub_w;
 			for (j = 0; j < vsp->num; j++) {
 				if (map) {
-					map[idx].type = DDR_PORT_ROW_VPU_W;
+					map[idx].type = DDR_PORT_MAP_SUB_W;
 					map[idx].port_id = port_id;
 					map[idx].sub_id = (s16)vsp->list[j].id;
 					map[idx].rw = 1;
-					map[idx].vpu_sub = &vsp->list[j];
+					map[idx].sub_port = &vsp->list[j];
 				}
 				idx++;
 			}
@@ -175,7 +170,7 @@ static int ddr_fill_port_map_table(struct ddr_bandwidth *db, struct ddr_port_map
 	DECLARE_BITMAP(port_bitmap, MAX_MAP_ID);
 	unsigned int rp = db->real_ports;
 	struct ddr_port_desc *desc = db->port_desc;
-	struct vpu_sub_desc *vpu = db->vpu_sub;
+	struct sub_dev_desc *sub_dev = db->sub_dev;
 	int idx = 0;
 	int i, j;
 
@@ -191,7 +186,7 @@ static int ddr_fill_port_map_table(struct ddr_bandwidth *db, struct ddr_port_map
 		set_bit(desc[i].port_id, port_bitmap);
 
 		if (map) {
-			map[idx].type = DDR_PORT_ROW_MASTER;
+			map[idx].type = DDR_PORT_MAP_MASTER;
 			map[idx].port_id = desc[i].port_id;
 			map[idx].sub_id = -1;
 			map[idx].rw = 0;
@@ -199,13 +194,13 @@ static int ddr_fill_port_map_table(struct ddr_bandwidth *db, struct ddr_port_map
 		}
 		idx++;
 
-		idx = ddr_fill_port_map_vpu(vpu, desc[i].port_id, map, idx);
+		idx = ddr_fill_port_map_sub_dev(sub_dev, desc[i].port_id, map, idx);
 
 		for (j = 0; j < (int)rp; j++) {
 			if (desc[j].port_id != desc[i].port_id || desc[j].sub_id == -1)
 				continue;
 			if (map) {
-				map[idx].type = DDR_PORT_ROW_DESC_SUB;
+				map[idx].type = DDR_PORT_MAP_DESC_SUB;
 				map[idx].port_id = desc[j].port_id;
 				map[idx].sub_id = desc[j].sub_id;
 				map[idx].rw = 0;
@@ -224,15 +219,15 @@ const char *ddr_port_map_name(const struct ddr_port_map *map)
 		return NULL;
 
 	switch (map->type) {
-	case DDR_PORT_ROW_MASTER:
-	case DDR_PORT_ROW_DESC_SUB:
+	case DDR_PORT_MAP_MASTER:
+	case DDR_PORT_MAP_DESC_SUB:
 		if (map->desc)
 			return map->desc->port_name;
 		return NULL;
-	case DDR_PORT_ROW_VPU_R:
-	case DDR_PORT_ROW_VPU_W:
-		if (map->vpu_sub && map->vpu_sub->name)
-			return map->vpu_sub->name;
+	case DDR_PORT_MAP_SUB_R:
+	case DDR_PORT_MAP_SUB_W:
+		if (map->sub_port && map->sub_port->name)
+			return map->sub_port->name;
 		return NULL;
 	default:
 		return NULL;
@@ -281,7 +276,7 @@ int ddr_init_port_map_table(struct ddr_bandwidth *db)
 	return 0;
 }
 
-static int port_to_map_id(int port, int sub_id)
+int port_to_map_id(int port, int sub_id)
 {
 	int i;
 
@@ -504,6 +499,14 @@ static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 		return;
 	}
 
+	if (unlikely(db->mode != MODE_ONLY_DDR)) {
+		if (db->ops && db->ops->vpu_status)
+			db->ops->vpu_status(0);
+	}
+
+	if (unlikely(db->mode == MODE_ONLY_VPU))
+		return;
+
 	if (unlikely((!db->dmc_freq || !db->ddr_freq) && !err_count)) {
 		pr_err("warning: dmc_freq=%ld ddr_freq=%ld\n", db->dmc_freq, db->ddr_freq);
 		err_count = 1;
@@ -662,6 +665,7 @@ static irqreturn_t dmc_irq_handler(int irq, void *dev_instance)
 		if (!db->ops->handle_irq(db, &dg))
 			cal_ddr_usage(db, &dg);
 	}
+
 	return IRQ_HANDLED;
 }
 
@@ -743,12 +747,28 @@ static int format_port(char *buf, int ch)
 	return size;
 }
 
-void ddr_set_map_select(int ch, int map_id)
+int ddr_set_map_select(int ch, int map_id)
 {
-	if (map_id < 0)
+	const struct ddr_port_map *map;
+
+	if (map_id < 0) {
 		bitmap_clear(aml_db->mapid_select, ch * MAX_MAP_ID, MAX_MAP_ID);
-	else
-		set_bit(map_id + ch * MAX_MAP_ID, aml_db->mapid_select);
+		return 0;
+	}
+
+	if (map_id > aml_db->port_map_count) {
+		pr_info("invalid map_id:%d\n", map_id);
+		return -ERANGE;
+	}
+
+	map = &aml_db->port_map_table[map_id];
+	if (map->type != DDR_PORT_MAP_MASTER && map->type != DDR_PORT_MAP_DESC_SUB) {
+		pr_info("invalid map_id:%d\n", map_id);
+		return -ERANGE;
+	}
+	set_bit(map_id + ch * MAX_MAP_ID, aml_db->mapid_select);
+
+	return 0;
 }
 
 unsigned int ddr_get_ch_set_num(int ch)
@@ -769,9 +789,7 @@ static int ddr_port_set_byte(struct ddr_bandwidth *db, int ch, int map_id)
 		}
 	}
 
-	ddr_set_map_select(ch, map_id);
-
-	return 0;
+	return ddr_set_map_select(ch, map_id);
 }
 
 int get_bus_num(void)
@@ -1040,9 +1058,11 @@ static ssize_t port_store(const struct class *class,
 		if (dmc_dev_is_byte(aml_db)) {
 			if (ddr_port_set_byte(aml_db, ch, map_id))
 				return -ERANGE;
-		} else {
-			ddr_set_map_select(ch, map_id);
 		}
+
+		if (ddr_set_map_select(ch, map_id))
+			return count;
+
 		aml_db->ops->config_port(aml_db, ch, map_id);
 	}
 
@@ -1098,12 +1118,39 @@ static ssize_t mode_show(const struct class *class,
 			char *buf)
 {
 	if (aml_db->mode == MODE_DISABLE)
-		return sprintf(buf, "0: disable\n");
+		return sprintf(buf, "%d: disable\n", aml_db->mode);
 	else if (aml_db->mode == MODE_ENABLE)
-		return sprintf(buf, "1: enable\n");
+		return sprintf(buf, "%d: enable\n", aml_db->mode);
 	else if (aml_db->mode == MODE_AUTODETECT)
-		return sprintf(buf, "2: auto detect\n");
+		return sprintf(buf, "%d: auto detect\n", aml_db->mode);
+	else if (aml_db->mode == MODE_ONLY_DDR)
+		return sprintf(buf, "%d: only ddr bandwidth\n", aml_db->mode);
+	else if (aml_db->mode == MODE_ONLY_VPU)
+		return sprintf(buf, "%d: only vpu data\n", aml_db->mode);
 	return sprintf(buf, "\n");
+}
+
+static int ddr_irq_enabled(void)
+{
+	static bool is_request;
+	int affinity_cpu = 1;
+
+	if (!ddr_is_poll(aml_db) && !is_request) {
+		int r = request_irq(aml_db->irq_num, dmc_irq_handler,
+				IRQF_SHARED | IRQF_ONESHOT,
+				"ddr_bandwidth", (void *)aml_db);
+		if (r < 0) {
+			pr_info("ddr bandwidth request irq failed\n");
+			return r;
+		}
+
+		if (num_online_cpus() > 2)
+			affinity_cpu = num_online_cpus() - 1;
+		irq_set_affinity_hint(aml_db->irq_num, get_cpu_mask(affinity_cpu));
+		is_request = true;
+	}
+
+	return 0;
 }
 
 static ssize_t mode_store(const struct class *class,
@@ -1116,8 +1163,11 @@ static ssize_t mode_store(const struct class *class,
 		pr_info("invalid input:%s\n", buf);
 		return 0;
 	}
-	if (val > MODE_AUTODETECT || val < MODE_DISABLE)
-		val = MODE_AUTODETECT;
+
+	if (val > MODE_TYPE_MAX || val < MODE_DISABLE) {
+		pr_info("invalid mode type:%ld, max:%d\n", val, MODE_TYPE_MAX);
+		return 0;
+	}
 
 	if (!aml_db->ops) {
 		pr_err("aml_db->ops is null\n");
@@ -1125,15 +1175,8 @@ static ssize_t mode_store(const struct class *class,
 	}
 
 	if (aml_db->mode == MODE_DISABLE && val != MODE_DISABLE) {
-		if (!ddr_is_poll(aml_db)) {
-			int r = request_irq(aml_db->irq_num, dmc_irq_handler,
-					IRQF_SHARED | IRQF_ONESHOT,
-					"ddr_bandwidth", (void *)aml_db);
-			if (r < 0) {
-				pr_info("ddr bandwidth request irq failed\n");
-				return count;
-			}
-		}
+		/* only mode enabled set, dmc irq will share with aml_ddr */
+		ddr_irq_enabled();
 		if (aml_db->ops->init) {
 			aml_db->mode = val;
 			aml_db->ops->init(aml_db);
@@ -1249,12 +1292,12 @@ static ssize_t usage_stat_show_single(char *buf, ssize_t offset)
 				percent, rem, total_count);
 
 		s += sprintf(buf + s, "\nbandwidth status for each channel\n");
-		s += sprintf(buf + s, "ch,        %s, avg bw(KB/s), max bw(KB/s), %s\n",
-			"port mask", "bw@max sample(KB/s)");
+		s += sprintf(buf + s, "ch, \t%s, avg bw(KB/s), max bw(KB/s), %s\n",
+			     "port mask", "bw@max sample(KB/s)");
 		for (j = 0; j < aml_db->channels; j++) {
 			ddr_copy_ch_mapid(mask_bitmap, j);
 			s += sprintf(buf + s,
-				"%2d, %*pbl,     %8lld,     %8ld,          %8d\n",
+				"%2d, \t%*pbl,     %8lld,     %8ld,          %8d\n",
 				j, MAX_MAP_ID, mask_bitmap,
 				tmp.avg_port[j],
 				tmp.max_bandwidth[j],
@@ -1324,12 +1367,12 @@ static ssize_t usage_stat_show(const struct class *class,
 			  percent, rem, total_count);
 
 	s += sprintf(buf + s, "\nbandwidth status for each channel\n");
-	s += sprintf(buf + s, "ch,        %s, avg bw(KB/s), max bw(KB/s), %s\n",
+	s += sprintf(buf + s, "ch, \t%s, avg bw(KB/s), max bw(KB/s), %s\n",
 		     "port mask", "bw@max sample(KB/s)");
 	for (i = 0; i < aml_db->channels; i++) {
 		ddr_copy_ch_mapid(mask_bitmap, i);
 		s += sprintf(buf + s,
-			     "%2d, %*pbl,     %8lld,     %8ld,          %8d\n",
+			     "%2d, \t%*pbl,     %8lld,     %8ld,          %8d\n",
 			     i, MAX_MAP_ID, mask_bitmap,
 			     tmp.avg_port[i],
 			     tmp.max_bandwidth[i],
@@ -1661,35 +1704,35 @@ static ssize_t ddr_port_map_table_show(struct ddr_bandwidth *db, char *buf,
 
 	for (rid = 0; rid < db->port_map_count; rid++) {
 		map = &db->port_map_table[rid];
-		if (!show_vpu && (map->type == DDR_PORT_ROW_VPU_R ||
-				  map->type == DDR_PORT_ROW_VPU_W))
+		if (!show_vpu && (map->type == DDR_PORT_MAP_SUB_R ||
+				  map->type == DDR_PORT_MAP_SUB_W))
 			continue;
 
 		mid = rid;
 		name = ddr_port_map_name(map);
 
 		switch (map->type) {
-		case DDR_PORT_ROW_MASTER:
+		case DDR_PORT_MAP_MASTER:
 			s += sprintf(buf + s,
 				     "  %5u  %7u  %-6s  %s\n",
 				     mid, (unsigned int)map->port_id, "-",
 				     name ? name : "");
 			break;
-		case DDR_PORT_ROW_DESC_SUB:
+		case DDR_PORT_MAP_DESC_SUB:
 			s += sprintf(buf + s,
 				     "  %5u  %*s %6d       %s\n",
 				     mid, 7, "",
 				     (int)map->sub_id,
 				     name ? name : "");
 			break;
-		case DDR_PORT_ROW_VPU_R:
+		case DDR_PORT_MAP_SUB_R:
 			s += sprintf(buf + s,
 				     "  %5u  %*s %6u      R:%s\n",
 				     mid, 7, "",
 				     (unsigned int)(u8)map->sub_id,
 				     name ? name : "");
 			break;
-		case DDR_PORT_ROW_VPU_W:
+		case DDR_PORT_MAP_SUB_W:
 			s += sprintf(buf + s,
 				     "  %5u  %*s %6u      W:%s\n",
 				     mid, 7, "",
@@ -2212,7 +2255,7 @@ static int __init init_chip_config(int cpu, struct ddr_bandwidth *band)
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_A9
 	case DMC_TYPE_A9:
 		band->ops          = &a9_ddr_bw_ops;
-		band->channels     = 24;
+		band->channels     = 16;
 		band->dmc_number   = 1;
 		band->mali_port[0] = 12;
 		band->mali_port[1] = -1;
@@ -3376,7 +3419,7 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 		aml_db->real_ports = pcnt;
 	}
 
-	vpu_sub_desc_init(aml_db->cpu_type, &aml_db->vpu_sub);
+	sub_dev_desc_init(aml_db->cpu_type, &aml_db->sub_dev);
 
 	ddr_init_port_map_table(aml_db);
 
@@ -3466,6 +3509,9 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 
 	if (aml_db->ops && aml_db->ops->bus_width_init)
 		aml_db->ops->bus_width_init(aml_db);
+
+	if (aml_db->ops && aml_db->ops->vpu_status)
+		aml_db->ops->vpu_status(1);
 
 	raw_spin_lock_init(&aml_db->lock);
 	aml_db->clock_count = aml_db->ops->get_freq(aml_db) / DEFAULT_SAMPLING_FREQ; // 1000hz

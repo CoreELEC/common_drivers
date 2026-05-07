@@ -75,7 +75,7 @@ static void gx_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	/*
 	 * for old chips, only 1 port can be selected
 	 */
-	val =  (db->mode << 31) |	/* enable bit */
+	val =  (db->mode ? BIT(31) : 0) |	/* enable bit */
 	       (0x01 << 20) |	/* use timer  */
 	       (0x0ffff <<  0);
 

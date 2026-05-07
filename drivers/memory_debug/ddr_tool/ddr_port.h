@@ -8,7 +8,7 @@
 
 #define DMC_MON_RW			0x8200004A
 
-#define MAX_NAME			15
+#define MAX_NAME			32
 
 /* see cpu_version.h define */
 #define DMC_TYPE_M8B			0x1B
@@ -63,7 +63,6 @@
 
 /* port defaults sub_id is -1, override with .sub_id = n if needed */
 #define PORT_DESC(...)	((struct ddr_port_desc){ .sub_id = -1, .bus = -1, __VA_ARGS__ })
-#define VPU_SUB_CNT  (sizeof(struct vpu_sub_desc) / sizeof(struct vpu_sub *))
 
 struct ddr_port_desc {
 	union {
@@ -81,33 +80,31 @@ struct ddr_port_desc {
 		unsigned int mdc_id;
 	};
 	unsigned char port_id;
-	signed char sub_id;	/* default -1 when using PORT_DESC() */
+	s16 sub_id;	/* default -1 when using PORT_DESC() */
 	unsigned char bus_id;
 	unsigned char mdc_bus;
 	char port_name[MAX_NAME];
 };
 
-struct vpu_sub_list {
+struct sub_port_list {
 	unsigned char id;
 	char *name;
 };
 
-struct vpu_sub_port {
+struct sub_dev_port {
 	int num;
-	char port_id; /* save vpu master port id */
-	struct vpu_sub_list *list;
+	char port_id; /* save master port id */
+	struct sub_port_list *list;
 };
 
-struct vpu_sub {
-	struct vpu_sub_port sub_r;
-	struct vpu_sub_port sub_w;
+struct sub_dev {
+	struct sub_dev_port sub_r;
+	struct sub_dev_port sub_w;
 };
 
-struct vpu_sub_desc {
-	struct vpu_sub *vpu0_sub;
-	struct vpu_sub *vpu1_sub;
-	struct vpu_sub *vpu2_sub;
-	struct vpu_sub *vpu3_sub;
+struct sub_dev_desc {
+	int num;
+	struct sub_dev *subs[];
 };
 
 enum ddr_priority_type {
@@ -221,10 +218,16 @@ struct ddr_priority_entry {
 struct ddr_priority_force {
 	unsigned int bus;
 	/* reg base fllow aml_ddr ddr_reg[] */
-	long force_mask;
-	unsigned long offset;
-	unsigned char lsb;
-	unsigned char nbits;
+	long r_force_mask;
+	long w_force_mask;
+	unsigned long r_force_mask_offset;
+	unsigned long w_force_mask_offset;
+	unsigned long r_offset;
+	unsigned long w_offset;
+	unsigned char r_lsb;
+	unsigned char w_lsb;
+	unsigned char r_nbits;
+	unsigned char w_nbits;
 };
 
 struct ddr_priority_info {
@@ -494,8 +497,8 @@ int ddr_priority_info_write(unsigned int id, int value, int rw, int dmc, char ty
 int priority_info_sysfs_parse(const char *buf, size_t count, unsigned int *id,
 				     int *val, int *rw, int *dmc, char *type);
 
-int vpu_sub_desc_init(int cpu_type, struct vpu_sub_desc **desc);
-char *vpu_to_sub_port(unsigned char port_id, int sid, char rw);
+int sub_dev_desc_init(int cpu_type, struct sub_dev_desc **desc);
+char *sub_dev_to_port(unsigned char port_id, int sid, char rw);
 /*
  * This function used only during boot
  */

@@ -154,7 +154,7 @@ static void c4_dmc_bandwidth_enable(struct ddr_bandwidth *db)
 	unsigned int val;
 
 	/* enable all channel */
-	val =  (db->mode << 31) |	/* enable bit */
+	val =  (db->mode ? BIT(31) : 0) |	/* enable bit */
 	       (0xff <<  0);
 	writel(val, db->ddr_reg[0] + DMC_MON_CTRL0);
 }
