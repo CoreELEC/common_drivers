@@ -2030,10 +2030,13 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 			dpss_enable_mc_link(0);
 			while (1) {
 				if (is_vd1_link_state()) {
+					dbg_f0("link off to disable frc\n");
 					if ((dpss_reset_ctrl & 0xF0) == 0x10)
 						w_reg_bit(FRC_REG_INPUT_SIZE, 0, 30, 1);
-					usleep_range(4000, 8000);
-					dbg_f0("link off to disable frc\n");
+					usleep_range(5000, 9000);
+					//msleep(4);
+					dbg_f0("wait 4ms, read frc_reg =%#x\n",
+							rd(FRC_REG_INPUT_SIZE));
 					break;
 				}
 				now = ktime_get();

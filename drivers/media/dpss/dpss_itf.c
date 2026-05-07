@@ -1379,16 +1379,24 @@ static void _vfm_polling_get_pre_block(struct dpss_ch_s *pch, int inp_is_full)
 {
 	struct vframe_s *vfm = NULL, *vfm2;
 	unsigned int ch;
-	int ret_in;
+	int ret_in, retry;
 	bool lock_ret;
 
 	if (!dpss_dbg_is_run())
 		return;
 
 	//mutex_lock(&pch->c.ch_lock); //lock
-	lock_ret = mutex_trylock(&pch->c.ch_lock);
+	//lock_ret = mutex_trylock(&pch->c.ch_lock);
+	lock_ret = false; // 20260506 add protect
+	for (retry = 0; retry < 3; retry++) {
+		lock_ret = mutex_trylock(&pch->c.ch_lock);
+		if (lock_ret)
+			break;
+		// little wait for NR init release mutex
+		usleep_range(100, 200);
+	}
 	if (!lock_ret) {
-		DBG_WARN("pre_block:wait\n");
+		DBG_WARN("pre_block: failed to acquire lock after 3 retries\n");
 		return;
 	}
 	ch = pch->c.ch;
