@@ -209,3 +209,4 @@ dtb-y += a9_a311y3_by408.dtb
 dtb-y += a9_a311y3_by409.dtb
 dtb-y += a9_a311y3_by401_linux.dtb
 dtb-y += a9_a311y3_by401_hdmi-only_linux.dtb
+dtb-y += a9_a311y3_by401_venus.dtb
