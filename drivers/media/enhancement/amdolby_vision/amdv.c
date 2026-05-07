@@ -915,12 +915,16 @@ bool is_aml_tvmode(void)
 		return false;
 }
 
+enum input_mode_enum m_input_mode = IN_MODE_OTT;
 bool is_aml_stb_hdmimode(void)
 {
 	if ((is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
 	    module_installed && tv_dovi_setting &&
 	    tv_dovi_setting->input_mode == IN_MODE_HDMI &&
 	    hdmi_to_stb_policy)
+		return true;
+	else if (is_aml_a9() && module_installed &&
+		m_input_mode == IN_MODE_HDMI)
 		return true;
 	else
 		return false;
@@ -976,7 +980,7 @@ int is_graphics_output_off(void)
 
 bool core1_detunnel(void)
 {
-	if ((is_aml_tm2_stbmode() || is_aml_t7_stbmode()) &&
+	if ((is_aml_tm2_stbmode() || is_aml_t7_stbmode() || is_aml_a9()) &&
 	    dv_core1_detunnel && multi_dv_mode)
 		return 1;
 	else
@@ -11073,7 +11077,8 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 			mel_flag = 0;
 		}
 	} else if (vf && (vf->source_type == VFRAME_SOURCE_TYPE_HDMI) &&
-		(is_aml_tm2_stbmode() || is_aml_t7_stbmode()) && hdmi_to_stb_policy) {
+		(is_aml_tm2_stbmode() || is_aml_t7_stbmode() || is_aml_a9()) &&
+		hdmi_to_stb_policy) {
 		if (vf->flag & VFRAME_FLAG_ALLM_MODE)
 			hdmi_in_allm = true;
 		else
@@ -11487,6 +11492,8 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 		} else {
 			amdv_run_mode_delay = 0;
 		}
+	} else if (is_aml_a9()) {
+		m_input_mode = input_mode;
 	}
 
 	/* check dst format */
