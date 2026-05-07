@@ -78,7 +78,7 @@
 		primary_plane_index = <0>; /* primary plane index for crtcs */
 		crtc_masks = <1 0 0>; /*for encoder: 0:hdmi 1:lcd 2:cvbs*/
 		crtcmask_of_osd = <0 0 0 0 0>; /* indicate the crtc mask of osd plane */
-		crtcmask_of_video = <0 1 0>; /* indicate the crtc mask of video plane */
+		crtcmask_of_video = <0 0 0>; /* indicate the crtc mask of video plane */
 		gamma_ctl = <0>; /*0:skip gamma init 1:gamma init*/
 		pxp_mode = <0>;
 		osd_afbc_mask = <7>;
@@ -301,6 +301,14 @@
 					index = /bits/ 8  <1>;
 					type = /bits/ 8  <7>;
 					block_name = "video2_block";
+					num_in_links = /bits/ 8  <0x0>;
+					num_out_links = /bits/ 8  <0x0>;
+				};
+				video3_block: block@21 {
+					id = /bits/ 8 <VIDEO3_BLOCK>;
+					index = /bits/ 8  <2>;
+					type = /bits/ 8  <7>;
+					block_name = "video3_block";
 					num_in_links = /bits/ 8  <0x0>;
 					num_out_links = /bits/ 8  <0x0>;
 				};
