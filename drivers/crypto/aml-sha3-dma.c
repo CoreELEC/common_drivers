@@ -308,7 +308,8 @@ static int aml_sha3_update_dma_start(struct aml_sha3_dev *dd,
 	struct scatterlist *sg;
 	struct dma_dsc_v2_64 dsc;
 	struct device *dev = dd->dev;
-	u32 nents = 0, nents_act;
+	int nents = 0;
+	u32 nents_act = 0;
 	u32 mapped = 0;
 	u32 i = 0;
 	int err = 0;
@@ -324,7 +325,7 @@ static int aml_sha3_update_dma_start(struct aml_sha3_dev *dd,
 				ctx, ctx->sg, ctx->total, nents_act, nents);
 
 		sg = ctx->sg;
-		if (nents) {
+		if (nents > 0) {
 			mapped = dma_map_sg(dd->parent, sg, nents, DMA_TO_DEVICE);
 			if (!mapped) {
 				dev_err(dev, "dma_map_sg() error\n");
