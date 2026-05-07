@@ -4788,26 +4788,6 @@
 		};
 	};
 
-	jtag_a_pins: jtag_a_pin {
-		mux {
-			groups = "jtag_tdi_d",
-				 "jtag_tdo_d",
-				 "jtag_clk_d",
-				 "jtag_tms_d";
-			function = "jtag";
-		};
-	};
-
-	jtag_b_pins: jtag_b_pin {
-		mux {
-			groups = "jtag2_tdi",
-				 "jtag2_tdo",
-				 "jtag2_clk",
-				 "jtag2_tms";
-			function = "jtag2";
-		};
-	};
-
 	spisg_c_pins_a: spisg_c_pins_a {
 		mux {
 			 /* GPIOA_8/9/11/10 */
@@ -4990,6 +4970,26 @@
 };
 
 &aobus_pinctrl{
+	jtag_a_pins: jtag_a_pin {
+		mux {
+			groups = "jtag_a_tdi_ao",
+				 "jtag_a_tdo_ao",
+				 "jtag_a_clk_ao",
+				 "jtag_a_tms_ao";
+			function = "jtag_a_ao";
+		};
+	};
+
+	jtag_b_pins: jtag_b_pin {
+		mux {
+			groups = "jtag_b_tdi_ao",
+				 "jtag_b_tdo_ao",
+				 "jtag_b_clk_ao",
+				 "jtag_b_tms_ao";
+			function = "jtag_b_ao";
+		};
+	};
+
 	sdcard_pins: sdcard_pins {
 		mux {
 			groups = "sdcard_d0_ao",
