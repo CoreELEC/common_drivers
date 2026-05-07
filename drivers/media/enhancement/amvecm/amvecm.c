@@ -4074,7 +4074,8 @@ static void set_hdr_test_case(int vpp_index)
 	pr_info("%s: hdr_test_case_set_flag = %d\n", __func__,
 		hdr_test_case_set_flag);
 
-	if (chip_type_id == chip_a9) {
+	if (chip_type_id == chip_t6w ||
+		chip_type_id == chip_a9) {
 		offset_addr_vd1 = 0x1600;
 		offset_addr_vd2 = 0x80;
 	}
@@ -4144,20 +4145,6 @@ static void set_hdr_test_case(int vpp_index)
 		return;
 	}
 
-	if (chip_type_id == chip_t6x) {
-		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_ADPSCL1_COEF0,
-			0x04000400, vpp_index);
-		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_ADPSCL1_COEF1,
-			0xc8000400, vpp_index);
-		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_RGB_GM_CTRL, 0x4, vpp_index);
-	} else if (chip_type_id == chip_a9) {
-		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF0,
-			0x04000400, vpp_index);
-		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF1,
-			0xc8000400, vpp_index);
-		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_RGB_GM_CTRL, 0x4, vpp_index);
-	}
-
 	am_set_regmap(test_case_reg, 0);
 	pr_info("%s: am_set_regmap\n  addr = %x", __func__,
 		test_case_reg->am_reg[0].addr);
@@ -4168,18 +4155,22 @@ static void set_hdr_test_case(int vpp_index)
 			test_case_lut->lut_eotf[i], vpp_index);
 	pr_info("%s: eotf set addr = %x\n", __func__, reg_eotf_addr);
 
-	VSYNC_WRITE_VPP_REG_VPP_SEL(reg_oetf_addr, 0x0, vpp_index);
 	VSYNC_WRITE_VPP_REG_VPP_SEL(reg_ogain_addr, 0x0, vpp_index);
-	for (i = 0; i < 75; i++) {
-		VSYNC_WRITE_VPP_REG_VPP_SEL(reg_oetf_data,
-			test_case_lut->lut_oetf[i], vpp_index);
+	for (i = 0; i < 75; i++)
 		VSYNC_WRITE_VPP_REG_VPP_SEL(reg_ogain_data,
 			test_case_lut->lut_ogain[i], vpp_index);
+
+	if (chip_type_id != chip_a9) {
+		VSYNC_WRITE_VPP_REG_VPP_SEL(reg_oetf_addr, 0x0, vpp_index);
+		for (i = 0; i < 75; i++)
+			VSYNC_WRITE_VPP_REG_VPP_SEL(reg_oetf_data,
+				test_case_lut->lut_oetf[i], vpp_index);
 	}
 
 	VSYNC_WRITE_VPP_REG_VPP_SEL(reg_ogain_ext_addr, 0x0, vpp_index);
 
-	if (chip_type_id == chip_t6x) {
+	if (chip_type_id == chip_t6x ||
+		chip_type_id == chip_a9) {
 		for (i = 0; i < 74; i++) {
 			VSYNC_WRITE_VPP_REG_VPP_SEL(reg_ogain_ext_data,
 				(test_case_lut->lut_ogain_ext[i] & 0xffff), vpp_index);
@@ -4203,6 +4194,29 @@ static void set_hdr_test_case(int vpp_index)
 		VSYNC_WRITE_VPP_REG_VPP_SEL(reg_cgain_data,
 			test_case_lut->lut_cgain[i], vpp_index);
 	pr_info("%s: cgain set addr = %x\n", __func__, reg_cgain_addr);
+
+	if (chip_type_id == chip_t6x) {
+		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_ADPSCL1_COEF0,
+			0x04000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_ADPSCL1_COEF1,
+			0xc8000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(DOLBY_HDR2_RGB_GM_CTRL, 0x4, vpp_index);
+	} else if (chip_type_id == chip_a9) {
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF0 + 0x2a00,
+			0x04000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_ADPSCL1_COEF1 + 0x2a00,
+			0xc8000400, vpp_index);
+		VSYNC_WRITE_VPP_REG_VPP_SEL(VD1_HDR2_RGB_GM_CTRL + 0x2a00,
+			0x4, vpp_index);
+
+		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VD1_HDR2_CGAIN_COEF1 + 0x2a00,
+			0xfff, 16, 13, vpp_index);
+
+		if (hdr_test_case_set_flag == EN_HDR_TEST_CASE_CUVA_SDR_SC1 ||
+			hdr_test_case_set_flag == EN_HDR_TEST_CASE_CUVAHLG_SDR_SC1 ||
+			hdr_test_case_set_flag == EN_HDR_TEST_CASE_CUVAHLG_SDR_STATIC)
+			set_oetf_lut_by_type(VD1_HDR, 0, 12, vpp_index);
+	}
 
 	//reset reg addr
 	if (hdr_test_case_set_flag == EN_HDR_TEST_CASE_VD2_CUVA_SDR_SC1 ||
@@ -17943,7 +17957,7 @@ int pkt_adv_chip(void)
 {
 	int ret;
 
-	if (chip_type_id == chip_t7 ||
+	if (chip_type_id == chip_t7 || chip_type_id == chip_a9 ||
 		(chip_type_id >= chip_s5 && chip_cls_id == STB_CHIP))
 		ret = 1;
 	else

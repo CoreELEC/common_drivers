@@ -266,6 +266,8 @@ int hdr10_param_dbg(char **parm);
 int get_hdr_on(void);
 extern int hdr_hist_dma_case;
 void set_eotf_type(enum eotf_type_e type);
+void set_oetf_lut_by_type(enum hdr_module_sel module_sel,
+	unsigned int type, unsigned int bitdepth, enum vpp_index_e vpp_index);
 
 #endif
 #endif

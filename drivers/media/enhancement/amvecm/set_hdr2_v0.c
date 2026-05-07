@@ -3640,6 +3640,112 @@ void set_oetf_lut(enum hdr_module_sel module_sel,
 		VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_data_port, lut[148], vpp_sel);
 }
 
+void set_oetf_lut_by_type(enum hdr_module_sel module_sel,
+	unsigned int type, unsigned int bitdepth, enum vpp_index_e vpp_index)
+{
+	unsigned int *lut;
+	unsigned int oetf_lut_addr_port = 0;
+	unsigned int oetf_lut_data_port = 0;
+	unsigned int i = 0;
+	int vpp_sel;
+	unsigned int addr_offset_osd2 = 0;
+	unsigned int addr_offset_osd1 = 0;
+	unsigned int addr_offset_vd1 = 0;
+	unsigned int addr_offset_vd2 = 0;
+
+	if (chip_type_id == chip_s7d ||
+		chip_type_id == chip_s6)
+		addr_offset_osd2 = 0x500;
+
+	if (chip_type_id == chip_t6d) {
+		addr_offset_vd1 = 0x2a00;
+		addr_offset_vd2 = 0x2a30;
+	} else if (chip_type_id == chip_t6w) {
+		addr_offset_vd1 = 0x1400;
+		addr_offset_vd2 = 0x2a30;
+	} else if (chip_type_id == chip_t6x) {
+		addr_offset_vd1 = 0x1400;
+		addr_offset_vd2 = 0x2ab0;
+		if (module_sel == VD1_1_HDR || module_sel == VD2_1_HDR) {
+			addr_offset_vd1 += 0x80;
+			addr_offset_vd2 += 0x80;
+		}
+	} else if (chip_type_id == chip_a9) {
+		addr_offset_vd1 = 0x2a00;
+		addr_offset_vd2 = 0x2a30;
+		addr_offset_osd1 = 0xa0;
+	}
+
+	if (vpp_index == VPP_TOP1 &&
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
+		chip_type_id == chip_a9))
+		vpp_sel = VPP_TOP1;
+	else if (vpp_index == VPP_TOP2 &&
+		get_cpu_type() == MESON_CPU_MAJOR_ID_T7)
+		vpp_sel = VPP_TOP2;
+	else
+		vpp_sel = vpp_index;
+
+	if (module_sel == VD1_HDR || module_sel == VD1_1_HDR) {
+		oetf_lut_addr_port = VD1_OETF_LUT_ADDR_PORT + addr_offset_vd1;
+		oetf_lut_data_port = VD1_OETF_LUT_DATA_PORT + addr_offset_vd1;
+	} else if (module_sel == VD2_HDR || module_sel == VD2_1_HDR) {
+		oetf_lut_addr_port = VD2_OETF_LUT_ADDR_PORT + addr_offset_vd2;
+		oetf_lut_data_port = VD2_OETF_LUT_DATA_PORT + addr_offset_vd2;
+	} else if (module_sel == VD3_HDR) {
+		oetf_lut_addr_port = VD3_OETF_LUT_ADDR_PORT;
+		oetf_lut_data_port = VD3_OETF_LUT_DATA_PORT;
+	} else if (module_sel == OSD1_HDR) {
+		oetf_lut_addr_port = OSD1_OETF_LUT_ADDR_PORT - addr_offset_osd1;
+		oetf_lut_data_port = OSD1_OETF_LUT_DATA_PORT - addr_offset_osd1;
+	} else if (module_sel == OSD2_HDR) {
+		oetf_lut_addr_port = OSD2_OETF_LUT_ADDR_PORT + addr_offset_osd2;
+		oetf_lut_data_port = OSD2_OETF_LUT_DATA_PORT + addr_offset_osd2;
+	} else if (module_sel == OSD3_HDR) {
+		oetf_lut_addr_port = OSD3_OETF_LUT_ADDR_PORT;
+		oetf_lut_data_port = OSD3_OETF_LUT_DATA_PORT;
+	} else if (module_sel == DI_HDR ||
+		module_sel == DI_M2M_HDR) {
+		oetf_lut_addr_port = DI_OETF_LUT_ADDR_PORT;
+		oetf_lut_data_port = DI_OETF_LUT_DATA_PORT;
+		vpp_sel = 0xff;
+	} else if (module_sel == VDIN0_HDR) {
+		oetf_lut_addr_port = VDIN0_OETF_LUT_ADDR_PORT;
+		oetf_lut_data_port = VDIN0_OETF_LUT_DATA_PORT;
+		vpp_sel = 0xff;
+	} else if (module_sel == VDIN1_HDR) {
+		oetf_lut_addr_port = VDIN1_OETF_LUT_ADDR_PORT;
+		oetf_lut_data_port = VDIN1_OETF_LUT_DATA_PORT;
+		vpp_sel = 0xff;
+	}
+
+	if (type == 0)
+		lut = &oe_y_lut_sdr[0];
+	else if (type == 1)
+		lut = &oe_y_lut_hdr[0];
+	else if (type == 2)
+		lut = &oe_y_lut_hlg[0];
+	else
+		lut = &oe_y_lut_bypass[0];
+
+	VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_addr_port, 0x0, vpp_sel);
+	for (i = 0; i < HDR2_OETF_LUT_SIZE / 2; i++) {
+		if (bitdepth == 10)
+			VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_data_port,
+				((lut[i * 2 + 1] >> 2) << 16) +
+				(lut[i * 2] >> 2), vpp_sel);
+		else
+			VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_data_port,
+				(lut[i * 2 + 1] << 16) +
+				lut[i * 2], vpp_sel);
+	}
+
+	if (bitdepth == 10)
+		VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_data_port, lut[148] >> 2, vpp_sel);
+	else
+		VSYNC_WRITE_VPP_REG_VPP_SEL(oetf_lut_data_port, lut[148], vpp_sel);
+}
+
 void set_c_gain(enum hdr_module_sel module_sel,
 		struct hdr_proc_lut_param_s *hdr_lut_param,
 		enum vpp_index_e vpp_index)
