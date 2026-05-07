@@ -13386,6 +13386,31 @@ static ssize_t frc_delay_show(const struct class *cla,
 }
 #endif
 
+static ssize_t vpp_delay_show(const struct class *cla,
+				      const struct class_attribute *attr,
+				      char *buf)
+{
+	struct vinfo_s *cur_vinfo = get_current_vinfo();
+	u64 vsync_interval;
+	u64 output_duration;
+	u32 tunnel_delay;
+	u32 nontunnel_delay;
+	u32 count = 0;
+
+	output_duration = div64_u64(cur_vinfo->sync_duration_num,
+		cur_vinfo->sync_duration_den);
+	vsync_interval = div_u64(1000000ULL, output_duration);
+	tunnel_delay = div_u64(vsync_interval * 3, 1000);
+	nontunnel_delay = div_u64(vsync_interval * 7, 2000);
+
+	count += sprintf(buf + count, "vpp_with_pull_down_delay_ms=%d\n", nontunnel_delay);
+	count += sprintf(buf + count, "vpp_without_pull_down_delay_ms=%d\n", tunnel_delay);
+	count += sprintf(buf + count, "vsync_duration_us=%llu\n", vsync_interval);
+	count += sprintf(buf + count, "display_out_hz=%llu\n", output_duration);
+
+	return count;
+}
+
 static ssize_t vpu_module_urgent_show(const struct class *cla,
 			     const struct class_attribute *attr, char *buf)
 {
@@ -14954,6 +14979,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       frc_delay_show,
 	       NULL),
 #endif
+	__ATTR(vpp_delay,
+	       0664,
+	       vpp_delay_show,
+	       NULL),
 	__ATTR(urgent_set,
 		0644,
 		vpu_module_urgent_show,
