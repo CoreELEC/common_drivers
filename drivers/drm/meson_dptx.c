@@ -595,11 +595,17 @@ static void meson_dptx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 	struct drm_crtc_state *crtc_state,
 	struct drm_connector_state *conn_state)
 {
+	struct am_meson_crtc_state *meson_crtc_state =
+		to_am_meson_crtc_state(crtc_state);
 	struct am_meson_crtc *amcrtc = to_am_meson_crtc(crtc_state->crtc);
 	struct meson_dp_tx *meson_dptx = encoder_to_meson_dptx(encoder);
 	struct meson_connector_dev *tx_dev = meson_dptx->dptx_dev;
+	struct drm_display_mode *adj_mode = &crtc_state->adjusted_mode;
+	char *modename = adj_mode->name;
 
 	update_curr_vout_server(amcrtc->base.index + 1, tx_dev->vout_serv);
+	meson_crtc_state->viu_mux = vout_func_get_viu_mux(amcrtc->vout_index,
+		tx_dev->vout_serv, modename);
 }
 
 static void meson_dptx_encoder_atomic_enable(struct drm_encoder *encoder,
