@@ -1131,7 +1131,8 @@ static struct clk_regmap pwm_c = {
 			&pwm_c_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -1178,7 +1179,8 @@ static struct clk_regmap pwm_d = {
 			&pwm_d_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -1225,7 +1227,8 @@ static struct clk_regmap pwm_e = {
 			&pwm_e_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
