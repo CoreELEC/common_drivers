@@ -628,7 +628,8 @@ static int aml_get_acodec_skew(void)
 	int skew = 4;
 
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_T6W ||
-		get_cpu_type() == MESON_CPU_MAJOR_ID_C4)
+		get_cpu_type() == MESON_CPU_MAJOR_ID_C4 ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_C5)
 		skew = 5;
 	else if (get_cpu_type() == MESON_CPU_MAJOR_ID_T6X)
 		skew = 3;

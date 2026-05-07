@@ -97,6 +97,7 @@ enum meson_acodec_version {
 	MESON_ACODEC_ID_VERSION_T6W,
 	MESON_ACODEC_ID_VERSION_T6X,
 	MESON_ACODEC_ID_VERSION_C4,
+	MESON_ACODEC_ID_VERSION_C5,
 };
 
 enum input_pin_sel {
@@ -640,6 +641,8 @@ static int output_mode_set(struct snd_soc_component *component, int acodec_chip_
 				snd_soc_component_get_drvdata(component);
 
 	if (aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_C4) {
+		/*c4 default disable alc*/
+		snd_soc_component_update_bits(component, ACODEC_ALC_0, 0x1 << 31, 0x0 << 31);
 		snd_soc_component_update_bits(component, ACODEC_0, 0xf << 0, 0xf);
 		snd_soc_component_write(component, ACODEC_8, 0x0000);
 		if (aml_acodec->output_type == DIFF_LINEOUT) {
@@ -657,6 +660,50 @@ static int output_mode_set(struct snd_soc_component *component, int acodec_chip_
 			0x1 << 6);
 		snd_soc_component_write(component, ACODEC_1, 0x50501111);
 		snd_soc_component_write(component, ACODEC_4, 0x10000);
+		input_pin_set(component);
+		return 0;
+	}
+	if (aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_C5) {
+		/*c5 default disable alc*/
+		snd_soc_component_update_bits(component, ACODEC_ALC_0, 0x1 << 31, 0x0 << 31);
+		snd_soc_component_update_bits(component, ACODEC_0, 0xf << 0, 0xf);
+		/*c5 acodec ADCx_INV*/
+		snd_soc_component_update_bits(component, ACODEC_0, 0x3 << 16, 0x3 << 16);
+		snd_soc_component_write(component, ACODEC_8, 0x0000);
+		if (aml_acodec->output_type == DIFF_LINEOUT) {
+			snd_soc_component_write(component, ACODEC_3, 0x10042);
+			snd_soc_component_update_bits(component, ACODEC_8, 0x1 << 8,
+				0x1 << 8);
+		} else if (aml_acodec->output_type == LINEOUT_SINGLE) {
+			snd_soc_component_write(component, ACODEC_3, 0x0022);
+			snd_soc_component_update_bits(component, ACODEC_8, 0x1 << 8,
+					0x1 << 8);
+		}
+		/*c5 soc micbiase control*/
+		snd_soc_component_update_bits(component, ACODEC_8,
+				0x1 << 4 | 0x1 << 6 | 0xff << 24,
+				0x1 << 4 | 0x1 << 6 | 0x34 << 24);
+		/*c5 acodec DACx_VC default*/
+		snd_soc_component_update_bits(component, ACODEC_2,
+					0xff << DACL_VC |
+					0xff << DACR_VC |
+					0x1 << DAC_VC_RAMP_MODE |
+					0x1 << DAC_MUTE_MODE |
+					0x1 << DAC_UNMUTE_MODE,
+					0xfb << DACL_VC |
+					0xff << DACR_VC |
+					0x0 << DAC_VC_RAMP_MODE |
+					0x0 << DAC_MUTE_MODE |
+					0x0 << DAC_UNMUTE_MODE);
+		/*c5 acodec DACx_VC default*/
+		snd_soc_component_update_bits(component, ACODEC_5,
+					0xff << DAC2L_VC |
+					0xff << DAC2R_VC,
+					0xfb << DAC2L_VC |
+					0xfb << DAC2R_VC);
+
+		/*c5 acodec current default*/
+		snd_soc_component_write(component, ACODEC_4, 0x20000);
 		input_pin_set(component);
 		return 0;
 	}
@@ -1395,7 +1442,8 @@ static int aml_tocodec_adc_control_init(struct am_acodec_priv *aml_acodec)
 
 	if (aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_T6W ||
 		aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_T6X ||
-		aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_C4) {
+		aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_C4 ||
+		aml_acodec->chip_version == MESON_ACODEC_ID_VERSION_C5) {
 		/*only ph0 is right*/
 		bclk_sel = 8 + aml_acodec->tdmin_index;
 		lrclk_sel = 8 + aml_acodec->tdmin_index;
@@ -1607,6 +1655,15 @@ static int aml_am_acodec_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (of_device_is_compatible(pdev->dev.of_node, "amlogic, c5_acodec")) {
+		aml_acodec->chip_version = MESON_ACODEC_ID_VERSION_C5;
+		aml_acodec->to_acodec_adc_regmap = regmap_resource(&pdev->dev, "to_acodec_adc");
+		if (IS_ERR(aml_acodec->to_acodec_adc_regmap)) {
+			dev_err(&pdev->dev, "miss to_acodec adc regmap\n");
+			return PTR_ERR(aml_acodec->to_acodec_adc_regmap);
+		}
+	}
+
 	/*soc component use the last regmap*/
 	aml_acodec->regmap = regmap_resource(&pdev->dev, "acodec");
 	if (IS_ERR(aml_acodec->regmap)) {
@@ -1775,6 +1832,9 @@ static const struct of_device_id aml_am_acodec_dt_match[] = {
 		.data = &acodec_cinfo_v3,
 	}, {
 		.compatible = "amlogic, c4_acodec",
+		.data = &acodec_cinfo_v3,
+	}, {
+		.compatible = "amlogic, c5_acodec",
 		.data = &acodec_cinfo_v3,
 	},
 	{},
