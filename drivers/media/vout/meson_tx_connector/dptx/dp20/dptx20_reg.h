@@ -383,6 +383,7 @@
  * At power up, this register has a value of 0x3F. That is, all interrupt sources are masked.
  */
  #define INTERRUPT_MASK_SENDFIFO_EVENT               BIT(21)
+ #define INTERRUPT_MASK_SEC0_AUDFIFO_OVERFLOW        BIT(16)
  #define INTERRUPT_MASK_SRC3_ERR_EVENT               BIT(14)
  #define INTERRUPT_MASK_SRC3_OVF_EVENT               BIT(13)
  #define INTERRUPT_MASK_SRC2_ERR_EVENT               BIT(12)

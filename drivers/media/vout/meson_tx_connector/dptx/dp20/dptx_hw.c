@@ -1052,7 +1052,8 @@ static void dptx_hw_intr_init(struct dptx_common *tx_comm, struct dptx_hw_common
 		INTERRUPT_MASK_SRC2_OVF_EVENT |
 		INTERRUPT_MASK_SRC2_ERR_EVENT |
 		INTERRUPT_MASK_SRC3_OVF_EVENT |
-		INTERRUPT_MASK_SRC3_ERR_EVENT;
+		INTERRUPT_MASK_SRC3_ERR_EVENT |
+		INTERRUPT_MASK_SEC0_AUDFIFO_OVERFLOW;
 
 	if (!hw_comm) {
 		DPTX_ERROR("%s NULL hw_comm instance!\n", __func__);
