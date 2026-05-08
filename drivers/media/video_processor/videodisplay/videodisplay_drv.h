@@ -241,6 +241,7 @@ struct videodisplay_dev {
 	u32 hdmi_drop_count;
 	int last_frc_delay;
 	struct vd_dump_info_s dump_info_yuv;
+	u32 cur_hold_count;
 };
 
 struct videodisplay_port_s *videodisplay_get_port(u32 index);

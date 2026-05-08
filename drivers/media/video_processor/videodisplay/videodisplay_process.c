@@ -2780,6 +2780,7 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 	bool is_44_pattern;
 	bool is_early_frame;
 	bool is_odd_trace_val;
+	int expected_disp_vsync;
 
 	/* Dont do anything if we have invalid data */
 	if (!vf || !vf->vc_private)
@@ -2836,7 +2837,13 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 		expected_curr_interval = 5;
 		break;
 	default:
-		return -1;
+		pattern_range =  PATTERN_11_DETECT_RANGE;
+		expected_prev_interval = 1;
+		expected_curr_interval = 1;
+		vd_print(dev->index, PRINT_PATTERN,
+			"patten mode: %d input",
+			dev->pattern_detected);
+
 	}
 
 	vd_print(dev->index, PRINT_PATTERN,
@@ -2848,6 +2855,30 @@ static inline int vd_perform_pulldown(struct videodisplay_dev *dev, struct vfram
 		*expired,
 		current_delay_count);
 
+	if (dev->pattern_detected == PATTERN_UNDETECTED) {
+		if (dev->fget_count == 0 && dev->cur_hold_count < 1) {
+			dev->cur_hold_count++;
+			vd_print(dev->index, PRINT_PATTERN,
+				"patten_undetected: hold to get enough buffer: %d\n",
+				dev->cur_hold_count);
+			*expired = false;
+		} else if (dev->fget_count == 0 && dev->cur_hold_count >= 1) {
+			vd_print(dev->index, PRINT_PATTERN,
+				"patten_undetected: already hold:%d, need expire\n",
+				dev->cur_hold_count);
+			*expired = true;
+		} else {
+			expected_disp_vsync = vf->vc_private->vsync_index - dev->last_vsync_index;
+			vd_print(dev->index, PRINT_PATTERN,
+				"patten_undetected: expected_disp_vsync:%d, patten_trace:%d\n",
+				expected_disp_vsync, patten_trace[dev->index]);
+			if (patten_trace[dev->index] < expected_disp_vsync)
+				*expired = false;
+			else
+				*expired = true;
+		}
+		return 0;
+	}
 	/* We do nothing if we dont have enough data*/
 	if (dev->pattern[dev->pattern_detected] != pattern_range)
 		return -1;
@@ -3934,7 +3965,6 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 	int max_delay_count = 2;
 	int input_fps, output_fps, output_pts_inc_scale = 0, output_pts_inc_scale_base = 0;
 	int aisr_delay_vsync;
-	int di_delay_vsync;
 	bool dpss_tvin_enable_pulldown;
 	int total_delay_vsync;
 	struct timespec64 cur_spec_time;
@@ -3972,16 +4002,12 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 			aisr_delay_vsync = 0;
 
 		/*dpss need force dalay vsync*/
-		if (dev->index == 0 && (vf->type_ext & VIDTYPE_EXT_422_10_2P_DPSS)) {
+		if (dev->index == 0 && (vf->type_ext & VIDTYPE_EXT_422_10_2P_DPSS))
 			dpss_tvin_enable_pulldown = true;
-			di_delay_vsync = 1;
-		} else {
+		else
 			dpss_tvin_enable_pulldown = false;
-			di_delay_vsync = 0;
-		}
 
-		total_delay_vsync = aisr_delay_vsync + di_delay_vsync
-			+ vd_set_frame_delay[dev->index];
+		total_delay_vsync = aisr_delay_vsync + vd_set_frame_delay[dev->index];
 
 		if (vf->vc_private && total_delay_vsync > 0) {
 			vsync_index = vf->vc_private->vsync_index;
@@ -4580,6 +4606,7 @@ static int video_display_init(struct videodisplay_dev *dev)
 	dev->drop_org_i_count = 0;
 	dev->hdmi_drop_count = 0;
 	dev->last_frc_delay = 0;
+	dev->cur_hold_count = 0;
 	dev_array[dev->index] = dev;
 	init_completion(&dev->task_done);
 	for (i = 0; i < MAX_VD_LAYERS; i++)
