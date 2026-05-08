@@ -2625,9 +2625,17 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 		prm_top->out_mode = dpss_o_mode;
 	if (dpss_o_dw == 1)
 		prm_top->out_mode = OUT_YUV422_1_PLANE;
-	dbg_h2("%s:is_afbcd:%d %d,vfs->type=0x%x\n", __func__,
+
+	if (pch->d->di_front) {
+		if (pch->c.parm.di_parm.output_format == DPSS_OUTPUT_NV12)
+			prm_top->out_mode = OUT_YUV420_NV12;
+		else
+			prm_top->out_mode = OUT_YUV420_NV21;
+	}
+	dbg_h2("%s:is_afbcd:%d %d,vfs->type=0x%x %d\n", __func__,
 			pch->d->is_afbcd,
-			pch->d->is_10bit, vfs->type);
+			pch->d->is_10bit, vfs->type,
+			prm_top->out_mode);
 //------
 	pch->d->nr_cp_mode = false;
 	if (nr_bypass_test && !pch->c.ch) { //dv_pl

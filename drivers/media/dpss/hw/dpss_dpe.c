@@ -2153,7 +2153,10 @@ void hw_cfg_dpss_dpe_intf(struct PRM_DPSS_TOP *prm_top,
 	pix_wmif2->swap_64bit = prm_top->swap_64bit;
 	pix_wmif2->little_endian = prm_top->l_endian;
 	pix_wmif1->uv_swap = pix_wmif2->uv_swap;
-	pix_wmif0->uv_swap = pix_wmif2->uv_swap;
+	if (prm_top->is_i)
+		pix_wmif0->uv_swap = false;
+	else
+		pix_wmif0->uv_swap = pix_wmif2->uv_swap;
 
 	dbg_h2("dpe wr uv sw:%d,fs_plan %d\n", pix_wmif0->uv_swap,
 				fs_plan);
