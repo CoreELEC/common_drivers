@@ -350,9 +350,10 @@ void hdmirx_phy_var_init(void)
 			rx_info.aml_phy_21.pll_bw_21 = 0x51;
 			rx_info.aml_phy_21.cdr_ph_div = 0x8;
 			rx_info.aml_phy_21.cdr_pi_ofst = 0x40;
-			rx_info.acr_rst_delay = 2000;
 			rx_info.aml_phy_21.cable_tuning_en = 1;
 		}
+		if (rx_info.phy_ver == PHY_VER_T6X || rx_info.phy_ver == PHY_VER_A9)
+			rx_info.acr_rst_delay = 2000;
 	}
 	rx_info.aml_phy.force_bw = 0x0;
 }

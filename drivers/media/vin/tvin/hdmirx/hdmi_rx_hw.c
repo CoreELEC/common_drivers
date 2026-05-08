@@ -6342,6 +6342,7 @@ void rx_clkmsr_handler(struct work_struct *work)
 		rx[E_PORT0].clk.tmds_clk = meson_clk_measure_with_precision(126, 32);
 		//rx[E_PORT0].clk.aud_pll = meson_clk_measure_with_precision(104, 32);
 		rx[E_PORT0].clk.p_clk = meson_clk_measure_with_precision(0, 32);
+		rx_info.aud_sck_clk = meson_clk_measure_with_precision(31, 32);
 		for (port = E_PORT1; port < rx_info.port_num; port++) {
 			rx[port].clk.cable_clk = rx[E_PORT0].clk.cable_clk;
 			rx[port].clk.tmds_clk = rx[E_PORT0].clk.tmds_clk;
