@@ -110,5 +110,9 @@
 #define VPU_VENCL_STAT              0x1cec
 #define VPU_VENCP_STAT              0x1ced
 #define VPU_VENC_CTRL               0x1cef
+
+#define VPU_VENCP_STAT_A9           0x1cec
+#define VPU_VENCL_STAT_A9           0x1ced
+
 #endif
 

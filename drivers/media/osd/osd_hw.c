@@ -1848,6 +1848,35 @@ static struct vpu_venc_regs venc_regs_t7[3] = {
 	}
 };
 
+#ifdef check_later
+static struct vpu_venc_regs venc_regs_a9[3] = {
+	{
+		VPU_VENCI_STAT,
+		VPU_VENCP_STAT_A9,
+		VPU_VENCL_STAT_A9,
+		ENCI_VFIFO2VD_LINE_TOP_START,
+		ENCP_VIDEO_VAVON_BLINE,
+		ENCL_VIDEO_VAVON_BLINE,
+	},
+	{
+		VPU_VENCI_STAT + 0x600,
+		VPU_VENCP_STAT_A9 + 0x600,
+		VPU_VENCL_STAT_A9 + 0x600,
+		ENCI_VFIFO2VD_LINE_TOP_START + 0x600,
+		ENCP_VIDEO_VAVON_BLINE + 0x600,
+		ENCL_VIDEO_VAVON_BLINE + 0x600,
+	},
+	{
+		VPU_VENCI_STAT + 0x800,
+		VPU_VENCP_STAT_A9 + 0x800,
+		VPU_VENCL_STAT_A9 + 0x800,
+		ENCI_VFIFO2VD_LINE_TOP_START + 0x800,
+		ENCP_VIDEO_VAVON_BLINE + 0x800,
+		ENCL_VIDEO_VAVON_BLINE + 0x800,
+	}
+};
+#endif
+
 static struct vpu_venc_regs venc_regs_t3x[3] = {
 	{
 		VPU_VENCI_STAT,

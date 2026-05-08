@@ -16032,8 +16032,13 @@ int detect_vout_type(const struct vinfo_s *vinfo)
 	if (cur_dev->display_module == T7_DISPLAY_MODULE ||
 		cur_dev->display_module == S5_DISPLAY_MODULE ||
 		cur_dev->display_module == T6W_DISPLAY_MODULE) {
-		encl_info_reg = VPU_VENCI_STAT;
-		encp_info_reg = VPU_VENCP_STAT;
+		if (video_is_meson_a9_cpu()) {
+			encl_info_reg = VPU_VENCI_STAT;
+			encp_info_reg = VPU_VENCP_STAT_A9;
+		} else {
+			encl_info_reg = VPU_VENCI_STAT;
+			encp_info_reg = VPU_VENCP_STAT;
+		}
 	} else {
 		encl_info_reg = ENCI_INFO_READ;
 		encp_info_reg = ENCP_INFO_READ;
@@ -16103,7 +16108,6 @@ static int get_venc_type(void)
 		venc_type = READ_VCBUS_REG(VPU_VIU_VENC_MUX_CTRL);
 	}
 	venc_type &= 0x3;
-
 	return venc_type;
 }
 
@@ -16197,17 +16201,32 @@ u32 get_cur_enc_line(void)
 			offset = 0x800;
 			break;
 		}
-		switch (venc_type) {
-		case 0:
-			reg = VPU_VENCI_STAT;
-			break;
-		case 1:
-			is_encp = 1;
-			reg = VPU_VENCP_STAT;
-			break;
-		case 2:
-			reg = VPU_VENCL_STAT;
-			break;
+		if (video_is_meson_a9_cpu()) {
+			switch (venc_type) {
+			case 0:
+				reg = VPU_VENCI_STAT;
+				break;
+			case 1:
+				is_encp = 1;
+				reg = VPU_VENCP_STAT_A9;
+				break;
+			case 2:
+				reg = VPU_VENCL_STAT_A9;
+				break;
+			}
+		} else {
+			switch (venc_type) {
+			case 0:
+				reg = VPU_VENCI_STAT;
+				break;
+			case 1:
+				is_encp = 1;
+				reg = VPU_VENCP_STAT;
+				break;
+			case 2:
+				reg = VPU_VENCL_STAT;
+				break;
+			}
 		}
 	} else {
 		switch (venc_type) {
@@ -16281,16 +16300,30 @@ u32 get_cur_enc_num(void)
 			offset = 0x800;
 			break;
 		}
-		switch (venc_type) {
-		case 0:
-			reg = VPU_VENCI_STAT;
-			break;
-		case 1:
-			reg = VPU_VENCP_STAT;
-			break;
-		case 2:
-			reg = VPU_VENCL_STAT;
-			break;
+		if (video_is_meson_a9_cpu()) {
+			switch (venc_type) {
+			case 0:
+				reg = VPU_VENCI_STAT;
+				break;
+			case 1:
+				reg = VPU_VENCP_STAT_A9;
+				break;
+			case 2:
+				reg = VPU_VENCL_STAT_A9;
+				break;
+			}
+		} else {
+			switch (venc_type) {
+			case 0:
+				reg = VPU_VENCI_STAT;
+				break;
+			case 1:
+				reg = VPU_VENCP_STAT;
+				break;
+			case 2:
+				reg = VPU_VENCL_STAT;
+				break;
+			}
 		}
 	} else {
 		bit_offest = 29;
@@ -16313,7 +16346,6 @@ u32 get_cur_enc_num(void)
 	reg_val = READ_VCBUS_REG(reg + offset);
 
 	enc_num = (reg_val >> bit_offest) & 0x7;
-
 	return enc_num;
 }
 
