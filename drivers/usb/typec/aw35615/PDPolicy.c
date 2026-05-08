@@ -105,10 +105,19 @@ void USBPDEnable(Port_t *port, AW_BOOL DeviceUpdate, SourceOrSink TypeCDFP)
 		port->PEIdle = AW_FALSE;
 
 #ifdef AW_HAVE_VDM
+#ifdef MESON_AW
+		if (Attempts_Discov_SOP) {
+			port->AutoVdmState = AUTO_VDM_INIT;
+			port->AutoVdmCnt = 0;
+		} else {
+			port->AutoVdmState = AUTO_VDM_DONE;
+		}
+#else
 		if (Attempts_Discov_SOP)
 			port->AutoVdmState = AUTO_VDM_INIT;
 		else
 			port->AutoVdmState = AUTO_VDM_DONE;
+#endif
 		port->cblPresent = AW_FALSE;
 		port->cblRstState = CBL_RST_DISABLED;
 #endif /* AW_HAVE_VDM */
@@ -539,6 +548,10 @@ void PolicySourceStartup(Port_t *port)
 		port->Registers.Switches.POWERROLE = port->PolicyIsSource;
 		/* port->Registers.Slice.byte = 0x60; */
 		/* DeviceWrite(port, regSlice, 1, &port->Registers.Slice.byte); */
+#ifdef MESON_AW
+		port->Registers.Slice.byte = 0xDC;
+		DeviceWrite(port, regSlice, 1, &port->Registers.Slice.byte);
+#endif
 		/* port->Registers.Switches.AUTO_CRC = 1; */
 		DeviceWrite(port, regSwitches1, 1, &port->Registers.Switches.byte[1]);
 
@@ -593,6 +606,9 @@ void PolicySourceStartup(Port_t *port)
 			port->AutoModeEntryObjPos = -1;
 			port->svid_discovery_done = AW_FALSE;
 			port->svid_discovery_idx  = -1;
+#ifdef MESON_AW
+			port->identity_discovery_done = AW_FALSE;
+#endif
 #endif /* AW_HAVE_VDM */
 
 #ifdef AW_HAVE_DP
@@ -1158,9 +1174,10 @@ void PolicySourceReady(Port_t *port)
 #ifdef MESON_AW
 	else if (port->PolicyIsDFP && (port->AutoVdmState != AUTO_VDM_DONE)) {
 		autoVdmDiscovery(port);
-	} else if (port->cblRstState > CBL_RST_DISABLED) {
-		processCableResetState(port);
 	}
+//	} else if (port->cblRstState > CBL_RST_DISABLED) {
+//		processCableResetState(port);
+//	}
 #else
 //	else if (port->PolicyIsDFP && (port->AutoVdmState != AUTO_VDM_DONE)) {
 //		autoVdmDiscovery(port);
@@ -1988,9 +2005,20 @@ void PolicySourceAlertReceived(Port_t *port)
 void PolicyNotSupported(Port_t *port)
 {
 	if (port->PdRevSop == USBPDSPECREV2p0) {
+#ifdef MESON_AW
+		if (port->ProtocolMsgRxSop < SOP_TYPE_NUM) {
+			PolicySendCommand(port, CMTReject,
+				port->PolicyIsSource ? peSourceReady : peSinkReady, 0,
+				port->ProtocolMsgRxSop);
+		} else {
+			SetPEState(port, port->PolicyIsSource ? peSourceReady : peSinkReady);
+			port->PolicySubIndex = 0;
+		}
+#else
 		PolicySendCommand(port, CMTReject,
 			port->PolicyIsSource ? peSourceReady : peSinkReady, 0,
 			port->ProtocolMsgRxSop);
+#endif
 	} else {
 		switch (port->PolicySubIndex) {
 #ifndef AW_HAVE_EXT_MSG
@@ -2012,9 +2040,21 @@ void PolicyNotSupported(Port_t *port)
 			break;
 #endif
 		default:
+#ifdef MESON_AW
+			if (port->ProtocolMsgRxSop < SOP_TYPE_NUM) {
+				PolicySendCommand(port, CMTNotSupported,
+					port->PolicyIsSource ? peSourceReady : peSinkReady, 0,
+					port->ProtocolMsgRxSop);
+			} else {
+				SetPEState(port,
+					port->PolicyIsSource ? peSourceReady : peSinkReady);
+				port->PolicySubIndex = 0;
+			}
+#else
 			PolicySendCommand(port, CMTNotSupported,
 					port->PolicyIsSource ? peSourceReady : peSinkReady, 0,
 					port->ProtocolMsgRxSop);
+#endif
 			break;
 		}
 	}
@@ -2212,6 +2252,9 @@ void PolicySinkStartup(Port_t *port)
 	port->svid_discovery_done = AW_FALSE;
 	port->svid_discovery_idx  = -1;
 	port->discoverIdCounter = 0;
+#ifdef MESON_AW
+	port->identity_discovery_done = AW_FALSE;
+#endif
 #endif /* AW_HAVE_VDM */
 
 	port->PEIdle = AW_FALSE;
@@ -3507,10 +3550,19 @@ void PolicyGiveVdm(Port_t *port)
 						port->vdm_next_ps, 0,
 						port->VdmMsgTxSop, AW_FALSE);
 		if (result == STAT_SUCCESS) {
+#ifdef MESON_AW
+			if (port->vdm_expectingresponse) {
+				startVdmTimer(port, port->PolicyState);
+				port->AutoVdmCnt = 0;
+			} else {
+				resetPolicyState(port);
+			}
+#else
 			if (port->vdm_expectingresponse)
 				startVdmTimer(port, port->PolicyState);
 			else
 				resetPolicyState(port);
+#endif
 			port->sendingVdmData = AW_FALSE;
 		} else if (result == STAT_ERROR) {
 			sendVdmMessageFailed(port);
@@ -3544,8 +3596,14 @@ void PolicyVdm(Port_t *port)
 	}
 
 	if (port->VdmTimerStarted && (TimerExpired(&port->VdmTimer))) {
+#ifdef MESON_AW
+		if (port->PolicyState == peDfpUfpVdmIdentityRequest &&
+				port->AutoVdmCnt >= 10)
+			port->AutoVdmState = AUTO_VDM_DONE;
+#else
 		if (port->PolicyState == peDfpUfpVdmIdentityRequest)
 			port->AutoVdmState = AUTO_VDM_DONE;
+#endif
 		vdmMessageTimeout(port);
 	}
 }
@@ -4344,12 +4402,28 @@ void autoVdmDiscovery(Port_t *port)
 			port->AutoVdmState = AUTO_VDM_DISCOVER_SVIDS_PP;
 			break;
 		case AUTO_VDM_DISCOVER_SVIDS_PP:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0 && !port->identity_discovery_done) {
+				port->PEIdle = AW_FALSE;
+				//port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_DISCOVER_ID_PP;
+				break;
+			}
+#endif
 			if (port->svid_discovery_done == AW_FALSE)
 				requestDiscoverSvids(port, SOP_TYPE_SOP);
 			else
 				port->AutoVdmState = AUTO_VDM_DISCOVER_MODES_PP;
 			break;
 		case AUTO_VDM_DISCOVER_MODES_PP:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0) {
+				port->PEIdle = AW_FALSE;
+				port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_DISCOVER_SVIDS_PP;
+				break;
+			}
+#endif
 			if (port->svid_discovery_idx >= 0) {
 				requestDiscoverModes(port, SOP_TYPE_SOP,
 					port->core_svid_info.svids[port->svid_discovery_idx]);
@@ -4360,6 +4434,14 @@ void autoVdmDiscovery(Port_t *port)
 			}
 			break;
 		case AUTO_VDM_ENTER_MODE_PP:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0) {
+				port->PEIdle = AW_FALSE;
+				port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_DISCOVER_MODES_PP;
+				break;
+			}
+#endif
 			if (port->AutoModeEntryObjPos > 0) {
 				requestEnterMode(
 						port, SOP_TYPE_SOP,
@@ -4377,6 +4459,14 @@ void autoVdmDiscovery(Port_t *port)
 			break;
 #ifdef AW_HAVE_DP
 		case AUTO_VDM_DP_GET_STATUS:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0) {
+				port->PEIdle = AW_FALSE;
+				port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_ENTER_MODE_PP;
+				break;
+			}
+#endif
 			if (port->DisplayPortData.DpModeEntered > 0) {
 				DP_RequestPartnerStatus(port);
 				port->AutoVdmState = AUTO_VDM_DP_SET_CONFIG;
@@ -4385,6 +4475,14 @@ void autoVdmDiscovery(Port_t *port)
 			}
 			break;
 		case AUTO_VDM_DP_SET_CONFIG:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0) {
+				port->PEIdle = AW_FALSE;
+				port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_DP_GET_STATUS;
+				break;
+			}
+#endif
 			if (port->DisplayPortData.DpPpStatus.Connection == DP_MODE_BOTH) {
 				/* If both connected send status with only one connected */
 				DP_SetPortMode(port, (DisplayPort_Preferred_Snk) ?
@@ -4393,13 +4491,26 @@ void autoVdmDiscovery(Port_t *port)
 			} else if (port->DisplayPortData.DpCapMatched &&
 					 port->DisplayPortData.DpPpStatus.Connection > 0) {
 				DP_RequestPartnerConfig(port, port->DisplayPortData.DpPpConfig);
+#ifdef MESON_AW
+				/* For retry. */
+				port->AutoVdmState = AUTO_VDM_DONE + 1;
+#else
 				port->AutoVdmState = AUTO_VDM_DONE;
+#endif
 			} else {
 				port->AutoVdmState = AUTO_VDM_DONE;
 			}
 			break;
 #endif /* AW_HAVE_DP */
 		default:
+#ifdef MESON_AW
+			if (port->AutoVdmCnt != 0) {
+				port->PEIdle = AW_FALSE;
+				port->AutoVdmCnt = 0;
+				port->AutoVdmState = AUTO_VDM_DP_SET_CONFIG;
+				break;
+			}
+#endif
 			port->AutoVdmState = AUTO_VDM_DONE;
 			break;
 		}

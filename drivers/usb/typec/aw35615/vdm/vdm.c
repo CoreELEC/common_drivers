@@ -335,9 +335,25 @@ AW_S32 processDiscoverIdentity(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32
 	}
 
 	/* Incoming responses, ACKs, NAKs, BUSYs */
+#ifdef MESON_AW
+	/* Rx packet may sneak in after peGiveVdm->(rty failed)peSourceSendSoftReset->
+	 * peSourceReady(rx valid). Don't return if the pe state is not desired.
+	 */
+	if (sop == SOP_TYPE_SOP) {
+#else
 	if ((port->PolicyState == peDfpUfpVdmIdentityRequest) && (sop == SOP_TYPE_SOP)) {
+#endif
 		if (vdmh_in.SVDM.CommandType == RESPONDER_ACK) {
 			SetPEState(port, peDfpUfpVdmIdentityAcked);
+#ifdef MESON_AW
+			/* cleared after peGiveVdm->txerr */
+			//if (port->vdm_expectingresponse)
+			/* If not cleared, after Rx packet sneaks in after peGiveVdm->
+			 * (rty failed)peSourceSendSoftReset->peSourceReady(rx valid)
+			 * -> peSourceReady(autovdm), retry will be falsely triggered.
+			 */
+			port->AutoVdmCnt = 0;
+#endif
 		} else {
 			SetPEState(port, peDfpUfpVdmIdentityNaked);
 			port->AutoVdmState = AUTO_VDM_DONE;
@@ -485,7 +501,9 @@ AW_S32 processDiscoverSvids(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32 le
 		svid_info.num_svids = 0;
 
 		if (port->PolicyState != peDfpVdmSvidsRequest) {
+#ifndef MESON_AW
 			return 1;
+#endif
 		} else if (vdmh_in.SVDM.CommandType == RESPONDER_ACK) {
 			for (i = 1; i < length_in; i++) {
 				top16 = (arr_in[i] >> 16) & 0x0000FFFF;
@@ -506,6 +524,11 @@ AW_S32 processDiscoverSvids(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32 le
 				svid_info.num_svids += 1;
 			}
 			SetPEState(port, peDfpVdmSvidsAcked);
+#ifdef MESON_AW
+			/* cleared after peGiveVdm->txerr */
+			//if (port->vdm_expectingresponse)
+			port->AutoVdmCnt = 0;
+#endif
 		} else {
 			SetPEState(port, peDfpVdmSvidsNaked);
 		}
@@ -584,9 +607,11 @@ AW_S32 processDiscoverModes(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32 le
 		return 0;
 	}
 
+#ifndef MESON_AW
 	/* Incoming responses, ACKs, NAKs, BUSYs */
 	if (port->PolicyState != peDfpVdmModesRequest)
 		return 1;
+#endif
 
 	if (vdmh_in.SVDM.CommandType == RESPONDER_ACK) {
 		modes_info.svid = vdmh_in.SVDM.SVID;
@@ -596,6 +621,11 @@ AW_S32 processDiscoverModes(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32 le
 			modes_info.modes[i - 1] = arr_in[i];
 
 		SetPEState(port, peDfpVdmModesAcked);
+#ifdef MESON_AW
+		/* cleared after peGiveVdm->txerr */
+		//if (port->vdm_expectingresponse)
+		port->AutoVdmCnt = 0;
+#endif
 	} else
 		SetPEState(port, peDfpVdmModesNaked);
 
@@ -678,6 +708,11 @@ AW_S32 processEnterMode(Port_t *port, SopType sop, AW_U32 *arr_in, AW_U32 length
 				svdmh_in.SVDM.ObjPos);
 	} else {
 		SetPEState(port, peDfpVdmModeEntryAcked);
+#ifdef MESON_AW
+		/* cleared after peGiveVdm->txerr */
+		//if (port->vdm_expectingresponse)
+		port->AutoVdmCnt = 0;
+#endif
 		port->vdmm.enter_mode_result(port, AW_TRUE, svdmh_in.SVDM.SVID,
 				svdmh_in.SVDM.ObjPos);
 	}
@@ -1073,6 +1108,9 @@ void resetPolicyState(Port_t *port)
 	SvidInfo __svid_info = { 0 };
 	ModesInfo __modes_info = { 0 };
 
+#ifdef MESON_AW
+	port->AutoVdmCnt++;
+#endif
 	port->vdm_expectingresponse = AW_FALSE;
 	port->VdmTimerStarted = AW_FALSE;
 	TimerDisable(&port->VdmTimer);
@@ -1086,6 +1124,9 @@ void resetPolicyState(Port_t *port)
 	switch (port->PolicyState) {
 	case peDfpUfpVdmIdentityRequest:
 		SetPEState(port, peDfpUfpVdmIdentityNaked);
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		/* informing of a NAK */
 		port->vdmm.inform_id(port, AW_FALSE, SOP_TYPE_SOP, __id);
 		SetPEState(port, port->originalPolicyState);
@@ -1098,16 +1139,25 @@ void resetPolicyState(Port_t *port)
 		break;
 	case peDfpVdmSvidsRequest:
 		SetPEState(port, peDfpVdmSvidsNaked);
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		port->vdmm.inform_svids(port, AW_FALSE, SOP_TYPE_SOP, __svid_info);
 		SetPEState(port, port->originalPolicyState);
 		break;
 	case peDfpVdmModesRequest:
 		SetPEState(port, peDfpVdmModesNaked);
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		port->vdmm.inform_modes(port, AW_FALSE, SOP_TYPE_SOP, __modes_info);
 		SetPEState(port, port->originalPolicyState);
 		break;
 	case peDfpVdmModeEntryRequest:
 		SetPEState(port, peDfpVdmModeEntryNaked);
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		port->vdmm.enter_mode_result(port, AW_FALSE, 0, 0);
 		SetPEState(port, port->originalPolicyState);
 		break;
@@ -1129,10 +1179,20 @@ void resetPolicyState(Port_t *port)
 		break;
 	case peDpRequestStatus:
 		SetPEState(port, peDpRequestStatusNak);
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		SetPEState(port, port->originalPolicyState);
 		break;
 	case peDpRequestConfig:
+#ifdef MESON_AW
+		SetPEState(port, peDpRequestConfigNak);
+#else
 		SetPEState(port, peDpRequestStatusNak);
+#endif
+#ifdef MESON_AW
+		port->PEIdle = AW_FALSE;
+#endif
 		SetPEState(port, port->originalPolicyState);
 		break;
 	default:

@@ -30,9 +30,15 @@
 #define MIN_DISC_ID_RESP_SIZE 3
 
 /* Millisecond values ticked by 1ms timer. */
+#ifdef MESON_AW
+#define tVDMSenderResponse (47 * TICK_SCALE_TO_MS)
+#define tVDMWaitModeEntry  (55 * TICK_SCALE_TO_MS)
+#define tVDMWaitModeExit   (55 * TICK_SCALE_TO_MS)
+#else
 #define tVDMSenderResponse (27 * TICK_SCALE_TO_MS)
 #define tVDMWaitModeEntry  (45 * TICK_SCALE_TO_MS)
 #define tVDMWaitModeExit   (45 * TICK_SCALE_TO_MS)
+#endif
 
 /*
  * Initialization functions.

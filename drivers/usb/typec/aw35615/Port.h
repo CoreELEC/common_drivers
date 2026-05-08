@@ -224,6 +224,10 @@ struct Port {
 
 	AW_BOOL                vdm_flag;
 #ifdef AW_HAVE_VDM
+#ifdef MESON_AW
+	AW_U8                   AutoVdmCnt;
+	AW_BOOL                 identity_discovery_done;
+#endif
 	VdmDiscoveryState_t     AutoVdmState;
 	VdmManager              vdmm;
 	PolicyState_t           vdm_next_ps;

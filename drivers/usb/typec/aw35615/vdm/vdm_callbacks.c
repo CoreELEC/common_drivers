@@ -147,8 +147,15 @@ AW_BOOL vdmModeExitRequest(Port_t *port, AW_U16 svid, AW_U32 mode_index)
 
 AW_BOOL vdmEnterModeResult(Port_t *port, AW_BOOL success, AW_U16 svid, AW_U32 mode_index)
 {
+#ifdef MESON_AW
+	if (success) {
+		if (port->AutoModeEntryObjPos > 0)
+			port->AutoModeEntryObjPos = 0;
+	}
+#else
 	if (port->AutoModeEntryObjPos > 0)
 		port->AutoModeEntryObjPos = 0;
+#endif
 
 	if (success) {
 		port->mode_entered = AW_TRUE;
@@ -188,6 +195,11 @@ void vdmExitModeResult(Port_t *port, AW_BOOL success, AW_U16 svid, AW_U32 mode_i
 
 void vdmInformIdentity(Port_t *port, AW_BOOL success, SopType sop, Identity id)
 {
+#ifdef MESON_AW
+	if (success)
+		port->identity_discovery_done = AW_TRUE;
+#endif
+
 	/* example of checking cable current handling capability: */
 	if (success && (sop == SOP_TYPE_SOP1) && (id.id_header.product_type_ufp == ACTIVE_CABLE)) {
 		switch (id.cable_vdo.vbus_current_handling_cap) {
@@ -207,10 +219,20 @@ void vdmInformIdentity(Port_t *port, AW_BOOL success, SopType sop, Identity id)
 void vdmInformSvids(Port_t *port, AW_BOOL success, SopType sop, SvidInfo svid_info)
 {
 	AW_U32 i;
+
+#ifdef MESON_AW
+	if (success) {
+		/* Reset the known index */
+		port->svid_discovery_idx = -1;
+		/* Assume we are going to be done */
+		port->svid_discovery_done = AW_TRUE;
+	}
+#else
 	/* Reset the known index */
 	port->svid_discovery_idx = -1;
 	/* Assume we are going to be done */
 	port->svid_discovery_done = AW_TRUE;
+#endif
 
 	if (success == AW_TRUE) {
 		port->core_svid_info.num_svids = svid_info.num_svids;
@@ -235,7 +257,12 @@ void vdmInformModes(Port_t *port, AW_BOOL success, SopType sop, ModesInfo modes_
 
 	AW_U32 i;
 
+#ifdef MESON_AW
+	if (success)
+		port->AutoModeEntryObjPos = -1;
+#else
 	port->AutoModeEntryObjPos = -1;
+#endif
 
 	if (!success)
 		return;
