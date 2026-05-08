@@ -111,7 +111,7 @@
 
 		ramoops@8400000 {
 			compatible = "ramoops";
-			status = "disabled";
+			status = "oaky";
 			reg = <0x0 0x08400000 0x0 0x00100000>;
 			record-size = <0x20000>;
 			console-size = <0x20000>;
