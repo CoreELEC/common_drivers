@@ -79,6 +79,7 @@ void c5_aoclk_exit(void);
 #define CLKCTRL_TS_CLK_CTRL                  (0x00e8  << 2)
 #define CLKCTRL_ETH_CLK_CTRL                 (0x00e9  << 2)
 #define CLKCTRL_GEN_CLK_CTRL                 (0x00ea  << 2)
+#define CLKCTRL_CLK12_24_CTRL                (0x00eb  << 2)
 #define CLKCTRL_HEVCF_CLK_CTRL               (0x0110  << 2)
 #define CLKCTRL_HCODEC_CLK_CTRL              (0x0111  << 2)
 #define CLKCTRL_VOUTENC_CLK_CTRL             (0x0118  << 2)

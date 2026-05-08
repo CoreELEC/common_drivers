@@ -3922,6 +3922,53 @@ static struct clk_regmap dsi_meas = {
 	},
 };
 
+static struct clk_regmap clk_24m_in = {
+	.data = &(struct clk_regmap_gate_data) {
+		.offset = CLKCTRL_CLK12_24_CTRL,
+		.bit_idx = 11,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "clk_24m_in",
+		.ops = &clk_regmap_gate_ops,
+		.parent_data = &(const struct clk_parent_data) {
+			.fw_name = "xtal",
+		},
+		.num_parents = 1,
+	},
+};
+
+static struct clk_fixed_factor clk_12m_div = {
+	.mult = 1,
+	.div = 2,
+	.hw.init = &(struct clk_init_data) {
+		.name = "clk_12m_div",
+		.ops = &clk_fixed_factor_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+			&clk_24m_in.hw,
+		},
+		.num_parents = 1,
+	},
+};
+
+static const struct clk_parent_data clk_12_24m_parent_data[] = {
+	{ .hw = &clk_24m_in.hw },
+	{ .hw = &clk_12m_div.hw }
+};
+
+static struct clk_regmap clk_12_24m = {
+	.data = &(struct clk_regmap_mux_data) {
+		.offset = CLKCTRL_CLK12_24_CTRL,
+		.mask = 0x1,
+		.shift = 10,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "clk_12_24m",
+		.ops = &clk_regmap_mux_ops,
+		.parent_data = clk_12_24m_parent_data,
+		.num_parents = ARRAY_SIZE(clk_12_24m_parent_data),
+	},
+};
+
 static u32 gen_parent_table[] = { 0, 1, 2, 5, 7, 14, 17, 19, 20, 21, 22,
 				 23, 24 };
 static const struct clk_parent_data gen_parent_data[] = {
@@ -4302,6 +4349,8 @@ static struct clk_regmap *const clk_regmaps[] = {
 	&dsi_meas_mux,
 	&dsi_meas_div,
 	&dsi_meas,
+	&clk_24m_in,
+	&clk_12_24m,
 	&gen_mux,
 	&gen_div,
 	&gen,
@@ -4590,6 +4639,9 @@ static struct clk_hw *c5_hw_clks[] = {
 	[CLKID_DSI_MEAS_MUX]          = &dsi_meas_mux.hw,
 	[CLKID_DSI_MEAS_DIV]          = &dsi_meas_div.hw,
 	[CLKID_DSI_MEAS]              = &dsi_meas.hw,
+	[CLKID_CLK_24M_IN]            = &clk_24m_in.hw,
+	[CLKID_CLK_12M_DIV]           = &clk_12m_div.hw,
+	[CLKID_CLK_12_24M]            = &clk_12_24m.hw,
 	[CLKID_GEN_MUX]               = &gen_mux.hw,
 	[CLKID_GEN_DIV]               = &gen_div.hw,
 	[CLKID_GEN]                   = &gen.hw,
