@@ -1964,11 +1964,11 @@
 
 	ir: ir@8000 {
 		compatible = "amlogic, meson-ir";
-		reg = <0x0 0xfe084080 0x0 0xA4>,
-			<0x0 0xfe084000 0x0 0x58>;
+		reg = <0x0 0xffa2e080 0x0 0xA4>,
+			<0x0 0xffa2e000 0x0 0x58>;
 		status = "disable";
 		protocol = <REMOTE_TYPE_NEC>;
-		interrupts = <GIC_SPI 80 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 411 IRQ_TYPE_EDGE_RISING>;
 		map = <&custom_maps>;
 		wakeup_map = <&ir_wakeup_key>;
 		mboxes = <&mbox_fifo C5_REE2AO_IR>;
@@ -3435,6 +3435,14 @@
 			bias-disable;
 		};
 	};
+
+	remote_pins: remote_pin {
+		mux {
+			groups = "ir_ao_in";
+			function = "ir_ao_in";
+			bias-disable;
+		};
+	};
 };
 
 &periphs_pinctrl {
@@ -4853,22 +4861,6 @@
 			groups = "GPIODSI_9";
 			function = "gpio_periphs";
 			input-enable;
-		};
-	};
-
-	remote_pins: remote_pin {
-		mux {
-			groups = "ir_remote_in_f3";
-			function = "ir_remote";
-			bias-disable;
-		};
-	};
-
-	remote_pins_1: remote_pin_1 {
-		mux {
-			groups = "ir_remote_in_d";
-			function = "ir_remote";
-			bias-disable;
 		};
 	};
 

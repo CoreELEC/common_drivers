@@ -709,3 +709,10 @@
 	wb_en = <0>;/*1:enable ;0:disable*/
 	vlock_en = <0>;/*1:enable;0:disable*/
 };
+
+&ir {
+	status = "disabled";
+	pinctrl-0 = <&remote_pins>;
+	pinctrl-names = "default";
+};
+
