@@ -139,11 +139,12 @@ struct meson8b_dwmac {
 	bool				wol_en;		/* MAC frames are processed in BL30 */
 	bool				wol_ready;
 #endif
+#endif
+	struct clk			*sys_apb_clk;		/* sys periph apb bus clk */
 	bool				ignore_pcs_stats;
 	struct phy			*serdes_phy;
 	unsigned int			speed;			/* Update by .fix_mac_speed */
 	unsigned int			serdes_speed;		/* Current SerDes speed */
-#endif
 	u32				smc_id;
 	void __iomem			*ee_reset_base;
 	int				eth_reset_bit;
@@ -697,6 +698,21 @@ static int meson8b_dwmac_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	/* sys periph apb clk controlled by drivers */
+	dwmac->sys_apb_clk = devm_clk_get_optional(dwmac->dev, "sys_apb");
+	if (IS_ERR(dwmac->sys_apb_clk))
+		return PTR_ERR(dwmac->sys_apb_clk);
+
+	if (dwmac->sys_apb_clk) {
+		ret = clk_prepare_enable(dwmac->sys_apb_clk);
+		if (ret) {
+			dev_err(dwmac->dev, "Failed to enable sys_apb_clk\n");
+			return ret;
+		}
+	}
+#endif
+
 	/* use 2ns as fallback since this value was previously hardcoded */
 	if (of_property_read_u32(pdev->dev.of_node, "amlogic,tx-delay-ns",
 				 &dwmac->tx_delay_ns))
@@ -1165,6 +1181,9 @@ static void meson8b_dwmac_remove(struct platform_device *pdev)
 	input_unregister_device(dwmac->input_dev);
 
 	stmmac_dvr_remove(&pdev->dev);
+
+	if (dwmac->sys_apb_clk)
+		clk_disable_unprepare(dwmac->sys_apb_clk);
 }
 
 #ifdef CONFIG_HIBERNATION

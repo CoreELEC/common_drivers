@@ -2327,8 +2327,9 @@
 			interrupt-names = "macirq";
 			clocks = <&clkc_sys CLKID_SYS_ETH>,
 				 <&scmi_clk CLKID_FCLK_DIV2>,
-				 <&scmi_clk CLKID_FCLK_50M>;
-			clock-names = "stmmaceth", "clkin0", "clkin1";
+				 <&scmi_clk CLKID_FCLK_50M>,
+				 <&clkc_sys CLKID_SYS_PERIPH>;
+			clock-names = "stmmaceth", "clkin0", "clkin1", "sys_apb";
 			// resets = <&reset RESET_ETH>;
 			// reset-names = "stmmaceth";
 			rx-fifo-depth = <4096>;
@@ -2369,8 +2370,9 @@
 			interrupt-names = "macirq";
 			clocks = <&clkc_sys CLKID_SYS_ETH_MAC_1G>,
 				 <&scmi_clk CLKID_FCLK_DIV2>,
-				 <&scmi_clk CLKID_FCLK_50M>;
-			clock-names = "stmmaceth", "clkin0", "clkin1";
+				 <&scmi_clk CLKID_FCLK_50M>,
+				 <&clkc_sys CLKID_SYS_PERIPH>;
+			clock-names = "stmmaceth", "clkin0", "clkin1", "sys_apb";
 			// resets = <&reset RESET_ETH_1G>;
 			// reset-names = "stmmaceth";
 			rx-fifo-depth = <4096>;
