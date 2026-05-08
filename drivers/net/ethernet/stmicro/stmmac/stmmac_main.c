@@ -1746,6 +1746,12 @@ static int stmmac_alloc_rx_buffers_zc(struct stmmac_priv *priv,
 
 static struct xsk_buff_pool *stmmac_get_xsk_pool(struct stmmac_priv *priv, u32 queue)
 {
+	if (!priv)
+		return NULL;
+
+	if (!priv->af_xdp_zc_qps)
+		return NULL;
+
 	if (!stmmac_xdp_is_enabled(priv) || !test_bit(queue, priv->af_xdp_zc_qps))
 		return NULL;
 
@@ -2112,8 +2118,8 @@ static int __alloc_dma_rx_desc_resources(struct stmmac_priv *priv,
 					 u32 queue)
 {
 	struct stmmac_rx_queue *rx_q = &dma_conf->rx_queue[queue];
-	struct stmmac_channel *ch = &priv->channel[queue];
-	bool xdp_prog = stmmac_xdp_is_enabled(priv);
+	struct stmmac_channel *ch;
+	bool xdp_prog;
 	struct page_pool_params pp_params = { 0 };
 	unsigned int num_pages;
 	unsigned int napi_id;
@@ -2121,6 +2127,12 @@ static int __alloc_dma_rx_desc_resources(struct stmmac_priv *priv,
 
 	rx_q->queue_index = queue;
 	rx_q->priv_data = priv;
+
+	if (!priv)
+		return -ENOMEM;
+
+	ch = &priv->channel[queue];
+	xdp_prog = stmmac_xdp_is_enabled(priv);
 
 	pp_params.flags = PP_FLAG_DMA_MAP | PP_FLAG_DMA_SYNC_DEV;
 	pp_params.pool_size = dma_conf->dma_rx_size;
@@ -2163,6 +2175,9 @@ static int __alloc_dma_rx_desc_resources(struct stmmac_priv *priv,
 		if (!rx_q->dma_rx)
 			return -ENOMEM;
 	}
+
+	if (!priv->af_xdp_zc_qps)
+		return -ENOMEM;
 
 	if (stmmac_xdp_is_enabled(priv) &&
 	    test_bit(queue, priv->af_xdp_zc_qps))
@@ -2573,6 +2588,9 @@ static bool stmmac_xdp_xmit_zc(struct stmmac_priv *priv, u32 queue, u32 budget)
 	struct xdp_desc xdp_desc;
 	bool work_done = true;
 	u32 tx_set_ic_bit = 0;
+
+	if (!pool)
+		return false;
 
 	/* Avoids TX time-out as we are sharing with slow path */
 	txq_trans_cond_update(nq);

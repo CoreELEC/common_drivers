@@ -486,9 +486,20 @@ static unsigned int phy_tst_write(struct phy_device *phy_dev, unsigned int wr_ad
 	return 0;
 }
 
+static unsigned int merge_u32(unsigned int var1, unsigned int var2)
+{
+	u16 low_part_var1 = (u16)var1;
+	u16 low_part_var2 = (u16)var2;
+	unsigned int val;
+
+	val = ((unsigned int)low_part_var2 << 16U) | (unsigned int)low_part_var1;
+	return val;
+}
+
 static unsigned int phy_tst_read(struct phy_device *phy_dev, unsigned int rd_addr)
 {
 	unsigned int rd_data_hi;
+	unsigned int rd_data_lo;
 	unsigned int rd_data = 0;
 
 	/*init*/
@@ -501,9 +512,9 @@ static unsigned int phy_tst_read(struct phy_device *phy_dev, unsigned int rd_add
 		phy_write(phy_dev, 20,
 			((1 << 15) | (1 << 10) | ((rd_addr & 0x1f) << 5)));
 
-		rd_data = phy_read(phy_dev, 21);
+		rd_data_lo = phy_read(phy_dev, 21);
 		rd_data_hi = phy_read(phy_dev, 22);
-		rd_data = ((rd_data_hi & 0xffff) << 16) | rd_data;
+		rd_data = merge_u32(rd_data_lo, rd_data_hi);
 		pr_info("read tstcntl phy [reg_%d] 0x%x\n", rd_addr, rd_data);
 	} else {
 		pr_info("Invalid parameter\n");

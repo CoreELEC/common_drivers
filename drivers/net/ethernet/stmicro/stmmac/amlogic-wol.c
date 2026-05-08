@@ -842,8 +842,8 @@ static void __maybe_unused mdns_set_wakeup_port(struct amlogic_wol *wol, struct 
 
 static void mdns_netlink_recv_msg(struct sk_buff *skb)
 {
-	struct sock *sk = skb->sk;
-	struct amlogic_wol *wol = (struct amlogic_wol *)sk->sk_user_data;
+	struct sock *sk;
+	struct amlogic_wol *wol;
 	struct sk_buff *skb_out;
 	struct nlmsghdr *nlh;
 	int msg_size;
@@ -854,6 +854,16 @@ static void mdns_netlink_recv_msg(struct sk_buff *skb)
 	int outmsg_size = strlen(outmsg);
 	int pid;
 	int res;
+
+	if (!skb)
+		return;
+
+	sk = skb->sk;
+
+	if (!sk)
+		return;
+
+	wol = (struct amlogic_wol *)sk->sk_user_data;
 
 	if (!wol) {
 		pr_err("netlink recv failed, sk_user_data is null\n");
@@ -888,7 +898,7 @@ static void mdns_netlink_recv_msg(struct sk_buff *skb)
 	res = handle_offload_msg(wol, puc, "NETLINK");
 	snprintf(outmsg, sizeof(outmsg), (res < 0) ? "Unknown message" : "Done: %d", res);
 	outmsg_size = strlen(outmsg);
-	strncpy(nlmsg_data(nlh), outmsg, outmsg_size);
+	strncpy(nlmsg_data(nlh), outmsg, msg_size);
 
 	res = nlmsg_unicast(wol->sk, skb_out, pid);
 	if (res < 0)

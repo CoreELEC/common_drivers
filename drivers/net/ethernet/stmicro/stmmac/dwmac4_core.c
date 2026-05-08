@@ -1173,6 +1173,13 @@ static int dwmac4_config_l4_filter(struct mac_device_info *hw, u32 filter_no,
 static void dwmac4_rx_hw_vlan(struct mac_device_info *hw,
 			      struct dma_desc *rx_desc, struct sk_buff *skb)
 {
+	if (!hw || !hw->desc)
+		return;
+
+	if (!hw->desc->get_rx_vlan_valid || !
+		hw->desc->get_rx_vlan_tci)
+		return;
+
 	if (hw->desc->get_rx_vlan_valid(rx_desc)) {
 		u16 vid = hw->desc->get_rx_vlan_tci(rx_desc);
 

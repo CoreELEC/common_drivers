@@ -260,6 +260,10 @@ void update_frame_list(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, uint8_t enable)
 void dump_frame_list(dwc_otg_hcd_t *hcd)
 {
 	int i = 0;
+
+	if (!hcd || !hcd->frame_list)
+		return;
+
 	DWC_PRINTF("--FRAME LIST (hex) --\n");
 	for (i = 0; i < MAX_FRLIST_EN_NUM; i++) {
 		DWC_PRINTF("%x\t", hcd->frame_list[i]);

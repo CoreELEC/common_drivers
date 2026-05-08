@@ -5043,9 +5043,20 @@ static int xhci_set_usb2_hardware_lpm(struct usb_hcd *hcd,
 
 static int xhci_update_device(struct usb_hcd *hcd, struct usb_device *udev)
 {
-	struct aml_xhci_hcd	*xhci = hcd_to_xhci(hcd);
+	struct aml_xhci_hcd *xhci;
 	struct aml_xhci_port *port;
 	u32 capability;
+
+	if (!hcd || !udev)
+		return -EINVAL;
+
+	if (!udev->parent)
+		return -EINVAL;
+
+	xhci = hcd_to_xhci(hcd);
+
+	if (!xhci)
+		return -EINVAL;
 
 	/* Check if USB3 device at root port is tunneled over USB4 */
 	if (hcd->speed >= HCD_USB3 && !udev->parent->parent) {

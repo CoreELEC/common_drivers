@@ -1232,6 +1232,9 @@ int aml_xhci_setup_addressable_virt_dev(struct aml_xhci_hcd *xhci, struct usb_de
 	struct aml_xhci_slot_ctx    *slot_ctx;
 	u32			max_packets;
 
+	if (!udev)
+		return -EINVAL;
+
 	dev = xhci->devs[udev->slot_id];
 	/* Slot ID 0 is reserved */
 	if (udev->slot_id == 0 || !dev) {
@@ -1275,6 +1278,9 @@ int aml_xhci_setup_addressable_virt_dev(struct aml_xhci_hcd *xhci, struct usb_de
 	if (!dev->rhub_port)
 		return -EINVAL;
 	/* Slot ID is set to the device directly below the root hub */
+	if (!udev->parent)
+		return -EINVAL;
+
 	if (!udev->parent->parent)
 		dev->rhub_port->slot_id = udev->slot_id;
 	slot_ctx->dev_info2 |= cpu_to_le32(ROOT_HUB_PORT(dev->rhub_port->hw_portnum + 1));
@@ -1298,6 +1304,9 @@ int aml_xhci_setup_addressable_virt_dev(struct aml_xhci_hcd *xhci, struct usb_de
 		list_for_each_entry(tt_bw, &rh_bw->tts, tt_list) {
 			if (tt_bw->slot_id != udev->tt->hub->slot_id)
 				continue;
+
+			if (!dev->udev->tt)
+				return -EINVAL;
 
 			if (!dev->udev->tt->multi ||
 					(udev->tt->multi &&
