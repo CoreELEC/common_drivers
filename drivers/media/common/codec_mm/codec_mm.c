@@ -4388,7 +4388,7 @@ struct mm_struct codec_init_mm = {
 static struct mm_struct *aml_init_mm;
 static pgd_t *faked_pgd;
 
-void (*aml_mte_sync_tags)(pte_t old_pte, pte_t pte);
+void (*aml_mte_sync_tags)(pte_t pte, unsigned int nr_pages);
 pte_t * (*aml__pte_offset_map)(pmd_t *pmd, unsigned long addr, pmd_t *pmdvalp);
 
 static void *get_symbol_addr(const char *symbol_name)
@@ -4487,7 +4487,7 @@ static void aml_set_pte_at(struct mm_struct *mm, unsigned long addr,
 		 * is_swap_pte()
 		 */
 		if (pte_tagged(pte) || (!pte_none(old_pte) && !pte_present(old_pte)))
-			aml_mte_sync_tags(old_pte, pte);
+			aml_mte_sync_tags(old_pte, 1);
 	}
 
 	__check_safe_pte_update(mm, ptep, pte);
@@ -4616,6 +4616,9 @@ int cma_mmu_op(struct page *page, int count, bool set)
 	#endif
 		page++;
 	}
+	codec_pr_dbg(CODEC_DBG_TRACE_ALLOC_FREE,
+		"[%s]%s pte %d pages\n", __func__,
+		set ? "set" : "clear", count);
 	return 0;
 }
 
@@ -4677,11 +4680,12 @@ int __nocfi get_mte_sync_tags_hook_kprobe(void *data)
 	int ret = 0;
 #if defined(CONFIG_ARM64)
 	get_faked_init_mm();
-	aml_mte_sync_tags = (void (*)(pte_t old_pte, pte_t pte))get_symbol_addr("mte_sync_tags");
+	aml_mte_sync_tags = (void (*)(pte_t pte, unsigned int nr_pages))
+		get_symbol_addr("mte_sync_tags");
 	aml__pte_offset_map = (pte_t * (*)(pmd_t *pmd, unsigned long addr,
-			pmd_t *pmdvalp))get_symbol_addr("__pte_offset_map");
+		pmd_t *pmdvalp))get_symbol_addr("__pte_offset_map");
 	pr_debug("aml_init_mm:%px, aml_mte_sync_tags:%px, aml__pte_offset_map:%px\n",
-			aml_init_mm, aml_mte_sync_tags, aml__pte_offset_map);
+		aml_init_mm, aml_mte_sync_tags, aml__pte_offset_map);
 	if (!aml_init_mm || !aml_mte_sync_tags || !aml__pte_offset_map) {
 		pr_err("[%s]symbol fix failed, %px %px %px\n",
 			__func__, aml_init_mm, aml_mte_sync_tags, aml__pte_offset_map);
