@@ -2996,7 +2996,7 @@ static const struct clk_parent_data dewarpa_parent_data[] = {
 static struct clk_regmap dewarpa_mux = {
 	.data = &(struct clk_regmap_mux_data) {
 		.offset = CLKCTRL_DEWARPA_CLK_CTRL,
-		.mask = 0x3,
+		.mask = 0x7,
 		.shift = 9,
 	},
 	.hw.init = &(struct clk_init_data) {
