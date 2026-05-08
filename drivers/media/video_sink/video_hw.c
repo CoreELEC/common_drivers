@@ -19116,6 +19116,9 @@ u32 get_vpu_venc_error_status(void)
 		status = (READ_VCBUS_REG(VPU_VENC_ERROR) & 0xff00) >> 8;
 	else if (video_is_meson_s6_cpu())
 		status = (READ_VCBUS_REG(VPU_ENC_ERROR) & 0xff00) >> 8;
+	else if (video_is_meson_a9_cpu())
+		status = (READ_VCBUS_REG(VPU_VENC_ERROR) & 0xff00) >> 8 |
+			(READ_VCBUS_REG(VPU1_VENC_ERROR) & 0xff00);
 	return status;
 }
 
@@ -19131,6 +19134,7 @@ void clear_vpu_venc_error(void)
 
 		//for t7/s5/ serials chip regs is same
 		value = READ_VCBUS_REG(VPU_VENC_ERROR) & 0xff00;
+
 		if (value && (debug_flag & DEBUG_FLAG_BASIC_INFO))
 			pr_info("before clear VPU_VENC_ERROR(0x1cea=0x%x)\n",
 				READ_VCBUS_REG(VPU_VENC_ERROR));
@@ -19168,6 +19172,7 @@ void clear_vpu_venc_error(void)
 			break;
 		}
 		value = READ_VCBUS_REG(VPU_ENC_ERROR) & err_bit;
+
 		if (value && (debug_flag & DEBUG_FLAG_BASIC_INFO))
 			pr_info("before clear VPU_VENC_ERROR(0x270c=0x%x)\n",
 				READ_VCBUS_REG(VPU_ENC_ERROR));
@@ -19177,6 +19182,26 @@ void clear_vpu_venc_error(void)
 		if (value && (debug_flag & DEBUG_FLAG_BASIC_INFO))
 			pr_info("after clear VPU_ENC_ERROR(0x270c=0x%x)\n",
 				READ_VCBUS_REG(VPU_ENC_ERROR));
+	} else if (video_is_meson_a9_cpu()) {
+		u32 reset_bit = 1, err_bit = 0xff00;
+		u32 value_vpp0 = 0, value_vpp1 = 0;
+
+		value_vpp0 = (READ_VCBUS_REG(VPU_VENC_ERROR) & err_bit) >> 8;
+		value_vpp1 = (READ_VCBUS_REG(VPU1_VENC_ERROR) & err_bit) >> 8;
+
+		if ((value_vpp0 > 10 || value_vpp1 > 10) && (debug_flag & DEBUG_FLAG_BASIC_INFO))
+			pr_info("before clear VPU_VENC_ERROR(0x1cea=0x%x) VPU1_VENC_ERROR(0x22ea=0x%x)\n",
+				READ_VCBUS_REG(VPU_VENC_ERROR), READ_VCBUS_REG(VPU1_VENC_ERROR));
+		//clear venc error status
+		WRITE_VCBUS_REG(VPU_VENC_ERROR, reset_bit);
+		WRITE_VCBUS_REG(VPU_VENC_ERROR, 0);
+
+		WRITE_VCBUS_REG(VPU1_VENC_ERROR, reset_bit);
+		WRITE_VCBUS_REG(VPU1_VENC_ERROR, 0);
+
+		if ((value_vpp0 > 10 || value_vpp1 > 10) && (debug_flag & DEBUG_FLAG_BASIC_INFO))
+			pr_info("after clear VPU_VENC_ERROR(0x1cea=0x%x) VPU1_VENC_ERROR(0x22ea=0x%x)\n",
+				READ_VCBUS_REG(VPU_VENC_ERROR), READ_VCBUS_REG(VPU1_VENC_ERROR));
 	}
 }
 

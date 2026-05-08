@@ -534,6 +534,9 @@
 #define VPU2_VENC_CTRL                             0x24ef
 
 #define VPU_ENC_ERROR                             0x270c
+//a9 added
+#define VPU1_VENC_ERROR                            0x22ea
+
 
 #define VPP1_BLD_CTRL                              0x5985
 #define VPP1_BLD_OUT_SIZE                          0x5986
