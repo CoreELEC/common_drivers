@@ -6985,8 +6985,9 @@ RERTY:
 	if (!local_input.pps_support)
 		wide_mode = VIDEO_WIDEOPTION_NORMAL;
 
-	if ((vf->flag & VFRAME_FLAG_COMPOSER_DONE) &&
-		!(vf->type_ext & VIDTYPE_EXT_SCALER)) {
+	if (((vf->flag & VFRAME_FLAG_COMPOSER_DONE) &&
+		!(vf->type_ext & VIDTYPE_EXT_SCALER)) ||
+		vf->source_type == VFRAME_SOURCE_TYPE_HWC) {
 		wide_mode = VIDEO_WIDEOPTION_FULL_STRETCH;
 		local_input.crop_top = vf->crop[0];
 		local_input.crop_left = vf->crop[1];
