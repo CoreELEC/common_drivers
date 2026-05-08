@@ -100,14 +100,14 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 {
 	enum vdin_output_mif_e sel;
 
-	if (is_meson_t3x_cpu())
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu())
 		return;
 
 	if (((devp->afbce_flag & VDIN_AFBCE_EN) == 0) || devp->index == 1 ||
 	    devp->double_wr)
 		return;
 
-	if (devp->afbce_mode == 0)
+	if (!vdin_is_afbce_enabled(devp))
 		sel = VDIN_OUTPUT_TO_MIF;
 	else
 		sel = VDIN_OUTPUT_TO_AFBCE;
@@ -169,7 +169,7 @@ void vdin_write_mif_or_afbce_init(struct vdin_dev_s *devp)
 void vdin_write_mif_or_afbce(struct vdin_dev_s *devp,
 			     enum vdin_output_mif_e sel)
 {
-	if (is_meson_t3x_cpu())
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu())
 		return;
 
 	if (((devp->afbce_flag & VDIN_AFBCE_EN) == 0) || devp->double_wr)
@@ -260,7 +260,7 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 	int uncompress_size;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_update_t3x(devp);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -317,6 +317,7 @@ void vdin_afbce_update(struct vdin_dev_s *devp)
 void vdin_afbce_config(struct vdin_dev_s *devp)
 {
 	int hold_line_num = VDIN_AFBCE_HOLD_LINE_NUM;
+
 	int lbuf_depth = 256;
 	int lossy_luma_en = 0;
 	int lossy_chrm_en = 0;
@@ -345,7 +346,7 @@ void vdin_afbce_config(struct vdin_dev_s *devp)
 	unsigned int bit_mode_shift = 0;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_config_t3x(devp);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -637,7 +638,7 @@ void vdin_afbce_set_next_frame(struct vdin_dev_s *devp,
 		return;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_set_next_frame_t3x(devp, rdma_enable, vfe);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -707,7 +708,7 @@ void vdin_afbce_set_next_frame(struct vdin_dev_s *devp,
 void vdin_pause_afbce_write(struct vdin_dev_s *devp, unsigned int rdma_enable, bool pause_en)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_pause_afbce_write_t3x(devp, rdma_enable, pause_en);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -730,7 +731,7 @@ void vdin_pause_afbce_write(struct vdin_dev_s *devp, unsigned int rdma_enable, b
 void vdin_afbce_clear_write_down_flag(struct vdin_dev_s *devp)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_clear_write_down_flag_t3x(devp);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -749,7 +750,7 @@ int vdin_afbce_read_write_down_flag(struct vdin_dev_s *devp)
 	int frm_end = -1, wr_abort = -1;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu())
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu())
 		return vdin_afbce_read_write_down_flag_t3x(devp);
 	else if (is_meson_t6w_cpu() || is_meson_t6x_cpu())
 		return vdin_vfce_read_write_down_flag(devp);
@@ -772,9 +773,9 @@ int vdin_afbce_read_write_down_flag(struct vdin_dev_s *devp)
 void vdin_afbce_soft_reset(struct vdin_dev_s *devp)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_s5_cpu() || is_meson_t6w_cpu() || is_meson_t6x_cpu())
+	if (is_meson_s5_cpu() || is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
 		return; //TODO
-	else if (is_meson_t3x_cpu()) {
+	} else if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_soft_reset_t3x(devp);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
@@ -846,7 +847,7 @@ void vdin_afbce_mode_init(struct vdin_dev_s *devp)
 void vdin_afbce_mode_update(struct vdin_dev_s *devp)
 {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (is_meson_t3x_cpu()) {
+	if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_mode_update_t3x(devp);
 		return;
 	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {

@@ -3513,12 +3513,12 @@
 
 	/*if you want to use vdin just modify status to "ok"*/
 	vdin0: vdin0 {
-		compatible = "amlogic, vdin-s6";
+		compatible = "amlogic, vdin-a9";
 		dev_name = "vdin0";
-		status = "disabled";
+		status = "okay";
 		reserve-iomap = "true";
 		/*bit8: 0-total buffer num apply,1-one buffer apply*/
-		flag_cma = <101>;/*1:share with codec_mm;2:cma alone*/
+		flag_cma = <0x30101>;/*1:share with codec_mm;2:cma alone*/
 		/*MByte, if 10bit disable: 64M(YUV422),
 		 *if 10bit enable: 64*1.5 = 96M(YUV422)
 		 *if support 4K2K-YUV444-10bit-WR:3840*2160*4*4 ~= 128M
@@ -3533,14 +3533,19 @@
 		clocks = <&scmi_clk CLKID_FCLK_DIV5>, <&clkc_vdin_meas>;
 		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		vdin_id = <0>;
+		tv_bit_mode = <0x235>;
+		afbce_bit_mode = <0x11>;
+		chk_wr_done_en;
+		/* urgent_en; */
+		double_write_en;
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
 		v4l_vd_num = <70>;
 		/* v4l2 capability */
 		driver   = "vdin_video";
-		card     = "meson-s6";
+		card     = "meson-a9";
 		bus_info = "vdin0 v4l2";
-		version  = <0x20220120>;
+		version  = <0x20260423>;
 		/* fe_ports refer to tvin.h */
 		fe_ports = <0x00001001   /* CVBS1 */
 			0x00010000   /* MIPI */
@@ -3550,25 +3555,29 @@
 		/* vdin v4l2 end */
 	};
 	vdin1: vdin1 {
-		compatible = "amlogic, vdin-s6";
+		compatible = "amlogic, vdin-a9";
 		dev_name = "vdin1";
-		status = "disabled";
+		status = "okay";
 		reserve-iomap = "true";
-		flag_cma = <0>;/*1:share with codec_mm;0:cma alone*/
+		/* flag_cma = <0x30101>;1:share with codec_mm;0:cma alone;bit16:scatter*/
 		interrupts = <0 212 1>;
 		interrupt-names = "vsync_int";
 		rdma-irq = <4>;
 		clocks = <&scmi_clk CLKID_FCLK_DIV5>, <&clkc_vdin_meas>;
 		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		vdin_id = <1>;
+		tv_bit_mode = <0x215>;
+		afbce_bit_mode = <0x0>;
+		chk_wr_done_en;
+		double_write_en;
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
 		v4l_vd_num = <71>;
 		/* v4l2 capability */
 		driver   = "vdin_video";
-		card     = "meson-s6";
+		card     = "meson-a9";
 		bus_info = "vdin1 v4l2";
-		version  = <0x20220120>;
+		version  = <0x20251030>;
 		/* fe_ports refer to tvin.h */
 		fe_ports = <0x0000a002   /* WB0_VD1 */
 			0x0000a003   /* WB0_VD2 */
@@ -3576,7 +3585,8 @@
 			0x0000a005   /* WB0_OSD2 */
 			0x0000a006   /* WB0_VPP */
 			0x0000a007   /* WB0_VDIN_BIST */
-			0x0000a008>; /* WB0_POST_BLEND */
+			0x0000a008   /* WB0_POST_BLEND */
+			0x0000a001>; /* VIDEO */
 		/* vdin v4l2 end */
 	};
 

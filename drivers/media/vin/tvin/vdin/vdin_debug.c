@@ -2987,6 +2987,8 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 {
 	unsigned int reg;
 	unsigned int offset = devp->addr_offset;
+	unsigned int offset_afbc_a9 = devp->addr_offset_afbc_a9;
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (is_meson_s5_cpu()) {
 		vdin_dump_regs_s5(devp, size);
@@ -3086,7 +3088,7 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 				(reg + offset), rd(offset, reg));
 		}
 		pr_info("t6w wrmif regs end\n");
-	} else if (devp->dtdata->hw_ver == VDIN_HW_T6D) {
+	} else if (devp->dtdata->hw_ver == VDIN_HW_T6D || devp->dtdata->hw_ver == VDIN_HW_A9) {
 		for (reg = VDIN_WRMIF_CTRL0;
 		     reg <= VDIN_WRMIF_LUMA_BADDR; reg++) {
 			pr_info("0x%04x = 0x%08x (t6d cfg_wrmif)\n",
@@ -3149,11 +3151,16 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 				reg++) {
 				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
 			}
-		} else {
-			for (reg = AFBCE_ENABLE; reg <= AFBCE_MMU_RMIF_RO_STAT;
+		} else if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+			for (reg = VDIN0_A9_AFBCE_FORMAT; reg <= VDIN0_A9_AFBCE_MMU_RMIF_RO_STAT;
 				reg++) {
-				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
+				pr_info("0x%04x = 0x%08x\n", (reg + offset_afbc_a9),
+					R_VCBUS(offset_afbc_a9 + reg));
 			}
+			pr_info("A9 vdin%d afbce regs----\n", devp->index);
+		} else {
+			for (reg = AFBCE_ENABLE; reg <= AFBCE_MMU_RMIF_RO_STAT; reg++)
+				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
 		}
 		pr_info("vdin%d afbce regs end----\n\n", devp->index);
 	}

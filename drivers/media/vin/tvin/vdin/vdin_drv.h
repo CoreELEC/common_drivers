@@ -206,6 +206,7 @@ enum vdin_hw_ver_e {
 	VDIN_HW_T6D,
 	VDIN_HW_T6W,
 	VDIN_HW_T6X,
+	VDIN_HW_A9,
 };
 
 /* 20230607: game mode optimize and add debug */
@@ -1156,6 +1157,7 @@ struct vdin_dev_s {
 	char vdin2_meta_wr_done_irq_name[20];
 	/* address offset(vdin0/vdin1/...) */
 	unsigned int addr_offset;
+	unsigned int addr_offset_afbc_a9;
 
 	unsigned int unstable_flag;
 	struct vdin_frame_stat_s stats;

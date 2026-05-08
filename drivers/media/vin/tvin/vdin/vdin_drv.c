@@ -106,6 +106,7 @@
 static dev_t vdin_devno;
 static struct class *vdin_class;
 static unsigned int vdin_addr_offset[VDIN_MAX_DEVS] = {0, 0x80, 0x400};
+static unsigned int vdin_addr_offset_afbc_a9[VDIN_MAX_DEVS] = {0, 0x50, 0x0};
 static struct vdin_dev_s *vdin_devp[VDIN_MAX_DEVS];
 static unsigned long mem_start, mem_end;
 static unsigned int use_reserved_mem;
@@ -2041,8 +2042,8 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 		vdin_canvas_start_config(devp);
 	else if (devp->dts_config.canvas_config_mode == 2)
 		vdin_canvas_auto_config(devp);
-
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+	/* After scatter tables are valid (vdin_sct_start); continuous gets maptable here too */
 	if (devp->afbce_info && devp->afbce_valid) {
 		vdin_afbce_maptable_init(devp);
 		vdin_afbce_config(devp);
@@ -2057,12 +2058,13 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 	vdin_vf_init(devp);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (vdin_sct_start(devp)) { /* request one scatter buffer before start */
+	if (vdin_sct_start(devp)) { /*  request one scatter buffer before start */
 		pr_err("vdin%d mem_type=%d,sct start failed!\n",
 			devp->index, devp->mem_type);
 		return -1;
 	}
 #endif
+
 	/* screenshot stress test vdin1 hw crash addr need adjust config */
 	vfe = provider_vf_peek(devp->vfp);
 	if (vfe)
@@ -2390,8 +2392,9 @@ void vdin_stop_dec(struct vdin_dev_s *devp)
 	vdin_dolby_addr_release(devp, devp->vfp->size);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	/*only when stop vdin0, disable afbc*/
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1) && devp->hw_core == VDIN_HW_CORE_NORMAL)
+	/* only when stop vdin0, disable afbc; except for a9, a9 have vdin0/1 afbce */
+	if ((cpu_after_eq(MESON_CPU_MAJOR_ID_TL1) && devp->hw_core == VDIN_HW_CORE_NORMAL) ||
+	    devp->dtdata->hw_ver == VDIN_HW_A9)
 		vdin_afbce_soft_reset(devp);
 
 	vdin_mem_exit(devp);
@@ -3675,17 +3678,16 @@ void vdin_frame_write_ctrl_set(struct vdin_dev_s *devp,
 			devp->vfp->rd_list_size, devp->vfp->rd_mode_size,
 			!vfe ? -1 : vfe->vf.index);
 
-	if (devp->afbce_mode == 0 || devp->double_wr) {
-		/* prepare for chroma canvas*/
-		if (vfe->vf.plane_num == 2)
-			vdin_set_chroma_canvas_id(devp, rdma_en, vfe);
+	/* prepare for chroma canvas*/
+	if (vfe->vf.plane_num == 2)
+		vdin_set_chroma_canvas_id(devp, rdma_en, vfe);
 
-		if (devp->dtdata->hw_ver >= VDIN_HW_T7)
-			vdin_set_frame_mif_write_addr(devp, rdma_en, vfe);
-		vdin_set_canvas_id(devp, rdma_en, vfe);
-	}
+	if (devp->dtdata->hw_ver >= VDIN_HW_T7)
+		vdin_set_frame_mif_write_addr(devp, rdma_en, vfe);
+	vdin_set_canvas_id(devp, rdma_en, vfe);
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (devp->afbce_mode == 1 || devp->double_wr)
+	if (vdin_is_afbce_enabled(devp))
 		vdin_afbce_set_next_frame(devp, rdma_en, vfe);
 #endif
 	if (devp->dv.update_axi_addr)
@@ -3704,7 +3706,7 @@ void vdin_pause_hw_write(struct vdin_dev_s *devp, bool rdma_en)
 	vdin_pause_mif_write(devp, rdma_en, true);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (devp->afbce_mode == 1 || devp->double_wr)
+	if (vdin_is_afbce_enabled(devp))
 		vdin_pause_afbce_write(devp, rdma_en, true);
 #endif
 }
@@ -3714,7 +3716,7 @@ void vdin_resume_hw_write(struct vdin_dev_s *devp, bool rdma_en)
 	vdin_pause_mif_write(devp, rdma_en, false);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-	if (devp->afbce_mode == 1 || devp->double_wr)
+	if (vdin_is_afbce_enabled(devp))
 		vdin_pause_afbce_write(devp, rdma_en, false);
 #endif
 }
@@ -4818,6 +4820,8 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 		return IRQ_HANDLED;
 	if (devp->vdin_reset_flag) {
 		devp->vdin_reset_flag = 0;
+		devp->vdin_irq_flag = VDIN_IRQ_FLG_FAKE_IRQ;
+		vdin_drop_frame_info(devp, "reset_flag");
 		return IRQ_HANDLED;
 	}
 	if (!(devp->flags & VDIN_FLAG_DEC_STARTED))
@@ -4848,7 +4852,12 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 
 	/* set CRC check pulse */
 	vdin_set_crc_pulse(devp);
-	devp->vdin_reset_flag = vdin_vsync_reset_mif(devp);
+	if (vdin_is_afbce_enabled(devp) && devp->dtdata->hw_ver == VDIN_HW_A9)
+		/* no need reset mif under afbc mode, only a9 have vdin1_afbce */
+		devp->vdin_reset_flag = 0;
+	else
+		devp->vdin_reset_flag = vdin_vsync_reset_mif(devp);
+
 	offset = devp->addr_offset;
 
 	vdin_set_mif_on_off(devp, devp->flags & VDIN_FLAG_RDMA_ENABLE);
@@ -4867,6 +4876,12 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 		if (devp->curr_wr_vfe) {
 			devp->curr_wr_vfe->vf.ready_jiffies64 = jiffies_64;
 			devp->curr_wr_vfe->vf.ready_clock[0] = sched_clock();
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+			if (devp->curr_wr_vfe && vdin_is_afbce_enabled(devp))
+				vdin_afbce_set_next_frame(devp, (devp->flags &
+							  VDIN_FLAG_RDMA_ENABLE),
+							  devp->curr_wr_vfe);
+#endif
 			/* enable write ddr */
 			vdin_resume_hw_write(devp, 0);
 			/*save the first field stamp*/
@@ -7371,6 +7386,15 @@ static const struct match_data_s vdin_dt_t6x = {
 					.vdin1_set_hdr = false,
 };
 
+static const struct match_data_s vdin_dt_a9 = {
+	.name = "vdin-a9",
+	.hw_ver = VDIN_HW_A9,
+	.vdin0_en = 1,                  .vdin1_en = 1,
+	.de_tunnel_tunnel = 1, /*0,1*/  .ipt444_to_422_12bit = 0, /*0,1*/
+	.vdin0_line_buff_size = 4096,   .vdin1_line_buff_size = 4096,
+	.vdin0_max_w_h = VDIN_4K_SIZE,	.vdin1_set_hdr = true,
+};
+
 #endif
 
 static const struct of_device_id vdin_dt_match[] = {
@@ -7478,6 +7502,10 @@ static const struct of_device_id vdin_dt_match[] = {
 	{
 		.compatible = "amlogic, vdin-t6x",
 		.data = &vdin_dt_t6x,
+	},
+	{
+		.compatible = "amlogic, vdin-a9",
+		.data = &vdin_dt_a9,
 	},
 #endif
 	/* DO NOT remove to avoid scan error of KASAN */
@@ -7980,8 +8008,9 @@ static int vdin_drv_probe(struct platform_device *pdev)
 	else
 		devp->force_malloc_yuv_422_to_444 = 0;
 
-	/*set afbce config*/
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1) && devp->hw_core == VDIN_HW_CORE_NORMAL) {
+	/*set afbce config, a9 have vdin1 afbce*/
+	if ((cpu_after_eq(MESON_CPU_MAJOR_ID_TL1) && devp->hw_core == VDIN_HW_CORE_NORMAL) ||
+	     devp->dtdata->hw_ver == VDIN_HW_A9) {
 		ret = of_property_read_u32(pdev->dev.of_node,
 					   "afbce_bit_mode", &devp->dts_config.afbce_flag_cfg);
 		if (ret)
@@ -8038,6 +8067,7 @@ static int vdin_drv_probe(struct platform_device *pdev)
 		devp->hv_reverse_en = 1;
 
 	devp->addr_offset = vdin_addr_offset[devp->index];
+	devp->addr_offset_afbc_a9 = vdin_addr_offset_afbc_a9[devp->index];
 
 	/*canvas align number*/
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) &&

@@ -122,6 +122,8 @@ void vdin_sct_read_mmu_num(struct vdin_dev_s *devp, struct vf_entry *vfe)
 			devp->afbce_mmu_num = 0;
 		} else if (devp->dtdata->hw_ver == VDIN_HW_T3X) {
 			vfe->vf.afbce_num = rd(devp->addr_offset, VDIN0_AFBCE_MMU_NUM);
+		} else if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+			vfe->vf.afbce_num = rd(devp->addr_offset_afbc_a9, VDIN0_A9_AFBCE_MMU_NUM);
 		} else {
 			vfe->vf.afbce_num = rd(devp->addr_offset, AFBCE_MMU_NUM);
 		}
@@ -248,7 +250,9 @@ void vdin_sct_free_tail(struct vdin_dev_s *devp, int vf_idx, int buffer_used)
 		devp->index, vf_idx, buffer_used, (unsigned int)diff, buffer_used);
 	return;
 error:
-	pr_err("vdin sct free tail error:%d", err);
+	pr_err("sct free tail error:%d vf_idx:%d buf_used:%d max_mmu:%u cur_idx:%u last_idx:%u\n",
+		err, vf_idx, buffer_used, devp->msct_top.mmu_4k_number,
+		devp->msct_top.cur_frame_idx, devp->msct_top.last_frame_idx);
 	return;
 }
 
@@ -493,12 +497,10 @@ error:
 /* afbce use scatter or continuous memory */
 int vdin_mem_init(struct vdin_dev_s *devp)
 {
-	bool is_afbce;
 	int err = 0;
-	is_afbce = (devp->afbce_mode == 1 || devp->double_wr);
 
 	if ((devp->debug.dbg_sct_ctl & DBG_SCT_CTL_DIS) ||
-	      devp->index || !is_afbce ||
+	    !vdin_is_afbce_enabled(devp) || (devp->index && devp->dtdata->hw_ver != VDIN_HW_A9) ||
 	    !(devp->cma_config_flag & MEM_ALLOC_CODEC_SCT)) {
 		devp->mem_type = VDIN_MEM_TYPE_CONTINUOUS;
 		return 0;

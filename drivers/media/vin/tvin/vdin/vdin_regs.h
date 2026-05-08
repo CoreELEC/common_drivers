@@ -10,6 +10,7 @@
 #include "vdin_regs_t3x.h"
 #include "vdin_regs_t6w.h"
 #include "vdin_regs_t6x.h"
+#include "vdin_regs_a9.h"
 
 //VPU QoS
 #define VPU_WRARB_UGT_L2C1 0x27c3
@@ -1091,8 +1092,9 @@
 #define MIF0_OUT_SEL_BIT	4
 /* [11:8] wr mif 1 sel */
 #define MIF1_OUT_SEL_BIT	8
-/* [15:12] wr mif 2 sel */
+/* [15:12] wr mif 2 sel vdin1_dwr: wrmif2/a9 afbce1 */
 #define MIF2_OUT_SEL_BIT	12
+#define AFBCE1_OUT_SEL_BIT	12
 /* vdin 0 wr interrupt mask*/
 #define VDIN0_INT_MASK_BIT	20
 /* vdin 1 wr interrupt mask*/

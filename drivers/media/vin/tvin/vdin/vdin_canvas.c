@@ -149,9 +149,8 @@ void vdin_cal_canvas_w(struct vdin_dev_s *devp)
 			canvas_num = canvas_num / 2;
 
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
-			if (devp->dtdata->hw_ver == VDIN_HW_T6D ||
-			    devp->dtdata->hw_ver == VDIN_HW_T6W ||
-			    devp->dtdata->hw_ver == VDIN_HW_T6X)
+			if (devp->dtdata->hw_ver >= VDIN_HW_T6D &&
+			    devp->dtdata->hw_ver <= VDIN_HW_A9)
 				devp->canvas_w = (h_active * 10) / 8;
 			else
 				devp->canvas_w = (h_active * 3) / 2;
@@ -320,9 +319,8 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 	} else if (vdin_is_convert_to_nv21(devp->format_convert)) {
 		/* nv21/nv12 only t3x have 8/10/12 bit mode */
 		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
-			if (devp->dtdata->hw_ver == VDIN_HW_T6D ||
-			    devp->dtdata->hw_ver == VDIN_HW_T6W ||
-			    devp->dtdata->hw_ver == VDIN_HW_T6X)
+			if (devp->dtdata->hw_ver >= VDIN_HW_T6D &&
+			    devp->dtdata->hw_ver <= VDIN_HW_A9)
 				h_size = roundup((h_size * 10) / 8, devp->canvas_align);
 			else
 				h_size = roundup((h_size * 3) / 2, devp->canvas_align);

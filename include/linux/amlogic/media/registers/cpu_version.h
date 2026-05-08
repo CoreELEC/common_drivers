@@ -351,6 +351,11 @@ static inline bool is_meson_t6x_cpu(void)
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_T6X;
 }
 
+static inline bool is_meson_a9_cpu(void)
+{
+	return get_cpu_type() == MESON_CPU_MAJOR_ID_A9;
+}
+
 static inline bool cpu_after_eq(unsigned int id)
 {
 	return get_cpu_type() >= id;

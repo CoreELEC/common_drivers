@@ -6006,16 +6006,26 @@ void hdmirx_set_video_mute(bool mute, u8 port)
 
 void set_dv_ll_mode(bool en, u8 port)
 {
-	if (rx_info.chip_id >= CHIP_ID_T3X ||
-		rx_info.chip_id <= CHIP_ID_TL1)
+	if ((rx_info.chip_id >= CHIP_ID_T3X ||
+		rx_info.chip_id <= CHIP_ID_TL1) && rx_info.chip_id != CHIP_ID_A9)
 		return;
 
-	if (en) {
-		hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(17), 1, port);
-		hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(19), 1, port);
+	if (rx_info.chip_id == CHIP_ID_A9) {
+		if (en) {
+			hdmirx_wr_bits_top_common(TOP_VID_CNTL, _BIT(17), 1);
+			hdmirx_wr_bits_top_common(TOP_VID_CNTL, _BIT(19), 1);
+		} else {
+			hdmirx_wr_bits_top_common(TOP_VID_CNTL, _BIT(17), 0);
+			hdmirx_wr_bits_top_common(TOP_VID_CNTL, _BIT(19), 0);
+		}
 	} else {
-		hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(17), 0, port);
-		hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(19), 0, port);
+		if (en) {
+			hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(17), 1, port);
+			hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(19), 1, port);
+		} else {
+			hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(17), 0, port);
+			hdmirx_wr_bits_top(TOP_VID_CNTL, _BIT(19), 0, port);
+		}
 	}
 }
 

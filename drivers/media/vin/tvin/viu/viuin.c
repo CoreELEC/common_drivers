@@ -646,7 +646,8 @@ static void viuin_set_wr_bak_ctrl(enum tvin_port_e port)
 	case TVIN_PORT_VIU1_WB0_OSD1:
 		wr_bits_viu(VPP_WR_BAK_CTRL, 3, 0, 4);
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu()) &&
+		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_a9_cpu()) &&
 			rd_bits_viu(VPP_MISC, 27, 1))
 			wr_bits_viu(VPP_WR_BAK_CTRL, 1, 11, 1);
 		if (is_meson_t6x_cpu()) {/* enable wrbak */
@@ -664,7 +665,8 @@ static void viuin_set_wr_bak_ctrl(enum tvin_port_e port)
 	case TVIN_PORT_VIU1_WB0_POST_BLEND:
 		wr_bits_viu(VPP_WR_BAK_CTRL, 5, 0, 4);
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu()) &&
+		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_a9_cpu()) &&
 			rd_bits_viu(VPP_MISC, 27, 1))
 			wr_bits_viu(VPP_WR_BAK_CTRL, 1, 11, 1);
 		if (is_meson_t6x_cpu()) {/* enable wrbak */
@@ -687,7 +689,8 @@ static void viuin_set_wr_bak_ctrl(enum tvin_port_e port)
 			}
 			break;
 		}
-		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu()) &&
+		if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_a9_cpu()) &&
 			rd_bits_viu(VPP_MISC, 27, 1))
 			wr_bits_viu(VPP_WR_BAK_CTRL, 1, 11, 1);
 #endif
@@ -1101,7 +1104,7 @@ static void viuin_stop(struct tvin_frontend_s *fe, enum tvin_port_e port,
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	/* txhd2 keystone path close */
 	if ((is_meson_txhd2_cpu() || is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
-		is_meson_t6x_cpu()) && rd_bits_viu(VPP_WR_BAK_CTRL, 11, 1))
+		is_meson_t6x_cpu() || is_meson_a9_cpu()) && rd_bits_viu(VPP_WR_BAK_CTRL, 11, 1))
 		wr_bits_viu(VPP_WR_BAK_CTRL, 0, 11, 1);
 #endif
 }

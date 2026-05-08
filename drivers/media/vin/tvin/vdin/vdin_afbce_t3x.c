@@ -53,6 +53,13 @@ void vdin_afbce_update_t3x(struct vdin_dev_s *devp)
 	int bits_num;
 	int uncompress_bits;
 	int uncompress_size;
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+		if (devp->hw_core == VDIN_HW_CORE_LITE)
+			hold_line_num = 0;
+	}
 
 	if (!devp->afbce_info)
 		return;
@@ -83,16 +90,16 @@ void vdin_afbce_update_t3x(struct vdin_dev_s *devp)
 	/* bit size of uncompressed mode */
 	uncompress_size = (((((16 * uncompress_bits * bits_num) + 7) >> 3) + 31)
 		/ 32) << 1;
-	rdma_write_reg(devp->rdma_handle, devp->addr_offset + VDIN0_AFBCE_MODE,
+	rdma_write_reg(devp->rdma_handle, offset + VDIN0_AFBCE_MODE,
 		       (0 & 0x7) << 29 | (0 & 0x3) << 26 | (3 & 0x3) << 24 |
 		       (hold_line_num & 0x7f) << 16 |
 		       (2 & 0x3) << 14 | (reg_fmt444_comb & 0x1));
 
 	rdma_write_reg_bits(devp->rdma_handle,
-			    devp->addr_offset + VDIN0_AFBCE_MIF_SIZE,
+			    offset + VDIN0_AFBCE_MIF_SIZE,
 			    (uncompress_size & 0x1fff), 16, 5);/* uncmp_size */
 
-	rdma_write_reg(devp->rdma_handle, devp->addr_offset + VDIN0_AFBCE_FORMAT,
+	rdma_write_reg(devp->rdma_handle, offset + VDIN0_AFBCE_FORMAT,
 		       (reg_format_mode  & 0x3) << 8 |
 		       (uncompress_bits & 0xf) << 4 |
 		       (uncompress_bits & 0xf));
@@ -111,6 +118,10 @@ void vdin_afbce_config_comp_ratio_t3x(struct vdin_dev_s *devp, unsigned int form
 	unsigned int afbce_loss_burst_num, sum, byte_num;
 	unsigned int reg_block_burst_num0, reg_block_burst_num1;
 	unsigned int reg_block_burst_num2, reg_block_burst_num3;
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9)
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
 
 	if (!devp->cr_lossy_param.cr_lossy_ratio)
 		return;
@@ -142,12 +153,18 @@ void vdin_afbce_config_comp_ratio_t3x(struct vdin_dev_s *devp, unsigned int form
 	afbce_loss_burst_num = (reg_block_burst_num0 << 24) | (reg_block_burst_num1 << 16) |
 			       (reg_block_burst_num2 << 8)  | (reg_block_burst_num3 << 0);
 
-	W_VCBUS(devp->addr_offset + VDIN0_AFBCE_LOSS_BURST_NUM, afbce_loss_burst_num);
+	W_VCBUS(offset + VDIN0_AFBCE_LOSS_BURST_NUM, afbce_loss_burst_num);
 }
 
 void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 {
 	int hold_line_num = VDIN_AFBCE_HOLD_LINE_NUM;
+
+	if (devp->hw_core == VDIN_HW_CORE_NORMAL)
+		hold_line_num = VDIN_AFBCE_HOLD_LINE_NUM;
+	else if (devp->hw_core == VDIN_HW_CORE_LITE && devp->dtdata->hw_ver == VDIN_HW_A9)
+		hold_line_num = 0;
+
 	int lbuf_depth = 256;
 	int lossy_luma_en = 0;
 	int lossy_chrm_en = 0;
@@ -174,7 +191,8 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	int reg_fmt444_rgb_en = 0;
 	enum vdin_format_convert_e vdin_out_fmt;
 	//unsigned int bit_mode_shift = 0;
-	unsigned int offset;
+	unsigned int offset = devp->addr_offset;
+	unsigned int offset1 = devp->addr_offset;
 
 	if (!devp->afbce_info)
 		return;
@@ -184,7 +202,10 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	pr_info("vdin afbce must use RDMA,but it not be opened\n");
 	pr_info("##############################################\n");
 #endif
-	offset = devp->addr_offset;
+	if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+		offset1 = offset + 0x3; /*a9 mmu are differences for the offset */
+	}
 	enc_win_bgn_h = 0;
 	enc_win_end_h = devp->h_active - 1;
 	enc_win_bgn_v = 0;
@@ -228,9 +249,16 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 		sub_block_num = 16;
 		if (devp->afbce_valid && vdin_is_dolby_signal_in(devp)) {
 			/* reg_detunnel_sel */
-			W_VCBUS_BIT(offset + VDIN0_CORE_DETUNNEL, 0x2c2d0, 0, 18);
-			/* enable detunnel */
-			W_VCBUS_BIT(offset + VDIN0_CORE_CTRL, 1, 0, 1);
+			if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+				W_VCBUS_BIT(devp->addr_offset + VDIN_DSC_DETUNNEL_SEL,
+					    0x2c2d0, 0, 18);
+				W_VCBUS_BIT(devp->addr_offset + VDIN_DSC_CTRL, 1, 3, 1);
+			} else {
+				W_VCBUS_BIT(devp->addr_offset + VDIN0_CORE_DETUNNEL,
+					0x2c2d0, 0, 18);
+				/* enable detunnel */
+				W_VCBUS_BIT(devp->addr_offset + VDIN0_CORE_CTRL, 1, 0, 1);
+			}
 		}
 	}
 	//bit size of uncompressed mode
@@ -337,29 +365,29 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 		((def_color_2 & 0xfff) << 12) |
 		((def_color_1 & 0xfff) << 0));
 
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_CTRL4,
+	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL4,
 		    devp->afbce_info->fm_table_paddr[0] >> 4, 0, 32);
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_CTRL1, 0x1, 6, 1);
+	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL1, 0x1, 6, 1);
 
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, cur_mmu_used, 0, 12);
+	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, cur_mmu_used, 0, 12);
 	/*for almost uncompressed pattern,garbage at bottom
 	 *(h_active * v_active * bytes per pixel + 3M) / page_size - 1
 	 *where 3M is the rest bytes of block,since every block must not be\
 	 *separated by 2 pages
 	 */
 	//W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, 0x1c4f, 16, 13);
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, 0x1ffe, 16, 13);
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_CTRL3, 0x1fff, 0, 13);
+	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, 0x1ffe, 16, 13);
+	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL3, 0x1fff, 0, 13);
 	W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 0, AFBCE_WORK_MD_BIT, AFBCE_WORK_MD_WID);
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_ROT_CTRL, 0, 1, 0);/* reg_rot_en */
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_ROT_CTRL, 0, 1, 1);/* reg_rot_en */
 
-	if (devp->double_wr) {
+	if (devp->dtdata->hw_ver != VDIN_HW_A9 && devp->double_wr) {
 		//W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 1, AFBCE_EN_BIT, AFBCE_EN_WID);
 		//W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 1,
 		//	AFBCE_START_PULSE_BIT, AFBCE_START_PULSE_WID);
 		W_VCBUS_BIT(offset + VDIN0_CORE_CTRL, 0, 8, 1);/* reg_afbce_path_en */
 		W_VCBUS_BIT(offset + VDIN0_CORE_CTRL, 1, 7, 1);/* reg_dith_path_en */
-	} else {
+	} else if (devp->dtdata->hw_ver != VDIN_HW_A9) {
 		W_VCBUS_BIT(offset + VDIN0_CORE_CTRL, 0, 8, 1);/* reg_afbce_path_en */
 		W_VCBUS_BIT(offset + VDIN0_CORE_CTRL, 0, 7, 1);/* reg_dith_path_en */
 		//W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 0, AFBCE_EN_BIT, AFBCE_EN_WID);
@@ -440,6 +468,14 @@ void vdin_afbce_set_next_frame_t3x(struct vdin_dev_s *devp,
 	unsigned long compHeadAddr;
 	unsigned long compTableAddr;
 	unsigned long compBodyAddr;
+	unsigned int offset = devp->addr_offset;
+	unsigned int offset1 = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9) {
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+		offset1 = offset + 0x3; /*a9 mmu are differences for the offset */
+	}
+
 
 	if (!devp->afbce_info)
 		return;
@@ -462,40 +498,43 @@ void vdin_afbce_set_next_frame_t3x(struct vdin_dev_s *devp,
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (rdma_enable) {
 		rdma_write_reg(devp->rdma_handle,
-			VDIN0_AFBCE_HEAD_BADDR + devp->addr_offset,
+			offset + VDIN0_AFBCE_HEAD_BADDR,
 			compHeadAddr >> 4);
 		rdma_write_reg(devp->rdma_handle,
-			VDIN0_AFBCE_MMU_RMIF_CTRL4 + devp->addr_offset,
+			offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL4,
 			compTableAddr >> 4);
 		rdma_write_reg_bits(devp->rdma_handle,
-				    VDIN0_AFBCE_ENABLE + devp->addr_offset, 1,
+				    offset + VDIN0_AFBCE_ENABLE, 1,
 				    AFBCE_START_PULSE_BIT, AFBCE_START_PULSE_WID);
 		if (devp->pause_dec || devp->debug.pause_afbce_dec || devp->pause_dec_once) {
+			if (devp->dtdata->hw_ver != VDIN_HW_A9)
+				rdma_write_reg_bits(devp->rdma_handle,
+						    devp->addr_offset + VDIN0_CORE_CTRL, 0,
+						    AFBCE_EN_BIT, AFBCE_EN_WID);
 			rdma_write_reg_bits(devp->rdma_handle,
-					    VDIN0_CORE_CTRL + devp->addr_offset, 0,
-					    AFBCE_EN_BIT, AFBCE_EN_WID);
-			rdma_write_reg_bits(devp->rdma_handle,
-					    VDIN0_AFBCE_ENABLE + devp->addr_offset, 0,
+					    offset + VDIN0_AFBCE_ENABLE, 0,
 					    AFBCE_EN_BIT, AFBCE_EN_WID);
 		} else {
+			if (devp->dtdata->hw_ver != VDIN_HW_A9)
+				rdma_write_reg_bits(devp->rdma_handle,
+						    devp->addr_offset + VDIN0_CORE_CTRL, 1,
+						    AFBCE_EN_BIT, AFBCE_EN_WID);
 			rdma_write_reg_bits(devp->rdma_handle,
-					    VDIN0_CORE_CTRL + devp->addr_offset, 1,
-					    AFBCE_EN_BIT, AFBCE_EN_WID);
-			rdma_write_reg_bits(devp->rdma_handle,
-					    VDIN0_AFBCE_ENABLE + devp->addr_offset, 1,
+					    offset + VDIN0_AFBCE_ENABLE, 1,
 					    AFBCE_EN_BIT, AFBCE_EN_WID);
 		}
 	} else {
-		W_VCBUS(VDIN0_AFBCE_HEAD_BADDR + devp->addr_offset,
+		W_VCBUS(offset + VDIN0_AFBCE_HEAD_BADDR,
 			compHeadAddr >> 4);
-		W_VCBUS(VDIN0_AFBCE_MMU_RMIF_CTRL4 + devp->addr_offset,
+		W_VCBUS(offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL4,
 			compTableAddr >> 4);
-		W_VCBUS_BIT(VDIN0_AFBCE_ENABLE + devp->addr_offset, 1,
+		W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 1,
 			AFBCE_START_PULSE_BIT, AFBCE_START_PULSE_WID);
-		W_VCBUS_BIT(VDIN0_AFBCE_ENABLE + devp->addr_offset, 0,
+		W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 0,
 			AFBCE_EN_BIT, AFBCE_EN_WID);
-		W_VCBUS_BIT(VDIN0_CORE_CTRL + devp->addr_offset, 0,
-			AFBCE_EN_BIT, AFBCE_EN_WID);
+		if (devp->dtdata->hw_ver != VDIN_HW_A9)
+			W_VCBUS_BIT(VDIN0_CORE_CTRL + devp->addr_offset, 0,
+				    AFBCE_EN_BIT, AFBCE_EN_WID);
 	}
 #endif
 	vdin_afbce_clear_write_down_flag(devp);
@@ -503,17 +542,23 @@ void vdin_afbce_set_next_frame_t3x(struct vdin_dev_s *devp,
 
 void vdin_pause_afbce_write_t3x(struct vdin_dev_s *devp, unsigned int rdma_enable, bool pause_en)
 {
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9)
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 	if (rdma_enable) {
 		/* reg_afbce_path_en */
-		rdma_write_reg_bits(devp->rdma_handle, devp->addr_offset + VDIN0_CORE_CTRL,
-			!pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
-		rdma_write_reg_bits(devp->rdma_handle, devp->addr_offset + VDIN0_AFBCE_ENABLE,
-			!pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
+		if (devp->dtdata->hw_ver != VDIN_HW_A9)
+			rdma_write_reg_bits(devp->rdma_handle, devp->addr_offset + VDIN0_CORE_CTRL,
+					    !pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
+		rdma_write_reg_bits(devp->rdma_handle, offset + VDIN0_AFBCE_ENABLE,
+				    !pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
 	} else {
-		W_VCBUS_BIT(VDIN0_CORE_CTRL + devp->addr_offset,
-			!pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
-		W_VCBUS_BIT(VDIN0_AFBCE_ENABLE + devp->addr_offset,
+		if (devp->dtdata->hw_ver != VDIN_HW_A9)
+			W_VCBUS_BIT(VDIN0_CORE_CTRL + devp->addr_offset,
+				    !pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
+		W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE,
 			!pause_en, AFBCE_EN_BIT, AFBCE_EN_WID);
 	}
 #endif
@@ -523,18 +568,27 @@ void vdin_pause_afbce_write_t3x(struct vdin_dev_s *devp, unsigned int rdma_enabl
 /* frm_end will not pull up if using rdma IF to clear afbce flag */
 void vdin_afbce_clear_write_down_flag_t3x(struct vdin_dev_s *devp)
 {
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9)
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+
 	/* bit0:frm_end_clr;bit1:enc_error_clr */
-	W_VCBUS_BIT(VDIN0_AFBCE_CLR_FLAG + devp->addr_offset, 3, 0, 2);
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_CLR_FLAG, 3, 0, 2);
 }
 
 /* return 1: write down */
 int vdin_afbce_read_write_down_flag_t3x(struct vdin_dev_s *devp)
 {
 	int frm_end = -1, wr_abort = -1;
+	unsigned int offset = devp->addr_offset;
 
-	frm_end = rd_bits(0, devp->addr_offset + VDIN0_AFBCE_STA_FLAGT, 0, 1);
+	if (devp->dtdata->hw_ver == VDIN_HW_A9)
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+
+	frm_end = rd_bits(0, offset + VDIN0_AFBCE_STA_FLAGT, 0, 1);
 	//frm_end = rd_bits(0, devp->addr_offset + VDIN0_AFBCE_STAT1, 31, 1);
-	wr_abort = rd_bits(0, devp->addr_offset + VDIN0_AFBCE_STA_FLAGT, 2, 2);
+	wr_abort = rd_bits(0, offset + VDIN0_AFBCE_STA_FLAGT, 2, 2);
 
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_WRITE_DONE)
 		pr_info("frm_end:%#x,wr_abort:%#x;[%#x]:%#x,[%#x]:%#x\n", frm_end, wr_abort,
@@ -549,14 +603,20 @@ int vdin_afbce_read_write_down_flag_t3x(struct vdin_dev_s *devp)
 
 void vdin_afbce_soft_reset_t3x(struct vdin_dev_s *devp)
 {
+	unsigned int offset = devp->addr_offset;
+
+	if (devp->dtdata->hw_ver == VDIN_HW_A9)
+		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
+
 	/* reg_afbce_path_en */
-	W_VCBUS_BIT(devp->addr_offset + VDIN0_CORE_CTRL, 0, 8, 1);
+	if (devp->dtdata->hw_ver != VDIN_HW_A9)
+		W_VCBUS_BIT(devp->addr_offset + VDIN0_CORE_CTRL, 0, 8, 1);
 	/* reg_enc_enable */
-	W_VCBUS_BIT(devp->addr_offset + VDIN0_AFBCE_ENABLE, 0,
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 0,
 		AFBCE_EN_BIT, AFBCE_EN_WID);
-	W_VCBUS_BIT(devp->addr_offset + VDIN0_AFBCE_MODE, 0, 30, 1);
-	W_VCBUS_BIT(devp->addr_offset + VDIN0_AFBCE_MODE, 1, 30, 1);
-	W_VCBUS_BIT(devp->addr_offset + VDIN0_AFBCE_MODE, 0, 30, 1);
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_MODE, 0, 30, 1);
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_MODE, 1, 30, 1);
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_MODE, 0, 30, 1);
 }
 
 void vdin_afbce_mode_update_t3x(struct vdin_dev_s *devp)

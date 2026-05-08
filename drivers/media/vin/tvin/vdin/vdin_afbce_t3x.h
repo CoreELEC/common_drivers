@@ -9,6 +9,7 @@
 #include "vdin_ctl.h"
 
 #define VDIN_AFBCE_HOLD_LINE_NUM    4
+#define VDIN_A9_AFBCE_REG_DELTA		0x3f40
 
 void vdin_afbce_update_t3x(struct vdin_dev_s *devp);
 void vdin_afbce_config_t3x(struct vdin_dev_s *devp);
