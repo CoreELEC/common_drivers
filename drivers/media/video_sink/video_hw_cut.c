@@ -5374,14 +5374,14 @@ void vd_blend_setting(struct video_layer_s *layer, struct blend_setting_s *setti
 		/* forground setting */
 		/* misc_off = 0x10; */
 		cur_dev->rdma_func[vpp_index].rdma_wr
-		(VPU_VOUT_BLD_SRC0_HPOS + misc_off,
+		(cur_dev->vout_blend_reg.vpu_vout_bld_src0_hpos, + misc_off,
 		((setting->postblend_h_start & vd_size_mask)
 		<< 0) |
 		((setting->postblend_h_end & vd_size_mask)
 		<< 16));
 
 		cur_dev->rdma_func[vpp_index].rdma_wr
-		(VPU_VOUT_BLD_SRC0_VPOS + misc_off,
+		(cur_dev->vout_blend_reg.vpu_vout_bld_src0_vpos, + misc_off,
 		((setting->postblend_v_start & vd_size_mask)
 		<< 0) |
 		((setting->postblend_v_end & vd_size_mask)

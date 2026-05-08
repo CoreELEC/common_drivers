@@ -1141,13 +1141,13 @@ static void dump_vout_blend_reg(void)
 
 	if (cur_dev->display_module != C3_DISPLAY_MODULE)
 		return;
-	vout_blend_reg[i++] = VPU_VOUT_BLEND_CTRL;
-	vout_blend_reg[i++] = VPU_VOUT_BLEND_DUMDATA;
-	vout_blend_reg[i++] = VPU_VOUT_BLEND_SIZE;
-	vout_blend_reg[i++] = VPU_VOUT_BLD_SRC0_HPOS;
-	vout_blend_reg[i++] = VPU_VOUT_BLD_SRC0_VPOS;
-	vout_blend_reg[i++] = VPU_VOUT_BLD_SRC1_HPOS;
-	vout_blend_reg[i++] = VPU_VOUT_BLD_SRC1_VPOS;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_blend_ctrl;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_blend_dumdata;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_blend_size;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_bld_src0_hpos;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_bld_src0_vpos;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_bld_src1_hpos;
+	vout_blend_reg[i++] = cur_dev->vout_blend_reg.vpu_vout_bld_src1_vpos;
 	vout_blend_reg[i++] = VPU_VOUT_TOP_CTRL;
 	vout_blend_reg[i++] = VPU_VOUT_SECURE_BIT_NOR;
 	vout_blend_reg[i++] = VPU_VOUT_SECURE_DATA;

@@ -5003,7 +5003,7 @@ static int dump_reg_show(struct seq_file *s, void *what)
 			reg_addr += 1;
 		}
 		seq_puts(s, "\nvd1 csc registers:\n");
-		reg_addr = VOUT_VD1_CSC_COEF00_01;
+		reg_addr = vd_layer[0].vd_csc_reg.vout_vd1_csc_coef00_01;
 		count = 14;
 		for (i = 0; i < count; i++) {
 			reg_val = READ_VCBUS_REG(reg_addr);
@@ -5012,7 +5012,7 @@ static int dump_reg_show(struct seq_file *s, void *what)
 			reg_addr += 1;
 		}
 		seq_puts(s, "\nvout blend registers:\n");
-		reg_addr = VPU_VOUT_BLEND_CTRL;
+		reg_addr = cur_dev->vout_blend_reg.vpu_vout_blend_ctrl;
 		count = 3;
 		for (i = 0; i < count; i++) {
 			reg_val = READ_VCBUS_REG(reg_addr);
@@ -5020,7 +5020,7 @@ static int dump_reg_show(struct seq_file *s, void *what)
 				   reg_addr, reg_val);
 			reg_addr += 1;
 		}
-		reg_addr = VPU_VOUT_BLD_SRC0_HPOS;
+		reg_addr = cur_dev->vout_blend_reg.vpu_vout_bld_src0_hpos;
 		count = 2;
 		for (i = 0; i < count; i++) {
 			reg_val = READ_VCBUS_REG(reg_addr);
@@ -5028,7 +5028,7 @@ static int dump_reg_show(struct seq_file *s, void *what)
 				   reg_addr, reg_val);
 			reg_addr += 1;
 		}
-		reg_addr = VPU_VOUT_BLD_SRC1_HPOS;
+		reg_addr = cur_dev->vout_blend_reg.vpu_vout_bld_src1_hpos;
 		count = 2;
 		for (i = 0; i < count; i++) {
 			reg_val = READ_VCBUS_REG(reg_addr);

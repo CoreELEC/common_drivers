@@ -13144,35 +13144,31 @@ void vpp_blend_update_c3(const struct vinfo_s *vinfo)
 	int video1_off_req = 0;
 	unsigned long flags;
 	u32 vpp_index = 0;
-	bool force_flush = false;
 
 	if (video_is_after_meson_c5_cpu()) {
 		check_video_pattern_output();
 		check_postblend_pattern_output();
 	}
-	if (force_vpp_blend_update) {
-		force_flush = true;
-		force_vpp_blend_update = false;
-	}
 
-	if (vd1_matrix != save_setting || force_flush) {
+	if (vd1_matrix != save_setting) {
 		if (video_is_meson_c3_cpu())
 			vd1_matrix_yuv2rgb(vd1_matrix);
 
-		if (vinfo) {
-			u32 read_value = cur_dev->rdma_func[vpp_index].rdma_rd
-				(cur_dev->vout_blend_reg.vpu_vout_blend_size);
-			if ((vinfo->field_height | (vinfo->width << 16))
-				!= read_value) {
-				cur_dev->rdma_func[vpp_index].rdma_wr_bits
-					(cur_dev->vout_blend_reg.vpu_vout_blend_size,
-					 vinfo->field_height, 0, 13);
-				cur_dev->rdma_func[vpp_index].rdma_wr_bits
-					(cur_dev->vout_blend_reg.vpu_vout_blend_size,
-					vinfo->width, 16, 13);
-			}
-		}
 		save_setting = vd1_matrix;
+	}
+
+	if (vinfo && vinfo->mode != VMODE_INVALID) {
+		u32 read_value = cur_dev->rdma_func[vpp_index].rdma_rd
+			(cur_dev->vout_blend_reg.vpu_vout_blend_size);
+		if ((vinfo->field_height | (vinfo->width << 16))
+			!= read_value) {
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits
+				(cur_dev->vout_blend_reg.vpu_vout_blend_size,
+				 vinfo->field_height, 0, 13);
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits
+				(cur_dev->vout_blend_reg.vpu_vout_blend_size,
+				vinfo->width, 16, 13);
+		}
 	}
 	spin_lock_irqsave(&video_onoff_lock, flags);
 	if (likely(vd_layer[0].onoff_state != VIDEO_ENABLE_STATE_IDLE)) {
@@ -13204,7 +13200,7 @@ void vpp_blend_update_c3(const struct vinfo_s *vinfo)
 		vd_layer[0].enabled = vd_layer[0].enabled_status_saved;
 	}
 	if (vd1_enabled != vd_layer[0].enabled ||
-		video1_off_req || force_flush) {
+		video1_off_req) {
 		if (vd_layer[0].enabled) {
 			video_prop_status &= ~VIDEO_PROP_CHANGE_DISABLE;
 			video_prop_status |= VIDEO_PROP_CHANGE_ENABLE;
@@ -13219,10 +13215,10 @@ void vpp_blend_update_c3(const struct vinfo_s *vinfo)
 		vd1_enabled = vd_layer[0].enabled;
 		if (vd1_enabled)
 			cur_dev->rdma_func[vpp_index].rdma_wr_bits
-			(VPU_VOUT_BLEND_CTRL, 1, 0, 1);
+			(cur_dev->vout_blend_reg.vpu_vout_blend_ctrl, 1, 0, 1);
 		else
 			cur_dev->rdma_func[vpp_index].rdma_wr_bits
-			(VPU_VOUT_BLEND_CTRL, 0, 0, 1);
+			(cur_dev->vout_blend_reg.vpu_vout_blend_ctrl, 0, 0, 1);
 		if (video1_off_req || !vd1_enabled)
 			disable_vd1_blend(&vd_layer[0]);
 	}
@@ -19465,6 +19461,11 @@ static void video_hw_init_c3(void)
 		WRITE_VCBUS_REG_BITS
 			(cur_dev->vout_blend_reg.vpu_vout_blend_ctrl,
 			0x100, 16, 9);
+		/* add latch support after c5 chip */
+		if (video_is_after_meson_c5_cpu())
+			WRITE_VCBUS_REG_BITS
+				(cur_dev->vout_blend_reg.vpu_vout_blend_ctrl,
+				0x1, 26, 2);
 		WRITE_VCBUS_REG
 			(cur_dev->vout_blend_reg.vpu_vout_blend_dumdata,
 			0x4080200);
