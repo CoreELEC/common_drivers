@@ -1802,9 +1802,12 @@ static ssize_t vbi_read(struct file *file, char __user *buf, size_t count,
 	loff_t *ppos)
 {
 	struct vbi_dev_s *vbi_dev = file->private_data;
-	struct vbi_slicer_s *vbi_slicer = vbi_dev->slicer;
+	struct vbi_slicer_s *vbi_slicer;
 	int ret = 0;
 
+	if (!vbi_dev)
+		return ret;
+	vbi_slicer = vbi_dev->slicer;
 	if (mutex_lock_interruptible(&vbi_slicer->mutex)) {
 		tvafe_pr_info("%s: slicer mutex error\n", __func__);
 		return -ERESTARTSYS;
@@ -1909,11 +1912,13 @@ int vbi_release_memory(void)
 		kfree(vbi_dev->pac_addr_start);
 		vbi_dev->pac_addr_start = NULL;
 	} else if (vbi_mem_flag == VBI_MEM_CODEC_MALLOC && vbi_dev->mem_start) {
+		tvafe_pr_info("%s pac_addr_start:0x%p,mem_start:%#lx\n",
+			__func__, vbi_dev->pac_addr_start, vbi_dev->mem_start);
 		if (vbi_dev->pac_addr_start) {
 			codec_mm_unmap_phyaddr(vbi_dev->pac_addr_start);
 			vbi_dev->pac_addr_start = NULL;
+			codec_mm_free_for_dma("tvafe_vbi", vbi_dev->mem_start);
 		}
-		codec_mm_free_for_dma("tvafe_vbi", vbi_dev->mem_start);
 	}
 
 	return 0;
@@ -1954,9 +1959,12 @@ static int vbi_open(struct inode *inode, struct file *file)
 static int vbi_release(struct inode *inode, struct file *file)
 {
 	struct vbi_dev_s *vbi_dev = file->private_data;
-	struct vbi_slicer_s *vbi_slicer = vbi_dev->slicer;
+	struct vbi_slicer_s *vbi_slicer;
 	int ret = 0;
 
+	if (!vbi_dev)
+		return ret;
+	vbi_slicer = vbi_dev->slicer;
 	vbi_dev->slicer_enable = false;
 	vbi_dev->vbi_start = false;  /*disable data capture function*/
 	ret = vbi_slicer_free(vbi_dev, vbi_slicer);
@@ -1983,9 +1991,12 @@ static long vbi_ioctl(struct file *file,
 	int ret = 0;
 	void __user *argp = (void __user *)arg;
 	unsigned int buffer_size_t;
-
 	struct vbi_dev_s *vbi_dev = file->private_data;
-	struct vbi_slicer_s *vbi_slicer = vbi_dev->slicer;
+	struct vbi_slicer_s *vbi_slicer;
+
+	if (!vbi_dev)
+		return -EFAULT;
+	vbi_slicer = vbi_dev->slicer;
 
 	if (mutex_lock_interruptible(&vbi_dev->mutex))
 		return -ERESTARTSYS;
@@ -2134,9 +2145,12 @@ static long vbi_compat_ioctl(struct file *file, unsigned int cmd,
 static unsigned int vbi_poll(struct file *file, poll_table *wait)
 {
 	struct vbi_dev_s *devp = file->private_data;
-	struct vbi_slicer_s *vbi_slicer = devp->slicer;
+	struct vbi_slicer_s *vbi_slicer;
 	unsigned int mask = 0;
 
+	if (!devp)
+		return 0;
+	vbi_slicer = devp->slicer;
 	if (!vbi_slicer) {
 		tvafe_pr_info("%s: slicer null\n", __func__);
 		return -EINVAL;
