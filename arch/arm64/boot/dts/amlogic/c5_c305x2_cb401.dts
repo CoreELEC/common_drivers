@@ -359,6 +359,9 @@
 	 */
 };
 
+/delete-node/ &CPU2;
+/delete-node/ &CPU3;
+
 &periphs_pinctrl {
 	/* Audio Related start */
 		tdmout_a: tdmout_a {
