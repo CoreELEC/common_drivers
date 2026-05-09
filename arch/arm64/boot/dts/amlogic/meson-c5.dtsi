@@ -1800,6 +1800,18 @@
 			    "dmcbus",
 			    "efusebus";
 	};
+	jpegenc {
+		compatible = "amlogic, jpegenc";
+		dev_name = "jpegenc";
+		status = "okay";
+		power-domains = <&pwrdm PDID_C5_DOS_HCODEC>;
+		clocks = <&clkc CLKID_SYS_DOS
+			&clkc CLKID_HCODEC>;
+		clock-names = "clk_dos",
+			"clk_jpeg_enc";
+		interrupts = <0x00 0x57 0x01>;
+		interrupt-names = "mailbox_0";
+	};
 	tahoe {
 		compatible = "amlogic, tahoe";
 		dev_name = "tahoe";
