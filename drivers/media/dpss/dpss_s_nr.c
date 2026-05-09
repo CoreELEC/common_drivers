@@ -1473,7 +1473,7 @@ void nr_dpe_pps_para(struct dpss_ch_s *pch,
 			else
 				pch->c.prm_top.pps_dsy = 0;
 			pch->c.prm_top.is_pps = 1;
-			if (((width == 720 || width == 702) && height == 576) &&
+			if ((width == 720  && height == 576) &&
 				pch->d->is_i) {
 				pch->c.prm_top.pps_dsx = 1;
 				pch->c.prm_top.pps_dsy = 1;
