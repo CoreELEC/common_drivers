@@ -82,7 +82,7 @@ static long defendkey_unlocked_ioctl(struct file *file,
 static long defendkey_compat_ioctl(struct file *filp,
 				   unsigned int cmd, unsigned long args)
 {
-	unsigned long ret;
+	long ret;
 
 	args = (unsigned long)compat_ptr(args);
 	ret = defendkey_unlocked_ioctl(filp, cmd, args);
@@ -340,6 +340,7 @@ static int defendkey_probe(struct platform_device *pdev)
 	void __iomem *reg_base = NULL;
 	struct aml_defendkey_dev *defendkey_dev;
 	unsigned int secureboot_mask = 0;
+	u32 mem_size_tmp = 0;
 
 	reg_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!IS_ERR_OR_NULL(reg_mem)) {
@@ -372,10 +373,13 @@ static int defendkey_probe(struct platform_device *pdev)
 	defendkey_dev->sb_mask = secureboot_mask;
 
 	ret = of_property_read_u32(pdev->dev.of_node,
-				   "mem_size", (unsigned int *)&mem_size);
+				   "mem_size", &mem_size_tmp);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to get mem_size\n");
+		mem_size = 0;
 		goto error1;
+	} else {
+		mem_size = mem_size_tmp;
 	}
 
 	mem_region = of_parse_phandle(pdev->dev.of_node, "memory-region", 0);

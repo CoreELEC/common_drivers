@@ -1496,6 +1496,7 @@ int aml_debug_init(void)
 	debug_lockup = debugfs_create_dir("aml_debug", NULL);
 	if (IS_ERR_OR_NULL(debug_lockup)) {
 		debug_lockup = NULL;
+		return -ENOMEM;
 	}
 	debugfs_create_file("sysrq-trigger", S_IFREG | 0664,
 				    debug_lockup, NULL, &sysrq_trigger_debug_ops);

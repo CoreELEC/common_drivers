@@ -43,14 +43,19 @@ static int dmc_name_get_id(char *port_name)
 
 int register_dmc_dev_access_notifier(char *dev_name, struct notifier_block *nb)
 {
-	int err;
+	int err, port_id;
 	struct dmc_notifier_list *dmc_notifier = NULL;
+
+	if (!dev_name)
+		return -1;
 
 	dmc_notifier = kzalloc(sizeof(*dmc_notifier), GFP_KERNEL);
 	if (!dmc_notifier)
 		return -1;
 
-	dmc_notifier->port_id = dmc_name_get_id(dev_name);
+	port_id = dmc_name_get_id(dev_name);
+	dmc_notifier->port_id = port_id < 0 ? 0xff : port_id;
+
 	snprintf(dmc_notifier->port_name, MAX_NAME, "%s", dev_name);
 	list_add(&dmc_notifier->list, &dmc_dev_access_list);
 

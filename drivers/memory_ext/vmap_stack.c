@@ -253,15 +253,6 @@ bad_area:
 	return addr;
 }
 
-void __init fixup_init_thread_union(void)
-{
-	void *p;
-
-	p = (void *)((unsigned long)&init_thread_union + THREAD_INFO_OFFSET);
-	memcpy(p, &init_thread_union, THREAD_INFO_SIZE);
-	memset(&init_thread_union, 0, THREAD_INFO_SIZE);
-}
-
 static void copy_pgd(void)
 {
 	unsigned long index;

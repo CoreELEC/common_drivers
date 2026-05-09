@@ -44,7 +44,7 @@ static void __iomem *sharemem_out_base;
 
 #define AUDIO_LICENSE_QUERY_MAX_SIZE	0x40
 #define DOLBY_FW_CRITICAL_MAX_SIZE 0x400
-
+#define DOLBY_FW_MAX_SIZE  (10 * 1024 * 1024)
 struct dolby_fw_args {
 	u64 src_addr;
 	unsigned int src_len;
@@ -102,6 +102,12 @@ static int dolby_fw_decrypt(struct dolby_fw_args *info)
 	int ret = -1;
 	int i, data_size, size, process_size;
 
+	if (info->src_len > DOLBY_FW_MAX_SIZE) {
+		pr_err("%s:%d: src_len too large: %u\n",
+			__func__, __LINE__, info->src_len);
+		goto err;
+	}
+
 	if (info->src_len != info->dest_len) {
 		pr_err("%s:%d: args are error!\n",
 					__func__, __LINE__);
@@ -158,6 +164,12 @@ static int dolby_fw_verify(struct dolby_fw_args *info)
 	int ret = -1;
 	int i, data_size, size, process_size, cnt;
 	unsigned char pre_shared[32];
+
+	if (info->src_len > DOLBY_FW_MAX_SIZE) {
+		pr_err("%s:%d: src_len too large: %u\n",
+			__func__, __LINE__, info->src_len);
+		goto err;
+	}
 
 	if (info->dest_len < 0x20) {
 		pr_err("%s:%d: verify dest len erro!\n",

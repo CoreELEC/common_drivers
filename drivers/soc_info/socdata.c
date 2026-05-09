@@ -139,7 +139,7 @@ static long socdata_unlocked_ioctl(struct file *file,
 static long socdata_compat_ioctl(struct file *filp,
 			      unsigned int cmd, unsigned long args)
 {
-	unsigned long ret;
+	long ret;
 
 	args = (unsigned long)compat_ptr(args);
 	ret = socdata_unlocked_ioctl(filp, cmd, args);

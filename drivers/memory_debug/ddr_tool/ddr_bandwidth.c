@@ -2394,7 +2394,7 @@ int ddr_axi_sts_alloc(struct ddr_bandwidth *db,
 		db->axi_sts.axi_chan_sts_offset = kzalloc(size, GFP_KERNEL);
 		if (!db->axi_sts.axi_chan_sts_offset) {
 			pr_err("Failed to allocate memory for axi chan sts offset\n");
-			return -ENOMEM;
+			goto err_axi_sts;
 		}
 		memcpy(db->axi_sts.axi_chan_sts_offset, axi_chan_sts_offset, size);
 
@@ -2402,11 +2402,16 @@ int ddr_axi_sts_alloc(struct ddr_bandwidth *db,
 		db->axi_sts.axi_chan_sts_value = kzalloc(size, GFP_KERNEL);
 		if (!db->axi_sts.axi_chan_sts_value) {
 			pr_err("Failed to allocate memory for axi chan sts value\n");
-			return -ENOMEM;
+			goto err_axi_sts;
 		}
 	}
 
 	return 0;
+
+err_axi_sts:
+	kfree(db->axi_sts.dmc_chan_sts_value);
+	kfree(db->axi_sts.axi_chan_sts_offset);
+	return -ENOMEM;
 }
 
 int ddr_axi_sts_init(void)
@@ -2417,6 +2422,16 @@ int ddr_axi_sts_init(void)
 	}
 
 	return aml_db->ops->axi_sts_init(aml_db);
+}
+
+void ddr_axi_sts_free(void)
+{
+	aml_db->axi_sts.axi_chan_sts_num = 0;
+	aml_db->axi_sts.dmc_chan_sts_offset = 0;
+
+	kfree(aml_db->axi_sts.dmc_chan_sts_value);
+	kfree(aml_db->axi_sts.axi_chan_sts_offset);
+	kfree(aml_db->axi_sts.axi_chan_sts_value);
 }
 
 /* 0: dmc sts, 1: axi sts */
@@ -3559,6 +3574,7 @@ static void ddr_bandwidth_remove(struct platform_device *pdev)
 	if (aml_db) {
 		int i;
 
+		ddr_axi_sts_free();
 		class_destroy(&aml_ddr_class);
 		free_irq(aml_db->irq_num, aml_db);
 		ddr_free_port_map_table(aml_db);
