@@ -84,6 +84,8 @@ static int meson_usb2phy_c5_cali_disc_squelch
 	val = (val & ~DISCONNECT_MASK) | DISCONNECT_VAL(0x3);
 	writel(val, cfg + 0xc);
 
+	writel(0x523, cfg + 0x60);
+
 	/* Trimming for squelch detect threshold. */
 	if (mphy->portspeed == MESON_USB_SPEED_HIGH_PLUS) {
 		val = readl(cfg + 0x60);
