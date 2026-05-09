@@ -85,7 +85,7 @@
 			alignment = <0x0 0x400000>;
 			reusable;
 			//no-map;
-			status = "okay";
+			status = "disabled";
 		};
 
 		logo_reserved:linux,meson-fb {
@@ -100,7 +100,7 @@
 			reusable;
 			size = <0x0 0x3000000>;
 			alignment = <0x0 0x400000>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		rtos_reserved:linux,rtos_reserved {
@@ -148,7 +148,7 @@
 			compatible = "shared-dma-pool";
 			//reusable;
 			no-map;
-			size = <0x0 0x4000000>;
+			size = <0x0 0x15E00000>;
 			alignment = <0x0 0x400000>;
 			status = "okay";
 		};
@@ -169,6 +169,7 @@
 			size = <0x0 0xD000000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
+			status = "disabled";
 		};
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
