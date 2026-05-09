@@ -1,9 +1,11 @@
-From 5f65ce156a3ea89921c03f320d7b8963f6324170 Mon Sep 17 00:00:00 2001
+From 6d74e25040c64c31bfb41b3789b7751685148efc Mon Sep 17 00:00:00 2001
 From: "lei.chen" <lei.chen@amlogic.com>
 Date: Tue, 15 Aug 2023 11:15:35 +0800
 Subject: [PATCH] BT: amlogic fix net/bluetooth driver [1/1]
 
-PD#SWPL-128975 SWPL-118242
+PD#SWPL-128975
+PD#SWPL-118242
+PD#SWPL-265980
 
 Problem:
 1.rdk kernel 5.15 bt not support deep sleep wake-up
@@ -12,7 +14,9 @@ Problem:
 Solution:
 1.set CONFIG_AMLOGIC_LINUX_BT as linux in yocto
 2.use same ble create connection parameters as android
-3.add CONFIG_AMLOGIC_LINUX_BT_SMP
+3.filter hci bt fw log
+4.add CONFIG_AMLOGIC_LINUX_BT_SMP
+5.add CONFIG_AMLOGIC_LINUX_BT_SUPPORT_WAKEUP
 
 Verify:
 T5W T3X
@@ -21,22 +25,24 @@ Change-Id: Id900189d0a1b66b4c42cf0ca2eb6a9e479b9440c
 Signed-off-by: lei.chen <lei.chen@amlogic.com>
 Signed-off-by: Zhu Lv <zhu.lv@amlogic.com>
 ---
- net/bluetooth/hci_core.c |  5 +++++
- net/bluetooth/hci_sync.c | 12 ++++++++++++
+ net/bluetooth/hci_core.c |  7 +++++++
+ net/bluetooth/hci_sync.c | 18 ++++++++++++++++++
  net/bluetooth/smp.c      |  8 ++++++++
- 3 files changed, 25 insertions(+)
+ 3 files changed, 33 insertions(+)
 
 diff --git a/net/bluetooth/hci_core.c b/net/bluetooth/hci_core.c
-index fa6c00ad2dca7..b357f069b771d 100644
+index 3369dc105000..e137cf5a4bb1 100644
 --- a/net/bluetooth/hci_core.c
 +++ b/net/bluetooth/hci_core.c
-@@ -4035,7 +4035,12 @@ static void hci_rx_work(struct work_struct *work)
+@@ -4062,7 +4062,14 @@ static void hci_rx_work(struct work_struct *work)
  		switch (hci_skb_pkt_type(skb)) {
  		case HCI_EVENT_PKT:
  			BT_DBG("%s Event packet", hdev->name);
 +#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_BT)
 +			if (skb->data[0] != 0x62)	/* filter hci bt fw log */
 +				hci_event_packet(hdev, skb);
++			else
++				kfree_skb(skb);
 +#else
  			hci_event_packet(hdev, skb);
 +#endif
@@ -44,10 +50,38 @@ index fa6c00ad2dca7..b357f069b771d 100644
  
  		case HCI_ACLDATA_PKT:
 diff --git a/net/bluetooth/hci_sync.c b/net/bluetooth/hci_sync.c
-index 79d1a6ed08b29..6ee775408d65c 100644
+index f79b38603205..9ab4a042097e 100644
 --- a/net/bluetooth/hci_sync.c
 +++ b/net/bluetooth/hci_sync.c
-@@ -6422,8 +6422,14 @@ static void set_ext_conn_params(struct hci_conn *conn,
+@@ -6151,7 +6151,9 @@ static int hci_pause_scan_sync(struct hci_dev *hdev)
+  */
+ int hci_suspend_sync(struct hci_dev *hdev)
+ {
++#ifndef CONFIG_AMLOGIC_LINUX_BT_SUPPORT_WAKEUP
+ 	int err;
++#endif
+ 
+ 	/* If marked as suspended there nothing to do */
+ 	if (hdev->suspended)
+@@ -6173,6 +6175,7 @@ int hci_suspend_sync(struct hci_dev *hdev)
+ 	hci_pause_scan_sync(hdev);
+ 
+ 	if (hci_conn_count(hdev)) {
++#ifndef CONFIG_AMLOGIC_LINUX_BT_SUPPORT_WAKEUP
+ 		/* Soft disconnect everything (power off) */
+ 		err = hci_disconnect_all_sync(hdev, HCI_ERROR_REMOTE_POWER_OFF);
+ 		if (err) {
+@@ -6181,6 +6184,9 @@ int hci_suspend_sync(struct hci_dev *hdev)
+ 			hci_resume_sync(hdev);
+ 			return err;
+ 		}
++#else
++		bt_dev_info(hdev, "amlogic skip disconnect while suspend");
++#endif
+ 
+ 		/* Update event mask so only the allowed event can wakeup the
+ 		 * host.
+@@ -6436,8 +6442,14 @@ static void set_ext_conn_params(struct hci_conn *conn,
  	p->scan_window = cpu_to_le16(hdev->le_scan_window_connect);
  	p->conn_interval_min = cpu_to_le16(conn->le_conn_min_interval);
  	p->conn_interval_max = cpu_to_le16(conn->le_conn_max_interval);
@@ -62,7 +96,7 @@ index 79d1a6ed08b29..6ee775408d65c 100644
  	p->min_ce_len = cpu_to_le16(0x0000);
  	p->max_ce_len = cpu_to_le16(0x0000);
  }
-@@ -6565,8 +6571,14 @@ static int hci_le_create_conn_sync(struct hci_dev *hdev, void *data)
+@@ -6579,8 +6591,14 @@ static int hci_le_create_conn_sync(struct hci_dev *hdev, void *data)
  	cp.own_address_type = own_addr_type;
  	cp.conn_interval_min = cpu_to_le16(conn->le_conn_min_interval);
  	cp.conn_interval_max = cpu_to_le16(conn->le_conn_max_interval);
@@ -78,7 +112,7 @@ index 79d1a6ed08b29..6ee775408d65c 100644
  	cp.max_ce_len = cpu_to_le16(0x0000);
  
 diff --git a/net/bluetooth/smp.c b/net/bluetooth/smp.c
-index 8b9724fd752a1..e8a6300710cf6 100644
+index a31971fe2fd7..b565d8313d01 100644
 --- a/net/bluetooth/smp.c
 +++ b/net/bluetooth/smp.c
 @@ -884,6 +884,13 @@ static int tk_request(struct l2cap_conn *conn, u8 remote_oob, u8 auth,
