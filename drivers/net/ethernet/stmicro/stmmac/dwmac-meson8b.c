@@ -1040,8 +1040,12 @@ static void meson8b_dwmac_remove(struct platform_device *pdev)
 #ifdef CONFIG_HIBERNATION
 static int meson8b_freeze(struct device *dev)
 {
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct phy_device *phydev = ndev->phydev;
 	int ret;
 
+	if (phydev)
+		phydev->irq_suspended = 0;
 	ret = stmmac_suspend(dev);
 	return ret;
 }
