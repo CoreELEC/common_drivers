@@ -347,14 +347,12 @@ static inline void meson_spicc_config_null_desc(struct spicc_device *spicc,
 	desc->cfg_start.b.block_num = DIV_ROUND_UP(n_clk, 9);
 }
 
-static int ns_to_clk(unsigned long clk_rate, int ns)
+static int ns_to_clk(u64 clk_rate, u64 ns)
 {
-	unsigned long abs_ns = abs(ns);
+	u64 abs_ns = abs(ns);
 	int n_clk;
 
 	n_clk = DIV_ROUND_CLOSEST_ULL(clk_rate * abs_ns, 1000000000);
-	if (ns < 0)
-		n_clk = 0 - n_clk;
 
 	return n_clk;
 }
