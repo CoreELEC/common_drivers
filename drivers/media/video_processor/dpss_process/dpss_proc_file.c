@@ -5,6 +5,7 @@
 
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
+#include <linux/amlogic/media/video_processor/video_pipe_adapter.h>
 #include "dpss_process.h"
 #include "dpss_proc_file.h"
 
@@ -44,39 +45,36 @@ static void di_proc_free_fd_private(void *arg)
 				di_proc_file_print(PRINT_OTHER,
 					"%s: release dpss v3 buf\n",
 					__func__);
+					/*release keep buf*/
+					if (data->keep_id > 0) {
+						video_keeper_free_mem(data->keep_id, 0);
+						data->keep_id = -1;
+						di_proc_file_print(PRINT_OTHER,
+							"%s: release mem_handle buf", __func__);
+					}
 
-				/*release keep buf*/
-				if (data->keep_id > 0) {
-					codec_mm_keeper_unmask_keeper(data->keep_id, 0);
-					data->keep_id = -1;
-					di_proc_file_print(PRINT_OTHER,
-						"%s: release mem_handle buf", __func__);
-				}
+					if (data->keep_head_id > 0) {
+						video_keeper_free_mem(data->keep_head_id, 0);
+						data->keep_head_id = -1;
+						di_proc_file_print(PRINT_OTHER,
+							"%s:release keep head buf", __func__);
+					}
 
-				if (data->keep_head_id > 0) {
-					codec_mm_keeper_unmask_keeper
-						(data->keep_head_id, 0);
-					data->keep_head_id = -1;
-					di_proc_file_print(PRINT_OTHER,
-						"%s:release keep head buf", __func__);
-				}
+					if (data->keep_id_1 > 0) {
+						video_keeper_free_mem(data->keep_id_1, 0);
+						data->keep_id_1 = -1;
+						di_proc_file_print(PRINT_OTHER,
+							"%s:release keep table buf", __func__);
+					}
 
-				if (data->keep_id_1 > 0) {
-					codec_mm_keeper_unmask_keeper
-						(data->keep_id_1, 0);
-					data->keep_id_1 = -1;
-					di_proc_file_print(PRINT_OTHER,
-						"%s:release keep table buf", __func__);
-				}
-
-				if (data->keep_dw_id > 0) {
-					codec_mm_keeper_unmask_keeper(data->keep_dw_id, 0);
-					data->keep_dw_id = -1;
-					di_proc_file_print(PRINT_OTHER,
-						"%s: release keep dw buf", __func__);
-				}
-				dpss_total_fill_count_increase();
-			//}
+					if (data->keep_dw_id > 0) {
+						video_keeper_free_mem(data->keep_dw_id, 0);
+						data->keep_dw_id = -1;
+						di_proc_file_print(PRINT_OTHER,
+							"%s: release keep dw buf", __func__);
+					}
+					dpss_total_fill_count_increase();
+				//}
 			}  else if (flag & V4LVIDEO_FLAG_DI_BYPASS) {
 				/*di bypass, need put dec file*/
 				vf = (struct vframe_s *)(data->vf_p);

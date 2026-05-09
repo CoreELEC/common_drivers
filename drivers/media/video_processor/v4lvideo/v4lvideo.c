@@ -42,6 +42,7 @@
 #include <linux/amlogic/media/amdolbyvision/dolby_vision_ext.h>
 #endif
 #include <linux/amlogic/meson_uvm_core.h>
+#include <linux/amlogic/media/video_processor/video_pipe_adapter.h>
 
 #define V4LVIDEO_MODULE_NAME "v4lvideo"
 
@@ -93,23 +94,7 @@ struct mutex mutex_dec_count;
 static int v4lvideo_instance_id;
 static DEFINE_MUTEX(v4lvideo_buf_mgr_mutex);
 
-#define MAX_KEEP_FRAME 64
 #define DI_NR_COUNT 1
-
-struct keep_mem_info {
-	void *handle;
-	int keep_id;
-	int count;
-};
-
-struct keeper_mgr {
-	/* lock*/
-	spinlock_t lock;
-	struct keep_mem_info keep_list[MAX_KEEP_FRAME];
-};
-
-static struct keeper_mgr keeper_mgr_private;
-
 static const struct file_operations v4lvideo_file_fops;
 
 static u32 print_flag;
@@ -192,25 +177,12 @@ void v4lvideo_dec_count_decrease(void)
 }
 EXPORT_SYMBOL(v4lvideo_dec_count_decrease);
 
-static struct keeper_mgr *get_keeper_mgr(void)
-{
-	return &keeper_mgr_private;
-}
-
 static inline u64 dur2pts(u32 duration)
 {
 	u32 ret;
 
 	ret = duration - (duration >> 4);
 	return ret;
-}
-
-void keeper_mgr_init(void)
-{
-	struct keeper_mgr *mgr = get_keeper_mgr();
-
-	memset(mgr, 0, sizeof(struct keeper_mgr));
-	spin_lock_init(&mgr->lock);
 }
 
 static const struct v4lvideo_fmt formats[] = {
@@ -343,112 +315,6 @@ static bool active_file_list_check(struct v4lvideo_dev *dev,
 	v4l_print(dev->inst, PRINT_FILE, "active check: freed\n");
 
 	return false;
-}
-
-static void video_keeper_keep_mem(void *mem_handle, int type, int *id)
-{
-	int ret;
-	int old_id = *id;
-	struct keeper_mgr *mgr = get_keeper_mgr();
-	int i;
-	unsigned long flags;
-	int have_samed = 0;
-	int keep_id = -1;
-	int slot_i = -1;
-
-	if (!mem_handle) {
-		pr_err("v4lvideo: mem handle is NULL.\n");
-		return;
-	}
-
-	spin_lock_irqsave(&mgr->lock, flags);
-	for (i = 0; i < MAX_KEEP_FRAME; i++) {
-		if (!mgr->keep_list[i].handle && slot_i < 0) {
-			slot_i = i;
-		} else if (mem_handle == mgr->keep_list[i].handle) {
-			mgr->keep_list[i].count++;
-			have_samed = true;
-			keep_id = mgr->keep_list[i].keep_id;
-			break;
-		}
-	}
-
-	if (have_samed) {
-		spin_unlock_irqrestore(&mgr->lock, flags);
-		*id = keep_id;
-		pr_info("v4lvideo: keep same mem handle=%p, keep_id=%d\n", mem_handle, keep_id);
-		return;
-	}
-
-	if (slot_i < 0) {
-		spin_unlock_irqrestore(&mgr->lock, flags);
-		keep_id = -1;
-		pr_err("v4lvideo: keep failed because keep_list fulled!!!\n");
-		return;
-	}
-
-	mgr->keep_list[slot_i].count++;
-	if (mgr->keep_list[slot_i].count != 1)
-		pr_err("v4lvideo: keep error mem handle=%p\n", mem_handle);
-	mgr->keep_list[slot_i].handle = mem_handle;
-
-	spin_unlock_irqrestore(&mgr->lock, flags);
-
-	ret = codec_mm_keeper_mask_keep_mem(mem_handle,
-					    type);
-	if (ret > 0) {
-		if (old_id > 0 && ret != old_id) {
-			/* wait 80 ms for vsync post. */
-			codec_mm_keeper_unmask_keeper(old_id, 0);
-		}
-		*id = ret;
-	} else {
-		spin_lock_irqsave(&mgr->lock, flags);
-		mgr->keep_list[slot_i].count--;
-		mgr->keep_list[slot_i].keep_id = -1;
-		mgr->keep_list[slot_i].handle = NULL;
-		spin_unlock_irqrestore(&mgr->lock, flags);
-		pr_err("v4lvideo: keep mask error ret=%d\n", ret);
-		return;
-	}
-	mgr->keep_list[slot_i].keep_id = *id;
-}
-
-static void video_keeper_free_mem(int keep_id, int delayms)
-{
-	struct keeper_mgr *mgr = get_keeper_mgr();
-	int i;
-	unsigned long flags;
-	int need_continue_keep = 0;
-
-	if (keep_id <= 0) {
-		pr_err("invalid keepid %d\n", keep_id);
-		return;
-	}
-
-	spin_lock_irqsave(&mgr->lock, flags);
-	for (i = 0; i < MAX_KEEP_FRAME; i++) {
-		if (keep_id == mgr->keep_list[i].keep_id) {
-			mgr->keep_list[i].count--;
-			if (mgr->keep_list[i].count > 0) {
-				need_continue_keep = 1;
-				break;
-			} else if (mgr->keep_list[i].count == 0) {
-				mgr->keep_list[i].keep_id = -1;
-				mgr->keep_list[i].handle = NULL;
-			} else {
-				pr_err("v4lvideo: free mem err count =%d\n",
-				       mgr->keep_list[i].count);
-			}
-		}
-	}
-	spin_unlock_irqrestore(&mgr->lock, flags);
-
-	if (need_continue_keep) {
-		pr_info("v4lvideo: need_continue_keep keep_id=%d\n", keep_id);
-		return;
-	}
-	codec_mm_keeper_unmask_keeper(keep_id, delayms);
 }
 
 static void vf_keep(struct v4lvideo_dev *dev,
@@ -3060,6 +2926,12 @@ static int v4lvideo_fd_link(int src_fd, int dst_fd)
 
 	private_data0 = (struct file_private_data *)(file0->private_data);
 	private_data1 = (struct file_private_data *)(file1->private_data);
+	if (!private_data0 || !private_data1) {
+		pr_err("fd_link: private_data is NULL.\n");
+		fput(file0);
+		fput(file1);
+		return -EINVAL;
+	}
 
 	if (private_data1->cnt_file) {
 		fput(private_data1->cnt_file);
@@ -3718,8 +3590,6 @@ int __init v4lvideo_init(void)
 	int ret = -1, i;
 	struct device *devp;
 	mutex_init(&mutex_dec_count);
-
-	keeper_mgr_init();
 
 	ret = class_register(&v4lvideo_class);
 	if (ret < 0)

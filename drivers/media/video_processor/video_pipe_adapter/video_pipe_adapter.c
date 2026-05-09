@@ -23,10 +23,14 @@
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #endif
+#include <linux/amlogic/media/codec_mm/codec_mm.h>
+#include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
 #include <linux/amlogic/media/video_processor/video_pipe_adapter.h>
+#include "video_pipe_adapter_int.h"
 
 #define DEVICE_NAME   "video_pipe_adapter"
 static u32 print_flag;
+static struct keeper_mgr keeper_mgr_private;
 
 static ssize_t print_flag_show(const struct class *class,
 		const struct class_attribute *attr, char *buf)
@@ -130,10 +134,134 @@ static const struct file_operations video_pipe_adapter_fops = {
 	.poll = NULL,
 };
 
+static struct keeper_mgr *get_keeper_mgr(void)
+{
+	return &keeper_mgr_private;
+}
+
+static void keeper_mgr_init(void)
+{
+	struct keeper_mgr *mgr = get_keeper_mgr();
+
+	memset(mgr, 0, sizeof(struct keeper_mgr));
+	spin_lock_init(&mgr->lock);
+}
+
+void video_keeper_keep_mem(void *mem_handle, int type, int *id)
+{
+	int ret;
+	int old_id = *id;
+	struct keeper_mgr *mgr = get_keeper_mgr();
+	int i;
+	unsigned long flags;
+	int have_samed = 0;
+	int keep_id = -1;
+	int slot_i = -1;
+
+	if (!mem_handle) {
+		pr_err("video-adapter: mem handle is NULL.\n");
+		return;
+	}
+
+	spin_lock_irqsave(&mgr->lock, flags);
+	for (i = 0; i < MAX_KEEP_FRAME; i++) {
+		if (!mgr->keep_list[i].handle && slot_i < 0) {
+			slot_i = i;
+		} else if (mem_handle == mgr->keep_list[i].handle) {
+			mgr->keep_list[i].count++;
+			have_samed = true;
+			keep_id = mgr->keep_list[i].keep_id;
+			break;
+		}
+	}
+
+	if (have_samed) {
+		spin_unlock_irqrestore(&mgr->lock, flags);
+		*id = keep_id;
+		pr_info("video-adapter: keep same mem handle=%p, keep_id=%d\n",
+			mem_handle, keep_id);
+		return;
+	}
+
+	if (slot_i < 0) {
+		spin_unlock_irqrestore(&mgr->lock, flags);
+		keep_id = -1;
+		pr_err("video-adapter: keep failed because keep_list fulled!!!\n");
+		return;
+	}
+
+	mgr->keep_list[slot_i].count++;
+	if (mgr->keep_list[slot_i].count != 1)
+		pr_err("video-adapter: keep error mem handle=%p\n", mem_handle);
+	mgr->keep_list[slot_i].handle = mem_handle;
+
+	spin_unlock_irqrestore(&mgr->lock, flags);
+
+	ret = codec_mm_keeper_mask_keep_mem(mem_handle,
+					    type);
+	if (ret > 0) {
+		if (old_id > 0 && ret != old_id) {
+			/* wait 80 ms for vsync post. */
+			codec_mm_keeper_unmask_keeper(old_id, 0);
+		}
+		*id = ret;
+	} else {
+		spin_lock_irqsave(&mgr->lock, flags);
+		mgr->keep_list[slot_i].count--;
+		mgr->keep_list[slot_i].keep_id = -1;
+		mgr->keep_list[slot_i].handle = NULL;
+		spin_unlock_irqrestore(&mgr->lock, flags);
+		pr_err("video-adapter: keep mask error ret=%d\n", ret);
+		return;
+	}
+	mgr->keep_list[slot_i].keep_id = *id;
+}
+EXPORT_SYMBOL(video_keeper_keep_mem);
+
+void video_keeper_free_mem(int keep_id, int delayms)
+{
+	struct keeper_mgr *mgr = get_keeper_mgr();
+	int i;
+	unsigned long flags;
+	int need_continue_keep = 0;
+
+	if (keep_id <= 0) {
+		pr_err("invalid keepid %d\n", keep_id);
+		return;
+	}
+
+	spin_lock_irqsave(&mgr->lock, flags);
+	for (i = 0; i < MAX_KEEP_FRAME; i++) {
+		if (keep_id == mgr->keep_list[i].keep_id) {
+			mgr->keep_list[i].count--;
+			if (mgr->keep_list[i].count > 0) {
+				need_continue_keep = 1;
+				break;
+			} else if (mgr->keep_list[i].count == 0) {
+				mgr->keep_list[i].keep_id = -1;
+				mgr->keep_list[i].handle = NULL;
+			} else {
+				pr_err("video-adapter: free mem err count =%d\n",
+				       mgr->keep_list[i].count);
+			}
+		}
+	}
+	spin_unlock_irqrestore(&mgr->lock, flags);
+
+	if (need_continue_keep) {
+		pr_info("video-adapter: need_continue_keep keep_id=%d\n", keep_id);
+		return;
+	}
+	codec_mm_keeper_unmask_keeper(keep_id, delayms);
+}
+EXPORT_SYMBOL(video_keeper_free_mem);
+
 static int video_pipe_adapter_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev;
+
+	keeper_mgr_init();
 
 	ret = class_register(&video_pipe_adapter_class);
 	if (ret < 0) {

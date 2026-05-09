@@ -36,6 +36,7 @@
 #include "dpss_process.h"
 #include "dpss_proc_file.h"
 #include "../../common/uvm_process/meson_uvm_lcevc_processor.h"
+#include <linux/amlogic/media/video_processor/video_pipe_adapter.h>
 
 #define DPSS_PROCESS_DEVICE_NAME   "di_process"
 #define WAIT_THREAD_STOPPED_TIMEOUT 20
@@ -1846,67 +1847,65 @@ static void dpss_out_q_uninit(struct dpss_process_dev *dev)
 
 	while (kfifo_len(&dev->dpss_out_q) > 0) {
 		if (kfifo_get(&dev->dpss_out_q, &dpss_out_buf)) {
-			if (!dpss_out_buf || !dpss_out_buf->private_data) {
+			if (!dpss_out_buf || !dpss_out_buf->private_data || !dpss_out_buf->vf) {
 				dp_print(dev->index, PRINT_OTHER, "dpss_out_buf is NULL.\n");
 				continue;
 			}
+
 			vf = dpss_out_buf->vf;
-			if (vf) {
-				if (vf->type & VIDTYPE_COMPRESS) {
-					keep_head_id = codec_mm_keeper_mask_keep_mem
-						(vf->mem_head_handle, MEM_TYPE_CODEC_MM);
-					if (keep_head_id > 0) {
-						dp_print(dev->index, PRINT_OTHER,
-							"keep ok id=%d, mem_head_handle=%px\n",
-							keep_head_id, vf->mem_head_handle);
-						dpss_out_buf->private_data->keep_head_id =
-							keep_head_id;
-						dpss_out_buf->private_data->is_keep = true;
-					} else {
-						dp_print(dev->index, PRINT_ERROR,
-							"keep fail id=%d\n", keep_head_id);
-					}
-
-					keep_table_id = codec_mm_keeper_mask_keep_mem
-						(vf->mem_handle_1, MEM_TYPE_CODEC_MM);
-					if (keep_table_id > 0) {
-						dp_print(dev->index, PRINT_OTHER,
-							"keep ok id=%d, mem_table_handle=%px\n",
-							keep_table_id, vf->mem_handle_1);
-						dpss_out_buf->private_data->keep_id_1 =
-							keep_table_id;
-						dpss_out_buf->private_data->is_keep = true;
-					} else {
-						dp_print(dev->index, PRINT_ERROR,
-							"keep fail id=%d\n", keep_table_id);
-					}
-
-					keep_dw_id = codec_mm_keeper_mask_keep_mem
-						(vf->mem_dw_handle, MEM_TYPE_CODEC_MM);
-					if (keep_dw_id > 0) {
-						dp_print(dev->index, PRINT_OTHER,
-							"keep ok id=%d, mem_dw_handle=%px\n",
-							keep_dw_id, vf->mem_dw_handle);
-						dpss_out_buf->private_data->keep_dw_id = keep_dw_id;
-						dpss_out_buf->private_data->is_keep = true;
-					} else {
-						dp_print(dev->index, PRINT_ERROR,
-							"keep fail id=%d\n", keep_dw_id);
-					}
-				}
-
-				keep_id = codec_mm_keeper_mask_keep_mem(vf->mem_handle,
-					MEM_TYPE_CODEC_MM);
-				if (keep_id > 0) {
+			if (vf->type & VIDTYPE_COMPRESS) {
+				video_keeper_keep_mem(vf->mem_head_handle, MEM_TYPE_CODEC_MM,
+					&keep_head_id);
+				if (keep_head_id > 0) {
 					dp_print(dev->index, PRINT_OTHER,
-						"keep ok id=%d, mem_handle=%px\n",
-						keep_id, vf->mem_handle);
-					dpss_out_buf->private_data->keep_id = keep_id;
+						"keep ok id=%d, mem_head_handle=%px\n",
+						keep_head_id, vf->mem_head_handle);
+					dpss_out_buf->private_data->keep_head_id =
+						keep_head_id;
 					dpss_out_buf->private_data->is_keep = true;
 				} else {
 					dp_print(dev->index, PRINT_ERROR,
-						"keep fail id=%d\n", keep_id);
+						"keep fail id=%d\n", keep_head_id);
 				}
+
+				video_keeper_keep_mem(vf->mem_handle_1, MEM_TYPE_CODEC_MM,
+					&keep_table_id);
+				if (keep_table_id > 0) {
+					dp_print(dev->index, PRINT_OTHER,
+						"keep ok id=%d, mem_table_handle=%px\n",
+						keep_table_id, vf->mem_handle_1);
+					dpss_out_buf->private_data->keep_id_1 =
+						keep_table_id;
+					dpss_out_buf->private_data->is_keep = true;
+				} else {
+					dp_print(dev->index, PRINT_ERROR,
+						"keep fail id=%d\n", keep_table_id);
+				}
+
+				video_keeper_keep_mem(vf->mem_dw_handle, MEM_TYPE_CODEC_MM,
+					&keep_dw_id);
+				if (keep_dw_id > 0) {
+					dp_print(dev->index, PRINT_OTHER,
+						"keep ok id=%d, mem_dw_handle=%px\n",
+						keep_dw_id, vf->mem_dw_handle);
+					dpss_out_buf->private_data->keep_dw_id = keep_dw_id;
+					dpss_out_buf->private_data->is_keep = true;
+				} else {
+					dp_print(dev->index, PRINT_ERROR,
+						"keep fail id=%d\n", keep_dw_id);
+				}
+			}
+
+			video_keeper_keep_mem(vf->mem_handle, MEM_TYPE_CODEC_MM, &keep_id);
+			if (keep_id > 0) {
+				dp_print(dev->index, PRINT_OTHER,
+					"keep ok id=%d, mem_handle=%px\n",
+					keep_id, vf->mem_handle);
+				dpss_out_buf->private_data->keep_id = keep_id;
+				dpss_out_buf->private_data->is_keep = true;
+			} else {
+				dp_print(dev->index, PRINT_ERROR,
+					"keep fail id=%d\n", keep_id);
 			}
 		}
 	}
