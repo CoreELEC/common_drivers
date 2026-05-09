@@ -1406,6 +1406,11 @@ static int codec_mm_page_alloc_from_one_pages(struct codec_mm_scatter_mgt *smgt,
 	gfp_t gfp = (smgt->config_alloc_flags & SC_ALLOC_SYS_DMA32) ?
 				(GFP_KERNEL | GFP_DMA32) : GFP_KERNEL;
 
+#ifdef CONFIG_ARM64
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_A9)
+		gfp |= GFP_DMA32;
+#endif
+
 	if (scatter_multi_alloc)
 		alloced = multi_task_alloc_pages(smgt, num, pages, gfp);
 	else

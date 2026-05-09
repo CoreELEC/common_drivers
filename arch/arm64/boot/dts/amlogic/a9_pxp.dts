@@ -182,6 +182,7 @@
 			 */
 			size = <0x0 0x1bc00000>;
 			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x0 0x0 0xffffffff>;
 			linux,contiguous-region;
 		};
 
