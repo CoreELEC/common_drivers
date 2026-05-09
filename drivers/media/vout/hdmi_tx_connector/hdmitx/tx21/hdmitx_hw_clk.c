@@ -110,7 +110,7 @@ void hdmitx21_set_default_clk(void)
 
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
 		hd21_set_reg_bits(CLKCTRL_SYS_CLK_EN0_REG2_A9, 1, 4, 1);
-		hd21_write_reg(CLKCTRL_HDMI_CLK_CTRL_A9, 0x8303);
+		hd21_write_reg(CLKCTRL_HDMI_CLK_CTRL_A9, 0x303);
 		hd21_write_reg(CLKCTRL_HTX_CLK_CTRL0_A9, 0x7010701);
 	} else {
 		// Enable clk81_hdmitx_pclk
