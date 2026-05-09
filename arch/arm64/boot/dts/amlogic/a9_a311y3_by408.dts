@@ -1313,11 +1313,26 @@
 	status = "okay";
 };
 
+&pcie_phy0 {
+	num-lanes = <2>;
+	status = "disabled";
+};
+
+&pcie_phy1 {
+	status = "disabled";
+};
+
+&pcie_phy2 {
+	status = "disabled";
+};
+
 &pcie_a {
 	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	phys = <&pcie_phy0>;
+	phy-names = "pcie-phy";
 	max-link-speed=<3>;
-	num-lanes = <1>;
-	/* iommu-map = <0x100 &smmu 0x5 0x10>; */
+	num-lanes = <2>;
+	iommu-map = <0x100 &smmu 0x5 0x10>;
 	status = "disabled";
 };
 
@@ -1325,7 +1340,7 @@
 	/* reset-gpio = <&gpio GPIOA_9 GPIO_ACTIVE_HIGH>; */
 	reset-gpio = <&gpio GPIOZ_15 GPIO_ACTIVE_HIGH>; // combphy
 	max-link-speed=<3>;
-	/* iommu-map = <0x100 &smmu 0x5 0x10>; */
+	iommu-map = <0x100 &smmu 0x5 0x10>;
 	status = "disabled";
 };
 

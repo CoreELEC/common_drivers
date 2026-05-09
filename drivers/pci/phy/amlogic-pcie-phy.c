@@ -55,16 +55,6 @@ static struct regmap *amlogic_map_resource(struct amlogic_pcie_phy *pcie_phy,
 
 static int amlogic_pcie_phy_parse_dt(struct amlogic_pcie_phy *pcie_phy, struct device_node *node)
 {
-	//if (of_property_read_bool(node, "amlogic,ao-interrupt-controller")) {
-	//	pcie_phy->of_irq = of_find_compatible_node(NULL,
-	//					     NULL,
-	//					     "amlogic,amlogic-gpio-ao-intc");
-	//} else {
-	//	pcie_phy->of_irq = of_find_compatible_node(NULL,
-	//					     NULL,
-	//					     "amlogic,amlogic-gpio-intc-ext");
-	//}
-
 	pcie_phy->regmap = amlogic_map_resource(pcie_phy, node, "phy");
 	if (IS_ERR_OR_NULL(pcie_phy->regmap)) {
 		dev_err(pcie_phy->dev, "failed map phy reg base\n");
@@ -80,77 +70,51 @@ static int amlogic_pcie_phy_parse_dt(struct amlogic_pcie_phy *pcie_phy, struct d
 static int amlogic_pcie_phy_reset(struct phy *phy)
 {
 	struct amlogic_pcie_phy *pcie_phy = phy_get_drvdata(phy);
-	int ret = 0;
 
-	ret = reset_control_assert(pcie_phy->reset);
-	if (ret != 0)
-		goto out;
-	usleep_range(20, 30);
-
-	ret = reset_control_deassert(pcie_phy->reset);
-	if (ret != 0)
-		goto out;
-	usleep_range(20, 30);
-
-	//TODO
 	if (pcie_phy->data->phy_reset)
 		return pcie_phy->data->phy_reset(pcie_phy);
 
-out:
-	return ret;
+	return 0;
 }
 
 static int amlogic_pcie_phy_exit(struct phy *phy)
 {
 	struct amlogic_pcie_phy *pcie_phy = phy_get_drvdata(phy);
 
-	//TODO
 	if (pcie_phy->data->phy_exit)
 		return pcie_phy->data->phy_exit(pcie_phy);
 
-	//regmap_write(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_PHY_INIT);
-	return reset_control_assert(pcie_phy->reset);
+	return 0;
 }
 
 static int amlogic_pcie_phy_init(struct phy *phy)
 {
 	struct amlogic_pcie_phy *pcie_phy = phy_get_drvdata(phy);
-	int ret = 0;
 
-	//TODO
 	if (pcie_phy->data->phy_init)
 		return pcie_phy->data->phy_init(pcie_phy);
 
-	//regmap_write(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_PHY_INIT);
-	return ret;
+	return 0;
 }
 
 static int amlogic_pcie_phy_power_on(struct phy *phy)
 {
 	struct amlogic_pcie_phy *pcie_phy = phy_get_drvdata(phy);
-	int ret = 0;
 
-	//TODO
 	if (pcie_phy->data->phy_power_on)
 		return pcie_phy->data->phy_power_on(pcie_phy);
 
-	//regmap_write(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_PHY_INIT);
-	//regmap_update_bits(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_POWERDOWN, 0);
-	return ret;
+	return 0;
 }
 
 static int amlogic_pcie_phy_power_off(struct phy *phy)
 {
 	struct amlogic_pcie_phy *pcie_phy = phy_get_drvdata(phy);
-	int ret = 0;
 
-	//TODO
 	if (pcie_phy->data->phy_power_off)
 		return pcie_phy->data->phy_power_off(pcie_phy);
 
-	//regmap_write(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_PHY_INIT);
-	//regmap_update_bits(pcie_phy->regmap, MESON_PCIE_REG0, MESON_PCIE_POWERDOWN, 0);
-	return ret;
+	return 0;
 }
 
 static const struct phy_ops pcie_phy_ops = {
