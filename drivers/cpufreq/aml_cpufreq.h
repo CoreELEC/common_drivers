@@ -33,6 +33,12 @@ enum cpufreq_scaling_mode {
 	SCALING_NUM
 };
 
+struct cpufreq_vrule {
+	int step_mv;
+	int delay;
+	int comp;
+};
+
 struct cluster_data {
 	int clusterid; //cluster driver data id
 	cpumask_var_t cpus; //cluster related cpus(online+offline)
@@ -45,6 +51,7 @@ struct cluster_data {
 	struct regulator *cpu_sramreg;
 	struct regulator *dsureg;
 	struct regulator *dsu_sramreg;
+	struct cpufreq_vrule *vrule;
 	bool skip_volt_scaling;
 	bool suspended;
 	bool dsuclk_shared;
@@ -57,6 +64,7 @@ struct cluster_data {
 	struct cpufreq_policy *policy;     //cpufreq policy
 	struct proc_dir_entry *procroot, *proccur;
 	bool pdvfs_enabled;
+	bool multi_psu;
 	int table_index;
 	int exit_index;  //policy exit frequency index in opp_table
 

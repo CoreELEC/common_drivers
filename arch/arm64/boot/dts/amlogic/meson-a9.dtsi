@@ -847,9 +847,6 @@
 		regulator-max-microvolt = <979000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;
 		/* Voltage Duty-Cycle */
 		voltage-table = <979000 0>,
 				<969000 3>,
@@ -894,9 +891,6 @@
 		regulator-max-microvolt = <979000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;
 		/* Voltage Duty-Cycle */
 		voltage-table = <979000 0>,
 				<969000 3>,
@@ -940,9 +934,6 @@
 		regulator-max-microvolt = <979000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;
 		/* Voltage Duty-Cycle */
 		voltage-table = <979000 0>,
 				<969000 3>,
@@ -987,9 +978,6 @@
 		regulator-max-microvolt = <979000>;
 		regulator-always-on;
 		max-duty-cycle = <1260>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;
 		/* Voltage Duty-Cycle */
 		voltage-table = <979000 0>,
 				<969000 3>,

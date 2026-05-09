@@ -150,6 +150,8 @@
 			transition_delay_us = <10000>;
 			//skip_volt_scaling;
 			cluster_cores = <0 1 2 3 4 5>;
+			multi-psu;
+			cpufreq-voltage-rules = <30000 40 20>;
 			dsu-opp-table = <1200000 1000000>,
 					<1404000 1128000>,
 					<1608000 1296000>,
@@ -166,6 +168,8 @@
 			transition_delay_us = <10000>;
 			//skip_volt_scaling;
 			cluster_cores = <6 7>;
+			multi-psu;
+			cpufreq-voltage-rules = <30000 40 20>;
 			dsu-opp-nums = <4>;
 			dsu-opp-table0 = <1200000 1000000 769000 799000>,
 					 <1404000 1128000 789000 819000>,
