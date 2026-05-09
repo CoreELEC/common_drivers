@@ -13,8 +13,8 @@
 #include "meson-c5-panel.dtsi"
 
 / {
-	amlogic-dt-id = "c5_c305x2_cb400";
-	compatible = "c5_c305x2_cb400";
+	amlogic-dt-id = "c5_a123x_cb409-8g";
+	compatible = "c5_a123x_cb409-8g";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
