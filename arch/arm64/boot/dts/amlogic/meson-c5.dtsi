@@ -2908,7 +2908,7 @@
 		mux {
 			groups = "GPIOAO_0",
 				"GPIOAO_1";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -2980,7 +2980,7 @@
 		mux {
 			groups = "GPIOP_0",
 				"GPIOP_1";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
