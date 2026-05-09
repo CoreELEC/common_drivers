@@ -214,6 +214,43 @@ int am_meson_get_hdmitx_diag_ioctl(struct drm_device *dev,
 }
 #endif
 
+int meson_mode_testattr_ioctl(struct drm_device *dev,
+			void *data, struct drm_file *file_priv)
+{
+	int ret;
+	struct drm_mode_object *mo;
+	struct drm_connector *connector;
+	struct drm_mode_test_attr *f = data;
+
+	mo = drm_mode_object_find(dev, file_priv, f->conn_id, DRM_MODE_OBJECT_CONNECTOR);
+	if (!mo) {
+		DRM_ERROR("can not find obj\n");
+		return -EINVAL;
+	}
+
+	connector = obj_to_connector(mo);
+	if (connector->connector_type == DRM_MODE_CONNECTOR_HDMIA ||
+		connector->connector_type == DRM_MODE_CONNECTOR_HDMIB) {
+#if !defined(CONFIG_AMLOGIC_DRM_CUT_HDMI)
+		ret = am_meson_mode_testattr_ioctl(dev, data, file_priv);
+		drm_mode_object_put(mo);
+		return ret;
+#endif
+	}
+
+#if defined(CONFIG_AMLOGIC_DRM_DP) || defined(CONFIG_AMLOGIC_DRM_EDP) || \
+	!defined(CONFIG_AMLOGIC_DRM_CUT_HDMI_MODERN)
+	ret = meson_tx_mode_testattr_ioctl(dev, data, file_priv);
+#else
+	DRM_ERROR("invalid config\n");
+	ret = -EINVAL;
+#endif
+
+	drm_mode_object_put(mo);
+
+	return ret;
+}
+
 static const struct drm_ioctl_desc meson_ioctls[] = {
 	#ifdef CONFIG_AMLOGIC_DRM_USE_ION
 	DRM_IOCTL_DEF_DRV(MESON_GEM_CREATE, am_meson_gem_create_ioctl,
@@ -222,11 +259,7 @@ static const struct drm_ioctl_desc meson_ioctls[] = {
 	DRM_IOCTL_DEF_DRV(MESON_ASYNC_ATOMIC, meson_async_atomic_ioctl,
 			  0),
 
-#if defined(CONFIG_AMLOGIC_DRM_CUT_HDMI) && !defined(CONFIG_AMLOGIC_DRM_CUT_HDMI_MODERN)
-	DRM_IOCTL_DEF_DRV(MESON_TESTATTR, meson_tx_mode_testattr_ioctl, 0),
-#elif !defined(CONFIG_AMLOGIC_DRM_CUT_HDMI) && defined(CONFIG_AMLOGIC_DRM_CUT_HDMI_MODERN)
-	DRM_IOCTL_DEF_DRV(MESON_TESTATTR, am_meson_mode_testattr_ioctl, 0),
-#endif
+	DRM_IOCTL_DEF_DRV(MESON_TESTATTR, meson_mode_testattr_ioctl, 0),
 
 #if !defined(CONFIG_AMLOGIC_DRM_CUT_HDMI) || !defined(CONFIG_AMLOGIC_DRM_CUT_HDMI_MODERN)
 	DRM_IOCTL_DEF_DRV(MESON_GET_HDMITX_DIAG, am_meson_get_hdmitx_diag_ioctl, 0),

@@ -183,10 +183,8 @@ int meson_tx_mode_testattr_ioctl(struct drm_device *dev,
 	int ret = 0;
 
 	mo = drm_mode_object_find(dev, file_priv, f->conn_id, DRM_MODE_OBJECT_CONNECTOR);
-	if (!mo) {
-		ret = -EINVAL;
-		goto out_free_mo;
-	}
+	if (!mo)
+		return -EINVAL;
 
 	connector = obj_to_connector(mo);
 	mesonconn = connector_to_meson_connector(connector);
@@ -223,11 +221,13 @@ int meson_tx_mode_testattr_ioctl(struct drm_device *dev,
 	else
 		f->valid = 0;
 
+	DRM_DEBUG("mode: %s, attr: %s, %d\n", f->modename, f->attr, f->valid);
+
 out_free_timing:
 	kfree(timing);
 out_free_new_state:
 	kfree(new_state);
-out_free_mo:
+
 	drm_mode_object_put(mo);
 
 	return ret;
