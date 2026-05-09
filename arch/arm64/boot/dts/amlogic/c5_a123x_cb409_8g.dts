@@ -207,13 +207,13 @@
 	sensor0: sensor0 {
 		compatible = "amlogic, sensor0";
 		status = "okay";
-		//clocks = <&clkc CLKID_MCLK_PLL_CLK
-		//		&clkc CLKID_MCLK0>;
-		clock-names = "mclk_pll", "mclk";
-		clock-frequency = <74250000>;
+		clocks = <&clkc CLKID_MCLK_0>, <&clkc CLKID_MCLK_1>;
+		clock-names = "mclk", "mclk1";
 		devices-type = <1>;
-		//reset-gpios = <&ao_gpio GPIOAO_7 GPIO_ACTIVE_HIGH>;
-		//pwdn-gpios = <&ao_gpio GPIOAO_6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio_ao GPIOAO_18 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
+		reset-1-gpios = <&gpio GPIOP_3 GPIO_ACTIVE_HIGH>;
+		pwdn-1-gpios = <&gpio GPIOP_2 GPIO_ACTIVE_HIGH>;
 	};
 
 	pmz_a1_dev {
@@ -665,6 +665,11 @@
 			reg = <0x0 0xffffffff>;
 		};
 	};
+};
+
+&isp0 {
+	assigned-clocks = <&clkc CLKID_MCLK_PLL>, <&clkc CLKID_MCLK_0_PRE>;
+	assigned-clock-rates = <2376000000>, <74250000>;
 };
 
 &spifc {

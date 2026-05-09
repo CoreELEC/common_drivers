@@ -274,7 +274,7 @@
 	csiphy0: csiphy0@ff559000 {
 		compatible = "amlogic, csiphy0";
 		reg = <0x0 0xff559000 0x0 0x700>;
-		//clocks = <&clkc CLKID_CSI_PHY>;
+		//clocks = <&clkc CLKID_CSIPHY0>;
 		clock-names = "mipi_phy_clk";
 		reg-names = "csi_phy0";
 		status = "okay";
