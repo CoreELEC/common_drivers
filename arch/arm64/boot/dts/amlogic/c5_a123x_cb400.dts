@@ -514,7 +514,7 @@
 
 /* SDIO */
 &sd_emmc_a {
-	status = "disabled";
+	status = "okay";
 	pinctrl-0 = <&sdio_pins>;
 	pinctrl-1 = <&sdio_clk_gate_pins>;
 	pinctrl-names = "default", "clk-gate";
@@ -587,11 +587,17 @@
 };
 
 &aml_wifi {
-	status = "disabled";
+	status = "okay";
+	interrupt-gpios = <&gpio_ao  GPIOAO_13  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&gpio_ao   GPIOAO_17  GPIO_ACTIVE_HIGH>;
 };
 
 &aml_bt {
-	status = "disabled";
+	status = "okay";
+};
+
+&uart_E {
+	status = "okay";
 };
 
 &mtd_nand {
