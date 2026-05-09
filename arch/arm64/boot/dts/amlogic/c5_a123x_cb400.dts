@@ -691,7 +691,7 @@
 };
 
 &ethmac {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
 	pinctrl-names = "default";
 	phy-mode = "rgmii";
