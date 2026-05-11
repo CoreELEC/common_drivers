@@ -1116,6 +1116,8 @@ static void meson_ir_remove(struct platform_device *pdev)
 	int i;
 	struct meson_ir_chip *chip = platform_get_drvdata(pdev);
 
+	meson_ir_set_irq(chip, 0);
+	del_timer(&chip->r_dev->timer_keyup);
 	tasklet_kill(&chip->tasklet);
 
 	if (MULTI_IR_SOFTWARE_DECODE(chip->r_dev->rc_type))
