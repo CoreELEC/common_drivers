@@ -649,6 +649,8 @@ int vpu_pipeline_check(struct meson_vpu_sub_pipeline *sub_pipeline,
 	int ret;
 
 	mvps = meson_vpu_pipeline_get_state(sub_pipeline, state);
+	if (PTR_ERR(mvps) == -EDEADLK)
+		return -EDEADLK;
 	vpu_pipeline_planes_calc(sub_pipeline->pipeline, mvps);
 
 	ret = vpu_pipeline_traverse(mvps, state);
