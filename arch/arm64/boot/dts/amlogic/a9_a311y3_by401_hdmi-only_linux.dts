@@ -124,12 +124,14 @@
 			size = <0x0>;
 			alignment = <0x0 0x400000>;
 		};
+
 		ion_fb_reserved:linux,ion-fb {
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0x0 0x0>;
 			alignment = <0x0 0x400000>;
 		};
+
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -137,6 +139,7 @@
 			size = <0x0 0xb000000>;
 			alignment = <0x0 0x400000>;
 		};
+
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -144,6 +147,7 @@
 			size = <0x0 0x0>;
 			alignment = <0x0 0x400000>;
 		};
+
 		dmaheap_secure_reserved:heap-secure {
 			compatible = "amlogic, heap-secure-mem";
 			no-map;
@@ -151,6 +155,7 @@
 			size = <0x0 0x0>;
 			alignment = <0x0 0x400000>;
 		};
+
 		mali_protected: mali_protected@c0000000 {
 			compatible = "mali-reserved";
 			no-map;
@@ -160,6 +165,7 @@
 			size = <0x0 0x0>;
 			alignment = <0x0 0x400000>;
 		};
+
 		/*di CMA pool */
 		di_cma_reserved:linux,di_cma {
 			compatible = "shared-dma-pool";
@@ -231,6 +237,7 @@
 		//	size = <0x0 0x01400000>;
 		//	alignment = <0x0 0x400000>;
 		//};
+
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
@@ -274,6 +281,7 @@
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
+
 		isp_reserved:linux,isp {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -1492,32 +1500,6 @@
 	// mdns_wkup = <1>;
 };
 
-// /* MAC_A 2.5G exphy setting */
-// &ext_mdio_a {
-//	status = "okay";
-// };
-
-// &external_phy_a {
-//	compatible = "ethernet-phy-ieee802.3-c45";
-//	max-speed = <2500>;
-// };
-
-// &serdes0 {
-//	status = "okay";
-// };
-
-// &ethmac_a {
-//	pinctrl-0 = <&eth_a_mdio_pins>;
-//	pinctrl-names = "default";
-//	status = "okay";
-//	phys = <&serdes0>;
-//	phy-names = "serdes";
-//	phy-mode = "2500base-x";
-//	phy-handle = <&external_phy_a>;
-//	// wol = <1>;
-//	// mdns_wkup = <1>;
-// };
-
 /* MAC_B 1G exphy setting */
 &ext_mdio_b {
 	status = "disabled";
@@ -1607,23 +1589,6 @@
 	status = "disabled";
 	pxp_mode = <0>;
 };
-//&lcd {
-//	status = "disable";
-//};
-
-//&lcd1 {
-//	status = "disable";
-//};
-
-
-//&drm_amhdmitx {
-//	status = "disabled";
-//	hdcp = "disabled";
-//};
-
-//&drm_amcvbsout {
-//	status = "disabled";
-//};
 
 &hdmirx {
 	status = "okay";
