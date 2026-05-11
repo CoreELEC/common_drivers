@@ -5115,7 +5115,7 @@
 				 "sdcard_cmd_ao";
 			function = "sdcard_ao";
 			bias-pull-up;
-			drive-strength-microamp = <3000>;
+			drive-strength-microamp = <4000>;
 		};
 	};
 	sd_1bit_pins: sd_1bit_pins {
@@ -5125,7 +5125,7 @@
 				 "sdcard_cmd_ao";
 			function = "sdcard_ao";
 			bias-pull-up;
-			drive-strength-microamp = <3000>;
+			drive-strength-microamp = <4000>;
 		};
 	};
 
@@ -5134,7 +5134,7 @@
 			groups = "GPIOC_4";
 			function = "gpio_aobus";
 			bias-pull-down;
-			drive-strength-microamp = <3000>;
+			drive-strength-microamp = <4000>;
 		};
 	};
 
