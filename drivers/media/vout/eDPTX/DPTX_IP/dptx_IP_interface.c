@@ -166,10 +166,8 @@ void dptx_if_IP_probe(struct dptx_drv_s *dptx)
 		dptx->if_ctrls = dptx_if_bind_t7(dptx);
 		break;
 	case eDPTX_CHIP_A9:
-		if (1)
-			dptx->if_ctrls = dptx_if_bind_tr14(dptx);
-		else
-			dptx->if_ctrls = dptx_if_bind_tx_connector_api(dptx);
+		/* dptx->if_ctrls = dptx_if_bind_tr14(dptx); */
+		dptx->if_ctrls = dptx_if_bind_tx_connector_api(dptx);
 		break;
 	default:
 		dptx->if_ctrls = NULL;

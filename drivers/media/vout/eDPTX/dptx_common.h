@@ -8,6 +8,7 @@
 
 #include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/math64.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_core_api_ext.h>
 
 /* 20240704: lcd tcon support user info */
 #define DPTX_DRV_VERSION    "20250820"
@@ -58,14 +59,6 @@ enum DP_link_rate_e {
 	DP_LINK_RATE_UBR20  = 0x3,
 	DP_LINK_RATE_INVALID = 0,
 };
-
-#define DPTX_AUX_CMD_WRITE            0x8
-#define DPTX_AUX_CMD_READ             0x9
-#define DPTX_AUX_CMD_I2C_WRITE        0x0
-#define DPTX_AUX_CMD_I2C_WRITE_MOT    0x4
-#define DPTX_AUX_CMD_I2C_READ         0x1
-#define DPTX_AUX_CMD_I2C_READ_MOT     0x5
-#define DPTX_AUX_CMD_I2C_WRITE_STATUS 0x2
 
 extern struct dptx_boot_ctrl_s dptx_uboot_configs[eDPTX_MAX_DRV];
 

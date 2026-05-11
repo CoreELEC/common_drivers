@@ -6,21 +6,17 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
-#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_core_api_ext.h>
 
 #include "dptx_log.h"
 #include "dptx_internal.h"
 #include "dptx_hw_opcode.h"
 #include "dptx_aux_helper.h"
 
-u8 edptx_get_hpd_level(struct dptx_drv_s *dptx, u8 port)
+u8 edptx_get_hpd_level(u8 dp_core_idx)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return 0;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return 0;
 
@@ -28,14 +24,10 @@ u8 edptx_get_hpd_level(struct dptx_drv_s *dptx, u8 port)
 }
 EXPORT_SYMBOL(edptx_get_hpd_level);
 
-u16 edptx_get_hpd_event(struct dptx_drv_s *dptx, u8 port)
+u16 edptx_get_hpd_event(u8 dp_core_idx)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return 0;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return 0;
 
@@ -43,15 +35,11 @@ u16 edptx_get_hpd_event(struct dptx_drv_s *dptx, u8 port)
 }
 EXPORT_SYMBOL(edptx_get_hpd_event);
 
-void edptx_set_interrupt_mask(struct dptx_drv_s *dptx, u8 port, u8 mask)
+void edptx_set_interrupt_mask(u8 dp_core_idx, u8 mask)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	u32 intr_mask = mask;
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
 
@@ -59,47 +47,22 @@ void edptx_set_interrupt_mask(struct dptx_drv_s *dptx, u8 port, u8 mask)
 }
 EXPORT_SYMBOL(edptx_set_interrupt_mask);
 
-void edptx_reg_store_data(struct dptx_drv_s *dptx, u8 port, uint32_t d0, uint32_t d1)
+void edptx_reg_store_data(u8 dp_core_idx, uint32_t d0, uint32_t d1)
 {
-	struct dptx_common *tx_comm = NULL;
-
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
-		return;
-
-	dptx_hw_cntl(tx_comm->base.tx_hw_base, EDP_REG_STORE_DATA, &d0, NULL);
+	DPTX_INFO("not support reg_store_data API\n");
 }
 EXPORT_SYMBOL(edptx_reg_store_data);
 
-void edptx_reg_get_data(struct dptx_drv_s *dptx, u8 port, uint32_t *d0, uint32_t *d1)
+void edptx_reg_get_data(u8 dp_core_idx, uint32_t *d0, uint32_t *d1)
 {
-	struct dptx_common *tx_comm = NULL;
-
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
-		return;
-
-	if (d0)
-		dptx_hw_cntl(tx_comm->base.tx_hw_base, EDP_REG_GET_DATA, NULL, d0);
-	if (d1)
-		*d1 = 0;
+	DPTX_INFO("not support reg_get_data API\n");
 }
 EXPORT_SYMBOL(edptx_reg_get_data);
 
-void edptx_reg_get_link(struct dptx_drv_s *dptx, u8 port, uint32_t *link, u8 *lane)
+void edptx_reg_get_link(u8 dp_core_idx, uint32_t *link, u8 *lane)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
 
@@ -111,16 +74,12 @@ void edptx_reg_get_link(struct dptx_drv_s *dptx, u8 port, uint32_t *link, u8 *la
 EXPORT_SYMBOL(edptx_reg_get_link);
 
 /* return 0 if write successfully, otherwise return non-zero */
-u8 edptx_aux_write(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf)
+u8 edptx_aux_write(u8 dp_core_idx, u32 addr, int len, u8 *buf)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	int accessed_bytes = 0;
 
-	if (!dptx || !buf)
-		return 1;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
+	if (!tx_comm || !buf)
 		return 1;
 
 	accessed_bytes = dptx_aux_write_dpcd(tx_comm->tx_aux, addr, buf, len);
@@ -133,15 +92,11 @@ u8 edptx_aux_write(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf)
 EXPORT_SYMBOL(edptx_aux_write);
 
 /* return 0 if write successfully, otherwise return non-zero */
-u8 edptx_aux_write_single(struct dptx_drv_s *dptx, u8 port, u32 addr, u8 val)
+u8 edptx_aux_write_single(u8 dp_core_idx, u32 addr, u8 val)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	int accessed_bytes = 0;
 
-	if (!dptx)
-		return 1;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return 1;
 
@@ -155,16 +110,12 @@ u8 edptx_aux_write_single(struct dptx_drv_s *dptx, u8 port, u32 addr, u8 val)
 EXPORT_SYMBOL(edptx_aux_write_single);
 
 /* return 0 if read successfully, otherwise return non-zero */
-u8 edptx_aux_read(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf)
+u8 edptx_aux_read(u8 dp_core_idx, u32 addr, int len, u8 *buf)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	int accessed_bytes = 0;
 
-	if (!dptx || !buf)
-		return 1;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
+	if (!tx_comm || !buf)
 		return 1;
 
 	accessed_bytes = dptx_aux_read_dpcd(tx_comm->tx_aux, addr, buf, len);
@@ -176,16 +127,12 @@ u8 edptx_aux_read(struct dptx_drv_s *dptx, u8 port, u32 addr, int len, u8 *buf)
 EXPORT_SYMBOL(edptx_aux_read);
 
 /* return 0 if write successfully, otherwise return non-zero */
-u8 edptx_aux_i2c_op(struct dptx_drv_s *dptx, u8 port, u8 cmd_type, u32 dev_addr, u8 len, u8 *data)
+u8 edptx_aux_i2c_op(u8 dp_core_idx, u8 cmd_type, u32 dev_addr, u8 len, u8 *data)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	int accessed_bytes = 0;
 
-	if (!dptx || !data)
-		return 1;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
+	if (!tx_comm || !data)
 		return 1;
 
 	accessed_bytes = dptx_dpcd_access(tx_comm->tx_aux, cmd_type, dev_addr, data, len);
@@ -197,16 +144,12 @@ u8 edptx_aux_i2c_op(struct dptx_drv_s *dptx, u8 port, u8 cmd_type, u32 dev_addr,
 EXPORT_SYMBOL(edptx_aux_i2c_op);
 
 /* return 0 if write successfully, otherwise return non-zero */
-u8 edptx_aux_read_edid(struct dptx_drv_s *dptx, u8 port, u8 *buf, u16 len)
+u8 edptx_aux_read_edid(u8 dp_core_idx, u8 *buf, u16 len)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	int ret = 0;
 
-	if (!dptx || !buf)
-		return 1;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
+	if (!tx_comm || !buf)
 		return 1;
 
 	ret = dptx_aux_read_edid_data(tx_comm->tx_aux, buf, len);
@@ -216,85 +159,69 @@ u8 edptx_aux_read_edid(struct dptx_drv_s *dptx, u8 port, u8 *buf, u16 len)
 }
 EXPORT_SYMBOL(edptx_aux_read_edid);
 
-void edptx_set_msa(struct dptx_drv_s *dptx, u8 port)
+void edptx_set_msa(u8 dp_core_idx, struct msa_s *msa)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
+	if (!tx_comm || !msa)
 		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
-	if (!tx_comm)
-		return;
-	dptx_hw_cntl(tx_comm->base.tx_hw_base, EDP_SET_MSA, &dptx->msa, NULL);
+	dptx_hw_cntl(tx_comm->base.tx_hw_base, EDP_SET_MSA, msa, NULL);
 }
 EXPORT_SYMBOL(edptx_set_msa);
 
-void edptx_set_phy_config_to_core(struct dptx_drv_s *dptx, u8 port, u8 use_preset)
+void edptx_set_phy_config_to_core(u8 dp_core_idx, u8 use_preset)
 {
 	DPTX_INFO("should use combo phy for edptx!\n");
 }
 EXPORT_SYMBOL(edptx_set_phy_config_to_core);
 
-void edptx_set_lane_config_to_core(struct dptx_drv_s *dptx, u8 port)
+void edptx_set_lane_config_to_core(u8 dp_core_idx, u8 link_rate, u8 lane_count, u8 enh_frame_en)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
 
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SAVE_LINK_RATE,
-		&dptx->sink.link[port].link_rate, NULL);
+		&link_rate, NULL);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SAVE_LANE_COUNT,
-		&dptx->sink.link[port].lane_count, NULL);
+		&lane_count, NULL);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_ENABLE_ENHANCED_FRAME,
-		&dptx->sink.link[port].enh_frame_en, NULL);
+		&enh_frame_en, NULL);
 }
 EXPORT_SYMBOL(edptx_set_lane_config_to_core);
 
-void edptx_psr1_ctrl_set(struct dptx_drv_s *dptx, u8 port, u8 flag)
+void edptx_psr1_ctrl_set(u8 dp_core_idx, u8 flag)
 {
 	DPTX_INFO("PSR1 function TODO\n");
 }
 EXPORT_SYMBOL(edptx_psr1_ctrl_set);
 
-void edptx_psr2_ctrl_set(struct dptx_drv_s *dptx, u8 port, u8 flag)
+void edptx_psr2_ctrl_set(u8 dp_core_idx, u8 flag)
 {
 	DPTX_INFO("PSR2 function TODO\n");
 }
 EXPORT_SYMBOL(edptx_psr2_ctrl_set);
 
-void edptx_set_scramble_reset(struct dptx_drv_s *dptx, u8 port, u8 sr_type)
+void edptx_set_scramble_reset(u8 dp_core_idx, u8 sr_type)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	u32 value = 0;
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
-	value = sr_type == 0 ? 0x01 : 0x00;
+	value = sr_type == DPTX_SCRAMBLE_RESET_OFF ? 0x01 : 0x00;
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_SCRAMBLE_DISABLE, &value, NULL);
 
-	value = sr_type == 2 ? 0x01 : 0x00;
+	value = sr_type == DPTX_eDP_ALTERNATIVE_SCRAMBLE_RESET ? 0x01 : 0x00;
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, EDP_ALTERNATE_SCRAMBLE_RESET, &value, NULL);
 }
 EXPORT_SYMBOL(edptx_set_scramble_reset);
 
-void edptx_transmitter_init(struct dptx_drv_s *dptx, u8 port)
+void edptx_transmitter_init(u8 dp_core_idx)
 {
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
 
@@ -302,20 +229,21 @@ void edptx_transmitter_init(struct dptx_drv_s *dptx, u8 port)
 }
 EXPORT_SYMBOL(edptx_transmitter_init);
 
-void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
+void edptx_transmit_pattern(u8 dp_core_idx, u8 pattern,
 		u8 lane_mask, u32 cos_80b_0, u32 cos_80b_1, u32 cos_80b_2)
 {
 	unsigned char dptx_ip_pat_sets[13] = {
-		0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x6, 0x7};
+		/* TRAINING_PATTERN_SET: off, TPS1, TPS2, TPS3, TPS4 */
+		0x00, 0x01, 0x02, 0x03, 0x04,
+		/* LINK_QUAL_PATTERN_SET: off, D10.2, SERm, PRBS7, 80b_cos,
+		 * CP2520-1, CP2520-2, CP2520-3
+		 */
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x6, 0x7};
 	u32 cos_80b[3] = {0};
 	unsigned int reg_val;
 	u32 sr_disable = 0;
-	struct dptx_common *tx_comm = NULL;
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
 	if (!tx_comm)
 		return;
 
@@ -391,14 +319,9 @@ void edptx_transmit_pattern(struct dptx_drv_s *dptx, u8 port, u8 pattern,
 }
 EXPORT_SYMBOL(edptx_transmit_pattern);
 
-void edptx_transmitter_output_set(struct dptx_drv_s *dptx, u8 port, u8 en)
+void edptx_transmitter_output_set(u8 dp_core_idx, u8 en)
 {
-	struct dptx_common *tx_comm = NULL;
-
-	if (!dptx)
-		return;
-
-	tx_comm = dptx_get_edptx_inst(dptx->idx);
+	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
 	if (!tx_comm)
 		return;
 

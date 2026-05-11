@@ -171,6 +171,8 @@ struct dptx_hw_common {
 	u32 is_edp;
 	/* use external edptx driver to control HW core */
 	bool ext_edptx_ctrl_en;
+	/* bit which set to 1 will not trigger intr */
+	u32 edptx_intr_mask;
 	/* for link training debug */
 	u8 force_tps_pattern;
 	/* DP1.4 chapter2.2.3 stream clk and link symbol clk share the same reference clk */

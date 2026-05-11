@@ -565,6 +565,9 @@ static irqreturn_t dptx_intr_handler(int irq, void *para)
 	if (!event_ops)
 		return IRQ_HANDLED;
 
+	/* not respond to masked intr if edptx controlled by external drv */
+	if (hw_comm->is_edp && hw_comm->ext_edptx_ctrl_en)
+		intr_mask |= hw_comm->edptx_intr_mask;
 	tx20_hw->intr_state |= intr_state;
 	/* only handle enabled irq */
 	tx20_hw->intr_state &= ~intr_mask;
@@ -1033,6 +1036,27 @@ void dptx_hw_core_init(struct dptx_hw_common *hw_comm)
 }
 
 /*
+ * Function: dptx_isr_disable
+ *
+ * Disable selected interrupts.
+ */
+void dptx_isr_disable(struct dptx_hw_common *tx_comm, u32 flags)
+{
+	u32 isr_mask = dptx20_reg_read(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK);
+
+	isr_mask |= flags;
+	dptx20_reg_write(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, isr_mask);
+}
+
+void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
+{
+	u32 isr_mask = dptx20_reg_read(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK);
+
+	isr_mask &= ~flags;
+	dptx20_reg_write(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, isr_mask);
+}
+
+/*
  * Function: dptx_hw_intr_init
  *
  * Initialize DisplayPort transmitter interrupts.
@@ -1059,43 +1083,29 @@ static void dptx_hw_intr_init(struct dptx_common *tx_comm, struct dptx_hw_common
 		DPTX_ERROR("%s NULL hw_comm instance!\n", __func__);
 		return;
 	}
+	tx20_hw = to_dptx20_hw(hw_comm);
 
-	/* for eDPTX, disable irq by default,
+	/* for eDPTX, only enable aux irq, disable other irq by default,
 	 * left it control by external edptx driver
 	 */
 	if (hw_comm->is_edp && hw_comm->ext_edptx_ctrl_en) {
-		intr_mask = 0xFFFFFFFF;
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, intr_mask);
-		return;
+		if (tx20_hw->aux_block_mode)
+			intr_mask = 0xFFFFFFFF;
+		else
+			intr_mask = 0xFFFFFFFF &
+				(~(INTERRUPT_MASK_REPLY_TIMEOUT_EVENT |
+				INTERRUPT_MASK_REPLY_RECEIVED_EVENT));
+		hw_comm->edptx_intr_mask = intr_mask;
+	} else {
+		if (tx20_hw->aux_block_mode) {
+			intr_mask |= (INTERRUPT_MASK_REPLY_RECEIVED_EVENT |
+				INTERRUPT_MASK_REPLY_TIMEOUT_EVENT);
+		}
 	}
-	tx20_hw = to_dptx20_hw(hw_comm);
-	if (tx20_hw->aux_block_mode)
-		intr_mask |= (INTERRUPT_MASK_REPLY_RECEIVED_EVENT |
-			INTERRUPT_MASK_REPLY_TIMEOUT_EVENT);
+
 	/* core level intr unmask: enable core intr */
 	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, intr_mask);
 	dptx_setup_irq(tx_comm);
-}
-
-/*
- * Function: dptx_isr_disable
- *
- * Disable selected interrupts.
- */
-void dptx_isr_disable(struct dptx_hw_common *tx_comm, u32 flags)
-{
-	u32 isr_mask = dptx20_reg_read(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK);
-
-	isr_mask |= flags;
-	dptx20_reg_write(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, isr_mask);
-}
-
-void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
-{
-	u32 isr_mask = dptx20_reg_read(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK);
-
-	isr_mask &= ~flags;
-	dptx20_reg_write(tx_comm, CORE_LEVEL, DPTX20_INTERRUPT_MASK, isr_mask);
 }
 
 static void dptx_hdcp_enable_intr(struct hdcptx_common *hdcptx_comm, bool en)
@@ -1543,6 +1553,13 @@ static void edptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 		dptx20_reg_write(hw_comm, CORE_LEVEL,
 			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_NVID),
 			msa->link_rate * 27000);
+	} else {
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MVID),
+			msa->m_vid);
+		dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_NVID),
+			msa->n_vid);
 	}
 
 	/* Note need to set link rate/lane count HW reg firstly */
@@ -1550,7 +1567,12 @@ static void edptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 		/* (enum colorimetry_format)msa->color_format, msa->bit_depth); */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_TU_CONFIG),
-			msa->tu_config);
+		/* FRAC_SYMBOLS_PER_TU */
+		((0 & 0xf) << 24) |
+		/* SYMBOLS_PER_TU */
+		((64 & 0xff) << 16) |
+		/* TRANSFER_UNIT_SIZE); */
+		(msa->tu_size & 0xff) << 0);
 	/* set 1 if interlace mode */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_MAIN_STREAM_INTERLACED),
@@ -1567,11 +1589,12 @@ static void edptx20_hw_set_msa(struct dptx_hw_common *hw_comm,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_DATA_COUNT),
 		symbols_per_line);
 
+	/* follow previous edptx setting */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
-		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_SYNC_POLARITY),
-		msa->user_sync_polarity);
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_SYNC_POLARITY), 0x7);
+	/* follow previous edptx setting, use sparse mode */
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
-		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), msa->user_control);
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), 0x1);
 }
 
 /* config MST_CTRL in DPCD */
@@ -3099,12 +3122,12 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 		dptx20_link_lane_remap(hw_comm, value & BIT(8), value & 0xf);
 		return 0;
 	case DP_GET_HPD_STATE:
-		return dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE);
+		return dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE) & 0x1;
 	case DP_GET_HPD_EVENT_STATE:
 		value = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE);
 		/* only clear HPD event intr state */
-		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE,
-			INTERRUPT_STATE_HPD_EVENT);
+		dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_INTERRUPT_STATE,
+			INTERRUPT_STATE_HPD_EVENT, 0, 1);
 		return value & INTERRUPT_STATE_HPD_EVENT;
 	case DP_SET_IRQ_MASK:
 		if (!input_argv)
@@ -3168,11 +3191,19 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 	case DP_TRANSMITTER_OUTPUT_EN:
 		if (!input_argv)
 			return -1;
-		/* assume vc_id = 0 */
+		/* assume vc_id = 0, TODO for mst */
 		value = *(u8 *)input_argv;
-		dptx20_hw_src_vid_enable(hw_comm, 0, !!value);
-		if (value == 0)
-			dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_TRANSMITTER_ENABLE, 0x0);
+		if (hw_comm->is_edp && hw_comm->ext_edptx_ctrl_en) {
+			dptx20_reg_write(hw_comm, CORE_LEVEL,
+				DPTX20_SRCX_VIDEO_STREAM_ENABLE, value ? 0x1 : 0);
+			dptx20_reg_write(hw_comm, CORE_LEVEL,
+				DPTX20_SOURCE_ENABLE, value ? 0x1 : 0);
+		} else {
+			dptx20_hw_src_vid_enable(hw_comm, 0, !!value);
+			if (value == 0)
+				dptx20_reg_write(hw_comm, CORE_LEVEL,
+					DPTX20_TRANSMITTER_ENABLE, 0x0);
+		}
 		break;
 	default:
 		break;
