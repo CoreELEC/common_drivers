@@ -338,6 +338,19 @@ bool dptx_common_get_edid_valid_state(struct dptx_common *tx_comm)
 }
 EXPORT_SYMBOL(dptx_common_get_edid_valid_state);
 
+bool dptx_common_edid_check_valid(struct dptx_common *tx_comm)
+{
+	if (!tx_comm) {
+		DPTX_ERROR("[%s]: invalid input param\n", __func__);
+		return false;
+	}
+
+	tx_comm->base.rxcap.edid_parsing = meson_tx_edid_check_valid(&tx_comm->base.rxcap,
+		tx_comm->base.edid_buf);
+	return tx_comm->base.rxcap.edid_parsing;
+}
+EXPORT_SYMBOL(dptx_common_edid_check_valid);
+
 int dptx_common_get_hdr_status(struct dptx_common *tx_comm)
 {
 	/* todo:hdr module development */

@@ -321,7 +321,7 @@ bool meson_tx_edid_check_valid(struct rx_cap *prxcap, unsigned char *buf)
 		return true;
 	/* check block 1 extension tag */
 	if (!(edid_check & 0x01)) {
-		if (!(buf[0x80] == 0x2 || buf[0x80] == 0xf0))
+		if (!(buf[0x80] == 0x2 || buf[0x80] == 0xf0 || buf[0x80] == 0x70))
 			return false;
 	}
 	/* check extension block 1 and more */

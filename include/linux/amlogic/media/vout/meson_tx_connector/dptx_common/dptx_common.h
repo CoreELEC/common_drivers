@@ -156,6 +156,7 @@ bool dptx_common_get_hdcp_user_state(struct dptx_common *tx_comm);
 bool dptx_common_get_ready_state(struct dptx_common *tx_comm);
 const struct hdr_info *dptx_common_get_hdr_info_rx(struct dptx_common *tx_comm);
 bool dptx_common_get_edid_valid_state(struct dptx_common *tx_comm);
+bool dptx_common_edid_check_valid(struct dptx_common *tx_comm);
 u32 dptx_common_get_vrr_cap(struct dptx_common *tx_comm);
 unsigned int dptx_common_get_content_types(struct dptx_common *tx_comm);
 int dptx_common_get_hdr_status(struct dptx_common *tx_comm);

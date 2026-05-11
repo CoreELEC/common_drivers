@@ -175,8 +175,11 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 		}
 		dptx_load_rx_cap_raw(tx_comm, token);
 		meson_tx_clear_rx_cap(&tx_comm->base.rxcap);
-		meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
-			tx_comm->base.edid_parse_mask);
+		tx_comm->base.rxcap.edid_parsing = meson_tx_edid_check_valid(&tx_comm->base.rxcap,
+			tx_comm->base.edid_buf);
+		if (tx_comm->base.rxcap.edid_parsing)
+			meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
+				tx_comm->base.edid_parse_mask);
 		display_id_cap_print(&tx_comm->base.rxcap.disp_id_cap);
 	} else if (token && strncmp(token, "print_info", 10) == 0) {
 		DPTX_INFO("drm_dptx_id: %d\n", tx_comm->dev_idx);
