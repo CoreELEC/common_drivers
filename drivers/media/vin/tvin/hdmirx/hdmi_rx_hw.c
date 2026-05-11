@@ -9122,3 +9122,10 @@ int hdmi_rx_ch_lock(u8 port)
 {
 	return hdmirx_rd_cor(SCDCS_STATUS_FLAGS0_SCDC_IVCRX, port) & 0xf;
 }
+
+void hdmi_rx_clr_frl_rate(u8 port)
+{
+	if (hdmirx_rd_cor(SCDCS_CONFIG1_SCDC_IVCRX, port) & 0xf)
+		hdmirx_wr_cor(SCDCS_CONFIG1_SCDC_IVCRX, 0, port);
+}
+

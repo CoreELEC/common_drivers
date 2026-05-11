@@ -4135,8 +4135,16 @@ static void hdmirx_early_suspend(struct early_suspend *h)
 		return;
 	}
 	early_suspend_flag = true;
+	rx_pkt_initial(E_PORT0);
+	if (rx_info.chip_id >= CHIP_ID_T3X) {
+		rx_pkt_initial(E_PORT1);
+		rx_pkt_initial(E_PORT2);
+		rx_pkt_initial(E_PORT3);
+	}
 	rx_del_timer(rx_info.hdmirx_dev);
 	rx_irq_en(0, E_PORT0);
+	hdmi_rx_clr_frl_rate(E_PORT2);
+	hdmi_rx_clr_frl_rate(E_PORT3);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
 		rx_irq_en(0, E_PORT1);
 		rx_irq_en(0, E_PORT2);
@@ -5169,7 +5177,15 @@ static int hdmirx_suspend(struct platform_device *pdev, pm_message_t state)
 	rx_info.suspend_flag = true;
 	if (early_suspend_flag && !rx_get_dig_clk_en_sts())
 		return 0;
+	rx_pkt_initial(E_PORT0);
+	if (rx_info.chip_id >= CHIP_ID_T3X) {
+		rx_pkt_initial(E_PORT1);
+		rx_pkt_initial(E_PORT2);
+		rx_pkt_initial(E_PORT3);
+	}
 	rx_irq_en(0, E_PORT0);
+	hdmi_rx_clr_frl_rate(E_PORT2);
+	hdmi_rx_clr_frl_rate(E_PORT3);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
 		rx_irq_en(0, E_PORT1);
 		rx_irq_en(0, E_PORT2);
