@@ -23,7 +23,8 @@
 		fe0_ts_out_mode = <1>;
 		fe0_ts  = <1>;
 		fe0_tuner0 = <0>;
-		fe0_tuner1 = <0>;
+		fe0_reset_gpio = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
+		fe0_reset_value = <0>;
 
 		tuner_num = <1>;
 		tuner0_name = "r848";
