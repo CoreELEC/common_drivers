@@ -11981,8 +11981,8 @@ void suspend_cm(void)
 	unsigned int data_port = VPP_CHROMA_DATA_PORT;/* 0x1d71; */
 	struct cm_port_s cm_port;
 
-	if (!pq_cfg.cm_en)
-		return;
+//	if (!pq_cfg.cm_en)
+//		return;
 
 	if (chip_type_id == chip_s7 ||
 		chip_type_id == chip_s7d)
@@ -12399,13 +12399,14 @@ void resume_ve(int vpp_index)
 void resume_cm(int vpp_index)
 {
 	if (chip_type_id == chip_s7 ||
-		chip_type_id == chip_s7d ||
-		!reg_cm_list)
+		chip_type_id == chip_s7d)
 		return;
 
-	pr_amvecm_dbg("amvecm: resume cm0\n");
+	pr_amvecm_dbg("amvecm: resume cm0, pq_cfg.cm_en/cm_en=%d/%d\n",
+		pq_cfg.cm_en, cm_en);
 
-	if (pq_cfg.cm_en) {
+//	if (pq_cfg.cm_en && reg_cm_list) {
+	if (reg_cm_list) {
 		amregs_store.length = RECOVERY_REG_CM_MAX;
 		if (!(memcpy(amregs_store.am_reg, reg_cm_list,
 			RECOVERY_REG_CM_MAX * sizeof(struct am_reg_s))))
@@ -12416,11 +12417,12 @@ void resume_cm(int vpp_index)
 		kfree(reg_cm_list);
 		reg_cm_list = NULL;
 		pr_amvecm_dbg("amvecm: resume cm\n");
+
+		if (cm_en)
+			amcm_enable(WR_VCB, vpp_index);
 	}
 
-	if (cm_en)
-		amcm_enable(WR_VCB, vpp_index);
-	else
+	if (!cm_en)
 		amcm_disable(WR_VCB, vpp_index);
 }
 
