@@ -2647,8 +2647,13 @@ void meson_osd_plane_async_update(struct drm_plane *plane,
 					new_sps->plane_info[osd_plane->plane_index];
 	}
 
-	vpu_pipeline_prepare_update(pipeline, new_state->crtc->mode.vdisplay,
-			drm_mode_vrefresh(&new_state->crtc->mode), crtc_index);
+	/*
+	 * C5 does not have a scanout pos register, so there is
+	 * no need to determine when a register is written.
+	 */
+	if (amcrtc->pipeline->priv->vpu_data->enc_method != ENC_METHOD_NULL)
+		vpu_pipeline_prepare_update(pipeline, new_state->crtc->mode.vdisplay,
+				drm_mode_vrefresh(&new_state->crtc->mode), crtc_index);
 
 	if (vpu_pipeline_osd_update(sub_pipe, state))
 		goto out;

@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/vfm/vfm_ext.h>
 #include "meson_logo.h"
 #include "meson_print.h"
+#include "meson_vpu.h"
 
 #define MESON_MAX_CRTC		3
 #define MESON_MAX_OSD		5
@@ -118,6 +119,7 @@ extern struct meson_drm_param am_drm_param;
 struct meson_drm {
 	struct device *dev;
 
+	enum vpu_compatible compat;
 	struct drm_device *drm;
 	struct device_node *blocks_node;
 	struct drm_plane *primary_plane;

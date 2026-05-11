@@ -39,6 +39,21 @@
 
 #define AM_VOUT_NULL_MODE "null"
 
+int meson_vpu_is_compatible(struct meson_vpu_pipeline *pipeline,
+				enum vpu_compatible family)
+{
+	struct meson_drm *priv;
+
+	if (!pipeline || !pipeline->priv) {
+		DRM_ERROR("pipeline or priv is NULL!\n");
+		return 0;
+	}
+
+	priv = pipeline->priv;
+
+	return priv->compat == family;
+}
+
 void meson_vout_notify_mode_change(int idx,
 		enum vmode_e mode, enum meson_vout_event event)
 {
@@ -303,6 +318,7 @@ static int am_meson_vpu_bind(struct device *dev,
 		return -EFAULT;
 	private->vpu_data = vpu_data;
 	pipeline->ops = private->vpu_data->pipe_ops;
+	private->compat = vpu_data->compat;
 
 	vpu_topology_populate(pipeline);
 	meson_vpu_block_state_init(private, private->pipeline);
@@ -724,6 +740,8 @@ static const struct meson_vpu_data vpu_c5_data = {
 	.osd_formats = &osd_formats_t6d,
 	.video_formats = &video_formats,
 	.drm_rdma_cnt = c5_drm_rdma_cnt,
+	.enc_method = ENC_METHOD_NULL,
+	.compat = VPU_COMPATIBLE_C5,
 };
 
 static const struct meson_vpu_data vpu_a9_data = {

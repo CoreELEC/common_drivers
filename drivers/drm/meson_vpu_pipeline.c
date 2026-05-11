@@ -1257,10 +1257,16 @@ EXPORT_SYMBOL(vpu_pipeline_prepare_update);
 void vpu_pipeline_finish_update(struct meson_vpu_pipeline *pipeline, int crtc_index)
 {
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
-	meson_vpu_reg_vsync_config(crtc_index);
-	MESON_DRM_STATE("(\"%s\" pid=%d]) rdma config\n",
-			current->comm, task_pid_nr(current));
-
+	/*
+	 * C5 does not have RDMA.
+	 * The rdma.c file contains vcBus-related interfaces that the VPU will call,
+	 * so cannot directly disable CONFIG.
+	 */
+	if (!meson_vpu_is_compatible(pipeline, VPU_COMPATIBLE_C5)) {
+		meson_vpu_reg_vsync_config(crtc_index);
+		MESON_DRM_STATE("(\"%s\" pid=%d]) rdma config\n",
+				current->comm, task_pid_nr(current));
+	}
 #endif
 }
 EXPORT_SYMBOL(vpu_pipeline_finish_update);

@@ -8,6 +8,8 @@
 
 #include <linux/amlogic/media/vout/vout_notify.h>
 
+#define ENC_METHOD_NULL INT_MAX
+
 struct am_vout_mode {
 	char name[DRM_DISPLAY_MODE_LEN];
 	enum vmode_e mode;
@@ -21,6 +23,14 @@ struct meson_vpu_crtc_func {
 	struct rdma_reg_ops *reg_ops;
 	void (*pre_init)(struct meson_vpu_pipeline *pipeline, struct device *dev);
 	void (*init_default_reg)(void);
+};
+
+enum vpu_compatible {
+	VPU_COMPATIBLE_GXBB = 0,
+	VPU_COMPATIBLE_GXL  = 1,
+	VPU_COMPATIBLE_GXM  = 2,
+	VPU_COMPATIBLE_G12A = 3,
+	VPU_COMPATIBLE_C5 = 4,
 };
 
 struct meson_vpu_data {
@@ -46,6 +56,7 @@ struct meson_vpu_data {
 	unsigned int max_osdblend_width, max_osdblend_height;
 	const enum meson_policy_id *policy;
 	struct meson_rdma_done_detect *drm_rdma_cnt;
+	enum vpu_compatible compat;
 };
 
 enum meson_vout_event {
@@ -64,5 +75,7 @@ int vout3_set_uevent(unsigned int vout_event, int val);
 int set_vout_mode_name(char *name);
 int set_vout2_mode_name(char *name);
 int set_vout3_mode_name(char *name);
+int meson_vpu_is_compatible(struct meson_vpu_pipeline *pipeline,
+						enum vpu_compatible family);
 
 #endif /* __AM_MESON_VPU_H */

@@ -951,8 +951,13 @@ static void am_meson_crtc_atomic_flush(struct drm_crtc *crtc,
 #endif
 	meson_commit_reenter_inc(pipeline->priv, crtc_index, NONBLOCK_MODE);
 	if (!meson_crtc_state->uboot_mode_init) {
-		vpu_pipeline_prepare_update(amcrtc->pipeline,
-			crtc->mode.vdisplay, drm_mode_vrefresh(&crtc->mode), crtc_index);
+		/*
+		 * C5 does not have a scanout pos register, so there is
+		 * no need to determine when a register is written.
+		 */
+		if (amcrtc->pipeline->priv->vpu_data->enc_method != ENC_METHOD_NULL)
+			vpu_pipeline_prepare_update(amcrtc->pipeline,
+				crtc->mode.vdisplay, drm_mode_vrefresh(&crtc->mode), crtc_index);
 		ATRACE_BEGIN("crtc_update");
 		vpu_osd_pipeline_update(sub_pipe, old_atomic_state);
 		spin_lock_irqsave(&crtc->dev->event_lock, flags);
