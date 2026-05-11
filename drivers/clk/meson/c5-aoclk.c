@@ -18,6 +18,21 @@
 #include "c5.h"
 #include <dt-bindings/clock/amlogic,c5-clkc.h>
 
+static struct clk_regmap osc_32m_en = {
+	.data = &(struct clk_regmap_gate_data) {
+		.offset = RTCCTRL_REG_CTRL0,
+		.bit_idx = 16,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "osc_32m_en",
+		.ops = &clk_regmap_gate_ops,
+		.parent_data = &(const struct clk_parent_data) {
+			.fw_name = "osc_32m"
+		},
+		.num_parents = 1,
+	},
+};
+
 static struct clk_regmap ao_rough_32k_div = {
 	.data = &(struct clk_regmap_div_data) {
 		.offset = AO_CLKCTRL_ROUGH_32K_CTRL,
@@ -27,8 +42,8 @@ static struct clk_regmap ao_rough_32k_div = {
 	.hw.init = &(struct clk_init_data) {
 		.name = "ao_rough_32k_div",
 		.ops = &clk_regmap_divider_ops,
-		.parent_data = &(const struct clk_parent_data) {
-			.fw_name = "osc_32m"
+		.parent_hws = (const struct clk_hw *[]) {
+			&osc_32m_en.hw,
 		},
 		.num_parents = 1,
 	},
@@ -345,7 +360,12 @@ static struct clk_regmap *const aoclk_regmaps[] = {
 	&ao_sys_psram_axi
 };
 
+static struct clk_regmap *const rtc_regmap[] = {
+	&osc_32m_en
+};
+
 static struct clk_hw *c5_aoclk_hw_clks[] = {
+	[CLKID_OSC_32M_EN]           = &osc_32m_en.hw,
 	[CLKID_AO_ROUGH_32K_DIV]      = &ao_rough_32k_div.hw,
 	[CLKID_AO_ROUGH_32K]          = &ao_rough_32k.hw,
 	[CLKID_AO_OSCIN32K_CLK]       = &ao_oscin32k_clk.hw,
@@ -395,6 +415,7 @@ static int meson_c5_aoclk_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct regmap *basic_map;
+	struct regmap *rtc_map;
 	struct meson_clk_hw_data *data;
 	int ret, i;
 
@@ -408,9 +429,18 @@ static int meson_c5_aoclk_probe(struct platform_device *pdev)
 		return PTR_ERR(basic_map);
 	}
 
+	rtc_map = meson_clk_regmap_resource(pdev, dev, 1);
+	if (IS_ERR(rtc_map)) {
+		dev_err(dev, "rtc clk registers not found\n");
+		return PTR_ERR(rtc_map);
+	}
+
 	/* Populate regmap for the regmap backed clocks */
 	for (i = 0; i < ARRAY_SIZE(aoclk_regmaps); i++)
 		aoclk_regmaps[i]->map = basic_map;
+
+	for (i = 0; i < ARRAY_SIZE(rtc_regmap); i++)
+		rtc_regmap[i]->map = rtc_map;
 
 	for (i = 0; i < data->num; i++) {
 		/* array might be sparse */

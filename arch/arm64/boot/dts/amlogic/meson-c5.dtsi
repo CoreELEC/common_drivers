@@ -1342,8 +1342,9 @@
 
 			ao_clkc: clock-controller@1 {
 				compatible = "amlogic,c5-aoclkc";
-				reg = <0x0 0x0 0x0 0x5c>;
-				reg-names = "basic";
+				reg = <0x0 0x0 0x0 0x5c>,
+				      <0x0 0x6008 0x0 0x8>;
+				reg-names = "basic", "rtc";
 				#clock-cells = <1>;
 				clocks = <&xtal>,
 					<&xtal_32k>,

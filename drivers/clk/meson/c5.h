@@ -94,4 +94,11 @@ void c5_aoclk_exit(void);
 #define AO_CLKCTRL_ROUGH_32K_CTRL            (0x0012  << 2)
 #define AO_CLKCTRL_PSRAM_CLK_CTRL            (0x0016  << 2)
 
+/**
+ * the gate of osc 32m is placed in the RTCCRTRL register, which
+ * needs to be mapped separately, and the register offset needs
+ * to be configured separately.
+ */
+#define RTCCTRL_REG_CTRL0            (0x0000  << 2)
+
 #endif  /* __C5_H */
