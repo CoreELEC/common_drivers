@@ -1232,7 +1232,7 @@ irqreturn_t irq0_handler(int irq, void *params)
 		}
 		rx[port].irq_err_cnt = 0;
 		rx_irq_en(0, port);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, port);
 		if (rx[port].state > FSM_WAIT_CLK_STABLE)
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 	}
@@ -1426,7 +1426,7 @@ irqreturn_t irq1_handler(int irq, void *params)
 		}
 		rx[E_PORT1].irq_err_cnt = 0;
 		rx_irq_en(0, E_PORT1);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, E_PORT1);
 		if (rx[E_PORT1].state > FSM_WAIT_CLK_STABLE)
 			rx[E_PORT1].state = FSM_WAIT_CLK_STABLE;
 	}
@@ -1580,7 +1580,7 @@ irqreturn_t irq2_handler(int irq, void *params)
 		}
 		rx[E_PORT2].irq_err_cnt = 0;
 		rx_irq_en(0, E_PORT2);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, E_PORT2);
 		if (rx[E_PORT2].state > FSM_FRL_FLT_READY)
 			rx[E_PORT2].state = FSM_FRL_FLT_READY;
 	}
@@ -1597,7 +1597,7 @@ irqreturn_t irq2_handler(int irq, void *params)
 			hdmirx_mute_vpp(true, E_PORT2);
 		rx[E_PORT2].de_err_cnt = 0;
 		rx_irq_en(0, E_PORT2);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, E_PORT2);
 		if (rx[E_PORT2].state > FSM_FRL_FLT_READY)
 			rx[E_PORT2].state = FSM_FRL_FLT_READY;
 	}
@@ -1802,7 +1802,7 @@ irqreturn_t irq3_handler(int irq, void *params)
 		}
 		rx[E_PORT3].irq_err_cnt = 0;
 		rx_irq_en(0, E_PORT3);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, E_PORT3);
 		if (rx[E_PORT3].state > FSM_FRL_FLT_READY)
 			rx[E_PORT3].state = FSM_FRL_FLT_READY;
 	}
@@ -1819,7 +1819,7 @@ irqreturn_t irq3_handler(int irq, void *params)
 			hdmirx_mute_vpp(true, E_PORT3);
 		rx[E_PORT3].de_err_cnt = 0;
 		rx_irq_en(0, E_PORT3);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, E_PORT3);
 		if (rx[E_PORT3].state > FSM_FRL_FLT_READY)
 			rx[E_PORT3].state = FSM_FRL_FLT_READY;
 	}
@@ -5290,7 +5290,7 @@ void rx_main_state_machine(void)
 			/* need to clr to none, for dishNXT box */
 			rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 			rx_irq_en(0, port);
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 			rx[port].var.vic_check_en = false;
 			rx[port].skip = 0;
@@ -5325,7 +5325,7 @@ void rx_main_state_machine(void)
 				rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 				//rx_sw_reset(2);
 				rx_irq_en(0, port);
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_WAIT_CLK_STABLE;
 				rx[port].var.vic_check_en = false;
 				rx[port].skip = 0;
@@ -5363,7 +5363,7 @@ void rx_main_state_machine(void)
 				rx[port].var.de_stable = false;
 				rx[port].hdcp.hdcp_pre_ver = rx[port].hdcp.hdcp_version;
 				/* need to clr to none, for dishNXT box */
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_SIG_WAIT_STABLE;
 				break;
 			}
@@ -5793,7 +5793,7 @@ void rx_port0_main_state_machine(void)
 			/* need to clr to none, for dishNXT box */
 			rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 			rx_irq_en(0, port);
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 			rx[port].var.vic_check_en = false;
 			rx[port].skip = 0;
@@ -5824,7 +5824,7 @@ void rx_port0_main_state_machine(void)
 				rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 				//rx_sw_reset(2, port);
 				rx_irq_en(0, port);
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_WAIT_CLK_STABLE;
 				rx[port].var.vic_check_en = false;
 				rx[port].skip = 0;
@@ -5854,7 +5854,7 @@ void rx_port0_main_state_machine(void)
 				rx[port].var.de_stable = false;
 				rx[port].hdcp.hdcp_pre_ver = rx[port].hdcp.hdcp_version;
 				/* need to clr to none, for dishNXT box */
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_SIG_WAIT_STABLE;
 				break;
 			}
@@ -6254,7 +6254,7 @@ void rx_port1_main_state_machine(void)
 			/* need to clr to none, for dishNXT box */
 			rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 			rx_irq_en(0, port);
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			rx[port].state = FSM_WAIT_CLK_STABLE;
 			rx[port].var.vic_check_en = false;
 			rx[port].skip = 0;
@@ -6285,7 +6285,7 @@ void rx_port1_main_state_machine(void)
 				rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 				//rx_sw_reset(2, port);
 				rx_irq_en(0, port);
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_WAIT_CLK_STABLE;
 				rx[port].var.vic_check_en = false;
 				rx[port].skip = 0;
@@ -6315,7 +6315,7 @@ void rx_port1_main_state_machine(void)
 				rx[port].var.de_stable = false;
 				rx[port].hdcp.hdcp_pre_ver = rx[port].hdcp.hdcp_version;
 				/* need to clr to none, for dishNXT box */
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_SIG_WAIT_STABLE;
 				break;
 			}
@@ -6627,7 +6627,7 @@ void rx_port2_main_state_machine(void)
 			rx_reset_hdcp(port);
 			rx_cor_reset(port);
 			rx_clr_f_det(false, port);
-			hdmirx_output_en(1);
+			hdmirx_output_en(true, port);
 			//rx_irq_en(true, port);
 			//hdmirx_top_irq_en(1, 1, port);
 			rx[port].dsc_flag = false;
@@ -6942,7 +6942,7 @@ void rx_port2_main_state_machine(void)
 			rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 			//rx_sw_reset(2);
 			rx_irq_en(IRQ_EN_HDCP, port);
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			rx[port].state = FSM_FRL_FLT_READY;
 			rx[port].var.vic_check_en = false;
 			rx[port].skip = 0;
@@ -6979,7 +6979,7 @@ void rx_port2_main_state_machine(void)
 				rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 				//rx_sw_reset(2, port);
 				rx_irq_en(IRQ_EN_HDCP, port);
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				if (rx[port].var.frl_rate)
 					rx[port].state = FSM_FRL_VALID_M;
 				else
@@ -7013,7 +7013,7 @@ void rx_port2_main_state_machine(void)
 				rx[port].var.de_stable = false;
 				rx[port].hdcp.hdcp_pre_ver = rx[port].hdcp.hdcp_version;
 				/* need to clr to none, for dishNXT box */
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_SIG_WAIT_STABLE;
 				break;
 			}
@@ -7326,7 +7326,7 @@ void rx_port3_main_state_machine(void)
 			rx_reset_hdcp(port);
 			rx_cor_reset(port);
 			rx_clr_f_det(false, port);
-			hdmirx_output_en(1);
+			hdmirx_output_en(true, port);
 			rx[port].dsc_flag = false;
 			rx[port].hdcp_reauth_cnt = 0;
 			rx[port].state = FSM_SIG_WAIT_STABLE;
@@ -7637,7 +7637,7 @@ void rx_port3_main_state_machine(void)
 			/* need to clr to none, for dishNXT box */
 			rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 			rx_irq_en(IRQ_EN_HDCP, port);
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			rx[port].state = FSM_FRL_FLT_READY;
 			rx[port].var.vic_check_en = false;
 			rx[port].skip = 0;
@@ -7674,7 +7674,7 @@ void rx_port3_main_state_machine(void)
 				rx[port].hdcp.hdcp_version = HDCP_VER_NONE;
 				//rx_sw_reset(2, port);
 				rx_irq_en(IRQ_EN_HDCP, port);
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				if (rx[port].var.frl_rate)
 					rx[port].state = FSM_FRL_VALID_M;
 				else
@@ -7707,7 +7707,7 @@ void rx_port3_main_state_machine(void)
 				rx[port].var.de_stable = false;
 				rx[port].hdcp.hdcp_pre_ver = rx[port].hdcp.hdcp_version;
 				/* need to clr to none, for dishNXT box */
-				hdmirx_output_en(false);
+				hdmirx_output_en(false, port);
 				rx[port].state = FSM_SIG_WAIT_STABLE;
 				break;
 			}

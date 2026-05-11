@@ -3723,7 +3723,7 @@ u32 rx_get_ecc_err(u8 port);
 u32 rx_get_ecc_pkt_cnt(u8 port);
 //void rx_check_ecc_error(void);
 void rx_get_ecc_info(u8 port);
-void hdmirx_output_en(bool en);
+void hdmirx_output_en(bool en, u8 port);
 void hdmirx_hbr2spdif(u8 val, u8 port);
 void rx_hdcp_monitor(u8 port);
 bool rx_sw_scramble_en(void);

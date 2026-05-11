@@ -3157,7 +3157,7 @@ bool rx_clr_tmds_valid(u8 port)
 		rx[port].state = FSM_WAIT_CLK_STABLE;
 		if (vpp_mute_enable && port != rx_info.sub_port)
 			hdmirx_mute_vpp(true, port);
-		hdmirx_output_en(false);
+		hdmirx_output_en(false, port);
 		rx_irq_en(0, port);
 		rx_aud_pll_ctl(0, port);
 		if (log_level & VIDEO_LOG)
@@ -4424,7 +4424,7 @@ void rx_afifo_monitor(u8 port)
 	if (rx_info.chip_id < CHIP_ID_T5M) {
 		if (afifo_overflow_cnt > 600) {
 			afifo_overflow_cnt = 0;
-			hdmirx_output_en(false);
+			hdmirx_output_en(false, port);
 			hdmirx_cor_reset();
 			if (rx_is_need_recovery_after_cor_reset(port))
 				rx_set_ext_state(port, FSM_HPD_LOW);
@@ -4840,7 +4840,8 @@ void cor_init(u8 port)
 
 	data8 = 0;
 	data8 |= 1 << 4;
-	data8 |= 1 << 6; //scdc write irq
+	if (rx_info.main_port == E_PORT2 || rx_info.main_port == E_PORT3)
+		data8 |= 1 << 6; //scdc write irq
 	hdmirx_wr_cor(RX_INTR10_MASK_AON_AON_IVCRX, data8, port);//for frl rate change
 	//-------------------
 	//  vp core config
@@ -5008,9 +5009,11 @@ void hdmirx_hbr2spdif(u8 val, u8 port)
 		hdmirx_wr_bits_top(TOP_CLK_CNTL, _BIT(15), 0, port);
 }
 
-void hdmirx_output_en(bool en)
+void hdmirx_output_en(bool en, u8 port)
 {
 	if (rx_info.chip_id < CHIP_ID_T7)
+		return;
+	if (rx_info.main_port != port && port != ALL_PORTS)
 		return;
 	if (en)
 		hdmirx_wr_top_common_1(TOP_OVID_OVERRIDE0, 0);
@@ -5024,7 +5027,7 @@ void hdmirx_hw_config(u8 port)
 		rx_pr("%s port:%d\n", __func__, port);
 	hdmirx_top_sw_reset();
 	//rx_i2c_div_init();
-	hdmirx_output_en(false);
+	hdmirx_output_en(false, port);
 	if (rx_info.chip_id >= CHIP_ID_T3X) {
 		top_config(port);
 		cor_config(port);
@@ -6015,7 +6018,7 @@ void hdmirx_config_video(u8 port)
 
 	hdmirx_set_video_mute(0, port);
 	set_dv_ll_mode(false, port);
-	hdmirx_output_en(true);
+	hdmirx_output_en(true, port);
 
 	if (rx_info.chip_id < CHIP_ID_T7)
 		return;

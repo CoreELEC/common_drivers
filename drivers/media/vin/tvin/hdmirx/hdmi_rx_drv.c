@@ -705,7 +705,7 @@ int hdmirx_dec_isr(struct tvin_frontend_s *fe, unsigned int hcnt64,
 				rx[port].vpp_mute_cnt = vpp_mute_cnt;
 				gcp_mute_flag[port] = 1;
 				hdmirx_mute_vpp(true, port);
-				hdmirx_set_video_mute(1, port);
+				//hdmirx_set_video_mute(1, port);
 				//skip_frame(2, port);
 				/* return TVIN_BUF_SKIP; */
 			} else {
@@ -4151,7 +4151,7 @@ static void hdmirx_early_suspend(struct early_suspend *h)
 		rx_irq_en(0, E_PORT3);
 	}
 	rx_emp_hw_enable(false);
-	hdmirx_output_en(false);
+	hdmirx_output_en(false, ALL_PORTS);
 	while (!is_emp_pkt_sent_out()) {
 		msleep(20);
 		if (i++ > 10) {
@@ -5192,7 +5192,7 @@ static int hdmirx_suspend(struct platform_device *pdev, pm_message_t state)
 		rx_irq_en(0, E_PORT3);
 	}
 	rx_emp_hw_enable(false);
-	hdmirx_output_en(false);
+	hdmirx_output_en(false, ALL_PORTS);
 	/* in some specific case,the suspend/resume flow may be:
 	 * earlysuspend->suspend->resume->suspend,in this case phy
 	 * was not turned off in second suspend
@@ -5293,7 +5293,7 @@ static void hdmirx_shutdown(struct platform_device *pdev)
 		rx_irq_en(0, E_PORT3);
 	}
 	rx_emp_hw_enable(false);
-	hdmirx_output_en(false);
+	hdmirx_output_en(false, ALL_PORTS);
 	while (!is_emp_pkt_sent_out()) {
 		msleep(20);
 		if (i++ > 10) {
