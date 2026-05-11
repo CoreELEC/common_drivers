@@ -1821,13 +1821,13 @@ void aml_pll_bw_cfg_t6x_21(int f_rate, u8 port)
 		data32 = phy_dchd_t6x_21[idx][1];
 		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_VAL1,
 			data32 & 0x1f, port);
-		data32 = phy_misc_t6x_21[idx][2];
-		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_MISC2, LDO_VTUNE,
-			(data32 >> 8) & 0xf, port);
 		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, EQ_BYP_EN,
 			(data32 >> 5) & 0x1, port);
 		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_DCHD_EQ, DFE_TAPS_DISABLE,
 			(data32 >> 19) & 0x1, port);
+		data32 = phy_misc_t6x_21[idx][2];
+		hdmirx_wr_bits_amlphy_t6x(T6X_HDMIRX21PHY_MISC2, LDO_VTUNE,
+			(data32 >> 8) & 0xf, port);
 		if (log_level & PHY_LOG)
 			rx_pr("phy bwth-%d\n", idx);
 	}
