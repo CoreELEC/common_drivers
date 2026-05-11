@@ -3338,6 +3338,7 @@
 	meson_uvm {
 		compatible = "amlogic, meson_uvm";
 		status = "okay";
+		enable_screencap = <1>;
 	};
 
 	meson_videotunnel{

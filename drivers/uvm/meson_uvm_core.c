@@ -115,7 +115,8 @@ static struct sg_table
 	if (!attachment || !attachment->dev)
 		goto err_out;
 	if (strstr(dev_name(attachment->dev), "bifrost") ||
-		strstr(dev_name(attachment->dev), "valhall")) {
+		strstr(dev_name(attachment->dev), "valhall") ||
+		strstr(dev_name(attachment->dev), "avalon")) {
 		gpu_access = true;
 	}
 	dmabuf = attachment->dmabuf;
@@ -224,7 +225,8 @@ static void meson_uvm_unmap_dma_buf(struct dma_buf_attachment *attachment,
 	bool gpu_access = false;
 
 	if (strstr(dev_name(attachment->dev), "bifrost") ||
-		strstr(dev_name(attachment->dev), "valhall")) {
+		strstr(dev_name(attachment->dev), "valhall") ||
+		strstr(dev_name(attachment->dev), "avalon")) {
 		gpu_access = true;
 	}
 
