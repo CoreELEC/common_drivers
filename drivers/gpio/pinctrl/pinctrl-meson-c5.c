@@ -223,7 +223,7 @@ static const unsigned  int pdm_ao_din3_ao_pins[]	= { GPIOAO_1 };
 static const unsigned  int pdm_ao_din2_ao_pins[]	= { GPIOAO_2 };
 static const unsigned  int pdm_ao_din1_ao_pins[]	= { GPIOAO_3 };
 static const unsigned  int pdm_ao_din0_ao_pins[]	= { GPIOAO_4 };
-static const unsigned  int pdm_ao_dclk_ao_pins[]	= { GPIOAO_5 };
+static const unsigned  int pdm_ao_dclk_ao5_pins[]	= { GPIOAO_5 };
 static const unsigned  int i2c1_ao_sck_ao6_pins[]	= { GPIOAO_6 };
 static const unsigned  int i2c1_ao_sda_ao7_pins[]	= { GPIOAO_7 };
 static const unsigned  int i2c1_ao_sck_ao15_pins[]	= { GPIOAO_15 };
@@ -232,6 +232,7 @@ static const unsigned  int wd_rsto_ao_pins[]		= { GPIOAO_17 };
 static const unsigned  int pmic_sleep_ao_pins[]		= { GPIOAO_18 };
 
 /* BANK AO func3 */
+static const unsigned  int pdm_ao_dclk_ao2_pins[]	= { GPIOAO_2 };
 static const unsigned  int uart_ao_a_cts_ao_pins[]	= { GPIOAO_6 };
 static const unsigned  int uart_ao_a_rts_ao_pins[]	= { GPIOAO_7 };
 static const unsigned  int uart_ao_a_tx_ao_pins[]	= { GPIOAO_8 };
@@ -509,7 +510,7 @@ static struct meson_pmx_group meson_c5_ao_groups[] __initdata = {
 	GROUP(pdm_ao_din2_ao,		2),
 	GROUP(pdm_ao_din1_ao,		2),
 	GROUP(pdm_ao_din0_ao,		2),
-	GROUP(pdm_ao_dclk_ao,		2),
+	GROUP(pdm_ao_dclk_ao5,		2),
 	GROUP(i2c1_ao_sck_ao6,		2),
 	GROUP(i2c1_ao_sda_ao7,		2),
 	GROUP(i2c1_ao_sck_ao15,		2),
@@ -518,6 +519,7 @@ static struct meson_pmx_group meson_c5_ao_groups[] __initdata = {
 	GROUP(pmic_sleep_ao,		2),
 
 	/* BANK AO func3 */
+	GROUP(pdm_ao_dclk_ao2,		3),
 	GROUP(uart_ao_a_cts_ao,		3),
 	GROUP(uart_ao_a_rts_ao,		3),
 	GROUP(uart_ao_a_tx_ao,		3),
@@ -790,7 +792,7 @@ static const char * const pdm_ao_groups[] = {
 
 	"pdm_ao_din3_ao", "pdm_ao_din2_ao",
 	"pdm_ao_din1_ao", "pdm_ao_din0_ao",
-	"pdm_ao_dclk_ao"
+	"pdm_ao_dclk_ao2", "pdm_ao_dclk_ao5"
 };
 
 static const char * const mic_mute_ao_groups[] = {
