@@ -3281,7 +3281,7 @@
 		mux {
 			groups = "GPIOAO_6",
 				"GPIOAO_7";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3299,7 +3299,7 @@
 		mux {
 			groups = "GPIOAO_15",
 				"GPIOAO_16";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3317,7 +3317,7 @@
 		mux {
 			groups = "GPIOF_2",
 				"GPIOF_3";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3353,7 +3353,7 @@
 		mux {
 			groups = "GPIOAO_21",
 				"GPIOAO_22";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3371,7 +3371,7 @@
 		mux {
 			groups = "GPIOP_2",
 				"GPIOP_3";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3389,7 +3389,7 @@
 		mux {
 			groups = "GPIOP_4",
 				"GPIOP_5";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3407,7 +3407,7 @@
 		mux {
 			groups = "GPIOP_6",
 				"GPIOP_7";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
@@ -3425,7 +3425,7 @@
 		mux {
 			groups = "GPIOP_8",
 				"GPIOP_9";
-			function = "gpio_periphs";
+			function = "gpio_ao";
 			input-enable;
 		};
 	};
