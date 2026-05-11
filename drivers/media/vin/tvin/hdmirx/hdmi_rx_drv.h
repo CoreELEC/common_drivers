@@ -416,6 +416,7 @@ struct rx_var_param {
 	int esd_phy_rst_max;
 	int frl_rst_cnt;
 	int valid_m_rst_cnt;
+	int frl_rate_wait_cnt;
 	int cec_dev_info;
 	bool term_flag;
 	int clk_chg_cnt;
@@ -1158,6 +1159,7 @@ struct rx_s {
 	struct edid_capacity edid_cap;
 	u32 frl_check;
 	u32 frl_double_check;
+	bool frl_rate_clr;
 	u32 frl_pix_cnt;
 	u8 frl_fdet_check_step;
 	u32 rx_sig_type;

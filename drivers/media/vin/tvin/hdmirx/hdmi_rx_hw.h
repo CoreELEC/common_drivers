@@ -3606,6 +3606,7 @@ void hdmirx_phy_pddq(unsigned int enable);
 void rx_get_video_info(u8 port);
 void hdmirx_set_video_mute(bool mute, u8 port);
 void rx_clr_gcp_avmute(u8 port);
+void hdmirx_t2p_reset(u8 port);
 void hdmirx_late_config_video(u8 port);
 void hdmirx_config_video(u8 port);
 void hdmirx_config_audio(u8 port);

@@ -145,7 +145,7 @@ int force_clk_stable;//t3x frl todo
 bool earc_hpd_low_flag;
 
 int frl_scrambler_en = 1;
-u32 frl_sync_cnt = 2000;
+u32 frl_sync_cnt = 500;
 u32 odn_reg_n_mul = 6;
 u32 ext_cnt = 2000;
 int frate_cnt = 100;
@@ -1030,7 +1030,7 @@ void hdmirx_wr_bits_cor(u32 addr, u32 mask, u8 value, u8 port)
 
 bool hdmirx_flt_update_cleared_wait(u32 addr, u8 port)
 {
-	unsigned long timeout = jiffies + HZ / 10;
+	unsigned long timeout = jiffies + HZ / 100;
 
 	if (log_level & FRL_LOG)
 		rx_pr("before flt cor = 0x%x\n", hdmirx_rd_cor(addr, port));
@@ -4492,8 +4492,10 @@ void rx_hdcp_monitor(u8 port)
 	if (rx[port].state < FSM_SIG_STABLE)
 		return;
 	if (rx[port].hdcp.hdcp_version == HDCP_VER_NONE &&
-		rx[port].hdcp.hdcp_pre_ver == HDCP_VER_NONE)
-		return;
+		rx[port].hdcp.hdcp_pre_ver == HDCP_VER_NONE) {
+		if (!rx[port].hdcp_reauth_cnt)
+			return;
+	}
 
 	rx_get_ecc_info(port);
 	if (rx[port].ecc_err &&
@@ -6029,6 +6031,15 @@ void set_dv_ll_mode(bool en, u8 port)
 	}
 }
 
+void hdmirx_t2p_reset(u8 port)
+{
+	//t2p fifo reset
+	if (rx[port].var.frl_rate) {
+		hdmirx_wr_bits_cor(RX_H21_SW_RST, _BIT(4), 1, port);
+		hdmirx_wr_bits_cor(RX_H21_SW_RST, _BIT(4), 0, port);
+	}
+}
+
 void hdmirx_late_config_video(u8 port)
 {
 	if (rx[port].pre.colorspace == E_COLOR_YUV422 &&
@@ -6075,11 +6086,7 @@ void hdmirx_late_config_video(u8 port)
 		else
 			wr_reg_clk_ctl(CLKCTRL_DSC_CLK_CTRL, 0x2c0);
 	}
-	//t2p fifo reset
-	if (rx[port].var.frl_rate) {
-		hdmirx_wr_bits_cor(RX_H21_SW_RST, _BIT(4), 1, port);
-		hdmirx_wr_bits_cor(RX_H21_SW_RST, _BIT(4), 0, port);
-	}
+
 	hdmirx_wr_top_common(TOP_DSC_HDMI_CNTL, 0x0);
 	hdmirx_wr_top_common(TOP_DSC_HDMI_CNTL, 0x1);
 	over_clk_flag = 0;
