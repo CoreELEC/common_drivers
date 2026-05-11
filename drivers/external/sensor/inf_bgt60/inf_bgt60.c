@@ -20,7 +20,7 @@
 #include <linux/math64.h>
 #include <linux/log2.h>
 #include <linux/amlogic/aml_spi.h>
-#include "sei_inf_bgt60.h"
+#include "inf_bgt60.h"
 
 #define INF_BGT60_DEFAULT_SPEED_HZ	10000000   /* 25MHz 调试 */
 #define RADAR_MOTION_DETECTION 1
@@ -1143,7 +1143,6 @@ int32_t radar_motion_detection_targets_read(struct inf_bgt60_t *inf_bgt60, motio
     motion_detection->sequence = 0;
     
     ret = xensiv_bgt60cutrxx_get_irq_status(motion_detection->radar_sensor, &irq_status);
-    pr_info("[inf_bgt60] IR_STAT: 0x%08X\n", irq_status);
     if (ret != XENSIV_BGT60CUTRXX_STATUS_OK)
     {
         // pr_err("[inf_bgt60] Error reading IRQ status: %d\n", ret);
@@ -1151,40 +1150,22 @@ int32_t radar_motion_detection_targets_read(struct inf_bgt60_t *inf_bgt60, motio
     }
 
     /* Debug: print which event bits are set */
-     pr_info("[inf_bgt60] Events: SEQ1=%d SEQ2=%d SEQ3=%d ULP=%d RD=%d MM=%d\n",
-         !!(irq_status & BGT60CUTR13B_IR_STAT_SEQ1_DONE_MSK),
-         !!(irq_status & BGT60CUTR13B_IR_STAT_SEQ2_DONE_MSK),
-         !!(irq_status & BGT60CUTR13B_IR_STAT_SEQ3_DONE_MSK),
-         !!(irq_status & BGT60CUTR13B_IR_STAT_ULP_EVENT_MSK),
-         !!(irq_status & BGT60CUTR13B_IR_STAT_RD_EVENT_MSK),
-         !!(irq_status & BGT60CUTR13B_IR_STAT_MM_EVENT_MSK));
 
     xensiv_bgt60cutrxx_get_reg(inf_bgt60, BGT60CUTR13B_REG_SEQ1_STAT, &seq1_status);
     seq1_counter_new = (uint16_t)(seq1_status & BGT60CUTR13B_SEQ1_STAT_SEQ_CNT_msk);
-     pr_info("[inf_bgt60] Sequence 1 counter actual: %d\n\r", seq1_counter_new);
     xensiv_bgt60cutrxx_get_reg(inf_bgt60, BGT60CUTR13B_REG_SEQ2_STAT, &seq2_status);
     seq2_counter_new = (uint16_t)(seq2_status & BGT60CUTR13B_SEQ2_STAT_SEQ_CNT_msk);
-     pr_info("[inf_bgt60] Sequence 2 counter actual: %d\n\r", seq2_counter_new);
 
     //first check for sequence 1
     if (irq_status & BGT60CUTR13B_IR_STAT_SEQ1_DONE_MSK)
     {
-        pr_info("[inf_bgt60] Event triggered ==> SEQ1 done\n\r");
         motion_detection->seq1_done = true;
         motion_detection->sequence = 1;
-        if (radar_motion_detection_evaluate_sequence_counter(seq1_counter_new,
-                                                            motion_detection->sequence_counters.seq1_counter) == false)
-        {
-             pr_info("[inf_bgt60] Sequence counter mismatch: prev. %d, actual %d\n\r",
-                     motion_detection->sequence_counters.seq1_counter, seq1_counter_new);
-        }
         // Sequence 1 is done, but target registers may not be available yet.
         if ((irq_status & BGT60CUTR13B_IR_STAT_ULP_EVENT_MSK) == 0)
         {
-             pr_info("[inf_bgt60] ULP event not set, waiting for it 5ms and read ir_stat again\n\r");
             mdelay(5);
             ret = xensiv_bgt60cutrxx_get_irq_status(motion_detection->radar_sensor, &irq_status);
-             pr_info("[inf_bgt60] IR_STAT: 0x%08X\n", irq_status);
         }
     }
 
@@ -1192,17 +1173,10 @@ int32_t radar_motion_detection_targets_read(struct inf_bgt60_t *inf_bgt60, motio
     // check if ULP event is set
     if (irq_status & BGT60CUTR13B_IR_STAT_ULP_EVENT_MSK)
     {
-         pr_info("[inf_bgt60] ULP event set\n\r");
         bgt60_dump_regs_on_ulp_event_once(inf_bgt60, irq_status);
         motion_detection->seq1_done = true;
         motion_detection->sequence = 1;
         motion_detection->ulp_event = true;
-        if (radar_motion_detection_evaluate_sequence_counter(seq1_counter_new,
-                motion_detection->sequence_counters.seq1_counter) == false)
-        {
-             pr_info("Sequence counter mismatch: prev. %d, actual %d\n\r",
-                     motion_detection->sequence_counters.seq1_counter, seq1_counter_new);
-        }
         ret = xensiv_bgt60cutrxx_get_md_targets(motion_detection->radar_sensor, (uint32_t*)motion_detection->targets,
                                                 BGT60CUTR13_MD_TARGET_REGISTERS);
     }
@@ -1225,7 +1199,6 @@ int32_t radar_motion_detection_targets_read(struct inf_bgt60_t *inf_bgt60, motio
             // pr_info("[inf_bgt60] RD event not set, waiting for it 5ms and read ir_stat again\n\r");
             mdelay(5);
             ret = xensiv_bgt60cutrxx_get_irq_status(motion_detection->radar_sensor, &irq_status);
-            pr_info("[inf_bgt60] IR_STAT: 0x%08X\n", irq_status);
         }
     }
 
@@ -2204,8 +2177,6 @@ void print_detections(motion_detection_t *motion_detection, uint32_t *counter)
     bool target_detected = false;
     uint8_t i;
 
-     pr_info("{\"ts\": %u, \"detections\": {", *counter);
-     pr_info("\"attributes\":[\"range_um\",\"azimuth_x100\",\"elevation_x100\",\"magnitude_x100\",\"speed_mmps\",\"rx\",\"sequence\",\"type\",\"seq_count_1\",\"seq_count_2\",\"ir_stat\"], \"data\": [");
     (*counter)++;
     if (motion_detection->seq1_done)
     {
@@ -2225,27 +2196,9 @@ void print_detections(motion_detection_t *motion_detection, uint32_t *counter)
         // check if targets are detected then print the targets
         if (motion_detection->processed_targets[i].antenna_rx != 0 || ((i == (BGT60CUTR13_PROCESSED_MD_TARGET_MAX - 1)) && !target_detected))
         {
-            if (target_detected)
-            {
-                 pr_info(", ");
-            }
             target_detected = true;
-
-             pr_info("[%u, %d, %d, %d, %d, %u, %d, %d, %d, %d, %u]",
-            motion_detection->processed_targets[i].range_um,
-            motion_detection->processed_targets[i].azimuth_deg_x100,
-            motion_detection->processed_targets[i].elevation_deg_x100,
-            motion_detection->processed_targets[i].magnitude_dB_x100,
-            motion_detection->processed_targets[i].velocity_mmps,
-            motion_detection->processed_targets[i].antenna_rx,
-            motion_detection->sequence,
-            type,
-            motion_detection->sequence_counters.seq1_counter,
-            motion_detection->sequence_counters.seq2_counter,
-            motion_detection->ir_stat);
         }
     }
-     pr_info("]}}\n");
 }
 
 static ssize_t inf_bgt60_detect_show(struct device *dev,

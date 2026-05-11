@@ -7,12 +7,7 @@ ddk_module(
     name = "sei_inf_bgt60",
     srcs = glob([
         "**/*.h",
-    ]),
-    conditional_srcs = {
-        "CONFIG_RADAR_BGT60": {
-            True: ["sei_inf_bgt60.c"],
-        },
-    },
+    ]) + ["inf_bgt60.c"],
     hdrs = [
     ],
     local_defines = ["pr_fmt(fmt)=\"[i2c]: \" fmt"],
