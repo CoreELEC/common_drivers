@@ -181,7 +181,7 @@ static const struct reg_sequence mclk_pll_init_regs[] = {
 };
 
 static struct reg_sequence mclk_pll_save_regs[] = {
-	{ .reg = ANACTRL_MPLL_CTRL4, .def = 0x00000202 }
+	{ .reg = ANACTRL_MPLL_CTRL4 }
 };
 
 static struct clk_regmap mclk_pll = {
