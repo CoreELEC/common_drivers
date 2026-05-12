@@ -1120,6 +1120,7 @@
 			mmc_debug_flag;
 			no-mmc;
 			no-sdio;
+			cap-mmc-64bit-dma;
 			//resets = <&reset RESET_SD_EMMC_B>;
 		};
 
@@ -1144,6 +1145,7 @@
 			use_intf3_tuning;
 			no-mmc;
 			no-sd;
+			cap-mmc-64bit-dma;
 			//resets = <&reset RESET_SD_EMMC_A>;
 		};
 
