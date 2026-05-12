@@ -212,7 +212,7 @@ extern int gdc_uv_swap_enable;
 #define DEWARP_STRIDE_ALIGN(x) (((x) + 15) / 16)
 #define AML_GDC_COEF_SIZE  256
 #define AML_GDC_CFG_STRIDE 8191
-#define AML_GDC_CFG_STRIDE_C4 4096
+#define AML_GDC_CFG_STRIDE_C4 8191
 
 // ----------------------------------- //
 // Instance 'gdc' of module 'gdc_ip_config'
