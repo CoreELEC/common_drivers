@@ -148,7 +148,6 @@ struct dptx_hw_common {
 	bool mst_en;
 	bool fec_en;
 	u8 psr_en;
-	bool vid_enable;
 	u8 hdcp_sec_en;
 	/* the spinlock for secondary data packet */
 	spinlock_t sdp_lock;

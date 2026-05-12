@@ -804,7 +804,8 @@ static void meson_dptx_hdcp_notify(void *data, int type, int result)
 
 	DRM_DEBUG("dptx hdcp uevent, mode=%d,result=%d\n", type, result);
 
-	kobject_uevent_env(&dev->primary->kdev->kobj, KOBJ_CHANGE, envp);
+	if (dev->primary && dev->primary->kdev)
+		kobject_uevent_env(&dev->primary->kdev->kobj, KOBJ_CHANGE, envp);
 end:
 	drm_modeset_unlock(mode_lock);
 }
@@ -857,10 +858,10 @@ static void meson_dptx_encoder_atomic_enable(struct drm_encoder *encoder,
 	/* assume hdmi_if_index = venc_idx by default */
 	meson_tx_build_clk_param(tx_dev, &dptx_conn_state->base_state.para,
 		meson_dptx->enc_idx, meson_dptx->enc_idx);
-	meson_tx_do_mode_setting(tx_dev, &dptx_conn_state->base_state,
-				 &old_dptx_conn_state->base_state);
 	meson_venc_mode_set(meson_dptx->venc, meson_dptx->enc_idx, VENC_ENCP,
 			    VENC_BIST_PTTN_OFF, &dptx_conn_state->base_state.para);
+	meson_tx_do_mode_setting(tx_dev, &dptx_conn_state->base_state,
+				 &old_dptx_conn_state->base_state);
 	meson_vout_notify_mode_change(amcrtc->vout_index,
 				      meson_crtc_state->vmode, EVENT_MODE_SET_FINISH);
 	meson_vout_update_mode_name(amcrtc->vout_index, mode->name, "dptx");

@@ -1618,11 +1618,9 @@ static int dptx20_hw_mst_config(struct dptx_hw_common *hw_comm)
 
 static void dptx20_hw_src_vid_enable(struct dptx_hw_common *hw_comm, u8 vc_id, bool enable)
 {
-	u32 src_en = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_SOURCE_ENABLE);
-
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), 0x0);
 	if (enable) {
-		dptx20_reg_write(hw_comm, CORE_LEVEL,
-			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), 0x8);
 		/* Set this bit to a 1 to enable the output of active data on the
 		 * DisplayPort main link. This bit enables source X data to
 		 * be inserted into the packet in the assigned time slots.
@@ -1631,16 +1629,13 @@ static void dptx20_hw_src_vid_enable(struct dptx_hw_common *hw_comm, u8 vc_id, b
 			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_VIDEO_STREAM_ENABLE), 0x1);
 	} else {
 		dptx20_reg_write(hw_comm, CORE_LEVEL,
-			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_USER_CONTROL), 0);
-		dptx20_reg_write(hw_comm, CORE_LEVEL,
 			dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_VIDEO_STREAM_ENABLE), 0);
 	}
 	/* INPUT_SOURCE_ENABLE: Enables the transmission of video and secondary
 	 * channel audio data from one or more MST virtual sources.
 	 * bit3~0 for MST3~0.
-	 * TO CONFIRM: disable bit for the disable input source when MST enabled?
 	 */
-	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SOURCE_ENABLE, src_en | 0x1 << vc_id);
+	dptx20_set_reg_bits(hw_comm, CORE_LEVEL, DPTX20_SOURCE_ENABLE, enable, vc_id, 1);
 }
 
 static void dptx_fec_init(struct dptx_hw_common *hw_comm)
@@ -2410,6 +2405,14 @@ static int dptx20_vpu_fmt_config(struct dptx_hw_common *hw_comm,
 	return 0;
 }
 
+/* do link reset and video capture reset before core config
+ * it will affect SST/MST
+ */
+static void dptx20_core_rst(struct dptx_hw_common *hw_comm)
+{
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SOFT_RESET, 0x1F);
+}
+
 static int dptx20_pre_enable_mode(struct dptx_hw_common *hw_comm, struct meson_tx_format_para *para)
 {
 	/* enable VENC clk for sync even mode set failed */
@@ -2417,7 +2420,9 @@ static int dptx20_pre_enable_mode(struct dptx_hw_common *hw_comm, struct meson_t
 
 	meson_tx_phy_power_on(hw_comm->hw_base.tx_phy);
 	meson_tx_clk_set(hw_comm->hw_base.tx_clk, clk_mask);
-	hw_comm->vid_enable = true;
+
+	dptx20_core_rst(hw_comm);
+	usleep_range(1000, 1100);
 	/* fec init should before link training initial, dp2.1 3.5.1.5.5 P933 */
 	dptx_fec_init(hw_comm);
 
