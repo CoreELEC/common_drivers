@@ -87,6 +87,7 @@ struct meson_pwm_tee {
 	 * that is shared between the two PWMs.
 	 */
 	spinlock_t lock;
+	u32 no_change_clk;
 #ifdef CONFIG_HIBERNATION
 #define PWM_TEE_REG_NUMS			8
 	u32 regs_restore[PWM_TEE_REG_NUMS];

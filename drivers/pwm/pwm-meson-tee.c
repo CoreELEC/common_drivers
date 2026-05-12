@@ -129,8 +129,11 @@ static int meson_pwm_tee_calc(struct meson_pwm_tee *meson, struct pwm_device *pw
 	}
 
 	dev_dbg(&meson->chip->dev, "fin_freq: %lu Hz\n", fin_freq);
-	channel->pre_div = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
-						(u64)NSEC_PER_SEC * 0xffffLL);
+	if (meson->no_change_clk)
+		channel->pre_div = 0;
+	else
+		channel->pre_div = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
+							(u64)NSEC_PER_SEC * 0xffffLL);
 	cnt = DIV64_U64_ROUND_CLOSEST((u64)fin_freq * (u64)period,
 			(u64)NSEC_PER_SEC * (u64)(channel->pre_div + 1));
 	if (cnt > 0xffff) {
@@ -210,6 +213,9 @@ static void meson_pwm_tee_enable(struct meson_pwm_tee *meson, struct pwm_device 
 				 SECID_PWM_ENABLE_MAIN, value, 0, 0, 0, &res);
 	#endif
 #endif
+
+	if (meson->no_change_clk)
+		return;
 	/*get_clk_rate()not use in Interrupt context*/
 	if (channel->clk_div == channel->pre_div)
 		return;
@@ -438,6 +444,10 @@ static int meson_pwm_tee_probe(struct platform_device *pdev)
 	}
 	if (of_property_read_u32(pdev->dev.of_node, "arm,smc-id", &meson->smc_id))
 		meson->smc_id = SECURE_PWM_I2C;
+	if (fwnode_property_present(&pdev->dev.of_node->fwnode, "change-clk-intern"))
+		meson->no_change_clk = 0;
+	else
+		meson->no_change_clk = 1;
 	// meson->base = devm_platform_ioremap_resource(pdev, 0);
 
 	spin_lock_init(&meson->lock);
