@@ -76,3 +76,10 @@ void aed_v3_set_volume(unsigned int master_vol,
 	/* unmute */
 	eqdrc_write(AED_MUTE_CTRL, 0x0);
 }
+
+/* need soft reset after ram set && get, to make ram data effective */
+void aed_soft_reset(void)
+{
+	eqdrc_write(AEQ_SOFT_REST, 0xf);
+	eqdrc_write(AEQ_SOFT_REST, 0);
+}

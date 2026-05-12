@@ -25,6 +25,7 @@
 #include "effects_common.h"
 #include "effects_hw.h"
 #include "effects_hw_v2.h"
+#include "effects_hw_v3.h"
 #include "effects_v2.h"
 #include "vad.h"
 #include "extn.h"
@@ -1456,10 +1457,17 @@ void aml_set_aed(bool enable, int aed_module)
 
 void aml_aed_top_enable(struct frddr *fr, bool enable)
 {
-	if (aml_get_mixer_is_exist(fr) && aml_check_aed_module(fr->dest))
-		mixer_eq_enable(fr, enable);
-	if (aml_check_aed_module(fr->dest))
+	if (aml_check_aed_module(fr->dest)) {
+		/* do soft reset before AED start */
+		if (enable && check_aed_version() == VERSION5)
+			aed_soft_reset();
+
+		/* mixer source select */
+		if (aml_get_mixer_is_exist(fr))
+			mixer_eq_enable(fr, enable);
+
 		aml_aed_enable(&attach_aed, enable);
+	}
 }
 
 void aml_aed_set_frddr_reserved(void)

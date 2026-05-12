@@ -16,6 +16,7 @@ void aed_v3_set_volume(unsigned int master_volume,
 void aed_v3_set_mixer_params(void);
 void aed_v3_eq_taps(unsigned int eq1_taps);
 void aed_status_set(void);
+void aed_soft_reset(void);
 void aed_v3_set_ram_coeff(int add, int len, unsigned int *params);
 void aed_v3_get_ram_coeff(int add, int len, unsigned int *params);
 
