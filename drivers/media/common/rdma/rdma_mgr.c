@@ -90,6 +90,7 @@ int rdma_configured[RDMA_NUM];
 ulong rdma_config_us[RDMA_NUM];
 int enc_num_configed[RDMA_NUM] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 static struct video_module_reg_s video_reg;
+
 /* bit0~bit3 already used */
 #define DEBUG_RDMA_DONE_SKIP      0x10
 #define DEBUG_RDMA_REG_CONFLICT   0x20
@@ -883,7 +884,6 @@ static int handle_trans_vpp(int handle)
 		return -1;
 	switch (rdma_type) {
 	case VSYNC_RDMA:
-	case EX_VSYNC_RDMA:
 		ret = RDMA_VPP0;
 		break;
 	case VSYNC_RDMA_VPP1:
@@ -894,6 +894,9 @@ static int handle_trans_vpp(int handle)
 		break;
 	case PRE_VSYNC_RDMA:
 		ret = RDMA_PRE_VSYNC;
+		break;
+	case EX_VSYNC_RDMA:
+		ret = RDMA_LOWLATENCY;
 		break;
 	}
 	return ret;
@@ -1188,7 +1191,8 @@ void part_table_combine_to_reg_buf(int handle)
 		return;
 	ins = &info->rdma_ins[handle];
 	if (vpp_index == RDMA_VPP0 ||
-		vpp_index == RDMA_PRE_VSYNC) {
+		vpp_index == RDMA_PRE_VSYNC ||
+		vpp_index == RDMA_LOWLATENCY) {
 		temp_combine_item = ins->reg_buf + ins->rdma_item_count * 2;
 		for (i = 0; i < PARTITION_TABLE_NUM; i++) {
 			if (info->rdma_part_ins[vpp_index][i].flag) {
@@ -2064,6 +2068,7 @@ int rdma_part_table_register(struct rdma_partition_ins_s *rdma_part_ins)
 	int vpp_index;
 	struct rdma_device_info *info = &rdma_info;
 	struct rdma_partition_ins_s *ins;
+	struct rdma_partition_ins_s *ins_lowlatency;
 
 	if (!rdma_part_ins->flag ||
 		rdma_part_ins->table_index >= PARTITION_TABLE_NUM) {
@@ -2073,7 +2078,14 @@ int rdma_part_table_register(struct rdma_partition_ins_s *rdma_part_ins)
 	tbl_index = rdma_part_ins->table_index;
 	vpp_index = rdma_part_ins->vpp_index;
 	table_cnt = rdma_part_ins->max_reg_cnt;
+	if (vpp_index == RDMA_VPP0) {
+		memcpy(&info->rdma_part_ins[RDMA_LOWLATENCY][tbl_index],
+			rdma_part_ins, sizeof(struct rdma_partition_ins_s));
+		ins_lowlatency = &info->rdma_part_ins[RDMA_LOWLATENCY][tbl_index];
+		ins_lowlatency->vpp_index = RDMA_LOWLATENCY;
+	}
 	ins = &info->rdma_part_ins[vpp_index][tbl_index];
+
 	if (table_cnt == 0) {
 		table_size = RDMA_PARTITION_TABLE_SIZE;
 		ins->max_reg_cnt = RDMA_PARTITION_TABLE_CNT;
@@ -2087,6 +2099,7 @@ int rdma_part_table_register(struct rdma_partition_ins_s *rdma_part_ins)
 	ins->reg_range_check = rdma_part_ins->reg_range_check;
 	ins->check_start_addr = rdma_part_ins->check_start_addr;
 	ins->check_end_addr = rdma_part_ins->check_end_addr;
+
 	if (ins->flag)
 		ins->rdma_item = kmalloc(table_size, GFP_KERNEL);
 	if (!ins->rdma_item) {
@@ -2095,7 +2108,22 @@ int rdma_part_table_register(struct rdma_partition_ins_s *rdma_part_ins)
 		return -1;
 	}
 	ins->vpp_index = rdma_part_ins->vpp_index;
-
+	if (vpp_index == RDMA_VPP0) {
+		ins_lowlatency->max_reg_cnt = ins->max_reg_cnt;
+		ins_lowlatency->flag = ins->flag;
+		ins_lowlatency->table_index = ins->table_index;
+		ins_lowlatency->rdma_item_count = 0;
+		ins_lowlatency->reg_range_check = ins->reg_range_check;
+		ins_lowlatency->check_start_addr = ins->check_start_addr;
+		ins_lowlatency->check_end_addr = ins->check_end_addr;
+		if (ins_lowlatency->flag)
+			ins_lowlatency->rdma_item = kmalloc(table_size, GFP_KERNEL);
+		if (!ins_lowlatency->rdma_item) {
+			kfree(ins_lowlatency->rdma_item);
+			ins_lowlatency->rdma_item = NULL;
+			return -1;
+		}
+	}
 	return tbl_index;
 }
 EXPORT_SYMBOL(rdma_part_table_register);

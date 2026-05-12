@@ -204,6 +204,7 @@ int sr_gain[2];
 #define RDMA_TABLE_NUM_MAX 4
 
 static struct rdma_partition_ins_s pq_rdma_part_ins[RDMA_TABLE_NUM_MAX];
+
 bool pq_rdma_init;
 static bool use_rdma_part_tables = true;
 
@@ -6593,7 +6594,6 @@ void init_pq_rdma_part_ins(void)
 
 	for (i = 0; i < RDMA_TABLE_NUM_MAX; i++)
 		pq_rdma_part_ins[0].table_index = -1;
-
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	if (ct_en || lut3d_en) {
 		if (chip_type_id == chip_t6d)

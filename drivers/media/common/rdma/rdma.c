@@ -117,11 +117,17 @@ inline int VSYNC_WR_TABLE_REG_SIMPLE(int tbl_idx, u32 adr, u32 val)
 	int enable_ = cur_enable[cur_vsync_handle_id] & 0xf;
 
 	if (enable_ != 0 && vsync_rdma_handle[cur_vsync_handle_id] > 0) {
-		if (get_part_flag_status(RDMA_VPP0, tbl_idx))
-			rdma_part_write_reg_simple(tbl_idx,
-					vsync_rdma_handle[cur_vsync_handle_id], adr, val);
-		else
+		if (cur_vsync_handle_id == VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_VPP0, tbl_idx))
+				rdma_part_write_reg_simple(tbl_idx,
+						vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		} else if (cur_vsync_handle_id == EX_VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_LOWLATENCY, tbl_idx))
+				rdma_part_write_reg_simple(tbl_idx,
+						vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		} else {
 			rdma_write_reg(vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		}
 	} else {
 		Wr(adr, val);
 		if (debug_flag[cur_vsync_handle_id] & 1)
@@ -897,11 +903,17 @@ u32 VSYNC_RD_TABLE_REG(int tbl_idx, u32 adr)
 	u32 read_val = Rd(adr);
 
 	if (enable_ != 0 && vsync_rdma_handle[cur_vsync_handle_id] > 0) {
-		if (get_part_flag_status(RDMA_VPP0, tbl_idx))
-			read_val = rdma_part_read_reg(tbl_idx,
-						vsync_rdma_handle[cur_vsync_handle_id], adr);
-		else
+		if (cur_vsync_handle_id == VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_VPP0, tbl_idx))
+				read_val = rdma_part_read_reg(tbl_idx,
+					vsync_rdma_handle[cur_vsync_handle_id], adr);
+		} else if (cur_vsync_handle_id == EX_VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_LOWLATENCY, tbl_idx))
+				read_val = rdma_part_read_reg(tbl_idx,
+					vsync_rdma_handle[cur_vsync_handle_id], adr);
+		} else {
 			read_val = rdma_read_reg(vsync_rdma_handle[cur_vsync_handle_id], adr);
+		}
 	}
 
 	return read_val;
@@ -981,11 +993,17 @@ int VSYNC_WR_TABLE_REG(int tbl_idx, u32 adr, u32 val)
 	int enable_ = cur_enable[cur_vsync_handle_id] & 0xf;
 
 	if (enable_ != 0 && vsync_rdma_handle[cur_vsync_handle_id] > 0) {
-		if (get_part_flag_status(RDMA_VPP0, tbl_idx))
-			rdma_part_write_reg(tbl_idx,
-					vsync_rdma_handle[cur_vsync_handle_id], adr, val);
-		else
+		if (cur_vsync_handle_id == VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_VPP0, tbl_idx))
+				rdma_part_write_reg(tbl_idx,
+						vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		} else if (cur_vsync_handle_id == EX_VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_LOWLATENCY, tbl_idx))
+				rdma_part_write_reg(tbl_idx,
+						vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		} else {
 			rdma_write_reg(vsync_rdma_handle[cur_vsync_handle_id], adr, val);
+		}
 	} else {
 		Wr(adr, val);
 		if (debug_flag[cur_vsync_handle_id] & 1)
@@ -1084,12 +1102,20 @@ int VSYNC_WR_TABLE_REG_BITS(int tbl_idx, u32 adr, u32 val, u32 start, u32 len)
 	int enable_ = cur_enable[cur_vsync_handle_id] & 0xf;
 
 	if (enable_ != 0 && vsync_rdma_handle[cur_vsync_handle_id] > 0) {
-		if (get_part_flag_status(RDMA_VPP0, tbl_idx))
-			rdma_part_write_reg_bits(tbl_idx, vsync_rdma_handle[cur_vsync_handle_id],
+		if (cur_vsync_handle_id == VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_VPP0, tbl_idx))
+				rdma_part_write_reg_bits(tbl_idx,
+					vsync_rdma_handle[cur_vsync_handle_id],
+				adr, val, start, len);
+		} else if (cur_vsync_handle_id == EX_VSYNC_RDMA) {
+			if (get_part_flag_status(RDMA_LOWLATENCY, tbl_idx))
+				rdma_part_write_reg_bits(tbl_idx,
+					vsync_rdma_handle[cur_vsync_handle_id],
 					adr, val, start, len);
-		else
+		} else {
 			rdma_write_reg_bits(vsync_rdma_handle[cur_vsync_handle_id],
 					adr, val, start, len);
+		}
 	} else {
 		u32 read_val = Rd(adr);
 		u32 write_val = (read_val &

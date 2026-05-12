@@ -95,6 +95,7 @@ enum rdma_vpp_e {
 	RDMA_VPP1,
 	RDMA_VPP2,
 	RDMA_PRE_VSYNC,
+	RDMA_LOWLATENCY,
 	RDMA_VPP_MAX,
 };
 

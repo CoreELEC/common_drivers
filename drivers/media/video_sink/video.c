@@ -354,7 +354,6 @@ static struct rdma_partition_ins_s vpp1_rdma_part_ins;
 static struct rdma_partition_ins_s vpp2_rdma_part_ins;
 static struct rdma_partition_ins_s pre_vsync_rdma_part_ins;
 
-
 #define ENABLE_UPDATE_HDR_FROM_USER 0
 #if ENABLE_UPDATE_HDR_FROM_USER
 static struct vframe_master_display_colour_s vf_hdr;
@@ -17473,6 +17472,7 @@ static int amvideom_probe(struct platform_device *pdev)
 		video_hw_init();
 	}
 	vpp_valid |= (1 << RDMA_VPP0);
+
 	video_reg_write_check_table_init();
 	prop = of_get_property(pdev->dev.of_node, "vpp2_layer_count", NULL);
 	if (prop && display_device_cnt >= 3) {
