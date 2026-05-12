@@ -150,8 +150,8 @@ static int lcd_pll_ss_check(struct aml_lcd_drv_s *pdrv, struct lcd_clk_config_s 
 			return -1;
 		if (cconf->ss_ppm >= 50000)
 			div_0p5_en = 0;
-		if (div_0p5_en != cconf->data->pll_data[0]->pll_0_5_div_en) {
-			cconf->data->pll_data[0]->pll_0_5_div_en = div_0p5_en;
+		if (div_0p5_en != cconf->data->pll_data[0]->pll_div_0p5_en) {
+			cconf->data->pll_data[0]->pll_div_0p5_en = div_0p5_en;
 			pll_fvco = cconf->pll_config[0].pll_fvco;
 			ret = check_vco(cconf, 0, pll_fvco);
 			if (ret == 0) {
@@ -183,11 +183,15 @@ static void lcd_set_pll_ss_tuning(struct aml_lcd_drv_s *pdrv, unsigned int ss_fl
 		return;
 	if (ret == 1) {
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0,
-				cconf->data->pll_data[0]->pll_0_5_div_en, 12, 1);
+				cconf->data->pll_data[0]->pll_div_0p5_en, 12, 1);
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL0,
 				cconf->pll_config[0].pll_m, 0, 9);
 		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL0_CNTL4,
 				cconf->pll_config[0].pll_frac, 0, 17);
+		lcd_delay_us(10);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL_VLOCK, 1, 4, 1);
+		lcd_delay_us(10);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_TCON_PLL_VLOCK, 0, 4, 1);
 	}
 	lcd_set_pll_ss_t6x(pdrv, cconf, ss_flag);
 }
@@ -298,7 +302,7 @@ static void lcd_set_pll_t6x(struct aml_lcd_drv_s *pdrv)
 
 	tcon_div_sel = cconf->pll_tcon_div_sel;
 	pll_ctrl0 = 0x8022000 | (cconf->pll_config[0].pll_m << 0) |
-			(cconf->data->pll_data[0]->pll_0_5_div_en << 12);
+			(cconf->data->pll_data[0]->pll_div_0p5_en << 12);
 	pll_ctrl1 = 0x1030600c;
 	pll_ctrl2 = 0x32000000 |
 		(1 << 24) |
@@ -355,7 +359,7 @@ static void lcd_set_pll_t6x(struct aml_lcd_drv_s *pdrv)
 				((cconf->pll_config[1].pll_n & 0x1f) << 16);
 			pll_ctrl1 = 0x03a00000 |
 				(cconf->pll_config[1].pll_frac & 0x7ffff);
-			pll_ctrl3 = 0x0b0da000 | (cconf->data->pll_data[1]->pll_0_5_div_en << 26);
+			pll_ctrl3 = 0x0b0da000 | (cconf->data->pll_data[1]->pll_div_0p5_en << 26);
 			lcd_ana_write(ANACTRL_GP2PLL_CTRL0, pll_ctrl0);
 			lcd_ana_setb(ANACTRL_GP2PLL_CTRL0, 1, 28, 1);
 			lcd_ana_write(ANACTRL_GP2PLL_CTRL1, pll_ctrl1);
@@ -813,7 +817,7 @@ static void lcd_clk_generate_t6x(struct aml_lcd_drv_s *pdrv)
 
 static struct lcd_pll_data_s lcd_pll_data_tcon_t6x = {
 	.pll_od_fb = 1,
-	.pll_0_5_div_en = 1,
+	.pll_div_0p5_en = 1,
 	.pll_m_max = 511,
 	.pll_m_min = 2,
 	.pll_n_max = 1,
@@ -836,7 +840,7 @@ static struct lcd_pll_data_s lcd_pll_data_tcon_t6x = {
 
 static struct lcd_pll_data_s lcd_pll_data_gp2_t6x = {
 	.pll_od_fb = 0,
-	.pll_0_5_div_en = 1,
+	.pll_div_0p5_en = 1,
 	.pll_m_max = 511,
 	.pll_m_min = 2,
 	.pll_n_max = 1,

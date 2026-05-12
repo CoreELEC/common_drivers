@@ -327,7 +327,7 @@ static inline unsigned long long lcd_pll_real_fvco_calc(unsigned long long pll_f
 							struct lcd_pll_data_s *pll_data)
 {
 	pll_fvco = lcd_do_div(pll_fvco, od_fb_table[pll_data->pll_od_fb]);
-	if (pll_data->pll_0_5_div_en)
+	if (pll_data->pll_div_0p5_en)
 		pll_fvco = pll_fvco * 2;
 	return pll_fvco;
 }
@@ -1923,7 +1923,7 @@ void lcd_clk_config_init_print_dft(struct aml_lcd_drv_s *pdrv)
 			"pll_m:       [%3d %3d]\n"
 			"pll_n:       [%3d %3d]\n"
 			"pll_od_fb:      %d\n"
-			"pll_0_5_div_en: %d\n"
+			"pll_div_0p5_en: %d\n"
 			"pll_frac_range: %d\n"
 			"pll_od_sel_max: %d\n"
 			"pll_ref:     [%d %d]\n"
@@ -1935,7 +1935,7 @@ void lcd_clk_config_init_print_dft(struct aml_lcd_drv_s *pdrv)
 			pll_data->pll_offset,
 			pll_data->pll_m_max, pll_data->pll_m_min,
 			pll_data->pll_n_max, pll_data->pll_n_min,
-			pll_data->pll_od_fb, pll_data->pll_0_5_div_en,
+			pll_data->pll_od_fb, pll_data->pll_div_0p5_en,
 			pll_data->pll_frac_range, pll_data->pll_od_sel_max,
 			pll_data->pll_ref_fmax, pll_data->pll_ref_fmin,
 			pll_data->pll_vco_fmax, pll_data->pll_vco_fmin,

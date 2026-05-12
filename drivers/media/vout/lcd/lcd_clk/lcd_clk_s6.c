@@ -300,7 +300,7 @@ static void lcd_prbs_test_s6(struct aml_lcd_drv_s *pdrv, unsigned int ms,
 
 static struct lcd_pll_data_s lcd_pll_data_s6 = {
 	.pll_od_fb = 0,
-	.pll_0_5_div_en = 0,
+	.pll_div_0p5_en = 0,
 	.pll_m_max = 511,
 	.pll_m_min = 2,
 	.pll_n_max = 1,

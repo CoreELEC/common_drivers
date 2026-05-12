@@ -526,7 +526,7 @@ lcd_prbs_test_err_t5w:
 
 static struct lcd_pll_data_s lcd_pll_data_t5w = {
 	.pll_od_fb = 0,
-	.pll_0_5_div_en = 0,
+	.pll_div_0p5_en = 0,
 	.pll_m_max = 511,
 	.pll_m_min = 2,
 	.pll_n_max = 1,

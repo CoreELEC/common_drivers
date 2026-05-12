@@ -79,7 +79,7 @@ struct lcd_clk_config_s;
 struct lcd_pll_data_s {
 	/*pll para limit*/
 	unsigned int pll_od_fb;
-	unsigned int pll_0_5_div_en;
+	unsigned int pll_div_0p5_en;
 	unsigned int pll_m_max;
 	unsigned int pll_m_min;
 	unsigned int pll_n_max;
