@@ -170,8 +170,8 @@
 
 	ram-dump {
 		compatible = "amlogic, ram_dump";
-		status = "disabled";
-		reg = <0x0 0xFE0102D8 0x0 4>;
+		status = "okay";
+		reg = <0x0 0xFFA80058 0x0 4>;
 		reg-names = "SYSCTRL_STICKY_REG6";
 		store_device = "data";
 	};

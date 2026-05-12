@@ -251,12 +251,12 @@ EXPORT_SYMBOL(ramdump_disabled);
 #ifdef CONFIG_ARM64
 /* arm64: kill flush_cache_all() 68234df4ea79
  * Flush the whole D-cache.
- * Corrupted registers: x0-x7, x9-x11
+ * Corrupted registers: x0-x7, x9-x12, x16
  */
 noinline void ramdump_sync_data(void)
 {
 	asm volatile
-		("sub sp, sp, #0x60\n"			//save corrupted registers: x0-x7, x9-x11
+		("sub sp, sp, #0x70\n"			//save corrupted registers: x0-x7, x9-x12, x16
 		"str x0, [sp]\n"
 		"str x1, [sp,#8]\n"
 		"str x2, [sp,#16]\n"
@@ -268,55 +268,79 @@ noinline void ramdump_sync_data(void)
 		"str x9, [sp,#64]\n"
 		"str x10, [sp,#72]\n"
 		"str x11, [sp,#80]\n"
+		"str x12, [sp,#88]\n"
+		"str x16, [sp,#96]\n"
+
+		"mov	x1, #0\n"			//only flush cache
 		"dsb	sy\n"
-		"mrs	x0, clidr_el1\n"
-		"and	x3, x0, #0x7000000\n"
-		"lsr	x3, x3, #23\n"
-		"cbz	x3, finished\n"
-		"mov	x10, #0\n"
-	"loop1:\n"
-		"add	x2, x10, x10, lsr #1\n"
-		"lsr	x1, x0, x2\n"
-		"and	x1, x1, #7\n"
-		"cmp	x1, #2\n"
-		"b.lt	skip\n"
-		"mrs	x9, daif\n"
-		"msr    daifset, #2\n"
-		"msr	csselr_el1, x10\n"
-		"isb\n"
-		"mrs	x1, ccsidr_el1\n"
-		"msr    daif, x9\n"
-		"and	x2, x1, #7\n"
-		"add	x2, x2, #4\n"
-		"mov	x4, #0x3ff\n"
-		"and	x4, x4, x1, lsr #3\n"
-		"clz	w5, w4\n"
-		"mov	x7, #0x7fff\n"
-		"and	x7, x7, x1, lsr #13\n"
-	"loop2:\n"
-		"mov	x9, x4\n"
-	"loop3:\n"
-		"lsl	x6, x9, x5\n"
-		"orr	x11, x10, x6\n"
-		"lsl	x6, x7, x2\n"
-		"orr	x11, x11, x6\n"
-		"dc	cisw, x11\n"
-		"subs	x9, x9, #1\n"
-		"b.ge	loop3\n"
-		"subs	x7, x7, #1\n"
-		"b.ge	loop2\n"
+		"mrs	x10, clidr_el1\n"		/* read clidr_el1 */
+		"ubfx	x11, x10, #24, #3\n"		/* x11 <- loc */
+		"cbz	x11, finished\n"		/* if loc is 0, exit */
+		"mrs	x16, s3_0_c0_c7_2\n"		/* read value of id_aa64mmfr2_el1*/
+		"ubfx	x16, x16, #20, #4\n"		/* save FEAT_CCIDX identifier in x16 */
+		"mov	x0, #0\n"			/* start flush at cache level 0 */
+		/* x0  <- cache level */
+		/* x10 <- clidr_el1 */
+		/* x11 <- loc */
+		/* x15 <- return address */
+
+	"loop_level:\n"
+		"add	x12, x0, x0, lsl #1\n"		/* x12 <- tripled cache level */
+		"lsr	x12, x10, x12\n"
+		"and	x12, x12, #7\n"			/* x12 <- cache type */
+		"cmp	x12, #2\n"
+		"b.lt	skip\n"				/* skip if no cache or icache */
+
+		"lsl   x12, x0, #1\n"
+		"msr    csselr_el1, x12\n"              /* select cache level */
+		"isb\n"                                 /* sync change of cssidr_el1 */
+		"mrs    x6, ccsidr_el1\n"               /* read the new cssidr_el1 */
+		"ubfx   x2, x6,  #0,  #3\n"             /* x2 <- log2(cache line size)-4 */
+		"cbz    x16, 3f\n"                      /* check for FEAT_CCIDX */
+		"ubfx   x3, x6,  #3, #21\n"             /* x3 <- number of cache ways - 1 */
+		"ubfx   x4, x6, #32, #24\n"             /* x4 <- number of cache sets - 1 */
+		"b      4f\n"
+	"3:\n"
+		"ubfx   x3, x6,  #3, #10\n"             /* x3 <- number of cache ways - 1 */
+		"ubfx   x4, x6, #13, #15\n"             /* x4 <- number of cache sets - 1 */
+	"4:\n"
+		"add    x2, x2, #4\n"                   /* x2 <- log2(cache line size) */
+		"clz    w5, w3\n"                       /* bit position of #ways */
+		/* x12 <- cache level << 1 */
+		/* x2 <- line length offset */
+		/* x3 <- number of cache ways - 1 */
+		/* x4 <- number of cache sets - 1 */
+		/* x5 <- bit position of #ways */
+	"loop_set:\n"
+		"mov    x6, x3\n"                       /* x6 <- working copy of #ways */
+	"loop_way:\n"
+		"lsl    x7, x6, x5\n"
+		"orr    x9, x12, x7\n"                  /* map way and level to cisw value */
+		"lsl    x7, x4, x2\n"
+		"orr    x9, x9, x7\n"                   /* map set number to cisw value */
+		"tbz    w1, #0, 1f\n"
+		"dc     isw, x9\n"
+		"b      2f\n"
+	"1:\n"
+		"dc     cisw, x9\n"                     /* clean & invalidate by set/way */
+	"2:\n"
+		"subs   x6, x6, #1\n"                   /* decrement the way */
+		"b.ge   loop_way\n"
+		"subs   x4, x4, #1\n"                   /* decrement the set */
+		"b.ge   loop_set\n"
+
 	"skip:\n"
-		"add	x10, x10, #2\n"
-		"cmp	x3, x10\n"
-		"b.gt	loop1\n"
-	"finished:\n"
-		"mov	x10, #0\n"
-		"msr	csselr_el1, x10\n"
+		"add	x0, x0, #1\n"			/* increment cache level */
+		"cmp	x11, x0\n"
+		"b.gt	loop_level\n"
+
+		"mov	x0, #0\n"
+		"msr	csselr_el1, x0\n"		/* restore csselr_el1 */
 		"dsb	sy\n"
 		"isb\n"
-		"mov	x0, #0\n"
-		"ic	ialluis\n"
-		"ldr x0, [sp]\n"			//restore corrupted registers: x0-x7, x9-x11
+
+	"finished:\n"
+		"ldr x0, [sp]\n"			//restore corrupted registers: x0-x7, x9-x12
 		"ldr x1, [sp,#8]\n"
 		"ldr x2, [sp,#16]\n"
 		"ldr x3, [sp,#24]\n"
@@ -327,7 +351,9 @@ noinline void ramdump_sync_data(void)
 		"ldr x9, [sp,#64]\n"
 		"ldr x10, [sp,#72]\n"
 		"ldr x11, [sp,#80]\n"
-		"add sp, sp, #0x60\n"
+		"ldr x12, [sp,#88]\n"
+		"ldr x16, [sp,#96]\n"
+		"add sp, sp, #0x70\n"
 	);
 }
 #else
