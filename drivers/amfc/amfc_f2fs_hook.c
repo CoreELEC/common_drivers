@@ -168,7 +168,7 @@ zstd_decompress_pages_pre_handler(struct kprobe *p, struct pt_regs *regs)
 	memset(dic->cbuf, 0, sizeof(c));
 	ret = amfc_decompress(dic->cbuf, dic->rbuf,
 			      dic->clen + sizeof(c), dic->rlen, 0);
-	pr_debug("%s, src:%px, dst:%px, ssize:%ld, dsize:%ld, ret:%d\n",
+	pr_debug("%s, src:%px, dst:%px, ssize:%zu, dsize:%zu, ret:%d\n",
 		__func__, dic->cbuf, dic->rbuf, dic->clen, dic->rlen, ret);
 	// restore
 	memcpy(dic->cbuf, &c, sizeof(c));
