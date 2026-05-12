@@ -88,6 +88,6 @@
 #define A9_MBOX_NUMS      4
 
 /* AOCPU STATUS MBOX CHANNEL ID */
-#define A9_MBOX_AO2TEE    4
+#define A9_AOCPU_STS_CHAN 4
 
 #endif /* __A9_MBOX_H__ */

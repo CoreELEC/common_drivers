@@ -288,6 +288,7 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/sound/soc:amlogic-snd-vad",
     "sound/drivers/snd-aloop.ko",
     "common_drivers/drivers/dma/amlogic-dma.ko",
+    "//common_drivers/drivers/dma:amlogic-dma",
 ]
 
 AMLOGOC_COMMON_MODULES_REMOVE = (
@@ -403,6 +404,18 @@ AMLOGIC_UPGRADE_COMMON_MODULES = [
     "//common_drivers/drivers/aml_watermark:aml_watermark",
     "common_drivers/drivers/net/phy/amlogic-realtek.ko",
     "//common_drivers/drivers/net:amlogic-realtek",
+    "common_drivers/drivers/dma/amlogic-dma.ko",
+    "//common_drivers/drivers/dma:amlogic-dma",
+    "common_drivers/drivers/i3c/master/amlogic-i3c.ko",
+    "//common_drivers/drivers/i3c/master:amlogic-i3c",
+    "common_drivers/drivers/usb/typec/aw35615/typec-aw35615.ko",
+    "//common_drivers/drivers/usb:typec-aw35615",
+    "common_drivers/drivers/global_timer/amlogic-global-timer.ko",
+    "//common_drivers/drivers/global_timer:amlogic-global-timer",
+    "common_drivers/drivers/pio/amlogic-pio.ko",
+    "//common_drivers/drivers/pio:amlogic-pio",
+    "common_drivers/sound/soc/codecs/amlogic/amlogic-snd-codec-es8389.ko",
+    "//common_drivers/sound/soc:amlogic-snd-codec-es8389",
 ]
 
 AMLOGIC_UPGRADE_P_MODULES = [

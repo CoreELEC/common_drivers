@@ -28,6 +28,8 @@
 
 #aml_media.ko
   __vmalloc_array_noprof
+  pinctrl_get
+  pinctrl_put
 
 #amlogic-rtc.ko
   regmap_test_bits
@@ -100,8 +102,8 @@
   phy_read_mmd
 
 #amlogic-debug.ko
- __traceiter_android_vh_ftrace_dump_buffer
- __tracepoint_android_vh_ftrace_dump_buffer
+  __traceiter_android_vh_ftrace_dump_buffer
+  __tracepoint_android_vh_ftrace_dump_buffer
 
 # amlogic-clk-v2.ko
   clk_hw_forward_rate_request
@@ -125,12 +127,6 @@
   i3c_master_register
   i3c_master_set_info
   i3c_master_unregister
-
-#amlogic-phy-debug.ko
-  class_dev_iter_exit
-  class_dev_iter_init
-  class_dev_iter_next
-  device_match_name
 
 #typec-aw35615.ko
   alarm_cancel
@@ -168,21 +164,37 @@
   typec_switch_register
   typec_switch_unregister
 
-#amlogic-realtek.ko
-  devm_clk_get_optional_enabled
-  genphy_c45_an_config_aneg
-  genphy_c45_check_and_restart_aneg
-  genphy_c45_pma_read_abilities
-  genphy_c45_pma_resume
-  genphy_c45_pma_setup_forced
-  genphy_c45_pma_suspend
-  genphy_c45_read_status
-  phy_modify_mmd_changed
-  phy_read_mmd
-
 #dwmac-meson8b.ko
   devm_phy_optional_get
   phy_set_speed
 
 #amlogic-hsg-phy.ko
   of_phy_simple_xlate
+
+#amlogic-dma.ko
+  devm_clk_get_enabled
+  dma_async_device_unregister
+  dma_async_tx_descriptor_init
+  dma_get_slave_channel
+  dmaenginem_async_device_register
+  of_dma_controller_free
+  of_dma_controller_register
+  vchan_dma_desc_free_list
+  vchan_find_desc
+  vchan_init
+  vchan_tx_desc_free
+  vchan_tx_submit
+
+#amlogic-pio.ko
+  devm_of_iomap
+  dma_request_chan
+
+#aml_drm.ko
+  drm_client_dev_hotplug
+
+#amlogic-snd-codec-es8389.ko
+  regcache_cache_bypass
+  snd_soc_dapm_get_volsw
+  snd_soc_dapm_put_volsw
+  snd_soc_get_enum_double
+  snd_soc_put_enum_double

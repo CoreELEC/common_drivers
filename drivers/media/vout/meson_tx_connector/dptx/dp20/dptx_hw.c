@@ -13,7 +13,6 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/phy/meson_tx_phy_core.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/clk/meson_tx_clk.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
 #include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 
@@ -2692,33 +2691,6 @@ static int dptx20_hw_cntl_hdcp(struct meson_tx_hw *tx_hw, u32 cmd,
 		if (hdcptx_comm->hdcptx_api->get_hdcprx_ver)
 			if (hdcptx_comm->hdcptx_api->get_hdcprx_ver(hdcptx_comm) == 2)
 				ret = true;
-		break;
-	case DP_HDCP1X_REAUTH:
-		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
-			&hw_comm->dptx_hdcp1x_inst->hdcp1x_reauth_work,
-			msecs_to_jiffies(5));
-		break;
-	case DP_HDCP1X_R0_PRIME_READY:
-		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
-			&hw_comm->dptx_hdcp1x_inst->hdcp1x_r0_work,
-			msecs_to_jiffies(5));
-		break;
-	case DP_HDCP1X_KSV_LIST_READY:
-		queue_delayed_work(hw_comm->dptx_hdcp1x_inst->hdcp_wq,
-			&hw_comm->dptx_hdcp1x_inst->hdcp1x_ksv_list_work,
-			msecs_to_jiffies(5));
-		break;
-	case DP_HDCP1X_AUTH_EN:
-		if (!input_argv) {
-			DPTX_ERROR("%s cmd[0x%x] null input arg\n", __func__, cmd);
-			ret = -1;
-			break;
-		}
-		en = *(u8 *)input_argv;
-		if (en)
-			dptx_hdcp1x_auth_enable(hw_comm);
-		else
-			dptx_hdcp1x_auth_disable(hw_comm);
 		break;
 	default:
 		break;

@@ -732,9 +732,13 @@
 			  <A9_MBOX_REE2DSPA>,
 			  <A9_MBOX_AO2REE>,
 			  <A9_MBOX_REE2AO>;
-		aocpu_sts_mboxid = <A9_MBOX_AO2TEE>;
-		ree2aocpu_mboxid = <A9_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_DSPA>,
+			     <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		dspa-hang-detect;
+		aocpu-sts-mboxid = <A9_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -749,10 +753,6 @@
 			 <&mbox_fifo A9_AO2REE_DEV>,
 			 <&mbox_fifo A9_REE2DSPA_DEV>,
 			 <&mbox_fifo A9_DSPA2REE_DEV>;
-		mbox-dests = <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>,
-			     <MAILBOX_DSP>,
-			     <MAILBOX_ARM>;
 	};
 
 	aml_hwspinlock: hwlock {

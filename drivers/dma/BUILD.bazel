@@ -1,0 +1,34 @@
+load("//build/kernel/kleaf:kernel.bzl", "ddk_headers", "ddk_module")
+load("//common_drivers:amlogic_utils.bzl", "m_k_files", "kernel_select")
+
+m_k_files()
+
+ddk_module(
+    name = "amlogic-dma",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_DMA": {
+            True: [
+                "amlogic-dma.c",
+            ],
+        },
+    },
+    hdrs = [
+        "//common:drivers/dma/virt-dma.h",
+    ],
+    linux_includes = [
+        "../../../common/drivers/dma",
+    ],
+    local_defines = [
+    ],
+    out = "amlogic-dma.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common_drivers/drivers/gki_tool:amlogic-gkitool",
+        "//common_drivers/drivers/debug:amlogic-debug-iotrace",
+        "//common_drivers/drivers/debug:amlogic-debug",
+    ],
+)
