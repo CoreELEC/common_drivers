@@ -551,6 +551,7 @@ void cec_spd_info_init(void)
 	cec_add_spd_info(4, 0x080046, "STR-DH590");
 	cec_add_spd_info(4, 0x00a0de, "RX-V385");
 	cec_add_spd_info(4, 0x0005cd, "AVR-X1600H");
+	cec_add_spd_info(4, 0x00903e, "PHILIPS BDP");
 }
 
 static bool cec_spd_logicaddr_isValid(unsigned char logicaddr)
