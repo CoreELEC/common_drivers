@@ -29,6 +29,9 @@
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
 		spi0 = &spifc;
+		spi1 = &spisg_b;
+		spi2 = &spisg_c;
+		spi3 = &spisg_d;
 		tsensor0 = &nna_tsensor;
 		tsensor1 = &isp_tsensor;
 		tsensor2 = &pll_tsensor;
@@ -679,4 +682,10 @@
 	gamma_en = <0>;/*1:enable ;0:disable*/
 	wb_en = <0>;/*1:enable ;0:disable*/
 	vlock_en = <0>;/*1:enable;0:disable*/
+};
+
+&spisg_b {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spisg_b_pins_x>;
 };

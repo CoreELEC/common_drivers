@@ -1017,15 +1017,43 @@
 					<10 11 12 13 14 15 16 17 18 19 20 21>;
 			};
 
-			spicc0: spi@50000 {
-				compatible = "amlogic,meson-a4-spicc-v2";
+			spisg_b: spi@50000 {
+				compatible = "amlogic,meson-t6x-spicc-v2";
 				reg = <0x0 0x50000 0x0 0x38>;
 				interrupts = <GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>;
-				//clocks = <&clkc CLKID_SYS_SPISG0>,
-				//	 <&clkc CLKID_SPISG0>;
-				//clock-names = "sys", "spi";
-				//assigned-clocks = <&clkc CLKID_SPISG0>;
-				//assigned-clock-rates = <500000000>;
+				clocks = <&clkc CLKID_SYS_SPISG0>,
+					 <&clkc CLKID_SPISG0>;
+				clock-names = "sys", "spi";
+				assigned-clocks = <&clkc CLKID_SPISG0>;
+				assigned-clock-rates = <500000000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			spisg_c: spi@50100 {
+				compatible = "amlogic,meson-t6x-spicc-v2";
+				reg = <0x0 0x50100 0x0 0x38>;
+				interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SYS_SPISG0>,
+					 <&clkc CLKID_SPISG1>;
+				clock-names = "sys", "spi";
+				assigned-clocks = <&clkc CLKID_SPISG1>;
+				assigned-clock-rates = <500000000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				status = "disabled";
+			};
+
+			spisg_d: spi@50200 {
+				compatible = "amlogic,meson-t6x-spicc-v2";
+				reg = <0x0 0x50200 0x0 0x38>;
+				interrupts = <GIC_SPI 187 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_SYS_SPISG0>,
+					 <&clkc CLKID_SPISG2>;
+				clock-names = "sys", "spi";
+				assigned-clocks = <&clkc CLKID_SPISG2>;
+				assigned-clock-rates = <500000000>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";
@@ -5413,46 +5441,103 @@
 		};
 	};
 
-	spicc0_pins_a: spicc0_pins_a {
+	spisg_b_pins_p: spisg_b_pins_p {
 		mux {
-			groups = "spi_a_mosi_a",
-				 "spi_a_miso_a",
-				 "spi_a_ss0_a",
-				 "spi_a_clk_a";
-			function = "spi_a";
+			 /* GPIOP_5/6/7/4 */
+			groups = "spi1_mosi_p",
+				 "spi1_miso_p",
+				 "spi1_ss0_p",
+				 "spi1_sclk_p";
+			function = "spi1";
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spicc0_pins_f: spicc0_pins_f {
+	spisg_b_pins_b: spisg_b_pins_b {
 		mux {
-			groups = "spi_a_mosi_f",
-				 "spi_a_miso_f",
-				 "spi_a_ss0_f",
-				 "spi_a_clk_f";
-			function = "spi_a";
+			 /* GPIOB_6/7/4/8/9/5 */
+			groups = "spi1_mosi_b",
+				 "spi1_miso_b",
+				 "spi1_ss0_b",
+				 "spi1_ss1_b",
+				 "spi1_ss2_b",
+				 "spi1_sclk_b";
+			function = "spi1";
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spicc0_pins_h: spicc0_pins_h {
+	spisg_b_pins_c: spisg_b_pins_c {
 		mux {
-			groups = "spi_a_mosi_h",
-				 "spi_a_miso_h",
-				 "spi_a_ss0_h",
-				 "spi_a_clk_h";
-			function = "spi_a";
+			 /* GPIOC_0/1/3/4/5/2 */
+			groups = "spi1_mosi_c",
+				 "spi1_miso_c",
+				 "spi1_ss0_c",
+				 "spi1_ss1_c",
+				 "spi1_ss2_c",
+				 "spi1_sclk_c";
+			function = "spi1";
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spicc0_pins_x: spicc0_pins_x {
+	spisg_b_pins_d: spisg_b_pins_d {
 		mux {
-			groups = "spi_a_mosi_x",
-				 "spi_a_miso_x",
-				 "spi_a_ss0_x",
-				 "spi_a_clk_x";
-			function = "spi_a";
+			 /* GPIOD_5/4/7/6 */
+			groups = "spi1_mosi_d",
+				 "spi1_miso_d",
+				 "spi1_ss1_d",
+				 "spi1_sclk_d";
+			function = "spi1";
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	spisg_b_pins_x: spisg_b_pins_x {
+		mux {
+			 /* GPIOX_12/13/10/11 */
+			groups = "spi1_mosi_x",
+				 "spi1_miso_x",
+				 "spi1_ss0_x",
+				 "spi1_sclk_x";
+			function = "spi1";
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	spisg_c_pins_d: spisg_c_pins_d {
+		mux {
+			 /* GPIOD_0/1/3/2 */
+			groups = "spi2_mosi_d",
+				 "spi2_miso_d",
+				 "spi2_ss0_d",
+				 "spi2_sclk_d";
+			function = "spi2";
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	spisg_c_pins_x: spisg_c_pins_x {
+		mux {
+			 /* GPIOX_7/8/9/6 */
+			groups = "spi2_mosi_x",
+				 "spi2_miso_x",
+				 "spi2_ss0_x",
+				 "spi2_sclk_x";
+			function = "spi2";
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	spisg_d_pins_x: spisg_d_pins_x {
+		mux {
+			 /* GPIOX_1/2/3/4/0 */
+			groups = "spi3_mosi",
+				 "spi3_miso",
+				 "spi3_ss0",
+				 "spi3_ss1",
+				 "spi3_sclk";
+			function = "spi3";
 			drive-strength-microamp = <3000>;
 		};
 	};

@@ -170,10 +170,10 @@ static const unsigned  int spi0_ao_sck_p_pins[]		= { GPIOP_0 };
 static const unsigned  int spi0_ao_mosi_p_pins[]	= { GPIOP_1 };
 static const unsigned  int spi0_ao_miso_p_pins[]	= { GPIOP_2 };
 static const unsigned  int spi0_ao_ss0_p_pins[]		= { GPIOP_3 };
-static const unsigned  int spi1_sck_p_pins[]		= { GPIOP_4 };
+static const unsigned  int spi1_sclk_p_pins[]		= { GPIOP_4 };
 static const unsigned  int spi1_mosi_p_pins[]		= { GPIOP_5 };
 static const unsigned  int spi1_miso_p_pins[]		= { GPIOP_6 };
-static const unsigned  int spi1_ss0_f_pins[]		= { GPIOP_7 };
+static const unsigned  int spi1_ss0_p_pins[]		= { GPIOP_7 };
 static const unsigned  int uart_f_tx_p_pins[]		= { GPIOP_8 };
 static const unsigned  int uart_f_rx_p_pins[]		= { GPIOP_9  };
 static const unsigned  int uart_e_tx_p_pins[]		= { GPIOP_10 };
@@ -456,10 +456,10 @@ static struct meson_pmx_group meson_c5_ao_groups[] __initdata = {
 	GROUP(spi0_ao_mosi_p,		5),
 	GROUP(spi0_ao_miso_p,		5),
 	GROUP(spi0_ao_ss0_p,		5),
-	GROUP(spi1_sck_p,		5),
+	GROUP(spi1_sclk_p,		5),
 	GROUP(spi1_mosi_p,		5),
 	GROUP(spi1_miso_p,		5),
-	GROUP(spi1_ss0_f,		5),
+	GROUP(spi1_ss0_p,		5),
 	GROUP(uart_f_tx_p,		5),
 	GROUP(uart_f_rx_p,		5),
 	GROUP(uart_e_tx_p,		5),
@@ -707,8 +707,8 @@ static const char * const spi0_ao_groups[] = {
 };
 
 static const char * const spi1_ao_groups[] = {
-	"spi1_sck_p", "spi1_mosi_p",
-	"spi1_miso_p", "spi1_ss0_f"
+	"spi1_sclk_p", "spi1_mosi_p",
+	"spi1_miso_p", "spi1_ss0_p"
 };
 
 static const char * const clk_32k_ao_in_groups[] = {
@@ -1888,7 +1888,7 @@ static const char * const spi1_groups[] = {
 	"spi1_mosi_c", "spi1_miso_c", "spi1_sclk_c", "spi1_ss0_c",
 	"spi1_ss1_c", "spi1_ss2_c",
 
-	"spi2_mosi_d", "spi2_miso_d", "spi2_sclk_d", "spi2_ss0_d",
+	"spi1_mosi_d", "spi1_miso_d", "spi1_sclk_d", "spi1_ss0_d",
 
 	"spi1_ss0_x", "spi1_sclk_x", "spi1_mosi_x", "spi1_miso_x"
 
