@@ -2690,6 +2690,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	struct dp_buf_mgr_t *cur_buf_mgr;
 	struct dpss_status dpss_state;
 	bool is_dtv_src = false;
+	bool is_pp_swtch = false;
 	int ret = 0;
 
 	if (!dev || !frame_info) {
@@ -2838,6 +2839,11 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	}
 	dev->should_on_vd1 = 0;
 	dev->continue_to_vd1_num = 0;
+
+	if (ret == 3 && !(dev->last_vf.type & VIDTYPE_TYPEMASK) && !(vf->type & VIDTYPE_TYPEMASK)) {
+		is_pp_swtch = true;
+		dp_print(dev->index, PRINT_OTHER, "P-->P switch\n");
+	}
 
 	/*vf need check switch*/
 	if ((vf->flag & VFRAME_FLAG_VIDEO_SECURE) && !dev->dpss_is_tvp) {
@@ -3093,6 +3099,12 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		dp_print(dev->index, PRINT_OTHER,
 			"first i, set dpss done flag, then vd1 toggle\n");
+	}
+
+	if (dev->is_switch_first_frame && is_pp_swtch) {
+		vf->type_ext |= VIDTYPE_EXT_DPSS_EOS;
+		dp_print(dev->index, PRINT_OTHER, "frame_index=%d, need eos flag\n",
+			vf->frame_index);
 	}
 
 	frame_info->out_fence_fd = out_fence_fd;
