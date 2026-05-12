@@ -241,30 +241,15 @@ static ssize_t secure_reg_write(struct file *file, const char __user *buffer,
 				size_t count, loff_t *ppos)
 {
 	int ret;
-	char *input;
 	unsigned long reg = 0;
 	struct arm_smccc_res res;
 
-	input = kzalloc(count, GFP_KERNEL);
-	if (!input) {
-		kfree(input);
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(input, buffer, count)) {
-		kfree(input);
-		return -EFAULT;
-	}
-	ret = kstrtoul(input, 0, &reg);
-	if (ret) {
-		kfree(input);
-		return -EINVAL;
-	}
+	ret = kstrtoul_from_user(buffer, count, 0, &reg);
+	if (ret)
+		return ret;
 
 	arm_smccc_smc(0x82000099, 0x30,
 		      reg, 0, 0, 0, 0, 0, &res);
-
-	kfree(input);
 
 	return count;
 }

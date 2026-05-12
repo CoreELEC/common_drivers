@@ -132,12 +132,12 @@ static unsigned int __pll_params_with_frac(unsigned long rate,
 
 	if (pll->flags & CLK_MESON_PLL_POWER_OF_TWO) {
 		val = vco_rate << n;
-		if (vco_rate < ((parent_rate >> n) * m))
+		if (vco_rate < (((u64)parent_rate >> n) * m))
 			return 0;
 	} else {
 		val = vco_rate * n;
 		/* Bail out if we are already over the requested rate */
-		if (vco_rate < (div_u64((u64)parent_rate * m, n)))
+		if (!n || vco_rate < (div_u64((u64)parent_rate * m, n)))
 			return 0;
 	}
 
@@ -151,7 +151,7 @@ static unsigned int __pll_params_with_frac(unsigned long rate,
 	else
 		val = div_u64(val * frac_max, parent_rate);
 
-	val -= m * frac_max;
+	val -= (u64)m * frac_max;
 
 	return min((unsigned int)val, (frac_max - 1));
 }

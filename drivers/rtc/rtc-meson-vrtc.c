@@ -53,7 +53,13 @@ static int meson_vrtc_set_time(struct device *dev, struct rtc_time *tm)
 	struct timespec64 boot_time;
 
 	time = rtc_tm_to_time64(tm);
+	if (time < 0)
+		return -EINVAL;
+
 	ktime_get_boottime_ts64(&boot_time);
+	if (boot_time.tv_sec < 0 || time < boot_time.tv_sec)
+		return -EINVAL;
+
 	vrtc_init_date = time - boot_time.tv_sec;
 
 	return 0;
