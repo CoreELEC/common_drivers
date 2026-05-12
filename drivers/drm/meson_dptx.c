@@ -452,6 +452,9 @@ struct drm_connector_state *meson_dptx_atomic_duplicate_state
 	curr_tx_state = &curr_state->base_state;
 	tx_state->sequence_id = curr_tx_state->sequence_id;
 	new_state->update = false;
+	new_state->color_attr_para.colorformat = curr_state->color_attr_para.colorformat;
+	new_state->color_attr_para.bitdepth = curr_state->color_attr_para.bitdepth;
+
 	tx_state->hdr_priority = curr_tx_state->hdr_priority;
 	new_state->metadata = curr_state->metadata;
 
