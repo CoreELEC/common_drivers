@@ -1588,8 +1588,12 @@ void tvafe_vbi_set_wss(void)
 {
 	struct vbi_dev_s *devp = vbi_dev_local;
 	enum tvin_sig_fmt_e fmt = get_tvafe_signal_fmt();
+	struct vbi_dev_s *vbi_dev = vbi_dev_local;
 
 	if (!devp || devp->vbi_function_sel & VBI_BYPASS_WSS_SET)
+		return;
+
+	if (vbi_dev && vbi_dev->vbi_start)
 		return;
 
 	if (tvafe_clk_status) {
