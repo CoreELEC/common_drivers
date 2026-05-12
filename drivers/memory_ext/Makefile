@@ -2,6 +2,9 @@
 
 ccflags-y += -I$(srctree)/mm -I$(srctree)/drivers/iommu/arm/arm-smmu-v3
 # CFLAGS_REMOVE_aml_cma.o += -Wframe-larger-than=${CONFIG_FRAME_WARN}
+ifeq ($(CONFIG_AMLOGIC_PTR_AUTH_KERNEL),y)
+CFLAGS_REMOVE_vmap_stack.o += -mbranch-protection=pac-ret
+endif
 
 obj-$(CONFIG_AMLOGIC_PAGE_TRACE)        += page_trace.o
 obj-$(CONFIG_AMLOGIC_CMA)               += aml_cma.o
