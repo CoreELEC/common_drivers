@@ -2039,7 +2039,7 @@ EXPORT_SYMBOL(dpss_cmd_asy);
 bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
 {
 	int i;
-	u32 in_frm_rate, in_frm_frac, out_frm_rate;
+	u32 in_frm_rate, in_frm_frac, out_frm_rate, out_frm_frac;
 	struct vinfo_s *vinfo;
 	bool need_do_game_frc = true;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
@@ -2079,6 +2079,9 @@ bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
 	in_frm_frac = 96000 * 1000 / vf->duration % 1000;
 	in_frm_rate = in_frm_rate + (in_frm_frac + 500) / 1000;
 	out_frm_rate = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	out_frm_frac = (vinfo->sync_duration_num * 1000 /
+			vinfo->sync_duration_den) % 1000;
+	out_frm_rate = out_frm_rate + (out_frm_frac + 500) / 1000;
 	for (i = 0; i < GAME_N2M_LIST_MAX; i++)
 		if (in_frm_rate == frc_n2m_list[i].input_framerate &&
 			out_frm_rate == frc_n2m_list[i].output_framerate)
