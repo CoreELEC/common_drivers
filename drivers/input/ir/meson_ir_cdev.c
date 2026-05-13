@@ -64,10 +64,13 @@ static long meson_ir_ioctl(struct file *file, unsigned int cmd,
 	void __user *parg = (void __user *)arg;
 	unsigned long flags;
 	u32 value;
-	int retval = 0, i, cnt;
+	int retval = 0, i;
 	u32 tmp[IR_MBOX_BUF_MAX_KEY + 3];
 	struct ir_wakeup_tab *wt;
 	static int wakeup_size;
+
+	if (!chip)
+		return -EFAULT;
 
 	if (!parg) {
 		dev_err(chip->dev, "%s invalid user space pointer\n", __func__);
@@ -228,22 +231,7 @@ static long meson_ir_ioctl(struct file *file, unsigned int cmd,
 			goto err;
 		}
 
-		tmp[0] = IR_MBOX_CMD_SET_WAKEUP_LIST;
-		for (i = 0, cnt = 0; i < wakeup_size; i++) {
-			tmp[2] |= (chip->wakeup_tab[i].ir_reason & 0x1) << cnt;
-			tmp[cnt + 3] = chip->wakeup_tab[i].frame_code;
-			cnt++;
-
-			if (cnt != IR_MBOX_BUF_MAX_KEY)
-				continue;
-
-			cnt = 0;
-			tmp[1] = 16;
-			meson_ir_mbox_transfer(chip, tmp, sizeof(tmp));
-			tmp[2] = 0;
-		}
-		tmp[1] = cnt;
-		meson_ir_mbox_transfer(chip, tmp, sizeof(tmp));
+		meson_ir_mbox_set_wakeup_key(chip, wakeup_size);
 
 		kfree(wt);
 		break;
@@ -281,6 +269,9 @@ err:
 static int meson_ir_release(struct inode *inode, struct file *file)
 {
 	struct meson_ir_chip *chip = (struct meson_ir_chip *)file->private_data;
+
+	if (!chip)
+		return -EFAULT;
 
 	enable_irq(chip->irqno[0]);
 	if (chip->irqno[1] >= 0)

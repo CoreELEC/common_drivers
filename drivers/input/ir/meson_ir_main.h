@@ -202,6 +202,7 @@ struct input_dev *meson_ir_match_input_dev(struct meson_ir_dev *dev,
 int meson_ir_pulses_malloc(struct meson_ir_chip *chip);
 void meson_ir_pulses_free(struct meson_ir_chip *chip);
 int meson_ir_mbox_transfer(struct meson_ir_chip *chip, u32 *data, u32 size);
+void meson_ir_mbox_set_wakeup_key(struct meson_ir_chip *chip, u32 key_num);
 void meson_ir_report_wakeup_event(struct meson_ir_chip *chip, u32 framecode);
 
 int meson_ir_xmp_decode_init(void);

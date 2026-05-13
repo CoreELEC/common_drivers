@@ -66,6 +66,29 @@ int meson_ir_mbox_transfer(struct meson_ir_chip *chip, u32 *data, u32 size)
 	return ret;
 }
 
+void meson_ir_mbox_set_wakeup_key(struct meson_ir_chip *chip, u32 key_num)
+{
+	int cnt, i;
+	u32 data[IR_MBOX_BUF_MAX_KEY + 3] = {IR_MBOX_CMD_SET_WAKEUP_LIST};
+
+	/* 3 items for cmd id, key num, ir wakeup reason */
+	for (i = 0, cnt = 0; i < key_num; i++) {
+		data[2] |= (chip->wakeup_tab[i].ir_reason & 0x1) << cnt;
+		data[cnt + 3] = chip->wakeup_tab[i].frame_code;
+		cnt++;
+
+		if (cnt != IR_MBOX_BUF_MAX_KEY)
+			continue;
+
+		cnt = 0;
+		data[1] = 16;
+		meson_ir_mbox_transfer(chip, data, sizeof(data));
+		data[2] = 0;
+	}
+	data[1] = cnt;
+	meson_ir_mbox_transfer(chip, data, sizeof(data));
+}
+
 void meson_ir_report_wakeup_event(struct meson_ir_chip *chip, u32 framecode)
 {
 	struct input_dev *input_device = NULL;
@@ -626,8 +649,7 @@ static int meson_ir_get_wakeup_tables(struct device_node *node,
 	const phandle *phandle;
 	struct device_node *wakeup_maps;
 	unsigned int key_num;
-	int cnt, i, ret = -1;
-	u32 data[IR_MBOX_BUF_MAX_KEY + 3] = {IR_MBOX_CMD_SET_WAKEUP_LIST};
+	int ret = -1;
 
 	phandle = of_get_property(node, "wakeup_map", NULL);
 	if (!phandle) {
@@ -664,23 +686,7 @@ static int meson_ir_get_wakeup_tables(struct device_node *node,
 		return -ENODATA;
 	}
 
-	/* 3 items for cmd id, key num, ir wakeup reason */
-	for (i = 0, cnt = 0; i < key_num; i++) {
-		data[2] |= (chip->wakeup_tab[i].ir_reason & 0x1) << cnt;
-		data[cnt + 3] = chip->wakeup_tab[i].frame_code;
-		cnt++;
-
-		if (cnt != IR_MBOX_BUF_MAX_KEY)
-			continue;
-
-		cnt = 0;
-		data[1] = 16;
-		meson_ir_mbox_transfer(chip, data, sizeof(data));
-		data[2] = 0;
-	}
-	data[1] = cnt;
-	meson_ir_mbox_transfer(chip, data, sizeof(data));
-
+	meson_ir_mbox_set_wakeup_key(chip, key_num);
 	return 0;
 }
 
@@ -1217,6 +1223,7 @@ static int meson_ir_restore(struct device *dev)
 	unsigned int val;
 	unsigned long flags;
 	unsigned char cnt;
+	unsigned int key_num = 0;
 
 	pinctrl_pm_select_default_state(dev);
 
@@ -1229,6 +1236,10 @@ static int meson_ir_restore(struct device *dev)
 		regmap_read(chip->ir_contr[cnt].base, REG_FRAME, &val);
 	}
 	spin_unlock_irqrestore(&chip->slock, flags);
+
+	while (chip->wakeup_tab[key_num].frame_code)
+		key_num++;
+	meson_ir_mbox_set_wakeup_key(chip, key_num);
 
 	meson_ir_set_irq(chip, 1);
 
