@@ -17,7 +17,7 @@ extern uint debug_csc;
 			pr_info("[%s](%d):" fmt, __func__, __LINE__, ## args);\
 	} while (0)
 
-#define ENABLE_PRINT 0
+#define ENABLE_PRINT 1
 #if ENABLE_PRINT
 #define pr_log(lvl, fmt, args...)\
 	do {\

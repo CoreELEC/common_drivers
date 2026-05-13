@@ -4031,6 +4031,8 @@ void set_gmut_comp(enum hdr_module_sel module_sel,
 }
 
 u32 hdr_hist[NUM_HDR_HIST][128];
+u32 hdr_hist_vd2[NUM_HDR_HIST][128];
+unsigned int vd_hist[128];
 static u32 hdr_max_rgb;
 static u8 percentile_percent[9] = {
 	1, 5, 10, 25, 50, 75, 90, 95, 99
@@ -4208,8 +4210,14 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 		return;
 	}
 
-	for (i = 0; i < NUM_HDR_HIST - 1; i++)
-		memcpy(hdr_hist[i], hdr_hist[i + 1], 128 * sizeof(u32));
+	if (vd_path == VD2_PATH) {
+		for (i = 0; i < NUM_HDR_HIST - 1; i++)
+			memcpy(hdr_hist_vd2[i], hdr_hist_vd2[i + 1], 128 * sizeof(u32));
+	} else {
+		for (i = 0; i < NUM_HDR_HIST - 1; i++)
+			memcpy(hdr_hist[i], hdr_hist[i + 1], 128 * sizeof(u32));
+	}
+
 	memset(percentile, 0, 9 * sizeof(u32));
 	total_pixel = 0;
 
@@ -4219,13 +4227,13 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 			hdr_hist[NUM_HDR_HIST - 1], 128);
 		else if (vd_path == VD2_PATH)
 			am_dma_get_mif_data_hdr2_hist(EN_HDR_DMA_ID_VD2,
-			hdr_hist[NUM_HDR_HIST - 1], 128);
+			hdr_hist_vd2[NUM_HDR_HIST - 1], 128);
 		else if (vd_path == VD1_1_PATH)
 			am_dma_get_mif_data_hdr2_hist(EN_HDR_DMA_ID_VD1_1,
 			hdr_hist[NUM_HDR_HIST - 1], 128);
 		else if (vd_path == VD2_1_PATH)
 			am_dma_get_mif_data_hdr2_hist(EN_HDR_DMA_ID_VD2_1,
-			hdr_hist[NUM_HDR_HIST - 1], 128);
+			hdr_hist_vd2[NUM_HDR_HIST - 1], 128);
 		for (i = 0; i < 128; i++)
 			total_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
 	} else {
@@ -4234,14 +4242,22 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 				16 + rd_index_offset, 8);
 			num_pixel = READ_VPP_REG(hdr2_hist_rd);
 			total_pixel += num_pixel;
-			hdr_hist[NUM_HDR_HIST - 1][i] = num_pixel;
+			if (vd_path == VD2_PATH)
+				hdr_hist_vd2[NUM_HDR_HIST - 1][i] = num_pixel;
+			else
+				hdr_hist[NUM_HDR_HIST - 1][i] = num_pixel;
 		}
 	}
 	num_pixel = 0;
 
+	if (vd_path == VD2_PATH)
+		memcpy(vd_hist, hdr_hist_vd2[NUM_HDR_HIST - 1], 128 * sizeof(u32));
+	else
+		memcpy(vd_hist, hdr_hist[NUM_HDR_HIST - 1], 128 * sizeof(u32));
+
 	if (total_pixel) {
 		for (i = 0; i < 128; i++) {
-			num_pixel += hdr_hist[NUM_HDR_HIST - 1][i];
+			num_pixel += vd_hist[i];
 			for (j = 8; j >= k; j--) {
 				if (num_pixel * 100 / total_pixel >=
 					percentile_percent[j]) {
@@ -4253,7 +4269,7 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 					break;
 				}
 			}
-			if (hdr_hist[NUM_HDR_HIST - 1][i])
+			if (vd_hist[i])
 				hdr_max_rgb =
 					(i + 1) * 10000 / 128;
 			if (percentile[8] != 0)
@@ -4273,14 +4289,14 @@ void get_hist(enum vd_path_e vd_path, enum hdr_hist_sel hist_sel,
 		for (i = 0; i < 16; i++) {
 			pr_info("hist[%d..]=%d %d %d %d %d %d %d %d\n",
 				i * 8,
-				hdr_hist[NUM_HDR_HIST - 1][i * 8],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 1],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 2],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 3],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 4],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 5],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 6],
-				hdr_hist[NUM_HDR_HIST - 1][i * 8 + 7]);
+				vd_hist[i * 8],
+				vd_hist[i * 8 + 1],
+				vd_hist[i * 8 + 2],
+				vd_hist[i * 8 + 3],
+				vd_hist[i * 8 + 4],
+				vd_hist[i * 8 + 5],
+				vd_hist[i * 8 + 6],
+				vd_hist[i * 8 + 7]);
 			pr_info("max=%d percentile=%d %d %d %d %d %d %d %d %d\n",
 				hdr_max_rgb,
 				percentile[0], percentile[1], percentile[2],
