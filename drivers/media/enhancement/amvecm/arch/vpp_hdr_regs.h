@@ -709,6 +709,21 @@ extern struct am_regs_s r_lut_hdr_sdr_level3;
 #define VPP_OSD2_MATRIX_PRE_OFFSET2                0x392c
 #define VPP_OSD2_MATRIX_EN_CTRL                    0x392d
 
+#define VIU_OSD3_MATRIX_COEF00_01             0x3db0
+#define VIU_OSD3_MATRIX_COEF02_10             0x3db1
+#define VIU_OSD3_MATRIX_COEF11_12             0x3db2
+#define VIU_OSD3_MATRIX_COEF20_21             0x3db3
+#define VIU_OSD3_MATRIX_COEF22                0x3db4
+#define VIU_OSD3_MATRIX_COEF13_14             0x3db5
+#define VIU_OSD3_MATRIX_COEF23_24             0x3db6
+#define VIU_OSD3_MATRIX_COEF15_25             0x3db7
+#define VIU_OSD3_MATRIX_CLIP                  0x3db8
+#define VIU_OSD3_MATRIX_OFFSET0_1             0x3db9
+#define VIU_OSD3_MATRIX_OFFSET2               0x3dba
+#define VIU_OSD3_MATRIX_PRE_OFFSET0_1         0x3dbb
+#define VIU_OSD3_MATRIX_PRE_OFFSET2           0x3dbc
+#define VIU_OSD3_MATRIX_EN_CTRL               0x3dbd
+
 /*t6x hdr*/
 #define VPU_HDR2_SIZE_IN                           0x4515
 #define VPU_HDR2_FRM2_SIZE                         0x4518

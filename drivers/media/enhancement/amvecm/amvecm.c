@@ -9251,8 +9251,8 @@ static ssize_t amvecm_hdr_dbg_show(const struct class *cla,
 }
 
 static ssize_t amvecm_hdr_dbg_store(const struct class *cla,
-				    const struct class_attribute *attr,
-				    const char *buf, size_t count)
+	const struct class_attribute *attr,
+	const char *buf, size_t count)
 {
 	long val = 0;
 	char *buf_orig, *parm[5] = {NULL};
@@ -9385,7 +9385,8 @@ static ssize_t amvecm_hdr_dbg_store(const struct class *cla,
 		if (!parm[1]) {
 			hdr_reg_dump(0);
 		} else {
-			if (kstrtoul(parm[1], 16, &val) < 0)
+			//if (kstrtoul(parm[1], 16, &val) < 0)
+			if (kstrtol(parm[1], 10, &val) < 0)
 				goto free_buf;
 			hdr_reg_dump(val);
 		}

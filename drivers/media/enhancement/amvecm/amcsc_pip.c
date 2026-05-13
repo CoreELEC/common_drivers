@@ -954,15 +954,15 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 {
 	int change_flag = 0;
 	enum vd_path_e oth_path =
-			(vd_path == VD1_PATH) ? VD2_PATH : VD1_PATH;
+		(vd_path == VD1_PATH) ? VD2_PATH : VD1_PATH;
 	int cur_hdr_policy = 0;
 	int dv_policy = 0;
 	int dv_hdr_policy = 0;
 	int dv_mode = 0;
 	int dv_format = 0;
-	bool hdr10_plus_support	=
+	bool hdr10_plus_support =
 		sink_hdr_support(vinfo) & HDRP_SUPPORT;
-	bool hlg_plus_support	=
+	bool hlg_plus_support =
 		sink_hdr_support(vinfo) & HLGP_SUPPORT;
 	bool cuva_support =
 		sink_hdr_support(vinfo) & CUVA_SUPPORT;
@@ -986,13 +986,11 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 		hdr_policy_bak = 0x0;
 	}
 
-	pr_csc(32, "%d  %s: vd_path=%d is vpp(%d %d) vpp_index = %d\n",
-		__LINE__,
-		__func__,
+	pr_csc(32, "policy: vd_path=%d is vpp(%d %d) vpp_index/output_mode/hdr_policy=%d/%d/%d\n",
 		vd_path,
 		is_vpp0(VD1_PATH),
 		is_vpp1(VD2_PATH),
-		vpp_index);
+		vpp_index, output_mode, hdr_policy);
 
 	cur_hdr_policy = get_hdr_policy();
 
@@ -1004,7 +1002,7 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 	} else if (is_vpp1(VD2_PATH) &&
 		vd_path == VD2_PATH &&
 		vpp_index != VPP_TOP1) {
-		pr_info("%s : error!!! expect amvecm_matrix_process had returned\n", __func__);
+		pr_info("policy: error!!! expect amvecm_matrix_process had returned\n");
 	}
 
 	tx_hdr10_plus_support = hdr10_plus_support;
@@ -1017,16 +1015,20 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 		dv_mode = get_amdv_target_mode();
 		dv_format = get_amdv_src_format(vd_path, vf);
 		dv_hdr_policy = get_amdv_hdr_policy(vf);
+		pr_csc(32, "policy: dv_policy/_mode/_format/_hdr_policy/_on=%d/%d/%d/%d/%d\n",
+			dv_policy, dv_mode, dv_format, dv_hdr_policy, is_amdv_on());
 	}
 #endif
 
 	ext_signal_type = get_cur_vd_ext_signal_type(vd_path);
 	if (ext_signal_type) {
 		ext_csc_type = get_ext_csc_type();
-		pr_csc(32, "%d %s:vd_path=%d, ext_signal_type=0x%x, ext_csc_type=0x%x\n",
-			__LINE__, __func__, vd_path,
+		pr_csc(32, "policy: ext_signal_type=0x%x, ext_csc_type=0x%x\n",
 			ext_signal_type, ext_csc_type);
 	}
+
+	pr_csc(32, "policy: cur_hdr_policy/source_format/hdr_flag/support=0x%x/%x/%x/%x\n",
+		cur_hdr_policy, source_format[vd_path], hdr_flag, sink_hdr_support(vinfo));
 
 	if (get_hdr_module_status(vd_path, vpp_index) != HDR_MODULE_ON && cur_hdr_policy != 2) {
 		/* hdr module off or bypass */
@@ -1059,11 +1061,6 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 				target_format[oth_path] = BT709;
 			}
 			target_format[vd_path] = BT709;
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 		} else if (source_format[vd_path] == HDRTYPE_PRIMESL) {
 			/* primesl process */
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_PRIME_SL
@@ -1270,11 +1267,6 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 				cuva_hlg_process_mode[vd_path] = PROC_CUVAHLG_TO_CUVA;
 				target_format[vd_path] = BT2020YUV_BT2020RGB_CUVA;
 			} else {
-				pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-					__LINE__,
-					__func__,
-					vd_path,
-					vpp_index);
 				/* vd2 *->sdr when vd1 output sdr */
 				sdr_process_mode[vd_path] = PROC_BYPASS;
 				hdr_process_mode[vd_path] = PROC_HDR_TO_SDR;
@@ -1293,11 +1285,6 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 			(((source_format[vd_path] != HDRTYPE_HLG) &&
 			(source_format[vd_path] != HDRTYPE_HLGPLUS)) ||
 			(hdr_flag & 0x10))) {
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 			/* *->hdr */
 			sdr_process_mode[vd_path] = PROC_SDR_TO_HDR;
 			hdr_process_mode[vd_path] = PROC_BYPASS;
@@ -1313,11 +1300,6 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 			((source_format[vd_path] == HDRTYPE_HDR10 ||
 			source_format[vd_path] == HDRTYPE_HDR10_709) &&
 			(hdr_flag & 0x10)))) {
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 			/* *->hlg */
 			sdr_process_mode[vd_path] = PROC_SDR_TO_HLG;
 			hdr_process_mode[vd_path] = PROC_HDR_TO_HLG;
@@ -1328,11 +1310,6 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 			cuva_hlg_process_mode[vd_path] = PROC_CUVAHLG_TO_HLG;
 			target_format[vd_path] = BT2020_HLG;
 		} else {
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 			/* *->sdr */
 			sdr_process_mode[vd_path] = PROC_BYPASS;
 			if (source_format[vd_path] == HDRTYPE_SDR &&

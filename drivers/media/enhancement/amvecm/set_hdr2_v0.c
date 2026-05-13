@@ -5080,6 +5080,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	struct hdr_gmt_comp_param_s *gmt_comp_para = &gmt_comp_default;
 	enum hdr_hist_sel hist_select = HIST_E_RGBMAX;
 	int tmp_val;
+	int osd1_hdr_path_sel = 0;/*0:after osdblend, 1:before osdblend*/
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	enum LUT_DMA_ID_e dma_id = HDR_DMA_ID;
@@ -5131,8 +5132,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		return hdr_process_select;
 
 	if ((osd_pic_en &&
-		(chip_type_id == chip_t5m ||
-		chip_type_id == chip_a9)) &&
+		chip_type_id == chip_t5m) &&
 		(module_sel == OSD1_HDR ||
 		module_sel == OSD2_HDR ||
 		module_sel == OSD3_HDR))
@@ -5148,7 +5148,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	if (((module_sel == OSD1_HDR && vpp_index == VPP_TOP1) ||
 		(module_sel == OSD3_HDR && vpp_index == VPP_TOP0)) &&
 		(get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
-		get_cpu_type() == MESON_CPU_MAJOR_ID_T3)) {
+		get_cpu_type() == MESON_CPU_MAJOR_ID_T3 ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_A9)) {
 //		pr_csc(128, "%s: module_sel = %d vpp_index = %d not match\n",
 //			__func__, module_sel, vpp_index);
 		return hdr_process_select;
@@ -5160,8 +5161,9 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		vpp_index);
 
 	if (vpp_index == VPP_TOP1 &&
-	    (get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
-	    get_cpu_type() == MESON_CPU_MAJOR_ID_T3))
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_T3 ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_A9))
 		vpp_sel = VPP_TOP1;
 	else if (vpp_index == VPP_TOP2 &&
 		get_cpu_type() == MESON_CPU_MAJOR_ID_T7)
@@ -5470,7 +5472,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	} else if (hdr_process_select & SDR_HDR ||
 		hdr_process_select & SDR_CUVA) {
 		if ((chip_cls_id == TV_CHIP ||
-			chip_type_id == chip_t7) &&
+			chip_type_id == chip_t7 ||
+			chip_type_id == chip_a9) &&
 			(module_sel == VD1_HDR ||
 			module_sel == S5_VD1_SLICE1)) {
 			for (i = 0; i < HDR2_OETF_LUT_SIZE; i++) {
@@ -6022,6 +6025,9 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		hdr_lut_param.cgain_lut[64]);
 #endif
 	/*mtx parameters*/
+//	if (chip_type_id == chip_a9)
+//		osd1_hdr_path_sel = READ_VPP_REG_BITS(VIU_OSD1_PATH_CTRL, 12, 1);
+
 	/* default matrix config */
 	if (module_sel == VD1_HDR ||
 		module_sel == S5_VD1_SLICE1 ||
@@ -6120,7 +6126,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		if ((chip_type_id == chip_s7d ||
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_t3x ||
-			chip_type_id == chip_s5) &&
+			chip_type_id == chip_s5 ||
+			(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
 			(module_sel == OSD1_HDR ||
 			module_sel == OSD2_HDR ||
 			module_sel == OSD3_HDR) &&
@@ -6163,7 +6170,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		if ((chip_type_id == chip_s7d ||
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_t3x ||
-			chip_type_id == chip_s5) &&
+			chip_type_id == chip_s5 ||
+			(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
 			(module_sel == OSD1_HDR ||
 			module_sel == OSD2_HDR ||
 			module_sel == OSD3_HDR)  &&
@@ -6598,7 +6606,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 				hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_709[i];
 				if ((chip_type_id == chip_s7d ||
 					chip_type_id == chip_s6 ||
-					chip_type_id == chip_s5) &&
+					chip_type_id == chip_s5 ||
+					(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
 					(module_sel == OSD1_HDR ||
 					module_sel == OSD2_HDR ||
 					module_sel == OSD3_HDR)) {
@@ -7037,7 +7046,8 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	}
 
 	if ((((chip_type_id == chip_s7d ||
-		chip_type_id == chip_s6) &&
+		chip_type_id == chip_s6 ||
+		chip_type_id == chip_a9) &&
 		(module_sel == OSD1_HDR ||
 		module_sel == OSD2_HDR)) ||
 		(chip_type_id == chip_s5 &&
@@ -7068,6 +7078,14 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 				mtx_sel = VPP_OSD1_MTX;
 			else if (module_sel == OSD2_HDR)
 				mtx_sel = VPP_OSD2_MTX;
+		} else if (chip_type_id == chip_a9) {
+			if (module_sel == OSD1_HDR) {
+				if (!osd1_hdr_path_sel || is_amdv_on())
+					mtx_on = MTX_OFF;
+				else
+					mtx_on = MTX_ON;
+				mtx_sel = VPP_OSD1_MTX;
+			}
 		}
 
 		mtx_setting(mtx_sel, mtx_csc, mtx_on);
@@ -8438,6 +8456,23 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 		matrix_pre_offset0_1 = VPP_OSD2_MATRIX_PRE_OFFSET0_1;
 		matrix_pre_offset2 = VPP_OSD2_MATRIX_PRE_OFFSET2;
 		matrix_en_ctrl = VPP_OSD2_MATRIX_EN_CTRL;
+
+		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(matrix_en_ctrl, mtx_on, 0, 1, vpp_sel);
+	} else if (mtx_sel == VPP_OSD3_MTX) {
+		matrix_coef00_01 = VIU_OSD3_MATRIX_COEF00_01;
+		matrix_coef02_10 = VIU_OSD3_MATRIX_COEF02_10;
+		matrix_coef11_12 = VIU_OSD3_MATRIX_COEF11_12;
+		matrix_coef20_21 = VIU_OSD3_MATRIX_COEF20_21;
+		matrix_coef22 = VIU_OSD3_MATRIX_COEF22;
+		matrix_coef13_14 = VIU_OSD3_MATRIX_COEF13_14;
+		matrix_coef23_24 = VIU_OSD3_MATRIX_COEF23_24;
+		matrix_coef15_25 = VIU_OSD3_MATRIX_COEF15_25;
+		matrix_clip = VIU_OSD3_MATRIX_CLIP;
+		matrix_offset0_1 = VIU_OSD3_MATRIX_OFFSET0_1;
+		matrix_offset2 = VIU_OSD3_MATRIX_OFFSET2;
+		matrix_pre_offset0_1 = VIU_OSD3_MATRIX_PRE_OFFSET0_1;
+		matrix_pre_offset2 = VIU_OSD3_MATRIX_PRE_OFFSET2;
+		matrix_en_ctrl = VIU_OSD3_MATRIX_EN_CTRL;
 
 		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(matrix_en_ctrl, mtx_on, 0, 1, vpp_sel);
 	} else if (mtx_sel == OSD_BLEDN_D0_MTX) {
@@ -9946,7 +9981,7 @@ int get_hdr_setting(enum hdr_module_sel module_sel,
 EXPORT_SYMBOL(get_hdr_setting);
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-void hdr_reg_dump(unsigned int offset)
+void hdr_reg_dump(int offset)
 {
 	unsigned int val;
 	unsigned int i;

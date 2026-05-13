@@ -1729,5 +1729,9 @@
 #define MAP1_GAMUT_OETF_LUT_DATA_PORT              0X6493
 #define VPP_MISC2                                  0x1d7a
 
+#define VIU_OSD1_PATH_CTRL                         0x1a76
+#define VIU_OSD2_PATH_CTRL                         0x1a77
+#define VIU_OSD3_PATH_CTRL                         0x1a78
+
 #endif
 

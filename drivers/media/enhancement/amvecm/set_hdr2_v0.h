@@ -160,7 +160,7 @@ void get_hist(enum vd_path_e vd_path,
 	enum vpp_index_e vpp_index);
 int cuva_hdr_update(enum hdr_module_sel module_sel,
 	enum hdr_process_sel hdr_process_select, enum vpp_index_e vpp_index);
-void hdr_reg_dump(unsigned int offset);
+void hdr_reg_dump(int offset);
 int calc_gmut_shift(struct hdr_proc_mtx_param_s *hdr_mtx_param);
 
 #define LDIM_STTS_DMA_ID 0
