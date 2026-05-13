@@ -39,7 +39,8 @@ static void dptx_early_suspend(struct early_suspend *es)
 		return;
 
 	tx_comm = es->param;
-	DPTX_DEBUG("early suspend %s\n", tx_comm ? dev_name(tx_comm->base.dev) : "");
+	DPTX_DEBUG("early suspend %s\n",
+		tx_comm && tx_comm->base.dev ? dev_name(tx_comm->base.dev) : "");
 	/* disable phy and core output */
 	meson_tx_phy_power_off(tx_comm->base.tx_hw_base->tx_phy);
 	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
@@ -56,7 +57,8 @@ static void dptx_late_resume(struct early_suspend *es)
 		return;
 
 	tx_comm = es->param;
-	DPTX_DEBUG("late resume %s\n", tx_comm ? dev_name(tx_comm->base.dev) : "");
+	DPTX_DEBUG("late resume %s\n",
+		tx_comm && tx_comm->base.dev ? dev_name(tx_comm->base.dev) : "");
 }
 #endif
 
@@ -483,13 +485,15 @@ static int dptx_probe(struct platform_device *pdev)
 	 * so a global handle cannot be used for registration here.
 	 */
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
-	tx_comm->es.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10;
-	tx_comm->es.suspend = dptx_early_suspend;
-	tx_comm->es.resume  = dptx_late_resume;
-	tx_comm->es.param   = tx_comm;
+	if (!tx_comm->is_edp || !tx_comm->hw_comm->ext_edptx_ctrl_en) {
+		tx_comm->es.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10;
+		tx_comm->es.suspend = dptx_early_suspend;
+		tx_comm->es.resume  = dptx_late_resume;
+		tx_comm->es.param   = tx_comm;
 
-	register_early_suspend(&tx_comm->es);
-	tx_comm->es_registered = true;
+		register_early_suspend(&tx_comm->es);
+		tx_comm->es_registered = true;
+	}
 #endif
 
 	component_add(device, &dptx_bind_ops);
