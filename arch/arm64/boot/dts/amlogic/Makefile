@@ -27,6 +27,7 @@ dtb-y += g12b_s922x_minix_u22xj_rev_a.dtb
 dtb-y += g12b_s922x_odroid_n2.dtb
 dtb-y += g12b_s922x_odroid_n2plus.dtb
 dtb-y += g12b_s922x_odroid_n2plus_rev_c.dtb
+dtb-y += g12b_s922z_amazon_2nd_gen_cube.dtb
 dtb-y += g12b_s922x_ugoos_am6_2g.dtb
 dtb-y += g12b_s922x_ugoos_am6_4g.dtb
 dtb-y += g12b_s922x_ugoos_am6_rev_a_2g.dtb
