@@ -2490,14 +2490,16 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	bool need_do_dpss = true;
 	bool is_qms_case = false;
 	bool need_dpss_rotate = false;
-	int used_vf_with = 0, used_vf_height = 0;
 	char do_dpss_type = 0;
+	int used_vf_with = 0, used_vf_height = 0;
+	int inp_std_duration;
 
 	if (!dev || !vf) {
 		pr_err("%s: param is invalid.\n", __func__);
 		return need_do_dpss;
 	}
 
+	inp_std_duration = find_standard_duration(dev, vf->duration);
 	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
 	if (do_dpss_type) {
 		dp_print(dev->index, PRINT_OTHER,
@@ -2535,7 +2537,7 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	/*over 144fps no need do dps*/
-	if (find_standard_duration(dev, vf->duration) < 667) {
+	if (inp_std_duration < 667) {
 		dp_print(dev->index, PRINT_OTHER, "over 144fps, no need do dpss.\n");
 		need_do_dpss = false;
 	}
@@ -2555,7 +2557,7 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	is_qms_case = vf->vf_vrr_param.qms_en || vf->vf_vrr_param.qms_plus_en;
-	if (vf->duration < 1600 && (vf->duration + 1) < dev->output_duration && !is_qms_case) {
+	if (vf->duration < 1600 && inp_std_duration < dev->output_duration && !is_qms_case) {
 		/*input fps more than output fps*/
 		dp_print(dev->index, PRINT_OTHER,
 			"input fps more than output, no need do dpss.\n");
