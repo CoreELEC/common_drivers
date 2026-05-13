@@ -10,6 +10,7 @@
 #include <linux/spinlock.h>
 #include <linux/list.h>
 #include <linux/dma-buf.h>
+#include <linux/notifier.h>
 
 #define DMA_BUF_CODEC_MM "CODEC_MM_DMA_BUF"
 
@@ -203,5 +204,10 @@ int is_reserved_ext_support(void);
 void codec_mm_attach_dma_buf(struct dma_buf *dmabuf, ulong phy);
 void codec_mm_detach_dma_buf(struct dma_buf *dmabuf, ulong phy);
 void codec_mm_inval_cache(dma_addr_t addr, size_t size);
+
+#ifdef CONFIG_PM
+int codec_mm_register_freeze_notifier(struct notifier_block *nb);
+int codec_mm_unregister_freeze_notifier(struct notifier_block *nb);
+#endif
 
 #endif

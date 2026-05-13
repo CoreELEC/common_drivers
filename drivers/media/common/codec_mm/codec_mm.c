@@ -26,6 +26,7 @@
 #include <linux/delay.h>
 #include <linux/sched/clock.h>
 #include <linux/dma-buf.h>
+#include <linux/notifier.h>
 
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_scatter.h>
@@ -4911,6 +4912,20 @@ static int codec_mm_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+static BLOCKING_NOTIFIER_HEAD(codec_mm_freeze_chain);
+
+int codec_mm_register_freeze_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&codec_mm_freeze_chain, nb);
+}
+EXPORT_SYMBOL(codec_mm_register_freeze_notifier);
+
+int codec_mm_unregister_freeze_notifier(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&codec_mm_freeze_chain, nb);
+}
+EXPORT_SYMBOL(codec_mm_unregister_freeze_notifier);
+
 static int codec_mm_restore(struct device *dev)
 {
 	int ret = 0;
@@ -4929,6 +4944,7 @@ static int codec_mm_restore(struct device *dev)
 
 static int codec_mm_freeze(struct device *dev)
 {
+	blocking_notifier_call_chain(&codec_mm_freeze_chain, 0, NULL);
 	return 0;
 }
 

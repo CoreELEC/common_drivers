@@ -351,14 +351,34 @@ static void dmabuf_manage_detach(struct dma_buf *dbuf,
 static struct sg_table *dmabuf_manage_map_dma_buf(struct dma_buf_attachment *attachment,
 		enum dma_data_direction dma_dir)
 {
-	struct kdmabuf_attachment *attach = attachment->priv;
-	struct dmabuf_manage_block *block = attachment->dmabuf->priv;
+	struct kdmabuf_attachment *attach = NULL;
+	struct dmabuf_manage_block *block = NULL;
 #if CONFIG_AMLOGIC_KERNEL_VERSION <= 14515
-	struct mutex *lock = &attachment->dmabuf->lock;
+	struct mutex *lock = NULL;
 #endif
 	struct sg_table *sgt;
 	size_t block_size = 0;
 	phys_addr_t phys = 0;
+
+	pr_enter();
+
+	if (!attachment)
+		return NULL;
+
+	attach = attachment->priv;
+	if (!attach)
+		return NULL;
+
+	if (!attachment->dmabuf)
+		return NULL;
+
+	block = attachment->dmabuf->priv;
+	if (!block)
+		return NULL;
+
+#if CONFIG_AMLOGIC_KERNEL_VERSION <= 14515
+	lock = &attachment->dmabuf->lock;
+#endif
 
 	if (block->extend) {
 		phys = block->extend_paddr;
@@ -368,7 +388,6 @@ static struct sg_table *dmabuf_manage_map_dma_buf(struct dma_buf_attachment *att
 		block_size = block->size;
 	}
 
-	pr_enter();
 #if CONFIG_AMLOGIC_KERNEL_VERSION <= 14515
 	mutex_lock(lock);
 #endif
@@ -2575,8 +2594,7 @@ static struct class dmabuf_manage_class = {
 };
 
 #if IS_ENABLED(CONFIG_AMLOGIC_OPTEE)
-static int dmabuf_manage_reboot_notifier(struct notifier_block *nb,
-	unsigned long action, void *data)
+static int dmabuf_manage_release_secmem_session(void)
 {
 	mutex_lock(&g_no_head_mutex);
 	if (g_secmem_inited) {
@@ -2593,12 +2611,30 @@ static int dmabuf_manage_reboot_notifier(struct notifier_block *nb,
 		g_secmem_inited = 0;
 	}
 	mutex_unlock(&g_no_head_mutex);
-	return NOTIFY_DONE;
+	return NOTIFY_OK;
+}
+
+static int dmabuf_manage_reboot_notifier(struct notifier_block *nb,
+	unsigned long action, void *data)
+{
+	return dmabuf_manage_release_secmem_session();
 }
 
 static struct notifier_block dmabuf_manage_reboot_nb = {
 	.notifier_call = dmabuf_manage_reboot_notifier,
 };
+
+#ifdef CONFIG_PM
+static int dmabuf_manage_freeze_notifier(struct notifier_block *nb,
+	unsigned long action, void *data)
+{
+	return dmabuf_manage_release_secmem_session();
+}
+
+static struct notifier_block dmabuf_manage_freeze_nb = {
+	.notifier_call = dmabuf_manage_freeze_notifier,
+};
+#endif
 #endif
 
 int __init dmabuf_manage_init(void)
@@ -2627,6 +2663,9 @@ int __init dmabuf_manage_init(void)
 	REG_PATH_CONFIGS(CONFIG_PATH, dmabuf_manage_configs);
 	INIT_LIST_HEAD(&pool_list);
 #if IS_ENABLED(CONFIG_AMLOGIC_OPTEE)
+#ifdef CONFIG_PM
+	codec_mm_register_freeze_notifier(&dmabuf_manage_freeze_nb);
+#endif
 	register_reboot_notifier(&dmabuf_manage_reboot_nb);
 #endif
 	pr_dbg("init done\n");
@@ -2646,6 +2685,9 @@ void __exit dmabuf_manage_exit(void)
 	class_destroy(&dmabuf_manage_class);
 	unregister_chrdev(dev_no, DEVICE_NAME);
 #if IS_ENABLED(CONFIG_AMLOGIC_OPTEE)
+#ifdef CONFIG_PM
+	codec_mm_unregister_freeze_notifier(&dmabuf_manage_freeze_nb);
+#endif
 	unregister_reboot_notifier(&dmabuf_manage_reboot_nb);
 #endif
 	pr_dbg("exit done\n");
