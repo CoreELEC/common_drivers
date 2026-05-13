@@ -47,6 +47,10 @@
 #define DPSS_I_MEM_USAGE 88
 #define DPSS_PPS_I_MEM_USAGE 41
 
+#define signal_color_primaries ((vf->signal_type >> 16) & 0xff)
+#define signal_transfer_characteristic ((vf->signal_type >> 8) & 0xff)
+#define signal_cuva ((vf->signal_type >> 31) & 1)
+
 static u32 dpss_process_instance_num = DPSS_INSTANCE_COUNT;
 static u32 total_get_count;
 static u32 total_put_count;
@@ -2690,6 +2694,47 @@ static int display_original_frame(struct dpss_process_dev *dev,
 	return 1;
 }
 
+static enum vframe_signal_fmt_e get_src_signal_format(struct vframe_s *vf)
+{
+	enum vframe_signal_fmt_e signal_fmt = VFRAME_SIGNAL_FMT_INVALID;
+
+	if (!vf) {
+		pr_err("vf param is invalid.\n");
+		return -EINVAL;
+	}
+
+	signal_fmt = vf->src_fmt.fmt;
+
+	if (vf->src_fmt.fmt == VFRAME_SIGNAL_FMT_INVALID) {
+		if (signal_transfer_characteristic == 18 &&
+			signal_color_primaries == 9) {
+			if (signal_cuva)
+				signal_fmt = VFRAME_SIGNAL_FMT_CUVA_HLG;
+			else
+				signal_fmt = VFRAME_SIGNAL_FMT_HLG;
+		} else if ((signal_transfer_characteristic == 0x30) &&
+				 (signal_color_primaries == 9)) {
+			signal_fmt = VFRAME_SIGNAL_FMT_HDR10;
+		} else if ((signal_transfer_characteristic == 16) &&
+				 ((signal_color_primaries == 9) ||
+				  (signal_color_primaries == 2))) {
+			if (signal_cuva)
+				signal_fmt = VFRAME_SIGNAL_FMT_CUVA_HDR;
+			else
+				signal_fmt = VFRAME_SIGNAL_FMT_HDR10;
+		} else if (signal_transfer_characteristic == 14 ||
+			signal_transfer_characteristic == 1) {
+			if (signal_color_primaries == 9)
+				signal_fmt = VFRAME_SIGNAL_FMT_SDR_2020;
+			else
+				signal_fmt = VFRAME_SIGNAL_FMT_SDR;
+		} else {
+			signal_fmt = VFRAME_SIGNAL_FMT_SDR;
+		}
+	}
+	return signal_fmt;
+}
+
 static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_info_t *frame_info)
 {
 	int i;
@@ -2923,7 +2968,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	if (dpss_state.buf_status != DPSS_BUF_STATE_READY) {
 		dp_print(dev->index, PRINT_OTHER, "dpss buf not ready.\n");
-		if (is_dtv_src)
+		if (is_dtv_src && (get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR))
 			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
@@ -2951,7 +2996,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	if (dev->need_check_hdr_state && !hdr_path_delink_status()) {
 		dp_print(dev->index, PRINT_ERROR, "need do dpss but hdr not ready, bypass.\n");
-		if (is_dtv_src)
+		if (is_dtv_src && (get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR))
 			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
@@ -3113,7 +3158,8 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
 		dp_print(dev->index, PRINT_ERROR, "first i, need drop\n");
 	} else if ((dev->is_switch_first_frame || dev->is_first_frame) &&
-		is_dtv_src && dev->cur_is_i) {
+		is_dtv_src && dev->cur_is_i &&
+		(get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR)) {
 		vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		dp_print(dev->index, PRINT_OTHER,
 			"first i, set dpss done flag, then vd1 toggle\n");
