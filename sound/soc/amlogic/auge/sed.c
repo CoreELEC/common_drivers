@@ -1263,11 +1263,7 @@ static int sed_freeze_thread(void *data)
 	if (!p_sed)
 		return 0;
 	current->flags |= PF_NOFREEZE;
-	if (!p_sed->tmp_buffer) {
-		p_sed->tmp_buffer = kzalloc(SED_PERIOD_BYTES, GFP_KERNEL);
-		if (!p_sed->tmp_buffer)
-			return -ENOMEM;
-	}
+	p_sed->thread_exit = 0;
 	set_current_state(TASK_INTERRUPTIBLE);
 	for (;;) {
 		if (kthread_should_stop()) {
@@ -1283,7 +1279,6 @@ static int sed_freeze_thread(void *data)
 			schedule();
 		set_current_state(TASK_INTERRUPTIBLE);
 	}
-	kfree(p_sed->tmp_buffer);
 	p_sed->reset_ptr = 1;
 	p_sed->thread_exit = 1;
 
@@ -1315,6 +1310,11 @@ static int sed_platform_suspend(struct platform_device *pdev, pm_message_t state
 		}
 		dev_info(p_sed->dev, "%s:freeze mode\n", __func__);
 		if (!p_sed->thread) {
+			if (!p_sed->tmp_buffer) {
+				p_sed->tmp_buffer = kzalloc(SED_PERIOD_BYTES, GFP_KERNEL);
+				if (!p_sed->tmp_buffer)
+					return -ENOMEM;
+			}
 			p_sed->thread =
 				kthread_create(sed_freeze_thread, p_sed,
 						   "sed_freeze_thread");
@@ -1360,19 +1360,16 @@ static int sed_platform_resume(struct platform_device *pdev)
 	dev_pm_clear_wake_irq(dev);
 	if (get_resume_method() == VAD_WAKEUP)
 		sed_key_report(p_sed);
-
-	if (!p_sed->thread_exit) {
+	if (is_pm_s2idle_mode() && !p_sed->thread_exit && p_sed->thread) {
 		kthread_stop(p_sed->thread);
-		p_sed->thread_exit = 1;
-	}
-	if (p_sed->thread) {
 		put_task_struct(p_sed->thread);
+		kfree(p_sed->tmp_buffer);
+		p_sed->tmp_buffer = NULL;
+		p_sed->thread_exit = 1;
 		p_sed->thread = NULL;
-		sed_enable(p_sed->audio_top_sed_map, false);
 	}
 	if (!is_pm_s2idle_mode())
 		sed_clk_disable(p_sed);
-
 	return 0;
 }
 
