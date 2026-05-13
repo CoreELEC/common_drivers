@@ -37,7 +37,7 @@ struct meson_eDP {
 #define aux_to_meson_eDP(x) container_of(x, struct meson_eDP, aux)
 #define drm_panel_to_meson_eDP(x) container_of(x, struct meson_eDP, eDP_dev)
 
-struct dptx_drv_s *meson_eDP_get_eDPTX_drv(int type);
+struct edptx_drv_s *meson_eDP_get_eDPTX_drv(int type);
 
 int meson_eDP_dev_bind(struct drm_device *drm, int type, struct meson_connector_dev *intf);
 int meson_eDP_dev_unbind(struct drm_device *drm, int type, struct meson_connector_dev *intf);

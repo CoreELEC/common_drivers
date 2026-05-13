@@ -16,35 +16,34 @@
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #endif
-#include <linux/amlogic/media/vout/eDPTX/DPTX_timing.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX_timing.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vpu/vpu.h>
-#include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_core_api_ext.h>
 
 //#define LCD_DEBUG_INFO
-extern u8 dptx_print_level;
+extern u8 edptx_print_level;
 //bit[15:0]
 #define LOG_E      0 // log level ERROR & Key
 #define LOG_I      1 // log level Informative
 #define LOG_V      2 // log level Verbose
 #define LOG_A      3 // log level All
 
-#define DPTX_ERR(drv, fmt, ...)     \
-		dptx_print_helper(drv, 0xff, LOG_E, fmt, ##__VA_ARGS__)
-#define DPTX_PR(drv, fmt, ...)      \
-		dptx_print_helper(drv, 0xff, LOG_I, fmt, ##__VA_ARGS__)
-#define DPTX_DBG(drv, fmt, ...)     \
-		dptx_print_helper(drv, 0xff, LOG_V, fmt, ##__VA_ARGS__)
-#define DPTX_DBG_ADV(drv, fmt, ...) \
-		dptx_print_helper(drv, 0xff, LOG_A, fmt, ##__VA_ARGS__)
-#define DPTX_P_ERR(drv, port, fmt, ...)   \
-		dptx_print_helper(drv, port, LOG_E, fmt, ##__VA_ARGS__)
-#define DPTX_P_PR(drv, port, fmt, ...)    \
-		dptx_print_helper(drv, port, LOG_I, fmt, ##__VA_ARGS__)
-#define DPTX_P_DBG(drv, port, fmt, ...)   \
-		dptx_print_helper(drv, port, LOG_V, fmt, ##__VA_ARGS__)
-#define DPTX_P_DBG2(drv, port, fmt, ...)   \
-		dptx_print_helper(drv, port, LOG_A, fmt, ##__VA_ARGS__)
+#define eDP_ERR(drv, fmt, ...)     \
+		edptx_print_helper(drv, 0xff, LOG_E, fmt, ##__VA_ARGS__)
+#define eDP_PR(drv, fmt, ...)      \
+		edptx_print_helper(drv, 0xff, LOG_I, fmt, ##__VA_ARGS__)
+#define eDP_DBG(drv, fmt, ...)     \
+		edptx_print_helper(drv, 0xff, LOG_V, fmt, ##__VA_ARGS__)
+#define eDP_DBG_ADV(drv, fmt, ...) \
+		edptx_print_helper(drv, 0xff, LOG_A, fmt, ##__VA_ARGS__)
+#define eDP_P_ERR(drv, port, fmt, ...)   \
+		edptx_print_helper(drv, port, LOG_E, fmt, ##__VA_ARGS__)
+#define eDP_P_PR(drv, port, fmt, ...)    \
+		edptx_print_helper(drv, port, LOG_I, fmt, ##__VA_ARGS__)
+#define eDP_P_DBG(drv, port, fmt, ...)   \
+		edptx_print_helper(drv, port, LOG_V, fmt, ##__VA_ARGS__)
+#define eDP_P_DBG2(drv, port, fmt, ...)   \
+		edptx_print_helper(drv, port, LOG_A, fmt, ##__VA_ARGS__)
 
 #define PR_BUF_MAX              (4 * 1024)
 
@@ -59,6 +58,24 @@ extern u8 dptx_print_level;
 
 #define RGB_DELAY                   13
 #define PRE_DE_DELAY                8
+
+/* test pattern index */
+#define eDPTX_TPS_DISABLE      0
+#define eDPTX_TPS1             1
+#define eDPTX_TPS2             2
+#define eDPTX_TPS3             3
+#define eDPTX_TPS4             4
+#define eDPTX_QUAL_PAT_DISABLE 5
+#define eDPTX_D10P2            6
+#define eDPTX_SYMBOL_ERROR_MSR 7
+#define eDPTX_PRBS7            8
+#define eDPTX_80BIT_CUSTOM     9
+#define eDPTX_HBR2_EYE         10
+#define eDPTX_CP2520_1         eDPTX_HBR2_EYE
+#define eDPTX_CP2520_2         11
+#define eDPTX_CP2520_3         12
+#define eDPTX_TRP_CR           eDPTX_TPS1
+#define eDPTX_TRP_EQ           0xf0
 
 enum dptx_chip_e {
 	eDPTX_CHIP_T7,
@@ -114,9 +131,12 @@ struct edptx_board_info_s {
 
 	u8 assigned_link_rate;
 	u8 assigned_lane_count;
+
+	u8 use_ext_tx_conn_api;
+	u8 ext_tx_conn_api_idx[eDPTX_MAX_PORT];
 };
 
-struct dptx_boot_ctrl_s {
+struct edptx_boot_ctrl_s {
 	u8 link[eDPTX_MAX_PORT][2];
 	u8 vmode_sel_idx;
 	u8 vmode_cfmt_sel;
@@ -127,7 +147,7 @@ struct dptx_boot_ctrl_s {
 	u8 user_hpd_debug;
 };
 
-struct dptx_reg_map_s {
+struct edptx_reg_map_s {
 	unsigned int base_addr;
 	unsigned int size;
 	void __iomem *p;
@@ -136,7 +156,7 @@ struct dptx_reg_map_s {
 
 #define MOD_LEN_MAX        30
 
-struct dptx_venc_cfg_s {
+struct edptx_venc_cfg_s {
 	u8 pll_flag;
 	u8 clk_mode;
 	u8 ppc;
@@ -182,7 +202,7 @@ struct dptx_venc_cfg_s {
 	unsigned short pre_vso_end;
 };
 
-struct dptx_phy_cfg_s {
+struct edptx_phy_cfg_s {
 	u32 flag;
 	u32 vswing;
 	struct dptx_phy_lane_s {
@@ -211,7 +231,7 @@ struct aux_irq_semaphore_s {
 	bool v;
 };
 
-struct dptx_clk_cfg_s {
+struct edptx_clk_cfg_s {
 	u64 fin;
 	u64 fout;
 	u8 clk_src; // 0=PLL, 1=FIX_PLL, 2=LINK_CLK
@@ -252,7 +272,7 @@ struct dptx_clk_cfg_s {
 };
 
 #define DPTX_DRV_TIMING_MAX  8
-struct dptx_edid_info_s {
+struct edptx_edid_info_s {
 	struct edid *drm_edid;
 	u8 manufacturer_id[4];  //[8:9]2byte
 	u16 product_id;         //[10:11]2byte
@@ -284,10 +304,10 @@ struct dptx_edid_info_s {
 	u8 edid_crc;
 };
 
-struct dptx_link_cfg_s {
+struct edptx_link_cfg_s {
 	/* internal used */
 	// unsigned char coding_support;
-	struct dptx_link_cap_s {
+	struct edptx_link_cap_s {
 		u8 DPCD_ver;
 
 		u8 max_lane_count;
@@ -368,7 +388,7 @@ struct dptx_link_cfg_s {
 #define VMODE_FLAG_FR_RANGE  BIT(1)
 #define VMODE_FLAG_PREFERRED BIT(2)
 // #define VMODE_FLAG_BW_ENOUGH BIT(3)
-struct dptx_vmode_mgr_s {
+struct edptx_vmode_mgr_s {
 	struct dptx_vmode_s {
 		u32 fr100_int;
 		u8 fr_adv; // 0=fr_int; 1=fr_frac; 0xff=raw fr
@@ -424,8 +444,7 @@ struct edptx_panel_data_s {
 	} ch_ctrl[eDPTX_PHY_CH_LANE_MAX];
 };
 
-struct dptx_drv_s {
-	/* EDPTX_CORE_IDX 0, DPTX_CORE_IDX1 */
+struct edptx_drv_s {
 	u8 idx;
 	u8 status;
 	u8 viu_sel; // 1=vout; 2=vou2; 3=vout3
@@ -436,7 +455,7 @@ struct dptx_drv_s {
 	struct edptx_board_info_s board_data;
 	struct edptx_panel_data_s panel_data;
 
-	struct dptx_user_set_s {
+	struct edptx_user_set_s {
 		char dev_name[32];
 		u8 use_aux_bl_as_possible;  //dft: 0
 		u8 user_port_mask;  //dft: 1
@@ -462,27 +481,26 @@ struct dptx_drv_s {
 	char HPD_name[12];
 	u16 vsync_cnt;
 
-	struct dptx_reg_map_s *reg_map;
+	struct edptx_reg_map_s *reg_map;
 
-	struct dptx_phy_cfg_s phy_cfg; // !move to link
-	struct dptx_clk_cfg_s vid_clk;
-	struct dptx_clk_cfg_s link_clk; // !move to link
-	struct dptx_venc_cfg_s venc_cfg;
+	struct edptx_phy_cfg_s phy_cfg; // !move to link
+	struct edptx_clk_cfg_s vid_clk;
+	struct edptx_clk_cfg_s link_clk; // !move to link
+	struct edptx_venc_cfg_s venc_cfg;
 
-	struct dptx_vmode_mgr_s vmode_mgr;
+	struct edptx_vmode_mgr_s vmode_mgr;
 	u8 next_vmd_idx;
 
 	struct dptx_detail_timing_s act_timing;
-	struct msa_s msa;
-	struct dptx_sink_dev_s {
+	struct edptx_sink_dev_s {
 		// char sink_name[32];
 		u8 port_mask;
 		u8 hpd_mask;
 		// u8 pwr_gpio_mask;
 		// u8 dt_cnt;
 		// struct dptx_detail_timing_s timing[DPTX_DRV_TIMING_MAX];
-		struct dptx_edid_info_s edid;
-		struct dptx_link_cfg_s link[eDPTX_MAX_PORT];
+		struct edptx_edid_info_s edid;
+		struct edptx_link_cfg_s link[eDPTX_MAX_PORT];
 	} sink;
 
 	struct cdev cdev;
@@ -503,6 +521,6 @@ struct dptx_drv_s {
 	struct drm_panel *panel;
 };
 
-void dptx_print_helper(struct dptx_drv_s *dptx, u8 port, u8 pr_type, const char *fmt, ...);
+void edptx_print_helper(struct edptx_drv_s *edp, u8 port, u8 pr_type, const char *fmt, ...);
 
 #endif

@@ -1,0 +1,22 @@
+/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
+/*
+ * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
+ */
+
+#ifndef _AML_DPTX_PHY_CONFIG_H
+#define _AML_DPTX_PHY_CONFIG_H
+
+#include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
+#include <linux/types.h>
+
+struct edptx_phy_ctrl_s {
+	unsigned int lane_lock;
+	void (*phy_enable)(struct edptx_drv_s *edp, u8 port);
+	void (*phy_disable)(struct edptx_drv_s *edp, u8 port);
+	void (*phy_set_lane)(struct edptx_drv_s *edp, u8 port, u8 lane_mask);
+};
+
+struct edptx_phy_ctrl_s *edptx_phy_config_init_t7(void);
+struct edptx_phy_ctrl_s *edptx_phy_config_init_a9(void);
+
+#endif

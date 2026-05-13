@@ -12,7 +12,7 @@
 #include <linux/component.h>
 #include <linux/iopoll.h>
 #include <vout/vout_serve/vout_func.h>
-#include <linux/amlogic/media/vout/eDPTX/DPTX_export.h>
+#include <linux/amlogic/media/vout/eDPTX/eDPTX_export.h>
 #include "meson_crtc.h"
 #include "meson_eDP.h"
 
@@ -25,13 +25,13 @@ static const char *get_eDP_aux_name(int type)
 	return eDP_aux_name[0];
 }
 
-struct dptx_drv_s *meson_eDP_get_eDPTX_drv(int type)
+struct edptx_drv_s *meson_eDP_get_eDPTX_drv(int type)
 {
 #ifdef CONFIG_AMLOGIC_eDPTX
 	if (type == DRM_MODE_CONNECTOR_MESON_EDP_A)
-		return aml_dptx_get_driver(0);
+		return aml_edptx_get_driver(0);
 	else if (type == DRM_MODE_CONNECTOR_MESON_EDP_B)
-		return aml_dptx_get_driver(1);
+		return aml_edptx_get_driver(1);
 	else
 		return NULL;
 #else
@@ -41,7 +41,7 @@ struct dptx_drv_s *meson_eDP_get_eDPTX_drv(int type)
 
 static int meson_eDP_get_eDPTX_aux_bl_available(int type)
 {
-	struct dptx_drv_s *dptx = meson_eDP_get_eDPTX_drv(type);
+	struct edptx_drv_s *dptx = meson_eDP_get_eDPTX_drv(type);
 
 	if (!dptx)
 		return 0;
@@ -547,7 +547,7 @@ static const struct drm_panel_funcs meson_eDP_panel_funcs = {
 
 ssize_t eDP_aux_transfer(struct drm_dp_aux *aux, struct drm_dp_aux_msg *msg)
 {
-	//struct dptx_drv_s *dptx_drv;
+	//struct edptx_drv_s *dptx_drv;
 	struct meson_eDP *am_eDP = aux_to_meson_eDP(aux);
 
 	DRM_DEBUG("[%d] called[%u] [0x%x] req=%u rep=%u size=%zu\n", __LINE__,
@@ -559,19 +559,19 @@ ssize_t eDP_aux_transfer(struct drm_dp_aux *aux, struct drm_dp_aux_msg *msg)
 // This is mainly useful for eDP panels drivers to wait for an eDP panel to finish powering on
 int  eDP_wait_hpd_asserted(struct drm_dp_aux *aux, unsigned long wait_us)
 {
-	struct dptx_drv_s *dptx_drv;
+	struct edptx_drv_s *edp_drv;
 	struct meson_eDP *am_eDP = aux_to_meson_eDP(aux);
 	int hpd_level, readx;
 
 	DRM_DEBUG("[%d] called %d, %lus\n", __LINE__, am_eDP->panel_type, wait_us);
 
-	dptx_drv = meson_eDP_get_eDPTX_drv(am_eDP->panel_type);
-	if (!dptx_drv)
+	edp_drv = meson_eDP_get_eDPTX_drv(am_eDP->panel_type);
+	if (!edp_drv)
 		return -ETIMEDOUT;
 
 	wait_us = (wait_us == 0 || wait_us > 1000) ? 1000 : wait_us;
 
-	readx = readx_poll_timeout(aml_eDPTX_get_hpd_state, dptx_drv->idx,
+	readx = readx_poll_timeout(aml_edptx_get_hpd_state, edp_drv->idx,
 				hpd_level, hpd_level == 1, 10, wait_us);
 
 	return readx;
@@ -589,7 +589,7 @@ int meson_eDP_dev_bind(struct drm_device *drm,
 	int connector_type = type;
 	int encoder_type = DRM_MODE_ENCODER_TMDS;
 	int ret = 0;
-	struct dptx_drv_s *dptx_drv = meson_eDP_get_eDPTX_drv(type);
+	struct edptx_drv_s *dptx_drv = meson_eDP_get_eDPTX_drv(type);
 
 	DRM_INFO("[%s]-[%d] type=%d\n", __func__, __LINE__, type);
 
