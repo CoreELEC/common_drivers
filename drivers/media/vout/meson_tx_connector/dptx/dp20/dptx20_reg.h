@@ -290,7 +290,17 @@
  *    0 HPD_EVENT: A 1 indicates that an HPD connect or disconnect event has been detected.
  */
 #define DPTX20_INTERRUPT_STATE                 0x130
+#define INTERRUPT_STATE_REPLY_RECEIVED_GTC_ERR      BIT(26)
+#define INTERRUPT_STATE_VID3_INTR                   BIT(25)
+#define INTERRUPT_STATE_VID2_INTR                   BIT(24)
+#define INTERRUPT_STATE_VID1_INTR                   BIT(23)
+#define INTERRUPT_STATE_VID0_INTR		    BIT(22)
 #define INTERRUPT_STATE_SENDFIFO                    BIT(21)
+#define INTERRUPT_STATE_HDCP_SHA_DOEN               BIT(20)
+#define INTERRUPT_STATE_SEC3_OVERFLOW               BIT(19)
+#define INTERRUPT_STATE_SEC2_OVERFLOW               BIT(18)
+#define INTERRUPT_STATE_SEC1_OVERFLOW               BIT(17)
+#define INTERRUPT_STATE_SEC0_OVERFLOW               BIT(16)
 #define INTERRUPT_STATE_LPM_TIMER_EVENT             BIT(15)
 #define INTERRUPT_STATE_SRC3_ERR_EVENT              BIT(14)
 #define INTERRUPT_STATE_SRC3_OVF_EVENT              BIT(13)
@@ -382,8 +392,18 @@
  *
  * At power up, this register has a value of 0x3F. That is, all interrupt sources are masked.
  */
- #define INTERRUPT_MASK_SENDFIFO_EVENT               BIT(21)
- #define INTERRUPT_MASK_SEC0_AUDFIFO_OVERFLOW        BIT(16)
+ #define INTERRUPT_MASK_SENDFIFO_EVENT              BIT(21)
+ #define INTERRUPT_MASK_REPLY_RECEIVED_GTC_ERR      BIT(26)
+ #define INTERRUPT_MASK_VID3_INTR                   BIT(25)
+ #define INTERRUPT_MASK_VID2_INTR                   BIT(24)
+ #define INTERRUPT_MASK_VID1_INTR                   BIT(23)
+ #define INTERRUPT_MASK_VID0_INTR		            BIT(22)
+ #define INTERRUPT_MASK_SENDFIFO                    BIT(21)
+ #define INTERRUPT_MASK_HDCP_SHA_DOEN               BIT(20)
+ #define INTERRUPT_MASK_SEC3_OVERFLOW               BIT(19)
+ #define INTERRUPT_MASK_SEC2_OVERFLOW               BIT(18)
+ #define INTERRUPT_MASK_SEC1_OVERFLOW               BIT(17)
+ #define INTERRUPT_MASK_SEC0_OVERFLOW                BIT(16)
  #define INTERRUPT_MASK_SRC3_ERR_EVENT               BIT(14)
  #define INTERRUPT_MASK_SRC3_OVF_EVENT               BIT(13)
  #define INTERRUPT_MASK_SRC2_ERR_EVENT               BIT(12)

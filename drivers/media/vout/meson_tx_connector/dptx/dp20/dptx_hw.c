@@ -1068,15 +1068,7 @@ void dptx_isr_enable(struct dptx_hw_common *tx_comm, u32 flags)
 static void dptx_hw_intr_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm)
 {
 	struct dptx20_hw *tx20_hw = NULL;
-	u32 intr_mask = INTERRUPT_MASK_SRC0_OVF_EVENT |
-		INTERRUPT_MASK_SRC0_ERR_EVENT |
-		INTERRUPT_MASK_SRC1_OVF_EVENT |
-		INTERRUPT_MASK_SRC1_ERR_EVENT |
-		INTERRUPT_MASK_SRC2_OVF_EVENT |
-		INTERRUPT_MASK_SRC2_ERR_EVENT |
-		INTERRUPT_MASK_SRC3_OVF_EVENT |
-		INTERRUPT_MASK_SRC3_ERR_EVENT |
-		INTERRUPT_MASK_SEC0_AUDFIFO_OVERFLOW;
+	u32 intr_mask = 0;
 
 	if (!hw_comm) {
 		DPTX_ERROR("%s NULL hw_comm instance!\n", __func__);
@@ -1096,9 +1088,13 @@ static void dptx_hw_intr_init(struct dptx_common *tx_comm, struct dptx_hw_common
 				INTERRUPT_MASK_REPLY_RECEIVED_EVENT));
 		hw_comm->edptx_intr_mask = intr_mask;
 	} else {
-		if (tx20_hw->aux_block_mode) {
-			intr_mask |= (INTERRUPT_MASK_REPLY_RECEIVED_EVENT |
-				INTERRUPT_MASK_REPLY_TIMEOUT_EVENT);
+		/* for DPTX, only enable HPD/IRQ_HPD, and aux irq if non-block mode */
+		intr_mask = 0xFFFFFFFF &
+			(~(INTERRUPT_MASK_HPD_EVENT |
+			INTERRUPT_MASK_HPD_IRQ_EVENT));
+		if (!tx20_hw->aux_block_mode) {
+			intr_mask &= (~(INTERRUPT_MASK_REPLY_RECEIVED_EVENT |
+				INTERRUPT_MASK_REPLY_TIMEOUT_EVENT));
 		}
 	}
 
