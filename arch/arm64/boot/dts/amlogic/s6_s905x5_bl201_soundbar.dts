@@ -20,7 +20,7 @@
 	aliases {
 		serial0 = &uart_B;
 		serial1 = &uart_A;
-		serial2 = &uart_C;
+		serial3 = &uart_C;
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
@@ -1351,6 +1351,18 @@
 &uart_A {
 	status = "okay";
 	uart-has-rtscts;
+};
+
+// [soundbar product] for uart_C driver {
+// follow the hardware design
+&uart_C {
+	status = "okay";
+	pinctrl-names = "default";
+	// GPIOH_6, GPIOH_7
+	// pinctrl-0 = <&c_uart_pins>;
+
+	// GPIOD_4, GPIOD_5, for minibar function
+	pinctrl-0 = <&c_uart_pins1>;
 };
 
 &amlogic_codec {
