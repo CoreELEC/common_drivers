@@ -920,9 +920,13 @@ void earctx_set_for_hpd(struct regmap *top_map, struct earc_chipinfo *chipinfo, 
 	if (hpd) {
 		earctx_enable_d2a(top_map, true);
 		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1f << 19, 0x10 << 19);
-		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1 << 17,  0);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1f << 12, 0x5 << 12);
 		mmio_update_bits(top_map, EARCTX_TOP_CTRL0, 0x3, 0x3);
+		usleep_range(2500, 3000);
 		mmio_update_bits(top_map, EARCTX_ANA_CTRL1, 0x1 << 20, 0x1 << 20);
+		usleep_range(2500, 3000);
+		mmio_update_bits(top_map, EARCTX_ANA_CTRL0, 0x1 << 17,  0);
+		usleep_range(2500, 3000);
 	} else {
 		u8 idr_trim = 0x10;
 
