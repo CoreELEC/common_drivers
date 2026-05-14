@@ -35,6 +35,7 @@ dtb-y += g12b_s922x_ugoos_am6b_2g.dtb
 dtb-y += g12b_s922x_ugoos_am6b_4g.dtb
 dtb-y += g12b_s922x_ugoos_am6b_rev_a_2g.dtb
 dtb-y += g12b_s922x_ugoos_am6b_rev_a_4g.dtb
+dtb-y += g12b_s922z_amazon_2nd_gen_cube.dtb
 dtb-y += s4_s905w2_2g.dtb
 dtb-y += s4_s905w2_4g.dtb
 dtb-y += s4_s905y4_2g.dtb

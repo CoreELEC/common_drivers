@@ -1,0 +1,518 @@
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/{
+	model = "Amazon Fire TV 2nd gen Cube";
+	coreelec-dt-id = "g12b_s922z_amazon_2nd_gen_cube";
+	amlogic-dt-id = "g12brevb_raven_2g";
+
+	
+	memory@00000000 {
+		
+		linux,usable-memory = <0x00 0x00 0x00 0x80000000>;
+	};
+	
+	reserved-memory {
+
+		linux,secmon {
+			size = <0x00 0x2400000>;
+			alloc-ranges = <0x00 0x5000000 0x00 0x2400000>;
+			/delete-property/ clear-map;
+		};			
+	};		
+
+	bifrost {
+
+		dvfs285_cfg {
+			threshold = <0x64 0xbe>;
+		};
+
+		dvfs500_cfg {
+			threshold = <0xb4 0xdc>;
+		};
+
+		dvfs666_cfg {
+			threshold = <0xd2 0xec>;
+		};
+
+		dvfs850_cfg {
+			threshold = <0xe6 0xff>;
+		};
+	};
+	
+	secmon {
+	
+		reserve_mem_size = <0x2300000>;
+	};
+
+	/delete-node/ ethernet@ff3f0000;
+	
+	/delete-node/ mdio-multiplexer@ff64c000;	
+
+	pinctrl@ff800014 {
+	
+		/delete-node/ jtag_apao_pin;
+		
+		/delete-node/ spdifout;
+		
+		/delete-node/ spdifout_a_mute;
+	};
+	
+	pinctrl@ff634480 {
+		
+		/delete-node/ jtag_apee_pin;	
+
+		tdmout_a: tdmout_a {
+			mux {
+				groups = "tdma_sclk\0tdma_fs\0tdma_dout0";
+				function = "tdma_out";
+			};
+		};
+
+		tdmin_a: tdmin_a {
+			mux {
+				groups = "tdma_din1";
+				function = "tdma_in";
+			};
+		};
+
+		tdmc_mclk: tdmc_mclk {
+			mux {
+				groups = "mclk1_a";
+				function = "mclk1";
+			};
+		};
+
+		tdmout_c: tdmout_c {
+			mux {
+				groups = "tdmc_sclk_a\0tdmc_fs_a";
+				function = "tdmc_out";
+				drive-strength = <0x03>;
+			};
+		};
+
+		tdmin_c: tdmin_c {
+			mux {
+				groups = "tdmc_din0_a";
+				function = "tdmc_in";
+				drive-strength = <0x03>;
+			};
+		};
+
+		spdifin: spdifin {
+			mux {
+				groups = "spdif_in_h";
+				function = "spdif_in";
+			};
+		};
+	};	
+
+	usb2phy@ffe09000 {
+		/delete-node/ gpio-vbus-power;
+		/delete-node/ gpios;
+	};	
+
+	usb3phy@ffe09080 {		
+		gpio-vbus-power = "GPIOH_4";
+		gpios = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH>;
+	};
+
+	/delete-node/ jtag;
+	
+	soc {
+		cbus@ffd00000 {
+			i2c@1c000 {  
+				/delete-node/ rt5651@1a;
+				
+				is31fl3236@3f {
+					compatible = "issi,is31fl3236";
+					reg = <0x3f>;
+					#address-cells = <1>;
+					#size-cells = <0>;
+					gpios = <&gpio GPIOA_4 GPIO_ACTIVE_HIGH>;
+	
+					led@1 {
+						reg = <1>;
+						label = "led1";
+					};
+
+					led@2 {
+						reg = <2>;
+						label = "led2";
+					};
+
+					led@3 {
+						reg = <3>;
+						label = "led3";
+					};
+
+					led@4 {
+						reg = <4>;
+						label = "led4";
+					};
+					
+					led@5 {
+						reg = <5>;
+						label = "led5";
+					};
+					
+					led@6 {
+						reg = <6>;
+						label = "led6";
+					};
+
+					led@7 {
+						reg = <7>;
+						label = "led7";
+					};
+
+					led@8 {
+						reg = <8>;
+						label = "led8";
+					};
+
+					led@9 {
+						reg = <9>;
+						label = "led9";
+					};
+
+					led@10 {
+						reg = <10>;
+						label = "led10";
+					};
+					
+					led@11 {
+						reg = <11>;
+						label = "led11";
+					};
+
+					led@12 {
+						reg = <12>;
+						label = "led12";
+					};
+
+					led@13 {
+						reg = <13>;
+						label = "led13";
+					};
+
+					led@14 {
+						reg = <14>;
+						label = "led14";
+					};
+					
+					led@15 {
+						reg = <15>;
+						label = "led15";
+					};										
+				};					
+			};
+		};
+		
+		aobus@ff800000 {
+			
+			/delete-node/ meson-irblaster@14c;
+		}; 		
+
+		audiobus@0xff642000 {
+
+			aml_tdma: tdma {
+				compatible = "amlogic, g12a-snd-tdma";
+				#sound-dai-cells = <0x00>;
+				dai-tdm-lane-slot-mask-in = <0x00 0x01>;
+				dai-tdm-lane-slot-mask-out = <0x01 0x00>;
+				dai-tdm-clk-sel = <0x00>;
+				clocks = <&clkaudio CLKID_AUDIO_MCLK_A>, 
+					<&clkc CLKID_MPLL1>; 
+				clock-names = "mclk\0clk_srcpll";
+				pinctrl-names = "tdm_pins";
+				pinctrl-0 = <&tdmout_a>, 
+					<&tdmin_a>;
+			};
+
+			tdmb {
+				clocks = <&clkaudio CLKID_AUDIO_MCLK_B>, 
+					<&clkc CLKID_MPLL0>; 
+				clock-names = "mclk\0clk_srcpll\0samesource_sysclk";
+				pinctrl-0 = <&tdmb_mclk>, 
+					<&tdmout_b>; 
+			};
+			
+			spdif {
+				pinctrl-names = "spdif_pins";
+				pinctrl-0 = <&spdifin>;
+				/delete-property/ pinctrl-1;
+			};
+		};
+	};
+	
+	serial@ffd24000 {
+	
+		status = "disabled";
+	};
+
+	emmc-pwrseq {
+	
+		reset-gpios = <&gpio BOOT_9 GPIO_ACTIVE_HIGH>;
+	};	
+
+	emmc@ffe07000 {	//emmc
+	
+		mmc-hs400-1_8v;
+		
+		emmc {
+			/delete-property/ save_para ;
+			/delete-property/ compute_cmd_delay;
+			/delete-property/ compute_coef;
+			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
+			caps = "MMC_CAP_8_BIT_DATA\0MMC_CAP_MMC_HIGHSPEED\0MMC_CAP_SD_HIGHSPEED\0MMC_CAP_NONREMOVABLE\0MMC_CAP_1_8V_DDR\0MMC_CAP_HW_RESET\0MMC_CAP_ERASE\0MMC_CAP_CMD23\0MMC_CAP_DRIVER_TYPE_A";
+			caps2 = "MMC_CAP2_HS200\0MMC_CAP2_HS400";
+			f_min = <0x61a80>;
+			f_max = <0xbebc200>;			
+		};		
+	};
+
+	sd@ffe05000 {		//sdcard
+	
+		status = "disabled";
+		
+	};
+
+	sdio@ffe03000 {	//wifi
+			
+		cap-mmc-highspeed;
+		sd-uhs-sdr50;
+		max-frequency = <60000000>;	 
+		no-sd;
+		mt76x8_pmu_en_gpio = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
+	};		
+	
+	bt-dev {
+		bt_en-gpios = <&gpio GPIOX_14 GPIO_ACTIVE_HIGH>;
+		/delete-property/ reset-gpios;
+		/delete-property/ hostwake-gpios;
+	};
+    
+	wifi { 
+		power_on-gpios = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
+	};
+
+	wifi_pwm_conf {
+
+		pwm_channel1_conf {
+			pwms = <&pwm_ef 0x00 0x7558 0x00>;
+			duty-cycle = <0x3aac>;
+		};
+
+		pwm_channel2_conf {
+			pwms = <&pwm_ef 0x02 0x754e 0x00>;
+			duty-cycle = <0x3aa7>;
+		};
+	};	
+
+	/delete-node/ gpio_keypad;
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;	
+	};	
+
+	/delete-node/ backlight;
+
+	/delete-node/ bl_pwm_conf;
+	
+	/delete-node/ bl30_manager;
+
+	/delete-node/ adc_keypad;
+	
+	meson-remote {
+		demod_enable;
+	};
+	
+	/delete-node/ custom_maps_linux;	
+
+	cpu_opp_table0 {
+
+		opp00 {
+			opp-hz = <0x00 0x5f5e100>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp01 {
+			opp-hz = <0x00 0xee6b280>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp02 {
+			opp-hz = <0x00 0x1dcd6500>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp03 {
+			opp-hz = <0x00 0x27bc86aa>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp04 {
+			opp-hz = <0x00 0x3b9aca00>;
+			opp-microvolt = <0xb9ca8>;
+		};
+
+		opp05 {
+			opp-hz = <0x00 0x47868c00>;
+			opp-microvolt = <0xbeac8>;
+		};
+
+		opp06 {
+			opp-hz = <0x00 0x5353c980>;
+			opp-microvolt = <0xc5ff8>;
+		};
+
+		opp07 {
+			opp-hz = <0x00 0x5a1f4a00>;
+			opp-microvolt = <0xd2348>;
+		};
+
+		opp08 {
+			opp-hz = <0x00 0x5fd82200>;
+			opp-microvolt = <0xdbf88>;
+		};
+
+		opp09 {
+			opp-hz = <0x00 0x6590fa00>;
+			opp-microvolt = <0xe82d8>;
+		};
+
+		opp10 {
+			opp-hz = <0x00 0x71b9c500>;
+			opp-microvolt = <0xf9830>;
+		};
+		
+		opp11 {
+			opp-hz = <0x00 0x7829b800>;
+			opp-microvolt = <0xf9830>;
+		};
+						
+	};
+
+	cpu_opp_table1 {
+
+		opp00 {
+			opp-hz = <0x00 0x5f5e100>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp01 {
+			opp-hz = <0x00 0xee6b280>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp02 {
+			opp-hz = <0x00 0x1dcd6500>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp03 {
+			opp-hz = <0x00 0x27bc86aa>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp04 {
+			opp-hz = <0x00 0x3b9aca00>;
+			opp-microvolt = <0xb2778>;
+		};
+
+		opp05 {
+			opp-hz = <0x00 0x47868c00>;
+			opp-microvolt = <0xb7598>;
+		};
+
+		opp06 {
+			opp-hz = <0x00 0x5353c980>;
+			opp-microvolt = <0xbc3b8>;
+		};
+
+		opp07 {
+			opp-hz = <0x00 0x5a1f4a00>;
+			opp-microvolt = <0xbc3b8>;
+		};
+
+		opp08 {
+			opp-hz = <0x00 0x5fd82200>;
+			opp-microvolt = <0xbeac8>;
+		};
+
+		opp09 {
+			opp-hz = <0x00 0x6590fa00>;
+			opp-microvolt = <0xc11d8>;
+		};
+
+		opp10 {
+			opp-hz = <0x00 0x6b49d200>;
+			opp-microvolt = <0xcae18>;
+		};
+
+		opp11 {
+			opp-hz = <0x00 0x71b9c500>;
+			opp-microvolt = <0xd2348>;
+		};
+
+		opp12 {
+			opp-hz = <0x00 0x7829b800>;
+			opp-microvolt = <0xde698>;
+		};
+
+		opp13 {
+			opp-hz = <0x00 0x7d2b7500>;
+			opp-microvolt = <0xe82d8>;
+		};
+
+		opp14 {
+			opp-hz = <0x00 0x839b6800>;
+			opp-microvolt = <0xf6d38>;
+		};
+		
+		opp15 {
+			opp-hz = <0x00 0x89544000>;
+			opp-microvolt = <0xf6d38>;
+		};
+
+		opp16 {
+			opp-hz = <0x00 0x8f0d1800>;
+			opp-microvolt = <0xf9830>;
+		};
+				
+	};
+
+	pwmao_d-regulator {
+	
+		pwms = <&pwm_AO_cd 0x01 0x4e2 0x00>;
+		regulator-min-microvolt = <0xb0068>;
+		regulator-max-microvolt = <0xf9830>;
+		max-duty-cycle = <0x4e2>;
+		voltage-table = <0xf9830 0x00 0xf6d38 0x03 0xf4628 0x06 0xf1f18 0x0a 0xef808 0x0d 0xed0f8 0x10 0xea9e8 0x14 0xe82d8 0x17 0xe5bc8 0x1a 0xe34b8 0x1e 0xe0da8 0x21 0xde698 0x24 0xdbf88 0x28 0xd9878 0x2b 0xd7168 0x2e 0xd4a58 0x32 0xd2348 0x35 0xcfc38 0x38 0xcd528 0x3c 0xcae18 0x3f 0xc8708 0x43 0xc5ff8 0x46 0xc38e8 0x49 0xc11d8 0x4c 0xbeac8 0x50 0xbc3b8 0x53 0xb9ca8 0x56 0xb7598 0x5a 0xb4e88 0x5d 0xb2778 0x60 0xb0068 0x64>;
+	};
+		
+	pwmab_a-regulator {
+		
+		pwms = <&pwm_ab 0x00 0x4e2 0x00>;
+		regulator-min-microvolt = <0xb0068>;
+		regulator-max-microvolt = <0xf9830>;
+		max-duty-cycle = <0x4e2>;
+		voltage-table = <0xf9830 0x00 0xf6d38 0x03 0xf4628 0x06 0xf1f18 0x0a 0xef808 0x0d 0xed0f8 0x10 0xea9e8 0x14 0xe82d8 0x17 0xe5bc8 0x1a 0xe34b8 0x1e 0xe0da8 0x21 0xde698 0x24 0xdbf88 0x28 0xd9878 0x2b 0xd7168 0x2e 0xd4a58 0x32 0xd2348 0x35 0xcfc38 0x38 0xcd528 0x3c 0xcae18 0x3f 0xc8708 0x43 0xc5ff8 0x46 0xc38e8 0x49 0xc11d8 0x4c 0xbeac8 0x50 0xbc3b8 0x53 0xb9ca8 0x56 0xb7598 0x5a 0xb4e88 0x5d 0xb2778 0x60 0xb0068 0x64>;
+	};
+	
+	/delete-node/ openvfd;
+
+	/delete-node/ dvb-extern;
+
+	/delete-node/ dvb-demux;			
+};
+
+&gpio {
+	hog-0 {
+		gpio-hog;
+		gpios = <GPIOA_4 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "led_controller_power";
+	};
+};
