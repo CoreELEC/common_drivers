@@ -31,6 +31,8 @@
 #include <linux/amlogic/symbols.h>
 #include <linux/xattr.h>
 #include <linux/cred.h>
+#include <linux/xxhash.h>
+#include <linux/psi.h>
 
 #include <linux/proc_fs.h>
 
@@ -478,6 +480,49 @@ static int fill_module_symbols(struct proc_node *node, struct ksymbol *sym)
 static void direct_symbol_assign(void)
 {
 	/*--------- erofs symbols ----------*/
+	FUN_ASSIGN(get_tree_bdev_flags);
+	FUN_ASSIGN(kmemdup_nul);
+	FUN_ASSIGN(filp_open);
+	FUN_ASSIGN(bdev_file_open_by_path);
+	FUN_ASSIGN(file_bdev);
+	FUN_ASSIGN(bdi_dev_name);
+	FUN_ASSIGN(super_setup_bdi);
+	FUN_ASSIGN(generic_encode_ino32_fh);
+	FUN_ASSIGN(get_tree_nodev);
+	FUN_ASSIGN(__folio_swap_cache_index);
+	FUN_ASSIGN(read_cache_folio);
+	FUN_ASSIGN(folio_end_read);
+	FUN_ASSIGN(iomap_read_folio);
+	FUN_ASSIGN(memchr_inv);
+	FUN_ASSIGN(copy_highpage);
+	FUN_ASSIGN(bio_uninit);
+	FUN_ASSIGN(iov_iter_bvec);
+	FUN_ASSIGN(vfs_iocb_iter_read);
+	FUN_ASSIGN(bio_init);
+	FUN_ASSIGN(bio_add_folio);
+	FUN_ASSIGN(folio_unlock);
+	FUN_ASSIGN(thp_get_unmapped_area);
+	FUN_ASSIGN(filemap_splice_read);
+	FUN_ASSIGN(iomap_invalidate_folio);
+	FUN_ASSIGN(iomap_release_folio);
+	FUN_ASSIGN(__filemap_get_folio);
+	FUN_ASSIGN(kmem_cache_alloc_lru_noprof);
+	FUN_ASSIGN(flush_dcache_folio);
+	FUN_ASSIGN(filemap_add_folio);
+	FUN_ASSIGN(wait_for_completion_io);
+	FUN_ASSIGN(xxh32);
+	FUN_ASSIGN(migrate_disable);
+	FUN_ASSIGN(migrate_enable);
+	FUN_ASSIGN(alloc_pages_bulk_noprof);
+	FUN_ASSIGN(lockref_get_not_zero);
+	FUN_ASSIGN(lockref_put_or_lock);
+	FUN_ASSIGN(lockref_mark_dead);
+	FUN_ASSIGN(__bio_advance);
+	FUN_ASSIGN(zero_fill_bio_iter);
+	FUN_ASSIGN(__seq_puts);
+	FUN_ASSIGN(_copy_to_iter);
+	FUN_ASSIGN(psi_memstall_enter),
+	FUN_ASSIGN(psi_memstall_leave),
 	dotdot_name_t = (struct qstr *)&dotdot_name;
 }
 #endif
