@@ -741,7 +741,7 @@
 };
 
 &saradc {
-	status = "disabled";
+	status = "okay";
 };
 
 &freertos {

@@ -49,7 +49,6 @@ config AMLOGIC_PDD
 	depends on OF
 	depends on REGMAP_MMIO
 	depends on IRQ_DOMAIN
-	depends on GENERIC_IRQ_CHIP
 	help
 	  Say yes here to build support for the PDD found in Amlogic SoCs.
 
