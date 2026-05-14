@@ -684,7 +684,6 @@ static void a9_postblend_set_state(struct meson_vpu_block *vblk,
 
 		vpp1_osd1_blend_scope_set(vblk, reg_ops, reg1, scope);
 		reg_ops->rdma_write_reg_bits(A9_VPP1_OSD1_BLEND_SRC_CTRL, 0x2, 0, 4);
-		reg_ops->rdma_write_reg_bits(A9_VPP1_BLD_CTRL, 0x1, 31, 1);
 
 		if (bld_src2_sel == 1) {
 			if (postblend->postblend_path_mask) {
