@@ -5,6 +5,15 @@ ccflags-y += -I$(srctree)/drivers
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_PINCTRL_MESON) += pinctrl/pinctrl-meson.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_PINCTRL_MESON) += pinctrl/pinctrl-meson-axg-pmx.o
 
+ccflags-y += -I$(srctree)/drivers/pinctrl/meson
+
+MODULE_NAME_A4 = amlogic-pinctrl-a4
+
+obj-$(CONFIG_AMLOGIC_PINCTRL_A4) += $(MODULE_NAME_A4).o
+$(MODULE_NAME_A4)-y += pinctrl/pinctrl-amlogic-a4.o
+PR_FMT_DEFINE_NA4="-Dpr_fmt(fmt)= \"[$(MODULE_NAME_A4)]: \" fmt"
+CFLAGS_pinctrl-amlogic-a4.o += $(PR_FMT_DEFINE_NA4)
+
 S4_MODULE_NAME = amlogic-pinctrl-soc-s4
 obj-$(CONFIG_AMLOGIC_PINCTRL_MESON_S4) += $(S4_MODULE_NAME).o
 $(S4_MODULE_NAME)-y += pinctrl/pinctrl-meson-s4.o

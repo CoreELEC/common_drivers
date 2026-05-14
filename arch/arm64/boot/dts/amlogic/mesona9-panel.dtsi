@@ -62,16 +62,16 @@
 		//edptx_vcc_on_dir = <1>;
 		//edptx_vcc-off_dir = <0>;
 
-		edptx_bl_en-gpio      = <&gpio GPIOY_0 GPIO_ACTIVE_HIGH>;
+		edptx_bl_en-gpio      = <&gpioy 0 GPIO_ACTIVE_HIGH>;
 		edptx_bl_en-gpio-name = "GPIOY_0";
 		edptx_bl_en_on_dir = <1>;
 		edptx_bl_en-off_dir = <0>;
-		edptx_bl_pwm-gpio      = <&gpio GPIOY_1 GPIO_ACTIVE_HIGH>;
+		edptx_bl_pwm-gpio      = <&gpioy 1 GPIO_ACTIVE_HIGH>;
 		edptx_bl_pwm-gpio-name = "GPIOY_1";
 		edptx_bl_pwm_on_dir = <1>;
 		edptx_bl_pwm-off_dir = <0>;
 
-		edptx_bist-gpio      = <&gpio GPIOY_3 GPIO_ACTIVE_HIGH>;
+		edptx_bist-gpio      = <&gpioy 3 GPIO_ACTIVE_HIGH>;
 		edptx_bist-gpio-name = "GPIOY_3";
 		edptx_bist_on_dir = <1>;
 		edptx_bist-off_dir = <0>;

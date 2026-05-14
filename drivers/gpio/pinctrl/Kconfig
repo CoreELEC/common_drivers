@@ -10,6 +10,24 @@ menuconfig AMLOGIC_PINCTRL_MESON
 	depends on OF_GPIO
 	depends on REGMAP_MMIO
 
+config AMLOGIC_PINCTRL_A4
+	tristate  "AMLOGIC pincontrol"
+	depends on OF
+	depends on PINMUX
+	depends on PINCONF
+	depends on GENERIC_PINCONF
+	depends on GPIOLIB
+	depends on OF_GPIO
+	depends on REGMAP_MMIO
+	depends on ARM64 || COMPILE_TEST
+	default n
+	help
+	  This is the driver for the pin controller found on Amlogic SoCs.
+
+	  This driver is simplify subsequent support for new amlogic SoCs,
+	  to support new Amlogic SoCs, only need to add the corresponding dts file,
+	  no additional binding header files or C file are added.
+
 if AMLOGIC_PINCTRL_MESON
 config AMLOGIC_PINCTRL_MESON_S4
 	tristate "Meson s4 Soc pinctrl driver"
