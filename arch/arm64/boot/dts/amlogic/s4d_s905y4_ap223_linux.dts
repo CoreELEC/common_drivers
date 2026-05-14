@@ -1270,22 +1270,13 @@
 };
 
 &amhdmitx {
-	status = "disabled";
+	status = "okay";
 	/* hdcp ctrl 0:sysctrl, 1: drv, 2: linux app */
 	hdcp_ctl_lvl = <1>;
 };
 
-&drm_amhdmitx {
-	status = "okay";
-	hdcp = "disabled";
-};
-
 &drm_amcvbsout {
 	status = "okay";
-};
-
-&drm_lcd {
-	status = "disabled";
 };
 
 &vpu {

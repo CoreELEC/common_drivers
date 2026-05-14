@@ -55,7 +55,6 @@
 	drm_subsystem: drm-subsystem {
 		status = "okay";
 		compatible = "amlogic, drm-subsystem";
-		//ports = <&vpu_out>,<&connectors_dev>;
 		ports = <&connectors_dev>;
 		fbdev_sizes = <1920 1080 1920 2160 32>;
 		memory-region = <&logo_reserved>;

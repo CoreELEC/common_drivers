@@ -1522,17 +1522,8 @@
 	logo_addr = "0x1fc00000";
 };
 
-&drm_amhdmitx {
-	status = "okay";
-	hdcp = "okay";
-};
-
 &drm_amcvbsout {
 	status = "okay";
-};
-
-&drm_lcd {
-	status = "disable";
 };
 
 &amhdmitx {

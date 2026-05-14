@@ -1346,24 +1346,14 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x3f800000";
-
 };
 
 &amhdmitx {
 	status = "okay";
 };
 
-&drm_amhdmitx {
-	status = "okay";
-	hdcp = "disabled";
-};
-
 &drm_amcvbsout {
-	status = "disabled";
-};
-
-&drm_lcd {
-	status = "disabled";
+	status = "okay";
 };
 
 &vpu {

@@ -37,7 +37,6 @@
 		clocks = <&clkc CLKID_VPU_CLKC_MUX>;
 		clock-names = "vpu_clkc";
 		dma-coherent;
-		//vpu_out: port {
 		connectors_dev: port@1 {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -51,8 +50,8 @@
 				remote-endpoint = <&cvbs_to_drm>;
 			};
 			drm_to_dummyl: endpoint@2 {
-			reg = <2>;
-			remote-endpoint = <&dummyl_to_drm>;
+				reg = <2>;
+				remote-endpoint = <&dummyl_to_drm>;
 			};
 		};
 	};

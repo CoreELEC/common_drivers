@@ -1317,7 +1317,6 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x1fc00000";
-
 };
 
 &amhdmitx {
@@ -1325,17 +1324,8 @@
 	status = "okay";
 };
 
-&drm_amhdmitx {
-	status = "okay";
-	hdcp = "disabled";
-};
-
 &drm_amcvbsout {
 	status = "okay";
-};
-
-&drm_lcd {
-	status = "disabled";
 };
 
 &vpu {

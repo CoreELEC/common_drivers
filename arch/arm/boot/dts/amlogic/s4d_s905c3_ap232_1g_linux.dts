@@ -1328,13 +1328,8 @@
 };
 
 &amhdmitx {
-	status = "disabled";
-	hdcp_ctl_lvl = <1>;
-};
-
-&drm_amhdmitx {
 	status = "okay";
-	hdcp = "disabled";
+	hdcp_ctl_lvl = <1>;
 };
 
 &drm_subsystem {
@@ -1343,10 +1338,6 @@
 
 &drm_amcvbsout {
 	status = "okay";
-};
-
-&drm_lcd {
-	status = "disabled";
 };
 
 /*if you want to use vdin just modify status to "ok"*/

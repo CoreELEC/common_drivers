@@ -6,11 +6,6 @@
 #include <dt-bindings/display/meson-drm-ids.h>
 
 / {
-	drm_amhdmitx: drm-amhdmitx {
-		status = "disabled";
-		hdcp = "disabled";
-	};
-
 	drm_amcvbsout: drm-amcvbsout {
 		status = "disabled";
 		compatible = "amlogic, drm-cvbsout";
@@ -22,22 +17,6 @@
 				cvbs_to_drm: endpoint@0 {
 					reg = <0>;
 					remote-endpoint = <&drm_to_cvbs>;
-				};
-			};
-		};
-	};
-
-	drm_lcd: drm-lcd {
-		status = "disabled";
-		compatible = "amlogic, drm-lcd";
-		dev_name = "meson-lcd";
-		ports {
-			port {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				lcd_in_vpu: endpoint@0 {
-					reg = <0>;
-					remote-endpoint = <&vpu_out_lcd>;
 				};
 			};
 		};
@@ -56,14 +35,6 @@
 		//clocks = <&clkc CLKID_VPU_CLKC>;
 		//clock-names = "vpu_clkc";
 		dma-coherent;
-		vpu_out: port@1 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			vpu_out_lcd: endpoint@2 {
-				reg = <2>;
-				remote-endpoint = <&lcd_in_vpu>;
-			};
-		};
 		/*EXTERNAL port for driver outside of drm.*/
 		connectors_dev: port@2 {
 			#address-cells = <1>;
@@ -86,7 +57,7 @@
 	drm_subsystem: drm-subsystem {
 		status = "okay";
 		compatible = "amlogic, drm-subsystem";
-		ports = <&vpu_out>,<&connectors_dev>;
+		ports = <&connectors_dev>;
 		fbdev_sizes = <1920 1080 1920 2160 32>;
 		fbdev_overlay_sizes = <640 360 640 720 32>;
 		memory-region = <&logo_reserved>;

@@ -1300,17 +1300,8 @@
 	status = "okay";
 };
 
-&drm_amhdmitx {
-	status = "okay";
-	hdcp = "disabled";
-};
-
 &drm_amcvbsout {
 	status = "okay";
-};
-
-&drm_lcd {
-	status = "disabled";
 };
 
 &vpu {
