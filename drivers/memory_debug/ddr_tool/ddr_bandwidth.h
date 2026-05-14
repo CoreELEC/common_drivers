@@ -193,6 +193,7 @@ struct ddr_port_map {
 const char *ddr_port_map_name(const struct ddr_port_map *map);
 
 struct ddr_bandwidth_ops {
+	void (*chip_init)(struct ddr_bandwidth *db);
 	void (*init)(struct ddr_bandwidth *db);
 	void (*config_port)(struct ddr_bandwidth *db, int channel, int port);
 	void (*config_range)(struct ddr_bandwidth *db, int channel,

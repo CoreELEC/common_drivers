@@ -3541,6 +3541,9 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 	if (aml_db->ops && aml_db->ops->vpu_status)
 		aml_db->ops->vpu_status(1);
 
+	if (aml_db->ops && aml_db->ops->chip_init)
+		aml_db->ops->chip_init(aml_db);
+
 	raw_spin_lock_init(&aml_db->lock);
 	aml_db->clock_count = aml_db->ops->get_freq(aml_db) / DEFAULT_SAMPLING_FREQ; // 1000hz
 	aml_db->ddr_poll_ns = 1000000000 / DEFAULT_SAMPLING_FREQ;	// 1ms

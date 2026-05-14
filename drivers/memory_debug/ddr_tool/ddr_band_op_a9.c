@@ -45,6 +45,76 @@ static unsigned int ots_levels[] __initdata = {
 	0x30263026, 0x34293429, 0x382C382C, 0x3C2F3C2F
 };
 
+static void chip_init(struct ddr_bandwidth *db)
+{
+// reserve buffer for vpu0/1
+	writel(0x18e01111,  db->ddr_reg[0] + (0x005a  << 2));
+
+// AXI0: CPU_IF0
+	writel(0xc3f003f3,  db->ddr_reg[0] + (0x0080  << 2));
+	writel(0xb8234233,  db->ddr_reg[0] + (0x0082  << 2));
+	writel(0x0000bb0f,  db->ddr_reg[0] + (0x0083  << 2));
+
+// AXI1: CPU_IF1
+	writel(0xc3f003f3,  db->ddr_reg[0] + (0x0084  << 2));
+	writel(0xb8234233,  db->ddr_reg[0] + (0x0086  << 2));
+	writel(0x0000bb0f,  db->ddr_reg[0] + (0x0087  << 2));
+
+// AXI2: VPU0
+	writel(0x3ffc3ff,  db->ddr_reg[0] + (0x0088  << 2));
+	writel(0xf0,  db->ddr_reg[0] + (0x008b  << 2));
+
+// AXI3: VPU1
+	writel(0x3ffc3ff,  db->ddr_reg[0] + (0x008c  << 2));
+	writel(0xf0,  db->ddr_reg[0] + (0x008f  << 2));
+
+// AXI4: NNA
+	writel(0xcff0cff7,  db->ddr_reg[0] + (0x0090  << 2));
+	writel(0x00000000,  db->ddr_reg[0] + (0x0093  << 2));
+
+// AXI5: DMC_TEST
+
+// AXI6: HEVC_B
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x0098  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x009b  << 2));
+
+// AXI7: HEVC_F
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x009c  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x009f  << 2));
+
+// AXI8: MIPI
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00a0  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00a3  << 2));
+
+// AXI9: VGE
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00a4  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00a7  << 2));
+
+// AXI10: DEVICE
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00a8  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00ab  << 2));
+
+// AXI11: DEMUX
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00ac  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00af  << 2));
+
+// AXI12: GPU
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00b0  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00b3  << 2));
+
+// AXI13: PP_DMC
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00b4  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00b7  << 2));
+
+// AXI14: HC_VC
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00b8  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00bb  << 2));
+
+// AXI15: ADH_MMC
+	writel(0xc3f003f7,  db->ddr_reg[0] + (0x00bc  << 2));
+	writel(0x0000bb00,  db->ddr_reg[0] + (0x00bf  << 2));
+}
+
 static void a9_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int i, val;
@@ -340,6 +410,7 @@ static void vpu_status(int is_init)
 }
 
 struct ddr_bandwidth_ops a9_ddr_bw_ops = {
+	.chip_init	  = chip_init,
 	.init             = a9_dmc_bandwidth_init,
 	.config_port      = a9_dmc_port_config,
 	.get_freq         = a9_get_dmc_freq_quick,
