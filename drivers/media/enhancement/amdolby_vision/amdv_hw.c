@@ -2022,10 +2022,15 @@ static int dv_core1a_set(u32 dm_count,
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_SWAP_CTRL2,
 					 0, 2, 2);
-				/*core1a el in sel null*/
+				/*core1a el in sel: vd2 if FEL, else null*/
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_SWAP_CTRL2,
-					 3, 4, 2);
+					 el_enable ? 1 : 3, 4, 2);
+				if (el_enable)
+					VSYNC_WR_DV_REG_BITS
+						(VPP_VD2_DSC_CTRL,
+						 /* enable vd2 path to core1a EL */
+						 0, 4, 1);
 				/*core1a out to vd1*/
 				VSYNC_WR_DV_REG_BITS
 					(AMDV_PATH_SWAP_CTRL2,
