@@ -104,9 +104,9 @@ static enum uvm_video_type get_resolution_vframe(const struct vframe_s *vfp)
 		h = vfp->height;
 	}
 
-	if (h > 2160 || w > 3840)
+	if (h > 2304 || w > 4096)
 		return AM_VIDEO_8K;
-	else if (h > 1080 || w > 1920)
+	else if (h > 1088 || w > 1920)
 		return AM_VIDEO_4K;
 
 	return AM_VIDEO_NORMAL;
