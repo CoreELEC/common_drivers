@@ -4756,6 +4756,17 @@ static struct vf_entry *check_vdin_read_list(struct vdin_dev_s *devp)
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static void vdin_set_vfe_type(struct vdin_dev_s *devp, struct vf_entry *vfe)
 {
+#ifdef CONFIG_AMLOGIC_LCD
+	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
+
+	if (!pdrv)
+		devp->is_lcd_mute = 0;
+	else
+		devp->is_lcd_mute = lcd_mute_state_get(pdrv);
+#else
+	devp->is_lcd_mute = 0;
+#endif
+
 	if (devp->matrix_pattern_mode || devp->secure_video || devp->is_lcd_mute)
 		vfe->vf.type_ext |= VIDTYPE_EXT_VDIN_HDCP;
 	else

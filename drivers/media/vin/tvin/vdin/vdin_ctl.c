@@ -2494,6 +2494,32 @@ static unsigned int vdin_is_support_10bit_for_dw(struct vdin_dev_s *devp)
 	}
 }
 
+static bool vdin_is_input_swap(struct vdin_dev_s *devp)
+{
+	if (devp->input_swap ^ devp->debug.input_swap)
+		return true;
+	else
+		return false;
+}
+
+static bool vdin_is_little_endian_output(struct vdin_dev_s *devp)
+{
+	if ((devp->wr_endian || devp->cfg_dma_buf ||
+		devp->work_mode == VDIN_WORK_MD_V4L) ^ devp->dbg_no_swap_en)
+		return true;
+	else
+		return false;
+}
+
+static bool vdin_is_uv_swap(struct vdin_dev_s *devp)
+{
+	if (devp->parm.h_reverse ^
+		(vdin_is_little_endian_output(devp) && !vdin_is_input_swap(devp)))
+		return true;
+	else
+		return false;
+}
+
 /*static unsigned int vdin_wr_mode = 0xff;*/
 /*module_param(vdin_wr_mode, uint, 0644);*/
 /*MODULE_PARM_DESC(vdin_wr_mode, "vdin_wr_mode");*/
@@ -2641,7 +2667,7 @@ void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 		if (devp->dtdata->hw_ver == VDIN_HW_T6W || devp->dtdata->hw_ver == VDIN_HW_T6X) {
 			/* swap_cbcr */
 			wr_bits(offset, VDIN0_WRMIF_CTRL1,
-				devp->parm.h_reverse ^ !swap_cbcr,
+				vdin_is_uv_swap(devp) ^ !swap_cbcr,
 				24, 1);
 			/* output even lines's cbcr */
 			wr_bits(offset, VDIN0_WRMIF_CTRL1, 0,
@@ -2655,7 +2681,7 @@ void vdin_set_wr_ctrl(struct vdin_dev_s *devp,
 				wr_bits(offset, VDIN_WRMIF_CTRL1, 1 ^ !swap_cbcr, 24, 1);
 			else
 				wr_bits(offset, VDIN_WRMIF_CTRL1,
-					devp->parm.h_reverse ^ !swap_cbcr, 24, 1);
+					vdin_is_uv_swap(devp) ^ !swap_cbcr, 24, 1);
 			/* output even lines's cbcr */
 			wr_bits(offset, VDIN_WRMIF_CTRL1, 0,
 				22, VCONV_MODE_WID);
@@ -5562,7 +5588,9 @@ void vdin_set_vscale(struct vdin_dev_s *devp)
 	} else {
 		wr_bits(offset, VDIN_VSC_INI_CTRL, 0,
 			VSC_PHASE0_ALWAYS_EN_BIT, VSC_PHASE0_ALWAYS_EN_WID);
-		if (devp->dtdata->hw_ver == VDIN_HW_T6X)
+		if (devp->dtdata->hw_ver == VDIN_HW_T6X ||
+			devp->dtdata->hw_ver == VDIN_HW_T6W ||
+			devp->dtdata->hw_ver == VDIN_HW_A9)
 			wr_bits(offset, VDIN_VSC_INI_CTRL, 1,
 			OUTSIDE_PIC_PAD_EN_BIT, OUTSIDE_PIC_PAD_EN_WID);
 		/* scale phase is 0x8000 */

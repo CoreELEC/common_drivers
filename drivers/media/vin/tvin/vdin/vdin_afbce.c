@@ -778,9 +778,6 @@ void vdin_afbce_soft_reset(struct vdin_dev_s *devp)
 	} else if (is_meson_t3x_cpu() || is_meson_a9_cpu()) {
 		vdin_afbce_soft_reset_t3x(devp);
 		return;
-	} else if (is_meson_t6w_cpu() || is_meson_t6x_cpu()) {
-		/* no needed anymore */
-		return;
 	}
 #endif
 

@@ -115,6 +115,8 @@ static struct class *viu_class;
  */
 
 #define VPP1_WR_BAK_CTRL 0x5981
+#define T6D_VPP1_WR_BAK_CTRL 0x6481
+
 #define VPP2_WR_BAK_CTRL 0x59c1
 #define VPU_422TO444_CTRL0 0x274b
 #define VPU_422TO444_CTRL1 0x274c
@@ -746,13 +748,25 @@ static void viuin_set_wr_bak_ctrl(enum tvin_port_e port)
 		wr_bits_viu(VPP_WR_BAK_CTRL, 0xff, 16, 8);
 		break;
 	case TVIN_PORT_VIU2_VD1:
-		wr_bits_viu(VPP1_WR_BAK_CTRL, 1, 0, 2);
+		if (is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_t6x_cpu() || is_meson_a9_cpu())
+			wr_bits_viu(T6D_VPP1_WR_BAK_CTRL, 1, 0, 2);
+		else
+			wr_bits_viu(VPP1_WR_BAK_CTRL, 1, 0, 2);
 		break;
 	case TVIN_PORT_VIU2_OSD1:
-		wr_bits_viu(VPP1_WR_BAK_CTRL, 2, 0, 2);
+		if (is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_t6x_cpu() || is_meson_a9_cpu())
+			wr_bits_viu(T6D_VPP1_WR_BAK_CTRL, 2, 0, 2);
+		else
+			wr_bits_viu(VPP1_WR_BAK_CTRL, 2, 0, 2);
 		break;
 	case TVIN_PORT_VIU2_VPP:
-		wr_bits_viu(VPP1_WR_BAK_CTRL, 3, 0, 2);
+		if (is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_t6x_cpu() || is_meson_a9_cpu())
+			wr_bits_viu(T6D_VPP1_WR_BAK_CTRL, 3, 0, 2);
+		else
+			wr_bits_viu(VPP1_WR_BAK_CTRL, 3, 0, 2);
 		break;
 	case TVIN_PORT_VIU3_VD1:
 		wr_bits_viu(VPP2_WR_BAK_CTRL, 1, 0, 2);
@@ -777,7 +791,11 @@ static void viuin_set_wr_bak_ctrl(enum tvin_port_e port)
 	default:
 		wr_bits_viu(VPP_WR_BAK_CTRL, 0, 0, 4);
 		wr_bits_viu(VPP_WR_BAK_CTRL, 0, 4, 4);
-		wr_bits_viu(VPP1_WR_BAK_CTRL, 0, 0, 2);
+		if (is_meson_t6d_cpu() || is_meson_t6w_cpu() ||
+			is_meson_t6x_cpu() || is_meson_a9_cpu())
+			wr_bits_viu(T6D_VPP1_WR_BAK_CTRL, 0, 0, 2);
+		else
+			wr_bits_viu(VPP1_WR_BAK_CTRL, 0, 0, 2);
 		wr_bits_viu(VPP2_WR_BAK_CTRL, 0, 0, 2);
 		break;
 	}
@@ -916,6 +934,9 @@ static int viuin_open(struct tvin_frontend_s *fe, enum tvin_port_e port,
 	unsigned int viu_mux = 0;
 	unsigned long vinfo_total_size;
 	const struct vinfo_s *vinfo = NULL;
+
+	if (!fe->private_data)
+		return -EINVAL;
 
 	vinfo = get_current_vinfo();
 

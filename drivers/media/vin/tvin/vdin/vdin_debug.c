@@ -182,8 +182,10 @@ void vdin_get_input_size(struct vdin_dev_s *devp, struct vdin_parm_s *parm)
 		return;
 
 	const struct vinfo_s *vinfo;
+	const struct vinfo_s *vinfo2;
 
 	vinfo = get_current_vinfo();
+	vinfo2 = get_current_vinfo2();
 	parm->frame_rate = vinfo->std_duration;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
@@ -198,7 +200,7 @@ void vdin_get_input_size(struct vdin_dev_s *devp, struct vdin_parm_s *parm)
 			get_vdx_real_axis(0, cur_axis);
 			parm->h_active = cur_axis[2] - cur_axis[0] + 1;
 			parm->v_active = cur_axis[3] - cur_axis[1] + 1;
-		} else if (parm->port == TVIN_PORT_VIU2_VD1) {
+		} else if (parm->port == TVIN_PORT_VIU1_WB0_VD2) {
 			get_vdx_real_axis(1, cur_axis);
 			parm->h_active = cur_axis[2] - cur_axis[0] + 1;
 			parm->v_active = cur_axis[3] - cur_axis[1] + 1;
@@ -209,8 +211,20 @@ void vdin_get_input_size(struct vdin_dev_s *devp, struct vdin_parm_s *parm)
 		}
 	} else {
 #endif
-		parm->h_active = vinfo->width;
-		parm->v_active = vinfo->height;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+		if (parm->port == TVIN_PORT_VIU2_VPP ||
+			parm->port == TVIN_PORT_VENC1) {
+			parm->h_active = vinfo2->width;
+			parm->v_active = vinfo2->height;
+			parm->frame_rate = vinfo2->sync_duration_num / vinfo2->sync_duration_den;
+		} else {
+#endif
+			parm->h_active = vinfo->width;
+			parm->v_active = vinfo->height;
+			parm->frame_rate = vinfo->sync_duration_num / vinfo->sync_duration_den;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+		}
+#endif
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	}
 #endif
@@ -2886,12 +2900,14 @@ static void vdin_write_back_reg(struct vdin_dev_s *devp)
 	pr_info("VPP_VE_H_V_SIZE(0x%x):0x%x\n", 0x1da4, R_VCBUS(0x1da4));
 	pr_info("VPP_OUT_H_V_SIZE(0x%x):0x%x\n", 0x1da5, R_VCBUS(0x1da5));
 	pr_info("VPP_WR_BAK_CTRL(0x%x):0x%x\n", 0x1df9, R_VCBUS(0x1df9));
-	if (R_VCBUS_BIT(0x2783, 0, 6) == 0x20)
-		pr_info("VPP1_WR_BAK_CTRL(0x%x):0x%x\n", 0x5981, R_VCBUS(0x5981));
-	else if (R_VCBUS_BIT(0x2783, 0, 6) == 0x40)
+	if (R_VCBUS_BIT(0x2783, 0, 6) == 0x20) {
+		if (devp->dtdata->hw_ver >= VDIN_HW_T6D)
+			pr_info("VPP1_WR_BAK_CTRL(0x%x):0x%x\n", 0x6481, R_VCBUS(0x6481));
+		else
+			pr_info("VPP1_WR_BAK_CTRL(0x%x):0x%x\n", 0x5981, R_VCBUS(0x5981));
+	} else if (R_VCBUS_BIT(0x2783, 0, 6) == 0x40) {
 		pr_info("VPP2_WR_BAK_CTRL(0x%x):0x%x\n", 0x59c1, R_VCBUS(0x59c1));
-	else
-		pr_info("if has VPP1/VPP2 check VPP1/VPP2_WR_BAK_CTRL(0x5981 0x59c1)\n");
+	}
 	pr_info("VDIN_COM_CTRL0:(0x%x):0x%x\n",
 		(VDIN_COM_CTRL0 + devp->addr_offset),
 		rd(devp->addr_offset, VDIN_COM_CTRL0));
