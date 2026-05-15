@@ -9254,8 +9254,7 @@ static int vpp_matrix_update(struct vframe_s *vf,
 	if (is_amdv_on() &&
 	    (vd_path == VD1_PATH ||
 	    !cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) &&
-	    cur_sbtm_mode[VD1_PATH] == sbtm_mode &&
-	    !sbtmdb_change_get(vd_path))
+	    cur_sbtm_mode[VD1_PATH] == sbtm_mode)
 		return 0;
 
 	/*sbtm*/

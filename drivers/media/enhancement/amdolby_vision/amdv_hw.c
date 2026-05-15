@@ -3256,7 +3256,13 @@ static int dv_core3_set
 		VSYNC_WR_DV_REG(CORE3_CLKGATE_CTRL, 0x20);
 	else
 		VSYNC_WR_DV_REG(CORE3_CLKGATE_CTRL, 0);
-	VSYNC_WR_DV_REG(CORE3_SWAP_CTRL1,
+	/*Non-s5 ctrl1 reg is total, according to the output setting.*/
+	if (is_aml_s5())
+		VSYNC_WR_DV_REG(CORE3_SWAP_CTRL1,
+			((hsize + htotal_add) << 16)
+			| (vsize + vtotal_add + vsize_add + vsize_hold * 2));
+	else
+		VSYNC_WR_DV_REG(CORE3_SWAP_CTRL1,
 			((h_total + htotal_add) << 16)
 			| (v_total + vtotal_add + vsize_add + vsize_hold * 2));
 	VSYNC_WR_DV_REG(CORE3_SWAP_CTRL2,
