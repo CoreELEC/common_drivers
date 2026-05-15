@@ -46,6 +46,7 @@ struct gpio_keypad {
 	struct input_dev *input_dev;
 	struct class kp_class;
 	u32 last_code;
+	bool bias_cfg;
 };
 
 static irqreturn_t gpio_irq_handler(int irq, void *data)
@@ -56,6 +57,20 @@ static irqreturn_t gpio_irq_handler(int irq, void *data)
 	mod_timer(&keypad->polling_timer,
 		  jiffies + msecs_to_jiffies(20));
 	return IRQ_HANDLED;
+}
+
+static int __gpiod_get_value(const struct gpio_keypad *keypad, const struct gpio_desc *desc)
+{
+	int retval = gpiod_get_value(desc);
+
+	if (retval < 0)
+		return retval;
+
+	/*
+	 * Legacy issue:
+	 * The driver treats 0 as a press by default, so we invert the value here.
+	 */
+	return keypad->bias_cfg ? !retval : retval;
 }
 
 static void report_key_code(struct gpio_keypad *keypad, int gpio_val)
@@ -95,7 +110,7 @@ static void polling_timer_handler(struct timer_list *t)
 
 	if (keypad->use_irq) {/* irq mode */
 		for (i = 0; i < keypad->key_size; i++) {
-			gpio_val = gpiod_get_value(keypad->key[i].desc);
+			gpio_val = __gpiod_get_value(keypad, keypad->key[i].desc);
 
 			if (keypad->key[i].current_status != gpio_val) {
 				keypad->key[i].count++;
@@ -114,7 +129,7 @@ static void polling_timer_handler(struct timer_list *t)
 				  msecs_to_jiffies(keypad->scan_period));
 	} else {/* polling mode */
 		for (i = 0; i < keypad->key_size; i++) {
-			gpio_val = gpiod_get_value(keypad->key[i].desc);
+			gpio_val = __gpiod_get_value(keypad, keypad->key[i].desc);
 			if (keypad->key[i].current_status != gpio_val) {
 				keypad->key[i].count++;
 				keypad->current_key = &keypad->key[i];
@@ -290,6 +305,7 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 	unsigned int number;
 	int wakeup_source = 0;
 	int register_flag = 0;
+	unsigned long irqflags;
 
 	if (!(pdev->dev.of_node)) {
 		dev_err(&pdev->dev,
@@ -319,6 +335,7 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 			"failed to get key_num!\n");
 		return -EINVAL;
 	}
+	keypad->bias_cfg = of_property_read_bool(pdev->dev.of_node, "amlogic,auto-bias-cfg");
 	keypad->key = devm_kzalloc(&pdev->dev,
 				   (keypad->key_size) * sizeof(*keypad->key),
 				   GFP_KERNEL);
@@ -356,7 +373,13 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 		gpiod_direction_input(keypad->key[i].desc);
-		gpiod_set_pull(keypad->key[i].desc, GPIOD_PULL_UP);
+		if (keypad->bias_cfg) {
+			gpiod_set_pull(keypad->key[i].desc,
+				       gpiod_is_active_low(keypad->key[i].desc) ?
+				       GPIOD_PULL_UP : GPIOD_PULL_DOWN);
+		} else {
+			gpiod_set_pull(keypad->key[i].desc, GPIOD_PULL_UP);
+		}
 	}
 
 	keypad->kp_class.name = "gpio_keypad";
@@ -402,10 +425,16 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 			keypad->key[i].count = 0;
 			keypad->key[i].irq_num =
 				gpiod_to_irq(keypad->key[i].desc);
+			if (keypad->bias_cfg) {
+				irqflags = gpiod_is_active_low(desc) ?
+					   IRQF_TRIGGER_FALLING : IRQF_TRIGGER_RISING;
+			} else {
+				irqflags = IRQF_TRIGGER_FALLING;
+			}
 			ret = devm_request_irq(&pdev->dev,
 					       keypad->key[i].irq_num,
 					       gpio_irq_handler,
-					       IRQF_TRIGGER_FALLING,
+					       irqflags,
 					       "gpio_keypad", keypad);
 			if (ret) {
 				dev_err(&pdev->dev,
@@ -505,7 +534,12 @@ static int meson_gpio_kp_restore(struct device *dev)
 			return -EINVAL;
 		}
 		gpiod_direction_input(desc);
-		gpiod_set_pull(desc, GPIOD_PULL_UP);
+		if (keypad->bias_cfg) {
+			gpiod_set_pull(desc, gpiod_is_active_low(desc) ?
+				       GPIOD_PULL_UP : GPIOD_PULL_DOWN);
+		} else {
+			gpiod_set_pull(desc, GPIOD_PULL_UP);
+		}
 		keypad->key[index].desc = desc;
 	}
 
