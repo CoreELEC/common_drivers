@@ -5028,9 +5028,12 @@ unsigned int get_muxio_link_status(void)
 	} else if (((cur_reg_val[0] & 0xff0) == 0xff0) || ((cur_reg_val[1] & 0xfffff) == 0xfffff)) {
 		ret = 0;
 	} else {
-		pr_csc(128, "%s: 0x%x/0x%x/0x%x=0x%x/0x%x/0x%x\n",
-			__func__, reg_addr[0], reg_addr[1], reg_addr[2],
-			reg_val[0], reg_val[1], reg_val[2]);
+//		pr_csc(128, "%s: 0x%x/0x%x/0x%x=0x%x/0x%x/0x%x\n",
+//			__func__, reg_addr[0], reg_addr[1], reg_addr[2],
+//			reg_val[0], reg_val[1], reg_val[2]);
+//		pr_csc(128, "%s: cur 0x%x/0x%x/0x%x=0x%x/0x%x/0x%x\n",
+//			__func__, reg_addr[0], reg_addr[1], reg_addr[2],
+//			cur_reg_val[0], cur_reg_val[1], cur_reg_val[2]);
 		ret = 1;
 	}
 

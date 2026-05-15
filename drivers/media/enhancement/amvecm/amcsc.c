@@ -9700,10 +9700,11 @@ int amvecm_matrix_process(struct vframe_s *vf,
 			dbg_vf[vd_path] = NULL;
 			last_vf[vd_path] = NULL;
 		}
+
 		if (vf)
 			pr_csc(1, "vf(%p) index=%d, frame_index=%d, dpss_flg=0x%x\n",
 				vf, vf->index, vf->frame_index, vf->dpss_flg);
-		update_hdr_settings_dpss(vf, vd_path, vpp_index);
+
 		video_post_process_for_dpss(vf, vd_path, vpp_index);
 
 		return 0;
@@ -10437,10 +10438,8 @@ unsigned int cur_cuva_hdr_process_mode_dpss = PROC_OFF;
 unsigned int cuva_hlg_process_mode_dpss;
 unsigned int cur_cuva_hlg_process_mode_dpss = PROC_OFF;
 
-unsigned int sdr_ext_mode_dpss_changed;
 unsigned int sdr_ext_mode_dpss;
 unsigned int hdr_core_fix_mode;
-unsigned int update_by_vsync;
 unsigned int dct_status_dpss;
 unsigned int pre_dct_status_dpss;
 
@@ -11043,32 +11042,26 @@ void hdr_process_for_dpss(struct vframe_s *vf)
 		switch (source_format) {
 		case HDRTYPE_SDR:
 		case HDRTYPE_SDR2020:
-			if (!sdr_ext_mode_dpss_changed) {
-				if (sdr_process_mode_dpss == PROC_BYPASS) {
-					if (gamut_conv_enable &&
-						(vpp_color_pri_sel || !gamut_mapping1_en)) {
-						gamut_convert_process(vinfo, &source_format,
-							vd_path, &m, 11, DEST_NONE);
-						sdr_gmt_conv_en = 1;
-					}
-					hdr_proc_multi_slices(vf, VD1_HDR,
-						sdr_gmt_conv_en ? SDR_GMT_CONVERT : HDR_BYPASS,
-						vinfo,
-						sdr_gmt_conv_en ? &m : NULL,
-						s5_silce_mode, vpp_index);
-				} else if (sdr_process_mode_dpss == PROC_SDR_TO_HDR) {
-					if (gamut_conv_enable) {
-						gamut_convert_process(vinfo, &source_format,
-							vd_path, &m, 11, DEST_NONE);
-					}
-					hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-						vinfo, gamut_conv_enable ? &m : NULL,
-						s5_silce_mode, vpp_index);
+			if (sdr_process_mode_dpss == PROC_BYPASS) {
+				if (gamut_conv_enable &&
+					(vpp_color_pri_sel || !gamut_mapping1_en)) {
+					gamut_convert_process(vinfo, &source_format,
+						vd_path, &m, 11, DEST_NONE);
+					sdr_gmt_conv_en = 1;
 				}
-			} else {
-				pr_csc(128, "%s: update_by_vsync %d -> 1\n",
-					__func__, update_by_vsync);
-				update_by_vsync = 1;
+				hdr_proc_multi_slices(vf, VD1_HDR,
+					sdr_gmt_conv_en ? SDR_GMT_CONVERT : HDR_BYPASS,
+					vinfo,
+					sdr_gmt_conv_en ? &m : NULL,
+					s5_silce_mode, vpp_index);
+			} else if (sdr_process_mode_dpss == PROC_SDR_TO_HDR) {
+				if (gamut_conv_enable)
+					gamut_convert_process(vinfo, &source_format,
+						vd_path, &m, 11, DEST_NONE);
+
+				hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
+					vinfo, gamut_conv_enable ? &m : NULL,
+					s5_silce_mode, vpp_index);
 			}
 			break;
 		case HDRTYPE_PRIMESL:
@@ -11444,10 +11437,6 @@ void set_sdr_ext_mode_for_dpss(unsigned int val)
 			__func__, sdr_ext_mode_dpss, val);
 
 		sdr_ext_mode_dpss = val;
-
-		pr_csc(128, "%s: sdr_ext_mode_dpss_changed %d -> 1\n",
-			__func__, sdr_ext_mode_dpss_changed);
-		sdr_ext_mode_dpss_changed = 1;
 	}
 }
 
@@ -11500,8 +11489,7 @@ void set_muxio_link_mode(unsigned int link_flag,
 		if ((get_muxio_link_status() &&
 			pre_dct_status_dpss == dct_status_dpss) &&
 			!hdr_core_fix_mode) {
-			pr_csc(128, "%s: muxio_link_status true now, skip set.\n",
-				__func__);
+//			pr_csc(128, "[muxio_link]: muxio_link_status true now, skip set.\n");
 			return;
 		}
 
@@ -11621,55 +11609,6 @@ unsigned int get_muxio_ready_for_dpss(void)
 		return 1;
 	else
 		return muxio_ready_flag;
-}
-
-void update_hdr_settings_dpss(struct vframe_s *vf,
-	enum vd_path_e vd_path, enum vpp_index_e vpp_index)
-{
-	struct vinfo_s *vinfo;
-	int s5_silce_mode;
-	struct matrix_s m = {
-		{0, 0, 0},
-		{
-			{0x0d49, 0x1b4d, 0x1f6b},
-			{0x1f01, 0x0910, 0x1fef},
-			{0x1fdb, 0x1f32, 0x08f3},
-		},
-		{0, 0, 0},
-		1
-	};
-
-	if (update_by_vsync) {
-		vinfo = get_current_vinfo();
-		s5_silce_mode = get_s5_slice_mode();
-
-		if (cur_dpss_src_format == HDRTYPE_SDR ||
-			cur_dpss_src_format == HDRTYPE_SDR2020) {
-			if (sdr_process_mode_dpss == PROC_BYPASS) {
-				if (gamut_conv_enable)
-					gamut_convert_process(vinfo, &cur_dpss_src_format,
-						vd_path, &m, 11, DEST_NONE);
-				hdr_proc_multi_slices(vf, VD1_HDR,
-					gamut_conv_enable ? SDR_GMT_CONVERT : HDR_BYPASS,
-					vinfo, gamut_conv_enable ? &m : NULL,
-					s5_silce_mode, vpp_index);
-			} else if (sdr_process_mode_dpss == PROC_SDR_TO_HDR) {
-				if (gamut_conv_enable)
-					gamut_convert_process(vinfo, &cur_dpss_src_format,
-						vd_path, &m, 11, DEST_NONE);
-				hdr_proc_multi_slices(vf, VD1_HDR, SDR_HDR,
-					vinfo, gamut_conv_enable ? &m : NULL,
-					s5_silce_mode, vpp_index);
-			}
-		}
-
-		pr_csc(128, "%s: update_by_vsync %d -> 0\n",
-			__func__, update_by_vsync);
-		pr_csc(128, "%s: sdr_ext_mode_dpss_changed %d -> 0\n",
-			__func__, sdr_ext_mode_dpss_changed);
-		update_by_vsync = 0;
-		sdr_ext_mode_dpss_changed = 0;
-	}
 }
 
 struct hdr_path_mux_sel_s h_p_s = {
