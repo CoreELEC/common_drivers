@@ -457,18 +457,6 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
-
-		aml-audio-card,dai-link@9 {
-			mclk-fs = <256>;
-			suffix-name = "alsaPORT-earc";
-			cpu {
-				sound-dai = <&earc>;
-				system-clock-frequency = <12288000>;
-			};
-			codec {
-				sound-dai = <&dummy_codec>;
-			};
-		 };
 	};
 	/* Audio Related end */
 
@@ -904,6 +892,10 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+};
+
+&audio_earc {
+	status = "disabled";
 };
 
 &i2c3 {
@@ -1640,6 +1632,10 @@
 	arc_port = <0>;
 	/* bit4: enable feature, bit3~0: port number */
 	disable_port = <0x0>;
+};
+
+&aocec {
+	output = <1>;
 };
 
 /*if you want to use vdin just modify status to "ok"*/
