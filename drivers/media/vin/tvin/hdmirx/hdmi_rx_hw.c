@@ -358,7 +358,8 @@ u32 hdmirx_rd_top(u32 addr, u8 port)
 
 	//if (dbg_port)
 		//port = dbg_port - 1;
-
+	if (rx_info.chip_id == CHIP_ID_A9 && port != E_PORT0)
+		port = E_PORT0;
 	if (rx_info.chip_id >= CHIP_ID_TL1) {
 		spin_lock_irqsave(&reg_rw_lock, flags);
 		dev_offset = rx_reg_maps[MAP_ADDR_MODULE_TOP].phy_addr;
@@ -486,7 +487,8 @@ void hdmirx_wr_top(u32 addr, u32 data, u8 port)
 
 	//if (dbg_port)
 		//port = dbg_port - 1;
-
+	if (rx_info.chip_id == CHIP_ID_A9 && port != E_PORT0)
+		port = E_PORT0;
 	if (rx_info.chip_id >= CHIP_ID_TL1) {
 		dev_offset = rx_reg_maps[MAP_ADDR_MODULE_TOP].phy_addr;
 		spin_lock_irqsave(&reg_rw_lock, flags);
@@ -900,7 +902,8 @@ u8 hdmirx_rd_cor(u32 addr, u8 port)
 		return 0;
 	if (dbg_port)
 		port = dbg_port - 1;
-
+	if (rx_info.chip_id == CHIP_ID_A9 && port != E_PORT0)
+		port = E_PORT0;
 	/* T7/T3 addr bit[8:15] is 0x1d or 0x1e need write twice */
 	if ((rx_info.chip_id >= CHIP_ID_T7 && rx_info.chip_id < CHIP_ID_T6D) ||
 		rx_info.chip_id == CHIP_ID_T3X) {
@@ -967,6 +970,8 @@ void hdmirx_wr_cor(u32 addr, u8 data, u8 port)
 		return;
 	if (dbg_port)
 		port = dbg_port - 1;
+	if (rx_info.chip_id == CHIP_ID_A9 && port != E_PORT0)
+		port = E_PORT0;
 	/* addr bit[8:15] is 0x1d or 0x1e need write twice */
 	if (rx_info.chip_id == CHIP_ID_T7 ||
 		rx_info.chip_id == CHIP_ID_T3) {

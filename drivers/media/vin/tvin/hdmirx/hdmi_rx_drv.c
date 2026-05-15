@@ -2411,6 +2411,12 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			break;
 		}
 		port_idx = hdmi_idx - 1;
+		if (rx_info.chip_id == CHIP_ID_A9 && port_idx != E_PORT0) {
+			rx_pr("port_idx illegal\n");
+			ret = -EFAULT;
+			mutex_unlock(&devp->rx_lock);
+			break;
+		}
 		if (port_idx > 3) {
 			rx_pr("port_idx illegal\n");
 			ret = -EFAULT;
