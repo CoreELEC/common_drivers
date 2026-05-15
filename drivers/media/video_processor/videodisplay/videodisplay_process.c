@@ -4693,7 +4693,7 @@ static int video_display_open(int index)
 {
 	struct videodisplay_dev *dev;
 	struct videodisplay_port_s *port = videodisplay_get_port(index);
-	struct device *class_dev = port->class_dev;
+	struct device *class_dev;
 	struct sched_param param = {.sched_priority = 2};
 	u32 layer_cap = 0;
 
@@ -4730,6 +4730,7 @@ static int video_display_open(int index)
 	dev->vframe_dump_flag = 0;
 	mutex_init(&dev->dump_info_yuv.mutex);
 
+	class_dev = port->class_dev;
 	dev_set_drvdata(class_dev, dev);
 	memcpy(dev->vf_provider_name, port->name, strlen(port->name) + 1);
 	dev->video_render_index = vd_render_index_get(dev);
