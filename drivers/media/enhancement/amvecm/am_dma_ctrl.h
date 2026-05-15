@@ -75,7 +75,7 @@ int am_dma_get_mif_data_lc_curve(unsigned int *data,
 void am_dma_get_mif_data_vi_hist(int index,
 	unsigned short *data, unsigned int length);
 void am_dma_get_mif_data_vi_hist_low(int index,
-	unsigned short *data, unsigned int length);
+	unsigned int *data, unsigned int length);
 int am_dma_get_mif_data_cm2_hist_hue(int index,
 	unsigned int *data, unsigned int length);
 int am_dma_get_mif_data_cm2_hist_sat(int index,
@@ -85,7 +85,7 @@ int am_dma_get_mif_data_hdr2_hist(int index,
 
 void am_dma_get_blend_vi_hist(unsigned short *data,
 	unsigned int length);
-void am_dma_get_blend_vi_hist_low(unsigned short *data,
+void am_dma_get_blend_vi_hist_low(unsigned int *data,
 	unsigned int length);
 void am_dma_get_blend_cm2_hist_hue(unsigned int *data,
 	unsigned int length);

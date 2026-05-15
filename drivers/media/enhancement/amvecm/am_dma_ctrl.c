@@ -829,7 +829,7 @@ void am_dma_get_mif_data_vi_hist(int index,
 }
 
 void am_dma_get_mif_data_vi_hist_low(int index,
-	unsigned short *data, unsigned int length)
+	unsigned int *data, unsigned int length)
 {
 	int i = 0;
 	int j = 0;
@@ -1104,7 +1104,7 @@ void am_dma_get_blend_vi_hist(unsigned short *data,
 	}
 }
 
-void am_dma_get_blend_vi_hist_low(unsigned short *data,
+void am_dma_get_blend_vi_hist_low(unsigned int *data,
 	unsigned int length)
 {
 	int i = 0;

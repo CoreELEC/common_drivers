@@ -477,6 +477,7 @@ struct vpp_hist_param_s *get_vpp_hist(void)
 static struct pre_gamma_table_s pre_gamma;
 struct eye_protect_s eye_protect;
 static int hist_chl;
+unsigned int ll_hist_mode;
 
 static unsigned int cm_slice_idx;
 
@@ -1448,18 +1449,60 @@ void vpp_get_hist_en(void)
 
 static unsigned int vpp_luma_max;
 
-void get_dark_luma_hist(struct vpp_hist_param_s *vp)
+void get_dark_luma_hist(struct vpp_hist_param_s *vp, struct vframe_s *vf)
 {
 	int i;
 	int hist_idx;
+	int hist_val;
+	int rs;
+	unsigned int h_rate = 0;
+	unsigned int w_rate = 0;
+	unsigned int src_h = 0;
+	unsigned int src_w = 0;
+	unsigned int val = 2;
+	unsigned int height;
+	unsigned int width;
 
+	if (!vf)
+		return;
+
+	w_rate = vf->dpss_pps_dsx;
+	h_rate = vf->dpss_pps_dsy;
+
+	height = (vf->type & VIDTYPE_COMPRESS) ? vf->compHeight : vf->height;
+	width = (vf->type & VIDTYPE_COMPRESS) ? vf->compWidth : vf->width;
+
+	if (h_rate)
+		src_h = height / (h_rate + 1);
+	else
+		src_h = height;
+
+	if (w_rate)
+		src_w = width / (w_rate + 1);
+	else
+		src_w = width;
+
+	if (src_w >= 3840 && src_h >= 2160)
+		val = 4;
+	else if ((src_w >= 3840 && src_h >= 1080) ||
+		(src_w >= 2560 && src_h >= 1440))
+		val = 3;
+	else
+		val = 2;
+
+	rs = val + 3;
 	if (chip_type_id == chip_t5m ||
 		chip_type_id == chip_t6d ||
-		chip_type_id == chip_t6w || chip_type_id == chip_t6x) {
+		chip_type_id == chip_t6w ||
+		chip_type_id == chip_t6x) {
 		hist_idx = 1 << 6;
 		WRITE_VPP_REG(VI_RO_HIST_LOW_IDX, hist_idx);
-		for (i = 0; i < 64; i++)
-			vp->vpp_dark_hist[i] = READ_VPP_REG(VI_RO_HIST_LOW);
+		for (i = 0; i < 64; i++) {
+			hist_val = READ_VPP_REG(VI_RO_HIST_LOW);
+			if (ll_hist_mode)
+				hist_val >>= rs;
+			vp->vpp_dark_hist[i] = hist_val;
+		}
 	}
 }
 
@@ -1632,6 +1675,60 @@ void get_luma_minmax_4bin_fw(void)
 
 //	pr_amvecm_dbg("vpp_luma_min = %d, vpp_luma_max = %d\n", param.vpp_luma_min,
 //		param.vpp_luma_max);
+}
+
+void vpp_hist_shft_cfg(struct vframe_s *vf)
+{
+	unsigned int h_rate = 0;
+	unsigned int w_rate = 0;
+	unsigned int src_h = 0;
+	unsigned int src_w = 0;
+	unsigned int val = 2;
+	unsigned int height;
+	unsigned int width;
+	static unsigned int pre_val;
+
+	if (!vf) {
+		if (pre_val != val) {
+			VSYNC_WRITE_VPP_REG_BITS(VI_HIST_CTRL, val,
+				VI_HIST_POW_BIT, VI_HIST_POW_WID);
+			pre_val = val;
+			pr_amvecm_dbg("no vf, pre_val=%d, val=%d\n", pre_val, val);
+		}
+		return;
+	}
+
+	w_rate = vf->dpss_pps_dsx;
+	h_rate = vf->dpss_pps_dsy;
+
+	height = (vf->type & VIDTYPE_COMPRESS) ? vf->compHeight : vf->height;
+	width = (vf->type & VIDTYPE_COMPRESS) ? vf->compWidth : vf->width;
+
+	if (h_rate)
+		src_h = height / (h_rate + 1);
+	else
+		src_h = height;
+
+	if (w_rate)
+		src_w = width / (w_rate + 1);
+	else
+		src_w = width;
+
+	if (src_w >= 3840 && src_h >= 2160)
+		val = 4;
+	else if ((src_w >= 3840 && src_h >= 1080) ||
+		(src_w >= 2560 && src_h >= 1440))
+		val = 3;
+	else
+		val = 2;
+
+	if (pre_val != val) {
+		VSYNC_WRITE_VPP_REG_BITS(VI_HIST_CTRL, val,
+			VI_HIST_POW_BIT, VI_HIST_POW_WID);
+		pre_val = val;
+		pr_amvecm_dbg("src_w=%d, src_h=%d, pre_val=%d, val=%d\n",
+			height, width, pre_val, val);
+	}
 }
 
 void vpp_get_vframe_hist_info(struct vframe_s *vf,
@@ -2001,7 +2098,7 @@ void vpp_get_vframe_hist_info(struct vframe_s *vf,
 	}
 
 	get_cm_hist(vp);
-	get_dark_luma_hist(vp);
+	get_dark_luma_hist(vp, vf);
 
 	if (debug_game_mode_1 &&
 	    vpp_luma_max != vp->vpp_luma_max) {
@@ -4635,6 +4732,7 @@ int amvecm_on_vs(struct vframe_s *vf,
 					vpq_size.sr1_in_hsize, vpq_size.sr1_in_vsize, vpp_index);
 				amvecm_fmeter_process(toggle_vf, vpp_index);
 			}
+			vpp_hist_shft_cfg(toggle_vf);
 		}
 		/*refresh vframe*/
 		if (!toggle_vf && vf && vd_path == VD1_PATH) {
@@ -4680,6 +4778,7 @@ int amvecm_on_vs(struct vframe_s *vf,
 			vpp_demo_func(NULL, &vpq_size, vpp_index);
 			pr_amvecm_bringup_dbg("[on_vs] demo_func else done.\n");
 			hdr_first_frame_flag_update();
+			vpp_hist_shft_cfg(NULL);
 		}
 		vf_state = cabc_add_hist_proc(NULL, &vpp_hist_param);
 		pr_amvecm_bringup_dbg("[on_vs] cabc_add done.\n");
@@ -14982,6 +15081,15 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 			kstrtoul(parm[3], 10, &val) < 0)
 			goto free_buf;
 		hdr_core_test_flag = val;
+	} else if (!strcmp(parm[0], "ll_hist_mode")) {
+		if (!parm[1]) {
+			pr_info("miss param1\n");
+			goto free_buf;
+		}
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto free_buf;
+		ll_hist_mode = val;
+		pr_info("ll_hist_mode = %d\n", ll_hist_mode);
 #endif
 	} else {
 		pr_info("unsupport cmd\n");
