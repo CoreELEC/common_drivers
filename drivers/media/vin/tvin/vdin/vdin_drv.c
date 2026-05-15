@@ -3983,7 +3983,8 @@ static void vdin_handle_secure_content(struct vdin_dev_s *devp)
 		protect_mode = 0;
 	if (protect_mode != devp->matrix_pattern_mode && !loopback_devp->mem_protected &&
 		loopback_devp->set_canvas_manual &&
-		(loopback_devp->flags & VDIN_FLAG_DEC_STARTED)) {
+		(loopback_devp->flags & VDIN_FLAG_DEC_STARTED) &&
+		devp->dtdata->hw_ver != VDIN_HW_A9) {
 		devp->matrix_pattern_mode = protect_mode;
 		vdin_set_matrix(devp);
 	} else if (devp->matrix_pattern_mode && loopback_devp->set_canvas_manual &&

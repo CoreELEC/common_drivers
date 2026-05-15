@@ -441,6 +441,11 @@ static struct vdin_matrix_lup_s vdin_matrix_lup[] = {
 		0x00000383, 0x00400200, 0x00000200,},
 };
 
+static struct vdin_matrix_lup_s vdin_mat_rgb2020_yuv2020_amldv_uniq = {
+	0x00000000, 0x00000000, 0x00e60252, 0x00341f84, 0x1ebe01c0, 0x01c01e65,
+	0x00001fdd, 0x00400200, 0x00000200,
+};
+
 /***************************Local function**********************************/
 
 /*set csc range idx
@@ -1725,12 +1730,19 @@ bool vdin_is_444_input(enum tvin_color_fmt_e color_format)
 void vdin_change_matrix0(u32 offset, u32 matrix_csc)
 {
 	struct vdin_matrix_lup_s *matrix_tbl;
+	struct vdin_dev_s *devp;
 
+	devp = vdin_get_dev(0);
 	if (matrix_csc == VDIN_MATRIX_NULL)	{
 		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 			VDIN_MATRIX_EN_BIT, VDIN_MATRIX_EN_WID);
 	} else {
-		matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
+		if (devp && devp->dtdata->hw_ver == VDIN_HW_A9 &&
+		    devp->dv.dv_flag && devp->prop.dv_unique_drm_flag &&
+		    matrix_csc == VDIN_MATRIX_RGB2020_YUV2020)
+			matrix_tbl = &vdin_mat_rgb2020_yuv2020_amldv_uniq;
+		else
+			matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
 
 		/*coefficient index select matrix0*/
 		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
@@ -1765,7 +1777,12 @@ void vdin_change_matrix1(u32 offset, u32 matrix_csc)
 		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 			VDIN_MATRIX1_EN_BIT, VDIN_MATRIX1_EN_WID);
 	} else {
-		matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
+		if (devp && devp->dtdata->hw_ver == VDIN_HW_A9 &&
+		    devp->dv.dv_flag && devp->prop.dv_unique_drm_flag &&
+		    matrix_csc == VDIN_MATRIX_RGB2020_YUV2020)
+			matrix_tbl = &vdin_mat_rgb2020_yuv2020_amldv_uniq;
+		else
+			matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
 		/*select matrix1 post probe and position(200,100)*/
 		wr_bits(offset, VDIN_MATRIX_CTRL, 1,
 			VDIN_PROBE_POST_BIT, VDIN_PROBE_POST_WID);
@@ -1818,7 +1835,12 @@ void vdin_change_matrix_hdr_a9(struct vdin_dev_s *devp, u32 matrix_csc)
 		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 			VDIN_MATRIX_EN_BIT, VDIN_MATRIX_EN_WID);
 	} else {
-		matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
+		if (devp->dtdata->hw_ver == VDIN_HW_A9 &&
+		    devp->dv.dv_flag && devp->prop.dv_unique_drm_flag &&
+		    matrix_csc == VDIN_MATRIX_RGB2020_YUV2020)
+			matrix_tbl = &vdin_mat_rgb2020_yuv2020_amldv_uniq;
+		else
+			matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
 
 		/*coefficient index select matrix0*/
 //		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
