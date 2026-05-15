@@ -629,6 +629,16 @@ static u32 safa_speed_up_handle(struct vsr_setting_s *vsr)
 	return pre_hsize;
 }
 
+static bool is_greater_2k1k380hz_out(const struct vinfo_s *vinfo)
+{
+	if (vinfo->width >= 1920 && vinfo->height >= 1080 &&
+		(vinfo->brr_duration >= 380 ||
+		 ((vinfo->sync_duration_num / vinfo->sync_duration_den) > 380)))
+		return true;
+	else
+		return false;
+}
+
 static void set_cfg_pi_safa(struct vsr_setting_s *vsr)
 {
 	struct vsr_pi_setting_s *vsr_pi = &vsr->vsr_pi;
@@ -1021,6 +1031,8 @@ void set_safa_pps(struct vsr_setting_s *vsr)
 	u32 safa_bot_vsc_ini_integer;
 	u32 safa_vsc_integer_part;
 	u32 safa_vsc_fraction_part;
+	bool is_2k1k_larger_freq;
+	const struct vinfo_s *vinfo = get_current_vinfo();
 
 	vsr_reg = &vd_layer[0].vsr_safa_reg;
 	if (cur_dev->vsr_nonlinear_support)
@@ -1032,15 +1044,30 @@ void set_safa_pps(struct vsr_setting_s *vsr)
 	pi_gamma_mode    = 1;
 	pi_max_sad_mode  = 1;
 
-	if (vsr_safa->mode == 0 || vsr_safa->mode == 1) {
-		step = vsr_safa->pre_hsize <= 1024 ? 1 :
-			(vsr_safa->pre_hsize <= 2048 ? 2 : 3);
-		if (vsr_safa->mode == 1)
-			adp_tap_alp_mode = 3;
+	is_2k1k_larger_freq = is_greater_2k1k380hz_out(vinfo);
+	if (is_2k1k_larger_freq) {
+		// > 2k1k 380hz case
+		if (vsr_safa->mode == 0 || vsr_safa->mode == 1) {
+			step = vsr_safa->pre_hsize <= 512 ? 1 :
+				(vsr_safa->pre_hsize <= 1024 ? 2 : 3);
+			if (vsr_safa->mode == 1)
+				adp_tap_alp_mode = 3;
+		} else {
+			step = vsr_safa->pre_hsize <= 256  ? 1 :
+				(vsr_safa->pre_hsize <= 512 ? 2 : 3);
+			drt_intp_chrm_en = 0;
+		}
 	} else {
-		step = vsr_safa->pre_hsize <= 512  ? 1 :
-			(vsr_safa->pre_hsize <= 1024 ? 2 : 3);
-		drt_intp_chrm_en = 0;
+		if (vsr_safa->mode == 0 || vsr_safa->mode == 1) {
+			step = vsr_safa->pre_hsize <= 1024 ? 1 :
+				(vsr_safa->pre_hsize <= 2048 ? 2 : 3);
+			if (vsr_safa->mode == 1)
+				adp_tap_alp_mode = 3;
+		} else {
+			step = vsr_safa->pre_hsize <= 512  ? 1 :
+				(vsr_safa->pre_hsize <= 1024 ? 2 : 3);
+			drt_intp_chrm_en = 0;
+		}
 	}
 	if (vsr->vsr_top.input_422_en) {
 		sharp_en = 1;
@@ -1086,11 +1113,24 @@ void set_safa_pps(struct vsr_setting_s *vsr)
 			postsc_size_mux = 0;
 	}
 	//scale down or input hsize over 1024/2048 disable analy_en
-	if ((vsr->vsr_top.hsize_in > vsr->vsr_top.hsize_out ||
-		vsr->vsr_top.vsize_in > vsr->vsr_top.vsize_out) ||
-		((glayer_info[0].src_height_max == 2160 && vsr->vsr_top.hsize_in > 2048) ||
-		(glayer_info[0].src_height_max == 1088 && vsr->vsr_top.hsize_in > 1024)))
-		analy_en = 0;
+	if (is_2k1k_larger_freq) {
+		// > 2k1k 380hz
+		if ((vsr->vsr_top.hsize_in > vsr->vsr_top.hsize_out ||
+			vsr->vsr_top.vsize_in > vsr->vsr_top.vsize_out) ||
+			((glayer_info[0].src_height_max == 2160 && vsr->vsr_top.hsize_in > 1024) ||
+			(glayer_info[0].src_height_max == 1088 && vsr->vsr_top.hsize_in > 512)))
+			analy_en = 0;
+		// 1: 1, analy_en = 0;
+		if (vsr->vsr_top.hsize_in == vsr->vsr_top.hsize_out &&
+			vsr->vsr_top.vsize_in == vsr->vsr_top.vsize_out)
+			analy_en = 0;
+	} else {
+		if ((vsr->vsr_top.hsize_in > vsr->vsr_top.hsize_out ||
+			vsr->vsr_top.vsize_in > vsr->vsr_top.vsize_out) ||
+			((glayer_info[0].src_height_max == 2160 && vsr->vsr_top.hsize_in > 2048) ||
+			(glayer_info[0].src_height_max == 1088 && vsr->vsr_top.hsize_in > 1024)))
+			analy_en = 0;
+	}
 	if (cur_dev->dejaggy_support || cur_dev->vsr_nonlinear_support) {
 		/*
 		 * if input output 1:1 enable safa_pps_top_en and disable postsc_en
