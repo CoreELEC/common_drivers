@@ -459,7 +459,7 @@ static int lcd_info_basic_print(struct aml_lcd_drv_s *pdrv, char *buf, int offse
 		"[%d]: drv_ver: %s\n"
 		"cfg_chk_glb: %d, cfg_chk_para: 0x%x, cfg_chk_en: %d\n"
 		"panel_type: %s, chip: %d, mode: %s, status: 0x%x\n"
-		"viu_sel: %d, isr_cnt: %d, resume_type: 0x%x\n"
+		"viu_sel: %d, isr_cnt: %d\n"
 		"fr_auto: flag: 0x%x, policy(glb): %d, cus: 0x%x\n"
 		"sw_vrr: en: %d, sta: %d, tg_fr: %d(to %d), range: %d~%d\n"
 		"fr_mode: %d, fr_duration: %d, frame_rate: %d(msr: %d.%03d)\n"
@@ -469,7 +469,7 @@ static int lcd_info_basic_print(struct aml_lcd_drv_s *pdrv, char *buf, int offse
 		pdrv->config_check_glb, pconf->basic.config_check, pdrv->config_check_en,
 		pdrv->curr_dev->dev_propname, pdrv->data->chip_type,
 		lcd_mode_mode_to_str(pdrv->mode), pdrv->status,
-		pdrv->viu_sel, pdrv->vsync_cnt, pdrv->resume_type,
+		pdrv->viu_sel, pdrv->vsync_cnt,
 		pconf->fr_auto_flag, pdrv->fr_auto_policy, pconf->fr_auto_cus,
 		pdrv->sw_vrr.en, pdrv->sw_vrr.sta, pdrv->sw_vrr.tg_fr,
 		lcd_get_sw_vrr_target_fr(pdrv->index),
@@ -656,7 +656,7 @@ static ssize_t lcd_proc_time_show(struct device *dev, struct device_attribute *a
 		"signal_off:  %u\n"
 		"power_off:   %u\n"
 		"signal_on:   %u\n"
-		"drv_change:  %u\n"
+		"timing_chg:  %u\n"
 		"extern_init: %u\n"
 		"tcon_reg:    %u\n"
 		"tcon_data:   %u\n"
@@ -675,7 +675,7 @@ static ssize_t lcd_proc_time_show(struct device *dev, struct device_attribute *a
 		pdrv->proc_time.signal_off_time,
 		pdrv->proc_time.power_off_time,
 		pdrv->proc_time.signal_on_time,
-		pdrv->proc_time.driver_change_time,
+		pdrv->proc_time.timing_change_time,
 		pdrv->proc_time.extern_init_time,
 		pdrv->proc_time.tcon_reg_time,
 		pdrv->proc_time.tcon_data_time,
@@ -1855,7 +1855,7 @@ static ssize_t lcd_debug_device_mgr_store(struct device *dev, struct device_attr
 
 		mutex_lock(&lcd_power_mutex);
 		lcd_proc_time_clear(pdrv);
-		pdrv->status &= ~(LCD_STATE_PREPARE | LCD_STATE_POWER);
+		pdrv->status &= ~(LCD_CTRL_PREPARE | LCD_CTRL_POWER);
 		aml_lcd_notifier_call_chain(LCD_EVENT_DISABLE, (void *)pdrv);
 
 		lcd_device_config_pre_clean(pdrv);
@@ -1863,9 +1863,9 @@ static ssize_t lcd_debug_device_mgr_store(struct device *dev, struct device_attr
 		lcd_device_config_post_process(pdrv);
 		//! need assign active timing
 
+		pdrv->status |= (LCD_CTRL_PREPARE | LCD_CTRL_POWER);
 		aml_lcd_notifier_call_chain(LCD_EVENT_ENABLE, (void *)pdrv);
 		lcd_if_enable_retry(pdrv);
-		pdrv->status |= (LCD_STATE_PREPARE | LCD_STATE_POWER);
 
 		mutex_unlock(&lcd_power_mutex);
 
@@ -1896,14 +1896,14 @@ static ssize_t lcd_debug_enable_store(struct device *dev, struct device_attribut
 	}
 	if (temp) {
 		mutex_lock(&lcd_power_mutex);
+		pdrv->status |= (LCD_CTRL_PREPARE | LCD_CTRL_POWER);
 		aml_lcd_notifier_call_chain(LCD_EVENT_ENABLE, (void *)pdrv);
 		lcd_if_enable_retry(pdrv);
-		pdrv->status |= (LCD_STATE_PREPARE | LCD_STATE_POWER);
 		mutex_unlock(&lcd_power_mutex);
 	} else {
 		mutex_lock(&lcd_power_mutex);
 		lcd_proc_time_clear(pdrv);
-		pdrv->status &= ~(LCD_STATE_PREPARE | LCD_STATE_POWER);
+		pdrv->status &= ~(LCD_CTRL_PREPARE | LCD_CTRL_POWER);
 		aml_lcd_notifier_call_chain(LCD_EVENT_DISABLE, (void *)pdrv);
 		mutex_unlock(&lcd_power_mutex);
 	}
@@ -1915,10 +1915,10 @@ static ssize_t lcd_debug_resume_show(struct device *dev, struct device_attribute
 {
 	struct aml_lcd_drv_s *pdrv = dev_get_drvdata(dev);
 
-	return sprintf(buf, "lcd resume type: 0x%x(%s %s)\n",
-		pdrv->resume_type,
-		(pdrv->resume_type & (1 << 0)) ? "workqueue" : "directly",
-		(pdrv->resume_type & (1 << 1)) ? "resume_if_on" : "late_resume_if_on");
+	return sprintf(buf, "lcd resume: %s, %s, %s\n",
+		(pdrv->status & LCD_CTRL_RESUME_DRCT) ? "directly" : "workqueue",
+		(pdrv->status & LCD_CTRL_RESUME_EARLY) ? "resume_early_on" : "resume_late_on",
+		(pdrv->status & LCD_CTRL_BL_PRE_ON) ? "bl_pre_on" : "bl_early_on");
 }
 
 static ssize_t lcd_debug_resume_store(struct device *dev, struct device_attribute *attr,
@@ -1933,8 +1933,19 @@ static ssize_t lcd_debug_resume_store(struct device *dev, struct device_attribut
 		LCDERR("invalid data\n");
 		return -EINVAL;
 	}
-	pdrv->resume_type = (unsigned char)temp;
-	LCDPR("set lcd resume_type: 0x%x\n", pdrv->resume_type);
+	if (temp & LCD_RESUME_WORKQUEUE)
+		pdrv->status &= ~LCD_CTRL_RESUME_DRCT;
+	else
+		pdrv->status |= LCD_CTRL_RESUME_DRCT;
+	if (temp & LCD_RESUME_EARLY)
+		pdrv->status |= LCD_CTRL_RESUME_EARLY;
+	else
+		pdrv->status &= ~LCD_CTRL_RESUME_EARLY;
+	if (temp & LCD_RESUME_BL_PRE_ON)
+		pdrv->status |= LCD_CTRL_BL_PRE_ON;
+	else
+		pdrv->status &= ~LCD_CTRL_BL_PRE_ON;
+	LCD_PR(pdrv, "set resume_type: 0x%x", temp);
 
 	return count;
 }
@@ -1995,19 +2006,19 @@ lcd_debug_power_store_next:
 	LCD_PR(pdrv, "%s: %d", __func__, temp);
 	if (temp) {
 		if (pdrv->status & LCD_STATUS_ENCL_ON) {
-			if (pdrv->status & LCD_STATE_DUMMY) {
+			if (pdrv->status & LCD_CTRL_DUMMY) {
 				LCDERR("%s: exit for dummy_state: 0x%x\n", __func__, pdrv->status);
 				mutex_unlock(&lcd_power_mutex);
 				return -EINVAL;
 			}
+			pdrv->status |= LCD_CTRL_POWER;
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, (void *)pdrv);
 			lcd_if_enable_retry(pdrv);
-			pdrv->status |= LCD_STATE_POWER;
 		} else {
 			LCDERR("%s: can't power on when driver disable\n", __func__);
 		}
 	} else {
-		pdrv->status &= ~LCD_STATE_POWER;
+		pdrv->status &= ~LCD_CTRL_POWER;
 		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_OFF, (void *)pdrv);
 	}
 	mutex_unlock(&lcd_power_mutex);
@@ -2147,7 +2158,17 @@ static ssize_t lcd_debug_frame_rate_store(struct device *dev, struct device_attr
 		ret = sscanf(buf, "set %d", &temp);
 		if (ret == 1) {
 			snprintf(str, 128, "set frame rate(*100): %d", temp);
-			lcd_connector_frame_rate_adjust(pdrv, temp);
+			/* update target frame rate */
+			pconf->timing.frame_rate = temp / 100;
+			pconf->timing.sync_duration_num = temp;
+			pconf->timing.sync_duration_den = 100;
+			pconf->timing.frac =
+				lcd_fr_is_frac(pdrv, pconf->timing.act_timing.frame_rate);
+
+			//lcd_vout_notify_mode_change_pre(pdrv);
+			lcd_frame_rate_change(pdrv);
+			lcd_mode_auto_framerate_set(pdrv);
+			//lcd_vout_notify_mode_change(pdrv);
 		} else {
 			goto lcd_debug_frame_rate_store_err;
 		}

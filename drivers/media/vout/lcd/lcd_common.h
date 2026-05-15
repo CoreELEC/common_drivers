@@ -26,7 +26,8 @@
 /* 20260131: merge tv &tablet */
 /* 20260203: optimize t6 phy & dphy init flow */
 /* 20260306: sw_vrr protect when vmode_switch */
-#define LCD_DRV_VERSION    "20260306"
+/* 20260425: update encl dummy clk flow */
+#define LCD_DRV_VERSION    "20260425"
 
 #define CTYPE_MASK           0xf0
 #define CTYPE_RGB            0x00
@@ -231,7 +232,8 @@ int lcd_encl_clk_msr(struct aml_lcd_drv_s *pdrv);
 void lcd_clk_pll_reset(struct aml_lcd_drv_s *pdrv);
 void lcd_update_clk_frac(struct aml_lcd_drv_s *pdrv);
 void lcd_set_clk(struct aml_lcd_drv_s *pdrv);
-int lcd_clk_set_dummy(struct aml_lcd_drv_s *pdrv, int status);
+void lcd_clk_set_dummy(struct aml_lcd_drv_s *pdrv);
+int lcd_clk_dummy_support(struct aml_lcd_drv_s *pdrv);
 void lcd_disable_clk(struct aml_lcd_drv_s *pdrv);
 void lcd_clk_change(struct aml_lcd_drv_s *pdrv);
 int lcd_mlvds_clk_phase_set(struct aml_lcd_drv_s *pdrv);
@@ -264,8 +266,8 @@ void lcd_window_attr_change(struct aml_lcd_drv_s *pdrv);
 void lcd_debug_cursor(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *cursor_attr);
 void lcd_set_venc_timing(struct aml_lcd_drv_s *pdrv);
 void lcd_set_venc(struct aml_lcd_drv_s *pdrv);
-void lcd_venc_set_dummy(struct aml_lcd_drv_s *pdrv);
-void lcd_venc_change(struct aml_lcd_drv_s *pdrv);
+void lcd_set_venc_dummy(struct aml_lcd_drv_s *pdrv, int flag);
+void lcd_venc_fr_change(struct aml_lcd_drv_s *pdrv);
 void lcd_venc_vrr_recovery(struct aml_lcd_drv_s *pdrv);
 void lcd_venc_enable(struct aml_lcd_drv_s *pdrv, int flag);
 void lcd_mute_set(struct aml_lcd_drv_s *pdrv, unsigned char flag);
@@ -280,10 +282,8 @@ void lcd_venc_adj_vtotal(struct aml_lcd_drv_s *pdrv, unsigned int vtotal);
 
 void lcd_connector_driver_init_pre(struct aml_lcd_drv_s *pdrv);
 void lcd_connector_driver_disable_post(struct aml_lcd_drv_s *pdrv);
-void lcd_connector_driver_change(struct aml_lcd_drv_s *pdrv);
 void lcd_connector_driver_init(struct aml_lcd_drv_s *pdrv);
 void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv);
-void lcd_connector_frame_rate_adjust(struct aml_lcd_drv_s *pdrv, int duration);
 void lcd_connector_config_probe(struct aml_lcd_drv_s *pdrv);
 void lcd_connector_config_remove(struct aml_lcd_drv_s *pdrv);
 
@@ -293,6 +293,8 @@ struct aml_lcd_device_s *lcd_device_assign(struct aml_lcd_drv_s *pdrv, unsigned 
 void lcd_device_switch(struct aml_lcd_drv_s *pdrv, unsigned char target_dev_idx);
 void lcd_device_list(struct aml_lcd_drv_s *pdrv);
 
+void lcd_mode_driver_dummy_set(struct aml_lcd_drv_s *pdrv, int status);
+void lcd_mode_auto_framerate_set(struct aml_lcd_drv_s *pdrv);
 int lcd_vmode_remove_all(struct aml_lcd_drv_s *pdrv);
 int lcd_mode_timing_set_next(struct aml_lcd_drv_s *pdrv, enum vmode_e vmode);
 void lcd_mode_vout_server_init(struct aml_lcd_drv_s *pdrv);

@@ -534,7 +534,7 @@ lcd_set_clk_retry:
 	}
 	mutex_unlock(&lcd_clk_mutex);
 
-	LCD_DBG(pdrv, "set_clk: clk_change=0x%x", pdrv->curr_dev->dev_cfg.timing.clk_change);
+	LCD_DBG(pdrv, "set_clk: status:0x%x", pdrv->status);
 }
 
 void lcd_disable_clk(struct aml_lcd_drv_s *pdrv)
@@ -570,46 +570,40 @@ static void lcd_request_vpu_overclk(struct aml_lcd_drv_s *pdrv, unsigned int enc
 
 void lcd_clk_change(struct aml_lcd_drv_s *pdrv)
 {
-	int enc_st = lcd_get_venc_state(pdrv);
-
 	LCD_DBG(pdrv, "%s: clk_change:0x%x", __func__, pdrv->curr_dev->dev_cfg.timing.clk_change);
 
 	if (pdrv->curr_dev->dev_cfg.timing.clk_change & LCD_CLK_PLL_CHANGE) {
-		if (enc_st) {
-			lcd_venc_enable(pdrv, 0);
-			msleep(30);
-		}
 		if (pdrv->vmode_switch)
 			lcd_request_vpu_overclk(pdrv, pdrv->curr_dev->dev_cfg.timing.enc_clk);
 		lcd_set_clk(pdrv);
-		if (enc_st) {
-			msleep(30);
-			lcd_venc_enable(pdrv, 1);
-		}
 	} else if (pdrv->curr_dev->dev_cfg.timing.clk_change & LCD_CLK_FRAC_UPDATE) {
 		lcd_update_clk_frac(pdrv);
 	}
 }
 
-int lcd_clk_set_dummy(struct aml_lcd_drv_s *pdrv, int status)
+void lcd_clk_set_dummy(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_clk_config_s *cconf;
 
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf || !cconf->data || !cconf->data->clk_set_dummy)
-		return -1;
+		return;
 
-	if (status) {
-		lcd_request_vpu_overclk(pdrv, 25000000);
-		mutex_lock(&lcd_clk_mutex);
-		cconf->data->clk_set_dummy(pdrv);
-		mutex_unlock(&lcd_clk_mutex);
-	} else {
-		lcd_request_vpu_overclk(pdrv, pdrv->curr_dev->dev_cfg.timing.enc_clk);
-		lcd_set_clk(pdrv);
-	}
-	LCD_PR(pdrv, "%s: %d", __func__, status);
-	return 0;
+	mutex_lock(&lcd_clk_mutex);
+	cconf->data->clk_set_dummy(pdrv);
+	mutex_unlock(&lcd_clk_mutex);
+
+	LCD_PR(pdrv, "clk_set_dummy");
+}
+
+int lcd_clk_dummy_support(struct aml_lcd_drv_s *pdrv)
+{
+	struct lcd_clk_config_s *cconf;
+
+	cconf = get_lcd_clk_config(pdrv);
+	if (!cconf || !cconf->data || !cconf->data->clk_set_dummy)
+		return 0;
+	return 1;
 }
 
 int lcd_mlvds_clk_phase_set(struct aml_lcd_drv_s *pdrv)

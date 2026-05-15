@@ -26,7 +26,7 @@ struct lcd_venc_op_s {
 	void (*venc_set_timing)(struct aml_lcd_drv_s *pdrv);
 	void (*venc_set)(struct aml_lcd_drv_s *pdrv);
 	void (*venc_set_dummy)(struct aml_lcd_drv_s *pdrv);
-	void (*venc_change)(struct aml_lcd_drv_s *pdrv);
+	void (*venc_fr_change)(struct aml_lcd_drv_s *pdrv);
 	void (*venc_enable)(struct aml_lcd_drv_s *pdrv, int flag);
 	int (*get_venc_state)(struct aml_lcd_drv_s *pdrv);
 	int (*get_venc_init_config)(struct aml_lcd_drv_s *pdrv);

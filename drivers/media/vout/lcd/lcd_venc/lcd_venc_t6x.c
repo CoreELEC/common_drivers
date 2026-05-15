@@ -338,6 +338,8 @@ static void lcd_venc_set_timing(struct aml_lcd_drv_s *pdrv)
 	vso_ln_bgn = vs_vs_addr;
 	vso_ln_end = vs_ve_addr;
 
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_T6X, 0, 15, 1);//bit[15];shadow_disable
+
 	lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X, h_period / ppc - 1, 16, 16);
 	lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X, v_period - 1, 0, 16);
 
@@ -405,6 +407,33 @@ static void lcd_venc_set_timing(struct aml_lcd_drv_s *pdrv)
 	}
 
 	lcd_vcbus_write(ENCL_INBUF_CNTL0_T6X, 0x2008000 | (pconf->timing.act_timing.h_active - 1));
+
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_T6X, 1, 15, 1);//bit[15];shadow_en
+}
+
+static void lcd_venc_set_dummy(struct aml_lcd_drv_s *pdrv)
+{
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_T6X, 0, 15, 1);//bit[15];shadow_disable
+
+	lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X, 951, 16, 16);
+	lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X, 524, 0, 16);
+
+	lcd_vcbus_setb(ENCL_VIDEO_HAVON_PX_RNG_T6X, 80, 16, 16);//HAVON_BEGIN
+	lcd_vcbus_setb(ENCL_VIDEO_HAVON_PX_RNG_T6X, 799, 0, 16);//HAVON_END
+
+	lcd_vcbus_setb(ENCL_VIDEO_VAVON_LN_RNG_T6X, 22, 16, 16);//BLINE
+	lcd_vcbus_setb(ENCL_VIDEO_VAVON_LN_RNG_T6X, 501, 0, 16);//ELINE
+
+	lcd_vcbus_setb(ENCL_VIDEO_HSO_PX_RNG_T6X, 0, 16, 16);//HSO_BEGIN
+	lcd_vcbus_setb(ENCL_VIDEO_HSO_PX_RNG_T6X, 20, 0, 16);//HSO_END
+
+	lcd_vcbus_setb(ENCL_VIDEO_VSO_PX_RNG_T6X, 0, 16, 16);//HSO_BEGIN
+	lcd_vcbus_setb(ENCL_VIDEO_VSO_PX_RNG_T6X, 0, 0, 16);//HSO_END
+
+	lcd_vcbus_setb(ENCL_VIDEO_VSO_LN_RNG_T6X, 0, 16, 16);//VSO BLINE
+	lcd_vcbus_setb(ENCL_VIDEO_VSO_LN_RNG_T6X, 5, 0, 16);//VSO ELINE
+
+	lcd_vcbus_setb(ENCL_VIDEO_MODE_T6X, 1, 15, 1);//bit[15];shadow_en
 }
 
 static void lcd_venc_set(struct aml_lcd_drv_s *pdrv)
@@ -425,8 +454,10 @@ static void lcd_venc_set(struct aml_lcd_drv_s *pdrv)
 	/*vfifo_upmode, 0:1ppc,1:2ppc,2, 4ppc */
 	lcd_vcbus_setb(ENCL_VIDEO_VSRC_CTRL_T6X, 0, 0, 3);
 
-	lcd_venc_set_timing(pdrv);
-	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
+	if (pdrv->status & LCD_CTRL_DUMMY)
+		lcd_venc_set_dummy(pdrv);
+	else
+		lcd_venc_set_timing(pdrv);
 
 	//restore test pattern
 	lcd_venc_bist_set(pdrv, pdrv->test_state);
@@ -511,35 +542,22 @@ static void lcd_venc_set(struct aml_lcd_drv_s *pdrv)
 	lcd_venc_gamma_init(pdrv);
 }
 
-static void lcd_venc_change_timing(struct aml_lcd_drv_s *pdrv)
+static void lcd_venc_change_framerate(struct aml_lcd_drv_s *pdrv)
 {
 	unsigned int htotal, vtotal, ppc;
 
 	ppc = pdrv->curr_dev->dev_cfg.timing.ppc;
 
-	if (pdrv->vmode_switch) {
-		lcd_venc_set_timing(pdrv);
-	} else {
-		htotal = (lcd_vcbus_getb(ENCL_VIDEO_MAX_CNT_T6X, 16, 16) + 1) * ppc;
-		vtotal = lcd_vcbus_getb(ENCL_VIDEO_MAX_CNT_T6X, 0, 16) + 1;
-		if (pdrv->curr_dev->dev_cfg.timing.act_timing.h_period != htotal) {
-			lcd_venc_set_htotal(pdrv,
-				pdrv->curr_dev->dev_cfg.timing.act_timing.h_period);
-		}
-		if (pdrv->curr_dev->dev_cfg.timing.act_timing.v_period != vtotal) {
-			lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X,
-					pdrv->curr_dev->dev_cfg.timing.act_timing.v_period - 1,
-					0, 16);
-		}
-		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
-			LCDPR("[%d]: venc changed: %d,%d\n",
-			      pdrv->index,
-			      pdrv->curr_dev->dev_cfg.timing.act_timing.h_period,
-			      pdrv->curr_dev->dev_cfg.timing.act_timing.v_period);
-		}
+	htotal = (lcd_vcbus_getb(ENCL_VIDEO_MAX_CNT_T6X, 16, 16) + 1) * ppc;
+	vtotal = lcd_vcbus_getb(ENCL_VIDEO_MAX_CNT_T6X, 0, 16) + 1;
+	if (pdrv->curr_dev->dev_cfg.timing.act_timing.h_period != htotal) {
+		lcd_venc_set_htotal(pdrv,
+			pdrv->curr_dev->dev_cfg.timing.act_timing.h_period);
 	}
-
-	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
+	if (pdrv->curr_dev->dev_cfg.timing.act_timing.v_period != vtotal) {
+		lcd_vcbus_setb(ENCL_VIDEO_MAX_CNT_T6X,
+			pdrv->curr_dev->dev_cfg.timing.act_timing.v_period - 1, 0, 16);
+	}
 }
 
 static void lcd_venc_enable_ctrl(struct aml_lcd_drv_s *pdrv, int flag)
@@ -681,7 +699,8 @@ int lcd_venc_op_init_t6x(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op
 	venc_op->venc_debug_test = lcd_venc_bist_set;
 	venc_op->venc_set_timing = lcd_venc_set_timing;
 	venc_op->venc_set = lcd_venc_set;
-	venc_op->venc_change = lcd_venc_change_timing;
+	venc_op->venc_fr_change = lcd_venc_change_framerate;
+	venc_op->venc_set_dummy = lcd_venc_set_dummy;
 	venc_op->venc_enable = lcd_venc_enable_ctrl;
 	venc_op->get_venc_state = lcd_venc_get_state;
 	venc_op->get_venc_init_config = lcd_venc_get_init_config;

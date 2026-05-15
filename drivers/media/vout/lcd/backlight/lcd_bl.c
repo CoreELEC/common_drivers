@@ -1018,7 +1018,7 @@ void bl_lcd_on_ctrl(struct aml_lcd_drv_s *pdrv)
 	if (bdrv->probe_done == 0)
 		return;
 
-	if (pdrv->status & LCD_STATE_BL_PRE_ON) {
+	if (pdrv->status & LCD_STATUS_BL_PRE_ON) {
 		bdrv->pre_on_time = local_time[0];
 		bdrv->state |= BL_STATE_PRE_ON;
 		BLPR("[%d]: %s: pre_on\n", bdrv->index, __func__);

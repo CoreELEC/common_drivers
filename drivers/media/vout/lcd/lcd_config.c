@@ -360,7 +360,7 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 {
 	const struct device_node *np;
 	const char *mode_str, *str;
-	unsigned int val, para[8];
+	unsigned int val, para[8], resume_type;
 	char str_info[128];
 	int ret = 0, cnt = 0, i = 0;
 	const char *lcd_gpio[LCD_CPU_GPIO_NUM_MAX];
@@ -418,11 +418,15 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 		LCD_PR(pdrv, "detect auto_test: %d", pdrv->auto_test);
 	}
 
-	ret = of_property_read_u32(np, "resume_type", &val);
-	if (ret)
-		pdrv->resume_type = 0x1; /* default workqueue */
-	else
-		pdrv->resume_type = (unsigned char)val;
+	ret = of_property_read_u32(np, "resume_type", &resume_type);
+	if (ret == 0) {
+		if ((resume_type & LCD_RESUME_WORKQUEUE) == 0)
+			pdrv->status |= LCD_CTRL_RESUME_DRCT;
+		if (resume_type & LCD_RESUME_EARLY)
+			pdrv->status |= LCD_CTRL_RESUME_EARLY;
+		if (resume_type & LCD_RESUME_BL_PRE_ON)
+			pdrv->status |= LCD_CTRL_BL_PRE_ON;
+	}
 
 	ret = of_property_read_u32(np, "config_check_glb", &val);
 	if (ret)
@@ -431,7 +435,7 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 		pdrv->config_check_glb = (unsigned char)val;
 
 	sprintf(str_info, "resume_type: 0x%x, cfg_chk_glb: %d",
-		pdrv->resume_type, pdrv->config_check_glb);
+		resume_type, pdrv->config_check_glb);
 	LCD_PR(pdrv, "drv_ver: %s(%d-%s), lcd_mode: %s, fr_auto: %d, %s",
 	      LCD_DRV_VERSION, pdrv->data->chip_type, pdrv->data->chip_name,
 	      mode_str, pdrv->fr_auto_policy, str_info);

@@ -646,7 +646,7 @@ struct lcd_time_s {
 	unsigned int switch_on_time;
 	unsigned int bl_off_time;
 	unsigned int bl_on_time;
-	unsigned int driver_change_time;
+	unsigned int timing_change_time;
 	unsigned int signal_off_time;
 	unsigned int signal_on_time;
 	unsigned int tcon_off_time;
@@ -785,17 +785,25 @@ struct lcd_resource_s {
 	struct lcd_resource_s *next_res;
 };
 
+#define LCD_RESUME_WORKQUEUE     BIT(0)
+#define LCD_RESUME_EARLY         BIT(1)
+#define LCD_RESUME_BL_PRE_ON     BIT(2)
+
 #define LCD_STATUS_IF_ON         BIT(0) //real status
 #define LCD_STATUS_ENCL_ON       BIT(1) //real status
 #define LCD_STATUS_ENCL_DUMMY    BIT(2) //real status
+#define LCD_STATUS_MUTE          BIT(3) //real status
 #define LCD_STATUS_ON            (LCD_STATUS_IF_ON | LCD_STATUS_ENCL_ON)
-#define LCD_STATE_POWER          BIT(4) //control state
-#define LCD_STATE_PREPARE        BIT(5) //control state
-#define LCD_STATE_VMODE_ACTIVE   BIT(6) //control state
-#define LCD_STATE_DUMMY          BIT(7) //control state
+#define LCD_CTRL_POWER           BIT(4) //control state
+#define LCD_CTRL_PREPARE         BIT(5) //control state
+#define LCD_CTRL_VMODE_ACTIVE    BIT(6) //control state
+#define LCD_CTRL_DUMMY           BIT(7) //control state
 
 #define LCD_STATUS_TCON_RDY      BIT(8) //real status
-#define LCD_STATE_BL_PRE_ON      BIT(12) //control state
+#define LCD_STATUS_BL_PRE_ON     BIT(11) //real status
+#define LCD_CTRL_BL_PRE_ON       BIT(12) //control state
+#define LCD_CTRL_RESUME_DRCT     BIT(14) //control state
+#define LCD_CTRL_RESUME_EARLY    BIT(15) //control state
 
 #define LCD_VIU_SEL_NONE         0
 
@@ -987,9 +995,6 @@ struct aml_lcd_drv_s {
 	unsigned char lcd_pxp;
 	unsigned char clk_path; /* 0=hpll, 1=gp0_pll */
 	unsigned char config_load;
-	  /*bit[1]: 0=lcd_if late_resume(default), 1=lcd_if resume */
-	  /*bit[0]: 0=directly, 1=workqueue(default) */
-	unsigned char resume_type;
 	unsigned char init_flag; /* 0=none, 1=power on request */
 	unsigned char auto_test;
 	unsigned char test_state;
@@ -1088,11 +1093,9 @@ struct aml_lcd_drv_s {
 	// void (*driver_disable_post)(struct aml_lcd_drv_s *pdrv);
 	// void (*driver_init)(struct aml_lcd_drv_s *pdrv);
 	// void (*driver_disable)(struct aml_lcd_drv_s *pdrv);
-	// void (*driver_change)(struct aml_lcd_drv_s *pdrv);
 	// void (*module_reset)(struct aml_lcd_drv_s *pdrv);
 	void (*module_tiny_reset)(struct aml_lcd_drv_s *pdrv);
 	void (*phy_set)(struct aml_lcd_drv_s *pdrv, int status);
-	// void (*fr_adjust)(struct aml_lcd_drv_s *pdrv, int duration);
 	// int (*vbyone_vsync_handler)(struct aml_lcd_drv_s *pdrv);
 
 	struct work_struct late_resume_work;

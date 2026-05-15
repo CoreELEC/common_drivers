@@ -29,7 +29,7 @@ static struct lcd_venc_op_s lcd_venc_op = {
 	.venc_set_timing = NULL,
 	.venc_set = NULL,
 	.venc_set_dummy = NULL,
-	.venc_change = NULL,
+	.venc_fr_change = NULL,
 	.venc_enable = NULL,
 	.get_venc_state = NULL,
 	.get_venc_init_config = NULL,
@@ -138,42 +138,6 @@ void lcd_debug_cursor(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *curs
 	}
 }
 
-void lcd_screen_restore(struct aml_lcd_drv_s *pdrv)
-{
-	unsigned long flags = 0;
-
-	if (lcd_venc_op.mute_set) {
-		spin_lock_irqsave(&pdrv->isr_lock, flags);
-		pdrv->mute_flag = 0;
-		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
-		LCD_PR(pdrv, "%s", __func__);
-	} else if (pdrv->viu_sel == 1) {
-#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
-		set_output_mute(false);
-		pdrv->mute_flag = 0;
-		LCD_PR(pdrv, "%s", __func__);
-#endif
-	}
-}
-
-void lcd_screen_black(struct aml_lcd_drv_s *pdrv)
-{
-	unsigned long flags = 0;
-
-	if (lcd_venc_op.mute_set) {
-		spin_lock_irqsave(&pdrv->isr_lock, flags);
-		pdrv->mute_flag = 1;
-		spin_unlock_irqrestore(&pdrv->isr_lock, flags);
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
-	} else if (pdrv->viu_sel == 1) {
-#ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
-		set_output_mute(true);
-		pdrv->mute_flag = 1;
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
-#endif
-	}
-}
-
 //vsync isr stage
 void lcd_bist_change(struct aml_lcd_drv_s *pdrv, unsigned int level_r,
 		     unsigned int level_g, unsigned int level_b)
@@ -190,19 +154,23 @@ void lcd_mute_set(struct aml_lcd_drv_s *pdrv,  unsigned char flag)
 		if (pdrv->vmode_switch) {
 			if (flag) {
 				pdrv->test_state = 0;
-				lcd_venc_op.mute_set(pdrv, flag);
+				lcd_venc_op.mute_set(pdrv, 1);
 			} else {
 				if (pdrv->test_flag) {
 					pdrv->test_state = pdrv->test_flag;
 					lcd_debug_test(pdrv, pdrv->test_state);
 				} else {
-					lcd_venc_op.mute_set(pdrv, flag);
+					lcd_venc_op.mute_set(pdrv, 0);
 				}
 			}
 		} else {
 			lcd_venc_op.mute_set(pdrv, flag);
 		}
-		LCD_PR(pdrv, "%s, venc mute %s", __func__, flag ? "ON" : "OFF");
+		if (flag)
+			pdrv->status |= LCD_STATUS_MUTE;
+		else
+			pdrv->status &= ~LCD_STATUS_MUTE;
+		LCD_PR(pdrv, "mute_set: venc mute %s", flag ? "ON" : "OFF");
 	} else if (pdrv->viu_sel == 1) {
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 		if (pdrv->vmode_switch) {
@@ -217,12 +185,16 @@ void lcd_mute_set(struct aml_lcd_drv_s *pdrv,  unsigned char flag)
 					pdrv->test_state = pdrv->test_flag;
 					lcd_debug_test(pdrv, pdrv->test_state);
 				}
-				set_output_mute(flag);
+				set_output_mute(0);
 			}
 		} else {
 			set_output_mute(flag);
 		}
-		LCD_DBG(pdrv, "%s, vpp mute %s", __func__, flag ? "ON" : "OFF");
+		if (flag)
+			pdrv->status |= LCD_STATUS_MUTE;
+		else
+			pdrv->status &= ~LCD_STATUS_MUTE;
+		LCD_DBG(pdrv, "mute_set: vpp mute %s", flag ? "ON" : "OFF");
 #endif
 	}
 }
@@ -234,7 +206,7 @@ int lcd_mute_state_get(struct aml_lcd_drv_s *pdrv)
 
 	if (lcd_venc_op.mute_set) {
 		spin_lock_irqsave(&pdrv->isr_lock, irq_flags);
-		flag = pdrv->mute_state;
+		flag = (pdrv->status & LCD_STATUS_MUTE);
 		spin_unlock_irqrestore(&pdrv->isr_lock, irq_flags);
 	} else if (pdrv->viu_sel == 1) {
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
@@ -244,53 +216,71 @@ int lcd_mute_state_get(struct aml_lcd_drv_s *pdrv)
 	return flag;
 }
 
+void lcd_set_venc(struct aml_lcd_drv_s *pdrv)
+{
+	if (!lcd_venc_op.venc_set) {
+		LCD_ERR(pdrv, "set_venc: invalid");
+		return;
+	}
+
+	LCD_DBG(pdrv, "set_venc, status:0x%x", pdrv->status);
+	lcd_venc_op.venc_set(pdrv);
+	lcd_act_timing_dbg_print(pdrv);
+}
+
 void lcd_set_venc_timing(struct aml_lcd_drv_s *pdrv)
 {
 	if (!lcd_venc_op.venc_set_timing)
 		return;
 
-	LCD_DBG(pdrv, "%s", __func__);
+	LCD_DBG(pdrv, "set_venc_timing, status:0x%x", pdrv->status);
 	lcd_venc_op.venc_set_timing(pdrv);
-
 	lcd_act_timing_dbg_print(pdrv);
+
+	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
 }
 
-void lcd_set_venc(struct aml_lcd_drv_s *pdrv)
+void lcd_set_venc_dummy(struct aml_lcd_drv_s *pdrv, int flag)
 {
-	if (!lcd_venc_op.venc_set) {
-		LCD_ERR(pdrv, "%s: invalid", __func__);
+	if (!lcd_venc_op.venc_set_dummy)
 		return;
+
+	LCD_DBG(pdrv, "set_venc_dummy: %d, status:0x%x", flag, pdrv->status);
+
+	if (flag) {
+		if (lcd_venc_op.venc_set_dummy)
+			lcd_venc_op.venc_set_dummy(pdrv);
+	} else {
+		if (lcd_venc_op.venc_set_timing)
+			lcd_venc_op.venc_set_timing(pdrv);
 	}
-
-	LCD_DBG(pdrv, "%s", __func__);
-	lcd_venc_op.venc_set(pdrv);
-
-	lcd_act_timing_dbg_print(pdrv);
 }
 
-void lcd_venc_change(struct aml_lcd_drv_s *pdrv)
+void lcd_venc_fr_change(struct aml_lcd_drv_s *pdrv)
 {
-	if (!lcd_venc_op.venc_change) {
-		LCD_ERR(pdrv, "%s: invalid", __func__);
+	if (!lcd_venc_op.venc_fr_change) {
+		LCD_ERR(pdrv, "venc_fr_change: invalid");
 		return;
 	}
 
 	if ((pdrv->status & LCD_STATUS_ENCL_ON) == 0)
 		return;
-	LCD_DBG(pdrv, "%s", __func__);
-	lcd_venc_op.venc_change(pdrv);
+	lcd_venc_op.venc_fr_change(pdrv);
+	LCD_DBG(pdrv, "venc_fr_changed: %d,%d",
+		pdrv->curr_dev->dev_cfg.timing.act_timing.h_period,
+		pdrv->curr_dev->dev_cfg.timing.act_timing.v_period);
 
-	lcd_act_timing_dbg_print(pdrv);
+	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
 }
 
 void lcd_venc_enable(struct aml_lcd_drv_s *pdrv, int flag)
 {
 	if (!lcd_venc_op.venc_enable) {
-		LCD_ERR(pdrv, "%s: invalid", __func__);
+		LCD_ERR(pdrv, "venc_enable: invalid");
 		return;
 	}
 
-	LCD_DBG(pdrv, "%s: %d", __func__, flag);
+	LCD_DBG(pdrv, "venc_enable: %d", flag);
 	lcd_venc_op.venc_enable(pdrv, flag);
 }
 
@@ -299,7 +289,7 @@ int lcd_get_venc_state(struct aml_lcd_drv_s *pdrv)
 	int ret = 0;
 
 	if (!lcd_venc_op.get_venc_state) {
-		LCD_ERR(pdrv, "%s: invalid", __func__);
+		LCD_ERR(pdrv, "get_venc_state: invalid");
 		return 0;
 	}
 
@@ -313,7 +303,7 @@ int lcd_get_venc_init_config(struct aml_lcd_drv_s *pdrv)
 	int ret = 0;
 
 	if (!lcd_venc_op.get_venc_init_config) {
-		LCD_ERR(pdrv, "%s: invalid", __func__);
+		LCD_ERR(pdrv, "get_venc_init_config: invalid");
 		return 0;
 	}
 
@@ -384,16 +374,6 @@ void lcd_venc_adj_vtotal(struct aml_lcd_drv_s *pdrv, unsigned int vtotal)
 		return;
 
 	lcd_venc_op.venc_set_vtotal(pdrv, vtotal);
-}
-
-void lcd_venc_set_dummy(struct aml_lcd_drv_s *pdrv)
-{
-	if (!lcd_venc_op.venc_set_dummy)
-		return;
-
-	LCD_DBG(pdrv, "%s", __func__);
-
-	lcd_venc_op.venc_set_dummy(pdrv);
 }
 
 int lcd_venc_reg_print(struct aml_lcd_drv_s *pdrv, char *buf, int offset)

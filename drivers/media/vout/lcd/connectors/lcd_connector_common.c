@@ -97,7 +97,10 @@ void lcd_connector_driver_init_pre(struct aml_lcd_drv_s *pdrv)
 		break;
 	}
 
-	lcd_set_clk(pdrv);
+	if (pdrv->status & LCD_CTRL_DUMMY)
+		lcd_clk_set_dummy(pdrv);
+	else
+		lcd_set_clk(pdrv);
 	lcd_set_venc(pdrv);
 
 	LCD_DBG(pdrv, "%s finished\n", __func__);
@@ -115,47 +118,6 @@ void lcd_connector_driver_disable_post(struct aml_lcd_drv_s *pdrv)
 #endif
 
 	LCD_DBG(pdrv, "%s finished", __func__);
-}
-
-void lcd_connector_driver_change(struct aml_lcd_drv_s *pdrv)
-{
-	unsigned long long local_time[2];
-
-	if (!pdrv->probe_done)
-		LCD_PR(pdrv, "config not loaded, bypass %s", __func__);
-
-	local_time[0] = sched_clock();
-
-	LCD_PR(pdrv, "connector driver change(ver %s): %s", LCD_DRV_VERSION,
-	      lcd_type_type_to_str(pdrv->curr_dev->dev_cfg.basic.lcd_type));
-
-	if (lcd_type_supported(pdrv))
-		return;
-
-	if (pdrv->status & LCD_STATUS_IF_ON) {
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
-		if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_VBYONE)
-			lcd_vbyone_interrupt_enable(pdrv, 0);
-#endif
-	}
-
-	if (!(pdrv->status & LCD_STATUS_ENCL_DUMMY)) {
-		lcd_clk_change(pdrv);
-		lcd_venc_change(pdrv);
-	}
-
-	if (pdrv->status & LCD_STATUS_IF_ON) {
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
-		if (pdrv->curr_dev->dev_cfg.basic.lcd_type == LCD_VBYONE) {
-			lcd_vbyone_wait_stable(pdrv);
-			lcd_vbyone_interrupt_enable(pdrv, 1);
-		}
-#endif
-	}
-
-	LCD_DBG(pdrv, "%s finished", __func__);
-	local_time[1] = sched_clock();
-	pdrv->proc_time.driver_change_time = lcd_do_div(local_time[1] - local_time[0], 1000);
 }
 
 void lcd_connector_driver_init(struct aml_lcd_drv_s *pdrv)
@@ -315,46 +277,6 @@ void lcd_connector_driver_disable(struct aml_lcd_drv_s *pdrv)
 	}
 
 	LCD_DBG(pdrv, "%s finished", __func__);
-}
-
-/* sync_duration is real_value * 100 */
-void lcd_connector_frame_rate_adjust(struct aml_lcd_drv_s *pdrv, int duration)
-{
-	struct lcd_config_s *pconf;
-
-	if (!pdrv || !pdrv->curr_dev)
-		return;
-	pconf = &pdrv->curr_dev->dev_cfg;
-
-	LCD_PR(pdrv, "%s: sync_duration=%d", __func__, duration);
-
-	lcd_vout_notify_mode_change_pre(pdrv);
-
-	/* update target frame rate */
-	pconf->timing.frame_rate = duration / 100;
-	pconf->timing.sync_duration_num = duration;
-	pconf->timing.sync_duration_den = 100;
-	pconf->timing.frac = lcd_fr_is_frac(pdrv, pconf->timing.act_timing.frame_rate);
-
-	/* update interface timing */
-	lcd_frame_rate_change(pdrv);
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
-	if (pconf->basic.lcd_type == LCD_VBYONE)
-		lcd_vbyone_interrupt_enable(pdrv, 0);
-#endif
-
-	/* change clk parameter */
-	lcd_clk_change(pdrv);
-	lcd_venc_change(pdrv);
-
-#ifdef CONFIG_AMLOGIC_LCD_VBYONE
-	if (pconf->basic.lcd_type == LCD_VBYONE) {
-		lcd_vbyone_wait_stable(pdrv);
-		lcd_vbyone_interrupt_enable(pdrv, 1);
-	}
-#endif
-
-	lcd_vout_notify_mode_change(pdrv);
 }
 
 void lcd_connector_config_probe(struct aml_lcd_drv_s *pdrv)
