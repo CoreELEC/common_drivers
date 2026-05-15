@@ -10868,6 +10868,10 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	} //else {
 		//dv_id = layer_id_to_dv_id(vd_path);
 	//}
+
+	if (src_format == FORMAT_INVALID)
+		last_current_format = src_format;
+
 	if (debug_dolby & 0x1000)
 		pr_dv_dbg("[inst%d]parse_metadata %p on vd%d, toggle %d, mode %d %d\n",
 			     dv_id + 1, vf, vd_path + 1, toggle_mode,
@@ -12138,6 +12142,7 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 
 	for (i = 0; i < NUM_IPCORE1; i++) {
 		new_m_dovi_setting.input[i].valid = 0;
+		new_m_dovi_setting.input[i].el_flag = 0;
 		new_m_dovi_setting.input[i].in_md_size = 0;
 		new_m_dovi_setting.input[i].in_comp_size = 0;
 	}
