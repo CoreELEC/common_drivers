@@ -8346,6 +8346,8 @@ static int vdin_drv_resume(struct platform_device *pdev)
 	 */
 	devp->flags &= (~VDIN_FLAG_SUSPEND);
 
+	vdin_dmc_ctrl(devp, true);
+
 	if (devp->flags & VDIN_FLAG_SUSPEND_STOP) {
 		vdin_self_start_dec(devp);
 		devp->flags &= (~VDIN_FLAG_SUSPEND_STOP);

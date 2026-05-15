@@ -7849,7 +7849,7 @@ bool vdin_is_qms_plus_state_chg(struct vdin_dev_s *devp)
  */
 bool vdin_is_qms_state_chg(struct vdin_dev_s *devp)
 {
-	if (devp->debug.vdin_dbg_en)
+	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_QMS_STATUS)
 		pr_info("qms_state_chg qms_en:%d->%d m_const:%d next_tfr:%d->%d\n",
 			devp->pre_prop.vtem_data.qms_en, devp->prop.vtem_data.qms_en,
 			devp->prop.vtem_data.m_const,
