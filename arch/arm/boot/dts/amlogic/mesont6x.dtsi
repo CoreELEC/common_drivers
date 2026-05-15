@@ -546,7 +546,7 @@
 
 	shmem@f7033000 {
 		compatible = "mmio-sram";
-		reg = <0xf7033000 0x1000>;
+		reg = <0xf7033000 0x100>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x0 0xf7033000 0x100>;

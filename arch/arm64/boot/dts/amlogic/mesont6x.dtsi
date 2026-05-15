@@ -546,10 +546,10 @@
 
 	shmem@f7033000 {
 		compatible = "mmio-sram";
-		reg = <0x0 0xf7033000 0x0 0x1000>;
+		reg = <0x0 0xf7033000 0x0 0x100>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ranges = <0x0 0x0 0xf7033000 0x1000>;
+		ranges = <0x0 0x0 0xf7033000 0x100>;
 
 		scmi_shmem: shmem@0 {
 			compatible = "arm,scmi-shmem";
