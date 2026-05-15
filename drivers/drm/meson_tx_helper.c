@@ -240,7 +240,7 @@ void meson_drm_kms_helper_hotplug_event(struct drm_connector *connector)
 	struct drm_device *dev = connector->dev;
 
 	snprintf(event_string, sizeof(event_string),
-				"HOTPLUG=1,CONNECTOR=%s,CONNECTOR_ID=%d,CONNECTOR_TYPE=%d",
+				"HOTPLUG,CONNECTOR=%s,CONNECTOR_ID=%d,CONNECTOR_TYPE=%d",
 				connector->name,
 				connector->base.id,
 				connector->connector_type);
