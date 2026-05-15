@@ -24,6 +24,7 @@
 #include <dt-bindings/thermal/ddr-params.h>
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
+#include <dt-bindings/power/meson-pm.h>
 / {
 	cpus:cpus {
 		#address-cells = <2>;
@@ -234,8 +235,11 @@
 		device_name = "aml_pm";
 		extend_resume_reason;
 		clear_suspend_reason = <9>; /* Clear netflix wakeup reason */
-		reg = <0x0 0xfe010288 0x0 0x4>, /*SYSCTRL_STATUS_REG2*/
-			<0x0 0xfe0102dc 0x0 0x4>; /*SYSCTRL_STICKY_REG7*/
+		reg = <0x0 0xffa800e4 0x0 0x4>, /*SYSCTRL_STATUS_REG2*/
+			<0x0 0xffa8005c 0x0 0x4>; /*SYSCTRL_STICKY_REG7*/
+//		deep_mode = <SYSTEM_SUSPEND_EE_PWR_DOWN>;
+		/*deep_mode supports custom configuration */
+		deep_mode = <(DEFINE(DDR, NORMAL) | DEFINE(EE_PWR_DN, OFF))>;
 	};
 
 	cpu_info {
