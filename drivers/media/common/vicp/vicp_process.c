@@ -2253,11 +2253,6 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 	memset(&temp_compress_param, 0, sizeof(temp_compress_param));
 	if (print_flag & VICP_DEBUG) {
 		pr_info("vicp: ##########usr param##########\n");
-		pr_info("vicp: input: is_vf:%d, vf:0x%px, type:0x%x, flag:0x%x.\n",
-			data_config->input_data.is_vframe,
-			data_config->input_data.data_vf,
-			data_config->input_data.data_vf->type,
-			data_config->input_data.data_vf->flag);
 		pr_info("vicp: output: w*h:%d*%d, y:addr:%ld stride:%d.\n",
 			data_config->output_data.width,
 			data_config->output_data.height,
@@ -2304,6 +2299,27 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 			vicp_print(VICP_ERROR, "%s: NULL vframe.\n", __func__);
 			return -1;
 		}
+
+		if (data_config->input_data.data_vf->canvas0_config[0].phy_addr == 0) {
+			vicp_print(VICP_INFO, "config: need check yuv data.\n");
+			if ((data_config->input_data.data_vf->flag &  VFRAME_FLAG_DOUBLE_FRAM) &&
+				data_config->input_data.data_vf->vf_ext) {
+				data_config->input_data.data_vf =
+					data_config->input_data.data_vf->vf_ext;
+			} else {
+				vicp_print(VICP_ERROR, "config: vf no yuv data.\n");
+				return -1;
+			}
+		}
+
+		vicp_print(VICP_INFO, "vf:0x%px, w*h:%d*%d(%d*%d), type:0x%x, flag:0x%x.\n",
+			data_config->input_data.data_vf,
+			data_config->input_data.data_vf->compWidth,
+			data_config->input_data.data_vf->compHeight,
+			data_config->input_data.data_vf->width,
+			data_config->input_data.data_vf->height,
+			data_config->input_data.data_vf->type,
+			data_config->input_data.data_vf->flag);
 
 		input_area = data_config->input_data.data_vf->compWidth *
 			data_config->input_data.data_vf->compHeight;
