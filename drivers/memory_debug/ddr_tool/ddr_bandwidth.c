@@ -2629,16 +2629,23 @@ static ssize_t bus_devices_read(struct file *file,
 {
 	struct ddr_bandwidth *aml_db;
 	int len = 0;
-	char buf[1800];
+	char *buf;
 
 	if (!file || !file->private_data)
 		return 0;
+
+	buf = kvzalloc(2048, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
 
 	aml_db = file->private_data;
 
 	len = bus_devices_display(aml_db, buf);
 
-	return simple_read_from_buffer(to, count, ppos, buf, len);
+	len = simple_read_from_buffer(to, count, ppos, buf, len);
+	kvfree(buf);
+
+	return len;
 }
 
 static const struct file_operations bus_devices_fops = {
@@ -3130,15 +3137,21 @@ static ssize_t side_band_read(struct file *file,
 {
 	struct ddr_bandwidth *aml_db;
 	int len = 0, ret;
-	char buf[1800];
+	char *buf;
 
 	if (!file || !file->private_data)
 		return 0;
+
+	buf = kvzalloc(2048, GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
 	aml_db = file->private_data;
 
 	len = side_band_display(aml_db, buf);
 
 	ret = simple_read_from_buffer(to, count, ppos, buf, len);
+	kvfree(buf);
 
 	return ret;
 }

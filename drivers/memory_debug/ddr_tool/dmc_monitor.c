@@ -1668,13 +1668,18 @@ static ssize_t reg_analysis_store(const struct class *class,
 			const struct class_attribute *attr,
 			const char *buf, size_t count)
 {
-	char info[1024];
+	char *info;
 	int ret = 0;
+
+	info = kvzalloc(1024, GFP_KERNEL);
+	if (!info)
+		return -ENOMEM;
 
 	if (dmc_mon->ops && dmc_mon->ops->reg_control)
 		ret = dmc_mon->ops->reg_control((char *)buf, 'a', info);
 	if (ret)
 		pr_emerg("%s", info);
+	kvfree(info);
 
 	return count;
 }
