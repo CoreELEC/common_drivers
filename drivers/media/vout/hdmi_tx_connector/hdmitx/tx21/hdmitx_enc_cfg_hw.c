@@ -326,6 +326,8 @@ static void hdmi_tvenc_interlaced_set(enum hdmi_vic vic)
 		HSYNC_PIXELS = 124;
 		BACK_PORCH = 114;
 		VSYNC_LINES = 3;
+		vs_adjust = 1;
+		SOF_LINES = 15;
 		set_vmode_enc_hw(tvregs_encp_480i60);
 		break;
 	case HDMI_21_720x576i50_4x3:
@@ -341,6 +343,8 @@ static void hdmi_tvenc_interlaced_set(enum hdmi_vic vic)
 		HSYNC_PIXELS = 126;
 		BACK_PORCH = 138;
 		VSYNC_LINES = 3;
+		vs_adjust = 1;
+		SOF_LINES = 19;
 		set_vmode_enc_hw(tvregs_encp_576i50);
 		break;
 	case HDMI_5_1920x1080i60_16x9:
@@ -506,6 +510,13 @@ void hdmitx_set_tv_encp_new(struct hdmitx21_dev *hdev, u32 enc_index, enum hdmi_
 	if (hdev->dsc_en)
 		hd21_set_reg_bits(ENCP_VIDEO_MODE_ADV, 0, 0, 3);
 	else if (hdev->frl_rate && hdev->tx_comm.fmt_para.cs != HDMI_COLORSPACE_YUV420)
+		hd21_set_reg_bits(ENCP_VIDEO_MODE_ADV, 1, 0, 3);
+	else if (hdev->hw_comm.chip_data->chip_type == MESON_CPU_ID_A9 &&
+		(vic == HDMI_6_720x480i60_4x3 ||
+		vic == HDMI_7_720x480i60_16x9 ||
+		vic == HDMI_21_720x576i50_4x3 ||
+		vic == HDMI_22_720x576i50_16x9))
+		/* for pix repetetion */
 		hd21_set_reg_bits(ENCP_VIDEO_MODE_ADV, 1, 0, 3);
 	else
 		hd21_set_reg_bits(ENCP_VIDEO_MODE_ADV, 0, 0, 3);

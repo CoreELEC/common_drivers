@@ -2274,15 +2274,16 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct hdmi_forma
 	if (para->timing.pi_mode == 0 &&
 	    (para->timing.v_active == 480 || para->timing.v_active == 576) &&
 		hdev->tx_comm.tx_hw->chip_data->chip_type != MESON_CPU_ID_A9) {
-		hd21_write_reg(VPU_VENC_CTRL, 0); // sel enci timming
+		/* sel enci timming */
+		hd21_write_reg(VPU_VENC_CTRL, 0);
 		hdmitx_set_tv_enci_new(hdev, hdev->tx_comm.enc_idx, vic, 1);
 		/* for s1a, s7 */
 		hdmitx_enable_enci_clk(hdev);
 	} else {
 		/* A9 not have enci, use encp to configure the output interlaced format */
-		hd21_write_reg(VPU_VENC_CTRL, 1); // sel encp timming
+		/* sel encp timming */
+		hd21_write_reg(VPU_VENC_CTRL, 1);
 		hdmitx_set_tv_encp_new(hdev, hdev->tx_comm.enc_idx, vic, 1);
-		/* for s1a, s7 */
 		hdmitx_enable_encp_clk(hdev);
 	}
 
@@ -6868,6 +6869,7 @@ static void vpu_hdmi_fmt_config(struct hdmitx21_dev *hdev)
 			(2 << 2) |
 			(((para->cd == COLORDEPTH_24B) ? 1 : 0) << 10) |
 			(2 << 22) |
+			(para->timing.pixel_repetition_factor << 24) |
 			(((para->cs == HDMI_COLORSPACE_RGB) ? 1 : 0) << 31);
 		break;
 	case MESON_CPU_ID_T7:
