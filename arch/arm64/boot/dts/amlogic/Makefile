@@ -205,6 +205,7 @@ dtb-y += s6_a311y2s_bq220_sdio.dtb
 dtb-y += a9_pxp.dtb
 dtb-y += a9_a311y3_by401.dtb
 dtb-y += a9_a311y3_by401_hdmi-only.dtb
+dtb-y += a9_a311y3_by401_dp-only.dtb
 dtb-y += a9_a311y3_by408.dtb
 dtb-y += a9_a311y3_by409.dtb
 dtb-y += a9_a311y3_by401_linux.dtb
