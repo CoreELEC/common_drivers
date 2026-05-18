@@ -154,7 +154,7 @@ struct uvm_fd_info {
 	u32 crop_right;
 	u32 crop_bottom;
 	u32 priority;
-	u32 fps;
+	s32 fps;
 	u32 reserve[4];
 };
 

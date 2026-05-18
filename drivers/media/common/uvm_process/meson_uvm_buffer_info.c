@@ -222,7 +222,13 @@ int get_uvm_video_info(const int fd, struct uvm_fd_info *info)
 	info->timestamp = vfp->timestamp;
 	info->buf_stride = info->buf_width;
 	info->priority = vfp->priority;
-	info->fps = vfp->duration;
+	if (vfp->source_type == VFRAME_SOURCE_TYPE_HDMI ||
+			vfp->source_type == VFRAME_SOURCE_TYPE_CVBS ||
+			vfp->source_type == VFRAME_SOURCE_TYPE_TUNER) {
+		info->fps = -1;
+	} else {
+		info->fps = (s32)vfp->duration;
+	}
 
 	MUBI_PRINTK(LOG_DEBUG, "type:0x%x timestamp:%lld wxh:%dx%d crop:(%d %d %d %d)\n",
 			info->type, info->timestamp, info->buf_width, info->buf_height,
