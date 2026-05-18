@@ -263,6 +263,19 @@ struct aml_tmo_reg_sw tmo_reg = {
 	.tmo_blend_dark_gain = 350,
 	.tmo_blend_dark_th0 = 128,
 	.tmo_blend_dark_th1 = 216,
+	.tmo_sc_proc_en = 0,
+	.tmo_sp_proc_en = 1,
+	.tmo_pst_midlight_ctrl_en = 1,
+	.tmo_pst_lowlight_ctrl_en = 1,
+	.tmo_pst_darklight_ctrl_en = 1,
+	.tmo_pst_midlight_boost_gain = 256,
+	.tmo_pst_lowlight_boost_gain = 352,
+	.tmo_pst_midlight_point_gain = 256,
+	.tmo_pst_lowlight_point_gain = 256,
+	.tmo_pst_darklight_point_gain = 256,
+	.tmo_ogain_max = 3600,
+	.tmo_ogain_max_low = 2048,
+	.tmo_soft_clip_en = 0,
 	.tmo_force_ootf1_mode = &tmo_force_ootf1_mode,
 	.tmo_force_ootf1_val = &tmo_force_ootf1_val,
 	.hw_regs = &pq_hw_regs,
@@ -436,11 +449,28 @@ void tmo_parm_ext_show_pre(struct hdr_tmo_sw_ext *pre_tmo_reg_ext)
 			pre_tmo_reg_ext->reg_fcurv_clip_val[i][2],
 			pre_tmo_reg_ext->reg_fcurv_clip_val[i][3]);
 	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_single_bin_th);
-	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_full_black_th);
-	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_full_white_th0);
-	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_full_white_th1);
-	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_special_pat1_th);
-	pr_info("reg_single_bin_th = %d\n", pre_tmo_reg_ext->reg_special_pat2_th);
+	pr_info("reg_full_black_th = %d\n", pre_tmo_reg_ext->reg_full_black_th);
+	pr_info("reg_full_white_th0 = %d\n", pre_tmo_reg_ext->reg_full_white_th0);
+	pr_info("reg_full_white_th1 = %d\n", pre_tmo_reg_ext->reg_full_white_th1);
+	pr_info("reg_special_pat1_th = %d\n", pre_tmo_reg_ext->reg_special_pat1_th);
+	pr_info("reg_special_pat2_th = %d\n", pre_tmo_reg_ext->reg_special_pat2_th);
+	pr_info("reg_blend_dark_gain = %d\n", pre_tmo_reg_ext->reg_blend_dark_gain);
+	pr_info("reg_blend_dark_th0 = %d\n", pre_tmo_reg_ext->reg_blend_dark_th0);
+	pr_info("reg_blend_dark_th1 = %d\n", pre_tmo_reg_ext->reg_blend_dark_th1);
+	pr_info("reg_sc_proc_en = %d\n", pre_tmo_reg_ext->reg_sc_proc_en);
+	pr_info("reg_sp_proc_en = %d\n", pre_tmo_reg_ext->reg_sp_proc_en);
+	pr_info("reg_pst_midlight_ctrl_en = %d\n", pre_tmo_reg_ext->reg_pst_midlight_ctrl_en);
+	pr_info("reg_pst_lowlight_ctrl_en = %d\n", pre_tmo_reg_ext->reg_pst_lowlight_ctrl_en);
+	pr_info("reg_pst_darklight_ctrl_en = %d\n", pre_tmo_reg_ext->reg_pst_darklight_ctrl_en);
+	pr_info("reg_pst_midlight_boost_gain = %d\n", pre_tmo_reg_ext->reg_pst_midlight_boost_gain);
+	pr_info("reg_pst_lowlight_boost_gain = %d\n", pre_tmo_reg_ext->reg_pst_lowlight_boost_gain);
+	pr_info("reg_pst_midlight_point_gain = %d\n", pre_tmo_reg_ext->reg_pst_midlight_point_gain);
+	pr_info("reg_pst_lowlight_point_gain = %d\n", pre_tmo_reg_ext->reg_pst_lowlight_point_gain);
+	pr_info("reg_pst_darklight_point_gain = %d\n",
+		pre_tmo_reg_ext->reg_pst_darklight_point_gain);
+	pr_info("reg_ogain_max = %d\n", pre_tmo_reg_ext->reg_ogain_max);
+	pr_info("reg_ogain_max_low = %d\n", pre_tmo_reg_ext->reg_ogain_max_low);
+	pr_info("reg_soft_clip_en = %d\n", pre_tmo_reg_ext->reg_soft_clip_en);
 }
 
 void hdr10_tmo_reg_set(struct hdr_tmo_sw *pre_tmo_reg)
@@ -547,18 +577,6 @@ void hdr10_tmo_reg_ext_set(struct hdr_tmo_sw_ext *pre_tmo_reg_ext)
 		pre_tmo_reg_ext->reg_avg_lum_alpha2 == 0 &&
 		pre_tmo_reg_ext->reg_avg_lum_alpha3 == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_en == 0 &&
-		pre_tmo_reg_ext->reg_avg_lum_alpha_sc_flag == 0 &&
-		pre_tmo_reg_ext->reg_sc_hist_th == 0 &&
-		pre_tmo_reg_ext->reg_sc_maxl_th == 0 &&
-		pre_tmo_reg_ext->reg_single_bin_th == 0 &&
-		pre_tmo_reg_ext->reg_full_black_th == 0 &&
-		pre_tmo_reg_ext->reg_full_white_th0 == 0 &&
-		pre_tmo_reg_ext->reg_full_white_th1 == 0 &&
-		pre_tmo_reg_ext->reg_special_pat1_th == 0 &&
-		pre_tmo_reg_ext->reg_special_pat2_th == 0 &&
-		pre_tmo_reg_ext->reg_blend_dark_gain == 0 &&
-		pre_tmo_reg_ext->reg_blend_dark_th0 == 0 &&
-		pre_tmo_reg_ext->reg_blend_dark_th1 == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_sync_idx[0] == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_sync_idx[1] == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_sync_idx[2] == 0 &&
@@ -579,6 +597,9 @@ void hdr10_tmo_reg_ext_set(struct hdr_tmo_sw_ext *pre_tmo_reg_ext)
 		pre_tmo_reg_ext->reg_fcurve_adj_gain[7] == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_gain[8] == 0 &&
 		pre_tmo_reg_ext->reg_fcurve_adj_gain[9] == 0 &&
+		pre_tmo_reg_ext->reg_avg_lum_alpha_sc_flag == 0 &&
+		pre_tmo_reg_ext->reg_sc_hist_th == 0 &&
+		pre_tmo_reg_ext->reg_sc_maxl_th == 0 &&
 		pre_tmo_reg_ext->reg_fcurv_clip_val[0][0] == 0 &&
 		pre_tmo_reg_ext->reg_fcurv_clip_val[0][1] == 0 &&
 		pre_tmo_reg_ext->reg_fcurv_clip_val[0][2] == 0 &&
@@ -618,7 +639,29 @@ void hdr10_tmo_reg_ext_set(struct hdr_tmo_sw_ext *pre_tmo_reg_ext)
 		pre_tmo_reg_ext->reg_fcurv_clip_val[9][0] == 0 &&
 		pre_tmo_reg_ext->reg_fcurv_clip_val[9][1] == 0 &&
 		pre_tmo_reg_ext->reg_fcurv_clip_val[9][2] == 0 &&
-		pre_tmo_reg_ext->reg_fcurv_clip_val[9][3] == 0) {
+		pre_tmo_reg_ext->reg_fcurv_clip_val[9][3] == 0 &&
+		pre_tmo_reg_ext->reg_single_bin_th == 0 &&
+		pre_tmo_reg_ext->reg_full_black_th == 0 &&
+		pre_tmo_reg_ext->reg_full_white_th0 == 0 &&
+		pre_tmo_reg_ext->reg_full_white_th1 == 0 &&
+		pre_tmo_reg_ext->reg_special_pat1_th == 0 &&
+		pre_tmo_reg_ext->reg_special_pat2_th == 0 &&
+		pre_tmo_reg_ext->reg_blend_dark_gain == 0 &&
+		pre_tmo_reg_ext->reg_blend_dark_th0 == 0 &&
+		pre_tmo_reg_ext->reg_blend_dark_th1 == 0 &&
+		pre_tmo_reg_ext->reg_sc_proc_en == 0 &&
+		pre_tmo_reg_ext->reg_sp_proc_en == 0 &&
+		pre_tmo_reg_ext->reg_pst_midlight_ctrl_en == 0 &&
+		pre_tmo_reg_ext->reg_pst_lowlight_ctrl_en == 0 &&
+		pre_tmo_reg_ext->reg_pst_darklight_ctrl_en == 0 &&
+		pre_tmo_reg_ext->reg_pst_midlight_boost_gain == 0 &&
+		pre_tmo_reg_ext->reg_pst_lowlight_boost_gain == 0 &&
+		pre_tmo_reg_ext->reg_pst_midlight_point_gain == 0 &&
+		pre_tmo_reg_ext->reg_pst_lowlight_point_gain == 0 &&
+		pre_tmo_reg_ext->reg_pst_darklight_point_gain == 0 &&
+		pre_tmo_reg_ext->reg_ogain_max == 0 &&
+		pre_tmo_reg_ext->reg_ogain_max_low == 0 &&
+		pre_tmo_reg_ext->reg_soft_clip_en == 0) {
 		pr_tmo_dbg("pre_tmo_reg_ext invalid\n");
 		return;
 	}
@@ -682,6 +725,19 @@ void hdr10_tmo_reg_ext_set(struct hdr_tmo_sw_ext *pre_tmo_reg_ext)
 	tmo_reg.tmo_blend_dark_gain = pre_tmo_reg_ext->reg_blend_dark_gain;
 	tmo_reg.tmo_blend_dark_th0 = pre_tmo_reg_ext->reg_blend_dark_th0;
 	tmo_reg.tmo_blend_dark_th1 = pre_tmo_reg_ext->reg_blend_dark_th1;
+	tmo_reg.tmo_sc_proc_en = pre_tmo_reg_ext->reg_sc_proc_en;
+	tmo_reg.tmo_sp_proc_en = pre_tmo_reg_ext->reg_sp_proc_en;
+	tmo_reg.tmo_pst_midlight_ctrl_en = pre_tmo_reg_ext->reg_pst_midlight_ctrl_en;
+	tmo_reg.tmo_pst_lowlight_ctrl_en = pre_tmo_reg_ext->reg_pst_lowlight_ctrl_en;
+	tmo_reg.tmo_pst_darklight_ctrl_en = pre_tmo_reg_ext->reg_pst_darklight_ctrl_en;
+	tmo_reg.tmo_pst_midlight_boost_gain = pre_tmo_reg_ext->reg_pst_midlight_boost_gain;
+	tmo_reg.tmo_pst_lowlight_boost_gain = pre_tmo_reg_ext->reg_pst_lowlight_boost_gain;
+	tmo_reg.tmo_pst_midlight_point_gain = pre_tmo_reg_ext->reg_pst_midlight_point_gain;
+	tmo_reg.tmo_pst_lowlight_point_gain = pre_tmo_reg_ext->reg_pst_lowlight_point_gain;
+	tmo_reg.tmo_pst_darklight_point_gain = pre_tmo_reg_ext->reg_pst_darklight_point_gain;
+	tmo_reg.tmo_ogain_max = pre_tmo_reg_ext->reg_ogain_max;
+	tmo_reg.tmo_ogain_max_low = pre_tmo_reg_ext->reg_ogain_max_low;
+	tmo_reg.tmo_soft_clip_en = pre_tmo_reg_ext->reg_soft_clip_en;
 	memcpy(tmo_reg.tmo_fcurve_adj_sync_idx,
 		pre_tmo_reg_ext->reg_fcurve_adj_sync_idx, 10 * sizeof(int));
 	memcpy(tmo_reg.tmo_fcurve_adj_gain,
@@ -800,6 +856,19 @@ void hdr10_tmo_reg_ext_get(struct hdr_tmo_sw_ext *pre_tmo_reg_ext_s)
 	pre_tmo_reg_ext_s->reg_blend_dark_gain = tmo_reg.tmo_blend_dark_gain;
 	pre_tmo_reg_ext_s->reg_blend_dark_th0 = tmo_reg.tmo_blend_dark_th0;
 	pre_tmo_reg_ext_s->reg_blend_dark_th1 = tmo_reg.tmo_blend_dark_th1;
+	pre_tmo_reg_ext_s->reg_sc_proc_en = tmo_reg.tmo_sc_proc_en;
+	pre_tmo_reg_ext_s->reg_sp_proc_en = tmo_reg.tmo_sp_proc_en;
+	pre_tmo_reg_ext_s->reg_soft_clip_en = tmo_reg.tmo_soft_clip_en;
+	pre_tmo_reg_ext_s->reg_ogain_max = tmo_reg.tmo_ogain_max;
+	pre_tmo_reg_ext_s->reg_ogain_max_low = tmo_reg.tmo_ogain_max_low;
+	pre_tmo_reg_ext_s->reg_pst_darklight_ctrl_en = tmo_reg.tmo_pst_darklight_ctrl_en;
+	pre_tmo_reg_ext_s->reg_pst_darklight_point_gain = tmo_reg.tmo_pst_darklight_point_gain;
+	pre_tmo_reg_ext_s->reg_pst_lowlight_ctrl_en = tmo_reg.tmo_pst_lowlight_ctrl_en;
+	pre_tmo_reg_ext_s->reg_pst_lowlight_boost_gain = tmo_reg.tmo_pst_lowlight_boost_gain;
+	pre_tmo_reg_ext_s->reg_pst_lowlight_point_gain = tmo_reg.tmo_pst_lowlight_point_gain;
+	pre_tmo_reg_ext_s->reg_pst_midlight_ctrl_en = tmo_reg.tmo_pst_midlight_ctrl_en;
+	pre_tmo_reg_ext_s->reg_pst_midlight_boost_gain = tmo_reg.tmo_pst_midlight_boost_gain;
+	pre_tmo_reg_ext_s->reg_pst_midlight_point_gain = tmo_reg.tmo_pst_midlight_point_gain;
 	memcpy(pre_tmo_reg_ext_s->reg_fcurve_adj_sync_idx,
 		tmo_reg.tmo_fcurve_adj_sync_idx, 10 * sizeof(int));
 	memcpy(pre_tmo_reg_ext_s->reg_fcurve_adj_gain,
@@ -972,6 +1041,19 @@ static char hdr_tmo_debug_usage_str[TMO_PARAM_CNT][LINE_SIZE] = {
 	"blend_dark_gain = ",
 	"blend_dark_th0 = ",
 	"blend_dark_th1 = ",
+	"sc_proc_en = ",
+	"sp_proc_en = ",
+	"pst_midlight_ctrl_en = ",
+	"pst_lowlight_ctrl_en = ",
+	"pst_darklight_ctrl_en = ",
+	"pst_midlight_boost_gain = ",
+	"pst_lowlight_boost_gain = ",
+	"pst_midlight_point_gain = ",
+	"pst_lowlight_point_gain = ",
+	"pst_darklight_point_gain = ",
+	"ogain_max = ",
+	"ogain_max_low = ",
+	"soft_clip_en = ",
 };
 
 void hdr10_tmo_reg_get_arr(int *arry)
@@ -1139,6 +1221,19 @@ void hdr10_tmo_reg_get_arr(int *arry)
 	arry[160] = tmo_reg.tmo_blend_dark_gain;
 	arry[161] = tmo_reg.tmo_blend_dark_th0;
 	arry[162] = tmo_reg.tmo_blend_dark_th1;
+	arry[163] = tmo_reg.tmo_sc_proc_en;
+	arry[164] = tmo_reg.tmo_sp_proc_en;
+	arry[165] = tmo_reg.tmo_pst_midlight_ctrl_en;
+	arry[166] = tmo_reg.tmo_pst_lowlight_ctrl_en;
+	arry[167] = tmo_reg.tmo_pst_darklight_ctrl_en;
+	arry[168] = tmo_reg.tmo_pst_midlight_boost_gain;
+	arry[169] = tmo_reg.tmo_pst_lowlight_boost_gain;
+	arry[170] = tmo_reg.tmo_pst_midlight_point_gain;
+	arry[171] = tmo_reg.tmo_pst_lowlight_point_gain;
+	arry[172] = tmo_reg.tmo_pst_darklight_point_gain;
+	arry[173] = tmo_reg.tmo_ogain_max;
+	arry[174] = tmo_reg.tmo_ogain_max_low;
+	arry[175] = tmo_reg.tmo_soft_clip_en;
 }
 
 int hdr_tmo_adb_show(char *str)
@@ -1364,6 +1459,19 @@ void hdr10_tmo_parm_show(void)
 	pr_info("tmo_blend_dark_gain = %d\n", tmo_reg.tmo_blend_dark_gain);
 	pr_info("tmo_blend_dark_th0 = %d\n", tmo_reg.tmo_blend_dark_th0);
 	pr_info("tmo_blend_dark_th1 = %d\n", tmo_reg.tmo_blend_dark_th1);
+	pr_info("tmo_sc_proc_en = %d\n", tmo_reg.tmo_sc_proc_en);
+	pr_info("tmo_sp_proc_en = %d\n", tmo_reg.tmo_sp_proc_en);
+	pr_info("tmo_soft_clip_en = %d\n", tmo_reg.tmo_soft_clip_en);
+	pr_info("tmo_ogain_max = %d\n", tmo_reg.tmo_ogain_max);
+	pr_info("tmo_ogain_max_low = %d\n", tmo_reg.tmo_ogain_max_low);
+	pr_info("tmo_pst_darklight_ctrl_en = %d\n", tmo_reg.tmo_pst_darklight_ctrl_en);
+	pr_info("tmo_pst_darklight_point_gain = %d\n", tmo_reg.tmo_pst_darklight_point_gain);
+	pr_info("tmo_pst_lowlight_ctrl_en = %d\n", tmo_reg.tmo_pst_lowlight_ctrl_en);
+	pr_info("tmo_pst_lowlight_boost_gain = %d\n", tmo_reg.tmo_pst_lowlight_boost_gain);
+	pr_info("tmo_pst_lowlight_point_gain = %d\n", tmo_reg.tmo_pst_lowlight_point_gain);
+	pr_info("tmo_pst_midlight_ctrl_en = %d\n", tmo_reg.tmo_pst_midlight_ctrl_en);
+	pr_info("tmo_pst_midlight_boost_gain = %d\n", tmo_reg.tmo_pst_midlight_boost_gain);
+	pr_info("tmo_pst_midlight_point_gain = %d\n", tmo_reg.tmo_pst_midlight_point_gain);
 
 	pr_info("w = %d\n", tmo_reg.w);
 	pr_info("h = %d\n", tmo_reg.h);
@@ -1920,6 +2028,71 @@ int hdr10_tmo_dbg(char **parm)
 		tmo_reg.tmo_blend_dark_th1 = (int)val;
 		pr_tmo_dbg("tmo_blend_dark_th1 = %d\n", (int)val);
 		pr_info("\n");
+	} else if (!strcmp(parm[0], "sc_proc_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_sc_proc_en = (int)val;
+		pr_tmo_dbg("tmo_sc_proc_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "sp_proc_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_sp_proc_en = (int)val;
+		pr_tmo_dbg("tmo_sp_proc_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "soft_clip_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_soft_clip_en = (int)val;
+		pr_tmo_dbg("tmo_soft_clip_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "ogain_max")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_ogain_max = (int)val;
+		pr_tmo_dbg("tmo_ogain_max = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "ogain_max_low")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_ogain_max_low = (int)val;
+		pr_tmo_dbg("tmo_ogain_max_low = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_darklight_ctrl_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_darklight_ctrl_en = (int)val;
+		pr_tmo_dbg("tmo_pst_darklight_ctrl_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_lowlight_ctrl_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_lowlight_ctrl_en = (int)val;
+		pr_tmo_dbg("tmo_pst_lowlight_ctrl_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_midlight_ctrl_en")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_midlight_ctrl_en = (int)val;
+		pr_tmo_dbg("tmo_pst_midlight_ctrl_en = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_darklight_point_gain")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_darklight_point_gain = (int)val;
+		pr_tmo_dbg("tmo_pst_darklight_point_gain = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_lowlight_point_gain")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_lowlight_point_gain = (int)val;
+		pr_tmo_dbg("tmo_pst_lowlight_point_gain = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_midlight_point_gain")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_midlight_point_gain = (int)val;
+		pr_tmo_dbg("tmo_pst_midlight_point_gain = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_lowlight_boost_gain")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_lowlight_boost_gain = (int)val;
+		pr_tmo_dbg("tmo_pst_lowlight_boost_gain = %d\n", (int)val);
+	} else if (!strcmp(parm[0], "pst_midlight_boost_gain")) {
+		if (kstrtoul(parm[1], 10, &val) < 0)
+			goto error;
+		tmo_reg.tmo_pst_midlight_boost_gain = (int)val;
+		pr_tmo_dbg("tmo_pst_midlight_boost_gain = %d\n", (int)val);
 	} else if (!strcmp(parm[0], "fcurve_adj_sync_idx")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			goto error;

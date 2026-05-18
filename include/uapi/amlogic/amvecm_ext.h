@@ -538,6 +538,19 @@ struct hdr_tmo_sw_ext {
 	int reg_blend_dark_gain;               /* u10 */
 	int reg_blend_dark_th0;                /* u10 */
 	int reg_blend_dark_th1;                /* u10 */
+	int reg_sc_proc_en;                    /* u1, scence change enable  */
+	int reg_sp_proc_en;                    /* u1, special pattern process enable */
+	int reg_pst_midlight_ctrl_en;          /* u1 */
+	int reg_pst_lowlight_ctrl_en;          /* u1 */
+	int reg_pst_darklight_ctrl_en;         /* u1 */
+	int reg_pst_midlight_boost_gain;       /* u9 (0~512) */
+	int reg_pst_lowlight_boost_gain;       /* u9 (0~512) */
+	int reg_pst_midlight_point_gain;       /* u9 (0~512) */
+	int reg_pst_lowlight_point_gain;       /* u9 (0~512) */
+	int reg_pst_darklight_point_gain;      /* u9 (0~512) */
+	int reg_ogain_max;                     /* u14, tmo ogain max, default is 4096 */
+	int reg_ogain_max_low;                 /* u14, tmo ogain max, default is 2048 */
+	int reg_soft_clip_en;                  /* u1, soft clip enable or not */
 };
 
 struct db_cabc_aad_param_s {

@@ -6,7 +6,7 @@
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 #include "../amcsc.h"
 
-#define TMO_PARAM_CNT 163
+#define TMO_PARAM_CNT 176
 #define LINE_SIZE 40
 
 extern int pr_tmo_en;

@@ -69,7 +69,7 @@ static int cur_primesl_type[VD_PATH_MAX];
 static int cur_vf_src_type[VD_PATH_MAX];
 #define FORCE_RGB_PROCESS 1
 
-uint hdr_hist_select = 1;
+uint hdr_hist_select;
 /*used for TV color gamut to panel*/
 uint gamut_conv_enable;
 uint osd_gamut_conv_type;/*0:off, 1:bt709, 2:dci-p3, 3:bt2020*/
@@ -9150,9 +9150,9 @@ static int vpp_matrix_update(struct vframe_s *vf,
 
 	if (hdr_hist_select && (get_cpu_type() == MESON_CPU_MAJOR_ID_T6W ||
 			get_cpu_type() == MESON_CPU_MAJOR_ID_T6X)) {
-		hist_select = HIST_E_LUMA;
+		hist_select = HIST_E_RGBMAX;
 		pre_tmo_reg = tmo_fw_param_get();
-		pre_tmo_reg->hdr_hist_sel = HIST_E_LUMA;
+		pre_tmo_reg->hdr_hist_sel = hist_select;
 	}
 
 	if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A) ||

@@ -207,7 +207,7 @@ struct aml_tmo_reg_sw {
 	int tmo_soft_clip_th;                   //u10
 	int tmo_r0_32;                          //u10
 	int tmo_r1_32;                          //u10
-	int tmo_y_highlight_ratio;                  //u10
+	int tmo_y_highlight_ratio;              //u10
 	int tmo_ratio_sat;                      //u11
 	int tmo_avg_lum_ratio;                  //u10
 	int tmo_alpha;                          //u8
@@ -252,6 +252,19 @@ struct aml_tmo_reg_sw {
 	int tmo_blend_dark_gain;                //u10
 	int tmo_blend_dark_th0;                 //u10
 	int tmo_blend_dark_th1;                 //u10
+	int tmo_sc_proc_en;                     //u1, scence change enable
+	int tmo_sp_proc_en;                     //u1, special pattern process enable
+	int tmo_pst_midlight_ctrl_en;           //u1
+	int tmo_pst_lowlight_ctrl_en;           //u1
+	int tmo_pst_darklight_ctrl_en;          //u1
+	int tmo_pst_midlight_boost_gain;        //u9: 0 ~ 512
+	int tmo_pst_lowlight_boost_gain;        //u9: 0 ~ 512
+	int tmo_pst_midlight_point_gain;        //u9: 0 ~ 512
+	int tmo_pst_lowlight_point_gain;        //u9: 0 ~ 512
+	int tmo_pst_darklight_point_gain;       //u9: 0 ~ 512
+	int tmo_ogain_max;                      //u14, tmo ogain max, default is 4096
+	int tmo_ogain_max_low;                  //u14, tmo ogain max, default is 2048
+	int tmo_soft_clip_en;                   //u1, soft clip enable or not
 	int *tmo_force_ootf1_mode;
 	int *tmo_force_ootf1_val;
 
