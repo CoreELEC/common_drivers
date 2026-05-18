@@ -3381,7 +3381,8 @@ static void hdmitx_debug(struct hdmitx_hw_common *tx_hw, const char *buf)
 		return;
 	} else if (strncmp(tmpbuf, "bist", 4) == 0) {
 		if (strncmp(tmpbuf + 4, "off", 3) == 0) {
-			if (vinfo->viu_mux == VIU_MUX_ENCI) {
+			if (vinfo->viu_mux == VIU_MUX_ENCI &&
+				tx_hw->chip_data->chip_type != MESON_CPU_ID_A9) {
 				hd21_write_reg(ENCI_TST_EN, 0);
 			} else {
 				hd21_set_reg_bits(ENCP_VIDEO_MODE_ADV, 1, 3, 1);
@@ -3391,8 +3392,9 @@ static void hdmitx_debug(struct hdmitx_hw_common *tx_hw, const char *buf)
 			return;
 		}
 		hdev->tx_comm.bist_lock = 1;
-		/* for 480i/576i mode */
-		if (vinfo->viu_mux == VIU_MUX_ENCI) {
+		/* for 480i/576i mode; A9 480i and 576i use encp */
+		if (vinfo->viu_mux == VIU_MUX_ENCI &&
+			tx_hw->chip_data->chip_type != MESON_CPU_ID_A9) {
 			if (strncmp(tmpbuf + 4, "blank", 5) == 0) {
 				hd21_write_reg(ENCI_TST_MDSEL, 0);
 				hd21_write_reg(ENCI_TST_Y, 0x0);
@@ -3533,6 +3535,12 @@ static void hdmitx_debug(struct hdmitx_hw_common *tx_hw, const char *buf)
 					width /= 2;
 			}
 			height = t->v_active;
+			if (tx_hw->chip_data->chip_type == MESON_CPU_ID_A9 &&
+				(para->vic == HDMI_6_720x480i60_4x3 ||
+				 para->vic == HDMI_7_720x480i60_16x9 ||
+				 para->vic == HDMI_21_720x576i50_4x3 ||
+				 para->vic == HDMI_22_720x576i50_16x9))
+				height = height / 2;
 			hd21_write_reg(VENC_VIDEO_TST_Y, 0x3ff);
 			hd21_write_reg(VENC_VIDEO_TST_CB, 0x1);
 			hd21_write_reg(VENC_VIDEO_TST_CR, 0x1);
