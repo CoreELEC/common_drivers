@@ -2258,7 +2258,7 @@ static long aml_crypto_dev_ioctl(struct file *filp,
 {
 	void __user *arg = (void __user *)arg_;
 	struct session_op sop;
-	struct kernel_crypt_op kcop;
+	struct kernel_crypt_op *kcop = NULL;
 	struct crypt_priv *pcr = filp->private_data;
 	struct fcrypt *fcr;
 	u32 ses;
@@ -2293,38 +2293,55 @@ static long aml_crypto_dev_ioctl(struct file *filp,
 		return ret;
 
 	case DO_CRYPTO:
-		ret = kcop_from_user(&kcop, fcr, arg);
+		kcop = kzalloc(sizeof(*kcop), GFP_KERNEL);
+		if (!kcop)
+			return -ENOMEM;
+
+		ret = kcop_from_user(kcop, fcr, arg);
 		if (unlikely(ret)) {
 			dbgp(2, "Error copying from user");
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		ret = crypto_run(fcr, &kcop);
+		ret = crypto_run(fcr, kcop);
 		if (unlikely(ret)) {
 			dbgp(2, "Error in crypto_run");
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		return kcop_to_user(&kcop, fcr, arg);
+		ret = kcop_to_user(kcop, fcr, arg);
+		kfree(kcop);
+
+		return ret;
 
 	case DO_HMAC:
-		ret = kcop_from_user(&kcop, fcr, arg);
+		kcop = kzalloc(sizeof(*kcop), GFP_KERNEL);
+		if (!kcop)
+			return -ENOMEM;
+
+		ret = kcop_from_user(kcop, fcr, arg);
 		if (unlikely(ret)) {
 			dbgp(2, "Error copying from user");
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		ret = hmac_run(fcr, &kcop);
+		ret = hmac_run(fcr, kcop);
 		if (unlikely(ret)) {
 			dbgp(2, "Error in crypto_run");
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		return kcop_to_user(&kcop, fcr, arg);
+		ret = kcop_to_user(kcop, fcr, arg);
+		kfree(kcop);
+		return ret;
 
 	default:
 		dbgp(3, "unknown cmd: %d\n", cmd);
@@ -2476,11 +2493,18 @@ static inline void crypt_op_to_compat(struct crypt_op *cop,
 static int compat_kcop_from_user(struct kernel_crypt_op *kcop,
 				 struct fcrypt *fcr, void __user *arg)
 {
-	struct compat_crypt_op compat_cop;
+	struct compat_crypt_op *compat_cop = NULL;
 
-	if (unlikely(copy_from_user(&compat_cop, arg, sizeof(compat_cop))))
+	compat_cop = kzalloc(sizeof(*compat_cop), GFP_KERNEL);
+	if (!compat_cop)
+		return -ENOMEM;
+
+	if (unlikely(copy_from_user(compat_cop, arg, sizeof(*compat_cop)))) {
+		kfree(compat_cop);
 		return -EFAULT;
-	compat_to_crypt_op(&compat_cop, &kcop->cop);
+	}
+	compat_to_crypt_op(compat_cop, &kcop->cop);
+	kfree(compat_cop);
 
 	if (kcop->cop.num_src_bufs > MAX_CRYPTO_BUFFERS ||
 	    kcop->cop.num_dst_bufs > MAX_CRYPTO_BUFFERS) {
@@ -2496,20 +2520,27 @@ static int compat_kcop_to_user(struct kernel_crypt_op *kcop,
 			       struct fcrypt *fcr, void __user *arg)
 {
 	int ret;
-	struct compat_crypt_op compat_cop;
+	struct compat_crypt_op *compat_cop = NULL;
+
+	compat_cop = kzalloc(sizeof(*compat_cop), GFP_KERNEL);
+	if (!compat_cop)
+		return -ENOMEM;
 
 	ret = fill_cop_from_kcop(kcop, fcr);
 	kfree(kcop->param);
 	if (unlikely(ret)) {
+		kfree(compat_cop);
 		dbgp(2, "Error in fill_cop_from_kcop");
 		return ret;
 	}
-	crypt_op_to_compat(&kcop->cop, &compat_cop);
+	crypt_op_to_compat(&kcop->cop, compat_cop);
 
-	if (unlikely(copy_to_user(arg, &compat_cop, sizeof(compat_cop)))) {
+	if (unlikely(copy_to_user(arg, compat_cop, sizeof(*compat_cop)))) {
+		kfree(compat_cop);
 		dbgp(2, "Error copying to user");
 		return -EFAULT;
 	}
+	kfree(compat_cop);
 	return 0;
 }
 
@@ -2519,7 +2550,7 @@ static long aml_crypto_dev_compat_ioctl(struct file *filp,
 	void __user *arg = (void __user *)arg_;
 	struct crypt_priv *pcr = filp->private_data;
 	struct fcrypt *fcr;
-	struct kernel_crypt_op kcop;
+	struct kernel_crypt_op *kcop = NULL;
 	int ret = 0;
 
 	if (unlikely(!pcr)) {
@@ -2535,33 +2566,52 @@ static long aml_crypto_dev_compat_ioctl(struct file *filp,
 	case CLOSE_SESSION:
 		return aml_crypto_dev_ioctl(filp, cmd, arg_);
 	case DO_CRYPTO_COMPAT:
-		ret = compat_kcop_from_user(&kcop, fcr, arg);
+		kcop = kzalloc(sizeof(*kcop), GFP_KERNEL);
+		if (!kcop)
+			return -ENOMEM;
+
+		ret = compat_kcop_from_user(kcop, fcr, arg);
 		if (unlikely(ret)) {
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		ret = crypto_run(fcr, &kcop);
+		ret = crypto_run(fcr, kcop);
 		if (unlikely(ret)) {
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		return compat_kcop_to_user(&kcop, fcr, arg);
+		ret = compat_kcop_to_user(kcop, fcr, arg);
+		kfree(kcop);
+
+		return ret;
+
 	case DO_HMAC_COMPAT:
-		ret = compat_kcop_from_user(&kcop, fcr, arg);
+		kcop = kzalloc(sizeof(*kcop), GFP_KERNEL);
+		if (!kcop)
+			return -ENOMEM;
+
+		ret = compat_kcop_from_user(kcop, fcr, arg);
 		if (unlikely(ret)) {
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		ret = hmac_run(fcr, &kcop);
+		ret = hmac_run(fcr, kcop);
 		if (unlikely(ret)) {
-			kfree(kcop.param);
+			kfree(kcop->param);
+			kfree(kcop);
 			return ret;
 		}
 
-		return compat_kcop_to_user(&kcop, fcr, arg);
+		ret = compat_kcop_to_user(kcop, fcr, arg);
+		kfree(kcop);
+
+		return ret;
 	default:
 		dbgp(3, "unknown cmd: %d\n", cmd);
 		ret = -EINVAL;
