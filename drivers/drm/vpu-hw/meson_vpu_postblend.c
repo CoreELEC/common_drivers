@@ -1784,10 +1784,21 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 				reg_ops->rdma_write_reg(VIU_OSD2_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD3) {
 				reg_val = meson_drm_read_reg(VIU_OSD3_PATH_CTRL);
-				reg_val = reg_val | BIT(0);  /* osd scaler before osdblend */
-				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
-						BIT(12) | /* hdr after osdblend */
-						BIT(17)); /* zero-pad the lower bits */
+				if (crtc_index == 0) {
+					reg_val = reg_val |
+							BIT(0);  /* osd scaler before osdblend */
+					reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+							BIT(12) | /* hdr after osdblend */
+							BIT(17)); /* zero-pad the lower bits */
+				} else if (crtc_index == 1) {
+					reg_val = reg_val |
+							BIT(0)  |  /* osd scaler before osdblend */
+							BIT(12) | /* hdr before osdblend */
+							BIT(16);  /* bypass osd dolby */
+					reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
+							BIT(15) | /* no bypass hdr */
+							BIT(17)); /* zero-pad the lower bits */
+				}
 				reg_ops->rdma_write_reg(VIU_OSD3_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD4) {
 				reg_val = meson_drm_read_reg(VIU_OSD4_PATH_CTRL);
