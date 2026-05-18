@@ -70,12 +70,12 @@ void save_gpu_cool_para(int i, struct device_node *n, int j)
 {
 }
 
-struct gpufreq_cooling_device *gpufreq_cooling_alloc(void)
+static inline struct gpufreq_cooling_device *gpufreq_cooling_alloc(void)
 {
 	return NULL;
 }
 
-int gpufreq_cooling_register(struct gpufreq_cooling_device *gpufreq_dev)
+static inline int gpufreq_cooling_register(struct gpufreq_cooling_device *gpufreq_dev)
 {
 	return 0;
 }

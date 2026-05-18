@@ -36,8 +36,6 @@
 		spi3 = &spisg_f;
 		i3c0 = &i3c0;
 		i3c1 = &i3c1;
-		tsensor0 = &p_tsensor;
-		tsensor1 = &c_tsensor;
 		ethernet0 = &ethmac_a;
 		ethernet1 = &ethmac_b;
 	};

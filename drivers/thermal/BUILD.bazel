@@ -11,7 +11,9 @@ ddk_module(
     conditional_srcs = {
         "CONFIG_AMLOGIC_AMLOGIC_THERMAL": {
             True: [
+                "thermal_init.c",
                 "meson_tsensor.c",
+                "amlogic_thermal.c",
                 "vir_tsens.c",
             ],
         },

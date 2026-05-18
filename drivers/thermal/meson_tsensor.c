@@ -977,7 +977,7 @@ static void meson_tsensor_shutdown(struct platform_device *pdev)
 	meson_tsensor_suspend(&pdev->dev);
 }
 
-static struct platform_driver meson_tsensor_driver = {
+struct platform_driver meson_tsensor_driver = {
 	.driver = {
 		.name   = "meson-tsensor",
 		.pm     = &meson_tsensor_pm_ops,
@@ -987,32 +987,6 @@ static struct platform_driver meson_tsensor_driver = {
 	.remove	= meson_tsensor_remove,
 	.shutdown = meson_tsensor_shutdown
 };
-
-static int __init meson_platdrv_init(void)
-{
-	int ret;
-
-	ret = platform_driver_register(&(meson_tsensor_driver));
-	if (ret)
-		return ret;
-
-	platform_driver_register(&vir_tsens_platdrv);
-	platform_driver_register(&ddr_control_platdrv);
-	platform_driver_register(&cpucore_cooling_platdrv);
-	return platform_driver_register(&(meson_cooldev_platdrv));
-}
-
-static __exit void meson_platdrv_exit(void)
-{
-	platform_driver_unregister(&meson_cooldev_platdrv);
-	platform_driver_unregister(&cpucore_cooling_platdrv);
-	platform_driver_unregister(&ddr_control_platdrv);
-	platform_driver_unregister(&vir_tsens_platdrv);
-	platform_driver_unregister(&meson_tsensor_driver);
-}
-
-module_init(meson_platdrv_init);
-module_exit(meson_platdrv_exit);
 
 MODULE_DESCRIPTION("MESON Tsensor Driver");
 MODULE_AUTHOR("Huan Biao <huan.biao@amlogic.com>");

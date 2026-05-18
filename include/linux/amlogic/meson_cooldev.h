@@ -25,7 +25,7 @@ struct thermal_cooling_device;
 int meson_gcooldev_min_update(struct thermal_cooling_device *cdev);
 #else
 struct thermal_cooling_device;
-int meson_gcooldev_min_update(struct thermal_cooling_device *cdev)
+static inline int meson_gcooldev_min_update(struct thermal_cooling_device *cdev)
 {
 	return 0;
 }

@@ -198,3 +198,6 @@
 
 #amlogic-pcie.ko
   __devm_reset_control_bulk_get
+
+#amlogic-thermal.ko
+  thermal_zone_device_priv
