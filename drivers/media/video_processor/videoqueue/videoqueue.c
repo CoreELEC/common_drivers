@@ -68,7 +68,7 @@
 #define VSYNC_MAIN_NORMAL 0x1
 #define VSYNC_PIP_NORMAL 0x2
 
-#define UNDEQUEU_COUNT 5
+#define VT_HOLD_COUNT 2
 #define CHECK_DELAYE_COUNT 6
 
 #define VIDEO_QUEUE_MAIN 0
@@ -587,7 +587,6 @@ void videoqueue_recycle_vf(void *caller_data, struct file *file, int instance_id
 static int videoqueue_dequeue_buf(struct video_queue_dev *dev, bool is_I, bool is_vt_connect)
 {
 	int ret = 0, i = 0;
-	int vq_hold_count = 0;
 	struct sync_file *sync_file = NULL;
 	struct file *free_file, *fence_file;
 
@@ -596,12 +595,8 @@ static int videoqueue_dequeue_buf(struct video_queue_dev *dev, bool is_I, bool i
 		return -1;
 	}
 
-	vq_hold_count = FILE_CNT - UNDEQUEU_COUNT;
-	if (is_I)
-		vq_hold_count++;
-
 	while (1) {
-		if (dev->queue_count - dev->dq_count <= vq_hold_count && is_vt_connect) {
+		if (dev->queue_count - dev->dq_count <= VT_HOLD_COUNT && is_vt_connect) {
 			vq_print(dev->inst, P_OTHER, "first new frames no need dq.\n");
 			break;
 		}
