@@ -6030,6 +6030,7 @@ void hdmitx_cuva_dhdr_init(struct hdmitx_common *tx_comm)
 	case MESON_CPU_ID_S7:
 	case MESON_CPU_ID_S7D:
 	case MESON_CPU_ID_S6:
+	case MESON_CPU_ID_A9:
 		/* when booting, write all zero data to cuva dhdr buffer, just once */
 		pr_info("cuva d_hdr_init\n");
 		/* [0]reg_pkt_gen; [1]reg_pkt_gen_en */
@@ -6073,6 +6074,7 @@ void hdmitx_cuva_dhdr_reset(struct hdmitx_common *tx_comm)
 	case MESON_CPU_ID_S7:
 	case MESON_CPU_ID_S7D:
 	case MESON_CPU_ID_S6:
+	case MESON_CPU_ID_A9:
 		/* only in cuva receiver mode, reset d_hdr when cuva signal needs to be output */
 		if (tx_comm->cuva_dhdr_reset) {
 			/* reset d_hdr */
