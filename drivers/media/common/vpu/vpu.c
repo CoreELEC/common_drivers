@@ -3331,8 +3331,8 @@ static struct vpu_data_s vpu_data_a9 = {
 	.clk_gate_table = NULL,
 
 	.vpu_dmc_axi_table = NULL,
-	.vpu_arb_urg_ctrl_table = NULL,
-	.vpp_ofifo_urg_ctrl_table = NULL,
+	.vpu_arb_urg_ctrl_table = vpu_arb_urg_ctrl_a9,
+	.vpp_ofifo_urg_ctrl_table = vpp_ofifo_urg_ctrl_a9,
 
 	.power_on = vpu_power_on_new,
 	.power_off = vpu_power_off_new,
@@ -3530,7 +3530,8 @@ static void vpu_resume_interface(void)
 		vpu_conf.data->chip_type == VPU_CHIP_T6D ||
 		vpu_conf.data->chip_type == VPU_CHIP_T5M ||
 		vpu_conf.data->chip_type == VPU_CHIP_T6W ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6X)
+		vpu_conf.data->chip_type == VPU_CHIP_T6X ||
+		vpu_conf.data->chip_type == VPU_CHIP_A9)
 		ret = init_arb_urgent_table();
 
 	suspend_status = false;
@@ -3640,7 +3641,8 @@ static int vpu_probe(struct platform_device *pdev)
 		vpu_conf.data->chip_type == VPU_CHIP_T6D ||
 		vpu_conf.data->chip_type == VPU_CHIP_T5M ||
 		vpu_conf.data->chip_type == VPU_CHIP_T6W ||
-		vpu_conf.data->chip_type == VPU_CHIP_T6X)
+		vpu_conf.data->chip_type == VPU_CHIP_T6X ||
+		vpu_conf.data->chip_type == VPU_CHIP_A9)
 		ret = init_arb_urgent_table();
 	if (ret)
 		vpu_power_init();
@@ -3710,6 +3712,7 @@ static int vpu_restore(struct device *dev)
 	vpu_resume_interface();
 	VPUPR("thaw clk: %uHz(0x%x) suspend_status = %d\n",
 	      vpu_clk_get(), (vpu_clk_read(vpu_conf.data->vpu_clk_reg)), suspend_status);
+
 	return 0;
 }
 

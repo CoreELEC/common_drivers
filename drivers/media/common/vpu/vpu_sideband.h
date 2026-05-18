@@ -63,6 +63,7 @@ extern struct vpu_sideband_ctrl_s vpu_arb_urg_ctrl_txhd2[];
 extern struct vpu_sideband_ctrl_s vpu_arb_urg_ctrl_t5w[];
 extern struct vpu_sideband_ctrl_s vpu_arb_urg_ctrl_t3[];
 extern struct vpu_sideband_ctrl_s vpu_arb_urg_ctrl_s7[];
+extern struct vpu_sideband_ctrl_s vpu_arb_urg_ctrl_a9[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_t7[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_t3x[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_t6w[];
@@ -71,6 +72,7 @@ extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_txhd2[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_t5w[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_t3[];
 extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_s7[];
+extern struct vpu_sideband_ctrl_s vpp_ofifo_urg_ctrl_a9[];
 
 void set_vpu_sideband_init(void);
 ssize_t vpu_sideband_show(const struct class *class,

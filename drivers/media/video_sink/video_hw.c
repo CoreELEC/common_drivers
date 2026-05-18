@@ -19332,6 +19332,11 @@ static int _video_hw_init(void)
 		WRITE_VCBUS_REG_BITS
 			(VPP_OFIFO_SIZE, ofifo_size,
 			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
+		/* a9 vpp1 ofifo size */
+		if (video_is_meson_a9_cpu())
+			WRITE_VCBUS_REG_BITS
+			(VPP1_LFIFO_CTRL, ofifo_size,
+			VPP_OFIFO_SIZE_BIT, VPP_OFIFO_SIZE_WID);
 		WRITE_VCBUS_REG_BITS
 			(VPP_MATRIX_CTRL, 0, 10, 5);
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXTVBB))

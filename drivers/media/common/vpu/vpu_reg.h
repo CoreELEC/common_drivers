@@ -126,6 +126,8 @@
 //bit0	arb rd0  sideband ctrl by vpp0 line fifo
 
 #define VPP_OFIFO_URG_CTRL          0x1dd8
+//for a9 vpp1
+#define VPP1_URGENT_CTRL            0x648e
 
 //VPU_ARB_URG_CTRL
 #define VPU_ARB_URG_CTRL1           0x2735
@@ -511,6 +513,33 @@
 //bit2	reg_axi1_rd_vpp0_ofifo_urgent_enable
 //bit1	reg_axi0_rd_rdma_urgent_enable
 //bit0	reg_axi0_rd_vpp0_ofifo_urgent_enable
+
+#define VPU_ARB_URG_CTRL_A9                           0x2747
+//bit29    surper urgent enable
+//bit28    sideband enable
+//bit27:26 reg_di_sxi_wr_super_urgent_offset
+//bit25:24 reg_axi0_wr_super_urgent_offset
+//bit23:22 reg_axi2_rd_super_urgent_offset
+//bit21:20 reg_di_axi_rd_super_urgent_offset
+//bit 19:18 reg_axi0_rd_super_urgent_offset
+//bit 17 reg_axi2_wr_super_urgent_enable
+//bit 16 reg_di_axi_wr_super_urgent_enable
+//bit 15 reg_axi0_wr_super_urgent_enable
+//bit 14 reg_axi2_rd_super_urgent_enable
+//bit 13 reg_di_axi_rd_super_urgent_enable
+//bit 12 reg_axi0_rd_super_urgent_enable
+//bit 11 reg_axi2_wr_vdin1_lfifo_urgent_enable
+//bit 10 reg_axi2_wr_vdin0_lfifo_urgent_enable
+//bit 9  reg_axi0_wr_vdin1_lfifo_urgent_enable
+//bit 8  reg_axi0_wr_vdin0_lfifo_urgent_enable
+//bit 7  reg_axi2_rd_vpp1_ofifo_urgent_enable
+//bit 6  reg_axi2_rd_rdma_urgent_enable
+//bit 5  arb rd2  sideband ctrl by rdma
+//bit 4  reg_axi2_rd_vpp0_ofifo_urgent_enable
+//bit 3  reg_axi0_rd_vpp2_ofifo_urgent_enable
+//bit 2  reg_axi0_rd_vpp1_ofifo_urgent_enable
+//bit 1  reg_axi0_rd_rdma_urgent_enable
+//bit 0  reg_axi0_rd_vpp0_ofifo_urgent_enable
 
 #define VPU_VOUT_BLEND_DUMDATA_A4    0x0041
 #define VPP_VD1_MATRIX_OFFSET0_1_A4  0x0189

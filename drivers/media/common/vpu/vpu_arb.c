@@ -1668,5 +1668,13 @@ int init_arb_urgent_table(void)
 	if (vpu_conf.data->vpu_arb_type == ARB_RD0123_WR012 ||
 		vpu_conf.data->vpu_arb_type == ARB_RD02_WR02)
 		init_super_urgent();
+	//temply add for a9
+	/*enable super urgent top control*/
+	if (vpu_conf.data->chip_type == VPU_CHIP_A9) {
+		vpu_vcbus_setb(VPU_ARB_URG_CTRL, 1, 29, 1);
+		vpu_vcbus_setb(VPU_ARB_URG_CTRL, 0x9, 12, 6);
+		vpu_vcbus_setb(VPU_ARB_URG_CTRL, 3, 18, 2);
+		vpu_vcbus_setb(VPU_ARB_URG_CTRL, 3, 24, 2);
+	}
 	return 0;
 }

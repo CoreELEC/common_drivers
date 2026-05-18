@@ -386,6 +386,9 @@
 #define VPP1_TOP_CTRL           0x6480
 #define VPP1_CRC_RO             0x6483
 
+/* a9 vpp1 ofifo */
+#define VPP1_LFIFO_CTRL                            0x6482
+
 /* pip alpha gen */
 #define VD1_PIP_ALPH_CTRL                          0x5880
 #define VD1_PIP_ALPH_SCP_H_0                       0x5881
