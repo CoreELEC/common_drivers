@@ -1940,7 +1940,7 @@
 						0xfe010330 0x4
 						0xfe4ae000 0x64>;
 				reset-level = <0x48>;
-				phy-reset-level-bits = <11>;
+				phy-reset-level-bits = <20>;
 				usb-comb-reset-bit = <13>;
 				usb-apb-reset-bit = <15>;
 				pll-settings = <0x0
