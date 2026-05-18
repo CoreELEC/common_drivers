@@ -1039,6 +1039,17 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	dpss_in_buf->vf.pp_info = (void *)pp_info;
 	dpss_in_buf->vf.dpss_data = NULL;
 
+	if (vf->dpss_flg & DPSS_FLG_USE_DW) {
+		dpss_in_buf->vf.type &= ~VIDTYPE_COMPRESS;
+		dpss_in_buf->vf.compWidth = 0;
+		dpss_in_buf->vf.compHeight = 0;
+		dpss_in_buf->vf.bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
+		if (vf->height & 1) {
+			dp_print(dev->index, PRINT_OTHER, "height not 2 aligned.\n");
+			dpss_in_buf->vf.height -= 1;
+		}
+	}
+
 	dp_print(dev->index, PRINT_OTHER,
 		"%s: frame_index=%d, magic_code=0x%x, ud_addr=%p, ud_len=%d, type=%x, flag=%x, compWidth=%d, compHeight=%d, width=%d, height=%d.\n",
 		__func__,
@@ -1169,13 +1180,7 @@ static void check_window_config(struct dpss_process_dev *dev, struct vframe_s *v
 	} else if (axis[3] * 100 > display_scaling_factor[0] * used_vf_height &&
 		axis[3] * 100 <= display_scaling_factor[1] * used_vf_height) {
 		dp_print(dev->index, PRINT_OTHER, "window_config: nr need use dw.\n");
-		vf->type &= ~VIDTYPE_COMPRESS;
 		vf->dpss_flg |= DPSS_FLG_USE_DW;
-		vf->bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
-		if (vf->height & 1) {
-			dp_print(dev->index, PRINT_OTHER, "height not 2 aligned.\n");
-			vf->height -= 1;
-		}
 	} else {
 		dp_print(dev->index, PRINT_OTHER, "window_config:normal dpss flow.\n");
 		if (axis[3] * 100 < display_scaling_factor[3] * used_vf_height) {
