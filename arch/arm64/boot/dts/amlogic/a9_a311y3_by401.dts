@@ -1177,14 +1177,36 @@
 	status = "okay";
 };
 
-//&tdma {
-//	pinctrl-names = "tdm_pins";
-//	pinctrl-0 = <&bt_pcm_gpio_x_pins
-//		&tdm_d1_pins
-//		&tdm_d0_pins
-//		&tdma_clk_pins>;
-//};
+&tdma {
+	pinctrl-names = "tdm_pins";
+	pinctrl-0 = <&bt_pcm_gpio_x_pins
+		&tdm_d0_pins
+		&tdm_d1_pins
+		&tdma_clk_pins>;
+};
 
+&pinctrl_audio {
+	tdm_d0_pins: tdm_d0_pin {
+		mux {
+			groups = "tdm_d0";
+			function = "tdmouta_lane0";
+		};
+	};
+
+	tdm_d1_pins: tdm_d1_pin {
+		mux {
+			groups = "tdm_d1";
+			function = "tdmina_lane0";
+		};
+	};
+
+	tdma_clk_pins: tdm_clk_pin {
+		mux {
+			groups = "tdm_sclk0", "tdm_lrclk0";
+			function = "tdm_clk_outa";
+		};
+	};
+};
 //&tdmc {
 //	pinctrl-names = "tdm_pins";
 //	pinctrl-0 = <&i2s_gpio_d_pins_1
@@ -1199,6 +1221,16 @@
 //};
 
 &periphs_pinctrl {
+	bt_pcm_gpio_x_pins: gpio_x_pin {
+		mux { /* GPIOX_10, GPIOX_9, GPIOX_8 OUT, GPIOX_7 IN */
+			groups = "tdm_sclk0",
+				"tdm_fs0",
+				"tdm_d0",
+				"tdm_d1";
+			function = "tdm";
+		};
+	};
+
 	dvb_s_ts0_pins: dvb_s_ts0_pins {
 		tsin_a {
 			groups = "tsin_a_sop",
