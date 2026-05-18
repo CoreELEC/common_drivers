@@ -467,6 +467,15 @@ int DeviceRead(Port_t *port, AW_U8 reg_addr, AW_U8 length, AW_U8 *buf)
 			pr_err("msg %s i2c read error: %d\n", __func__, ret);
 		else
 			break;
+#ifdef MESON_AW
+		if (reg_addr == regDeviceID) {
+			/* If we fail to read the Device ID, it's likely that the chip isn't
+			 * responding at all. In that case, there's no point in retrying
+			 * multiple times in quick succession, so break out of the loop.
+			 */
+			break;
+		}
+#endif
 	}
 
 	if (buf != NULL)
@@ -1562,7 +1571,9 @@ void aw_InitializeCore(struct aw35615_chip *chip)
 AW_BOOL aw_IsDeviceValid(struct aw35615_chip *chip)
 {
 	int ret = 0;
+#ifndef MESON_AW
 	int i, j;
+#endif
 	AW_U8 val = 0, cnt = 0;
 	AW_BOOL id_ret = AW_FALSE;
 
@@ -1571,6 +1582,44 @@ AW_BOOL aw_IsDeviceValid(struct aw35615_chip *chip)
 		return id_ret;
 	}
 
+#ifdef MESON_AW
+	/* Read chip id */
+	ret = DeviceRead(&chip->port, (AW_U8)0x01, 1, &val);
+	if (ret < 0) {
+		dev_err(&chip->client->dev,
+				"%s - I2C error reading chip id Return: '%d'\n",
+				__func__, ret);
+		usleep_range(2000, 3000);
+		id_ret = AW_FALSE;
+	} else if ((val >> 4) == 0x9) {
+		id_ret = AW_TRUE;
+		chip->port.chip_id = val;
+		chip->vendor_id = 0x344f;
+		if (chip->port.chip_id == AW35615P_CHIP_ID ||
+				chip->port.chip_id == AW35615F_CHIP_ID) {
+			while (cnt++ < AW_FUSE_CHECK) {
+				DeviceRead(&chip->port, regStatus1a, 1,
+					&chip->port.Registers.Status.byte[1]);
+				if (chip->port.Registers.Status.FUSE_CRC_GD) {
+					AW_LOG("port%d fuse crc ok\n", chip->port.PortID);
+					break;
+				}
+				InitializeEfuseRetry(&chip->port);
+				usleep_range(2000, 3000);
+				dev_err(&chip->client->dev, "%s port%d retry fuse crc failed %d\n",
+					__func__, chip->port.PortID, cnt);
+			}
+		}
+	}
+	if (id_ret) {
+		AW_LOG("The port%d (0x%x) address matching successful\n",
+			chip->port.PortID, chip->client->addr);
+	} else {
+		AW_LOG("The port%d (0x%x) address does not match, try (0x24)\n",
+			chip->port.PortID, chip->client->addr);
+		chip->client->addr = (unsigned short)AW35615FSlaveAddr;
+	}
+#else
 	for (j = 0; j < 2; j++) {
 		for (i = 0; i < 5; i++) {
 			/* Read chip id */
@@ -1607,6 +1656,7 @@ AW_BOOL aw_IsDeviceValid(struct aw35615_chip *chip)
 		AW_LOG("The port%d (0x%x) address does not match, try (0x24)\n", chip->port.PortID, chip->client->addr);
 		chip->client->addr = (unsigned short)AW35615FSlaveAddr;
 	}
+#endif
 
 	AW_LOG("Device check passed chip id = 0x%x id_ret = %d\n", val, id_ret);
 

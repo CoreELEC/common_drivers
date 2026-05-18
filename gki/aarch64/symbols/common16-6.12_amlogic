@@ -146,6 +146,15 @@
   usb_role_switch_get
   trace_set_clr_event
 
+#tcpci-husb311.ko
+  i2c_smbus_read_word_data
+  regmap_raw_read
+  tcpci_get_tcpm_port
+  tcpci_irq
+  tcpci_register_port
+  tcpci_unregister_port
+  tcpm_tcpc_reset
+
 #typec-mux-meson.ko
   typec_mux_get_drvdata
   typec_mux_register

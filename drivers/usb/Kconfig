@@ -62,6 +62,7 @@ config MESON_USBPHY
 if TYPEC
 
 source "$(COMMON_DRIVERS_DIR)/drivers/usb/typec/aw35615/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/usb/typec/husb311/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/usb/typec/mux/Kconfig"
 
 endif # TYPEC

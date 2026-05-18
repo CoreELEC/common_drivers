@@ -11,6 +11,7 @@
 #include "mesona9_drm_dual.dtsi"
 #include "mesona9_audio.dtsi"
 #include "firmware_ab.dtsi"
+#include <dt-bindings/usb/pd.h>
 / {
 	amlogic-dt-id = "a9_a311y3_by401";
 	compatible = "a9_a311y3_by401";
@@ -947,7 +948,7 @@
 		reg = <0x10>;
 		status = "okay";
 	};
-	usbc0: aw35615@22 {
+	usbca0: aw35615@22 {
 		compatible = "awinic,aw35615";
 		reg = <0x22>;
 		awinic,int_n = <&gpiod 15 GPIO_ACTIVE_HIGH>;
@@ -973,7 +974,7 @@
 		aw35615,lpd_tim_set = <0x4>; /* set the LPD sensitivity */
 		status = "okay";
 
-		usb_con: connector {
+		usb_cona: connector {
 			compatible = "usb-c-connector";
 			label = "USB-C";
 			ports {
@@ -985,16 +986,64 @@
 
 				port@0 {
 					reg = <0>;
-					usbc0_mux: endpoint {
-						remote-endpoint = <&usbdp_phy0_mux>;
+					usbca0_mux: endpoint {
+						remote-endpoint = <&usbdp_phy0_muxa>;
 					};
 				};
 
 				port@1 {
 					reg = <1>;
 
+					usbca0_role_sw: endpoint {
+						remote-endpoint = <&usb3_0_role_switcha>;
+					};
+				};
+			};
+		};
+	};
+	usbc0: husb311@4e {
+		compatible = "hynetek,husb311";
+		reg = <0x4e>;
+		interrupt-parent = <&gpio_ao_intc>;
+		interrupts = <28 IRQ_TYPE_LEVEL_LOW>; //GPIOD_15
+		pinctrl-names = "default";
+		pinctrl-0 = <&husb311_int>;
+		gpios = <&gpioa 17 GPIO_ACTIVE_HIGH>;
+		//vbus-supply = <&type_c_5v_reg>;
+		status = "okay";
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "sink";
+			op-sink-microwatt = <1000000>;
+			sink-pdos =
+				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			source-pdos =
+				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
+			altmodes {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				altmode@0 {
+					reg = <0>;
+					svid = /bits/ 16 <0xff01>;
+					vdo = <0xffffffff>;
+				};
+			};
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
 					usbc0_role_sw: endpoint {
 						remote-endpoint = <&usb3_0_role_switch>;
+					};
+				};
+				port@1 {
+					reg = <1>;
+					usbc0_mux: endpoint {
+						remote-endpoint = <&usbdp_phy0_mux>;
 					};
 				};
 			};
@@ -1256,6 +1305,10 @@
 			reg = <0>;
 			remote-endpoint = <&usbc0_mux>;
 		};
+		usbdp_phy0_muxa: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&usbca0_mux>;
+		};
 	};
 };
 
@@ -1297,6 +1350,10 @@
 		usb3_0_role_switch: endpoint@0 {
 			reg = <0>;
 			remote-endpoint = <&usbc0_role_sw>;
+		};
+		usb3_0_role_switcha: endpoint@1 {
+			reg = <1>;
+			remote-endpoint = <&usbca0_role_sw>;
 		};
 	};
 };

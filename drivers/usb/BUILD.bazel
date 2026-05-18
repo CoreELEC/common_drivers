@@ -310,3 +310,33 @@ ddk_module(
         "//common_drivers/drivers/usb:typec-mux-meson",
     ]
 )
+
+ddk_module(
+    name = "tcpci-husb311",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_TYPEC_HUSB311": {
+            True: [
+                "typec/husb311/tcpci_husb311.c",
+            ],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = [
+        #"DEBUG",
+    ],
+    linux_includes = [
+    ],
+    out = "tcpci-husb311.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common_drivers/drivers/gki_tool:amlogic-gkitool",
+        "//common_drivers/drivers/i2c/busses:amlogic-i2c",
+        "//common_drivers/drivers/usb:amlogic-usb",
+        "//common_drivers/drivers/usb:typec-mux-meson",
+    ]
+)

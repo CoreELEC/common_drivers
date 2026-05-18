@@ -4395,6 +4395,12 @@
 				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 0)>;
 			output-high;
 		};
+
+		husb311_int: group-husb311-int-pin {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 15, 0)>;
+			input-enable;
+			bias-disable;
+		};
 	};
 };
 

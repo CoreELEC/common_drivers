@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#
+# awinic aw35615 pd controller driver configuration
+#
+
+config  TYPEC_HUSB311
+	tristate "HUSB311 Type-C PD"
+	depends on I2C
+	help
+		This option enables support for the HUSB311 Typec-C PD
+		connected through I2C.
+
+		To compile this driver as a module, choose M here: the
+		module will be called tcpci-husb311.
