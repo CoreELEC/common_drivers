@@ -1266,6 +1266,8 @@ static void dpss_process_task(struct dpss_process_dev *dev)
 		is_tv_path = true;
 	if (!is_tv_path)
 		check_window_config(dev, vf, received_frame);
+	if (dev->direct_mode_en && is_meson_t6w_cpu())
+		vf->dpss_flg |= DPSS_FLG_HIGH_BANDWIDTH;
 
 	if (dummy) {
 		drop_count = 0;
@@ -1661,6 +1663,9 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 
 	if (pp_info->dpss_flag | DPSS_FLG_PPS_SKIP)
 		vf->dpss_flg |= DPSS_FLG_PPS_SKIP;
+
+	if (pp_info->dpss_flag | DPSS_FLG_HIGH_BANDWIDTH)
+		vf->dpss_flg |= DPSS_FLG_HIGH_BANDWIDTH;
 
 	private_data->vf = *vf;
 	private_data->vf_p = vf;
