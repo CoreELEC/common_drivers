@@ -8448,6 +8448,37 @@ static bool send_hdmi_pkt
 	return flag;
 }
 
+static void send_zero_drm_pkt(const struct vinfo_s *vinfo)
+{
+	int i = 0;
+
+	hdr10_data.features =
+			(1 << 29)	/* video available */
+			| (5 << 26)	/* unspecified */
+			| (0 << 25)	/* limit */
+			| (1 << 24)	/* color available */
+			| (1 << 16)	/* bt709 */
+			| (1 << 8)	/* bt709 */
+			| (1 << 0);	/* bt709 */
+	for (i = 0; i < 3; i++) {
+		hdr10_data.primaries[i][0] = 0;
+		hdr10_data.primaries[i][1] = 0;
+	}
+	hdr10_data.white_point[0] = 0;
+	hdr10_data.white_point[1] = 0;
+	hdr10_data.luminance[0] = 0;
+	hdr10_data.luminance[1] = 0;
+	hdr10_data.max_content = 0;
+	hdr10_data.max_frame_average = 0;
+
+	if (vinfo && vinfo->vout_device &&
+		vinfo->vout_device->fresh_tx_hdr_pkt) {
+		pr_dv_dbg("send zero drm pkt\n");
+		vinfo->vout_device->fresh_tx_hdr_pkt
+				(vinfo->vout_device->tx_instance, &hdr10_data);
+	}
+}
+
 static void send_hdmi_pkt_ahead
 	(enum signal_format_enum dst_format,
 	 const struct vinfo_s *vinfo)
@@ -8479,19 +8510,25 @@ static void send_hdmi_pkt_ahead
 
 		if (vinfo && vinfo->vout_device &&
 			vinfo->vout_device->fresh_tx_vsif_pkt) {
-			if (dovi_ll_enable)
+			if (dovi_ll_enable) {
 				vinfo->vout_device->fresh_tx_vsif_pkt
 					(vinfo->vout_device->tx_instance, EOTF_T_DV_AHEAD,
 					diagnostic_enable
 					? RGB_10_12BIT : YUV422_BIT12,
 					&vsif, false);
-			else
+			} else {
+				/*When switching from hdr to dolby video playback for*/
+				/*adaptive sink-led mode, hdmitx needs to delete 444,8->422,12*/
+				/*hdr mode switching by sending zero drm pkt.*/
+				if (dolby_vision_policy == AMDV_FOLLOW_SOURCE)
+					send_zero_drm_pkt(vinfo);
 				vinfo->vout_device->fresh_tx_vsif_pkt
 					(vinfo->vout_device->tx_instance, EOTF_T_DV_AHEAD,
 					(amdv_target_mode ==
 					dovi_ll_enable)
 					? YUV422_BIT12 : RGB_8BIT, &vsif,
 					false);
+			}
 		}
 		pr_dv_dbg("send_hdmi_pkt ahead: %s\n",
 			     dovi_ll_enable ? "LL" : "DV");
