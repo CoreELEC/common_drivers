@@ -413,6 +413,20 @@
 		};
 
 		aml-audio-card,dai-link@5 {
+			mclk-fs = <128>;
+			continuous-clock;
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-spdifb";
+			cpu {
+				sound-dai = <&spdifb>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@6 {
 			mclk-fs = <256>;
 			continuous-clock;
 			suffix-name = "alsaPORT-loopback";
@@ -425,7 +439,7 @@
 			};
 		};
 
-		aml-audio-card,dai-link@6 {
+		aml-audio-card,dai-link@7 {
 			mclk-fs = <256>;
 			continuous-clock;
 			suffix-name = "alsaPORT-mixer";
@@ -438,7 +452,7 @@
 			};
 		};
 
-		aml-audio-card,dai-link@7 {
+		aml-audio-card,dai-link@8 {
 			mclk-fs = <256>;
 			suffix-name = "alsaPORT-Sed";
 			cpu {
@@ -448,7 +462,8 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
-		aml-audio-card,dai-link@8 {
+
+		aml-audio-card,dai-link@9 {
 			mclk-fs = <256>;
 			suffix-name = "alsaPORT-tv";
 			cpu {
@@ -459,18 +474,6 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
-
-		aml-audio-card,dai-link@9 {
-			mclk-fs = <256>;
-			suffix-name = "alsaPORT-earc";
-			cpu {
-				sound-dai = <&earc>;
-				system-clock-frequency = <12288000>;
-			};
-			codec {
-				sound-dai = <&dummy_codec>;
-			};
-		 };
 	};
 	/* Audio Related end */
 	dvb-extern {

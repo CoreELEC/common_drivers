@@ -410,6 +410,20 @@
 		};
 
 		aml-audio-card,dai-link@5 {
+			mclk-fs = <128>;
+			continuous-clock;
+			/* suffix-name, sync with android audio hal used for */
+			suffix-name = "alsaPORT-spdifb";
+			cpu {
+				sound-dai = <&spdifb>;
+				system-clock-frequency = <6144000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+
+		aml-audio-card,dai-link@6 {
 			mclk-fs = <256>;
 			continuous-clock;
 			suffix-name = "alsaPORT-loopback";
@@ -422,7 +436,7 @@
 			};
 		};
 
-		aml-audio-card,dai-link@6 {
+		aml-audio-card,dai-link@7 {
 			mclk-fs = <256>;
 			continuous-clock;
 			suffix-name = "alsaPORT-mixer";
@@ -435,7 +449,7 @@
 			};
 		};
 
-		aml-audio-card,dai-link@7 {
+		aml-audio-card,dai-link@8 {
 			mclk-fs = <256>;
 			suffix-name = "alsaPORT-Sed";
 			cpu {
@@ -446,7 +460,7 @@
 			};
 		};
 
-		aml-audio-card,dai-link@8 {
+		aml-audio-card,dai-link@9 {
 			mclk-fs = <256>;
 			suffix-name = "alsaPORT-tv";
 			cpu {
@@ -1716,6 +1730,14 @@
 			&tdm_d6_pins
 			&tdmb_clk_pins>;
 	pinctrl-1 = <&tdmout_b_gpio>;
+	Channel_Mask {
+		/*i2s has 4 pins, 8channel, mux output*/
+		Spdif_samesource_Channel_Mask = "i2s_0/1";
+	};
+};
+
+&aed {
+	channel_mask = <0x3>;
 };
 
 &pdma {
@@ -1725,8 +1747,16 @@
 
 &spdifa {
 
-		pinctrl-names = "spdif_pins",
-			"spdif_pins_mute";
-		pinctrl-0 = <&spdifout_a>;
-		pinctrl-1 = <&spdifout_a_mute>;
+	pinctrl-names = "spdif_pins",
+		"spdif_pins_mute";
+	pinctrl-0 = <&spdifout_a>;
+	pinctrl-1 = <&spdifout_a_mute>;
+};
+
+/*only 2 ch output*/
+&tdm_d5_pins {
+	mux {
+		groups = "tdm_d5";
+		function = "tdmoutb_lane0";
+	};
 };
