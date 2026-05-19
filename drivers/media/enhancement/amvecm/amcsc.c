@@ -9993,7 +9993,8 @@ int amvecm_matrix_process(struct vframe_s *vf,
 		if (chip_type_id == chip_s5 ||
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_s7 ||
-			chip_type_id == chip_s7d)
+			chip_type_id == chip_s7d ||
+			chip_type_id == chip_a9)
 			flags |= CSC_FLAG_FORCE_PACKET;
 
 		if ((video_process_flags[vd_path] & PROC_FLAG_FORCE_PROCESS) ||
