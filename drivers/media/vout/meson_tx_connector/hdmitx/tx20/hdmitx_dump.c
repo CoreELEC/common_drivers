@@ -1645,10 +1645,17 @@ static const struct proc_ops dump_hdmirx_info_pops = {
 static int dump_clkmsr_show(struct seq_file *s, void *v)
 {
 	struct hdmitx_common *tx_comm = s->private;
-	char buf[1000];
+	char *buf;
+
+	buf = kzalloc(1000, GFP_KERNEL);
+	if (!buf) {
+		HDMITX_ERROR("%s: kzalloc failed\n", __func__);
+		return -ENOMEM;
+	}
 
 	tx_comm->tx_hw->get_clk(buf, 1000);
 	seq_printf(s, "%s\n", buf);
+	kfree(buf);
 	return 0;
 }
 
