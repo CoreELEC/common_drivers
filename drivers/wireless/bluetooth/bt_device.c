@@ -60,13 +60,10 @@ char *btmac;
 __module_param(btmac, charp, 0644);
 static struct class *bt_addr_class;
 static int btwake_evt;
-static int btirq_flag;
 static int btpower_evt;
-static int flag_n;
-static int flag_p;
-static int cnt;
 static u32 cus_wakeup_key = KEY_NETFLIX;
 
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && defined(CONFIG_AMLOGIC_GX_SUSPEND)
 #ifndef CONFIG_AMLOGIC_BT_WAKE_NOT_REPORT
 static int distinguish_module(void)
 {
@@ -95,6 +92,7 @@ static void bt_report_key(struct platform_device *pdev, u32 wakeup_key)
 		input_sync(prdata->pdata->input_dev);
 	}
 }
+#endif
 #endif
 
 static ssize_t value_show(const struct class *class,
@@ -249,7 +247,6 @@ static void bt_device_off(struct bt_dev_data *pdata)
 static void bt_device_init(struct bt_dev_data *pdata)
 {
 	btpower_evt = 0;
-	btirq_flag = 0;
 
 	if (pdata->gpio_reset > 0)
 		gpio_request(pdata->gpio_reset, BT_RFKILL);
@@ -352,11 +349,12 @@ static int bt_suspend(struct platform_device *pdev,
 
 static int bt_resume(struct platform_device *pdev)
 {
-	unsigned int resume_reason = get_resume_method();
+	btwake_evt = 0;
 
 	pr_debug("bt resume\n");
 
-	btwake_evt = 0;
+#if defined(CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND) && defined(CONFIG_AMLOGIC_GX_SUSPEND)
+	unsigned int resume_reason = get_resume_method();
 
 	pr_info("%s: resume_reason:%u\n", __func__, resume_reason);
 
@@ -364,10 +362,6 @@ static int bt_resume(struct platform_device *pdev)
 	case RTC_WAKEUP:
 	case AUTO_WAKEUP:
 		btwake_evt = 1;
-		btirq_flag = 0;
-		flag_n = 0;
-		flag_p = 0;
-		cnt = 0;
 		break;
 #ifndef CONFIG_AMLOGIC_BT_WAKE_NOT_REPORT
 	case BT_WAKEUP:
@@ -380,6 +374,7 @@ static int bt_resume(struct platform_device *pdev)
 	default:
 		break;
 	}
+#endif
 
 	return 0;
 }
