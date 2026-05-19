@@ -1193,6 +1193,13 @@ static void ratio_adjust_for_high_freq(const struct vinfo_s *vinfo,
 			int *min_ratio_1000, u64 *cur_vpp_speed_factor,
 			s32 height_in, s32 width_in, s32 height_out, s32 width_out)
 {
+	if (is_meson_s6_cpu()) {
+		/* 4k input, 4k60hz output */
+		*min_ratio_1000 = round_div(min_skip_ratio, 1105, 1250);
+		*cur_vpp_speed_factor =
+			div_u64((u64)vpp_speed_factor * 0x129, 0x110);
+	}
+
 	if (is_meson_t6w_cpu()) {
 		if (is_4k1k180hz_out(vinfo)) {
 			*min_ratio_1000 = round_div(min_skip_ratio, 1840, 1250);
