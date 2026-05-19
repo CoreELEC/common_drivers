@@ -16,6 +16,10 @@ extern struct platform_driver meson_spicc_driver;
 extern struct platform_driver meson_spicc_v2_driver;
 #endif
 
+#ifdef CONFIG_SPI_AMLOGIC_SPISG
+extern struct platform_driver amlogic_spisg_driver;
+#endif
+
 #ifdef CONFIG_AMLOGIC_SPI_MESON_SPIFC
 extern struct platform_driver meson_spifc_driver;
 #endif

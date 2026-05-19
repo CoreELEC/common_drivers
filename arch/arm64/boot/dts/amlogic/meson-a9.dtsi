@@ -1228,6 +1228,7 @@
 				status = "disabled";
 			};
 
+/*
 			spisg_e: spi@50100 {
 				compatible = "amlogic,meson-t6x-spicc-v2";
 				reg = <0x0 0x50100 0x0 0x38>;
@@ -1240,6 +1241,17 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				status = "disabled";
+			};
+*/
+			spisg_e: spi@50100 {
+				compatible = "amlogic,a4-spisg";
+				reg = <0x0 0x50100 0x0 0x38>;
+				interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc_sys CLKID_SYS_SPISG_0>,
+					 <&clkc_spisg CLKID_SPISG_1>;
+				clock-names = "core", "pclk";
+				#address-cells = <1>;
+				#size-cells = <0>;
 			};
 
 			spisg_f: spi@50200 {

@@ -25,6 +25,12 @@ static int __init spi_module_init(void)
 		pr_err("insmod meson_spicc_v2_driver fail\n");
 #endif
 
+#ifdef CONFIG_SPI_AMLOGIC_SPISG
+	ret = platform_driver_register(&amlogic_spisg_driver);
+	if (ret)
+		pr_err("insmod amlogic_spisg_driver(upstream) fail\n");
+#endif
+
 #ifdef CONFIG_AMLOGIC_SPI_MESON_SPIFC
 	ret = platform_driver_register(&meson_spifc_driver);
 	if (ret)

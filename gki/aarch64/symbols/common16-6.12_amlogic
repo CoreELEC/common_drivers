@@ -37,6 +37,11 @@
 
 #amlogic-spi.ko
   spi_delay_exec
+  spi_delay_to_ns
+  spi_register_controller
+  spi_unregister_controller
+  __devm_spi_alloc_controller
+  devm_clk_hw_get_clk
 
 #amlogic-pm.ko
   pm_suspend_target_state

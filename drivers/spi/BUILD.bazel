@@ -21,6 +21,9 @@ ddk_module(
         "CONFIG_AMLOGIC_SPI_MESON_SPICC_V2": {
             True: ["spi-meson-spicc-v2.c"],
         },
+        "CONFIG_SPI_AMLOGIC_SPISG": {
+            True: ["spi-amlogic-spisg.c"],
+        },
         "CONFIG_AMLOGIC_SPI_MESON_SPIFC": {
             True: ["spi-meson-spifc.c"],
         },

@@ -16,6 +16,13 @@ config AMLOGIC_SPI_MESON_SPICC_V2
 	  This enables master mode support for the SPICC (SPI communication
 	  controller) available in A4, T3X Amlogic Meson SoCs.
 
+config SPI_AMLOGIC_SPISG
+	tristate "Amlogic SPISG controller(upstream)"
+	help
+	  This enables master mode support for the SPISG (SPI scatter-gather
+	  communication controller), which is available on platforms such as
+	  Amlogic A4 SoCs.
+
 config SPICC_TEST
 	tristate "Amlogic Meson SPICC controller test entry"
 	help
