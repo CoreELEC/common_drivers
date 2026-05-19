@@ -80,6 +80,7 @@ static int vout_print_enable(char *str)
 }
 __setup("vout_print=", vout_print_enable);
 
+#ifdef CONFIG_AMLOGIC_VOUT_IRQ
 /* ********************************************************** */
 static irqreturn_t vout_vsync_irq_handler(int irq, void *data)
 {
@@ -109,7 +110,7 @@ static irqreturn_t vout_vsync_irq_handler(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-
+#endif
 /* ********************************************************** */
 
 char *get_vout_mode_internal(void)
@@ -1188,6 +1189,7 @@ static void aml_vout_get_dt_info(struct platform_device *pdev)
 		VOUTPR("get vs_meas:%d\n", vs_meas_en);
 	}
 
+#ifdef CONFIG_AMLOGIC_VOUT_IRQ
 	vsync_irq = platform_get_irq_byname(pdev, "vsync");
 	if (vsync_irq < 0) {
 		VOUTPR("%s: can't get vsync irq\n", __func__);
@@ -1197,6 +1199,7 @@ static void aml_vout_get_dt_info(struct platform_device *pdev)
 			VOUTERR("%s: can't request vout_vsync\n", __func__);
 		}
 	}
+#endif
 }
 
 /*****************************************************************
