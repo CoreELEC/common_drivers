@@ -469,6 +469,80 @@
 		regulator-always-on;
 	};
 
+	vdd_npu2_sram: pwm_h-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc1v8>;
+		pwms = <&pwm_h MESON_PWM_0 840 0>;//GPIOE_5
+		regulator-name = "VDDNPU2_SRAM";
+		regulator-min-microvolt = <660000>;
+		regulator-max-microvolt = <860000>;
+		regulator-always-on;
+		max-duty-cycle = <840>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <860000 0>,
+				<850000 5>,
+				<840000 10>,
+				<830000 15>,
+				<820000 20>,
+				<810000 25>,
+				<800000 30>,
+				<790000 35>,
+				<780000 40>,
+				<770000 45>,
+				<760000 50>,
+				<750000 55>,
+				<740000 60>,
+				<730000 65>,
+				<720000 70>,
+				<710000 75>,
+				<700000 80>,
+				<690000 85>,
+				<680000 90>,
+				<670000 95>,
+				<660000 100>;
+		status = "disabled";
+	};
+
+	vdd_npu3_sram: pwm_j-regulator {
+		compatible = "amlogic, pwm-regulator";
+		vin-supply = <&vcc1v8>;
+		pwms = <&pwm_j MESON_PWM_0 840 0>;//GPIOE_7
+		regulator-name = "VDDNPU3_SRAM";
+		regulator-min-microvolt = <660000>;
+		regulator-max-microvolt = <860000>;
+		regulator-always-on;
+		max-duty-cycle = <840>;
+		amlogic,vsel-step = <3>;
+		amlogic,usleep-time = <200>;
+		amlogic,udelay-time = <40 20>;//pwm 1nF
+		/* Voltage Duty-Cycle */
+		voltage-table = <860000 0>,
+				<850000 5>,
+				<840000 10>,
+				<830000 15>,
+				<820000 20>,
+				<810000 25>,
+				<800000 30>,
+				<790000 35>,
+				<780000 40>,
+				<770000 45>,
+				<760000 50>,
+				<750000 55>,
+				<740000 60>,
+				<730000 65>,
+				<720000 70>,
+				<710000 75>,
+				<700000 80>,
+				<690000 85>,
+				<680000 90>,
+				<670000 95>,
+				<660000 100>;
+		status = "disabled";
+	};
+
 	vddee: pwm_c-regulator {
 		compatible = "amlogic, pwm-regulator";
 		vin-supply = <&vcc_sys>;

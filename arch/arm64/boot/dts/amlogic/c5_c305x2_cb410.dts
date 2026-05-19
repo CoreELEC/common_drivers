@@ -44,7 +44,7 @@
 		linux,initrd-start = <0x0 0x0 0x0 0xc000000>;
 		linux,initrd-end = <0x0  0x0 0x0  0xe000000>;
 		bootargs = "console=ttyS0,921600 no_console_suspend earlycon=aml_uart,0xffa1e000
-			initcall_debug loglevel=7
+			initcall_debug=0 loglevel=7
 			connector0_type=MIPI-A lcd0=0x0,,mipi_0 outputmode=1024x600p60hz,enabled
 			lcd_debug=0x1";
 	};
@@ -76,13 +76,12 @@
 			alignment = <0x0 0x100000>;
 			reg = <0x0 0x05000000 0x0 0x00b00000>;
 		};
+
 		nna_cma_reserved: linux,nna_cma {
 			compatible = "shared-dma-pool";
-			//alloc-ranges = <0x0  0x70000000 0x0 0x18000000>;
 			size = <0x0 0x1000000>;
 			alignment = <0x0 0x400000>;
 			reusable;
-			//no-map;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 			status = "disabled";
 		};
@@ -146,7 +145,6 @@
 
 		pmz_cma_a1_reserved:anonymous {
 			compatible = "shared-dma-pool";
-			//reusable;
 			no-map;
 			size = <0x0 0x15E00000>;
 			alignment = <0x0 0x400000>;
@@ -156,7 +154,6 @@
 
 		pmz_cma_a2_reserved:user_pmz {
 			compatible = "shared-dma-pool";
-			//reusable;
 			no-map;
 			size = <0x0 0x1000000>;
 			alignment = <0x0 0x400000>;
@@ -174,6 +171,7 @@
 			linux,contiguous-region;
 			status = "disabled";
 		};
+
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
 			compatible = "amlogic, codec-mm-reserved";
@@ -183,6 +181,7 @@
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 			status = "disabled";
 		};
+
 		jpegenc_cma_reserved:linux,jpegenc_cma {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -346,106 +345,6 @@
 		compatible = "amlogic, picdec";
 		status = "disabled";
 	};
-
-	vdd_npu2_sram: pwm_h-regulator {
-		compatible = "amlogic, pwm-regulator";
-		vin-supply = <&vcc1v8>;
-		pwms = <&pwm_h MESON_PWM_0 840 0>;//GPIOE_5
-		regulator-name = "VDDNPU2_SRAM";
-		regulator-min-microvolt = <660000>;
-		regulator-max-microvolt = <860000>;
-		regulator-always-on;
-		max-duty-cycle = <840>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;//pwm 1nF
-		/* Voltage Duty-Cycle */
-		voltage-table = <860000 0>,
-				<850000 5>,
-				<840000 10>,
-				<830000 15>,
-				<820000 20>,
-				<810000 25>,
-				<800000 30>,
-				<790000 35>,
-				<780000 40>,
-				<770000 45>,
-				<760000 50>,
-				<750000 55>,
-				<740000 60>,
-				<730000 65>,
-				<720000 70>,
-				<710000 75>,
-				<700000 80>,
-				<690000 85>,
-				<680000 90>,
-				<670000 95>,
-				<660000 100>;
-		status = "okay";
-	};
-
-	vdd_npu3_sram: pwm_j-regulator {
-		compatible = "amlogic, pwm-regulator";
-		vin-supply = <&vcc1v8>;
-		pwms = <&pwm_j MESON_PWM_0 840 0>;//GPIOE_7
-		regulator-name = "VDDNPU3_SRAM";
-		regulator-min-microvolt = <660000>;
-		regulator-max-microvolt = <860000>;
-		regulator-always-on;
-		max-duty-cycle = <840>;
-		amlogic,vsel-step = <3>;
-		amlogic,usleep-time = <200>;
-		amlogic,udelay-time = <40 20>;//pwm 1nF
-		/* Voltage Duty-Cycle */
-		voltage-table = <860000 0>,
-				<850000 5>,
-				<840000 10>,
-				<830000 15>,
-				<820000 20>,
-				<810000 25>,
-				<800000 30>,
-				<790000 35>,
-				<780000 40>,
-				<770000 45>,
-				<760000 50>,
-				<750000 55>,
-				<740000 60>,
-				<730000 65>,
-				<720000 70>,
-				<710000 75>,
-				<700000 80>,
-				<690000 85>,
-				<680000 90>,
-				<670000 95>,
-				<660000 100>;
-		status = "okay";
-	};
-
-	/* Audio Related end */
-	/* to check
-	 *wifivbat_power: regulator-wifivbat {
-	 *	compatible = "regulator-fixed";
-	 *	regulator-name = "WIFIVBAT_POWER";
-	 *	vin-supply = <&vddao3v3_reg>;
-	 *	regulator-min-microvolt = <3300000>;
-	 *	regulator-max-microvolt = <3300000>;
-	 *	gpio = <&gpio GPIOD_13 GPIO_ACTIVE_HIGH>;
-	 *	enable-active-high;
-	 *	regulator-boot-on;
-	 *	regulator-always-on;
-	 *};
-
-	 *vddio_wf: regulator_wfio {
-	 *	compatible = "regulator-fixed";
-	 *	regulator-name = "VDDIO_WF";
-	 *	vin-supply = <&vddao1v8_reg>;
-	 *	regulator-min-microvolt = <1800000>;
-	 *	regulator-max-microvolt = <1800000>;
-	 *	regulator-boot-on;
-	 *	regulator-always-on;
-	 *};
-	 */
-
 };
 
 /delete-node/ &CPU2;

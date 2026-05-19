@@ -3418,7 +3418,9 @@ static void vframe_display(struct videodisplay_dev *dev,
 	u64 time_us64;
 	struct vframe_s *vf_ext = NULL;
 	int pic_w = 0, pic_h = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 	bool enable_prelink = false;
+#endif
 	struct uvm_lcevc_frame_info *lcevc_data;
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 	struct timespec64 ts;
