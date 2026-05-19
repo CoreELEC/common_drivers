@@ -427,12 +427,12 @@ void vd2_map_top1_policy_process(struct vinfo_s *vinfo,
 {
 	int dv_hdr_policy = 0;
 	int cur_hdr_policy = 0;
-	bool hdr10_plus_support	=
+	bool hdr10_plus_support =
 		sink_hdr_support(vinfo) & HDRP_SUPPORT;
 	bool cuva_support =
 		sink_hdr_support(vinfo) & CUVA_SUPPORT;
 	bool output_mode = 0;
-	bool hlg_plus_support	=
+	bool hlg_plus_support =
 		sink_hdr_support(vinfo) & HLGP_SUPPORT;
 
 	if (vinfo->mode == VMODE_LCD || vinfo->mode == VMODE_eDP ||
@@ -455,14 +455,14 @@ void vd2_map_top1_policy_process(struct vinfo_s *vinfo,
 		dv_mode = get_amdv_target_mode();
 		dv_format = get_amdv_src_format(vd_path, vf);
 		dv_hdr_policy = get_amdv_hdr_policy(vf);
+		pr_csc(32, "policy: dv_policy/_mode/_format/_hdr_policy/_on=%d/%d/%d/%d/%d\n",
+			dv_policy, dv_mode, dv_format, dv_hdr_policy, is_amdv_on());
 	}
 #endif
-	pr_csc(32, "%d %s: vd%d  vpp_index = %d hdr status = %d\n",
-		__LINE__,
-		__func__,
-		vd_path + 1,
-		vpp_index,
-		get_hdr_module_status(vd_path, vpp_index));
+
+	pr_csc(32, "vd2 top1: hdr_policy/src_format/output_mode/support/status=0x%x/%x/%x/%x/%x\n",
+		cur_hdr_policy, source_format[vd_path], output_mode,
+		sink_hdr_support(vinfo), get_hdr_module_status(vd_path, vpp_index));
 
 	if (get_hdr_module_status(vd_path, vpp_index) != HDR_MODULE_ON && cur_hdr_policy != 2) {
 		/* hdr module off or bypass */
@@ -485,11 +485,6 @@ void vd2_map_top1_policy_process(struct vinfo_s *vinfo,
 			cuva_hdr_process_mode[vd_path] = PROC_BYPASS;
 			cuva_hlg_process_mode[vd_path] = PROC_BYPASS;
 			target_format[vd_path] = BT709;
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 		} else if (is_amdv_enable() &&
 		   !is_amdv_on() &&
 		   ((get_dv_support_info() & 7) == 7) &&
@@ -565,12 +560,7 @@ void vd2_map_top1_policy_process(struct vinfo_s *vinfo,
 			    (((source_format[vd_path] != HDRTYPE_HLG) &&
 			    (source_format[vd_path] != HDRTYPE_HLGPLUS)) ||
 			    (hdr_flag & 0x10))) {
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
-				/* *->hdr */
+			/* *->hdr */
 			sdr_process_mode[vd_path] = PROC_SDR_TO_HDR;
 			hdr_process_mode[vd_path] = PROC_BYPASS;
 			hlg_process_mode[vd_path] = PROC_HLG_TO_HDR;
@@ -580,11 +570,6 @@ void vd2_map_top1_policy_process(struct vinfo_s *vinfo,
 			cuva_hlg_process_mode[vd_path] = PROC_CUVAHLG_TO_HDR;
 			target_format[vd_path] = BT2020_PQ;
 		} else {
-			pr_csc(32, "%d %s: vd_path=%d  vpp_index = %d\n",
-				__LINE__,
-				__func__,
-				vd_path,
-				vpp_index);
 			/* *->sdr */
 			sdr_process_mode[vd_path] = PROC_BYPASS;
 			if (source_format[vd_path] == HDRTYPE_SDR &&

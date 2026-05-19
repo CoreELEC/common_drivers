@@ -9396,7 +9396,8 @@ static int vpp_matrix_update(struct vframe_s *vf,
 		     !is_video_layer_on(VD2_PATH) &&
 		     !is_amdv_on()) ||
 		     vpp_index == VPP_TOP1) {
-			if (get_cpu_type() == MESON_CPU_MAJOR_ID_T7 &&
+			if ((get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
+				chip_type_id == chip_a9) &&
 				vd_path == VD2_PATH &&
 				get_vout2_change()) {
 				set_vout2_change(0);
@@ -10155,7 +10156,8 @@ int amvecm_matrix_process(struct vframe_s *vf,
 			null_vf_cnt[vd_path] = 1;
 			toggle_frame = 1;
 			pr_csc(8, "vd%d: dv enable->disable\n", vd_path + 1);
-		} else if (get_cpu_type() == MESON_CPU_MAJOR_ID_T7 &&
+		} else if ((get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
+			chip_type_id == chip_a9) &&
 			vd_path == VD2_PATH &&
 			get_vout2_change()) {
 			null_vf_cnt[vd_path] = 1;
