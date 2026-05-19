@@ -368,6 +368,14 @@ bool dim_get_pre_link(void)
 }
 EXPORT_SYMBOL(dim_get_pre_link);
 
+bool dim_is_dct_on(void)
+{
+	if (dil_api && dil_api->is_dct_on)
+		return dil_api->is_dct_on();
+	return 0;
+}
+EXPORT_SYMBOL(dim_is_dct_on);
+
 bool di_vfm_info(struct afbcd_info *vfm_info)
 {
 	if (dil_api && dil_api->get_vfm_info)

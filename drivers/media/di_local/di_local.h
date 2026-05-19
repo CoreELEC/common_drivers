@@ -46,6 +46,7 @@ struct di_ext_ops {
 	bool (*is_post_link)(void);
 	int (*set_buffer_num)(unsigned int post, unsigned int pre);
 	bool (*get_vfm_info)(struct afbcd_info *vfm_info);
+	bool (*is_dct_on)(void);
 };
 
 #endif	/*__DI_LOCAL_H__*/

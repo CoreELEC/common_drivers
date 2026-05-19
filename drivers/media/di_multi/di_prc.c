@@ -5765,6 +5765,15 @@ void dim_slt_init(void)
 	PR_INF("%s:\n", __func__);
 }
 
+bool is_dct_on(void)
+{
+	bool ret;
+
+	ret = IS_IC_SUPPORT(DECONTOUR);
+	dim_print("dct state:%d\n", ret);
+	return ret;
+}
+
 /************************************************
  * ic list for support crc cts test
  ***********************************************/

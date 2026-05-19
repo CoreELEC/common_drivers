@@ -41,7 +41,8 @@ static const struct di_ext_ops di_ext = {
 	.is_pre_link		= dim_pre_link_state,
 	.is_post_link		= dim_post_link_state,
 	.set_buffer_num		= set_buffer_num,
-	.get_vfm_info		= dim_get_vfm_info
+	.get_vfm_info		= dim_get_vfm_info,
+	.is_dct_on		= is_dct_on
 };
 
 void dim_attach_to_local(void)

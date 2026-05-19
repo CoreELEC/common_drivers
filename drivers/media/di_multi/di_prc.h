@@ -638,6 +638,7 @@ bool dpvpp_dbg_en_irq(void);
 bool dpvpp_bypass_display(void);
 bool dpvpp_dbg_4k_tsnr(void);
 bool dpvpp_dbg_tnr_disable(void);
+bool is_dct_on(void);
 
 int set_holdreg_by_in_out(struct vframe_s *vfm, struct pvpp_dis_para_in_s *in_para,
 			const struct reg_acc *op_in);

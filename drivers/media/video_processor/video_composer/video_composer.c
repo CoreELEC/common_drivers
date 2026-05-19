@@ -4326,6 +4326,7 @@ static void video_composer_task(struct composer_dev *dev)
 	bool do_mosaic_22 = false;
 	struct uvm_lcevc_frame_info *lcevc_data;
 	bool enable_prelink = false;
+	bool enable_dct = false;
 	unsigned int ds_ratio = 0;
 	int ret = 0;
 
@@ -4451,6 +4452,7 @@ static void video_composer_task(struct composer_dev *dev)
 
 #ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		enable_prelink = dim_get_pre_link();
+		enable_dct = dim_is_dct_on();
 #endif
 		if (enable_prelink &&
 			!IS_DI_PRELINK(vf->di_flag) &&
@@ -4459,6 +4461,10 @@ static void video_composer_task(struct composer_dev *dev)
 			!(vf->type & VIDTYPE_INTERLACE)) {
 			vc_print(dev->index, PRINT_OTHER, "need set ds_ratio.\n");
 			ds_ratio = get_vf_ds_ratio(dev, vf);
+			if (!enable_dct) {
+				ds_ratio = DI_FLAG_DCT_DS_RATIO_MAX;
+				vc_print(dev->index, PRINT_OTHER, "no dct reset ds_ratio.\n");
+			}
 			ds_ratio = ds_ratio << DI_FLAG_DCT_DS_RATIO_BIT;
 			ds_ratio &= DI_FLAG_DCT_DS_RATIO_MASK;
 			vf->di_flag |= DI_FLAG_DI_PVPPLINK_BYPASS | DI_FLAG_DI_BYPASS;
