@@ -246,6 +246,7 @@ struct frc_ctrl_dbg_s {
 	unsigned out_line:32;  /*ctl mc out line for user*/
 	unsigned check_reg_status:16;
 	unsigned frc_dae_div4:1;
+	unsigned frc_use_vfcd_addr:1;
 };
 
 enum frc_mc_mtx_csc_e {

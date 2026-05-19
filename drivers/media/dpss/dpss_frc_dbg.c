@@ -225,6 +225,9 @@ static ssize_t dpss_frc_debug_if_help(char *buf)
 		sprintf(buf + len, "frc_get_crop\t= [%d,%d,%d,%d]\n",
 			frc_top->crop_top, frc_top->crop_left,
 			frc_top->crop_bottom, frc_top->crop_right);
+	len +=
+		sprintf(buf + len, "frc_use_vfcd_addr\t=%d\n",
+			dbg_st->ctrl_dbg.frc_use_vfcd_addr);
 	return len;
 }
 
@@ -456,6 +459,11 @@ static void dpss_frc_debug_if(const char *buf, size_t count)
 			goto exit;
 		if (kstrtoint(parm[1], 10, &val1) == 0)
 			dbg_st->ctrl_dbg.frc_dae_div4 = val1;
+	} else if (!strcmp(parm[0], "frc_use_vfcd_addr")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			dbg_st->ctrl_dbg.frc_use_vfcd_addr = val1;
 	}
 exit:
 	kfree(buf_orig);

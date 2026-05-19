@@ -1397,7 +1397,8 @@ bool hw_dpss_dpe_info_cfg(struct PRM_DPSS_TOP *prm_top, bool obuf_rdy)
 
 		DPSS_RDMA_WR_PRE_VS(DPSS_DPE_MC_DIN_CHRM1_BADDR0, mc_chrm1_rdmif_baddr0);
 		DPSS_RDMA_WR_PRE_VS(DPSS_DPE_MC_DIN_CHRM1_BADDR1, mc_chrm1_rdmif_baddr1);
-		if (prm_top->dpss_mode == DPSS_FRC_MODE &&
+		if (pchip_st->dbg_st.ctrl_dbg.frc_use_vfcd_addr &&
+			prm_top->dpss_mode == DPSS_FRC_MODE &&
 			pchip_st->state_st.compr_sel != DDR_MIF) {
 			wr_vc(get_vfcd_regs_ofst(DPSS_RMIF_MC0) +
 				VFCD_AFBC_HEAD_BADDR, mc_luma0_rdmif_baddr1);
