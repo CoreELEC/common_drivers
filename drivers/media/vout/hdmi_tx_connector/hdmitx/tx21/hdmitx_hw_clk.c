@@ -91,16 +91,24 @@ static void hdmitx_disable_tx_pixel_clk(struct hdmitx21_dev *hdev)
 
 void hdmitx21_set_audioclk(bool en)
 {
-	// Enable hdmitx_aud_clk
-	// [10: 9] clk_sel for cts_hdmitx_aud_clk: 2=fclk_div3
-	// [    8] clk_en for cts_hdmitx_aud_clk
-	// [ 6: 0] clk_div for cts_hdmitx_aud_clk: fclk_div3/aud_clk_div
-	//use 200M = 2G / 5 / 2
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 0, 8, 1);
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 3, 9, 2);	/* FIXPLL/5 */
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, 1, 0, 1);	/* div 2 */
+	struct hdmitx21_dev *hdev = get_hdmitx21_device();
+	u32 clkctrl_htx_clk_ctrl1 = CLKCTRL_HTX_CLK_CTRL1;
 
-	hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL1, en, 8, 1);
+	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9)
+		clkctrl_htx_clk_ctrl1 = CLKCTRL_HTX_CLK_CTRL1_A9;
+
+	/* Enable hdmitx_aud_clk
+	 * [10: 9] clk_sel for cts_hdmitx_aud_clk: 2=fclk_div3
+	 * [    8] clk_en for cts_hdmitx_aud_clk
+	 * [ 6: 0] clk_div for cts_hdmitx_aud_clk: fclk_div3/aud_clk_div
+	 * use 200M = 2G / 5 / 2
+	 */
+	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 0, 8, 1);
+	/* FIXPLL/5 */
+	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 3, 9, 2);
+	/* div 2 */
+	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, 1, 0, 1);
+	hd21_set_reg_bits(clkctrl_htx_clk_ctrl1, en, 8, 1);
 }
 
 void hdmitx21_set_default_clk(void)
