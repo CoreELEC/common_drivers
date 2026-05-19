@@ -1396,7 +1396,7 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 	u32 *oo_gain)
 {
 	int i;
-	struct aml_hdr_prm_s gain_tbl;
+	struct aml_hdr_prm_s *gain_tbl_ptr;
 	static int first_frame = 1;
 	static unsigned int blend_gain[HDR2_OOTF_LUT_SIZE];
 	int alpha = 250;
@@ -1405,6 +1405,12 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 	u32 sc_th;
 	int *hist;
 	struct sbtmdb_tgt_parm *tgt_parm = sbtm_sbtmdb_tgt_get();
+
+	gain_tbl_ptr =
+		kzalloc(sizeof(struct aml_hdr_prm_s), GFP_KERNEL);
+
+	if (!gain_tbl_ptr)
+		return;
 
 	if (chip_type_id == chip_s5)
 		hist = &s5_hdr_hist[15][0];
@@ -1424,10 +1430,10 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 	}
 
 	tgt_lum = tgt_parm->frmpblimit;
-	alg_hdr2hdr_dynamic_liner(&gain_tbl, hdr_reg_tmo, hist, tgt_lum);
+	alg_hdr2hdr_dynamic_liner(gain_tbl_ptr, hdr_reg_tmo, hist, tgt_lum);
 
 	if (first_frame)
-		memcpy(blend_gain, gain_tbl.hdr_ogain_lut, sizeof(int) * 149);
+		memcpy(blend_gain, gain_tbl_ptr->hdr_ogain_lut, sizeof(int) * 149);
 
 	if (tmo_debug_sbtm)
 		pr_info("alpha = %d\n", alpha);
@@ -1442,7 +1448,7 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 
 	for (i = 0; i < HDR2_OOTF_LUT_SIZE; i++) {
 		blend_gain[i] = (blend_gain[i] * alpha +
-			((1 << 8) - alpha) * gain_tbl.hdr_ogain_lut[i]) >> 8;
+			((1 << 8) - alpha) * gain_tbl_ptr->hdr_ogain_lut[i]) >> 8;
 	}
 	memcpy(oo_gain, blend_gain, sizeof(int) * 149);
 
@@ -1450,17 +1456,22 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 		pr_info("%s -----------ogain lut[149]----------\n", __func__);
 		for (i = 0; i < 14; i++)
 			pr_info("%d, %d, %d, %d, %d, %d, %d, %d, %d, %d,\n",
-			gain_tbl.hdr_ogain_lut[i * 10 + 0], gain_tbl.hdr_ogain_lut[i * 10 + 1],
-			gain_tbl.hdr_ogain_lut[i * 10 + 2], gain_tbl.hdr_ogain_lut[i * 10 + 3],
-			gain_tbl.hdr_ogain_lut[i * 10 + 4], gain_tbl.hdr_ogain_lut[i * 10 + 5],
-			gain_tbl.hdr_ogain_lut[i * 10 + 6], gain_tbl.hdr_ogain_lut[i * 10 + 7],
-			gain_tbl.hdr_ogain_lut[i * 10 + 8], gain_tbl.hdr_ogain_lut[i * 10 + 9]);
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 0],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 1],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 2],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 3],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 4],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 5],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 6],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 7],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 8],
+			gain_tbl_ptr->hdr_ogain_lut[i * 10 + 9]);
 		pr_info("%d, %d, %d, %d, %d, %d, %d, %d, %d\n",
-			gain_tbl.hdr_ogain_lut[140], gain_tbl.hdr_ogain_lut[141],
-			gain_tbl.hdr_ogain_lut[142], gain_tbl.hdr_ogain_lut[143],
-			gain_tbl.hdr_ogain_lut[144], gain_tbl.hdr_ogain_lut[145],
-			gain_tbl.hdr_ogain_lut[146], gain_tbl.hdr_ogain_lut[147],
-			gain_tbl.hdr_ogain_lut[148]);
+			gain_tbl_ptr->hdr_ogain_lut[140], gain_tbl_ptr->hdr_ogain_lut[141],
+			gain_tbl_ptr->hdr_ogain_lut[142], gain_tbl_ptr->hdr_ogain_lut[143],
+			gain_tbl_ptr->hdr_ogain_lut[144], gain_tbl_ptr->hdr_ogain_lut[145],
+			gain_tbl_ptr->hdr_ogain_lut[146], gain_tbl_ptr->hdr_ogain_lut[147],
+			gain_tbl_ptr->hdr_ogain_lut[148]);
 
 		pr_info("%s -----------blend ogain lut[149]----------\n", __func__);
 		for (i = 0; i < 14; i++)
@@ -1478,6 +1489,7 @@ void tmo_alg_hdr2hdr_dynamic_liner(struct aml_tmo_hdr_hdr_reg_sw *hdr_reg_tmo,
 	}
 
 	first_frame = 0;
+	kfree(gain_tbl_ptr);
 }
 
 void sbtm_tmo_hdr2hdr_proc(struct vinfo_s *vinfo, int *oolut, int *cgain)

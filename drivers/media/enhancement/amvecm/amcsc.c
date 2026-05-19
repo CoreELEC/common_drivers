@@ -9058,8 +9058,8 @@ int hdr_hist_test_cnt;
 void hdr_hist_test(enum vd_path_e vd_path)
 {
 	unsigned int i = 0;
-	unsigned int hdr_hist[128] = {0};
-	unsigned int hdr_hist_dma[128] = {0};
+	static unsigned int hdr_hist[128] = {0};
+	static unsigned int hdr_hist_dma[128] = {0};
 	unsigned int hist_ctrl = DOLBY_HDR2_HIST_CTRL;
 	unsigned int hist_rd = DOLBY_HDR2_HIST_RD;
 	unsigned int dma_idx = 0;
