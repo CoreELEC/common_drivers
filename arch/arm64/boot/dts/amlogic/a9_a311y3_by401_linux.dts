@@ -131,8 +131,8 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* linux yocto 4K+1080p+direct render, size 175+45=220M */
-			size = <0x0 0xdc00000>;
+			/* linux yocto dual 4K, 8 buffers = 280M */
+			size = <0x0 0x11800000>;
 			alignment = <0x0 0x400000>;
 		};
 
