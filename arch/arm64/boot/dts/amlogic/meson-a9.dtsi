@@ -5265,6 +5265,10 @@
 	/* Protected memory allocator default not available*/
 	//protected-memory-allocator = <&gpu_protected_memory_allocator>;
 
+	qchannel-reg = <0xFE010404>;
+	qchannel-enabled = <1>;
+	qchannel-supported = <1>;
+
 	num_of_pp = <1>;
 	system-coherency = <31>;
 	clocks = <&clkc CLKID_MALI>,
