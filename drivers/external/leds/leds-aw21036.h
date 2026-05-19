@@ -65,7 +65,8 @@ static unsigned int state_mode=0;
 
 /*2:S905X2 SEI520, 3:S905X3 SEI600TID; 4:S905X3 SEI610/SEI610F, 6:SEI610FPT*/
 static unsigned int platform_id = 0;
-static unsigned int hwen_id = 3, isel_id = 3;
+static unsigned int hwen_id = 3;
+static unsigned int __maybe_unused isel_id = 3;
 
 static int driver_init_flag = 0; // driver init flag, 0: not init, 1: init
 static unsigned int ledr_value = 0, ledg_value = 0, ledb_value = 0;
@@ -89,12 +90,12 @@ static u8 tmp_col[37] = {\
 	0xff,0xff,0xff, 0xff,0xff,0xff, 0xff,0xff,0xff, 0xff,0xff,0xff,\
 };
 
-static u8 tmp_ledon[10] = {\
-	0x68,0xdd,0xf5, 0x68,0xdd,0xf5, 0x68,0xdd,0xf5,\
+static u8 __maybe_unused tmp_ledon[10] = {
+	0x68, 0xdd, 0xf5, 0x68, 0xdd, 0xf5, 0x68, 0xdd, 0xf5,
 };
 
-static u8 tmp_ledoff[10] = {\
-	0x00,0x00,0x00, 0x00,0x00,0x00, 0x00,0x00,0x00,\
+static u8 __maybe_unused tmp_ledoff[10] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
 //#define NO_DIRECTION_CORRECT

@@ -487,15 +487,8 @@ function adjust_sequence_modules_loading() {
 	select_type_modules=
 	[[ -z ${TYPE_MODULE_SELECT_MODULE} ]] && TYPE_MODULE_SELECT_MODULE=${TYPE_MODULE_SELECT_MODULE_ANDROID}
 	echo "TYPE_MODULE_SELECT_MODULE=${TYPE_MODULE_SELECT_MODULE}"
-	mkdir temp_dir
-	cd temp_dir
-	in_temp_dir=y
+	set -f #Disable wildcard expansion
 	for element in ${TYPE_MODULE_SELECT_MODULE}; do
-		if [[ ${in_temp_dir} = y ]]; then
-			cd ../
-			rm -r temp_dir
-			in_temp_dir=
-		fi
 		if [[ ${in_line_i} = a ]]; then
 			in_line_i=b
 			type_module=${element}
@@ -516,6 +509,7 @@ function adjust_sequence_modules_loading() {
 			fi
 		fi
 	done
+	set +f
 
 	if [[ -n ${ANDROID_PROJECT} ]];then
 		rule_type_modules="${rule_type_modules} ${DEFAULT_DELETE_TYPE_LIST[@]}"
@@ -524,7 +518,16 @@ function adjust_sequence_modules_loading() {
 	echo rule_type_modules="${rule_type_modules}"
 	echo select_type_modules="${select_type_modules}"
 
-	for module in `ls ${rule_type_modules}`; do
+	shopt -s nullglob
+	local rule_modules_list=()
+	for module in ${rule_type_modules}; do
+		for file in $module; do
+			[[ -f "$file" ]] && rule_modules_list+=("$file")
+		done
+	done
+	shopt -u nullglob
+
+	for module in "${rule_modules_list[@]}"; do
 		dont_delete_module=0
 		for select_module in ${select_type_modules}; do
 			if [[ "${select_module}" == "${module}" ]] ; then
@@ -540,11 +543,6 @@ function adjust_sequence_modules_loading() {
 		fi
 	done
 	echo delete_type_modules=${delete_type_modules[*]}
-
-	if [[ -n ${in_temp_dir} ]]; then
-		cd ../
-		rm -r temp_dir
-	fi
 
 	mkdir service_module
 	echo  MODULES_SERVICE_LOAD_LIST=${MODULES_SERVICE_LOAD_LIST[@]}

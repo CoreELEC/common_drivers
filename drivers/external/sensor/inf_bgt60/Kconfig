@@ -1,7 +1,7 @@
 config SEI_INF_BGT60
 	tristate "SEI Infineon BGT60CUTR13AIP Radar Sensor support"
 	depends on I2C
-	default m
+	default n
 	help
 		Say Y here if you want to use the NTA533 depends on I2C
 

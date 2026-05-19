@@ -88,6 +88,7 @@ COMMON_GKI_MODULES_LIST=(
 	usbnet.ko
 	ptp.ko
 	pps_core.ko
+	usbserial.ko
 )
 
 GKI_MODULES_LOAD_WHITE_LIST=(
@@ -98,4 +99,18 @@ GKI_MODULES_LOAD_WHITE_LIST=(
 DEFAULT_DELETE_TYPE_LIST=(
 	xfs.ko	#tv gki default add but not need
 	amlogic-soc-*
+	usbserial.ko
+	amlogic-maxio.ko #project select
+	cp210x.ko
+	f81232.ko
+	pl2303.ko
+	st7789v3_tft.ko
+	temp_htu20d.ko
+	leds-aw21036.ko
+	nta533.ko
+	radar_wakeup.ko
+	sei_ucs11681_light.ko
+	sei_inf_bgt60.ko
+	sei_ucs116e0_light.ko
+	sei_gpio_ctrl.ko
 )

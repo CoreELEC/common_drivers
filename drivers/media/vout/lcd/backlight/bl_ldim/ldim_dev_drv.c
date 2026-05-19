@@ -1462,7 +1462,7 @@ static int ldim_dev_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void ldim_dev_remove(struct platform_device *pdev)
+static __maybe_unused void ldim_dev_remove(struct platform_device *pdev)
 {
 	struct aml_ldim_driver_s *ldim_drv = aml_ldim_get_driver();
 

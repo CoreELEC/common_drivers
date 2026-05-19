@@ -9,7 +9,7 @@ ddk_module(
         "**/*.h",
     ]),
     conditional_srcs = {
-        "CONFIG_LEDS_AW21036": {
+        "CONFIG_RADAR_WAKEUP": {
             True: ["radar_wakeup.c"],
         },
     },
@@ -23,5 +23,6 @@ ddk_module(
         "//common_drivers/drivers/gki_tool:amlogic-gkitool",
         "//common_drivers/drivers/debug:amlogic-debug-iotrace",
         "//common_drivers/drivers/debug:amlogic-debug",
+        "//common_drivers/drivers/pm:amlogic-pm",
     ],
 )

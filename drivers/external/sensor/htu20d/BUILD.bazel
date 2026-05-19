@@ -4,7 +4,7 @@ load("//common_drivers:amlogic_utils.bzl", "m_k_files", "kernel_select")
 m_k_files()
 
 ddk_module(
-    name = "htu20d",
+    name = "temp_htu20d",
     srcs = glob([
         "**/*.h",
     ]),
@@ -16,7 +16,7 @@ ddk_module(
     hdrs = [
     ],
     local_defines = ["pr_fmt(fmt)=\"[i2c]: \" fmt"],
-    out = "htu20d.ko",
+    out = "temp_htu20d.ko",
     kernel_build = kernel_select(),
     visibility = ["//visibility:public"],
     deps = [
