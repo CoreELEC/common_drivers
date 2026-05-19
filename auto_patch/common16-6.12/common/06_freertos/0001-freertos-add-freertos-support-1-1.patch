@@ -1,4 +1,4 @@
-From f65840142879e6c0cedd1f5a5d024de47ea606df Mon Sep 17 00:00:00 2001
+From 28d6a2af5b586fbb269f84bad7628e4e6d877785 Mon Sep 17 00:00:00 2001
 From: "wanwei.jiang" <wanwei.jiang@amlogic.com>
 Date: Mon, 28 Feb 2022 09:54:55 +0800
 Subject: [PATCH] freertos: add freertos support [1/1]
@@ -21,10 +21,11 @@ Change-Id: Ib2b18fbcb026afa8df7654eac90355f080e9a74b
 Signed-off-by: wanwei.jiang <wanwei.jiang@amlogic.com>
 ---
  arch/arm/kernel/smp.c            | 22 +++++++++++++++++++
- arch/arm64/kernel/smp.c          | 21 +++++++++++++++++++
+ arch/arm64/kernel/smp.c          | 22 +++++++++++++++++++
  drivers/irqchip/irq-gic-common.c | 36 ++++++++++++++++++++++++++++++++
+ drivers/irqchip/irq-gic-v3.c     | 27 +++++++++++++++++++++++-
  drivers/irqchip/irq-gic.c        | 20 +++++++++++++++++-
- 4 files changed, 98 insertions(+), 1 deletion(-)
+ 5 files changed, 125 insertions(+), 2 deletions(-)
 
 diff --git a/arch/arm/kernel/smp.c b/arch/arm/kernel/smp.c
 index 306b5da28c23e..f8f30ae23f494 100644
@@ -81,7 +82,7 @@ index 306b5da28c23e..f8f30ae23f494 100644
  {
  	unsigned long timeout;
 diff --git a/arch/arm64/kernel/smp.c b/arch/arm64/kernel/smp.c
-index 15ad0056aa903..d3df105d02f19 100644
+index 15ad0056aa903..71333910b7497 100644
 --- a/arch/arm64/kernel/smp.c
 +++ b/arch/arm64/kernel/smp.c
 @@ -53,6 +53,10 @@
@@ -115,7 +116,7 @@ index 15ad0056aa903..d3df105d02f19 100644
  	[IPI_CPU_BACKTRACE]	= "CPU backtrace interrupts",
  	[IPI_KGDB_ROUNDUP]	= "KGDB roundup interrupts",
  };
-@@ -885,6 +895,13 @@ void arch_irq_work_raise(void)
+@@ -885,6 +895,14 @@ void arch_irq_work_raise(void)
  }
  #endif
  
@@ -124,12 +125,13 @@ index 15ad0056aa903..d3df105d02f19 100644
 +{
 +	smp_cross_call(cpumask_of(cpu), IPI_FREERTOS);
 +}
++EXPORT_SYMBOL(arch_send_ipi_rtos);
 +#endif
 +
  static void __noreturn local_cpu_stop(unsigned int cpu)
  {
  	set_cpu_online(cpu, false);
-@@ -1016,6 +1033,10 @@ static void do_handle_IPI(int ipinr)
+@@ -1016,6 +1034,10 @@ static void do_handle_IPI(int ipinr)
  		break;
  
  	case IPI_KGDB_ROUNDUP:
@@ -219,11 +221,69 @@ index c776f9142610e..49d9ba429ecd5 100644
  }
  
  void gic_cpu_config(void __iomem *base, int nr, u8 priority)
+diff --git a/drivers/irqchip/irq-gic-v3.c b/drivers/irqchip/irq-gic-v3.c
+index 7daaac8ff87fe..578f10c3947eb 100644
+--- a/drivers/irqchip/irq-gic-v3.c
++++ b/drivers/irqchip/irq-gic-v3.c
+@@ -33,6 +33,10 @@
+ #include <linux/bits.h>
+ #include <linux/arm-smccc.h>
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS)
++#include <linux/amlogic/freertos.h>
++#endif
++
+ #include <asm/cputype.h>
+ #include <asm/exception.h>
+ #include <asm/smp_plat.h>
+@@ -979,8 +983,15 @@ void gic_v3_dist_init(void)
+ 	void __iomem *base = gic_data.dist_base;
+ 	u32 val;
+ 
+-	/* Disable the distributor */
++#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS)
++	u32 tmp __attribute__((unused));
++	/*disable gic distributor will result in freertos lost interrupt*/
++#else
+ 	writel_relaxed(0, base + GICD_CTLR);
++#endif
++
++	/* Disable the distributor */
++	//writel_relaxed(0, base + GICD_CTLR);
+ 	gic_v3_dist_wait_for_rwp();
+ 
+ 	/*
+@@ -1026,11 +1037,25 @@ void gic_v3_dist_init(void)
+ 	 * enabled.
+ 	 */
+ 	affinity = gic_cpu_to_affinity(smp_processor_id());
++#if IS_ENABLED(CONFIG_AMLOGIC_FREERTOS)
++	for (i = 32; i < GIC_LINE_NR; i++) {
++		u64 val = readq_relaxed(base + GICD_IROUTER + i * 8);
++		u64 tmp = freertos_get_irqregval(affinity, val, i, 1);
++		gic_write_irouter(tmp, base + GICD_IROUTER + i * 8);
++	}
++
++	for (i = 0; i < GIC_ESPI_NR; i++) {
++		u64 val = readq_relaxed(base + GICD_IROUTERnE + i * 8);
++		u64 tmp = freertos_get_irqregval(affinity, val, i + ESPI_BASE_INTID, 1);
++		gic_write_irouter(tmp, base + GICD_IROUTERnE + i * 8);
++	}
++#else
+ 	for (i = 32; i < GIC_LINE_NR; i++)
+ 		gic_write_irouter(affinity, base + GICD_IROUTER + i * 8);
+ 
+ 	for (i = 0; i < GIC_ESPI_NR; i++)
+ 		gic_write_irouter(affinity, base + GICD_IROUTERnE + i * 8);
++#endif
+ }
+ EXPORT_SYMBOL_GPL(gic_v3_dist_init);
+ 
 diff --git a/drivers/irqchip/irq-gic.c b/drivers/irqchip/irq-gic.c
-index 9d88c619d8732..a98c2c9c50079 100644
+index 32abc2916b40f..7c00a8227c8a8 100644
 --- a/drivers/irqchip/irq-gic.c
 +++ b/drivers/irqchip/irq-gic.c
-@@ -50,6 +50,10 @@
+@@ -49,6 +49,10 @@
  
  #include "irq-gic-common.h"
  
@@ -234,7 +294,7 @@ index 9d88c619d8732..a98c2c9c50079 100644
  #ifdef CONFIG_ARM64
  #include <asm/cpufeature.h>
  
-@@ -461,15 +465,21 @@ static void gic_cpu_if_up(struct gic_chip_data *gic)
+@@ -460,15 +464,21 @@ static void gic_cpu_if_up(struct gic_chip_data *gic)
  	writel_relaxed(bypass | mode | GICC_ENABLE, cpu_base + GIC_CPU_CTRL);
  }
  
@@ -257,7 +317,7 @@ index 9d88c619d8732..a98c2c9c50079 100644
  
  	/*
  	 * Set all global interrupts to this CPU only.
-@@ -477,8 +487,16 @@ static void gic_dist_init(struct gic_chip_data *gic)
+@@ -476,8 +486,16 @@ static void gic_dist_init(struct gic_chip_data *gic)
  	cpumask = gic_get_cpumask(gic);
  	cpumask |= cpumask << 8;
  	cpumask |= cpumask << 16;
