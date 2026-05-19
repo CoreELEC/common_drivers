@@ -1336,7 +1336,7 @@ void vdin_double_write_confirm(struct vdin_dev_s *devp)
 		devp->is_422_12bit_enabled = false;
 	}
 
-	if (vdin_force_format_for_decontour(devp))
+	if (vdin_force_format_for_decontour(devp) && vdin_dv_is_sink_led(devp))
 		devp->detunnel_enabled = true;
 	else
 		devp->detunnel_enabled = false;
@@ -7798,6 +7798,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	devp->debug.sleep_time = 50;
 	devp->debug.port = TVIN_PORT_NULL;
 	devp->debug.matrix_sel = VDIN_SEL_MATRIX_MAX;
+	//devp->debug.force_fmt_for_dct = true; /* Trunk is disabled by default */
 }
 
 static int vdin_drv_probe(struct platform_device *pdev)
