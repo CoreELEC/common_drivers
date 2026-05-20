@@ -71,7 +71,7 @@
 		idle-states {
 			entry-method = "arm,psci-0.2";
 			CPU_SLEEP_0: cpu-sleep-0 {
-					compatible = "arm,idle-state";
+					/*compatible = "arm,idle-state";*/
 					arm,psci-suspend-param = <0x0010000>;
 					local-timer-stop;
 					entry-latency-us = <100>;
@@ -79,7 +79,7 @@
 					min-residency-us = <1212>;
 			};
 			SYSTEM_SLEEP_0: system-sleep-0 {
-					compatible = "arm,idle-state";
+					/*compatible = "arm,idle-state";*/
 					arm,psci-suspend-param = <0x0000000>;
 					entry-latency-us = <0x3fffffff>;
 					exit-latency-us = <0x40000000>;
