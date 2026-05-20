@@ -65,6 +65,7 @@ enum {
 	VP_FMT_YUV444_PACKED,
 	VP_FMT_AFBC,
 	VP_FMT_AFRC,
+	VP_FMT_YUV444_3PLANE,
 };
 
 enum {

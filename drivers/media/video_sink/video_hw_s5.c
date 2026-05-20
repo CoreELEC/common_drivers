@@ -6811,6 +6811,12 @@ static void vd1_set_dcu_s5(struct video_layer_s *layer,
 		(vpp_hold_line[vpp_index] << VDIF_HOLD_LINES_BIT) |
 		VDIF_FORMAT_SPLIT |
 		VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
+	//yuv422 or yuv444 multi planes, disable rpt_last
+	if (((vf->type & VIDTYPE_VIU_444) ||
+		(vf->type & VIDTYPE_VIU_422)) &&
+		!(vf->type & VIDTYPE_VIU_SINGLE_PLANE))
+		r &= ~VDIF_CHRO_RPT_LAST;
+
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
 	if (layer->global_debug & DEBUG_FLAG_GOFIELD_MANUL)
 		r |= 1 << 7; /*for manul trigger gofiled.*/
@@ -7399,6 +7405,12 @@ static void vd1_set_slice_dcu_s5(struct video_layer_s *layer,
 		VDIF_FORMAT_SPLIT |
 		VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
+	//yuv422 or yuv444 multi planes, disable rpt_last
+	if (((vf->type & VIDTYPE_VIU_444) ||
+		(vf->type & VIDTYPE_VIU_422)) &&
+		!(vf->type & VIDTYPE_VIU_SINGLE_PLANE))
+		r &= ~VDIF_CHRO_RPT_LAST;
+
 	if (layer->global_debug & DEBUG_FLAG_GOFIELD_MANUL)
 		r |= 1 << 7; /*for manul trigger gofiled.*/
 
@@ -7867,6 +7879,12 @@ static void vdx_set_dcu_s5(struct video_layer_s *layer,
 		VDIF_FORMAT_SPLIT |
 		VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
+	//yuv422 or yuv444 multi planes, disable rpt_last
+	if (((vf->type & VIDTYPE_VIU_444) ||
+		(vf->type & VIDTYPE_VIU_422)) &&
+		!(vf->type & VIDTYPE_VIU_SINGLE_PLANE))
+		r &= ~VDIF_CHRO_RPT_LAST;
+
 	if (layer->global_debug & DEBUG_FLAG_GOFIELD_MANUL)
 		r |= 1 << 7; /*for manul trigger gofiled.*/
 

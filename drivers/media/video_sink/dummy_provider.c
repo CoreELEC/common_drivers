@@ -789,6 +789,12 @@ static int set_vfm_type(struct vp_frame_s *frame_info,
 				VIDTYPE_VIU_FIELD;
 		*bpp = 24;
 		break;
+	case VP_FMT_YUV444_3PLANE:
+		vf->type = VIDTYPE_VIU_444 |
+				VIDTYPE_VIU_FIELD;
+		vf->plane_num = 3;
+		*bpp = 8;
+		break;
 	case VP_FMT_AFBC:
 		/* 0:YUV444 1:YUV422 2:YUV420 3:RGB */
 		switch (frame_info->afbc_format) {
@@ -999,6 +1005,7 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		break;
 	case VP_FMT_RGB888:
 	case VP_FMT_YUV444_PACKED:
+
 		if (frame_info->luma_only)
 			canvas_config(canvas_table[fill] & 0xff,
 					addr,
@@ -1093,6 +1100,25 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		       new_vf->afrc_info.mmu_page_mode,
 		       new_vf->afrc_info.mmu_baddr0,
 		       new_vf->afrc_info.mmu_baddr1);
+		break;
+	case VP_FMT_YUV444_3PLANE:
+		canvas_config(canvas_table[fill] & 0xff,
+				addr,
+				frame_info->width, frame_info->height,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		addr += frame_info->width * frame_info->height;
+		canvas_config((canvas_table[fill] >> 8) & 0xff,
+				addr,
+				frame_info->width, frame_info->height,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		addr += frame_info->width * frame_info->height;
+		canvas_config((canvas_table[fill] >> 16) & 0xff,
+				addr,
+				frame_info->width, frame_info->height,
+				CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
+		new_vf->canvas0Addr = canvas_table[fill];
+		if (frame_info->secure)
+			protect_size = frame_info->height * frame_info->width * 3;
 		break;
 	default:
 		vp_err("unsupported format to canvas_config\n");

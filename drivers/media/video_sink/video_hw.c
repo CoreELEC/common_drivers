@@ -4913,8 +4913,8 @@ static void set_vd_mif_linear_cs(struct video_layer_s *layer,
 				   struct vframe_s *vf,
 				   u32 lr_select)
 {
-	u32 y_line_stride;
-	u32 c_line_stride;
+	u32 y_line_stride = 0;
+	u32 c_line_stride = 0;
 	int y_buffer_width, c_buffer_width;
 	u64 baddr_y, baddr_cb, baddr_cr;
 	struct hw_vd_linear_reg_s *vd_mif_linear_reg = &layer->vd_mif_linear_reg;
@@ -4945,7 +4945,7 @@ static void set_vd_mif_linear_cs(struct video_layer_s *layer,
 		vd_if_stride_1 = vd_mif_linear_reg->vd_if0_stride_1_f1;
 	}
 	vpp_index = layer->vpp_index;
-	if ((vf->type & VIDTYPE_VIU_444) ||
+	if (((vf->type & VIDTYPE_VIU_444) && (vf->type & VIDTYPE_VIU_SINGLE_PLANE)) ||
 		    (vf->type & VIDTYPE_RGB_444) ||
 		    (vf->type & VIDTYPE_VIU_422)) {
 		baddr_y = cs0->addr;
@@ -4991,8 +4991,8 @@ static void set_vd_mif_linear(struct video_layer_s *layer,
 				   struct vframe_s *vf,
 				   u32 lr_select)
 {
-	u32 y_line_stride;
-	u32 c_line_stride;
+	u32 y_line_stride = 0;
+	u32 c_line_stride = 0;
 	int y_buffer_width, c_buffer_width;
 	u64 baddr_y, baddr_cb, baddr_cr;
 	struct hw_vd_linear_reg_s *vd_mif_linear_reg = &layer->vd_mif_linear_reg;
@@ -5553,6 +5553,11 @@ static void vd1_set_dcu(struct video_layer_s *layer,
 			(2 << VDIF_BURSTSIZE_CR_BIT) |
 			VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
 			/* add no dummy data(bit25), push dummy pixel(bit18) */
+	//yuv422 or yuv444 multi planes, disable rpt_last
+	if (((vf->type & VIDTYPE_VIU_444) ||
+		(vf->type & VIDTYPE_VIU_422)) &&
+		!(vf->type & VIDTYPE_VIU_SINGLE_PLANE))
+		r &= ~VDIF_CHRO_RPT_LAST;
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
 	if (layer->global_debug & DEBUG_FLAG_GOFIELD_MANUL)
 		r |= 1 << 7; /*for manul triggle gofiled.*/
@@ -6079,6 +6084,12 @@ static void vdx_set_dcu(struct video_layer_s *layer,
 		(vpp_hold_line[vpp_index] << VDIF_HOLD_LINES_BIT) |
 		VDIF_FORMAT_SPLIT |
 		VDIF_CHRO_RPT_LAST | VDIF_ENABLE;
+	//yuv422 or yuv444 multi planes, disable rpt_last
+	if (((vf->type & VIDTYPE_VIU_444) ||
+		(vf->type & VIDTYPE_VIU_422)) &&
+		!(vf->type & VIDTYPE_VIU_SINGLE_PLANE))
+		r &= ~VDIF_CHRO_RPT_LAST;
+
 	/*  | VDIF_RESET_ON_GO_FIELD;*/
 	if (layer->global_debug & DEBUG_FLAG_GOFIELD_MANUL)
 		r |= 1 << 7; /*for manul triggle gofiled.*/
