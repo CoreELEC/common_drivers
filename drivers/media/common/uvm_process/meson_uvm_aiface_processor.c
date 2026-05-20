@@ -618,7 +618,7 @@ int aiface_getinfo(void *arg, char *buf)
 		aiface_info->frame_index = vf->frame_index;
 		aiface_info->buf_phy_addr = (ulong)phy_addr;
 		aiface_print(PRINT_OTHER,
-			"output.width=%d, output.height=%d, addr=%lld, aiface_fd=%d, frame_index=%d\n",
+			"output.width=%d, output.height=%d, addr=%lx, aiface_fd=%d, frame_index=%d\n",
 			output.width, output.height, (ulong)phy_addr, aiface_fd, vf->frame_index);
 
 		if (aiface_info->nn_input_frame_format == 1)
