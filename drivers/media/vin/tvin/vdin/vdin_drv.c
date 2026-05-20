@@ -7841,7 +7841,7 @@ static void vdin_get_dts_config(struct vdin_dev_s *devp,
 	/* Enable aspect ratio by default */
 	devp->vdin_function_sel |= VDIN_SET_DISPLAY_RATIO;
 	devp->dts_config.sct_remain_size = 2;/* Keep 2 pages to allocate the buffer faster.*/
-	devp->dts_config.vdin_mut_cnt = 32;
+	devp->dts_config.vdin_mut_cnt = 64;
 
 	/* debug cmd */
 	devp->debug.sm_debug_enable = VDIN_SM_LOG_L_1;

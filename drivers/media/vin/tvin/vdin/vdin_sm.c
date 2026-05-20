@@ -1230,7 +1230,8 @@ void tvin_smr(struct vdin_dev_s *devp)
 		pr_info("[smr.%d]status:%x %x %x\n", devp->index,
 			sm_p->state, info->status, sm_p->sig_status);
 	/* signal status changed during start_dec need to restart vdin */
-	if (devp->is_status_locked && sm_p->sig_status != info->status)
+	if (devp->is_status_locked && (sm_p->sig_status != info->status ||
+		signal_chg & TVIN_SIG_DV_CHG || signal_chg & TVIN_SIG_HDR_CHG))
 		devp->is_need_re_cfg = true;
 	if (devp->is_need_re_cfg) {
 		devp->parm.info.status = TVIN_SIG_STATUS_UNSTABLE;
