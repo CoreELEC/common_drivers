@@ -924,8 +924,9 @@
 
 &i2c3 {
 	status = "okay";
-	pinctrl-names="default";
+	pinctrl-names="default", "sleep";
 	pinctrl-0=<&i2c3_pins4>;
+	pinctrl-1=<&i2c3_pins4_sleep>;
 	clock-frequency = <300000>;
 	ad82120b_68: ad82120b@68 {
 		compatible = "ESMT,ad82120b";
@@ -1003,9 +1004,10 @@
 };
 
 &i2c4 {
-	status = "disabled";
-	pinctrl-names="default";
+	status = "okay";
+	pinctrl-names="default", "sleep";
 	pinctrl-0=<&i2c4_pins3>;
+	pinctrl-1=<&i2c4_pins3_sleep>;
 	clock-frequency = <300000>;
 };
 

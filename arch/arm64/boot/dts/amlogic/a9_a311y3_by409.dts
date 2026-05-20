@@ -977,8 +977,9 @@
 
 &i2c3 {
 	status = "okay";
-	pinctrl-names="default";
+	pinctrl-names="default", "sleep";
 	pinctrl-0=<&i2c3_pins4>;
+	pinctrl-1=<&i2c3_pins4_sleep>;
 	clock-frequency = <300000>;
 	usbc0: aw35615@22 {
 		compatible = "awinic,aw35615";
@@ -1036,9 +1037,10 @@
 };
 
 &i2c4 {
-	status = "disabled";
-	pinctrl-names="default";
+	status = "okay";
+	pinctrl-names="default", "sleep";
 	pinctrl-0=<&i2c4_pins3>;
+	pinctrl-1=<&i2c4_pins3_sleep>;
 	clock-frequency = <300000>;
 };
 

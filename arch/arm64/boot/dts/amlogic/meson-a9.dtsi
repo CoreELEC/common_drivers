@@ -27,6 +27,7 @@
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
 #include <dt-bindings/power/meson-pm.h>
+#include <dt-bindings/i2c/i2c-meson.h>
 / {
 	cpus:cpus {
 		#address-cells = <2>;
@@ -1490,7 +1491,8 @@
 			i2c4: i2c@3a4400 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4400 0x0 0x3c>;
-				interrupts = <GIC_SPI 164 IRQ_TYPE_EDGE_RISING>;
+				working_mode = <I2C_POLLING_MODE>;
+				interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_E>;
@@ -1500,7 +1502,7 @@
 			i2c5: i2c@3a4500 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4500 0x0 0x3c>;
-				interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_I>;
@@ -1510,7 +1512,7 @@
 			i2c6: i2c@3a4600 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4600 0x0 0x3c>;
-				interrupts = <GIC_SPI 173 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_G>;
@@ -1520,7 +1522,7 @@
 			i2c7: i2c@3a4700 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4700 0x0 0x3c>;
-				interrupts = <GIC_SPI 179 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_H>;
@@ -1530,7 +1532,7 @@
 			i2c8: i2c@3a4800 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4800 0x0 0x3c>;
-				interrupts = <GIC_SPI 166 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_I>;
@@ -1758,6 +1760,7 @@
 			i2c3: i2c@e300 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe300 0x0 0x3c>;
+				working_mode = <I2C_POLLING_MODE>;
 				interrupts = <GIC_SPI 411 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -4527,6 +4530,12 @@
 				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 3)>;
 			bias-disable;
 		};
+
+		i2c3_pins4_sleep:i2c4_pins4_sleep {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 14, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 0)>;
+			input-enable;
+		};
 	};
 
 	func-i2c4 {
@@ -4546,6 +4555,12 @@
 			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 2)>,
 				 <AML_PINMUX(AMLOGIC_GPIO_Y, 6, 2)>;
 			bias-disable;
+		};
+
+		i2c4_pins3_sleep:i2c4_pins3_sleep {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Y, 6, 0)>;
+			input-enable;
 		};
 
 		i2c4_pins4: group-i2c4-pins4 {
