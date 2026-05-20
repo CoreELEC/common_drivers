@@ -121,7 +121,7 @@ static int lcd_mode_resume(void *data)
 		LCD_PR(pdrv, "directly lcd late_resume, status=0x%x", pdrv->status);
 		lcd_late_resume(pdrv);
 	} else {
-		lcd_queue_work(&pdrv->late_resume_work);
+		lcd_queue_delayed_work(&pdrv->late_resume_dly_work, 0);
 	}
 
 	return 0;

@@ -575,8 +575,10 @@ static int lcd_power_load_from_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd_de
 				break;
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 			case LCD_POWER_TYPE_EXTERN:
-				lcd_resource_add(pdrv, LCD_RES_EXTERN, index);
-				lcd_extern_dev_index_add(pdrv->index, index);
+				if (index < 0xff) {
+					lcd_resource_add(pdrv, LCD_RES_EXTERN, index);
+					lcd_extern_dev_index_add(pdrv->index, index);
+				}
 				break;
 #endif
 			case LCD_POWER_TYPE_CLK_SS:
@@ -679,8 +681,10 @@ static int lcd_power_load_from_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd_de
 				break;
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
 			case LCD_POWER_TYPE_EXTERN:
-				lcd_resource_add(pdrv, LCD_RES_EXTERN, index);
-				lcd_extern_dev_index_add(pdrv->index, index);
+				if (index < 0xff) {
+					lcd_resource_add(pdrv, LCD_RES_EXTERN, index);
+					lcd_extern_dev_index_add(pdrv->index, index);
+				}
 				break;
 #endif
 			case LCD_POWER_TYPE_BACKLIGHT:
@@ -1204,8 +1208,10 @@ static int lcd_config_load_from_dts(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 			LCD_DEV_DBG(pdrv, dev_p->idx, "failed to get extern_init");
 		} else {
 			pctrl->mipi_cfg.extern_init = para[0];
-			lcd_resource_add(pdrv, LCD_RES_EXTERN, para[0]);
-			lcd_extern_dev_index_add(pdrv->index, para[0]);
+			if (para[0] < 0xff) {
+				lcd_resource_add(pdrv, LCD_RES_EXTERN, para[0]);
+				lcd_extern_dev_index_add(pdrv->index, para[0]);
+			}
 		}
 #endif
 #endif
@@ -1313,8 +1319,10 @@ config_phy_adv_attr_done:
 	} else {
 		pconf->backlight_index = para[0];
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-		lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, pconf->backlight_index);
-		aml_bl_index_add(pdrv->index, pconf->backlight_index);
+		if (pconf->backlight_index < 0xff) {
+			lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, pconf->backlight_index);
+			aml_bl_index_add(pdrv->index, pconf->backlight_index);
+		}
 #endif
 	}
 
@@ -2206,8 +2214,10 @@ static int lcd_power_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_de
 				break;
 			case LCD_POWER_TYPE_EXTERN:
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
-				lcd_resource_add(pdrv, LCD_RES_EXTERN, pstep[i].index);
-				lcd_extern_dev_index_add(pdrv->index, pstep[i].index);
+				if (pstep[i].index < 0xff) {
+					lcd_resource_add(pdrv, LCD_RES_EXTERN, pstep[i].index);
+					lcd_extern_dev_index_add(pdrv->index, pstep[i].index);
+				}
 #endif
 				break;
 			case LCD_POWER_TYPE_CLK_SS:
@@ -2276,8 +2286,10 @@ static int lcd_power_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_de
 				break;
 			case LCD_POWER_TYPE_EXTERN:
 #ifdef CONFIG_AMLOGIC_LCD_EXTERN
-				lcd_resource_add(pdrv, LCD_RES_EXTERN, pstep[i].index);
-				lcd_extern_dev_index_add(pdrv->index, pstep[i].index);
+				if (pstep[i].index < 0xff) {
+					lcd_resource_add(pdrv, LCD_RES_EXTERN, pstep[i].index);
+					lcd_extern_dev_index_add(pdrv->index, pstep[i].index);
+				}
 #endif
 				break;
 			case LCD_POWER_TYPE_BACKLIGHT:

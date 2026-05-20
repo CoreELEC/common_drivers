@@ -960,11 +960,11 @@ void lcd_power_if_early_on(struct aml_lcd_drv_s *pdrv)
 					(void *)pdrv);
 			lcd_if_enable_retry(pdrv);
 		} else {
-			lcd_queue_work(&pdrv->late_resume_work);
+			lcd_queue_delayed_work(&pdrv->late_resume_dly_work, 0);
 		}
 	} else {
 		LCD_PR(pdrv, "workqueue if_early_on, status=0x%x", pdrv->status);
-		lcd_queue_work(&pdrv->late_resume_work);
+		lcd_queue_delayed_work(&pdrv->late_resume_dly_work, 0);
 	}
 }
 
@@ -1112,16 +1112,18 @@ void lcd_late_resume(struct aml_lcd_drv_s *pdrv)
 	mutex_unlock(&lcd_power_mutex);
 }
 
-static void lcd_late_resume_work(struct work_struct *work)
+static void lcd_late_resume_delayed_work(struct work_struct *p_work)
 {
+	struct delayed_work *d_work;
 	struct aml_lcd_drv_s *pdrv;
 	int res_ready;
 
-	pdrv = container_of(work, struct aml_lcd_drv_s, late_resume_work);
+	d_work = container_of(p_work, struct delayed_work, work);
+	pdrv = container_of(d_work, struct aml_lcd_drv_s, late_resume_dly_work);
 	res_ready = lcd_resource_is_ready(pdrv);
 	if (res_ready == 0) {
-		LCD_DBG_ADV2(pdrv, "%s: lcd resource is not ready\n", __func__);
-		lcd_queue_work(&pdrv->late_resume_work);
+		LCD_DBG_ADV2(pdrv, "late_resume_dly_work: lcd resource is not ready");
+		lcd_queue_delayed_work(&pdrv->late_resume_dly_work, 20);
 		return;
 	}
 	lcd_late_resume(pdrv);
@@ -1141,8 +1143,8 @@ static void lcd_init_on_delayed_work(struct work_struct *p_work)
 
 	res_ready = lcd_resource_is_ready(pdrv);
 	if (res_ready == 0) {
-		LCD_DBG(pdrv, "%s: lcd resource is not ready", __func__);
-		lcd_queue_delayed_work(&pdrv->init_on_delayed_work, 10);
+		LCD_DBG_ADV2(pdrv, "init_on_dly_work: lcd resource is not ready");
+		lcd_queue_delayed_work(&pdrv->init_on_delayed_work, 20);
 		return;
 	}
 
@@ -2846,7 +2848,7 @@ static int lcd_probe(struct platform_device *pdev)
 
 	spin_lock_init(&pdrv->sw_vrr.set_lock);
 	spin_lock_init(&pdrv->isr_lock);
-	INIT_WORK(&pdrv->late_resume_work, lcd_late_resume_work);
+	INIT_DELAYED_WORK(&pdrv->late_resume_dly_work, lcd_late_resume_delayed_work);
 	INIT_WORK(&pdrv->mode_switch_on_work, lcd_mode_switch_on_work);
 	INIT_DELAYED_WORK(&pdrv->init_on_delayed_work, lcd_init_on_delayed_work);
 	INIT_DELAYED_WORK(&pdrv->test_delayed_work, lcd_auto_test_delayed);
@@ -2890,7 +2892,7 @@ static void lcd_remove(struct platform_device *pdev)
 
 	index = pdrv->index;
 
-	cancel_work_sync(&pdrv->late_resume_work);
+	cancel_delayed_work(&pdrv->late_resume_dly_work);
 	cancel_work_sync(&pdrv->mode_switch_on_work);
 	cancel_delayed_work(&pdrv->init_on_delayed_work);
 	if (lcd_workqueue)

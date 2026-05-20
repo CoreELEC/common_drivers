@@ -4806,6 +4806,18 @@
 		};
 	};
 
+	func-backlight {
+		bl0_pwm_off_pins: group-bl0-pwm-off-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 1, 0)>;
+			output-low;
+		};
+
+		bl1_pwm_off_pins: group-bl1-pwm-off-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 0)>;
+			output-low;
+		};
+	};
+
 	func-dtv {
 		dtvdemod_if_agc_pins: group-dtvdemod-if-agc-pins {
 			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ??dtv_a_if_agc_z10 */

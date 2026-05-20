@@ -1101,7 +1101,7 @@ struct aml_lcd_drv_s {
 	void (*phy_set)(struct aml_lcd_drv_s *pdrv, int status);
 	// int (*vbyone_vsync_handler)(struct aml_lcd_drv_s *pdrv);
 
-	struct work_struct late_resume_work;
+	struct delayed_work late_resume_dly_work;
 	struct work_struct vx1_reset_work;
 	struct work_struct mode_switch_on_work;
 	struct work_struct vrr_test_work;

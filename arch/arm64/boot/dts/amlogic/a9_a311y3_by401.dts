@@ -1685,6 +1685,26 @@
 	};
 };
 
+&pwm_i {
+	status = "okay";
+};
+
+&pwm_j {
+	status = "okay";
+};
+
+&backlight {
+	status = "okay";
+	pinctrl-0 = <&pwm_i_pins1>; /* GPIOY_1*/
+	pinctrl-1 = <&bl0_pwm_off_pins>;
+};
+
+&backlight1 {
+	status = "okay";
+	pinctrl-0 = <&pwm_j_pins1>; /* GPIOY_5*/
+	pinctrl-1 = <&bl1_pwm_off_pins>;
+};
+
 &hdmirx {
 	status = "okay";
 	pinctrl-0 = <&hdmirx_a_mux>;
