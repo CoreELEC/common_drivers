@@ -2818,7 +2818,7 @@ void irq_dae0(void)
 		prm_top->trig_byp_dae0 = false;
 		dae0_byp_cnt = dpss_dbg_dae0_byp_cnt;
 
-		frc_top->fw_pause = 1;
+		//frc_top->fw_pause = 1;
 		//w_reg_bit(VPU_DAE_WRAP_MIF_MASK, 1, 15, 1); // dae bbd 11.11 from yaotao
 		//w_reg_bit(VPU_DAE_WRAP_MIF_MASK, 1, 9, 1);  // dae ro 11.11 from yaotao
 		wr(VPU_DAE_WRAP_GCLK_CTRL0, 0xaaaaaaaa); // dae clk 11.13 from yaotao
@@ -2830,7 +2830,7 @@ void irq_dae0(void)
 		dbg_h2("trig byp dae0 cnt:%d\n", dae0_byp_cnt);
 		if (!dae0_byp_cnt) {
 			prm_top->frc_me_en = state_st->cur_frc_me_en;
-			frc_top->fw_pause = state_st->cur_fw_pause;
+			//frc_top->fw_pause = state_st->cur_fw_pause;
 			dbg_h2("frc_me_en=%d fw_pause=%d\n",
 				prm_top->frc_me_en, frc_top->fw_pause);
 			// wr(VPU_DAE_WRAP_GCLK_CTRL0, 0x0);
