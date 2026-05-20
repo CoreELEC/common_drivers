@@ -238,7 +238,7 @@ index 37c24ffea65c..8a6fb5a34395 100644
 -- 
 2.46.0
  
-From c1d1a9e4f0d268e0a331a8e5f29c2798261feab3 Mon Sep 17 00:00:00 2001
+From d24fae98a740366648fe8ccc52f6ed0bc5ac7518 Mon Sep 17 00:00:00 2001
 From: yao zhang1 <yao.zhang1@amlogic.com>
 Date: Tue, 10 Jun 2025 11:29:40 +0000
 Subject: [PATCH] fastboot: c4 optimization boottime [1/1]
@@ -265,12 +265,12 @@ Signed-off-by: yao zhang1 <yao.zhang1@amlogic.com>
  drivers/firmware/arm_scmi/driver.c         |  4 +++
  drivers/firmware/arm_scmi/transports/smc.c | 13 ++++++++
  drivers/of/platform.c                      | 38 ++++++++++++++++++++++
- init/initramfs.c                           | 15 +++++++++
+ init/initramfs.c                           | 16 +++++++++
  kernel/sched/features.h                    |  4 +++
  mm/slab.h                                  |  2 +-
  mm/slub.c                                  |  4 +--
  net/ipv4/inet_fragment.c                   |  4 +++
- 10 files changed, 102 insertions(+), 3 deletions(-)
+ 10 files changed, 103 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/clk/clk-fixed-rate.c b/drivers/clk/clk-fixed-rate.c
 index 6b4f76b9c4da..5c2a3eac617a 100644
@@ -332,7 +332,7 @@ index 79866f3b6b3e..a924ed5200ad 100644
  static void __exit scmi_driver_exit(void)
  {
 diff --git a/drivers/firmware/arm_scmi/transports/smc.c b/drivers/firmware/arm_scmi/transports/smc.c
-index 2f0e981e7599..85440a046ffb 100644
+index 2f0e981e7599..fb8f21837cda 100644
 --- a/drivers/firmware/arm_scmi/transports/smc.c
 +++ b/drivers/firmware/arm_scmi/transports/smc.c
 @@ -304,7 +304,20 @@ static const struct of_device_id scmi_of_match[] = {
@@ -434,7 +434,7 @@ index e01be7fd0cfb..49461151df04 100644
  	return 0;
  }
 diff --git a/init/initramfs.c b/init/initramfs.c
-index b2f7583bb1f5..8cf1d90a1a89 100644
+index b2f7583bb1f5..288a3e16bd47 100644
 --- a/init/initramfs.c
 +++ b/init/initramfs.c
 @@ -703,7 +703,11 @@ static void __init populate_initrd_image(char *err)
@@ -466,7 +466,7 @@ index b2f7583bb1f5..8cf1d90a1a89 100644
  	if (!initramfs_cookie) {
  		/*
  		 * Something before rootfs_initcall wants to access
-@@ -764,16 +773,22 @@ void wait_for_initramfs(void)
+@@ -764,16 +773,23 @@ void wait_for_initramfs(void)
  		return;
  	}
  	async_synchronize_cookie_domain(initramfs_cookie + 1, &initramfs_domain);
@@ -478,6 +478,7 @@ index b2f7583bb1f5..8cf1d90a1a89 100644
  {
 +#ifdef CONFIG_AMLOGIC_FREERTOS_C4
 +	do_populate_rootfs();
++	usermodehelper_enable();
 +	return 0;
 +#else
  	initramfs_cookie = async_schedule_domain(do_populate_rootfs, NULL,
