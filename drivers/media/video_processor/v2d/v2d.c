@@ -2096,7 +2096,7 @@ static int v2d_set_frames(struct v2d_dev *dev,
 			vframe_info_cur->fd,
 			file_vf,
 			vframe_info_cur->fence_fd,
-			fence_file,
+			dev->received_frames[i].input_fence[j],
 			dev->fget_count,
 			total_get_count);
 		is_dec_vf = is_valid_mod_type(file_vf->private_data, VF_SRC_DECODER);
@@ -2180,9 +2180,8 @@ static int v2d_set_frames(struct v2d_dev *dev,
 	set_output_buffer_area(dev, frames_info, &dev->received_frames[i], src_vf);
 
 	v2d_print(dev->index, PRINT_PATTERN,
-		"%s done, out_file:%d(%px) out_fence:%d(%px), received_new_count:%d\n",
-		__func__, out_fd, dmabuf->file,
-		out_fence_fd, output_fence_file, dev->received_new_count);
+		"%s done, in_file:%px\n",
+		__func__, dev->received_frames[i].input_file[0]);
 
 	fput(output_fence_file);
 	v2d_print(dev->index, PRINT_AXIS,
@@ -2840,7 +2839,6 @@ static void v2d_do_file_task(struct v2d_dev *dev)
 	v2d_print(dev->index, PRINT_PERFORMANCE,
 		 "display_q len=%d\n", kfifo_len(&dev->display_q));
 
-	memset(received_frames, 0, sizeof(*received_frames));
 	atomic_set(&received_frames->on_use, false);
 }
 
