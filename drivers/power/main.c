@@ -28,7 +28,9 @@ static int __init domain_main_init(void)
 {
 	pr_debug("### %s() start\n", __func__);
 	call_sub_init(sec_power_domain_init);
+	call_sub_init(meson_sm_init);
 	call_sub_init(power_ee_domain_init);
+	call_sub_init(meson_power_domain_init);
 	call_sub_init(meson_pmic6b_bat_init);
 	call_sub_init(sgm415xx_charger_init);
 	call_sub_init(cw2015_battery_init);
@@ -44,6 +46,8 @@ static void __exit domain_main_exit(void)
 	meson_pmic6b_bat_exit();
 	sgm415xx_charger_exit();
 	cw2015_battery_exit();
+	meson_power_domain_exit();
+	meson_sm_exit();
 }
 
 #if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)

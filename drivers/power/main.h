@@ -20,6 +20,34 @@ static inline void sec_power_domain_exit(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_AMLOGIC_POWER)
+int meson_power_domain_init(void);
+void meson_power_domain_exit(void);
+#else
+static inline int meson_power_domain_init(void)
+{
+	return 0;
+}
+
+static inline void meson_power_domain_exit(void)
+{
+}
+#endif
+
+#if IS_ENABLED(CONFIG_AMLOGIC_SM)
+int meson_sm_init(void);
+void meson_sm_exit(void);
+#else
+static inline int meson_sm_init(void)
+{
+	return 0;
+}
+
+static inline void meson_sm_exit(void)
+{
+}
+#endif
+
 #if IS_ENABLED(CONFIG_AMLOGIC_POWER_EE)
 int power_ee_domain_init(void);
 void power_ee_domain_exit(void);

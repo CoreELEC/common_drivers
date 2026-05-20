@@ -15,6 +15,12 @@ config AMLOGIC_POWER_EE
 	help
 	  this config enables to use amlogic ee power management driver
 
+config AMLOGIC_SM
+	tristate "Amlogic Secure Monitor driver"
+	default y if (AMLOGIC_POWER=m || AMLOGIC_POWER=y)
+	depends on AMLOGIC_POWER
+	help
+	  Say y here to enable the Amlogic secure monitor driver
 
 source "$(COMMON_DRIVERS_DIR)/drivers/power/meson_pmic6b/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/power/charger/Kconfig"

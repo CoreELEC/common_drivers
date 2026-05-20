@@ -9,6 +9,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/a9-pd.h>
+#include <dt-bindings/power/amlogic-a9-power.h>
 #include <dt-bindings/dma/amlogic,a9-dma.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/gpio/meson-a9-gpio.h>
@@ -285,7 +286,7 @@
 		interrupts = <0 185 IRQ_TYPE_EDGE_RISING
 			      0 186 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "amfc0", "amfc1";
-		power-domains=<&pwrdm PDID_A9_AMFC>;
+		power-domains=<&pwrdm PWRC_A9_AMFC_ID>;
 		clocks = <&clkc_amfc>;
 		assigned-clocks = <&clkc_amfc>;
 		assigned-clock-rates = <666666666>;
@@ -411,7 +412,7 @@
 		compatible = "amlogic,adap0";
 		reg = <0x0 0xff55b000 0x0 0xe4>;
 		reg-names = "adap";
-		power-domains = <&pwrdm PDID_A9_OPP>;
+		power-domains = <&pwrdm PWRC_A9_OPP_ID>;
 		clocks = <&clkc_isp>;
 		clock-names = "isp";
 		assigned-clocks = <&clkc_isp>;
@@ -442,7 +443,7 @@
 		compatible = "amlogic,adap1";
 		reg = <0x0 0xff55b400 0x0 0xe4>;
 		reg-names = "adap";
-		power-domains = <&pwrdm PDID_A9_OPP>;
+		power-domains = <&pwrdm PWRC_A9_OPP_ID>;
 		clocks = <&clkc_isp>;
 		clock-names = "isp";
 		assigned-clocks = <&clkc_isp>;
@@ -473,7 +474,7 @@
 		compatible = "amlogic,adap2";
 		reg = <0x0 0xff55f000 0x0 0xe4>;
 		reg-names = "adap";
-		power-domains = <&pwrdm PDID_A9_OPP>;
+		power-domains = <&pwrdm PWRC_A9_OPP_ID>;
 		clocks = <&clkc_isp>;
 		clock-names = "isp";
 		assigned-clocks = <&clkc_isp>;
@@ -504,7 +505,7 @@
 		compatible = "amlogic,adap3";
 		reg = <0x0 0xff55f400 0x0 0xe4>;
 		reg-names = "adap";
-		power-domains = <&pwrdm PDID_A9_OPP>;
+		power-domains = <&pwrdm PWRC_A9_OPP_ID>;
 		clocks = <&clkc_isp>;
 		clock-names = "isp";
 		assigned-clocks = <&clkc_isp>;
@@ -549,7 +550,7 @@
 	isp_virt0: isp-virt0 {
 		compatible = "amlogic,isp-virt0";
 		isp = <&isp>;
-		power-domains = <&pwrdm PDID_A9_ISP>;
+		power-domains = <&pwrdm PWRC_A9_CVE_ID>;
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
@@ -566,7 +567,7 @@
 	isp_virt1: isp-virt1 {
 		compatible = "amlogic,isp-virt1";
 		isp = <&isp>;
-		power-domains = <&pwrdm PDID_A9_ISP>;
+		power-domains = <&pwrdm PWRC_A9_CVE_ID>;
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
@@ -583,7 +584,7 @@
 	isp_virt2: isp-virt2 {
 		compatible = "amlogic,isp-virt2";
 		isp = <&isp>;
-		power-domains = <&pwrdm PDID_A9_ISP>;
+		power-domains = <&pwrdm PWRC_A9_CVE_ID>;
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
@@ -600,7 +601,7 @@
 	isp_virt3: isp-virt3 {
 		compatible = "amlogic,isp-virt3";
 		isp = <&isp>;
-		power-domains = <&pwrdm PDID_A9_ISP>;
+		power-domains = <&pwrdm PWRC_A9_CVE_ID>;
 		clocks = <&clkc_dewarp>, <&clkc_isp>;
 		clock-names = "dewarp", "isp";
 		assigned-clocks = <&clkc_dewarp>, <&clkc_isp>;
@@ -686,8 +687,12 @@
 		status = "okay";
 	};
 
+	sm: secure-monitor {
+		compatible = "amlogic,meson-gxbb-sm";
+	};
+
 	pwrdm: power-domains {
-		compatible = "amlogic,a9-power-domain";
+		compatible = "amlogic,a9-pwrc";
 		#power-domain-cells = <1>;
 		status = "okay";
 	};
@@ -704,7 +709,7 @@
 		interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clkc_nna_core>;
 		clock-names = "adla_core_clk";
-		power-domains=<&pwrdm PDID_A9_NNA_4T>;
+		power-domains=<&pwrdm PWRC_A9_NNA_4T_ID>;
 		nn_hw_version="r4p0";
 		adla_core_clk_rate = <1000000000>;
 		adla_smc_cmd = <0x820000b2>;
@@ -1098,7 +1103,7 @@
 		 * bit2: pm_support_ffv
 		 */
 		pm-support = /bits/ 8 <0x0>;
-		power-domains = <&pwrdm PDID_A9_DSPA>;
+		power-domains = <&pwrdm PWRC_A9_DSPA_ID>;
 		power-domain-names = "dspa";
 		mboxes = <&mbox_fifo A9_REE2DSPA_HOST>;
 		//logbuff-polling-ms = <50>;
@@ -1836,7 +1841,7 @@
 				clock-names = "usb_general", "apb_bus", "xtal", "usb_clk_250m";
 				assigned-clocks = <&clkc_usb CLKID_USB_250M>;
 				assigned-clock-rates = <250000000>;
-				power-domains = <&pwrdm PDID_A9_U3DRD_A>;
+				power-domains = <&pwrdm PWRC_A9_U3DRD_A_ID>;
 				status = "okay";
 			};
 
@@ -1862,7 +1867,7 @@
 								"usb_clk_250m";
 				assigned-clocks = <&clkc_usb CLKID_USB_250M>;
 				assigned-clock-rates = <250000000>;
-				power-domains = <&pwrdm PDID_A9_U3DPPHY_U3>;
+				power-domains = <&pwrdm PWRC_A9_U3DPPHY_U3_ID>;
 				phy-clk-sel-reg-off = <0x0>;
 				pipe-clk-sel = <0xc>;
 				status = "okay";
@@ -1882,7 +1887,7 @@
 			clock-names = "bus_early", "ref", "suspend";
 			phys = <&u2paport0>, <&u3paport0>;
 			phy-names = "usb2-phy", "usb3-phy";
-			power-domains = <&pwrdm PDID_A9_U3DRD_A>;
+			power-domains = <&pwrdm PWRC_A9_U3DRD_A_ID>;
 			resets = <&reset RESET_U3DRD>;
 			snps,usb2-lpm-disable;
 			//snps,usb3_lpm_capable;
@@ -1942,7 +1947,7 @@
 				clock-names = "usb_general", "apb_bus", "pp_clk", "xtal";
 				assigned-clocks = <&clkc_pp>;
 				assigned-clock-rates = <400000000>;
-				power-domains = <&pwrdm PDID_A9_U3DRD_B>;
+				power-domains = <&pwrdm PWRC_A9_U3DRD_B_ID>;
 				status = "okay";
 			};
 
@@ -1969,7 +1974,7 @@
 								"xtal";
 				assigned-clocks = <&clkc_pp>;
 				assigned-clock-rates = <400000000>;
-				power-domains = <&pwrdm PDID_A9_U3DRD_B>;
+				power-domains = <&pwrdm PWRC_A9_U3DRD_B_ID>;
 				status = "okay";
 			};
 		};
@@ -1987,7 +1992,7 @@
 			clock-names = "bus_early", "ref", "suspend";
 			phys = <&u2pbport0>, <&u3pbport0>;
 			phy-names = "usb2-phy", "usb3-phy";
-			power-domains = <&pwrdm PDID_A9_U3DRD_B>;
+			power-domains = <&pwrdm PWRC_A9_U3DRD_B_ID>;
 			resets = <&reset RESET_U3DRDB>;
 			snps,usb2-lpm-disable;
 			//snps,usb3_lpm_capable;
@@ -2044,7 +2049,7 @@
 				clock-names = "usb_general", "apb_bus", "pp_clk", "xtal";
 				assigned-clocks = <&clkc_pp>;
 				assigned-clock-rates = <400000000>;
-				power-domains = <&pwrdm PDID_A9_U2H>;
+				power-domains = <&pwrdm PWRC_A9_U2H_ID>;
 				sw-hsp;
 				status = "okay";
 			};
@@ -2063,7 +2068,7 @@
 			clock-names = "bus_early", "ref", "suspend";
 			phys = <&u2pcport0>;
 			phy-names = "usb2-phy";
-			power-domains = <&pwrdm PDID_A9_U2H>;
+			power-domains = <&pwrdm PWRC_A9_U2H_ID>;
 			resets = <&reset RESET_U2H>;
 			snps,usb2-lpm-disable;
 			//snps,usb3_lpm_capable;
@@ -2117,7 +2122,7 @@
 							<&clkc_sys CLKID_SYS_PERIPH>,
 							<&xtal>;
 				clock-names = "usb_general", "apb_bus", "xtal";
-				power-domains = <&pwrdm PDID_A9_U2DRD>;
+				power-domains = <&pwrdm PWRC_A9_U2DRD_ID>;
 				status = "okay";
 			};
 		};
@@ -2135,7 +2140,7 @@
 			clock-names = "bus_early", "ref", "suspend";
 			phys = <&u2pdport0>;
 			phy-names = "usb2-phy";
-			power-domains = <&pwrdm PDID_A9_U2DRD>;
+			power-domains = <&pwrdm PWRC_A9_U2DRD_ID>;
 			resets = <&reset RESET_U2DRD>;
 			snps,usb2-lpm-disable;
 			//snps,usb3_lpm_capable;
@@ -2388,7 +2393,7 @@
 			/* <reg_offset vlaue> */
 			pcie_rst_1 = <0x04 0xFF007800>;
 			pcie-phy-apb-rst = <0x4 0x400>;
-			power-domains = <&pwrdm PDID_A9_PCIE_A>;
+			power-domains = <&pwrdm PWRC_A9_PCIE_A_ID>;
 			status = "disabled";
 			dma-ranges = <0x0 0x0 0x0 0x0 0x0 0x0 0xe0000000>;
 		};
@@ -2442,7 +2447,7 @@
 			pcie_rst_1 = <0x04 0x18>;
 			pcie_rst_2 = <0x0c 0x1FF8>;
 			pcie-phy-apb-rst = <0x4 0x400>;
-			power-domains = <&pwrdm PDID_A9_PCIE_B>;
+			power-domains = <&pwrdm PWRC_A9_PCIE_B_ID>;
 			status = "disabled";
 			dma-ranges = <0x0 0x0 0x0 0x0 0x0 0x0 0xe0000000>;
 		};
@@ -2499,7 +2504,7 @@
 			mmc_debug_flag;
 			no-mmc;
 			no-sdio;
-			power-domains=<&pwrdm PDID_A9_SD_EMMC_B>;
+			power-domains=<&pwrdm PWRC_A9_SD_EMMC_B_ID>;
 			//resets = <&reset RESET_SD_EMMC_B>;
 		};
 
@@ -2524,7 +2529,7 @@
 			use_intf3_tuning;
 			no-mmc;
 			no-sd;
-			power-domains=<&pwrdm PDID_A9_SD_EMMC_A>;
+			power-domains=<&pwrdm PWRC_A9_SD_EMMC_A_ID>;
 			//resets = <&reset RESET_SD_EMMC_A>;
 		};
 
@@ -2552,7 +2557,7 @@
 			u3hsg-combo-reg = <0xfe0086e0>;
 			combo-hsg-sel-val = <0x0>;
 			#phy-cells = <0>;
-			power-domains=<&pwrdm PDID_A9_U3HSG_HSG>;
+			power-domains=<&pwrdm PWRC_A9_U3HSG_HSG_ID>;
 			status = "disabled";
 		};
 
@@ -2576,7 +2581,7 @@
 			internal_phy = <2>;
 			/* ignore integrated PCS link states */
 			amlogic,ignore-pcs-stats;
-			power-domains=<&pwrdm PDID_A9_ETH>;
+			power-domains=<&pwrdm PWRC_A9_ETH_ID>;
 			status = "disabled";
 
 			ext_mdio_a: mdio {
@@ -2618,7 +2623,7 @@
 			mboxes = <&mbox_fifo A9_REE2AO_ETH>;
 			// amlogic,smc-id = <0x8200009d>;
 			internal_phy = <2>;
-			power-domains=<&pwrdm PDID_A9_ETH_1G>;
+			power-domains=<&pwrdm PWRC_A9_ETH_1G_ID>;
 			status = "disabled";
 
 			ext_mdio_b: mdio {
@@ -2716,8 +2721,8 @@
 			"assist_mbox_irq_ee",
 			"viff_empty",
 			"axi_monitor";
-		power-domains = <&pwrdm PDID_A9_DOS_HEVC>,
-			<&pwrdm PDID_A9_DOS_HCODEC>;
+		power-domains = <&pwrdm PWRC_A9_DOS_HEVC_ID>,
+			<&pwrdm PWRC_A9_DOS_HCODEC_ID>;
 		power-domain-names = "pwrc-hevc",
 			"pwrc-hcodec";
 		reset-names = "hevcf_dmc_pipel";
@@ -3035,7 +3040,7 @@
 				"clk_tahoe";
 		interrupts = <GIC_SPI 259 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "tahoe_irq0";
-		power-domains = <&pwrdm PDID_A9_TAHOE>;
+		power-domains = <&pwrdm PWRC_A9_TAHOE_ID>;
 		reset-names = "tahoe_core_rst", "tahoe_a_rst", "tahoe_apb_rst", "tahoe_sys_rst";
 		resets = <&reset RESET_TAHOE_CORE>,
 			<&reset RESET_TAHOE>,
@@ -3059,7 +3064,7 @@
 			"clk_dos",
 			"clk_jpeg_enc";
 
-		power-domains = <&pwrdm PDID_A9_DOS_HCODEC>;
+		power-domains = <&pwrdm PWRC_A9_DOS_HCODEC_ID>;
 		interrupts = <0 87 1 0 88 1 0 89 1>;
 		interrupt-names = "dos_mbox_slow_irq0", "dos_mbox_slow_irq1", "dos_mbox_slow_irq2";
 		//reset-names = "jpegenc_rst";
@@ -3708,7 +3713,7 @@
 			<&clkc_cve_vge CLKID_VGE>;
 		clock-names = "clk_cve", "clk_vge";
 		clk-rate = <666000000>;
-		power-domains = <&pwrdm PDID_A9_CVE>;
+		power-domains = <&pwrdm PWRC_A9_CVE_ID>;
 		status = "okay";
 	};
 
@@ -3724,7 +3729,7 @@
 			"clk_ge2d_gate",
 			"cve_arb";
 		reg = <0x0 0xff560000 0x0 0x100>;
-		power-domains = <&pwrdm PDID_A9_GE2D>;
+		power-domains = <&pwrdm PWRC_A9_GE2D_ID>;
 	};
 
 	amlgdc {
@@ -3764,7 +3769,7 @@
 			<666666666>,
 			<800000000>;
 		reg = <0x0 0xff564000 0x0 0xe80>;
-		power-domains = <&pwrdm PDID_A9_VICP>;
+		power-domains = <&pwrdm PWRC_A9_VICP_ID>;
 	};
 
 	aml_bt: aml_bt {

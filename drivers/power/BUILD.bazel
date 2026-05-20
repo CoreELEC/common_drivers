@@ -15,6 +15,8 @@ ddk_module(
                 "power_domain_sysfs.c",
                 "sec_pwr_ctrl.c",
                 "sec_power_domain.c",
+                "meson-secure-pwrc.c",
+                "meson_sm.c",
             ],
         },
 

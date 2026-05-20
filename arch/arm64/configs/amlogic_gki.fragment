@@ -195,6 +195,7 @@ CONFIG_AMLOGIC_DOLBY_FW=y
 
 # amlogic-power.ko
 CONFIG_AMLOGIC_POWER=m
+CONFIG_AMLOGIC_SM=m
 
 # amlogic-cpuinfo.ko
 CONFIG_AMLOGIC_CPU_INFO=m

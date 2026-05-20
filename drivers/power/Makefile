@@ -5,7 +5,9 @@ obj-$(CONFIG_AMLOGIC_POWER)		+= $(MODULE_NAME).o
 $(MODULE_NAME)-y += main.o	\
 			power_domain_sysfs.o	\
 			sec_pwr_ctrl.o	\
-			sec_power_domain.o
+			sec_power_domain.o \
+			meson_sm.o	\
+			meson-secure-pwrc.o
 
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_POWER_EE) += power_ee_domain.o
 
