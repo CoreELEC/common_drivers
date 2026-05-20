@@ -203,25 +203,33 @@ int frc_get_video_latency(void)
 	struct vinfo_s *vinfo = get_current_vinfo();
 	u32 vout_hz = 0;
 	u32 delay_time = 0;   /*ms*/
-	u32 delay = 0;   /*ms*/
+	u32 frm_rate;
 
-	if (vinfo && vinfo->sync_duration_den != 0)
-		vout_hz = vinfo->sync_duration_num / vinfo->sync_duration_den;
-	// out_frm_dly_num = READ_FRC_BITS(FRC_REG_TOP_CTRL9, 24, 4);
-	if (vout_hz != 0)
-		delay = 35 * 100 / vout_hz;
-	// delay_time = out_frm_dly_num;
 	if (!devp || !vinfo)
 		return 0;
+
+	frm_rate = devp->in_sts.frc_vf_rate;
+	if (!frm_rate)
+		return 0;
+
+	if (vinfo->sync_duration_den != 0)
+		vout_hz = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	else
+		return 0;
+
+	if (devp->in_sts.frc_vf_rate_frac > 500)
+		frm_rate += 1;
+
 	if (devp->frc_sts.auto_ctrl == 1) {
-		// if (devp->in_sts.vf_sts == VFRAME_NO)
-		// delay_time = delay;
-		// else if (devp->frc_sts.state == FRC_STATE_BYPASS ||
-		//	devp->frc_sts.state == FRC_STATE_DISABLE)
-		// delay_time = 0;
-		// else if (devp->frc_sts.state == FRC_STATE_ENABLE)
-		//	delay_time = delay;
-		delay_time = delay;
+		delay_time = 50;
+		if ((READ_FRC_REG(FRC_TOP_CTRL) & 0x01) == FRC_STATE_ENABLE) {
+			if (devp->in_out_ratio == FRC_RATIO_1_1 &&
+				frm_rate == vout_hz)
+				delay_time = (35 * 100 * 100 / vout_hz) / 100;
+			else
+				delay_time = (20 * 100 * 100 / frm_rate) / 100 +
+					(15 * 100 * 100 / vout_hz) / 100;
+		}
 	} else {
 		delay_time = 0;
 	}
