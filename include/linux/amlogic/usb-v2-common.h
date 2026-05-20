@@ -196,7 +196,6 @@ struct aml_usb3_phy {
 		int (*pll_init)(struct aml_usb3_phy *phy);
 		bool (*wait_pll_locked)(struct aml_usb3_phy *phy);
 		void (*ssc_set)(struct aml_usb3_phy *phy, bool on);
-		void (*ssc_fliped_set)(struct aml_usb3_phy *phy, bool on);
 		int (*secondary_pipe_clk_set)(struct aml_usb3_phy *phy, bool on);
 	} *priv;
 	u64 cfg_reg_phy;

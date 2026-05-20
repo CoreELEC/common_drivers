@@ -423,43 +423,6 @@ static void meson_u3phy_a9_ssc_set(struct aml_usb3_phy *phy, bool on)
 	}
 }
 
-static void meson_u3phy_a9_ssc_fliped_set(struct aml_usb3_phy *phy, bool on)
-{
-	if (on) {
-		/* U3P2PLL1_CNTL0
-		 * <2> R/W 0 u3p2pll0_bias_en
-		 * <3> R/W 1 u3p2pll0_clk_output_select
-		 * <27> R/W 0 u3p2pll0_lock_en
-		 */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(2), BIT(2));
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(27), BIT(27));
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x44, BIT(3), BIT(3));
-
-		/* U3P2PLL1_CNTL2 <13> R/W 0 u3p2pll1_rstn */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(13), BIT(13));
-		/* U3P2PLL1_CNTL2 <14> R/W 0 u3p2pll1_rstn_lock */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(14), BIT(14));
-
-		/* U3P2PLL1_CNTL2 <15> R/W 1 u3p2pll1_sdm_en */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(15), BIT(15));
-		/* U3P2PLL1_CNTL2 <20:19> R/W u3p2pll1_ss_mode(ssc dir).
-		 * 2b'10:negative 2b'01:positive
-		 */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(20, 19), 0x2 << 19);
-		/* U3P2PLL1_CNTL2 <24:21> R/W 0 u3p2pll1_ssc_dep_sel(ssc amplitude step).
-		 * 4b'1001: 4500ppm.
-		 */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(24, 21), 0x9 << 21);
-		/* U3P2PLL1_CNTL2 <28:25> R/W u3p2pll1_ssc_str_m (ssc amplitude). 4'b0001*/
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, GENMASK(28, 25), 0x1 << 25);
-		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en(ssc on). 1'b1. */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(29), BIT(29));
-	} else {
-		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4c, BIT(29), 0);
-	}
-}
-
 int meson_u3phy_a9_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
 {
 	int ret = 0;
@@ -486,7 +449,6 @@ static struct meson_aml_u3phy_priv meson_u3phy_a9_priv = {
 	.trim = meson_u3phy_a9_trim,
 	.txrx_cali = meson_u3phy_a9_txrx_cali,
 	.ssc_set = meson_u3phy_a9_ssc_set,
-	.ssc_fliped_set = meson_u3phy_a9_ssc_fliped_set,
 	.secondary_pipe_clk_set = meson_u3phy_a9_secondary_pipe_clk_set,
 };
 

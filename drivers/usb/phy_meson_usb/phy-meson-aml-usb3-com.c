@@ -527,12 +527,8 @@ static void meson_aml_u3phy_typec_post_init(struct aml_usb3_phy *phy)
 
 	ret = meson_aml_u3phy_pll_hw_init(phy);
 
-	if (!WARN_ON(!phy->priv->ssc_set || !phy->priv->ssc_fliped_set)) {
-		if (phy->orient == TYPEC_ORIENTATION_NORMAL)
-			phy->priv->ssc_set(phy, true);
-		else if (phy->orient == TYPEC_ORIENTATION_REVERSE)
-			phy->priv->ssc_fliped_set(phy, true);
-	}
+	if (!WARN_ON(!phy->priv->ssc_set))
+		phy->priv->ssc_set(phy, true);
 
 	if (phy->priv->secondary_pipe_clk_set) {
 		ret = phy->priv->secondary_pipe_clk_set(phy, false);
