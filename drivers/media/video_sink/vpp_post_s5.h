@@ -211,6 +211,7 @@ struct vpp_post_input_s {
 	u32 vd1_size_before_padding;
 	u32 vd1_size_after_padding;
 	u32 vd1_proc_slice;
+	u32 slice_out_calc;
 };
 
 struct vpp_post_in_padding_s {

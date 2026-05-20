@@ -1391,17 +1391,20 @@ static int check_vpp_info_changed(struct vpp_post_input_s *vpp_input, u8 vpp_ind
 	if (!changed) {
 		if (vpp_input->slice_num != g_vpp_input_pre.slice_num ||
 			vpp_input->bld_out_hsize != g_vpp_input_pre.bld_out_hsize ||
-			vpp_input->bld_out_vsize != g_vpp_input_pre.bld_out_vsize) {
+			vpp_input->bld_out_vsize != g_vpp_input_pre.bld_out_vsize ||
+			vpp_input->slice_out_calc != g_vpp_input_pre.slice_out_calc) {
 			changed = 1;
 			if (debug_flag_s5 & DEBUG_VPP_POST)
-				pr_info("vpp_index=%d:hit vpp_input->slice_num=%d, %d, %d, %d, %d, %d\n",
+				pr_info("vpp_index=%d:hit vpp_input->slice_num=%d, %d, %d, %d, %d, %d, %d, %d\n",
 					vpp_index,
 					vpp_input->slice_num,
 					vpp_input->bld_out_hsize,
 					vpp_input->bld_out_vsize,
+					vpp_input->slice_out_calc,
 					g_vpp_input_pre.slice_num,
 					g_vpp_input_pre.bld_out_hsize,
-					g_vpp_input_pre.bld_out_vsize);
+					g_vpp_input_pre.bld_out_vsize,
+					g_vpp_input_pre.slice_out_calc);
 		}
 	}
 	if (!changed) {
@@ -1566,6 +1569,13 @@ int vpp_blend_vd2_set(u8 vpp_index, struct vpp_post_blend_s *vpp_post_blend)
 	return 0;
 }
 
+static u32 get_slice_out_calc(void)
+{
+	struct vd_proc_s *vd_proc = get_vd_proc_info();
+
+	return vd_proc->vd_proc_vd1_info.slice_out_calc;
+}
+
 int update_vpp_input_info(const struct vinfo_s *info, u8 vpp_index)
 {
 	int update = 0;
@@ -1725,6 +1735,7 @@ int update_vpp_input_info(const struct vinfo_s *info, u8 vpp_index)
 	vpp_input.vpp_post_in_pad_vsize = g_vpp_in_padding.vpp_post_in_pad_vsize;
 	vpp_input.down_move = g_vpp_in_padding.down_move;
 	vpp_input.right_move = g_vpp_in_padding.right_move;
+	vpp_input.slice_out_calc = get_slice_out_calc();
 	update = check_vpp_info_changed(&vpp_input, vpp_index);
 	return update;
 }
