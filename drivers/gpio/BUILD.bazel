@@ -551,28 +551,3 @@ ddk_module(
     visibility = ["//visibility:public"],
     deps = amlogic_pinctrl_soc_deps,
 )
-
-ddk_module(
-    name = "amlogic-pinctrl-a4",
-    srcs = glob([
-        "**/*.h",
-    ]),
-    conditional_srcs = {
-        "CONFIG_AMLOGIC_PINCTRL_A4": {
-            True: ["pinctrl/pinctrl-amlogic-a4.c"],
-        },
-    },
-    hdrs = [
-        "//common:drivers/pinctrl/core.h",
-        "//common:drivers/pinctrl/pinctrl-utils.h",
-        "//common:drivers/pinctrl/pinconf.h",
-    ],
-    linux_includes = [
-        "../../../common/drivers/pinctrl/meson",
-    ],
-    local_defines = ["pr_fmt(fmt)=\"[pinctrl-a4]: \" fmt"],
-    out = "amlogic-pinctrl-a4.ko",
-    kernel_build = kernel_select(),
-    visibility = ["//visibility:public"],
-    deps = amlogic_pinctrl_soc_deps,
-)

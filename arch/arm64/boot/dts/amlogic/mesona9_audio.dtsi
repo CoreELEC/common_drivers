@@ -508,6 +508,74 @@
 	};
 };
 
+&periphs_pinctrl {
+	tdmb_pin: tdmb_pins {
+		mux { /* GPIOA_1 GPIOA_2  GPIOA_3  GPIOA_4 GPIOA_5*/
+			groups = "tdm_sclk1_a",
+				"tdm_fs1_a",
+				"tdm_d2",
+				"tdm_d3",
+				"tdm_d4_a",
+				"tdm_d5_a",
+				"tdm_d6_a";
+			function = "tdm";
+		};
+	};
+
+	tdmout_b_gpio: tdmout_b_gpio {
+		mux { /* GPIOA_1, GPIOA_2, GPIOA_3  GPIOA_5*/
+			groups ="GPIOA_1",
+				"GPIOA_2",
+				"GPIOA_3",
+				"GPIOA_4",
+				"GPIOA_5",
+				"GPIOA_6",
+				"GPIOA_7";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+
+	mclk_1_pad: mclk1_pins {
+		mux { /* GPIOA_0*/
+			groups = "mclk_1_a";
+			function = "mclk";
+		};
+	};
+};
+
+&aobus_pinctrl {
+	pdmin: pdminpins {
+		mux { /* GPIOAO_6  GPIOAO_10*/
+			groups = "pdm_din0_ao",
+				"pdm_din1_ao",
+				"pdm_din2_ao",
+				"pdm_din3_ao",
+				"pdm_dclk_ao";
+			function = "pdm_ao";
+		};
+	};
+	spdifout_a: spdifout_a {
+		mux { /* GPIOD_13 */
+			groups = "spdif_out_ao_d";
+			function = "spdif_ao";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIOD_13 */
+			groups = "GPIOD_13";
+			function = "gpio_aobus";
+		};
+	};
+	spdifin_a: spdifin_a {
+		mux { /* GPIOD_13 */
+			groups = "spdif_in_ao_d";
+			function = "spdif_ao";
+		};
+	};
+};
+
 &pinctrl_audio {
 	tdm_d2_pins: tdm_d2_pin {
 		mux {
