@@ -54,6 +54,7 @@
 #define I2C_HW_POS		BIT(2)
 #define I2C_JOIN_RX		BIT(1)
 #define I2C_JOIN_TX		BIT(0)
+#define I2C_TX_THR_DIV		2
 
 /* CFG BUS fields */
 #define BUS_NO_STOP		BIT(18)//after soc c5 support this bit. others invalid.
@@ -208,14 +209,14 @@ static inline void meson_i2c_dump_reg(struct meson_i2c *i2c, const char *func, i
 	u32 data;
 	int i;
 
-	dev_err(i2c->dev, " %s, line:%d\n", func, line);
+	trace_printk("%s %s, line:%d\n", dev_name(i2c->dev), func, line);
 	for (i = 0 ; i < 8; i++) {
 		data = readl(i2c->regs + i * 4);
-		dev_err(i2c->dev, "i2c reg%x : 0x%x\n", i, data);
+		trace_printk("%s i2c reg%x : 0x%x\n", dev_name(i2c->dev), i, data);
 	}
 	for (i = 0xb ; i < 0xf; i++) {
 		data = readl(i2c->regs + i * 4);
-		dev_err(i2c->dev, "i2c reg%x : 0x%x\n", i, data);
+		trace_printk("%s i2c reg%x : 0x%x\n", dev_name(i2c->dev), i, data);
 	}
 #endif
 }
@@ -254,17 +255,17 @@ static void meson_i2c_set_clk_div(struct meson_i2c *i2c)
 	 */
 	meson_i2c_set_mask(i2c, REG_CFG_BUS,
 		BUS_RATIO_MASK | BUS_SPEED_MODE, div | BUS_SPEED_MODE);
-	dev_dbg(i2c->dev, "%s: clk %lu, freq %u, div %u\n",
-		__func__, clk_rate, i2c->frequency, div);
+#ifdef I2C_DEBUG
+	trace_printk("%s %s: clk %lu, freq %u, div %u\n",
+		dev_name(i2c->dev), __func__,
+			clk_rate, i2c->frequency, div);
+#endif
 }
 
 static void reset_fifo_pos(struct meson_i2c *i2c)
 {
 	meson_i2c_writel(i2c, 0x00, REG_TX_RD_ADDR);
-	if (i2c->mode == I2C_POLLING_MODE)
-		meson_i2c_writel(i2c, 0x00, REG_TX_WR_ADDR);
-	else
-		meson_i2c_writel(i2c, i2c->fifo_depth, REG_TX_WR_ADDR);
+	meson_i2c_writel(i2c, 0x00, REG_TX_WR_ADDR);
 
 	/* Must reset rx_wr_addr before rx_rd_addr for continues read.
 	 * Because reset rd will pull data to fifo, so we need reset wr early.
@@ -279,11 +280,24 @@ static int controller_is_error(struct meson_i2c *i2c)
 	int ret = 0;
 
 	if (readl(i2c->regs + REG_CGF_IRQ_STATE) & i2c->data->xfer_err_bits) {
-		dev_dbg(i2c->dev, "i2c trans error 0x%x\n", readl(i2c->regs + REG_CGF_IRQ_STATE));
+#ifdef I2C_DEBUG
+		trace_printk("%s i2c controller error: 0x%x\n", dev_name(i2c->dev),
+					readl(i2c->regs + REG_CGF_IRQ_STATE));
+#endif
 		ret = -ENXIO;
 	}
 
 	return ret;
+}
+
+static int controller_is_done(struct meson_i2c *i2c)
+{
+	return readl(i2c->regs + REG_CGF_IRQ_STATE) & i2c->data->xfer_done_bits;
+}
+
+static void clear_irq_status(struct meson_i2c *i2c, u32 irq_bits)
+{
+	meson_i2c_writel(i2c, irq_bits, REG_CGF_IRQ_STATE);
 }
 
 static int wait_controller_done(struct meson_i2c *i2c)
@@ -291,7 +305,7 @@ static int wait_controller_done(struct meson_i2c *i2c)
 	u32 time_cnt = 0;
 	int ret = 0;
 
-	while (!(readl(i2c->regs + REG_CGF_IRQ_STATE) & i2c->data->xfer_done_bits)) {
+	while (!controller_is_done(i2c)) {
 		if (time_cnt > I2C_TIMEOUT_MS * 1000)
 			return -ETIMEDOUT;
 		udelay(1);
@@ -329,8 +343,7 @@ static int wait_tx_done(struct meson_i2c *i2c, u32 des_count)
 static void meson_i2c_init(struct meson_i2c *i2c)
 {
 	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK, 1 << 12);
-	meson_i2c_writel(i2c, 0, REG_CFG_START);
-	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
+	clear_irq_status(i2c, 0xffff);//clear all irq
 	meson_i2c_writel(i2c, i2c->data->enable_irq_bits, REG_CGF_IRQ_ENABLE);
 	meson_i2c_set_mask(i2c, REG_CFG_BUS, BUS_FILTER_MASK | BUS_NO_STOP, 1 << 12 | BUS_NO_STOP);
 	/* set rx thresh, when fifo has data and fifo full will generate irq for cpu read.
@@ -339,13 +352,8 @@ static void meson_i2c_init(struct meson_i2c *i2c)
 	 * because TCON driver will OP i2c DMA in there driver.
 	 */
 	i2c->fifo_depth = 16;
-	if (i2c->mode == I2C_POLLING_MODE)
-		meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
-					i2c->fifo_depth << 16 | (i2c->fifo_depth / 2) << 8);
-	else
-		meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
-					i2c->fifo_depth << 16 | 0 << 8);
-
+	meson_i2c_set_mask(i2c, REG_CFG_I2C, I2C_DMA | I2C_RX_THR | I2C_TX_THR,
+				i2c->fifo_depth << 16 | (i2c->fifo_depth / I2C_TX_THR_DIV) << 8);
 	reset_fifo_pos(i2c);
 	meson_i2c_set_clk_div(i2c);
 }
@@ -361,56 +369,37 @@ static void meson_i2c_push_data_to_user(struct meson_i2c *i2c, u8 data)
 
 	i2c->count = 1;
 	*buf = data;
-	dev_dbg(i2c->dev, "%s: data %08x\n", __func__, *buf);
+#ifdef I2C_DEBUG
+	trace_printk("%s %s: data %08x\n", dev_name(i2c->dev), __func__, *buf);
+#endif
 }
 
 static void meson_i2c_put_data(struct meson_i2c *i2c, char *buf, int len)
 {
-	int i, j, times, left;
-	u32 reg_val = 0;
-
 	if (!i2c->msg->len) {//this i2c module when trans 0 byte, must put at least 1.
 		meson_i2c_writel(i2c, 0x00, REG_CGF_TX);
 		return;
 	}
-	if (i2c->mode == I2C_POLLING_MODE) {
-		for (int i = 0; i < len; i++, buf++)
-			meson_i2c_writel(i2c, *buf, REG_CGF_TX);
-
-	} else {
-		times = (len + 4 - 1) / 4;
-		left = len % 4;
-
-		for (i = 0; i < times; i++) {
-			reg_val = 0;
-			if (left != 0 && i == (times - 1)) {
-				for (j = 0; j < left; j++, buf++)
-					reg_val += *buf << (8 * j);
-			} else {
-				for (j = 0; j < 4; j++, buf++)
-					reg_val += *buf << (8 * j);
-			}
-			meson_i2c_writel(i2c, reg_val, REG_FIFO_BASE + i * 4);
-			dev_dbg(i2c->dev, " write data 0x0%8x reg 0x%x\n",
-				reg_val, REG_FIFO_BASE + i * 4);
-		}
-		reset_fifo_pos(i2c);//should reset fifo for every transfer
+	for (int i = 0; i < len; i++, buf++) {
+		meson_i2c_writel(i2c, *buf, REG_CGF_TX);
+#ifdef I2C_DEBUG
+		trace_printk("%s %s: data %08x\n", dev_name(i2c->dev), __func__, *buf);
+#endif
 	}
 }
 
-static void meson_i2c_prepare_xfer(struct meson_i2c *i2c)
+static void meson_i2c_prepare_xfer(struct meson_i2c *i2c, bool full_fill)
 {
 	bool write = !(i2c->msg->flags & I2C_M_RD);
 
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	if (write) {
-		if (i2c->mode == I2C_POLLING_MODE)
+		if (i2c->mode == I2C_POLLING_MODE || full_fill)
 			i2c->count = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
 		else
-			i2c->count = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
+			i2c->count = min(i2c->msg->len - i2c->pos,
+					i2c->fifo_depth / I2C_TX_THR_DIV);
 		meson_i2c_put_data(i2c, i2c->msg->buf + i2c->pos, i2c->count);
 	}
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 }
 
 /* three case should be check in irq:
@@ -423,59 +412,85 @@ static void meson_i2c_prepare_xfer(struct meson_i2c *i2c)
 static irqreturn_t meson_i2c_irq(int irqno, void *dev_id)
 {
 	struct meson_i2c *i2c = dev_id;
-	unsigned int irq_state, irq_en, rd_val, i, j;
+	int ret;
+	u32 rd_len, i;
+	u32 rd_val;
 
-	i2c->count = 0;
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	spin_lock(&i2c->lock);
-	irq_state = readl(i2c->regs + REG_CGF_IRQ_STATE);
-	irq_en = readl(i2c->regs + REG_CGF_IRQ_ENABLE);
-	irq_state &= irq_en;// mask disabled irq bit
-	// if last transfer, exit thresh MODE, avoid thresh bit and done bit come at the same time.
-	if ((i2c->pos + i2c->fifo_depth) >= i2c->msg->len && (irq_en & THRESH_MODE))
-		meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE, THRESH_MODE, 0);
-	if (irq_state & i2c->data->xfer_err_bits) {
-		dev_dbg(i2c->dev, "bus phy erro set\n");
-		i2c->error = -ENXIO;
-		complete(&i2c->done);
-		i2c->state = STATE_IDLE;
-		goto trans_out;
-	} else if (irq_state & TX_FIFO_WRITE) {// tx thresh mode
-		dev_dbg(i2c->dev, "thresh for tx\n");
-		// push data to fifo
-		meson_i2c_prepare_xfer(i2c);
-		i2c->pos += i2c->count;
-	} else if (irq_state & RX_FIFO_READ) {// rx thresh mode
-		dev_dbg(i2c->dev, "thresh for rx\n");
-		for (i = 0; i < i2c->fifo_depth; i++) {
+	ret = controller_is_error(i2c);
+	if (ret) {
+#ifdef I2C_DEBUG
+		trace_printk("%s IRQ controller error\n", dev_name(i2c->dev));
+#endif
+		i2c->error = ret;
+		goto complete_irq_out;
+	}
+
+	switch (i2c->state) {
+	case STATE_READ:
+		meson_i2c_dump_reg(i2c, __func__, __LINE__);
+		rd_len = min(i2c->msg->len - i2c->pos, i2c->fifo_depth);
+#ifdef I2C_DEBUG
+		trace_printk("%s thresh for rx rd-len:%d\n",  dev_name(i2c->dev), rd_len);
+#endif
+		for (i = 0; i < rd_len; i++) {
 			rd_val = readl(i2c->regs + REG_CGF_RX);
-			// pull data from fifo
+#ifdef I2C_DEBUG
+			trace_printk("%s thresh for rx RX reg value:0x%x\n",
+				dev_name(i2c->dev), rd_val);
+#endif
 			meson_i2c_push_data_to_user(i2c, rd_val & TX_RX_DATA);
 			i2c->pos += i2c->count;
 		}
-	} else if (irq_state & i2c->data->xfer_done_bits) {
-		// no thresh mode and trans done
-		dev_dbg(i2c->dev, "trans_done\n");
-		if (i2c->state == STATE_READ) {
-			// pull data from fifo
-			dev_dbg(i2c->dev, "trans_done and pull data\n");
-			j = i2c->msg->len - i2c->pos;
-			for (i = 0; i < j; i++) {
-				dev_dbg(i2c->dev, "i=%d len:%d pos:%d", i, i2c->msg->len, i2c->pos);
-				rd_val = readl(i2c->regs + REG_CGF_RX);
-				meson_i2c_push_data_to_user(i2c, rd_val & TX_RX_DATA);
-				i2c->pos += i2c->count;
-			}
+		clear_irq_status(i2c, RX_FIFO_READ);//rx must clear thresh after read fifo
+		break;
+	case STATE_WRITE:
+#ifdef I2C_DEBUG
+		trace_printk("%s thresh for tx\n",  dev_name(i2c->dev));
+#endif
+		meson_i2c_dump_reg(i2c, __func__, __LINE__);
+		meson_i2c_prepare_xfer(i2c, false);
+		if ((i2c->pos + i2c->fifo_depth / I2C_TX_THR_DIV) >= i2c->msg->len)
+			meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE, TX_FIFO_WRITE, 0);
+		clear_irq_status(i2c, TX_FIFO_WRITE);//tx must clear thresh after write fifo
+		i2c->pos += i2c->count;
+		break;
+	case STATE_IDLE:
+		dev_warn(i2c->dev, "i2c irq triggered abnormally!!!\n");
+		break;
+	default:
+		break;
+	}
+	//check controller done?
+	if (!controller_is_done(i2c)) {
+		goto irq_trans_out;
+	} else {
+#ifdef I2C_DEBUG
+		trace_printk("%s i2c irq controller_is_done\n",
+					dev_name(i2c->dev));
+#endif
+		if (i2c->state == STATE_READ && (i2c->msg->len - i2c->pos)) {//read not complete
+#ifdef I2C_DEBUG
+			trace_printk("%s i2c irq done but read not complete\n",
+					dev_name(i2c->dev));
+#endif
+			goto irq_trans_out;
 		}
-		complete(&i2c->done);
-		i2c->state = STATE_IDLE;
 	}
 
-trans_out:
-	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
-	spin_unlock(&i2c->lock);
-	dev_dbg(i2c->dev, "IRQ out\n");
+complete_irq_out:
+	reset_fifo_pos(i2c);
+	complete(&i2c->done);
+	i2c->state = STATE_IDLE;
+	meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE,
+		RX_FIFO_READ | TX_FIFO_WRITE, 0);//disable TX/RX irq bits
+	clear_irq_status(i2c, 0xffff);//clear all irq
+irq_trans_out:
+#ifdef I2C_DEBUG
+	trace_printk("%s IRQ out\n", dev_name(i2c->dev));
+#endif
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
+	spin_unlock(&i2c->lock);
 
 	return IRQ_HANDLED;
 }
@@ -491,20 +506,18 @@ static void meson_i2c_do_start(struct meson_i2c *i2c, struct i2c_msg *msg)
 		if (!(msg->flags & I2C_M_RD) && !i2c->last && msg->len)
 			trans_len = msg->len + 1;
 	}
-
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	reg_val = (msg->addr << 1) |
 				((msg->flags & I2C_M_RD) ? START_READ : 0) |
 				((trans_len) << 12) | START_STRAT;
 	meson_i2c_set_mask(i2c, REG_CFG_START,
 		START_STRAT | START_SLAVE_ADDR | START_READ | START_LEN, reg_val);
+	//NACK irq will be clear validly only after start signal
+	clear_irq_status(i2c, 0xffff);//clear all irq
 	if (trans_len > i2c->fifo_depth) {
 		reg_val = (msg->flags & I2C_M_RD) ? RX_FIFO_READ : TX_FIFO_WRITE;
 		meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE,
 		RX_FIFO_READ | TX_FIFO_WRITE, reg_val);//enable thresh mode
 	}
-	//NACK irq will be clear validly only after start signal
-	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 }
 
@@ -518,10 +531,8 @@ static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg, bool l
 	i2c->count = 0;
 	i2c->error = 0;
 
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
-
 	i2c->state = (msg->flags & I2C_M_RD) ? STATE_READ : STATE_WRITE;
-	meson_i2c_prepare_xfer(i2c);
+	meson_i2c_prepare_xfer(i2c, true);
 	i2c->pos += i2c->count;//every prepare data pushed, should increase pos.
 	reinit_completion(&i2c->done);
 
@@ -542,21 +553,15 @@ static int meson_i2c_xfer_msg(struct meson_i2c *i2c, struct i2c_msg *msg, bool l
 
 	if (!time_left) {
 		/*to do. maybe reset i2c for stop*/
-		meson_i2c_dump_reg(i2c, __func__, __LINE__);
-		reset_fifo_pos(i2c);
-		meson_i2c_set_mask(i2c, REG_CGF_IRQ_ENABLE,
-			RX_FIFO_READ | TX_FIFO_WRITE, 0);//disable thresh bit
-		meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq bit
 		i2c->state = STATE_IDLE;
 		ret = -ETIMEDOUT;
-		meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	}
 
 	if (i2c->error)
 		ret = i2c->error;
 
 	spin_unlock_irqrestore(&i2c->lock, flags);
-	meson_i2c_dump_reg(i2c, __func__, __LINE__);
+
 	return ret;
 }
 
@@ -619,7 +624,7 @@ static int meson_i2c_xfer_polling_msg(struct meson_i2c *i2c, struct i2c_msg *msg
 			} while (rd_val & TX_RX_EMPTY);//waiting data
 			meson_i2c_push_data_to_user(i2c, rd_val & TX_RX_DATA);
 		} else { //for tx
-			meson_i2c_prepare_xfer(i2c);
+			meson_i2c_prepare_xfer(i2c, true);
 			ret = wait_tx_done(i2c, i2c->pos + i2c->count);
 			if (ret)
 				goto xfer_out;
@@ -640,7 +645,7 @@ static int meson_i2c_xfer_polling_msg(struct meson_i2c *i2c, struct i2c_msg *msg
 	}
 
 xfer_out:
-	meson_i2c_writel(i2c, 0xffff, REG_CGF_IRQ_STATE);//clear irq
+	clear_irq_status(i2c, 0xffff);//clear all irq
 	reset_fifo_pos(i2c);
 
 	return ret;
@@ -755,7 +760,8 @@ static int meson_i2c_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
-
+	//init i2c, avoid it's old states come from uboot
+	meson_i2c_init(i2c);
 	if (of_property_read_u32(pdev->dev.of_node, "working_mode",
 				 &i2c->mode)) {
 		i2c->mode = I2C_IRQ_MODE;
