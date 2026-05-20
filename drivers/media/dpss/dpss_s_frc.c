@@ -4693,12 +4693,15 @@ int dpss_frc_get_video_latency_new(u32 input_fps, u32 output_fps)
 		if (frc_ratio == DPSS_FRC_RATIO_1_1 &&
 				frm_rate == output_fps) {
 			delta_ms = get_delta_ms(frm_rate, output_fps);
-			delay_time = (25 * 100 * 100 / output_fps) / 100;
+			//delay_time = (25 * 100 * 100 / output_fps) / 100;
+			delay_time = (35 * 100 * 100 / output_fps) / 100; // rdma_8buf
 			delay_time += delta_ms;
 		} else {
 			delta_ms = get_delta_ms(frm_rate, output_fps);
+			//delay_time = (20 * 100 * 100 / frm_rate) / 100 +
+			//		(5 * 100 * 100 / output_fps) / 100;
 			delay_time = (20 * 100 * 100 / frm_rate) / 100 +
-					(5 * 100 * 100 / output_fps) / 100;
+					(15 * 100 * 100 / output_fps) / 100; // rdma_8buf
 			delay_time += delta_ms;
 		}
 		// dbg_f2("delay_time:%d, memc_bypass:%d", delay_time, memc_bypass);
