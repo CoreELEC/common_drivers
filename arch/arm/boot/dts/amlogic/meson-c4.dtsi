@@ -1567,7 +1567,7 @@
 	};
 
 	mbd_audio: mbd_audio {
-		compatible = "amlogic, mbd_audio";
+		compatible = "amlogic, mbd_audio_c4";
 		status = "disabled";
 		#address-cells=<1>;
 		#size-cells=<1>;

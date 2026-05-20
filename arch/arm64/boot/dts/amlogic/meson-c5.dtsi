@@ -2944,6 +2944,50 @@
 		power-domains = <&pwrdm PDID_C5_GE2D>;
 	};
 
+	mbd_audio: mbd_audio {
+			compatible = "amlogic, mbd_audio_c5";
+			status = "disabled";
+			#address-cells=<2>;
+			#size-cells=<2>;
+			ranges;
+
+			// power-domains = <&pwrdm PDID_C5_AUDIO_TOP>;
+			clocks = <&clkc CLKID_HIFI_PLL>;
+			clock-names = "clk_srcpll";
+			interrupts = <
+					GIC_SPI 264 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 265 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 268 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 269 IRQ_TYPE_EDGE_RISING
+					>;
+			interrupt-names =
+					"toddr_a", "toddr_b",
+					"frddr_a", "frddr_b";
+			diff_output = <1>;
+			//Source of the input data of DACL and DACR:
+			//0 = The left channel data of I2S_DIN to left channel,
+			//      The right channel data of I2S_DIN to right channel.
+			//1 = The left channel data of I2S_DIN to right channel,
+			//      The right channel data of I2S_DIN to left channel.
+			acodec_LR_swap = <1>;
+			pdm_bus {
+					reg = <0x0 0xffae2000 0x0 0x400>;
+			};
+			audiobus_base {
+					reg = <0x0 0xffae0000 0x0 0x1000>;
+			};
+			vad_top_base {
+					reg = <0x0 0xffae1000 0x0 0x20>;
+			};
+			acodec_base {
+					reg = <0x0 0xfe034000 0x0 0x6c>;
+			};
+			resampleA_base {
+					reg = <0x0 0xffae3000 0x0 0x104>;
+			};
+
+	};
+
 	amlgdc {
 		#address-cells=<2>;
 		#size-cells=<2>;
