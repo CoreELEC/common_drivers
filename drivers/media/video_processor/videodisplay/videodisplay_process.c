@@ -4362,14 +4362,15 @@ static struct vframe_s *vd_vf_get(void *op_arg)
 		}
 
 		vd_print(dev->index, PRINT_OTHER | PRINT_PATTERN,
-			 "get:frame_index=%d, index_disp=%d, get=%d, total_get=%lld, vsync =%d, diff=%d, duration=%d\n",
+			 "get:frame_index=%d, index_disp=%d, get=%d, total_get=%lld, vsync =%d, diff=%d, duration=%d, signal_type=0x%x.\n",
 			 vf->frame_index,
 			 vf->index_disp,
 			 get_count[dev->index],
 			 dev->fget_count,
 			 continue_vsync_count[dev->index],
 			 vsync_index_diff,
-			 vf->duration);
+			 vf->duration,
+			 vf->signal_type);
 
 		vd_print(dev->index, PRINT_OTHER,
 			"%s: prelink_en=%d, vf=%px(%px), frame_index=%d, vf->source_type=0x%x, vf_type=0x%x, vf_flag=0x%x, vf->timestamp: %lld.di_flag=%x, dpss_flg:%x\n",

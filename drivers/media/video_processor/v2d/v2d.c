@@ -1398,6 +1398,7 @@ static int config_ge2d_param(struct v2d_dev *dev,
 	ge2d_data = &v2d_composer_param->composer_device_param.ge2d_data;
 
 	v2d_print(dev->index, PRINT_OTHER, "use ge2d composer.\n");
+
 	ge2d_data->buf_format = vframe_info_cur->buffer_format;
 	ret = v2d_config_ge2d_data(v2d_composer_param->input_vf,
 		v2d_composer_param->addr,
@@ -2047,13 +2048,7 @@ static int v2d_set_frames(struct v2d_dev *dev,
 		v2d_print(dev->index, PRINT_ERROR, "peek free dma_buf fail!!!\n");
 		return -EINVAL;
 	}
-/*
- *	if (!kfifo_get(&dev->free_q, &dst_vf)) {
- *		v2d_print(dev->index, PRINT_ERROR, "set_frames； peek free_q failed\n");
- *		return;
- *	}
- *	private_data = v2d_get_file_private_data(dmabuf->file, true);
- */
+
 	dev->set_frame_count++;
 
 	v2d_get_file_private_data(dmabuf->file, true);
@@ -2154,12 +2149,6 @@ static int v2d_set_frames(struct v2d_dev *dev,
 
 	out_fence_fd = v2d_timeline_create_fence(dev);
 	output_fence_file = fget(out_fence_fd);
-	if (!kfifo_put(&dev->file_wait_q, dmabuf))
-		v2d_print(dev->index, PRINT_ERROR, "put file_wait fail\n");
-	v2d_print(dev->index, PRINT_OTHER,
-		 "%s file_wait_q count: %d\n",
-		 __func__, kfifo_len(&dev->file_wait_q));
-
 	out_fd = get_unused_fd_flags(O_CLOEXEC);
 	if (out_fd < 0) {
 		v2d_print(dev->index, PRINT_ERROR, "not fd!!!\n");
@@ -2169,6 +2158,12 @@ static int v2d_set_frames(struct v2d_dev *dev,
 	/*out_fd is released by HWC*/
 	fd_install(out_fd, dmabuf->file);
 	dma_buf_get(out_fd);
+
+	if (!kfifo_put(&dev->file_wait_q, dmabuf))
+		v2d_print(dev->index, PRINT_ERROR, "put file_wait fail\n");
+	v2d_print(dev->index, PRINT_OTHER,
+		"set_frames: file_wait_q count: %d\n",
+		kfifo_len(&dev->file_wait_q));
 
 	frames_info->out_buffer.fd = out_fd;
 	frames_info->out_buffer.fence_fd = out_fence_fd;
@@ -2621,6 +2616,7 @@ static void v2d_do_file_task(struct v2d_dev *dev)
 		v2d_print(dev->index, PRINT_OTHER, "%s:bypass consider later\n", __func__);
 	start_time = ktime_to_ns(ktime_get());
 	output_vf = &private_data->vf;
+	memset(output_vf, 0, sizeof(struct vframe_s));
 
 	if (!output_vf->composer_info) {
 		output_vf->composer_info = kmalloc(sizeof(*output_vf->composer_info), GFP_KERNEL);
@@ -2805,6 +2801,9 @@ static void v2d_do_file_task(struct v2d_dev *dev)
 		if (input_vf->flag & VFRAME_FLAG_GAME_MODE)
 			output_vf->flag |= VFRAME_FLAG_GAME_MODE;
 	}
+
+	v2d_print(dev->index, PRINT_OTHER, "v2d_task: signal_type = 0x%x.\n",
+		output_vf->signal_type);
 	if (enable_v2d_dump) {
 		enable_v2d_dump = 0;
 		v2d_dump_output_buffer(output_vf);
