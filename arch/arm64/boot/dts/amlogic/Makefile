@@ -217,3 +217,4 @@ dtb-y += c5_c305x2_cb410.dtb
 dtb-y += c5_c305x2_cb401.dtb
 dtb-y += c5_a123x_cb409_2g.dtb
 dtb-y += c5_a123x_cb409_8g.dtb
+dtb-y += c5_a123x_cb400_fastboot.dtb

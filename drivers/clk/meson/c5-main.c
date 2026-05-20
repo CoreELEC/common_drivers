@@ -21,7 +21,11 @@ static void __exit c5_main_exit(void)
 	c5_clk_exit();
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_LINUX_S_OPTIMIZE)
+subsys_initcall_sync(c5_main_init);
+#else
 module_init(c5_main_init);
+#endif
 module_exit(c5_main_exit);
 
 MODULE_LICENSE("GPL v2");
