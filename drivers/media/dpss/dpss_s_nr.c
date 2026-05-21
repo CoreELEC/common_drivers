@@ -2348,7 +2348,8 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	    !VFM_IS_I_SRC(vf->type) &&
 	    (dpss_light_chg & C_BIT0) &&
 		!VFM_IS_HDMI_SRC(vf->source_type) &&
-		!pch->d->need_dis_light_chg) {
+		!pch->d->need_dis_light_chg &&
+		dpss_frc_get_enable()) {
 		//not support i / p
 		//not support small window memc
 		light_chg = true;
@@ -2360,7 +2361,7 @@ void nr_only_int(struct dpss_ch_s *pch, struct dpss_sub_vf_s *vfs,
 	if (vf->dpss_flg & DPSS_FLG_HIGH_BANDWIDTH)
 		vfs->dpss_flag |= DPSS_FLG_HIGH_BANDWIDTH;
 
-	if (light_chg) {
+	if (light_chg && dpss_frc_get_enable()) {
 		prm_top->trig_byp_dae0 = true;
 		prm_top->trig_byp_mc = true;
 		dbg_h2("%s trig byp dae0 and mc\n", __func__);

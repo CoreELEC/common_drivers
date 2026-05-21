@@ -2478,16 +2478,19 @@ void irq_inp(void)
 			inp_ofrm_vld = config_inp_loop_tab(inp_film_mode,
 					inp_film_phs, badedit_en);
 			config_dae_loop_tab(prm_top->frc_ratio,
-					    inp_film_mode, 1);
-			dbg_h2("inp irq 1st frame\n");
+						inp_film_mode, 1);
+			dbg_h2("irq_inp_1st frame\n");
 		} else {
-			if (det_filmmode_chg == 1)
-				if (inp_film_phs == 0)
-					det_filmmode_chg = 0;
+			if (det_filmmode_chg == 1 && inp_film_phs == 0)
+				det_filmmode_chg = 0;
+			if (prm_top->frc_me_en == 0) {
+				inp_film_mode = DPSS_VIDEO;
+				inp_film_phs = 0;
+			}
 			inp_ofrm_vld = config_inp_loop_tab(inp_film_mode,
 					inp_film_phs, badedit_en);
 			config_dae_loop_tab(prm_top->frc_ratio,
-					    inp_film_mode, 1);
+						inp_film_mode, 1);
 			if (frc_top->fw_pause == 0 && pfw_data->inp_irq_handler &&
 				(dpss_dbg_irq_ko & C_BIT8)) {
 				inp_ofrm_vld = pfw_data->inp_irq_handler(pfw_data);
@@ -2499,7 +2502,7 @@ void irq_inp(void)
 		}
 	} else {
 		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) &  0x1) && prm_top->inp_done_int == 1) {
-			dbg_h2("inp irq 1st frame\n");
+			dbg_h2("irq_inp_1st frame\n");
 		} else {
 			if (det_filmmode_chg == 1) {
 				if (inp_film_phs == 0) {
@@ -2509,7 +2512,7 @@ void irq_inp(void)
 					inp_ofrm_vld = config_inp_loop_tab(inp_film_mode, 0, 0);
 					config_dae_loop_tab(prm_top->frc_ratio,
 						inp_film_mode, 1);
-					dbg_h2("new film step: %d\n",
+					dbg_h2("irq_inp_new film step: %d\n",
 						(rd(FRC_REG_TOP_CTRL7) & 0xfffff));
 				} else {
 					if (det_film_mode == DPSS_VIDEO)
@@ -2524,6 +2527,10 @@ void irq_inp(void)
 						det_film_phs = det_film_phs + 1;
 				}
 			} else {
+				if (prm_top->frc_me_en == 0) {
+					inp_film_mode = DPSS_VIDEO;
+					inp_film_phs = 0;
+				}
 				inp_ofrm_vld = config_inp_loop_tab(inp_film_mode, inp_film_phs, 0);
 				config_dae_loop_tab(prm_top->frc_ratio, inp_film_mode, 1);
 			}
@@ -2812,7 +2819,7 @@ void irq_dae0(void)
 	dpss_dae_frm_cnt_src0++;
 	prm_top->frame_count = dpss_dae_frm_cnt_src0;
 
-	if (prm_top->trig_byp_dae0) {
+	if (prm_top->trig_byp_dae0 && !prm_top->reset_path) {
 		prm_top->frc_me_en = 0;
 		pre_org_hsize = prm_top->org_hsize;
 		pre_org_vsize = prm_top->org_vsize;
@@ -2826,7 +2833,7 @@ void irq_dae0(void)
 		wr(VPU_DAE_WRAP_GCLK_CTRL1, 0xaaaaaaaa); // dae clk 11.13 from yaotao
 		dbg_h2("trig byp dae0,top_org_size(%d,%d)\n",
 			prm_top->org_hsize, prm_top->org_vsize);
-	} else if (dae0_byp_cnt) {
+	} else if (dae0_byp_cnt && !prm_top->reset_path) {
 		dae0_byp_cnt--;
 		dbg_h2("trig byp dae0 cnt:%d\n", dae0_byp_cnt);
 		if (!dae0_byp_cnt) {

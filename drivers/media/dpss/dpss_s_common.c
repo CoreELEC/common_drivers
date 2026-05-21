@@ -480,7 +480,7 @@ static unsigned int dpss_is_vinfo_chg(struct dpss_vinfo_s *v1,	/* new */
 	} else if (v1->dpss_flg != v2->dpss_flg) {
 		ret = 6;
 	}
-	dbg_h1("v2->dpss_flg:%x %x", v1->dpss_flg, v2->dpss_flg);
+	dbg_h1("v2->dpss_flg:%x %x[ret:%d]", v1->dpss_flg, v2->dpss_flg, ret);
 	return ret;
 }
 
@@ -2021,7 +2021,8 @@ void dpss_h_parser_nr(struct dpss_ch_s *pch)
 		     pch->d->nr_reset &&
 		     !VFM_IS_I_SRC(vfm->type) &&
 			 !VFM_IS_HDMI_SRC(vfm->source_type) &&
-			!pch->d->need_dis_light_chg)
+			!pch->d->need_dis_light_chg &&
+			dpss_frc_get_enable())
 			light_chg = true;
 
 		if (pch->c.ch == 0 && pch->d->frc_link &&
