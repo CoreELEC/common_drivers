@@ -66,7 +66,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -77,7 +77,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -88,7 +88,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -99,7 +99,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -110,7 +110,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -121,7 +121,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <282>;
-			dynamic-power-coefficient = <84>;
+			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
 
@@ -132,7 +132,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <1024>;
-			dynamic-power-coefficient = <335>;
+			dynamic-power-coefficient = <416>;
 			#cooling-cells = <2>;
 		};
 
@@ -143,7 +143,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
 			capacity-dmips-mhz = <1024>;
-			dynamic-power-coefficient = <335>;
+			dynamic-power-coefficient = <416>;
 			#cooling-cells = <2>;
 		};
 
@@ -3227,7 +3227,7 @@
 		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1160>;
+			sustainable-power = <1760>;
 			thermal-sensors = <&a55_tsensor 0>;
 			trips {
 				a55_switch_on: trip-point@0 {
@@ -3258,7 +3258,7 @@
 		c_thermal: c_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1160>;
+			sustainable-power = <695>;
 			thermal-sensors = <&c_tsensor 1>;
 			trips {
 				c_switch_on: trip-point@0 {
