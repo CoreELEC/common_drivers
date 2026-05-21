@@ -24,7 +24,8 @@
 //2025.12.15 update vrr range once
 //2026.04.01 add mute before update edid
 //2026.04.09 Pull HPD after both audio and tvserver have updated the EDID
-#define RX_EDID_H_VER "ver.2026/04/09"
+//2026.05.21 Reduce stack memory usage of rpt_edid_multi_vdb_extraction
+#define RX_EDID_H_VER "ver.2026/05/21"
 
 #define EDID_EXT_BLK_OFF	128
 #define EDID_BLK_SIZE		128

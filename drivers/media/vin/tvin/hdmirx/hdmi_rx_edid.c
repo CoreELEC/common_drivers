@@ -6717,12 +6717,20 @@ void rpt_edid_multi_vdb_extraction(unsigned char *p_dest_edid, unsigned char *p_
 {
 	u8 vdb_start = 0;
 	u8 i = 0;
-	u8 p_dest_tmp[EDID_SIZE] = {0};
-	u8 p_source_tmp[EDID_SIZE] = {0};
-	u8 vdb_dest[128] = {0};
+	u8 *p_dest_tmp = NULL;
+	u8 *p_source_tmp = NULL;
+	u8 *vdb_dest = NULL;
 	u8 vdb_size = 0;
 	struct data_block_location_s ret = {0};
 
+	p_dest_tmp = kmalloc(EDID_SIZE, GFP_KERNEL);
+	p_source_tmp = kmalloc(EDID_SIZE, GFP_KERNEL);
+	vdb_dest = kmalloc(128, GFP_KERNEL);
+	if (!p_dest_tmp || !p_source_tmp || !vdb_dest)
+		goto malloc_free;
+	memset(p_dest_tmp, 0, EDID_SIZE);
+	memset(p_source_tmp, 0, EDID_SIZE);
+	memset(vdb_dest, 0, 128);
 	memcpy(p_source_tmp, p_source_edid, EDID_SIZE);
 	while (edid_tag_extract(p_source_tmp, VIDEO_TAG)) {
 		i++;
@@ -6785,6 +6793,13 @@ void rpt_edid_multi_vdb_extraction(unsigned char *p_dest_edid, unsigned char *p_
 		vdb_dest[vdb_size] = HDMI_640x480p60;//add VIC1
 	}
 	splice_data_blk_to_edid(p_dest_edid, &vdb_dest[0], VIDEO_TAG);
+malloc_free:
+	kfree(p_dest_tmp);
+	kfree(p_source_tmp);
+	kfree(vdb_dest);
+	p_dest_tmp = NULL;
+	p_source_tmp = NULL;
+	vdb_dest = NULL;
 }
 
 void rpt_edid_audio_db_extraction(unsigned char *p_edid)
