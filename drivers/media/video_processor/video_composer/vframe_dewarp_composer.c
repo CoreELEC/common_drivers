@@ -293,11 +293,16 @@ bool is_dewarp_supported(int vc_index, struct composer_vf_para *vf_param)
 
 int init_dewarp_composer(struct dewarp_composer_para *param)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_GDC
+	int dev_type = AML_GDC;
+#endif
+
 	if (IS_ERR_OR_NULL(param))
 		return -1;
 
 	if (IS_ERR_OR_NULL(param->context)) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
+		dev_type = get_gdc_version();
 		param->context = create_gdc_work_queue(AML_GDC);
 #else
 		param->context = NULL;

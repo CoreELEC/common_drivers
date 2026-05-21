@@ -309,6 +309,17 @@ int get_gdc_fw_version(void)
 }
 EXPORT_SYMBOL(get_gdc_fw_version);
 
+int get_gdc_version(void)
+{
+	int dev_type = AML_GDC;
+
+	if (is_aml_gdc_supported())
+		dev_type = gdc_manager.aml_gdc_dev->dev_type;
+
+	return dev_type;
+}
+EXPORT_SYMBOL(get_gdc_version);
+
 static inline int work_queue_no_space(struct gdc_context_s *queue)
 {
 	return list_empty(&queue->free_queue);

@@ -31,6 +31,7 @@ enum {
 	ARMGDC_FW_V1,
 	AMLGDC_FW_V1,
 	AMLGDC_FW_V2,
+	AMLGDC_FW_V3, /* add for AML_GDC_V2 chip A9 */
 	GDC_MAX_FW
 };
 
@@ -255,5 +256,6 @@ int rotation_calc_and_load_firmware(struct firmware_rotate_s *fw_param,
 int register_gdc_fw_funcs(struct gdc_fw_func_ptr *func_ptr, char *version);
 void unregister_gdc_fw_funcs(void);
 int get_gdc_fw_version(void);
+int get_gdc_version(void);
 
 #endif

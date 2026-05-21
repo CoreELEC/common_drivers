@@ -167,7 +167,7 @@ static struct gdc_device_data_s aml_gdc_v5 = {
 	.bit_width_ext = 0,
 	.gamma_support = 0,
 	.core_cnt = 1,
-	.fw_version = AMLGDC_FW_V2,
+	.fw_version = AMLGDC_FW_V3,
 	.has_pwd = 0,
 	.endian_config = NEW_ENDIAN_CONFIG
 };
