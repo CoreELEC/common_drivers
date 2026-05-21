@@ -283,7 +283,7 @@ static int controller_is_error(struct meson_i2c *i2c)
 		ret = -ENXIO;
 	}
 
-	return 0;
+	return ret;
 }
 
 static int wait_controller_done(struct meson_i2c *i2c)
@@ -488,9 +488,10 @@ static void meson_i2c_do_start(struct meson_i2c *i2c, struct i2c_msg *msg)
 	trans_len = msg->len;
 	if (i2c->mode == I2C_POLLING_MODE) {
 		//if TX and not last xfer, need add no stop
-		if (!(msg->flags & I2C_M_RD) && !i2c->last)
+		if (!(msg->flags & I2C_M_RD) && !i2c->last && msg->len)
 			trans_len = msg->len + 1;
 	}
+
 	meson_i2c_dump_reg(i2c, __func__, __LINE__);
 	reg_val = (msg->addr << 1) |
 				((msg->flags & I2C_M_RD) ? START_READ : 0) |
@@ -627,7 +628,7 @@ static int meson_i2c_xfer_polling_msg(struct meson_i2c *i2c, struct i2c_msg *msg
 	} while (i2c->pos < msg->len);
 
 	//if TX and not last xfer, need add no stop
-	if (!(msg->flags & I2C_M_RD) && !i2c->last) {
+	if (!(msg->flags & I2C_M_RD) && !i2c->last && msg->len) {
 		ret = meson_i2c_no_stop(i2c);
 		if (ret)
 			goto xfer_out;
@@ -769,8 +770,10 @@ static int meson_i2c_probe(struct platform_device *pdev)
 			return ret;
 		}
 		i2c->irq = irq;
+#ifdef I2C_PM_RUNTIME
 		/* Disable the interrupt so that the system can enter low-power mode */
 		disable_irq(i2c->irq);
+#endif
 	}
 
 	strscpy(i2c->adap.name, "Meson I2C V2 adapter",
