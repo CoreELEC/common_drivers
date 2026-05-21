@@ -1309,7 +1309,7 @@
 			};
 */
 			spisg_e: spi@50100 {
-				compatible = "amlogic,a4-spisg";
+				compatible = "amlogic,t6x-spisg";
 				reg = <0x0 0x50100 0x0 0x38>;
 				interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clkc_sys CLKID_SYS_SPISG_0>,

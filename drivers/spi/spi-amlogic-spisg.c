@@ -32,6 +32,12 @@
 #define CFG_HW_POS			BIT(6)
 /* start on vsync falling */
 #define CFG_HW_NEG			BIT(7)
+#define CFG_WORD_GAP			GENMASK(9, 8)
+#define CFG_MO_IDLE_OUTPUT		GENMASK(11, 10)
+/* cs hold time in pclk */
+#define CFG_CS_HOLD			GENMASK(26, 12)
+/* high 4 bits of cs setup time in sclk */
+#define CFG_CS_SETUP_EXTEND		GENMASK(30, 27)
 
 #define SPISG_REG_CFG_START		0x08
 #define CFG_BLOCK_NUM			GENMASK(19, 0)
@@ -136,6 +142,13 @@ struct spisg_descriptor_extra {
 	struct spisg_sg_link		*rx_ccsg;
 	int				tx_ccsg_len;
 	int				rx_ccsg_len;
+};
+
+struct aml_spisg_data {
+	bool				mo_idle_output_ctrl;
+	bool				word_gap_ctrl;
+	bool				cs_hold_ctrl;
+	bool				cs_setup_extend_ctrl;
 };
 
 struct spisg_device {
@@ -478,12 +491,15 @@ static int aml_spisg_transfer_one_message(struct spi_controller *ctlr,
 {
 	struct spisg_device *spisg = spi_controller_get_devdata(ctlr);
 	struct device *dev = &spisg->pdev->dev;
+	const struct aml_spisg_data *data = of_device_get_match_data(dev);
 	unsigned long long ms = 0;
 	struct spi_transfer *xfer;
 	struct spisg_descriptor *descs, *desc;
 	struct spisg_descriptor_extra *exdescs, *exdesc;
 	dma_addr_t descs_paddr;
 	int desc_num = 1, descs_len;
+	bool last_xfer_keep_ss = false;
+	u32 cs_setup_in_sclk;
 	u32 cs_hold_in_sclk = 0;
 	int ret = -EIO;
 
@@ -519,14 +535,23 @@ static int aml_spisg_transfer_one_message(struct spi_controller *ctlr,
 		}
 
 		/* calculate cs-setup delay with the first xfer speed */
-		if (list_is_first(&xfer->transfer_list, &msg->transfers))
-			desc->cfg_bus |= FIELD_PREP(CFG_CS_SETUP,
-				spi_delay_to_sclk(xfer->effective_speed_hz, &msg->spi->cs_setup));
+		if (list_is_first(&xfer->transfer_list, &msg->transfers)) {
+			cs_setup_in_sclk =
+				spi_delay_to_sclk(xfer->effective_speed_hz, &msg->spi->cs_setup);
+			desc->cfg_bus |= FIELD_PREP(CFG_CS_SETUP, cs_setup_in_sclk & 0xF);
+			if (data->cs_setup_extend_ctrl) {
+				spisg->cfg_spi &= ~CFG_CS_SETUP_EXTEND;
+				spisg->cfg_spi |= FIELD_PREP(CFG_CS_SETUP_EXTEND,
+							     cs_setup_in_sclk >> 4);
+			}
+		}
 
 		/* calculate cs-hold delay with the last xfer speed */
-		if (list_is_last(&xfer->transfer_list, &msg->transfers))
+		if (list_is_last(&xfer->transfer_list, &msg->transfers)) {
 			cs_hold_in_sclk =
 				spi_delay_to_sclk(xfer->effective_speed_hz, &msg->spi->cs_hold);
+			last_xfer_keep_ss = xfer->cs_change;
+		}
 
 		desc++;
 		exdesc++;
@@ -534,13 +559,24 @@ static int aml_spisg_transfer_one_message(struct spi_controller *ctlr,
 				       xfer->effective_speed_hz);
 	}
 
-	if (cs_hold_in_sclk)
+	if (data->cs_hold_ctrl) {
+		cs_hold_in_sclk = cs_hold_in_sclk ? : 1;
+		spisg->cfg_spi &= ~CFG_CS_HOLD;
+		spisg->cfg_spi |= FIELD_PREP(CFG_CS_HOLD,
+				cs_hold_in_sclk * (FIELD_GET(CFG_CLK_DIV, spisg->cfg_bus) + 1));
+		desc--;
+	} else if (cs_hold_in_sclk) {
 		/* additional null-descriptor to achieve the cs-hold delay */
 		aml_spisg_setup_null_desc(spisg, desc, cs_hold_in_sclk);
-	else
 		desc--;
+		desc->cfg_bus |= FIELD_PREP(CFG_KEEP_SS, 1);
+		desc++;
+	} else {
+		desc--;
+	}
 
-	desc->cfg_bus |= FIELD_PREP(CFG_KEEP_SS, 0);
+	desc->cfg_bus &= ~CFG_KEEP_SS;
+	desc->cfg_bus |= FIELD_PREP(CFG_KEEP_SS, last_xfer_keep_ss);
 	desc->cfg_start |= FIELD_PREP(CFG_EOC, 1);
 
 	/* some tolerances */
@@ -853,9 +889,28 @@ static const struct dev_pm_ops amlogic_spisg_pm_ops = {
 	.runtime_resume		= spisg_resume_runtime,
 };
 
+static const struct aml_spisg_data aml_spisg_data_a4 = {
+	.mo_idle_output_ctrl = false,
+	.word_gap_ctrl = false,
+	.cs_hold_ctrl = false,
+	.cs_setup_extend_ctrl = false,
+};
+
+static const struct aml_spisg_data aml_spisg_data_t6x = {
+	.mo_idle_output_ctrl = true,
+	.word_gap_ctrl = true,
+	.cs_hold_ctrl = true,
+	.cs_setup_extend_ctrl = true,
+};
+
 static const struct of_device_id amlogic_spisg_of_match[] = {
 	{
 		.compatible = "amlogic,a4-spisg",
+		.data = &aml_spisg_data_a4,
+	},
+	{
+		.compatible = "amlogic,t6x-spisg",
+		.data = &aml_spisg_data_t6x,
 	},
 
 	{ /* sentinel */ }
