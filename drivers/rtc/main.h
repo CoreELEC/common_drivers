@@ -34,6 +34,20 @@ static inline void rtc_exit(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_RTC_DRV_AMLOGIC_A4)
+int __init aml_rtc_dev_init(void);
+void __exit aml_rtc_dev_exit(void);
+#else
+static inline int aml_rtc_dev_init(void)
+{
+	return 0;
+}
+
+static inline void aml_rtc_dev_exit(void)
+{
+}
+#endif
+
 #if IS_ENABLED(CONFIG_AMLOGIC_RTC_PMIC6B)
 int __init meson_pmic6b_rtc_init(void);
 void __exit meson_pmic6b_rtc_exit(void);

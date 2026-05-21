@@ -24,6 +24,11 @@ ddk_module(
                     "meson-rtc.c",
             ],
         },
+        "CONFIG_RTC_DRV_AMLOGIC_A4": {
+            True: [
+                    "rtc-amlogic-a4.c",
+            ],
+        },
         "CONFIG_AMLOGIC_RTC_PMIC6B": {
             True: [
                     "meson_pmic6b/pmic6b_rtc.c",

@@ -676,14 +676,13 @@
 	};
 
 	rtc: rtc@ffa08000 {
-		compatible = "amlogic,meson-rtc";
+		compatible = "amlogic,a9-rtc", "amlogic,a4-rtc";
 		reg = <0x0 0xffa08000 0x0 0x38>;
-		interrupts = <GIC_SPI 404 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 404 IRQ_TYPE_LEVEL_HIGH>;
 		pinctrl-0 = <&rtc_32k_pins>;
 		pinctrl-names = "default";
 		clocks = <&xtal_32k>, <&clkc_sys_ao CLKID_AO_SYS_RTC_DIG>;
 		clock-names = "osc", "sys";
-		time-storage-format-gray;
 		status = "okay";
 	};
 
@@ -5131,6 +5130,8 @@
 	func-rtc-32k {
 		rtc_32k_pins: group-rtc-32k-pins1 {
 			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 4, 3)>;
+			bias-pull-up;
+			input-enable;
 		};
 	};
 
