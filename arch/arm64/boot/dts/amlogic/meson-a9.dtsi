@@ -22,6 +22,7 @@
 #include <dt-bindings/mailbox/a9-mbox.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/thermal/ddr-params.h>
+#include <dt-bindings/pinctrl/amlogic,pinctrl.h>
 #include "meson-ir-map.dtsi"
 #include "meson-avalon.dtsi"
 #include <dt-bindings/power/meson-pm.h>
@@ -1166,18 +1167,82 @@
 			};
 
 			periphs_pinctrl: pinctrl@4000 {
-				compatible = "amlogic,meson-a9-periphs-pinctrl";
+				compatible = "amlogic,pinctrl-a9";
 				#address-cells = <2>;
 				#size-cells = <2>;
-				ranges;
+				ranges = <0x0 0x0 0x0 0x4000 0x0 0x340>;
+				interrupt-parent = <&gpio_intc>;
 
-				gpio: bank@4000 {
-					reg = <0x0 0x4000 0x0 0x004c>,
-					      <0x0 0x40c0 0x0 0x02cc>;
-					reg-names = "mux", "gpio";
+				gpioz: gpio@c0 {
+					reg = <0 0xc0 0 0x20>, <0 0x18 0 0x8>;
+					reg-names = "gpio", "mux";
 					gpio-controller;
 					#gpio-cells = <2>;
-					gpio-ranges = <&periphs_pinctrl 0 0 96>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_Z<<8) 16>;
+					hw-irq = <48>;
+				};
+
+				gpiox: gpio@100 {
+					reg = <0 0x100 0 0x24>, <0 0xc 0 0x8>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_X<<8) 18>;
+					hw-irq = <30>;
+				};
+
+				gpioh: gpio@140 {
+					reg = <0 0x140 0 0x20>, <0 0x2c 0 0x4>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_H<<8) 8>;
+					hw-irq = <22>;
+				};
+
+				gpiom: gpio@1a0 {
+					reg = <0 0x1a0 0 0x20>, <0 0x20 0 0x4>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_M<<8) 8>;
+					hw-irq = <14>;
+				};
+
+				gpiob: gpio@240 {
+					reg = <0 0x240 0 0x20>, <0 0x0 0 0x8>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_B<<8) 14>;
+					hw-irq = <0>;
+				};
+
+				gpioa: gpio@280 {
+					reg = <0 0x280 0 0x24>, <0 0x40 0 0xc>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_A<<8) 20>;
+					hw-irq = <64>;
+				};
+
+				gpioy: gpio@2c0 {
+					reg = <0 0x2c0 0 0x20>, <0 0x30 0 0x8>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_Y<<8) 10>;
+					hw-irq = <86>;
+				};
+
+				gpiocc: gpio@300 {
+					reg = <0 0x300 0 0x20>, <0 0x14 0 0x4>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&periphs_pinctrl 0 (AMLOGIC_GPIO_CC<<8) 2>;
+					hw-irq = <84>;
 				};
 			};
 
@@ -1546,19 +1611,46 @@
 			};
 
 			aobus_pinctrl: pinctrl@4000 {
-				compatible = "amlogic,meson-a9-aobus-pinctrl";
+				compatible = "amlogic,pinctrl-a9";
 				#address-cells = <2>;
 				#size-cells = <2>;
-				ranges;
-				amlogic,ao-interrupt-controller;
+				ranges = <0x0 0x0 0x0 0x4000 0x0 0x0e0>;
+				interrupt-parent = <&gpio_ao_intc>;
 
-				gpio_ao: bank@4000 {
-					reg = <0x0 0x4000 0x0 0x0014>,
-					      <0x0 0x401c 0x0 0x0064>;
-					reg-names = "mux", "gpio";
+				gpioao: gpio@1c {
+					reg = <0 0x1c 0 0x20>, <0 0x0 0 0x8>;
+					reg-names = "gpio", "mux";
 					gpio-controller;
 					#gpio-cells = <2>;
-					gpio-ranges = <&aobus_pinctrl 0 0 38>;
+					gpio-ranges = <&aobus_pinctrl 0 (AMLOGIC_GPIO_AO<<8) 13>;
+					hw-irq = <0>;
+				};
+
+				gpioc: gpio@3c {
+					reg = <0 0x3c 0 0x20>, <0 0x10 0 0x4>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&aobus_pinctrl 0 (AMLOGIC_GPIO_C<<8) 7>;
+					hw-irq = <31>;
+				};
+
+				gpiod: gpio@5c {
+					reg = <0 0x5c 0 0x24>, <0 0x8 0 0x8>;
+					reg-names = "gpio", "mux";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&aobus_pinctrl 0 (AMLOGIC_GPIO_D<<8) 18>;
+					hw-irq = <13>;
+				};
+
+				test_n: gpio@c0 {
+					reg = <0 0xc0 0 0x20>;
+					reg-names = "gpio";
+					gpio-controller;
+					#gpio-cells = <2>;
+					gpio-ranges = <&aobus_pinctrl 0 (AMLOGIC_GPIO_TEST_N<<8) 1>;
+					hw-irq = <38>;
 				};
 			};
 
@@ -1611,22 +1703,6 @@
 				amlogic,channel-interrupts =
 					<384 385 386 387 388 389 390 391 392 393
 					394 395 396 397 398 399 400 401 402 403>;
-			};
-
-			test_pinctrl: pinctrl@40c0 {
-				compatible = "amlogic,meson-a9-test-pinctrl";
-				#address-cells = <2>;
-				#size-cells = <2>;
-				ranges;
-				amlogic,ao-interrupt-controller;
-
-				test_gpio: bank@40c0 {
-					reg = <0x0 0x40c0 0x0 0x0020>;
-					reg-names = "gpio";
-					gpio-controller;
-					#gpio-cells = <2>;
-					gpio-ranges = <&test_pinctrl 0 0 1>;
-				};
 			};
 
 			uart_AO_B: serial@1e000 {
@@ -2477,7 +2553,7 @@
 
 						reset-assert-us = <20000>;
 						reset-deassert-us = <50000>;
-						reset-gpios = <&gpio GPIOZ_15 (GPIO_ACTIVE_LOW |
+						reset-gpios = <&gpioz 15 (GPIO_ACTIVE_LOW |
 									GPIO_OPEN_DRAIN)>;
 						realtek,clkout-disable;
 						realtek,aldps-enable;
@@ -2519,7 +2595,7 @@
 
 						reset-assert-us = <20000>;
 						reset-deassert-us = <50000>;
-						reset-gpios = <&gpio GPIOA_15 (GPIO_ACTIVE_LOW |
+						reset-gpios = <&gpioa 15 (GPIO_ACTIVE_LOW |
 									GPIO_OPEN_DRAIN)>;
 						realtek,clkout-disable;
 						realtek,aldps-enable;
@@ -2744,9 +2820,9 @@
 		pinctrl-names="hdmitx_hpd", "hdmitx_ddc";
 		pinctrl-0=<&hdmitx_hpd>;
 		pinctrl-1=<&hdmitx_ddc>;
-		hdmitx-gpios-hpd = <&gpio GPIOH_2 GPIO_ACTIVE_HIGH>;
-		hdmitx-gpios-scl = <&gpio GPIOH_1 GPIO_ACTIVE_HIGH>;
-		hdmitx-gpios-sda = <&gpio GPIOH_0 GPIO_ACTIVE_HIGH>;
+		hdmitx-gpios-hpd = <&gpioh 2 GPIO_ACTIVE_HIGH>;
+		hdmitx-gpios-scl = <&gpioh 1 GPIO_ACTIVE_HIGH>;
+		hdmitx-gpios-sda = <&gpioh 0 GPIO_ACTIVE_HIGH>;
 		interrupts = <GIC_SPI 204 IRQ_TYPE_LEVEL_HIGH
 			GIC_SPI 197 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "hdmitx_hpd", "hdmitx_vsync";
@@ -4069,1200 +4145,1017 @@
 };
 
 &aobus_pinctrl {
+	func-pwm-a {
+		pwm_a_pins1: group-pwm-a-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 10, 3)>;
+		};
 
-	pwm_a_pins1: pwm_a_pins1 {
-		mux {
-			groups = "pwm_a_ao";
-			function = "pwm_a_ao";
+		pwm_a_pins2: group-pwm-a-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 0, 1)>;
+		};
+
+		pwm_a_pins3: group-pwm-a-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 11, 2)>;
+		};
+
+		pwm_a_hiz_pins: group-pwm-a-hiz-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 10, 1)>;
 		};
 	};
 
-	pwm_a_pins2: pwm_a_pins2 {
-		mux {
-			groups = "pwm_a_ao_ao";
-			function = "pwm_a_ao";
+	func-pwm-b {
+		pwm_b_pins1: group-pwm-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 1, 1)>;
 		};
 	};
 
-	pwm_a_pins3: pwm_a_pins3 {
-		mux {
-			groups = "pwm_a_ao_ao11";
-			function = "pwm_a_ao";
+	func-pwm-c {
+		pwm_c_pins1: group-pwm-c-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 2, 1)>;
+		};
+
+		pwm_c_hiz_pins: group-pwm-c-hiz-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 10, 4)>;
 		};
 	};
 
-	pwm_b_pins1: pwm_b_pins1 {
-		mux {
-			groups = "pwm_b_ao";
-			function = "pwm_b_ao";
+	func-pwm-d {
+		pwm_d_pins1: group-pwm-d-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 3, 1)>;
 		};
 	};
 
-	pwm_c_pins1: pwm_c_pins1 {
-		mux {
-			groups = "pwm_c_ao";
-			function = "pwm_c_ao";
+	func-pwm-e {
+		pwm_e_pins1: group-pwm-e-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 4, 1)>;
 		};
 	};
 
-	pwm_d_pins1: pwm_d_pins1 {
-		mux {
-			groups = "pwm_d_ao";
-			function = "pwm_d_ao";
+	func-pwm-f {
+		pwm_f_pins1: group-pwm-f-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 5, 1)>;
 		};
 	};
 
-	pwm_e_pins1: pwm_e_pins1 {
-		mux {
-			groups = "pwm_e_ao";
-			function = "pwm_e_ao";
+	func-pwm-g {
+		pwm_g_pins1: group-pwm-g-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 11, 3)>;
+		};
+
+		pwm_g_pins2: group-pwm-g-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 6, 4)>;
+		};
+
+		pwm_g_hiz_pins: group-pwm-g-hiz-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 11, 4)>;
 		};
 	};
 
-	pwm_f_pins1: pwm_f_pins1 {
-		mux {
-			groups = "pwm_f_ao";
-			function = "pwm_f_ao";
+	func-i2c0 {
+		i2c0_pins1: group-i2c0-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 3, 1)>;
+			bias-disable;
+		};
+
+		i2c0_pins2: group-i2c0-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 4, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 4)>;
+			bias-disable;
+		};
+
+		i2c0_pins3: group-i2c0-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 7, 1)>;
+			bias-disable;
+		};
+
+		i2c0_pins4: group-i2c0-pins4 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 0, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 1, 2)>;
+			bias-disable;
 		};
 	};
 
-	pwm_g_pins1: pwm_g_pins1 {
-		mux {
-			groups = "pwm_g_ao";
-			function = "pwm_g_ao";
+	func-i2c1 {
+		i2c1_pins1: group-i2c1-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 4, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 5, 2)>;
+			bias-disable;
+		};
+
+		i2c1_pins2: group-i2c1-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 2, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 3, 4)>;
+			bias-disable;
 		};
 	};
 
-	pwm_g_pins2: pwm_g_pins2 {
-		mux {
-			groups = "pwm_g_ao_ao";
-			function = "pwm_g_ao";
+	func-i2c2 {
+		i2c2_pins1: group-i2c2-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 13, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 14, 1)>;
+			bias-disable;
+		};
+
+		i2c2_pins2: group-i2c2-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 4)>;
+			bias-disable;
+		};
+
+		i2c2_pins3: group-i2c2-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 6, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 7, 2)>;
+			bias-disable;
 		};
 	};
 
-	pwm_a_hiz_pins: pwm_a_hiz_pins {
-		mux {
-			groups = "pwm_a_hiz_ao";
-			function = "pwm_a_ao";
+	func-i2c3 {
+		i2c3_pins1: group-i2c3-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 15, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 16, 1)>;
+			bias-disable;
+		};
+
+		i2c3_pins2: group-i2c3-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 11, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 12, 1)>;
+			bias-disable;
+		};
+
+		i2c3_pins3: group-i2c3-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 8, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 9, 2)>;
+			bias-disable;
 		};
 	};
 
-	pwm_c_hiz_pins: pwm_c_hiz_pins {
-		mux {
-			groups = "pwm_c_hiz_ao";
-			function = "pwm_b_ao";
+	func-i3c0 {
+		i3c0_ao_pins1: group-i3c0-ao-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 2, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 3, 3)>;
+			bias-disable;
+		};
+
+		i3c0_ao_pins2: group-i3c0-ao-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 7)>;
+			bias-disable;
 		};
 	};
 
-	pwm_g_hiz_pins: pwm_g_hiz_pins {
-		mux {
-			groups = "pwm_g_hiz_ao";
-			function = "pwm_g_ao";
+	func-ir-in {
+		remote_pins: group-remote-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 5, 1)>;
+			bias-disable;
+		};
+
+		remote_pins_1: group-remote-pins-1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 9, 3)>;
+			bias-disable;
 		};
 	};
 
-	eecec_b: ee_cecb {
-		mux {
-			groups = "cec_ao";
-			function = "cec_ao";
+	func-gpio-periphs {
+		sd_to_ao_uart_clr_pins: group-sd2aoaurt-clr-pin {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 0, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 1, 0)>;
+			drive-strength = <3>;
 			bias-pull-up;
 		};
-	};
-	i2c0_pins1:i2c0_pins1 {
-		mux {
-			groups = "i2c_a_scl_ao",
-				"i2c_a_sda_ao";
-			function = "i2c_a_ao";
-			bias-disable;
-		};
-	};
 
-	i2c0_pins2:i2c0_pins2 {
-		mux {
-			groups = "i2c_a_scl_ao_c",
-				"i2c_a_sda_ao_c";
-			function = "i2c_a_ao";
-			bias-disable;
+		sd_clr_all_pins: group-sd-clr-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 2, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 3, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 0)>;
+			output-high;
 		};
-	};
 
-	i2c0_pins3:i2c0_pins3 {
-		mux {
-			groups = "i2c_a_scl_ao_d",
-				"i2c_a_sda_ao_d";
-			function = "i2c_a_ao";
-			bias-disable;
+		/* Attention use together with sd_clr_all_pins because of not mux */
+		sd_clr_all_pins2: group-sd-clr-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 4, 0)>;
+			output-low;
 		};
-	};
 
-	i2c0_pins4:i2c0_pins4 {
-		mux {
-			groups = "i2c_a_scl_ao_ao",
-				"i2c_a_sda_ao_ao";
-			function = "i2c_a_ao";
-			bias-disable;
-		};
-	};
-	i2c1_pins1:i2c1_pins1 {
-		mux {
-			groups = "i2c_b_scl_ao",
-				"i2c_b_sda_ao";
-			function = "i2c_b_ao";
-			bias-disable;
-		};
-	};
-
-	i2c1_pins2:i2c1_pins2 {
-		mux {
-			groups = "i2c_b_scl_ao_c",
-				"i2c_b_sda_ao_c";
-			function = "i2c_b_ao";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins1:i2c2_pins1 {
-		mux {
-			groups = "i2c_c_scl_ao",
-				"i2c_c_sda_ao";
-			function = "i2c_c_ao";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins2:i2c2_pins2 {
-		mux {
-			groups = "i2c_c_scl_ao_c",
-				"i2c_c_sda_ao_c";
-			function = "i2c_c_ao";
-			bias-disable;
-		};
-	};
-
-	i2c2_pins3:i2c2_pins3 {
-		mux {
-			groups = "i2c_c_scl_ao_ao",
-				"i2c_c_scl_ao_ao";
-			function = "i2c_c_ao";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins1:i2c3_pins1 {
-		mux {
-			groups = "i2c_d_scl_ao",
-				"i2c_d_sda_ao";
-			function = "i2c_d_ao";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins2:i2c3_pins2 {
-		mux {
-			groups = "i2c_d_scl_ao_ao",
-				"i2c_d_scl_ao_ao";
-			function = "i2c_d_ao";
-			bias-disable;
-		};
-	};
-
-	i2c3_pins3:i2c3_pins3 {
-		mux {
-			groups = "i2c_d_scl_ao_ao8",
-				"i2c_d_sda_ao_ao9";
-			function = "i2c_d_ao";
-			bias-disable;
-		};
-	};
-
-	i3c0_ao_pins1:i3c0_ao_pins1 {
-		mux {
-			groups = "i3c_a_scl_ao",
-				"i3c_a_sda_ao";
-			function = "i3c_a";
-			bias-disable;
-		};
-	};
-
-	i3c0_ao_pins2:i3c0_ao_pins2 {
-		mux {
-			groups = "i3c_a_scl_ao_c",
-				"i3c_a_sda_ao_c";
-			function = "i3c_a";
-			bias-disable;
-		};
-	};
-
-	remote_pins: remote_pin {
-		mux {
-			groups = "ir_in_ao";
-			function = "ir_in_ao";
-			bias-disable;
-		};
-	};
-
-	remote_pins_1: remote_pin_1 {
-		mux {
-			groups = "ir_in_ao_d";
-			function = "ir_in_ao";
-			bias-disable;
+		sd_clr_noall_pins: group-sd-clr-no-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 4, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 0)>;
+			output-high;
 		};
 	};
 };
 
 &periphs_pinctrl {
-	bl_pwm_off_pins:bl_pwm_off_pin {
-		mux {
-			groups = "GPIOF_4";
-			function = "gpio_periphs";
+	func-gpio-periphs {
+		bl_pwm_off_pins: group-bl-pwm-off-pin {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_F, 4, 0)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	pwm_h_pins1: pwm_h_pins1 {
-		mux {
-			groups = "pwm_h";
-			function = "pwm_h";
+	func-pwm-h {
+		pwm_h_pins1: group-pwm-h-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 17, 1)>;
 		};
 	};
 
-	pwm_i_pins1: pwm_i_pins1 {
-		mux {
-			groups = "pwm_i";
-			function = "pwm_i";
+	func-pwm-i {
+		pwm_i_pins1: group-pwm-i-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 1, 1)>;
 		};
 	};
 
-	pwm_j_pins1: pwm_j_pins1 {
-		mux {
-			groups = "pwm_j";
-			function = "pwm_j";
+	func-pwm-j {
+		pwm_j_pins1: group-pwm-j-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 1)>;
+		};
+
+		pwm_j_pins2: group-pwm-j-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 4, 5)>;
 		};
 	};
 
-	pwm_j_pins2: pwm_j_pins2 {
-		mux {
-			groups = "pwm_j";
-			function = "pwm_j_m";
+	func-pwm-k {
+		pwm_k_pins1: group-pwm-k-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 15, 1)>;
+		};
+
+		pwm_k_pins2: group-pwm-k-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 2, 1)>;
 		};
 	};
 
-	pwm_k_pins1: pwm_k_pins1 {
-		mux {
-			groups = "pwm_k";
-			function = "pwm_k";
+	func-pwm-l {
+		pwm_l_pins1: group-pwm-l-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 3, 1)>;
 		};
 	};
 
-	pwm_k_pins2: pwm_k_pins2 {
-		mux {
-			groups = "pwm_k_y";
-			function = "pwm_k_m";
+	func-pwm-m {
+		pwm_m_pins1: group-pwm-m-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 4, 3)>;
+		};
+
+		pwm_m_pins2: group-pwm-m-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 4, 1)>;
 		};
 	};
 
-	pwm_l_pins1: pwm_l_pins1 {
-		mux {
-			groups = "pwm_l";
-			function = "pwm_l";
+	func-pwm-n {
+		pwm_n_pins1: group-pwm-n-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 0, 1)>;
 		};
 	};
 
-	pwm_m_pins1: pwm_m_pins1 {
-		mux {
-			groups = "pwm_m";
-			function = "pwm_m";
-		};
-	};
-
-	pwm_m_pins2: pwm_m_pins2 {
-		mux {
-			groups = "pwm_m_y";
-			function = "pwm_m_m";
-		};
-	};
-
-	pwm_n_pins1: pwm_n_pins1 {
-		mux {
-			groups = "pwm_n";
-			function = "pwm_n";
-		};
-	};
-
-	i2c3_pins4:i2c3_pins4 {
-		mux {
-			groups = "i2c_d_sda",
-				"i2c_d_scl";
-			function = "i2c_d";
+	func-i2c3 {
+		i2c3_pins4: group-i2c3-pins4 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 14, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 3)>;
 			bias-disable;
 		};
 	};
 
-	i2c4_pins1:i2c4_pins1 {
-		mux {
-			groups = "i2c_e_sda",
-				"i2c_e_scl";
-			function = "i2c_e";
+	func-i2c4 {
+		i2c4_pins1: group-i2c4-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 5, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 6, 3)>;
+			bias-disable;
+		};
+
+		i2c4_pins2: group-i2c4-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 2, 1)>;
+			bias-disable;
+		};
+
+		i2c4_pins3: group-i2c4-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Y, 6, 2)>;
+			bias-disable;
+		};
+
+		i2c4_pins4: group-i2c4-pins4 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 6)>;
 			bias-disable;
 		};
 	};
 
-	i2c4_pins2:i2c4_pins2 {
-		mux {
-			groups = "i2c_e_scl_m",
-				"i2c_e_sda_m";
-			function = "i2c_e";
+	func-i2c5 {
+		i2c5_pins1: group-i2c5-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 2, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 3, 6)>;
+			bias-disable;
+		};
+
+		i2c5_pins2: group-i2c5-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 4, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 5, 2)>;
+			bias-disable;
+		};
+
+		i2c5_pins3: group-i2c5-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_CC, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_CC, 1, 1)>;
+			bias-disable;
+		};
+
+		i2c5_pins4: group-i2c5-pins4 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 5, 1)>;
 			bias-disable;
 		};
 	};
 
-	i2c4_pins3:i2c4_pins3 {
-		mux {
-			groups = "i2c_e_scl_y",
-				"i2c_e_sda_y";
-			function = "i2c_e";
+	func-i2c6 {
+		i2c6_pins1: group-i2c6-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 3, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 4, 3)>;
+			bias-disable;
+		};
+
+		i2c6_pins2: group-i2c6-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 1, 1)>;
+			bias-disable;
+		};
+
+		i2c6_pins3: group-i2c6-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 4, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 5, 6)>;
 			bias-disable;
 		};
 	};
 
-	i2c4_pins4:i2c4_pins4 {
-		mux {
-			groups = "i2c_e_scl_z",
-				"i2c_e_sda_z";
-			function = "i2c_e";
+	func-i2c7 {
+		i2c7_pins1: group-i2c7-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 2, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 3, 4)>;
+			bias-disable;
+		};
+
+		i2c7_pins2: group-i2c7-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 7, 1)>;
+			bias-disable;
+		};
+
+		i2c7_pins3: group-i2c7-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 6, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 7, 6)>;
 			bias-disable;
 		};
 	};
 
-	i2c5_pins1:i2c5_pins1 {
-		mux {
-			groups = "i2c_f_scl",
-				"i2c_f_sda";
-			function = "i2c_f";
+	func-i2c8 {
+		i2c8_pins1: group-i2c8-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 0, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 1, 4)>;
+			bias-disable;
+		};
+
+		i2c8_pins2: group-i2c8-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 12, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 13, 3)>;
+			bias-disable;
+		};
+
+		i2c8_pins3: group-i2c8-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 8, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 3)>;
 			bias-disable;
 		};
 	};
 
-	i2c5_pins2:i2c5_pins2 {
-		mux {
-			groups = "i2c_f_scl_h",
-				"i2c_f_sda_h";
-			function = "i2c_f";
+	func-i3c0 {
+		i3c0_pins1: group-i3c0-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 18, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 19, 4)>;
 			bias-disable;
 		};
 	};
 
-	i2c5_pins3:i2c5_pins3 {
-		mux {
-			groups = "i2c_f_sda_cc",
-				"i2c_f_scl_cc";
-			function = "i2c_f";
+	func-i3c1 {
+		i3c1_pins1: group-i3c1-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 1, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 2, 7)>;
+			bias-disable;
+		};
+
+		i3c1_pins2: group-i3c1-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 14, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 5)>;
+			bias-disable;
+		};
+
+		i3c1_pins3: group-i3c1-pins3 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 0, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 1, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 2, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 3, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 4, 7)>;
+			bias-disable;
+		};
+
+		i3c1_pins4: group-i3c1-pins4 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 13, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 14, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 16, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 17, 5)>;
 			bias-disable;
 		};
 	};
 
-	i2c5_pins4:i2c5_pins4 {
-		mux {
-			groups = "i2c_f_scl_m",
-				"i2c_f_sda_m";
-			function = "i2c_f";
-			bias-disable;
-		};
-	};
-
-	i2c6_pins1:i2c6_pins1 {
-		mux {
-			groups = "i2c_g_scl",
-				"i2c_g_sda";
-			function = "i2c_g";
-			bias-disable;
-		};
-	};
-
-	i2c6_pins2:i2c6_pins2 {
-		mux {
-			groups = "i2c_g_scl_m",
-				"i2c_g_sda_m";
-			function = "i2c_g";
-			bias-disable;
-		};
-	};
-
-	i2c6_pins3:i2c6_pins3 {
-		mux {
-			groups = "i2c_g_scl_z",
-				"i2c_g_sda_z";
-			function = "i2c_g";
-			bias-disable;
-		};
-	};
-
-	i2c7_pins1:i2c7_pins1 {
-		mux {
-			groups = "i2c_h_scl",
-				"i2c_h_sda";
-			function = "i2c_h";
-			bias-disable;
-		};
-	};
-
-	i2c7_pins2:i2c7_pins2 {
-		mux {
-			groups = "i2c_h_scl_m",
-				"i2c_h_sda_m";
-			function = "i2c_h";
-			bias-disable;
-		};
-	};
-
-	i2c7_pins3:i2c7_pins3 {
-		mux {
-			groups = "i2c_h_scl_z",
-				"i2c_h_sda_z";
-			function = "i2c_h";
-			bias-disable;
-		};
-	};
-
-	i2c8_pins1:i2c8_pins1 {
-		mux {
-			groups = "i2c_i_scl",
-				"i2c_i_sda";
-			function = "i2c_i";
-			bias-disable;
-		};
-	};
-
-	i2c8_pins2:i2c8_pins2 {
-		mux {
-			groups = "i2c_i_scl_a",
-				"i2c_i_sda_a";
-			function = "i2c_i";
-			bias-disable;
-		};
-	};
-
-	i3c0_pins1:i3c0_pins1 {
-		mux {
-			groups = "i3c_a_scl",
-				"i3c_a_sda";
-			function = "i3c_b";
-			bias-disable;
-		};
-	};
-
-	i3c1_pins1:i3c1_pins1 {
-		mux {
-			groups = "i3c_b_scl",
-				"i3c_b_sda_d0";
-			function = "i3c_b";
-			bias-disable;
-		};
-	};
-
-	i3c1_pins2:i3c1_pins2 {
-		mux {
-			groups = "i3c_b_scl_a",
-				"i3c_b_sda_d0_a";
-			function = "i3c_b";
-			bias-disable;
-		};
-	};
-
-	i3c1_pinsbt1:i3c1_pinsbt1 {
-		mux {
-			groups = "i3c_b_scl",
-				"i3c_b_sda_d0",
-				"i3c_b_sda_d1",
-				"i3c_b_sda_d2",
-				"i3c_b_sda_d3";
-			function = "i3c_b";
-			bias-disable;
-		};
-	};
-
-	i3c1_pinsbt2:i3c1_pinsbt2 {
-		mux {
-			groups = "i3c_b_scl_a",
-				"i3c_b_sda_d0_a",
-				"i3c_b_sda_d1_a",
-				"i3c_b_sda_d2_a",
-				"i3c_b_sda_d3_a";
-			function = "i3c_b";
-			bias-disable;
-		};
-	};
-
-	i2c8_pins3:i2c8_pins3 {
-		mux {
-			groups = "i2c_i_scl_y",
-				"i2c_i_sda_y";
-			function = "i2c_i";
-			bias-disable;
-		};
-	};
-
-	a_uart_pins:a_uart {
-		mux {
-			groups = "uart_a_tx",
-				"uart_a_rx",
-				"uart_a_cts",
-				"uart_a_rts";
-			function = "uart_a";
+	func-uart-a {
+		a_uart_pins: group-uart-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 11, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 12, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 13, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 14, 1)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	c_uart_pins:c_uart {
-		mux {
-			groups = "uart_c_tx",
-				"uart_c_rx";
-			function = "uart_c";
+	func-uart-c {
+		c_uart_pins: group-uart-c-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 0, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 1, 2)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	d_uart_pins1:d_uart1 {
-		mux {
-			groups = "uart_d_rx",
-				"uart_d_tx",
-				"uart_d_cts",
-				"uart_d_rts";
-			function = "uart_d";
+	func-uart-d {
+		d_uart_pins1: group-uart-d-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 2, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 3, 7)>;
+			drive-strength = <3>;
+			bias-pull-up;
+		};
+
+		d_uart_pins2: group-uart-d-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 0, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 1, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 2, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 3, 2)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	d_uart_pins2:d_uart2 {
-		mux {
-			groups = "uart_d_rx_m",
-				"uart_d_tx_m",
-				"uart_d_cts_m",
-				"uart_d_rts_m";
-			function = "uart_d";
+	func-uart-e {
+		e_uart_pins: group-uart-e-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 6, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 7, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 9, 7)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	e_uart_pins:e_uart {
-		mux {
-			groups = "uart_e_rx",
-				"uart_e_tx",
-				"uart_e_cts",
-				"uart_e_rts";
-			function = "uart_e";
+	func-uart-f {
+		f_uart_pins: group-uart-f-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 4, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 5, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 6, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 7, 2)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	f_uart_pins:f_uart {
-		mux {
-			groups = "uart_f_rx",
-				"uart_f_tx",
-				"uart_f_cts",
-				"uart_f_rts";
-			function = "uart_f";
-			drive-strength = <3>;
-			bias-pull-up;
-		};
-	};
-
-	emmc_pins: emmc_pins {
-		mux-0 {
-			groups = "emmc_d0",
-				 "emmc_d1",
-				 "emmc_d2",
-				 "emmc_d3",
-				 "emmc_d4",
-				 "emmc_d5",
-				 "emmc_d6",
-				 "emmc_d7",
-				 "emmc_cmd";
-			function = "emmc";
+	func-emmc {
+		emmc_pins: group-emmc-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_B, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 5, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 7, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 8, 1)>, /* emmc_clk */
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 10, 1)>;
 			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 
-		mux-1 {
-			groups = "emmc_clk";
-			function = "emmc";
-			bias-pull-up;
+		emmc_ds_pins: group-emmc-ds-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_B, 11, 1)>;
+			bias-pull-down;
 			drive-strength-microamp = <3000>;
 		};
-	};
 
-	emmc_ds_pins: emmc_ds_pins {
-		mux {
-			groups = "emmc_ds";
-			function = "emmc";
+		emmc_clk_gate_pins: group-emmc-clk-gate-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_B, 8, 0)>;
 			bias-pull-down;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	emmc_clk_gate_pins: emmc_clk_gate_pins {
-		mux {
-			groups = "GPIOB_8";
-			function = "gpio_periphs";
+	func-nand {
+		all_nand_pins: group-nand-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_B, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 5, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 7, 1)>, /* mux emmc-data[0:7] */
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 8, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 9, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 10, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 11, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_B, 12, 2)>;
+			input-enable;
+		};
+
+		nand_cs_pins: group-nand-cs-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_B, 12, 2)>; /* ce0 */
+		};
+	};
+
+	func-sdio {
+		sd_iso7816_pins: group-sd-iso7816-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 2)>;
+			input-enable;
+			bias-pull-down;
+		};
+
+		sdio_pins: group-sdio-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 5, 1)>;
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+
+		sdio_clk_gate_pins: group-sdio-clk-gate-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 4, 0)>;
 			bias-pull-down;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	all_nand_pins: all_nand_pins {
-	mux {
-			groups = "emmc_nand_d0",
-				"emmc_nand_d1",
-				"emmc_nand_d2",
-				"emmc_nand_d3",
-				"emmc_nand_d4",
-				"emmc_nand_d5",
-				"emmc_nand_d6",
-				"emmc_nand_d7",
-				"nand_ce0",
-				"nand_ale",
-				"nand_cle",
-				"nand_wen_clk",
-				"nand_ren_wr";
-			function = "nand";
+	func-hdmi {
+		hdmitx_hpd: group-hdmitx-hpd-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 6, 1)>;
+			bias-disable;
+		};
+
+		hdmitx_hpd_gpio: group-hdmitx-hpd-gpio-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 1, 0)>; /* ??? GPIO_H_6 */
+			bias-disable;
+		};
+
+		hdmitx_ddc: group-hdmitx-ddc-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 5, 1)>;
+			bias-disable;
+			drive-strength = <3>;
+		};
+
+		hdmirx_a_mux: group-hdmirx-a-mux-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_H, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_H, 3, 1)>;
+		};
+	};
+
+	func-lcd {
+		lcd_vbyone_a_pins: group-lcd-vbyone-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 7, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 1)>;
+		};
+
+		lcd_vbyone_a_off_pins: group-lcd-vbyone-a-off-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 7, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 0)>;
 			input-enable;
 		};
 	};
 
-	nand_cs_pins: nand_cs {
-		mux {
-			groups = "nand_ce0";
-			function = "nand";
+	func-edp {
+		edptx_0_hpd_pins: group-edptx-0-hpd-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>;
 		};
-	};
 
-	sd_to_ao_uart_clr_pins: sd_to_ao_uart_clr_pins {
-		mux {
-			groups = "GPIOD_0",
-				   "GPIOD_1";
-			function = "gpio_periphs";
-		};
-	};
-
-	ao_to_sd_uart_pins: ao_to_sd_uart_pins {
-		mux {
-			groups = "uart_b_tx_c",
-				"uart_b_rx_c";
-			function = "uart_b";
-			bias-pull-up;
+		edptx_0_hpd_off_pins: group-edptx-0-hpd-off-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 0)>;
 			input-enable;
 		};
 	};
 
-	sd_clr_all_pins: sd_clr_all_pins {
-		mux {
-			groups = "GPIOC_0",
-				   "GPIOC_1",
-				   "GPIOC_2",
-				   "GPIOC_3",
-				   "GPIOC_5";
-			function = "gpio_periphs";
-			output-high;
+	func-dtv {
+		dtvdemod_if_agc_pins: group-dtvdemod-if-agc-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ??dtv_a_if_agc_z10 */
 		};
-		mux1 {
-			groups = "GPIOC_4";
-			function = "gpio_periphs";
+
+		dtvdemod_if_agc2_pins: group-dtvdemod-if-agc2-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ?? dtv_b_if_agc */
+		};
+
+		dtvdemod_rf_agc_pins: group-dtvdemod-rf-agc-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ?? dtv_a_rf_agc */
+		};
+	};
+
+	func-dis {
+		diseqc_out: group-diseqc-out-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ??diseqc_out */
+			bias-pull-down;
+		};
+
+		diseqc_in: group-diseqc-in-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 9, 2)>; /* ??diseqc_in */
+			bias-pull-down;
+		};
+	};
+
+	func-spisg-c {
+		spisg_c_pins_a: group-spisg-c-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 8, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 9, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 10, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 11, 3)>;
+			drive-strength-microamp = <3000>;
+		};
+
+		spisg_c_pins_m: group-spisg-c-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_M, 0, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 1, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 2, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_M, 3, 5)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	func-spisg-e {
+		spisg_e_pins_z: group-spisg-e-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 2, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 3, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	func-spisg-f {
+		spisg_f_pins_z: group-spisg-f-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 4, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 5, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 6, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 7, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	func-spisg-b {
+		spisg_b_pins_z: group-spisg-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 9, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 10, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 11, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 12, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 13, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	/* ??? spif_hold spif_mo spif_mi spif_clk spif_wp spif_cs */
+	func-spifc {
+		spifc_pins: group-spifc-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	func-irblaster {
+		/* ??? ir_remote_out_f */
+		irblaster_pin_f: group-irblaster-f-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+
+		/* ??? ir_remote_out_h */
+		irblaster_pin_h: group-irblaster-h-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+
+		/* ??? ir_remote_out_z */
+		irblaster_pin_z: group-irblaster-z-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+		/* ??? ir_remote_out_a */
+		irblaster_pin_a: group-irblaster-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	/* ??? spdif_in */
+	func-spdif {
+		spdifin: group-spdif-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 4)>;
+			drive-strength-microamp = <3000>;
+		};
+	};
+
+	func-eth-a {
+		eth_a_mdio_pins: group-eth-a-mdio-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 1)>;
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+
+		eth_a_pins: group-eth-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 5, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 9, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 10, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 11, 1)>;
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+
+		eth_a_rgmii_pins: group-eth-a-rgmii-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Z, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 7, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 8, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 12, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_Z, 13, 1)>;
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+	};
+
+	func-eth-b {
+		eth_b_pins: group-eth-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 0, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 1, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 2, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 3, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 4, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 5, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 9, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 10, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 11, 7)>;
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+
+		eth_b_rgmii_pins: group-eth-b-rgmii-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 6, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 7, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 8, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 12, 7)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 13, 7)>;
+			drive-strength-microamp = <3000>;
+			bias-disable;
+		};
+	};
+
+	/* from mesona9_aduio.dtsi */
+	func-audio {
+		tdmb_pin: group-audio-tdmb-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 5, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 7, 1)>;
+		};
+
+		tdmout_b_gpio: group-audio-tdmout-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 1, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 2, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 3, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 4, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 5, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 6, 0)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 7, 0)>;
 			output-low;
 		};
-	};
 
-	sd_clr_noall_pins: sd_clr_noall_pins {
-		mux {
-			groups = "GPIOC_0",
-				   "GPIOC_1",
-				   "GPIOC_4",
-				   "GPIOC_5";
-			function = "gpio_periphs";
-			output-high;
+		mclk_1_pad: group-audio-mclk-pad-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 0, 1)>;
 		};
 	};
 
-	sd_iso7816_pins:sd_iso7816_pins {
-		mux {
-			groups = "iso7816_clk_z",
-				"iso7816_data_z";
-			function = "iso7816";
-			input-enable;
-			bias-pull-down;
+	/* from ervery dts */
+	func-dvb {
+		dvb_s_ts0_pins: group-dvb-s-ts0-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 0, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 1, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 2, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_A, 3, 5)>;
 		};
 	};
 
-	sdio_pins: sdio_pins {
-		mux {
-			groups = "sdio_d0",
-				 "sdio_d1",
-				 "sdio_d2",
-				 "sdio_d3",
-				 "sdio_clk",
-				 "sdio_cmd";
-			function = "sdio";
-			bias-pull-up;
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	sdio_clk_gate_pins: sdio_clk_gate_pins {
-		mux {
-			groups = "GPIOX_4";
-			function = "gpio_periphs";
-			bias-pull-down;
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	hdmitx_hpd: hdmitx_hpd {
-		mux {
-			groups = "hdmitx_hpd_in";
-			function = "hdmitx";
-			bias-disable;
-		};
-	};
-
-	hdmitx_hpd_gpio: hdmitx_hpd_gpio {
-		mux {
-			groups = "GPIOH_1";
-			function = "gpio_periphs";
-			bias-disable;
-		};
-	};
-
-	lcd_vbyone_a_pins: lcd_vbyone_a_pin {
-		mux {
-			groups = "vx1_htpdn_y","vx1_lockn_y";
-			function = "vx1";
-		};
-	};
-
-	lcd_vbyone_a_off_pins: lcd_vbyone_a_off_pin {
-		mux {
-			groups = "GPIOY_7","GPIOY_9";
-			function = "gpio_periphs";
-			input-enable;
-		};
-	};
-
-	hdmitx_ddc: hdmitx_ddc {
-		mux {
-			groups = "hdmitx_sda",
-				"hdmitx_scl";
-			function = "hdmitx";
-			bias-disable;
-			drive-strength = <3>;
-		};
-	};
-
-	hdmirx_a_mux:hdmirx_a_mux {
-		mux {
-			groups = "hdmirx_hpd",
-				"hdmirx_5vdet",
-				"hdmirx_sda",
-				"hdmirx_scl";
-			function = "hdmirx";
-		};
-	};
-
-	edptx_0_hpd_pins: edptx_0_hpd_pins {
-		mux {
-			groups = "edp_hpd_y";
-			function = "edp_hpd";
-		};
-	};
-
-	edptx_0_hpd_off_pins: edptx_0_hpd_off_pins {
-		mux {
-			groups = "GPIOY_9";
-			function = "gpio_periphs";
-			input-enable;
-		};
-	};
-
-	dtvdemod_if_agc_pins: dtvdemod_if_agc_pins {
-		mux {
-			groups = "dtv_a_if_agc_z10";
-			function = "dtv";
-		};
-	};
-
-	dtvdemod_if_agc2_pins: dtvdemod_if_agc2_pins {
-		mux {
-			groups = "dtv_b_if_agc";
-			function = "dtv";
-		};
-	};
-
-	dtvdemod_rf_agc_pins: dtvdemod_rf_agc_pins {
-		mux {
-			groups = "dtv_a_rf_agc";
-			function = "dtv";
-		};
-	};
-
-	diseqc_out: diseqc_out {
-		mux {
-			groups = "diseqc_out";
-			function = "diseqc_out";
-			bias-pull-down;
-		};
-	};
-
-	diseqc_in: diseqc_in {
-		mux {
-			groups = "diseqc_in";
-			function = "diseqc_in";
-			bias-pull-down;
-		};
-	};
-
-	spisg_c_pins_a: spisg_c_pins_a {
-		mux {
-			 /* GPIOA_8/9/11/10 */
-			groups = "spi_c_mosi",
-				 "spi_c_miso",
-				 "spi_c_ss0",
-				 "spi_c_sclk";
-			function = "spi_c";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	spisg_c_pins_m: spisg_c_pins_m {
-		mux {
-			 /* GPIOM_0/1/3/2 */
-			groups = "spi_c_mosi_m",
-				 "spi_c_miso_m",
-				 "spi_c_ss0_m",
-				 "spi_c_sclk_m";
-			function = "spi_c";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	spisg_e_pins_z: spisg_e_pins_z {
-		mux {
-			 /* GPIOZ_0/1/3/2 */
-			groups = "spi_e_mosi",
-				 "spi_e_miso",
-				 "spi_e_ss0",
-				 "spi_e_sclk";
-			function = "spi_e";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	spisg_f_pins_z: spisg_f_pins_z {
-		mux {
-			 /* GPIOZ_4/5/7/6 */
-			groups = "spi_f_mosi",
-				 "spi_f_miso",
-				 "spi_f_ss0",
-				 "spi_f_sclk";
-			function = "spi_f";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	spisg_b_pins_z: spisg_b_pins_z {
-		mux {
-			 /* GPIOZ_10/11/13/9/8/12 */
-			groups = "spi_b_mosi",
-				 "spi_b_miso",
-				 "spi_b_ss0",
-				 "spi_b_ss1",
-				 "spi_b_ss2",
-				 "spi_b_sclk";
-			function = "spi_b";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	spifc_pins:spifc_pins {
-		mux {
-			groups = "spif_hold",
-				 "spif_mo",
-				 "spif_mi",
-				 "spif_clk",
-				 "spif_wp",
-				 "spif_cs";
-			function = "spif";
-			drive-strength-microamp = <3000>;
-		};
-	};
-
-	irblaster_pin_f:irblaster_pin_f {
-		mux {
-			groups = "ir_remote_out_f";
-			function = "ir_remote";
-		};
-	};
-
-	irblaster_pin_h:irblaster_pin_h {
-		mux {
-			groups = "ir_remote_out_h";
-			function = "ir_remote";
-		};
-	};
-
-	irblaster_pin_z:irblaster_pin_z {
-		mux {
-			groups = "ir_remote_out_z";
-			function = "ir_remote";
-		};
-	};
-
-	irblaster_pin_a:irblaster_pin_a {
-		mux {
-			groups = "ir_remote_out_a";
-			function = "ir_remote";
-		};
-	};
-
-	spdifin: spdifin {
-		mux {/* GPIOH_5 */
-			groups = "spdif_in";
-			function = "spdif_in";
-		};
-	};
-
-	eth_a_mdio_pins: eth_a_mdio_pins {
-		mux {
-			groups = "eth_a_mdio_z",
-				 "eth_a_mdc_z";
-			function = "eth_a";
-			drive-strength-microamp = <3000>;
-			bias-disable;
-		};
-	};
-
-	eth_a_pins: eth_a_pins {
-		mux {
-			groups = "eth_a_mdio_z",
-				 "eth_a_mdc_z",
-				 "eth_a_rgmii_rx_clk",
-				 "eth_a_rx_dv",
-				 "eth_a_rxd0",
-				 "eth_a_rxd1",
-				 "eth_a_txen",
-				 "eth_a_txd0",
-				 "eth_a_txd1";
-			function = "eth_a";
-			drive-strength-microamp = <3000>;
-			bias-disable;
-		};
-	};
-
-	eth_a_rgmii_pins: eth_a_rgmii_pins {
-		mux {
-			groups = "eth_a_rxd2_rgmii",
-				 "eth_a_rxd3_rgmii",
-				 "eth_a_rgmii_tx_clk",
-				 "eth_a_txd2_rgmii",
-				 "eth_a_txd3_rgmii";
-			function = "eth_a";
-			drive-strength-microamp = <3000>;
-			bias-disable;
-		};
-	};
-
-	eth_b_pins: eth_b_pins {
-		mux {
-			groups = "eth_b_mdio",
-				 "eth_b_mdc",
-				 "eth_b_rgmii_rx_clk",
-				 "eth_b_rx_dv",
-				 "eth_b_rxd0",
-				 "eth_b_rxd1",
-				 "eth_b_txen",
-				 "eth_b_txd0",
-				 "eth_b_txd1";
-			function = "eth_b";
-			drive-strength-microamp = <3000>;
-			bias-disable;
-		};
-	};
-
-	eth_b_rgmii_pins: eth_b_rgmii_pins {
-		mux {
-			groups = "eth_b_rxd2_rgmii",
-				 "eth_b_rxd3_rgmii",
-				 "eth_b_rgmii_tx_clk",
-				 "eth_b_txd2_rgmii",
-				 "eth_b_txd3_rgmii";
-			function = "eth_b";
-			drive-strength-microamp = <3000>;
-			bias-disable;
+	/* from ervery dts */
+	func-tdm {
+		bt_pcm_gpio_x_pins: group-tdma-bt-pcm-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_X, 7, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 8, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 9, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_X, 10, 1)>;
 		};
 	};
 };
 
-&aobus_pinctrl{
-	jtag_a_pins: jtag_a_pin {
-		mux {
-			groups = "jtag_a_tdi_ao",
-				 "jtag_a_tdo_ao",
-				 "jtag_a_clk_ao",
-				 "jtag_a_tms_ao";
-			function = "jtag_a_ao";
+&aobus_pinctrl {
+	func-jtag-a {
+		jtag_a_pins: group-jtag-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 8, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 9, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 10, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 11, 2)>;
 		};
 	};
 
-	jtag_b_pins: jtag_b_pin {
-		mux {
-			groups = "jtag_b_tdi_ao",
-				 "jtag_b_tdo_ao",
-				 "jtag_b_clk_ao",
-				 "jtag_b_tms_ao";
-			function = "jtag_b_ao";
+	func-aocec {
+		eecec_b: group-eecec-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 14, 2)>;
+			bias-pull-up;
 		};
 	};
 
-	sdcard_pins: sdcard_pins {
-		mux {
-			groups = "sdcard_d0_ao",
-				 "sdcard_d1_ao",
-				 "sdcard_d2_ao",
-				 "sdcard_d3_ao",
-				 "sdcard_clk_ao",
-				 "sdcard_cmd_ao";
-			function = "sdcard_ao";
+	func-jtag-b {
+		jtag_b_pins: group-jtag-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 4, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 2)>;
+		};
+	};
+
+	func-sdcard {
+		sdcard_pins: group-sdcard-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 2, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 3, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 1)>;
 			bias-pull-up;
 			drive-strength-microamp = <4000>;
 		};
-	};
-	sd_1bit_pins: sd_1bit_pins {
-		mux {
-			groups = "sdcard_d0_ao",
-				 "sdcard_clk_ao",
-				 "sdcard_cmd_ao";
-			function = "sdcard_ao";
+
+		sd_1bit_pins: group-sd-1bit-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 4, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 1)>;
 			bias-pull-up;
 			drive-strength-microamp = <4000>;
 		};
-	};
 
-	sdcard_clk_gate_pins: sdcard_clk_gate_pins {
-		mux {
-			groups = "GPIOC_4";
-			function = "gpio_aobus";
+		sdcard_clk_gate_pins: group-sdcard-clk-gate-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 4, 0)>;
 			bias-pull-down;
 			drive-strength-microamp = <4000>;
 		};
 	};
 
-	spisg_a_pins_d: spisg_a_pins_d {
-		mux {
-			 /* GPIOD_3/4/5/6/7/2 */
-			groups = "spi_a_mosi_ao",
-				 "spi_a_miso_ao",
-				 "spi_a_ss0_ao",
-				 "spi_a_ss1_ao",
-				 "spi_a_ss2_ao",
-				 "spi_a_sclk_ao";
-			function = "spi_a_ao";
+	func-spisg-a {
+		spisg_a_pins_d: group-spisg-a-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 2, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 3, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 4, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 5, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 6, 2)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 7, 2)>;
+			bias-pull-up;
+			drive-strength-microamp = <3000>;
+		};
+
+		spisg_a_pins_ao: group-spisg-a-pins2 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 0, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 1, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 2, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 3, 3)>;
+			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spisg_a_pins_ao: spisg_a_pins_ao {
-		mux {
-			 /* GPIOAO_1/2/3/0 */
-			groups = "spi_a_mosi_ao_ao",
-				 "spi_a_miso_ao_ao",
-				 "spi_a_ss0_ao_ao",
-				 "spi_a_sclk_ao_ao";
-			function = "spi_a_ao";
+	func-spisg-b {
+		spisg_b_pins_ao: group-spisg-b-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 4, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 5, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 6, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 7, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 8, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 9, 3)>;
+			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spisg_b_pins_ao: spisg_b_pins_ao {
-		mux {
-			 /* GPIOAO_4/5/7/8/9/6 */
-			groups = "spi_b_mosi_ao",
-				 "spi_b_miso_ao",
-				 "spi_b_ss0_ao",
-				 "spi_b_ss1_ao",
-				 "spi_b_ss2_ao",
-				 "spi_b_sclk_ao";
-			function = "spi_b_ao";
+	func-spisg-d {
+		spisg_d_pins_c: group-spisg-d-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 2, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 3, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 4, 3)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 3)>;
+			bias-pull-up;
 			drive-strength-microamp = <3000>;
 		};
 	};
 
-	spisg_d_pins_c: spisg_d_pins_c {
-		mux {
-			 /* GPIOC_0/1/3/4/5/2 */
-			groups = "spi_d_mosi_ao",
-				 "spi_d_miso_ao",
-				 "spi_d_ss0_ao",
-				 "spi_d_ss1_ao",
-				 "spi_d_ss2_ao",
-				 "spi_d_sclk_ao";
-			function = "spi_d_ao";
-			drive-strength-microamp = <3000>;
+	func-rtc-32k {
+		rtc_32k_pins: group-rtc-32k-pins1 {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 4, 3)>;
 		};
 	};
 
-	rtc_32k_pins: rtc_32k_pins {
-		mux {
-			groups = "clk_32k_in_ao";
-			function = "clk_ao";
-		};
-	};
-
-	b_ao_uart_pins:b_ao_uart {
-		mux {
-			groups = "uart_b_rx_ao",
-				"uart_b_tx_ao";
-			function = "uart_b_ao";
+	func-uart-b {
+		b_ao_uart_pins: group-uart-b-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 0, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 1, 1)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	c_ao_uart_pins:c_ao_uart {
-		mux {
-			groups = "uart_c_rx_ao",
-				"uart_c_tx_ao",
-				"uart_c_cts_ao",
-				"uart_c_rts_ao";
-			function = "uart_c_ao";
+	func-uart-c {
+		c_ao_uart_pins: group-uart-c-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 2, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 3, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 4, 4)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 5, 4)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	d_ao_uart_pins:d_ao_uart {
-		mux {
-			groups = "uart_d_rx_ao",
-				"uart_d_tx_ao",
-				"uart_d_cts_ao",
-				"uart_d_rts_ao";
-			function = "uart_d_ao";
+	func-uart-d {
+		d_ao_uart_pins: group-uart-d-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_C, 0, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 1, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 5, 6)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_C, 6, 6)>;
 			drive-strength = <3>;
 			bias-pull-up;
 		};
 	};
 
-	e_ao_uart_pins:e_ao_uart {
-		mux {
-			groups = "uart_e_rx_ao",
-				"uart_e_tx_ao",
-				"uart_e_cts_ao",
-				"uart_e_rts_ao";
-			function = "uart_e_ao";
+	func-uart-e {
+		e_ao_uart_pins: group-uart-e-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 8, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 9, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 10, 5)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_D, 11, 5)>;
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	/* from mesona9_aduio.dtsi */
+	func-audio {
+		pdmin: group-aduio-pdmin-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_AO, 6, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 7, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 8, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 9, 1)>,
+				 <AML_PINMUX(AMLOGIC_GPIO_AO, 10, 1)>;
+		};
+
+		spdifout_a: group-aduio-spdifout-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 13, 2)>;
+		};
+
+		spdifout_a_mute: group-aduio-spdifout-a-mute-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 13, 0)>;
+		};
+		spdifin_a: group-aduio-spdifin-a-pins {
+			pinmux = <AML_PINMUX(AMLOGIC_GPIO_D, 13, 3)>;
 		};
 	};
 };

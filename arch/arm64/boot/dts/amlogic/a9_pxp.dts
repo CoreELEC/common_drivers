@@ -252,7 +252,7 @@
 	auge_sound {
 		compatible = "amlogic, auge-sound-card";
 		status = "disabled";
-		spk_mute-gpios = <&gpio GPIOH_5 GPIO_ACTIVE_LOW>;
+		spk_mute-gpios = <&gpioh 5 GPIO_ACTIVE_LOW>;
 		/*gpio high is enable spk,control by "SPK mute"*/
 		aml-audio-card,name = "AML-AUGESOUND";
 		aml-audio-card,dai-link@0 {
@@ -426,7 +426,7 @@
 		status = "disabled";
 
 		/* dvb hardware main power. */
-		dvb_power_gpio = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		dvb_power_gpio = <&gpioz 5 GPIO_ACTIVE_HIGH>;
 		dvb_power_value = <1>;
 		dvb_power_dir = <0>; /* 0: out, 1: in. */
 
@@ -441,7 +441,7 @@
 		fe2_i2c_adap_id = <&i2c4>;
 		fe2_demod_i2c_addr = <0xD8>;
 		fe2_reset_value = <0>;
-		fe2_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
+		fe2_reset_gpio = <&gpioz 4 GPIO_ACTIVE_HIGH>;
 		fe2_reset_dir = <0>; /* 0: out, 1: in. */
 		fe2_ant_poweron_value = <0>;
 		//fe2_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
@@ -629,8 +629,8 @@
 		key_name = "bluetooth", "mute";
 		key_code = <600 SW_MUTE_DEVICE>;
 		key_type = <EV_KEY EV_SW>;
-		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
-			     &gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		key-gpios = <&gpiod 2 GPIO_ACTIVE_HIGH
+			     &gpioa 11 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
 	};
@@ -681,7 +681,7 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>; /* test_n no mux reg */
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -695,7 +695,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -709,7 +709,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -723,7 +723,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -737,7 +737,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -751,7 +751,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -765,7 +765,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -778,7 +778,7 @@
 		regulator-name = "VDD_12V_ETX";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -791,7 +791,7 @@
 		vin-supply = <&vdd_3v3_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio GPIOA_16 GPIO_ACTIVE_HIGH>;	//Default DWN
+		gpio = <&gpioa 16 GPIO_ACTIVE_HIGH>;	//Default DWN
 		enable-active-low;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -803,7 +803,7 @@
 		regulator-name = "VDDIO_C_P";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio_ao GPIOD_12 GPIO_ACTIVE_HIGH>;	//L=3.3V H=1.8V
+		gpio = <&gpiod 12 GPIO_ACTIVE_HIGH>;	//L=3.3V H=1.8V
 		gpios-states = <0>;
 		states = <1800000 1 3300000 0>;
 		startup-delay-us = <7000>;
@@ -836,7 +836,7 @@
 		regulator-name = "PANEL_12V";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -850,7 +850,7 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		gpio = <&gpio GPIOH_7 GPIO_ACTIVE_LOW>;
+		gpio = <&gpioh 7 GPIO_ACTIVE_LOW>;
 		gpio-open-drain;						//ODmode
 		enable-active-low;
 		startup-delay-us = <7000>;
@@ -899,8 +899,8 @@
 		//clocks = <&clkc CLKID_MCLK0>;
 		clock-names = "mclk0";
 
-		pwdn-gpios = <&gpio GPIOX_5 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio GPIOX_4 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpiox 5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpiox 4 GPIO_ACTIVE_HIGH>;
 
 		port {
 			amlsens_0_ep: endpoint {
@@ -921,7 +921,7 @@
 		#sound-dai-cells = <0>;
 		reg = <0x2a>;
 		status = "disabled";
-		reset_pin-gpios = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		reset_pin-gpios = <&gpiod 5 GPIO_ACTIVE_HIGH>;
 	};
 	aw9523: aw9523_led@5b {
 		compatible = "amlogic,aw9523b_led";
@@ -986,18 +986,6 @@
 //		pinctrl-0 = <&spdif_out_a_h4_pins>;
 //		pinctrl-1 = <&spdif_out_a_h4_mute_pins>;
 //};
-
-&periphs_pinctrl {
-	dvb_s_ts0_pins: dvb_s_ts0_pins {
-		tsin_a {
-			groups = "tsin_a_sop",
-				"tsin_a_valid",
-				"tsin_a_clk",
-				"tsin_a_din0";
-			function = "tsin_a";
-		};
-	};
-}; /* end of periphs_pinctrl */
 
 &pcie_a {
 	/* reset-gpio = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>; */
@@ -1067,7 +1055,7 @@
 	max-frequency = <200000000>;
 	disable-wp;
 
-	cd-gpios = <&gpio_ao GPIOC_6 GPIO_ACTIVE_HIGH>;
+	cd-gpios = <&gpioc 6 GPIO_ACTIVE_HIGH>;
 	//dat1-gpios = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
 	//vmmc-supply = <&vddao_3v3>;
 	//vqmmc-supply = <&emmc_1v8>;
@@ -1419,13 +1407,13 @@
 
 &aml_wifi{
 	status = "disabled";
-	interrupt-gpios = <&gpio  GPIOX_7  GPIO_ACTIVE_HIGH>;
-	power_on-gpios = <&gpio   GPIOX_6  GPIO_ACTIVE_HIGH>;
+	interrupt-gpios = <&gpiox  7  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&gpiox   6  GPIO_ACTIVE_HIGH>;
 };
 
 &aml_bt {
 	status = "disabled";
-	reset-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpiox    17 GPIO_ACTIVE_HIGH>;
 	// TODO: must check! // btwakeup-gpios = <&gpio    GPIOX_18 GPIO_ACTIVE_HIGH>;
 	// TODO: must check! // hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 };

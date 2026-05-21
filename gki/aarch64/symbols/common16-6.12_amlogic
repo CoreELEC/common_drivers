@@ -176,6 +176,13 @@
   vchan_tx_desc_free
   vchan_tx_submit
 
+#amlogic-pinctrl-a4.ko
+  devm_kasprintf_strarray
+  pinconf_generic_parse_dt_config
+  pinctrl_utils_add_map_configs
+  pinctrl_utils_add_map_mux
+  pinctrl_utils_reserve_map
+
 #amlogic-pio.ko
   devm_of_iomap
   dma_request_chan

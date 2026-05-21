@@ -295,7 +295,7 @@
 		compatible = "amlogic, auge-sound-card";
 		aml-audio-card,name = "AML-AUGESOUND";
 		/* headphone insert det */
-		hp-det-gpios = <&gpio_ao GPIOD_10 GPIO_ACTIVE_HIGH>;
+		hp-det-gpios = <&gpiod 10 GPIO_ACTIVE_HIGH>;
 		interrupts = <GIC_SPI 91 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "audio_exception64";
 
@@ -494,7 +494,7 @@
 		status = "disabled";
 
 		/* dvb hardware main power. */
-		dvb_power_gpio = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		dvb_power_gpio = <&gpioz 5 GPIO_ACTIVE_HIGH>;
 		dvb_power_value = <1>;
 		dvb_power_dir = <0>; /* 0: out, 1: in. */
 
@@ -509,7 +509,7 @@
 		fe2_i2c_adap_id = <&i2c4>;
 		fe2_demod_i2c_addr = <0xD8>;
 		fe2_reset_value = <0>;
-		fe2_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
+		fe2_reset_gpio = <&gpioz 4 GPIO_ACTIVE_HIGH>;
 		fe2_reset_dir = <0>; /* 0: out, 1: in. */
 		fe2_ant_poweron_value = <0>;
 		//fe2_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
@@ -698,7 +698,7 @@
 		key_name = "power";
 		key_code = <KEY_POWER>;
 		key_type = <EV_KEY>;
-		key-gpios = <&gpio_ao GPIOD_3 GPIO_ACTIVE_HIGH>;
+		key-gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
 		/* 0:polling mode, 1:irq mode */
 		detect_mode = <0>;
 	};
@@ -749,7 +749,7 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -763,7 +763,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -777,7 +777,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -791,7 +791,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -805,7 +805,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&test_gpio GPIO_TEST_N GPIO_ACTIVE_HIGH>;
+		gpio = <&test_n 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -819,7 +819,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		pinctrl-names = "default";
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -833,7 +833,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		pinctrl-names = "default";
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -846,7 +846,7 @@
 		regulator-name = "VDD_12V_ETX";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -859,7 +859,7 @@
 		vin-supply = <&vdd_3v3_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio GPIOA_16 GPIO_ACTIVE_HIGH>;	//Default DWN
+		gpio = <&gpioa 16 GPIO_ACTIVE_HIGH>;	//Default DWN
 		enable-active-low;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -871,7 +871,7 @@
 		regulator-name = "VDDIO_C_P";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio_ao GPIOD_12 GPIO_ACTIVE_HIGH>;	//L=3.3V H=1.8V
+		gpio = <&gpiod 12 GPIO_ACTIVE_HIGH>;	//L=3.3V H=1.8V
 		gpios-states = <0>;
 		states = <1800000 1 3300000 0>;
 		startup-delay-us = <7000>;
@@ -904,7 +904,7 @@
 		regulator-name = "PANEL_12V";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		gpio = <&gpio_ao GPIOD_2 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpiod 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		startup-delay-us = <7000>;
 		regulator-boot-on;
@@ -930,14 +930,14 @@
 	ad82120b_68: ad82120b@68 {
 		compatible = "ESMT,ad82120b";
 		#sound-dai-cells = <0>;
-		reset_pin-gpios = <&gpio GPIOA_13 GPIO_ACTIVE_HIGH>;
+		reset_pin-gpios = <&gpioa 13 GPIO_ACTIVE_HIGH>;
 		reg = <0x68>;
 		status = "okay";
 	};
 	ad82120b_6c: ad82120b@6c {
 		compatible = "ESMT,ad82120b";
 		#sound-dai-cells = <0>;
-		//reset_pin-gpios = <&gpio GPIOA_12 GPIO_ACTIVE_HIGH>;
+		//reset_pin-gpios = <&gpioa 12 GPIO_ACTIVE_HIGH>;
 		reg = <0x6c>;
 		status = "okay";
 	};
@@ -950,8 +950,8 @@
 	usbc0: aw35615@22 {
 		compatible = "awinic,aw35615";
 		reg = <0x22>;
-		awinic,int_n = <&gpio_ao GPIOD_15 GPIO_ACTIVE_HIGH>;
-		gpios = <&gpio GPIOA_17 GPIO_ACTIVE_HIGH>;
+		awinic,int_n = <&gpiod 15 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpioa 17 GPIO_ACTIVE_HIGH>;
 		aw35615,port_id = <0>;
 		aw35615,vbus_name = "otg-vbus"; /*otg vbus regulator name*/
 		aw35615,snk_pdo_size = <1>; /* set sink pdo num*/
@@ -1026,13 +1026,13 @@
 		#sound-dai-cells = <0>;
 		reg = <0x2a>;
 		status = "disabled";
-		reset_pin-gpios = <&gpio GPIOD_5 GPIO_ACTIVE_HIGH>;
+		reset_pin-gpios = <&gpiod 5 GPIO_ACTIVE_HIGH>;
 	};
 	aw9523: aw9523_led@5b {
 		compatible = "amlogic,aw9523b_led";
 		reg = <0x5b>;
 		status = "disabled";
-		//reset-gpio = <&gpio GPIOD_10 GPIO_ACTIVE_HIGH>;
+		//reset-gpio = <&gpiod 10 GPIO_ACTIVE_HIGH>;
 		platform = <10>;
 
 		led1 {
@@ -1093,8 +1093,8 @@
 		assigned-clocks = <&clkc_mclk CLKID_MCLK_0>;
 		assigned-clock-rates = <24000000>;
 
-		pwdn-gpios = <&gpio GPIOM_3 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio GPIOM_2 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpiom 3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpiom 2 GPIO_ACTIVE_HIGH>;
 
 		port {
 			amlsens_0_out: endpoint {
@@ -1128,8 +1128,8 @@
 		assigned-clocks = <&clkc_mclk1 CLKID_MCLK1_0>;
 		assigned-clock-rates = <24000000>;
 
-		pwdn-gpios = <&gpio GPIOM_5 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio GPIOM_4 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpiom 5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpiom 4 GPIO_ACTIVE_HIGH>;
 
 		port {
 			amlsens_2_out: endpoint {
@@ -1236,28 +1236,6 @@
 //		pinctrl-1 = <&spdif_out_a_h4_mute_pins>;
 //};
 
-&periphs_pinctrl {
-	bt_pcm_gpio_x_pins: gpio_x_pin {
-		mux { /* GPIOX_10, GPIOX_9, GPIOX_8 OUT, GPIOX_7 IN */
-			groups = "tdm_sclk0",
-				"tdm_fs0",
-				"tdm_d0",
-				"tdm_d1";
-			function = "tdm";
-		};
-	};
-
-	dvb_s_ts0_pins: dvb_s_ts0_pins {
-		tsin_a {
-			groups = "tsin_a_sop",
-				"tsin_a_valid",
-				"tsin_a_clk",
-				"tsin_a_din0";
-			function = "tsin_a";
-		};
-	};
-}; /* end of periphs_pinctrl */
-
 &typec_mux {
 	status = "okay";
 	port {
@@ -1279,7 +1257,7 @@
 	status = "okay";
 	u2p@fe4cc000 {
 		gpio-vbus-power = "GPIOA_18";
-		gpios = <&gpio GPIOA_18 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpioa 18 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -1287,7 +1265,7 @@
 	status = "okay";
 	u2p@fe4ac000 {
 		gpio-vbus-power = "GPIOD_17";
-		gpios = <&gpio_ao GPIOD_17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		gpios = <&gpiod 17 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 	};
 };
 
@@ -1295,7 +1273,7 @@
 	status = "okay";
 	u2p@fe4a4000 {
 		gpio-vbus-power = "GPIOA_19";
-		gpios = <&gpio GPIOA_19 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpioa 19 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -1339,7 +1317,7 @@
 };
 
 &pcie_a {
-	reset-gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	reset-gpio = <&gpioa 8 GPIO_ACTIVE_HIGH>;
 	phys = <&pcie_phy0>;
 	phy-names = "pcie-phy";
 	max-link-speed=<3>;
@@ -1350,7 +1328,7 @@
 
 &pcie_b {
 	/* reset-gpio = <&gpio GPIOA_9 GPIO_ACTIVE_HIGH>; */
-	reset-gpio = <&gpio GPIOZ_15 GPIO_ACTIVE_HIGH>; // combphy
+	reset-gpio = <&gpioz 15 GPIO_ACTIVE_HIGH>; // combphy
 	max-link-speed=<3>;
 	iommu-map = <0x100 &smmu 0x5 0x10>;
 	status = "disabled";
@@ -1417,8 +1395,8 @@
 	max-frequency = <200000000>;
 	disable-wp;
 
-	cd-gpios = <&gpio_ao GPIOC_6 GPIO_ACTIVE_HIGH>;
-	//dat1-gpios = <&gpio GPIOC_1 GPIO_ACTIVE_HIGH>;
+	cd-gpios = <&gpioc 6 GPIO_ACTIVE_HIGH>;
+	//dat1-gpios = <&gpioc 1 GPIO_ACTIVE_HIGH>;
 	vmmc-supply = <&sdcard_3v3_reg>;
 	vqmmc-supply = <&vddio_c_p_reg>;
 };
@@ -1732,15 +1710,15 @@
 
 &aml_wifi{
 	status = "okay";
-	interrupt-gpios = <&gpio  GPIOX_6  GPIO_ACTIVE_HIGH>;
-	power_on-gpios = <&gpio_ao   GPIOAO_11  GPIO_ACTIVE_HIGH>;
+	interrupt-gpios = <&gpiox 6  GPIO_ACTIVE_HIGH>;
+	power_on-gpios = <&gpioao 11  GPIO_ACTIVE_HIGH>;
 };
 
 &aml_bt {
 	status = "okay";
-	reset-gpios = <&gpio_ao  GPIOAO_12 GPIO_ACTIVE_HIGH>;
-	btwakeup-gpios = <&gpio  GPIOX_16 GPIO_ACTIVE_HIGH>;
-	hostwake-gpios = <&gpio  GPIOX_17 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpioao 12 GPIO_ACTIVE_HIGH>;
+	btwakeup-gpios = <&gpiox 16 GPIO_ACTIVE_HIGH>;
+	hostwake-gpios = <&gpiox 17 GPIO_ACTIVE_HIGH>;
 };
 
 &pwm_k {
