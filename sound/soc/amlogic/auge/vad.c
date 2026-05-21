@@ -790,19 +790,31 @@ void vad_update_buffer(bool isvadbuf)
 			toddr_vad_enable(false);
 		}
 	} else {
-		if (isvadbuf) {
-			toddr_stopped = aml_toddr_burst_finished(p_vad->tddr);
-			if (toddr_stopped)
-				aml_vad_toddr_enable(p_vad->tddr, false);
-		}
+		toddr_stopped = aml_toddr_burst_finished(p_vad->tddr);
+		if (toddr_stopped)
+			aml_vad_toddr_enable(p_vad->tddr, false);
+
 		aml_toddr_set_buf_startaddr(p_vad->tddr, start);
+		/* wait start finish */
+		udelay(5);
 		aml_toddr_force_finish(p_vad->tddr);
 
 		/* make sure DMA point is in new buffer */
 		curr_addr = aml_toddr_get_position(p_vad->tddr);
+		pr_info("first curr_addr:0x%x start:0x%x end:0x%x\n",
+			curr_addr, start, end);
 		while (curr_addr < start || curr_addr > end) {
 			if (i++ > 20000) {
-				pr_err("break\n");
+				int k;
+
+				pr_info("break error curr_addr:0x%x start:0x%x end:0x%x\n",
+					curr_addr, start, end);
+				for (k = 0; k < 12; k++)
+					pr_err("vad time out read reg[0x%x] 0x%x break\n",
+						p_vad->tddr->reg_base + k,
+						aml_audiobus_read(p_vad->tddr->actrl,
+									p_vad->tddr->reg_base + k));
+
 				break;
 			}
 			udelay(1);
@@ -812,8 +824,7 @@ void vad_update_buffer(bool isvadbuf)
 		aml_toddr_set_buf_endaddr(p_vad->tddr, end);
 
 		aml_toddr_set_fifos(p_vad->tddr, rd_th);
-		if (isvadbuf)
-			aml_vad_toddr_enable(p_vad->tddr, true);
+		aml_vad_toddr_enable(p_vad->tddr, true);
 	}
 	p_vad->a2v_buf = isvadbuf;
 	p_vad->addr = 0;

@@ -41,6 +41,8 @@
 #include "audio_controller.h"
 #include "hdmirx_arc_iomap.h"
 #include "sound_init.h"
+#include <linux/interrupt.h>
+
 #if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
 		defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
@@ -184,7 +186,10 @@ struct earc {
 	struct work_struct rx_xrun_work;
 	struct work_struct tx_hold_bus_work;
 	struct work_struct earctx_reg_init_work;
+#if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
+	defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
 	struct delayed_work tx_resume_work;
+#endif
 	struct delayed_work send_uevent_work;
 	struct delayed_work gain_disable_work;
 	struct delayed_work rx_stable_work;
@@ -2472,9 +2477,22 @@ static void earc_resume(void)
 
 #if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
 	defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
+	schedule_delayed_work(&p_earc->tx_resume_work, 0);
+#endif
+
+	p_earc->resumed = true;
+}
+
+#if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
+	defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
+static void tx_resume_work_func(struct work_struct *p_work)
+{
+	struct earc *p_earc = container_of(p_work, struct earc, tx_resume_work.work);
+
 	/* earc port, need reset for earc discovery when earc mode is on */
 	if (!IS_ERR_OR_NULL(p_earc->tx_cmdc_map) && p_earc->tx_earc_mode) {
 		if (p_earc->earctx_5v) {
+			usleep_range(1000 * 32, 1000 * 35);
 			earctx_set_earc_mode(p_earc, p_earc->tx_earc_mode, false);
 		} else {
 			/* cable is plugout, but 5v is on, that means
@@ -2486,23 +2504,14 @@ static void earc_resume(void)
 				p_earc->earctx_5v = true;
 				rx_earc_hpd_cntl(); /* reset hpd */
 				/* wait hpd is high, time is 600ms */
-				schedule_delayed_work(&p_earc->tx_resume_work,
-					msecs_to_jiffies(600));
+				usleep_range(1000 * 600, 1000 * 650);
+				dev_info(p_earc->dev, "%s earctx init", __func__);
+				earctx_init(p_earc->earctx_port, true);
 			}
 		}
 	}
+}
 #endif
-
-	p_earc->resumed = true;
-}
-
-static void tx_resume_work_func(struct work_struct *p_work)
-{
-	struct earc *p_earc = container_of(p_work, struct earc, tx_resume_work.work);
-
-	dev_info(p_earc->dev, "%s earctx init", __func__);
-	earctx_init(p_earc->earctx_port, true);
-}
 
 static int earctx_earc_mode_put(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
@@ -3496,6 +3505,11 @@ static int earctx_cmdc_setup(struct earc *p_earc)
 		earctx_dmac_force_mode(p_earc->tx_dmac_map, false, true,
 			p_earc->chipinfo->tx_pll_new);
 	}
+	/* Clear any pending interrupts to avoid race conditions */
+	if (!IS_ERR_OR_NULL(p_earc->tx_top_map)) {
+		earctx_cdmc_clr_irqs(p_earc->tx_top_map, 0xFFFFFFFF);
+		earctx_dmac_clr_irqs(p_earc->tx_top_map, 0xFFFFFFFF);
+	}
 	/* Default: no time out to connect RX */
 	earctx_cmdc_set_timeout(p_earc->tx_cmdc_map, 1);
 	/* Default: arc arc_initiated */
@@ -3778,28 +3792,31 @@ static int earc_platform_probe(struct platform_device *pdev)
 		earctx_cmdc_setup(p_earc);
 		earctx_ss_ops.private = p_earc;
 		register_samesrc_ops(SHAREBUFFER_EARCTX, &earctx_ss_ops);
+#if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
+	defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
 		INIT_DELAYED_WORK(&p_earc->tx_resume_work, tx_resume_work_func);
+#endif
 		INIT_DELAYED_WORK(&p_earc->send_uevent_work, send_uevent_work_func);
 		INIT_WORK(&p_earc->tx_hold_bus_work, tx_hold_bus_work_func);
 		INIT_WORK(&p_earc->earctx_reg_init_work, earctx_reg_init_work_func);
 		INIT_DELAYED_WORK(&p_earc->gain_disable_work, gain_disable_work_func);
 		INIT_DELAYED_WORK(&p_earc->tx_mute_work, tx_mute_work_func);
 
-#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-		register_earctx_callback(earc_hdmirx_hpdst);
-#endif
-
 		ret = devm_request_threaded_irq(p_earc->dev,
 					p_earc->irq_earc_tx,
 					NULL,
 					earc_tx_isr,
-					IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
+					IRQF_TRIGGER_HIGH | IRQF_ONESHOT | IRQF_NO_AUTOEN,
 					"earc_tx",
 					p_earc);
 		if (ret) {
 			dev_err(p_earc->dev, "failed to claim earc_tx %u\n", p_earc->irq_earc_tx);
 			return ret;
 		}
+		enable_irq(p_earc->irq_earc_tx);
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
+		register_earctx_callback(earc_hdmirx_hpdst);
+#endif
 	}
 
 	if (!IS_ERR_OR_NULL(p_earc->rx_top_map)) {
@@ -3878,7 +3895,10 @@ static int earc_platform_suspend(struct device *dev)
 		cancel_delayed_work(&p_earc->hdmitx_5v_work);
 	}
 	if (p_earc->chipinfo->tx_enable) {
+#if (defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI ||\
+	defined CONFIG_AMLOGIC_MEDIA_TVIN_HDMI_MODULE)
 		cancel_delayed_work(&p_earc->tx_resume_work);
+#endif
 		cancel_delayed_work(&p_earc->send_uevent_work);
 		cancel_delayed_work(&p_earc->gain_disable_work);
 		cancel_delayed_work(&p_earc->tx_mute_work);
