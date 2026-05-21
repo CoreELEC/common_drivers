@@ -301,7 +301,7 @@ static struct dma_async_tx_descriptor *aml_dma_prep_slave_sg
 		return NULL;
 	}
 
-	aml_desc = kmalloc(sizeof(*aml_desc), GFP_KERNEL);
+	aml_desc = kzalloc(sizeof(*aml_desc), GFP_KERNEL);
 	if (!aml_desc)
 		return NULL;
 	link_count = sg_nents_for_dma(sgl, sg_len, SG_MAX_LEN);
