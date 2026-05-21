@@ -116,7 +116,7 @@
 			 * wayland-drm: 4 buffers for westeros or 2 buffers for weston,
 			 *   3 buffers for direct display(enabled on weston)
 			 */
-			size = <0x0 0x3000000>;
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
 		};
 		/*di CMA pool */

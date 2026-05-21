@@ -110,8 +110,12 @@
 		dmaheap_cma_reserved:heap-gfx {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 1080p STB androidT size 88M */
-			size = <0x0 0x3000000>;
+			/* maximum size of fbdev and wayland-drm backend
+			 * fbdev: 2 * (number of /dev/fbx device) buffers
+			 * wayland-drm: 4 buffers for westeros or 2 buffers for weston,
+			 *   3 buffers for direct display(enabled on weston)
+			 */
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
 		};
 		/*di CMA pool */

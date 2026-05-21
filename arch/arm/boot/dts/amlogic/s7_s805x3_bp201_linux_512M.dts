@@ -110,7 +110,7 @@
 			 * fbdev: 2 * (number of /dev/fbx device) buffers
 			 * wayland-drm: 4 buffers for wayland compositor
 			 */
-			size = <0xc00000>;
+			size = <0x1000000>;
 			alignment = <0x400000>;
 		};
 		dmaheap_fb_reserved:heap-fb {
