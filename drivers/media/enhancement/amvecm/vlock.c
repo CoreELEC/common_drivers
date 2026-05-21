@@ -184,6 +184,7 @@ static int vlock_frc_is_on;
 
 static unsigned int vlock_game;
 static unsigned int pre_vlock_game;
+static unsigned int vlock_unlock_cnt;
 
 struct reg_map vlock_reg_maps[REG_MAP_END] = {0};
 
@@ -3581,15 +3582,24 @@ void vlock_process(struct vframe_s *vf,
 		}
 	}
 
+	if (pvlock->fsm_sts == VLOCK_STATE_ENABLE_STEP2_DONE &&
+		!(vlock_get_vlock_flag() && vlock_get_phlock_flag()))
+		vlock_unlock_cnt++;
+	else
+		vlock_unlock_cnt = 0;
+
+	if (vlock_unlock_cnt > (pvlock->input_hz * 8))
+		vlock_set_phase(pvlock, pvlock->phlock_percent);
+
 	pre_vlock_game = vlock_game;
 
 	if (vlock_debug & VLOCK_DEBUG_FLASH)
-		pr_info("%s: idx = %d, addr = 0x%x, org_enc_line_num = %d, pre_enc_max_line = %d\n",
+		pr_info("%s: idx:%d addr:0x%x org_enc_line_num:%d pre_enc_max_line:%d cnt:%d\n",
 			__func__,
 			pvlock->idx,
 			pvlock->enc_max_line_addr + pvlock->offset_encl,
 			pvlock->org_enc_line_num,
-			pvlock->pre_enc_max_line);
+			pvlock->pre_enc_max_line, vlock_unlock_cnt);
 
 	/* todo:vlock process only for tv chip */
 	if (pvlock->dtdata->vlk_new_fsm)
