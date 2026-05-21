@@ -47,7 +47,7 @@ int lcnt_reg_val[VRR_VARIANCE_CNT] = {0};
 unsigned int frame_lock_en = 1;
 unsigned int vrr_priority;
 unsigned int vrr_delay_line = 200;
-unsigned int vrr_delay_line_50hz = 600;
+unsigned int vrr_delay_line_50hz = 550;
 unsigned int vrr_delay_line_pre;
 
 unsigned int qms_input_pre;
@@ -500,6 +500,47 @@ static int frame_lock_check_base_fps(struct vframe_s *vf)
 	return fps;
 }
 
+static int frame_lock_check_out_fps(struct vinfo_s *vinfo)
+{
+	int fps = 0;
+	unsigned int out_fps = 0;
+
+	out_fps = vinfo->sync_duration_num / vinfo->sync_duration_den;
+
+	if (diff(out_fps, 50) <= 1)
+		fps = 50;
+	else if (diff(out_fps, 60) <= 1)
+		fps = 60;
+	else if (diff(out_fps, 100) <= 1)
+		fps = 100;
+	else if (diff(out_fps, 120) <= 1)
+		fps = 120;
+	else if (diff(out_fps, 144) <= 1)
+		fps = 144;
+	else if (diff(out_fps, 165) <= 1)
+		fps = 165;
+	else if (diff(out_fps, 170) <= 1)
+		fps = 170;
+	else if (diff(out_fps, 180) <= 1)
+		fps = 180;
+	else if (diff(out_fps, 200) <= 1)
+		fps = 200;
+	else if (diff(out_fps, 240) <= 1)
+		fps = 240;
+	else if (diff(out_fps, 288) <= 1)
+		fps = 288;
+	else if (diff(out_fps, 330) <= 1)
+		fps = 330;
+	else if (diff(out_fps, 340) <= 1)
+		fps = 340;
+	else if (diff(out_fps, 360) <= 1)
+		fps = 360;
+	else
+		fps = out_fps;
+
+	return fps;
+}
+
 int frame_lock_frame_rate_check(struct vframe_s *vf, struct vinfo_s *vinfo)
 {
 	bool ret = false;
@@ -569,8 +610,8 @@ int frame_lock_frame_rate_check(struct vframe_s *vf, struct vinfo_s *vinfo)
 				hdr_low_latency);
 	} else {
 		if ((vf->signal_type == VRR_LATENCY_SIGNAL || vf->signal_type == VRR_HDR_SIGNAL) &&
-			((frame_sts.vrr_frame_cur == 50 && vinfo->std_duration == 100) ||
-			(frame_sts.vrr_frame_cur == 60 && vinfo->std_duration == 120)) &&
+			((frame_sts.vrr_frame_cur == 50 && vout_base == 100) ||
+			(frame_sts.vrr_frame_cur == 60 && vout_base == 120)) &&
 			(is_meson_t3x_cpu() || is_meson_t6x_cpu())) {
 			ret = true;
 			frame_sts.vrr_frame_outof_range_cnt = 0;
@@ -1066,7 +1107,7 @@ void frame_lock_process(struct vframe_s *vf,
 		return;
 
 	index = (vinfo->viu_mux >> 4) & 0xf;
-	vout_base = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	vout_base = frame_lock_check_out_fps(vinfo);
 
 	if (probe_ok == 0) {
 		return;
