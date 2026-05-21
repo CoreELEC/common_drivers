@@ -214,30 +214,93 @@ void vdin_cal_canvas_w(struct vdin_dev_s *devp)
 	devp->vf_mem_max_cnt = min(devp->vf_mem_max_cnt, devp->canvas_max_num);
 }
 
+unsigned int vdin_422_hsize_canvas_alignment(struct vdin_dev_s *devp, int h_size)
+{
+	/* 422 mode, 4k up to 444 8bit mode,
+	 * other up to 10 bit mode
+	 */
+	if (devp->hw_core == VDIN_HW_CORE_NORMAL) {
+		if (vdin_is_8bit_needed(devp) && !vdin_is_dolby_signal_in(devp)) {
+			/*up to 444 8bit*/
+			h_size = roundup(h_size * VDIN_YUV444_8BIT_PER_PIXEL_BYTE,
+					 devp->canvas_align);
+			devp->canvas_align_w = h_size / VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
+		} else {
+			if (devp->force_malloc_yuv_422_to_444) {
+				if (vdin_is_8bit_needed(devp)) {
+					h_size = roundup(h_size * VDIN_YUV444_8BIT_PER_PIXEL_BYTE,
+					 devp->canvas_align);
+					devp->canvas_align_w = h_size /
+						VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
+				} else {
+					/*up to 444 10bit*/
+					h_size = roundup(h_size * VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
+							 devp->canvas_align);
+					devp->canvas_align_w = h_size /
+						VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
+				}
+			} else {
+				if (devp->full_pack == VDIN_422_FULL_PK_EN) {
+					h_size = roundup((h_size * 5) / 2,
+							 devp->canvas_align);
+					devp->canvas_align_w = (h_size * 2) / 5;
+				} else {
+					h_size = h_size * VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
+					h_size = roundup(h_size, devp->canvas_align);
+					devp->canvas_align_w = h_size /
+						VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
+				}
+			}
+		}
+	} else if (devp->hw_core == VDIN_HW_CORE_LITE) {
+		if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
+			if (devp->full_pack == VDIN_422_FULL_PK_EN) {
+				h_size = roundup((h_size * 5) / 2, devp->canvas_align);
+				devp->canvas_align_w = (h_size * 2) / 5;
+			} else {
+				h_size = roundup(h_size * VDIN_YUV422_10BIT_PER_PIXEL_BYTE,
+						 devp->canvas_align);
+				devp->canvas_align_w = h_size /
+					VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
+			}
+		} else {
+			h_size = roundup(h_size * VDIN_YUV422_8BIT_PER_PIXEL_BYTE,
+				devp->canvas_align);
+			devp->canvas_align_w = h_size / VDIN_YUV422_8BIT_PER_PIXEL_BYTE;
+		}
+	}
+	return h_size;
+}
+
 unsigned int get_vdin_req_mem(struct vdin_dev_s *devp)
 {
 	unsigned int mem_size;
 
+	vdin_dv_hw5_init(devp);
 	vdin_set_decimation(devp); //get origin_hv
 	vdin_set_cutwin(devp, 0); //get cutwin_hv
+	vdin_get_format_convert(devp);
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	/* check if need enable afbce */
 	vdin_afbce_mode_init(devp);
 #endif
 	vdin_double_write_confirm(devp);//get dw status
+	vdin_set_bitdepth(devp, 0);
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	vdin_mem_init(devp); //get scatter on_off
 #endif
 	vdin_get_hv_shrink(devp); //get hv_shrink_size
 	mem_size = count_vdin_req_mem(devp);
 	devp->get_vdin_mem_size_flag = 0;
+	if (devp->debug.vdin_dbg_en)
+		pr_info("count_vdin_req_mem:(%d)B\n", mem_size);
 
 	return mem_size;
 }
 
 unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 {
-	unsigned int mem_size, h_size, v_size, frame_size = 0, temp, afrc_body_y_size = 0;
+	unsigned int mem_size, h_size, v_size, frame_size = 0, afrc_body_y_size = 0;
 	unsigned int max_buffer_num = devp->dts_config.min_buf_num;
 	unsigned int fix_size = 0, sct_body_size, cpr_body_size;
 	unsigned int h_tmp, v_tmp, blk_num;
@@ -303,15 +366,15 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 			h_size = roundup(h_size * VDIN_RGBA8888_PER_PIXEL_BYTE,
 				devp->canvas_align);
 			devp->canvas_align_w = h_size / VDIN_RGBA8888_PER_PIXEL_BYTE;
-		} else if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH ||
-		    (devp->dv_hw5.hw5_ctl & BIT3)) {
-			/* 4k is not support 10 bit mode in order to save memory
-			 * up to 4k 444 8bit mode
-			 */
+		} else if ((devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH ||
+		    devp->dv_hw5.hw5_ctl & BIT3) && !vdin_is_8bit_needed(devp)) {
 			h_size = roundup(h_size * VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
 				devp->canvas_align);
 			devp->canvas_align_w = h_size / VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
 		} else {
+			/* before t6x, 4k is not support 10 bit mode in order to save memory
+			 * up to 4k 444 8bit mode
+			 */
 			h_size = roundup(h_size * VDIN_YUV444_8BIT_PER_PIXEL_BYTE,
 				devp->canvas_align);
 			devp->canvas_align_w = h_size / VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
@@ -330,52 +393,7 @@ unsigned int count_vdin_req_mem(struct vdin_dev_s *devp)
 		devp->canvas_align_w = h_size;
 		/*todo change with canvas alloc!!*/
 	} else {
-		/* 422 mode, 4k up to 444 8bit mode,
-		 * other up to 10 bit mode
-		 */
-		if (devp->index == 0) {
-			if (vdin_is_8bit_needed(devp) && !vdin_is_dolby_signal_in(devp)) {
-				/*up to 444 8bit*/
-				h_size = roundup(h_size * VDIN_YUV444_8BIT_PER_PIXEL_BYTE,
-						 devp->canvas_align);
-				devp->canvas_align_w = h_size / VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
-			} else {
-				if (devp->force_malloc_yuv_422_to_444) {
-					/*up to 444 10bit*/
-					h_size = roundup(h_size * VDIN_YUV444_10BIT_PER_PIXEL_BYTE,
-							 devp->canvas_align);
-					devp->canvas_align_w = h_size /
-						VDIN_YUV444_10BIT_PER_PIXEL_BYTE;
-				} else {
-					if (devp->full_pack == VDIN_422_FULL_PK_EN) {
-						h_size = roundup((h_size * 5) / 2,
-								 devp->canvas_align);
-						devp->canvas_align_w = (h_size * 2) / 5;
-					} else {
-						temp = h_size * VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
-						h_size = roundup(temp, devp->canvas_align);
-						devp->canvas_align_w = h_size /
-							VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
-					}
-				}
-			}
-		} else if (devp->index) {
-			if (devp->source_bitdepth > VDIN_MIN_SOURCE_BITDEPTH) {
-				if (devp->full_pack == VDIN_422_FULL_PK_EN) {
-					h_size = roundup((h_size * 5) / 2, devp->canvas_align);
-					devp->canvas_align_w = (h_size * 2) / 5;
-				} else {
-					h_size = roundup(h_size * VDIN_YUV422_10BIT_PER_PIXEL_BYTE,
-							 devp->canvas_align);
-					devp->canvas_align_w = h_size /
-						VDIN_YUV422_10BIT_PER_PIXEL_BYTE;
-				}
-			} else {
-				h_size = roundup(h_size * VDIN_YUV422_8BIT_PER_PIXEL_BYTE,
-					devp->canvas_align);
-				devp->canvas_align_w = h_size / VDIN_YUV422_8BIT_PER_PIXEL_BYTE;
-			}
-		}
+		h_size = vdin_422_hsize_canvas_alignment(devp, h_size);
 	}
 
 	/*1 frame bytes*/

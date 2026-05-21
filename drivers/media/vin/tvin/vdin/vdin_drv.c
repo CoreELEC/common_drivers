@@ -1353,7 +1353,7 @@ static u32 vdin_is_delay_vfe2rd_list(struct vdin_dev_s *devp)
 }
 
 /* For DV HW5 on T3X/T6W only */
-static void vdin_dv_hw5_init(struct vdin_dev_s *devp)
+void vdin_dv_hw5_init(struct vdin_dev_s *devp)
 {
 	if ((!is_meson_t3x_cpu() && !is_meson_t6w_cpu() && !is_meson_t6x_cpu()) ||
 		devp->work_mode == VDIN_WORK_MD_V4L)
@@ -6364,7 +6364,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 		mutex_unlock(&devp->fe_lock);
 		if (devp->debug.vdin_dbg_en)
-			pr_info("TVIN_IOC_S_VDIN_MEM_SIZE(%d)\n", vdin_need_mem_size);
+			pr_info("TVIN_IOC_S_VDIN_MEM_SIZE(%d)KB\n", vdin_need_mem_size);
 		break;
 	case TVIN_IOC_S_CANVAS_ADDR:
 		if (devp->index == 0) {
