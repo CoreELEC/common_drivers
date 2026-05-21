@@ -1350,7 +1350,7 @@
 			i2c2: i2c@3a4000 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4000 0x0 0x3c>;
-				interrupts = <GIC_SPI 162 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_C>;
@@ -1360,7 +1360,7 @@
 			i2c3: i2c@3a4100 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4100 0x0 0x3c>;
-				interrupts = <GIC_SPI 163 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_D>;
@@ -1370,7 +1370,7 @@
 			i2c4: i2c@3a4200 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4200 0x0 0x3c>;
-				interrupts = <GIC_SPI 164 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_E>;
@@ -1380,7 +1380,7 @@
 			i2c5: i2c@3a4300 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4300 0x0 0x3c>;
-				interrupts = <GIC_SPI 165 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_F>;
@@ -1390,7 +1390,7 @@
 			i2c6: i2c@3a4400 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0x3a4400 0x0 0x3c>;
-				interrupts = <GIC_SPI 166 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&clkc CLKID_SYS_I2C_M_G>;
@@ -1517,7 +1517,7 @@
 			i2c0: i2c@e000 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe000 0x0 0x3c>;
-				interrupts = <GIC_SPI 408 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 408 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&ao_clkc CLKID_AO_SYS_I2C_M_A>;
@@ -1527,7 +1527,7 @@
 			i2c1: i2c@e100 {
 				compatible = "amlogic,meson-i2c-v2-1";
 				reg = <0x0 0xe100 0x0 0x3c>;
-				interrupts = <GIC_SPI 409 IRQ_TYPE_EDGE_RISING>;
+				interrupts = <GIC_SPI 409 IRQ_TYPE_LEVEL_HIGH>;
 				#address-cells = <1>;
 				#size-cells = <0>;
 				clocks = <&ao_clkc CLKID_AO_SYS_I2C_M_B>;
