@@ -3444,6 +3444,7 @@ static void vframe_display(struct videodisplay_dev *dev,
 	get_dma_buf(frame_info->dmabuf[0]);
 	if (frame_info->dmabuf[1])
 		get_dma_buf(frame_info->dmabuf[1]);
+
 	if (dev->last_file == (struct file *)frame_info->dmabuf[0])
 		is_repeat_vf = true;
 
@@ -3481,6 +3482,7 @@ static void vframe_display(struct videodisplay_dev *dev,
 				dma_fence_put(frame_info->release_fence);
 				atomic_set(&received_frames->on_use, false);
 				vd_prepare_data_q_put(dev, vd_prepare);
+				dev->last_file = NULL;
 				return;
 			}
 			vd_prepare->src_frame = vf;
@@ -4610,6 +4612,7 @@ static int video_display_init(struct videodisplay_dev *dev)
 	dev->hdmi_drop_count = 0;
 	dev->last_frc_delay = 0;
 	dev->cur_hold_count = 0;
+	dev->last_file = NULL;
 	dev_array[dev->index] = dev;
 	init_completion(&dev->task_done);
 	for (i = 0; i < MAX_VD_LAYERS; i++)
