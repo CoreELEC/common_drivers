@@ -468,6 +468,7 @@ void hdmitx_get_init_state(struct hdmitx_common *tx_common,
 
 /*******************************hdmitx common api*******************************/
 int hdmitx_common_init(struct hdmitx_common *tx_common, struct hdmitx_hw_common *hw_comm);
+int hdmitx_common_post_init(struct hdmitx_common *tx_common, struct hdmitx_hw_common *hw_comm);
 int hdmitx_common_destroy(struct hdmitx_common *tx_common);
 /* modename policy: get vic from name and check if support by rx;
  * return the vic of mode, if failed return HDMI_0_UNKNOWN;
