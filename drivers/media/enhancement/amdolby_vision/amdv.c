@@ -3304,23 +3304,40 @@ void amdv_free_mem(void)
 
 	if (is_aml_t3x()) {
 		for (i = 0; i < DMA_BUF_CNT; i++) {
+			if (lut_dma_info[i].dma_vaddr)
+				codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
+			lut_dma_info[i].dma_vaddr = 0;
 			if (lut_dma_info[i].dma_paddr)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
 			lut_dma_info[i].dma_paddr = 0;
 		}
 	} else if (is_aml_t6w() || is_aml_t6x()) {
 		for (i = 0; i < DMA_BUF_CNT; i++) {
+			if (lut_dma_info[i].dma_vaddr)
+				codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
+			lut_dma_info[i].dma_vaddr = 0;
 			if (lut_dma_info[i].dma_paddr)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
 			lut_dma_info[i].dma_paddr = 0;
+
+			if (lut_dma_info[i].dma_vaddr_top2)
+				codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
+			lut_dma_info[i].dma_vaddr_top2 = 0;
 			if (lut_dma_info[i].dma_paddr_top2)
 				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr_top2);
 			lut_dma_info[i].dma_paddr_top2 = 0;
 		}
 	}
+	if (dv5_md_hist.hist_vaddr[0])
+		codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[0]);
+	dv5_md_hist.hist_vaddr[0] = 0;
 	if (dv5_md_hist.hist_paddr[0])
 		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[0]);
 	dv5_md_hist.hist_paddr[0] = 0;
+
+	if (dv5_md_hist.hist_vaddr[1])
+		codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[1]);
+	dv5_md_hist.hist_vaddr[1] = 0;
 	if (dv5_md_hist.hist_paddr[1])
 		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[1]);
 	dv5_md_hist.hist_paddr[1] = 0;
@@ -3331,12 +3348,20 @@ void amdv_free_mem(void)
 		py_buf_cnt = 2;
 
 	for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
+		if (py_addr[i].py_vaddr[0])
+			codec_mm_unmap_phyaddr(py_addr[i].py_vaddr[0]);
+		py_addr[i].py_vaddr[0] = 0;
+
 		if (py_addr[i].top1_py_paddr[0])
 			codec_mm_free_for_dma("amdv", py_addr[i].top1_py_paddr[0]);
 		py_addr[i].top1_py_paddr[0] = 0;
 	}
 	if (is_aml_t6w() || is_aml_t6x()) {
 		for (i = 0; i < TOP_BUF_CNT; i++) {
+			if (top_info.up_buf[i].pyup_vaddr)
+				codec_mm_unmap_phyaddr(top_info.up_buf[i].pyup_vaddr);
+			top_info.up_buf[i].pyup_vaddr = 0;
+
 			if (top_info.up_buf[i].pyup_paddr)
 				codec_mm_free_for_dma("amdv", top_info.up_buf[i].pyup_paddr);
 			top_info.up_buf[i].pyup_paddr = 0;
