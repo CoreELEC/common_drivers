@@ -87,9 +87,17 @@ static u32 meson_read_alarm(struct aml_rtc_data *rtc)
 static void meson_set_alarm(struct aml_rtc_data *rtc, u32 alarm_sec)
 {
 	u32 alarm_val = alarm_sec;
+	int ret = 0;
+	bool enable;
 
 	if (rtc->rtc_virtual) {
 		regmap_write(rtc->map, VRTC_ALARM_REG, alarm_val);
+
+		enable = !!alarm_val;
+		ret = aml_mbox_transfer_data(rtc->mbox_chan, MBOX_CMD_RTC_ENABLE_ALRM,
+			&enable, sizeof(enable), NULL, 0, MBOX_SYNC);
+		if (ret < 0)
+			dev_err(&rtc->rtc_dev->dev, "enable vrtc timer failed\n");
 	} else {
 		if (alarm_val) {
 			alarm_val += meson_read_time(rtc);
@@ -104,22 +112,19 @@ static void meson_enable_alarm(struct aml_rtc_data *rtc, bool enable)
 {
 	int ret = 0;
 
-	if (rtc->rtc_virtual) {
+	if (rtc->rtc_virtual && !enable) {
 		ret = aml_mbox_transfer_data(rtc->mbox_chan, MBOX_CMD_RTC_ENABLE_ALRM,
 			&enable, sizeof(enable), NULL, 0, MBOX_SYNC);
 		if (ret < 0)
-			dev_err(&rtc->rtc_dev->dev, "enable vrtc timer failed\n");
+			dev_err(&rtc->rtc_dev->dev, "disable vrtc timer failed\n");
 	} else {
 		if (enable) {
 			regmap_update_bits(rtc->map, RTC_CTRL_REG,
 					   RTC_ALRM0_EN, RTC_ALRM0_EN);
-			regmap_update_bits(rtc->map, RTC_INT_MASK,
-					   RTC_ALRM0_IRQ_MSK, 0);
+			/* wait for alarm enable to take effect(for vlsi) */
+			usleep_range(100, 200);
 		} else {
-			regmap_update_bits(rtc->map, RTC_INT_MASK,
-					   RTC_ALRM0_IRQ_MSK, RTC_ALRM0_IRQ_MSK);
-			regmap_update_bits(rtc->map, RTC_CTRL_REG,
-					   RTC_ALRM0_EN, 0);
+			regmap_update_bits(rtc->map, RTC_CTRL_REG, RTC_ALRM0_EN, 0);
 		}
 	}
 }
@@ -164,9 +169,9 @@ static int aml_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 		time_sec = meson_read_time(rtc);
 		if (alarm_sec64 > time_sec) {
 			alarm_sec = alarm_sec64 - time_sec;
-			/* set rtc alarm */
-			meson_set_alarm(rtc, alarm_sec);
+			/* for rtc, need to enable alarm first, then set alarm */
 			meson_enable_alarm(rtc, alarm->enabled);
+			meson_set_alarm(rtc, alarm_sec);
 			rtc->alarm_enabled = alarm->enabled;
 
 			dev_dbg(dev, "alarm->enabled=%d time=%u alarm=%lld\n",
@@ -419,8 +424,8 @@ static void aml_rtc_init(struct device *dev, struct aml_rtc_data *rtc)
 		regmap_write_bits(rtc->map, RTC_CTRL_REG, RTC_ENABLE, RTC_ENABLE);
 		usleep_range(100, 200);
 	}
-	/* mask alarm0 irq */
-	regmap_write_bits(rtc->map, RTC_INT_MASK, RTC_ALRM0_IRQ_MSK, RTC_ALRM0_IRQ_MSK);
+	/* unmask alarm0 irq */
+	regmap_write_bits(rtc->map, RTC_INT_MASK, RTC_ALRM0_IRQ_MSK, 0);
 	/* disable alarm0 */
 	regmap_write_bits(rtc->map, RTC_CTRL_REG, RTC_ALRM0_EN, 0);
 }
@@ -617,10 +622,10 @@ static void aml_rtc_shutdown(struct platform_device *pdev)
 	alarm_sec = rtc_tm_to_time64(&aie_timer.time);
 	if (alarm_sec > rtc_time && aie_timer.enabled) {
 		alarm_sec -= rtc_time;
-		/* set alarm to reg */
-		meson_set_alarm(rtc, alarm_sec);
 		/* enable rtc alarm */
 		meson_enable_alarm(rtc, 1);
+		/* set alarm to reg */
+		meson_set_alarm(rtc, alarm_sec);
 
 		dev_info(&pdev->dev, "system will wakeup %llus later\n", alarm_sec);
 	}
