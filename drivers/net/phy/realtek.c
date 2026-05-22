@@ -1365,6 +1365,114 @@ static int rtlgen_c45_resume(struct phy_device *phydev)
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+static int rtl8221b_suspend(struct phy_device *phydev)
+{
+	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
+	int ret = 0;
+#if IS_ENABLED(CONFIG_AMLOGIC_WOL)
+	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
+
+	/* When a wake source exists, the PHY must remain in working state. */
+	if (eth_priv->wol_ops.not_empty) {
+		if (eth_priv->wol_ops.not_empty(ethmac_dev))
+			return 0;
+	}
+#endif
+
+	if (eth_priv->support_gpio_wol) {
+		/* Config MAC address for WOL */
+		if (phydev->attached_dev) {
+			if (eth_priv->exphy_mdns_wkup) {
+				/* multicast: 01:00:5e:00:00:fb */
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c0, 0x0001);
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c2, 0x005e);
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c4, 0xfb00);
+			} else {
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c0,
+						(phydev->attached_dev->dev_addr[0] |
+						(phydev->attached_dev->dev_addr[1] << 8)));
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c2,
+						(phydev->attached_dev->dev_addr[2] |
+						(phydev->attached_dev->dev_addr[3] << 8)));
+				phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8c4,
+						(phydev->attached_dev->dev_addr[4] |
+						(phydev->attached_dev->dev_addr[5] << 8)));
+			}
+		}
+
+		if (eth_priv->exphy_mdns_wkup) {
+			/* Set Max packet length */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8a2, 0x9fff);
+			/* Enable WOL Wake-Up Frame 0 Event */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8a0, 0x0001);
+			/* Set Wake-Up Frame 0 Mask */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd800, 0x0000);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd802, 0x0080);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd804, 0x103c);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd806, 0x0000);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd808, 0x0000);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd80a, 0x0000);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd80c, 0x0000);
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd80e, 0x0000);
+			/* 16bit CRC */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd880, 0xe442);
+		} else {
+			/* Set Max packet length */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8a2, 0x9fff);
+			/* Enable WOL Magic Packet Event */
+			phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8a0, 0x1000);
+		}
+
+		/* Select PMEB function */
+		phy_modify_mmd_changed(phydev, MDIO_MMD_VEND2, 0xd05c, BIT(0), BIT(0));
+	} else {
+		if (phydev->is_c45)
+			ret = genphy_c45_pma_suspend(phydev);
+		else
+			ret = genphy_suspend(phydev);
+	}
+
+	return ret;
+}
+
+static int rtl8221b_resume(struct phy_device *phydev)
+{
+	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
+	int ret = 0;
+#if IS_ENABLED(CONFIG_AMLOGIC_WOL)
+	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
+
+	if (eth_priv->wol_ops.not_empty) {
+		if (eth_priv->wol_ops.not_empty(ethmac_dev))
+			return 0;
+	}
+#endif
+
+	if (eth_priv->support_gpio_wol) {
+		/* Disable all WOL events */
+		phy_write_mmd(phydev, MDIO_MMD_VEND2, 0xd8a0, 0x0000);
+		/* Reset WOL */
+		phy_modify_mmd_changed(phydev, MDIO_MMD_VEND2, 0xd8a2, BIT(15), 0);
+	} else {
+		if (phydev->is_c45)
+			ret = rtlgen_c45_resume(phydev);
+		else
+			ret = rtlgen_resume(phydev);
+		if (ret < 0)
+			return ret;
+
+		/* PHY hardware reset will result in the loss of
+		 * register configuration. Therefore, it is necessary
+		 * to restore SerDes Configuration after resume.
+		 */
+		ret = rtl822xb_config_init(phydev);
+	}
+
+	return ret;
+}
+#endif
+
 static int rtl9000a_config_init(struct phy_device *phydev)
 {
 	phydev->autoneg = AUTONEG_DISABLE;
@@ -1655,8 +1763,13 @@ static struct phy_driver realtek_drvs[] = {
 		.config_init    = rtl822xb_config_init,
 		.get_rate_matching = rtl822xb_get_rate_matching,
 		.read_status    = rtl822xb_read_status,
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		.suspend        = rtl8221b_suspend,
+		.resume         = rtl8221b_resume,
+#else
 		.suspend        = genphy_suspend,
 		.resume         = rtlgen_resume,
+#endif
 		.read_page      = rtl821x_read_page,
 		.write_page     = rtl821x_write_page,
 	}, {
@@ -1670,8 +1783,13 @@ static struct phy_driver realtek_drvs[] = {
 		.get_features   = rtl822x_c45_get_features,
 		.config_aneg    = rtl822x_c45_config_aneg,
 		.read_status    = rtl822xb_c45_read_status,
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		.suspend        = rtl8221b_suspend,
+		.resume         = rtl8221b_resume,
+#else
 		.suspend        = genphy_c45_pma_suspend,
 		.resume         = rtlgen_c45_resume,
+#endif
 	}, {
 		.match_phy_device = rtl8221b_vn_cg_c22_match_phy_device,
 		.name           = "RTL8221B-VM-CG 2.5Gbps PHY (C22)",
