@@ -66,7 +66,7 @@
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
@@ -77,7 +77,7 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
@@ -88,7 +88,7 @@
 			reg = <0x0 0x200>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
@@ -99,7 +99,7 @@
 			reg = <0x0 0x300>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
@@ -110,7 +110,7 @@
 			reg = <0x0 0x400>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
@@ -121,7 +121,7 @@
 			reg = <0x0 0x500>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			capacity-dmips-mhz = <282>;
+			capacity-dmips-mhz = <430>;
 			dynamic-power-coefficient = <59>;
 			#cooling-cells = <2>;
 		};
