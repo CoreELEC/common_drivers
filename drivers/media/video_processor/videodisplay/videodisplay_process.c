@@ -4056,7 +4056,7 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 		if (vd_vf_is_tvin(vf) && (input_fps * 3 < output_fps * 2) && input_fps <= 14400)
 			special_case = true;
 		if (!special_case && (get_count[dev->index] == 2 && dev->video_render_index != 5)) {
-			vd_print(dev->index, PRINT_ERROR,
+			vd_print(dev->index, PRINT_OTHER,
 				 "has already get 2, can not get more, video_render.%d",
 				 dev->video_render_index);
 			return NULL;
