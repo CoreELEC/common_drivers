@@ -220,6 +220,8 @@ enum v2d_work_mode {
 	V2D_MODE_UNINITIAL = 0,
 	V2D_MODE_ROTATE,
 	V2D_MODE_COMPOSER,
+	V2D_MODE_COMPOSER_ROTATE,
+	V2D_MODE_MAX,
 };
 
 union composer_device_config {

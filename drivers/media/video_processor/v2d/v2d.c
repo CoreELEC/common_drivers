@@ -645,6 +645,8 @@ static void choose_v2d_device(struct v2d_dev *dev,
 {
 	u32 frame_transform = 0;
 	int count = 0;
+	int i = 0;
+	bool video_need_rotate = false;
 
 	if (IS_ERR_OR_NULL(dev) || IS_ERR_OR_NULL(received_frames)) {
 		v2d_print(dev->index, PRINT_ERROR, "%s: invalid param.\n", __func__);
@@ -667,13 +669,30 @@ static void choose_v2d_device(struct v2d_dev *dev,
 		else
 			dev->work_mode = V2D_MODE_COMPOSER;
 	} else {
-		dev->work_mode = V2D_MODE_COMPOSER;
+		for (i = 0; i < count; i++) {
+			frame_transform = received_frames->frames_info.input_buffer[i].transform;
+			if (frame_transform == V2D_TRANSFORM_ROT_90 ||
+				frame_transform == V2D_TRANSFORM_ROT_180 ||
+				frame_transform == V2D_TRANSFORM_ROT_270 ||
+				frame_transform == V2D_TRANSFORM_FLIP_H_ROT_90 ||
+				frame_transform == V2D_TRANSFORM_FLIP_V_ROT_90 ||
+				frame_transform == V2D_TRANSFORM_FLIP_H ||
+				frame_transform == V2D_TRANSFORM_FLIP_V) {
+				video_need_rotate = true;
+				break;
+			}
+		}
+
+		if (video_need_rotate)
+			dev->work_mode = V2D_MODE_COMPOSER_ROTATE;
+		else
+			dev->work_mode = V2D_MODE_COMPOSER;
 	}
 
 	if (v2d_dev_choice == COMPOSER_WITH_DEFAULT) {
 		if (check_dewarp_status(input_vf, count, dev->work_mode, dev->index))
 			dev->dev_choice = COMPOSER_WITH_DEWARP;
-		else if (check_vicp_status(dev->index))
+		else if (check_vicp_status(input_vf, dev->work_mode, dev->index))
 			dev->dev_choice = COMPOSER_WITH_VICP;
 		else
 			dev->dev_choice = COMPOSER_WITH_GE2D;
@@ -681,7 +700,8 @@ static void choose_v2d_device(struct v2d_dev *dev,
 		if (v2d_dev_choice == COMPOSER_WITH_DEWARP &&
 			check_dewarp_status(input_vf, count, dev->work_mode, dev->index))
 			dev->dev_choice = COMPOSER_WITH_DEWARP;
-		else if (v2d_dev_choice == COMPOSER_WITH_VICP && check_vicp_status(dev->index))
+		else if (v2d_dev_choice == COMPOSER_WITH_VICP &&
+			check_vicp_status(input_vf, dev->work_mode, dev->index))
 			dev->dev_choice = COMPOSER_WITH_VICP;
 		else
 			dev->dev_choice = COMPOSER_WITH_GE2D;
@@ -718,7 +738,7 @@ static void init_output_buffer_size(struct v2d_dev *dev,
 			"%s:meson_uvm_get_usage fail.\n", __func__);
 #endif
 	received_frames->usage = usage;
-	buf_width = (dev->vinfo_w + 0x1f) & ~0x1f;
+	buf_width = dev->vinfo_w;
 	buf_height = dev->vinfo_h;
 
 	if (dev->output_duration > 60) {
@@ -736,8 +756,13 @@ static void init_output_buffer_size(struct v2d_dev *dev,
 			buf_width = BUFFER_4K_WIDTH;
 			buf_height = BUFFER_4K_HEIGHT;
 		} else if (dev->dev_choice == COMPOSER_WITH_VICP) {
-			buf_width = BUFFER_4K_WIDTH;
-			buf_height = BUFFER_4K_HEIGHT;
+			if (dev->work_mode == V2D_MODE_ROTATE) {
+				buf_width = BUFFER_4K_HEIGHT;
+				buf_height = BUFFER_4K_WIDTH;
+			} else {
+				buf_width = BUFFER_4K_WIDTH;
+				buf_height = BUFFER_4K_HEIGHT;
+			}
 		} else {
 			if (dev->work_mode == V2D_MODE_ROTATE) {
 				buf_width = BUFFER_720_WIDTH;
@@ -753,6 +778,8 @@ static void init_output_buffer_size(struct v2d_dev *dev,
 		buf_width = manual_buf_width;
 		buf_height = manual_buf_height;
 	}
+
+	buf_width = ALIGN(buf_width, 32);
 
 	dev->buf_width = buf_width;
 	dev->buf_height = buf_height;
@@ -906,8 +933,8 @@ static void set_output_buffer_area(struct v2d_dev *dev, struct frames_info_t *fr
 	u32 out_crop[4] = {0};
 	u32 dewarp_crop_top = 0, dewarp_crop_left = 0;
 	u32 dewarp_crop_bottom = 0, dewarp_crop_right = 0;
-	u32 src_w, src_h;
-	u32 dewarp_dst_w, dewarp_dst_h;
+	u32 src_w = 0, src_h = 0;
+	u32 dewarp_dst_w = 0, dewarp_dst_h = 0;
 
 	memcpy(&area_bound, &received_frame->output_axis, sizeof(struct output_axis));
 	v2d_print(dev->index, PRINT_OTHER,
@@ -918,6 +945,23 @@ static void set_output_buffer_area(struct v2d_dev *dev, struct frames_info_t *fr
 		area_bound.max_bottom,
 		area_bound.max_right);
 
+	vframe_info_cur = &frames_info->input_buffer[0];
+	if (!vframe_info_cur)
+		return;
+
+	if (src_vf) {
+		if (src_vf->type & VIDTYPE_COMPRESS) {
+			src_w = src_vf->compWidth;
+			src_h = src_vf->compHeight;
+		} else {
+			src_w = src_vf->width;
+			src_h = src_vf->height;
+		}
+	} else {
+		src_w = vframe_info_cur->buffer_w;
+		src_h = vframe_info_cur->buffer_h;
+	}
+
 	if (dev->dev_choice == COMPOSER_WITH_GE2D) {
 		out_crop[0] = area_bound.min_top * dev->buf_width / dev->vinfo_w;
 		out_crop[1] = area_bound.min_left * dev->buf_height / dev->vinfo_h;
@@ -925,57 +969,48 @@ static void set_output_buffer_area(struct v2d_dev *dev, struct frames_info_t *fr
 			dev->buf_height / dev->vinfo_h;
 		out_crop[3] = dev->buf_width - area_bound.max_right *
 			dev->buf_height / dev->vinfo_h;
+
+		frames_info->out_buffer.crop_y = out_crop[0];
+		frames_info->out_buffer.crop_x = out_crop[1];
+		frames_info->out_buffer.crop_h = dev->buf_height - out_crop[2] - out_crop[0];
+		frames_info->out_buffer.crop_w = dev->buf_width - out_crop[3] - out_crop[1];
+		frames_info->out_buffer.dst_x = received_frame->output_axis.min_left;
+		frames_info->out_buffer.dst_y = received_frame->output_axis.min_top;
+		frames_info->out_buffer.dst_w = received_frame->output_axis.max_right -
+			received_frame->output_axis.min_left + 1;
+		frames_info->out_buffer.dst_h = received_frame->output_axis.max_bottom -
+			received_frame->output_axis.min_top + 1;
 	} else if (dev->dev_choice == COMPOSER_WITH_VICP) {
-		out_crop[0] = area_bound.min_top * dev->buf_width / dev->vinfo_w;
-		out_crop[1] = area_bound.min_left * dev->buf_height / dev->vinfo_h;
-		out_crop[2] = dev->buf_height - area_bound.max_bottom *
-			dev->buf_height / dev->vinfo_h;
-		out_crop[3] = dev->buf_width - area_bound.max_right *
-			dev->buf_height / dev->vinfo_h;
 
-		vframe_info_cur = &frames_info->input_buffer[0];
-		if (src_vf) {
-			if (src_vf->type & VIDTYPE_COMPRESS) {
-				src_w = src_vf->compWidth;
-				src_h = src_vf->compHeight;
-			} else {
-				src_w = src_vf->width;
-				src_h = src_vf->height;
-			}
+		if (dev->work_mode == V2D_MODE_ROTATE) {
+			frames_info->out_buffer.crop_y = 0;
+			frames_info->out_buffer.crop_x = 0;
+			frames_info->out_buffer.crop_h = src_w;
+			frames_info->out_buffer.crop_w = src_h;
 		} else {
-			src_w = vframe_info_cur->buffer_w;
-			src_h = vframe_info_cur->buffer_h;
+			out_crop[0] = area_bound.min_top * dev->buf_width / dev->vinfo_w;
+			out_crop[1] = area_bound.min_left * dev->buf_height / dev->vinfo_h;
+			out_crop[2] = dev->buf_height - area_bound.max_bottom *
+				dev->buf_height / dev->vinfo_h;
+			out_crop[3] = dev->buf_width - area_bound.max_right *
+				dev->buf_height / dev->vinfo_h;
+			frames_info->out_buffer.crop_y = out_crop[0];
+			frames_info->out_buffer.crop_x = out_crop[1];
+			frames_info->out_buffer.crop_h = dev->buf_height - out_crop[2] -
+				out_crop[0];
+			frames_info->out_buffer.crop_w = dev->buf_width - out_crop[3] -
+				out_crop[1];
 		}
 
-		if (vframe_info_cur->transform == V2D_TRANSFORM_ROT_90 ||
-			vframe_info_cur->transform == V2D_TRANSFORM_ROT_270 ||
-			vframe_info_cur->transform == V2D_TRANSFORM_FLIP_H_ROT_90 ||
-			vframe_info_cur->transform == V2D_TRANSFORM_FLIP_V_ROT_90) {
-			out_crop[2] += (dev->buf_height - src_w);
-			out_crop[3] += (dev->buf_width - src_h);
-		}
+		frames_info->out_buffer.dst_x = received_frame->output_axis.min_left;
+		frames_info->out_buffer.dst_y = received_frame->output_axis.min_top;
+		frames_info->out_buffer.dst_w = received_frame->output_axis.max_right -
+			received_frame->output_axis.min_left - 1;
+		frames_info->out_buffer.dst_h = received_frame->output_axis.max_bottom -
+			received_frame->output_axis.min_top - 1;
 	} else {
 		v2d_print(dev->index, PRINT_DEWARP, "dewarp process out_buffer crop.\n");
-		vframe_info_cur = &frames_info->input_buffer[0];
 		if (vframe_info_cur->crop_w > 0 || vframe_info_cur->crop_h  > 0) {
-			if (src_vf) {
-				if (src_vf->type & VIDTYPE_COMPRESS) {
-					src_w = src_vf->compWidth;
-					src_h = src_vf->compHeight;
-				} else {
-					src_w = src_vf->width;
-					src_h = src_vf->height;
-				}
-				v2d_print(dev->index, PRINT_DEWARP,
-					"src_vf: compWidth:%d compHeight:%d w:%d h:%d.\n",
-					src_vf->compWidth,
-					src_vf->compHeight,
-					src_vf->width,
-					src_vf->height);
-			} else {
-				src_w = vframe_info_cur->buffer_w;
-				src_h = vframe_info_cur->buffer_h;
-			}
 			if (src_vf && is_src_crop_valid(src_vf->src_crop)) {
 				dewarp_crop_top =
 					MAX(vframe_info_cur->crop_y, src_vf->src_crop.top);
@@ -1024,33 +1059,15 @@ static void set_output_buffer_area(struct v2d_dev *dev, struct frames_info_t *fr
 				out_crop[3] = dewarp_crop_top * dewarp_dst_w / src_h;
 			}
 		}
-	}
 
-	v2d_print(dev->index, PRINT_AXIS,
-		"dst_vf->crop: top:%d left:%d bottom:%d right:%d.\n",
-		out_crop[0],
-		out_crop[1],
-		out_crop[2],
-		out_crop[3]);
-
-	frames_info->out_buffer.crop_y = out_crop[0];
-	frames_info->out_buffer.crop_x = out_crop[1];
-	if (dev->dev_choice == COMPOSER_WITH_DEWARP) {
+		frames_info->out_buffer.crop_y = out_crop[0];
+		frames_info->out_buffer.crop_x = out_crop[1];
 		frames_info->out_buffer.crop_h = dewarp_dst_h - out_crop[2] - out_crop[0];
 		frames_info->out_buffer.crop_w = dewarp_dst_w - out_crop[3] - out_crop[1];
 		frames_info->out_buffer.dst_x = vframe_info_cur->dst_x;
 		frames_info->out_buffer.dst_y = vframe_info_cur->dst_y;
 		frames_info->out_buffer.dst_w = vframe_info_cur->dst_w;
 		frames_info->out_buffer.dst_h = vframe_info_cur->dst_h;
-	} else {
-		frames_info->out_buffer.crop_h = dev->buf_height - out_crop[2] - out_crop[0];
-		frames_info->out_buffer.crop_w = dev->buf_width - out_crop[3] - out_crop[1];
-		frames_info->out_buffer.dst_x = received_frame->output_axis.min_left;
-		frames_info->out_buffer.dst_y = received_frame->output_axis.min_top;
-		frames_info->out_buffer.dst_w = received_frame->output_axis.max_right -
-			received_frame->output_axis.min_left + 1;
-		frames_info->out_buffer.dst_h = received_frame->output_axis.max_bottom -
-			received_frame->output_axis.min_top + 1;
 	}
 }
 
@@ -2128,21 +2145,23 @@ static int v2d_set_frames(struct v2d_dev *dev,
 		}
 
 		v2d_print(dev->index, PRINT_AXIS,
-			 "=========frame info:==========\n");
+			"input_axis x,y,w,h: %d %d %d %d.\n",
+			vframe_info_cur->dst_x,
+			vframe_info_cur->dst_y,
+			vframe_info_cur->dst_w,
+			vframe_info_cur->dst_h);
 		v2d_print(dev->index, PRINT_AXIS,
-			 "frame axis x,y,w,h: %d %d %d %d\n",
-			 vframe_info_cur->dst_x, vframe_info_cur->dst_y,
-			 vframe_info_cur->dst_w, vframe_info_cur->dst_h);
+			"input crop t,l,w,h: %d %d %d %d.\n",
+			vframe_info_cur->crop_y,
+			vframe_info_cur->crop_x,
+			vframe_info_cur->crop_w,
+			vframe_info_cur->crop_h);
 		v2d_print(dev->index, PRINT_AXIS,
-			 "frame crop t,l,w,h: %d %d %d %d\n",
-			 vframe_info_cur->crop_y, vframe_info_cur->crop_x,
-			 vframe_info_cur->crop_w, vframe_info_cur->crop_h);
-		v2d_print(dev->index, PRINT_AXIS,
-			 "frame buffer Width X Height: %d X %d\n",
-			 vframe_info_cur->buffer_w, vframe_info_cur->buffer_h);
-		v2d_print(dev->index, PRINT_AXIS,
-			 "frame buffer stride Width X Height: %d X %d\n",
-			 vframe_info_cur->align_w, vframe_info_cur->align_h);
+			"input buffer w*h=%d*%d, stride w*h=%d*%d.\n",
+			vframe_info_cur->buffer_w,
+			vframe_info_cur->buffer_h,
+			vframe_info_cur->align_w,
+			vframe_info_cur->align_h);
 
 		get_output_axis_crop(dev, src_vf, &dev->received_frames[i], vframe_info_cur, j);
 	}
@@ -2180,17 +2199,23 @@ static int v2d_set_frames(struct v2d_dev *dev,
 
 	fput(output_fence_file);
 	v2d_print(dev->index, PRINT_AXIS,
-		"output_axis:dst_x:%d dst_y:%d dst_w:%d dst_h:%d\n",
+		"output_axis x,y,w,h: %d %d %d %d\n",
 		frames_info->out_buffer.dst_x,
 		frames_info->out_buffer.dst_y,
 		frames_info->out_buffer.dst_w,
 		frames_info->out_buffer.dst_h);
 	v2d_print(dev->index, PRINT_AXIS,
-		"output_crop:crop_x:%d crop_y:%d crop_w:%d crop_h:%d\n",
+		"output_crop t,l,w,h: %d %d %d %d.\n",
 		frames_info->out_buffer.crop_x,
 		frames_info->out_buffer.crop_y,
 		frames_info->out_buffer.crop_w,
 		frames_info->out_buffer.crop_h);
+	v2d_print(dev->index, PRINT_AXIS,
+		"output buffer w*h=%d*%d, stride w*h=%d*%d.\n",
+		frames_info->out_buffer.buffer_w,
+		frames_info->out_buffer.buffer_h,
+		frames_info->out_buffer.align_w,
+		frames_info->out_buffer.align_h);
 	dev->received_frames[i].frames_info = *frames_info;
 	dev->received_frames[i].is_tvp = is_tvp;
 	atomic_set(&dev->received_frames[i].on_use, true);

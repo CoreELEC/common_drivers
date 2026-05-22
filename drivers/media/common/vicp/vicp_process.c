@@ -2253,7 +2253,7 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 	memset(&temp_compress_param, 0, sizeof(temp_compress_param));
 	if (print_flag & VICP_DEBUG) {
 		pr_info("vicp: ##########usr param##########\n");
-		pr_info("vicp: output: w*h:%d*%d, y:addr:%ld stride:%d.\n",
+		pr_info("vicp: output: w*h:%d*%d, y:addr:0x%lx stride:%d.\n",
 			data_config->output_data.width,
 			data_config->output_data.height,
 			data_config->output_data.phy_addr[0],
@@ -2265,7 +2265,7 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 			data_config->output_data.out_sig_fmt,
 			data_config->output_data.mif_color_fmt,
 			data_config->output_data.mif_color_dep);
-		pr_info("vicp: fbc:en:%d fmt:%d dep:%d, uv:addr:%ld %ld, init_ctrl:%d pip_mode:%d.\n",
+		pr_info("vicp: fbc:en:%d fmt:%d dep:%d, uv:addr:0x%lx 0x%lx, init_ctrl:%d pip_mode:%d.\n",
 			data_config->output_data.fbc_out_en,
 			data_config->output_data.fbc_color_fmt,
 			data_config->output_data.fbc_color_dep,
@@ -2836,7 +2836,7 @@ int  vicp_process(struct vicp_data_config_s *data_config)
 			vid_cmpr_top.rdmif_canvas0_addr0,
 			vid_cmpr_top.rdmif_canvas0_addr1,
 			vid_cmpr_top.rdmif_canvas0_addr2);
-		pr_info("vicp:output: afbce_en=%d, head_baddr=%lld, mmu_info_baddr=%lld, init_ctrl=%d, pip_mode=%d.\n",
+		pr_info("vicp:output: afbce_en=%d, head_baddr=0x%llx, mmu_info_baddr=0x%llx, init_ctrl=%d, pip_mode=%d.\n",
 			vid_cmpr_top.out_afbce_enable,
 			vid_cmpr_top.out_head_baddr,
 			vid_cmpr_top.out_mmu_info_baddr,

@@ -11,7 +11,7 @@
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vicp/vicp.h>
 
-bool check_vicp_status(int index);
+bool check_vicp_status(struct vframe_s *input_vf, int work_mode, int index);
 enum vicp_rotation_mode_e map_rotationmode_from_v2d_to_vicp(int v2d_rotation);
 int v2d_config_vicp_input_data(struct vframe_s *vf, ulong addr, int width, int height,
 	int stride_w, int stride_y, int endian, int color_fmt, int color_depth,

@@ -18,9 +18,11 @@
 
 static int dev_index;
 
-bool check_vicp_status(int index)
+bool check_vicp_status(struct vframe_s *input_vf, int work_mode, int index)
 {
 	int cpu_type = 0;
+	bool is_hardware_support = false;
+	int ret = true;
 
 	dev_index = index;
 
@@ -30,9 +32,23 @@ bool check_vicp_status(int index)
 		cpu_type == MESON_CPU_MAJOR_ID_T3X ||
 		cpu_type == MESON_CPU_MAJOR_ID_S6 ||
 		cpu_type == MESON_CPU_MAJOR_ID_A9)
-		return true;
-	else
+		is_hardware_support = true;
+
+	if (!is_hardware_support || work_mode == 3)
 		return false;
+
+	if (work_mode == 1) {
+		if (!input_vf) {
+			ret = false;
+		} else {
+			if (!(input_vf->type & VIDTYPE_COMPRESS)) {
+				v2d_print(dev_index, PRINT_OTHER, "vicp not support mif rotate.\n");
+				ret = false;
+			}
+		}
+	}
+
+	return ret;
 }
 
 enum vicp_rotation_mode_e map_rotationmode_from_v2d_to_vicp(int v2d_rotation)
@@ -133,9 +149,24 @@ int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotat
 	int i, int count, int rotate_part, int vicp_transform, struct output_axis_s *display_axis,
 	struct crop_info_s *crop_info, struct vframe_s *src_vf)
 {
-	if (!data_config || !src_vf || !display_axis || !crop_info) {
+	u32 src_w = 0, src_h = 0;
+
+	if (!data_config || !display_axis || !crop_info) {
 		pr_info("%s: src_vf is NULL, please check.\n", __func__);
 		return -1;
+	}
+
+	if (src_vf) {
+		if (src_vf->type & VIDTYPE_COMPRESS) {
+			src_w = src_vf->compWidth;
+			src_h = src_vf->compHeight;
+		} else {
+			src_w = src_vf->width;
+			src_h = src_vf->height;
+		}
+	} else {
+		src_w = crop_info->width;
+		src_h = crop_info->height;
 	}
 
 	if (vicp_rotate_mode == 0 || vicp_rotate_mode == 1) {
@@ -145,14 +176,16 @@ int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotat
 		data_config->data_option.crop_info.top = crop_info->top;
 		data_config->data_option.crop_info.width = crop_info->width;
 		data_config->data_option.crop_info.height = crop_info->height;
-		data_config->data_option.output_axis.left = display_axis->left;
-		data_config->data_option.output_axis.top = display_axis->top;
 		if (vicp_rotate_mode == 0) {
+			data_config->data_option.output_axis.left = display_axis->left;
+			data_config->data_option.output_axis.top = display_axis->top;
 			data_config->data_option.output_axis.width = display_axis->width;
 			data_config->data_option.output_axis.height = display_axis->height;
 		} else {
-			data_config->data_option.output_axis.width = src_vf->compHeight;
-			data_config->data_option.output_axis.height = src_vf->compWidth;
+			data_config->data_option.output_axis.left = 0;
+			data_config->data_option.output_axis.top = 0;
+			data_config->data_option.output_axis.width = src_h;
+			data_config->data_option.output_axis.height = src_w;
 		}
 	} else {
 		data_config->data_option.input_source_count = 2;
@@ -161,15 +194,15 @@ int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotat
 		if (rotate_part == 0) {
 			data_config->data_option.crop_info.left = 0;
 			data_config->data_option.crop_info.top = 0;
-			data_config->data_option.crop_info.width = src_vf->compWidth;
-			data_config->data_option.crop_info.height = src_vf->compHeight / 2;
-			data_config->data_option.output_axis.width = src_vf->compHeight / 2;
-			data_config->data_option.output_axis.height = src_vf->compWidth;
+			data_config->data_option.crop_info.width = src_w;
+			data_config->data_option.crop_info.height = src_h / 2;
+			data_config->data_option.output_axis.width = src_h / 2;
+			data_config->data_option.output_axis.height = src_w;
 
 			if (vicp_transform == 4 ||
 				vicp_transform == 5 ||
 				vicp_transform == 6) {
-				data_config->data_option.output_axis.left = src_vf->compHeight / 2;
+				data_config->data_option.output_axis.left = src_h / 2;
 				data_config->data_option.output_axis.top = 0;
 			} else {
 				data_config->data_option.output_axis.left = 0;
@@ -179,11 +212,11 @@ int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotat
 			data_config->output_data.fbc_init_ctrl = 0;
 
 			data_config->data_option.crop_info.left = 0;
-			data_config->data_option.crop_info.top = src_vf->compHeight / 2;
-			data_config->data_option.crop_info.width = src_vf->compWidth;
-			data_config->data_option.crop_info.height = src_vf->compHeight / 2;
-			data_config->data_option.output_axis.width = src_vf->compHeight / 2;
-			data_config->data_option.output_axis.height = src_vf->compWidth;
+			data_config->data_option.crop_info.top = src_h / 2;
+			data_config->data_option.crop_info.width = src_w;
+			data_config->data_option.crop_info.height = src_h / 2;
+			data_config->data_option.output_axis.width = src_h / 2;
+			data_config->data_option.output_axis.height = src_w;
 
 			if (vicp_transform == 4 ||
 				vicp_transform == 5 ||
@@ -191,7 +224,7 @@ int config_vicp_axis_crop(struct vicp_data_config_s *data_config, int vicp_rotat
 				data_config->data_option.output_axis.left = 0;
 				data_config->data_option.output_axis.top = 0;
 			} else {
-				data_config->data_option.output_axis.left = src_vf->compHeight / 2;
+				data_config->data_option.output_axis.left = src_h / 2;
 				data_config->data_option.output_axis.top = 0;
 			}
 		}
