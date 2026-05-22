@@ -404,6 +404,7 @@ static ssize_t osd_reverse_store(struct file *filp, struct kobject *kobj,
 	int idx = *(int *)attr->private;
 	struct meson_drm *priv;
 	struct am_osd_plane *amp;
+	int ret;
 
 	if (!minor || !minor->dev)
 		return -EINVAL;
@@ -425,6 +426,10 @@ static ssize_t osd_reverse_store(struct file *filp, struct kobject *kobj,
 	} else {
 		return -EINVAL;
 	}
+
+	ret = meson_drm_trigger_atomic_commit(minor);
+	if (ret)
+		DRM_ERROR("failed, ret = %d\n", ret);
 
 	return count;
 }
@@ -2673,9 +2678,14 @@ static struct bin_attribute reg_dump_attr = {
 int meson_drm_sysfs_register(struct drm_device *drm_dev)
 {
 	int rc, i;
+	struct device *dev;
 	struct meson_drm *priv = drm_dev->dev_private;
-	struct device *dev = drm_dev->primary->kdev;
 	struct bin_attribute **module_param_bin_attrs;
+
+	if (!drm_dev->primary || !drm_dev->primary->kdev)
+		return -ENODEV;
+
+	dev = drm_dev->primary->kdev;
 
 	rc = sysfs_create_group(&dev->kobj, &vpu_attr_group);
 
@@ -2717,8 +2727,13 @@ int meson_drm_sysfs_register(struct drm_device *drm_dev)
 void meson_drm_sysfs_unregister(struct drm_device *drm_dev)
 {
 	int i;
+	struct device *dev;
 	struct meson_drm *priv = drm_dev->dev_private;
-	struct device *dev = drm_dev->primary->kdev;
+
+	if (!drm_dev->primary || !drm_dev->primary->kdev)
+		return;
+
+	dev = drm_dev->primary->kdev;
 
 	sysfs_remove_group(&dev->kobj, &vpu_attr_group);
 	sysfs_remove_bin_file(&dev->kobj, &state_attr);

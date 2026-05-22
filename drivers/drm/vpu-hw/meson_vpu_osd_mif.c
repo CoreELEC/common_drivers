@@ -1448,6 +1448,7 @@ static bool osd_check_config(struct meson_vpu_osd_state *mvos,
 		old_mvos->pixel_format != mvos->pixel_format ||
 		old_mvos->global_alpha != mvos->global_alpha ||
 		old_mvos->crtc_index != mvos->crtc_index ||
+		old_mvos->rotation != mvos->rotation ||
 		old_mvos->afbc_en != mvos->afbc_en) {
 		return true;
 	} else {
