@@ -3370,7 +3370,8 @@ static struct am_video_plane *am_video_plane_create(struct meson_drm *priv,
 
 	drm_plane_create_rotation_property(plane,
 				DRM_MODE_ROTATE_0,
-				DRM_MODE_ROTATE_MASK);
+				DRM_MODE_ROTATE_MASK |
+				DRM_MODE_REFLECT_MASK);
 	drm_plane_create_zpos_property(plane, zpos, min_zpos, max_zpos);
 	meson_video_plane_create_in_fence_property(priv, video_plane);
 	meson_video_create_video_present_fence_property(priv->drm, video_plane);
