@@ -533,3 +533,6 @@ include/linux/amlogic/pio/meson_pio.h
 include/linux/amlogic/pio/pio_instructions.h
 include/linux/amlogic/pio/regs-dma.h
 include/linux/amlogic/pio/regs.h
+drivers/staging/android/ashmem.c
+drivers/staging/android/ashmem.h
+drivers/staging/android/uapi/ashmem.h
