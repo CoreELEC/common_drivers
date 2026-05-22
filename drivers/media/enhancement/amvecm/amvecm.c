@@ -368,6 +368,10 @@ unsigned int pd_detect_en;
 unsigned int pd_det;
 int pre_fmeter_level = 0, cur_fmeter_level = 0, fmeter_flag = 0;
 int cur_sr_level = 5;
+static int num_3dlut_tmp = LUT3D_TMP_BUF_LEN;
+int g_lut3d_tmp_buf[LUT3D_TMP_BUF_LEN] = {0};
+module_param_array(g_lut3d_tmp_buf, int, &num_3dlut_tmp, 0664);
+MODULE_PARM_DESC(g_lut3d_tmp_buf, "\n num_3dlut_tmp\n");
 #endif
 
 int pd_weak_fix_lvl = PD_LOW_LVL;
@@ -13128,6 +13132,10 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 	struct hdr_mtrx_data_s hdr_mtrx_data;
 	struct hdr_gamut_data_s hdr_gamut_data;
 	int temp = 0;
+	long r_index = 0;
+	char *hex_str = NULL;
+	unsigned short r, g, b;
+	unsigned int reg_gb;
 #endif
 
 	if (!buf)
@@ -15097,6 +15105,143 @@ static ssize_t amvecm_debug_store(const struct class *cla,
 			goto free_buf;
 		ll_hist_mode = val;
 		pr_info("ll_hist_mode = %d\n", ll_hist_mode);
+	} else if (!strcmp(parm[0], "3dlut_write")) {
+		if (!parm[1] || !parm[2]) {
+			pr_info("Usage: 3dlut_write r_idx hex_str\n");
+			goto free_buf;
+		}
+
+		hex_str = parm[2];
+
+		if (kstrtoul(parm[1], 10, &r_index) < 0)
+			goto free_buf;
+
+		if (r_index >= 17) {
+			pr_info("r_index must 0~16\n");
+			goto free_buf;
+		}
+
+		const int per_point_hex = 9;
+		const int point_cnt = 17 * 17;
+		const int need_hex_len = point_cnt * per_point_hex;
+		int hex_len = strlen(hex_str);
+
+		if (hex_len != need_hex_len) {
+			pr_info("hex len err: expect %d, input %d\n",
+				need_hex_len, hex_len);
+			goto free_buf;
+		}
+
+		for (i = 0; i < point_cnt; i++) {
+			char tmp[4];
+			unsigned long val;
+			int base_off = i * 9;
+
+			/* parse R: base+0~2 */
+			memcpy(tmp, hex_str + base_off + 0, 3);
+			tmp[3] = '\0';
+			if (kstrtoul(tmp, 16, &val) < 0) {
+				pr_info("parse R fail at point %d\n", i);
+				goto free_buf;
+			}
+			g_lut3d_tmp_buf[i * 3 + 0] = val & 0xFFF;
+
+			/* parse G: base+3~5 */
+			memcpy(tmp, hex_str + base_off + 3, 3);
+			tmp[3] = '\0';
+			if (kstrtoul(tmp, 16, &val) < 0) {
+				pr_info("parse G fail at point %d\n", i);
+				goto free_buf;
+			}
+			g_lut3d_tmp_buf[i * 3 + 1] = val & 0xFFF;
+
+			/* parse B: base+6~8 */
+			memcpy(tmp, hex_str + base_off + 6, 3);
+			tmp[3] = '\0';
+			if (kstrtoul(tmp, 16, &val) < 0) {
+				pr_info("parse B fail at point %d\n", i);
+				goto free_buf;
+			}
+			g_lut3d_tmp_buf[i * 3 + 2] = val & 0xFFF;
+		}
+
+		unsigned int ctltemp;
+
+		WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, 0, 1, 1);
+		ctltemp = READ_VPP_REG(VPP_LUT3D_CTRL);
+		WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp & 0xFFFFFFFE);
+		usleep_range(16000, 16001);
+
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 1);
+
+		for (i = 0; i < 17 * 17; i++) {
+			unsigned char g_idx = i / 17;
+			unsigned char b_idx = i % 17;
+
+			unsigned int ram_addr = (r_index << 16) | (g_idx << 8) | b_idx;
+
+			WRITE_VPP_REG(VPP_LUT3D_RAM_ADDR, ram_addr);
+
+			r = g_lut3d_tmp_buf[i * 3 + 0];
+			g = g_lut3d_tmp_buf[i * 3 + 1];
+			b = g_lut3d_tmp_buf[i * 3 + 2];
+
+			WRITE_VPP_REG(VPP_LUT3D_RAM_DATA, ((g & 0xFFF) << 16) | (b & 0xFFF));
+			WRITE_VPP_REG(VPP_LUT3D_RAM_DATA, (r & 0xFFF));
+		}
+
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
+		WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp);
+	} else if (!strcmp(parm[0], "3dlut_read")) {
+		if (!parm[1]) {
+			pr_info("Usage: parm fail\n");
+			goto free_buf;
+		}
+
+		if (kstrtoul(parm[1], 10, &r_index) < 0)
+			goto free_buf;
+
+		if (r_index >= 17) {
+			pr_info("r_index must 0~16\n");
+			goto free_buf;
+		}
+
+		unsigned int ctltemp;
+
+		WRITE_VPP_REG_BITS(VPP_LUT3D_CTRL, 0, 1, 1);
+		ctltemp = READ_VPP_REG(VPP_LUT3D_CTRL);
+		WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp & 0xFFFFFFFE);
+		usleep_range(16000, 16001);
+
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 1);
+
+		for (i = 0; i < 17 * 17; i++) {
+			unsigned char g_idx = i / 17;
+			unsigned char b_idx = i % 17;
+			unsigned int ram_addr = (1 << 31) | (r_index << 16) | (g_idx << 8) | b_idx;
+
+			WRITE_VPP_REG(VPP_LUT3D_RAM_ADDR, ram_addr);
+
+			reg_gb = READ_VPP_REG(VPP_LUT3D_RAM_DATA);
+
+			g_lut3d_tmp_buf[i * 3 + 1] = (reg_gb >> 16) & 0xFFF; // G
+			g_lut3d_tmp_buf[i * 3 + 2] = reg_gb & 0xFFF;	     // B
+			unsigned int reg_r = READ_VPP_REG(VPP_LUT3D_RAM_DATA);
+
+			g_lut3d_tmp_buf[i * 3 + 0] = reg_r & 0xFFF;// R
+		}
+
+		WRITE_VPP_REG(VPP_LUT3D_CBUS2RAM_CTRL, 0);
+		WRITE_VPP_REG(VPP_LUT3D_CTRL, ctltemp);
+
+		for (i = 0; i < 17 * 17; i++) {
+			int pos = i * 3;
+
+			pr_info("%03x%03x%03x\n",
+				g_lut3d_tmp_buf[pos + 0],   // R
+				g_lut3d_tmp_buf[pos + 1],   // G
+				g_lut3d_tmp_buf[pos + 2]);  // B
+		}
 #endif
 	} else {
 		pr_info("unsupport cmd\n");

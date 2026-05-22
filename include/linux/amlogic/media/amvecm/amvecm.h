@@ -191,6 +191,7 @@
 #define HDR_OUTPUT_MODE_SDR						6
 #define HDR_OUTPUT_MODE_BYPASS					7
 #define LC_EVC_SIZE  5
+#define LUT3D_TMP_BUF_LEN 867
 
 //48-56hz gm_tb[1][3]
 //57-64hz gm_tb[2][3]
