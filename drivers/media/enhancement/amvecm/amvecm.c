@@ -16992,10 +16992,11 @@ void init_pq_setting(void)
 #endif
 
 	int bitdepth;
+	int lcd_support = vinfo_lcd_support();
 
-	/*pr_info("pq_setting_init start.\n");*/
+//	pr_info("[debug] pq_setting_init start, lcd_support %d\n", lcd_support);
 
-	if (vinfo_lcd_support())
+	if (lcd_support)
 		init_pq_control(PQ_TV);
 	else
 		init_pq_control(PQ_BOX);
@@ -17038,16 +17039,17 @@ void init_pq_setting(void)
 		chip_type_id == chip_t6d ||
 		chip_type_id == chip_t6w ||
 		chip_type_id == chip_t6x ||
-		chip_type_id == chip_a9)
+		(chip_type_id == chip_a9 && lcd_support))
 		goto tvchip_pq_setting;
 	else if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
-		 is_meson_sm1_cpu() ||
-		 get_cpu_type() == MESON_CPU_MAJOR_ID_SC2 ||
-		 is_meson_s4_cpu() ||
-		 is_meson_s4d_cpu() ||
-		 is_meson_s7_cpu() ||
-		 chip_type_id == chip_s7d ||
-		 is_meson_s6_cpu()) {
+		is_meson_sm1_cpu() ||
+		get_cpu_type() == MESON_CPU_MAJOR_ID_SC2 ||
+		is_meson_s4_cpu() ||
+		is_meson_s4d_cpu() ||
+		is_meson_s7_cpu() ||
+		chip_type_id == chip_s7d ||
+		is_meson_s6_cpu() ||
+		(chip_type_id == chip_a9 && !lcd_support)) {
 		if (is_meson_s4_cpu())
 			bitdepth = 10;
 		else
@@ -17058,8 +17060,8 @@ void init_pq_setting(void)
 		WRITE_VPP_REG_BITS(VPP_GCLK_CTRL1, 0xf, 0, 4);
 
 		if (chip_type_id == chip_s6 ||
-			chip_type_id == chip_t6w ||
-			chip_type_id == chip_t6x ||
+//			chip_type_id == chip_t6w ||
+//			chip_type_id == chip_t6x ||
 			chip_type_id == chip_a9)
 			osd_sharpness_init();
 
@@ -17067,19 +17069,25 @@ void init_pq_setting(void)
 		sr_init_config();
 		dnlp_init_config();
 		cm_init_config(bitdepth);
-		/*dnlp off*/
-		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 0,
-			DNLP_EN_BIT, DNLP_EN_WID);
-		/*sr0 chroma filter bypass*/
-		WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_HCOEF0,
-			0x4000);
-		WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_VCOEF0,
-			0x4000);
+//		pr_info("[debug] cm_init_config\n");
+
+		if (chip_type_id < chip_s7d) {
+			/*dnlp off*/
+			WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 0,
+				DNLP_EN_BIT, DNLP_EN_WID);
+			/*sr0 chroma filter bypass*/
+			WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_HCOEF0,
+				0x4000);
+			WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_VCOEF0,
+				0x4000);
+		}
 
 		/*kernel sdr2hdr match uboot setting*/
-		def_hdr_sdr_mode();
+		if (chip_type_id != chip_a9)
+			def_hdr_sdr_mode();
 #endif
 		vpp_pq_ctrl_config(pq_cfg, WR_VCB, 0);
+//		pr_info("[debug] vpp_pq_ctrl_config\n");
 
 		pq_reg_wr_rdma = 1;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
@@ -17286,8 +17294,10 @@ void amvecm_gamma_init(bool en)
 
 	if (cpu_after_eq_t7()) {
 		if (is_meson_t7_cpu() ||
-			chip_type_id == chip_t3x) {
-			if (chip_type_id == chip_t3x) {
+			chip_type_id == chip_t3x ||
+			chip_type_id == chip_a9) {
+			if (chip_type_id == chip_t3x ||
+				chip_type_id == chip_a9) {
 				p_gm = get_gm_data();
 				p_gm->max_idx = 257;
 				p_gm->auto_inc = 1 << L_H_AUTO_INC_2;
@@ -18290,7 +18300,8 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 
 		aml_vecm_match_init(matchdata);
 
-		if (chip_type_id == chip_t6w || chip_type_id == chip_t6x)
+		if (chip_type_id == chip_t6w ||
+			chip_type_id == chip_t6x)
 			watermark_support = 1;
 
 		ret = of_property_read_u32(node, "watermark_support", &val);
@@ -18320,6 +18331,7 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 	vpp_probe_enable();
 #endif
 
+//	pr_info("[debug] wb_en = %d\n", wb_en);
 	if (chip_type_id != chip_t3x)
 		amvecm_wb_init(wb_en);
 
@@ -18346,6 +18358,7 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 		chip_type_id == chip_t6d)
 		gamma_en = 0;
 
+//	pr_info("[debug] gamma_en = %d\n", gamma_en);
 	amvecm_gamma_init(gamma_en);
 	amvecm_3dlut_init(lut3d_en);
 	slt_lut3d_en = lut3d_en;
@@ -18369,6 +18382,7 @@ static void aml_vecm_dt_parse(struct amvecm_dev_s *devp, struct platform_device 
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	amvecm_set_osd_mtx_init(osd_pic_en);
+//	pr_info("[debug] osd_pic_en = %d\n", osd_pic_en);
 
 	res_viu2_vsync_irq =
 		platform_get_resource_byname(pdev, IORESOURCE_IRQ, "vsync2");
@@ -18751,6 +18765,8 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	struct amvecm_dev_s *devp = &amvecm_dev;
 
 	memset(devp, 0, (sizeof(struct amvecm_dev_s)));
+
+//	pr_info("\n VECM probe start\n");
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	hdr_lut_buffer_malloc(pdev);

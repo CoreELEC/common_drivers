@@ -4761,6 +4761,11 @@ void set_vpp_enh_clk(struct vframe_s *vf, struct vframe_s *rpt_vf, int vpp_index
 
 void s7d_sharpness_init(void)
 {
+	int reg_offset = 0;
+
+	if (chip_type_id == chip_a9)
+		reg_offset = 0x8;
+
 	WRITE_VPP_REG(VPP_SR_DIR_MIMAXERR2_LUT_0_0, 0x30100800);
 	WRITE_VPP_REG(VPP_SR_DIR_MIMAXERR2_LUT_0_1, 0x3c3c3838);
 	WRITE_VPP_REG(VPP_SR_DIR_MIMAXERR2_LUT_1_0, 0x30100000);
@@ -4794,7 +4799,10 @@ void s7d_sharpness_init(void)
 	WRITE_VPP_REG(VPP_PI_MAXSAD_GAMMA_LUT2D_2_2_0, 0x00000004);
 
 	WRITE_VPP_REG(VPP_PI_GLB_GAIN, 0x3f);/*5088*/
-	WRITE_VPP_REG_BITS(SAFA_PPS_DIR_DIF_WIN, 2, 0, 2); /* reg_dir_dif_win_y=2 bit 0-1*/
+	if (chip_type_id == chip_a9) /* reg_dir_dif_win_y=2 bit 0-1*/
+		WRITE_VPP_REG_BITS(SAFA_PPS_DIR_DIF_WIN + reg_offset, 2, 4, 2);
+	else
+		WRITE_VPP_REG_BITS(SAFA_PPS_DIR_DIF_WIN, 2, 0, 2);
 	/*reg_edge_str_std_gain = 4;bit 0-3 */
 //	WRITE_VPP_REG_BITS(SAFA_PPS_EDGE_STR_MODE_GAIN, 4, 0, 4);
 
@@ -4822,7 +4830,6 @@ void s7d_sharpness_init(void)
 
 	if (chip_type_id == chip_s6)
 		WRITE_VPP_REG(SAFA_PPS_DEJAGGY_CTRL, 0x80004444);
-
 }
 
 static enum vsr_pq_cfg_e pre_vsr_cfg;

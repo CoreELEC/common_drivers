@@ -503,13 +503,19 @@ static int index_rdma_part_ins(u32 reg)
 		reg == 0x5125)
 		table_index = 0;
 
-	if ((chip_type_id == chip_t6w || chip_type_id == chip_t6x) &&
+	if ((chip_type_id == chip_t6w ||
+		chip_type_id == chip_t6x) &&
 		(reg == 0x5126 ||
 		reg == 0x5192 ||
 		reg == 0x6d02))
 		table_index = 0;
 
 	if (reg == 0x1d26)
+		table_index = 0;
+
+	if (chip_type_id == chip_a9 &&
+		(reg == 0x5126 ||
+		reg == 0x5192))
 		table_index = 0;
 
 	return table_index;
