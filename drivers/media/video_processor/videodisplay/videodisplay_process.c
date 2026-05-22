@@ -4320,7 +4320,7 @@ static struct vframe_s *vd_vf_get(void *op_arg)
 		if (!(vf->flag & VFRAME_FLAG_VIDEO_COMPOSER))
 			pr_err("vd: vf_get: flag is null\n");
 
-		if (vf->di_flag && (vf->di_flag & DI_FLAG_DI_PVPPLINK))
+		if (vf->di_flag && (vf->di_flag & DI_FLAG_DI_PSTVPPLINK))
 			is_di_postlink = true;
 
 		if ((vd_drop_org_i & 1) && vd_vf_is_tvin(vf))
