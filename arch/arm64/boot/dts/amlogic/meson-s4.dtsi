@@ -1847,8 +1847,8 @@
 		status = "okay";
 	};
 
-	chosen {
-		bootargs = "usbcore.autosuspend=-1 swiotlb=noforce dm_mod.reserved_bio_based_ios=8";
+	chosen: chosen {
+		bootargs = "usbcore.autosuspend=-1 dm_mod.reserved_bio_based_ios=8";
 	};
 
 	gpu_opp_table: gpu_opp_table {
