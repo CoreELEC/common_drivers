@@ -908,10 +908,6 @@
 	};
 };
 
-&audio_earc {
-	status = "disabled";
-};
-
 &i2c3 {
 	status = "okay";
 	pinctrl-names="default";
