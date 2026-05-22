@@ -1960,7 +1960,7 @@
 					max-speed = <1000>;
 					reset-assert-us = <20000>;
 					reset-deassert-us = <50000>;
-					reset-gpios = <&gpio GPIOF_3 (GPIO_ACTIVE_LOW |
+					reset-gpios = <&gpio_ao GPIOF_3 (GPIO_ACTIVE_LOW |
 								GPIO_OPEN_DRAIN)>;
 				};
 			};
