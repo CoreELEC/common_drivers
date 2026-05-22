@@ -1620,7 +1620,7 @@ void _prm_top_init_vfm(struct dpss_ch_s *pch,
 		prm_top->frm_vsize = prm_top->org_vsize;
 		dbg_h2("org_hsize=%d, org_vsize=%d_2\n", prm_top->org_hsize, prm_top->org_vsize);
 		dbg_h2("frm_hsize=%d, frm_vsize=%d_3\n", prm_top->frm_hsize, prm_top->frm_vsize);
-		if (prm_top->org_hsize != prm_top->frm_hsize)
+		if (prm_top->org_hsize != prm_top->frm_hsize && !prm_top->vds_4k1k_en)
 			prm_top->nr_src_align = true;
 
 		dbg_i0("align %d\n", prm_top->alig_hmode);

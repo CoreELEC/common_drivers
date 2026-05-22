@@ -1656,8 +1656,8 @@ void hw_cfg_dpss_dpe_intf(struct PRM_DPSS_TOP *prm_top,
 
 	if (nr_4k1k_vds_en) {
 		w_reg_bit(DPSS_DPE_MIF_CTRL0, 1, 25, 1);      //reg_mif_win_y_mode
-		w_reg_bit_vc(RMIF_F0_LUMA_RPT_PAT, 0X8, 0, 32);  //reg_f0_luma_rpt_pat
-		w_reg_bit_vc(RMIF_F0_CHRM_RPT_PAT, 0X8, 0, 32);  //reg_f0_chrm_rpt_pat
+		w_reg_bit_vc(RMIF_F0_LUMA_RPT_PAT, 1, 3, 1);  //reg_f0_luma_rpt_pat
+		w_reg_bit_vc(RMIF_F0_CHRM_RPT_PAT, 1, 3, 1);  //reg_f0_chrm_rpt_pat
 		//reg_VFCD_MIF0_VSIZE
 		w_reg_bit(DPSS_DPE_VFCD_MIF0_VSIZE, prm_top->frm_vsize * 2, 0, 13);
 		//NO USE APB MODE
