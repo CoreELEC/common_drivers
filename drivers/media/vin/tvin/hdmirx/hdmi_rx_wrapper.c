@@ -3300,7 +3300,7 @@ bool is_unnormal_format(u32 wait_cnt, u8 port)
 void fsm_restart(u8 port)
 {
 	rx_esm_reset(2);
-	hdmi_rx_top_edid_update(port);
+	//hdmi_rx_top_edid_update(port);
 	//hdmirx_hw_config(port);
 	if (rx[port].var.edid_update_flag)
 		hdmirx_clr_scdc(true, port);

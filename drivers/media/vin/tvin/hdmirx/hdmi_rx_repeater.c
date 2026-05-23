@@ -123,6 +123,7 @@ int rx_hdmi_tx_notify_handler(struct notifier_block *nb,
 		//if (hdmirx_repeat_support())
 		if (rx_info.chip_id == CHIP_ID_T7)
 			rx[rx_info.main_port].hdcp.repeat = true;
+		hdmi_rx_top_edid_update(rx_info.main_port);
 		fsm_restart(rx_info.main_port);
 		ret = NOTIFY_OK;
 		break;
@@ -156,6 +157,7 @@ int rx_hdmi_tx_notify_handler(struct notifier_block *nb,
 		rx_set_cur_hpd(0, "tx hdr", rx_info.main_port);
 		if (!rx_info.main_port_open)
 			port_hpd_rst_flag = 0xf;
+		hdmi_rx_top_edid_update(rx_info.main_port);
 		fsm_restart(rx_info.main_port);
 		ret = NOTIFY_OK;
 		break;

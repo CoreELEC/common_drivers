@@ -2394,8 +2394,10 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			if (rx_info.chip_id < CHIP_ID_T3X && hdmi_cec_en == 1)
 				port_hpd_rst_flag |= (1 << rx_info.main_port);
 		}
-		for (port_idx = E_PORT0; port_idx < rx_info.port_num; port_idx++)
+		for (port_idx = E_PORT0; port_idx < rx_info.port_num; port_idx++) {
+			hdmi_rx_top_edid_update(port_idx);
 			fsm_restart(port_idx);
+		}
 		if (hdmi_cec_en == 1 && rx_info.boot_flag)
 			rx_force_hpd_rxsense_cfg(1);
 		//rx_info.edid_update_done |= 0xf;
@@ -2451,6 +2453,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 				skip_frame(4, port_idx, "edid skip");
 				msleep(20);
 				rx_set_cur_hpd(0, "ioc update edid", port_idx);
+				hdmi_rx_top_edid_update(port_idx);
 				fsm_restart(port_idx);
 				hdmirx_scdc_reset(port_idx);
 			}
@@ -5381,8 +5384,10 @@ static int hdmirx_restore(struct device *dev)
 	if (rx_5v_wake_up_en)
 		hdmirx_wr_bits_top_common(TOP_EDID_RAM_OVR0_DATA, _BIT(0), 1);
 	//restore edid
-	for (port_idx = E_PORT0; port_idx < rx_info.port_num; port_idx++)
+	for (port_idx = E_PORT0; port_idx < rx_info.port_num; port_idx++) {
+		hdmi_rx_top_edid_update(port_idx);
 		fsm_restart(port_idx);
+	}
 	return 0;
 }
 
