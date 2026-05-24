@@ -6835,6 +6835,14 @@ static bool send_hdmi_pkt
 	bool dovi_ll_enable = false;
 	bool diagnostic_enable = false;
 
+	if (dst_format == FORMAT_DOVI &&
+	    !dolby_vision_on &&
+	    amdv_target_mode == AMDV_OUTPUT_MODE_BYPASS &&
+	    dolby_vision_status == BYPASS_PROCESS) {
+		dolby_vision_flags &= ~FLAG_FORCE_HDMI_PKT;
+		return false;
+	}
+
 	if ((debug_dolby & 2))
 		pr_dv_dbg("[%s]src_format %d,dst %d,last %d:,vf %p\n",
 			     __func__, src_format, dst_format,
@@ -7246,6 +7254,11 @@ static void send_hdmi_pkt_ahead
 {
 	bool dovi_ll_enable = false;
 	bool diagnostic_enable = false;
+
+	if (!dolby_vision_on &&
+	    amdv_target_mode == AMDV_OUTPUT_MODE_BYPASS &&
+	    dolby_vision_status == BYPASS_PROCESS)
+		return;
 
 	if ((dolby_vision_flags & FLAG_FORCE_DV_LL) ||
 	    dolby_vision_ll_policy == DOLBY_VISION_LL_YUV422 ||
