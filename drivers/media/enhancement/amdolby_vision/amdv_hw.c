@@ -6453,6 +6453,12 @@ void enable_amdv(int enable)
 	} else {
 		enable_amdv_v1(enable);
 	}
+
+	if (!enable) {
+		if (dolby_vision_flags & FLAG_TOGGLE_FRAME)
+			pr_dv_dbg("clear stale TOGGLE_FRAME at DV teardown (bypass path missed gated clear)\n");
+		dolby_vision_flags &= ~FLAG_TOGGLE_FRAME;
+	}
 }
 
 void update_stb_core_setting_flag(int flag)
