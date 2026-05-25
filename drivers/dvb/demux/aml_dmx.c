@@ -2319,16 +2319,20 @@ int _dmx_get_mem_info(struct dmx_demux *dmx, void *v_info)
 	struct filter_mem_info *pinfo;
 	struct dmx_filter_mem_info *info = v_info;
 	struct filter_mem_info_64bits *pinfo_64bits;
-	struct dmx_filter_mem_info_64bits info_64bits;
+	struct dmx_filter_mem_info_64bits *pdmxinfo_64bits;
 	int ret = 0;
 	int i = 0;
 
-	ret = _dmx_get_mem_info_64bits(dmx, &info_64bits);
+	pdmxinfo_64bits = kmalloc(sizeof(*pdmxinfo_64bits), GFP_KERNEL);
+	if (!pdmxinfo_64bits)
+		return -ENOMEM;
+
+	ret = _dmx_get_mem_info_64bits(dmx, pdmxinfo_64bits);
 	if (!ret) {
-		info->filter_num = info_64bits.filter_num;
+		info->filter_num = pdmxinfo_64bits->filter_num;
 		for (i = 0; i < 40; i++) {
 			pinfo = &info->info[i];
-			pinfo_64bits = &info_64bits.info[i];
+			pinfo_64bits = &pdmxinfo_64bits->info[i];
 			pinfo->type = pinfo_64bits->type;
 			pinfo->pid = pinfo_64bits->pid;
 			pinfo->filter_info.dmx_total_size =
@@ -2347,6 +2351,7 @@ int _dmx_get_mem_info(struct dmx_demux *dmx, void *v_info)
 				pinfo_64bits->filter_info.newest_pts;
 		}
 	}
+	kfree(pdmxinfo_64bits);
 	return ret;
 }
 
