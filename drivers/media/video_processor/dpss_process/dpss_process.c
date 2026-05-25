@@ -2236,16 +2236,19 @@ EXPORT_SYMBOL(set_display_speed);
 static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, int rotate)
 {
 	int max_width = 0, max_height = 0;
+	int input_duration = 0;
 
 	if (!dev || !vf) {
 		pr_err("%s: NULL param.\n", __func__);
 		return;
 	}
 
+	input_duration = find_standard_duration(dev, vf->duration);
 	dev->transform = 0;
 	dev->dpss_is_tvp = false;
 	dev->cur_is_i = false;
 	dev->cur_is_frcgame = false;
+	dev->cur_is_nr = false;
 
 	max_width = vf->compWidth >= vf->width ? vf->compWidth : vf->width;
 	max_height = vf->compHeight >= vf->height ? vf->compHeight : vf->height;
@@ -2260,6 +2263,8 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 	if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
 		dev->dpss_parm.di_parm.is_interlace = 1;
 		dev->cur_is_i = true;
+		if (input_duration < dev->output_duration)
+			dev->cur_is_nr = true;
 	} else {
 		dev->dpss_parm.di_parm.is_interlace = 0;
 	}
@@ -2270,6 +2275,10 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 		dev->dpss_parm.dps_work_mode = DPSS_WORK_MODE_FRC;
 		dev->cur_is_frcgame = true;
 	}
+
+	if (dev->cur_is_nr)
+		dev->dpss_parm.dps_work_mode &= ~DPSS_WORK_MODE_FRC;
+
 	dev->dpss_parm.di_parm.buffer_mode = DPSS_BUFFER_MODE_ALLOC_SELF;
 	dev->dpss_parm.di_parm.output_format = DPSS_OUTPUT_BY_DI_DEFINE;
 	if (vf->flag & VFRAME_FLAG_VIDEO_SECURE) {
@@ -2336,6 +2345,7 @@ static int dpss_process_init(struct dpss_process_dev *dev)
 	dev->q_dummy_frame_done = false;
 	dev->last_frame_bypass = false;
 	dev->cur_is_i = false;
+	dev->cur_is_nr = false;
 	dev->last_buf_mgr = NULL;
 	dev->cur_is_frcgame = false;
 	dev->last_file = NULL;
@@ -2494,11 +2504,15 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	char do_dpss_type = 0;
 	int used_vf_with = 0, used_vf_height = 0;
 	int inp_std_duration;
+	bool is_i_src = false;
 
 	if (!dev || !vf) {
 		pr_err("%s: param is invalid.\n", __func__);
 		return need_do_dpss;
 	}
+
+	if (vf->type & VIDTYPE_INTERLACE)
+		is_i_src = true;
 
 	/*all the check flow need done beforce this debug node control*/
 	/*force bypass dpss*/
@@ -2553,11 +2567,9 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	/*pip check*/
-	if (dev->index > 0) {
-		if (!(vf->type & VIDTYPE_INTERLACE)) {
-			dp_print(dev->index, PRINT_OTHER, "pip dpss only support I source.\n");
-			need_do_dpss = false;
-		}
+	if (dev->index > 0 && !is_i_src) {
+		dp_print(dev->index, PRINT_OTHER, "pip dpss only support I source.\n");
+		need_do_dpss = false;
 	}
 
 	/*height > 2160 no need do dpss*/
@@ -2567,10 +2579,13 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	is_qms_case = vf->vf_vrr_param.qms_en || vf->vf_vrr_param.qms_plus_en;
-	if (vf->duration < 1600 && inp_std_duration < dev->output_duration && !is_qms_case) {
+	if (!is_i_src &&
+		!is_qms_case &&
+		vf->duration < 1600 &&
+		inp_std_duration < dev->output_duration) {
 		/*input fps more than output fps*/
 		dp_print(dev->index, PRINT_OTHER,
-			"input fps more than output, no need do dpss.\n");
+			"p source input fps more than output, no need do dpss.\n");
 		need_do_dpss = false;
 	}
 
@@ -2748,6 +2763,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	bool is_dtv_src = false;
 	bool is_pp_swtch = false;
 	int ret = 0;
+	bool nr_switch = false, is_special_i = false;
 
 	if (!dev || !frame_info) {
 		pr_err("%s: param is invalid.\n", __func__);
@@ -2800,6 +2816,8 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		vf->width,
 		vf->height,
 		vf->duration);
+
+	dev->output_duration = get_output_duration(dev);
 
 	if (dev->dpss_index == -1) {
 		if (dev->index == 0 || (dev->index == 1 && (vf->type & VIDTYPE_INTERLACE))) {
@@ -2856,8 +2874,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 		config_play_speed_for_frc(dev, vf);
 	}
-
-	dev->output_duration = get_output_duration(dev);
 
 	if (!check_need_do_dpss(dev, vf, frame_info->transform) || force_num_to_vd1) {
 		dev->is_start_with_dpss = false;
@@ -2940,7 +2956,21 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		game_switch = false;
 	}
 
-	if (tvp_switch || ip_switch || rotate180_switch || game_switch) {
+	/*need check nr mode switch*/
+	if (dev->cur_is_i && vf->duration < dev->output_duration)
+		is_special_i = true;
+
+	if (is_special_i && !dev->cur_is_nr) {
+		dp_print(dev->index, PRINT_ERROR, "need up layer reinit to nr mode.\n");
+		nr_switch = true;
+	} else if (!is_special_i && dev->cur_is_nr) {
+		dp_print(dev->index, PRINT_ERROR, "need up layer reinit to normal mode.\n");
+		nr_switch = true;
+	} else {
+		nr_switch = false;
+	}
+
+	if (tvp_switch || ip_switch || rotate180_switch || game_switch || nr_switch) {
 		dev->last_vf.type = 0;
 		dp_put_file(dev, file_vf);
 		return 1;

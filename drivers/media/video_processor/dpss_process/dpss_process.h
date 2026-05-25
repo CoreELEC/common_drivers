@@ -180,6 +180,7 @@ struct dpss_process_dev {
 	bool is_switch_first_frame;
 	u32 sync_id;
 	int trick_play_en;
+	bool cur_is_nr;
 };
 
 struct dpss_process_port_s {
