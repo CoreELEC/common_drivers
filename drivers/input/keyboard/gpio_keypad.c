@@ -581,12 +581,10 @@ static struct platform_driver meson_gpio_kp_driver = {
 	},
 };
 
-int __init meson_gpio_kp_init(void)
-{
-	return platform_driver_register(&meson_gpio_kp_driver);
-}
+MODULE_DEVICE_TABLE(of, key_dt_match);
 
-void __exit meson_gpio_kp_exit(void)
-{
-	platform_driver_unregister(&meson_gpio_kp_driver);
-}
+module_platform_driver(meson_gpio_kp_driver);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Amlogic");
+MODULE_DESCRIPTION("Amlogic GPIO Keypad Driver");
