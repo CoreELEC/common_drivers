@@ -599,7 +599,8 @@ static int  common_toggle_frame(struct video_recv_s *ins,
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		int i = 0;
 
-		if (is_vsync_vppx_rdma_enable(ins->vpp_id)) {
+		/* mif latch need a vync delay when put buf, which is same as rdma */
+		if (is_vsync_vppx_rdma_enable(ins->vpp_id) || cur_dev->latch_enable) {
 			if (ins->rdma_buf == ins->cur_buf) {
 				if (ins->buf_to_put_num < DISPBUF_TO_PUT_MAX) {
 					ins->buf_to_put[ins->buf_to_put_num] =

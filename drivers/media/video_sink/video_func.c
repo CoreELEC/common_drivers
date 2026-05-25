@@ -476,7 +476,8 @@ static struct vframe_s *pipx_toggle_frame(u8 path_index, struct vframe_s *vf)
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		int j = 0;
 
-		if (is_vsync_rdma_enable()) {
+		/* mif latch need a vync delay when put buf, which is same as rdma */
+		if (is_vsync_rdma_enable() || cur_dev->latch_enable) {
 			if (cur_rdma_buf[i] == cur_dispbuf[i]) {
 				if (!check_dispbuf(i, cur_dispbuf[i], false)) {
 					if (video_vf_put(i, cur_dispbuf[i]) < 0)
@@ -3584,7 +3585,7 @@ static int vdx_misc_early_proc(u8 layer_id,
 	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	if (rdma_enable) {
+	if (rdma_enable || cur_dev->latch_enable) {
 		vd_layer[layer_id].cur_canvas_id =
 			vd_layer[layer_id].next_canvas_id;
 	} else {

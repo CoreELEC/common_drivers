@@ -293,7 +293,7 @@ irqreturn_t vsync_isr_viux(u8 vpp_index, const struct vinfo_s *info)
 		goto exit;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	if (is_vsync_vppx_rdma_enable(vpp_index)) {
+	if (is_vsync_vppx_rdma_enable(vpp_index) || cur_dev->latch_enable) {
 		vd_layer_vpp[vpp_id].cur_canvas_id = vd_layer_vpp[vpp_id].next_canvas_id;
 	} else {
 		if (rdma_enable_vppx_pre[vpp_id])

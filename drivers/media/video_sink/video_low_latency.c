@@ -296,7 +296,7 @@ static int lowlatency_vsync(u8 instance_id)
 		goto exit;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-	if (is_vsync_rdma_enable()) {
+	if (is_vsync_rdma_enable() || cur_dev->latch_enable) {
 		vd_layer[0].cur_canvas_id = vd_layer[0].next_canvas_id;
 		vd_layer[1].cur_canvas_id = vd_layer[1].next_canvas_id;
 		vd_layer[2].cur_canvas_id = vd_layer[2].next_canvas_id;

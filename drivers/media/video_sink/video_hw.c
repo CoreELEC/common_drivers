@@ -14762,15 +14762,16 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 					    cur_frame_par, disp_info,
 					    is_mvc);
 
-		cur_dev->rdma_func[vpp_index].rdma_wr
-			(vd_mif_reg->vd_if0_canvas0,
-			layer->disp_canvas[cur_canvas_id][0]);
-
 		/* enable latch for c5 */
 		if (cur_dev->display_module == C3_DISPLAY_MODULE &&
-			video_is_after_meson_c5_cpu())
-			cur_dev->rdma_func[vpp_index].rdma_wr_bits
-			(vd_mif_reg->vd_if0_canvas0, 3, 30, 2);
+			cur_dev->latch_enable)
+			cur_dev->rdma_func[vpp_index].rdma_wr
+			(vd_mif_reg->vd_if0_canvas0,
+			layer->disp_canvas[cur_canvas_id][0] | 3 << 30);
+		else
+			cur_dev->rdma_func[vpp_index].rdma_wr
+			(vd_mif_reg->vd_if0_canvas0,
+			layer->disp_canvas[cur_canvas_id][0]);
 
 		if (is_mvc)
 			cur_dev->rdma_func[vpp_index].rdma_wr
@@ -16185,7 +16186,7 @@ int detect_vout_type(const struct vinfo_s *vinfo)
 				VOUT_TYPE_TOP_FIELD : VOUT_TYPE_BOT_FIELD;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-		if (is_vsync_rdma_enable()) {
+		if (is_vsync_rdma_enable() || cur_dev->latch_enable) {
 			if (vout_type == VOUT_TYPE_TOP_FIELD)
 				vout_type = VOUT_TYPE_BOT_FIELD;
 			else if (vout_type == VOUT_TYPE_BOT_FIELD)
@@ -20332,6 +20333,7 @@ int video_early_init(struct amvideo_device_data_s *p_amvideo)
 		p_amvideo->dev_property.vsf_mode_support;
 	cur_dev->yuv_sharpen_support = p_amvideo->dev_property.yuv_sharpen_support;
 	cur_dev->display_device_cnt = p_amvideo->display_device_cnt;
+	cur_dev->latch_enable = p_amvideo->latch_enable;
 	if (cur_dev->aisr_support)
 		cur_dev->pps_auto_calc = 1;
 	if (cur_dev->display_module == T6W_DISPLAY_MODULE) {

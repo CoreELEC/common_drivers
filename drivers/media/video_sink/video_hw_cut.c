@@ -7865,7 +7865,7 @@ int detect_vout_type(const struct vinfo_s *vinfo)
 				VOUT_TYPE_TOP_FIELD : VOUT_TYPE_BOT_FIELD;
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-		if (is_vsync_rdma_enable()) {
+		if (is_vsync_rdma_enable() || cur_dev->latch_enable) {
 			if (vout_type == VOUT_TYPE_TOP_FIELD)
 				vout_type = VOUT_TYPE_BOT_FIELD;
 			else if (vout_type == VOUT_TYPE_BOT_FIELD)

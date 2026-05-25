@@ -3647,7 +3647,8 @@ static struct vframe_s *vsync_toggle_frame(struct vframe_s *vf, int line)
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 		int i = 0, done = false;
 
-		if (is_vsync_rdma_enable()) {
+		/* mif latch need a vync delay when put buf, which is same as rdma */
+		if (is_vsync_rdma_enable() || cur_dev->latch_enable) {
 			if (cur_rdma_buf[0] == cur_dispbuf[0]) {
 				done = check_dispbuf(layer_id, cur_dispbuf[0], false);
 				if (!done) {
@@ -16820,6 +16821,7 @@ static struct amvideo_device_data_s amvideo_c5 = {
 	.max_vd_layers = 1,
 	.has_vpp1 = 0,
 	.has_vpp2 = 0,
+	.latch_enable = 1,
 };
 #endif
 

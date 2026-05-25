@@ -319,6 +319,7 @@ struct video_dev_s {
 	u8 vsf_mode_support;
 	u8 yuv_sharpen_support;
 	u8 has_2ppc_support;
+	u8 latch_enable;
 };
 
 struct video_layer_s;
@@ -952,6 +953,7 @@ struct amvideo_device_data_s {
 	u8 display_device_cnt;
 	u8 share_afbc_with_di;
 	u8 has_2ppc_support;
+	u8 latch_enable;
 };
 
 struct pre_scaler_info {
