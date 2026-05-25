@@ -20,20 +20,6 @@ static inline void amlogic_watchkey_driver_exit(void)
 }
 #endif
 
-#if IS_ENABLED(CONFIG_AMLOGIC_GPIO_KEY)
-int meson_gpio_kp_init(void);
-void meson_gpio_kp_exit(void);
-#else
-static inline int meson_gpio_kp_init(void)
-{
-	return 0;
-}
-
-static inline void meson_gpio_kp_exit(void)
-{
-}
-#endif
-
 #if IS_ENABLED(CONFIG_AMLOGIC_ADC_KEYPADS)
 int meson_adc_kp_init(void);
 void meson_adc_kp_exit(void);
