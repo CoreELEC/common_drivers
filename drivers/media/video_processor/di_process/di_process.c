@@ -633,8 +633,6 @@ static int queue_input_to_di(struct di_process_dev *dev, struct vframe_s *vf,
 	di_buf->caller_mng.dummy = dummy;
 	di_buf->caller_mng.src_file = src_file;
 
-	vf->vc_private = (struct video_composer_private *)di_buf->caller_mng.src_file;
-
 	dp_print(dev->index, PRINT_OTHER,
 		"%s: frame_index=%d, magic_code=0x%x, ud_addr=%p, ud_len=%d.\n",
 		__func__,
