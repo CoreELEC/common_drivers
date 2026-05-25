@@ -1604,6 +1604,7 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x7f800000";
+	osd_occupied_index = <1>;
 
 	connectors_dev: port@1 {
 		drm_to_lcd0: endpoint@1 {
@@ -1624,6 +1625,7 @@
 &drm_subsystem {
 	status = "okay";
 	fbdev_sizes = <1280 720 1280 1440 32>;
+	vpu_block_select = <&vpu_blocks_path4>;
 };
 
 &amhdmitx {
