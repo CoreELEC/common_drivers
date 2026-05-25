@@ -2300,14 +2300,12 @@ int vicp_process_config(struct vicp_data_config_s *data_config,
 			return -1;
 		}
 
-		if (data_config->input_data.data_vf->canvas0_config[0].phy_addr == 0) {
-			vicp_print(VICP_INFO, "config: need check yuv data.\n");
-			if ((data_config->input_data.data_vf->flag &  VFRAME_FLAG_DOUBLE_FRAM) &&
-				data_config->input_data.data_vf->vf_ext) {
-				data_config->input_data.data_vf =
-					data_config->input_data.data_vf->vf_ext;
-			} else {
-				vicp_print(VICP_ERROR, "config: vf no yuv data.\n");
+		if (data_config->input_data.data_vf->di_flag & DI_FLAG_DI_PVPPLINK ||
+			data_config->input_data.data_vf->di_flag & DI_FLAG_DI_PSTVPPLINK) {
+			vicp_print(VICP_INFO, "config: di link mode, need use decoder buf.\n");
+			data_config->input_data.data_vf = data_config->input_data.data_vf->vf_ext;
+			if (!data_config->input_data.data_vf) {
+				vicp_print(VICP_ERROR, "config: decoder buf is NULL.\n");
 				return -1;
 			}
 		}
