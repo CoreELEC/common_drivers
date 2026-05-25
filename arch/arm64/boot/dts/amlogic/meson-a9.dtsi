@@ -2809,6 +2809,8 @@
 		reg = <0x0 0xfe008000 0x0 0x1000>,
 		      <0x0 0xfe48c000 0x0 0x100>;
 		reg-names = "anactrl_typec_dp_reg", "dpphy_ctrl_reg";
+		dptx-aux-gpios = <&gpiocc 0 GPIO_ACTIVE_HIGH
+				  &gpiocc 1 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 

@@ -163,6 +163,11 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 	static char test_color_attr[16];
 	struct reg_access reg_acc;
 	struct master_display_info_s data = {};
+	struct meson_tx_phy_cfg_opts *phy_conf;
+	struct meson_tx_phy *tx_phy;
+
+	phy_conf = &tx_comm->hw_comm->hw_base.tx_phy_conf;
+	tx_phy = tx_comm->hw_comm->hw_base.tx_phy;
 
 	token = strsep(&cur, delim);
 	if (token && strncmp(token, "load", 4) == 0) {
@@ -260,6 +265,13 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 			else
 				DPTX_INFO("HPD is low, no plug handler\n");
 		}
+	} else if (token && strncmp(token, "hpd_lock", 8) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &val) < 0)
+			return count;
+		tx_comm->hw_comm->hpd_lock = !!val;
+		DPTX_INFO("HPD %s %px\n", tx_comm->hw_comm->hpd_lock ? "locked" : "unlocked",
+			  &tx_comm->hw_comm->hpd_lock);
 	} else if (token && strncmp(token, "hpd_over", 8) == 0) {
 		int hw_hpd_st = 0;
 
@@ -417,12 +429,20 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 
 		tx_comm->link_train->timeout_ms = val;
 		DPTX_INFO("%s dptx link train timeout: %dms\n", __func__, val);
+	} else if (token && strncmp(token, "lt_lane_remap", 13) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		tx_comm->hw_comm->hw_base.lane_remap = val;
+		DPTX_INFO("%s dptx lane remap: %#x\n", __func__, val);
 	} else if (token && strncmp(token, "lt_force_lr", 11) == 0) {
 		token = strsep(&cur, delim);
 		if (!token || kstrtouint(token, 16, &val) < 0)
 			return count;
 
 		tx_comm->link_train->force_lr = val;
+		phy_conf->dp_ops.link_rate = val * 270;
 		DPTX_INFO("%s force link rate: 0x%x\n", __func__, val);
 	} else if (token && strncmp(token, "lt_force_lc", 11) == 0) {
 		token = strsep(&cur, delim);
@@ -430,7 +450,130 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 			return count;
 
 		tx_comm->link_train->force_lc = val;
+		phy_conf->dp_ops.lanes = val;
 		DPTX_INFO("%s force lane count: %d\n", __func__, val);
+	} else if (token && strncmp(token, "lt_force_ssc", 12) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 16, &val) < 0)
+			return count;
+
+		phy_conf->force_ssc = 1;
+		phy_conf->dp_ops.ssc = !!val;
+		DPTX_INFO("dptx force link pll ssc: %d\n", val);
+		return count;
+	} else if (token && strncmp(token, "phy_init", 8) == 0) {
+		meson_tx_phy_set_mode(tx_phy, PHY_DP, phy_conf);
+		return count;
+	} else if (token && strncmp(token, "aux_gpio", 8) == 0) {
+		u32 gpio1, gpio2;
+		const char *msg[3] = {
+			"low",
+			"high",
+			"Hi-Z",
+		};
+
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &gpio1) < 0)
+			return count;
+
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &gpio2) < 0)
+			return count;
+		if (gpio1 > 2 || gpio2 > 2) {
+			DPTX_INFO("please input 0/low 1/high 2/hi-z\n");
+			return count;
+		}
+		DPTX_INFO("set aux gpio1 as %s gpio2 as %s\n", msg[gpio1], msg[gpio2]);
+		meson_tx_phy_set_aux_gpio(tx_phy, gpio1, gpio2);
+		return count;
+	} else if (token && strncmp(token, "vswing", 6) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &val) < 0)
+			return count;
+
+		phy_conf->dp_ops.voltage[0] = val;
+		phy_conf->dp_ops.voltage[1] = val;
+		phy_conf->dp_ops.voltage[2] = val;
+		phy_conf->dp_ops.voltage[3] = val;
+		meson_tx_phy_configure(tx_phy, phy_conf);
+		return count;
+	} else if (token && strncmp(token, "preemp", 6) == 0) {
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &val) < 0)
+			return count;
+
+		phy_conf->dp_ops.pre[0] = val;
+		phy_conf->dp_ops.pre[1] = val;
+		phy_conf->dp_ops.pre[2] = val;
+		phy_conf->dp_ops.pre[3] = val;
+		meson_tx_phy_configure(tx_phy, phy_conf);
+		return count;
+	} else if (token && strncmp(token, "t_pattern", 9) == 0) {
+		u32 pttn = 0;
+		u32 skip_aux = 1;
+		const char *pttn_msg[5] = {
+			"off",
+			"tps1",
+			"tps2",
+			"tps3",
+			"tps4",
+		};
+
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &pttn) < 0)
+			return count;
+		if (pttn > 4) {
+			pr_info("train pattern is less than 4\n");
+			return count;
+		}
+		pr_info("dptx setting train pattern %s\n", pttn_msg[pttn]);
+		switch (pttn) {
+		case 1:
+			pttn = 0x21;
+			break;
+		case 2:
+			pttn = 0x22;
+			break;
+		case 3:
+			pttn = 0x23;
+			break;
+		case 4:
+			pttn = 0x07;
+			break;
+		default:
+			pttn = 0;
+			break;
+		}
+
+		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN, &pttn,
+			     &skip_aux);
+		return count;
+	} else if (token && strncmp(token, "q_pattern", 9) == 0) {
+		u32 pttn = 0;
+		const char *pttn_msg[8] = {
+			"off",
+			"d10.2",
+			"symbolerror",
+			"prbs7",
+			"pltpat",
+			"cp2502 pttn1",
+			"cp2502 pttn2",
+			"cp2502 pttn3",
+		};
+
+		token = strsep(&cur, delim);
+		if (!token || kstrtouint(token, 10, &pttn) < 0)
+			return count;
+		if (pttn > 7) {
+			pr_info("qual pattern is less than 7\n");
+			return count;
+		}
+		pr_info("dptx setting quality pattern %s\n", pttn_msg[pttn]);
+
+		val = (pttn << 24) | (pttn << 16) | (pttn << 8) | (pttn << 0);
+		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_QUAL_PATTERN,
+			&val, NULL);
+		return count;
 	} else if (token && strncmp(token, "lt_retry_cnt", 12) == 0) {
 		token = strsep(&cur, delim);
 		if (!token || kstrtouint(token, 16, &val) < 0)
@@ -490,7 +633,8 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 			} else {
 				DPTX_INFO("read dpcd ret length: %d\n", ret);
 				for (cnt = 0; cnt < ret; cnt++)
-					DPTX_INFO("aux[%d] = 0x%x\n", cnt, tx_dev->dpcd_buf[cnt]);
+					DPTX_INFO("aux[%05x] = 0x%x\n", cnt + addr,
+						  tx_dev->dpcd_buf[cnt]);
 			}
 		}  else if (token && strncmp(token, "wr", 2) == 0) {
 			/*

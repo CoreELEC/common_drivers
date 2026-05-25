@@ -56,6 +56,14 @@ int meson_tx_phy_set_mode(struct meson_tx_phy *phy, enum meson_tx_phy_mode mode,
 	return 0;
 }
 
+int meson_tx_phy_set_aux_gpio(struct meson_tx_phy *phy, u32 gpio1, u32 gpio2)
+{
+	if (phy->ops->set_aux_gpio)
+		phy->ops->set_aux_gpio(phy, gpio1, gpio2);
+
+	return 0;
+}
+
 int meson_tx_phy_configure(struct meson_tx_phy *phy, struct meson_tx_phy_cfg_opts *opts)
 {
 	if (phy->ops->configure)
@@ -64,14 +72,22 @@ int meson_tx_phy_configure(struct meson_tx_phy *phy, struct meson_tx_phy_cfg_opt
 	return 0;
 }
 
+int meson_tx_phy_toggle(struct meson_tx_phy *phy)
+{
+	if (phy->ops->toggle)
+		return phy->ops->toggle(phy);
+
+	return 0;
+}
+
 int meson_tx_phy_validate(struct meson_tx_phy *phy, enum meson_tx_phy_mode mode,
 			struct meson_tx_phy_cfg_opts *opts)
 {
 	if (phy->ops->validate)
-		phy->ops->validate(phy, mode, opts);
+		return phy->ops->validate(phy, mode, opts);
 
 	pr_info("%s\n", __func__);
-	return 0;
+	return -1;
 }
 
 int meson_tx_phy_calibrate(struct meson_tx_phy *phy)

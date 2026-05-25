@@ -552,7 +552,7 @@ int dptx_calc_hw_fmt_para(struct meson_tx_dev *tx_base, struct meson_tx_format_p
 
 	hw_para->total_bandwidth = bandwidth;
 	/* choose low rate firstly, then count */
-	/* TODO, restore after 4lane works
+	/*
 	if (bandwidth <= 1620000) {
 		rate = DPTX_LINK_RATE_1P62GHZ;
 		count = DPTX_LANE_COUNT_1;
@@ -639,6 +639,7 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 	u8 i = 0;
 	struct meson_tx_hw *tx_hw_base;
 	struct meson_tx_phy_cfg_opts *ops;
+	u32 ssc_en = 0;
 
 	if (!tx_dev || !para)
 		return ret;
@@ -661,9 +662,12 @@ static int dptx_mode_enable(struct meson_tx_dev *tx_dev, struct meson_tx_format_
 		return -EINVAL;
 	}
 	ops = &tx_hw_base->tx_phy_conf;
-	pr_info("dptx %s[%d] lr %d lc %d\n", __func__, __LINE__,
-		ops->dp_ops.link_rate, ops->dp_ops.lanes);
-	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_LINK_LANE_REMAP, (void *)&ops, NULL);
+	ssc_en = !!(tx_dev->dpcd_buf[DP_MAX_DOWNSPREAD] & DP_SUP_MAX_DOWNSPREAD);
+	if (tx_hw_base->tx_phy_conf.force_ssc)
+		ssc_en = ops->dp_ops.ssc;
+	ops->dp_ops.ssc = ssc_en;
+	pr_info("dptx %s[%d] lr %d lc %d ssc %d\n", __func__, __LINE__,
+		ops->dp_ops.link_rate, ops->dp_ops.lanes, ssc_en);
 	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 
 	for (i = 0; i <= tx_comm->link_train->lt_retry_cnt; i++) {
@@ -780,6 +784,109 @@ unsigned int dptx_common_set_hdcp_mode(struct dptx_common *tx_comm, u8 hdcp_mode
 }
 EXPORT_SYMBOL(dptx_common_set_hdcp_mode);
 
+static void dump_raw_dpcd(u8 *buf, u8 len, u32 addr)
+{
+	u8 *tmp_buf;
+	u32 i, pos;
+
+	tmp_buf = kmalloc(2048, GFP_KERNEL);
+	if (!tmp_buf)
+		return;
+
+	for (i = 0, pos = 0; i < len; i++) {
+		if (!buf[i])
+			continue;
+		pos += sprintf(tmp_buf + pos, "[%05x] %02x\n", addr + i, buf[i]);
+	}
+	pr_info("%s", tmp_buf);
+	kfree(tmp_buf);
+}
+
+static void dptx_phy_automated_test(struct dptx_common *tx_comm)
+{
+	struct meson_tx_hw *tx_hw_base;
+	struct meson_tx_phy_cfg_opts *phy_conf;
+	u8 dpcd_buf218[DP_TEST_LANE_COUNT - DP_TEST_REQUEST + 1] = {0};
+	u8 dpcd_buf248[1] = {0};
+	u8 dpcd_buf250[DP_TEST_80BIT_PTTN_AUXCH_CTRL - DP_TEST_80BIT_CUSTOM_PATTERN_7_0 + 1] = {0};
+	u8 dpcd_tmp;
+	u8 lr;
+	u8 lc;
+	u8 phy_test_pattern = 0;
+	u8 temp;
+
+	if (!tx_comm)
+		return;
+	tx_hw_base = tx_comm->base.tx_hw_base;
+	phy_conf = &tx_hw_base->tx_phy_conf;
+	dptx_aux_read_dpcd(tx_comm->tx_aux, DP_TEST_REQUEST, dpcd_buf218, sizeof(dpcd_buf218));
+	dump_raw_dpcd(dpcd_buf218, sizeof(dpcd_buf218), DP_TEST_REQUEST);
+	DPTX_INFO("TEST_REQUEST: %#x\n", dpcd_buf218[0]);
+
+	if (!(dpcd_buf218[0] & (DP_TEST_LINK_TRAINING | DP_TEST_LINK_PHY_TEST_PATTERN))) {
+		dpcd_tmp = DP_TEST_NAK;
+		dptx_aux_write_dpcd(tx_comm->tx_aux, DP_TEST_RESPONSE, &dpcd_tmp, 1);
+		pr_info("DP_TEST_NAK\n");
+		return;
+	}
+	dpcd_tmp = DP_TEST_ACK;
+	dptx_aux_write_dpcd(tx_comm->tx_aux, DP_TEST_RESPONSE, &dpcd_tmp, 1);
+	pr_info("DP_TEST_ACK\n");
+
+	lr = dpcd_buf218[DP_TEST_LINK_RATE - DP_TEST_REQUEST];
+	lc = dpcd_buf218[DP_TEST_LANE_COUNT - DP_TEST_REQUEST] & 0x1f;
+	tx_comm->link_train->force_lr = lr;
+	phy_conf->dp_ops.link_rate = lr * 270;
+	tx_comm->link_train->force_lc = lc;
+	phy_conf->dp_ops.lanes = lc;
+	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, phy_conf);
+
+	if (dpcd_buf218[0] & DP_TEST_LINK_TRAINING) {
+		pr_info("DP_TEST_LINK_TRAINING\n");
+		if (dptx_link_training(tx_comm->link_train) != 0)
+			DPTX_ERROR("link training failed during dp test\n");
+	}
+
+	if (dpcd_buf218[0] & DP_TEST_LINK_PHY_TEST_PATTERN) {
+		pr_info("DP_TEST_LINK_PHY_TEST_PATTERN\n");
+		dptx_aux_read_dpcd(tx_comm->tx_aux, DP_PHY_TEST_PATTERN, dpcd_buf248,
+				   sizeof(dpcd_buf248));
+		dptx_aux_read_dpcd(tx_comm->tx_aux, DP_TEST_80BIT_CUSTOM_PATTERN_7_0, dpcd_buf250,
+				   sizeof(dpcd_buf250));
+		dump_raw_dpcd(dpcd_buf248, sizeof(dpcd_buf248), DP_PHY_TEST_PATTERN);
+		dump_raw_dpcd(dpcd_buf250, sizeof(dpcd_buf250), DP_TEST_80BIT_CUSTOM_PATTERN_7_0);
+		if (lc == 1)
+			phy_test_pattern = dpcd_buf248[0];
+		if (lc == 2)
+			phy_test_pattern = (dpcd_buf248[0] << 8) | dpcd_buf248[0];
+		if (lc == 4)
+			phy_test_pattern = (dpcd_buf248[0] << 24) | (dpcd_buf248[0] << 16) |
+					   (dpcd_buf248[0] << 8) | dpcd_buf248[0];
+		temp = dpcd_buf250[DP_TEST_80BIT_AUX_CH_CAP - DP_TEST_80BIT_CUSTOM_PATTERN_7_0];
+		if (temp & DP_TEST_80BIT_AUX_CH_CAP_SUP) {
+			u32 cust_80bit[3];
+
+			pr_info("DP_TEST_80BIT_AUX_CH_CAP_SUP\n");
+			cust_80bit[0] = dpcd_buf250[3] | dpcd_buf250[2] | dpcd_buf250[1] |
+					dpcd_buf250[0];
+			cust_80bit[1] = dpcd_buf250[7] | dpcd_buf250[6] | dpcd_buf250[5] |
+					dpcd_buf250[4];
+			cust_80bit[2] = dpcd_buf250[9] | dpcd_buf250[8];
+			temp = dpcd_buf250[DP_TEST_80BIT_PTTN_AUXCH_CTRL -
+				DP_TEST_80BIT_CUSTOM_PATTERN_7_0];
+			dpcd_tmp = DP_TEST_80BIT_PTTN_AUXCH_CTRL_EN |
+				   (temp & DP_TEST_DURATION_CTRL);
+			dptx_aux_write_dpcd(tx_comm->tx_aux, DP_TEST_80BIT_PTTN_AUXCH_CTRL,
+					    &dpcd_tmp, 1);
+			dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_QUAL_PATTERN,
+				     &phy_test_pattern, cust_80bit);
+		} else {
+			dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_QUAL_PATTERN,
+				     &phy_test_pattern, NULL);
+		}
+	}
+}
+
 struct meson_tx_helper_ops dptx_common_helper_ops = {
 	.create_sysfs	= dptx_create_sysfs,
 	.remove_sysfs	= dptx_remove_sysfs,
@@ -836,6 +943,10 @@ static void dptx_irq_hpd_process(void *para)
 		DPTX_ERROR("%s DPRX Event Status Indicator read ret:%d\n", __func__, ret);
 		return;
 	}
+
+	/* Automated test request from TE */
+	if (link_sink_status_buf[1] & DP_AUTOMATED_TEST_REQUEST)
+		dptx_phy_automated_test(tx_comm);
 
 	/* cp_irq */
 	if (link_sink_status_buf[1] & DP_CP_IRQ) {
@@ -959,7 +1070,19 @@ static void dptx_irq_hpd_process(void *para)
 		DPTX_INFO("%s DOWNSTREAM_PORT_STATUS_CHANGED to: %d\n", __func__, sink_count);
 	}
 	if (link_sink_status_buf[4] & BIT(7)) {
+		u8 rx_lane_st[6] = {0};
+		int i;
+
 		DPTX_INFO("%s LINK_STATUS_UPDATED %d\n", __func__, sink_count);
+		ret = dptx_aux_read_dpcd(tx_comm->tx_aux, DP_LANE0_1_STATUS, &rx_lane_st,
+					 sizeof(rx_lane_st));
+		if (ret < 0) {
+			DPTX_ERROR("dpcd read lane status failed: %d\n", __func__, ret);
+		} else {
+			for (i = 0; i < sizeof(rx_lane_st); i++)
+				DPTX_INFO("DPCD[0x%05x] = 0x%x", DP_LANE0_1_STATUS + i,
+					  rx_lane_st[i]);
+		}
 		/* re-training */
 		if (dptx_link_training(tx_comm->link_train) != 0)
 			DPTX_ERROR("%s link training failed, abort mode set\n", __func__);
@@ -1123,6 +1246,8 @@ int dptx_common_init(struct dptx_common *tx_comm, struct dptx_hw_common *hw_comm
 		return -ENOMEM;
 	hw_comm->is_edp = tx_comm->is_edp;
 	hw_comm->ext_edptx_ctrl_en = tx_comm->ext_edptx_drv_en;
+	hw_comm->hw_base.lane_remap = -1;
+
 	/* init connector_type */
 	tx_comm->base.conn_dev.connector_type =
 		(tx_comm->is_edp ? DRM_MODE_CONNECTOR_MESON_TX_EDP_A :

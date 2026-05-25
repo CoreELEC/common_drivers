@@ -37,9 +37,8 @@ static void link_training_prepare(struct link_train_t *lt)
 	struct dptx_link_cfg *lc;
 	enum dp_lane_count_e max_lane_count = DPTX_LANE_COUNT_UNKNOWN;
 	u8 *dpcd;
-
-	if (!lt)
-		return;
+	struct dptx_common *tx_comm = lt->tx_comm;
+	struct meson_tx_phy_cfg_opts *ops = &tx_comm->base.tx_hw_base->tx_phy_conf;
 
 	lc = lt->link_cfg;
 	param = &lt->link_cfg->curr;
@@ -88,7 +87,7 @@ static void link_training_prepare(struct link_train_t *lt)
 	lc->enhanced_frame_cap = !!(dpcd[DP_MAX_LANE_COUNT] & DP_ENHANCED_FRAME_CAP);
 	if (lc->version >= DP_DPCD_REV_14)
 		lc->tps4_support = !!(dpcd[DP_MAX_DOWNSPREAD] & DP_TPS4_SUPPORTED);
-	lc->downspread = dpcd[DP_MAX_DOWNSPREAD] & DP_MAX_DOWNSPREAD_0_5;
+	lc->downspread = ops->dp_ops.ssc;
 	lc->coding_8b10b = dpcd[DP_MAIN_LINK_CHANNEL_CODING] & DP_CAP_ANSI_8B10B;
 }
 
@@ -218,7 +217,7 @@ static bool dptx_dpcd_rd_training_status(struct link_train_t *lt)
 		DPTX_ERROR("%s dpcd read failed: %d\n", __func__, ret);
 	} else {
 		for (i = 0; i < DP_LINK_STATUS_SIZE; i++)
-			DPTX_DEBUG_PHY("DPCD[0x%x] = 0x%x", DP_LANE0_1_STATUS + i, lc->dpcd[i]);
+			DPTX_INFO("DPCD[0x%x] = 0x%x", DP_LANE0_1_STATUS + i, lc->dpcd[i]);
 	}
 	return ret;
 }
@@ -358,7 +357,11 @@ static void lt_cr_dshift_lr(struct link_train_t *lt)
 	enum dp_link_rate_e new_rate = DPTX_LINK_RATE_1P62GHZ;
 	enum dp_link_rate_e cur_rate = lt->link_cfg->curr.link_rate;
 	enum link_pattern_e link_pattern = LINK_PATTERN_OFF;
+	struct meson_tx_hw *tx_hw_base;
+	struct meson_tx_phy_cfg_opts *ops;
 
+	tx_hw_base = tx_comm->base.tx_hw_base;
+	ops = &tx_hw_base->tx_phy_conf;
 	switch (cur_rate) {
 	case DPTX_LINK_RATE_8P10GHZ:
 		new_rate = DPTX_LINK_RATE_5P40GHZ;
@@ -374,7 +377,9 @@ static void lt_cr_dshift_lr(struct link_train_t *lt)
 		new_rate = DPTX_LINK_RATE_1P62GHZ;
 		break;
 	}
-	DPTX_DEBUG_PHY("%s downshift link rate to: 0x%x\n", __func__, new_rate);
+	DPTX_INFO("%s downshift link rate from %#x to %#x\n", __func__, cur_rate, new_rate);
+	ops->dp_ops.link_rate = new_rate * 270;
+	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN,
 		&link_pattern, NULL);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_LINK_RATE,
@@ -402,7 +407,7 @@ static void lt_cr_dshift_lc(struct link_train_t *lt)
 		new_lane = DPTX_LANE_COUNT_2;
 	else
 		new_lane = DPTX_LANE_COUNT_1;
-	DPTX_DEBUG_PHY("%s downshift lane count to: 0x%x\n", __func__, new_lane);
+	DPTX_INFO("%s downshift lane count from %d to %d\n", __func__, cur_lane, new_lane);
 	lc->curr.lane_count = new_lane;
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_LANE_COUNT,
 		(void *)&new_lane, NULL);
@@ -423,7 +428,7 @@ static void lt_eq_reset_lc(struct link_train_t *lt)
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_LANE_COUNT,
 		(void *)&lc->base.lane_count, NULL);
 	lc->curr.lane_count = lc->base.lane_count;
-	DPTX_DEBUG_PHY("%s reset lane count to primary count: 0x%x\n",
+	DPTX_INFO("%s reset lane count to primary count: 0x%x\n",
 		__func__, lc->curr.lane_count);
 }
 
@@ -440,7 +445,11 @@ static void lt_eq_dshift_lr(struct link_train_t *lt)
 	enum dp_link_rate_e new_rate = DPTX_LINK_RATE_1P62GHZ;
 	enum dp_link_rate_e cur_rate = lt->link_cfg->curr.link_rate;
 	enum link_pattern_e pattern = LINK_PATTERN_OFF;
+	struct meson_tx_hw *tx_hw_base;
+	struct meson_tx_phy_cfg_opts *ops;
 
+	tx_hw_base = tx_comm->base.tx_hw_base;
+	ops = &tx_hw_base->tx_phy_conf;
 	switch (cur_rate) {
 	case DPTX_LINK_RATE_8P10GHZ:
 		new_rate = DPTX_LINK_RATE_5P40GHZ;
@@ -456,7 +465,9 @@ static void lt_eq_dshift_lr(struct link_train_t *lt)
 		new_rate = DPTX_LINK_RATE_1P62GHZ;
 		break;
 	}
-	DPTX_DEBUG_PHY("%s downshift lr to: 0x%x\n", __func__, new_rate);
+	DPTX_INFO("%s downshift lr from %#x to %#x\n", __func__, cur_rate, new_rate);
+	ops->dp_ops.link_rate = new_rate * 270;
+	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 	/* LINK_PATTERN_OFF */
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN,
 		(void *)&pattern, NULL);
@@ -570,11 +581,18 @@ static enum link_status_e lt_check_cr_dshift(struct link_train_t *lt)
  */
 static void lt_cr_reset_lr(struct link_train_t *lt)
 {
+	struct dptx_common *tx_comm = lt->tx_comm;
 	struct dptx_link_cfg *lc = lt->link_cfg;
 	enum link_pattern_e pattern = LINK_PATTERN_OFF;
+	struct meson_tx_hw *tx_hw_base;
+	struct meson_tx_phy_cfg_opts *ops;
 
+	tx_hw_base = tx_comm->base.tx_hw_base;
+	ops = &tx_hw_base->tx_phy_conf;
 	dptx_hw_cntl(&lt->tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN,
 		(void *)&pattern, NULL);
+	ops->dp_ops.link_rate = lc->base.link_rate * 270;
+	meson_tx_phy_set_mode(tx_hw_base->tx_phy, PHY_DP, &tx_hw_base->tx_phy_conf);
 	dptx_hw_cntl(&lt->tx_comm->hw_comm->hw_base, LINKCONF_SET_LINK_RATE,
 		(void *)&lc->base.link_rate, NULL);
 	lc->curr.link_rate = lc->base.link_rate;
@@ -698,7 +716,7 @@ static void dptx_training_chan_eq_init(struct link_train_t *lt)
 		pattern = LINK_PATTERN_2;
 		break;
 	}
-	DPTX_DEBUG_PHY("%s pattern = 0x%x\n", __func__, pattern);
+	DPTX_INFO("train pattern = TPS%x\n", pattern & 0x7);
 	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, LINKCONF_SET_TRAIN_PATTERN,
 		(void *)&pattern, NULL);
 }
@@ -896,6 +914,12 @@ static enum link_status_e dptx_train_fsm(struct link_train_t *lt)
 				break;
 			}
 			st = lt_check_eq_count(lt);
+			{
+				struct meson_tx_hw *tx_hw;
+
+				tx_hw = &lt->tx_comm->hw_comm->hw_base;
+				meson_tx_phy_toggle(tx_hw->tx_phy);
+			}
 			if (st == LINK_ST_EQ_MAX_COUNT) {
 				/* Loop Count is Yes */
 				st = lt_eq_dshift_lc_lr(lt);

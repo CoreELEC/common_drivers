@@ -22,16 +22,16 @@ void __meson_tx_print(struct meson_tx_log *log, struct va_format *vaf)
 
 	switch (log->print_level) {
 	case INFO_LEVEL:
-		pr_info("[%s:] %pV", log->driver_tag, vaf);
+		pr_info("[%s] %pV", log->driver_tag, vaf);
 		break;
 	case WARN_LEVEL:
-		pr_err("[%s:] *WARNING* %pV", log->driver_tag, vaf);
+		pr_err("[%s] *WARNING* %pV", log->driver_tag, vaf);
 		break;
 	case ERROR_LEVEL:
-		pr_err("[%s:] *ERROR* %pV", log->driver_tag, vaf);
+		pr_err("[%s] *ERROR* %pV", log->driver_tag, vaf);
 		break;
 	case DEBUG_LEVEL:
-		pr_info("[%s:] %pV", log->driver_tag, vaf);
+		pr_info("[%s] %pV", log->driver_tag, vaf);
 		break;
 	}
 }

@@ -388,11 +388,19 @@ static int dpphy_to_core_notifier(struct notifier_block *nb,
 
 	switch (action) {
 	case MESON_TX_CONN_DPPHY_HPD_PLUGIN:
+		if (tx_comm->hw_comm->hpd_lock) {
+			DPTX_INFO("hpd locked\n");
+			return NOTIFY_OK;
+		}
 		/* HPD rising */
 		event_ops->queue_event(event_ops->data, HPD_PLUGIN,
 			tx_comm->hw_comm->hpd_in_filter_ms);
 		break;
 	case MESON_TX_CONN_DPPHY_HPD_PLUGOUT:
+		if (tx_comm->hw_comm->hpd_lock) {
+			DPTX_INFO("hpd locked\n");
+			return NOTIFY_OK;
+		}
 		/* HPD falling */
 		event_ops->cancel_event(event_ops->data, HPD_PLUGIN, false);
 		event_ops->queue_event(event_ops->data, HPD_PLUGOUT, 0);
@@ -406,7 +414,7 @@ static int dpphy_to_core_notifier(struct notifier_block *nb,
 			flip = 1;
 		if (usb_dp_state.pin_state == TYPEC_DP_STATE_E)
 			pin_state = 2;
-		args = (flip << 8) || (pin_state & 0xf);
+		args = (flip << 8) | (pin_state & 0xf);
 		dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_LINK_LANE_REMAP, (void *)&args, NULL);
 		break;
 	default:
@@ -444,6 +452,7 @@ static int dptx_probe(struct platform_device *pdev)
 	tx_comm->is_edp	= plat_data->is_edp;
 	tx_comm->base.pdev = device;
 	tx_comm->hw_comm = to_dptx_hw_common(tx_hw);
+	tx_hw->lane_remap = -1;
 
 	/* get config from dts */
 	ret = dptx_get_dt_info(pdev, tx_comm, tx_comm->hw_comm);

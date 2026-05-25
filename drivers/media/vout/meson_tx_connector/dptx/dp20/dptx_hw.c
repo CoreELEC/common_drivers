@@ -573,6 +573,8 @@ static irqreturn_t dptx_intr_handler(int irq, void *para)
 
 	/* hotplug events in common tx task queue */
 	if (tx20_hw->intr_state & INTERRUPT_STATE_HPD_EVENT) {
+		if (hw_comm->hpd_lock)
+			goto next;
 		tx20_hw->intr_state &= ~INTERRUPT_STATE_HPD_EVENT;
 		hpd_state = !!dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE);
 		if (hpd_state) {
@@ -585,6 +587,7 @@ static irqreturn_t dptx_intr_handler(int irq, void *para)
 			event_ops->queue_event(event_ops->data, HPD_PLUGOUT, 0);
 		}
 	}
+next:
 	/* hpd_irq in dptx private task queue */
 	if (tx20_hw->intr_state & INTERRUPT_STATE_HPD_IRQ) {
 		tx20_hw->intr_state &= ~INTERRUPT_STATE_HPD_IRQ;
@@ -1897,6 +1900,7 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 	int pattern = 0;
 	u8 dpcd[4] = {0};
 	u32 val;
+	u32 skip_aux = 0;
 
 	if (!hw_comm)
 		return -1;
@@ -1959,6 +1963,8 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 	case LINKCONF_SET_TRAIN_PATTERN:
 		dpcd[0] = 0;
 		link_pattern = *(enum link_pattern_e *)input_argv;
+		if (output_struct)
+			skip_aux = *(u32 *)output_struct;
 		switch (link_pattern) {
 		case LINK_PATTERN_OFF:
 		case LINK_PATTERN_D10_2:
@@ -1995,7 +2001,38 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 		}
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_DISABLE_SCRAMBLING, scramble);
 		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_TRAINING_PATTERN_SET, pattern);
-		dptx_aux_write_dpcd(hw_comm->tx_aux, DP_TRAINING_PATTERN_SET, dpcd, 1);
+		/* if skip_aux is true, then there will no AUX transaction under manual OSC test */
+		if (!skip_aux)
+			dptx_aux_write_dpcd(hw_comm->tx_aux, DP_TRAINING_PATTERN_SET, dpcd, 1);
+		break;
+	case LINKCONF_SET_TRAIN_QUAL_PATTERN:
+		if (!input_argv)
+			return -1;
+		val = *(u32 *)input_argv;
+		switch (val & 0x7) {
+		case 0 ... 4:
+			scramble = 0;
+			break;
+		default:
+			scramble = 1;
+			break;
+		}
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LINK_QUAL_PATTERN_SET, val);
+		if ((val & 7) == 4) { // custom pattern
+			u32 cust_pttn[3] = {0xC1F07C1F, 0xF07C1F07, 0x7c1};
+
+			if (output_struct) {
+				cust_pttn[0] = ((u32 *)output_struct)[0];
+				cust_pttn[1] = ((u32 *)output_struct)[1];
+				cust_pttn[2] = ((u32 *)output_struct)[2];
+			}
+			dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_CUSTOM_80BIT_PATTERN_31_0,
+					 cust_pttn[0]);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_CUSTOM_80BIT_PATTERN_63_32,
+					 cust_pttn[1]);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_CUSTOM_80BIT_PATTERN_79_64,
+					 cust_pttn[2] & 0xffff);
+		}
 		break;
 	case LINKCONF_SET_TRAIN_PATTERN_VALUE:
 		if (!input_argv)
@@ -2014,9 +2051,10 @@ static int dptx20_hw_cntl_linkconf(struct dptx_hw_common *hw_comm, u32 cmd,
 			dptx_hw_set_phy_preemph(&hw_comm->hw_base, phy->preemp);
 			vs = phy->vswing;
 			pe = phy->preemp;
-			if (phy->vswing == DPTX_PHY_VSWING_1200)
+			/* currently only support up to level 2 */
+			if (phy->vswing == DPTX_PHY_VSWING_800)
 				vs |= DP_TRAIN_MAX_SWING_REACHED;
-			if (phy->preemp == DPTX_PHY_PREEMP_9DB)
+			if (phy->preemp == DPTX_PHY_PREEMP_6DB)
 				pe |= DP_TRAIN_MAX_PRE_EMPHASIS_REACHED;
 			dpcd[0] = (pe << 3) | vs;
 			dpcd[1] = dpcd[0];
@@ -2939,10 +2977,14 @@ static void hw_timer_start(struct dptx_hw_common *hw_comm, enum timer_hw_type hw
 static void dptx20_link_lane_remap(struct dptx_hw_common *hw_comm, bool flip, u32 alt_mux)
 {
 	u32 data32 = 0;
+	s32 lane_remap = hw_comm->hw_base.lane_remap;
 
-	/* TODO, currently fixed value, remove after USB PD is OK */
+	if (flip)
+		data32 = 0x11b;
+	if (lane_remap >= 0)
+		data32 = lane_remap;
 	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_LANE_REMAP, data32);
-	pr_info("dptx: fixed lane remap\n");
+	pr_info("dptx: lane remap to %#x\n", data32);
 	return;
 }
 
@@ -3092,7 +3134,7 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 		if (!input_argv)
 			return -1;
 		value = *(u32 *)input_argv;
-		dptx20_link_lane_remap(hw_comm, value & BIT(8), value & 0xf);
+		dptx20_link_lane_remap(hw_comm, !!(value & BIT(8)), value & 0xf);
 		return 0;
 	case DP_GET_HPD_STATE:
 		return dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_HPD_INPUT_STATE) & 0x1;

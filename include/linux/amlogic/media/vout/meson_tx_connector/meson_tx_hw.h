@@ -44,6 +44,9 @@ struct meson_tx_hw {
 	/* for HW iomem access */
 	struct reg_map *regs_region;
 
+	/* for manual lane remap */
+	s32 lane_remap;
+
 	bool pxp_mode;
 };
 
