@@ -61,9 +61,6 @@ struct amlogic_pcie {
 
 	struct reset_control *mac_apb_rst;
 	struct reset_control *por_rst;
-	struct reset_control *phy_rst;
-	struct reset_control *pipe_rst;
-	struct reset_control *phy_apb_rst;
 	struct reset_control *pcie_rst0;
 	struct reset_control *pcie_rst1;
 	struct reset_control *pcie_rst2;
@@ -257,27 +254,6 @@ static int amlogic_pcie_get_reset(struct amlogic_pcie *aml_pcie)
 		return PTR_ERR(aml_pcie->por_rst);
 	}
 
-	aml_pcie->pipe_rst = devm_reset_control_get_exclusive(dev, "pipe_rst");
-	if (IS_ERR(aml_pcie->pipe_rst)) {
-		if (PTR_ERR(aml_pcie->pipe_rst) != -EPROBE_DEFER)
-			dev_err(dev, "pipe_rst property in node\n");
-		return PTR_ERR(aml_pcie->pipe_rst);
-	}
-
-	aml_pcie->phy_rst = devm_reset_control_get_exclusive(dev, "phy_rst");
-	if (IS_ERR(aml_pcie->phy_rst)) {
-		if (PTR_ERR(aml_pcie->phy_rst) != -EPROBE_DEFER)
-			dev_err(dev, "phy_rst property in node\n");
-		return PTR_ERR(aml_pcie->phy_rst);
-	}
-
-	aml_pcie->phy_apb_rst = devm_reset_control_get_exclusive(dev, "phy_apb_rst");
-	if (IS_ERR(aml_pcie->phy_apb_rst)) {
-		if (PTR_ERR(aml_pcie->phy_apb_rst) != -EPROBE_DEFER)
-			dev_err(dev, "phy_apb_rst property in node\n");
-		return PTR_ERR(aml_pcie->phy_apb_rst);
-	}
-
 	return 0;
 
 get_rst_reg:
@@ -433,24 +409,6 @@ static int amlogic_pcie_assert_reset(struct amlogic_pcie *aml_pcie)
 		return ret;
 	}
 
-	ret = reset_control_assert(aml_pcie->phy_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert phy_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_assert(aml_pcie->pipe_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert pipe_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_assert(aml_pcie->phy_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert phy_apb_rst err %d\n", ret);
-		return ret;
-	}
-
 	return 0;
 
 set_rst_reg:
@@ -481,24 +439,6 @@ static int amlogic_pcie_deassert_reset(struct amlogic_pcie *aml_pcie)
 	ret = reset_control_deassert(aml_pcie->por_rst);
 	if (ret < 0) {
 		dev_err(dev, "deassert por_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_deassert(aml_pcie->phy_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert phy_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_deassert(aml_pcie->pipe_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert pipe_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_deassert(aml_pcie->phy_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert phy_apb_rst err %d\n", ret);
 		return ret;
 	}
 

@@ -26,19 +26,8 @@ struct amlogic_pcie_phy {
 	void __iomem *reset_base;
 	void __iomem *efuse_base;
 
-	struct reset_control *mac_apb_rst;
-	struct reset_control *por_rst;
-	struct reset_control *phy_rst;
-	struct reset_control *pipe_rst;
 	struct reset_control *phy_apb_rst;
-	struct reset_control *pcie_rst0;
-	struct reset_control *pcie_rst1;
-	struct reset_control *pcie_rst2;
-	struct reset_control *pcie_rst3;
-	struct reset_control *pcie_rst4;
-	struct reset_control *pcie_rst5;
-	struct reset_control *pcie_rst6;
-	struct reset_control *pcie_rst7;
+	struct reset_control_bulk_data *resets;
 	u32 reset_number;
 
 	struct clk *pcie_phy_clk;
@@ -46,6 +35,11 @@ struct amlogic_pcie_phy {
 	u32 pll_setting_number;
 	u32 num_lanes;
 	u32 port_num;
+};
+
+struct pcie_reset_seq {
+	const char *name;
+	unsigned long delay_us;   /* deassert */
 };
 
 /* Common probe function */

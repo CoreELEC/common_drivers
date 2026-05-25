@@ -13,8 +13,24 @@
 #include <linux/regmap.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/bits.h>
 #include "amlogic-pcie-phy.h"
+
+static const struct pcie_reset_seq reset_info[] = {
+	{ "phy",	10 },
+	{ "pipe",	10 },
+	{ "mac_apb",	10 },
+	{ "por",	10 },
+	{ "rst0",	0 },
+	{ "rst1",	0 },
+	{ "rst2",	0 },
+	{ "rst3",	0 },
+	{ "rst4",	0 },
+	{ "rst5",	0 },
+	{ "rst6",	0 },
+	{ "rst7",	10 },
+};
 
 static int amlogic_pcie_phy_a9_power_on(struct amlogic_pcie_phy *pcie_phy)
 {
@@ -58,34 +74,20 @@ static int amlogic_pcie_phy_assert_reset(struct amlogic_pcie_phy *pcie_phy)
 	if (pcie_phy->reset_base)
 		goto set_rst_reg;
 
-	ret = reset_control_assert(pcie_phy->mac_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert mac_apb_rst err %d\n", ret);
-		return ret;
+	if (pcie_phy->port_num != 1) {
+		ret = reset_control_assert(pcie_phy->phy_apb_rst);
+		if (ret < 0) {
+			dev_err(dev, "assert phy_apb_rst err %d\n", ret);
+			return ret;
+		}
 	}
 
-	ret = reset_control_assert(pcie_phy->por_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert por_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_assert(pcie_phy->phy_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert phy_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_assert(pcie_phy->pipe_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert pipe_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_assert(pcie_phy->phy_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "assert phy_apb_rst err %d\n", ret);
-		return ret;
+	for (i = 0; i < pcie_phy->reset_number; i++) {
+		ret = reset_control_assert(pcie_phy->resets[i].rstc);
+		if (ret < 0) {
+			dev_err(dev, "Failed to assert '%s': %d\n", pcie_phy->resets[i].id, ret);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -105,34 +107,23 @@ static int amlogic_pcie_phy_deassert_reset(struct amlogic_pcie_phy *pcie_phy)
 	if (pcie_phy->reset_base)
 		goto set_rst_reg;
 
-	ret = reset_control_deassert(pcie_phy->mac_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert mac_apb_rst err %d\n", ret);
-		return ret;
+	if (pcie_phy->port_num != 1) {
+		ret = reset_control_deassert(pcie_phy->phy_apb_rst);
+		if (ret < 0) {
+			dev_err(dev, "deassert phy_apb_rst err %d\n", ret);
+			return ret;
+		}
 	}
 
-	ret = reset_control_deassert(pcie_phy->por_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert por_rst err %d\n", ret);
-		return ret;
-	}
+	for (i = 0; i < pcie_phy->reset_number; i++) {
+		ret = reset_control_deassert(pcie_phy->resets[i].rstc);
+		if (ret < 0) {
+			dev_err(dev, "Failed to deassert '%s': %d\n", pcie_phy->resets[i].id, ret);
+			return ret;
+		}
 
-	ret = reset_control_deassert(pcie_phy->phy_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert phy_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_deassert(pcie_phy->pipe_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert pipe_rst err %d\n", ret);
-		return ret;
-	}
-
-	ret = reset_control_deassert(pcie_phy->phy_apb_rst);
-	if (ret < 0) {
-		dev_err(dev, "deassert phy_apb_rst err %d\n", ret);
-		return ret;
+		if (reset_info[i].delay_us)
+			usleep_range(reset_info[i].delay_us, reset_info[i].delay_us + 10);
 	}
 
 	return 0;
@@ -152,6 +143,9 @@ static int amlogic_pcie_phy_do_phy_apb_reset(struct amlogic_pcie_phy *pcie_phy)
 	struct device *dev = pcie_phy->dev;
 	u32 reg[2], val;
 	int ret = 0;
+
+	if (!pcie_phy->reset_base)
+		return ret;
 
 	if (phy_apb_reset_once++ != 0)
 		return ret;
@@ -212,6 +206,10 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 {
 	struct device *dev = pcie_phy->dev;
 	struct device_node *node = dev->of_node;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct resource *efuse_res;
+	void __iomem *efuse_base = NULL;
+	u32 val, offset = 0;
 	int ret = 0, i;
 
 	ret = clk_prepare_enable(pcie_phy->pcie_phy_clk);
@@ -260,7 +258,15 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 			ret = regmap_update_bits(pcie_phy->regmap, 0x1050, GENMASK(9, 5), 0);
 			if (ret)
 				return ret;
+
+			ret = regmap_write(pcie_phy->regmap, 0x1084, 0xFF951071);
+			if (ret)
+				return ret;
 		}
+	} else {
+		ret = regmap_write(pcie_phy->regmap, 0x84, 0xFF951071);
+		if (ret)
+			return ret;
 	}
 
 	if (pcie_phy->port_num != 1) {
@@ -289,6 +295,114 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 			return ret;
 	}
 
+	efuse_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "efuse");
+	if (efuse_res) {
+		efuse_base = devm_ioremap(dev, efuse_res->start, resource_size(efuse_res));
+		if (IS_ERR(efuse_base)) {
+			dev_err(dev, "failed to request efuse_base\n");
+			return PTR_ERR(efuse_base);
+		}
+	} else {
+		dev_err(dev, "failed to get reset_base resource\n");
+		return -ENODEV;
+	}
+
+	if (efuse_base) {
+		val = readl(efuse_base);
+		dev_dbg(dev, " efuse val = 0x%x\n", val);
+		dev_dbg(dev, "boost = 0x%x\n", (u32)((val & GENMASK(11, 7)) >> 7));
+
+		if (pcie_phy->num_lanes == 1 && pcie_phy->port_num == 2) {
+			dev_dbg(dev, "pdio = 0x%x\n", (u32)(val & GENMASK(2, 0)));
+			dev_dbg(dev, "puio = 0x%x\n", (u32)((val & GENMASK(5, 3)) >> 3));
+			dev_dbg(dev, "dcha = 0x%x\n", (u32)((val & GENMASK(16, 13)) >> 13));
+
+			/* boost */
+			if (val & BIT(12)) {
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x3c, GENMASK(20, 16),
+							 ((val & GENMASK(11, 7)) >> 7));
+				if (ret)
+					return ret;
+			}
+
+			if (val & BIT(6)) {
+				/* puio */
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x3c, GENMASK(14, 12),
+							 ((val & GENMASK(5, 3)) >> 3));
+				if (ret)
+					return ret;
+
+				/* pdio */
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x3c, GENMASK(10, 8),
+							 val & GENMASK(2, 0));
+				if (ret)
+					return ret;
+			}
+
+			/* dcha */
+			if (val & BIT(17)) {
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x7c, GENMASK(7, 4),
+							 ((val & GENMASK(16, 13)) >> 13));
+				if (ret)
+					return ret;
+
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x80, GENMASK(7, 4),
+							 ((val & GENMASK(16, 13)) >> 13));
+				if (ret)
+					return ret;
+			}
+		} else {
+			dev_dbg(dev, "u3 tx = 0x%x\n", (u32)((val & GENMASK(21, 18)) >> 18));
+			dev_dbg(dev, "u3 rx = 0x%x\n", (u32)((val & GENMASK(26, 23)) >> 23));
+			if (pcie_phy->port_num == 1)
+				offset = 0x1000;
+
+			/* boost */
+			if (val & BIT(12)) {
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x44 + offset, GENMASK(24, 20),
+							 ((val & GENMASK(11, 7)) >> 7));
+				if (ret)
+					return ret;
+			}
+
+			/* TX */
+			if (val & BIT(22)) {
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x44 + offset, GENMASK(31, 28),
+							 ((val & GENMASK(21, 18)) >> 18));
+				if (ret)
+					return ret;
+			}
+
+			/* RX */
+			if (val & BIT(27)) {
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x7c + offset, GENMASK(7, 4),
+							 ((val & GENMASK(26, 23)) >> 23));
+				if (ret)
+					return ret;
+
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x80 + offset, GENMASK(7, 4),
+							 ((val & GENMASK(26, 23)) >> 23));
+				if (ret)
+					return ret;
+
+				ret = regmap_update_bits(pcie_phy->regmap,
+							 0x84 + offset, GENMASK(7, 4),
+							 ((val & GENMASK(26, 23)) >> 23));
+				if (ret)
+					return ret;
+			}
+		}
+	}
+
 	ret = of_property_read_u32(node, "pll_setting_number",
 				   &pcie_phy->pll_setting_number);
 	if (ret)
@@ -312,8 +426,10 @@ static int amlogic_pcie_phy_a9_power_off(struct amlogic_pcie_phy *pcie_phy)
 	if (ret)
 		return ret;
 
-	clk_disable_unprepare(pcie_phy->pcie_phy_clk);
-	clk_disable_unprepare(pcie_phy->pcie_apb_bus_clk);
+	if (__clk_is_enabled(pcie_phy->pcie_phy_clk))
+		clk_disable_unprepare(pcie_phy->pcie_phy_clk);
+	if (__clk_is_enabled(pcie_phy->pcie_apb_bus_clk))
+		clk_disable_unprepare(pcie_phy->pcie_apb_bus_clk);
 	return 0;
 }
 
@@ -325,8 +441,10 @@ static int amlogic_pcie_phy_a9_exit(struct amlogic_pcie_phy *pcie_phy)
 	if (ret)
 		return ret;
 
-	clk_disable_unprepare(pcie_phy->pcie_phy_clk);
-	clk_disable_unprepare(pcie_phy->pcie_apb_bus_clk);
+	if (__clk_is_enabled(pcie_phy->pcie_phy_clk))
+		clk_disable_unprepare(pcie_phy->pcie_phy_clk);
+	if (__clk_is_enabled(pcie_phy->pcie_apb_bus_clk))
+		clk_disable_unprepare(pcie_phy->pcie_apb_bus_clk);
 	return ret;
 }
 
@@ -341,41 +459,28 @@ static int amlogic_pcie_phy_get_reset(struct amlogic_pcie_phy *pcie_phy)
 	struct device_node *node = dev->of_node;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct resource *res;
-	int ret = 0;
+	int ret = 0, i;
 
-	pcie_phy->mac_apb_rst = devm_reset_control_get_exclusive(dev, "mac_apb_rst");
-	if (IS_ERR(pcie_phy->mac_apb_rst)) {
-		if (PTR_ERR(pcie_phy->mac_apb_rst) != -EPROBE_DEFER)
-			goto get_rst_reg;
+	if (pcie_phy->port_num != 1) {
+		pcie_phy->phy_apb_rst = devm_reset_control_get_exclusive(dev, "phy_apb");
+		if (IS_ERR(pcie_phy->phy_apb_rst)) {
+			if (PTR_ERR(pcie_phy->phy_apb_rst) != -EPROBE_DEFER)
+				goto get_rst_reg;
+		}
 	}
 
-	pcie_phy->por_rst = devm_reset_control_get_exclusive(dev, "por_rst");
-	if (IS_ERR(pcie_phy->por_rst)) {
-		if (PTR_ERR(pcie_phy->por_rst) != -EPROBE_DEFER)
-			dev_err(dev, "por_rst property in node\n");
-		return PTR_ERR(pcie_phy->por_rst);
-	}
+	pcie_phy->reset_number = ARRAY_SIZE(reset_info);
+	pcie_phy->resets = devm_kcalloc(dev, pcie_phy->reset_number, sizeof(*pcie_phy->resets),
+				       GFP_KERNEL);
+	if (IS_ERR_OR_NULL(pcie_phy->resets))
+		return -ENOMEM;
 
-	pcie_phy->pipe_rst = devm_reset_control_get_exclusive(dev, "pipe_rst");
-	if (IS_ERR(pcie_phy->pipe_rst)) {
-		if (PTR_ERR(pcie_phy->pipe_rst) != -EPROBE_DEFER)
-			dev_err(dev, "pipe_rst property in node\n");
-		return PTR_ERR(pcie_phy->pipe_rst);
-	}
+	for (i = 0; i < pcie_phy->reset_number; i++)
+		pcie_phy->resets[i].id = reset_info[i].name;
 
-	pcie_phy->phy_rst = devm_reset_control_get_exclusive(dev, "phy_rst");
-	if (IS_ERR(pcie_phy->phy_rst)) {
-		if (PTR_ERR(pcie_phy->phy_rst) != -EPROBE_DEFER)
-			dev_err(dev, "phy_rst property in node\n");
-		return PTR_ERR(pcie_phy->phy_rst);
-	}
-
-	pcie_phy->phy_apb_rst = devm_reset_control_get_exclusive(dev, "phy_apb_rst");
-	if (IS_ERR(pcie_phy->phy_apb_rst)) {
-		if (PTR_ERR(pcie_phy->phy_apb_rst) != -EPROBE_DEFER)
-			dev_err(dev, "phy_apb_rst property in node\n");
-		return PTR_ERR(pcie_phy->phy_apb_rst);
-	}
+	ret = devm_reset_control_bulk_get_exclusive(dev, pcie_phy->reset_number, pcie_phy->resets);
+	if (ret)
+		return dev_err_probe(dev, ret, "Failed to get resets\n");
 
 	return 0;
 

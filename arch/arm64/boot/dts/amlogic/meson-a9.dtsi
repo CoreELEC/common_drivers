@@ -2197,7 +2197,7 @@
 			pll_setting_number = <7>;
 			/* <reg_offset vlaue> */
 			phy_pll_setting_1 = <0x0018 0x1f455ed>;
-			phy_pll_setting_2 = <0x001c 0x809e7e5>;
+			phy_pll_setting_2 = <0x001c 0x909e7e5>;
 			phy_pll_setting_3 = <0x0018 0xdf455ed>;
 			phy_pll_setting_4 = <0x0020 0xa03b9788>;
 			phy_pll_setting_5 = <0x000c 0x40000071>;
@@ -2207,14 +2207,27 @@
 			 */
 			phy_pll_setting_7 = <0x017c 0x3000000>;
 
-			/* resets = <&reset RESET_PCIE_PHY>;
-			 * reset-names = "phy";
-			 */
+			resets = <&reset RESET_PCIEA_PIPE>,
+				<&reset RESET_PCIE_A_POR>,
+				<&reset RESET_PCIEA_PHY>,
+				<&reset RESET_PCIEA_MAC_APB>,
+				<&reset RESET_PCIEA_PHY_APB>,
+				<&reset RESET_PCIEA_0>,
+				<&reset RESET_PCIEA_1>,
+				<&reset RESET_PCIEA_2>,
+				<&reset RESET_PCIEA_3>,
+				<&reset RESET_PCIEA_4>,
+				<&reset RESET_PCIEA_5>,
+				<&reset RESET_PCIEA_6>,
+				<&reset RESET_PCIEA_7>;
+			reset-names = "pipe", "por", "phy", "mac_apb", "phy_apb", "rst0",
+					"rst1", "rst2", "rst3", "rst4", "rst5", "rst6", "rst7";
 			pcie_rst_number = <1>;
 			/* <reg_offset vlaue> */
 			pcie_rst_1 = <0x04 0xFF007800>;
 			pcie-phy-apb-rst = <0x4 0x400>;
 			#phy-cells = <0>;
+			power-domains = <&pwrdm PDID_A9_PCIE3PHY>;
 			status = "disabled";
 		};
 
@@ -2235,7 +2248,7 @@
 			pll_setting_number = <11>;
 			/* <reg_offset vlaue> */
 			phy_pll_setting_1 = <0x0018 0x1f455ed>;
-			phy_pll_setting_2 = <0x001c 0x809e7e5>;
+			phy_pll_setting_2 = <0x001c 0x909e7e5>;
 			phy_pll_setting_3 = <0x0018 0xdf455ed>;
 			phy_pll_setting_4 = <0x0020 0xa03b9788>;
 			phy_pll_setting_5 = <0x000c 0x40000071>;
@@ -2251,15 +2264,28 @@
 			 */
 			phy_pll_setting_11 = <0x117c 0x3000000>;
 
-			/* resets = <&reset RESET_PCIE_PHY>;
-			 * reset-names = "phy";
-			 */
+			resets = <&reset RESET_PCIEB_PIPE>,
+				<&reset RESET_PCIE_B_POR>,
+				<&reset RESET_PCIEB_PHY>,
+				<&reset RESET_PCIEB_MAC_APB>,
+				/* <&reset RESET_PCIEA_PHY_APB>, */
+				<&reset RESET_PCIEB_0>,
+				<&reset RESET_PCIEB_1>,
+				<&reset RESET_PCIEB_2>,
+				<&reset RESET_PCIEB_3>,
+				<&reset RESET_PCIEB_4>,
+				<&reset RESET_PCIEB_5>,
+				<&reset RESET_PCIEB_6>,
+				<&reset RESET_PCIEB_7>;
+			reset-names = "pipe", "por", "phy", "mac_apb", "rst0",
+					"rst1", "rst2", "rst3", "rst4", "rst5", "rst6", "rst7";
 			pcie_rst_number = <2>;
 			/* <reg_offset vlaue> */
 			pcie_rst_1 = <0x04 0x18>;
 			pcie_rst_2 = <0x0c 0x1FF8>;
 			pcie-phy-apb-rst = <0x4 0x400>;
 			#phy-cells = <0>;
+			power-domains = <&pwrdm PDID_A9_PCIE3PHY>;
 			status = "disabled";
 		};
 
@@ -2279,7 +2305,7 @@
 			pll_setting_number = <7>;
 			/* <reg_offset vlaue> */
 			phy_pll_setting_1 = <0x0014 0x01f455ed>;
-			phy_pll_setting_2 = <0x0018 0x0809e7e5>;
+			phy_pll_setting_2 = <0x0018 0x0909e7e5>;
 			phy_pll_setting_3 = <0x0014 0x0df455ed>;
 			phy_pll_setting_4 = <0x0028 0xa03b9788>;
 			phy_pll_setting_5 = <0x001c 0x40000071>;
@@ -2289,15 +2315,28 @@
 			 */
 			phy_pll_setting_7 = <0x017c 0x3000000>;
 
-			/* resets = <&reset RESET_PCIE_PHY>;
-			 * reset-names = "phy";
-			 */
+			resets = <&reset RESET_U3HSG_PCIE_PIPE>,
+				<&reset RESET_PCIE_B_POR>,
+				<&reset RESET_U3HSG_PCIE2_PHY>,
+				<&reset RESET_PCIEB_MAC_APB>,
+				<&reset RESET_U3HSG_PCIE2_PHY_APB>,
+				<&reset RESET_PCIEB_0>,
+				<&reset RESET_PCIEB_1>,
+				<&reset RESET_PCIEB_2>,
+				<&reset RESET_PCIEB_3>,
+				<&reset RESET_PCIEB_4>,
+				<&reset RESET_PCIEB_5>,
+				<&reset RESET_PCIEB_6>,
+				<&reset RESET_PCIEB_7>;
+			reset-names = "pipe", "por", "phy", "mac_apb", "phy_apb", "rst0",
+					"rst1", "rst2", "rst3", "rst4", "rst5", "rst6", "rst7";
 			pcie_rst_number = <2>;
 			/* <reg_offset vlaue> */
 			pcie_rst_1 = <0x04 0x18>;
 			pcie_rst_2 = <0x0c 0x1FF8>;
 			pcie-phy-apb-rst = <0x4 0x400>;
 			#phy-cells = <0>;
+			power-domains = <&pwrdm PDID_A9_U3HSG_PCIE2>;
 			status = "disabled";
 		};
 
