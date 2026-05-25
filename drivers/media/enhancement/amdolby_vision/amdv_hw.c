@@ -42,6 +42,7 @@
 #include <linux/vmalloc.h>
 #include <linux/amlogic/arm-smccc.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#include <linux/amlogic/media/rdma/reg_shadow.h>
 
 static unsigned int dv_ll_output_mode = AMDV_OUTPUT_MODE_HDR10;
 static bool stb_core2_const_flag;
@@ -4345,6 +4346,38 @@ static u32 vpp_data_conv_para0_backup;
 static u32 vpp_data_conv_para1_backup;
 #endif
 
+/*
+ * The shadow mechanism is required to resolve
+ * the conflict between the DV and DRM 0x1a76 reg.
+ * a9 VIU_OSD1_PATH_CTRL bit[16:15]:
+ * enable core2:  val=1 -> bit15 = 1, bit16 = 0
+ * disable core2: val=2 -> bit15 = 0, bit16 = 1
+ */
+static u32 set_amdv_core2_reg(u32 val)
+{
+	struct meson_reg_shadow *ctx;
+	u32 reg_val;
+	u32 mask;
+	u32 field_val;
+
+	ctx = meson_reg_shadow_get();
+
+	reg_val = READ_VPP_DV_REG(VIU_OSD1_PATH_CTRL);
+	mask = BIT(16) | BIT(15);
+	field_val = (val << 15) & mask;
+
+	reg_val = meson_reg_shadow_update_bits(ctx,
+						VIU_OSD1_PATH_CTRL,
+						reg_val,
+						mask,
+						field_val);
+
+	pr_dv_dbg("a9 core2 0x1a76 val=%u field=0x%x reg=0x%x\n",
+			val, field_val, reg_val);
+
+	return reg_val;
+}
+
 void enable_amdv_v1(int enable)
 {
 	u32 core_flag = 0;
@@ -5498,11 +5531,6 @@ void enable_amdv_v1(int enable)
 						(OSD_DOLBY_BYPASS_EN,
 						 1,
 						 4, 1);/*core2c bypass*/
-				} else if (is_aml_a9()) {
-					VSYNC_WR_DV_REG_BITS(VIU_VD1_PATH_CTRL,
-						1, 16, 1);   /* core1 bypass */
-					VSYNC_WR_DV_REG_BITS(VIU_OSD1_PATH_CTRL,
-						1, 16, 1);   /* core2 bypass */
 				} else {
 					VSYNC_WR_DV_REG_BITS
 						(AMDV_PATH_CTRL,
@@ -5823,15 +5851,11 @@ void enable_amdv_v2_stb(int enable)
 						 0, 3, 1);   /* bypass core3  */
 
 					if (amdv_mask & 2)
-						VSYNC_WR_DV_REG_BITS
-							(VIU_OSD1_PATH_CTRL,
-							 0,
-							 16, 1);/*core2 enable*/
+						VSYNC_WR_DV_REG(VIU_OSD1_PATH_CTRL,
+							set_amdv_core2_reg(1));/*core2 enable*/
 					else
-						VSYNC_WR_DV_REG_BITS
-							(VIU_OSD1_PATH_CTRL,
-							 1,
-							 16, 1);/*core2 bypass*/
+						VSYNC_WR_DV_REG(VIU_OSD1_PATH_CTRL,
+							set_amdv_core2_reg(2));/*core2 bypass*/
 				} else {
 					if (amdv_mask & 4)
 						VSYNC_WR_DV_REG_BITS
@@ -6451,10 +6475,9 @@ void enable_amdv_v2_stb(int enable)
 					(VIU_VD1_PATH_CTRL,
 					 /* disable core1 */
 					 1, 16, 1);
-				VSYNC_WR_DV_REG_BITS
-					(VIU_OSD1_PATH_CTRL,
-					 /* disable core2 */
-					 1, 16, 1);
+				VSYNC_WR_DV_REG(VIU_OSD1_PATH_CTRL,
+					/* disable core2 */
+					set_amdv_core2_reg(2));
 			} else if (is_aml_t7_stbmode()) {
 				VSYNC_WR_DV_REG_BITS
 					(VPP_VD1_DSC_CTRL,
