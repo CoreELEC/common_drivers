@@ -429,7 +429,11 @@ done:
 static int aml_dwc3_core_soft_reset_new(struct aml_dwc3 *dwc)
 {
 	u32		reg;
-	int		retries = 1000;
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	int	retries = 2000;
+#else
+	int	retries = 1000;
+#endif
 
 	/*
 	 * We're resetting only the device side because, if we're in host mode,
@@ -464,7 +468,7 @@ static int aml_dwc3_core_soft_reset_new(struct aml_dwc3 *dwc)
 			udelay(1);
 	} while (--retries);
 
-	dev_warn(dwc->dev, "DWC3 controller soft reset failed.\n");
+	dev_warn(dwc->dev, "DWC3 controller soft reset failed.,retry=%d\n", retries);
 	return -ETIMEDOUT;
 
 done:
@@ -475,7 +479,6 @@ done:
 	 */
 	if (DWC3_VER_IS_WITHIN(DWC31, ANY, 180A))
 		msleep(50);
-
 	return 0;
 }
 
