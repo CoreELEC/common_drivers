@@ -1308,6 +1308,7 @@ struct vdin_dev_s {
 	bool is_status_locked;
 	bool is_need_re_cfg; /* signal status changed during start_dec */
 	bool re_cfg; /* hdr/dv status changed */
+	unsigned int cur_ufr_mode; /* ufr_mode = 1 means DLG on */
 	unsigned int mute_cnt;
 	unsigned int ignore_frames;
 	/*use frame rate to cal duration*/
