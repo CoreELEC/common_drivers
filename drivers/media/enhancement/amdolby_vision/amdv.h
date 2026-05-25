@@ -588,7 +588,7 @@ struct dv_inst_s {
 	int amdv_wait_count;
 	bool amdv_wait_init;
 	bool dv_unique_drm;
-	void *metadata_parser;
+	void __rcu *metadata_parser;
 	bool mapped;
 	int layer_id;/*display on vd1 or vd2*/
 	int valid;

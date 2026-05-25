@@ -14,6 +14,7 @@
 #include <linux/errno.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
+#include <linux/rcupdate.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/video_sink/video.h>
 #include <linux/amlogic/media/video_sink/video_signal_notify.h>
@@ -2416,7 +2417,7 @@ void amdv_create_inst(void)
 			memset(dv_inst[i].comp_buf[1], 0, COMP_BUF_SIZE);
 
 		dv_inst[i].current_id = 0;
-		dv_inst[i].metadata_parser = NULL;
+		rcu_assign_pointer(dv_inst[i].metadata_parser, NULL);
 		dv_inst[i].layer_id = VD_PATH_MAX;
 		dv_inst[i].mapped = false;
 	}
@@ -2515,14 +2516,25 @@ int dv_inst_map(int *inst)
 		dv_inst[new_map_id].mapped = true;
 		*inst = new_map_id;
 
-		if (!dv_inst[*inst].metadata_parser && p_funcs_stb)
-			dv_inst[*inst].metadata_parser =
+		if (!rcu_dereference_protected(dv_inst[*inst].metadata_parser,
+					       lockdep_is_held(&dv_inst_lock)) &&
+		    p_funcs_stb) {
+			void *new_parser =
 				p_funcs_stb->multi_mp_init(dolby_vision_flags
 								& FLAG_CHANGE_SEQ_HEAD
 								? 1 : 0);
-		if (dv_inst[*inst].metadata_parser) {
-			p_funcs_stb->multi_mp_reset(dv_inst[*inst].metadata_parser, 1);
-			pr_dv_dbg("reset mp\n");
+			/* publish to vsync readers via RCU */
+			rcu_assign_pointer(dv_inst[*inst].metadata_parser,
+					   new_parser);
+		}
+		{
+			void *mp = rcu_dereference_protected
+				(dv_inst[*inst].metadata_parser,
+				 lockdep_is_held(&dv_inst_lock));
+			if (mp) {
+				p_funcs_stb->multi_mp_reset(mp, 1);
+				pr_dv_dbg("reset mp\n");
+			}
 		}
 		mutex_unlock(&dv_inst_lock);
 		/*clear dv_vf and framecount*/
@@ -2563,10 +2575,17 @@ void dv_inst_unmap(int inst)
 	if (dv_inst_valid(inst) && dv_inst[inst].mapped) {
 		dv_inst[inst].mapped = false;
 		last_unmap_id = inst;
-		if (dv_inst[inst].metadata_parser && p_funcs_stb) {
-			p_funcs_stb->multi_mp_release
-				(&dv_inst[inst].metadata_parser);
-			dv_inst[inst].metadata_parser = NULL;
+		{
+			void *parser = rcu_dereference_protected
+				(dv_inst[inst].metadata_parser,
+				 lockdep_is_held(&dv_inst_lock));
+			if (parser && p_funcs_stb) {
+				/* NULL first, drain in-flight vsync readers, then release */
+				rcu_assign_pointer
+					(dv_inst[inst].metadata_parser, NULL);
+				synchronize_rcu();
+				p_funcs_stb->multi_mp_release(&parser);
+			}
 		}
 		pr_info("%s %d OK\n", __func__, inst);
 	}
@@ -5902,16 +5921,29 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 				 &md_size,
 				 true);
 			} else {
-				rpu_ret =
-				p_funcs_stb->multi_mp_process
-				(dv_inst[dv_id].metadata_parser,
-				 meta_buf, rpu_size,
-				 comp_buf +
-				 *total_comp_size,
-				 &comp_size,
-				 md_buf + *total_md_size,
-				 &md_size,
-				 true, DV_TYPE_DOVI);
+				void *mp;
+
+				/* hold a live parser across multi_mp_process */
+				rcu_read_lock();
+				mp = rcu_dereference
+					(dv_inst[dv_id].metadata_parser);
+				if (!mp) {
+					/* torn down concurrently: contribute zero */
+					rcu_read_unlock();
+					rpu_ret = 0;
+				} else {
+					rpu_ret =
+					p_funcs_stb->multi_mp_process
+					(mp,
+					 meta_buf, rpu_size,
+					 comp_buf +
+					 *total_comp_size,
+					 &comp_size,
+					 md_buf + *total_md_size,
+					 &md_size,
+					 true, DV_TYPE_DOVI);
+					rcu_read_unlock();
+				}
 			}
 
 			if (rpu_ret < 0) {
@@ -6091,7 +6123,7 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 			md_size = 0;
 			comp_size = 0;
 
-			if (is_aml_tvmode())
+			if (is_aml_tvmode()) {
 				rpu_ret =
 				p_funcs_tv->metadata_parser_process
 				(meta_buf, size,
@@ -6100,16 +6132,29 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 				md_buf + *total_md_size,
 				&md_size,
 				true);
-			else
-				rpu_ret =
-				p_funcs_stb->multi_mp_process
-				(dv_inst[dv_id].metadata_parser,
-				 meta_buf, size,
-				 comp_buf + *total_comp_size,
-				 &comp_size,
-				 md_buf + *total_md_size,
-				 &md_size,
-				 true, DV_TYPE_ATSC);
+			} else {
+				void *mp;
+
+				/* hold a live parser across multi_mp_process */
+				rcu_read_lock();
+				mp = rcu_dereference
+					(dv_inst[dv_id].metadata_parser);
+				if (!mp) {
+					rcu_read_unlock();
+					rpu_ret = 0;
+				} else {
+					rpu_ret =
+					p_funcs_stb->multi_mp_process
+					(mp,
+					 meta_buf, size,
+					 comp_buf + *total_comp_size,
+					 &comp_size,
+					 md_buf + *total_md_size,
+					 &md_size,
+					 true, DV_TYPE_ATSC);
+					rcu_read_unlock();
+				}
+			}
 
 			if (rpu_ret < 0) {
 				pr_dv_error
@@ -14672,12 +14717,16 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			/*where the decoder does not call the map and dv can also work normally.*/
 			/*Usually parser will be automatically created when play and map*/
 			for (i = 0; i < 2; i++) {
-				dv_inst[i].metadata_parser =
+				void *new_parser =
 				p_funcs_stb->multi_mp_init(dolby_vision_flags
 							   & FLAG_CHANGE_SEQ_HEAD
 							   ? 1 : 0);
-				p_funcs_stb->multi_mp_reset
-					(dv_inst[i].metadata_parser, 1);
+				rcu_assign_pointer
+					(dv_inst[i].metadata_parser,
+					 new_parser);
+				if (new_parser)
+					p_funcs_stb->multi_mp_reset
+						(new_parser, 1);
 			}
 
 			for (i = 0; i < new_m_dovi_setting.num_input; i++) {
@@ -14959,15 +15008,28 @@ int unregister_dv_functions(void)
 		}
 
 		if (multi_dv_mode) {
+			void *snapshots[NUM_INST] = { NULL };
+
+			/* two-pass: NULL all under lock, one synchronize_rcu, then release */
+			mutex_lock(&dv_inst_lock);
 			for (i = 0; i < NUM_INST; i++) {
-				if (dv_inst[i].metadata_parser && p_funcs_stb) {
-					p_funcs_stb->multi_mp_release
-						(&dv_inst[i].metadata_parser);
-					dv_inst[i].metadata_parser = NULL;
-				}
+				snapshots[i] = rcu_dereference_protected
+					(dv_inst[i].metadata_parser,
+					 lockdep_is_held(&dv_inst_lock));
+				if (snapshots[i])
+					rcu_assign_pointer
+						(dv_inst[i].metadata_parser,
+						 NULL);
 				if (dv_inst[i].mapped)
 					dv_inst[i].mapped = false;
 			}
+			synchronize_rcu();
+			for (i = 0; i < NUM_INST; i++) {
+				if (snapshots[i] && p_funcs_stb)
+					p_funcs_stb->multi_mp_release
+						(&snapshots[i]);
+			}
+			mutex_unlock(&dv_inst_lock);
 			if (new_m_dovi_setting.output_ctrl_data) {
 				vfree(new_m_dovi_setting.output_ctrl_data);
 				new_m_dovi_setting.output_ctrl_data = NULL;
@@ -17941,16 +18003,28 @@ static int __exit amdolby_vision_remove(struct platform_device *pdev)
 		vsem_md_buf = NULL;
 	}
 
-	for (i = 0; i < NUM_INST; i++) {
-		if (dv_inst[i].metadata_parser) {
-			if (p_funcs_stb && p_funcs_stb->multi_mp_release)
-				p_funcs_stb->multi_mp_release
-					(&dv_inst[i].metadata_parser);
-			else if (p_funcs_tv && p_funcs_tv->multi_mp_release)
-				p_funcs_tv->multi_mp_release
-					(&dv_inst[i].metadata_parser);
-			dv_inst[i].metadata_parser = NULL;
+	{
+		void *snapshots[NUM_INST] = { NULL };
+
+		/* two-pass RCU teardown (see unregister_dv_functions) */
+		for (i = 0; i < NUM_INST; i++) {
+			snapshots[i] = rcu_dereference_raw
+				(dv_inst[i].metadata_parser);
+			if (snapshots[i])
+				rcu_assign_pointer
+					(dv_inst[i].metadata_parser, NULL);
 		}
+		synchronize_rcu();
+		for (i = 0; i < NUM_INST; i++) {
+			if (!snapshots[i])
+				continue;
+			if (p_funcs_stb && p_funcs_stb->multi_mp_release)
+				p_funcs_stb->multi_mp_release(&snapshots[i]);
+			else if (p_funcs_tv && p_funcs_tv->multi_mp_release)
+				p_funcs_tv->multi_mp_release(&snapshots[i]);
+		}
+	}
+	for (i = 0; i < NUM_INST; i++) {
 		if (dv_inst[i].md_buf[0]) {
 			vfree(dv_inst[i].md_buf[0]);
 			dv_inst[i].md_buf[0] = NULL;
