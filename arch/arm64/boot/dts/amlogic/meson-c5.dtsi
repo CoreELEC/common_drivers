@@ -2932,6 +2932,11 @@
 		status = "okay";
 	};
 
+	mbd_vpu {
+		compatible = "amlogic, mbd_vpu_c3";
+		status = "okay";
+	};
+
 	ge2d {
 		compatible = "amlogic, mbp-ge2d-c5";
 		status = "okay";
