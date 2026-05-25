@@ -5081,6 +5081,7 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 	enum hdr_hist_sel hist_select = HIST_E_RGBMAX;
 	int tmp_val;
 	int osd1_hdr_path_sel = 0;/*0:after osdblend, 1:before osdblend*/
+	int osd2_hdr_path_sel = 0;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	enum LUT_DMA_ID_e dma_id = HDR_DMA_ID;
@@ -6025,8 +6026,12 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 		hdr_lut_param.cgain_lut[64]);
 #endif
 	/*mtx parameters*/
-//	if (chip_type_id == chip_a9)
+	if (chip_type_id == chip_a9) {
 //		osd1_hdr_path_sel = READ_VPP_REG_BITS(VIU_OSD1_PATH_CTRL, 12, 1);
+		tmp_val = READ_VPP_REG_BITS(VIU_OSD3_PATH_CTRL, 15, 1);
+		if (tmp_val)
+			osd2_hdr_path_sel = 1;
+	}
 
 	/* default matrix config */
 	if (module_sel == VD1_HDR ||
@@ -6127,7 +6132,9 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_t3x ||
 			chip_type_id == chip_s5 ||
-			(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
+			(chip_type_id == chip_a9 &&
+			((osd1_hdr_path_sel && module_sel == OSD1_HDR) ||
+			(osd2_hdr_path_sel && module_sel == OSD2_HDR)))) &&
 			(module_sel == OSD1_HDR ||
 			module_sel == OSD2_HDR ||
 			module_sel == OSD3_HDR) &&
@@ -6171,7 +6178,9 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 			chip_type_id == chip_s6 ||
 			chip_type_id == chip_t3x ||
 			chip_type_id == chip_s5 ||
-			(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
+			(chip_type_id == chip_a9 &&
+			((osd1_hdr_path_sel && module_sel == OSD1_HDR) ||
+			(osd2_hdr_path_sel && module_sel == OSD2_HDR)))) &&
 			(module_sel == OSD1_HDR ||
 			module_sel == OSD2_HDR ||
 			module_sel == OSD3_HDR)  &&
@@ -6607,7 +6616,9 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 				if ((chip_type_id == chip_s7d ||
 					chip_type_id == chip_s6 ||
 					chip_type_id == chip_s5 ||
-					(chip_type_id == chip_a9 && osd1_hdr_path_sel)) &&
+					(chip_type_id == chip_a9 &&
+					((osd1_hdr_path_sel && module_sel == OSD1_HDR) ||
+					(osd2_hdr_path_sel && module_sel == OSD2_HDR)))) &&
 					(module_sel == OSD1_HDR ||
 					module_sel == OSD2_HDR ||
 					module_sel == OSD3_HDR)) {
@@ -7085,6 +7096,12 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 				else
 					mtx_on = MTX_ON;
 				mtx_sel = VPP_OSD1_MTX;
+			} else if (module_sel == OSD2_HDR) {
+				if (!osd2_hdr_path_sel || is_amdv_on())
+					mtx_on = MTX_OFF;
+				else
+					mtx_on = MTX_ON;
+				mtx_sel = VPP_OSD3_MTX;
 			}
 		}
 
