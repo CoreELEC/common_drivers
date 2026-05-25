@@ -10564,7 +10564,7 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 #define CORE_META_LENGTH 512
 
 static unsigned char reversed_meta_buffer[CORE_META_LENGTH];
-static unsigned char combo_meta_buffer[CORE_META_LENGTH];
+static unsigned char combo_meta_buffer[MD_BUF_SIZE];
 
 static size_t reverse_dv_meta(
 	unsigned char *metadata,
