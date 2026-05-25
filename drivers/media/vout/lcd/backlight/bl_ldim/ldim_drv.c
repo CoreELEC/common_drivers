@@ -249,11 +249,12 @@ static int ldim_power_off(void)
 	}
 	LDIMPR("%s\n", __func__);
 
+	if (fw && fw->fw_cmd)
+		fw->fw_cmd(fw, CMD_PWROFF, NULL);
+
 	ldim_driver.state &= ~LDIM_STATE_POWER_ON;
 	ldim_driver.init_on_flag = 0;
 	ldim_driver.state &= ~LDIM_STATE_TRANSMIT_EN;
-	if (fw && fw->fw_cmd)
-		fw->fw_cmd(fw, CMD_PWROFF, NULL);
 
 	if (ldim_driver.dev_drv &&
 		ldim_driver.dev_drv->dev_transmit_stop)
