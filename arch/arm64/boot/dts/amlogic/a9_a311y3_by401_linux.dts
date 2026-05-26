@@ -1652,7 +1652,7 @@
 };
 
 &dptx {
-	status = "okay";
+	status = "disabled";
 	pxp_mode = <0>;
 	enc_idx = <0>;
 };

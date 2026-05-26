@@ -55,7 +55,7 @@
 			};
 			drm_to_dptx: endpoint@2 {
 				reg = <2>;
-				remote-endpoint = <&dptx_to_drm>;
+				remote-endpoint = <0>;
 			};
 			//drm_to_edp: endpoint@2 {
 			//	reg = <1>;
@@ -749,7 +749,7 @@
 			#size-cells = <0>;
 			dptx_to_drm: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <&drm_to_dptx>;
+				remote-endpoint = <0>;
 			};
 		};
 	};

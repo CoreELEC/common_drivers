@@ -478,8 +478,11 @@ static int dptx_probe(struct platform_device *pdev)
 	dptx_hdcp_init(tx_comm);
 	dev_set_drvdata(device, tx_comm);
 
-	tx_comm->dpphy_to_core_nb.notifier_call = dpphy_to_core_notifier;
-	meson_tx_dpphy_register_notify(&tx_comm->dpphy_to_core_nb);
+	/* eDP doesn't have typeC connector, so only DPTx needs the notifier */
+	if (!tx_comm->is_edp) {
+		tx_comm->dpphy_to_core_nb.notifier_call = dpphy_to_core_notifier;
+		meson_tx_dpphy_register_notify(&tx_comm->dpphy_to_core_nb);
+	}
 
 	/* In multiple DPTX scenarios, the probe will be executed multiple times,
 	 * so a global handle cannot be used for registration here.
