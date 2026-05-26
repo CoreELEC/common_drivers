@@ -569,12 +569,13 @@ static void aml_validate_cpu_voltage(struct cluster_data *data)
 {
 	int cnt = data->opp_cnt;
 	int dsu_cnt = data->dsu_opp_cnt;
-	unsigned long max = data->opp_table[cnt - 1].volt;
-	unsigned long min = data->opp_table[0].volt;
-	int cpuvolt_old, dsuvolt_old;
+	int max = data->opp_table[cnt - 1].volt;
+	int min = data->opp_table[0].volt;
+	int cpuvolt_old, dsuvolt_old, volt;
 
 	if (data->skip_volt_scaling)
 		return;
+
 	cpuvolt_old = regulator_get_voltage(data->cpureg);
 	if (cpuvolt_old > max)
 		cpuvolt_old = max;
@@ -583,8 +584,17 @@ static void aml_validate_cpu_voltage(struct cluster_data *data)
 
 	regulator_set_voltage(data->cpureg, cpuvolt_old, MAX_VOLTAGE);
 
+	if (data->cpu_sramreg) {
+		max = data->opp_table[cnt - 1].sram_volt;
+		min = data->opp_table[0].sram_volt;
+		volt = clamp(regulator_get_voltage(data->cpu_sramreg), min, max);
+		regulator_set_voltage(data->cpu_sramreg, volt, MAX_VOLTAGE);
+	}
+
 	if (!data->dsureg)
 		return;
+
+	min = data->opp_table[0].volt;
 	dsuvolt_old = regulator_get_voltage(data->dsureg);
 	if (dsuvolt_old > data->dsu_opp_table[dsu_cnt - 1].dsuvolt)
 		dsuvolt_old = data->dsu_opp_table[dsu_cnt - 1].dsuvolt;
@@ -592,6 +602,13 @@ static void aml_validate_cpu_voltage(struct cluster_data *data)
 		dsuvolt_old = min;
 
 	regulator_set_voltage(data->dsureg, dsuvolt_old, MAX_VOLTAGE);
+
+	if (!data->dsu_sramreg)
+		return;
+	max = data->dsu_opp_table[dsu_cnt - 1].dsu_sramvolt;
+	min = data->opp_table[0].sram_volt;
+	volt = clamp(regulator_get_voltage(data->dsu_sramreg), min, max);
+	regulator_set_voltage(data->dsu_sramreg, volt, MAX_VOLTAGE);
 }
 
 static void aml_setup_policy_rest(struct cluster_data *data)
@@ -799,8 +816,7 @@ static int aml_cpufreq_probe(struct platform_device *pdev)
 		if (!aml_setup_opptable(&clusterdata[i]))
 			goto free;
 
-		if (!of_property_read_bool(cluster_np, "bypass_voltage_validate"))
-			aml_validate_cpu_voltage(&clusterdata[i]);
+		aml_validate_cpu_voltage(&clusterdata[i]);
 
 		mutex_lock(&cluster_list_lock);
 		list_add_tail(&clusterdata[i].node, &cluster_list);
