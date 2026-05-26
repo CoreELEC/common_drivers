@@ -121,7 +121,7 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 	}
 
 	DRM_INFO("%s get %d modes\n", __func__, count);
-	return 0;
+	return count;
 }
 
 static enum drm_mode_status meson_dptx_check_mode(struct drm_connector *connector,
@@ -1341,7 +1341,7 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	dptx_register_dev_to_txdev_xlate(tx_dev, conn_dev_to_meson_tx_dev);
 
 	/* init dptx property */
-	tx_state = devm_kzalloc(drm->dev, sizeof(*tx_state), GFP_KERNEL);
+	tx_state = kzalloc(sizeof(*tx_state), GFP_KERNEL);
 	if (!tx_state)
 		return -ENOMEM;
 	/*hdcp init, default is disable state*/
