@@ -290,12 +290,13 @@
 	isp0: isp0@ff540000 {
 		compatible = "amlogic, isp";
 		reg = <0x0 0xff540000 0x0 0x17780>,
-				<0x0 0xff566000 0x0 0x600>;
+		      <0x0 0xff566000 0x0 0x600>;
 		reg-names = "base", "disp";
 		power-domains = <&pwrdm PDID_C5_ISP>,<&pwrdm PDID_C5_DEWARP>;
 		power-domain-names = "isp_pd", "opp_pd";
-		clocks = <&clkc CLKID_CSIPHY0>, <&clkc CLKID_ISP0>, <&clkc CLKID_DEWARPA>;
-		clock-names = "mipi_csi_clk", "mipi_isp_clk", "isp_dewarp_clk";
+		clocks = <&clkc CLKID_CSIPHY0>, <&clkc CLKID_ISP0>,
+			 <&clkc CLKID_DEWARPA>, <&clkc CLKID_VAPB>;
+		clock-names = "mipi_csi_clk", "mipi_isp_clk", "isp_dewarp_clk", "vapb_clk";
 		interrupts = <GIC_SPI 383 IRQ_TYPE_EDGE_RISING>,
 			     <GIC_SPI 372 IRQ_TYPE_EDGE_RISING>,
 			     <GIC_SPI 373 IRQ_TYPE_EDGE_RISING>,
