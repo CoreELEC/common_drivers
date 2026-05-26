@@ -36,6 +36,7 @@ struct bl_data_s {
 	unsigned int chip_type;
 	const char *chip_name;
 	unsigned int pwm_vs_flag;
+	unsigned int pwm_vs_shift;
 };
 
 /* for lcd backlight power */
@@ -253,6 +254,7 @@ struct bl_pwm_init_config_s {
 	unsigned int *pwm_vs_reg;
 	unsigned int pwm_vs_reg_cnt;
 	unsigned int pwm_vs_flag;
+	unsigned int pwm_vs_shift;
 };
 
 struct aml_bl_drv_s *aml_bl_get_driver(int index);

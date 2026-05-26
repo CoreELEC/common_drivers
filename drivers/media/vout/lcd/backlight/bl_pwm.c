@@ -263,8 +263,8 @@ static void bl_set_pwm_vs(struct bl_pwm_config_s *bl_pwm,
 			     n, sw, pwm_hi, bl_pwm->pwm_phase);
 		}
 		for (i = 0; i < n; i++) {
-			vs[i] = 1 + (sw * i) + bl_pwm->pwm_phase;
-			ve[i] = vs[i] + pwm_hi - 1;
+			vs[i] = 1 + (((sw * i) + bl_pwm->pwm_phase) >> pwm_init_cfg.pwm_vs_shift);
+			ve[i] = (vs[i] + pwm_hi - 1) >> pwm_init_cfg.pwm_vs_shift;
 		}
 		for (i = n; i < 8; i++) {
 			vs[i] = 0x1fff;
@@ -284,6 +284,9 @@ static void bl_set_pwm_vs(struct bl_pwm_config_s *bl_pwm,
 	}
 	for (i = 0; i < pwm_init_cfg.pwm_vs_reg_cnt; i++)
 		reg[i] = pwm_init_cfg.pwm_vs_reg[i];
+
+	if (pwm_init_cfg.pwm_vs_shift)
+		lcd_vcbus_setb(VPU_VENC_CTRL, pwm_init_cfg.pwm_vs_shift, 4, 2);//venc_line_sel = 1
 
 	lcd_vcbus_write(reg[0], (pol << 31) |
 		       (2 << 14) | /* vsync latch */
@@ -753,6 +756,7 @@ int bl_pwm_init_config_probe(struct bl_data_s *bdata)
 	}
 
 	pwm_init_cfg.pwm_vs_flag = bdata->pwm_vs_flag;
+	pwm_init_cfg.pwm_vs_shift = bdata->pwm_vs_shift;
 
 	return 0;
 }

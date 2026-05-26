@@ -1879,31 +1879,19 @@ static int aml_bl_resume(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_OF
-static struct bl_data_s bl_data_axg = {
-	.chip_type = LCD_CHIP_AXG,
-	.chip_name = "axg",
-	.pwm_vs_flag = 0,
-};
-
 static struct bl_data_s bl_data_g12a = {
 	.chip_type = LCD_CHIP_G12A,
 	.chip_name = "g12a",
 	.pwm_vs_flag = 0,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_g12b = {
 	.chip_type = LCD_CHIP_G12B,
 	.chip_name = "g12b",
 	.pwm_vs_flag = 0,
+	.pwm_vs_shift = 0,
 };
-
-#ifndef CONFIG_AMLOGIC_REMOVE_OLD
-static struct bl_data_s bl_data_tl1 = {
-	.chip_type = LCD_CHIP_TL1,
-	.chip_name = "tl1",
-	.pwm_vs_flag = 1,
-};
-#endif
 
 static struct bl_data_s bl_data_sm1 = {
 	.chip_type = LCD_CHIP_SM1,
@@ -1915,103 +1903,108 @@ static struct bl_data_s bl_data_tm2 = {
 	.chip_type = LCD_CHIP_TM2,
 	.chip_name = "tm2",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_tm2b = {
 	.chip_type = LCD_CHIP_TM2B,
 	.chip_name = "tm2b",
 	.pwm_vs_flag = 1,
-};
-
-static struct bl_data_s bl_data_t5 = {
-	.chip_type = LCD_CHIP_T5,
-	.chip_name = "t5",
-	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t5d = {
 	.chip_type = LCD_CHIP_T5D,
 	.chip_name = "t5d",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t7 = {
 	.chip_type = LCD_CHIP_T7,
 	.chip_name = "t7",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t3 = {
 	.chip_type = LCD_CHIP_T3,
 	.chip_name = "t3",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t5w = {
 	.chip_type = LCD_CHIP_T5W,
 	.chip_name = "t5w",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_c3 = {
 	.chip_type = LCD_CHIP_C3,
 	.chip_name = "c3",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t5m = {
 	.chip_type = LCD_CHIP_T5M,
 	.chip_name = "t5m",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t3x = {
 	.chip_type = LCD_CHIP_T3X,
 	.chip_name = "t3x",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_txhd2 = {
 	.chip_type = LCD_CHIP_TXHD2,
 	.chip_name = "txhd2",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_s6 = {
 	.chip_type = LCD_CHIP_S6,
 	.chip_name = "s6",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t6d = {
 	.chip_type = LCD_CHIP_T6D,
 	.chip_name = "t6d",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t6w = {
 	.chip_type = LCD_CHIP_T6W,
 	.chip_name = "t6w",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static struct bl_data_s bl_data_t6x = {
 	.chip_type = LCD_CHIP_T6X,
 	.chip_name = "t6x",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 1,
 };
 
 static struct bl_data_s bl_data_a9 = {
 	.chip_type = LCD_CHIP_A9,
 	.chip_name = "a9",
 	.pwm_vs_flag = 1,
+	.pwm_vs_shift = 0,
 };
 
 static const struct of_device_id bl_dt_match_table[] = {
-	{
-		.compatible = "amlogic, backlight-axg",
-		.data = &bl_data_axg,
-	},
 	{
 		.compatible = "amlogic, backlight-g12a",
 		.data = &bl_data_g12a,
@@ -2020,12 +2013,6 @@ static const struct of_device_id bl_dt_match_table[] = {
 		.compatible = "amlogic, backlight-g12b",
 		.data = &bl_data_g12b,
 	},
-#ifndef CONFIG_AMLOGIC_REMOVE_OLD
-	{
-		.compatible = "amlogic, backlight-tl1",
-		.data = &bl_data_tl1,
-	},
-#endif
 	{
 		.compatible = "amlogic, backlight-sm1",
 		.data = &bl_data_sm1,
@@ -2037,10 +2024,6 @@ static const struct of_device_id bl_dt_match_table[] = {
 	{
 		.compatible = "amlogic, backlight-tm2b",
 		.data = &bl_data_tm2b,
-	},
-	{
-		.compatible = "amlogic, backlight-t5",
-		.data = &bl_data_t5,
 	},
 	{
 		.compatible = "amlogic, backlight-t5d",
