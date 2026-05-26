@@ -5129,6 +5129,7 @@ void rx_main_state_machine(void)
 			if (++rx[port].var.pll_lock_cnt < pll_lock_max)
 				break;
 			rx_cor_reset(port);
+			rx[port].hdcp_reauth_cnt = 0;
 			//hdmirx_output_en(true);
 			//rx_irq_en(IRQ_EN_ALL, port);
 			//hdmirx_top_irq_en(1, 1, port);

@@ -92,7 +92,8 @@
 /* 2026.03.23 add scdc frl rate monitor */
 /* 2026.04.07 fix pip port color unnormal */
 /* 2026.05.06 Remove unnecessary mute when no AVI */
-#define RX_WRAPPER_VER "ver.2026/05/06"
+/* 2026.05.26 fix do not do hdcp reauth when hdcp err */
+#define RX_WRAPPER_VER "ver.2026/05/26"
 
 struct freq_ref_s {
 	bool interlace;
