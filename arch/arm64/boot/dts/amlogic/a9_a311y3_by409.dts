@@ -137,10 +137,14 @@
 		dmaheap_fb_reserved:heap-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* android16 dual-display main 4K secondary 1080p, size 108+56=164M,
-			 * and mirror display need 192M, total size 164+192=356M
+			/* 4k TV + 1080p STB android16 size total: 108 + 56 + 64 + 84 = 408M
+			 * primary display: (2160p RGBA afbc) * 3 = 108M
+			 * secondary display: (1080p RGBA afbc) * 6 = 56M
+			 * ultra whiteboard: (2160p RGBA) * 2 = 64M
+			 * virtual display(for vdin and output buffer):
+			 *      (2160p YUV444) * 6 + (2160p NV12) * 3 = 144 + 36 = 180M
 			 */
-			size = <0x0 0x16400000>;
+			size = <0x0 0x19800000>;
 			alignment = <0x0 0x400000>;
 		};
 
@@ -193,8 +197,9 @@
 			 * Note:
 			 *  setting to 496M if scatter_alloc_mode is 0.
 			 *  setting to 444M if scatter_alloc_mode is 1.
+			 * Loopback display add 204m, total size 648M.
 			 */
-			size = <0x0 0x1bc00000>;
+			size = <0x0 0x28800000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xffffffff>;
 			linux,contiguous-region;
