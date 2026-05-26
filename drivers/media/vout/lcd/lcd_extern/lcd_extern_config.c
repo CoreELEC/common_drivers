@@ -346,16 +346,61 @@ static int lcd_extern_init_table_check(unsigned char *table, int len)
 	return -1;
 }
 
+static int lcd_extern_get_init_data_from_panel_param(struct lcd_extern_driver_s *edrv,
+				struct lcd_extern_dev_s *edev)
+{
+	struct lcd_extern_config_s *cfg;
+	int on_cnt = 2, off_cnt = 2;
+	int size;
+	unsigned char *p = NULL;
+	char name[32];
+
+	cfg = &edev->config;
+	sprintf(name, "panel%d_ext%d_init_table", edrv->index, edev->dev_index);
+	p = panel_param_mem_get(name, &size);
+	if (!p)
+		return -1;
+
+	/* on_cnt|off_cnt|on_data|off_data */
+	on_cnt = *(u32 *)(p + 0);
+	off_cnt = *(u32 *)(p + 4);
+	if (on_cnt + off_cnt + 8 > size) {
+		EXTPR("%s init size fail\n", __func__);
+		return -1;
+	}
+
+	cfg->table_init_on = kzalloc(on_cnt, GFP_KERNEL);
+	cfg->table_init_off = kzalloc(off_cnt, GFP_KERNEL);
+	if (cfg->table_init_on) {
+		memcpy(cfg->table_init_on, p + 8, on_cnt);
+		cfg->table_init_on_cnt = on_cnt;
+		if (lcd_extern_init_table_check(cfg->table_init_on, on_cnt)) {
+			kfree(cfg->table_init_on);
+			cfg->table_init_on = NULL;
+			cfg->table_init_on_cnt = 0;
+			EXTPR("%s init_on check fail\n", __func__);
+		}
+	}
+	if (cfg->table_init_off) {
+		memcpy(cfg->table_init_off, p + 8 + on_cnt, off_cnt);
+		cfg->table_init_off_cnt = off_cnt;
+		if (lcd_extern_init_table_check(cfg->table_init_off, off_cnt)) {
+			kfree(cfg->table_init_off);
+			cfg->table_init_off = NULL;
+			cfg->table_init_off_cnt = 0;
+			EXTPR("%s init_off check fail\n", __func__);
+		}
+	}
+
+	return 0;
+}
+
 static int lcd_extern_get_config_json(struct lcd_extern_driver_s *edrv,
 				struct lcd_extern_dev_s *edev)
 {
 	struct json_s *parent, *child;
 	const char *str = NULL;
-	int on_cnt = 2, off_cnt = 2;
-	int size;
 	struct lcd_extern_config_s *cfg;
-	unsigned char *p = NULL;
-	char name[32];
 	struct json_parse_s *jsp = get_panel_jsp(edrv->index);
 
 	if (!json_parse_ok(jsp)) {
@@ -415,43 +460,7 @@ static int lcd_extern_get_config_json(struct lcd_extern_driver_s *edrv,
 	}
 
 /* init data*/
-	sprintf(name, "panel%d_ext%d_init_table", edrv->index, edev->dev_index);
-	p = panel_param_mem_get(name, &size);
-	if (!p)
-		goto parse_init_end;
-
-	/* on_cnt|off_cnt|on_data|off_data */
-	on_cnt = *(u32 *)(p + 0);
-	off_cnt = *(u32 *)(p + 4);
-	if (on_cnt + off_cnt + 8 > size) {
-		EXTPR("%s init size fail\n", __func__);
-		goto parse_init_end;
-	}
-
-	cfg->table_init_on = kzalloc(on_cnt, GFP_KERNEL);
-	cfg->table_init_off = kzalloc(off_cnt, GFP_KERNEL);
-	if (cfg->table_init_on) {
-		memcpy(cfg->table_init_on, p + 8, on_cnt);
-		cfg->table_init_on_cnt = on_cnt;
-		if (lcd_extern_init_table_check(cfg->table_init_on, on_cnt)) {
-			kfree(cfg->table_init_on);
-			cfg->table_init_on = NULL;
-			cfg->table_init_on_cnt = 0;
-			EXTPR("%s init_on check fail\n", __func__);
-		}
-	}
-	if (cfg->table_init_off) {
-		memcpy(cfg->table_init_off, p + 8 + on_cnt, off_cnt);
-		cfg->table_init_off_cnt = off_cnt;
-		if (lcd_extern_init_table_check(cfg->table_init_off, off_cnt)) {
-			kfree(cfg->table_init_off);
-			cfg->table_init_off = NULL;
-			cfg->table_init_off_cnt = 0;
-			EXTPR("%s init_off check fail\n", __func__);
-		}
-	}
-
-parse_init_end:
+	lcd_extern_get_init_data_from_panel_param(edrv, edev);
 	cfg->cmd_size = LCD_EXT_CMD_SIZE_DYNAMIC;
 	cfg->table_init_loaded = 1;
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
@@ -565,6 +574,11 @@ static int lcd_extern_get_config_ini(struct lcd_extern_driver_s *edrv,
 	edev->config.table_init_off = NULL;
 	if (init_cmd_valid == 0)
 		return 0;
+
+	if (lcd_extern_get_init_data_from_panel_param(edrv, edev) == 0) {
+		edev->config.table_init_loaded = 1;
+		return 0;
+	}
 
 	init_len = lcd_ini_get_array_cnt(inip, psec, "init_on");
 	if (init_len < 0) {

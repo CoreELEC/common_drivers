@@ -1679,7 +1679,7 @@ int lcd_tcon_setting_check_t5(struct aml_lcd_drv_s *pdrv, struct lcd_detail_timi
 
 	if (!ferr_str || !warn_str)
 		return 0;
-	if (!core_reg_info)
+	if (!core_reg_info || !core_reg_info->table)
 		return 0;
 
 	if (!lcd_tcon_get_table32_reg(core_reg_info, 0x26e, &val))
@@ -1749,7 +1749,7 @@ int lcd_tcon_setting_check_t5d(struct aml_lcd_drv_s *pdrv, struct lcd_detail_tim
 
 	if (!ferr_str || !warn_str)
 		return 0;
-	if (!core_reg_info)
+	if (!core_reg_info || !core_reg_info->table)
 		return 0;
 
 	if (!lcd_tcon_get_table32_reg(core_reg_info, 0x26e, &val))

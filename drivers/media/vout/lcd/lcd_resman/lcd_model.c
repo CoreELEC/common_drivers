@@ -389,6 +389,7 @@ int lcd_panel_file_pre_proc(void)
 	struct panel_param_head_s *head;
 	struct panel_param_key_s *key;
 	int ret = -1, i = 0;
+	void *ini_mem = NULL;
 
 	mem = lcd_transmit_mem_get("panel_config", &size);
 	if (!mem) {
@@ -440,6 +441,17 @@ int lcd_panel_file_pre_proc(void)
 		mem = panel_param_mem_get(name, &size);
 		if (mem) {
 			ret = lcd_ini_preload_mem(i, mem);
+			goto lcd_panel_file_pre_loop_next;
+		}
+
+		snprintf(name, 31, "panel%d_ini_file", i);
+		mem = panel_param_mem_get(name, &size);
+		if (mem) {
+			ini_mem = lcd_ini_file_parse(i, mem);
+			if (ini_mem)
+				ret = 0;
+			else
+				ret = -1;
 			goto lcd_panel_file_pre_loop_next;
 		}
 
