@@ -2503,12 +2503,22 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		return need_do_dpss;
 	}
 
+	/*all the check flow need done beforce this debug node control*/
+	/*force bypass dpss*/
+	if (dpss_bypass == 1) {
+		dp_print(dev->index, PRINT_OTHER, "force bypass dpss.\n");
+		return false;
+	} else if (dpss_bypass == 0) {
+		dp_print(dev->index, PRINT_OTHER, "force do dpss.\n");
+		return true;
+	}
+
 	inp_std_duration = find_standard_duration(dev, vf->duration);
 	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
 	if (do_dpss_type) {
 		dp_print(dev->index, PRINT_OTHER,
 			"need bypass due to dpss, reason=%d.\n", do_dpss_type);
-		need_do_dpss = false;
+		return false;
 	}
 
 	if (vf->type & VIDTYPE_COMPRESS) {
@@ -2529,7 +2539,6 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		if (!dpss_rotate_en) {
 			need_do_dpss = false;
 		} else {
-			need_do_dpss = true;
 			need_dpss_rotate = true;
 		}
 	}
@@ -2584,16 +2593,6 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	if (vf->codec_vfmt == VFORMAT_JPEG) {
 		dp_print(dev->index, PRINT_OTHER, "JPEG image, no need so dpss.\n");
 		need_do_dpss = false;
-	}
-
-	/*all the check flow need done beforce this debug node control*/
-	/*force bypass dpss*/
-	if (dpss_bypass == 1) {
-		dp_print(dev->index, PRINT_OTHER, "force bypass dpss.\n");
-		need_do_dpss = false;
-	} else if (dpss_bypass == 0) {
-		dp_print(dev->index, PRINT_OTHER, "force do dpss.\n");
-		need_do_dpss = true;
 	}
 
 	return need_do_dpss;
