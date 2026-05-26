@@ -1303,7 +1303,7 @@ static struct sub_port_list vpu0_sub_r_c5[] __initdata = {
 	{ .id = 0x01, .name = "OSD1"		},
 };
 
-SUB_DEV_RO(c5, 0, 1);
+SUB_DEV_RO(c5, vpu0, 1);
 SUB_DEV_DESC_INIT(c5, &vpu0_sub_c5);
 #endif
 

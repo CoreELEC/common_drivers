@@ -17062,7 +17062,7 @@ static const struct of_device_id amlogic_amvideom_dt_match[] = {
 	{
 		.compatible = "amlogic, amvideom-a9",
 		.data = &amvideo_a9,
-	}
+	},
 	{
 		.compatible = "amlogic, amvideom-c5",
 		.data = &amvideo_c5,

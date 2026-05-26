@@ -1127,6 +1127,7 @@ static int set_vfm_info_from_frame(struct vp_frame_s *frame_info, int path_id)
 		new_vf->canvas0Addr = canvas_table[fill];
 		if (frame_info->secure)
 			protect_size = frame_info->height * frame_info->width * 3;
+		break;
 	case VP_FMT_P010:
 		canvas_config(vp_canvas_table[fill_ptr] & 0xff,
 				addr,

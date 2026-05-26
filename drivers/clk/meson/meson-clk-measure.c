@@ -5702,6 +5702,7 @@ static const struct of_device_id meson_msr_match_table[] = {
 		.compatible = "amlogic,meson-a9-clk-measure",
 		.data = &meson_a9_data,
 	},
+	{
 		.compatible = "amlogic,meson-c5-clk-measure",
 		.data = &meson_c5_data,
 	},

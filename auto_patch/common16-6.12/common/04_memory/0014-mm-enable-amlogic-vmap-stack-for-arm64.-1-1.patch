@@ -1,4 +1,4 @@
-From 2cb6ea5dc7599c49cee406a92afd9ddf4a59b879 Mon Sep 17 00:00:00 2001
+From 37d0f299fc4f97a407ddd2793a807d5566338dfe Mon Sep 17 00:00:00 2001
 From: Jianxiong Pan <jianxiong.pan@amlogic.com>
 Date: Thu, 28 Nov 2024 15:15:07 +0800
 Subject: [PATCH] mm: add amlogic vmap stack for arm64. [1/1]
@@ -24,7 +24,7 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  arch/arm64/include/asm/stacktrace.h        |   4 +
  arch/arm64/include/asm/stacktrace/common.h |  12 ++
  arch/arm64/kernel/Makefile                 |   4 +
- arch/arm64/kernel/entry-common.c           |  16 +++
+ arch/arm64/kernel/entry-common.c           |  15 +++
  arch/arm64/kernel/entry.S                  | 124 +++++++++++++++++++++
  arch/arm64/kernel/hibernate.c              |   6 +
  arch/arm64/kernel/hw_breakpoint.c          |   7 ++
@@ -40,7 +40,7 @@ Signed-off-by: Jianxiong Pan <jianxiong.pan@amlogic.com>
  kernel/fork.c                              |  25 +++++
  lib/Kconfig.debug                          |   1 +
  mm/kmemleak.c                              |  25 +++++
- 23 files changed, 351 insertions(+), 1 deletion(-)
+ 23 files changed, 350 insertions(+), 1 deletion(-)
 
 diff --git a/Makefile b/Makefile
 index 8237627e2d3e..f58101c6092c 100644
@@ -178,10 +178,11 @@ index 2b112f3b7510..411d0b295240 100644
  # When KASAN is enabled, a stack trace is recorded for every alloc/free, which
  # can significantly impact performance. Avoid instrumenting the stack trace
 diff --git a/arch/arm64/kernel/entry-common.c b/arch/arm64/kernel/entry-common.c
-index 4d541320e011..353f2f6c120b 100644
+index 4d541320e011..29b97b126b1f 100644
 --- a/arch/arm64/kernel/entry-common.c
 +++ b/arch/arm64/kernel/entry-common.c
-@@ -32,6 +32,10 @@
+@@ -31,6 +31,9 @@
+ #include <trace/hooks/traps.h>
  #include <trace/hooks/gic.h>
  #include <trace/hooks/dtask.h>
 +#ifdef CONFIG_AMLOGIC_VMAP
@@ -190,8 +191,7 @@ index 4d541320e011..353f2f6c120b 100644
  
  /*
   * Handle IRQ/context state management when entering from kernel mode.
-  * Before this function is called it is not safe to call regular kernel code,
-@@ -526,6 +530,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+@@ -526,6 +529,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  	switch (ESR_ELx_EC(esr)) {
  	case ESR_ELx_EC_DABT_CUR:
  	case ESR_ELx_EC_IABT_CUR:
@@ -201,7 +201,7 @@ index 4d541320e011..353f2f6c120b 100644
  		el1_abort(regs, esr);
  		break;
  	/*
-@@ -537,6 +544,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+@@ -537,6 +543,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  		break;
  	case ESR_ELx_EC_SYS64:
  	case ESR_ELx_EC_UNKNOWN:
@@ -211,7 +211,7 @@ index 4d541320e011..353f2f6c120b 100644
  		el1_undef(regs, esr);
  		break;
  	case ESR_ELx_EC_BTI:
-@@ -546,6 +556,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
+@@ -546,6 +555,9 @@ asmlinkage void noinstr el1h_64_sync_handler(struct pt_regs *regs)
  	case ESR_ELx_EC_SOFTSTP_CUR:
  	case ESR_ELx_EC_WATCHPT_CUR:
  	case ESR_ELx_EC_BRK64:
@@ -221,7 +221,7 @@ index 4d541320e011..353f2f6c120b 100644
  		el1_dbg(regs, esr);
  		break;
  	case ESR_ELx_EC_FPAC:
-@@ -590,6 +603,9 @@ static void noinstr el1_interrupt(struct pt_regs *regs,
+@@ -590,6 +602,9 @@ static void noinstr el1_interrupt(struct pt_regs *regs,
  
  asmlinkage void noinstr el1h_64_irq_handler(struct pt_regs *regs)
  {

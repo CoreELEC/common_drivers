@@ -761,6 +761,7 @@ static const struct meson_vpu_data vpu_a9_data = {
 #endif
 	.osd_formats = &osd_formats_t6d,
 	.video_formats = &video_formats,
+	.drm_rdma_cnt = drm_rdma_cnt,
 	.policy = s7d_policy,
 	.has_gfcd = 1,
 	.enc_method = 2,

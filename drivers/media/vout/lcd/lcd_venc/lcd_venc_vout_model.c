@@ -396,7 +396,7 @@ int lcd_venc_op_init_vout_model(struct lcd_data_s *pdata, struct lcd_venc_op_s *
 	venc_op->venc_debug_test = lcd_venc_debug_test;
 	venc_op->venc_set_timing = NULL;
 	venc_op->venc_set = lcd_venc_set;
-	venc_op->venc_change = NULL;
+	venc_op->venc_fr_change = NULL;
 	venc_op->venc_enable = lcd_venc_enable_ctrl;
 	venc_op->get_venc_state = lcd_venc_get_state;
 	venc_op->get_venc_init_config = lcd_venc_get_init_config;

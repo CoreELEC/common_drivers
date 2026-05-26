@@ -795,7 +795,11 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 
 	if (aml_vrr_state() && vrr_enable_cnt < vrr_disable_cnt) {
 		ret = FRAMELOCK_VRRLOCK;
+#if defined(CONFIG_AMLOGIC_DPSS_PROCESS)
 	} else if ((vf->vf_vrr_param.game_frc || get_dpss_game_frc_locked()) &&
+#else
+	} else if ((vf->vf_vrr_param.game_frc) &&
+#endif
 		!vf->vf_vrr_param.vrr_signal) {
 		ret = FRAMELOCK_GAMEFRC;
 		vrr_skip_frame_cnt = 5;
@@ -830,10 +834,12 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 	frame_sts.vrr_frame_sts = ret;
 
 	if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG) {
+#if defined(CONFIG_AMLOGIC_DPSS_PROCESS)
 		framelock_pr_info("check_type vrrst:%d g_frc:%d g_frc_l:%d qms:%d fr_adj:%d\n",
 			aml_vrr_state(), vf->vf_vrr_param.game_frc,
 			get_dpss_game_frc_locked(), vf->vf_vrr_param.qms_en,
 			vinfo->fr_adj_type);
+#endif
 		framelock_pr_info("check_types en:%d ranc:%d outc:%d ret:%d skip:%d\n",
 			frame_sts.vrr_en, frame_sts.vrr_frame_outof_range_cnt,
 			vrr_outof_rge_cnt, ret, vrr_skip_frame_cnt);

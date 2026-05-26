@@ -3332,8 +3332,8 @@ static struct vpu_data_s vpu_data_a9 = {
 	.clk_gate_table = NULL,
 
 	.vpu_dmc_axi_table = NULL,
-	.vpu_arb_urg_ctrl_table = NULL,
-	.vpp_ofifo_urg_ctrl_table = NULL,
+	.vpu_arb_urg_ctrl_table = vpu_arb_urg_ctrl_a9,
+	.vpp_ofifo_urg_ctrl_table = vpp_ofifo_urg_ctrl_a9,
 
 	.power_on = vpu_power_on_new,
 	.power_off = vpu_power_off_new,
