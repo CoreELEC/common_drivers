@@ -403,7 +403,6 @@
 			    SARADC_CH2 SARADC_CH2>;
 		key_code = <KEY_POWER KEY_VOLUMEDOWN KEY_VOLUMEUP KEY_ENTER KEY_MENU
 			    KEY_FN_F1 KEY_EXIT>;
-		/* key_val = voltage / 1800mV * 1023 */
 		key_val = <0 252 468 684 892 252 468>; // Unit: millivolt
 		key_tolerance = <70 70 70 70 70 70 70>; // Unit: millivolt
 	};
