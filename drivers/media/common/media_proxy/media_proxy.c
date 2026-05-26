@@ -335,7 +335,7 @@ static int consumer_thread_fn(void *data)
 	return 0;
 }
 
-int update_subscribe_msg_type(void)
+static int update_subscribe_msg_type(void)
 {
 	u32 subscribe_msg_type = 0;
 	int i = 0;
@@ -355,7 +355,7 @@ int update_subscribe_msg_type(void)
 	return 0;
 }
 
-int mediaproxy_open(struct inode *inode, struct file *filp)
+static int mediaproxy_open(struct inode *inode, struct file *filp)
 {
 	int ret;
 
@@ -371,10 +371,15 @@ int mediaproxy_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-int mediaproxy_release(struct inode *inode, struct file *filp)
+static int mediaproxy_release(struct inode *inode, struct file *filp)
 {
 	struct mediaproxy_session *session = filp->private_data;
 
+	if (!session) {
+		pr_info("Session is null when release\n");
+		module_put(THIS_MODULE);
+		return 0;
+	}
 	pr_dbg(1, "release session\n");
 	if (session->session_id >= 0) {
 		//not disconnect, get lock
@@ -533,7 +538,7 @@ static int mediaproxy_disconnect(struct mediaproxy_session *session)
 	return 0;
 }
 
-ssize_t mediaproxy_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
+static ssize_t mediaproxy_read(struct file *filp, char __user *buf, size_t count, loff_t *f_pos)
 {
 	unsigned int copied = 0;
 	int idx = -1;
@@ -555,14 +560,19 @@ ssize_t mediaproxy_read(struct file *filp, char __user *buf, size_t count, loff_
 	}
 
 	if (kfifo_is_empty(&mediaproxy->c_fifo[idx]->msg_kfifo)) {
+		long ret;
+
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
-		if (wait_event_interruptible_timeout(mediaproxy->c_fifo[idx]->rw_queue,
-			!kfifo_is_empty(&mediaproxy->c_fifo[idx]->msg_kfifo),
-			msecs_to_jiffies(READ_TIME_OUT)) == 0) {
-			// timeout
+
+		ret = wait_event_interruptible_timeout(mediaproxy->c_fifo[idx]->rw_queue,
+				!kfifo_is_empty(&mediaproxy->c_fifo[idx]->msg_kfifo),
+				msecs_to_jiffies(READ_TIME_OUT));
+		if (ret == 0) {
 			pr_dbg(3, "read timeout\n");
 			return -ETIMEDOUT;
+		} else if (ret < 0) {
+			return ret;
 		}
 	}
 
@@ -575,7 +585,8 @@ ssize_t mediaproxy_read(struct file *filp, char __user *buf, size_t count, loff_
 	return copied;
 }
 
-ssize_t mediaproxy_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
+static ssize_t mediaproxy_write(struct file *filp, const char __user *buf,
+size_t count, loff_t *f_pos)
 {
 	unsigned int copied = 0;
 	int idx = -1;
@@ -657,7 +668,7 @@ static unsigned int mediaproxy_poll(struct file *filp, struct poll_table_struct 
 	return mask;
 }
 
-int mediaproxy_inject_buf(struct mediaproxy_session *session, unsigned long arg, bool is32)
+static int mediaproxy_inject_buf(struct mediaproxy_session *session, unsigned long arg, bool is32)
 {
 	struct aml_buffer_info user_argp;
 	struct aml_video_user_data msg;
@@ -722,7 +733,7 @@ int mediaproxy_inject_buf(struct mediaproxy_session *session, unsigned long arg,
 	return result;
 }
 
-int mediaproxy_get_buf(struct mediaproxy_session *session, unsigned long arg, bool is32)
+static int mediaproxy_get_buf(struct mediaproxy_session *session, unsigned long arg, bool is32)
 {
 	struct aml_buffer_info user_argp;
 	struct aml_video_user_data msg;
@@ -781,6 +792,11 @@ static long mediaproxy_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 {
 	int result = 0;
 	union mediaproxy_ioctl_args args = {.subscribe_msg_type = 0};
+
+	if (!filp->private_data) {
+		pr_err("Session is null in ioctl\n");
+		return -EFAULT;
+	}
 
 	struct mediaproxy_session *session = filp->private_data;
 
@@ -883,6 +899,12 @@ static long mediaproxy_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 static long mediaproxy_ioctl_compat(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int result = 0;
+
+	if (!filp->private_data) {
+		pr_err("Session is null in ioctl_compat\n");
+		return -EFAULT;
+	}
+
 	struct mediaproxy_session *session = filp->private_data;
 
 	switch (cmd) {
@@ -1074,7 +1096,7 @@ int notify_msg_to_mediaproxy(void *handle, int num, void *data)
 	struct aml_video_user_data *ptr;
 
 	if (!handle) {
-		pr_err("notify mediaproxy handle is null\n");
+		pr_dbg(2, "notify mediaproxy handle is null\n");
 		return 0;
 	}
 	if (!data || num <= 0) {
@@ -1185,10 +1207,9 @@ int receive_msg_from_mediaproxy(void *handle,  int num, void *data)
 	int data_copied = 0;
 	struct mediaproxy_session *session;
 
-	if (!handle) {
-		pr_err("mediaproxy handle is null get msg from proxy\n");
+	if (!handle)
 		return 0;
-	}
+
 	if (!data) {
 		pr_err("mediaproxy data is null get msg from proxy\n");
 		return 0;
@@ -1214,7 +1235,7 @@ int media_proxy_consumer_deinit(void *handle)
 }
 EXPORT_SYMBOL(media_proxy_consumer_deinit);
 
-const struct file_operations mediaproxy_fops = {
+static const struct file_operations mediaproxy_fops = {
 	.owner = THIS_MODULE,
 	.read = mediaproxy_read,
 	.write = mediaproxy_write,
@@ -1317,14 +1338,14 @@ static struct class aml_mediaproxy_class = {
 	.class_groups = aml_mediaproxy_class_groups,
 };
 
-int aml_regist_mediaproxy_class(void)
+static int aml_regist_mediaproxy_class(void)
 {
 	if (class_register(&aml_mediaproxy_class) < 0)
 		pr_err("register class error\n");
 	return 0;
 }
 
-int aml_unregist_mediaproxy_class(void)
+static int aml_unregist_mediaproxy_class(void)
 {
 	class_unregister(&aml_mediaproxy_class);
 	return 0;
