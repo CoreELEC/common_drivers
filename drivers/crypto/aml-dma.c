@@ -56,6 +56,7 @@ struct meson_dma_data {
 	u32 thread;
 	u32 status;
 	u8  link_mode;
+	u8  version_detect;
 };
 
 #ifndef CONFIG_AMLOGIC_REMOVE_OLD
@@ -63,6 +64,7 @@ struct meson_dma_data meson_gxl_data = {
 	.thread = GXL_DMA_T0,
 	.status = GXL_DMA_STS0,
 	.link_mode = 0,
+	.version_detect = 0,
 };
 #endif
 
@@ -70,12 +72,14 @@ struct meson_dma_data meson_txlx_data = {
 	.thread = TXLX_DMA_T0,
 	.status = TXLX_DMA_STS0,
 	.link_mode = 0,
+	.version_detect = 0,
 };
 
 struct meson_dma_data meson_p1_data = {
 	.thread = TXLX_DMA_T0,
 	.status = TXLX_DMA_STS0,
 	.link_mode = 1,
+	.version_detect = 1,
 };
 #ifdef CONFIG_OF
 static const struct of_device_id aml_dma_dt_match[] = {
@@ -205,7 +209,7 @@ out:
 	return err;
 }
 
-static int aml_dma_probe(struct platform_device *pdev)
+static int aml_crypto_dma_probe(struct platform_device *pdev)
 {
 	struct aml_dma_dev *dma_dd;
 	struct device *dev = &pdev->dev;
@@ -271,11 +275,16 @@ static int aml_dma_probe(struct platform_device *pdev)
 		err = PTR_ERR(dma_dd->kthread);
 		goto dma_err;
 	}
-	version = aml_read_crypto_reg(DMA_VER) >> 8;
-	if (version == 0x202506)
-		dma_dd->dma_version = DMA_VERSION_2;
-	else
+
+	if (priv_data->version_detect) {
+		version = aml_read_crypto_reg(DMA_VER) >> 8;
+		if (version == 0x202506)
+			dma_dd->dma_version = DMA_VERSION_2;
+		else
+			dma_dd->dma_version = DMA_VERSION_1;
+	} else {
 		dma_dd->dma_version = DMA_VERSION_1;
+	}
 
 	err = aml_dma_init_dbgfs(dev);
 	if (err)
@@ -298,7 +307,7 @@ dma_err:
 	return err;
 }
 
-static void aml_dma_remove(struct platform_device *pdev)
+static void aml_crypto_dma_remove(struct platform_device *pdev)
 {
 	struct aml_dma_dev *dma_dd;
 	struct device *dev = &pdev->dev;
@@ -313,8 +322,8 @@ static void aml_dma_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver aml_dma_driver = {
-	.probe		= aml_dma_probe,
-	.remove		= aml_dma_remove,
+	.probe		= aml_crypto_dma_probe,
+	.remove		= aml_crypto_dma_remove,
 	.driver		= {
 		.name	= "aml_dma",
 		.owner	= THIS_MODULE,
