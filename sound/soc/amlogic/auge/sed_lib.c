@@ -156,7 +156,7 @@ int aml_snd_pcm_lib_xfer(struct snd_pcm_substream *substream, void *data,
 			return ret;
 		}
 	}
-	switch (runtime->status->state) {
+	switch (runtime->state) {
 	case SNDRV_PCM_STATE_XRUN:
 		err = -EPIPE;
 		goto _end_unlock;
@@ -186,7 +186,7 @@ int aml_snd_pcm_lib_xfer(struct snd_pcm_substream *substream, void *data,
 		appl_ofs = appl_ptr % runtime->buffer_size;
 		snd_pcm_lib_read_transfer(substream, appl_ofs, data, offset,
 				frames);
-		switch (runtime->status->state) {
+		switch (runtime->state) {
 		case SNDRV_PCM_STATE_XRUN:
 			err = -EPIPE;
 			goto _end_unlock;

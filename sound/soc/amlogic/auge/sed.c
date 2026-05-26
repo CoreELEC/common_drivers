@@ -43,6 +43,8 @@
 #include <linux/mm.h>
 #include <linux/firmware.h>
 #include <linux/irq.h>
+#include <linux/ktime.h>
+#include <linux/time64.h>
 
 #include "ddr_mngr.h"
 #include "sed.h"
@@ -72,6 +74,9 @@ struct sed {
 
 	struct clk *pdm_sysclk;
 	struct clk *pdm_dclk;
+
+	struct clk *rc_clk_gate;
+
 	struct toddr *tddr;
 	int irq_wakeup;
 	void *mic_src;
@@ -94,13 +99,17 @@ struct sed {
 	struct task_struct *thread;
 	struct snd_pcm_substream *substream;
 	char *tmp_buffer;
+	struct timespec64 wakeup_tstamp;
+	struct timespec64 curr_tstamp;
 	int reset_ptr;
 	int thread_exit;
+	unsigned int key_word_time;
 	int running;
 	int prepared;
 	int xruns;
 	int max_sample_cnt;
-
+	int use_sed_toddr;
+	int sed_clk_measure_id;
 };
 
 #define SED_BUFFER_BYTES (512 * 1024)
@@ -217,18 +226,6 @@ static int pdm_clk_enable(struct sed *p_sed)
 {
 	int ret = 0;
 
-	/* enable clock */
-	ret = clk_prepare_enable(p_sed->pdm_sysclk_srcpll);
-	if (ret) {
-		pr_err("Can't enable pcm pdm_sysclk_srcpll clock: %d\n", ret);
-		goto err;
-	}
-
-	ret = clk_prepare_enable(p_sed->pdm_dclk_srcpll);
-	if (ret) {
-		pr_err("Can't enable pcm pdm_dclk_srcpll clock: %d\n", ret);
-		goto err;
-	}
 	ret = clk_prepare_enable(p_sed->pdm_sysclk);
 	if (ret) {
 		pr_err("Can't enable pcm pdm_sysclk clock: %d\n", ret);
@@ -300,7 +297,7 @@ static int pdm_set_clk(struct sed *p_sed)
 	clk_set_rate(p_sed->pdm_dclk, pdm_dclk);
 
 	if (clk_get_rate(p_sed->sed_clk) == SED_CLK_PLL)
-		source_clk = meson_clk_measure(109);
+		source_clk = meson_clk_measure(p_sed->sed_clk_measure_id);
 	else
 		source_clk = 24000000;
 	pdm_dclk_coefficient(p_sed->audio_top_sed_map, by_pass, source_clk);
@@ -328,7 +325,7 @@ static int sed_clk_config(struct sed *p_sed)
 	}
 
 	if (clk_get_rate(p_sed->sed_clk) == SED_CLK_PLL)
-		source_clk = meson_clk_measure(109);
+		source_clk = meson_clk_measure(p_sed->sed_clk_measure_id);
 	else
 		source_clk = 24000000;
 
@@ -362,8 +359,6 @@ static void sed_clk_disable(struct sed *sed_p)
 	if (sed_p->sed_clk_en) {
 		clk_disable_unprepare(sed_p->pdm_dclk);
 		clk_disable_unprepare(sed_p->pdm_sysclk);
-		clk_disable_unprepare(sed_p->pdm_sysclk_srcpll);
-		clk_disable_unprepare(sed_p->pdm_dclk_srcpll);
 		clk_disable_unprepare(sed_p->sed_clk);
 		ret = clk_set_parent(sed_p->pdm_sysclk, sed_p->pdm_sysclk_pll);
 		if (ret) {
@@ -377,7 +372,8 @@ static void sed_clk_disable(struct sed *sed_p)
 			"Can't set clk_pdm_dclk parent clock\n");
 			return;
 		}
-		pdm_dclk_coefficient(sed_p->audio_top_sed_map, 1, meson_clk_measure(109));
+		pdm_dclk_coefficient(sed_p->audio_top_sed_map, 1,
+					meson_clk_measure(sed_p->sed_clk_measure_id));
 		sed_p->sed_clk_en = 0;
 	}
 }
@@ -455,16 +451,18 @@ static int sed_enable_set(struct snd_kcontrol *kcontrol,
 		pr_info("invalid value:%d\n", value);
 		return 0;
 	}
+	if (!sed_p->sed_enable && value == 0)
+		return 0;
 	sed_p->sed_enable = value;
 	if (sed_p->sed_enable) {
 		sed_clk_enable(sed_p);
 		load_sed_firmware(sed_p);
 		sed_init(sed_p, 1);
 		sed_enable(sed_p->audio_top_sed_map, 1);
+		msleep(100);
 		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value, sed_p->max_sample_cnt);
 		pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	} else {
-		sed_init(sed_p, 0);
 		sed_enable(sed_p->audio_top_sed_map, 0);
 		sed_clk_disable(sed_p);
 	}
@@ -503,7 +501,8 @@ static int sed_pdm_sample_count_set(struct snd_kcontrol *kcontrol,
 	if (!sed_p)
 		return 0;
 	sed_p->pdm_sample_cnt = value;
-	pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
+	if (sed_p->sed_enable)
+		pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
 	return 0;
 }
 
@@ -539,10 +538,11 @@ static int sed_pdm_sample_train_set(struct snd_kcontrol *kcontrol,
 	sed_p  = snd_soc_component_get_drvdata(component);
 	if (!sed_p)
 		return 0;
-	if (sed_p->sed_enable)
+	if (sed_p->sed_enable) {
 		sed_p->pdm_sample_cnt = pdm_auto_train_algorithm(0, value,
 					sed_p->max_sample_cnt);
-	pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
+		pdm_set_channel_ctrl(sed_p->pdm_sample_cnt, 0);
+	}
 	return 0;
 }
 
@@ -810,6 +810,7 @@ static int aml_sed_open(struct snd_soc_component *component,
 		}
 	}
 	rtd->dai_link->ignore_suspend = 1;
+	substream->pcm->nonatomic = 0;
 	runtime->private_data = sed_p;
 	sed_p->substream = substream;
 	return 0;
@@ -1007,9 +1008,11 @@ int sed_read_copy(struct snd_soc_component *component,
 
 	/*reset app_ptr when thread exit*/
 	if (sed_p->reset_ptr) {
-		runtime->control->appl_ptr = runtime->status->hw_ptr - runtime->buffer_size;
+		/*enable xrun*/
+		runtime->stop_threshold = runtime->buffer_size;
 		sed_p->reset_ptr = 0;
 	}
+
 	if (copy_to_iter(get_dma_ptr(substream->runtime, channel, hwoff),
 			 bytes, iter) != bytes)
 		return -EFAULT;
@@ -1047,7 +1050,7 @@ static int aml_dai_sed_trigger(struct snd_pcm_substream *substream, int cmd,
 			pdm_fifo_reset(0);
 			aml_toddr_enable(sed_p->tddr, 1);
 			pdm_enable(true, 0);
-		} else if (sed_p->mic_source == PDM_MIC) {
+		} else if (sed_p->mic_source == TDM_MIC) {
 			aml_tdm_reset(sed_p->mic_src,
 				substream->stream);
 			aml_tdm_trigger(sed_p->mic_src,
@@ -1115,18 +1118,18 @@ static void sed_key_report(struct sed *p_sed)
 	input_sync(p_sed->input_device);
 }
 
-static void sed_input_device_init(struct sed *pvad)
+static void sed_input_device_init(struct sed *psed)
 {
-	pvad->input_device->name = "vad_keypad";
-	pvad->input_device->phys = "vad_keypad/input3";
-	pvad->input_device->dev.parent = pvad->dev;
-	pvad->input_device->id.bustype = BUS_ISA;
-	pvad->input_device->id.vendor  = 0x0001;
-	pvad->input_device->id.product = 0x0001;
-	pvad->input_device->id.version = 0x0100;
-	pvad->input_device->evbit[0] = BIT_MASK(EV_KEY);
-	pvad->input_device->keybit[BIT_WORD(BTN_0)] = BIT_MASK(BTN_0);
-	set_bit(KEY_POWER, pvad->input_device->keybit);
+	psed->input_device->name = "sed_keypad";
+	psed->input_device->phys = "sed_keypad/input3";
+	psed->input_device->dev.parent = psed->dev;
+	psed->input_device->id.bustype = BUS_ISA;
+	psed->input_device->id.vendor  = 0x0001;
+	psed->input_device->id.product = 0x0001;
+	psed->input_device->id.version = 0x0100;
+	psed->input_device->evbit[0] = BIT_MASK(EV_KEY);
+	psed->input_device->keybit[BIT_WORD(BTN_0)] = BIT_MASK(BTN_0);
+	set_bit(KEY_POWER, psed->input_device->keybit);
 }
 
 static int pcm_start(struct sed *p_sed)
@@ -1145,6 +1148,20 @@ static int pcm_start(struct sed *p_sed)
 	}
 	p_sed->running = true;
 	return ret;
+}
+
+static int pcm_stop(struct sed *p_sed)
+{
+	int ret;
+
+	ret = snd_pcm_kernel_ioctl(p_sed->substream, SNDRV_PCM_IOCTL_DROP, NULL);
+	if (ret < 0) {
+		dev_err(p_sed->dev, "start error:%d", ret);
+		return ret;
+	}
+	p_sed->running = false;
+	p_sed->prepared = false;
+	return 0;
 }
 
 static int pcm_read(struct sed *p_sed, void *buffer, int bytes)
@@ -1177,21 +1194,25 @@ static int pcm_read(struct sed *p_sed, void *buffer, int bytes)
 #define SED_PERIOD_BYTES (ASR_SIZE * 96)
 
 #define ASR_TIME 150
-static int rewind_appl_ptr(struct sed *p_sed)
+
+static int rewind_appl_ptr(struct sed *p_sed, unsigned int rewind_time)
 {
 	struct snd_pcm_substream *substream = p_sed->substream;
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	snd_pcm_sframes_t rewind_ptr, rewind_frame;
 
-	snd_pcm_sframes_t rewind_ptr;
+	rewind_frame = runtime->rate * rewind_time / 1000;
 
 	if (runtime->status->hw_ptr < runtime->buffer_size)
 		runtime->status->hw_ptr =  runtime->status->hw_ptr +  runtime->buffer_size;
 
-	if (runtime->buffer_size <= SED_PERIOD_BYTES)
+	if (runtime->buffer_size <= rewind_frame)
 		rewind_ptr = runtime->buffer_size;
 	else
-		rewind_ptr = SED_PERIOD_BYTES;
+		rewind_ptr = rewind_frame;
 	/*read all buffer size*/
+	if (runtime->status->hw_ptr < rewind_ptr)
+		rewind_ptr = runtime->status->hw_ptr;
 	runtime->control->appl_ptr = runtime->status->hw_ptr - rewind_ptr;
 	return 0;
 }
@@ -1230,24 +1251,58 @@ static int algorithm_data_process(struct sed *p_sed, unsigned int bytes)
 	return ret;
 }
 
+#define VOICE_TIME_OUT 2
+
+static bool is_voice_time_out(struct sed *p_sed)
+{
+	bool ret = false;
+	s64 delta_sec;
+	s64 delta_nsec;
+
+	/*update timestamp*/
+	ktime_get_ts64(&p_sed->curr_tstamp);
+	delta_sec = p_sed->curr_tstamp.tv_sec - p_sed->wakeup_tstamp.tv_sec;
+	delta_nsec = p_sed->curr_tstamp.tv_nsec - p_sed->wakeup_tstamp.tv_nsec;
+	if (delta_sec > VOICE_TIME_OUT || (delta_sec == VOICE_TIME_OUT && delta_nsec > 0)) {
+		ret = true;
+		 pr_info("sed wait voice....\n");
+		/*clear the timestamp*/
+		memset(&p_sed->curr_tstamp, 0x00, sizeof(struct timespec64));
+		memset(&p_sed->wakeup_tstamp, 0x00, sizeof(struct timespec64));
+	} else {
+		ret = false;
+	}
+	return ret;
+}
+
+#define SED_REWIND_MS 1500
+
 static bool sed_engine_check(struct sed *p_sed)
 {
 	struct snd_pcm_substream *substream = p_sed->substream;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret = 0;
+	int rewind_size;
 
 	/*disable xrun*/
 	runtime->stop_threshold = runtime->boundary;
-	rewind_appl_ptr(p_sed);
+	rewind_size = frames_to_bytes(runtime, runtime->rate * SED_REWIND_MS / 1000);
+	rewind_appl_ptr(p_sed, SED_REWIND_MS);
 	/*read previous data before wake up*/
-	ret = algorithm_data_process(p_sed, SED_PERIOD_BYTES);
+	ret = algorithm_data_process(p_sed, rewind_size);
 	if (ret == 1)
 		return true;
 	/*enable xrun*/
 	runtime->stop_threshold = runtime->buffer_size;
 	/*normal read*/
-	for (int i = 0; i < ASR_TIME; i++) {
-		ret = algorithm_data_process(p_sed, ASR_SIZE);
+	for (;;) {
+		if (is_voice_time_out(p_sed))
+			break;
+		if (p_sed->thread_exit) {
+			ret = 1;
+			break;
+		}
+		ret = algorithm_data_process(p_sed, frames_to_bytes(runtime, runtime->period_size));
 		if (ret == 1)
 			break;
 	}
@@ -1259,29 +1314,46 @@ static bool sed_engine_check(struct sed *p_sed)
 static int sed_freeze_thread(void *data)
 {
 	struct sed *p_sed = data;
+	unsigned int time = 2000;
 
 	if (!p_sed)
 		return 0;
-	current->flags |= PF_NOFREEZE;
+	if (!p_sed->tmp_buffer) {
+		p_sed->tmp_buffer = kzalloc(SED_PERIOD_BYTES, GFP_KERNEL);
+		if (!p_sed->tmp_buffer)
+			return -ENOMEM;
+	}
 	p_sed->thread_exit = 0;
+	current->flags |= PF_NOFREEZE;
 	set_current_state(TASK_INTERRUPTIBLE);
 	for (;;) {
-		if (kthread_should_stop()) {
-			dev_info(p_sed->dev, "sed: freeze thread call stop exit\n");
-			break;
-		}
 		dev_info(p_sed->dev, "sed: freeze thread enter into\n");
 		if (sed_engine_check(p_sed) > 0) {
 			dev_info(p_sed->dev, "sed: freeze thread exit\n");
 			break;
 		}
-		if (!kthread_should_stop())
-			schedule();
+		if (p_sed->thread_exit) {
+			break;
+			dev_info(p_sed->dev, "sed: freeze thread wake up exit\n");
+		}
+
 		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+
+		if (p_sed->thread_exit) {
+			break;
+			dev_info(p_sed->dev, "sed: freeze thread wake up exit\n");
+		}
 	}
+
+	if (p_sed->key_word_time)
+		time = p_sed->key_word_time;
+
+	rewind_appl_ptr(p_sed, time);
 	p_sed->reset_ptr = 1;
 	p_sed->thread_exit = 1;
-
+	kfree(p_sed->tmp_buffer);
+	p_sed->tmp_buffer = NULL;
 	return 0;
 }
 
@@ -1310,11 +1382,6 @@ static int sed_platform_suspend(struct platform_device *pdev, pm_message_t state
 		}
 		dev_info(p_sed->dev, "%s:freeze mode\n", __func__);
 		if (!p_sed->thread) {
-			if (!p_sed->tmp_buffer) {
-				p_sed->tmp_buffer = kzalloc(SED_PERIOD_BYTES, GFP_KERNEL);
-				if (!p_sed->tmp_buffer)
-					return -ENOMEM;
-			}
 			p_sed->thread =
 				kthread_create(sed_freeze_thread, p_sed,
 						   "sed_freeze_thread");
@@ -1331,6 +1398,8 @@ static int sed_platform_suspend(struct platform_device *pdev, pm_message_t state
 				p_sed->suspend_type = FREEZE_MODE;
 				/*disable xrun*/
 				runtime->stop_threshold = runtime->boundary;
+				if (snd_pcm_running(substream))
+					pcm_stop(p_sed);
 				pcm_start(p_sed);
 				sed_enable(p_sed->audio_top_sed_map, true);
 				dev_info(p_sed->dev, "sed pcm start\n");
@@ -1360,11 +1429,12 @@ static int sed_platform_resume(struct platform_device *pdev)
 	dev_pm_clear_wake_irq(dev);
 	if (get_resume_method() == VAD_WAKEUP)
 		sed_key_report(p_sed);
-	if (is_pm_s2idle_mode() && !p_sed->thread_exit && p_sed->thread) {
-		kthread_stop(p_sed->thread);
+	if (is_pm_s2idle_mode() && p_sed->thread) {
+		if (!p_sed->thread_exit) {
+			p_sed->thread_exit = 1;
+			wake_up_process(p_sed->thread);
+		}
 		put_task_struct(p_sed->thread);
-		kfree(p_sed->tmp_buffer);
-		p_sed->tmp_buffer = NULL;
 		p_sed->thread_exit = 1;
 		p_sed->thread = NULL;
 	}
@@ -1385,9 +1455,10 @@ static irqreturn_t sed_wakeup_isr(int irq, void *data)
 {
 	struct sed *p_sed = (struct sed *)data;
 
+	ktime_get_ts64(&p_sed->wakeup_tstamp);
 	if (p_sed->sed_enable)
 		pr_info("%s:%0x\n", __func__, sed_irq_status(p_sed->sed_map));
-	if (p_sed->thread)
+	if (p_sed->thread && !p_sed->thread_exit)
 		wake_up_process(p_sed->thread);
 	return IRQ_HANDLED;
 }
@@ -1437,6 +1508,17 @@ static int sed_platform_probe(struct platform_device *pdev)
 			pr_info("%s, mic-src found\n", __func__);
 		}
 	}
+	sed_p->rc_clk_gate = devm_clk_get(&pdev->dev, "sed_clk_gate");
+	if (!IS_ERR(sed_p->rc_clk_gate)) {
+		ret = clk_prepare_enable(sed_p->rc_clk_gate);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Can't retrieve pll clock\n");
+			ret = PTR_ERR(sed_p->rc_clk_gate);
+			goto err;
+		}
+	}
+
 	sed_p->rc_pll = devm_clk_get(&pdev->dev, "rc_pll");
 	if (IS_ERR(sed_p->rc_pll)) {
 		dev_err(&pdev->dev,
@@ -1510,7 +1592,7 @@ static int sed_platform_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 	ret = request_irq(sed_p->irq_wakeup,
-			sed_wakeup_isr, IRQF_SHARED | IRQF_NO_SUSPEND, "vad_wakeup",
+			sed_wakeup_isr, IRQF_SHARED | IRQF_NO_SUSPEND, "sed_wakeup",
 			sed_p);
 	if (ret) {
 		dev_err(sed_p->dev, "failed to claim irq_wakeup %u, ret: %d\n",
@@ -1551,7 +1633,17 @@ static int sed_platform_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(node, "sed_suspend_type",
 			&sed_p->channel);
 	if (ret < 0)
-		sed_p->suspend_type = SUSPEND_MODE;
+		sed_p->suspend_type = FREEZE_MODE;
+	ret = of_property_read_u32(node, "use_vad_toddr",
+			&sed_p->use_sed_toddr);
+	if (ret < 0)
+		sed_p->use_sed_toddr = 0;
+
+	ret = of_property_read_u32(node, "sed_clk_measure_id",
+			&sed_p->sed_clk_measure_id);
+	if (ret < 0)
+		sed_p->sed_clk_measure_id = 0;
+
 	sed_clk_enable(sed_p);
 	load_sed_firmware(sed_p);
 	sed_clk_disable(sed_p);

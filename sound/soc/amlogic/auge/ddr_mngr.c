@@ -145,6 +145,10 @@ static struct toddr *register_toddr_l(struct device *dev,
 		/* irqs request */
 		ret = request_threaded_irq(to->irq, aml_ddr_isr, handler,
 		IRQF_SHARED, dev_name(dev), data);
+		if (ret) {
+			dev_err(dev, "failed to claim irq %u\n", to->irq);
+			return NULL;
+		}
 	}
 	/* enable audio ddr arb */
 	mask_bit = i;

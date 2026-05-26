@@ -1011,8 +1011,10 @@ static void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
 	if (!p_pdm->start_clk_enable) {
 		/* disable clock and gate */
 		p_pdm->clk_on = false;
-		clk_disable_unprepare(p_pdm->clk_pdm_dclk);
-		clk_disable_unprepare(p_pdm->clk_pdm_sysclk);
+		if (__clk_is_enabled(p_pdm->clk_pdm_dclk))
+			clk_disable_unprepare(p_pdm->clk_pdm_dclk);
+		if (__clk_is_enabled(p_pdm->clk_pdm_sysclk))
+			clk_disable_unprepare(p_pdm->clk_pdm_sysclk);
 		clk_disable_unprepare(p_pdm->clk_gate);
 	}
 }

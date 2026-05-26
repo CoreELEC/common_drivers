@@ -630,7 +630,7 @@ int pdm_auto_train_algorithm(int pdm_id, int enable, int cnt)
 	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 1 << 18);
 	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 18, 0 << 18);
 	while (1) {
-		usleep_range(30, 40);
+		usleep_range(50, 60);
 		val = (aml_pdm_read(pdm_id, PDM_STS) >> 4) & 0xff;
 		if (val == 0 || val == 1) {
 			count++;
@@ -639,7 +639,8 @@ int pdm_auto_train_algorithm(int pdm_id, int enable, int cnt)
 				continue;
 			else
 				count = 0;
-			if (sample_count2 > 40)
+			usleep_range(500, 600);
+			if (sample_count2 > 50)
 				break;
 		} else {
 			/*must be find two sample count for max and min range*/
@@ -667,5 +668,11 @@ int pdm_auto_train_algorithm(int pdm_id, int enable, int cnt)
 		}
 	}
 	aml_pdm_update_bits(pdm_id, PDM_CTRL, 1 << 19, 0 << 19);
+
+	pr_info("sample range:%d~:%d\n",
+					(sample_count1 < sample_count2 ?
+					sample_count1 : sample_count2),
+					(sample_count1 < sample_count2 ?
+					sample_count2 : sample_count1));
 	return (sample_count1 + sample_count2) / 2;
 }

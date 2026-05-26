@@ -319,16 +319,16 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
-		//aml-audio-card,dai-link@4 {
-		//	mclk-fs = <256>;
-		//	suffix-name = "alsaPORT-Sed";
-		//	cpu {
-		//		sound-dai = <&sed>;
-		//	};
-		//	codec {
-		//		sound-dai = <&dummy_codec>;
-		//	};
-		//};
+		aml-audio-card,dai-link@4 {
+			mclk-fs = <256>;
+			suffix-name = "alsaPORT-Sed";
+			cpu {
+				sound-dai = <&sed>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
 	};
 	/* Audio Related end */
 	picdec {

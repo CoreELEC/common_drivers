@@ -52,7 +52,7 @@ int sed_top_ctrl_init(struct regmap *audio_top_sed_map, int source)
 	return 0;
 }
 
-int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss, int measure_clk)
+int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss, unsigned int measure_clk)
 {
 	 //pdm dclk 0.768M, 30/0.768 =	39.0625  ->int 39
 	//frac=round(  fraction(source_freq/tar_freq) * 256)
@@ -78,7 +78,7 @@ int pdm_dclk_coefficient(struct regmap *audio_top_sed_map, int bypss, int measur
 		div_frac = int_div - (div_int * 1000);
 		div_frac = div64_ul(div_frac * 256, 1000);
 	}
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_A9)
+	if (measure_clk == 24000000)
 		rc = 0;
 	regmap_update_bits(audio_top_sed_map, EE_AUDIO2_CLK_PDMIN_CTRL_0,
 					0x1 << 28, rc  << 28);

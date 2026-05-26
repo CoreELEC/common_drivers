@@ -8,7 +8,6 @@
 #include "meson-c5.dtsi"
 //#include "hdr10plus.dtsi"
 #include "mesonc5_drm.dtsi"
-//#include "mesons6_audio.dtsi"
 //#include "firmware_ab.dtsi"
 #include "meson-c5-panel.dtsi"
 

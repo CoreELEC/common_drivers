@@ -123,6 +123,20 @@
 		clock-output-names = "rc_32m";
 		#clock-cells = <0>;
 	};
+	sedbus@ffae1000 {
+		compatible = "simple-bus";
+		reg = <0x0 0xffae1000 0x0 0x400>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges = <0x0 0x0 0x0 0xFE334C00 0x0 0x400>;
+		toddr_vad: toddrvad@0xfe334c80 {
+			compatible = "amlogic, toddrvad";
+			interrupts = <GIC_SPI 407 IRQ_TYPE_EDGE_RISING>;
+			interrupt-names = "toddr_vad";
+			reg =<0x0 0x0 0x0 0x400>;
+			reg-names = "toddrvad_reg";
+		};
+	};
 };
 
 &audiobus {
@@ -291,7 +305,7 @@
 	sed: sed@ffac0000 {
 		compatible = "amlogic, sed";
 		#sound-dai-cells = <0>;
-		status = "disabled";
+		status = "okay";
 		clocks = <
 			&extclk
 			&extclk
@@ -299,7 +313,8 @@
 			&clkc CLKID_HIFI_PLL
 			&clkaudio CLKID_AUDIO2_PDM_DCLK
 			&clkaudio CLKID_AUDIO2_PDM_SYSCLK
-			&clkaudio CLKID_AUDIO2_VAD_CLK>;
+			&clkaudio CLKID_AUDIO2_VAD_CLK
+			&ao_clkc CLKID_OSC_32M_EN>;
 		clock-names =
 			"rc_pll",
 			"sed_clk_pll",
@@ -307,7 +322,8 @@
 			"dclk_srcpll",
 			"pdm_dclk",
 			"pdm_sysclk",
-			"sed_clk";
+			"sed_clk",
+			"sed_clk_gate";
 		reg = <0x0 0xc0000 0x0 0x20000>,
 			<0x0 0xe1000 0x0 0x400>;
 		reg-names = "sed_reg", "audio_top_reg";
@@ -317,6 +333,8 @@
 					>;
 		interrupt-names ="irq_wakeup", "sed_err_irq";
 		mic-src = <&pdma>;
+		use_vad_toddr = <1>;
+		sed_clk_measure_id = <98>;
 	};
 };
 
