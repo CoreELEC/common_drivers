@@ -287,3 +287,6 @@ CONFIG_AMLOGIC_SMARTCARD=y
 
 # aml_media.ko
 CONFIG_AMLOGIC_MEDIA_MODULE=y
+
+# typec-mux-meson.ko (media depends on)
+CONFIG_TYPEC_MUX_MESON=y

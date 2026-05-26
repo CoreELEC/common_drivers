@@ -322,13 +322,22 @@ AMLOGOC_COMMON_MODULES_REMOVE = (
     [
         "kernel/kheaders.ko",
         "drivers/android/binder/rust_binder.ko",
+        "common_drivers/drivers/external/sensor/inf_bgt60/sei_inf_bgt60.ko",
+        "//common_drivers/drivers/external/sensor/inf_bgt60:sei_inf_bgt60",
     ] + (
         [
             "common_drivers/drivers/tty/serial/amlogic-uart.ko",
             "//common_drivers/drivers/tty/serial:amlogic-uart",
+            "common_drivers/drivers/usb/typec/mux/typec-mux-meson.ko",
+            "//common_drivers/drivers/usb:typec-mux-meson",
         ] if project_configs.UPGRADE_PROJECT else []
     )
 ) if project_configs.GKI_CONFIG in ("", "non_gki") else (
+    [
+        "common_drivers/drivers/external/sensor/inf_bgt60/sei_inf_bgt60.ko",
+        "//common_drivers/drivers/external/sensor/inf_bgt60:sei_inf_bgt60",
+    ] + (["drivers/android/binder/rust_binder.ko"] if project_configs.KASAN else [])
+) if project_configs.GKI_CONFIG == "gki_10" else (
     ["drivers/android/binder/rust_binder.ko"] if project_configs.KASAN else []
 )
 
