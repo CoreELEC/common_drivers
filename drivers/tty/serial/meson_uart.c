@@ -761,9 +761,9 @@ static struct uart_driver meson_uart_driver = {
 	.cons		= MESON_SERIAL_CONSOLE,
 };
 
-static u32 uart_reg_ctrl;
-static u32 uart_reg_misc;
-static u32 uart_reg_reg5;
+static u32 reg_ctrl[AML_UART_PORT_MAX];
+static u32 reg_misc[AML_UART_PORT_MAX];
+static u32 reg_reg5[AML_UART_PORT_MAX];
 
 static int meson_uart_freeze(struct device *dev)
 {
@@ -773,13 +773,13 @@ static int meson_uart_freeze(struct device *dev)
 	pdev = to_platform_device(dev);
 	port = platform_get_drvdata(pdev);
 
-	uart_reg_ctrl = readl_relaxed(port->membase + AML_UART_CONTROL);
-	uart_reg_misc = readl_relaxed(port->membase + AML_UART_MISC);
-	uart_reg_reg5 = readl_relaxed(port->membase + AML_UART_REG5);
+	reg_ctrl[port->line] = readl_relaxed(port->membase + AML_UART_CONTROL);
+	reg_misc[port->line] = readl_relaxed(port->membase + AML_UART_MISC);
+	reg_reg5[port->line] = readl_relaxed(port->membase + AML_UART_REG5);
 
-	pr_debug("uart freeze, uart_reg_ctrl = 0x%x\n", uart_reg_ctrl);
-	pr_debug("uart freeze, uart_reg_misc = 0x%x\n", uart_reg_misc);
-	pr_debug("uart freeze, uart_reg_reg5 = 0x%x\n", uart_reg_reg5);
+	pr_debug("%s, reg_ctrl[%d] = 0x%x\n", __func__, port->line, reg_ctrl[port->line]);
+	pr_debug("%s, reg_misc[%d] = 0x%x\n", __func__, port->line, reg_misc[port->line]);
+	pr_debug("%s, reg_reg5[%d] = 0x%x\n", __func__, port->line, reg_reg5[port->line]);
 
 	return 0;
 }
@@ -797,13 +797,13 @@ static int meson_uart_restore(struct device *dev)
 	pdev = to_platform_device(dev);
 	port = platform_get_drvdata(pdev);
 
-	writel_relaxed(uart_reg_ctrl, port->membase + AML_UART_CONTROL);
-	writel_relaxed(uart_reg_misc, port->membase + AML_UART_MISC);
-	writel_relaxed(uart_reg_reg5, port->membase + AML_UART_REG5);
+	writel_relaxed(reg_ctrl[port->line], port->membase + AML_UART_CONTROL);
+	writel_relaxed(reg_misc[port->line], port->membase + AML_UART_MISC);
+	writel_relaxed(reg_reg5[port->line], port->membase + AML_UART_REG5);
 
-	pr_debug("uart restore, uart_reg_ctrl = 0x%x\n", uart_reg_ctrl);
-	pr_debug("uart restore, uart_reg_misc = 0x%x\n", uart_reg_misc);
-	pr_debug("uart restore, uart_reg_reg5 = 0x%x\n", uart_reg_reg5);
+	pr_debug("%s, reg_ctrl[%d] = 0x%x\n", __func__, port->line, reg_ctrl[port->line]);
+	pr_debug("%s, reg_misc[%d] = 0x%x\n", __func__, port->line, reg_misc[port->line]);
+	pr_debug("%s, reg_reg5[%d] = 0x%x\n", __func__, port->line, reg_reg5[port->line]);
 
 	return 0;
 }
