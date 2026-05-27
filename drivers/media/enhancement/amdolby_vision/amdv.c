@@ -283,7 +283,8 @@ static u32 vsync_count;
 
 static u32 vpp_data_422T0444_backup;
 
-bool force_core2c_on = true;
+/*bit0: core2a on, bit1: core2c on*/
+u32 force_core2_on = 3;
 static bool is_osd_off[OSD_MAX_INDEX];
 static int core1_switch;
 static int core3_switch;
@@ -17519,7 +17520,7 @@ static const char *amdolby_vision_debug_usage_str = {
 	"echo force_top1_vskip value > /sys/class/amdolby_vision/debug;\n"
 	"echo enable_top1_scale value > /sys/class/amdolby_vision/debug;\n"
 	"echo debug_force_mode value > /sys/class/amdolby_vision/debug;\n"
-	"echo force_core2c_on 0/1 > /sys/class/amdolby_vision/debug;\n"
+	"echo force_core2_on value > /sys/class/amdolby_vision/debug;\n"
 	"echo load_fixed_setting 0/1 > /sys/class/amdolby_vision/debug;\n"
 	"echo debug_maxcll value > /sys/class/amdolby_vision/debug;\n"
 	"echo debug_maxfall value > /sys/class/amdolby_vision/debug;\n"
@@ -17884,11 +17885,11 @@ static ssize_t amdolby_vision_debug_store
 		else
 			debug_force_mode = true;
 		pr_info("set debug_force_mode %d\n", debug_force_mode);
-	} else if (!strcmp(parm[0], "force_core2c_on")) {
+	} else if (!strcmp(parm[0], "force_core2_on")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			return -EINVAL;
-		force_core2c_on = val;
-		pr_info("force_core2c_on %d\n", force_core2c_on);
+		force_core2_on = val;
+		pr_info("force_core2_on %d\n", force_core2_on);
 	} else if (!strcmp(parm[0], "force_toggle_each_vsync")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			return -EINVAL;

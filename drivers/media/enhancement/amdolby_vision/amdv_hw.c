@@ -3792,9 +3792,10 @@ void apply_stb_core_settings(dma_addr_t dma_paddr,
 			       sizeof(struct dm_lut_ipcore));
 
 
-		osd_enable[0] = get_core2_enable_info(OSD1_INDEX);
+		osd_enable[0] = get_core2_enable_info(OSD1_INDEX) ||
+			((force_core2_on & 1) && (core2_sel & 1));
 		osd_enable[1] = get_core2_enable_info(OSD3_INDEX) ||
-			(force_core2c_on && (core2_sel & 2));
+			((force_core2_on & 2) && (core2_sel & 2));
 
 		dv_core2a_set
 			(24, 256 * 5,
@@ -4779,7 +4780,8 @@ void enable_amdv_v1(int enable)
 						VSYNC_WR_DV_REG_BITS(VPP_SLICE3_DOLBY_CTRL,
 							0, 3, 1);	/* core3 S3 disable */
 					}
-					if (get_core2_enable_info(OSD1_INDEX)) {
+					if (get_core2_enable_info(OSD1_INDEX) ||
+						((force_core2_on & 1) && (core2_sel & 1))) {
 						pr_info("enable core2a\n");
 						VSYNC_WR_DV_REG_BITS
 							(OSD_DOLBY_BYPASS_EN,
@@ -4792,7 +4794,7 @@ void enable_amdv_v1(int enable)
 							 0, 1);/*core2a bypass*/
 					}
 					if (get_core2_enable_info(OSD3_INDEX) ||
-						(force_core2c_on && (core2_sel & 2))) {
+						((force_core2_on & 2) && (core2_sel & 2))) {
 						pr_info("enable core2c\n");
 						VSYNC_WR_DV_REG_BITS
 							(OSD_DOLBY_BYPASS_EN,
@@ -5815,7 +5817,8 @@ void enable_amdv_v2_stb(int enable)
 						VSYNC_WR_DV_REG_BITS(VPP_SLICE3_DOLBY_CTRL,
 							0, 3, 1);	/* core3 S3 disable */
 					}
-					if (get_core2_enable_info(OSD1_INDEX)) {
+					if (get_core2_enable_info(OSD1_INDEX) ||
+						((force_core2_on & 1) && (core2_sel & 1))) {
 						pr_info("enable core2a\n");
 						VSYNC_WR_DV_REG_BITS
 							(OSD_DOLBY_BYPASS_EN,
@@ -5828,7 +5831,7 @@ void enable_amdv_v2_stb(int enable)
 							 0, 1);/*core2a bypass*/
 					}
 					if (get_core2_enable_info(OSD3_INDEX) ||
-						(force_core2c_on && (core2_sel & 2))) {
+						((force_core2_on & 2) && (core2_sel & 2))) {
 						pr_info("enable core2c\n");
 						VSYNC_WR_DV_REG_BITS
 							(OSD_DOLBY_BYPASS_EN,

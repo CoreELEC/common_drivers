@@ -1063,7 +1063,7 @@ extern u32 last_top1_ro2;
 extern u32 last_top1_ro1;
 extern u32 last_top1_ro0;
 extern u32 enable_ro_check;
-extern bool force_core2c_on;
+extern u32 force_core2_on;
 extern bool vdin_vd1_detunnel_tunnel_mode;
 extern u32 bypass_detunnel_debug;
 extern u32 lightsense_test_mode;
