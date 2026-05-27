@@ -1124,6 +1124,7 @@ int meson_aml_u2phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	cnt = of_property_count_strings(dev->of_node, "clock-names");
 	if (cnt < 0) {
 		dev_err(dev, "no clks? Please double-check.\n");
+		ret = 0;
 		goto no_clks;
 	} else if (cnt > AML_USB_PHY_MAX_CLK_NUMBER) {
 		dev_err(dev, "too many clks. exit.");

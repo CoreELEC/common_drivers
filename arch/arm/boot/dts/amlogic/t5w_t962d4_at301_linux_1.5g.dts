@@ -925,27 +925,28 @@
 	};
 };
 
-&crg {
+&usbphy0 {
 	status = "okay";
-};
+	u2p@0 {
+		status = "okay";
+	};
 
-&usb2_phy_v2 {
-	status = "okay";
-	portnum = <3>;
-};
+	u2p@20 {
+		status = "okay";
+		controller-type = <1>; /* 0~3: normal, host, device, otg */
+	};
 
-&usb3_phy_v2 {
-	status = "okay";
-	portnum = <0>;
-	portconfig-30 = <0>;
-	portconfig-31 = <0>;
-	otg = <0>;
+	u2p@40 {
+		status = "okay";
+	};
 };
 
 &dwc2_a {
 	status = "okay";
-	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
-	controller-type = <1>;
+};
+
+&crg {
+	status = "okay";
 };
 
 &ethmac {

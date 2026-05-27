@@ -855,49 +855,96 @@
 		};
 
 		crg: crg@ff500000 {
-			compatible = "amlogic, crg";
+			compatible = "amlogic, crg-host-drd";
 			status = "disabled";
 			reg = <0xff500000 0x100000>;
 			interrupts = <0 30 4>;
-			usb-phy = <&usb2_phy_v2>, <&usb3_phy_v2>;
+			phys = <&u2p0port0>, <&u2p0port1>, <&u2p0port2>;
+			phy-names = "usb2-0", "usb2-1", "usb2-2";
 			cpu-type = "gxl";
 			clock-src = "usb3.0";
 			clocks = <&clkc CLKID_CLK81_USB_GENERAL>;
 			clock-names = "crg_general";
 		};
 
-		usb2_phy_v2: usb2phy@ffe09000 {
-			compatible = "amlogic, amlogic-new-usb2-v2";
+		usbphy0: usbphy0@ffe09000 {
+			compatible = "amlogic,u2phy-t5w";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			//ranges = <0 0 0 0x1000>;
 			status = "disabled";
-			reg = <0xffe09000 0x80
-					0xffd01008 0x100
-					0xff636000 0x2000
-					0xff63a000 0x2000
-					0xff658000 0x2000>;
-			pll-setting-1 = <0x09400414>;
-			pll-setting-2 = <0x927E0000>;
-			pll-setting-3 = <0xac5f69e5>;
-			pll-setting-4 = <0xbe18>;
-			pll-setting-5 = <0x7>;
-			pll-setting-6 = <0x78000>;
-			pll-setting-7 = <0xe0004>;
-			pll-setting-8 = <0xe000c>;
-			version = <3>;
-			pwr-ctl = <0>;
-			usb-phy-trim-reg = <0xff800270>;
-		};
+			u2p0port0: u2p@0 {
+				#phy-cells = <0>;
+				port-speed = <0x0>; /* 0~2: HS HSP SS */
+				reg = <0xffe09000 0x20
+						0xffd01008 0x100
+						0xff800270 0x4
+						0xff636000 0x2000>;
+				reset-level = <0x40>;
+				phy-reset-level-bits = <16>;
+				usb-reset-bit = <2>;
+				pll-settings = <0x09400414
+								0x927E0000
+								0xac5f69e5
+								0xbe18
+								0x7
+								0x78000
+								0xe0004
+								0xe000c>;
+				//dis-thred-enhance = <0x2>;
+				clocks = <&clkc CLKID_CLK81_USB_GENERAL>;
+				clock-names = "crg_general";
+			};
+			u2p0port1: u2p@20 {
+				#phy-cells = <0>;
+				port-speed = <0x0>; /* 0~2: HS HSP SS */
+				reg = <0xffe09020 0x20
+						0xffd01008 0x100
+						0xff800270 0x4
+						0xff63a000 0x2000
+						0xffe09080 0x20>;
+				reset-level = <0x40>;
+				phy-reset-level-bits = <17>;
+				usb-reset-bit = <2>;
+				pll-settings = <0x09400414
+								0x927E0000
+								0xac5f69e5
+								0xbe18
+								0x7
+								0x78000
+								0xe0004
+								0xe000c>;
+				//dis-thred-enhance = <0x2>;
+				phy-otg;
+				otg-type = <0>; /* 0: PHY ID, 1: GPIO ID. */
+				iddig-type = <1>; /* iddig defined in - 0: usb2 set, 1:usb3 set. */
+				// interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clkc CLKID_CLK81_USB_GENERAL>;
+				clock-names = "crg_general";
+			};
 
-		usb3_phy_v2: usb3phy@ffe09080 {
-			compatible = "amlogic, amlogic-new-usb3-v2";
-			status = "disable";
-			reg = <0xffe09080 0x20
-				0xffd01008 0x100>;
-			phy-reg = <0xff646000>;
-			phy-reg-size = <0x2000>;
-			usb2-phy-reg = <0xffe09000>;
-			usb2-phy-reg-size = <0x80>;
-			interrupts = <0 16 4>;
-			pwr-ctl = <0>;
+			u2p0port2: u2p@40 {
+				#phy-cells = <0>;
+				port-speed = <0x0>; /* 0~2: HS HSP SS */
+				reg = <0xffe09000 0x20
+						0xffd01008 0x100
+						0xff800270 0x4
+						0xff658000 0x2000>;
+				reset-level = <0x40>;
+				phy-reset-level-bits = <18>;
+				usb-reset-bit = <2>;
+				pll-settings = <0x09400414
+								0x927E0000
+								0xac5f69e5
+								0xbe18
+								0x7
+								0x78000
+								0xe0004
+								0xe000c>;
+				//dis-thred-enhance = <0x2>;
+				clocks = <&clkc CLKID_CLK81_USB_GENERAL>;
+				clock-names = "crg_general";
+			};
 		};
 
 		dwc2_a: dwc2_a@ff400000 {
@@ -922,6 +969,8 @@
 			/** phy-interface: 0x0: amlogic-v1 phy, 0x1: synopsys phy **/
 			/**                0x2: amlogic-v2 phy                    **/
 			phy-interface = <0x2>;
+			use-gphy;
+			phys = <&u2p0port1>;
 			clocks = <&clkc CLKID_CLK81_USB_GENERAL
 						&clkc CLKID_CLK81_USB1_TO_DDR>;
 			clock-names = "usb_general",
