@@ -616,8 +616,8 @@
 		dct = <0>;
 		sub_v = <0>;//sub version
 		afbce_loss_en = <0>;//t5w loss mode enable for DI output
-		prelink_en = <1>;
-		ponly_mode = <1>;
+		prelink_en = <0>;
+		ponly_mode = <0>;
 		t5db_afbcd_en = <1>;
 		postlink_en = <0>;
 		/***************************************************
