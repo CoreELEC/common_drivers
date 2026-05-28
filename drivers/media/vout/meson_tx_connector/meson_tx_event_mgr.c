@@ -372,12 +372,12 @@ int meson_tx_event_mgr_set_uevent_state(struct meson_tx_event_mgr *event_mgr,
 	if (!event_mgr)
 		return 0;
 
-	if (event_mgr->conn_type > DRM_MODE_MESON_CONNECTOR_HDMI_START &&
-		event_mgr->conn_type < DRM_MODE_MESON_CONNECTOR_HDMI_END)
+	/* currently DP share the HDMI extcon id */
+	if ((event_mgr->conn_type > DRM_MODE_MESON_CONNECTOR_HDMI_START &&
+		event_mgr->conn_type < DRM_MODE_MESON_CONNECTOR_HDMI_END) ||
+	   (event_mgr->conn_type > DRM_MODE_CONNECTOR_MESON_TX_DP_START &&
+		event_mgr->conn_type < DRM_MODE_CONNECTOR_MESON_TX_DP_END))
 		extcon_id = EXTCON_DISP_HDMI;
-	else if (event_mgr->conn_type > DRM_MODE_CONNECTOR_MESON_TX_DP_START &&
-		event_mgr->conn_type < DRM_MODE_CONNECTOR_MESON_TX_DP_END)
-		extcon_id = EXTCON_DISP_DP;
 	else
 		extcon_id = EXTCON_NONE;
 
@@ -416,12 +416,12 @@ int meson_tx_event_mgr_send_uevent(struct meson_tx_event_mgr *uevent_mgr,
 	if (!uevent_mgr)
 		return 0;
 
-	if (uevent_mgr->conn_type > DRM_MODE_MESON_CONNECTOR_HDMI_START &&
-		uevent_mgr->conn_type < DRM_MODE_MESON_CONNECTOR_HDMI_END)
+	/* currently DP share the HDMI extcon id */
+	if ((uevent_mgr->conn_type > DRM_MODE_MESON_CONNECTOR_HDMI_START &&
+		uevent_mgr->conn_type < DRM_MODE_MESON_CONNECTOR_HDMI_END) ||
+	   (uevent_mgr->conn_type > DRM_MODE_CONNECTOR_MESON_TX_DP_START &&
+		uevent_mgr->conn_type < DRM_MODE_CONNECTOR_MESON_TX_DP_END))
 		extcon_id = EXTCON_DISP_HDMI;
-	else if (uevent_mgr->conn_type > DRM_MODE_CONNECTOR_MESON_TX_DP_START &&
-		uevent_mgr->conn_type < DRM_MODE_CONNECTOR_MESON_TX_DP_END)
-		extcon_id = EXTCON_DISP_DP;
 	else
 		extcon_id = EXTCON_NONE;
 

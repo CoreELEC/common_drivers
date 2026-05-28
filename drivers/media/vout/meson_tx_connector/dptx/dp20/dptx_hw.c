@@ -3551,6 +3551,9 @@ struct meson_tx_hw *dptx20_alloc_tx_hw(void)
 
 static void _dptx_audio_init(struct dptx_hw_common *hw_comm, u8 vc_id)
 {
+	/* reset the secondary stream control */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 0);
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 1);
 	dptx20_reg_write(hw_comm, CORE_LEVEL,

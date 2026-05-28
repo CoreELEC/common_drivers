@@ -1694,6 +1694,14 @@
 			&tdm_d6_pins
 			&tdmb_clk_pins>;
 	pinctrl-1 = <&tdmout_b_gpio>;
+	Channel_Mask {
+		/*i2s has 4 pins, 8channel, mux output*/
+		Spdif_samesource_Channel_Mask = "i2s_0/1";
+	};
+};
+
+&aed {
+	channel_mask = <0x3>;
 };
 
 &pdma {
