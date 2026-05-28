@@ -1098,7 +1098,7 @@ void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p, int vpp_index)
 			chip_type_id == chip_t3x) {
 			post_gainoff_set(p, WR_DMA, vpp_index);
 		} else if (is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
-		    is_meson_tm2_cpu() || is_meson_t7_cpu()) {
+		    is_meson_tm2_cpu() || is_meson_t7_cpu() || chip_type_id == chip_a9) {
 			VSYNC_WRITE_VPP_REG(VPP_GAINOFF_CTRL0,
 				      ((p->en << 31) & 0x80000000) |
 				      ((p->r_gain << 16) & 0x07ff0000) |
@@ -1162,22 +1162,28 @@ void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p, int vpp_index)
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 void vpp_set_rgb_ogo_sub(struct tcon_rgb_ogo_s *p)
 {
+	int offset = 0;
+
+	if (chip_type_id == chip_a9)
+		offset = 0xb00;
+
 	/*for t7 vpp1 go*/
-	if (is_meson_t7_cpu()) {
-		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL0,
+	if (is_meson_t7_cpu() ||
+		chip_type_id == chip_a9) {
+		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL0 + offset,
 			((p->en << 31) & 0x80000000) |
 			((p->r_gain << 16) & 0x07ff0000) |
 			((p->g_gain << 0) & 0x000007ff));
-		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL1,
+		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL1 + offset,
 			((p->b_gain << 16) & 0x07ff0000) |
 			((p->r_post_offset << 0) & 0x00001fff));
-		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL2,
+		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL2 + offset,
 			((p->g_post_offset << 16) & 0x1fff0000) |
 			((p->b_post_offset << 0) & 0x00001fff));
-		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL3,
+		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL3 + offset,
 			((p->r_pre_offset << 16) & 0x1fff0000) |
 			((p->g_pre_offset << 0) & 0x00001fff));
-		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL4,
+		VSYNC_WRITE_VPP_REG(VPP1_GAINOFF_CTRL4 + offset,
 			((p->b_pre_offset << 0) & 0x00001fff));
 	}
 }
@@ -1613,7 +1619,8 @@ void ve_lcd_gamma_process(int vpp_index)
 			pr_amve_dbg("\n[amve] vpp_set_lcd_gamma_table OK\n");
 		} else {
 			vpp_set_rgb_ogo(&video_rgb_ogo, vpp_index);
-			if (is_meson_t7_cpu()) {
+			if (is_meson_t7_cpu() ||
+				chip_type_id == chip_a9) {
 				vpp_set_rgb_ogo_sub(&video_rgb_ogo_sub);
 				pr_amve_dbg("\n[amve] set_rgb_ogo_sub OK!!!\n");
 			}
