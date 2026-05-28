@@ -33,3 +33,10 @@
 &demux {
 	status = "okay";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "StarNet";
+		product_desc = "Apple-X3";
+	};
+};

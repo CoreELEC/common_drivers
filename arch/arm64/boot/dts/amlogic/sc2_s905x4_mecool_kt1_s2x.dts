@@ -67,3 +67,10 @@
 &sd_emmc_b {
 	max-frequency = <150000000>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Mecool";
+		product_desc = "KT1";
+	};
+};

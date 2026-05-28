@@ -10,3 +10,10 @@
 					0x00000001 0x00000000 0x00000001 0x20000000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "X96";
+		product_desc = "X10 Pro";
+	};
+};

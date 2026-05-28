@@ -10,3 +10,10 @@
 					0x00000001 0x00000000 0x00000001 0x20000000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "AM8 Pro";
+	};
+};

@@ -9,3 +9,9 @@
 		linux,usable-memory = <0x0 0x000000 0x0 0x80000000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		product_desc = "Bananapi-M2Pro";
+	};
+};

@@ -31,3 +31,10 @@
 		reg = <0x51>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Beelink";
+		product_desc = "GT-King";
+	};
+};

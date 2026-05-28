@@ -9,3 +9,10 @@
 		mosi-gpios = <&gpio GPIOA_9 GPIO_ACTIVE_LOW>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "AM9 Pro";
+	};
+};

@@ -25,3 +25,10 @@
 		realtek,in2-differential = "false";
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Minix";
+		product_desc = "U22-XJ";
+	};
+};
