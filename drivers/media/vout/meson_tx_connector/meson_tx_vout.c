@@ -97,6 +97,7 @@ void meson_tx_vout_init(struct meson_tx_dev *tx_dev, struct vout_op_s *ops)
 	vout_server->op.set_vframe_rate_hint = ops->set_vframe_rate_hint;
 	vout_server->op.get_vframe_rate_hint = ops->get_vframe_rate_hint;
 	vout_server->op.set_bist = ops->set_bist;
+	vout_server->op.get_viu_mux = ops->get_viu_mux;
 #ifdef CONFIG_PM
 	vout_server->op.vout_suspend = ops->vout_suspend;
 	vout_server->op.vout_resume = ops->vout_resume;

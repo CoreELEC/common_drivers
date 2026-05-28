@@ -188,6 +188,23 @@ static enum vmode_e dptx_validate_vmode(char *_mode, unsigned int frac, void *da
 	return VMODE_MAX;
 }
 
+static unsigned int dptx_get_viu_mux(char *_mode, void *data)
+{
+	struct dptx_common *tx_comm = (struct dptx_common *)data;
+	unsigned int viu_mux = VIU_MUX_INVALID;
+
+	if (!tx_comm) {
+		DPTX_ERROR("[%s]: input param is NULL\n", __func__);
+		return viu_mux;
+	}
+
+	/* The A9 chip only supports ENCP */
+	viu_mux = VIU_MUX_ENCP | (tx_comm->enc_idx << 4);
+
+	DPTX_INFO("%s mode: %s, viu_mux: %d\n", __func__, _mode, viu_mux);
+	return viu_mux;
+}
+
 static int dptx_vmode_is_supported(enum vmode_e mode, void *data)
 {
 	if ((mode & VMODE_MODE_BIT_MASK) == VMODE_DPTX)
@@ -234,6 +251,7 @@ void dptx_vout_init(struct dptx_common *tx_comm)
 		.set_vframe_rate_hint = NULL,
 		.get_vframe_rate_hint = NULL,
 		.set_bist = NULL,
+		.get_viu_mux = dptx_get_viu_mux,
 		.vout_suspend = NULL,
 		.vout_resume = NULL,
 	};
