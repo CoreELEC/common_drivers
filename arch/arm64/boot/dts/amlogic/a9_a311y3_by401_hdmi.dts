@@ -12,8 +12,8 @@
 #include "mesona9_audio.dtsi"
 #include "firmware_ab.dtsi"
 / {
-	amlogic-dt-id = "a9_a311y3_by401_hdmi-only";
-	compatible = "a9_a311y3_by401_hdmi-only";
+	amlogic-dt-id = "a9_a311y3_by401_hdmi";
+	compatible = "a9_a311y3_by401_hdmi";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -471,18 +471,6 @@
 				sound-dai = <&dummy_codec>;
 			};
 		};
-
-		aml-audio-card,dai-link@10 {
-			mclk-fs = <256>;
-			suffix-name = "alsaPORT-earc";
-			cpu {
-				sound-dai = <&earc>;
-				system-clock-frequency = <12288000>;
-			};
-			codec {
-				sound-dai = <&dummy_codec>;
-			};
-		 };
 	};
 	/* Audio Related end */
 
@@ -510,7 +498,7 @@
 		fe2_reset_gpio = <&gpioz 4 GPIO_ACTIVE_HIGH>;
 		fe2_reset_dir = <0>; /* 0: out, 1: in. */
 		fe2_ant_poweron_value = <0>;
-		//fe2_ant_power_gpio = <&gpioh 9 GPIO_ACTIVE_HIGH>;
+		//fe2_ant_power_gpio = <&gpio GPIOH_9 GPIO_ACTIVE_HIGH>;
 		fe2_ts = <0>;
 		fe2_tuner1 = <3>; /* use tuner3, only S. */
 
@@ -1121,7 +1109,7 @@
 		index = <2>;
 		status = "okay";
 
-		clocks = <&clkc CLKID_MCLK1_PLL>,
+		clocks =  <&clkc CLKID_MCLK1_PLL>,
 				<&clkc CLKID_MCLK1_0_PRE>,
 				<&clkc CLKID_MCLK1_0>;
 		clock-names = "mclk_pll", "mclk_pre", "xclk";
@@ -1193,13 +1181,36 @@
 	status = "okay";
 };
 
-//&tdma {
-//	pinctrl-names = "tdm_pins";
-//	pinctrl-0 = <&bt_pcm_gpio_x_pins
-//		&tdm_d1_pins
-//		&tdm_d0_pins
-//		&tdma_clk_pins>;
-//};
+&tdma {
+	pinctrl-names = "tdm_pins";
+	pinctrl-0 = <&bt_pcm_gpio_x_pins
+		&tdm_d0_pins
+		&tdm_d1_pins
+		&tdma_clk_pins>;
+};
+
+&pinctrl_audio {
+	tdm_d0_pins: tdm_d0_pin {
+		mux {
+			groups = "tdm_d0";
+			function = "tdmouta_lane0";
+		};
+	};
+
+	tdm_d1_pins: tdm_d1_pin {
+		mux {
+			groups = "tdm_d1";
+			function = "tdmina_lane0";
+		};
+	};
+
+	tdma_clk_pins: tdm_clk_pin {
+		mux {
+			groups = "tdm_sclk0", "tdm_lrclk0";
+			function = "tdm_clk_outa";
+		};
+	};
+};
 
 //&tdmc {
 //	pinctrl-names = "tdm_pins";
@@ -1592,11 +1603,11 @@
 };
 
 &amhdmitx {
-	status = "disabled";
+	status = "okay";
 };
 
 &dptx {
-	status = "okay";
+	status = "disabled";
 	pxp_mode = <0>;
 	enc_idx = <0>;
 };
@@ -1614,6 +1625,10 @@
 	arc_port = <0>;
 	/* bit4: enable feature, bit3~0: port number */
 	disable_port = <0x0>;
+};
+
+&aocec {
+	output = <1>;
 };
 
 /*if you want to use vdin just modify status to "ok"*/
@@ -1640,8 +1655,8 @@
 &aml_bt {
 	status = "okay";
 	reset-gpios = <&gpioao  12 GPIO_ACTIVE_HIGH>;
-	btwakeup-gpios = <&gpiox 16 GPIO_ACTIVE_HIGH>;
-	hostwake-gpios = <&gpiox 17 GPIO_ACTIVE_HIGH>;
+	btwakeup-gpios = <&gpiox  16 GPIO_ACTIVE_HIGH>;
+	hostwake-gpios = <&gpiox  17 GPIO_ACTIVE_HIGH>;
 };
 
 &pwm_k {
@@ -1669,8 +1684,8 @@
 	compatible = "amlogic, vecm-a9";
 	dev_name = "aml_vecm";
 	status = "okay";
-	gamma_en = <1>;/*1:enable ;0:disable*/
-	wb_en = <1>;/*1:enable ;0:disable*/
+	gamma_en = <0>;/*1:enable ;0:disable*/
+	wb_en = <0>;/*1:enable ;0:disable*/
 	cm_en = <1>;/*1:enable ;0:disable*/
 	wb_sel = <0>;/*1:mtx ;0:gainoff*/
 	osd_pic_en = <1>;
@@ -1711,8 +1726,16 @@
 
 &spdifa {
 
-		pinctrl-names = "spdif_pins",
-			"spdif_pins_mute";
-		pinctrl-0 = <&spdifout_a>;
-		pinctrl-1 = <&spdifout_a_mute>;
+	pinctrl-names = "spdif_pins",
+		"spdif_pins_mute";
+	pinctrl-0 = <&spdifout_a>;
+	pinctrl-1 = <&spdifout_a_mute>;
+};
+
+/*only 2 ch output*/
+&tdm_d5_pins {
+	mux {
+		groups = "tdm_d5";
+		function = "tdmoutb_lane0";
+	};
 };

@@ -14,8 +14,8 @@
 #include "meson-ir-map-linux.dtsi"
 
 / {
-	amlogic-dt-id = "t7c_a311d2_an400-hdmitx-only";
-	compatible = "t7c_a311d2_an400-hdmitx-only";
+	amlogic-dt-id = "t7c_a311d2_an400-hdmitx";
+	compatible = "t7c_a311d2_an400-hdmitx";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;

@@ -12,8 +12,8 @@
 #include "mesont7c_drm.dtsi"
 
 / {
-	amlogic-dt-id = "t7c_a311d2_an400-hdmitx-only-4g";
-	compatible = "t7c_a311d2_an400-hdmitx-only-4g";
+	amlogic-dt-id = "t7c_a311d2_an400-hdmitx-4g";
+	compatible = "t7c_a311d2_an400-hdmitx-4g";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -1591,27 +1591,28 @@
 			function = "tdm";
 		};
 	};
-/*
-    dvb_s_ts0_pins: dvb_s_ts0_pins {
-		tsin_a {
-			groups = "tsin_a_sop_t",
-				   "tsin_a_valid_t",
-				   "tsin_a_clk_t",
-				   "tsin_a_din0_t";
-			function = "tsin_a";
-		};
-	};
 
-	dvb_s_ts1_pins: dvb_s_ts1_pins {
-		tsin_b {
-			groups = "tsin_b_sop",
-				   "tsin_b_valid",
-				   "tsin_b_clk",
-				   "tsin_b_din0";
-			function = "tsin_b";
-		};
-	};
-*/
+/*
+ *   dvb_s_ts0_pins: dvb_s_ts0_pins {
+ *		tsin_a {
+ *			groups = "tsin_a_sop_t",
+ *				   "tsin_a_valid_t",
+ *				   "tsin_a_clk_t",
+ *				   "tsin_a_din0_t";
+ *			function = "tsin_a";
+ *		};
+ *	};
+ *
+ *	dvb_s_ts1_pins: dvb_s_ts1_pins {
+ *		tsin_b {
+ *			groups = "tsin_b_sop",
+ *				   "tsin_b_valid",
+ *				   "tsin_b_clk",
+ *				   "tsin_b_din0";
+ *			function = "tsin_b";
+ *		};
+ *	};
+ */
 	dvb_p_ts1_pins: dvb_p_ts1_pins {
 		tsin_b {
 			groups = "tsin_b_sop",
