@@ -310,10 +310,8 @@ void hw_cfg_dpss_dae(enum DPSS_WORK_MODE  dae_mode,
 	dae_yuv->bits_mode  = prm_dae->dae_yuv_mif.bits_mode;
 	dae_yuv->pack_mode  = prm_dae->dae_yuv_mif.pack_mode;
 
-	dae_yuv->reverse[0] = (prm_top->frc_rev_mode & 0x1) |
-				(prm_top->comp_setting.vfcd_rev_mode & 0x1);
-	dae_yuv->reverse[1] = ((prm_top->frc_rev_mode & 0x2) >> 1) |
-			(prm_top->comp_setting.vfcd_rev_mode & 0x2) >> 1;
+	dae_yuv->reverse[0] = 0;
+	dae_yuv->reverse[1] = 0;
 	//yu.zong 2024-12-06	dae_yuv_intf.skip_line =0 ;
 	if (prm_top->di_line_sel) {
 		dae_yuv->skip_line = nr_4k1k_vds_en ? 1 : 0;
