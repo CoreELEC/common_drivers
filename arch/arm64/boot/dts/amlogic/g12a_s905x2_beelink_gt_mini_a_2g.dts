@@ -9,3 +9,10 @@
 		linux,usable-memory = <0x0 0x00100000 0x0 0x7ff00000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Beelink";
+		product_desc = "GT-Mini-A";
+	};
+};

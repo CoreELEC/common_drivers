@@ -37,3 +37,10 @@
 		reset-deassert-us = <300000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "RockTek";
+		product_desc = "G2";
+	};
+};

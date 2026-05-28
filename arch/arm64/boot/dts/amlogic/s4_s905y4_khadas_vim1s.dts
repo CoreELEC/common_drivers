@@ -108,6 +108,13 @@
 	};
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+		product_desc = "VIM1S";
+	};
+};
+
 &{/thermal-zones} {
 	fan_thermal: fan_thermal {
 		polling-delay = <1000>;

@@ -108,3 +108,10 @@
 		};
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "GTMedia";
+		product_desc = "GT Combo";
+	};
+};

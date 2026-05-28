@@ -58,6 +58,13 @@
 	};
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "Beelink";
+		product_desc = "GS-King X";
+	};
+};
+
 &vir_tsensor {
 	num-vtsens = <2>;
 };

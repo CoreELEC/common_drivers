@@ -169,3 +169,10 @@
 &uart_A {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "HK";
+		product_desc = "ODROID-N2Plus";
+	};
+};

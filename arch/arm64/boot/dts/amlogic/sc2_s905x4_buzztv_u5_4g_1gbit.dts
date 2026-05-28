@@ -5,3 +5,9 @@
 	amlogic-dt-id = "sc2_s905x4_ah212-gEth-4g";
 	coreelec-dt-id = "sc2_s905x4_buzztv_u5_4g_1gbit";
 };
+
+&amhdmitx {
+	vend_data {
+		product_desc = "U5";
+	};
+};

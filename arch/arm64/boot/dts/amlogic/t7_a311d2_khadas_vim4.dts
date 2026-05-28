@@ -11,3 +11,9 @@
 &vrtc {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		product_desc = "VIM4";
+	};
+};

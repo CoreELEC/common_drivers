@@ -81,6 +81,12 @@
 	/delete-property/ gpios;
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+	};
+};
+
 &{/thermal-zones} {
 	fan_thermal: fan_thermal {
 		polling-delay = <1000>;
