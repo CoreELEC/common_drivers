@@ -498,6 +498,13 @@
 	};
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "Amazon";
+		product_desc = "Fire TV Cube 2";
+	};
+};
+
 &u2p0port1 {
 	gpio-vbus-power = "GPIOH_4";
 	gpios = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH>;

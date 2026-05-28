@@ -231,3 +231,10 @@
 		def-dacvol = <0x0a>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "AM7";
+	};
+};

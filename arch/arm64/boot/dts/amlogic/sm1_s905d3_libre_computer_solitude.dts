@@ -142,6 +142,13 @@
 	 status = "disabled";
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "LCP";
+		product_desc = "Solitude";
+	};
+};
+
 &meson_fb {
 	logo_addr = "0x3d800000";
 };
