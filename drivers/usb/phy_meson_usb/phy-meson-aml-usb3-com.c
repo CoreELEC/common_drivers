@@ -370,7 +370,7 @@ static int meson_aml_u3phy_pll_hw_init(struct aml_usb3_phy *phy)
 /* RESET_reg, write each bit to 1 can reset related module, the reset will auto-cover to 0 by HW.
  * RESETn_module(low active) = (~RESET_reg & RESET_LEVEL) | RESET_MASK.
  */
-static inline void  meson_aml_u3phy_pre_reset(struct aml_usb3_phy *phy)
+static inline void  meson_aml_u3phy_reset(struct aml_usb3_phy *phy)
 {
 	/* PHY PLL HW init needs controller reset deasserted. */
 	meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift,
@@ -397,6 +397,9 @@ static inline void  meson_aml_u3phy_pre_reset(struct aml_usb3_phy *phy)
 	}
 }
 
+/* The u3phy power is comprised of dynamic part & static part
+ * and controlled by the reg values.
+ */
 static void  meson_aml_u3phy_set_power(struct aml_usb3_phy *phy, bool on)
 {
 	/* The vbus power is controlled by the companion usb2 phy. */
@@ -407,12 +410,6 @@ static void  meson_aml_u3phy_set_power(struct aml_usb3_phy *phy, bool on)
 		meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift +
 				phy->apb_reset_offset, BIT(phy->usb3_apb_reset_bit),
 				BIT(phy->usb3_apb_reset_bit));
-		/* The u3phy power is comprised of dynamic part & static part
-		 * and controlled by the reg values. Reset phy to default.
-		 * Make sure reset is done here even if previous step have already
-		 * done it.
-		 */
-		meson_aml_u3phy_pre_reset(phy);
 	} else {
 		/* Hold reset to power off. */
 		meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift,
@@ -421,14 +418,6 @@ static void  meson_aml_u3phy_set_power(struct aml_usb3_phy *phy, bool on)
 				phy->apb_reset_offset, BIT(phy->usb3_apb_reset_bit), 0);
 		usleep_range(100, 200);
 	}
-}
-
-static inline void  meson_aml_u3phy_post_reset(struct aml_usb3_phy *phy)
-{
-	/* The usb3_phy_reset_bit triggers HW pll cfg. */
-	meson_aml_u3phy_write_reg32(phy, BIT(phy->usb3_controller_reset_bit),
-				phy->reset_reg);
-	usleep_range(100, 200);
 }
 
 static int meson_aml_u3phy_pll_init(struct aml_usb3_phy *phy)
@@ -556,6 +545,12 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 	else
 		meson_aml_u3phy_set_power(phy, true);
 
+	/* Reset phy to default and trigger HW PLL init.
+	 * Make sure reset is done here even if previous step have already
+	 * done it i.e. power on after power off.
+	 */
+	meson_aml_u3phy_reset(phy);
+
 	/* usb3 phy with lane muxed by usbcdp should trigger hw pll init after
 	 * typec plug is insert and flip state is detected.
 	 */
@@ -571,7 +566,6 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 
 pll_done:
 	meson_aml_u3phy_cali(phy);
-	meson_aml_u3phy_post_reset(phy);
 
 	meson_aml_u3phy_set_hw_on(phy, true);
 

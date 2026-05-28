@@ -1168,10 +1168,23 @@ int aml_xhci_resume(struct aml_xhci_hcd *xhci, pm_message_t msg)
 		comp_timer_running = true;
 
 		aml_xhci_dbg(xhci, "Start the primary HCD\n");
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		/* Call xhci->priv->plat_start(hcd) if any.
+		 * Calling plat_start() directly before aml_xhci_run
+		 * shall works, but this is a cleaner way by not
+		 * cross-referencing xhci plat specific structures.
+		 */
+		retval = hcd->driver->start(hcd);
+#else
 		retval = aml_xhci_run(hcd);
+#endif
 		if (!retval && xhci->shared_hcd) {
 			aml_xhci_dbg(xhci, "Start the secondary HCD\n");
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+			retval = xhci->shared_hcd->driver->start(xhci->shared_hcd);
+#else
 			retval = aml_xhci_run(xhci->shared_hcd);
+#endif
 		}
 		if (retval)
 			return retval;
@@ -1631,7 +1644,10 @@ static int xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb, gfp_t mem_flag
 
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
 	if (xhci->meson_quirks & XHCI_CRG_HOST_010) {
-		if (urb->dev->level != 1 && urb->dev->speed == USB_SPEED_SUPER &&
+		/* Coverity: Dereference of potentially null field (NULL_FIELD). */
+		if (!urb->dev->bus) {
+			aml_xhci_warn(xhci, "CRG_HOST_010 quirk set but urb->dev->bus is NULL\n");
+		} else if (urb->dev->level != 1 && urb->dev->speed == USB_SPEED_SUPER &&
 			usb_urb_dir_in(urb) && urb->dev->bus->sg_tablesize > 0) {
 			urb_priv->need_div = 1;
 		}

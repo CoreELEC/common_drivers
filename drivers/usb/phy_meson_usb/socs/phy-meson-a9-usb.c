@@ -84,7 +84,7 @@ static int meson_u2phy_a9_cali_disc_squelch
 	 * usb2_disc_trim:
 	 *	usb2.0 & 2t: reg32_03[6:4] (MSB->LSB) default 3b'111.
 	 */
-#define DISCONNECT_MASK ((u32)GENMASK(6, 4))
+#define DISCONNECT_MASK GENMASK_U32(6, 4)
 #define DISCONNECT_VAL(x) ((0x7 & (x)) << 4)
 	val = readl(cfg + 0xc);
 	val = (val & ~DISCONNECT_MASK) | DISCONNECT_VAL(0x6);
@@ -93,11 +93,11 @@ static int meson_u2phy_a9_cali_disc_squelch
 	/* Trimming for squelch detect threshold. */
 	if (mphy->portspeed == MESON_USB_SPEED_HIGH_PLUS) {
 		val = readl(cfg + 0x60);
-		val = (val & ~((u32)GENMASK(11, 8))) | (0x5 << 8);
+		val = (val & ~GENMASK_U32(11, 8)) | (0x5 << 8);
 		writel(val, cfg + 0x60);
 	} else if (mphy->portspeed == MESON_USB_SPEED_HIGH) {
 		val = readl(cfg + 0xc);
-		val = (val & ~((u32)GENMASK(3, 0))) | (0x6 << 0);
+		val = (val & ~GENMASK_U32(3, 0)) | (0x6 << 0);
 		writel(val, cfg + 0xc);
 	}
 
@@ -126,7 +126,7 @@ static void meson_u2phy_a9_cali_misc(struct amlogic_usb_v2 *mphy)
 	 */
 	if (mphy->portspeed == MESON_USB_SPEED_HIGH_PLUS) {
 		val = readl(cfg + 0x60);
-		val = (val & ~((u32)GENMASK(6, 5))) | (0x1 << 5);
+		val = (val & ~GENMASK_U32(6, 5)) | (0x1 << 5);
 		writel(val, cfg + 0x60);
 	}
 }
@@ -273,17 +273,17 @@ static void  meson_u3phy_a9_trim(struct aml_usb3_phy *phy)
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
 				BIT(14), BIT(14));
 		/* TX termination impedance trim: upctx_pdio_main. */
-		val = raw & (u32)GENMASK(2, 0) >> 0;
+		val = (raw & GENMASK_U32(2, 0)) >> 0;
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
-			(u32)GENMASK(28, 26), val << 26);
+			GENMASK_U32(28, 26), val << 26);
 
 		/* software force value, need to set upctx_puio_main en in tx_cfg0. */
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
 			BIT(17), BIT(17));
 		/* TX termination impedance trim: upctx_puio_main */
-		val = (raw & (u32)GENMASK(5, 3)) >> 3;
+		val = (raw & GENMASK_U32(5, 3)) >> 3;
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
-			(u32)GENMASK(25, 23), val << 23);
+			GENMASK_U32(25, 23), val << 23);
 	}
 
 	if (!(raw & BIT(12))) {
@@ -315,18 +315,18 @@ static void  meson_u3phy_a9_trim(struct aml_usb3_phy *phy)
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xbc,
 			BIT(0), BIT(0));
 		/* TX amplitude trim: upctx_boost_ctrl. 0xc0 [4:0] */
-		val = (raw & (u32)GENMASK(11, 7)) >> 7;
+		val = (raw & GENMASK_U32(11, 7)) >> 7;
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xc0,
-			(u32)GENMASK(4, 0), val  << 0);
+			GENMASK_U32(4, 0), val  << 0);
 	}
 
 	if (!(raw & BIT(17))) {
 		dev_err(phy->dev, "No RX termination impedance trim? Skip.\n");
 	} else {
 		/* RX impedance trim: rterm_cal_cn field of reg_dcha_afe   */
-		val = (raw & (u32)GENMASK(16, 13)) >> 13;
+		val = (raw & GENMASK_U32(16, 13)) >> 13;
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4,
-			(u32)GENMASK(7, 4), val << 4);
+			GENMASK_U32(7, 4), val << 4);
 	}
 }
 
@@ -342,10 +342,10 @@ static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 	/* RX */
 	/* reg_dcha_dfe<13:9> dfe_tap_en -> 0x10*/
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x08,
-					GENMASK(13, 9), 0x1 << 9);
+					GENMASK_U32(13, 9), 0x1 << 9);
 //default set
 //#define PI_DOUBLEDGE_SAMPLING_CLK_SELECT BIT(20)
-//#define PI_CAP_VAL_CTRL ((u32)GENMASK(27, 26))
+//#define PI_CAP_VAL_CTRL GENMASK_U32(27, 26)
 //		aml_usb3_phy_modify_reg32(phy, phy->ctrl_reg + 0x08,
 //						PI_DOUBLEDGE_SAMPLING_CLK_SELECT,
 //						PI_DOUBLEDGE_SAMPLING_CLK_SELECT);
@@ -354,13 +354,13 @@ static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 
 	/* reg_dchd_cdr<2:0> cdr_ph_div Kp -> 0x4.*/
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x10,
-			GENMASK(2, 0), 0x4);
+			GENMASK_U32(2, 0), 0x4);
 	/* reg_dchd_cdr<5:4> cdr_fr_div Ki -> 0x2.*/
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x10,
-			GENMASK(5, 4), 0x2 << 4);
+			GENMASK_U32(5, 4), 0x2 << 4);
 	/* reg_dchd_cdr<11:10> cdr_pi_div -> 0x1.*/
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x10,
-			GENMASK(11, 10), 0x1 << 10);
+			GENMASK_U32(11, 10), 0x1 << 10);
 //default set?
 //#define PI_DOUBLEDGE_SAMPLING BIT(6)
 //		aml_usb3_phy_modify_reg32(phy, phy->ctrl_reg + 0x10,
@@ -375,7 +375,7 @@ static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 			BIT(9), BIT(9));
 	/* rx_cfg9<18:14> upcrx_eq_byp_val. Set to 0. I.e. eq training start from 0. */
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x24,
-			GENMASK(18, 14), 0x0 << 14);
+			GENMASK_U32(18, 14), 0x0 << 14);
 
 	/* TX */
 	/* u3 upctx_cfg1<5>upctx_sel_dc_mode:TX dc output enable. */
@@ -384,6 +384,9 @@ static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 	/* upctx_cfg2<4>upctx_low_amp_en: TX output swing amplitude control. */
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0xe0,
 			BIT(29), BIT(29));
+	/* txdetrx_1st_timer -> 5us. */
+	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x104,
+					GENMASK_U32(15, 0), 0x78);
 }
 
 static void meson_u3phy_a9_ssc_set(struct aml_usb3_phy *phy, bool on)
@@ -408,13 +411,16 @@ static void meson_u3phy_a9_ssc_set(struct aml_usb3_phy *phy, bool on)
 		/* U3P2PLL1_CNTL2 <20:19> R/W u3p2pll1_ss_mode(ssc dir).
 		 * 2b'10:negative 2b'01:positive
 		 */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(20, 19), 0x2 << 19);
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40,
+								GENMASK_U32(20, 19), 0x2 << 19);
 		/* U3P2PLL1_CNTL2 <24:21> R/W 0 u3p2pll1_ssc_dep_sel(ssc amplitude step).
 		 * 4b'1001: 4500ppm.
 		 */
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(24, 21), 0x9 << 21);
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40,
+								GENMASK_U32(24, 21), 0x9 << 21);
 		/* U3P2PLL1_CNTL2 <28:25> R/W u3p2pll1_ssc_str_m (ssc amplitude). 4'b0001*/
-		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, GENMASK(28, 25), 0x1 << 25);
+		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40,
+								GENMASK_U32(28, 25), 0x1 << 25);
 		/* U3P2PLL1_CNTL2 <29> R/W u3p2pll1_ssg_en(ssc on). 1'b1. */
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x40, BIT(29), BIT(29));
 	} else {

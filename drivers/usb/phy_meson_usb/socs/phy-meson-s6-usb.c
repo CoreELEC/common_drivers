@@ -175,22 +175,6 @@ static void  meson_u3phy_s6_set_power(struct aml_usb3_phy *phy, bool on)
 		meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift,
 				BIT(phy->usb3_apb_reset_bit) | BIT(phy->usb3_phy_reset_bit),
 				BIT(phy->usb3_apb_reset_bit) | BIT(phy->usb3_phy_reset_bit));
-
-		/* The u3phy power is comprised of dynamic part & static part
-		 * and controlled by the reg values. Reset phy to default.
-		 * Make sure reset is done here even if previous step have already
-		 * done it.
-		 */
-		/* PHY PLL HW init needs controller reset deasserted. */
-		meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift,
-			BIT(phy->usb3_controller_reset_bit), BIT(phy->usb3_controller_reset_bit));
-
-		meson_aml_u3phy_write_reg32(phy, BIT(phy->usb3_apb_reset_bit), phy->reset_reg);
-		meson_aml_u3phy_write_reg32(phy, BIT(phy->usb3_phy_reset_bit), phy->reset_reg);
-
-		/* Reset usb3_phy_reset_bit triggers pll cfg. Wait for it. */
-		if (!meson_u3phy_s6_wait_pll_locked(phy))
-			dev_err(phy->dev, "Pre Wait HW PLL init failed.\n");
 	} else {
 		/* Hold reset to power off. */
 		meson_aml_u3phy_modify_reg32(phy, phy->reset_reg + phy->reset_level_shift,
