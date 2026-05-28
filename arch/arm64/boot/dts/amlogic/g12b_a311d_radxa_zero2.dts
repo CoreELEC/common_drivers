@@ -18,3 +18,10 @@
 &ethmac {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Radxa";
+		product_desc = "Zero 2";
+	};
+};

@@ -208,3 +208,10 @@
 	pinctrl-0 = <&i2c4_pins2>;
 	clock-frequency = <100000>;		/* default 100k */
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "HK";
+		product_desc = "ODROID-C5";
+	};
+};

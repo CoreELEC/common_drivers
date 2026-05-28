@@ -80,3 +80,9 @@
 	/delete-property/ gpio-vbus-power;
 	/delete-property/ gpios;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+	};
+};

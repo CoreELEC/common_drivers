@@ -49,3 +49,10 @@
 &usb3_phy_v2 {
 	portnum = <0>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "SV";
+		product_desc = "Bananapi-M2S";
+	};
+};

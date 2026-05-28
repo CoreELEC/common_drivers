@@ -103,3 +103,10 @@
 		};
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Homatic";
+		product_desc = "R 4K Plus";
+	};
+};

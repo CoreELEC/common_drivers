@@ -124,3 +124,10 @@
 &sd_emmc_a {
 	 status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "SV";
+		product_desc = "Bananapi-M5";
+	};
+};

@@ -27,3 +27,10 @@
 		aux-det-gpio = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "UGOOS";
+		product_desc = "AM6B+";
+	};
+};

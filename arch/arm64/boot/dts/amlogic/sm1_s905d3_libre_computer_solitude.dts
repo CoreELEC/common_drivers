@@ -135,3 +135,10 @@
 &sd_emmc_a {
 	 status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "LCP";
+		product_desc = "Solitude";
+	};
+};
