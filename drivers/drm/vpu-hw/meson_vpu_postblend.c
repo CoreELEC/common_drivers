@@ -1843,12 +1843,12 @@ static void a9_postblend_register_init(struct meson_vpu_block *vblk,
 						BIT(0)  | /* osd scaler before osdblend */
 						BIT(15) | /* bypass hdr */
 						BIT(18) | /* osdblend45 to osdblend */
-						BIT(19);  /* osd2 hdr */
+						BIT(19) | /* osd3 hdr */
+						BIT(20); /* osd3 go field */
 				reg_val &= ~(BIT(4)  | /*no bypass osdblend*/
 						BIT(12) | /* hdr after osdblend */
 						BIT(16) | /* no bypass osd dolby */
-						BIT(17) | /* zero-pad the lower bits */
-						BIT(20)); /* osd2 go field */
+						BIT(17)); /* zero-pad the lower bits */
 				reg_ops->rdma_write_reg(VIU_OSD2_PATH_CTRL, reg_val);
 			} else if (i == MESON_OSD3) {
 				reg_val = meson_drm_read_reg(VIU_OSD3_PATH_CTRL);
