@@ -114,6 +114,13 @@
 	};
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+		product_desc = "VIM3";
+	};
+};
+
 &logo_reserved {
 	reg = <0x0 0x7f800000 0x0 0x800000>;
 };

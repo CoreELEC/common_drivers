@@ -51,3 +51,10 @@
 	bt_en-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
 	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "X96";
+		product_desc = "X4";
+	};
+};

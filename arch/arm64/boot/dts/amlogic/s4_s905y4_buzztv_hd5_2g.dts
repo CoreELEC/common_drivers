@@ -36,3 +36,10 @@
 &sd_emmc_b {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "BuzzTV";
+		product_desc = "HD5";
+	};
+};

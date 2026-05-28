@@ -67,3 +67,10 @@
 &demux {
 	status = "okay";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "MS";
+		product_desc = "C500 Pro";
+	};
+};

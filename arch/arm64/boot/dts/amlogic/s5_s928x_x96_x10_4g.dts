@@ -23,3 +23,10 @@
 &i2c1 {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "X96";
+		product_desc = "X10";
+	};
+};

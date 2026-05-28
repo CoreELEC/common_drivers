@@ -45,3 +45,10 @@
 &demux {
 	status = "okay";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Mecool";
+		product_desc = "K5";
+	};
+};
