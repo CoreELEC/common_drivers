@@ -309,7 +309,6 @@
 			     <MAILBOX_DSPA>,
 			     <MAILBOX_ARM>,
 			     <MAILBOX_AOCPU>;
-		dspa-hang-detect;
 		aocpu-hang-detect;
 		aocpu-sts-mboxid = <S6_AOCPU_STS_CHAN>;
 	};
