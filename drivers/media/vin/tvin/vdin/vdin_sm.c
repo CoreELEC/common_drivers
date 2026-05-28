@@ -938,7 +938,11 @@ void tvin_smr(struct vdin_dev_s *devp)
 						info->cfmt = prop->color_format;
 						memcpy(pre_prop, prop, cnt);
 					}
-
+					if (info->fmt == TVIN_SIG_FMT_NULL) {
+						sm_p->state = TVIN_SM_STATUS_UNSTABLE;
+						info->status = TVIN_SIG_STATUS_UNSTABLE;
+						break;
+					}
 					if (sm_ops->fmt_config)
 						sm_ops->fmt_config(fe);
 
