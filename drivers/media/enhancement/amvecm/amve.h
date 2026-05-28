@@ -240,8 +240,11 @@ void amve_vsr_config_update(struct vframe_s *vf, int vpp_index);
 
 void set_sharpness_gain(int sr0_gain, int sr1_gain);
 void sharpness_gain_update(int vpp_index);
+
 void osd_sharpness_init(void);
 void osd_sharpness_ctrl(unsigned int sel, unsigned int enable);
+void osd_sharpness_size_update(void);
+
 void amvecm_vadj_enable(enum vadj_index_e vadj_idx, int enable);
 
 void init_pq_rdma_part_ins(void);
