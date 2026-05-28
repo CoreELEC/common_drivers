@@ -288,7 +288,8 @@ static void meson_cma_heap_dma_buf_release(struct dma_buf *dmabuf)
 
 	mutex_lock(&meson_cma_heap->lock);
 	meson_cma_heap->num_of_buffers--;
-	meson_cma_heap->num_of_alloc_bytes -= buffer->len;
+	meson_cma_heap->num_of_alloc_bytes -=
+		ALIGN(buffer->len, (1 << CONFIG_CMA_ALIGNMENT) * PAGE_SIZE);
 	if (strstr(heap_name, "heap-gfx")) {
 		meson_cma_heap->num_of_free_bytes =
 			hdev->total_heap_gfx_size - meson_cma_heap->num_of_alloc_bytes;
@@ -487,7 +488,8 @@ static struct dma_buf *meson_cma_heap_allocate(struct dma_heap *heap,
 
 	mutex_lock(&meson_cma_heap->lock);
 	meson_cma_heap->num_of_buffers++;
-	meson_cma_heap->num_of_alloc_bytes += buffer->len;
+	meson_cma_heap->num_of_alloc_bytes +=
+		ALIGN(buffer->len, (1 << CONFIG_CMA_ALIGNMENT) * PAGE_SIZE);
 	if (strstr(exp_info.exp_name, "heap-gfx")) {
 		meson_cma_heap->num_of_free_bytes =
 			hdev->total_heap_gfx_size - meson_cma_heap->num_of_alloc_bytes;
