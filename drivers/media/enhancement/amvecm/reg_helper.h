@@ -484,6 +484,16 @@ static int index_rdma_part_ins(u32 reg)
 			table_index = 4;
 	}
 
+	if (chip_type_id == chip_s5) {
+		if ((reg >= 0x25a0 && reg <= 0x25f0) || //vd1 slice0
+			(reg >= 0x26a0 && reg <= 0x26f0) || //vd1 slice1
+			(reg >= 0x2ca0 && reg <= 0x2cf0) || //vd1 slice2
+			(reg >= 0x3ea0 && reg <= 0x3ef0) || //vd1 slice3
+			(reg >= 0x3800 && reg <= 0x3840) || //vd2
+			(reg >= 0x6450 && reg <= 0x6490) || //osd1
+			(reg >= 0x6c50 && reg <= 0x6c90)) //osd3
+			table_index = 1;
+	}
 	/*use VIDEO_PARTITION_TABLE*/
 	if (chip_type_id >= chip_s7d &&
 		(reg == 0x5048 || reg == 0x5049 ||
