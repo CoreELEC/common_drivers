@@ -55,8 +55,8 @@
 #define RESET_DPTX_1P4_APB			11
 #define RESET_EDPTX_1P4				12
 #define RESET_USB2DRD_PHY_APB			13
-#define RESET_U2DRD_COMB			14
-#define RESET_U2DRD				15
+#define RESET_U2DRD			14
+#define RESET_U2DRD_COMB				15
 #define RESET_HDMI20_AES			16
 #define RESET_HDMITX_CAPB3			17
 #define RESET_BRG_VCBUS_DEC			18
@@ -122,8 +122,9 @@
 #define RESET_TS_DOS				74
 #define RESET_U2DRD_USB2PHY			75
 #define RESET_PIO				76
-#define RESET_U2H_COMB				77
-#define RESET_U2H				78
+#define RESET_U2H				77
+#define RESET_U2H_COMB				78
+/* RESET_USB2H_PHY_APB is not used by U2H. */
 #define RESET_USB2H_PHY_APB			79
 #define RESET_MSR_CLK				80
 /*					81*/

@@ -1895,7 +1895,7 @@
 				reset-level = <0x40>;
 				phy-reset-level-bits = <4>;
 				usb-comb-reset-bit = <6>;
-				usb-apb-reset-bit = <7>;
+				phy-apb-reset-bit = <7>;
 				pll-settings = <0x0
 								0x0
 								0x0
@@ -1963,18 +1963,9 @@
 			//snps,usb3_lpm_capable;
 			snps,usb2-gadget-lpm-disable;
 			snps,has-lpm-erratum;
-			/* better try */
-			//snps,rx_detect_poll_quirk;
 			snps,dis_u3_susphy_quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,dis_enblslpm_quirk;
-			/* why we do this? dwc3_ref_clk_period() must enable
-			 * GFLADJ_REFCLK_LPM_SEL
-			 */
-			//snps,dis-u2-freeclk-exists-quirk;
-			//snps,gfladj-refclk-lpm-sel-quirk;
-			/* need post-silicon test. */
-			//snps,quirk-frame-length-adjustment;
 			snps,rx-thr-num-pkt = <2>;
 			snps,rx-max-burst = <16>;
 			snps,tx-thr-num-pkt = <2>;
@@ -2004,7 +1995,7 @@
 				reset-level = <0x4c>;
 				phy-reset-level-bits = <30>;
 				usb-comb-reset-bit = <28>;
-				usb-apb-reset-bit = <29>;
+				phy-apb-reset-bit = <29>;
 				pll-settings = <0x0
 								0x0
 								0x0
@@ -2068,18 +2059,9 @@
 			//snps,usb3_lpm_capable;
 			snps,usb2-gadget-lpm-disable;
 			snps,has-lpm-erratum;
-			/* better try */
-			//snps,rx_detect_poll_quirk;
 			snps,dis_u3_susphy_quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,dis_enblslpm_quirk;
-			/* why we do this? dwc3_ref_clk_period() must enable
-			 * GFLADJ_REFCLK_LPM_SEL
-			 */
-			//snps,dis-u2-freeclk-exists-quirk;
-			//snps,gfladj-refclk-lpm-sel-quirk;
-			/* need post-silicon test. */
-			//snps,quirk-frame-length-adjustment;
 			snps,rx-thr-num-pkt = <2>;
 			snps,rx-max-burst = <16>;
 			snps,tx-thr-num-pkt = <2>;
@@ -2105,8 +2087,11 @@
 						0xfe4ae000 0x64>;
 				reset-level = <0x48>;
 				phy-reset-level-bits = <20>;
-				usb-comb-reset-bit = <13>;
-				usb-apb-reset-bit = <15>;
+				usb-comb-reset-bit = <14>;
+				/* u2phy apb & dwc3c share the same reset line.
+				 * don't trigger it in phy_init().
+				 */
+				//phy-apb-reset-bit = <13>;
 				pll-settings = <0x0
 								0x0
 								0x0
@@ -2144,18 +2129,9 @@
 			//snps,usb3_lpm_capable;
 			snps,usb2-gadget-lpm-disable;
 			snps,has-lpm-erratum;
-			/* better try */
-			//snps,rx_detect_poll_quirk;
 			snps,dis_u3_susphy_quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,dis_enblslpm_quirk;
-			/* why we do this? dwc3_ref_clk_period() must enable
-			 * GFLADJ_REFCLK_LPM_SEL
-			 */
-			//snps,dis-u2-freeclk-exists-quirk;
-			//snps,gfladj-refclk-lpm-sel-quirk;
-			/* need post-silicon test. */
-			//snps,quirk-frame-length-adjustment;
 			snps,rx-thr-num-pkt = <2>;
 			snps,rx-max-burst = <16>;
 			snps,tx-thr-num-pkt = <2>;
@@ -2181,8 +2157,8 @@
 						0xfe4a6000 0x64>;
 				reset-level = <0x40>;
 				phy-reset-level-bits = <75>;
-				usb-comb-reset-bit = <14>;
-				usb-apb-reset-bit = <13>;
+				usb-comb-reset-bit = <15>;
+				phy-apb-reset-bit = <13>;
 				pll-settings = <0x0
 								0x0
 								0x0
@@ -2216,18 +2192,9 @@
 			//snps,usb3_lpm_capable;
 			snps,usb2-gadget-lpm-disable;
 			snps,has-lpm-erratum;
-			/* better try */
-			//snps,rx_detect_poll_quirk;
 			snps,dis_u3_susphy_quirk;
 			snps,dis_u2_susphy_quirk;
 			snps,dis_enblslpm_quirk;
-			/* why we do this? dwc3_ref_clk_period() must enable
-			 * GFLADJ_REFCLK_LPM_SEL
-			 */
-			//snps,dis-u2-freeclk-exists-quirk;
-			//snps,gfladj-refclk-lpm-sel-quirk;
-			/* need post-silicon test. */
-			//snps,quirk-frame-length-adjustment;
 			snps,rx-thr-num-pkt = <2>;
 			snps,rx-max-burst = <16>;
 			snps,tx-thr-num-pkt = <2>;
