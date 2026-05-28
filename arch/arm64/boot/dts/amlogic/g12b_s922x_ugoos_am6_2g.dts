@@ -93,3 +93,10 @@
 	/delete-node/ spdifout;
 	/delete-node/ spdifout_a_mute;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "UGOOS";
+		product_desc = "AM6";
+	};
+};

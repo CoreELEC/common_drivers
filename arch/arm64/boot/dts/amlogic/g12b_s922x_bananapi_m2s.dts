@@ -55,3 +55,10 @@
 	phys = <&u2p0port0>, <&u2p0port1>;
 	phy-names = "usb2-0", "usb2-1";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "SV";
+		product_desc = "Bananapi-M2S";
+	};
+};

@@ -32,3 +32,10 @@
 	phy-handle = <&external_phy>;
 	amlogic,tx-delay-ns = <2>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Beelink";
+		product_desc = "GT-King II";
+	};
+};

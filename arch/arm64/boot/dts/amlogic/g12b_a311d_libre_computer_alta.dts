@@ -159,6 +159,13 @@
 	 status = "disabled";
 };
 
+&amhdmitx {
+	vend_data {
+		vendor_name = "LCP";
+		product_desc = "Alta";
+	};
+};
+
 &vir_tsensor {
 	num-vtsens = <2>;
 };
