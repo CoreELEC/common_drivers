@@ -981,7 +981,7 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 		if (!token || kstrtouint(token, 10, &val) < 0)
 			return count;
 		en = val & 0xFF;
-		DPTX_INFO("tx output %s\n", en ? "enable" : "disable");
+		DPTX_INFO("tx vc_id %d output %s\n", en >> 0x4, en & 0xf ? "enable" : "disable");
 		dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	} else if (token && strncmp(token, "hdcp_mode", 9) == 0) {
 		token = strsep(&cur, delim);

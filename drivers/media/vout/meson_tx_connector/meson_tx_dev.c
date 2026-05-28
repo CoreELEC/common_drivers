@@ -692,6 +692,8 @@ int meson_tx_build_clk_param(struct meson_tx_dev *tx_dev,
 		return -EINVAL;
 	}
 	para->vid_clk_path = hdmi_if_idx << 4 | enc_idx;
+	para->vc_id = hdmi_if_idx;
+	TX_INFO(tx_log, "set video source channel: %d\n", para->vc_id);
 	meson_tx_hw_cntl(tx_dev->tx_hw_base, PLATFORM_VID_CLK_PARAM_BUILD,
 		para, &tx_dev->tx_hw_base->tx_clk->tx_clk_cfg);
 	return 0;

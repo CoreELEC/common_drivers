@@ -96,6 +96,11 @@ int dptx_hpd_plugout(struct meson_tx_dev *tx_dev)
 	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
 		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
+	/*
+	 * disable the input/output of vc_id channel
+	 * TODO: for MST, need disable all channel
+	 */
+	en = (0x0 << 0) | (tx_dev->sw_fmt_para.vc_id << 4);
 	dptx_hw_cntl(tx_dev->tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 	/* clear hdr packet */
 	//dptx_drm_infoframe_set(tx_comm->hw_comm, 0, NULL);

@@ -48,7 +48,12 @@ void dptx20_seq_rd_reg(struct dptx_hw_common *tx_comm, u32 io_type, u32 offset, 
 void dptx20_set_reg_bits(struct dptx_hw_common *tx_comm, u32 io_type,
 	u32 addr, u32 value, u32 offset, u32 len)
 {
-	return;
+	u32 data32 = 0;
+
+	data32 = dptx20_reg_read(tx_comm, io_type, addr);
+	data32 &= ~(((1 << len) - 1) << offset);
+	data32 |= (value & ((1 << len) - 1)) << offset;
+	dptx20_reg_write(tx_comm, io_type, addr, data32);
 }
 
 static inline void __iomem *get_reg_addr(struct dptx_hw_common *tx_comm, u32 idx)

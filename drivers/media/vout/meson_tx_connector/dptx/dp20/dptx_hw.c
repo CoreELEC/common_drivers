@@ -9,6 +9,7 @@
 #include <linux/irqreturn.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
+#include <linux/arm-smccc.h>
 
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_hw_common.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/dptx_common/dptx_core_api_ext.h>
@@ -1619,6 +1620,10 @@ static int dptx20_hw_mst_config(struct dptx_hw_common *hw_comm)
 	return 0;
 }
 
+/*
+ * vc_id: virtual channel, 0~3 for video source 0~3
+ * for MST, should call this function for each virtual channel
+ */
 static void dptx20_hw_src_vid_enable(struct dptx_hw_common *hw_comm, u8 vc_id, bool enable)
 {
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
@@ -1772,6 +1777,11 @@ static int dptx20_hw_set_vid_mode(struct dptx_hw_common *hw_comm,
 			!!para->timing.v_pol << 1 |
 			!!para->timing.h_pol;
 
+       /* select input video source if in SST mode */
+	if (!hw_comm->mst_en) {
+		DPTX_INFO("select video source of %d for SST\n", vc_id);
+		dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SST_SOURCE_SELECT, vc_id);
+	}
 	dptx20_hw_set_msa(hw_comm, vc_id, para);
 	dptx20_hw_set_vsc_colorimetry(hw_comm, vc_id, para);
 	/* symbols per line */
@@ -2469,6 +2479,14 @@ static int dptx20_pre_enable_mode(struct dptx_hw_common *hw_comm, struct meson_t
 	return 0;
 }
 
+static void set_dptx_enc_idx(unsigned int val)
+{
+	struct arm_smccc_res res;
+
+	/* #define HDCPTX_IOOPR        0x820000ab */
+	arm_smccc_smc(0x820000ab, 9, 1, !!val, 0, 0, 0, 0, &res);
+}
+
 static int dptx20_enable_mode(struct dptx_hw_common *hw_comm, struct meson_tx_format_para *para)
 {
 	u8 hdmi_if_idx = 0;
@@ -2507,6 +2525,16 @@ static int dptx20_enable_mode(struct dptx_hw_common *hw_comm, struct meson_tx_fo
 			dptx20_set_plt_reg_bits(hw_comm, VPU_DSI_EDP_INFO, 3, 0, 2);
 		}
 	} else {
+		if (venc_idx == 0) {
+			/* hdmitx0_enable */
+			dptx20_set_plt_reg_bits(hw_comm, VPU_DISP_VIU0_CTRL, 1, 29, 1);
+		} else {
+			DPTX_INFO("vpu_hdmi_if 1 allow for dptx\n");
+			/* hdmitx_allow enable */
+			set_dptx_enc_idx(venc_idx);
+			/* hdmitx1_enable */
+			dptx20_set_plt_reg_bits(hw_comm, VPU_DISP_VIU1_CTRL, 1, 29, 1);
+		}
 		dptx20_vpu_fmt_config(hw_comm, para, venc_idx, hdmi_if_idx);
 	}
 	dptx20_hw_core_config(hw_comm, para);
@@ -3206,18 +3234,19 @@ static int dptx20_hw_cntl_core_misc(struct meson_tx_hw *tx_hw, u32 cmd,
 	case DP_TRANSMITTER_OUTPUT_EN:
 		if (!input_argv)
 			return -1;
-		/* assume vc_id = 0, TODO for mst */
+		/*
+		 * bit[3:0]: 1 enable, 0: disable;
+		 * bit[7:4]: input video source: 0~3
+		 */
 		value = *(u8 *)input_argv;
 		if (hw_comm->is_edp && hw_comm->ext_edptx_ctrl_en) {
 			dptx20_reg_write(hw_comm, CORE_LEVEL,
-				DPTX20_SRCX_VIDEO_STREAM_ENABLE, value ? 0x1 : 0);
-			dptx20_reg_write(hw_comm, CORE_LEVEL,
-				DPTX20_SOURCE_ENABLE, value ? 0x1 : 0);
+				dptx20_hw_calc_mst_reg(value >> 0x4,
+				DPTX20_SRCX_VIDEO_STREAM_ENABLE), !!(value & 0xf));
+			dptx20_set_reg_bits(hw_comm, CORE_LEVEL,
+				DPTX20_SOURCE_ENABLE, !!(value & 0xf), value >> 0x4, 1);
 		} else {
-			dptx20_hw_src_vid_enable(hw_comm, 0, !!value);
-			if (value == 0)
-				dptx20_reg_write(hw_comm, CORE_LEVEL,
-					DPTX20_TRANSMITTER_ENABLE, 0x0);
+			dptx20_hw_src_vid_enable(hw_comm, value >> 0x4, !!(value & 0xf));
 		}
 		break;
 	default:

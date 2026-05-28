@@ -46,6 +46,11 @@ static void dptx_early_suspend(struct early_suspend *es)
 	if (tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable)
 		tx_comm->hdcptx_comm.hdcptx_api->hdcptx_disable(tx_comm->hdcptx_priv);
 	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_HDCP1X_AUTH_EN, &en, NULL);
+	/*
+	 * disable the input/output of vc_id channel
+	 * TODO: for MST, need disable all channel
+	 */
+	en = (0x0 << 0) | (tx_comm->base.sw_fmt_para.vc_id << 4);
 	dptx_hw_cntl(tx_comm->base.tx_hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
 }
 
@@ -215,7 +220,7 @@ static int dptx_get_dt_info(struct platform_device *pdev,
 	} else {
 		tx_cap->max_h_active = val;
 	}
-	ret = of_property_read_u32(pdev->dev.of_node, "max_h_active", &val);
+	ret = of_property_read_u32(pdev->dev.of_node, "max_v_active", &val);
 	if (ret) {
 		DPTX_INFO("%s: no max_v_active, default to 2160\n", __func__);
 		tx_cap->max_v_active = 2160;

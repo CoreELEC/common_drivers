@@ -322,10 +322,15 @@ EXPORT_SYMBOL(edptx_transmit_pattern);
 void edptx_transmitter_output_set(u8 dp_core_idx, u8 en)
 {
 	struct dptx_common *tx_comm = dptx_get_edptx_inst(dp_core_idx);
+	u8 arg = 0;
+	/* assume edptx always use input source of 0 */
+	u8 vc_id = 0;
+
 	if (!tx_comm)
 		return;
 
-	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_TRANSMITTER_OUTPUT_EN, &en, NULL);
+	arg = (en << 0) | (vc_id << 4);
+	dptx_hw_cntl(&tx_comm->hw_comm->hw_base, DP_TRANSMITTER_OUTPUT_EN, &arg, NULL);
 }
 EXPORT_SYMBOL(edptx_transmitter_output_set);
 
