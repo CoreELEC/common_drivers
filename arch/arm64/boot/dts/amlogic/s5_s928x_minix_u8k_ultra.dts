@@ -45,3 +45,10 @@
 &vrtc {
 	status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Minix";
+		product_desc = "U8K-Ultra";
+	};
+};

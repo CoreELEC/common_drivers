@@ -516,3 +516,10 @@
 		line-name = "led_controller_power";
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Amazon";
+		product_desc = "Fire TV Cube 2";
+	};
+};

@@ -173,3 +173,10 @@
 		reg = <0>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+		product_desc = "VIM3L";
+	};
+};

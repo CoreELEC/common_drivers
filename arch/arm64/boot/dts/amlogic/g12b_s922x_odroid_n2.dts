@@ -41,3 +41,10 @@
 		};
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Hardkrn";
+		product_desc = "ODROID-N2";
+	};
+};

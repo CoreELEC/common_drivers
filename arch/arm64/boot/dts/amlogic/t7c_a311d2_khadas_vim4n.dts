@@ -7,3 +7,10 @@
 	coreelec-dt-id = "t7c_a311d2_khadas_vim4n";
 	amlogic-dt-id = "t7c_a311d2_an400-8g";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Khadas";
+		product_desc = "VIM4N";
+	};
+};

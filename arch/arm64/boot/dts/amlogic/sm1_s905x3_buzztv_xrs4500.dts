@@ -67,3 +67,10 @@
 		max-frequency = <170000000>;
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "BuzzTV";
+		product_desc = "XRS4500";
+	};
+};

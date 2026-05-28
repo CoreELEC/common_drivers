@@ -128,3 +128,10 @@
 &sd_emmc_a {
 	 status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Sinovip";
+		product_desc = "Bananapi-M5";
+	};
+};

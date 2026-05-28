@@ -139,3 +139,10 @@
 &sd_emmc_a {
 	 status = "disabled";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Hardkrn";
+		product_desc = "ODROID-C4";
+	};
+};

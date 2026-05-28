@@ -136,3 +136,10 @@
 &vddio_c {
 	gpio = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Minix";
+		product_desc = "U22-XJ Max";
+	};
+};

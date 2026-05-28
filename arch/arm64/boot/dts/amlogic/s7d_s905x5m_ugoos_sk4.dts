@@ -166,3 +166,10 @@
 		      0xe718ff00 IR_NORMAL KEY_POWER
 		      0x8b74e619 IR_NORMAL KEY_POWER>;
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "SK4";
+	};
+};

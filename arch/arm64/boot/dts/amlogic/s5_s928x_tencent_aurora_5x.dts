@@ -49,3 +49,10 @@
 		};
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Tencent";
+		product_desc = "Aurora Box 5X";
+	};
+};

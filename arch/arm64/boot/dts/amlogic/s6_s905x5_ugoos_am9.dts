@@ -298,3 +298,10 @@
 &uart_C {
 	status = "okay";
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "AM9";
+	};
+};

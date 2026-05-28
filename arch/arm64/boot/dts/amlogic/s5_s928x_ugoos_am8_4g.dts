@@ -259,3 +259,10 @@
 		};
 	};
 };
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Ugoos";
+		product_desc = "AM8";
+	};
+};
