@@ -172,7 +172,8 @@ static struct clk_regmap ao_psram = {
 			&ao_psram_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
