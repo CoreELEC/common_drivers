@@ -2483,7 +2483,6 @@ static void lcd_tcon_axi_mem_config(void)
 	struct lcd_tcon_axi_mem_cfg_s *axi_mem_cfg = NULL;
 	unsigned int temp_size = 0;
 	unsigned int mem_paddr = 0, od_mem_size = 0;
-	unsigned char *mem_vaddr = NULL;
 	int i;
 
 	if (!lcd_tcon_conf->axi_tbl_len || !lcd_tcon_conf->axi_mem_cfg_tbl)
@@ -2507,26 +2506,28 @@ static void lcd_tcon_axi_mem_config(void)
 			continue;
 		tcon_rmem.axi_rmem[i].mem_size = axi_mem_cfg->mem_size;
 		tcon_rmem.axi_rmem[i].mem_paddr = tcon_rmem.axi_mem_paddr + temp_size;
-		tcon_rmem.axi_rmem[i].mem_vaddr =
-			lcd_tcon_paddrtovaddr(tcon_rmem.axi_rmem[i].mem_paddr,
-				axi_mem_cfg->mem_size);
-		if (!tcon_rmem.axi_rmem[i].mem_vaddr) {
-			tcon_rmem.axi_rmem[i].mem_paddr = 0;
-			tcon_rmem.axi_rmem[i].mem_size = 0;
-			continue;
+		// OD is secure, cpu do not access
+		if (axi_mem_cfg->mem_type == TCON_AXI_MEM_TYPE_OD) {
+			tcon_rmem.axi_rmem[i].mem_vaddr = NULL;
+		} else {
+			tcon_rmem.axi_rmem[i].mem_vaddr =
+				lcd_tcon_paddrtovaddr(tcon_rmem.axi_rmem[i].mem_paddr,
+							axi_mem_cfg->mem_size);
+			if (!tcon_rmem.axi_rmem[i].mem_vaddr) {
+				tcon_rmem.axi_rmem[i].mem_paddr = 0;
+				tcon_rmem.axi_rmem[i].mem_size = 0;
+				continue;
+			}
 		}
 		temp_size += axi_mem_cfg->mem_size;
-
 		if (axi_mem_cfg->mem_type == TCON_AXI_MEM_TYPE_OD) {
-			if (!mem_paddr) {
+			if (!mem_paddr)
 				mem_paddr = tcon_rmem.axi_rmem[i].mem_paddr;
-				mem_vaddr = tcon_rmem.axi_rmem[i].mem_vaddr;
-			}
 			od_mem_size += tcon_rmem.axi_rmem[i].mem_size;
 		}
 	}
 	tcon_rmem.secure_axi_rmem.mem_paddr = mem_paddr;
-	tcon_rmem.secure_axi_rmem.mem_vaddr = mem_vaddr;
+	tcon_rmem.secure_axi_rmem.mem_vaddr = NULL;// secure memory, cpu do not access
 	tcon_rmem.secure_axi_rmem.mem_size = od_mem_size;
 }
 
@@ -3877,7 +3878,8 @@ int lcd_tcon_remove(struct aml_lcd_drv_s *pdrv)
 	kfree(dbg_vsync_time);
 #endif
 	for (i = 0; i < tcon_rmem.axi_bank; i++)
-		lcd_unmap_phyaddr(tcon_rmem.axi_rmem[i].mem_vaddr);
+		if (tcon_rmem.axi_rmem[i].mem_vaddr)
+			lcd_unmap_phyaddr(tcon_rmem.axi_rmem[i].mem_vaddr);
 
 	kfree(tcon_rmem.axi_reg);
 	tcon_rmem.axi_reg = NULL;
