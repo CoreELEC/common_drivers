@@ -1907,7 +1907,7 @@ void meson_hdmitx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 		convert_attrstr(attr_debugfs, attr);
 		ret = hdmitx_common_build_format_para(tx_comm,
 					&hdmitx_state->hcs.para, vic,
-					tx_comm->frac_rate_policy,
+					hdmitx_state->frac_rate_policy,
 					attr->colorformat,
 					bitdepth_to_colordepth(attr->bitdepth),
 					HDMI_QUANTIZATION_RANGE_FULL);
@@ -1952,7 +1952,7 @@ void meson_hdmitx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 	}
 
 	ret = hdmitx_common_build_format_para(tx_comm, &hdmitx_state->hcs.para,
-					      vic, tx_comm->frac_rate_policy,
+					      vic, hdmitx_state->frac_rate_policy,
 					      attr->colorformat,
 					      bitdepth_to_colordepth(attr->bitdepth),
 					      HDMI_QUANTIZATION_RANGE_FULL);
