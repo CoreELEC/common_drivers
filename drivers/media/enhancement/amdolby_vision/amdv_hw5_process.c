@@ -3199,12 +3199,20 @@ int amdv_hw5_control_path(struct vframe_s *vf, struct vd_proc_info_t *vd_proc_in
 			 tv_hw5_setting->force_num_slices,
 			 tv_hw5_setting->backlight);
 	}
+	if (flag < 0) {/**/
+		pr_dv_dbg("cp(%d) failed %d,try sdr setting to avoid stuck\n",
+		       tv_hw5_setting->top2.src_format, flag);
+		tv_hw5_setting->top2.src_format = FORMAT_SDR;
+		flag = p_funcs_tv->tv_hw5_control_path(tv_hw5_setting);
+	}
 	if (flag >= 0) {
 		dump_tv_setting(tv_hw5_setting,
 			v_inst_info->frame_count, debug_dolby);
 		ret = 0; /* setting updated */
 		top2_v_info.tv_dovi_setting_change_flag = true;
 	} else {
+		pr_dv_error("tv_hw5_control_path(%d) failed %d\n",
+		       tv_hw5_setting->top2.src_format, flag);
 		tv_hw5_setting->top2.video_width = 0;
 		tv_hw5_setting->top2.video_height = 0;
 	}
