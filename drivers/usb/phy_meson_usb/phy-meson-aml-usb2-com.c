@@ -1108,8 +1108,6 @@ int meson_aml_u2phy_parse(struct device *dev, struct meson_uphy_instance *instan
 
 	aml_u2phy->ic_ver = get_cpu_type();
 
-	ret = 0;
-
 	ret = of_property_read_u32(dev->of_node, "pipe-clk-sel", &aml_u2phy->pipe_clk_sel);
 	if (ret < 0)
 		aml_u2phy->pipe_clk_sel = -1U;
@@ -1120,6 +1118,8 @@ int meson_aml_u2phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	if (ret < 0)
 		aml_u2phy->phy_clk_sel_reg_off = -1U;
 	dev_dbg(dev, "phy-clk-sel-reg-off: 0x%x\n", aml_u2phy->phy_clk_sel_reg_off);
+
+	ret = 0;
 
 	cnt = of_property_count_strings(dev->of_node, "clock-names");
 	if (cnt < 0) {
