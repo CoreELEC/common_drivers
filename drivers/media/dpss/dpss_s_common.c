@@ -2578,7 +2578,7 @@ void out_put_vf(struct dpss_ch_s *pch, unsigned int idx, bool output_last)
 	unsigned char b_idx, bb_idx, hd_idx;
 	struct PRM_DPSS_TOP *prm_top = &pch->c.prm_top;//&prm_dpss_top;
 	unsigned int canvas_align_width = 64;
-	unsigned int vf_idx;
+	unsigned int vf_idx, vfm_h;
 	struct dpss_blk_s *blk;
 	struct PRM_DPSS_DPE *prm_dpe = &pch->c.prm_dpe;
 
@@ -2955,7 +2955,12 @@ void out_put_vf(struct dpss_ch_s *pch, unsigned int idx, bool output_last)
 		cvs = &vfm->canvas0_config[0];
 		cvs->bit_depth = 10;
 		cvs->phy_addr = pch->c.addr_nr[b_idx];
-		cvs->width = (vfm->width * 5) / 2;
+		if (vfm->width > 1920 || vfm->height > 1080)
+			vfm_h = (vfm->width + 15) & (~0xf);
+		else
+			vfm_h = (vfm->width + 7) & (~0x7);
+
+		cvs->width = (vfm_h * 5) / 2;
 		cvs->width = roundup(cvs->width, canvas_align_width);
 		cvs->height = vfm->height;
 		cvs->block_mode = 0;
@@ -2995,7 +3000,11 @@ void out_put_vf(struct dpss_ch_s *pch, unsigned int idx, bool output_last)
 			dbg_pps0("yad[%d]: 0x%lx,0x%lx\n", b_idx,
 				cvs->phy_addr, pch->c.addr_nr[b_idx]);
 		}
-		cvs->width = (vfm->width * 5) / 4;
+		if (vfm->width > 1920 || vfm->height > 1080)
+			vfm_h = (vfm->width + 15) & (~0xf);
+		else
+			vfm_h = (vfm->width + 7) & (~0x7);
+		cvs->width = (vfm_h * 5) / 4;
 		cvs->width = roundup(cvs->width, canvas_align_width);
 		cvs->height = vfm->height;
 
@@ -3017,7 +3026,7 @@ void out_put_vf(struct dpss_ch_s *pch, unsigned int idx, bool output_last)
 		dbg_pps0("%s:is_pps ch=%d,=%d,=%d\n", __func__, pch->c.ch,
 			pch->c.prm_top.is_pps, pch->c.prm_top.is_di2pps);
 
-		cvs->width = (vfm->width * 5) / 4;
+		cvs->width = (vfm_h * 5) / 4;
 		cvs->width = roundup(cvs->width, canvas_align_width);
 		cvs->height = vfm->height;
 		cvs->block_mode = 0;
