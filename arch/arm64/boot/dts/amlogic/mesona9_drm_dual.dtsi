@@ -26,7 +26,6 @@
 
 	drm_vpu: drm-vpu@ff900000  {
 		status = "disabled";
-		//compatible = "amlogic, meson-s6-vpu";
 		compatible = "amlogic, meson-a9-vpu";
 		osd_ver = /bits/ 8 <OSD_V7>;
 		reg = <0x0 0xff900000 0x0 0x40000>,
@@ -47,7 +46,7 @@
 			#size-cells = <0>;
 			drm_to_hdmitx: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <&hdmitx_to_drm>;
+				remote-endpoint = <0>;
 			};
 			drm_to_lcd0: endpoint@1 {
 				reg = <1>;
@@ -64,6 +63,10 @@
 			drm_to_dummyl: endpoint@4 {
 				reg = <4>;
 				remote-endpoint = <&dummyl_to_drm>;
+			};
+			drm_to_dptx: endpoint@5 {
+				reg = <5>;
+				remote-endpoint = <0>;
 			};
 		};
 	};
@@ -87,7 +90,7 @@
 		afbc_aligned_size = <1>; /*0:fbdev alloc non-afbc memory 1:fbdev alloc afbc memory*/
 		//vpu_block_select = <&vpu_blocks>; /*default vpu_blocks*/
 		vpu_block_select = <&vpu_blocks_path2>;
-		//tx_venc = <&tx_venc>;
+		tx_venc = <&tx_venc>;
 
 		vpu_topology: vpu_topology {
 			vpu_blocks: vpu_blocks {
@@ -945,45 +948,6 @@
 		};
 	};
 };
-
-&amhdmitx {
-	ports {
-		port {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			hdmitx_to_drm: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&drm_to_hdmitx>;
-			};
-		};
-	};
-};
-
-//&dptx {
-//	ports {
-//		port {
-//			#address-cells = <1>;
-//			#size-cells = <0>;
-//			dptx_to_drm: endpoint@0 {
-//				reg = <0>;
-//				remote-endpoint = <&drm_to_dptx>;
-//			};
-//		};
-//	};
-//};
-
-//&edptx {
-//	ports {
-//		port {
-//			#address-cells = <1>;
-//			#size-cells = <0>;
-//			edp_to_drm: endpoint@0 {
-//				reg = <0>;
-//				remote-endpoint = <&drm_to_edp>;
-//			};
-//		};
-//	};
-//};
 
 &dummy_venc {
 	default_venc_index = <1>;

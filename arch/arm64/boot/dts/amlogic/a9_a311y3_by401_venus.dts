@@ -1704,10 +1704,10 @@
 &dptx {
 	status = "disabled";
 	pxp_mode = <0>;
-	enc_idx = <0>;
+	enc_idx = <1>;
 };
 
-&edptx {
+&dptx_core {
 	status = "disabled";
 	pxp_mode = <0>;
 };

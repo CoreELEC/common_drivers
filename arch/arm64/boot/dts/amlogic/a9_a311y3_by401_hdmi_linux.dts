@@ -1593,6 +1593,12 @@
 &drm_vpu {
 	status = "okay";
 	logo_addr = "0x7f800000";
+	connectors_dev: port@1 {
+		drm_to_hdmitx: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&hdmitx_to_drm>;
+		};
+	};
 };
 
 &drm_subsystem {
@@ -1602,6 +1608,16 @@
 
 &amhdmitx {
 	status = "okay";
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			hdmitx_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_hdmitx>;
+			};
+		};
+	};
 };
 
 &tx_venc {
@@ -1619,10 +1635,10 @@
 &dptx {
 	status = "disabled";
 	pxp_mode = <0>;
-	enc_idx = <0>;
+	enc_idx = <1>;
 };
 
-&edptx {
+&dptx_core {
 	status = "disabled";
 	pxp_mode = <0>;
 };

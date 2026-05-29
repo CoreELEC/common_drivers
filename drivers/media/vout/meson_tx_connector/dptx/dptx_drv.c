@@ -617,7 +617,7 @@ static const struct of_device_id dptx_of_match[] = {
 		.data		= &dptx_plat_data_a9,
 	},
 	{
-		.compatible	= "amlogic, edp-a9",
+		.compatible	= "amlogic, dptx-core-a9",
 		.data		= &edp_plat_data_a9,
 	},
 	{},

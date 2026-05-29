@@ -2825,13 +2825,13 @@
 
 	dptx: dptx {
 		compatible = "amlogic, dptx-a9";
-		dev_name = "amdptx";
+		dev_name = "dptx";
 		status = "disabled";
 		tx_phy = <&tx_phy>;
 		tx_clk = <&dptx_clk>;
 		dev_index = <0>;
-		interrupts = <0 285 4
-			0 286 4>;
+		interrupts = <GIC_SPI 285 IRQ_TYPE_LEVEL_HIGH
+			GIC_SPI 286 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "apb_dp_int", "hdcp2tx_intr";
 
 		reg = <0x0 0xFE484000 0x0 0x2000
@@ -2862,9 +2862,10 @@
 		};
 	};
 
-	edptx: edptx {
-		compatible = "amlogic, edp-a9";
-		dev_name = "amedptx";
+	/* Used by the edptx driver */
+	dptx_core: dptx_core {
+		compatible = "amlogic, dptx-core-a9";
+		dev_name = "dptx_core";
 		status = "disabled";
 		tx_phy = <&tx_phy>;
 		tx_clk = <&dptx_clk>;

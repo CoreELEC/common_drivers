@@ -1607,6 +1607,10 @@
 	logo_addr = "0x7f800000";
 
 	connectors_dev: port@1 {
+		drm_to_hdmitx: endpoint@0 {
+			reg = <0>;
+			remote-endpoint = <&hdmitx_to_drm>;
+		};
 		drm_to_lcd0: endpoint@1 {
 			reg = <1>;
 			remote-endpoint = <&lcd0_to_drm>;
@@ -1618,6 +1622,10 @@
 		drm_to_edptx0: endpoint@3 {
 			reg = <3>;
 			remote-endpoint = <&edptx0_to_drm>;
+		};
+		drm_to_dptx: endpoint@5 {
+			reg = <5>;
+			remote-endpoint = <&dptx_to_drm>;
 		};
 	};
 };
@@ -1631,6 +1639,16 @@
 	status = "okay";
 	enc_idx = <1>;
 	clk_source_idx = <1>;
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			hdmitx_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_hdmitx>;
+			};
+		};
+	};
 };
 
 &eDPTX0 {
@@ -1648,12 +1666,22 @@
 };
 
 &dptx {
-	status = "disabled";
+	status = "okay";
 	pxp_mode = <0>;
-	enc_idx = <0>;
+	enc_idx = <1>;
+	ports {
+		port {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			dptx_to_drm: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&drm_to_dptx>;
+			};
+		};
+	};
 };
 
-&edptx {
+&dptx_core {
 	status = "okay";
 	pxp_mode = <0>;
 };
