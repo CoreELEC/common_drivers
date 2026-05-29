@@ -94,6 +94,7 @@ static void _cfg_dpss_inp(struct PRM_DPSS_TOP *prm_top,
 	u32 vsize_m1 = me_vsize - 1;
 	u32 x_fmt = src_fmt == YUV444 ? 1 : 0;
 	u32 y_fmt = src_fmt == YUV420 ? 0 : 1;
+	u32 nr_4k1k_vds_en;
 
 	if ((prm_top->use_inp_big & 0x0f) == 1) {
 		if (prm_top->dpss_mode != DPSS_FRC_MODE && prm_top->is_i) {
@@ -123,8 +124,10 @@ static void _cfg_dpss_inp(struct PRM_DPSS_TOP *prm_top,
 	//====================================================//
 	//ary move to glb struct PRM_INTF_TYPE inp_yuv_rdmif; //ary:need cfg input format and addr
 	//ary move to glb memset((void*)(&inp_yuv_rdmif), 0, sizeof(struct PRM_INTF_TYPE));
-
-	u32 nr_4k1k_vds_en = prm_top->vds_4k1k_en;
+	if (prm_top->frm_vsize < 1080)
+		nr_4k1k_vds_en = 0;
+	else
+		nr_4k1k_vds_en = prm_top->vds_4k1k_en;
 
 	inp_yuv_rdmif->src_hsize = me_hsize;
 	inp_yuv_rdmif->src_vsize = me_vsize;
@@ -149,8 +152,9 @@ static void _cfg_dpss_inp(struct PRM_DPSS_TOP *prm_top,
 	if (!prm_top->is_i)
 		inp_yuv_rdmif->block_mode = prm_top->block_mode;
 
-	dbg_h2("%s: x:%d %d, y:%d %d.\n",
+	dbg_h2("%s:nr4k1k_en %d, x:%d %d, y:%d %d.\n",
 		__func__,
+		nr_4k1k_vds_en,
 		inp_yuv_rdmif->slc_x_st[0],
 		inp_yuv_rdmif->slc_x_ed[0],
 		inp_yuv_rdmif->slc_y_st[0],
