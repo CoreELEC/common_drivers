@@ -204,6 +204,17 @@
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 			status = "disabled";
 		};
+
+		pcie_dma_ops_mm:linux,pcie_dma_ops {
+			compatible = "shared-dma-pool";
+			status = "disabled";
+			reusable;
+			size = <0x0 0x2000000>;
+			swiotlb-size = <0x0 0x1c00000>;
+			atomic-size = <0x0 0x40000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
+		};
 	};
 
 	sensor0: sensor0 {
@@ -770,4 +781,15 @@
 	pinctrl-names = "mbd_audio_pins";
 	pinctrl-0 = <&pdmin>;
 	status = "okay";
+};
+
+&pcie_phy {
+	status = "disabled";
+};
+
+&pcie {
+	reset-gpio = <&gpio_ao GPIOF_5 GPIO_ACTIVE_HIGH>;
+	max-link-speed=<2>;
+	iommu-map = <0x100 &smmu 0x5 0x400>;
+	status = "disable";
 };

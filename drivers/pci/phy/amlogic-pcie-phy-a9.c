@@ -244,7 +244,7 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 			return ret;
 
 		/* close fast_sim */
-		ret = regmap_update_bits(pcie_phy->regmap, 0x1b8, BIT(0), 0);
+		ret = regmap_update_bits(pcie_phy->regmap, 0x1b8, BIT(21), 0);
 		if (ret)
 			return ret;
 

@@ -672,7 +672,7 @@ static int amlogic_pcie_do_phy_apb_reset(struct amlogic_pcie *aml_pcie)
 					 "pcie-phy-apb-rst",
 					 reg, ARRAY_SIZE(reg));
 	if (ret) {
-		dev_err(dev, "failed to request pcie_reset_number\n");
+		dev_err(dev, "failed to request pcie-phy-apb-rst\n");
 		return ret;
 	}
 	val = readl(aml_pcie->reset_base + reg[0]);

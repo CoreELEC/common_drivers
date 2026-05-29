@@ -39,6 +39,12 @@ ddk_module(
 		"phy/amlogic-pcie-phy-a9.c",
 	    ],
          },
+        "CONFIG_AMLOGIC_PCIE_PHY_C5": {
+            True: [
+		"phy/amlogic-pcie-phy.c",
+		"phy/amlogic-pcie-phy-c5.c",
+	    ],
+         },
     },
     hdrs = [
         "//common:drivers/pci/controller/dwc/pcie-designware.h",

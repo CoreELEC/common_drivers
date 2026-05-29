@@ -3,3 +3,4 @@
 
 # ccflags-y += -DDEBUG
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_PCIE_PHY_A9) += phy/amlogic-pcie-phy.o phy/amlogic-pcie-phy-a9.o
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_PCIE_PHY_C5) += phy/amlogic-pcie-phy.o phy/amlogic-pcie-phy-c5.o

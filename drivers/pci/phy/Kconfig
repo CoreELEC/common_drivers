@@ -6,3 +6,10 @@ config AMLOGIC_PCIE_PHY_A9
 	default n
 	help
 	  Say Y here if you want to enable PCIE support on Amlogic SoCs.
+
+config AMLOGIC_PCIE_PHY_C5
+	tristate "Meson PCIE PHY C5"
+	depends on AMLOGIC_PCIE
+	default n
+	help
+	  Say Y here if you want to enable PCIE support on Amlogic SoCs.
