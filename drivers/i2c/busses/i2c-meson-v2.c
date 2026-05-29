@@ -24,7 +24,7 @@
 
 // #define I2C_DEBUG
 // #define I2C_PXP
-#define I2C_PM_RUNTIME
+// #define I2C_PM_RUNTIME
 
 #define FUTURE_USE		0
 /* Meson I2C register map */
@@ -760,8 +760,7 @@ static int meson_i2c_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
-	//init i2c, avoid it's old states come from uboot
-	meson_i2c_init(i2c);
+
 	if (of_property_read_u32(pdev->dev.of_node, "working_mode",
 				 &i2c->mode)) {
 		i2c->mode = I2C_IRQ_MODE;
@@ -810,6 +809,8 @@ static int meson_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get clk rate\n");
 		return -EINVAL;
 	}
+	//init i2c, avoid it's old states come from uboot
+	meson_i2c_init(i2c);
 #ifdef I2C_PM_RUNTIME
 	pm_runtime_mark_last_busy(i2c->dev);
 	pm_runtime_put_autosuspend(i2c->dev);
