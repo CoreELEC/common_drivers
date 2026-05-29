@@ -1,0 +1,69 @@
+#include "sc2_s905x4_ah212_drm.dts"
+#include "coreelec_sc2_common.dtsi"
+
+/ {
+	model = "Mecool KT1 (DVB-S2X)";
+	coreelec-dt-id = "sc2_s905x4_mecool_kt1_s2x";
+
+	auge_sound {
+		/delete-property/ avout_mute-gpios;
+	};
+
+	gpioleds {
+		sys_led {
+			label = "sys_led";
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+		net_led {
+			label = "net_led";
+			gpios=<&gpio GPIOD_4 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
+		};
+		rc_led {
+			label = "rc_led";
+			gpios=<&gpio GPIOD_6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "rc-feedback";
+		};
+	};
+
+	gpio_keypad {
+		status = "disabled";
+	};
+
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "okay";
+
+		fe_num = <1>;
+		fe0_demod = "avl6221c";
+		fe0_i2c_adap_id = <&i2c3>;
+		fe0_demod_i2c_addr = <0x14>;
+		fe0_ts  = <1>;
+		fe0_tuner0 = <0>;
+
+		tuner_num = <1>;
+		tuner0_name = "av2018";
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x62>;
+		tuner0_xtal = <27000>;
+	};
+
+	dvb-demux {
+		status = "okay";
+		tee_compat = <1>;
+	};
+};
+
+&i2c2 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "okay";
+};
+
+&sd_emmc_b {
+	max-frequency = <150000000>;
+};
