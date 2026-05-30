@@ -859,9 +859,9 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 		int auto_search, bool *lock)
 {
 	struct analog_parameters params;
-	struct dvb_frontend *fe = &v4l2_fe->fe;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
-	struct v4l2_analog_parameters *p = &v4l2_fe->params;
+	struct dvb_frontend *fe = NULL;
+	struct atv_demod_priv *priv = NULL;
+	struct v4l2_analog_parameters *p = NULL;
 	enum v4l2_status tuner_state = V4L2_TIMEDOUT;
 	enum v4l2_status ade_state = V4L2_TIMEDOUT;
 	int try_cnt = tuner_status_cnt;
@@ -872,6 +872,12 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 	unsigned int tuner_id = 0;
 	s16 strength = 0;
 
+	if (!v4l2_fe || !lock)
+		return;
+
+	fe = &v4l2_fe->fe;
+	p = &v4l2_fe->params;
+	priv = fe->analog_demod_priv;
 	if (!priv)
 		return;
 
@@ -919,7 +925,9 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 			}
 		}
 
-		fe->ops.analog_ops.has_signal(fe, (u16 *)&ade_state);
+		if (fe->ops.analog_ops.has_signal)
+			fe->ops.analog_ops.has_signal(fe, (u16 *)&ade_state);
+
 		try_cnt--;
 		if (((ade_state == V4L2_HAS_LOCK ||
 			tuner_state == V4L2_HAS_LOCK) &&
@@ -959,7 +967,8 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 				params.mode = p->afc_range;
 				params.audmode = p->audmode;
 				params.std = p->std;
-				fe->ops.analog_ops.set_params(fe, &params);
+				if (fe->ops.analog_ops.set_params)
+					fe->ops.analog_ops.set_params(fe, &params);
 
 				if (tuner_status_cnt > 2)
 					try_cnt = tuner_status_cnt / 2;
@@ -981,7 +990,8 @@ static void atvdemod_fe_try_signal(struct v4l2_frontend *v4l2_fe,
 		params.mode = p->afc_range;
 		params.audmode = p->audmode;
 		params.std = p->std;
-		fe->ops.analog_ops.set_params(fe, &params);
+		if (fe->ops.analog_ops.set_params)
+			fe->ops.analog_ops.set_params(fe, &params);
 	}
 }
 

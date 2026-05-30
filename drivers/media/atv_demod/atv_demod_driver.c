@@ -86,7 +86,8 @@
 /* 2025/09/29 --- V6.00 --- t6w and t6x bringup */
 /* 2025/11/26 --- V6.01 --- implement module debug parameter */
 /* 2026/03/30 --- V6.02 --- fix scan code test. */
-#define AMLATVDEMOD_VER "V6.02"
+/* 2026/05/30 --- V6.03 --- fix coverity. */
+#define AMLATVDEMOD_VER "V6.03"
 
 #define ATVDEMOD_ATTR_DEFINE()	\
 	ATVDEMOD_ATTR_ADD(reg_23cf, u32)	\
@@ -639,11 +640,15 @@ int aml_atvdemod_attach_demod(struct aml_atvdemod_device *dev)
 int aml_atvdemod_attach_tuner(struct aml_atvdemod_device *dev)
 {
 	void *p = NULL;
-	struct v4l2_frontend *v4l2_fe = &dev->v4l2_fe;
-	struct dvb_frontend *fe = &v4l2_fe->fe;
-	struct atv_demod_priv *priv = fe->analog_demod_priv;
+	struct dvb_frontend *fe = NULL;
+	struct atv_demod_priv *priv = NULL;
 	int tuner_id = 0;
 
+	if (!dev || !dev->v4l2_fe.fe.analog_demod_priv)
+		return -EFAULT;
+
+	fe = &dev->v4l2_fe.fe;
+	priv = fe->analog_demod_priv;
 	p = dvb_tuner_attach(fe);
 	if (p != NULL) {
 		dev->tuner_attached = true;
