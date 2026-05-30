@@ -208,7 +208,8 @@ static long aml_demod_ioctl(struct file *file,
 
 			demod->frontend.dtv_property_cache.frequency =
 				tuner_para.ch_freq;
-			demod->frontend.ops.tuner_ops.set_config(&demod->frontend, NULL);
+			if (demod->frontend.ops.tuner_ops.set_config)
+				demod->frontend.ops.tuner_ops.set_config(&demod->frontend, NULL);
 			tuner_set_params(&demod->frontend);
 		}
 		break;

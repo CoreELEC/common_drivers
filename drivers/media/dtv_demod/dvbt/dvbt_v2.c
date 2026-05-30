@@ -1364,7 +1364,7 @@ void dvbt2_info(struct aml_dtvdemod *demod, struct seq_file *seq)
 	/* SFO */
 	unsigned int sfo = dvbt_t2_rdb(0x28f8) | ((dvbt_t2_rdb(0x28f9) & 7) << 8);
 
-	sfo = ((sfo > 16383) ? (sfo - 32768) : sfo) / 16;
+	//sfo = ((sfo > 16383) ? (sfo - 32768) : sfo) / 16;
 	c_snr = c_snr * 3 / 64;
 	f_snr = f_snr * 3 / 64;
 	d_snr = d_snr * 3 / 64;
