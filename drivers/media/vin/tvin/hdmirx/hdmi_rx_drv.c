@@ -4182,6 +4182,7 @@ static void hdmirx_early_suspend(struct early_suspend *h)
 	msleep(20);
 	rx_phy_suspend();
 	rx_dig_clk_en(0);
+	rx_set_suspend_edid_clk(true);
 	rx_pr("hdmirx_early_suspend - ok\n");
 }
 
@@ -4201,6 +4202,7 @@ static void hdmirx_late_resume(struct early_suspend *h)
 		return;
 	rx_dig_clk_en(1);
 	rx_phy_resume();
+	rx_set_suspend_edid_clk(false);
 	if (rx_info.chip_id >= CHIP_ID_T3X)
 		sm_pause = 0;
 	for (i = 0; i < rx_info.port_num; i++) {
