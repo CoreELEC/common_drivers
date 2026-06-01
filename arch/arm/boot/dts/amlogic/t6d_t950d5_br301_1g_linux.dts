@@ -1080,6 +1080,10 @@
 		pinctrl-1 = <&spdifout_a_mute>;
 };
 
+&drm_subsystem {
+	fbdev_sizes = <1280 720 1280 1440 32>;
+};
+
 &spdifb {
 		pinctrl-names = "spdif_pins",
 			"spdif_pins_mute";
