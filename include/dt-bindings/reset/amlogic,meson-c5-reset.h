@@ -49,7 +49,20 @@
 #define RESET_USB2H_USB2PHY_APB		10
 #define RESET_U2H_USB2PHY		11
 #define RESET_BRG_VCBUS_DEC		12
-/*					13-31*/
+#define RESET_PCIE_MAC_APB		13
+#define RESET_PCIE			14
+#define RESET_PCIE1_0			15
+#define RESET_PCIE1_1			16
+#define RESET_PCIE1_2			17
+#define RESET_PCIE1_3			18
+#define RESET_PCIE1_4			19
+#define RESET_PCIE1_5			20
+#define RESET_PCIE1_6			21
+#define RESET_PCIE1_7			22
+#define RESET_PCIE2_PHY			23
+#define RESET_PCIE2_PHY_APB		24
+#define RESET_PCIE_PIPE			25
+/*					26-31*/
 
 /* RESET1 */
 #define RESET_ISP			32
