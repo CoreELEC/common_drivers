@@ -16,6 +16,7 @@
 #include <linux/interrupt.h>
 #include <linux/debugfs.h>
 #include <linux/miscdevice.h>
+#include <linux/math64.h>
 #include <asm/uaccess.h>
 
 #include "ucs116e0_light.h"
@@ -34,6 +35,11 @@ struct ucs116e0_data {
 	struct timer_list polling_timer;
 	struct work_struct ucs116e0_work;
 	struct workqueue_struct *ucs116e0_wq;
+	u8 sub_gain_reg;
+	u8 pga_gain_reg;
+	u8 inte_time_reg;
+	u8 als_dark_coef;
+	u8 als_win_loss;
 };
 
 struct ucs116e0_data *ucs116e0;
@@ -184,6 +190,24 @@ static int ucs116e0_init_register(struct ucs116e0_data *dev)
 	if (ret < 0)
 		return ret;
 	ret = ucs116e0_i2c_write(dev, UCS116E0_SYSM_CTRL,    0x01);
+	if (ret < 0)
+		return ret;
+
+	dev->sub_gain_reg = UCS116E0_INIT_SUB_GAIN;
+	dev->pga_gain_reg = UCS116E0_INIT_ALS_CLR_GAIN;
+	dev->inte_time_reg = UCS116E0_INIT_INTE_TIME;
+	dev->als_dark_coef = 0x80;
+	dev->als_win_loss = 0x40;
+
+	{
+		unsigned int reg_val;
+
+		if (ucs116e0_i2c_read(dev, UCS116E0_ALS_COEF, &reg_val) >= 0)
+			dev->als_dark_coef = reg_val;
+		if (ucs116e0_i2c_read(dev, UCS116E0_ALS_WIN_LOSS, &reg_val) >= 0)
+			dev->als_win_loss = reg_val;
+	}
+
 	return ret;
 }
 
@@ -196,7 +220,7 @@ static int read_ALS_data(struct ucs116e0_data *dev)
 	int als_data;
 
 	ucs116e0_read_regs(dev, UCS116E0_ALS_DATA_L, 3, &read_data[0]);
-	als_data = (read_data[2] << 16) | (read_data[1] << 8) | read_data[0];
+	als_data = ((read_data[2] & 0x7F) << 16) | (read_data[1] << 8) | read_data[0];
 	SEI_UCS116E0_DEBUG1("ALS data = %d", als_data);
 	return als_data;
 }
@@ -209,7 +233,7 @@ static int read_CLEAR_data(struct ucs116e0_data *dev)
 	int clr_data;
 
 	ucs116e0_read_regs(dev, UCS116E0_CLEAR_DATA_L, 3, &read_data[0]);
-	clr_data = (read_data[2] << 16) | (read_data[1] << 8) | read_data[0];
+	clr_data = ((read_data[2] & 0x7F) << 16) | (read_data[1] << 8) | read_data[0];
 	SEI_UCS116E0_DEBUG1("CLEAR data = %d", clr_data);
 	return clr_data;
 }
@@ -222,9 +246,82 @@ static int read_DARK_data(struct ucs116e0_data *dev)
 	int dark_data;
 
 	ucs116e0_read_regs(dev, UCS116E0_DARK_DATA_L, 3, &read_data[0]);
-	dark_data = (read_data[2] << 16) | (read_data[1] << 8) | read_data[0];
+	dark_data = ((read_data[2] & 0x7F) << 16) | (read_data[1] << 8) | read_data[0];
 	SEI_UCS116E0_DEBUG1("DARK data = %d", dark_data);
 	return dark_data;
+}
+
+static u32 ucs116e0_pga_gain_factor(u8 als_clr_gain_reg)
+{
+	u8 setting = als_clr_gain_reg & 0x07;
+
+	if (setting > 4)
+		setting = 4;
+
+	return 1U << setting;
+}
+
+static u32 ucs116e0_sub_gain_factor(u8 sub_gain_reg)
+{
+	u8 setting = sub_gain_reg & 0x0F;
+
+	if (setting > 7)
+		setting = 7;
+
+	return 1U << setting;
+}
+
+static int read_compensated_ALS_data(struct ucs116e0_data *dev)
+{
+	int als_raw, dark_raw, als_comp;
+
+	als_raw = read_ALS_data(dev);
+	dark_raw = read_DARK_data(dev);
+	als_comp = als_raw - (dev->als_dark_coef * dark_raw / 128);
+	if (als_comp < 0)
+		als_comp = 0;
+
+	SEI_UCS116E0_DEBUG1("ALS raw = %d, dark = %d, comp = %d",
+			   als_raw, dark_raw, als_comp);
+
+	return als_comp;
+}
+
+static int ucs116e0_calc_lux(struct ucs116e0_data *dev, int als_comp)
+{
+	u64 lux;
+	u64 denom;
+	u32 pga_gain, sub_gain, inte_ms, win_loss;
+
+	if (als_comp <= 0)
+		return 0;
+
+	pga_gain = ucs116e0_pga_gain_factor(dev->pga_gain_reg);
+	sub_gain = ucs116e0_sub_gain_factor(dev->sub_gain_reg);
+	inte_ms = (dev->inte_time_reg + 1) * UCS116E0_INTE_TIME_UNIT_MS;
+	win_loss = dev->als_win_loss ? dev->als_win_loss : 64;
+
+	denom = (u64)pga_gain * sub_gain * inte_ms * win_loss *
+		UCS116E0_LUX_COEF_DEN;
+	if (!denom)
+		return 0;
+
+	lux = (u64)als_comp * UCS116E0_LUX_COEF_NUM * 64ULL * 128ULL;
+	lux = div64_u64(lux, denom);
+
+	if (lux > INT_MAX)
+		return INT_MAX;
+
+	return (int)lux;
+}
+
+static int read_lux_data(struct ucs116e0_data *dev)
+{
+	int als_comp = read_compensated_ALS_data(dev);
+	int lux = ucs116e0_calc_lux(dev, als_comp);
+
+	SEI_UCS116E0_DEBUG1("lux data = %d", lux);
+	return lux;
 }
 
 static void ucs116e0_report_als_data(struct ucs116e0_data *dev)
@@ -386,6 +483,15 @@ static ssize_t ucs116e0_dark_data_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", dark_data);
 }
 
+/* sysfs: read lux value */
+static ssize_t lux_data_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	int lux_data = read_lux_data(ucs116e0);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", lux_data);
+}
+
 static ssize_t ucs116e0_debug_en_store(struct device *dev,
 					struct device_attribute *attr,
 					const char *buf, size_t count)
@@ -419,12 +525,14 @@ static struct miscdevice ucs116e0_device = {
 static DEVICE_ATTR(als_data,   S_IWUSR | S_IRUGO, ucs116e0_als_data_show,   NULL);
 static DEVICE_ATTR(clear_data, S_IWUSR | S_IRUGO, ucs116e0_clear_data_show, NULL);
 static DEVICE_ATTR(dark_data,  S_IWUSR | S_IRUGO, ucs116e0_dark_data_show,  NULL);
+static DEVICE_ATTR_RO(lux_data);
 static DEVICE_ATTR(debug_en,   S_IWUSR | S_IRUGO, ucs116e0_debug_en_show,   ucs116e0_debug_en_store);
 
 static struct attribute *ucs116e0_attributes[] = {
 	&dev_attr_als_data.attr,
 	&dev_attr_clear_data.attr,
 	&dev_attr_dark_data.attr,
+	&dev_attr_lux_data.attr,
 	&dev_attr_debug_en.attr,
 	NULL
 };
@@ -465,6 +573,11 @@ static int ucs116e0_i2c_probe(struct i2c_client *client)
 	}
 	ucs116e0->client = client;
 	ucs116e0->pdata  = *pdata;
+	ucs116e0->sub_gain_reg = UCS116E0_INIT_SUB_GAIN;
+	ucs116e0->pga_gain_reg = UCS116E0_INIT_ALS_CLR_GAIN;
+	ucs116e0->inte_time_reg = UCS116E0_INIT_INTE_TIME;
+	ucs116e0->als_dark_coef = 0x80;
+	ucs116e0->als_win_loss = 0x40;
 
 	ret = ucs116e0_verify(ucs116e0);
 	if (ret < 0) {

@@ -79,4 +79,13 @@
 #define UCS116E0_INIT_INTE_TIME          0x3F  /* 64T * 2ms = 128ms integration time */
 #define UCS116E0_INIT_ALS_CLR_GAIN       0x04  /* ALS_GAIN=x16, CLEAR_GAIN=x1 */
 
+/*
+ * Platform lux calibration (tune per module):
+ * lux = als_comp * LUX_COEF_NUM * 64 * 128 /
+ *       (LUX_COEF_DEN * pga_gain * sub_gain * inte_ms * win_loss)
+ */
+#define UCS116E0_LUX_COEF_NUM            1000
+#define UCS116E0_LUX_COEF_DEN            1000
+#define UCS116E0_INTE_TIME_UNIT_MS       2
+
 #endif /* _UCS116E0_H_ */
