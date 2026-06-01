@@ -68,6 +68,9 @@ struct vframe_s *frc_get_vfm(void);
 void mc_res_switch_begin(bool need_update_res_swth);
 //reverse
 void frc_transform_check(struct vframe_s *vfm);
+//trick play
+bool check_trick_play(void);
+void dpss_check_trick_play(void);
 
 //crop
 void detect_axis_change(struct pvpp_dis_frc_para_in_s *in_para);

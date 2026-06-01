@@ -2389,6 +2389,7 @@ void irq_inp(void)
 	struct frc_interrupt_s *frc_int_st;
 	struct dpss_game_state_s *game_st;
 	u8 frc_fw_working = 0;
+	u8 inp_start_sel;
 	struct PRM_DPSS_TOP *prm_top = prm_dpss_top;
 	u64 timestamp = sched_clock();
 
@@ -2439,6 +2440,8 @@ void irq_inp(void)
 	ro_inp_ibuf = rd(DPSS_FRC_INP_BUF_STATUS) & 0xff;
 	ro_dae_ibuf = rd(DPSS_FRC_DAE_BUF_STATUS) & 0xff;
 
+	inp_start_sel = (rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1;
+
 	unsigned int badedit_en = prm_top->badedit_en;
 	unsigned int inp_film_phs;
 
@@ -2474,7 +2477,7 @@ void irq_inp(void)
 
 	//badedit
 	if (badedit_en) {	////write inp frmae valid flag by fw
-		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1)) {	//1st frame
+		if (inp_start_sel) {	//1st frame
 			inp_ofrm_vld = config_inp_loop_tab(inp_film_mode,
 					inp_film_phs, badedit_en);
 			config_dae_loop_tab(prm_top->frc_ratio,
@@ -2501,8 +2504,8 @@ void irq_inp(void)
 				cfg_inp_triggle(0);	//frm_end
 		}
 	} else {
-		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) &  0x1) && prm_top->inp_done_int == 1) {
-			dbg_h2("irq_inp_1st frame\n");
+		if (inp_start_sel && prm_top->inp_done_int == 1) {
+			dbg_h2("inp irq 1st frame\n");
 		} else {
 			if (det_filmmode_chg == 1) {
 				if (inp_film_phs == 0) {
@@ -2579,7 +2582,7 @@ void irq_inp(void)
 			inp_ofrm_vld = 0;
 			w_reg_bit(FRC_AUTO_MODE_INP_OFRM_WREN, inp_ofrm_vld, 0, 1);
 		}
-		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1) != 1)
+		if (inp_start_sel != 1)
 			dpss_input_q_update_status(prm_top->in_q, inp_ofrm_vld, prm_top->is_i);
 	} else if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
 		if (game_st->inp_ctrl)
@@ -2588,7 +2591,7 @@ void irq_inp(void)
 
 	//don't add  logic after triggle function,add by fxj
 	if (badedit_en) {	////write inp frmae valid flag by fw
-		if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1) == 1) {	//1st frame
+		if (inp_start_sel) {	//1st frame
 			cfg_inp_triggle(1);	//frm_start
 			inp_chg2done_triggle();	//config after triggle
 		} else {
@@ -2598,7 +2601,7 @@ void irq_inp(void)
 		}
 	} else {
 		if (prm_top->inp_done_int) {
-			if (((rd(FRC_REG_INP_FRM_CTRL) >> 4) & 0x1) == 1) {//1st frame
+			if (inp_start_sel) {//1st frame
 				cfg_inp_triggle(1);//frm_start
 				inp_chg2done_triggle();//config after triggle
 			} else {

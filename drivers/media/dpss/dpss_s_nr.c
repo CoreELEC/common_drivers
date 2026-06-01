@@ -3619,6 +3619,8 @@ void dbg_step0_trig_input(unsigned int index)
 	dbg_h1("%s:index =%d\n", __func__, index);
 	w_reg_bit(FRC_REG_INP_IBUF_CFG, index, 4, 4);
 	cfg_dpss_done_trigger(FRC_SRC_DONE);
+	if (prm_top->frc_en)
+		dpss_check_trick_play();
 
 	dbg_h2("%s:index =%d, VDIN_TOP_SIZE=%#X, DPSS_REG_INP_IBUF=%#X\n",
 	       __func__, index, rd_vc(VDIN_TOP_SIZE), rd(FRC_REG_INP_IBUF_CFG));

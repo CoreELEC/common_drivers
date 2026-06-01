@@ -398,7 +398,21 @@ struct n2m_lut_s {
 	enum DPSS_FRC_RATIO frc_ratio;
 };
 
+struct frame_time_lut_s {
+	u16 input_framerate;
+	u16 output_framerate;
+	u32 time_interval1;
+	u32 time_interval2;
+	u32 avg_interval;
+	u16 cadence1;
+	u16 cadence2;
+};
+
 struct frc_interrupt_s {
+	bool work_normal;
+	u32 src_duration;
+	u64 src_timestamp;
+
 	u32 inp_int_cnt;
 	u32 inp_duration;
 	u64 inp_timestamp;
@@ -414,6 +428,7 @@ struct frc_interrupt_s {
 	u64 pre_vsync_timestamp;
 
 	u32 frc_vsync_cnt;
+	u32 frc_vsync_cnt_ro;
 	u32 frc_vsync_duration;
 	u64 frc_vsync_timestamp;
 
@@ -574,6 +589,12 @@ struct frc_state_s {
 	u32 src_frm_height;
 	u32 frc_off_delay_vs_cnt;
 	u32 display_buf_info_cnt;
+
+	bool trick_play_check_opt;
+	bool trick_play_en;
+	u8  trick_play_expect;
+	u32 trick_play_abnormal_level;
+
 	unsigned int put_frame_cnt;
 	enum compress_fmt_s compr_sel;
 	unsigned int pre_idx;

@@ -82,8 +82,8 @@ void dpss_frc_status(void)
 	pr_frc(0, "mc_bypass\t= %d, pre_vs_offset\t= %d\n",
 			rd(FRC_MC_HW_CTRL0) & 0x3, rd_vc(pchip_st->encl_frc_ctrl) & 0xffff);
 	pr_frc(0, "dpss_flag\t= %#x\n", frc_top->frc_prot_mode);
-	pr_frc(0, "eos enable\t= %d\trev_mode\t= %d\n",
-		state_st->enable_last_drop, frc_top->frc_rev_mode);
+	pr_frc(0, "eos enable = %d\trev_mode = %d\ttrick_play = %d\n",
+		state_st->enable_last_drop, frc_top->frc_rev_mode, state_st->trick_play_en);
 	pr_frc(0, "game_n2m\t= %d, game_film\t= %d\n",
 		game_st->game_n2m, game_st->game_film);
 //	pr_frc(0, "secure_mode= %d, buf secured= %d\n",
@@ -2014,6 +2014,10 @@ ssize_t dpss_frc_debug_param_if_help(char *buf)
 			dbg_st->ctrl_dbg.check_reg_status);
 	len += sprintf(buf + len, "need_disable_mc_link\t= %d\n",
 			state_st->need_disable_mc_link);
+	len += sprintf(buf + len, "trick_play_check_opt\t= %d\n",
+			state_st->trick_play_check_opt);
+	len += sprintf(buf + len, "trick_play_abnormal_level\t= %d\n",
+			state_st->trick_play_abnormal_level);
 	return len;
 }
 
@@ -2284,6 +2288,20 @@ void dpss_frc_debug_param_if(const char *buf, size_t count)
 		if (kstrtoint(parm[1], 10, &val1) == 0) {
 			if (val1 < 200)
 				state_st->frc_off_delay_vs_cnt = val1;
+		}
+	} else if (!strcmp(parm[0], "trick_play_check_opt")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0) {
+			if (val1 < 200)
+				state_st->trick_play_check_opt = val1;
+		}
+	} else if (!strcmp(parm[0], "trick_play_abnormal_level")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0) {
+			if (val1 < 200)
+				state_st->trick_play_abnormal_level = val1;
 		}
 	}
 

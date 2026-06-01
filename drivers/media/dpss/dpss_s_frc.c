@@ -9,6 +9,7 @@
 #include "sys_def.h"
 #include <linux/module.h>
 #include <linux/kfifo.h>
+#include <linux/sched/clock.h>
 #include <linux/amlogic/gki_module.h>
 #include <uapi/amlogic/frc.h>
 #include <linux/amlogic/media/vfm/vframe.h>
@@ -64,8 +65,10 @@ struct display_queue display_buf_q;
 int enable_mc_link = 1;
 int frc_delay_dbg; // for avsync debug
 
-#define N2M_LIST 29
+#define N2M_LIST                     29
+#define FRAME_LIST                   27
 #define DPSS_FRC_RESET_PATH_SKIP_CNT 5
+#define TRICK_DETECT_WIN             20
 
 //hdr_flag
 #define hdr_color_primaries ((vfm->signal_type >> 16) & 0xff)
@@ -149,6 +152,36 @@ struct n2m_lut_s n2m_table[N2M_LIST] = {
 	{144, 288, DPSS_FRC_RATIO_1_2},
 
 	{60, 60, DPSS_FRC_RATIO_1_1},
+};
+
+const struct frame_time_lut_s check_inp_duration[FRAME_LIST] = {
+	{12,  60,  83333, 83333, 83333,  5,  5},
+	{12,  120, 83333, 83333, 83333, 10, 10},
+	{15,  60,  66667, 66667, 66667,  4,  4},
+	{15,  120, 66667, 66667, 66667,  8,  8},
+	{24,  60,  50000, 33333, 41667,  3,  2},
+	{24,  120, 41667, 41667, 41667,  5,  5},
+	{24,  144, 41667, 41667, 41667,  6,  6},
+	{24,  240, 41667, 41667, 41667, 10, 10},
+	{24,  288, 41667, 41667, 41667, 12, 12},
+	{25,  50,  40000, 40000, 40000,  2,  2},
+	{25,  100, 40000, 40000, 40000,  4,  4},
+	{25,  200, 40000, 40000, 40000,  8,  8},
+	{30,  60,  33333, 33333, 33333,  2,  2},
+	{30,  120, 33333, 33333, 33333,  4,  4},
+	{30,  240, 33333, 33333, 33333,  8,  8},
+	{48,  144, 20833, 20833, 20833,  3,  3},
+	{48,  288, 20833, 20833, 20833,  6,  6},
+	{50,  50,  20000, 20000, 20000,  1,  1},
+	{50,  100, 20000, 20000, 20000,  2,  2},
+	{50,  200, 20000, 20000, 20000,  4,  4},
+	{60,  60,  16667, 16667, 16667,  1,  1},
+	{60,  120, 16667, 16667, 16667,  2,  2},
+	{60,  240, 16667, 16667, 16667,  4,  4},
+	{100, 100, 10000, 10000, 10000,  1,  1},
+	{100, 200, 10000, 10000, 10000,  2,  2},
+	{120, 120, 8333,  8333,  8333,   1,  1},
+	{120, 240, 8333,  8333,  8333,   2,  2},
 };
 
 /*****************************************************************************/
@@ -725,6 +758,8 @@ static void frc_drv_initial(struct dpss_dev_s *devp)
 	state_st->first_put_vfm = true;
 	state_st->frc_only_rst = 0x3;
 	state_st->frc_off_delay_vs_cnt = 1;
+	state_st->trick_play_abnormal_level = 5;
+	state_st->trick_play_check_opt = false;
 	frc_top->memc_enable = 2;
 	frc_top->frc_memc_level = 10;
 	frc_top->frc_deblur_level = 10;
@@ -1250,6 +1285,8 @@ void init_frc_pre_light(struct vframe_s *vf)
 	state_st = &pchip_st->state_st;
 	state_st->dae0_bypass_mode = 1;
 	state_st->reverse_need_update = false;
+	state_st->trick_play_en = false;
+	state_st->trick_play_expect = 0;
 
 	pchip_st->mc_pix_rmif.uv_swap = false;
 	pchip_st->mc_pix_rmif.reverse[0] = 0;
@@ -3587,6 +3624,145 @@ static void frc_set_n2m(u32 in_fr, u32 out_fr, struct frc_state_s *state_st)
 	dbg_f2("frc set n2m:%d\n", frc_ratio);
 }
 
+bool check_trick_play(void)
+{
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct frc_state_s *state_st;
+	struct frc_interrupt_s *frc_int_st;
+	u32 in_fr;
+	u32 out_fr;
+	u32 actual_interval;
+	u32 target_interval;
+	u32 avg_interval;
+	u32 actual_vsync_cnt;
+	u32 target_vsync_cnt;
+	u32 i;
+	u32 tolerance;
+	u32 tmp_time_low;
+	u32 tmp_time_high;
+	bool ret = false;
+	bool hist = false;
+	u8 hist_raw;
+	u64 timestamp = sched_clock();
+	static u8 expect;
+	static u8 is_abnormal_last;
+	static u8 trick_det_idx;
+	static u8 abnormal_cnt;
+	static u8 det_array[TRICK_DETECT_WIN];
+	static u32 actual_interval_last;
+
+	if (!pchip_st) {
+		WARN_ON(1);
+		return false;
+	}
+
+	state_st = &pchip_st->state_st;
+	frc_int_st = &state_st->frc_int_st;
+	if (!state_st->is_dos)
+		return false;
+	timestamp = div64_u64(timestamp, 1000);
+	if (!frc_int_st->work_normal) {
+		is_abnormal_last = 0;
+		actual_interval_last = 0;
+		trick_det_idx = 0;
+		abnormal_cnt = 0;
+		for (i = 0; i < TRICK_DETECT_WIN; i++)
+			det_array[i] = 1;
+		goto first;
+	}
+	frc_int_st->src_duration = timestamp - frc_int_st->src_timestamp;
+	in_fr = state_st->n2m_status.input_framerate;
+	out_fr = state_st->n2m_status.output_framerate;
+	for (i = 0; i < FRAME_LIST; i++) {
+		if (check_inp_duration[i].input_framerate == in_fr &&
+			check_inp_duration[i].output_framerate == out_fr) {
+			target_interval = expect == 0 ? check_inp_duration[i].time_interval1 :
+				check_inp_duration[i].time_interval2;
+			target_vsync_cnt = expect == 0 ? check_inp_duration[i].cadence1 :
+				check_inp_duration[i].cadence2;
+			avg_interval = check_inp_duration[i].avg_interval;
+			break;
+		}
+	}
+	if (i == FRAME_LIST)
+		goto exit;
+
+	tolerance = 500000 / state_st->n2m_status.output_framerate;
+	actual_interval = state_st->frc_int_st.src_duration;
+	tmp_time_low = target_interval - tolerance;
+	tmp_time_high = target_interval + tolerance;
+	actual_vsync_cnt = rd(DPSS_DISP_GO_FIELD_CNT) - state_st->frc_int_st.frc_vsync_cnt_ro;
+
+	hist_raw = det_array[trick_det_idx];
+
+	if ((actual_interval > tmp_time_low && actual_interval < tmp_time_high) ||
+		actual_vsync_cnt == target_vsync_cnt) {
+		if (hist_raw == 0)
+			abnormal_cnt--;
+		det_array[trick_det_idx] = 1;
+		expect ^= 1;
+		hist = true;
+	} else {
+		if (hist_raw == 1)
+			abnormal_cnt++;
+		det_array[trick_det_idx] = 0;
+		hist = false;
+	}
+
+	if (is_abnormal_last &&
+		actual_interval_last + actual_interval > 2 * avg_interval - tolerance &&
+		actual_interval_last + actual_interval < 2 * avg_interval + tolerance) {
+		expect = hist ? expect ^ 1 : expect;
+		det_array[trick_det_idx] = 1;
+		abnormal_cnt = hist ? abnormal_cnt - 1 : abnormal_cnt - 2;
+		if (trick_det_idx == 0)
+			det_array[TRICK_DETECT_WIN - 1] = 1;
+		else
+			det_array[trick_det_idx - 1] = 1;
+		hist = true;
+	}
+
+	is_abnormal_last = !hist;
+	actual_interval_last = actual_interval;
+
+	if (abnormal_cnt >= state_st->trick_play_abnormal_level)
+		ret = true;
+
+	pr_frc(3, "%s(%d),in_fr=%d,src_dur=%5d(%d,%d)->%5d,vsync=%d->%d,ng=%d,ep=%d,ht=%d\n",
+		"trick_play", ret, in_fr, frc_int_st->src_duration,
+		tmp_time_low, tmp_time_high, target_interval, actual_vsync_cnt, target_vsync_cnt,
+		abnormal_cnt, expect, hist);
+
+	trick_det_idx = (trick_det_idx + 1) % TRICK_DETECT_WIN;
+
+first:
+	frc_int_st->src_timestamp = timestamp;
+	frc_int_st->frc_vsync_cnt_ro = rd(DPSS_DISP_GO_FIELD_CNT);
+	frc_int_st->work_normal = true;
+	return ret;
+
+exit:
+	pr_frc(3, "%dfps->%dfps not support\n", in_fr, out_fr);
+	return false;
+}
+
+void dpss_check_trick_play(void)
+{
+	bool trick_play_en = false;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+
+	if (!pchip_st) {
+		WARN_ON(1);
+		return;
+	}
+	if (!pchip_st->state_st.trick_play_check_opt)
+		return;
+
+	trick_play_en = check_trick_play();
+	if (trick_play_en != pchip_st->state_st.trick_play_en)
+		dp_dynamic_detect_play_speed(trick_play_en);
+}
+
 bool  frc_dynamic_detect_play_speed(void)
 {
 	u32 nr_buf_stats;
@@ -3613,7 +3789,8 @@ void dp_dynamic_detect_play_speed(bool en)
 	state_st = &pchip_st->state_st;
 	state_st->fast_pat_set_n2m = en;
 	state_st->fast_pat_set_phase0 = en;
-	dbg_f1("fast_pat_set=%d\n", en);
+	state_st->trick_play_en = en;
+	dbg_f1("trick play=%d\n", en);
 }
 
 enum hdr_fmt_s {
