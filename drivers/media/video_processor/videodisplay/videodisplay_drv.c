@@ -1310,6 +1310,30 @@ static ssize_t continue_dump_num_show(const struct class *cla,
 		get_debug_flag_val(VD_DEBUG_CLASS_CONTINUE_DUMP_NUM));
 }
 
+static ssize_t max_count_hold_vsync_store(const struct class *cla,
+				const struct class_attribute *attr,
+				const char *buf,
+				size_t count)
+{
+	long tmp;
+	int ret;
+
+	ret = kstrtol(buf, 0, &tmp);
+	if (ret != 0)
+		return ret;
+
+	set_debug_flag_val(VD_DEBUG_CLASS_MAX_COUNT_HOLD_VSYNC, tmp);
+	return count;
+}
+
+static ssize_t max_count_hold_vsync_show(const struct class *cla,
+				const struct class_attribute *attr,
+				char *buf)
+{
+	return snprintf(buf, 80, "max count_hold_vsync is %d.\n",
+		get_debug_flag_val(VD_DEBUG_CLASS_MAX_COUNT_HOLD_VSYNC));
+}
+
 static CLASS_ATTR_RW(debug_axis_pip);
 static CLASS_ATTR_RW(debug_crop_pip);
 static CLASS_ATTR_RW(force_composer);
@@ -1366,6 +1390,7 @@ static CLASS_ATTR_RW(vd_composer_en);
 static CLASS_ATTR_RW(vd_drop_org_i);
 static CLASS_ATTR_RW(vd_drop_hdmi_count);
 static CLASS_ATTR_RW(continue_dump_num);
+static CLASS_ATTR_RW(max_count_hold_vsync);
 
 static struct attribute *videodisplay_class_attrs[] = {
 	&class_attr_debug_crop_pip.attr,
@@ -1424,6 +1449,7 @@ static struct attribute *videodisplay_class_attrs[] = {
 	&class_attr_vd_drop_org_i.attr,
 	&class_attr_vd_drop_hdmi_count.attr,
 	&class_attr_continue_dump_num.attr,
+	&class_attr_max_count_hold_vsync.attr,
 	NULL
 };
 ATTRIBUTE_GROUPS(videodisplay_class);

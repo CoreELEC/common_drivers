@@ -140,6 +140,7 @@ static u32 mute_vsync_count;
 static bool enable_new_afr_pattern;
 static struct mediasync_cb *mediasync_callback;
 static DEFINE_MUTEX(videodisplay_mutex);
+static u32 max_count_hold_vsync = 3;
 
 #define to_dst_buf(vf)	container_of(vf, struct dst_buf_t, frame)
 #define IS_DI_PRELINK_BYPASS(di_flag) ((di_flag) & DI_FLAG_DI_PVPPLINK_BYPASS)
@@ -513,6 +514,9 @@ void set_debug_flag_val(enum videodisplay_debug_class_type debug_type, int value
 	case VD_DEBUG_CLASS_CONTINUE_DUMP_NUM:
 		continue_dump_num = value;
 		break;
+	case VD_DEBUG_CLASS_MAX_COUNT_HOLD_VSYNC:
+		max_count_hold_vsync = value;
+		break;
 	default:
 		pr_info("%s: invalid debug type.\n", __func__);
 		break;
@@ -694,6 +698,9 @@ int get_debug_flag_val(enum videodisplay_debug_class_type debug_type)
 		break;
 	case VD_DEBUG_CLASS_CONTINUE_DUMP_NUM:
 		ret = continue_dump_num;
+		break;
+	case VD_DEBUG_CLASS_MAX_COUNT_HOLD_VSYNC:
+		ret = max_count_hold_vsync;
 		break;
 	default:
 		pr_info("%s: invalid debug type.\n", __func__);
@@ -4296,6 +4303,7 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 	int total_delay_vsync;
 	struct timespec64 cur_spec_time;
 	int frc_delay = 0;
+	u32 hold_vsync_count = 0, cur_hold_count = 0;
 
 	time1 = dev->start_time;
 	time2 = vsync_time[dev->index];
@@ -4454,14 +4462,50 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 					max_delay_count += vd_pulldown_level - 1;
 				if (dev->pattern_detected == PATTERN_44)
 					max_delay_count += 1;
+
 				if (vsync_index + max_delay_count < vsync_count[dev->index]) {
 					vd_print(dev->index, PRINT_PATTERN,
 						"need disp, vsync_index =%d, vsync_count=%d\n",
 						vsync_index, vsync_count[dev->index]);
 					expired = true;
 				}
-				if (!expired)
-					return NULL;
+
+				/*hold count, 0->1*/
+				if (dev->continue_hold_count == 2) {
+					dev->hold_start_vsync = vsync_count[dev->index];
+					vd_print(dev->index, PRINT_PATTERN,
+						"peek: hold_start_vsync = %d\n",
+						dev->hold_start_vsync);
+				}
+
+				if (!expired) {
+					/* nts 0.95->1->1.05*/
+					/*avsync, can not hold too many buf, set max hold 2 vsync*/
+					/* in (2 .. 2 1) (2 .. 2 1) (2 .. 2 1)*/
+					/* need out (2 .. 2 2) (2 .. 2 1) (2 .. 2 1)*/
+					hold_vsync_count = vsync_count[dev->index] -
+						dev->hold_start_vsync;
+					cur_hold_count = vsync_count[dev->index] - vsync_index;
+					vd_print(dev->index, PRINT_PATTERN,
+						"peek: hold_vsync_count=%d, cur_hold_count=%d.\n",
+						hold_vsync_count, cur_hold_count);
+					if (is_meson_t6w_cpu() &&
+						vf->duration == 3203 &&
+						vf->flag & VFRAME_FLAG_VIDEO_SECURE &&
+						cur_hold_count == max_count_hold_vsync &&
+						hold_vsync_count > 4 &&
+						hold_vsync_count <= 30) {
+						vd_print(dev->index, PRINT_PATTERN,
+							"no need intreace hold count.\n");
+						/*hold count, 1->2*/
+						dev->hold_start_vsync = vsync_count[dev->index];
+					} else {
+						vd_print(dev->index, PRINT_PATTERN,
+							"need increase hold count(%d).\n",
+							cur_hold_count);
+						return NULL;
+					}
+				}
 			}
 		}
 
@@ -4933,6 +4977,7 @@ static int video_display_init(struct videodisplay_dev *dev)
 	dev->last_frc_delay = 0;
 	dev->cur_hold_count = 0;
 	dev->last_file = NULL;
+	dev->hold_start_vsync = 0;
 	dev_array[dev->index] = dev;
 	init_completion(&dev->task_done);
 	for (i = 0; i < MAX_VD_LAYERS; i++)

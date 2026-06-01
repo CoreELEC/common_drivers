@@ -242,6 +242,7 @@ struct videodisplay_dev {
 	int last_frc_delay;
 	struct vd_dump_info_s dump_info_yuv;
 	u32 cur_hold_count;
+	u32 hold_start_vsync;
 };
 
 struct videodisplay_port_s *videodisplay_get_port(u32 index);
