@@ -2417,7 +2417,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 			mutex_unlock(&devp->rx_lock);
 			break;
 		}
-		if (port_idx > 3) {
+		if (port_idx > rx_info.port_num) {
 			rx_pr("port_idx illegal\n");
 			ret = -EFAULT;
 			mutex_unlock(&devp->rx_lock);
@@ -2450,6 +2450,7 @@ static long hdmirx_ioctl(struct file *file, unsigned int cmd,
 				hdmirx_scdc_reset(port_idx);
 			}
 		}
+		rx[port_idx].hpd_cntl |= EDID_CNTL_HPD;
 		//rx_info.edid_update_done |= _BIT(port_idx);
 		mutex_unlock(&devp->rx_lock);
 		break;
@@ -3134,6 +3135,7 @@ static ssize_t cec_store(struct device *dev,
 			 size_t count)
 {
 	int cnt = 0, val = 0;
+	u8 i;
 
 	/* cnt = sscanf(buf, "%x", &val); */
 	cnt = kstrtoint(buf, 0, &val);
@@ -3157,6 +3159,8 @@ static ssize_t cec_store(struct device *dev,
 		if (is_valid_edid_data(edid_cur))
 			rx_force_hpd_rxsense_cfg(1);
 	}
+	for (i = 0; i < rx_info.port_num; ++i)
+		rx[i].hpd_cntl |= CEC_CNTL_HPD;
 	rx_info.boot_flag = false;
 	tv_auto_power_on = (val >> 4) & 0xF;
 	rx_pr("cec sts = %d\n", val);

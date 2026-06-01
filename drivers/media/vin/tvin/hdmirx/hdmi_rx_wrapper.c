@@ -8647,6 +8647,8 @@ int hdmirx_debug(const char *buf, int size)
 			hdmirx_qms_plus_en(true, port);
 	} else if (strncmp(tmpbuf, "low_frl", 7) == 0) {
 		hdmi_rx_frl_rate_update(port, FRL_8G_4LANE);
+	} else if (strncmp(tmpbuf, "cntl_hpd", 8) == 0) {
+		rx[port].hpd_cntl = EDID_UPDATE_READY;
 	}
 	return 0;
 }
