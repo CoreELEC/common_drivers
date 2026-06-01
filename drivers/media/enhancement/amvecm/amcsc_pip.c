@@ -3063,10 +3063,10 @@ void hdmi_packet_process(int signal_change_flag,
 		h10_para = hdmitx_hdr10plus_param;
 	}
 
-	if (vdev && !f_h) {
-		pr_info("vdev->fresh_tx_hdr_pkt is null, return\n");
+//	if (vdev && !f_h) {
+//		pr_info("vdev->fresh_tx_hdr_pkt is null, return\n");
 		/* continue */
-	}
+//	}
 	pr_csc(16,
 	       "am_vecm: vd%d %s %s, vd2 %s %s, output_format %s,%s, flag 0x%x, hdr_cap = 0x%x\n",
 	       vd_path + 1,
