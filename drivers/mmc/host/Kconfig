@@ -27,13 +27,9 @@ config AMLOGIC_MMC_CRYPTO
 	  capabilities of the MMC device (if present) to perform crypto
 	  operations on data being transferred to/from the device.
 
-config AMLOGIC_MMC_RPMB
-         tristate "Amlogic MMC RPMB support"
-         depends on MMC
-         help
-           This selects support for the Amlogic MMC RPMB found on the
-		   A4/A5 family of SoCs.  This controller is
-           MMC 5.1 compliant and supports eMMC interfaces.
-           If you have a controller with this interface, say Y here.
-
-
+config AMLOGIC_MIN_RESERVED_PARTITION
+	tristate "Enable minimal reserved partition format"
+	depends on MMC
+	default n
+	help
+	  Enable minimal reserved partition in the MMC.

@@ -2591,6 +2591,53 @@ static unsigned int tl1_emmc_line_timing(struct mmc_host *mmc)
 	return 0;
 }
 
+void mmc_pattern_check(struct mmc_host *mmc)
+{
+	struct meson_host *host = mmc_priv(mmc);
+	int check_pass = 1;
+	u64 capacity = 0;
+	u64 offset = 0;
+	u32 *buf = NULL;
+	int i;
+
+	host->reserved_out = 0;
+	single_read_scan(mmc, MMC_READ_SINGLE_BLOCK, host->blk_test,
+			512, 1, MMC_PATTERN_OFFSET);
+	buf = (u32 *)host->blk_test;
+	for (i = 0; i < 128; i += 1) {
+		if (buf[i] != 0x55aa55aa) {
+			check_pass = 0;
+			break;
+		}
+	}
+
+	if (check_pass == 1)
+		return;
+
+	if (mmc->card) {
+		capacity = mmc->card->ext_csd.sectors;
+		check_pass = 1;
+		if (capacity != 0) {
+			offset = capacity - ((2 * SZ_1M) >> 9);
+			single_read_scan(mmc, MMC_READ_SINGLE_BLOCK, host->blk_test,
+					512, 1, offset);
+			buf = (u32 *)host->blk_test;
+			for (i = 0; i < 128; i += 1) {
+				if (buf[i] != 0x55aa55aa) {
+					check_pass = 0;
+					break;
+				}
+			}
+			if (check_pass == 1) {
+				host->reserved_out = 1;
+				pr_info("reserved partition out\n");
+			} else {
+				dump_stack();
+			}
+		}
+	}
+}
+
 static int emmc_test_bus(struct mmc_host *mmc)
 {
 	int err = 0;
@@ -2603,6 +2650,9 @@ static int emmc_test_bus(struct mmc_host *mmc)
 				  host->blk_test, blksz, 40, MMC_PATTERN_NAME);
 	if (err)
 		goto _out;
+
+	if (aml_card_type_mmc(host))
+		mmc_pattern_check(mmc);
 
 	if (device_property_read_u32(dev, "cali_blk_cnt", &cali_blk_cnt) < 0)
 		cali_blk_cnt = CALI_BLK_CNT;
@@ -3608,51 +3658,6 @@ static int mmc_intf3_win_tuning(struct mmc_host *mmc, u32 opcode)
 		pr_err("scan intf3 rx window fail.\n");
 
 	return ret;
-}
-
-void mmc_pattern_check(struct mmc_host *mmc)
-{
-	struct meson_host *host = mmc_priv(mmc);
-	int check_pass = 1;
-	u64 capacity = 0;
-	u64 offset = 0;
-	u32 *buf = NULL;
-	int i;
-
-	host->reserved_out = 0;
-	single_read_scan(mmc, MMC_READ_SINGLE_BLOCK, host->blk_test,
-			512, 1, MMC_PATTERN_OFFSET);
-	buf = (u32 *)host->blk_test;
-	for (i = 0; i < 128; i += 1) {
-		if (buf[i] != 0x55aa55aa) {
-			check_pass = 0;
-			break;
-		}
-	}
-
-	if (check_pass == 1)
-		return;
-
-	if (mmc->card) {
-		capacity = mmc->card->ext_csd.sectors;
-		check_pass = 1;
-		if (capacity != 0) {
-			offset = capacity - ((2 * SZ_1M) >> 9);
-			single_read_scan(mmc, MMC_READ_SINGLE_BLOCK, host->blk_test,
-					512, 1, offset);
-			buf = (u32 *)host->blk_test;
-			for (i = 0; i < 128; i += 1) {
-				if (buf[i] != 0x55aa55aa) {
-					check_pass = 0;
-					break;
-				}
-			}
-			if (check_pass == 1) {
-				host->reserved_out = 1;
-				pr_info("reserved partition out\n");
-			}
-		}
-	}
 }
 
 static int meson_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)

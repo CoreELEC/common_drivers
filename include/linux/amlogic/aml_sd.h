@@ -428,18 +428,33 @@ int mmc_io_rw_direct(struct mmc_card *card, int write, unsigned int fn,
 #define CALI_HS_50M_ADJUST      0
 #define ERROR   1
 #define FIXED   2
-#define		SZ_1M			0x00100000
 #define	MMC_PATTERN_NAME		"pattern"
-#define	MMC_PATTERN_OFFSET		((SZ_1M * (36 + 3)) / 512)
+#ifdef CONFIG_AMLOGIC_MIN_RESERVED_PARTITION
+#define	MMC_PATTERN_OFFSET		((4 * SZ_1M + 528 * SZ_1K) / 512)
+#else
+#define	MMC_PATTERN_OFFSET		(((36 + 3) * SZ_1M) / 512)
+#endif
 #define	MMC_PATTERN_SIZE		(256 * 512)
 #define	MMC_MAGIC_NAME			"magic"
-#define	MMC_MAGIC_OFFSET		((SZ_1M * (36 + 6)) / 512)
+#ifdef CONFIG_AMLOGIC_MIN_RESERVED_PARTITION
+#define	MMC_MAGIC_OFFSET		((4 * SZ_1M + 656 * SZ_1K) / 512)
+#else
+#define	MMC_MAGIC_OFFSET		(((36 + 6) * SZ_1M) / 512)
+#endif
 #define	MMC_MAGIC_SIZE			(256 * 512)
 #define	MMC_RANDOM_NAME			"random"
-#define	MMC_RANDOM_OFFSET		((SZ_1M * (36 + 7)) / 512)
+#ifdef CONFIG_AMLOGIC_MIN_RESERVED_PARTITION
+#define	MMC_RANDOM_OFFSET		((4 * SZ_1M + 784 * SZ_1K) / 512)
+#else
+#define	MMC_RANDOM_OFFSET		(((36 + 7) * SZ_1M) / 512)
+#endif
 #define	MMC_RANDOM_SIZE			(256 * 512)
 #define	MMC_DTB_NAME			"dtb"
-#define	MMC_DTB_OFFSET			((SZ_1M * (36 + 4)) / 512)
+#ifdef CONFIG_AMLOGIC_MIN_RESERVED_PARTITION
+#define	MMC_DTB_OFFSET			((4 * SZ_1M + 912 * SZ_1K) / 512)
+#else
+#define	MMC_DTB_OFFSET			(((36 + 4) * SZ_1M) / 512)
+#endif
 #define CALI_BLK_CNT	80
 #define CALI_HS_50M_ADJUST	0
 #define EMMC_SDIO_CLOCK_FELD	0Xffff

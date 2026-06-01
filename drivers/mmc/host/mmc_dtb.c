@@ -63,12 +63,16 @@ struct mmc_dtb {
 #define DTB_CELL_SIZE   (16 * 1024U)
 
 #define DTB_NAME		"dtb"
-#define	SZ_1M			0x00100000
-#define	MMC_DTB_PART_OFFSET	(40 * SZ_1M)
+#ifdef CONFIG_AMLOGIC_MIN_RESERVED_PARTITION
+#define RESERVED_GPT_OFFSET	(4 * SZ_1M)
+#define DTB_RESERVE_OFFSET	(912 * SZ_1K)
+#else
+#define RESERVED_GPT_OFFSET	(36 * SZ_1M)
+#define DTB_RESERVE_OFFSET	(4 * SZ_1M)
+#endif
 #define	EMMC_BLOCK_SIZE		(0x100)
 #define	MAX_EMMC_BLOCK_SIZE	(128 * 1024)
 
-#define DTB_RESERVE_OFFSET	(4 * SZ_1M)
 #define	DTB_BLK_SIZE		(0x200)
 #define	DTB_BLK_CNT		(512)
 #define	DTB_SIZE		(DTB_BLK_CNT * DTB_BLK_SIZE)
@@ -297,7 +301,7 @@ static int amlmmc_dtb_read(struct mmc_card *card, unsigned char *buf, int len)
 	if (!buffer)
 		return -ENOMEM;
 
-	start_blk = MMC_DTB_PART_OFFSET >> bit;
+	start_blk = (get_reserve_partition_off_from_tbl() + DTB_RESERVE_OFFSET) >> bit;
 	blk_cnt = CONFIG_DTB_SIZE >> bit;
 	dst = (unsigned char *)buffer;
 
@@ -328,7 +332,7 @@ static ssize_t mmc_dtb_read(struct file *file, char __user *buf,
 	unsigned char *dtb_ptr = NULL;
 	ssize_t read_size = 0;
 	int bit = card_dtb->csd.read_blkbits;
-	int blk = (MMC_DTB_PART_OFFSET + *ppos) >> bit;
+	int blk = (get_reserve_partition_off_from_tbl() + DTB_RESERVE_OFFSET + *ppos) >> bit;
 	int ret = 0, cnt = 0;
 
 	if (*ppos == CONFIG_DTB_SIZE)
@@ -432,7 +436,7 @@ static const struct file_operations dtb_ops = {
 
 int get_reserve_partition_off_from_tbl(void)
 {
-	return 0x2400000;
+	return RESERVED_GPT_OFFSET;
 }
 
 void amlmmc_dtb_init(struct mmc_card *card, int *retp)
