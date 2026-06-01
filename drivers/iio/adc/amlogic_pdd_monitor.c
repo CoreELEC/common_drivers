@@ -11,6 +11,14 @@
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/workqueue.h>
+#include <linux/reboot.h>
+
+struct reg_info {
+	void __iomem *reg;
+	u32 value;
+	u32 mask;
+};
 
 struct amlogic_pdd_monitor {
 	struct miscdevice miscdev;
@@ -18,6 +26,11 @@ struct amlogic_pdd_monitor {
 	unsigned long status;		/* Internal status bits */
 #define _PDDM_DEV_OPEN		0	/* Opened ? */
 #define _PDDM_IRQ_TRIGGER	1	/* IRQ triggered ? */
+	bool reboot_en;
+	struct work_struct reboot_work;
+	bool table_cfg_en;
+	struct reg_info *tables;
+	u32 table_count;
 };
 
 static inline struct amlogic_pdd_monitor *pdd_monitor_get_priv(struct file *file)
@@ -96,14 +109,35 @@ static const struct file_operations pdd_monitor_fops = {
 	.poll		= pdd_monitor_poll,
 };
 
+static void reboot_work_handler(struct work_struct *work)
+{
+	pr_warn("!!REBOOT NOW!!\n");
+	kernel_restart("Power-down detected");
+}
+
 static irqreturn_t amlogic_pdd_monitor_irq(int irq, void *data)
 {
 	struct device *dev = data;
 	struct amlogic_pdd_monitor *priv = dev_get_drvdata(dev);
+	int index;
+	struct reg_info *info;
+	u32 tmp;
+
+	if (priv->table_cfg_en) {
+		for (index = 0; index < priv->table_count; index++) {
+			info = &priv->tables[index];
+			tmp = readl(info->reg) & ~info->mask;
+			tmp |= info->value & info->mask;
+			writel(tmp, info->reg);
+		}
+	}
 
 	set_bit(_PDDM_IRQ_TRIGGER, &priv->status);
 	wake_up_interruptible(&priv->waitq);
 	dev_warn(dev, "DETECTED DOWN\n");
+
+	if (priv->reboot_en)
+		schedule_work(&priv->reboot_work);
 
 	return IRQ_HANDLED;
 }
@@ -114,10 +148,62 @@ static int amlogic_pdd_monitor_probe(struct platform_device *pdev)
 	int irq;
 	int ret;
 	struct amlogic_pdd_monitor *priv;
+	int index;
+	u32 u32_count;
+	u32 *u32_array;
+	u32 address;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	priv->table_cfg_en = of_property_read_bool(dev->of_node, "amlogic,table-cfg-enable");
+	if (priv->table_cfg_en) {
+		u32_count = of_property_count_u32_elems(dev->of_node, "amlogic,tables");
+		if (u32_count > 0 && !(u32_count % 3))
+			priv->table_count = u32_count / 3;
+		else
+			return dev_err_probe(dev, -EINVAL,
+					     "%d elems were found, but the format is incorrect\n",
+					     u32_count);
+
+		priv->tables = devm_kcalloc(&pdev->dev, priv->table_count,
+					    sizeof(*priv->tables), GFP_KERNEL);
+		if (!priv->tables)
+			return -ENOMEM;
+		u32_array = kmalloc_array(u32_count, sizeof(u32), GFP_KERNEL);
+		if (!u32_array)
+			return -ENOMEM;
+
+		ret = of_property_read_u32_array(dev->of_node, "amlogic,tables", u32_array,
+						 u32_count);
+		if (ret) {
+			kfree(u32_array);
+			return ret;
+		}
+
+		for (index = 0; index < priv->table_count; index++) {
+			address = u32_array[index * 3];
+			priv->tables[index].reg = devm_ioremap(dev, address, sizeof(u32));
+			if (!priv->tables[index].reg) {
+				kfree(u32_array);
+				return dev_err_probe(dev, -ENOMEM,
+						     "Address where ioremap failed: 0x%08x\n",
+						     address);
+			}
+			priv->tables[index].value = u32_array[index * 3 + 1];
+			priv->tables[index].mask = u32_array[index * 3 + 2];
+			dev_dbg(dev, "table[%d]: reg[0x%08x(%p)], value[0x%08x], mask[0x%08x]\n",
+				index, address, priv->tables[index].reg,
+				priv->tables[index].value, priv->tables[index].mask);
+		}
+
+		kfree(u32_array);
+		dev_info(dev, "A total of %d tables were parsed\n", priv->table_count);
+	}
+
+	priv->reboot_en = of_property_read_bool(dev->of_node, "amlogic,reboot-enable");
+	INIT_WORK(&priv->reboot_work, reboot_work_handler);
 
 	init_waitqueue_head(&priv->waitq);
 	priv->status = 0;
