@@ -418,11 +418,11 @@ static const struct tuner_module tuner_modules[] = {
 		.name = "cxd6866er",
 		.id = AM_TUNER_CXD6866ER,
 		.delsys = { SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B, SYS_DVBT,
-				SYS_ISDBT, SYS_ISDBC, SYS_ATSC, SYS_ATSCMH, SYS_DTMB,
-				SYS_DVBT2, SYS_DVBC_ANNEX_C
+				SYS_ISDBT, SYS_ATSC, SYS_ATSCMH, SYS_DTMB,
+				SYS_DVBT2, SYS_ANALOG
 		},
 		.type = { FE_OFDM, FE_ATSC, FE_QAM,
-				FE_DTMB, FE_ISDBT,
+				FE_DTMB, FE_ISDBT, FE_ANALOG,
 				AML_FE_UNDEFINED
 		},
 		.attach_symbol = NULL,
@@ -464,6 +464,23 @@ static const struct tuner_module tuner_modules[] = {
 		.id = AM_TUNER_R856,
 		.delsys = { SYS_ATSC },
 		.type = {  FE_ATSC, AML_FE_UNDEFINED },
+		.attach_symbol = NULL,
+		.attach = aml_tuner_attach,
+		.detach = aml_tuner_detach,
+		.match = aml_tuner_match,
+		.detect = aml_tuner_detect
+	},
+	{
+		.name = "si2190",
+		.id = AM_TUNER_SI2190,
+		.delsys = { SYS_DVBC_ANNEX_A, SYS_DVBC_ANNEX_B, SYS_DVBT,
+				SYS_ISDBT, SYS_ATSC, SYS_DTMB, SYS_DVBT2,
+				SYS_DVBC_ANNEX_C, SYS_ANALOG
+		},
+		.type = { FE_OFDM, FE_ATSC, FE_QAM,
+				FE_DTMB, FE_ISDBT, FE_ANALOG,
+				AML_FE_UNDEFINED
+		},
 		.attach_symbol = NULL,
 		.attach = aml_tuner_attach,
 		.detach = aml_tuner_detach,
