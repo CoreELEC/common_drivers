@@ -134,7 +134,11 @@ static int ramoops_io_en_setup(char *buf)
 }
 __setup("ramoops_io_en=", ramoops_io_en_setup);
 
-int ramoops_io_dump = 1;
+#define DUMP_WATCHDOG 1
+#define DUMP_WATCHDOG_PANIC 2
+#define DUMP_ALL 3
+
+int ramoops_io_dump = DUMP_WATCHDOG;
 
 static int ramoops_io_dump_setup(char *buf)
 {
@@ -880,6 +884,9 @@ static int percpu_trace_open(struct inode *inode, struct file *file)
 		return err;
 
 	sf = file->private_data;
+	if (!sf)
+		return -EINVAL;
+
 	sf->private = pde_data(inode);
 
 	return 0;
@@ -1201,9 +1208,13 @@ void iotrace_auto_dump(void)
 
 static void iotrace_work_func(struct work_struct *work)
 {
-	pr_info("ramoops: en:%d, dump=%d, skip=%d, stack=%d\n",
+	if (!strcmp(reboot_mode, "watchdog_reboot") ||
+		(!strcmp(reboot_mode, "kernel_panic") && ramoops_io_dump == DUMP_WATCHDOG_PANIC) ||
+		ramoops_io_dump == DUMP_ALL) {
+		pr_info("ramoops: en:%d, dump=%d, skip=%d, stack=%d\n",
 		ramoops_io_en, ramoops_io_dump, ramoops_io_skip, ramoops_io_stack);
-	iotrace_auto_dump();
+		iotrace_auto_dump();
+	}
 }
 
 static int module_base_callback(struct notifier_block *nb,

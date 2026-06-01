@@ -1490,9 +1490,10 @@ static const struct attribute_group aml_debug_group = {
 
 int aml_debug_init(void)
 {
-	static struct dentry *debug_lockup;
 	struct proc_dir_entry *aml_regmap;
 
+#ifdef CONFIG_DEBUG_FS
+	static struct dentry *debug_lockup;
 	debug_lockup = debugfs_create_dir("aml_debug", NULL);
 	if (IS_ERR_OR_NULL(debug_lockup)) {
 		debug_lockup = NULL;
@@ -1500,6 +1501,7 @@ int aml_debug_init(void)
 	}
 	debugfs_create_file("sysrq-trigger", S_IFREG | 0664,
 				    debug_lockup, NULL, &sysrq_trigger_debug_ops);
+#endif
 #if IS_ENABLED(CONFIG_AMLOGIC_CLASS_DEBUG)
 	amlogic_class_debug_create_dir(&aml_debug_group, 1);
 #endif
