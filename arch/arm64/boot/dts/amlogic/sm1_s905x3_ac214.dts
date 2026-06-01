@@ -218,7 +218,11 @@
 
 		remote_led {
 			label = "remote_led";
-			gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_LOW>;
+			
+			/* original line that keeps the led on when powered off */
+			/*gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_LOW>;*/
+			
+			gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
 			default-state = "off";
 			linux,default-trigger = "rc_feedback";
 		};
