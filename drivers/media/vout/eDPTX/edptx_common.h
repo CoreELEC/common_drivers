@@ -212,7 +212,7 @@ extern struct dptx_detail_timing_s DPTX_SafeMode_640x480_timing;
 extern struct dptx_vmode_s DPTX_SafeMode_640x480_vmode;
 
 void edptx_pinmux_set(struct edptx_drv_s *edp, u8 status);
-
+void edptx_gpios_get(struct edptx_drv_s *edp, u8 status);
 void dptx_HPD_trigger_set(struct edptx_drv_s *edp, u8 en);
 
 void edptx_act_timing_to_venc_config(struct edptx_drv_s *edp);

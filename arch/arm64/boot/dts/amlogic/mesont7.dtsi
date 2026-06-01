@@ -2895,17 +2895,18 @@
 		      <0x0 0xfe004000 0x0 0x70>;    /* periphs */
 		power-domains = <&pwrdm PDID_T7_EDP1>;
 		interrupts = <0 197 1>,<0 194 1>,<0 82 1>,<0 222 1>;
-		interrupt-names = "vsync","vsync2","vsync3","DPTX-HPD";
+		interrupt-names = "vsync","vsync2","vsync3","edptx_0_hpd";
 		pinctrl-0 = <&lcd_edp_b_pins>;
 		pinctrl-1 = <&lcd_edp_b_off_pins>;
-		pinctrl-names = "DPTX-ON","DPTX-OFF";
+		pinctrl-names = "edptx_0_hpd_on","edptx_0_hpd_off";
 
 		device_name = "amlogic-eDPTX";
 		HPD-ignore = <0>;
 		edptx_vcc-gpio      = <&gpio GPIOY_14 GPIO_ACTIVE_HIGH>;
 		edptx_vcc-gpio-name = "GPIOY_14";
-		edptx-gpio-OD     = <&gpio GPIOY_7 GPIO_ACTIVE_HIGH>;
-		edptx-gpio-OD-name = "GPIOY_7";
+
+		/* edptx-gpio-OD     = <&gpio GPIOY_7 GPIO_ACTIVE_HIGH>; */
+		/* edptx-gpio-OD-name = "GPIOY_7"; */
 
 		drive-strength-lut =
 			<0x3 0x3 0x0>,<0x3 0x7 0x0>,<0x3 0xb 0x0>,<0x3 0xf 0x0>,

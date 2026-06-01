@@ -542,6 +542,27 @@ void edptx_pinmux_set(struct edptx_drv_s *edp, u8 status)
 		eDP_PR(edp, "%s %u ok (0x%px)", __func__, status, pin_sel);
 }
 
+void edptx_gpios_get(struct edptx_drv_s *edp, u8 status)
+{
+	eDP_PR(edp, "%s: %u", __func__, status);
+
+	edp->board_data.edptx_vcc_gpio_desc =
+		devm_gpiod_get(edp->dev, "edptx_vcc", GPIOD_OUT_LOW);
+	if (IS_ERR(edp->board_data.edptx_vcc_gpio_desc)) {
+		eDP_ERR(edp, "regist vcc gpio: %p, err: %d",
+		       edp->board_data.edptx_vcc_gpio_desc,
+		       IS_ERR(edp->board_data.edptx_vcc_gpio_desc));
+	}
+
+	edp->board_data.edptx_bist_gpio_desc =
+		devm_gpiod_get(edp->dev, "edptx_bist", GPIOD_OUT_LOW);
+	if (IS_ERR(edp->board_data.edptx_bist_gpio_desc)) {
+		eDP_ERR(edp, "regist bist gpio: %p, err: %d",
+		       edp->board_data.edptx_bist_gpio_desc,
+		       IS_ERR(edp->board_data.edptx_bist_gpio_desc));
+	}
+}
+
 static u8 edptx_panel_config_load_timing(struct edptx_drv_s *edp, const struct device_node *child)
 {
 	char snode[24];
@@ -764,22 +785,6 @@ int dptx_config_load_from_dts(struct edptx_drv_s *edp)
 	}
 	np = edp->dev->of_node;
 
-	edp->board_data.edptx_vcc_gpio_desc =
-		devm_gpiod_get(edp->dev, "edptx_vcc", GPIOD_OUT_LOW);
-	if (IS_ERR(edp->board_data.edptx_vcc_gpio_desc)) {
-		eDP_ERR(edp, "regist vcc gpio: %p, err: %d",
-		       edp->board_data.edptx_vcc_gpio_desc,
-		       IS_ERR(edp->board_data.edptx_vcc_gpio_desc));
-	}
-
-	edp->board_data.edptx_bist_gpio_desc =
-		devm_gpiod_get(edp->dev, "edptx_bist", GPIOD_OUT_LOW);
-	if (IS_ERR(edp->board_data.edptx_bist_gpio_desc)) {
-		eDP_ERR(edp, "regist bist gpio: %p, err: %d",
-		       edp->board_data.edptx_bist_gpio_desc,
-		       IS_ERR(edp->board_data.edptx_bist_gpio_desc));
-	}
-
 	memset(&para[0], 0, 30 * sizeof(unsigned char));
 	ret = of_property_read_u16_array(np, "drive-strength-lut", &para[0], 30);
 	if (ret) {
@@ -787,14 +792,6 @@ int dptx_config_load_from_dts(struct edptx_drv_s *edp)
 	} else {
 		for (i = 0; i < 30; i++)
 			edp->board_data.driver_strength_lut[i / 10][i % 3] = para[i];
-	}
-
-	edp->board_data.edptx_vcc_gpio_desc =
-		devm_gpiod_get(edp->dev, "edptx_bist", GPIOD_OUT_LOW);
-	if (IS_ERR(edp->board_data.edptx_bist_gpio_desc)) {
-		eDP_ERR(edp, "regist bist gpio: %p, err: %d",
-		       edp->board_data.edptx_bist_gpio_desc,
-		       IS_ERR(edp->board_data.edptx_bist_gpio_desc));
 	}
 
 	ret = of_property_read_u16(np, "edptx_use_external_tx_conn_api", &para[0]);
@@ -852,6 +849,8 @@ static int dptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pd
 
 	/* lock pinmux as when dptx is used ?? or link on */
 	if (edp->viu_sel || edp->status & DPTX_STA_LINK_ON) {
+		edptx_gpios_get(edp, 1);
+
 		edptx_driver_panel_power_ctrl(edp, 1);
 
 		edptx_pinmux_set(edp, 1);
