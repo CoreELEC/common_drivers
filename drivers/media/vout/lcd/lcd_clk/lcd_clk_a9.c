@@ -380,6 +380,21 @@ static void lcd_clk_set_a9(struct aml_lcd_drv_s *pdrv)
 {
 	lcd_set_pll_a9(pdrv);
 	lcd_set_vid_pll_div_a9(pdrv);
+
+	// reset for clk msr
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x1, 25, 1);
+	if (pdrv->index == 0) {
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x1, 16, 1);
+		lcd_delay_us(5);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x0, 16, 1);
+
+	} else {
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x1, 20, 1);
+		lcd_delay_us(5);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x0, 20, 1);
+	}
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9, 0x0, 25, 1);
+
 }
 
 static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
