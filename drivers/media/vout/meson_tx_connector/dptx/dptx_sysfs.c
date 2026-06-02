@@ -12,6 +12,7 @@
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_log.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_mode.h>
 #include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_hw_opcode.h>
+#include <linux/amlogic/media/vout/meson_tx_connector/meson_tx_edid.h>
 #include <linux/amlogic/clk_measure.h>
 
 #include "dptx_log.h"
@@ -998,8 +999,40 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 	return count;
 }
 
+static ssize_t dptx_aud_cap_show(struct device *dev,
+			     struct device_attribute *attr,
+			     char *buf)
+{
+	struct meson_tx_dev *tx_dev = dptx_convert(dev);
+	struct dptx_common *tx_comm = to_dptx_common(tx_dev);
+	struct rx_cap *prxcap = &tx_comm->base.rxcap;
+
+	return meson_tx_show_aud_cap(prxcap, buf, PAGE_SIZE);
+}
+
+static ssize_t dptx_rawedid_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	struct meson_tx_dev *tx_dev = dptx_convert(dev);
+	struct dptx_common *tx_comm = to_dptx_common(tx_dev);
+
+	return meson_tx_show_rawedid(tx_comm->base.edid_buf, buf, PAGE_SIZE);
+}
+
+static ssize_t dptx_edid_show(struct device *dev,
+			    struct device_attribute *attr, char *buf)
+{
+	struct meson_tx_dev *tx_dev = dptx_convert(dev);
+	struct dptx_common *tx_comm = to_dptx_common(tx_dev);
+
+	return meson_tx_edid_print_rx_cap(&tx_comm->base.rxcap, buf, PAGE_SIZE);
+}
+
 static struct device_attribute dptx_attrs[] = {
 	__ATTR(debug, 0200, NULL, dptx_debug_store),
+	__ATTR(aud_cap, 0444, dptx_aud_cap_show, NULL),
+	__ATTR(rawedid, 0444, dptx_rawedid_show, NULL),
+	__ATTR(edid_sum, 0444, dptx_edid_show, NULL),
 };
 
 int dptx_create_sysfs(struct meson_tx_dev *tx_dev)

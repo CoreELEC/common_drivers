@@ -744,7 +744,7 @@ int hdmirx_info_show(struct seq_file *s, void *v)
 	}
 
 	seq_puts(s, "\n******aud_cap******\n");
-	_show_aud_cap(prxcap, buf, len);
+	meson_tx_show_aud_cap(prxcap, buf, len);
 	seq_printf(s, buf);
 
 	seq_printf(s, "content_cap: game(%d)/cinema(%d)/photo(%d)/graphics(%d), allm_cap: %d\n",

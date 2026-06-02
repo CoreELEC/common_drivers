@@ -88,6 +88,8 @@
 #define DISPLAY_ID_TYPE_VII_ONLY_SUPPORT_DSC         BIT(0)
 #define DISPLAY_ID_TYPE_VII_YUV420                   BIT(1)
 
+struct rx_cap;
+
 struct displayid_header {
 	u8 rev;
 	u8 bytes;
@@ -397,6 +399,9 @@ struct display_product_type_id {
 };
 
 void display_id_cap_print(struct display_id_cap *disp_id_cap);
+ssize_t meson_tx_show_aud_cap(struct rx_cap *prxcap, char *buf, int size);
+ssize_t meson_tx_show_rawedid(const char *edid_bin, char *buf, const int size);
+
 /* displayID end  */
 
 /* the default max_tmds_clk is 165MHz/5 in H14b Table 8-16 */
@@ -650,11 +655,28 @@ struct rx_cap {
 
 /* edid apis */
 
+/* 0: VESA DSC 1.2a is not supported
+ * 1: up to 1 slice and up to (340 MHz/K SliceAdjust) pixel clock per slice
+ * 2: up to 2 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
+ * 3: up to 4 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
+ * 4: up to 8 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
+ * 5: up to 8 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
+ * 6: up to 12 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
+ * 7: up to 16 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
+ * 8-15: Reserved
+ */
+
+static const u8 dsc_max_slices_num[] = {
+	0, 1, 2, 4, 8, 8, 12, 16,
+};
+
 /*edid is good return 0, otherwise return < 0.*/
 bool meson_tx_edid_is_all_zeros(unsigned char *rawedid);
 bool meson_tx_edid_check_valid(struct rx_cap *prxcap, unsigned char *buf);
 int meson_tx_edid_parse(struct rx_cap *prxcap, u8 *edid_buf, u8 edid_parse_mask);
-unsigned int meson_tx_edid_valid_block_num(unsigned char *edid_buf);
+unsigned int meson_tx_edid_valid_block_num(const unsigned char *edid_buf);
+/* dump rx cap information in edid */
+int meson_tx_edid_print_rx_cap(const struct rx_cap *prxcap, char *buffer, int buffer_len);
 void meson_tx_edid_raw_data_print(u8 *edid_buf);
 void meson_tx_edid_buffer_clear(u8 *edid_buf, int size);
 void meson_tx_clear_rx_cap(struct rx_cap *prxcap);

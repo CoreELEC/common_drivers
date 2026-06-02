@@ -222,28 +222,6 @@ struct st_debug_param {
 	bool dis_dmc_req;
 };
 
-/* 0: VESA DSC 1.2a is not supported
- * 1: up to 1 slice and up to (340 MHz/K SliceAdjust) pixel clock per slice
- * 2: up to 2 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
- * 3: up to 4 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
- * 4: up to 8 slices and up to (340 MHz/K SliceAdjust) pixel clock per slice
- * 5: up to 8 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
- * 6: up to 12 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
- * 7: up to 16 slices and up to (400 MHz/K SliceAdjust) pixel clock per slice
- * 8-15: Reserved
- */
-
-static const u8 dsc_max_slices_num[] = {
-	0,
-	1,
-	2,
-	4,
-	8,
-	8,
-	12,
-	16
-};
-
 struct ced_cnt {
 	bool ch0_valid;
 	u16 ch0_cnt:15;

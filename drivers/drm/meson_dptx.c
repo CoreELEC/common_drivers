@@ -100,9 +100,11 @@ static int meson_dptx_get_modes(struct drm_connector *connector)
 		dptx_state->base_state.sequence_id = new_sequence_id;
 		spin_lock_irqsave(&tx_comm->edid_spinlock, flags);
 		meson_tx_clear_rx_cap(&tx_comm->base.rxcap);
-		if (dptx_common_edid_check_valid(tx_comm))
+		if (dptx_common_edid_check_valid(tx_comm)) {
 			meson_tx_edid_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf,
 				tx_comm->base.edid_parse_mask);
+			meson_tx_edid_audio_parse(&tx_comm->base.rxcap, tx_comm->base.edid_buf);
+		}
 		DRM_INFO("%s[%d] edid_parsing:%d\n", __func__, __LINE__,
 			tx_comm->base.rxcap.edid_parsing);
 		spin_unlock_irqrestore(&tx_comm->edid_spinlock, flags);
