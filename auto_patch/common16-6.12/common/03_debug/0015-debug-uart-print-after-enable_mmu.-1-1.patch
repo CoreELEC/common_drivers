@@ -1,0 +1,154 @@
+From 2a7132204ee78e680a3c0ae1592311ed121fb944 Mon Sep 17 00:00:00 2001
+From: "biao.sun" <biao.sun@amlogic.com>
+Date: Tue, 2 Jun 2026 07:43:42 +0000
+Subject: [PATCH] debug: uart print after enable_mmu. [1/1]
+
+PD#SWPL-271461
+
+Problem:
+uart print after enable_mmu.
+
+Solution:
+uart print after enable_mmu.
+
+Verify:
+s4
+
+Change-Id: I40263f2ffaef46298287ff0bc1c99e5d7c6b4b74
+Signed-off-by: biao.sun <biao.sun@amlogic.com>
+---
+ arch/arm/kernel/head-common.S    |  7 ++++++-
+ arch/arm/kernel/head.S           | 20 ++++++++++++++++++++
+ arch/arm64/kernel/head.S         |  9 ++++++++-
+ arch/arm64/kernel/pi/map_range.c | 21 +++++++++++++++++++++
+ arch/arm64/kernel/pi/pi.h        |  4 ++++
+ 5 files changed, 59 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm/kernel/head-common.S b/arch/arm/kernel/head-common.S
+index 9c3bafb2834e..3fc5fcdf5258 100644
+--- a/arch/arm/kernel/head-common.S
++++ b/arch/arm/kernel/head-common.S
+@@ -75,7 +75,9 @@ ENDPROC(__vet_atags)
+  */
+ 	__INIT
+ __mmap_switched:
+-
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m r7 r8 r10 "----------after __enable_mmu enter __mmap_switched----------\r\n"
++#endif
+ 	mov	r7, r1
+ 	mov	r8, r2
+ 	mov	r10, r0
+@@ -133,6 +135,9 @@ __mmap_switched:
+ 	bl	kasan_early_init
+ #endif
+ 	mov	lr, #0
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m r7 r8 r10 "----------after __enable_mmu before start_kernel----------\r\n"
++#endif
+ 	b	start_kernel
+ ENDPROC(__mmap_switched)
+
+diff --git a/arch/arm/kernel/head.S b/arch/arm/kernel/head.S
+index d113fa0874ba..9dca234d3f76 100644
+--- a/arch/arm/kernel/head.S
++++ b/arch/arm/kernel/head.S
+@@ -269,6 +269,26 @@ __create_page_tables:
+ 	addlo	r5, r5, #1			@ next section
+ 	blo	1b
+
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	/* amlogic idmap uart */
++	ldr	r7, [r10, #PROCINFO_IO_MMUFLAGS] @ io_mmuflags
++
++	ldr	r5, =CONFIG_DEBUG_UART_PHYS
++	ldr	r3, =0xfff00000
++	and	r5, r5, r3
++	mov	r6, r5
++	add	r6, r6, #0x200000
++
++	mov	r5, r5, lsr #SECTION_SHIFT
++	mov	r6, r6, lsr #SECTION_SHIFT
++
++7:	orr	r3, r7, r5, lsl #SECTION_SHIFT	@ flags + kernel base
++	str	r3, [r4, r5, lsl #PMD_ENTRY_ORDER]	@ identity mapping
++	cmp	r5, r6
++	addlo	r5, r5, #1			@ next section
++	blo	7b
++	ldr	r7, [r10, #PROCINFO_MM_MMUFLAGS] @ mm_mmuflags
++#endif
+ 	/*
+ 	 * The main matter: map in the kernel using section mappings, and
+ 	 * set two variables to indicate the physical start and end of the
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index eda5c0cc4384..cb7e28ea62ca 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -95,6 +95,11 @@ SYM_CODE_START(primary_entry)
+ 	mov	x1, xzr
+ 	bl	__pi_create_init_idmap
+
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	adrp	x0, init_idmap_pg_dir
++	mov	x1, xzr
++	bl	__pi_create_uart_idmap
++#endif
+ 	/*
+ 	 * If the page tables have been populated with non-cacheable
+ 	 * accesses (MMU disabled), invalidate those tables again to
+@@ -518,7 +523,9 @@ SYM_FUNC_START_LOCAL(__primary_switch)
+ 	puts_uart_m x15 x16 w3 "----------__primary_switch 2----------\r\n"
+ #endif
+ 	bl	__enable_mmu
+-
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++	puts_uart_m x15 x16 w3 "----------after __enable_mmu----------\r\n"
++#endif
+ 	adrp	x1, early_init_stack
+ 	mov	sp, x1
+ 	mov	x29, xzr
+diff --git a/arch/arm64/kernel/pi/map_range.c b/arch/arm64/kernel/pi/map_range.c
+index 5410b2cac590..bfba17fc735e 100644
+--- a/arch/arm64/kernel/pi/map_range.c
++++ b/arch/arm64/kernel/pi/map_range.c
+@@ -103,3 +103,24 @@ asmlinkage u64 __init create_init_idmap(pgd_t *pg_dir, pteval_t clrmask)
+
+ 	return ptep;
+ }
++
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++#define BLOCK_SHIFT	21
++#define BLOCK_MASK	(~((1UL << BLOCK_SHIFT) - 1))
++
++asmlinkage u64 __init create_uart_idmap(pgd_t *pg_dir, pteval_t clrmask)
++{
++	u64 ptep = (u64)pg_dir + 2 * PAGE_SIZE;
++	pgprot_t text_prot = __pgprot(PROT_DEVICE_nGnRnE);
++	u64 uart_phys = CONFIG_AMLOGIC_DEBUG_UART_PHYS;
++	u64 start = uart_phys & BLOCK_MASK;
++	u64 end   = start + (1UL << BLOCK_SHIFT);
++
++	pgprot_val(text_prot) &= ~clrmask;
++
++	map_range(&ptep, start, end, start,
++		  text_prot, IDMAP_ROOT_LEVEL, (pte_t *)pg_dir, false, 0);
++
++	return ptep;
++}
++#endif
+\ No newline at end of file
+diff --git a/arch/arm64/kernel/pi/pi.h b/arch/arm64/kernel/pi/pi.h
+index c91e5e965cd3..755b84c5ab92 100644
+--- a/arch/arm64/kernel/pi/pi.h
++++ b/arch/arm64/kernel/pi/pi.h
+@@ -34,3 +34,7 @@ void map_range(u64 *pgd, u64 start, u64 end, u64 pa, pgprot_t prot,
+ asmlinkage void early_map_kernel(u64 boot_status, void *fdt);
+
+ asmlinkage u64 create_init_idmap(pgd_t *pgd, pteval_t clrmask);
++
++#ifdef CONFIG_AMLOGIC_DEBUG_EARLY_UART
++asmlinkage u64 create_uart_idmap(pgd_t *pgd, pteval_t clrmask);
++#endif
+--
+2.49.0
+
