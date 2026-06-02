@@ -151,29 +151,32 @@ static struct kprobe g_kps[] = {
 #include "codec_mm_kps_config.h"
 };
 
-void codec_mm_unregister_kprobes(struct kprobe **kps, int num)
+static void codec_mm_unregister_kprobes(struct codec_mm_kps_s *kctx)
 {
+	int num = ARRAY_SIZE(g_kps);
 	int i;
 
-	if (num <= 0)
+	if (!kctx || num <= 0)
 		return;
 
 	for (i = 0; i < num; i++)
-		unregister_kprobe(kps[i]);
+		unregister_kprobe(&kctx->kps[i]);
 }
 
-int codec_mm_register_kprobes(struct kprobe **kps, int num)
+static int codec_mm_register_kprobes(struct codec_mm_kps_s *kctx)
 {
+	int num = ARRAY_SIZE(g_kps);
 	int i, ret = 0;
 
-	if (num <= 0)
+	if (!kctx || num <= 0)
 		return -EINVAL;
 
 	for (i = 0; i < num; i++) {
-		ret = register_kprobe(kps[i]);
+		ret = register_kprobe(&kctx->kps[i]);
 		if (ret < 0) {
 			if (i > 0)
-				codec_mm_unregister_kprobes(kps, i);
+				while (--i >= 0)
+					unregister_kprobe(&kctx->kps[i]);
 			break;
 		}
 	}
@@ -186,18 +189,15 @@ int codec_mm_reg_kprobes(void **kps_h, void *priv, kps_cb cb)
 	struct codec_mm_kps_s *kctx;
 	int ret;
 
-	KPS_DEF();
-
 	kctx = vzalloc(sizeof(*kctx));
 	if (!kctx)
 		return -ENOMEM;
 
-	KPS_INIT(kctx);
 	kctx->func	= cb;
 	kctx->priv	= priv;
 	memcpy(kctx->kps, g_kps, sizeof(g_kps));
 
-	ret = codec_mm_register_kprobes(KPS_GET(), KPS_SIZE());
+	ret = codec_mm_register_kprobes(kctx);
 	if (ret < 0) {
 		pr_err("%s fail, ret:%d\n", __func__, ret);
 		return ret;
@@ -212,10 +212,6 @@ void codec_mm_unreg_kprobes(void *kps_h)
 {
 	struct codec_mm_kps_s *kctx = kps_h;
 
-	KPS_DEF();
-
-	KPS_INIT(kctx);
-
-	codec_mm_unregister_kprobes(KPS_GET(), KPS_SIZE());
+	codec_mm_unregister_kprobes(kctx);
 }
 

@@ -14,19 +14,6 @@
 	//...
 #define DBUF_TRACE_FUNC_MAX	(128)
 
-#define KPS_DEF()				\
-	int kps_n = ARRAY_SIZE(g_kps);		\
-	struct kprobe *kps_p[DBUF_TRACE_FUNC_MAX]
-
-#define KPS_INIT(t)				\
-	({typeof(t) _t = t; int i;		\
-	for (i = 0; i < kps_n; i++)		\
-		kps_p[i] = &(_t)->kps[i];	\
-	})
-
-#define KPS_GET()	(kps_p)
-#define KPS_SIZE()	(kps_n)
-
 typedef void (*kps_cb)(void*, const char*, int, int, void *, void *, void *);
 
 int codec_mm_reg_kprobes(void **kps_h, void *priv, kps_cb cb);
