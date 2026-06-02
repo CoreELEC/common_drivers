@@ -250,6 +250,8 @@ struct hdmitx_common {
 	bool ready;
 	/* if hdmitx is in early suspend state. */
 	bool suspend_flag;
+	/* set the flag 1, don't check suspend_flag when mode setting. */
+	bool drm_modeset_flag;
 	/*current format para.*/
 	struct hdmi_format_para fmt_para;
 	/* for debug, it will override the frac mode set by drm.

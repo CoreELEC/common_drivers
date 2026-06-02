@@ -490,6 +490,14 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 		HDMITX_INFO("enc_idx %d\n", tx_comm->enc_idx);
 
 		ret = of_property_read_u32(pdev->dev.of_node,
+					   "drm_modeset_flag", &val);
+		if (!ret && val == 1)
+			tx_comm->drm_modeset_flag = 1;
+		else
+			tx_comm->drm_modeset_flag = 0;
+		HDMITX_INFO("drm_modeset_flag %d\n", tx_comm->drm_modeset_flag);
+
+		ret = of_property_read_u32(pdev->dev.of_node,
 					   "clk_source_idx", &val);
 		if (!ret && val == 1)
 			tx_comm->clk_source_idx = 1;
@@ -1137,6 +1145,10 @@ void hdmitx_common_sw_debug_func(struct hdmitx_common *tx_comm, const char *buf)
 		ret = kstrtoul(tmpbuf + 4, 10, &value);
 		tx_comm->enc_idx = value;
 		HDMITX_INFO("set venc index: %d\n", tx_comm->enc_idx);
+	} else if (strncmp(tmpbuf, "drm_modeset_flag", 16) == 0) {
+		ret = kstrtoul(tmpbuf + 16, 10, &value);
+		tx_comm->drm_modeset_flag = !!value;
+		HDMITX_INFO("set drm_modeset_flag: %d\n", tx_comm->drm_modeset_flag);
 	}
 }
 

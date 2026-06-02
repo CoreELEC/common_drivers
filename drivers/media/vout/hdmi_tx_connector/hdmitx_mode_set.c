@@ -29,8 +29,9 @@ static int hdmitx_common_pre_enable_mode(struct hdmitx_common *tx_comm,
 	if (tx_comm->ready)
 		HDMITX_ERROR("Should run disable_mode before enable new mode.\n");
 
-	if ((tx_comm->hpd_state == 0 || tx_comm->suspend_flag) && !tx_comm->pxp_mode) {
-		HDMITX_ERROR("%s current hpd_state/suspend (%d,%d), exit\n",
+	if ((tx_comm->hpd_state == 0 || (tx_comm->suspend_flag && !tx_comm->drm_modeset_flag)) &&
+		!tx_comm->pxp_mode) {
+		HDMITX_INFO("%s current hpd_state/suspend (%d,%d), exit\n",
 			__func__, tx_comm->hpd_state, tx_comm->suspend_flag);
 		hdmitx_tracer_write_event(tx_comm->tx_tracer, HDMITX_KMS_SKIP);
 		tx_comm->skip_phy_setting = true;
@@ -395,6 +396,7 @@ void hdmitx_process_plugin(struct hdmitx_common *tx_comm, bool boot_flag, bool s
 	hdmitx_common_get_edid(tx_comm);
 	/* parse EDID */
 	hdmitx_edid_process(tx_comm, boot_flag, false);
+	hdmitx_edid_process(tx_comm, boot_flag, true);
 
 	/* step3: SW: status update */
 	tx_comm->hpd_state = 1;
