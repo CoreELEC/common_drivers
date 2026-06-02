@@ -34,7 +34,7 @@
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
 		i2c6 = &i2c6;
-		spi0 = &spifc;
+		spi0 = &spi_nfc;
 		spi1 = &spisg_b;
 		spi2 = &spisg_c;
 		spi3 = &spisg_d;
@@ -550,10 +550,10 @@
 	assigned-clock-rates = <2376000000>, <74250000>;
 };
 
-&spifc {
+&spi_nfc {
 	status = "disabled";
 	pinctrl-names = "default";
-	pinctrl-0 = <&spifc_pins>;
+	pinctrl-0 = <&spinf_pins>;
 	spi-nand@0 {
 		compatible = "spi-nand";
 		status = "disabled";
@@ -561,51 +561,18 @@
 		spi-max-frequency = <83000000>;
 		spi-tx-bus-width = <4>;
 		spi-rx-bus-width = <4>;
-		bl_mode = <2>; /* advance mode */
-		fip_copies = <4>;
-		partition = <&snand_partitions>;
-		snand_partitions: snand_partitions{
-			bootloader{
-				offset=<0x0 0x0>;
-				size=<0x0 0x0>;
-			};
-			bl2e{
-				offset=<0x0 0x0>;
-				size=<0x0 0x0>;
-			};
-			bl2x{
-				offset=<0x0 0x0>;
-				size=<0x0 0x0>;
-			};
-			ddrfip{
-				offset=<0x0 0x0>;
-				size=<0x0 0x0>;
-			};
-			devfip{
-				offset=<0x0 0x0>;
-				size=<0x0 0x0>;
-			};
-			logo{
-				offset=<0x0 0x0>;
-				size=<0x0 0x200000>;
-			};
-			recovery{
-				offset=<0x0 0x0>;
-				size=<0x0 0x1000000>;
-			};
-			boot{
-				offset=<0x0 0x0>;
-				size=<0x0 0x1000000>;
-			};
-			system{
-				offset=<0x0 0x0>;
-				size=<0x0 0x4000000>;
-			};
-			data{
-				offset=<0xffffffff 0xffffffff>;
-				size=<0x0 0x0>;
-			};
-		};
+	};
+	spi-nor@0 {
+		compatible = "spi-nor";
+		status = "disabled";
+		reg = <0>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
+		spi-max-frequency = <83000000>;
+		m25p,fast-read;
+		/* partition info sram addr */
+		param_sram_addr = <0xF3D36800>;
+		param_sram_size = <0x400>;
 	};
 };
 
