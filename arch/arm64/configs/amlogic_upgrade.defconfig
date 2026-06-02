@@ -164,6 +164,9 @@ CONFIG_AMLOGIC_PINCTRL_MESON_T6X=y
 # amlogic-pinctrl-soc-a9.ko
 CONFIG_AMLOGIC_PINCTRL_MESON_A9=y
 
+# amlogic-pinctrl-a4.ko
+CONFIG_AMLOGIC_PINCTRL_A4=y
+
 # amlogic-mailbox.ko
 CONFIG_AMLOGIC_MHU_MBOX=y
 
