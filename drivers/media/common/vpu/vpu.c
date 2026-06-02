@@ -3255,8 +3255,8 @@ static struct vpu_data_s vpu_data_t6x = {
 	.chip_type = VPU_CHIP_T6X,
 	.chip_name = "t6x",
 
-	.clk_level_dft = CLK_LEVEL_DFT_T6W,
-	.clk_level_max = CLK_LEVEL_MAX_T6W,
+	.clk_level_dft = CLK_LEVEL_DFT_T6X,
+	.clk_level_max = CLK_LEVEL_MAX_T6X,
 	.fclk_div_table = fclk_div_table_g12a,
 	.clk_table = vpu_t6w_clk_table,
 
