@@ -2605,14 +2605,13 @@ int amdv_update_setting(bool update_top1, bool update_top2)
 			}
 		}
 	} else if (is_aml_t6w() || is_aml_t6x()) {//todo
-		if (lut_dma_info[cur_dmabuf_id].dma_vaddr && tv_hw5_setting &&
-			!hw5_reg_from_file) {
+		if (tv_hw5_setting && !hw5_reg_from_file) {
 			if (enable_top1 && update_top1) {
 				dma_data = tv_hw5_setting->top1_lut;
 				if (test_dv & DEBUG_FIXED_LUT) /*fixed lut*/
 					dma_data = top1_lut_buf;
 				size = TOP1_LUT_NUM * LUT_SIZE;
-				if (dma_data)
+				if (dma_data && lut_dma_info[cur_dmabuf_id].dma_vaddr)
 					memcpy(lut_dma_info[cur_dmabuf_id].dma_vaddr,
 					dma_data, size);
 			}
@@ -2621,22 +2620,22 @@ int amdv_update_setting(bool update_top1, bool update_top2)
 				if (test_dv & DEBUG_FIXED_LUT) /*fixed lut*/
 					dma_data = top2_lut_buf;
 				size = TOP2_LUT_NUM * LUT_SIZE;
-				if (dma_data)
+				if (dma_data && lut_dma_info[cur_dmabuf_id].dma_vaddr_top2)
 					memcpy(lut_dma_info[cur_dmabuf_id].dma_vaddr_top2,
 					dma_data, size);
 			}
-		} else if (lut_dma_info[cur_dmabuf_id].dma_vaddr && hw5_reg_from_file) {
+		} else if (hw5_reg_from_file) {
 			if (enable_top1 && update_top1) {
 				dma_data = top1_lut_buf;
 				size = TOP1_LUT_NUM * LUT_SIZE;
-				if (dma_data)
+				if (dma_data && lut_dma_info[cur_dmabuf_id].dma_vaddr)
 					memcpy(lut_dma_info[cur_dmabuf_id].dma_vaddr,
 					dma_data, size);
 			}
 			if (update_top2) {
 				dma_data = top2_lut_buf;
 				size = TOP2_LUT_NUM * LUT_SIZE;
-				if (dma_data)
+				if (dma_data && lut_dma_info[cur_dmabuf_id].dma_vaddr_top2)
 					memcpy(lut_dma_info[cur_dmabuf_id].dma_vaddr_top2,
 					dma_data, size);
 			}
@@ -2649,28 +2648,36 @@ int amdv_update_setting(bool update_top1, bool update_top2)
 				size = TOP1_LUT_NUM * LUT_SIZE;
 				pr_info("top1 dma_vaddr %px, dma size %dx4 int, size %d\n",
 					lut_dma_info[cur_dmabuf_id].dma_vaddr, TOP1_LUT_NUM, size);
-				for (i = 0; i < size / 8; i += 2)
-					pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				if (p) {
+					for (i = 0; i < size / 8; i += 2)
+						pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				}
 				p = (uint64_t *)lut_dma_info[cur_dmabuf_id].dma_vaddr_top2;
 				size = TOP2_LUT_NUM * LUT_SIZE;
 				pr_info("top2 dma_vaddr %px, dma size %dx4 int, size %d\n",
 					lut_dma_info[cur_dmabuf_id].dma_vaddr_top2,
 					TOP2_LUT_NUM, size);
-				for (i = 0; i < size / 8; i += 2)
-					pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				if (p) {
+					for (i = 0; i < size / 8; i += 2)
+						pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				}
 			} else {
 				p = (uint64_t *)lut_dma_info[cur_dmabuf_id].dma_vaddr;
 				size = TOP2_LUT_NUM * LUT_SIZE;
 				pr_info("top2 dma_vaddr %px, dma size %dx4 int, size %d\n",
 					lut_dma_info[cur_dmabuf_id].dma_vaddr, TOP2_LUT_NUM, size);
-				for (i = 0; i < size / 8; i += 2)
-					pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				if (p) {
+					for (i = 0; i < size / 8; i += 2)
+						pr_info("%016llx%016llx\n", p[i + 1], p[i]);
+				}
 			}
 		} else {
 			p = (uint64_t *)dma_vaddr;
 			pr_info("dma_vaddr %p, dma size %d\n", dma_vaddr, TV_DMA_TBL_SIZE);
-			for (i = 0; i < size / 8; i += 2)
-				pr_info("%016llx, %016llx\n", p[i], p[i + 1]);
+			if (p) {
+				for (i = 0; i < size / 8; i += 2)
+					pr_info("%016llx, %016llx\n", p[i], p[i + 1]);
+			}
 		}
 	}
 	dovi_setting_update_flag = false;
@@ -3193,17 +3200,18 @@ void amdv_alloc_mem(void)
 			lut_dma_info[i].dma_top1_size = top1_lut_num * LUT_SIZE;
 			alloc_size =
 				(lut_dma_info[i].dma_top1_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-			lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
+			if (!(efuse_mode & 2) && !device_disable_pd) {
+				lut_dma_info[i].dma_paddr = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-			lut_dma_info[i].dma_vaddr =
+				lut_dma_info[i].dma_vaddr =
 				codec_mm_vmap_noncache(lut_dma_info[i].dma_paddr, alloc_size);
 
-			pr_dv_dbg("top1 dma_vaddr %px %pad,size %d,alloc size %d\n",
-					lut_dma_info[i].dma_vaddr,
-					&lut_dma_info[i].dma_paddr,
-					lut_dma_info[i].dma_top1_size,
-					alloc_size);
-
+				pr_dv_dbg("top1 dma_vaddr %px %pad,size %d,alloc size %d\n",
+						lut_dma_info[i].dma_vaddr,
+						&lut_dma_info[i].dma_paddr,
+						lut_dma_info[i].dma_top1_size,
+						alloc_size);
+			}
 			lut_dma_info[i].dma_top2_size = top2_lut_num * LUT_SIZE;
 			alloc_size =
 			(lut_dma_info[i].dma_top2_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
@@ -3220,16 +3228,18 @@ void amdv_alloc_mem(void)
 		}
 	}
 
-	dv5_md_hist.hist_size = 256;
-	alloc_size = dv5_md_hist.hist_size;
-	dv5_md_hist.hist_paddr[0] = codec_mm_alloc_for_dma("amdv",
+	if (!(efuse_mode & 2) && !device_disable_pd) {
+		dv5_md_hist.hist_size = 256;
+		alloc_size = dv5_md_hist.hist_size;
+		dv5_md_hist.hist_paddr[0] = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-	dv5_md_hist.hist_vaddr[0] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[0], alloc_size);
-	dv5_md_hist.hist_paddr[1] = codec_mm_alloc_for_dma("amdv",
+		dv5_md_hist.hist_vaddr[0] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[0],
+			alloc_size);
+		dv5_md_hist.hist_paddr[1] = codec_mm_alloc_for_dma("amdv",
 				(alloc_size + PAGE_SIZE - 1) / PAGE_SIZE, 0, CODEC_MM_FLAGS_DMA);
-	dv5_md_hist.hist_vaddr[1] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[1], alloc_size);
+		dv5_md_hist.hist_vaddr[1] = codec_mm_vmap_noncache(dv5_md_hist.hist_paddr[1],
+			alloc_size);
 
-	if ((!(efuse_mode & 2) && !device_disable_pd)) {
 		if (is_aml_t3x())
 			py_buf_cnt = PYRAMID_BUF_CNT;
 		else if (is_aml_t6w() || is_aml_t6x())
@@ -3314,12 +3324,14 @@ void amdv_free_mem(void)
 		}
 	} else if (is_aml_t6w() || is_aml_t6x()) {
 		for (i = 0; i < DMA_BUF_CNT; i++) {
-			if (lut_dma_info[i].dma_vaddr)
-				codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
-			lut_dma_info[i].dma_vaddr = 0;
-			if (lut_dma_info[i].dma_paddr)
-				codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
-			lut_dma_info[i].dma_paddr = 0;
+			if (!(efuse_mode & 2) && !device_disable_pd) {
+				if (lut_dma_info[i].dma_vaddr)
+					codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
+				lut_dma_info[i].dma_vaddr = 0;
+				if (lut_dma_info[i].dma_paddr)
+					codec_mm_free_for_dma("amdv", lut_dma_info[i].dma_paddr);
+				lut_dma_info[i].dma_paddr = 0;
+			}
 
 			if (lut_dma_info[i].dma_vaddr_top2)
 				codec_mm_unmap_phyaddr(lut_dma_info[i].dma_vaddr);
@@ -3329,43 +3341,46 @@ void amdv_free_mem(void)
 			lut_dma_info[i].dma_paddr_top2 = 0;
 		}
 	}
-	if (dv5_md_hist.hist_vaddr[0])
-		codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[0]);
-	dv5_md_hist.hist_vaddr[0] = 0;
-	if (dv5_md_hist.hist_paddr[0])
-		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[0]);
-	dv5_md_hist.hist_paddr[0] = 0;
+	if (!(efuse_mode & 2) && !device_disable_pd) {
+		if (dv5_md_hist.hist_vaddr[0])
+			codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[0]);
+		dv5_md_hist.hist_vaddr[0] = 0;
+		if (dv5_md_hist.hist_paddr[0])
+			codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[0]);
+		dv5_md_hist.hist_paddr[0] = 0;
 
-	if (dv5_md_hist.hist_vaddr[1])
-		codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[1]);
-	dv5_md_hist.hist_vaddr[1] = 0;
-	if (dv5_md_hist.hist_paddr[1])
-		codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[1]);
-	dv5_md_hist.hist_paddr[1] = 0;
+		if (dv5_md_hist.hist_vaddr[1])
+			codec_mm_unmap_phyaddr(dv5_md_hist.hist_vaddr[1]);
+		dv5_md_hist.hist_vaddr[1] = 0;
+		if (dv5_md_hist.hist_paddr[1])
+			codec_mm_free_for_dma("amdv", dv5_md_hist.hist_paddr[1]);
+		dv5_md_hist.hist_paddr[1] = 0;
 
-	if (is_aml_t3x())
-		py_buf_cnt = PYRAMID_BUF_CNT;
-	else if (is_aml_t6w() || is_aml_t6x())
-		py_buf_cnt = 2;
+		if (is_aml_t3x())
+			py_buf_cnt = PYRAMID_BUF_CNT;
+		else if (is_aml_t6w() || is_aml_t6x())
+			py_buf_cnt = 2;
 
-	for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
-		if (py_addr[i].py_vaddr[0])
-			codec_mm_unmap_phyaddr(py_addr[i].py_vaddr[0]);
-		py_addr[i].py_vaddr[0] = 0;
+		for (i = 0; i < py_buf_cnt; i++) {/*read,write,reserved*/
+			if (py_addr[i].py_vaddr[0])
+				codec_mm_unmap_phyaddr(py_addr[i].py_vaddr[0]);
+			py_addr[i].py_vaddr[0] = 0;
 
-		if (py_addr[i].top1_py_paddr[0])
-			codec_mm_free_for_dma("amdv", py_addr[i].top1_py_paddr[0]);
-		py_addr[i].top1_py_paddr[0] = 0;
-	}
-	if (is_aml_t6w() || is_aml_t6x()) {
-		for (i = 0; i < TOP_BUF_CNT; i++) {
-			if (top_info.up_buf[i].pyup_vaddr)
-				codec_mm_unmap_phyaddr(top_info.up_buf[i].pyup_vaddr);
-			top_info.up_buf[i].pyup_vaddr = 0;
+			if (py_addr[i].top1_py_paddr[0])
+				codec_mm_free_for_dma("amdv", py_addr[i].top1_py_paddr[0]);
+			py_addr[i].top1_py_paddr[0] = 0;
+		}
+		if (is_aml_t6w() || is_aml_t6x()) {
+			for (i = 0; i < TOP_BUF_CNT; i++) {
+				if (top_info.up_buf[i].pyup_vaddr)
+					codec_mm_unmap_phyaddr(top_info.up_buf[i].pyup_vaddr);
+				top_info.up_buf[i].pyup_vaddr = 0;
 
-			if (top_info.up_buf[i].pyup_paddr)
-				codec_mm_free_for_dma("amdv", top_info.up_buf[i].pyup_paddr);
-			top_info.up_buf[i].pyup_paddr = 0;
+				if (top_info.up_buf[i].pyup_paddr)
+					codec_mm_free_for_dma("amdv",
+					top_info.up_buf[i].pyup_paddr);
+				top_info.up_buf[i].pyup_paddr = 0;
+			}
 		}
 	}
 }
@@ -3375,11 +3390,25 @@ bool amdv_check_mem(void)
 	if (!is_aml_hw5())
 		return true;
 
-	if (!lut_dma_info[0].dma_paddr || !lut_dma_info[0].dma_paddr_top2 ||
-		!dv5_md_hist.hist_paddr[0] || !py_addr[0].top1_py_paddr[0] ||
-		!top_info.up_buf[0].pyup_paddr)
-		return false;
+	if (is_aml_t3x()) {
+		if (!lut_dma_info[0].dma_paddr)
+			return false;
+		if (!(efuse_mode & 2) && !device_disable_pd) {
+			if (!dv5_md_hist.hist_paddr[0] || !py_addr[0].top1_py_paddr[0])
+				return false;
+		}
+	}
+	if (is_aml_t6w() || is_aml_t6x()) {
+		if (!lut_dma_info[0].dma_paddr_top2)
+			return false;
 
+		if (!(efuse_mode & 2) && !device_disable_pd) {
+			if (!lut_dma_info[0].dma_paddr ||
+				!dv5_md_hist.hist_paddr[0] || !py_addr[0].top1_py_paddr[0] ||
+				!top_info.up_buf[0].pyup_paddr)
+				return false;
+		}
+	}
 	return true;
 }
 
@@ -20596,8 +20625,6 @@ static void amdolby_vision_remove(struct platform_device *pdev)
 {
 	struct amdolby_vision_dev_s *devp = &amdolby_vision_dev;
 	int i;
-	int j;
-	u32 py_buf_cnt = 0;
 
 	if (pq_config_buf) {
 		vfree(pq_config_buf);
@@ -20663,50 +20690,6 @@ static void amdolby_vision_remove(struct platform_device *pdev)
 		if (pq_config_dvp_fake_top1) {
 			vfree((pq_config_dvp_fake_top1));
 			pq_config_dvp_fake_top1 = NULL;
-		}
-
-		if (is_aml_t3x()) {
-			for (i = 0; i < DMA_BUF_CNT; i++)
-				dma_free_coherent(&pdev->dev, lut_dma_info[i].dma_total_size,
-					lut_dma_info[i].dma_vaddr, lut_dma_info[i].dma_paddr);
-		} else if (is_aml_t6w()) {
-			for (i = 0; i < DMA_BUF_CNT; i++) {
-				dma_free_coherent(&pdev->dev, lut_dma_info[i].dma_top1_size,
-					lut_dma_info[i].dma_vaddr, lut_dma_info[i].dma_paddr);
-				dma_free_coherent(&pdev->dev, lut_dma_info[i].dma_top2_size,
-					lut_dma_info[i].dma_vaddr_top2,
-					lut_dma_info[i].dma_paddr_top2);
-			}
-		}
-		dma_free_coherent(&pdev->dev, dv5_md_hist.hist_size,
-				dv5_md_hist.hist_vaddr[0], dv5_md_hist.hist_paddr[0]);
-		dma_free_coherent(&pdev->dev, dv5_md_hist.hist_size,
-				dv5_md_hist.hist_vaddr[1], dv5_md_hist.hist_paddr[1]);
-
-		if ((!(efuse_mode & 2) && !device_disable_pd)) {
-			if (is_aml_t3x())
-				py_buf_cnt = PYRAMID_BUF_CNT;
-			else if (is_aml_t6w() || is_aml_t6x())
-				py_buf_cnt = 2;
-
-			for (i = 0; i < py_buf_cnt; i++) {
-				for (j = 0; j < 7; j++) {
-					if (py_addr[i].py_vaddr[j])
-						dma_free_coherent(&pdev->dev,
-							py_addr[i].top1_py_size[j],
-							py_addr[i].py_vaddr[j],
-							py_addr[i].top1_py_paddr[j]);
-				}
-			}
-			if (is_aml_t6w() || is_aml_t6x()) {
-				for (i = 0; i < TOP_BUF_CNT; i++) {
-					if (top_info.up_buf[i].pyup_vaddr)
-						dma_free_coherent(&pdev->dev,
-							top_info.up_buf[i].pyup_size,
-							top_info.up_buf[i].pyup_vaddr,
-							top_info.up_buf[i].pyup_paddr);
-				}
-			}
 		}
 	} else {
 		if (multi_dv_mode) {
