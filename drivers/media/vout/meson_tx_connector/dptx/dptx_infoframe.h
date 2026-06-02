@@ -98,5 +98,5 @@ void dptx_audio_infoframe_set(struct dptx_hw_common *hw_comm, u8 vc_id,
 void dptx_audio_infoframe_rawset(struct dptx_hw_common *hw_comm, u8 vc_id, u8 *hb, u8 *pb);
 void dptx_drm_infoframe_set(struct dptx_hw_common *hw_comm, u8 vc_id, struct drm_infoframe *info);
 void dptx_drm_infoframe_rawset(struct dptx_hw_common *hw_comm, u8 vc_id, u8 *hb, u8 *pb);
-
+void dptx_construct_sdp_header(struct dp_sdp_header *header, enum infoframe_type type);
 #endif /* __DPTX_INFOFRAME_H__ */

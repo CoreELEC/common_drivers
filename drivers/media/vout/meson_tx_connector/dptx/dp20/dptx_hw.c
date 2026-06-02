@@ -31,7 +31,7 @@
 #include "dptx_hdcp_hw.h"
 
 static void dptx_hdcp2x_intr_handler(struct dp_intr_t *intr, void *intr_para);
-static void dptx_audio_init(struct dptx_hw_common *hw_comm);
+static void dptx_audio_init(struct dptx_hw_common *hw_comm, struct meson_tx_format_para *para);
 
 static struct dptx_intr dptx_all_intr = {
 	.cp2tx_intr0 = {
@@ -1888,7 +1888,7 @@ static int dptx20_hw_core_config(struct dptx_hw_common *hw_comm, struct meson_tx
 	dptx_fec_enable(hw_comm);
 	/* enable sec when MST config done */
 	/* dptx_sec_enable(hw_comm, para->vc_id); */
-	dptx_audio_init(hw_comm);
+	dptx_audio_init(hw_comm, para);
 	return 0;
 }
 
@@ -3617,13 +3617,23 @@ static void _dptx_audio_set_interface(struct dptx_hw_common *hw_comm, u8 vc_id)
 	_config_spdif_for(hw_comm, vc_id);
 }
 
-static void _dptx_set_sdp_window(struct dptx_hw_common *hw_comm, u8 vc_id)
+static void _dptx_set_sdp_window(struct dptx_hw_common *hw_comm, u8 vc_id,
+		struct meson_tx_format_para *para)
 {
-	u32 hblank;
+	u32 hblank = 0;
+	u32 bandwidth = 0;
 
-	hblank = 16 + 96 + 48;
-	hblank = (hblank * 1000) / 25200;
-	hblank = ((hblank * 1620) / 40);
+	if (!hw_comm || !para)
+		return;
+
+	bandwidth = dptx20_reg_read(hw_comm, CORE_LEVEL, DPTX20_LINK_BW_SET) * 27;
+	hblank = para->timing.h_blank;
+	hblank = (hblank * 1000) /  para->timing.pixel_freq;
+	hblank = ((hblank * bandwidth * 10) / 40);
+
+	/* multiply by 0.9 */
+	hblank *= 900;
+	hblank /= 1000;
 
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_DATA_WINDOW), hblank);
@@ -3635,7 +3645,6 @@ static void _dptx_audio_setup(struct dptx_hw_common *hw_comm, u8 vc_id)
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_CHANNEL_COUNT), 2);
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_AUDIO_CHANNEL_MAP), 0x87654321ul);
-	_dptx_set_sdp_window(hw_comm, vc_id);
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_CS_CATEGORY_CODE), 0x00b5ul);
 }
@@ -3745,14 +3754,14 @@ static void dptx_hard_code_for_aud(struct dptx_hw_common *hw_comm)
 	 */
 }
 
-static void dptx_audio_init(struct dptx_hw_common *hw_comm)
+static void dptx_audio_init(struct dptx_hw_common *hw_comm, struct meson_tx_format_para *para)
 {
-	_dptx_audio_init(hw_comm, 0);
-
-	_dptx_audio_set_interface(hw_comm, 0);
-	_dptx_audio_setup(hw_comm, 0);
-	_dptx_audio_set_timing(hw_comm, 0);
-	_dptx_infoframe_write_packet(hw_comm, 0);
+	_dptx_audio_set_interface(hw_comm, para->vc_id);
+	_dptx_set_sdp_window(hw_comm, para->vc_id, para);
+	_dptx_audio_setup(hw_comm, para->vc_id);
+	_dptx_audio_set_timing(hw_comm, para->vc_id);
+	_dptx_infoframe_write_packet(hw_comm, para->vc_id);
 	dptx_hard_code_for_aud(hw_comm);
+	_dptx_audio_init(hw_comm, para->vc_id);
 	DPTX_INFO("dptx: audio init done\n");
 }

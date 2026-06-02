@@ -18,7 +18,7 @@ static void dptx_infoframe_send(struct dptx_hw_common *hw_comm, u8 vc_id,
  * Other INFOFRAME coding types, as specified in CEA-861-F, Table 5, and CEA-861.3,
  * shall use INFOFRAME SDP v1.3.
  */
-static void dptx_construct_sdp_header(struct dp_sdp_header *header, enum infoframe_type type)
+void dptx_construct_sdp_header(struct dp_sdp_header *header, enum infoframe_type type)
 {
 	if (!header)
 		return;

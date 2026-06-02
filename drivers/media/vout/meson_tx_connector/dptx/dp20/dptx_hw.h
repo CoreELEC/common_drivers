@@ -105,5 +105,5 @@ int dptx_avi_infoframe_config(struct dptx_hw_common *tx_comm, u32 avi_cmd, u8 va
 void dptx_dump_infoframe_packets(struct dptx_hw_common *hw_comm, u8 vc_id);
 int dptx_vsc_pkt_for_pixel_enc(struct dptx_hw_common *hw_comm,
 	struct meson_tx_format_para *para, u8 sdp_sel);
-
+void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 sel, u8 *data);
 #endif

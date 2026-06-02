@@ -23,6 +23,7 @@
 #include "dptx_infoframe.h"
 #include "dptx_timer.h"
 #include "dptx_hdr.h"
+#include "dp20/dptx_hw.h"
 
 conn_dev_to_txdev dptx_convert;
 
@@ -165,6 +166,13 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 	struct master_display_info_s data = {};
 	struct meson_tx_phy_cfg_opts *phy_conf;
 	struct meson_tx_phy *tx_phy;
+	int i;
+	struct dp_sdp sdp_info;
+	u8 drm_hb[3] = {0x87, 0x01, 0x1a};
+	u8 drm_pb[28] = {0x0d, 0x02, 0x00, 0x34, 0x21, 0xaa,
+			0x9b, 0x96, 0x19, 0xfc, 0x08, 0x48, 0x8a,
+			0x08, 0x39, 0x13, 0x3d, 0x42, 0x40, 0xe8,
+			0x03, 0x32, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 	phy_conf = &tx_comm->hw_comm->hw_base.tx_phy_conf;
 	tx_phy = tx_comm->hw_comm->hw_base.tx_phy;
@@ -881,6 +889,17 @@ static ssize_t dptx_debug_store(struct device *dev, struct device_attribute *att
 		data.max_content = 0x1516;
 		data.max_frame_average = 0x1718;
 		dptx_set_drm_pkt(tx_comm, &data);
+	} else if (token && strncmp(token, "drm56", 5) == 0) {
+		memset(&sdp_info, 0, sizeof(sdp_info));
+		dptx_construct_sdp_header(&sdp_info.sdp_header, INFOFRAME_TYPE_DRM);
+		sdp_info.data[0] = drm_hb[1];
+		sdp_info.data[1] = drm_hb[2];
+		memcpy(&sdp_info.data[2], drm_pb + 1, DRM_INFOFRAME_SIZE);
+		for (i = 0; i < 56; i++) {
+			sdp_info.data[30] = i;
+			sdp_info_buffer_write(tx_comm->hw_comm,
+					tx_dev->sw_fmt_para.vc_id, i, (u8 *)&sdp_info);
+		}
 	} else if (token && strncmp(token, "adaptive_sync", 13) == 0) {
 		bool enable = false;
 

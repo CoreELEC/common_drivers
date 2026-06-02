@@ -19,10 +19,10 @@
 #include "dptx_hw_opcode.h"
 #include "dptx_infoframe.h"
 
-/* For each MSTn, there are 7 SDP buffers for the Infoframe packets */
-#define BUFFER_MAX_NUM             7
+/* For each MSTn, there are 56 SDP buffers for the Infoframe packets */
+#define BUFFER_MAX_NUM             56
 
-static void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 sel, u8 *data)
+void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 sel, u8 *data)
 {
 	int i;
 	unsigned long flags;
@@ -34,18 +34,33 @@ static void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 s
 
 	spin_lock_irqsave(&hw_comm->sdp_lock, flags);
 	reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_SELECT);
-	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, sel); // buf selection
+	/* buf selection */
+	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, sel);
 	reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_DATA_PACKET_ID);
-	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, vc_id); // vc_id assign to packet id
+	/* vc_id assign to packet id */
+	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, vc_id);
+
 	if (!data) {
-		reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_RATE);
-		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
-		val &= ~(1 << sel);
-		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
-		reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_ENABLE);
-		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
-		val &= ~(1 << sel);
-		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+		if (sel <= 31) {
+			reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_RATE);
+			val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+			val &= ~(1 << sel);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+			reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_ENABLE);
+			val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+			val &= ~(1 << sel);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+		} else if (sel >= 32 && sel < BUFFER_MAX_NUM) {
+			sel = sel - 32;
+			reg = dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SECX_INFOFRAME_RATE1);
+			val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+			val &= ~(1 << sel);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+			reg = dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SECX_INFOFRAME_ENABLE1);
+			val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+			val &= ~(1 << sel);
+			dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+		}
 
 		for (i = 0; i < DP_INFOFRAME_TOTAL_SZ; i++) {
 			reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA);
@@ -56,22 +71,37 @@ static void sdp_info_buffer_write(struct dptx_hw_common *hw_comm, u8 vc_id, u8 s
 		return;
 	}
 
-	/* enable SDP */
-	dptx20_reg_write(hw_comm, CORE_LEVEL,
-		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 0x1);
-
 	for (i = 0; i < DP_INFOFRAME_TOTAL_SZ; i++) {
 		reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_DATA);
 		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, data[i]);
 	}
-	reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_RATE);
-	val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
-	val |= 1 << sel;
-	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
-	reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_ENABLE);
-	val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
-	val |= 1 << sel;
-	dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+
+	if (sel <= 31) {
+		reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_RATE);
+		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+		val |= 1 << sel;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+
+		reg = dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_INFOFRAME_ENABLE);
+		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+		val |= 1 << sel;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+	} else if (sel >= 32 && sel < BUFFER_MAX_NUM) {
+		sel = sel - 32;
+		reg = dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SECX_INFOFRAME_RATE1);
+		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+		val |= 1 << sel;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+
+		reg = dptx20_hw_calc_mst_reg(vc_id, TR_DPTX_SECX_INFOFRAME_ENABLE1);
+		val = dptx20_reg_read(hw_comm, CORE_LEVEL, reg);
+		val |= 1 << sel;
+		dptx20_reg_write(hw_comm, CORE_LEVEL, reg, val);
+	}
+	/* enable SDP */
+	dptx20_reg_write(hw_comm, CORE_LEVEL,
+		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 0x1);
+
 	spin_unlock_irqrestore(&hw_comm->sdp_lock, flags);
 }
 
@@ -256,9 +286,30 @@ static int sdp_infoframe_wrrd(struct dptx_hw_common *hw_comm, u8 vc_id, u8 wr,
 		return -1;
 	}
 
-	/* the bank index is fixed */
-	sel = info_type & 0x7;
-	sel--; /* the index is 0 ~ 6, not 1 ~ 7 */
+	switch (info_type) {
+	case INFOFRAME_TYPE_VENDOR:
+		sel = 0;
+		break;
+	case INFOFRAME_TYPE_AVI:
+		sel = 1;
+		break;
+	case INFOFRAME_TYPE_SPD:
+		sel = 2;
+		break;
+	case INFOFRAME_TYPE_MPEG_SOURCE:
+		sel = 3;
+		break;
+	case INFOFRAME_TYPE_AUDIO:
+		sel = 4;
+		break;
+	case INFOFRAME_TYPE_NTSC_VBI:
+		sel = 5;
+		break;
+	case INFOFRAME_TYPE_DRM:
+	default:
+		sel = 6;
+		break;
+	}
 
 	if (wr) {
 		sdp_info_buffer_write(hw_comm, vc_id, sel, body);
