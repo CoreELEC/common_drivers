@@ -955,7 +955,7 @@ static int lowlatency_vsync(u8 instance_id)
 			vsync_pts_inc_scale / vsync_pts_inc_scale_base;
 		vframe_walk_delay -= new_frame->duration / 96;
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		if (!(new_frame->flag & VFRAME_FLAG_GAME_MODE) &&
 			(new_frame->dpss_flg & DPSS_FLG_OUT_DONE))
 			vframe_walk_delay += dpss_frc_get_video_latency();

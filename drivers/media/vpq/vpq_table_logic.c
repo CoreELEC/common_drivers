@@ -21,8 +21,9 @@
 #include "modules/vpq_module_dump.h"
 #include "../vpp/vpp_common.h"
 #include "../vpp/vpp_pq_mgr.h"
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 #include "../dpss/drv/d_pq_mgr.h"
-
+#endif
 // whole static variables
 static enum vpq_chip_class_e chip_type;
 static enum vpq_chip_e chip_id;
@@ -1026,7 +1027,11 @@ int vpq_set_nr(unsigned char value)
 	}
 
 	pdata = &pq_table_param.nr_table[index][value].param;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = di_pq_mgr_dnr_param(pdata);
+#else
+	ret = -1;
+#endif
 	if (ret == 0) {
 		pq_setting_val[PQ_NR] = value;
 		pq_table_idx[PQ_INDEX_NR] = index;
@@ -1058,7 +1063,11 @@ int vpq_set_deblock(unsigned char value)
 	}
 
 	pdata = &pq_table_param.dblk_table[index][value].param;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = di_pq_mgr_dblk_param(pdata);
+#else
+	ret = -1;
+#endif
 	if (ret == 0) {
 		pq_setting_val[PQ_DEBLOCK] = value;
 		pq_table_idx[PQ_INDEX_DEBLOCK] = index;
@@ -1090,7 +1099,11 @@ int vpq_set_demosquito(unsigned char value)
 	}
 
 	pdata = &pq_table_param.demos_table[index][value].param;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = di_pq_mgr_demosquito_param(pdata);
+#else
+	ret = -1;
+#endif
 	if (ret == 0) {
 		pq_setting_val[PQ_DEMOSQUITO] = value;
 		pq_table_idx[PQ_INDEX_DEMOSQUITO] = index;
@@ -1122,7 +1135,11 @@ int vpq_set_smoothplus_mode(unsigned char value)
 	}
 
 	pdata = &pq_table_param.dct_table[index][value].param;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = di_pq_mgr_dct_param(pdata);
+#else
+	ret = -1;
+#endif
 	if (ret == 0) {
 		pq_setting_val[PQ_SMOOTHPLUS] = value;
 		pq_table_idx[PQ_INDEX_SMOOTHPLUS] = index;
@@ -1150,7 +1167,11 @@ int vpq_set_di_param(void)
 	}
 
 	pdata = &pq_table_param.di_table[index].param;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = di_pq_mgr_xlr_param(pdata);
+#else
+	ret = -1;
+#endif
 	if (ret == 0)
 		pq_table_idx[PQ_INDEX_DI] = index;
 
@@ -1162,40 +1183,55 @@ int vpq_set_nr_dpss(struct vpq_dnr_param_s *pdata)
 {
 	if (!pdata)
 		return RET_NULL_POINT;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	return di_pq_mgr_dnr_param((struct di_dnr_param_s *)pdata);
+#else
+	return -1;
+#endif
 }
 
 int vpq_set_deblock_dpss(struct vpq_dblk_param_s *pdata)
 {
 	if (!pdata)
 		return RET_NULL_POINT;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	return di_pq_mgr_dblk_param((struct di_dblk_param_s *)pdata);
+#else
+	return -1;
+#endif
 }
 
 int vpq_set_demosquito_dpss(struct vpq_demosquito_param_s *pdata)
 {
 	if (!pdata)
 		return RET_NULL_POINT;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	return di_pq_mgr_demosquito_param((struct di_demosquito_param_s *)pdata);
+#else
+	return -1;
+#endif
 }
 
 int vpq_set_smoothplus_dpss(struct vpq_dct_param_s *pdata)
 {
 	if (!pdata)
 		return RET_NULL_POINT;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	return di_pq_mgr_dct_param((struct di_dct_param_s *)pdata);
+#else
+	return -1;
+#endif
 }
 
 int vpq_set_xlr_dpss(struct vpq_xlr_param_s *pdata)
 {
 	if (!pdata)
 		return RET_NULL_POINT;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	return di_pq_mgr_xlr_param((struct di_xlr_param_s *)pdata);
+#else
+	return -1;
+#endif
 }
 
 /* DPSS End */
@@ -1289,29 +1325,33 @@ struct vpq_dv_cfg_support_s vpq_get_dv_cfg_support(unsigned char value)
  */
 int vpq_set_memc_on_off(unsigned char value)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	dpss_set_mc_link_state(value);
-
+#endif
 	return 0;
 }
 
 int vpq_set_memc_deblur_level(unsigned char value)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	dpss_frc_set_deblur(value);
-
+#endif
 	return 0;
 }
 
 int vpq_set_memc_dejudder_level(unsigned char value)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	dpss_frc_set_dejudder(value);
-
+#endif
 	return 0;
 }
 
 int vpq_set_memc_demo_mode(unsigned char value)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	dpss_frc_demo_win(value, 0);
-
+#endif
 	return 0;
 }
 

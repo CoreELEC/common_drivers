@@ -920,12 +920,17 @@ int buf_mgr_reset(struct dp_buf_mgr_t *buf_mgr)
 			vf_ref_count_dec(buf_mgr, buf_mgr->ref_list_1);
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 			buf_mgr_set_eos(print_flag, buf_mgr->ref_list_1);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			get_eos_from_dp(1);
 #endif
+#endif
+
 		} else if (buf_mgr->ref_list_1->ref_number == 3) {
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 			buf_mgr_set_eos(print_flag, buf_mgr->ref_list_1);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			get_eos_from_dp(1);
+#endif
 #endif
 			vf_ref_count_dec(buf_mgr, buf_mgr->ref_list_1);
 			vf_ref_count_dec(buf_mgr, buf_mgr->ref_list_1);

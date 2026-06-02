@@ -7486,7 +7486,7 @@ static enum hdr_type_e get_source_type(enum vd_path_e vd_path,
 }
 #endif
 
-#ifndef AMLOGIC_MEDIA_DPSS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 #define AMLOGIC_MEDIA_DPSS
 #endif
 enum hdr_type_e get_cur_source_type(enum vd_path_e vd_path,

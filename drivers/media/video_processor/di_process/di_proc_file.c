@@ -70,7 +70,9 @@ static void di_proc_vf_free(struct file_private_data *file_private_data)
 				return;
 			}
 			di_proc_file_print(PRINT_OTHER, "vf_free: release di v3 buf\n");
+		#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 			di_release_keep_buf(buf);
+		#endif
 			total_fill_count++;
 		}
 	}  else if (flag & V4LVIDEO_FLAG_DI_BYPASS) {

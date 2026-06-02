@@ -169,17 +169,21 @@ void sprint_rdma_info(struct seq_file *s, unsigned int para);
 //vpp rdma:
 void dpss_v_rdma_remove(void);
 void dpss_v_rdma_prob(void);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 void dpss_v_rdma_config_a(void);
 void dpss_v_rdma_config_b(void);
+#endif
 void dpss_dbg_v_rdma_step(unsigned int para);
 
 //rdma v interface for module:
 int DPSS_A_WR_MPEG_REG(u32 adr, u32 val);
 int DPSS_A_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 u32 DPSS_A_RD_MPEG_REG(u32 adr);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 int DPSS_B_WR_MPEG_REG(u32 adr, u32 val);
 int DPSS_B_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 u32 DPSS_B_RD_MPEG_REG(u32 adr);
+#endif
 unsigned int dpss_dbg_level_get(void);
 
 /*dbg */

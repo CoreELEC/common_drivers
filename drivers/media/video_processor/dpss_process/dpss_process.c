@@ -961,7 +961,7 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 {
 	struct dpss_in_buf_t *dpss_in_buf = NULL;
 	struct pp_info_t *pp_info;
-	int ret;
+	int ret = 1;
 	struct timeval begin_time;
 	struct timeval end_time;
 	int cost_time;
@@ -1072,8 +1072,9 @@ static int queue_input_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 		pp_info->dropped,
 		pp_info->dummy,
 		pp_info->src_file);
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = dpss_empty_input_buffer(dev->dpss_index, &dpss_in_buf->vf);
+#endif
 	if (ret != 0) {
 		pp_info->queued = false;
 		dp_print(dev->index, PRINT_ERROR,
@@ -1125,8 +1126,9 @@ static enum DPSS_ERRORTYPE queue_outbuf_to_dpss(struct dpss_process_dev *dev, st
 {
 	enum DPSS_ERRORTYPE ret = 0;
 	int frame_index = vf->frame_index;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = dpss_fill_output_buffer(dev->dpss_index, vf);
+#endif
 
 	dev->fill_count++;
 	total_fill_count++;
@@ -1558,7 +1560,7 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 	struct dma_buf *dmabuf;
 	struct file_private_data *private_data = NULL;
 	int dpss_out_index;
-	enum DPSS_ERRORTYPE ret = 0;
+	enum DPSS_ERRORTYPE ret = DPSS_ERR_UNDEFINED;
 	struct pp_info_t *pp_info;
 	struct dpss_out_vf_info dpss_out_info;
 
@@ -1617,7 +1619,9 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 	}
 
 	memset(&dpss_out_info, 0, sizeof(struct dpss_out_vf_info));
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	ret = dpss_get_vf_info(vf, &dpss_out_info);
+#endif
 	if (ret != 0)
 		dp_print(dev->index, PRINT_OTHER, "dpss_get_vf_info err %d\n", ret);
 	dp_print(dev->index, PRINT_OTHER, "idx_m idx_s (%d,%d)\n",
@@ -1643,7 +1647,7 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 		vf->vf_ud_param.ud_param.pbuf_addr = private_data->p_ud_param;
 	else
 		dp_print(dev->index, PRINT_OTHER, "%s: no ud.\n", __func__);
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (dev->dpss_parm.dps_work_mode == DPSS_WORK_MODE_FRC)
 		vf->dpss_flg |= DPSS_FLG_OUT_BYPASS | DPSS_FLG_SET_DPSS_PROCESS;
 	else
@@ -1663,7 +1667,7 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 
 	if (pp_info->dpss_flag & DPSS_FLG_ROTATE_DONE)
 		vf->dpss_flg |= DPSS_FLG_ROTATE_DONE;
-
+#endif
 	private_data->vf = *vf;
 	private_data->vf_p = vf;
 	private_data->vf.vf_ext2 = &private_data->vf_ext;
@@ -2110,13 +2114,17 @@ static void dpss_direct_mode_switch(struct dpss_process_dev *dev, struct vframe_
 	if (dev->direct_mode_en == 0 && direct_mode_flag == 1) {
 		dp_print(dev->index, PRINT_OTHER, "%s:enable direct mode.\n", __func__);
 		dpss_para.para |= DPSS_DIRECT_MODE;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dpss_cmd_asy(dev->dpss_index, DPSS_CMD_ASY_2_WORKMODE, &dpss_para);
+#endif
 		dev->direct_mode_en = 1;
 	} else if (dev->direct_mode_en == 1 && direct_mode_flag == 0) {
 		dp_print(dev->index, PRINT_OTHER, "%s: disable direct mode.\n", __func__);
 		dpss_para.para &= ~DPSS_DIRECT_MODE;
 		dev->direct_mode_en = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dpss_cmd_asy(dev->dpss_index, DPSS_CMD_ASY_2_WORKMODE, &dpss_para);
+#endif
 	} else {
 		dp_print(dev->index, PRINT_OTHER, "%s: keep direct mode status :%d.\n",
 			__func__, direct_mode_flag);
@@ -2141,13 +2149,17 @@ static void dpss_frc_enable_switch(struct dpss_process_dev *dev, int enable)
 	if (dev->frc_en == 0 && enable == 1) {
 		dp_print(dev->index, PRINT_OTHER, "%s:enable frc.\n", __func__);
 		dpss_para.para = 1;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dpss_cmd_asy(dev->dpss_index, DPSS_CMD_ENABLE_FRC, &dpss_para);
+#endif
 		dev->frc_en = 1;
 	} else if (dev->frc_en == 1 && enable == 0) {
 		dp_print(dev->index, PRINT_OTHER, "%s: disable frc.\n", __func__);
 		dpss_para.para = 0;
 		dev->frc_en = 0;
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dpss_cmd_asy(dev->dpss_index, DPSS_CMD_ENABLE_FRC, &dpss_para);
+#endif
 	} else {
 		dp_print(dev->index, PRINT_OTHER, "%s: keep frc status :%d.\n", __func__, enable);
 	}
@@ -2215,11 +2227,15 @@ static void config_play_speed_for_frc(struct dpss_process_dev *dev, struct vfram
 
 	if (display_speed[i].speed != DISPLAY_SPEED_DEFAULT && !dev->trick_play_en) {
 		dp_print(dev->index, PRINT_OTHER, "enable trick_play.\n");
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dp_dynamic_detect_play_speed(true);
+#endif
 		dev->trick_play_en = true;
 	} else if (display_speed[i].speed == DISPLAY_SPEED_DEFAULT && dev->trick_play_en) {
 		dp_print(dev->index, PRINT_OTHER, "disable trick_play.\n");
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		dp_dynamic_detect_play_speed(false);
+#endif
 		dev->trick_play_en = false;
 	} else {
 		dp_print(dev->index, PRINT_OTHER, "no need update speed.\n");
@@ -2270,15 +2286,15 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 	}
 
 	dev->dpss_parm.dps_work_mode = dpss_config_work_mode(dev->index);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (check_need_do_game_frc(&dev->dpss_parm, vf)) {
 		dev->is_start_with_dpss = false;
 		dev->dpss_parm.dps_work_mode = DPSS_WORK_MODE_FRC;
 		dev->cur_is_frcgame = true;
 	}
-
 	if (dev->cur_is_nr)
 		dev->dpss_parm.dps_work_mode &= ~DPSS_WORK_MODE_FRC;
-
+#endif
 	dev->dpss_parm.di_parm.buffer_mode = DPSS_BUFFER_MODE_ALLOC_SELF;
 	dev->dpss_parm.di_parm.output_format = DPSS_OUTPUT_BY_DI_DEFINE;
 	if (vf->flag & VFRAME_FLAG_VIDEO_SECURE) {
@@ -2298,8 +2314,9 @@ static void connect_to_dpss(struct dpss_process_dev *dev, struct vframe_s *vf, i
 	dev->dpss_parm.ops.empty_input_done = dp_empty_input_done;
 	dev->dpss_parm.ops.fill_output_done = dp_fill_output_done;
 	dev->dpss_parm.ops.get_input_vf_info = get_input_vf_info;
-
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	dev->dpss_index = dpss_create_instance(&dev->dpss_parm);
+#endif
 	if (dev->dpss_index < 0) {
 		dp_print(dev->index, PRINT_ERROR,
 			"creat dpss fail, dpss_index=%d\n",
@@ -2411,7 +2428,9 @@ static int dpss_process_uninit(struct dpss_process_dev *dev)
 	}
 
 	if (dev->dpss_index >= 0) {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		ret = dpss_destroy_instance(dev->dpss_index);
+#endif
 		if (ret != 0)
 			dp_print(dev->index, PRINT_ERROR,
 				  "destroy dpss fail, dpss_index=%d\n",
@@ -2501,7 +2520,7 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	bool need_do_dpss = true;
 	bool is_qms_case = false;
 	bool need_dpss_rotate = false;
-	char do_dpss_type = 0;
+	char do_dpss_type = 1;
 	int used_vf_with = 0, used_vf_height = 0;
 	int inp_std_duration;
 	bool is_i_src = false;
@@ -2525,7 +2544,9 @@ static bool check_need_do_dpss(struct dpss_process_dev *dev, struct vframe_s *vf
 	}
 
 	inp_std_duration = find_standard_duration(dev, vf->duration);
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	do_dpss_type = dpss_is_bypass(&dev->dpss_parm, vf);
+#endif
 	if (do_dpss_type) {
 		dp_print(dev->index, PRINT_OTHER,
 			"need bypass due to dpss, reason=%d.\n", do_dpss_type);
@@ -2956,6 +2977,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	}
 
 	/*need check game mode switch*/
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (check_need_do_game_frc(&dev->dpss_parm, vf) && !dev->cur_is_frcgame) {
 		dp_print(dev->index, PRINT_ERROR, "need up layer reinit to game.\n");
 		game_switch = true;
@@ -2965,7 +2987,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	} else {
 		game_switch = false;
 	}
-
+#endif
 	/*need check nr mode switch*/
 	if (dev->cur_is_i && vf->duration < dev->output_duration)
 		is_special_i = true;
@@ -2979,7 +3001,6 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	} else {
 		nr_switch = false;
 	}
-
 	if (tvp_switch || ip_switch || rotate180_switch || game_switch || nr_switch) {
 		dev->last_vf.type = 0;
 		dp_put_file(dev, file_vf);
@@ -2995,14 +3016,17 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	}
 
 	memset(&dpss_state, 0, sizeof(struct dpss_status));
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (dpss_get_state(dev->dpss_index, DPSS_STATE_BUF, NULL, &dpss_state) != 0)
 		dp_print(dev->index, PRINT_OTHER, "get buf state failed.\n");
-
+#endif
 	if (dpss_state.buf_status != DPSS_BUF_STATE_READY) {
 		dp_print(dev->index, PRINT_OTHER, "dpss buf not ready.\n");
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		if (is_dtv_src && (get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR))
 			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
+#endif
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
 		display_original_frame(dev, frame_info, file_vf, vf);
 		return 0;
@@ -3028,9 +3052,11 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	if (dev->need_check_hdr_state && !hdr_path_delink_status()) {
 		dp_print(dev->index, PRINT_ERROR, "need do dpss but hdr not ready, bypass.\n");
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		if (is_dtv_src && (get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR))
 			vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
 		else
+#endif
 			vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
 		display_original_frame(dev, frame_info, file_vf, vf);
 		return ret;
@@ -3192,7 +3218,9 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	} else if ((dev->is_switch_first_frame || dev->is_first_frame) &&
 		is_dtv_src && dev->cur_is_i &&
 		(get_src_signal_format(vf) == VFRAME_SIGNAL_FMT_SDR)) {
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		vf->dpss_flg |= DPSS_FLG_OUT_DONE | DPSS_FLG_FORCE_DPSS_DONE;
+#endif
 		dp_print(dev->index, PRINT_OTHER,
 			"first i, set dpss done flag, then vd1 toggle\n");
 	}

@@ -445,7 +445,7 @@ static void videoq_hdmi_video_sync_2(struct video_queue_dev *dev,
 	frc_delay = frc_get_video_latency();
 	frc_delay = frc_delay * 1000;
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) &&
 		(vf->duration > 0 && vf->duration <= 582)) {
 		frc_delay = 0;
@@ -537,8 +537,10 @@ static int videoqueue_put_vf(struct video_queue_dev *dev, struct file *vf_file)
 			ret = vf_put(vf, dev->vf_receiver_name);
 			if (ret) {
 				vq_print(dev->inst, P_ERROR, "put: FAIL\n");
+			#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 				if (vf->type & VIDTYPE_DI_PW)
 					dim_post_keep_cmd_release2(vf);
+			#endif
 			}
 		} else {
 			vq_print(dev->inst, P_OTHER, "NULL vframe.\n");
@@ -872,7 +874,7 @@ static int do_file_thread(struct video_queue_dev *dev)
 		dev->need_check_delay_count = 0;
 	}
 
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if ((is_meson_t6w_cpu() || is_meson_t6x_cpu()) &&
 		(vf->duration > 0 && vf->duration <= 582))
 		frc_delay = 0;

@@ -2204,6 +2204,7 @@ static struct vpp_frame_par_save_s frame_par_save;
 struct vpp_frame_par_s *get_cur_frame_par(struct video_layer_s *layer)
 {
 #ifdef ENABLE_DPSS_FRC
+#ifdef AMLOGIC_MEDIA_DPSS
 	if (cur_dev->display_module == T6W_DISPLAY_MODULE &&
 			layer->layer_id == 0 &&
 			is_frc_link_on(layer) &&
@@ -2211,6 +2212,7 @@ struct vpp_frame_par_s *get_cur_frame_par(struct video_layer_s *layer)
 			frame_par_save.used_saved_parm)
 		return &frame_par_save.frame_par;
 	else
+#endif
 		return layer->cur_frame_par;
 #else
 	return layer->cur_frame_par;
@@ -4349,6 +4351,7 @@ RESTART:
 				input->layer_id, vf, vf->vf_ext);
 	}
 #ifdef ENABLE_DPSS_FRC
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (!used_pre_pam && cur_dev->display_module == T6W_DISPLAY_MODULE &&
 		input->layer_id == 0 &&
 		frame_par_save.used_saved_parm) {
@@ -4435,6 +4438,7 @@ RESTART:
 		frame_par_save.VPP_vsc_startp_save = next_frame_par->VPP_vsc_startp;
 		frame_par_save.VPP_vsc_endp_save = next_frame_par->VPP_vsc_endp;
 	}
+#endif
 #endif
 	return ret;
 }

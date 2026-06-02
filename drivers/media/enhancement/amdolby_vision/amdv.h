@@ -163,7 +163,11 @@
 #define PRINT_RDMA_TABLE_REG_BASIC 0x4
 #define PRINT_RDMA_TABLE_REG_MORE 0x8
 
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 #define ENABLE_DPSS 1
+#else
+#define ENABLE_DPSS 0
+#endif
 
 enum core1_switch_type {
 	NO_SWITCH = 0,

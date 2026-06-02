@@ -621,7 +621,7 @@ void game_frc_set_lcd_mute(struct vdin_dev_s *devp)
 
 void vdin_game_frc_check(struct vdin_dev_s *devp, int state)
 {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	struct game_frc_s frc_data;
 
 	// if (!state)
@@ -1032,7 +1032,7 @@ static void vdin_handle_game_mode_chg(struct vdin_dev_s *devp)
 	if (game_mode_pre != devp->game_mode)
 		vdin_frame_lock_check(devp, 1);
 
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (devp->vdin_game_frc) {
 		if (vdin_get_game_frc_lock_st())
 			devp->game_mode |= VDIN_GAME_MODE_1;

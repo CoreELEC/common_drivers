@@ -103,8 +103,10 @@ static int __init media_main_init(void)
 	call_sub_init(amlvideo2_init);
 	call_sub_init(dil_init);
 	call_sub_init(di_module_init);
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 	call_sub_init(dim_module_init);
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#endif
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	call_sub_init(dpss_module_init);
 #endif
 	call_sub_init(cec_init);

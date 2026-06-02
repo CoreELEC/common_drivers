@@ -264,8 +264,9 @@ void dpss_dd_cfg_inp(struct vframe_s *vfm)//dae
 			//top1 reg set
 			amdolby_vision_process_hw5(vfm, NULL,
 				ori_w << 16 | ori_h, 1);
-
+		#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			dpss_v_rdma_config_a();
+		#endif
 		} else {
 			force_top1_done();
 		}
@@ -298,7 +299,9 @@ void dpss_dd_cfg_dpe(struct vframe_s *vfm)
 			/*top2 reg set*/
 			amdolby_vision_process_hw5(NULL, vfm,
 					ori_w << 16 | ori_h, 1);
+		#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			dpss_v_rdma_config_b();
+		#endif
 			vfm->dpss_flg |= DPSS_FLG_DDD;
 		}
 	//}
@@ -352,8 +355,10 @@ void dpss_dd_dae_update(struct vframe_s *vfm)
 			//top1 reg set
 			amdolby_vision_process_hw5(vfm, NULL,
 				ori_w << 16 | ori_h, 1);
+		#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			if (dpss_enable_dd_rdma)
 				dpss_v_rdma_config_a();
+		#endif
 		} else {
 			force_top1_done();
 		}
@@ -386,9 +391,10 @@ void dpss_dd_dpe_update(struct vframe_s *vfm)
 		/*top2 reg set*/
 		amdolby_vision_process_hw5(NULL, vfm,
 				ori_w << 16 | ori_h, 1);
+	#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		if (dpss_enable_dd_rdma)
 			dpss_v_rdma_config_b();
-
+	#endif
 		//if have dv set flg:
 		vfm->dpss_flg |= DPSS_FLG_DDD;
 	}

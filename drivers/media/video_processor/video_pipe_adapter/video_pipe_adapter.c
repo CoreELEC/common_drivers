@@ -100,7 +100,7 @@ static long video_pipe_adapter_ioctl(struct file *file, unsigned int cmd, ulong 
 
 		if (video_delay_arg.input_fps <= 0 || video_delay_arg.output_fps <= 0)
 			return -EINVAL;
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		video_delay_arg.video_delay =
 			dpss_frc_get_video_latency_new(video_delay_arg.input_fps,
 						video_delay_arg.output_fps);

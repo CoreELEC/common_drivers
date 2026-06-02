@@ -2695,7 +2695,7 @@ static void process_hdmi_video_sync(struct vframe_s *vf)
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 			vframe_walk_delay += frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 			if (vf->dpss_flg & DPSS_FLG_OUT_DONE)
 				vframe_walk_delay += dpss_frc_get_video_latency();
 #endif
@@ -4392,7 +4392,7 @@ void hdmi_in_delay_maxmin_old(struct vframe_s *vf)
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 	memc_delay = frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	memc_delay += dpss_frc_get_video_latency();
 #endif
 
@@ -4508,7 +4508,7 @@ void hdmi_in_delay_maxmin_new(struct vframe_s *vf)
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 	memc_delay = frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (!(vf->dpss_flg & DPSS_FLG_OUT_DONE))
 		memc_delay = 0;
 	else
@@ -4617,8 +4617,12 @@ static void hdmi_in_delay_maxmin_new1(struct tvin_to_vpp_info_s *tvin_info)
 		tvin_info->cfmt == TVIN_YUV422) {
 		do_di = true;
 		/* TODO: if need add post link check */
-		if ((tvin_info->width > 1920 && tvin_info->width <= 3840) || dim_get_pre_link())
+		if ((tvin_info->width > 1920 && tvin_info->width <= 3840))
 			di_has_vdin_vf = true;
+		#ifdef ENABLE_PLINK
+		if (dim_get_pre_link())
+			di_has_vdin_vf = true;
+		#endif
 		if (tvin_info->scan_mode == TVIN_SCAN_MODE_INTERLACED)
 			di_keep_count = DI_KEEP_COUNT_I;
 		else
@@ -4651,7 +4655,7 @@ static void hdmi_in_delay_maxmin_new1(struct tvin_to_vpp_info_s *tvin_info)
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 	memc_delay = frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	memc_delay += dpss_frc_get_video_latency();
 #endif
 
@@ -13382,7 +13386,7 @@ static ssize_t frc_delay_show(const struct class *cla,
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 	frc_delay += frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	frc_delay += dpss_frc_get_video_latency();
 #endif
 	return sprintf(buf, "%d\n", frc_delay);

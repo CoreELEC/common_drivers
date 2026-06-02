@@ -17,7 +17,7 @@
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 #define ENABLE_DPSS_FRC
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 #define AMLOGIC_MEDIA_DPSS
 #endif
 
@@ -1395,7 +1395,9 @@ void vpp_trace_vframe(const char *name, void *vf, int arg1, int arg2, int id, in
 bool is_plink_available(struct vframe_s *vf);
 #endif
 #ifdef ENABLE_DPSS_FRC
+#ifdef AMLOGIC_MEDIA_DPSS
 bool is_frc_link_source(struct vframe_s *vf);
+#endif
 #endif
 #ifdef TV_REVERSE
 int screen_orientation(void);

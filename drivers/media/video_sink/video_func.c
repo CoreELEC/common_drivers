@@ -1848,14 +1848,14 @@ s32 primary_render_frame(struct video_layer_s *layer,
 
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 #ifdef ENABLE_DPSS_FRC
-#ifdef AMLOGIC_MEDIA_DPSS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (is_frc_link_on(layer) &&
 		dispbuf && !is_local_vf(dispbuf)) {
 		int iret;
 		struct pvpp_dis_frc_para_in_s frc_in_p;
 
 		if (layer->frc_link_skip_cnt == 0) {
-			memset(&frc_in_p, 0, sizeof(struct pvpp_dis_para_in_s));
+			memset(&frc_in_p, 0, sizeof(struct pvpp_dis_frc_para_in_s));
 			frc_in_p.win.x_st = layer->cur_frame_par->VPP_hd_start_lines_;
 			frc_in_p.win.x_end = layer->cur_frame_par->VPP_hd_end_lines_;
 			frc_in_p.win.y_st = layer->cur_frame_par->VPP_vd_start_lines_;
@@ -3134,7 +3134,9 @@ static void vd_dispbuf_init(u8 layer_id)
 			    (recycle_buf[i][j]->flag & VFRAME_FLAG_DI_PW_VFM)) {
 				if (i == 0)
 					di_release_count++;
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 				dim_post_keep_cmd_release2(recycle_buf[i][j]);
+#endif
 			} else if (recycle_buf[i][j] &&
 				   _cur_dispbuf == recycle_buf[i][j]) {
 				pr_err("recycle %d di buffer conflict, recycle vf:%p\n",
@@ -4652,7 +4654,7 @@ static void do_vd1_swap_frame(u8 layer_id,
 		if (!(new_frame->flag & VFRAME_FLAG_GAME_MODE))
 			vframe_walk_delay += frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		if (!(new_frame->flag & VFRAME_FLAG_GAME_MODE) &&
 			(new_frame->dpss_flg & DPSS_FLG_OUT_DONE))
 			vframe_walk_delay += dpss_frc_get_video_latency();
@@ -6303,7 +6305,7 @@ exit:
 			if (vd_fake_func[i].vd_late_process)
 				vd_fake_func[i].vd_late_process(0xff, i);
 	}
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	/* post vsync signal notify for dpss-rdma */
 	post_vsync_signal_to_dpss_rdma();
 #endif
@@ -7136,7 +7138,7 @@ u32 get_playback_delay_duration(void)
 #ifdef CONFIG_AMLOGIC_MEDIA_FRC
 	memc_delay = frc_get_video_latency();
 #endif
-#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	if (frc_delay_enable)
 		memc_delay = dpss_frc_get_video_latency();
 #endif

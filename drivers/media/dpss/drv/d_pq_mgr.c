@@ -19,6 +19,7 @@
 #include "d_pq_mgr.h"
 #include "dpss_pq_drv.h"
 
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 int di_pq_mgr_demosquito_param(struct di_demosquito_param_s *pdata)
 {
 	int ret = -1;
@@ -73,4 +74,5 @@ int di_pq_mgr_xlr_param(struct di_xlr_param_s *pdata)
 	return ret;
 }
 EXPORT_SYMBOL(di_pq_mgr_xlr_param);
+#endif
 

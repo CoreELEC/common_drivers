@@ -65,7 +65,9 @@ struct v4l_data_t {
 void v4lvideo_data_copy(struct v4l_data_t *v4l_data,
 				struct dma_buf *dmabuf, u32 align);
 struct file_private_data *v4lvideo_get_vf(int fd);
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 void dim_post_keep_cmd_release2(struct vframe_s *vframe);
+#endif
 int is_v4lvideo_buf_file(struct file *file);
 struct file *v4lvideo_alloc_file(void);
 void v4lvideo_keep_vf(struct file *file);

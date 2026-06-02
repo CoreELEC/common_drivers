@@ -5,7 +5,7 @@
 
 menu "DI_MULTI driver"
 
-config AMLOGIC_MEDIA_DEINTERLACE
+config AMLOGIC_MEDIA_DPSS
 	tristate "DPSS driver"
 	default n
 	help

@@ -2516,6 +2516,7 @@ void dpss_v_stop(void)
 	_v_rdma_stop(rdma_s1);
 }
 
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 void dpss_v_rdma_config_a(void)
 {
 	_v_rdma_config(dpss_rdma_s0);
@@ -2526,6 +2527,7 @@ void dpss_v_rdma_config_b(void)
 	_v_rdma_config(dpss_rdma_s1);
 }
 EXPORT_SYMBOL(dpss_v_rdma_config_b);
+#endif
 
 int DPSS_A_WR_MPEG_REG(u32 adr, u32 val)
 {
@@ -2569,6 +2571,7 @@ u32 DPSS_A_RD_MPEG_REG(u32 adr)
 }
 EXPORT_SYMBOL(DPSS_A_RD_MPEG_REG);
 
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 int DPSS_B_WR_MPEG_REG(u32 adr, u32 val)
 {
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
@@ -2610,6 +2613,7 @@ u32 DPSS_B_RD_MPEG_REG(u32 adr)
 	return read_val;
 }
 EXPORT_SYMBOL(DPSS_B_RD_MPEG_REG);
+#endif
 
 void dpss_dbg_v_rdma_step(unsigned int para)
 {
@@ -2619,10 +2623,12 @@ void dpss_dbg_v_rdma_step(unsigned int para)
 		dpss_v_rdma_remove();
 	else if (para == 3)
 		dpss_v_stop();
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	else if (para == 4)
 		dpss_v_rdma_config_a();
 	else if (para == 5)
 		dpss_v_rdma_config_b();
+#endif
 	else
 		DBG_INF("%s:no function\n", __func__);
 }

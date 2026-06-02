@@ -1042,7 +1042,9 @@ enum DI_ERRORTYPE dp_fill_output_done(struct di_buffer *buf)
 			if (ret == DI_ERR_INDEX_NOT_ACTIVE) {
 				dp_print(dev->index, PRINT_OTHER,
 					"%s:recycle failed, release\n", __func__);
+			#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 				di_release_keep_buf(buf);
+			#endif
 			}
 		}
 		return 0;

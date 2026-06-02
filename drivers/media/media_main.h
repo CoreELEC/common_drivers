@@ -593,10 +593,6 @@ static inline int ambilight_init(void)
 int dil_init(void);
 int di_module_init(void);
 int dim_module_init(void);
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
-int dpss_module_init(void);
-#endif
-
 #else
 static inline int dil_init(void)
 {
@@ -612,14 +608,15 @@ static inline int dim_module_init(void)
 {
 	return 0;
 }
+#endif
 
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
+int dpss_module_init(void);
+#else
 static inline int dpss_module_init(void)
 {
 	return 0;
 }
-#endif
-
 #endif
 
 #if defined(CONFIG_AMLOGIC_AO_CEC) || defined(CONFIG_AMLOGIC_LINUX_STD_CEC)

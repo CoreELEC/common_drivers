@@ -384,9 +384,12 @@ struct di_pq_table_s {
 	struct di_pq_page_s page[DI_PAGE_TBL_COUNT_MAX]; /*Table selected by top layer*/
 };
 
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 int di_pq_mgr_demosquito_param(struct di_demosquito_param_s *pdata);
 int di_pq_mgr_dblk_param(struct di_dblk_param_s *pdata);
 int di_pq_mgr_dnr_param(struct di_dnr_param_s *pdata);
 int di_pq_mgr_dct_param(struct di_dct_param_s *pdata);
 int di_pq_mgr_xlr_param(struct di_xlr_param_s *pdata);
+#endif
+
 #endif	/*__DPSS_D_PQ_MGR_H__*/

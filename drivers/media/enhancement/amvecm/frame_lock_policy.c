@@ -796,7 +796,7 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 
 	if (aml_vrr_state() && vrr_enable_cnt < vrr_disable_cnt) {
 		ret = FRAMELOCK_VRRLOCK;
-#if defined(CONFIG_AMLOGIC_DPSS_PROCESS)
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 	} else if ((vf->vf_vrr_param.game_frc || get_dpss_game_frc_locked()) &&
 #else
 	} else if ((vf->vf_vrr_param.game_frc) &&
@@ -835,7 +835,7 @@ u16 frame_lock_check_lock_type(struct vpp_frame_par_s *cur_video_sts, struct vfr
 	frame_sts.vrr_frame_sts = ret;
 
 	if (frame_lock_debug & VRR_POLICY_DEBUG_FLAG) {
-#if defined(CONFIG_AMLOGIC_DPSS_PROCESS)
+#if defined(CONFIG_AMLOGIC_MEDIA_DPSS)
 		framelock_pr_info("check_type vrrst:%d g_frc:%d g_frc_l:%d qms:%d fr_adj:%d\n",
 			aml_vrr_state(), vf->vf_vrr_param.game_frc,
 			get_dpss_game_frc_locked(), vf->vf_vrr_param.qms_en,

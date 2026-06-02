@@ -146,7 +146,9 @@ void v4lvideo_dec_count_increase(void)
 	mutex_lock(&mutex_dec_count);
 	dec_count++;
 	if (dec_count > DI_NR_COUNT && !di_bypass_p) {
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		dim_polic_cfg(K_DIM_BYPASS_ALL_P, 1);
+#endif
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 		dpss_direct_mode_ctrl(1);
 #endif
@@ -166,7 +168,9 @@ void v4lvideo_dec_count_decrease(void)
 		pr_err("v4lvideo: dec count -1\n");
 	dec_count--;
 	if (dec_count <= DI_NR_COUNT && di_bypass_p) {
+#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		dim_polic_cfg(K_DIM_BYPASS_ALL_P, 0);
+#endif
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 		dpss_direct_mode_ctrl(0);
 #endif
@@ -362,7 +366,9 @@ static void vf_keep(struct v4lvideo_dev *dev,
 					"vf keep shold not here");
 			if (v4lvideo_file->vf_type & VIDTYPE_DI_PW) {
 				vf_p = v4lvideo_file->vf_p;
+			#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 				dim_post_keep_cmd_release2(vf_p);
+			#endif
 				total_release_count[inst_id]++;
 			}
 		}
@@ -524,7 +530,9 @@ static void vf_free(struct file_private_data *file_private_data)
 		vf_p = file_private_data->vf_ext_p;
 	} else if (flag & V4LVIDEO_FLAG_DI_V3) {
 		buf = (struct di_buffer *)file_private_data->private2;
+	#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		di_release_keep_buf(buf);
+	#endif
 		v4l_print(inst_id, PRINT_OTHER, "%s: release di v3 buf\n", __func__);
 		return;
 	}
@@ -532,7 +540,9 @@ static void vf_free(struct file_private_data *file_private_data)
 	if (vf->type & VIDTYPE_DI_PW) {
 		v4l_print(inst_id, PRINT_OTHER,
 			"free: frame_index=%d\n", vf_p->frame_index);
+	#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		dim_post_keep_cmd_release2(vf_p);
+	#endif
 		total_release_count[inst_id]++;
 		v4l_print(inst_id, PRINT_COUNT,
 			"di release1 get=%d, put=%d, release=%d\n",
@@ -567,7 +577,9 @@ static void vf_free_force(struct v4lvideo_file_s *v4lvideo_file)
 		vf_p = v4lvideo_file->vf_ext_p;
 
 	if (v4lvideo_file->vf_type & VIDTYPE_DI_PW) {
+	#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		dim_post_keep_cmd_release2(vf_p);
+	#endif
 		total_release_count[inst_id]++;
 		v4l_print(inst_id, PRINT_COUNT,
 			"di release2 get=%d, put=%d, release=%d\n",
@@ -1971,7 +1983,9 @@ static void v4lvideo_vf_put(struct v4lvideo_dev *dev, struct vframe_s *vf)
 		if (is_di_pw) {
 			v4l_print(dev->inst, PRINT_OTHER,
 				"put: release frame_index=%d\n", vf->frame_index);
+		#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 			dim_post_keep_cmd_release2(vf);
+		#endif
 			total_release_count[dev->inst]++;
 		}
 	} else {
@@ -2041,7 +2055,9 @@ static int vidioc_qbuf_1(struct file *file, void *priv, struct v4l2_buffer *p)
 			} else {
 				v4l_print(dev->inst, PRINT_ERROR, "%s: maybe in unreg\n", __func__);
 				if (v4lvideo_file->vf_type & VIDTYPE_DI_PW) {
+				#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 					dim_post_keep_cmd_release2(vf_p);
+				#endif
 					total_release_count[inst_id]++;
 					v4l_print(inst_id, PRINT_COUNT,
 						"qbuf: get=%d, put=%d, release=%d\n",

@@ -10616,7 +10616,9 @@ void rx_mute_vpp(u8 port_type)
 		rx_mute_vpp_s5(black_val);
 	} else {
 #ifdef ENABLE_DPSS_FRC
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		rx_game_frc_notify(); //game memc need
+#endif
 #endif
 		WRITE_VCBUS_REG(VPP_VD1_CLIP_MISC0, black_val);
 		WRITE_VCBUS_REG(VPP_VD1_CLIP_MISC1, black_val);

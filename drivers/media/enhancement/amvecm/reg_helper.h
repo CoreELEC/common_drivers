@@ -386,9 +386,11 @@ int VSYNC_WR_MPEG_REG_VPP_SEL(u32 adr, u32 val, int vpp_sel);
 #define DPSS_RMDA (0)
 
 #if DPSS_RMDA
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 int DPSS_B_WR_MPEG_REG(u32 adr, u32 val);
 int DPSS_B_WR_MPEG_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
 u32 DPSS_B_RD_MPEG_REG(u32 adr);
+#endif
 #endif
 
 /* table1:hdr; table2:sr dnlp lc;table3:other modules*/
@@ -754,7 +756,7 @@ static inline void VSYNC_WRITE_VPP_REG_VPP_SEL(u32 reg,
 		VSYNC_WR_MPEG_REG_VPP1(reg1, value);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		DPSS_B_WR_MPEG_REG(offset_addr(reg), value);
 #endif
 #endif
@@ -820,7 +822,7 @@ static inline u32 VSYNC_READ_VPP_REG_VPP_SEL(u32 reg, int vpp_sel)
 		ret = VSYNC_RD_MPEG_REG_VPP1(reg1);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		ret = DPSS_B_RD_MPEG_REG(offset_addr(reg));
 #endif
 #endif
@@ -860,7 +862,7 @@ static inline void VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(u32 reg,
 		VSYNC_WR_MPEG_REG_BITS_VPP1(reg1, value, start, len);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		DPSS_B_WR_MPEG_REG_BITS(offset_addr(reg), value, start, len);
 #endif
 #endif
@@ -894,7 +896,7 @@ static inline void VSYNC_WRITE_VPP_REG_EX_VPP_SEL(u32 reg,
 		VSYNC_WR_MPEG_REG_VPP1(reg, value);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		DPSS_B_WR_MPEG_REG(reg, value);
 #endif
 #endif
@@ -928,7 +930,7 @@ static inline u32 VSYNC_READ_VPP_REG_EX_VPP_SEL(u32 reg,
 		ret = VSYNC_RD_MPEG_REG_VPP1(reg);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		ret = DPSS_B_RD_MPEG_REG(reg);
 #endif
 #endif
@@ -966,7 +968,7 @@ static inline void VSYNC_WRITE_VPP_REG_BITS_EX_VPP_SEL(u32 reg,
 		VSYNC_WR_MPEG_REG_BITS_VPP1(reg, value, start, len);
 #if DPSS_RMDA
 	} else if (vpp_sel == 4) {
-#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
 		DPSS_B_WR_MPEG_REG_BITS(reg, value, start, len);
 #endif
 #endif

@@ -447,7 +447,9 @@ static int di_v4l_release(struct inode *inode, struct file *file)
 	di_uninit(dev);
 	di_buf_uninit(dev);
 	while (kfifo_get(&dev->di_output_di_q, &di_buf)) {
+	#ifdef CONFIG_AMLOGIC_MEDIA_DEINTERLACE
 		di_release_keep_buf(di_buf);
+	#endif
 		dev->fill_count++;
 	}
 	di_v4l_print(dev->index, PRINT_ERROR,
