@@ -584,7 +584,9 @@ int attach_aipq_hook_mod_info(int shared_fd,
 			aipq_print(PRINT_ERROR,
 				"%s: aipq get vinfo err.\n", __func__);
 		}
-		if (output_fps >= 24000 || (vinfo->width == 3840 && vinfo->height == 2160)) {
+		if (output_fps >= 24000 ||
+			(vinfo->width == 3840 && vinfo->height == 2160) ||
+			(vinfo->width == 1920 && vinfo->height == 1080)) {
 			aipq_info->need_do_aipq = 1;
 			enable_aipq = true;
 		} else {
