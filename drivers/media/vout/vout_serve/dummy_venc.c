@@ -49,6 +49,7 @@ enum dummy_venc_chip_e {
 	DUMMY_VENC_S1A, /* 5 */
 	DUMMY_VENC_TXHD2, /* 6 */
 	DUMMY_VENC_T6D, /* 7 */
+	DUMMY_VENC_A9, /* 8 */
 	DUMMY_VENC_MAX,
 };
 
@@ -1227,6 +1228,51 @@ static void dummy_encl_venc_set(struct dummy_venc_driver_s *venc_drv)
 		venc_drv->vdata->venc_sel(venc_drv, DUMMY_SEL_ENCL);
 }
 
+static void dummy_encl_clk_ctrl_a9(struct dummy_venc_driver_s *venc_drv, int flag)
+{
+	struct venc_config_s *vconf;
+
+	if (!venc_drv || !venc_drv->vdata)
+		return;
+	if (!venc_drv->vdata->vconf)
+		return;
+
+	vconf = venc_drv->vdata->vconf;
+
+	if (flag) {
+		/* a9 use venc0/venc1 */
+		/* clk source sel: fckl_div5 */
+		vout_clk_setb(vconf->vid2_clk_div_reg, 0xf, VCLK2_XD, 8);
+		usleep_range(5, 6);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 6, VCLK2_CLK_IN_SEL, 3);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 1, VCLK2_EN, 1);
+		usleep_range(5, 6);
+		vout_clk_setb(vconf->vid_clk_div_reg, 8, ENCP_CLK_SEL, 4);
+		vout_clk_setb(vconf->vid2_clk_div_reg, 1, VCLK2_XD_EN, 1);
+		usleep_range(5, 6);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 1, VCLK2_DIV1_EN, 1);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 1, VCLK2_SOFT_RST, 1);
+		usleep_range(10, 11);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 0, VCLK2_SOFT_RST, 1);
+		if (vconf->venc_index == 1) {
+			usleep_range(5, 6);
+			vout_clk_setb(vconf->vid2_clk_div_reg, 8, VCLK_TO_VENC1, 4);
+			usleep_range(5, 6);
+			vout_clk_setb(vconf->vid_clk_ctrl2_reg, 1, VENC1_GATE_VCLK, 1);
+		} else {
+			usleep_range(5, 6);
+			vout_clk_setb(vconf->vid2_clk_div_reg, 8, VCLK_TO_VENC0, 4);
+			usleep_range(5, 6);
+			vout_clk_setb(vconf->vid_clk_ctrl2_reg, 1, VENC0_GATE_VCLK, 1);
+		}
+	} else {
+		vout_clk_setb(vconf->vid_clk_ctrl2_reg, 0, VENC1_GATE_VCLK, 1);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 0, VCLK2_DIV1_EN, 1);
+		vout_clk_setb(vconf->vid2_clk_ctrl_reg, 0, VCLK2_EN, 1);
+		vout_clk_setb(vconf->vid2_clk_div_reg, 0, VCLK2_XD_EN, 1);
+	}
+}
+
 static void dummy_encl_clk_ctrl(struct dummy_venc_driver_s *venc_drv, int flag)
 {
 	struct venc_config_s *vconf;
@@ -1347,8 +1393,17 @@ static int dummy_encl_set_current_vmode(enum vmode_e mode, void *data)
 	if (venc_drv->vdata->encl_clk_gate_switch)
 		venc_drv->vdata->encl_clk_gate_switch(venc_drv, 1);
 
-	dummy_encl_clk_ctrl(venc_drv, 1);
-	dummy_encl_venc_set(venc_drv);
+	if (venc_drv->vdata->chip_type == DUMMY_VENC_A9) {
+		if (venc_drv->vdata->default_venc_index == 1) {
+			venc_drv->vdata->vconf->venc_index = 1;
+			venc_drv->vdata->vconf->venc_offset = 0x600;
+		}
+		dummy_encl_clk_ctrl_a9(venc_drv, 1);
+		dummy_encl_venc_set(venc_drv);
+	} else {
+		dummy_encl_clk_ctrl(venc_drv, 1);
+		dummy_encl_venc_set(venc_drv);
+	}
 
 	venc_drv->status = 1;
 	venc_drv->vout_valid = 1;
@@ -2015,6 +2070,18 @@ static struct venc_config_s dummy_venc_conf_t7_2 = {
 	.venc_offset = 0x800,
 };
 
+static struct venc_config_s dummy_venc_conf_a9 = {
+	/* ENC0/ENC1 */
+	.vid_clk_ctrl_reg = CLKCTRL_VID_CLK0_CTRL_A9,
+	.vid_clk_ctrl2_reg = CLKCTRL_VID_CLK0_CTRL2_A9,
+	.vid_clk_div_reg = CLKCTRL_VID_CLK0_DIV_A9,
+	.vid2_clk_ctrl_reg = CLKCTRL_VIID_CLK0_CTRL_A9,
+	.vid2_clk_div_reg = CLKCTRL_VIID_CLK0_DIV_A9,
+
+	.venc_index = 0,
+	.venc_offset = 0,
+};
+
 static struct venc_config_s dummy_venc_conf_t5w = {
 	.vid_clk_ctrl_reg = HHI_VID_CLK0_CTRL,
 	.vid_clk_ctrl2_reg = HHI_VID_CLK0_CTRL2,
@@ -2082,6 +2149,21 @@ static struct dummy_venc_data_s dummy_venc_match_data_t7 = {
 	.vconf = &dummy_venc_conf_t7_0,
 
 	.chip_type = DUMMY_VENC_T7,
+	.default_venc_index = 0,
+	.projection_valid = 1,
+
+	.clktree_probe = NULL,
+	.clktree_remove = NULL,
+	.encp_clk_gate_switch = NULL,
+	.enci_clk_gate_switch = NULL,
+	.encl_clk_gate_switch = NULL,
+	.venc_sel = dummy_venc_sel_t7,
+};
+
+static struct dummy_venc_data_s dummy_venc_match_data_a9 = {
+	.vconf = &dummy_venc_conf_a9,
+
+	.chip_type = DUMMY_VENC_A9,
 	.default_venc_index = 0,
 	.projection_valid = 1,
 
@@ -2206,6 +2288,10 @@ static const struct of_device_id dummy_venc_dt_match_table[] = {
 	{
 		.compatible = "amlogic, dummy_venc_t6w",
 		.data = &dummy_venc_match_data_t6d,
+	},
+	{
+		.compatible = "amlogic, dummy_venc_a9",
+		.data = &dummy_venc_match_data_a9,
 	},
 #endif
 	{}

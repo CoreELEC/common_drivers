@@ -291,6 +291,11 @@
 #define ENCT_GATE_VCLK           1
 #define ENCI_GATE_VCLK           0
 
+#define VCLK_TO_VENC0            12
+#define VCLK_TO_VENC1            8
+#define VENC0_GATE_VCLK          10
+#define VENC1_GATE_VCLK          11
+
 #define CLKCTRL_VID_CLK_CTRL                       0x0030
 #define CLKCTRL_VID_CLK_CTRL2                      0x0031
 #define CLKCTRL_VID_CLK_DIV                        0x0032
@@ -303,6 +308,12 @@
 #define CLKCTRL_VID_CLK0_DIV                       0x0032
 #define CLKCTRL_VIID_CLK0_DIV                      0x0033
 #define CLKCTRL_VIID_CLK0_CTRL                     0x0034
+#define CLKCTRL_VID_CLK0_CTRL_A9                   0x0130
+#define CLKCTRL_VID_CLK0_CTRL2_A9                  0x0131
+#define CLKCTRL_VID_CLK0_DIV_A9                    0x0132
+#define CLKCTRL_VIID_CLK0_DIV_A9                   0x0133
+#define CLKCTRL_VIID_CLK0_CTRL_A9                  0x0134
+
 /* ENC1 */
 #define CLKCTRL_VID_CLK1_CTRL                      0x0073
 #define CLKCTRL_VID_CLK1_CTRL2                     0x0074
