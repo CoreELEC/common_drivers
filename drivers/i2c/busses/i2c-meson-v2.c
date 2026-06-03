@@ -24,7 +24,7 @@
 
 // #define I2C_DEBUG
 // #define I2C_PXP
-// #define I2C_PM_RUNTIME
+#define I2C_PM_RUNTIME
 
 #define FUTURE_USE		0
 /* Meson I2C register map */
