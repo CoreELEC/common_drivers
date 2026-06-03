@@ -1594,6 +1594,7 @@ void enable_amdv_hw5(int enable)
 				}
 			}
 			video_effect_bypass(0);
+			amdv_disable_backlight();
 		}
 		set_vf_crc_valid(0);
 		set_vf_crc_valid_top1(0);
