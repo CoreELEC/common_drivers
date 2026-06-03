@@ -102,6 +102,9 @@ CONFIG_AMLOGIC_COMMON_CLK_T3X=y
 # amlogic-clk-soc-s7d.ko
 CONFIG_AMLOGIC_COMMON_CLK_S7D=y
 
+# amlogic-clk-soc-a9.ko
+CONFIG_AMLOGIC_COMMON_CLK_A9=y
+
 # amlogic-env.ko
 CONFIG_AMLOGIC_ENV_ENCRYPT=y
 

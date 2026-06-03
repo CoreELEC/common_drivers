@@ -577,7 +577,7 @@ ddk_module(
         "**/*.h",
     ]),
     conditional_srcs = {
-        "CONFIG_AMLOGIC_COMMON_CLK_S7D": {
+        "CONFIG_AMLOGIC_COMMON_CLK_A9": {
             True: [
                 "a9.c",
                 "a9-aoclk.c",
