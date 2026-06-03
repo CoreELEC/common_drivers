@@ -134,7 +134,13 @@ void vout_trim_string(char *str)
 		start++;
 	while (*end && (*end == ' '))
 		*end-- = '\0';
-	strcpy(str, start);
+
+	if (start != str) {
+		memmove(str, start, end - start + 1);
+		str[end - start + 1] = '\0';
+	} else {
+		*(end + 1) = '\0';
+	}
 }
 EXPORT_SYMBOL(vout_trim_string);
 

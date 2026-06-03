@@ -746,7 +746,7 @@ static long vout3_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static long vout3_compat_ioctl(struct file *file, unsigned int cmd,
 			       unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = vout3_ioctl(file, cmd, arg);

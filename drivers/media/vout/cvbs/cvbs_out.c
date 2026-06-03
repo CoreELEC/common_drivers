@@ -534,7 +534,7 @@ static long cvbs_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 static long cvbs_compat_ioctl(struct file *file, unsigned int cmd,
 			      unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = cvbs_ioctl(file, cmd, arg);
@@ -573,8 +573,7 @@ const struct vinfo_s *get_valid_vinfo(char  *mode)
 		}
 	}
 	if (vinfo) {
-		strncpy(vinfo->ext_name, mode,
-			(strlen(mode) < 32) ? strlen(mode) : 31);
+		strscpy(vinfo->ext_name, mode, sizeof(vinfo->ext_name));
 		cvbs_drv->vinfo = vinfo;
 	} else {
 		local_cvbs_mode = MODE_MAX;

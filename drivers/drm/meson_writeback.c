@@ -155,6 +155,7 @@ int meson_writeback_capture_picture(struct drm_framebuffer *fb, u32 port,
 	if (!meson_fb || !meson_fb->bufp[0])
 		return -EINVAL;
 
+	memset(&vdin_pram, 0, sizeof(vdin_pram));
 	vdin_pram.h_active = hdisplay;
 	vdin_pram.v_active = vdisplay;
 	vdin_pram.dest_h_active = fb->width;

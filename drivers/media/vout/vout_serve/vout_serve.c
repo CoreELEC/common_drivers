@@ -1014,7 +1014,7 @@ static long vout_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #ifdef CONFIG_COMPAT
 static long vout_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-	unsigned long ret;
+	long ret;
 
 	arg = (unsigned long)compat_ptr(arg);
 	ret = vout_ioctl(file, cmd, arg);

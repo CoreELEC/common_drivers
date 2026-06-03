@@ -82,7 +82,7 @@ static char *next_token_ex(char *separator, char *buf, unsigned int size,
 }
 
 /* check the colorattribute from uboot */
-static int get_hdmitx_color_attr(char *token, char *color_attr)
+static int get_hdmitx_color_attr(char *token, char *color_attr, size_t ca_size)
 {
 	char attr[16] = {0};
 	const char * const cs[] = {
@@ -113,7 +113,7 @@ static int get_hdmitx_color_attr(char *token, char *color_attr)
 			if (strlen(attr) >= sizeof(attr)) {
 				HDMITX_ERROR("get err attr: %zu-%s\n", strlen(attr), attr);
 			} else {
-				strncpy(color_attr, attr, strlen(attr));
+				strscpy(color_attr, attr, ca_size);
 				ret = 0;
 			}
 			break;
@@ -152,7 +152,8 @@ static int parse_hdmitx_boot_para(char *s)
 			}
 
 			if (tx_params.color_attr[0] == 0)
-				get_hdmitx_color_attr(token, tx_params.color_attr);
+				get_hdmitx_color_attr(token, tx_params.color_attr,
+						sizeof(tx_params.color_attr));
 
 			if ((token_len == 11 && strncmp(token, "scan_info:0", token_len) == 0))
 				tx_params.scan_info = HDMI_SCAN_MODE_NONE;
