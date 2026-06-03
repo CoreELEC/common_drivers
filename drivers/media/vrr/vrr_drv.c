@@ -706,6 +706,8 @@ static void vrr_trigger_sw_mode(struct aml_vrr_drv_s *vdrv)
 
 	if (vdrv->data->chip_type == VRR_CHIP_T6X)
 		vrr_reg_setb((VENC_VRR_CTRL_T6X + offset), 1, 31, 1);
+	else if (vdrv->data->chip_type == VRR_CHIP_T6W)
+		vrr_reg_setb((VENC_VRR_CTRL + offset), 1, 31, 1);
 
 	if (vrr_debug_print & VRR_DBG_PR_NORMAL)
 		VRRPR("[%d]: vrr trigger\n", vdrv->index);
@@ -852,7 +854,8 @@ int vrr_drv_func_en(struct aml_vrr_drv_s *vdrv, int flag)
 			vrr_hdmi_enable(vdrv, 0);
 			break;
 		case VRR_OUTPUT_ENCL:
-			if ((vdrv->state & VRR_STATE_EN) == 0)
+			if (((vdrv->state & VRR_STATE_EN) == 0) &&
+				vdrv->data->chip_type >= VRR_CHIP_T6W)
 				vrr_lcd_enable(vdrv, 1);
 			else
 				vrr_lcd_enable(vdrv, 0);
