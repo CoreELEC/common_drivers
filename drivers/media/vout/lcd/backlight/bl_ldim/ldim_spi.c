@@ -126,13 +126,10 @@ int ldim_spi_write_async(struct spi_device *spi, unsigned char *tbuf,
 	struct spi_private_data *priv;
 	int xlen, ret;
 
-	if (!dev_drv || !cdata || !cdata->dirspi_async)
+	if (!dev_drv || !cdata || !cdata->dirspi_async || !cdata->priv || !spi->controller)
 		return -EIO;
 
 	priv = cdata->priv;
-	if (!priv)
-		return -EIO;
-
 	xlen = tlen;
 	if (spi->controller->dma_alignment) {
 		spi->bits_per_word = 64;
@@ -226,19 +223,14 @@ int ldim_spi_dma_trig_start(struct spi_device *spi)
 	struct spi_private_data *priv;
 	int ret;
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv) {
 		LDIMPR("%s, dev_drv or cdata is null, spi=0x%p\n", __func__, spi);
 		return -EIO;
 	}
+	priv = cdata->priv;
 
 	if (!cdata->dirspi_dma_trig_start) {
 		LDIMPR("%s, cdata->dirspi_dma_trig_start is null, spi=0x%p\n", __func__, spi);
-		return -EIO;
-	}
-
-	priv = cdata->priv;
-	if (!priv) {
-		LDIMPR("%s, priv is null,spi=0x%p\n", __func__, spi);
 		return -EIO;
 	}
 
@@ -325,17 +317,12 @@ int ldim_spi_write_dma_trig(struct spi_device *spi, unsigned char *tbuf,
 	int line_total_cnt;
 
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv || !spi->controller) {
 		LDIMPR("%s, dev_drv or cdata is null, spi=0x%p\n", __func__, spi);
 		return -EIO;
 	}
 
 	priv = cdata->priv;
-	if (!priv) {
-		LDIMPR("%s, priv is null,spi=0x%p\n", __func__, spi);
-		return -EIO;
-	}
-
 	xlen = tlen;
 	if (spi->controller->dma_alignment) {
 		spi->bits_per_word = 64;
@@ -402,17 +389,12 @@ int ldim_spi_write_xfer(struct spi_device *spi, unsigned char *tbuf, int tlen)
 	struct spi_private_data *priv;
 	int ret;
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv) {
 		LDIMERR("---- %s: dev_drv or cdata is null\n", __func__);
 		return -EIO;
 	}
 
 	priv = cdata->priv;
-	if (!priv) {
-		LDIMERR("---- %s: priv is null\n", __func__);
-		return -EIO;
-	}
-
 	if (priv->async_busy) {
 		if (ldim_debug_print & LDIM_DBG_PR_SPI)
 			LDIMERR("%s: async_busy=%d\n", __func__, priv->async_busy);
@@ -444,17 +426,12 @@ int ldim_spi_write(struct spi_device *spi, unsigned char *tbuf, int tlen)
 	struct spi_message msg;
 	int ret;
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv) {
 		LDIMERR("---- %s: dev_drv or cdata is null\n", __func__);
 		return -EIO;
 	}
 
 	priv = cdata->priv;
-	if (!priv) {
-		LDIMERR("---- %s: priv is null\n", __func__);
-		return -EIO;
-	}
-
 	if (priv->async_busy) {
 		if (ldim_debug_print & LDIM_DBG_PR_SPI)
 			LDIMERR("%s: spi(0x%p) async_busy=%d\n", __func__, spi, priv->async_busy);
@@ -490,17 +467,12 @@ int ldim_spi_read(struct spi_device *spi, unsigned char *tbuf, int tlen,
 	struct spi_message msg;
 	int ret;
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv) {
 		LDIMERR("---- %s: dev_drv or cdata is null\n", __func__);
 		return -EIO;
 	}
 
 	priv = cdata->priv;
-	if (!priv) {
-		LDIMERR("---- %s: priv is null\n", __func__);
-		return -EIO;
-	}
-
 	if (priv->async_busy) {
 		if (ldim_debug_print & LDIM_DBG_PR_SPI)
 			LDIMERR("%s: spi(0x%p) async_busy=%d\n", __func__, spi, priv->async_busy);
@@ -541,17 +513,12 @@ int ldim_spi_read_sync(struct spi_device *spi, unsigned char *tbuf,
 	struct spi_message msg;
 	int ret;
 
-	if (!dev_drv || !cdata) {
+	if (!dev_drv || !cdata || !cdata->priv) {
 		LDIMERR("---- %s: dev_drv or cdata is null\n", __func__);
 		return -EIO;
 	}
 
 	priv = cdata->priv;
-	if (!priv) {
-		LDIMERR("---- %s: priv is null\n", __func__);
-		return -EIO;
-	}
-
 	if (priv->async_busy) {
 		if (ldim_debug_print & LDIM_DBG_PR_SPI)
 			LDIMERR("%s: spi(0x%p) async_busy=%d\n", __func__, spi, priv->async_busy);
@@ -587,36 +554,25 @@ void ldim_spi_async_busy_clear(void)
 	struct spi_private_data *priv;
 	int i;
 
-	if (!ldim_drv) {
+	if (!ldim_drv || !ldim_drv->dev_drv) {
 		LDIMPR("%s: ldim_drv is null,return!\n", __func__);
 		return;
 	}
 
 	dev_drv = ldim_drv->dev_drv;
-	if (!dev_drv) {
-		LDIMPR("%s: dev_drv is null,return!\n", __func__);
-		return;
-	}
-
 	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++) {
 		spi = dev_drv->spi_conf.spi_dev[i];
-		if (!spi) {
+		if (!spi || !spi->controller_data) {
 			LDIMPR("%s: spi(0x%p) is null,return!\n", __func__, spi);
 			return;
 		}
 
-		cdata = spi->controller_data;
-		if (!cdata) {
-			LDIMPR("%s: cdata is null,return!\n", __func__);
-			return;
-		}
-
-		priv = cdata->priv;
-		if (!priv) {
+		cdata = (struct spicc_controller_data *)spi->controller_data;
+		if (!cdata->priv) {
 			LDIMPR("%s: spi_priv is null,return!\n", __func__);
 			return;
 		}
-
+		priv = (struct spi_private_data *)cdata->priv;
 		priv->async_busy = 0;
 		priv->async_busy_cnt = 0;
 	}
@@ -631,36 +587,25 @@ void ldim_spi_async_busy_proc(void)
 	struct spi_private_data *priv;
 	int i;
 
-	if (!ldim_drv) {
-		LDIMPR("%s: ldim_drv is null,return!\n", __func__);
+	if (!ldim_drv || !ldim_drv->dev_drv) {
+		LDIMPR("%s: ldim_drv or dev_drv is null,return!\n", __func__);
 		return;
 	}
 
 	dev_drv = ldim_drv->dev_drv;
-	if (!dev_drv) {
-		LDIMPR("%s: dev_drv is null,return!\n", __func__);
-		return;
-	}
-
 	for (i = 0; i < dev_drv->spi_conf.spi_dev_num; i++) {
 		spi = dev_drv->spi_conf.spi_dev[i];
-		if (!spi) {
+		if (!spi || !spi->controller_data) {
 			LDIMPR("%s: spi(0x%p) is null,return!\n", __func__, spi);
 			return;
 		}
 
-		cdata = spi->controller_data;
-		if (!cdata) {
-			LDIMPR("%s: cdata is null,return!\n", __func__);
-			return;
-		}
-
-		priv = cdata->priv;
-		if (!priv) {
+		cdata = (struct spicc_controller_data *)spi->controller_data;
+		if (!cdata->priv) {
 			LDIMPR("%s: priv is null,return!\n", __func__);
 			return;
 		}
-
+		priv = (struct spi_private_data *)cdata->priv;
 		if (priv->async_busy) {
 			if (cdata->dirspi_busy_proc)
 				cdata->dirspi_busy_proc(spi);
@@ -676,13 +621,10 @@ static int ldim_spi_dev_probe(struct spi_device *spi)
 	struct spi_private_data *priv;
 	int ret = 0;
 
-	if (!dev_drv || !cdata)
+	if (!dev_drv || !cdata || !cdata->priv || !spi->controller)
 		return 0;
 
 	priv = cdata->priv;
-	if (!priv)
-		return 0;
-
 	dev_set_drvdata(&spi->dev, dev_drv);
 	if (spi->controller->dma_alignment)
 		spi->bits_per_word = 64;
@@ -708,17 +650,15 @@ static int ldim_spi_dev_probe(struct spi_device *spi)
 static void ldim_spi_dev_remove(struct spi_device *spi)
 {
 	struct ldim_dev_driver_s *dev_drv = dev_get_drvdata(&spi->dev);
-	struct device *dev = spi->controller->dev.parent;
+	struct device *dev;
 	struct spicc_controller_data *cdata = spi->controller_data;
 	struct spi_private_data *priv;
 
-	if (!dev_drv || !cdata)
+	if (!dev_drv || !cdata || !cdata->priv || !spi->controller)
 		return;
 
 	priv = cdata->priv;
-	if (!priv)
-		return;
-
+	dev = spi->controller->dev.parent;
 	if (dev_drv->spi_conf.trig_mode != SPI_ASYNC)  {
 		dma_free_coherent(dev, priv->xlen, priv->tx_buf, priv->tx_dma);
 		dma_free_coherent(dev, priv->xlen, priv->rx_buf, priv->rx_dma);
@@ -773,13 +713,17 @@ struct spi_controller *spi_aliases_to_ctlr(const char *spi_aliases, int spicc_ve
 
 			pdev = of_find_device_by_node(target_node);
 			if (!pdev)
-				return NULL;
+				goto spi_aliases_to_ctlr_end;
 
 			if (spicc_version == SPICC_V1) {
 				spicc_v1_device_ = platform_get_drvdata(pdev);
+				if (!spicc_v1_device_)
+					goto spi_aliases_to_ctlr_end;
 				ctlr = spicc_v1_device_->controller;
 			} else if (spicc_version == SPICC_V2) {
 				spicc_v2_device_ = platform_get_drvdata(pdev);
+				if (!spicc_v2_device_)
+					goto spi_aliases_to_ctlr_end;
 				ctlr = spicc_v2_device_->controller;
 			}
 
@@ -787,6 +731,7 @@ struct spi_controller *spi_aliases_to_ctlr(const char *spi_aliases, int spicc_ve
 		}
 	}
 
+spi_aliases_to_ctlr_end:
 	of_node_put(of_aliases);
 
 	return ctlr;
