@@ -1532,7 +1532,7 @@
 	phy-mii-clk-sel = <0x3>;
 	amlogic,tx-delay-ns = <2>;
 	cali_val = <0x290000>;
-	// wol = <1>;
+	wol = <1>;
 	// mdns_wkup = <1>;
 };
 
