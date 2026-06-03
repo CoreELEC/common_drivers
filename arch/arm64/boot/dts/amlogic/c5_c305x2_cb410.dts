@@ -220,8 +220,8 @@
 		clocks = <&clkc CLKID_MCLK_0>, <&clkc CLKID_MCLK_1>;
 		clock-names = "mclk", "mclk1";
 		devices-type = <1>;
-		reset-gpios = <&gpio_ao GPIOAO_18 GPIO_ACTIVE_HIGH>;
-		pwdn-gpios = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpio_ao GPIOAO_18 GPIO_ACTIVE_HIGH>;
 		reset-1-gpios = <&gpio GPIOP_3 GPIO_ACTIVE_HIGH>;
 		pwdn-1-gpios = <&gpio GPIOP_2 GPIO_ACTIVE_HIGH>;
 	};
