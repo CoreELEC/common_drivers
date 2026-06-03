@@ -296,6 +296,7 @@ static struct clk_regmap mclk_pll = {
 			.fw_name = "xtal",
 		},
 		.num_parents = 1,
+		.flags = CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -641,7 +642,8 @@ static struct clk_regmap mclk_0 = {
 			&mclk_0_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -2931,7 +2933,8 @@ static struct clk_regmap vge = {
 			&vge_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -3036,7 +3039,8 @@ static struct clk_regmap dewarpa = {
 			&dewarpa_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -3200,7 +3204,8 @@ static struct clk_regmap vapb_0 = {
 			&vapb_0_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE,
+		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -3248,7 +3253,8 @@ static struct clk_regmap vapb_1 = {
 			&vapb_1_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE,
+		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -3268,7 +3274,14 @@ static struct clk_regmap vapb = {
 		.ops = &clk_regmap_mux_ops,
 		.parent_data = vapb_parent_data,
 		.num_parents = ARRAY_SIZE(vapb_parent_data),
-		.flags = CLK_SET_RATE_PARENT | CLK_OPS_PARENT_ENABLE,
+		/**
+		 * no glitch clk buildin loading, clk_disable_unused
+		 * will check CLK_OPS_PARENT_ENABLE, and then turn off
+		 * its parent clk. The CLK_IGNORE_UNUSED flag is
+		 * ineffective; need to remove CLK_OPS_PARENT_ENABLE for
+		 * it to work.
+		 */
+		.flags = CLK_SET_RATE_PARENT,
 	},
 };
 
@@ -3341,7 +3354,8 @@ static struct clk_regmap isp0 = {
 			&isp0_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -3494,7 +3508,8 @@ static struct clk_regmap csiphy0 = {
 			&csiphy0_div.hw,
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT |
+			 CLK_IGNORE_UNUSED,
 	},
 };
 
