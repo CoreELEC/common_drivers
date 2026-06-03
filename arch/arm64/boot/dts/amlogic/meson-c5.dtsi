@@ -35,7 +35,7 @@
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			dynamic-power-coefficient = <230>;
+			dynamic-power-coefficient = <81>;
 			#cooling-cells = <2>;
 		};
 
@@ -45,7 +45,7 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			dynamic-power-coefficient = <230>;
+			dynamic-power-coefficient = <81>;
 			#cooling-cells = <2>;
 		};
 
@@ -55,7 +55,7 @@
 			reg = <0x0 0x200>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			dynamic-power-coefficient = <230>;
+			dynamic-power-coefficient = <81>;
 			#cooling-cells = <2>;
 		};
 
@@ -65,7 +65,7 @@
 			reg = <0x0 0x300>;
 			enable-method = "psci";
 			cpu-idle-states = <&CPU_SLEEP_0 &SYSTEM_SLEEP_0>;
-			dynamic-power-coefficient = <230>;
+			dynamic-power-coefficient = <81>;
 			#cooling-cells = <2>;
 		};
 		idle-states {
@@ -2549,7 +2549,7 @@
 		nna_thermal: nna_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1160>;
+			sustainable-power = <584>;
 			thermal-sensors = <&nna_tsensor 0>;
 			trips {
 				nna_switch_on: trip-point@0 {
@@ -2573,7 +2573,7 @@
 		isp_thermal: isp_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1160>;
+			sustainable-power = <584>;
 			thermal-sensors = <&isp_tsensor 1>;
 			trips {
 				isp_switch_on: trip-point@0 {
@@ -2597,7 +2597,7 @@
 		soc_thermal: soc_thermal {
 			polling-delay = <1000>;
 			polling-delay-passive = <100>;
-			sustainable-power = <1160>;
+			sustainable-power = <584>;
 			thermal-sensors = <&pll_tsensor 2>;
 			trips {
 				pll_switch_on: trip-point@0 {
