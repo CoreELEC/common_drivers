@@ -1143,7 +1143,7 @@ static bool set_gamemode_dw_policy(struct video_layer_s *layer,
 		u32 src_width = 0;
 		u32 src_height = 0;
 		u32 sync_duration_num = 60;
-		#define SMALL_WINDOW_HEITHT  890
+		#define SMALL_WINDOW_HEITHT  892
 
 		if (vf->type & VIDTYPE_COMPRESS) {
 			src_width = vf->compWidth;
@@ -1176,6 +1176,7 @@ static bool set_gamemode_dw_policy(struct video_layer_s *layer,
 				height_out_max = SMALL_WINDOW_HEITHT >> 1;
 			height_out = cur_frame_par->VPP_vsc_endp -
 				cur_frame_par->VPP_vsc_startp + 1;
+
 			if (height_out <= height_out_max) {
 				ret = true;
 				if (super_debug)
