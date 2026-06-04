@@ -5434,7 +5434,16 @@ static void config_hdmi21_tx(struct hdmitx21_dev *hdev)
 	hdmitx21_wr_reg(TEST_TXCTRL_IVCTX, 0x02);
 	hdmitx21_wr_reg(CLKRATIO_IVCTX, 0x8a);
 
-	hdmitx_enable_null_pkt(hdev);
+	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_A9) {
+		/* reg_null_pkt_en,Null packet Enable. */
+		hdmitx21_set_reg_bits(P2T_CTRL_IVCTX, 1, 6, 1);
+		/* send packet as fixed slot */
+		hdmitx21_set_reg_bits(TMDS_CTRL4_IVCTX, 1, 1, 1);
+		HDMITX_INFO("send packet as fixed slot\n");
+	} else {
+		hdmitx_enable_null_pkt(hdev);
+	}
+
 	//---------------
 	//config vp core
 	// For S1A and later chips, delete the vp core hardware and move the yuv to rgb
