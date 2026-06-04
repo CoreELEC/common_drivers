@@ -1,0 +1,29 @@
+#include "s7_s905y5_2g.dts"
+
+/{
+	model = "HD+ IP TV-Stick";
+	coreelec-dt-id = "s7_s905y5_sei_900_hdplus";
+
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		sys_led {
+			label = "sys_led";
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "default-on";
+		};
+	};
+
+	shmem {
+		reg = <0x0 0x50f7e00 0x0 0x100>;
+		ranges = <0 0x0 0x50f7e00 0x100>;
+	};
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "HD+";
+		product_desc = "IP TV-Stick";
+	};
+};
