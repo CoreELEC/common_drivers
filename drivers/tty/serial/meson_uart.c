@@ -773,6 +773,8 @@ static int meson_uart_freeze(struct device *dev)
 	pdev = to_platform_device(dev);
 	port = platform_get_drvdata(pdev);
 
+	pinctrl_pm_select_sleep_state(dev);
+
 	reg_ctrl[port->line] = readl_relaxed(port->membase + AML_UART_CONTROL);
 	reg_misc[port->line] = readl_relaxed(port->membase + AML_UART_MISC);
 	reg_reg5[port->line] = readl_relaxed(port->membase + AML_UART_REG5);
@@ -796,6 +798,13 @@ static int meson_uart_restore(struct device *dev)
 
 	pdev = to_platform_device(dev);
 	port = platform_get_drvdata(pdev);
+
+	pinctrl_pm_select_default_state(dev);
+
+	if (port->line == 0) {
+		if (!(reg_ctrl[port->line] & (AML_UART_RX_INT_EN | AML_UART_TX_INT_EN)))
+			reg_ctrl[port->line] |= (AML_UART_RX_INT_EN | AML_UART_TX_INT_EN);
+	}
 
 	writel_relaxed(reg_ctrl[port->line], port->membase + AML_UART_CONTROL);
 	writel_relaxed(reg_misc[port->line], port->membase + AML_UART_MISC);

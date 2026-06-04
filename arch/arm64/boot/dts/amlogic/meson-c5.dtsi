@@ -1423,8 +1423,9 @@
 					&clkc CLKID_AO_SYS_UART_A>;
 				clock-names = "clk_uart", "clk_gate";
 				fifosize = < 64 >;
-				pinctrl-names = "default";
+				pinctrl-names = "default", "sleep";
 				pinctrl-0 = <&ao_a_uart_pins>;
+				pinctrl-1 = <&ao_a_uart_sleep_pins>;
 			};
 
 			ao_pinctrl: ao_pinctrl@4000 {
@@ -1919,9 +1920,10 @@
 			clock-names = "clk_uart", "clk_gate";
 			xtal_tick_en = <2>;
 			fifosize = < 64 >;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			/* can't use ao_b pinmux */
 			pinctrl-0 = <&b_uart_pins>;
+			pinctrl-1 = <&b_uart_sleep_pins>;
 		};
 
 		uart_C: serial@fe07c000 {
@@ -1933,8 +1935,9 @@
 				&clkc CLKID_SYS_UART_C>;
 			clock-names = "clk_uart", "clk_gate";
 			fifosize = < 64 >;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&c_uart_pins>;
+			pinctrl-1 = <&c_uart_sleep_pins>;
 		};
 
 		uart_D: serial@fe07e000 {
@@ -1946,8 +1949,9 @@
 				&clkc CLKID_SYS_UART_D>;
 			clock-names = "clk_uart", "clk_gate";
 			fifosize = < 64 >;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&d_uart_pins>;
+			pinctrl-1 = <&d_uart_sleep_pins>;
 		};
 
 		uart_E: serial@fe080000 {
@@ -1959,8 +1963,9 @@
 				&clkc CLKID_SYS_UART_E>;
 			clock-names = "clk_uart", "clk_gate";
 			fifosize = < 64 >;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&e_uart_pins1>;
+			pinctrl-1 = <&e_uart_sleep_pins1>;
 		};
 
 		uart_F: serial@fe082000 {
@@ -1972,8 +1977,9 @@
 				&clkc CLKID_SYS_UART_F>;
 			clock-names = "clk_uart", "clk_gate";
 			fifosize = < 64 >;
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&f_uart_pins>;
+			pinctrl-1 = <&f_uart_sleep_pins>;
 		};
 	};
 
@@ -4020,6 +4026,14 @@
 		};
 	};
 
+	ao_a_uart_sleep_pins:ao_a_sleep_uart {
+		mux {
+			groups = "GPIOF_2",
+				"GPIOF_3";
+			function = "gpio_periphs";
+		};
+	};
+
 	ao_a_uart_pins1:ao_a_uart1 {
 		mux {
 			groups = "uart_ao_a_tx_p",
@@ -4029,6 +4043,16 @@
 			function = "uart_ao_a";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	ao_a_uart_sleep_pins1:ao_a_sleep_uart1 {
+		mux {
+			groups = "GPIOP_0",
+				"GPIOP_1",
+				"GPIOP_2",
+				"GPIOP_3";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4044,6 +4068,16 @@
 		};
 	};
 
+	ao_a_uart_sleep_pins2:ao_a_sleep_uart2 {
+		mux {
+			groups = "GPIOAO_6",
+				"GPIOAO_7",
+				"GPIOAO_8",
+				"GPIOAO_9";
+			function = "gpio_periphs";
+		};
+	};
+
 	ao_b_uart_pins:ao_b_uart {
 		mux {
 			groups = "uart_ao_b_tx_f",
@@ -4051,6 +4085,14 @@
 			function = "uart_ao_b";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	ao_b_uart_sleep_pins:ao_b_sleep_uart {
+		mux {
+			groups = "GPIOF_0",
+				"GPIOF_1";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4064,6 +4106,14 @@
 		};
 	};
 
+	ao_f_uart_sleep_pins:ao_f_sleep_uart {
+		mux {
+			groups = "GPIOP_8",
+				"GPIOP_9";
+			function = "gpio_periphs";
+		};
+	};
+
 	ao_e_uart_pins:ao_e_uart {
 		mux {
 			groups = "uart_e_tx_p",
@@ -4071,6 +4121,14 @@
 			function = "uart_ao_e";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	ao_e_uart_sleep_pins:ao_e_sleep_uart {
+		mux {
+			groups = "GPIOP_10",
+				"GPIOP_11";
+			function = "gpio_periphs";
 		};
 	};
 };
@@ -4383,6 +4441,14 @@
 		};
 	};
 
+	b_uart_sleep_pins:b_sleep_uart {
+		mux {
+			groups = "GPIOC_2",
+				"GPIOC_3";
+			function = "gpio_periphs";
+		};
+	};
+
 	c_uart_pins:c_uart {
 		mux {
 			groups = "uart_c_cts_b",
@@ -4392,6 +4458,16 @@
 			function = "uart_c";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	c_uart_sleep_pins:c_sleep_uart {
+		mux {
+			groups = "GPIOB_4",
+				"GPIOB_5",
+				"GPIOB_6",
+				"GPIOB_7";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4405,6 +4481,14 @@
 		};
 	};
 
+	c_uart_sleep_pins1:c_sleep_uart1 {
+		mux {
+			groups = "GPIOC_0",
+				"GPIOC_1";
+			function = "gpio_periphs";
+		};
+	};
+
 	c_uart_pins2:c_uart2 {
 		mux {
 			groups = "uart_c_tx_d",
@@ -4415,6 +4499,14 @@
 		};
 	};
 
+	c_uart_sleep_pins2:c_sleep_uart2 {
+		mux {
+			groups = "GPIOD_0",
+				"GPIOD_1";
+			function = "gpio_periphs";
+		};
+	};
+
 	d_uart_pins:d_uart {
 		mux {
 			groups = "uart_d_tx_d",
@@ -4422,6 +4514,14 @@
 			function = "uart_d";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	d_uart_sleep_pins:d_sleep_uart {
+		mux {
+			groups = "GPIOD_2",
+				"GPIOD_3";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4437,6 +4537,16 @@
 		};
 	};
 
+	d_uart_sleep_pins1:d_sleep_uart1 {
+		mux {
+			groups = "GPIOX_0",
+				"GPIOX_1",
+				"GPIOX_2",
+				"GPIOX_3";
+			function = "gpio_periphs";
+		};
+	};
+
 	d_uart_pins2:d_uart2 {
 		mux {
 			groups = "uart_d_tx_c",
@@ -4447,6 +4557,14 @@
 		};
 	};
 
+	d_uart_sleep_pins2:d_sleep_uart2 {
+		mux {
+			groups = "GPIOC_2",
+				"GPIOC_3";
+			function = "gpio_periphs";
+		};
+	};
+
 	e_uart_pins:e_uart {
 		mux {
 			groups = "uart_e_rx_d",
@@ -4454,6 +4572,14 @@
 			function = "uart_e";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	e_uart_sleep_pins:e_sleep_uart {
+		mux {
+			groups = "GPIOD_5",
+				"GPIOD_4";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4469,6 +4595,16 @@
 		};
 	};
 
+	e_uart_sleep_pins1:e_sleep_uart1 {
+		mux {
+			groups = "GPIOX_6",
+				"GPIOX_7",
+				"GPIOX_8",
+				"GPIOX_9";
+			function = "gpio_periphs";
+		};
+	};
+
 	f_uart_pins:f_uart {
 		mux {
 			groups = "uart_f_rx_d",
@@ -4476,6 +4612,14 @@
 			function = "uart_f";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	f_uart_sleep_pins:f_sleep_uart {
+		mux {
+			groups = "GPIOD_6",
+				"GPIOD_7";
+			function = "gpio_periphs";
 		};
 	};
 
@@ -4488,6 +4632,16 @@
 			function = "uart_f";
 			drive-strength = <3>;
 			bias-pull-up;
+		};
+	};
+
+	f_uart_sleep_pins1:f_sleep_uart1 {
+		mux {
+			groups = "GPIOX_10",
+				"GPIOX_11",
+				"GPIOX_12",
+				"GPIOX_13";
+			function = "gpio_periphs";
 		};
 	};
 
