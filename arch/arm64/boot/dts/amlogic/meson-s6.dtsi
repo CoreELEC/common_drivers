@@ -2039,9 +2039,9 @@
 		compatible = "amlogic, vicp-s6";
 		dev_name = "vicp";
 		status = "okay";
-		interrupts = <GIC_SPI 263 IRQ_TYPE_EDGE_RISING>,
-			<GIC_SPI 262 IRQ_TYPE_EDGE_RISING>,
-			<GIC_SPI 261 IRQ_TYPE_EDGE_RISING>;
+		interrupts = <GIC_SPI 263 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 262 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 261 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "vicp_err", "vicp_rdma", "vicp_proc";
 		clocks = <&clkc CLKID_VAPB_0>,
 			<&clkc CLKID_CMPR>;
