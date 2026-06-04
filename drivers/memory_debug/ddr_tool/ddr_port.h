@@ -62,6 +62,14 @@
 #define DMC_READ			0
 #define DMC_WRITE			1
 
+/* Level 2 */
+#define SUB_ID_MATCH_ALL	(-2)	/* match both read and write */
+#define SUB_ID_MATCH_R		(-3)	/* match read only */
+#define SUB_ID_MATCH_W		(-4)	/* match write only */
+
+/* Level 3 */
+#define MODULE_ID_MATCH_ALL	(-2)	/* match all module_id in group */
+
 /* port defaults sub_id is -1, override with .sub_id = n if needed */
 #define PORT_DESC(...)	((struct ddr_port_desc){ .sub_id = -1, .bus = -1, __VA_ARGS__ })
 
@@ -87,14 +95,92 @@ struct ddr_port_desc {
 	char port_name[MAX_NAME];
 };
 
+enum prio_prop_mode {
+	PRIO_PROP_FULL = 0,	/* prio all from child */
+	PRIO_PROP_PARTIAL,	/* prio part form child */
+	PRIO_PROP_FIXED,	/* only show val */
+	PRIO_PROP_NONE,		/* final node */
+};
+
+enum ddr_priority_ctrl {
+	PRIO_CTRL_NOT_SUPPORT = 0,	/* show - */
+	PRIO_CTRL_REG_RW,		/* show reg val */
+	PRIO_CTRL_REG_WO,		/* show wo */
+	PRIO_CTRL_FIXED,		/* show val */
+	PRIO_CTRL_HW_AUTO,		/* show h */
+	PRIO_CTRL_SW_AUTO,		/* show s */
+	PRIO_CTRL_POWER,		/* show p */
+	PRIO_CTRL_HANDLER,		/* handler by func */
+};
+
+struct prio_disp_cfg {
+	bool has_nic;
+	bool has_dev;
+	bool force_only;
+};
+
+struct ddr_priority_ops {
+	int (*set_vpu_super_priority)(unsigned char axi, char rw, unsigned char priority);
+	int (*set_vpu_top_priority)(unsigned char axi, char rw,
+					unsigned char top_i, unsigned char priority);
+	int (*set_vpu_sub_dev_priority)(unsigned char axi, char rw,
+						unsigned int id, unsigned char priority);
+	int (*set_demod_priority)(unsigned char priority);
+	int (*set_demux_priority)(unsigned char priority, char rw);
+	int (*set_audio_x_select_priority)(char x, unsigned char ugt);
+	int (*set_audio_priority)(unsigned char idx, unsigned char priority, char rw);
+	int (*show_audio_priority_setting)(void);
+	int (*set_bcon_hw_urgent)(unsigned char low, unsigned char high);
+	int (*set_bcon_sw_urgent)(unsigned char ugt);
+	int (*show_bcon_priority_setting)(void);
+	int (*set_hevc_level_id)(char rw, unsigned char level, unsigned char i, unsigned char id);
+	int (*set_hcodec_level_id)(char rw, unsigned char level,
+					unsigned char i, unsigned char id);
+	int (*set_hevc_low_priority)(char rw, unsigned char priority);
+	int (*set_hcodec_low_priority)(char rw, unsigned char priority);
+	int (*show_hevc_priority_setting)(void);
+	int (*show_hcodec_priority_setting)(void);
+	int (*set_device_accessible)(char *dev, unsigned char access);
+};
+
+struct ddr_priority_reg {
+	enum ddr_priority_ctrl ctrl_type;
+	unsigned long reg_base;
+	unsigned char reg_mode;
+	unsigned long w_offset;
+	unsigned long r_offset;
+	unsigned char w_lsb;
+	unsigned char r_lsb;
+	unsigned char w_nbits;
+	unsigned char r_nbits;
+	long r_force_mask;
+	long w_force_mask;
+	union {
+		struct {
+			unsigned char fixed_w, fixed_r;
+			unsigned char fixed_lsb_r, fixed_lsb_w;
+			unsigned char fixed_nbits_r, fixed_nbits_w;
+		};
+		struct {
+			unsigned char cur_lsb_r, cur_lsb_w;
+			unsigned char cur_nbits_r, cur_nbits_w;
+			unsigned char child_lsb_r, child_lsb_w;
+			unsigned char child_nbits_r, child_nbits_w;
+		};
+	};
+};
+
 struct sub_port_list {
 	unsigned char id;
 	char *name;
+	struct sub_port_list *children;
+	unsigned char nr_children;
 };
 
 struct sub_dev_port {
 	int num;
 	char port_id; /* save master port id */
+	signed char parent_sub_id;
 	struct sub_port_list *list;
 };
 
@@ -108,112 +194,36 @@ struct sub_dev_desc {
 	struct sub_dev *subs[];
 };
 
-enum ddr_priority_type {
-	/* entry set */
-	PRIO_NOT_SUPPORT = BIT(0),
-	PRIO_AUTO =        BIT(1),
-	PRIO_FROM_MDC =    BIT(2),
-	PRIO_FROM_NIC =    BIT(3),
-	PRIO_FROM_DEV =    BIT(4),
-	/* fix only entry can mix set */
-	PRIO_FIXED =       BIT(5),
-	/* mdc nic dev type set */
-	PRIO_REG_RW =      BIT(6),
-	PRIO_REG_WO =      BIT(7),
-	PRIO_REG_POWER =   BIT(8),
-	PRIO_HANDLER =     BIT(9),
-};
-
 struct ddr_priority_dev {
 	unsigned char port_id;
 	signed char sub_id;
-	unsigned int type;
-	union {
-		struct {
-			unsigned char fixed_w;
-			unsigned char fixed_r;
-			unsigned char fixed_nbits;
-		};
-		struct {
-			unsigned long reg_base;
-			unsigned char reg_mode;
-			long force_mask;
-			unsigned long w_offset;
-			unsigned long r_offset;
-			unsigned char w_lsb;
-			unsigned char r_lsb;
-			unsigned char w_nbits;
-			unsigned char r_nbits;
-		};
-	};
+	unsigned int group_id;
+	signed short module_id;
+	enum prio_prop_mode prop_mode;
+	struct ddr_priority_reg reg;
 	/* function pointer to specify handle priority */
-	int (*handle_get)(const struct ddr_priority_dev *dev, unsigned int value, int is_w);
-	int (*handle_set)(const struct ddr_priority_dev *dev, unsigned int value, int is_w);
+	int (*handle_get)(void *node, int is_w);
+	int (*handle_set)(void *node, unsigned int value, int is_w, void *data);
 };
 
 struct ddr_priority_nic {
 	unsigned char port_id;
 	signed char sub_id;
-	unsigned int type;
-	union {
-		struct {
-			unsigned char fixed_w;
-			unsigned char fixed_r;
-			unsigned char fixed_nbits;
-		};
-		struct {
-			unsigned long reg_base;
-			unsigned char reg_mode;
-			unsigned long w_offset;
-			unsigned long r_offset;
-			unsigned char w_lsb;
-			unsigned char r_lsb;
-			unsigned char w_nbits;
-			unsigned char r_nbits;
-			unsigned int r_mask;
-			unsigned int w_mask;
-		};
-	};
+	unsigned int group_id;
+	unsigned char module_id;
+	enum prio_prop_mode prop_mode;
+	struct ddr_priority_reg reg;
+	unsigned int r_mask;
+	unsigned int w_mask;
 };
 
 struct ddr_priority_mdc {
 	unsigned char port_id;
 	signed char sub_id;
-	unsigned int type;
-	union {
-		struct {
-			unsigned char fixed_w;
-			unsigned char fixed_r;
-			unsigned char fixed_nbits;
-		};
-		struct {
-			unsigned long reg_base;
-			unsigned char reg_mode;
-			long force_mask;
-			unsigned long w_offset;
-			unsigned long r_offset;
-			unsigned char w_lsb;
-			unsigned char r_lsb;
-			unsigned char w_nbits;
-			unsigned char r_nbits;
-		};
-	};
-};
-
-struct ddr_priority_entry {
-	unsigned int type;
-	unsigned char port_id;
-	unsigned char dev_lsb_r;
-	unsigned char dev_lsb_w;
-	unsigned char nic_lsb_r;
-	unsigned char nic_lsb_w;
-	unsigned char mdc_lsb_r;
-	unsigned char mdc_lsb_w;
-
-	unsigned char fixed_w;
-	unsigned char fixed_r;
-	unsigned char fixed_lsb;
-	unsigned char fixed_nbits;
+	unsigned int group_id;
+	unsigned char module_id;
+	enum prio_prop_mode prop_mode;
+	struct ddr_priority_reg reg;
 };
 
 struct ddr_priority_force {
@@ -231,16 +241,43 @@ struct ddr_priority_force {
 	unsigned char w_nbits;
 };
 
+struct ddr_priority_node {
+	const char *name;
+	unsigned char port_id;
+	s16 sub_id;
+	int bus;
+	unsigned int group_id;
+	unsigned char module_id;
+
+	enum prio_prop_mode prop_mode;
+	struct ddr_priority_force **dmc_force;
+	struct ddr_priority_dev *dev;
+	struct ddr_priority_nic *nic;
+	struct ddr_priority_mdc *mdc;
+	signed char rw;
+	bool accessible;
+
+	struct ddr_priority_node *parent;
+	struct ddr_priority_node **children;
+	unsigned char nr_children;
+};
+
+struct ddr_priority_tree {
+	unsigned int nr_nodes;
+	unsigned int nr_roots;
+	struct ddr_priority_node *nodes;
+	struct ddr_priority_node **roots;
+
+};
+
 struct ddr_priority_info {
 	int dev_num;
 	int nic_num;
 	int mdc_num;
-	int entry_num;
 	int dmc_force_num;
 	struct ddr_priority_dev *dev;
 	struct ddr_priority_nic *nic;
 	struct ddr_priority_mdc *mdc;
-	struct ddr_priority_entry *entry;
 	struct ddr_priority_force *dmc_force;
 };
 
@@ -482,6 +519,7 @@ struct ddr_priority {
 	ssize_t v1_buf_size;
 	char *v1_buf;
 	struct ddr_priority_info *v1;
+	struct ddr_priority_tree *tree;
 	struct ddr_priority_v2 *v2;
 };
 
@@ -493,10 +531,6 @@ struct dev_priority {
 ssize_t priority_display(char *buf, loff_t pos, size_t count);
 void set_priority_display(const char *buf);
 int ddr_priority_init(int cpu_type);
-ssize_t ddr_priority_info_show(char *buf);
-int ddr_priority_info_write(unsigned int id, int value, int rw, int dmc, char type);
-int priority_info_sysfs_parse(const char *buf, size_t count, unsigned int *id,
-				     int *val, int *rw, int *dmc, char *type);
 
 int sub_dev_desc_init(int cpu_type, struct sub_dev_desc **desc);
 char *sub_dev_to_port(unsigned char port_id, int sid, char rw);

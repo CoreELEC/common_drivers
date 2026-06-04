@@ -335,3 +335,320 @@ struct ddr_bandwidth_ops c5_ddr_bw_ops = {
 	.side_band	  = side_band,
 	.axi_sts_init     = c5_axi_sts_init,
 };
+
+static int set_vpu_sub_dev_priority(unsigned char axi, char rw,
+					unsigned int id, unsigned char priority)
+{
+	struct ddr_priority_node *node;
+
+	if (rw != 'r' && rw != 'w')
+		return -EINVAL;
+
+	node = get_dev_tree_prio_by_path(rw, 0x01, id);
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+}
+
+static int hevc_hcodec_sub_get(unsigned int base, signed char id)
+{
+	int i, j;
+	u32 reg_h[3], reg_l[3];
+	unsigned char val;
+
+	for (i = 0; i < 3; i++) {
+		reg_access(base + ((4 * i) << 2), 0, DMC_READ, &reg_h[i]);
+		reg_access(base + ((4 * i + 1) << 2), 0, DMC_READ, &reg_l[i]);
+
+		for (j = 0; j < 4; j++) {
+			val = (reg_h[i] >> (j * 8)) & 0xff;
+			if (val == id)
+				return i + 1;
+			val = (reg_l[i] >> (j * 8)) & 0xff;
+			if (val == id)
+				return i + 1;
+		}
+	}
+
+	return -ENODEV;
+}
+
+static int hevc_hcodec_sub_set(unsigned int base, signed char id,
+				unsigned char val, unsigned char index)
+{
+	unsigned char off = val - 1;
+	u32 reg_h, reg_l;
+
+	if (val < 1 || val > 3)
+		return -EINVAL;
+
+	if (index > 7)
+		return -EINVAL;
+
+	reg_access(base + ((4 * off) << 2), 0, DMC_READ, &reg_h);
+	reg_access(base + ((4 * off + 1) << 2), 0, DMC_READ, &reg_l);
+
+	if (index <= 3) {
+		reg_l &= ~(0xff << (index * 8));
+		reg_l |= (id << (index * 8));
+		reg_access(base + ((4 * off + 1) << 2), 0, DMC_WRITE, &reg_l);
+	} else {
+		reg_h &= ~(0xff << ((index - 4) * 8));
+		reg_h |= (id << ((index - 4) * 8));
+		reg_access(base + ((4 * off) << 2), 0, DMC_WRITE, &reg_h);
+	}
+
+	return 0;
+}
+
+#define AW_HEVC_MAP_LV1_H                ((0x3fa4  << 2) + 0xfe320000)
+#define AW_HEVC_MAP_LV1_L                ((0x3fa5  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV1_H                ((0x3fa6  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV1_L                ((0x3fa7  << 2) + 0xfe320000)
+#define AW_HEVC_MAP_LV2_H                ((0x3fa8  << 2) + 0xfe320000)
+#define AW_HEVC_MAP_LV2_L                ((0x3fa9  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV2_H                ((0x3faa  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV2_L                ((0x3fab  << 2) + 0xfe320000)
+#define AW_HEVC_MAP_LV3_H                ((0x3fac  << 2) + 0xfe320000)
+#define AW_HEVC_MAP_LV3_L                ((0x3fad  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV3_H                ((0x3fae  << 2) + 0xfe320000)
+#define AR_HEVC_MAP_LV3_L                ((0x3faf  << 2) + 0xfe320000)
+
+int c5_hevc_handle_get(void *node, int is_w)
+{
+	struct ddr_priority_node *n;
+	s16 subid;
+
+	if (!node)
+		return -ENODEV;
+
+	n = (struct ddr_priority_node *)node;
+	subid = n->sub_id;
+
+	if (is_w)
+		return hevc_hcodec_sub_get(AW_HEVC_MAP_LV1_H, subid);
+	else
+		return hevc_hcodec_sub_get(AR_HEVC_MAP_LV1_H, subid);
+}
+
+int c5_hevc_handle_set(void *node, unsigned int value, int is_w, void *data)
+{
+	struct ddr_priority_node *n;
+	s16 subid;
+	unsigned char index = data ? *(unsigned char *)data : 0;
+
+	if (!node)
+		return -ENODEV;
+
+	n = (struct ddr_priority_node *)node;
+	subid = n->sub_id;
+
+	if (is_w)
+		return hevc_hcodec_sub_set(AW_HEVC_MAP_LV1_H, subid, value, index);
+	else
+		return hevc_hcodec_sub_set(AR_HEVC_MAP_LV1_H, subid, value, index);
+}
+
+static int set_hevc_level_id(char rw, unsigned char level, unsigned char i, unsigned char id)
+{
+	struct ddr_priority_node *node;
+
+	if (rw != 'r' && rw != 'w')
+		return -EINVAL;
+
+	node = get_dev_tree_prio_by_path(rw, 0x9, id);
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	if (!node->dev)
+		return -ENODEV;
+
+	return c5_hevc_handle_set(node->dev, level, rw == 'w', &i);
+}
+
+#define AW_HCODEC_MAP_LV1_H              ((0x3fb0  << 2) + 0xfe320000)
+#define AW_HCODEC_MAP_LV1_L              ((0x3fb1  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV1_H              ((0x3fb2  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV1_L              ((0x3fb3  << 2) + 0xfe320000)
+#define AW_HCODEC_MAP_LV2_H              ((0x3fb4  << 2) + 0xfe320000)
+#define AW_HCODEC_MAP_LV2_L              ((0x3fb5  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV2_H              ((0x3fb6  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV2_L              ((0x3fb7  << 2) + 0xfe320000)
+#define AW_HCODEC_MAP_LV3_H              ((0x3fb8  << 2) + 0xfe320000)
+#define AW_HCODEC_MAP_LV3_L              ((0x3fb9  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV3_H              ((0x3fba  << 2) + 0xfe320000)
+#define AR_HCODEC_MAP_LV3_L              ((0x3fbb  << 2) + 0xfe320000)
+
+int c5_hcodec_handle_get(void *node, int is_w)
+{
+	struct ddr_priority_node *n;
+	s16 subid;
+
+	if (!node)
+		return -ENODEV;
+
+	n = (struct ddr_priority_node *)node;
+	subid = n->module_id;
+
+	if (is_w)
+		return hevc_hcodec_sub_get(AW_HCODEC_MAP_LV1_H, subid);
+	else
+		return hevc_hcodec_sub_get(AR_HCODEC_MAP_LV1_H, subid);
+}
+
+int c5_hcodec_handle_set(void *node, unsigned int value, int is_w, void *data)
+{
+	struct ddr_priority_node *n;
+	s16 subid;
+	unsigned char index = data ? *(unsigned char *)data : 0;
+
+	if (!node)
+		return -ENODEV;
+
+	n = (struct ddr_priority_node *)node;
+	subid = n->module_id;
+
+	if (is_w)
+		return hevc_hcodec_sub_set(AW_HCODEC_MAP_LV1_H, subid, value, index);
+	else
+		return hevc_hcodec_sub_set(AR_HCODEC_MAP_LV1_H, subid, value, index);
+}
+
+static int set_hcodec_level_id(char rw, unsigned char level, unsigned char i, unsigned char id)
+{
+	struct ddr_priority_node *node;
+
+	if (rw != 'r' && rw != 'w')
+		return -EINVAL;
+
+	node = get_dev_tree_prio_by_path(rw, 0x8, 0x0, id);
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	if (!node->dev)
+		return -ENODEV;
+
+	return c5_hcodec_handle_set(node->dev, level, rw == 'w', &i);
+}
+
+static int set_hevc_low_priority(char rw, unsigned char priority)
+{
+	struct ddr_priority_node *node;
+
+	if (rw != 'r' && rw != 'w')
+		return -EINVAL;
+
+	node = get_dev_tree_prio_by_path(rw, 0x9);
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+}
+
+static int set_hcodec_low_priority(char rw, unsigned char priority)
+{
+	struct ddr_priority_node *node;
+
+	if (rw != 'r' && rw != 'w')
+		return -EINVAL;
+
+	node = get_dev_tree_prio_by_path(rw, 0x8, 0x0);
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+}
+
+static void show_hevc_hcodec_id_map(u32 *reg_h, u32 *reg_l,
+					unsigned int port_id, int *sub_path, int depth, int is_w)
+{
+	int i, j;
+	unsigned char id;
+	struct ddr_priority_node *node;
+
+	if (is_w)
+		pr_info("write low level priority  3\n");
+	else
+		pr_info("read low level priority  3\n");
+	pr_info("lv  idx  id  name\n");
+
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 4; j++) {
+			id = (reg_l[i] >> (j * 8)) & 0xff;
+			sub_path[depth] = id;
+			node = find_node_by_dev_path(aml_db->priority->tree,
+							port_id, sub_path, depth + 1, is_w);
+			if (node && node->name)
+				pr_info("%-2d  %-3d  %-2x  %s\n", i + 1, j, id, node->name);
+			else
+				pr_info("%-2d  %-3d  %-2x\n", i + 1, j, id);
+		}
+		for (j = 0; j < 4; j++) {
+			id = (reg_h[i] >> (j * 8)) & 0xff;
+			sub_path[depth] = id;
+			node = find_node_by_dev_path(aml_db->priority->tree,
+							port_id, sub_path, depth + 1, is_w);
+			if (node && node->name)
+				pr_info("%-2d  %-3d  %-2x  %s\n", i + 1, j + 4, id, node->name);
+			else
+				pr_info("%-2d  %-3d  %-2x\n", i + 1, j + 4, id);
+		}
+	}
+}
+
+static int show_hevc_priority_setting(void)
+{
+	int i;
+	u32 reg_wh[3], reg_wl[3], reg_rh[3], reg_rl[3], base;
+	int sub_path[4] = {-1};
+
+	base = AW_HEVC_MAP_LV1_H;
+	for (i = 0; i < 3; i++) {
+		reg_access(base + ((4 * i) << 2), 0, DMC_READ, &reg_wh[i]);
+		reg_access(base + ((4 * i + 1) << 2), 0, DMC_READ, &reg_wl[i]);
+		reg_access(base + ((4 * i + 2) << 2), 0, DMC_READ, &reg_rh[i]);
+		reg_access(base + ((4 * i + 3) << 2), 0, DMC_READ, &reg_rl[i]);
+	}
+
+	show_hevc_hcodec_id_map(reg_wh, reg_wl, 0x9, sub_path, 0, 1);
+	show_hevc_hcodec_id_map(reg_rh, reg_rl, 0x9, sub_path, 0, 0);
+
+	return 0;
+}
+
+static int show_hcodec_priority_setting(void)
+{
+	int i;
+	u32 reg_wh[3], reg_wl[3], reg_rh[3], reg_rl[3], base;
+	int sub_path[4] = {0x0};
+
+	base = AW_HCODEC_MAP_LV1_H;
+	for (i = 0; i < 3; i++) {
+		reg_access(base + ((4 * i) << 2), 0, DMC_READ, &reg_wh[i]);
+		reg_access(base + ((4 * i + 1) << 2), 0, DMC_READ, &reg_wl[i]);
+		reg_access(base + ((4 * i + 2) << 2), 0, DMC_READ, &reg_rh[i]);
+		reg_access(base + ((4 * i + 3) << 2), 0, DMC_READ, &reg_rl[i]);
+	}
+
+	show_hevc_hcodec_id_map(reg_wh, reg_wl, 0x8, sub_path, 1, 1);
+	show_hevc_hcodec_id_map(reg_rh, reg_rl, 0x8, sub_path, 1, 0);
+
+	return 0;
+}
+
+static int set_device_accessible(char *dev, unsigned char access)
+{
+	return 0;
+}
+
+struct ddr_priority_ops c5_ddr_prio_ops = {
+	.set_vpu_sub_dev_priority = set_vpu_sub_dev_priority,
+	.set_hevc_level_id = set_hevc_level_id,
+	.set_hcodec_level_id = set_hcodec_level_id,
+	.set_hevc_low_priority = set_hevc_low_priority,
+	.set_hcodec_low_priority = set_hcodec_low_priority,
+	.show_hevc_priority_setting = show_hevc_priority_setting,
+	.show_hcodec_priority_setting = show_hcodec_priority_setting,
+	.set_device_accessible = set_device_accessible,
+};

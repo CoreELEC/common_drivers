@@ -1484,12 +1484,12 @@ static struct ddr_port_desc ddr_port_desc_c5_mon[] __initdata = {
 	PORT_DESC(.port_id =  9, .bus =  9, .port_name = "HEVC"),
 	PORT_DESC(.port_id = 10, .bus = 10, .port_name = "DEVICE"),
 	/* start of each vge */
-	PORT_DESC(.port_id =  3, .sub_id =  0, .bus =  6, .port_name = "CVE"),
-	PORT_DESC(.port_id =  3, .sub_id =  1, .bus =  6, .port_name = "GE2D"),
-	PORT_DESC(.port_id =  3, .sub_id =  2, .bus =  6, .port_name = "OPP"),
+	PORT_DESC(.port_id =  3, .sub_id =  0, .bus =  3, .port_name = "CVE"),
+	PORT_DESC(.port_id =  3, .sub_id =  1, .bus =  3, .port_name = "GE2D"),
+	PORT_DESC(.port_id =  3, .sub_id =  2, .bus =  3, .port_name = "OPP"),
 	/* start of each dos */
-	PORT_DESC(.port_id =  8, .sub_id =  0, .bus =  3, .port_name = "HCODEC"),
-	PORT_DESC(.port_id =  8, .sub_id =  1, .bus =  3, .port_name = "TAHOE"),
+	PORT_DESC(.port_id =  8, .sub_id =  0, .bus =  8, .port_name = "HCODEC"),
+	PORT_DESC(.port_id =  8, .sub_id =  1, .bus =  8, .port_name = "TAHOE"),
 	/* start of each device */
 	PORT_DESC(.port_id = 10, .sub_id = 32, .bus = 10, .port_name = "DMA"),
 	PORT_DESC(.port_id = 10, .sub_id = 49, .bus = 10, .port_name = "SDIOA"),

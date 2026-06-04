@@ -118,59 +118,11 @@ static int dmc_dev_is_byte(struct ddr_bandwidth *db)
 	return 0;
 }
 
-static int ddr_fill_port_map_sub_dev(struct sub_dev_desc *sub_dev,
-				     unsigned char port_id,
-				     struct ddr_port_map *map,
-				     int idx)
-{
-	struct sub_dev *sub;
-	struct sub_dev_port *vsp;
-	int i, j;
-
-	if (!sub_dev)
-		return idx;
-
-	for (i = 0; i < sub_dev->num; i++) {
-		sub = sub_dev->subs[i];
-		if (!sub)
-			continue;
-		if (sub->sub_r.port_id == port_id && sub->sub_r.list) {
-			vsp = &sub->sub_r;
-			for (j = 0; j < vsp->num; j++) {
-				if (map) {
-					map[idx].type = DDR_PORT_MAP_SUB_R;
-					map[idx].port_id = port_id;
-					map[idx].sub_id = (s16)vsp->list[j].id;
-					map[idx].rw = 0;
-					map[idx].sub_port = &vsp->list[j];
-				}
-				idx++;
-			}
-		}
-		if (sub->sub_w.port_id == port_id && sub->sub_w.list) {
-			vsp = &sub->sub_w;
-			for (j = 0; j < vsp->num; j++) {
-				if (map) {
-					map[idx].type = DDR_PORT_MAP_SUB_W;
-					map[idx].port_id = port_id;
-					map[idx].sub_id = (s16)vsp->list[j].id;
-					map[idx].rw = 1;
-					map[idx].sub_port = &vsp->list[j];
-				}
-				idx++;
-			}
-		}
-	}
-
-	return idx;
-}
-
 static int ddr_fill_port_map_table(struct ddr_bandwidth *db, struct ddr_port_map *map)
 {
 	DECLARE_BITMAP(port_bitmap, MAX_MAP_ID);
 	unsigned int rp = db->real_ports;
 	struct ddr_port_desc *desc = db->port_desc;
-	struct sub_dev_desc *sub_dev = db->sub_dev;
 	int idx = 0;
 	int i, j;
 
@@ -193,8 +145,6 @@ static int ddr_fill_port_map_table(struct ddr_bandwidth *db, struct ddr_port_map
 			map[idx].desc = &desc[i];
 		}
 		idx++;
-
-		idx = ddr_fill_port_map_sub_dev(sub_dev, desc[i].port_id, map, idx);
 
 		for (j = 0; j < (int)rp; j++) {
 			if (desc[j].port_id != desc[i].port_id || desc[j].sub_id == -1)
@@ -1616,10 +1566,6 @@ ssize_t priority_write(struct file *filp, struct kobject *kobj,
 			  loff_t pos, size_t count)
 {
 	int ret;
-	unsigned int id;
-	int val;
-	int rw, dmc;
-	char type;
 
 	if (!aml_db->priority) {
 		pr_info("Current soc not support ddr priority\n");
@@ -1641,13 +1587,7 @@ ssize_t priority_write(struct file *filp, struct kobject *kobj,
 		return count;
 	}
 
-	ret = priority_info_sysfs_parse(buf, count, &id, &val, &rw, &dmc, &type);
-	if (ret) {
-		pr_info("invalid input, Example: <id> <val> [r|w] [dmc] [type]\n");
-		return -EINVAL;
-	}
-
-	ret = ddr_priority_info_write(id, val, rw, dmc, type);
+	ret = priority_tree_write(buf, count);
 	if (ret < 0)
 		return ret;
 	return count;
@@ -2273,6 +2213,7 @@ static int __init init_chip_config(int cpu, struct ddr_bandwidth *band)
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_C5
 	case DMC_TYPE_C5:
 		band->ops          = &c5_ddr_bw_ops;
+		band->prio_ops     = &c5_ddr_prio_ops;
 		band->channels     = 11;
 		band->dmc_number   = 1;
 		band->mali_port[0] = -1;
@@ -3460,12 +3401,12 @@ static int __init ddr_bandwidth_probe(struct platform_device *pdev)
 
 	ddr_init_port_map_table(aml_db);
 
-	ddr_priority_init(aml_db->cpu_type);
-
 	if (init_chip_config(aml_db->cpu_type, aml_db)) {
 		aml_db = NULL;
 		return -EINVAL;
 	}
+
+	ddr_priority_init(aml_db->cpu_type);
 
 	single_bus_width_init(aml_db);
 

@@ -364,6 +364,7 @@ struct ddr_bandwidth {
 	struct ddr_priority *priority;
 	struct sub_dev_desc *sub_dev;
 	struct ddr_bandwidth_ops *ops;
+	struct ddr_priority_ops *prio_ops;
 	struct work_struct work_bandwidth;
 	struct ddr_increase_tool increase_tool;
 	struct ddr_outstanding ost;
@@ -440,6 +441,31 @@ extern struct ddr_bandwidth_ops a9_ddr_bw_ops;
 #endif
 #ifdef CONFIG_AMLOGIC_DDR_BANDWIDTH_C5
 extern struct ddr_bandwidth_ops c5_ddr_bw_ops;
+extern struct ddr_priority_ops c5_ddr_prio_ops;
+int c5_hevc_handle_get(void *node, int is_w);
+int c5_hevc_handle_set(void *node, unsigned int value, int is_w, void *data);
+int c5_hcodec_handle_get(void *node, int is_w);
+int c5_hcodec_handle_set(void *node, unsigned int value, int is_w, void *data);
+#else
+static inline int c5_hevc_handle_get(void *node, int is_w)
+{
+	return -ENODEV;
+}
+
+static inline int c5_hevc_handle_set(void *node, unsigned int value, int is_w, void *data)
+{
+	return -ENODEV;
+}
+
+static inline int c5_hcodec_handle_get(void *node, int is_w)
+{
+	return -ENODEV;
+}
+
+static inline int c5_hcodec_handle_set(void *node, unsigned int value, int is_w, void *data)
+{
+	return -ENODEV;
+}
 #endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_DDR_SSR)
@@ -450,6 +476,17 @@ static inline unsigned long ddr_ssr_access_sec(unsigned long addr, unsigned long
 }
 #endif
 
+#define get_dev_tree_prio_by_path(rw, port_id, ...) \
+	__get_dev_tree_prio_by_path(rw, port_id, ##__VA_ARGS__, -1)
+
+int write_node_layer(struct ddr_priority_node *node, char type, int value,
+						int rw, int dmc, void *data);
+int reg_access(unsigned int reg, char sec, char rw, unsigned int *value);
+struct ddr_priority_node *__get_dev_tree_prio_by_path(char rw, unsigned int port_id, ...);
+struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
+						unsigned int port_id,
+						int *sub_path, int depth, int rw);
+int priority_tree_write(const char *buf, size_t count);
 void ddr_poll_start(void *info);
 unsigned int aml_get_ddr_usage(void);
 
