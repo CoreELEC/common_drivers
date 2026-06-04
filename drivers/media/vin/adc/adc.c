@@ -1784,11 +1784,28 @@ static void adc_pll_down(void)
 	if (!adc_devp->pll_flg && adc_devp->plat_data->chip_id >= ADC_CHIP_T5) {
 		adc_wr_hiu_bits(adc_addr->vdac_cntl_1, 0, 7, 1);
 		adc_wr_hiu_bits(adc_addr->dadc_cntl_3, 0, 0, 2);
-		adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 28, 1);
+		if (adc_devp->plat_data->chip_id == ADC_CHIP_T6X)
+			adc_wr_hiu_bits(adc_addr->dadc_cntl_3, 0, 16, 1);
 		if (adc_devp->plat_data->is_tv_chip)
 			adc_wr_hiu_bits(adc_addr->s2_dadc_cntl_2, 0, 8, 1);
-		adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 1, 29, 1);
-		adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 29, 1);
+		adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 28, 1);
+		if (adc_devp->plat_data->chip_id == ADC_CHIP_T5 ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T5D ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T5W ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T3) {
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 1, 29, 1);
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 29, 1);
+		} else if (adc_devp->plat_data->chip_id == ADC_CHIP_T6X ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T5M ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T3X) {
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_1 + reg_offset, 0, 14, 1);
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 1, 29, 1);
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 29, 1);
+		} else if (adc_devp->plat_data->chip_id == ADC_CHIP_T6D ||
+			adc_devp->plat_data->chip_id == ADC_CHIP_T6W) {
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 1, 30, 1);
+			adc_wr_hiu_bits(pll_addr->adc_pll_cntl_0 + reg_offset, 0, 30, 1);
+		}
 	}
 
 	if (adc_devp->plat_data->is_tv_chip) {
@@ -2037,6 +2054,8 @@ static ssize_t adc_store(struct device *dev, struct device_attribute *attr,
 		adc_dump_status();
 	} else if (parm[0] && !strcmp(parm[0], "down")) {
 		adc_pll_down();
+	} else if (parm[0] && !strcmp(parm[0], "reset")) {
+		adc_set_pll_reset();
 	} else if (parm[0] && !strcmp(parm[0], "dump_reg")) {
 		adc_dump_regs();
 	} else if (parm[0] && !strcmp(parm[0], "debug")) {
