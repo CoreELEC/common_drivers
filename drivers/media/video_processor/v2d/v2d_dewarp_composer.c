@@ -263,12 +263,17 @@ bool check_dewarp_status(struct vframe_s *input_vf, int count, int work_mode, in
 
 int v2d_init_dewarp_composer(struct dewarp_composer_para *param)
 {
+#ifdef CONFIG_AMLOGIC_MEDIA_GDC
+	int dev_type = AML_GDC;
+#endif
+
 	if (IS_ERR_OR_NULL(param))
 		return -1;
 
 	if (IS_ERR_OR_NULL(param->context)) {
 #ifdef CONFIG_AMLOGIC_MEDIA_GDC
-		param->context = create_gdc_work_queue(AML_GDC);
+		dev_type = get_gdc_version();
+		param->context = create_gdc_work_queue(dev_type);
 #else
 		param->context = NULL;
 #endif
