@@ -63,7 +63,7 @@ u32 dp_buf_mgr_print_flag;
 
 static DEFINE_MUTEX(di_process_mutex);
 
-int dp_print(int index, int debug_flag, const char *fmt, ...)
+static int dp_print(int index, int debug_flag, const char *fmt, ...)
 {
 	if ((print_flag & debug_flag) ||
 	    debug_flag == PRINT_ERROR) {
@@ -246,7 +246,7 @@ static void video_wait_decode_fence(struct di_process_dev *dev,
 	}
 }
 
-int get_di_backend_need_mem(int width, int height, int source_type)
+int get_di_process_need_mem(int width, int height, int source_type)
 {
 	bool prelink_enable = 0, postlink_enable = 0, enable_4k_input = 0, decounter_enable = 0;
 	bool nr_enable = 0;
@@ -316,7 +316,7 @@ int get_di_backend_need_mem(int width, int height, int source_type)
 
 	return di_still_need_mem;
 }
-EXPORT_SYMBOL(get_di_backend_need_mem);
+EXPORT_SYMBOL(get_di_process_need_mem);
 
 static struct file *dp_get_file_ext(struct di_process_dev *dev, struct file *file_vf)
 {

@@ -2595,7 +2595,7 @@ static ssize_t resman_read(struct file *filp, char *buf, size_t len, loff_t *off
 	struct resman_event *event;
 
 	sess = filp->private_data;
-	if (len < sizeof(__u32))
+	if (len < sizeof(__u32) || !sess)
 		return -EINVAL;
 	mutex_lock(&sess->lock);
 	event = list_first_entry_or_null(&sess->events,
@@ -2617,6 +2617,9 @@ static unsigned int resman_poll(struct file *filp, struct poll_table_struct *wai
 	struct resman_session *sess;
 
 	sess = filp->private_data;
+	if (!sess)
+		return -EFAULT;
+
 	poll_wait(filp, &sess->wq_event, wait);
 	if (!list_empty(&sess->events))
 		mask |= POLL_IN | POLLRDNORM;
@@ -2896,7 +2899,7 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 				r = r_bytes / (1024 * 1024);
 		}
 		dprintk(4, "%d vdec expect size %d\n", sess->id, r);
-#if defined(CONFIG_AMLOGIC_DPSS_PROCESS) || defined(CONFIG_AMLOGIC_DI_PROCESS)
+#if defined(CONFIG_AMLOGIC_BUF_MANAGER)
 		// di buffer
 		r_bytes = get_di_backend_need_mem(w, h, is_interlace);
 		if (r_bytes > 0 && r_bytes < RESMAN_BYTES_MAX) {
@@ -2949,7 +2952,7 @@ static int resman_ioctl_parameter_set_ctl(struct resman_session *sess, unsigned 
 			get_resman_param_key_string(RESMAN_PARAM_VIDEO_STATUS));
 		v_status = !resman_set_item_t ? 0 : resman_set_item_t->value.i;
 		if (v_status > RESMAN_STATUS_PREPARING) {
-#if defined(CONFIG_AMLOGIC_DPSS_PROCESS) || defined(CONFIG_AMLOGIC_DI_PROCESS)
+#if defined(CONFIG_AMLOGIC_BUF_MANAGER)
 			resman_set_item_t = param_set_get_by_name(sess->param_set,
 					get_resman_param_key_string(RESMAN_PARAM_VIDEO_FD));
 			is_interlace = !resman_set_item_t ? 0 : resman_set_item_t->value.i;

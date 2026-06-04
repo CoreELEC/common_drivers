@@ -20,7 +20,13 @@
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
 #include <linux/amlogic/media/video_sink/v4lvideo_ext.h>
 #include <linux/amlogic/media/di/dpss_interface.h>
-
+#include <linux/amlogic/cpu_version.h>
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
+#include <linux/amlogic/media/video_processor/dpss_process_ext.h>
+#endif
+#ifdef CONFIG_AMLOGIC_DI_PROCESS
+#include <linux/amlogic/media/video_processor/di_process_ext.h>
+#endif
 #define WAIT_DISP_Q_TIMEOUT 100
 
 static u32 list_q_wait = 15;
@@ -81,6 +87,20 @@ int set_buf_mgr_print_flag(int flag)
 	return 0;
 }
 EXPORT_SYMBOL(set_buf_mgr_print_flag);
+
+int get_di_backend_need_mem(int width, int height, int source_type)
+{
+	int ret = 0;
+	int cpu_type = get_cpu_type();
+
+	if (cpu_type == MESON_CPU_MAJOR_ID_T6W || cpu_type == MESON_CPU_MAJOR_ID_T6X)
+		ret = get_dpss_process_need_mem(width, height, source_type);
+	else
+		ret = get_di_process_need_mem(width, height, source_type);
+
+	return ret;
+}
+EXPORT_SYMBOL(get_di_backend_need_mem);
 
 static struct file_private_data *dp_get_v4lvideo_private(struct dp_buf_mgr_t *buf_mgr,
 							  struct file *file_vf)

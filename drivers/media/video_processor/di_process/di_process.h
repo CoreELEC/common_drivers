@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_keeper.h>
 #include <linux/amlogic/media/video_processor/di_proc_buf_mgr.h>
+#include <linux/amlogic/media/video_processor/di_process_ext.h>
 
 #define DIPR_POOL_SIZE 16
 

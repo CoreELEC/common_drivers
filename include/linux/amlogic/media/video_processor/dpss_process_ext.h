@@ -25,4 +25,5 @@ void dpss_direct_mode_ctrl(bool on);
  * @return
  */
 
+int get_dpss_process_need_mem(int width, int height, int source_type);
 #endif /* DPSS_PROCESS_EXT_H */

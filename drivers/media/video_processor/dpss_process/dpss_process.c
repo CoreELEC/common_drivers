@@ -1665,10 +1665,10 @@ static enum DPSS_ERRORTYPE dp_fill_output_done(void *arg, struct vframe_s *vf)
 	if (pp_info->dpss_flag & DPSS_FLG_USE_DW)
 		vf->dpss_flg |= DPSS_FLG_USE_DW;
 
-	if (pp_info->dpss_flag | DPSS_FLG_PPS_SKIP)
+	if (pp_info->dpss_flag & DPSS_FLG_PPS_SKIP)
 		vf->dpss_flg |= DPSS_FLG_PPS_SKIP;
 
-	if (pp_info->dpss_flag | DPSS_FLG_HIGH_BANDWIDTH)
+	if (pp_info->dpss_flag & DPSS_FLG_HIGH_BANDWIDTH)
 		vf->dpss_flg |= DPSS_FLG_HIGH_BANDWIDTH;
 
 	private_data->vf = *vf;
@@ -1729,7 +1729,7 @@ enum DPSS_ERRORTYPE get_input_vf_info(void *arg, struct vframe_s *vf,
 	return 0;
 }
 
-int get_di_backend_need_mem(int width, int height, int source_type)
+int get_dpss_process_need_mem(int width, int height, int source_type)
 {
 	int dpss_need_mem = 0;
 
@@ -1742,7 +1742,7 @@ int get_di_backend_need_mem(int width, int height, int source_type)
 	}
 	return dpss_need_mem;
 }
-EXPORT_SYMBOL(get_di_backend_need_mem);
+EXPORT_SYMBOL(get_dpss_process_need_mem);
 
 static void file_q_init(struct dpss_process_dev *dev)
 {
