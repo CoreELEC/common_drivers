@@ -604,9 +604,9 @@ static void dump_vpp_blend_reg(void)
 
 static void dump_mif_reg_t6w(bool mosaic_mode)
 {
-	int i, j = 0;
-	u32 t6w_mif_reg[MAX_VD_LAYER][T6W_MIF_REG_CNT];
-	u32 mosaic_mif_reg[SLICE_NUM][T6W_MIF_REG_CNT];
+	int i, j = 0, k = 0;
+	u32 **t6w_mif_reg = NULL;
+	u32 **mosaic_mif_reg = NULL;
 	u32 reg_addr, reg_val = 0;
 #if DUMP_REG_NAME
 	static const char * const reg_name[] = {
@@ -664,6 +664,18 @@ static void dump_mif_reg_t6w(bool mosaic_mode)
 #endif
 
 	if (mosaic_mode) {
+		mosaic_mif_reg = kmalloc_array(SLICE_NUM, sizeof(u32 *), GFP_KERNEL);
+		if (!mosaic_mif_reg)
+			return;
+		for (i = 0; i < SLICE_NUM; i++) {
+			mosaic_mif_reg[i] = kmalloc_array(T6W_MIF_REG_CNT, sizeof(u32), GFP_KERNEL);
+			if (!mosaic_mif_reg[i]) {
+				for (k = 0; k < i; k++)
+					kfree(mosaic_mif_reg[k]);
+				kfree(mosaic_mif_reg);
+				return;
+			}
+		}
 		for (i = 0; i < SLICE_NUM; i++) {
 			mosaic_mif_reg[i][j++] =
 			g_mosaic_frame[i].virtual_layer.vd_hw_mif_reg.vfcd_top_ctrl0;
@@ -783,6 +795,9 @@ static void dump_mif_reg_t6w(bool mosaic_mode)
 #endif
 			}
 		}
+		for (i = 0; i < SLICE_NUM; i++)
+			kfree(mosaic_mif_reg[i]);
+		kfree(mosaic_mif_reg);
 		return;
 	}
 	reg_addr = VPU_AXIRD_PATH_CTRL;
@@ -793,6 +808,18 @@ static void dump_mif_reg_t6w(bool mosaic_mode)
 	reg_val = READ_VCBUS_REG(VPU_AXIRD_TUNNEL_CTRL1);
 	pr_info("[0x%x] = 0x%X [VPU_AXIRD_TUNNEL_CTRL1]\n",
 		   reg_addr, reg_val);
+	t6w_mif_reg = kmalloc_array(cur_dev->max_vd_layers, sizeof(u32 *), GFP_KERNEL);
+	if (!t6w_mif_reg)
+		return;
+	for (i = 0; i < cur_dev->max_vd_layers; i++) {
+		t6w_mif_reg[i] = kmalloc_array(T6W_MIF_REG_CNT, sizeof(u32), GFP_KERNEL);
+		if (!t6w_mif_reg[i]) {
+			for (k = 0; k < i; k++)
+				kfree(t6w_mif_reg[k]);
+			kfree(t6w_mif_reg);
+			return;
+		}
+	}
 	for (i = 0; i < cur_dev->max_vd_layers; i++) {
 		t6w_mif_reg[i][j++] = vd_layer[i].vd_hw_mif_reg.vfcd_top_ctrl0;
 		t6w_mif_reg[i][j++] = vd_layer[i].vd_hw_mif_reg.vfcd_top_ctrl2;
@@ -862,15 +889,18 @@ static void dump_mif_reg_t6w(bool mosaic_mode)
 #endif
 		}
 	}
+	for (i = 0; i < cur_dev->max_vd_layers; i++)
+		kfree(t6w_mif_reg[i]);
+	kfree(t6w_mif_reg);
 }
 
 #define T6W_VFCD_REG_CNT 48
 
 static void dump_vfcd_reg_t6w(bool mosaic_mode)
 {
-	int i, j = 0;
-	u32 t6w_vfcd_reg[MAX_VD_LAYER][T6W_VFCD_REG_CNT];
-	u32 mosaic_vfcd_reg[SLICE_NUM][T6W_VFCD_REG_CNT];
+	int i, j = 0, k = 0;
+	u32 **t6w_vfcd_reg = NULL;
+	u32 **mosaic_vfcd_reg = NULL;
 	u32 reg_addr, reg_val = 0;
 #if DUMP_REG_NAME
 	static const char * const reg_name[] = {
@@ -924,7 +954,21 @@ static void dump_vfcd_reg_t6w(bool mosaic_mode)
 		"vfcd_afrc_chrm_body_baddr",
 	};
 #endif
+
 	if (mosaic_mode) {
+		mosaic_vfcd_reg = kmalloc_array(SLICE_NUM, sizeof(u32 *), GFP_KERNEL);
+		if (!mosaic_vfcd_reg)
+			return;
+		for (i = 0; i < SLICE_NUM; i++) {
+			mosaic_vfcd_reg[i] =
+				kmalloc_array(T6W_VFCD_REG_CNT, sizeof(u32), GFP_KERNEL);
+			if (!mosaic_vfcd_reg[i]) {
+				for (k = 0; k < i; k++)
+					kfree(mosaic_vfcd_reg[k]);
+				kfree(mosaic_vfcd_reg);
+				return;
+			}
+		}
 		for (i = 0; i < SLICE_NUM; i++) {
 			if (!g_mosaic_frame[i].virtual_layer_info.afbc_support)
 				continue;
@@ -1029,7 +1073,6 @@ static void dump_vfcd_reg_t6w(bool mosaic_mode)
 		for (i = 0; i < SLICE_NUM; i++) {
 			pr_info("mosaic slice%d vfcd regs:\n", i);
 			for (j = 0; j < T6W_VFCD_REG_CNT; j++) {
-				/*coverity[UNINIT]*/
 				reg_addr = mosaic_vfcd_reg[i][j];
 				if (!reg_addr)
 					continue;
@@ -1043,7 +1086,22 @@ static void dump_vfcd_reg_t6w(bool mosaic_mode)
 #endif
 			}
 		}
+		for (i = 0; i < SLICE_NUM; i++)
+			kfree(mosaic_vfcd_reg[i]);
+		kfree(mosaic_vfcd_reg);
 		return;
+	}
+	t6w_vfcd_reg = kmalloc_array(cur_dev->max_vd_layers, sizeof(u32 *), GFP_KERNEL);
+	if (!t6w_vfcd_reg)
+		return;
+	for (i = 0; i < cur_dev->max_vd_layers; i++) {
+		t6w_vfcd_reg[i] = kmalloc_array(T6W_VFCD_REG_CNT, sizeof(u32), GFP_KERNEL);
+		if (!t6w_vfcd_reg[i]) {
+			for (k = 0; k < i; k++)
+				kfree(t6w_vfcd_reg[k]);
+			kfree(t6w_vfcd_reg);
+			return;
+		}
 	}
 	for (i = 0; i < cur_dev->max_vd_layers; i++) {
 		t6w_vfcd_reg[i][j++] = vd_layer[i].vd_hw_vfcd_reg.vfcd_top_ctrl0;
@@ -1112,6 +1170,9 @@ static void dump_vfcd_reg_t6w(bool mosaic_mode)
 #endif
 		}
 	}
+	for (i = 0; i < cur_dev->max_vd_layers; i++)
+		kfree(t6w_vfcd_reg[i]);
+	kfree(t6w_vfcd_reg);
 }
 
 #define VOUT_BLEND_REG_CNT 13
