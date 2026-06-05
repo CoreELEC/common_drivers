@@ -1269,7 +1269,7 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg, u32 mask)
 		 * src2 repeat function needs hsc_div_length 8 alignment
 		 */
 		if (cfg->cmd_op == IS_BLEND && ge2d_meson_dev.src2_repeat)
-			hsc_div_length = (hsc_div_length + 7) & ~7;
+			hsc_div_length &= ~7;
 		cfg->hsc_div_length = hsc_div_length;
 		multo = cfg->hsc_phase_step * cfg->hsc_div_length;
 		cfg->hsc_adv_num   = multo >> 24;
