@@ -12628,8 +12628,7 @@ void resume_cm(int vpp_index)
 {
 	if (chip_type_id == chip_s7 ||
 		chip_type_id == chip_s7d ||
-		chip_type_id == chip_c5 ||
-		!reg_cm_list)
+		chip_type_id == chip_c5)
 		return;
 
 	pr_amvecm_dbg("amvecm: resume cm0, pq_cfg.cm_en/cm_en=%d/%d\n",
@@ -19075,7 +19074,8 @@ static int amvecm_drv_freeze(struct device *dev)
 		chip_type_id == chip_t5m ||
 		chip_type_id == chip_s6 ||
 		chip_type_id == chip_t3 ||
-		chip_type_id == chip_c5) {
+		chip_type_id == chip_c5 ||
+		chip_type_id == chip_t6x) {
 		if (!suspend_drv_status_get()) {
 			suspend_drv_status_set(true);
 			suspend_cm();
@@ -19106,6 +19106,9 @@ static int amvecm_drv_thaw(struct device *dev)
 	if (chip_type_id == chip_t5w)
 		resume_hdr_clk_gate();
 
+	resume_dma();
+	resume_gamut_wrapper();
+
 	if (chip_type_id == chip_t5w ||
 		chip_type_id == chip_t7 ||
 		chip_type_id == chip_s7 ||
@@ -19114,12 +19117,15 @@ static int amvecm_drv_thaw(struct device *dev)
 		chip_type_id == chip_t5m ||
 		chip_type_id == chip_s6 ||
 		chip_type_id == chip_t3 ||
-		chip_type_id == chip_c5) {
+		chip_type_id == chip_c5 ||
+		chip_type_id == chip_t6x) {
 		if (suspend_drv_status_get()) {
 			vecm_latch_flag2 |= FLAG_RESUME_RECOVERY;
 			resume_mtx_flag_set(true);
 		}
 	}
+
+	reset_hdr_path_cfg();
 	pr_info("amvecm: thaw module\n");
 	return 0;
 }
@@ -19138,6 +19144,9 @@ static int amvecm_drv_restore(struct device *dev)
 	if (chip_type_id == chip_t7)
 		resume_mtx_t7();
 
+	resume_dma();
+	resume_gamut_wrapper();
+
 	if (chip_type_id == chip_t5w ||
 		chip_type_id == chip_t7 ||
 		chip_type_id == chip_s7 ||
@@ -19146,12 +19155,15 @@ static int amvecm_drv_restore(struct device *dev)
 		chip_type_id == chip_t5m ||
 		chip_type_id == chip_s6 ||
 		chip_type_id == chip_t3 ||
-		chip_type_id == chip_c5) {
+		chip_type_id == chip_c5 ||
+		chip_type_id == chip_t6x) {
 		if (suspend_drv_status_get()) {
 			vecm_latch_flag2 |= FLAG_RESUME_RECOVERY;
 			resume_mtx_flag_set(true);
 		}
 	}
+
+	reset_hdr_path_cfg();
 	pr_info("amvecm: restore module\n");
 	return 0;
 }
