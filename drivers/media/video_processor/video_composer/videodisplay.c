@@ -118,17 +118,22 @@ void vsync_notify_video_composer(u8 layer_id,
 static void vc_notify_msg_to_mediaproxy(struct vframe_s *vf, int index,
 	int event, struct timespec64 ts)
 {
-	struct aml_video_user_data msg;
+	struct aml_video_user_data *msg;
 
-	memset(&msg, 0, sizeof(struct aml_video_user_data));
-	msg.data.frame_info.bitstreamid = div64_u64(vf->timestamp, 1000000000);
-	msg.data.frame_info.vd_instid = index;
-	msg.data.frame_info.decoder_instid = vf->decoder_instid;
-	msg.data.frame_info.frame_index = vf->frame_index;
-	msg.data.frame_info.time = 1000000000L * ts.tv_sec + ts.tv_nsec;
-	msg.message_type = event;
+	msg = kzalloc(sizeof(*msg), GFP_KERNEL);
+	if (!msg)
+		return;
 
-	notify_msg_to_mediaproxy(mediaproxy_display_info[index].k_producer_session, 1, &msg);
+	msg->data.frame_info.bitstreamid = div_u64(vf->timestamp, NSEC_PER_SEC);
+	msg->data.frame_info.vd_instid = index;
+	msg->data.frame_info.decoder_instid = vf->decoder_instid;
+	msg->data.frame_info.frame_index = vf->frame_index;
+	msg->data.frame_info.time = (u64)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
+	msg->message_type = event;
+
+	notify_msg_to_mediaproxy(mediaproxy_display_info[index].k_producer_session, 1, msg);
+
+	kfree(msg);
 }
 #endif
 

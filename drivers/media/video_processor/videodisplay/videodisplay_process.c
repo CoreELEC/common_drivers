@@ -2409,9 +2409,9 @@ static void video_display_para_reset(int layer_index)
 static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 	struct vframe_s *vf, int event, struct timespec64 ts)
 {
-	struct aml_video_user_data msg[MAX_COMPOSER_COUNT] = {0};
+	struct aml_video_user_data *msg;
 	struct input_mediaproxy_info_s *input_vf_info;
-	int count = 0;
+	int count = 0, msg_size = 0;
 	int i;
 
 	if (!dev || !vf) {
@@ -2419,21 +2419,27 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 		return;
 	}
 
+	msg_size = sizeof(struct aml_video_user_data) * MAX_COMPOSER_COUNT;
+	msg = kzalloc(msg_size, GFP_KERNEL);
+	if (!msg)
+		return;
+
 	if (!(vf->flag & VFRAME_FLAG_COMPOSER_DONE)) {
-		msg[0].data.frame_info.bitstreamid = div64_u64(vf->timestamp, 1000000000);
+		msg[0].data.frame_info.bitstreamid = div_u64(vf->timestamp, NSEC_PER_SEC);
 		msg[0].data.frame_info.vd_instid = dev->index;
 		msg[0].data.frame_info.decoder_instid = vf->decoder_instid;
 		msg[0].data.frame_info.frame_index = vf->frame_index;
-		msg[0].data.frame_info.time = 1000000000L * ts.tv_sec + ts.tv_nsec;
+		msg[0].data.frame_info.time = (u64)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 		msg[0].message_type = event;
 
 		notify_msg_to_mediaproxy(vd_mediaproxy_display_info[dev->index].k_producer_session,
 					1,
-					&msg);
+					msg);
 	} else {
 		if (!vf->composer_info) {
 			vd_print(dev->index, PRINT_ERROR,
 				"%s:vc_private is null!\n", __func__);
+			kfree(msg);
 			return;
 		}
 		count = vf->composer_info->count;
@@ -2446,17 +2452,19 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 		for (i = 0; i < count; i++) {
 			input_vf_info = &vf->composer_info->input_info[i];
 			msg[i].data.frame_info.bitstreamid =
-				div64_u64(input_vf_info->timestamp, 1000000000);
+				div_u64(input_vf_info->timestamp, NSEC_PER_SEC);
 			msg[i].data.frame_info.vd_instid = dev->index;
 			msg[i].data.frame_info.decoder_instid =  input_vf_info->decoder_instid;
 			msg[i].data.frame_info.frame_index = input_vf_info->frame_index;
-			msg[i].data.frame_info.time = 1000000000L * ts.tv_sec + ts.tv_nsec;
+			msg[i].data.frame_info.time = (u64)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 			msg[i].message_type = event;
 		}
 		notify_msg_to_mediaproxy(vd_mediaproxy_display_info[dev->index].k_producer_session,
 					count,
-					&msg);
+					msg);
 	}
+
+	kfree(msg);
 }
 #endif
 
