@@ -2921,13 +2921,17 @@
 	};
 
 	cve:mbd_cve {
-		compatible = "amlogic, cve";
+		compatible = "amlogic, mbp-cve-c5";
 		reg = <0x0 0xFF561000 0x0 0x1000>;
 		reg-names = "cve";
 		interrupts = <GIC_SPI 218 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "cve";
-		clocks = <&clkc CLKID_CVE>, <&clkc CLKID_VGE>;
-		clock-names = "clk_cve", "clk_vge";
+		clocks = <&clkc CLKID_VAPB>,
+			<&clkc CLKID_VGE>,
+			<&clkc CLKID_CVE>;
+		clock-names = "clk_vapb",
+			"clk_vge",
+			"clk_cve";
 		power-domains = <&pwrdm PDID_C5_CVE>;
 		status = "okay";
 	};
