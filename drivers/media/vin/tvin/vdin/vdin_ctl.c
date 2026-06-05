@@ -1894,12 +1894,8 @@ void vdin_change_matrix_hdr(struct vdin_dev_s *devp, u32 matrix_csc)
 	if (matrix_csc == VDIN_MATRIX_NULL)	{
 		wr_bits(offset, VDIN_MATRIX_CTRL, 0,
 			VDIN_MATRIX_EN_BIT, VDIN_MATRIX_EN_WID);
-
-		if (is_meson_tm2_cpu() ||
-		    (get_cpu_type() == MESON_CPU_MAJOR_ID_SC2))
-			wr_bits(offset, VDIN_HDR2_MATRIXI_EN_CTRL, 0,
-				VDIN_MATRIX_EN_BIT,
-				VDIN_MATRIX_EN_WID);
+		if (devp->dtdata->hw_ver == VDIN_HW_SC2)
+			wr_bits(offset, VDIN_HDR2_MATRIXI_EN_CTRL, 1, 0, 1);
 	} else {
 		matrix_tbl = &vdin_matrix_lup[matrix_csc - 1];
 
