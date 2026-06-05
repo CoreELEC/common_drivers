@@ -3403,6 +3403,292 @@ ssize_t vd_dump_yuv_show(struct file *filp, struct kobject *kobj,
 }
 EXPORT_SYMBOL(vd_dump_yuv_show);
 
+static struct vf_nn_sr_t *vd_get_hfout_data(struct videodisplay_dev *dev,
+						     struct dma_buf *dmabuf)
+{
+	struct vf_nn_sr_t *srout_data;
+	struct uvm_hook_mod *uhmod;
+
+	if (!dmabuf) {
+		vd_print(dev->index, PRINT_ERROR, "vd get hfout data fail\n");
+		return NULL;
+	}
+
+	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_NN);
+	if (!uhmod) {
+		vd_print(dev->index, PRINT_OTHER, "dma file file_private_data is NULL 1\n");
+		return NULL;
+	}
+
+	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
+		vd_print(dev->index, PRINT_ERROR, "dma file file_private_data is NULL 2\n");
+		return NULL;
+	}
+	srout_data = uhmod->arg;
+	uvm_put_hook_mod(dmabuf, PROCESS_NN);
+
+	return srout_data;
+}
+
+static struct vf_aiface_t *vd_get_aiface_info(struct videodisplay_dev *dev,
+						struct dma_buf *dmabuf, int frame_index)
+{
+	struct vf_aiface_t *aiface_info;
+	struct uvm_hook_mod *uhmod;
+
+	if (!dmabuf) {
+		vd_print(dev->index, PRINT_ERROR, "NULL param: frame_index=%d.\n", frame_index);
+
+		return NULL;
+	}
+	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AIFACE);
+	if (!uhmod) {
+		vd_print(dev->index, PRINT_OTHER, "NULL uhmod: frame_index=%d\n", frame_index);
+		return NULL;
+	}
+
+	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
+		vd_print(dev->index, PRINT_ERROR, "invalid uhmod param:frame_index=%d\n",
+			frame_index);
+		return NULL;
+	}
+	aiface_info = uhmod->arg;
+	uvm_put_hook_mod(dmabuf, PROCESS_AIFACE);
+
+	return aiface_info;
+}
+
+static struct vf_aicolor_t *vd_get_aicolor_info(struct videodisplay_dev *dev,
+		struct dma_buf *dmabuf)
+{
+	struct vf_aicolor_t *aicolor_info;
+	struct uvm_hook_mod *uhmod;
+
+	if (!dmabuf) {
+		vd_print(dev->index, PRINT_ERROR, "vd get aicolor_info fail.\n");
+		return NULL;
+	}
+	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AICOLOR);
+	if (!uhmod) {
+		vd_print(dev->index, PRINT_OTHER, "dma file file_private_data is NULL 1\n");
+		return NULL;
+	}
+
+	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
+		vd_print(dev->index, PRINT_ERROR, "dma file file_private_data is NULL 2\n");
+		return NULL;
+	}
+	aicolor_info = uhmod->arg;
+	uvm_put_hook_mod(dmabuf, PROCESS_AICOLOR);
+
+	return aicolor_info;
+}
+
+static void video_wait_aiface_ready(struct videodisplay_dev *dev,
+				struct vf_aiface_t *aiface_info, int frame_index)
+{
+	int wait_count = 0;
+
+	while (1) {
+		if (aiface_info->nn_status != NN_DONE &&
+			(aiface_info->nn_status == NN_WAIT_DOING ||
+			aiface_info->nn_status == NN_START_DOING)) {
+			usleep_range(2000, 2100);
+			wait_count++;
+			vd_print(dev->index, PRINT_PATTERN | PRINT_AIFACE,
+				"aiface wait count %d, frame_index=%d, nn_status=%d\n",
+				wait_count, frame_index, aiface_info->nn_status);
+		} else {
+			break;
+		}
+	}
+	vd_print(dev->index, PRINT_PATTERN | PRINT_AIFACE,
+		 "aiface wait %dms, frame_index=%d, nn_status=%d\n",
+		 2 * wait_count, frame_index, aiface_info->nn_status);
+}
+
+static struct vf_aiface_t *aiface_info_adjust(struct videodisplay_dev *dev, struct dma_buf *dmabuf,
+	int frame_index, int display_x, int display_y, int display_w, int display_h)
+{
+	struct vf_aiface_t *aiface_info = NULL;
+	struct face_value_t face_value_tmp;
+	int nn_width, nn_height, count = 0;
+	int i = 0;
+
+	aiface_info = vd_get_aiface_info(dev, dmabuf, frame_index);
+	if (aiface_info) {
+		nn_width = aiface_info->nn_frame_width;
+		nn_height = aiface_info->nn_frame_height;
+		video_wait_aiface_ready(dev, aiface_info, frame_index);
+		if (aiface_info->nn_status == NN_DONE) {
+			memset(&face_value_tmp, 0, sizeof(struct face_value_t));
+			count = aiface_info->aiface_value_count;
+			for (i = 0; i < count; i++) {
+				vd_print(dev->index, PRINT_AIFACE,
+					"src: frame_index=%d, x=%d, y=%d, w=%d, h=%d, score=%d.\n",
+					frame_index,
+					aiface_info->face_value[i].x,
+					aiface_info->face_value[i].y,
+					aiface_info->face_value[i].w,
+					aiface_info->face_value[i].h,
+					aiface_info->face_value[i].score);
+				face_value_tmp.x = display_x +
+					display_w * aiface_info->face_value[i].x / nn_width;
+				face_value_tmp.y = display_y +
+					display_h * aiface_info->face_value[i].y / nn_height;
+				face_value_tmp.w = display_w *
+					aiface_info->face_value[i].w / nn_width;
+				face_value_tmp.h = display_h *
+					aiface_info->face_value[i].h / nn_height;
+				face_value_tmp.score = aiface_info->face_value[i].score;
+
+				aiface_info->face_value[i] = face_value_tmp;
+				vd_print(dev->index, PRINT_AIFACE,
+					"dst: frame_index=%d, x=%d, y=%d, w=%d, h=%d, score=%d.\n",
+					frame_index,
+					aiface_info->face_value[i].x,
+					aiface_info->face_value[i].y,
+					aiface_info->face_value[i].w,
+					aiface_info->face_value[i].h,
+					aiface_info->face_value[i].score);
+			}
+
+			aiface_info->nn_status = NN_DISPLAYED;
+		} else {
+			vd_print(dev->index, PRINT_AIFACE,
+				"%s: frame_index=%d, aiface not ready.\n",
+				__func__, frame_index);
+		}
+	} else {
+		//vd_print(dev->index, PRINT_ERROR, "%s: get aiface info failed.\n", __func__);
+		aiface_info = NULL;
+	}
+
+	return aiface_info;
+}
+
+static void video_wait_sr_fence(struct videodisplay_dev *dev,
+				    struct dma_fence *fence)
+{
+	if (fence) {
+		u64 timestamp = local_clock();
+		s32 ret = dma_fence_wait_timeout(fence, false, 2000);
+
+		vd_print(dev->index, PRINT_FENCE,
+			 "%s, sr fence %lx, state: %d, wait cost time:%lldns\n",
+			 __func__, (ulong)fence, ret,
+			 local_clock() - timestamp);
+	} else {
+		vd_print(dev->index, PRINT_FENCE,
+			 "sr fence is NULL\n");
+	}
+}
+
+static int config_ai_param(struct videodisplay_dev *dev,
+	struct received_frames_t *received_frames, struct vframe_s *vf)
+{
+	struct frames_info_t *frames_info = NULL;
+	struct frame_info_t *frame_info = NULL;
+	struct dma_buf *dmabuf = NULL;
+	struct vf_nn_sr_t *srout_data = NULL;
+	u32 nn_status;
+	struct vf_aiface_t *aiface_info = NULL;
+	struct vf_aicolor_t *aicolor_info = NULL;
+
+	if (!dev || !received_frames || !vf || !vf->vc_private) {
+		pr_info("vc: %s: NULL param.\n", __func__);
+		return -1;
+	}
+
+	frames_info = &received_frames->frames_info;
+	frame_info = frames_info->frame_info;
+	dmabuf = frame_info->dmabuf[0];
+	if (!dmabuf)
+		return -1;
+
+	if (vf->hf_info && !nn_bypass)
+		srout_data = vd_get_hfout_data(dev, dmabuf);
+	if (srout_data) {
+		video_wait_sr_fence(dev, srout_data->fence);
+		nn_status = srout_data->nn_status;
+		if (vf->hf_info->phy_addr != 0 &&
+			vf->hf_info->width != 0 &&
+			vf->hf_info->height != 0 &&
+			(nn_status == NN_WAIT_DOING ||
+			nn_status == NN_START_DOING ||
+			nn_status == NN_DONE)) {
+			vf->vc_private->srout_data = srout_data;
+			vf->vc_private->flag |= VC_FLAG_AI_SR;
+		}
+	}
+
+	aiface_info = aiface_info_adjust(dev,
+					dmabuf,
+					vf->frame_index,
+					frame_info->dst_x,
+					frame_info->dst_y,
+					frame_info->dst_w,
+					frame_info->dst_h);
+	if (aiface_info) {
+		vf->vc_private->aiface_info = aiface_info;
+		vf->vc_private->flag |= VC_FLAG_AI_FACE;
+		vd_print(dev->index, PRINT_AIFACE,
+			"frame_index = %d, aiface_value_count = %d.\n",
+			vf->frame_index, aiface_info->aiface_value_count);
+	}
+
+	aicolor_info = vd_get_aicolor_info(dev, dmabuf);
+	if (aicolor_info) {
+		nn_status = aicolor_info->nn_status;
+		if (nn_status == NN_WAIT_DOING ||
+			nn_status == NN_START_DOING ||
+			nn_status == NN_DONE) {
+			vf->vc_private->aicolor_info = aicolor_info;
+			vf->vc_private->flag |= VC_FLAG_AI_COLOR;
+		}
+	}
+
+	return 0;
+}
+
+static void set_frc_pattern(struct videodisplay_dev *dev, struct vframe_s *vf)
+{
+	int duration;
+
+	if (!vf->vc_private)
+		return;
+	if (vf->source_type == VFRAME_SOURCE_TYPE_HDMI ||
+		vf->source_type == VFRAME_SOURCE_TYPE_CVBS ||
+		vf->source_type == VFRAME_SOURCE_TYPE_TUNER) {
+		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_1_1;
+		new_afr_pulldown = 0;
+		vd_print(dev->index, PRINT_OTHER, "%s:HDMI mode, FRC full function", __func__);
+		return;
+	}
+
+	duration = find_nearest_duration(dev, vf->duration);
+	switch (duration) {
+	case 3200:
+	case 3203:
+	case 3840:
+		if (check_frc_n2m_status())
+			new_afr_pulldown = 1;
+		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_1_2;
+		break;
+	case 4000:
+	case 4004:
+		if (check_frc_n2m_status())
+			new_afr_pulldown = 1;
+		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_2_5;
+		break;
+	default:
+		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_BYPASS;
+		break;
+	}
+	vd_print(dev->index, PRINT_OTHER, "%s: set frc mode:%d\n",
+		__func__, vf->vc_private->frc_operation_mode);
+}
+
 static void vframe_display(struct videodisplay_dev *dev,
 				struct received_frames_t *received_frames)
 {
@@ -3425,6 +3711,7 @@ static void vframe_display(struct videodisplay_dev *dev,
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 	struct timespec64 ts;
 #endif
+	int ret = 0;
 
 	if (!dev || !received_frames) {
 		pr_info("%s: NULL param.\n", __func__);
@@ -3717,6 +4004,21 @@ static void vframe_display(struct videodisplay_dev *dev,
 	if (frame_info->dmabuf[1])
 		vf->file_vf_ext = (struct file *)(frame_info->dmabuf[1]);
 	vf->repeat_count = 0;
+
+	if (is_dec_vf || is_v4l_vf) {
+		if (vf->vc_private)
+			vf->vc_private->src_vf = vd_prepare->src_frame;
+
+		/*only vd0 support ai feature*/
+		if (dev->video_render_index == 0) {
+			ret = config_ai_param(dev, received_frames, vf);
+			if (ret)
+				vd_print(dev->index, PRINT_ERROR,
+					"config ai param failed");
+			if (enable_frc_pattern)
+				set_frc_pattern(dev, vf);
+		}
+	}
 
 	if (vf->type_ext & VIDTYPE_EXT_LCEVC) {
 		lcevc_data = vc_get_lcevc_data(dev, frame_info->dmabuf[0]);
@@ -4142,10 +4444,7 @@ static struct vframe_s *vd_vf_peek(void *op_arg)
 			}
 		}
 
-		if (dev->is_drm_enable)
-			return vf;
-		else
-			return videocomposer_vf_peek(op_arg);
+		return videocomposer_vf_peek(op_arg);
 	} else {
 		return NULL;
 	}
