@@ -576,6 +576,24 @@ static irqreturn_t emp_vsync_intr_handler(int irq, void *dev)
 }
 #endif
 
+/* hdmitx shutdown and disable all irq */
+void hdmitx21_disable_all_irq(void)
+{
+	_intr_enable((struct intr_t *)&hdmi_all_intr.top_intr, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.intr2, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.intr5, false);
+#ifdef CONFIG_AMLOGIC_HDCP_TX
+	_intr_enable((struct intr_t *)&hdmi_all_intr.tpi_intr, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.cp2tx_intr0, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.cp2tx_intr1, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.cp2tx_intr2, false);
+	_intr_enable((struct intr_t *)&hdmi_all_intr.cp2tx_intr3, false);
+#endif
+	_intr_enable((struct intr_t *)&hdmi_all_intr.scdc_intr, false);
+
+	HDMITX_INFO("disable hdmitx all irq");
+}
+
 int hdmitx_setup_irqs(struct hdmitx_hw_common *tx_hw)
 {
 	int r;

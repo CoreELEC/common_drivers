@@ -297,7 +297,7 @@ void hdmitx_a9_clock_gate_ctrl(struct hdmitx21_dev *hdev, bool en)
 	if (gate_bit_mask & BIT(7))
 		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0_A9, en, 24, 1);
 	if (gate_bit_mask & BIT(8))
-		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0, en, 8, 1);
+		hd21_set_reg_bits(CLKCTRL_HTX_CLK_CTRL0_A9, en, 8, 1);
 	if (gate_bit_mask & BIT(9))
 		hd21_set_reg_bits(CLKCTRL_HDMI_CLK_CTRL_A9, en, 8, 1);
 

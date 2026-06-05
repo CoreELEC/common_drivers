@@ -238,6 +238,7 @@ void hdmitx_core_intr_process(struct hdmitx_common *tx_comm);
 int hdmitx_setup_irqs(struct hdmitx_hw_common *tx_hw);
 void intr_status_init_clear(void);
 void hdmitx_fifo_flow_enable_intr(bool en);
+void hdmitx21_disable_all_irq(void);
 
 /* 2. DDC/SCDC related */
 u8 hdmi_ddc_status_check(void);

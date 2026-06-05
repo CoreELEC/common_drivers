@@ -133,7 +133,7 @@ void tx_task_mgr_release(struct tx_task_manager *mgr)
 
 	for (i = 0; i < MAX_TASK; i++) {
 		if (mgr->tasks[i])
-			tx_task_mgr_cancel_task(mgr, i, false);
+			tx_task_mgr_cancel_task(mgr, i, true);
 		kfree(mgr->tasks[i]);
 	}
 

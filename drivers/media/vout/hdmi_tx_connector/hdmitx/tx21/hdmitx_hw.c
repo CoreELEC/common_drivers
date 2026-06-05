@@ -5288,6 +5288,9 @@ static int hdmitx21_hw_cntl_core_misc(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		break;
 	case CORE_MISC_GET_OUTPUT_ST:
 		return hdmitx21_uboot_already_display();
+	case CORE_MISC_DISABLE_ALL_IRQ:
+		hdmitx21_disable_all_irq();
+		break;
 	case CORE_MISC_SUSPEND_RESUME_CNTL:
 	default:
 		break;

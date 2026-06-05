@@ -5037,6 +5037,9 @@ static int hdmitx21_hw_cntl_core_misc(struct hdmitx_hw_common *tx_hw, u32 cmd,
 		hdmitx_hw_cntl(tx_hw, HDCP_DISABLE, NULL, NULL);
 		hdmitx_hw_cntl(tx_hw, PLATFORM_HDMI_CLKS_CTRL, (void *)&arg, NULL);
 		break;
+	case CORE_MISC_DISABLE_ALL_IRQ:
+		hdmitx21_disable_all_irq();
+		break;
 	case CORE_MISC_SUSPEND_RESUME_CNTL:
 	default:
 		break;

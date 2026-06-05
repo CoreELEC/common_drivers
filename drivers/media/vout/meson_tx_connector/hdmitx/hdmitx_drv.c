@@ -1301,6 +1301,7 @@ static void amhdmitx_shutdown(struct platform_device *pdev)
 		HDMITX_ERROR("%s: drvdata is NULL\n", __func__);
 		return;
 	}
+	hdmitx_hw_cntl(tx_comm->tx_hw, CORE_MISC_DISABLE_ALL_IRQ, NULL, NULL);
 	hdmitx_hw_cntl(tx_comm->tx_hw, CORE_MISC_HDCP_SUSPEND, NULL, NULL);
 	meson_tx_dev_release(&tx_comm->base);
 }

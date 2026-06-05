@@ -1370,6 +1370,7 @@ static void amhdmitx_shutdown(struct platform_device *pdev)
 	struct hdmitx_common *tx_comm = dev_get_drvdata(&pdev->dev);
 	bool arg = false;
 
+	hdmitx_hw_cntl(tx_comm->tx_hw, CORE_MISC_DISABLE_ALL_IRQ, NULL, NULL);
 	_amhdmitx_suspend(tx_comm);
 
 	if (tx_comm->tx_hw->chip_data->chip_type >= MESON_CPU_ID_T7) {
@@ -1378,11 +1379,11 @@ static void amhdmitx_shutdown(struct platform_device *pdev)
 	}
 	cancel_work_sync(&tx_comm->work_hdr);
 	cancel_work_sync(&tx_comm->work_hdr_unmute);
-	cancel_delayed_work(&tx_comm->work_hpd_plugout);
-	cancel_delayed_work(&tx_comm->work_hpd_plugin);
-	cancel_delayed_work(&tx_comm->work_internal_intr);
-	cancel_delayed_work(&tx_comm->work_rxsense);
-	cancel_delayed_work(&tx_comm->work_cedst);
+	cancel_delayed_work_sync(&tx_comm->work_hpd_plugout);
+	cancel_delayed_work_sync(&tx_comm->work_hpd_plugin);
+	cancel_delayed_work_sync(&tx_comm->work_internal_intr);
+	cancel_delayed_work_sync(&tx_comm->work_rxsense);
+	cancel_delayed_work_sync(&tx_comm->work_cedst);
 }
 
 static struct platform_driver amhdmitx_driver = {
