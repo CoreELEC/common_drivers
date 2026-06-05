@@ -180,6 +180,9 @@ static struct meson_u2phy_priv meson_u2phy_t6x_priv = {
 	.set_clock_src = meson_u2phy_t6x_set_clock_src,
 };
 
+/* FIXME: Don't call meson_u2phy_u3drdu2o_set for setting secondary pipe clk.
+ * Set it in usb3 phy, refer to a9 phy driver for how.
+ */
 static int meson_u2phy_t6x_set_mode(void *phy, enum meson_uphy_mode mode)
 {
 	int ret;

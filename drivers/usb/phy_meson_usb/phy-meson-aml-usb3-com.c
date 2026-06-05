@@ -9,6 +9,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/delay.h>
+#include <linux/clk/clk-conf.h>
 #include <linux/amlogic/usbtype.h>
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/typec_mux_meson.h>
@@ -297,6 +298,38 @@ static ssize_t rtdump_store(struct device *dev,
 static DEVICE_ATTR_RW(rtdump);
 #endif
 
+int meson_u3phy_set_mode(struct aml_usb3_phy *phy, enum meson_uphy_mode mode)
+{
+	if (!meson_aml_u3phy_is_hw_on(phy))
+		return -ENODEV;
+
+	/* This is not setting the mode, but providing the pipe clk for the controller
+	 * in U2 only device mode.
+	 */
+	if (mode == MESON_USB_MODE_DEVICE) {
+		phy->priv->secondary_pipe_clk_set(phy, true);
+		dev_dbg(phy->dev, "%s  mode %d enable secondary pipe clk.\n", __func__, mode);
+	}
+	return 0;
+}
+
+/* TODO: Move secondary_pipe_clk_set() in the typec related functions to platform-specific
+ * driver if the pipe clk is fixed(mentioned in phy init).
+ */
+static inline int meson_aml_u3phy_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
+{
+	int ret = 0;
+
+	if (!phy->priv->secondary_pipe_clk_set)
+		return ret;
+
+	ret = phy->priv->secondary_pipe_clk_set(phy, on);
+	if (ret)
+		dev_err(phy->dev, "%s secondary_pipe_clk_set %d failed %d.\n", __func__, on, ret);
+
+	return ret;
+}
+
 static int  meson_aml_u3phy_set_clk(struct aml_usb3_phy *phy, bool on)
 {
 	int ret = 0;
@@ -492,7 +525,7 @@ static void meson_aml_u3phy_trim(struct aml_usb3_phy *phy)
 	if (!(raw & BIT(16))) {
 		dev_err(phy->dev, "No RX termination impedance trim? Skip.\n");
 	} else {
-		/* RX impedance trim: rterm_cal_cn field of reg_dcha_afe   */
+		/* RX impedance trim: rterm_cal_cn field of reg_dcha_afe */
 		val = (raw & (u32)GENMASK(15, 12)) >> 12;
 		meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x4,
 			(u32)GENMASK(7, 4), val << 4);
@@ -512,26 +545,24 @@ static void  meson_aml_u3phy_cali(struct aml_usb3_phy *phy)
 
 static void meson_aml_u3phy_typec_post_init(struct aml_usb3_phy *phy)
 {
-	int ret = 0;
-
-	ret = meson_aml_u3phy_pll_hw_init(phy);
+	meson_aml_u3phy_pll_hw_init(phy);
 
 	if (!WARN_ON(!phy->priv->ssc_set))
 		phy->priv->ssc_set(phy, true);
 
-	if (phy->priv->secondary_pipe_clk_set) {
-		ret = phy->priv->secondary_pipe_clk_set(phy, false);
-		if (ret)
-			dev_err(phy->dev, "%s secondary_pipe_clk_set failed %d.\n", __func__, ret);
-	}
+	/* Disable secondary pipe clk. */
+	meson_aml_u3phy_secondary_pipe_clk_set(phy, false);
 }
 
 int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 {
 	int ret = 0;
 
-	if (!meson_aml_u3phy_is_sw_on(phy))
+	if (!meson_aml_u3phy_is_sw_on(phy)) {
+		/* Safe to set here - pipe clk config is in the u2phy comb domain, not u3phy. */
+		meson_aml_u3phy_secondary_pipe_clk_set(phy, true);
 		return 0;
+	}
 
 	if (meson_aml_u3phy_is_hw_on(phy))
 		return 0;
@@ -544,6 +575,12 @@ int meson_aml_u3phy_init(struct aml_usb3_phy *phy)
 		phy->priv->set_power(phy, true);
 	else
 		meson_aml_u3phy_set_power(phy, true);
+
+	/* PHY parameters may not be perceived by the PHY state machine
+	 * if it is set before the combo phy is switched to USB mode.
+	 */
+	if (phy->priv->combo_mux_set)
+		phy->priv->combo_mux_set(phy, true);
 
 	/* Reset phy to default and trigger HW PLL init.
 	 * Make sure reset is done here even if previous step have already
@@ -569,11 +606,17 @@ pll_done:
 
 	meson_aml_u3phy_set_hw_on(phy, true);
 
-	/* Reordering hw_on after pll_hw_init may cause pll init lost.
-	 */
+	/* Reordering hw_on after pll_hw_init may cause pll init lost. */
 	smp_mb();
 	if (phy->lane_muxed && READ_ONCE(phy->tc_plug_connected))
 		meson_aml_u3phy_typec_post_init(phy);
+	/* U3 PHY pipe clk is off in a9 when the lane is not muxed to the U3PHY, but this is
+	 * the default state after system power on, which means the dwc3 won't be able to run.
+	 * Workaround it by enabling 2nd pipe clk when typec plug is unplugged, and disable it
+	 * when it is plugged(real pipe clk is on).
+	 */
+	else if (phy->lane_muxed)
+		meson_aml_u3phy_secondary_pipe_clk_set(phy, true);
 
 	return ret;
 
@@ -620,7 +663,6 @@ static int meson_aml_u3phy_typec_mux_notifier(struct notifier_block *nb,
 {
 	struct aml_usb3_phy *phy = container_of(nb, struct aml_usb3_phy, typec_mux_nb);
 	enum typec_orientation orient = 0;
-	int ret;
 
 	dev_info(phy->dev, "notify from typec mux: action = %lu\n", action);
 	switch (action) {
@@ -629,12 +671,7 @@ static int meson_aml_u3phy_typec_mux_notifier(struct notifier_block *nb,
 		phy->orient = orient;
 		if (orient == TYPEC_ORIENTATION_NONE) {
 			WRITE_ONCE(phy->tc_plug_connected, 0);
-			if (phy->priv->secondary_pipe_clk_set) {
-				ret = phy->priv->secondary_pipe_clk_set(phy, true);
-				if (ret)
-					dev_err(phy->dev, "%s secondary_pipe_clk_set failed %d.\n",
-						__func__, ret);
-			}
+			meson_aml_u3phy_secondary_pipe_clk_set(phy, true);
 		} else {
 			WRITE_ONCE(phy->tc_plug_connected, 1);
 			/* Pairing with smp_mb() in meson_aml_u3phy_init(). */
@@ -660,12 +697,6 @@ static inline void meson_aml_u3phy_register_nb(struct aml_usb3_phy *phy)
 {
 	phy->typec_mux_nb.notifier_call = meson_aml_u3phy_typec_mux_notifier;
 	typec_mux_meson_register_notify(&phy->typec_mux_nb);
-}
-
-static bool meson_aml_u3phy_repurposed(struct aml_usb3_phy *phy)
-{
-	return phy->combo_phy && (meson_uphy_of_device_pci_available() ||
-		meson_uphy_of_device_eth_hsgmii_phy_available());
 }
 
 int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instance,
@@ -762,7 +793,6 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 			phy->trim_reg_phy, trim_reg, phy->trim_reg_size);
 
 	phy->combo_phy = of_property_read_bool(dev->of_node, "combo-phy");
-	phy->off =	meson_aml_u3phy_repurposed(phy);
 	if (!phy->off)
 		phy->off = of_property_read_bool(dev->of_node, "off");
 
@@ -835,6 +865,10 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	for (i = 0; i < phy->clk_num; i++)
 		dev_dbg(dev, "%s %px.\n", phy->clks[i].id, (void *)phy->clks[i].clk);
 
+	ret = of_clk_set_defaults(phy->dev->of_node, false);
+	if (ret < 0)
+		dev_err(phy->dev, "set assigned clock parents and rates failed %d.\n", ret);
+
 	dev_dbg(dev, "USB3 phy_off:%d, pll_sw_cfg:%d, phy_id:%d, clk_num:%d\n"
 						 "reset_level_shift:0x%x, usb3-apb-reset-bit:%d\n"
 						 "usb3-phy-reset-bit:%d, usb3-controller-reset-bit:%d\n"
@@ -875,6 +909,7 @@ int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instan
 	} else {
 		/* For u3h u2h only mode. */
 		meson_aml_u3phy_set_power(phy, false);
+		meson_aml_u3phy_set_hw_on(phy, false);
 	}
 
 	return 0;

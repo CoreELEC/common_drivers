@@ -181,6 +181,7 @@ inline void  meson_aml_u3phy_modify_reg32(struct aml_usb3_phy *phy,
 			void __iomem *reg, u32 clear_mask, u32 set_mask);
 inline void  meson_aml_u3phy_write_reg32(struct aml_usb3_phy *phy,
 								u32 val, void __iomem *reg);
+int meson_u3phy_set_mode(struct aml_usb3_phy *phy, enum meson_uphy_mode mode);
 int meson_aml_u3phy_init(struct aml_usb3_phy *phy);
 int meson_aml_u3phy_exit(struct aml_usb3_phy *phy);
 int meson_aml_u3phy_parse(struct device *dev, struct meson_uphy_instance *instance,

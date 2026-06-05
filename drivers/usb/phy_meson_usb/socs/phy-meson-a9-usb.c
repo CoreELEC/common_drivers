@@ -2,9 +2,8 @@
 /*
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  */
-
-#include "../phy-meson-usb.h"
 #include <linux/clk/clk-conf.h>
+#include "../phy-meson-usb.h"
 
 static int meson_u2phy_a9_set_clock_src(struct amlogic_usb_v2 *mphy)
 {
@@ -178,7 +177,6 @@ static int meson_u2phy_a9_init(void *phy)
 	if (ret)
 		return ret;
 
-	ret = meson_u2phy_u3drdu2o_set((struct amlogic_usb_v2 *)phy, true);
 	return ret;
 }
 
@@ -187,10 +185,8 @@ static int meson_u2phy_a9_exit(void *phy)
 	int ret;
 
 	ret = meson_u2phy_exit((struct amlogic_usb_v2 *)phy);
-	if (ret >= 0) {
-		if (((struct amlogic_usb_v2 *)phy)->current_mode == MESON_USB_MODE_DEVICE)
-			ret = meson_u2phy_u3drdu2o_set((struct amlogic_usb_v2 *)phy, false);
-	}
+	meson_u2phy_set_vbus_power(phy, 0);
+
 	return ret;
 }
 
@@ -260,6 +256,14 @@ int meson_aml_u2phy_a9_parse(struct device *dev, struct meson_uphy_instance *ins
 }
 
 /* usb3 phy*/
+static void meson_u3phy_a9_combo_mux_set(struct aml_usb3_phy *phy, bool on)
+{
+	if (phy->combo_phy && phy->combo_phy_mux_reg) {
+		dev_dbg(phy->dev, "%s muxed to usb: %d.\n", __func__, on);
+		meson_aml_u3phy_write_reg32(phy, 0x2,
+					on ? phy->combo_phy_mux_reg : 0);
+	}
+}
 
 static void  meson_u3phy_a9_trim(struct aml_usb3_phy *phy)
 {
@@ -340,6 +344,20 @@ static void  meson_u3phy_a9_trim(struct aml_usb3_phy *phy)
 static void  meson_u3phy_a9_txrx_cali(struct aml_usb3_phy *phy)
 {
 	/* RX */
+	/* reg_misc<11:9> squelch voltage threshold(sq_vh) 3'b011 -> 3'b001.
+	 * For compatibility with long rx lane channel.
+	 */
+	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x00,
+					GENMASK_U32(11, 9), 0x1 << 9);
+	/* rx_cfg8 <24> upcrx_sqh_en bypass en */
+	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x20,
+					BIT(24), BIT(24));
+	/* trigger rx_cfg10 <9> upcrx_sqh_en. */
+	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x28,
+					BIT(9), 0);
+	usleep_range(300, 500);
+	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x28,
+					BIT(9), BIT(9));
 	/* reg_dcha_dfe<13:9> dfe_tap_en -> 0x10*/
 	meson_aml_u3phy_modify_reg32(phy, phy->ctrl_reg + 0x08,
 					GENMASK_U32(13, 9), 0x1 << 9);
@@ -435,23 +453,25 @@ int meson_u3phy_a9_secondary_pipe_clk_set(struct aml_usb3_phy *phy, bool on)
 	void __iomem *phy_clk_sel_reg;
 	u32 pipe_clk_sel;
 
-	if (phy->pipe_clk_sel != -1U && phy->phy_clk_sel_reg_off != -1U) {
-		pipe_clk_sel = phy->pipe_clk_sel;
-		phy_clk_sel_reg = phy->cfg_reg + phy->phy_clk_sel_reg_off;
+#define BYPASS_PIPE3_EN BIT(3)
+#define PIPE_CLK_NUX BIT(2)
 
-		if (on) {
-			writel(readl(phy_clk_sel_reg) | pipe_clk_sel, phy_clk_sel_reg);
-			dev_dbg(phy->dev, "enable secondary usb_pipe_clk\n");
-		} else {
-			writel(readl(phy_clk_sel_reg) & ~pipe_clk_sel, phy_clk_sel_reg);
-			dev_dbg(phy->dev, "disable secondary usb_pipe_clk\n");
-		}
+	pipe_clk_sel = BYPASS_PIPE3_EN | PIPE_CLK_NUX;
+	phy_clk_sel_reg = phy->cfg_reg;
+
+	if (on) {
+		writel(readl(phy_clk_sel_reg) | pipe_clk_sel, phy_clk_sel_reg);
+		dev_dbg(phy->dev, "enable secondary usb_pipe_clk\n");
+	} else {
+		writel(readl(phy_clk_sel_reg) & ~pipe_clk_sel, phy_clk_sel_reg);
+		dev_dbg(phy->dev, "disable secondary usb_pipe_clk\n");
 	}
 
 	return ret;
 }
 
 static struct meson_aml_u3phy_priv meson_u3phy_a9_priv = {
+	.combo_mux_set = meson_u3phy_a9_combo_mux_set,
 	.trim = meson_u3phy_a9_trim,
 	.txrx_cali = meson_u3phy_a9_txrx_cali,
 	.ssc_set = meson_u3phy_a9_ssc_set,
@@ -462,15 +482,7 @@ static int meson_u3phy_a9_set_mode(void *phy, enum meson_uphy_mode mode)
 {
 	struct aml_usb3_phy *mphy = (struct aml_usb3_phy *)phy;
 
-	if (mode == MESON_USB_MODE_HOST) {
-		if (mphy->combo_phy && mphy->combo_phy_mux_reg) {
-			dev_dbg(mphy->dev, "muxed to usb.");
-			meson_aml_u3phy_write_reg32(mphy, 0x2,
-					mphy->combo_phy_mux_reg);
-		}
-	}
-
-	return 0;
+	return meson_u3phy_set_mode(mphy, mode);
 }
 
 static int meson_u3phy_a9_init(void *phy)
@@ -493,6 +505,7 @@ static int meson_aml_u3phy_a9_parse(struct device *dev, struct meson_uphy_instan
 {
 	int ret;
 	struct aml_usb3_phy *mphy;
+	int i;
 
 	ret = meson_aml_u3phy_parse(dev, instance, &meson_u3phy_a9_priv);
 	if (ret)
@@ -504,37 +517,17 @@ static int meson_aml_u3phy_a9_parse(struct device *dev, struct meson_uphy_instan
 	if (!mphy)
 		return -ENODEV;
 
-	ret = of_property_read_u32(dev->of_node, "pipe-clk-sel", &mphy->pipe_clk_sel);
-	if (ret < 0)
-		mphy->pipe_clk_sel = -1U;
-	dev_dbg(dev, "pipe_clk_sel: 0x%x\n", mphy->pipe_clk_sel);
+	i = mphy->clk_num;
 
-	ret = of_property_read_u32(dev->of_node, "phy-clk-sel-reg-off",
-		&mphy->phy_clk_sel_reg_off);
-	if (ret < 0)
-		mphy->phy_clk_sel_reg_off = -1U;
-
-	dev_dbg(dev, "phy-clk-sel-reg-off: 0x%x\n", mphy->phy_clk_sel_reg_off);
-
-	ret = 0;
-
-	if (mphy->pipe_clk_sel != -1U && mphy->phy_clk_sel_reg_off != -1U) {
-		int i = mphy->clk_num;
-
-		while (i--) {
-			if (strstr(mphy->clks[i].id, "usb_clk_250m"))
-				break;
-		}
-
-		if (!i) {
-			dev_err(mphy->dev, "no usb_clk_250m.");
-			return -ENODEV;
-		}
+	while (i--) {
+		if (strstr(mphy->clks[i].id, "usb_clk_250m"))
+			break;
 	}
 
-	ret = of_clk_set_defaults(mphy->dev->of_node, false);
-	if (ret < 0)
-		dev_err(mphy->dev, "set assigned clock parents and rates failed %d.\n", ret);
+	if (!i) {
+		dev_err(mphy->dev, "no usb_clk_250m.");
+		return -ENODEV;
+	}
 
 	return ret;
 }

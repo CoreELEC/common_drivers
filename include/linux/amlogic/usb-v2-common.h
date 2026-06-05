@@ -190,6 +190,7 @@ struct aml_usb3_phy {
 	void __iomem	*trim_reg;
 	void __iomem	*combo_phy_mux_reg;
 	struct meson_aml_u3phy_priv {
+		void (*combo_mux_set)(struct aml_usb3_phy *phy, bool on);
 		void (*set_power)(struct aml_usb3_phy *phy, bool on);
 		void (*trim)(struct aml_usb3_phy *phy);
 		void (*txrx_cali)(struct aml_usb3_phy *phy);
