@@ -7844,7 +7844,12 @@ bool vdin_check_freesync_state_chg(struct vdin_dev_s *devp)
 		    (devp->prop.spd_data.data[5] >> 1 & 0x7)) {
 			return true;
 		}
-		if (devp->vrr_data.cur_vrr_status != devp->vrr_data.pre_vrr_status)
+		/* Do not report VRR changes when changes are between OFF and LATENCY */
+		if (devp->vrr_data.cur_vrr_status != devp->vrr_data.pre_vrr_status &&
+			!((devp->vrr_data.pre_vrr_status == VDIN_VRR_OFF &&
+			  devp->vrr_data.cur_vrr_status == VDIN_VRR_LATENCY) ||
+			 (devp->vrr_data.pre_vrr_status == VDIN_VRR_LATENCY &&
+			  devp->vrr_data.cur_vrr_status == VDIN_VRR_OFF)))
 			return true;
 	} else {
 		return false;
