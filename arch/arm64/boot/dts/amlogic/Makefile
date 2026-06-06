@@ -80,6 +80,7 @@ dtb-y += sm1_s905x3_starnet_apple_x3.dtb
 dtb-y += sm1_s905x3_tiger_1b.dtb
 dtb-y += sm1_s905x3_magicsee_c500_pro_2g.dtb
 dtb-y += sm1_s905x3_magicsee_c500_pro_4g.dtb
+dtb-y += sm1_s905x3_ugoos_x3_pro_4g_1gbit.dtb
 dtb-y += sc2_s905x4_2g.dtb
 dtb-y += sc2_s905x4_2g_1gbit.dtb
 dtb-y += sc2_s905x4_4g.dtb
