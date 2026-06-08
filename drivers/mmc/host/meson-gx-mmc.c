@@ -42,6 +42,7 @@
 #include <linux/amlogic/gki_module.h>
 #include <linux/thermal.h>
 #include <linux/amlogic/cpu_info.h>
+#include <linux/amlogic/arm-smccc.h>
 #include "mmc_key.h"
 #include "mmc_dtb.h"
 #include "mmc_common.h"
@@ -4517,6 +4518,7 @@ static void meson_mmc_remove(struct platform_device *pdev)
 	mmc_free_host(host->mmc);
 }
 
+#ifdef CONFIG_HIBERNATION
 static int meson_mmc_freeze(struct device *dev)
 {
 	return 0;
@@ -4548,6 +4550,98 @@ static int meson_mmc_restore(struct device *dev)
 	       host->regs + SD_EMMC_STATUS);
 	writel(IRQ_CRC_ERR | IRQ_TIMEOUTS | IRQ_END_OF_CHAIN,
 	       host->regs + SD_EMMC_IRQ_EN);
+
+	return ret;
+}
+#endif
+
+static bool ee_support_powerdown_restore(void)
+{
+	struct arm_smccc_res res;
+
+	arm_smccc_smc(0x82000079, 0x1003, 0, 0, 0, 0, 0, 0, &res);
+
+	return res.a0 ? 0 : res.a1;
+}
+
+static int meson_mmc_suspend(struct device *dev)
+{
+	struct meson_host *host = dev_get_drvdata(dev);
+	int i = 0, ret = 0;
+
+	if (!host || !host->mmc)
+		return ret;
+
+	/* ee domain power off, return 0; */
+	if (!ee_support_powerdown_restore())
+		return ret;
+
+	/* The Wi-Fi hasn't lost power,
+	 * but the eMMC/SD card device has lost power,
+	 * so the SDIO controller needs to save the register
+	 * values from before standby in order to wake up.
+	 */
+	if (aml_card_type_sdio(host)) {
+		for (i = 0; i < 20; i++)
+			host->reg_bak[i] = readl(host->regs + (i * 4));
+
+		host->pins_sleep =
+			pinctrl_lookup_state(host->pinctrl, "sleep");
+		if (IS_ERR(host->pins_sleep)) {
+			ret = PTR_ERR(host->pins_sleep);
+			pr_err("[%s]%s: not config sleep pin\n",
+				__func__, dev_name(host->dev));
+		} else {
+			pinctrl_select_state(host->pinctrl, host->pins_sleep);
+		}
+	}
+
+	return ret;
+}
+
+static int meson_mmc_resume(struct device *dev)
+{
+	struct meson_host *host = dev_get_drvdata(dev);
+	u32 reg;
+	int ret = 0, i = 0;
+
+	if (!host || !host->mmc)
+		return ret;
+
+	if (!ee_support_powerdown_restore())
+		return ret;
+
+	reg = readl(host->regs + SD_EMMC_CLOCK);
+	if (!(reg & CLK_DIV_MASK))
+		writel(reg | (0x3c & CLK_DIV_MASK), host->regs + SD_EMMC_CLOCK);
+
+	if (aml_card_type_sdio(host))
+		ret = clk_set_rate(host->mmc_clk, host->mmc->f_max);
+	else
+		ret = clk_set_rate(host->mmc_clk, host->mmc->f_min);
+	if (ret) {
+		dev_err(dev, "[%s]set rate failed.ret:%d\n", __func__, ret);
+		return ret;
+	}
+	clk_prepare_enable(host->mmc_clk);
+	/* set config to sane default */
+	meson_mmc_cfg_init(host);
+	/* clear, ack and enable interrupts */
+	writel(0, host->regs + SD_EMMC_IRQ_EN);
+	writel(IRQ_CRC_ERR | IRQ_TIMEOUTS | IRQ_END_OF_CHAIN,
+	       host->regs + SD_EMMC_STATUS);
+	writel(IRQ_CRC_ERR | IRQ_TIMEOUTS | IRQ_END_OF_CHAIN,
+	       host->regs + SD_EMMC_IRQ_EN);
+
+	if (aml_card_type_sdio(host)) {
+		for (i = 0; i < 20; i++)
+			writel(host->reg_bak[i], (host->regs + (i * 4)));
+		pinctrl_select_state(host->pinctrl, host->pins_default);
+		pr_info("[%s]%s,pinmux:0x%x,clktree:0x%x\n",
+			__func__, dev_name(host->dev),
+			readl(host->pin_mux_base),
+			readl(host->clk_tree_base));
+	}
 
 	return ret;
 }
@@ -4585,8 +4679,8 @@ static const struct dev_pm_ops meson_mmc_pm_ops = {
 	.freeze = meson_mmc_freeze,
 	.restore = meson_mmc_restore,
 #endif
-	.suspend = meson_mmc_freeze,
-	.resume = meson_mmc_restore,
+	.suspend = meson_mmc_suspend,
+	.resume = meson_mmc_resume,
 };
 
 static struct platform_driver meson_mmc_driver = {

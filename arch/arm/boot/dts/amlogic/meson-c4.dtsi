@@ -2268,6 +2268,19 @@
 		};
 	};
 
+	sdio_pins_sleep:sdio_all_pins_sleep {
+		mux {
+			groups = "GPIOX_0",
+				 "GPIOX_1",
+				 "GPIOX_2",
+				 "GPIOX_3",
+				 "GPIOX_4",
+				 "GPIOX_5";
+			function = "gpio_periphs";
+			input-enable;
+		};
+	};
+
 	sdcard_pins:sdcard_all_pins {
 		mux {
 			groups = "sdcard_d0",
@@ -2329,8 +2342,7 @@
 				 "GPIOC_4",
 				 "GPIOC_5";
 			function = "gpio_periphs";
-			output-low;
-			bias-disable;
+			input-enable;
 		};
 	};
 

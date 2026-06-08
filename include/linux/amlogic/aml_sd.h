@@ -206,6 +206,7 @@ struct meson_host {
 	unsigned int req_size;
 	int run_low_mem;
 	int reserved_out;
+	u32 reg_bak[20];
 };
 
 struct wifi_clk_table {
