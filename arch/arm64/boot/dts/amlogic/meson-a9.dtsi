@@ -1906,16 +1906,10 @@
 								0x0
 								0x0
 								0x7>;
-				/* Enable fake usb_250m pipe clk for dwc3 in device mode. */
-				phy-clk-sel-reg-off = <0x90>;
-				pipe-clk-sel = <0xc>;
 				clocks = <&clkc CLKID_SYS_USB3DRD_A>,
 							<&clkc CLKID_SYS_PERIPH>,
-							<&xtal>,
-							<&clkc CLKID_USB_250M>;
-				clock-names = "usb_general", "apb_bus", "xtal", "usb_clk_250m";
-				assigned-clocks = <&clkc CLKID_USB_250M>;
-				assigned-clock-rates = <250000000>;
+							<&xtal>;
+				clock-names = "usb_general", "apb_bus", "xtal";
 				power-domains = <&pwrdm PWRC_A9_U3DRD_A_ID>;
 				status = "okay";
 			};
@@ -1943,8 +1937,6 @@
 				assigned-clocks = <&clkc CLKID_USB_250M>;
 				assigned-clock-rates = <250000000>;
 				power-domains = <&pwrdm PWRC_A9_U3DPPHY_U3_ID>;
-				phy-clk-sel-reg-off = <0x0>;
-				pipe-clk-sel = <0xc>;
 				status = "okay";
 			};
 		};
@@ -2020,7 +2012,7 @@
 			u3pbport0: u3p@fe4cc100 {
 				#phy-cells = <0>;
 				port-speed = <0x3>; /* 0~2: HS HSP SS */
-				reg = <0xfe4cc100 0x20		/* phy3 cfg base */
+				reg = <0xfe4cc090 0x20		/* phy3 cfg base */
 						0xfe00200c 0x100	/* reset base */
 						0xfe4c0000 0x1d4	/* phy3 ctrl base */
 						0xfe01034c 0x4>;	/* phy3 trim base */
@@ -2033,13 +2025,15 @@
 				clocks = <&clkc CLKID_SYS_USB3DRD_B>,
 							<&clkc CLKID_SYS_PERIPH>,
 							<&clkc CLKID_PP>,
-							<&xtal>;
+							<&xtal>,
+							<&clkc CLKID_USB_250M>;
 				clock-names = "u3p_clk_0",
 								"apb_bus",
 								"pp_clk",
-								"xtal";
-				assigned-clocks = <&clkc CLKID_PP>;
-				assigned-clock-rates = <400000000>;
+								"xtal",
+								"usb_clk_250m";
+				assigned-clocks = <&clkc CLKID_PP>, <&clkc CLKID_USB_250M>;
+				assigned-clock-rates = <400000000>, <250000000>;
 				power-domains = <&pwrdm PWRC_A9_U3DRD_B_ID>;
 				status = "okay";
 			};
