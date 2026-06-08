@@ -1649,6 +1649,11 @@ static void t6w_osdblend_set_state(struct meson_vpu_block *vblk,
 	MESON_DRM_BLOCK("%s set_state done.\n", osdblend->base.name);
 }
 
+static void osd_sr_size_set(u32 h_size, u32 v_size, struct rdma_reg_ops *reg_ops)
+{
+	reg_ops->rdma_write_reg(OSD_SR_SIZE, (v_size << 16) | h_size);
+}
+
 static void a9_osdblend_set_state(struct meson_vpu_block *vblk,
 			       struct meson_vpu_block_state *state,
 			       struct meson_vpu_block_state *old_state,
@@ -1734,6 +1739,11 @@ static void a9_osdblend_set_state(struct meson_vpu_block *vblk,
 			osd_din3_input_enable_set(vblk, reg_ops, reg, true);
 			osd_din3_scope_set(vblk, reg_ops, reg, scope_default);
 		}
+
+		/* update sr size register */
+		osd_sr_size_set(mvobs->input_width[OSD_SUB_BLEND0],
+				mvobs->input_height[OSD_SUB_BLEND0],
+				state->sub->reg_ops);
 	} else {
 		if (!osd4_enable && !osd5_enable) {
 			/*blend en*/

@@ -57,6 +57,8 @@
 #define OSD45_RO_HV_CNT                            0x3d47
 #define DIV_ALPHA                                  0x3d48
 
+#define OSD_SR_SIZE                                0x4702
+
 /* add for osd dv core2 */
 #define DOLBY_CORE2A_SWAP_CTRL1	                   0x3434
 #define DOLBY_CORE2A_SWAP_CTRL2	                   0x3435

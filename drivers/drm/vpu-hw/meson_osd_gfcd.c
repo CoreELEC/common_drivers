@@ -344,7 +344,15 @@ static void gfcd_hw_enable(struct meson_vpu_block *vblk, struct meson_vpu_block_
 static void gfcd_hw_disable(struct meson_vpu_block *vblk,
 	struct meson_vpu_sub_pipeline *sub_pipeline)
 {
+	int i;
+	struct gfcd_reg_s *reg;
 	struct meson_vpu_gfcd *gfcd = to_gfcd_block(vblk);
+	struct rdma_reg_ops *reg_ops = sub_pipeline->reg_ops;
+
+	for (i = gfcd->start_surface; i <= gfcd->end_surface; i++) {
+		reg = &gfcd->reg[i];
+		reg_ops->rdma_write_reg_bits(reg->gfcd_top_ctrl, 0, 4, 1);
+	}
 
 	MESON_DRM_BLOCK("%s disable called.\n", gfcd->base.name);
 }

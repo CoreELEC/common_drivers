@@ -708,7 +708,10 @@ static void a9_postblend_set_state(struct meson_vpu_block *vblk,
 		scope.v_end = scope.v_start + mvps->scaler_param[scaler_index].output_height - 1;
 
 		vpp1_osd1_blend_scope_set(vblk, reg_ops, reg1, scope);
-		reg_ops->rdma_write_reg_bits(A9_VPP1_OSD1_BLEND_SRC_CTRL, 0x2, 0, 4);
+		if (amc->blank_enable)
+			reg_ops->rdma_write_reg_bits(A9_VPP1_OSD1_BLEND_SRC_CTRL, 0x0, 0, 4);
+		else
+			reg_ops->rdma_write_reg_bits(A9_VPP1_OSD1_BLEND_SRC_CTRL, 0x2, 0, 4);
 
 		if (bld_src2_sel == 1) {
 			if (postblend->postblend_path_mask) {
