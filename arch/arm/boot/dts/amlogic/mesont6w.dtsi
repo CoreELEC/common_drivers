@@ -1299,6 +1299,7 @@
 		unifykey-index-18 = <&keysn_18>;
 		unifykey-index-19 = <&keysn_19>;
 		unifykey-index-20 = <&keysn_20>;
+		unifykey-index-21 = <&keysn_21>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -1407,6 +1408,11 @@
 		};
 		keysn_20:key_20{
 			key-name = "diag_state";
+			key-device = "normal";
+			key-permit = "read","write","del";
+		};
+		keysn_21:key_21{
+			key-name = "model_name";
 			key-device = "normal";
 			key-permit = "read","write","del";
 		};
