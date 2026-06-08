@@ -70,6 +70,10 @@ unsigned int vsp_sel;
 unsigned int line_dly;
 unsigned int v_max;
 unsigned int v_min;
+static unsigned int vrr_check_small;
+unsigned int delay_change_ctrl;
+static unsigned int pre_check_small;
+static unsigned int small_check_ctrl;
 
 #define VRR_MNT_MAX      5
 static unsigned int vrr_mnt_table[VRR_MNT_MAX] = {
@@ -494,18 +498,42 @@ static void vrr_line_delay_update(struct aml_vrr_drv_s *vdrv)
 	else
 		temp = vrr_reg_getb(reg + offset, 8, 16);
 
-	if (line_change_type == VRR_DOT)
-		vrr_line_dly = vrr_dot_line;
-	else if (line_change_type == VRR_AXIS)
-		vrr_line_dly = dst_line;
-	else
-		vrr_line_dly = vdrv->line_dly + crop_line;
+	if (!delay_change_ctrl) {
+		if (line_change_type == VRR_DOT) {
+			vrr_line_dly = vrr_dot_line;
+		} else if (dst_line > 200) {
+			if (vdrv->line_dly >= 2350)
+				vrr_line_dly = vdrv->line_dly + dst_line + crop_line;
+			else
+				vrr_line_dly = dst_line + crop_line;
+		} else {
+			vrr_line_dly = vdrv->line_dly + crop_line;
+		}
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("[%d]:type:%d ln:%d temp:%d v_l:%d c:%d cp:%d d:%d dp:%d\n",
+				vdrv->index, line_change_type, vrr_line_dly,
+				temp, vdrv->line_dly, crop_line, pre_line,
+				dst_line, pre_dst_line);
+	} else {
+		vrr_line_dly = vdrv->line_dly;
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("[%d]: %s: line_new:%d temp:%d v_l:%d\n",
+				vdrv->index, __func__, vrr_line_dly,
+				temp, vdrv->line_dly);
+	}
 
 	if (temp == vrr_line_dly)
 		return;
 
 	if (dst_line == 200 && pre_dst_line == 0)
 		return;
+
+	if (vrr_check_small && vdrv->enable &&
+		!pre_check_small && small_check_ctrl) {
+		vrr_drv_func_en(vdrv, 0);
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("[%d]: full screen change to small win!", vdrv->index);
+	}
 
 	if (crop_line > pre_line || dst_line > pre_dst_line) {
 		if (vdrv->data->chip_type == VRR_CHIP_T6X)
@@ -541,6 +569,23 @@ static void vrr_line_delay_update(struct aml_vrr_drv_s *vdrv)
 			vdrv->index, __func__, temp, vrr_line_dly);
 }
 
+bool vrr_check_display_mode(void)
+{
+	bool ret = false;
+	struct vinfo_s *vinfo = NULL;
+
+	vinfo = get_current_vinfo();
+	if (!vinfo)
+		return false;
+
+	if (vinfo->width == 3840 && vinfo->height == 1080)
+		ret = true;
+	else
+		ret = false;
+
+	return ret;
+}
+
 void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 			u16 dst_w, u16 dst_h, u16 type)
 {
@@ -560,6 +605,12 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 		return;
 	}
 
+	if (delay_change_ctrl) {
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("crop_update not support change delay line\n");
+		return;
+	}
+
 	switch (type) {
 	case VRR_CROP:
 		crop_line = line;
@@ -571,14 +622,27 @@ void vrr_crop_update_delay_line(u32 line, u16 axis_y,
 		break;
 
 	case VRR_AXIS:
-		if (dst_h <= vdrv->vrr_dev->v_active && dst_h > 0 && axis_y > 0 &&
+		if (!vrr_check_display_mode() && dst_h <= vdrv->vrr_dev->v_active &&
+			dst_h > 0 && axis_y > 0 &&
 			vdrv->vrr_dev->v_active >= dst_h + axis_y)
 			dst_line = (vdrv->vrr_dev->v_active - dst_h - axis_y) + 200;
-		else if (dst_h <= vdrv->vrr_dev->v_active && dst_h > 0 && axis_y > 0 &&
+		else if (!vrr_check_display_mode() && dst_h <= vdrv->vrr_dev->v_active &&
+			dst_h > 0 && axis_y > 0 &&
 			vdrv->vrr_dev->v_active < dst_h + axis_y)
 			dst_line = axis_y + 200;
 		else
 			dst_line = 200;
+
+		if (small_check_ctrl && dst_h < ((vdrv->vrr_dev->v_active * 85) / 100))
+			vrr_check_small = 1;
+		else
+			vrr_check_small = 0;
+		if (vrr_debug_print & VRR_DBG_PR_NORMAL)
+			VRRPR("crop_update h:%d ac:%d sm:%d pre_sm:%d",
+				dst_h, vdrv->vrr_dev->v_active, vrr_check_small,
+				pre_check_small);
+
+		pre_check_small = vrr_check_small;
 
 		if (dst_line != pre_dst_line) {
 			line_change_type = VRR_AXIS;
@@ -988,6 +1052,23 @@ static irqreturn_t vrr_vsync_isr_handler(int irq, void *data)
 	spin_unlock_irqrestore(&vdrv->vrr_isr_lock, flags);
 
 	return IRQ_HANDLED;
+}
+
+bool vrr_check_window(void)
+{
+	return vrr_check_small;
+}
+
+bool vrr_check_window_change(void)
+{
+	bool ret = false;
+
+	if (!small_check_ctrl)
+		ret = false;
+	else if (vrr_check_small && !pre_check_small)
+		ret = true;
+
+	return ret;
 }
 
 //===========================================================================

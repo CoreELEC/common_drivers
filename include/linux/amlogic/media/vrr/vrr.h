@@ -5,6 +5,7 @@
 
 #ifndef _AML_VRR_H_
 #define _AML_VRR_H_
+#include <linux/amlogic/media/vfm/vframe.h>
 
 enum vrr_input_src_e {
 	VRR_INPUT_TVIN = 0,
@@ -157,5 +158,7 @@ unsigned int vrr_instead_vlock(void);
 bool vrr_small_window(void);
 void vrr_check_dec(unsigned int state);
 bool vrr_hdr_latency(void);
+bool vrr_check_input_to_out(struct vframe_s *vf);
+bool vrr_check_window_change(void);
 
 #endif

@@ -70,7 +70,7 @@ struct freesync_vtem_s freesync_vtem_data;
 static unsigned int freesync_pb6_data_pre;
 
 static unsigned int hdr_low_latency;
-unsigned int vrr_line_hdr_50hz = 3235;
+unsigned int vrr_line_hdr_50hz = 3250;
 unsigned int vrr_line_hdr_60hz = 2350;
 
 u8 freesync_ld_ctrl;
@@ -85,6 +85,7 @@ static unsigned int vrr_signal_pre;
 static int vrr_disable_cnt = 3;
 static unsigned int vrr_enable_cnt;
 static unsigned int vout_base;
+static unsigned int check_delay_vsync;
 
 struct vrr_sig_sts frame_sts = {
 	.vrr_support = false,
@@ -968,6 +969,12 @@ void vrrlock_process(struct vframe_s *vf,
 		if (frame_lock_debug & VRR_POLICY_LOCK_STATUS_DEBUG_FLAG)
 			framelock_pr_info("%s 50/100hz vdata.line_dly:%d\n",
 				__func__, vdata.line_dly);
+	} else if ((frame_sts.vrr_frame_cur == 144 && !vf->vf_vrr_param.vrr_signal) ||
+		vf->vf_vrr_param.vin_base_fps == 144) {
+		if (vf->compWidth == 3840 && vf->compHeight == 2160)
+			vdata.line_dly = vrr_delay_line;
+		else
+			vdata.line_dly = vrr_delay_line + 50;
 	} else {
 		if (vf->compWidth == 2560 && vf->compHeight == 1440 &&
 			((frame_sts.vrr_frame_cur == 60 || frame_sts.vrr_frame_cur == 120) &&
@@ -1138,9 +1145,9 @@ void frame_lock_process(struct vframe_s *vf,
 		frame_lock_check_lock_type(cur_video_sts, vf);
 
 	if (frame_lock_debug & VRR_POLICY_LOCK_STATUS_DEBUG_FLAG)
-		framelock_pr_info("%s lock_type:%d vrr_skip_frame_cnt:%d vrr_enable:%d\n",
+		framelock_pr_info("%s lock_type:%d vrr_skip_frame_cnt:%d vrr_enable:%d de_vs:%d\n",
 			__func__, frame_sts.vrr_frame_lock_type, vrr_skip_frame_cnt,
-			vrr_enable_cnt);
+			vrr_enable_cnt, check_delay_vsync);
 
 	switch (frame_sts.vrr_frame_lock_type) {
 	case FRAMELOCK_VRRLOCK:
@@ -1278,6 +1285,45 @@ bool vrr_hdr_latency(void)
 	return ret;
 }
 
+bool vrr_check_input_to_out(struct vframe_s *vf)
+{
+	bool ret = false;
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+	unsigned int out = 0;
+	struct vinfo_s *vinfo = NULL;
+
+	vinfo = get_current_vinfo();
+	if (!vinfo || !vf)
+		return ret;
+
+	out = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	if (!check_delay_vsync && aml_vrr_state()) {
+		ret = true;
+	} else {
+		if (vf->vf_vrr_param.vrr_signal) {
+			if ((vf->vf_vrr_param.vin_base_fps == 50 && out == 100) ||
+				(vf->vf_vrr_param.vin_base_fps == 60 && out == 120))
+				ret = true;
+			else
+				ret = false;
+		} else {
+			if ((frame_sts.vrr_frame_cur == 50 && out == 100) ||
+				(frame_sts.vrr_frame_cur == 60 && out == 120))
+				ret = true;
+			else
+				ret = false;
+		}
+	}
+
+	if (frame_lock_debug & VRR_POLICY_DEBUG_RANGE_FLAG)
+		framelock_pr_info("%s vrr:%d in:%d out:%d fps:%d ret:%d\n",
+			__func__, vf->vf_vrr_param.vrr_signal,
+			vf->vf_vrr_param.vin_base_fps, out,
+			frame_sts.vrr_frame_cur, ret);
+#endif
+	return ret;
+}
+
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 ssize_t frame_lock_debug_store(const struct class *cla,
 			  const struct class_attribute *attr,
@@ -1313,7 +1359,7 @@ ssize_t frame_lock_debug_store(const struct class *cla,
 		vrr_delay_line = val;
 		frame_sts.vrr_frame_lock_type = FRAMELOCK_INVALID;
 		pr_info("\n vrr_delay_line = %d\n", vrr_delay_line);
-	} else if (!strncmp(parm[0], "delay_line_50hz", 15)) {
+	} else if (!strncmp(parm[0], "line_delay", 10)) {
 		if (kstrtol(parm[1], 10, &val) < 0)
 			return -EINVAL;
 		vrr_delay_line_50hz = val;
@@ -1340,6 +1386,11 @@ ssize_t frame_lock_debug_store(const struct class *cla,
 			return -EINVAL;
 		vrr_outof_rge_cnt = val;
 		pr_info("\n vrr_outof_rge_cnt = %d\n", vrr_outof_rge_cnt);
+	} else if (!strncmp(parm[0], "delay_vs", 8)) {
+		if (kstrtol(parm[1], 10, &val) < 0)
+			return -EINVAL;
+		check_delay_vsync = val;
+		pr_info("\n check_delay_vsync = %d\n", check_delay_vsync);
 	} else {
 		pr_info("\n frame lock debug cmd invalid\n");
 	}
