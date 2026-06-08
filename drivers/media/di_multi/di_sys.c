@@ -70,9 +70,9 @@
 
 static di_dev_t *di_pdev;
 
-static const char videodisplay_group_name0[] = "d_i_debug";
+static const char dim_group_name0[] = "d_i_debug";
 
-static struct bin_attribute videodisplay_attr[] = {
+static struct bin_attribute dim_attr[] = {
 	{
 		.attr.name = "dump_yuv",
 		.attr.mode = 0664,
@@ -82,16 +82,15 @@ static struct bin_attribute videodisplay_attr[] = {
 	},
 };
 
-static struct bin_attribute *videodisplay_bin_attrs0[] = {
-	&videodisplay_attr[0],
-	&videodisplay_attr[1],
+static struct bin_attribute *dim_bin_attrs0[] = {
+	&dim_attr[0],
 	NULL,
 };
 
-static const struct attribute_group videodisplay_attr_group[] = {
+static const struct attribute_group dim_attr_group[] = {
 	{
-		.name = videodisplay_group_name0,
-		.bin_attrs = videodisplay_bin_attrs0,
+		.name = dim_group_name0,
+		.bin_attrs = dim_bin_attrs0,
 	},
 };
 
@@ -4117,7 +4116,7 @@ static int dim_probe(struct platform_device *pdev)
 		pr_error("device_create create error\n");
 		goto fail_cdev_add;
 	}
-	ret = sysfs_create_group(&pdev->dev.kobj, &videodisplay_attr_group[0]);
+	ret = sysfs_create_group(&pdev->dev.kobj, &dim_attr_group[0]);
 		if (ret)
 			pr_err("videodisplay creat dump node fail, ret=%d.\n", ret);
 	dev_set_drvdata(di_devp->dev, di_devp);
