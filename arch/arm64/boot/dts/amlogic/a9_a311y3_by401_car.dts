@@ -13,8 +13,8 @@
 #include "firmware_ab.dtsi"
 #include <dt-bindings/usb/pd.h>
 / {
-	amlogic-dt-id = "a9_a311y3_by401_venus";
-	compatible = "a9_a311y3_by401_venus";
+	amlogic-dt-id = "a9_a311y3_by401_car";
+	compatible = "a9_a311y3_by401_car";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -1322,6 +1322,7 @@
 		};
 	};
 };
+
 //&tdmc {
 //	pinctrl-names = "tdm_pins";
 //	pinctrl-0 = <&i2s_gpio_d_pins_1
