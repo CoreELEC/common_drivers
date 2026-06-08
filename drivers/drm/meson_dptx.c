@@ -486,10 +486,9 @@ static void meson_dptx_atomic_print_state(struct drm_printer *p,
 	struct meson_tx_state *tx_state = &dptx_state->base_state;
 
 	drm_printf(p, "\t\t update:[%d]\n", dptx_state->update);
-	drm_printf(p, "\t\t\t cs: [%d], cd: [%d]\n",
+	drm_printf(p, "\t\t cs: [%d], cd: [%d]\n",
 		   dptx_state->color_attr_para.colorformat,
 		   dptx_state->color_attr_para.bitdepth);
-	drm_printf(p, "\t\t update:[%d]\n", dptx_state->update);
 	drm_printf(p, "\t\t avmute:[%d]\n", dptx_state->avmute);
 	drm_printf(p, "\t\t hdr_cap_rx:[%d]\n", get_hdr_info_rx(tx_comm));
 	drm_printf(p, "\t\t ready:[%d]\n", tx_dev->ready);
