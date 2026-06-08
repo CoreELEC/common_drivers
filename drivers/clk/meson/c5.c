@@ -164,6 +164,7 @@ static struct clk_regmap hifi_pll = {
 			.fw_name = "hifi_pll_osc",
 		},
 		.num_parents = 1,
+		.flags = CLK_IGNORE_UNUSED,
 	},
 };
 
