@@ -456,7 +456,9 @@ static irqreturn_t meson_i2c_irq(int irqno, void *dev_id)
 		i2c->pos += i2c->count;
 		break;
 	case STATE_IDLE:
-		dev_warn(i2c->dev, "i2c irq triggered abnormally!!!\n");
+		dev_warn(i2c->dev, "i2c irq triggered abnormally!!!, irq_state:0x%x,irq_en:0x%x\n",
+				readl(i2c->regs + REG_CGF_IRQ_STATE),
+				readl(i2c->regs + REG_CGF_IRQ_ENABLE));
 		break;
 	default:
 		break;
@@ -748,6 +750,11 @@ static int meson_i2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't get device clock\n");
 		return PTR_ERR(i2c->clk);
 	}
+	i2c->clk_rate = clk_get_rate(i2c->clk);
+	if (i2c->clk_rate == 0) {
+		dev_err(&pdev->dev, "failed to get clk rate\n");
+		return -EINVAL;
+	}
 	i2c->regs  = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(i2c->regs))
 		return PTR_ERR(i2c->regs);
@@ -760,7 +767,10 @@ static int meson_i2c_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
-
+	/* init i2c before req irq, avoid it's old states trigger irq.
+	 * and must init i2c after get clock rate, because it will set speed.
+	 */
+	meson_i2c_init(i2c);
 	if (of_property_read_u32(pdev->dev.of_node, "working_mode",
 				 &i2c->mode)) {
 		i2c->mode = I2C_IRQ_MODE;
@@ -804,13 +814,6 @@ static int meson_i2c_probe(struct platform_device *pdev)
 	ret = meson_i2c_speed_debug(&pdev->dev);
 	if (ret)
 		dev_err(&pdev->dev, "Creat i2c speed debug sysfs failed\n");
-	i2c->clk_rate = clk_get_rate(i2c->clk);
-	if (i2c->clk_rate == 0) {
-		dev_err(&pdev->dev, "failed to get clk rate\n");
-		return -EINVAL;
-	}
-	//init i2c, avoid it's old states come from uboot
-	meson_i2c_init(i2c);
 #ifdef I2C_PM_RUNTIME
 	pm_runtime_mark_last_busy(i2c->dev);
 	pm_runtime_put_autosuspend(i2c->dev);
