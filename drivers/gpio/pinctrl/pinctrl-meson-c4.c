@@ -1159,8 +1159,8 @@ static const char * const uart_b_groups[] = {
 };
 
 static const char * const uart_c_groups[] = {
-	"uart_c_rx",   "uart_c_tx",   "uart_c_rx_b",  "uart_c_rx_c",
-	"uart_c_rx_m", "uart_c_rx_x", "uart_c_tx_b",  "uart_c_tx_c",
+	"uart_c_rx",   "uart_c_tx",   "uart_c_rx_c",
+	"uart_c_rx_m", "uart_c_rx_x", "uart_c_tx_c",
 	"uart_c_tx_m", "uart_c_tx_x", "uart_c_rx_m3", "uart_c_tx_m2",
 	"uart_c_cts_m4", "uart_c_rts_m5"
 };
