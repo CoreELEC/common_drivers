@@ -1577,6 +1577,8 @@ static int cec_read_padreg(void)
 	switch (cec_dev->plat_data->chip_id) {
 	case CEC_CHIP_SC2:
 	case CEC_CHIP_S4:
+	case CEC_CHIP_S6:
+	case CEC_CHIP_S7D:
 		/* GPIOH_3 */
 		reg = read_pad_reg(PADCTRL_GPIOH_I);
 		break;

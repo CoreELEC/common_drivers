@@ -2181,7 +2181,7 @@ static const struct cec_platform_data_s cec_tm2_data = {
 
 static const struct cec_platform_data_s cec_sc2_data = {
 	.chip_id = CEC_CHIP_SC2,
-	.line_reg = 0xff,/*don't check*/
+	.line_reg = 2,
 	.line_bit = 3,
 	.ee_to_ao = 1,
 	.ceca_sts_reg = 1,
@@ -2254,8 +2254,8 @@ static const struct cec_platform_data_s cec_s7_data = {
 
 static const struct cec_platform_data_s cec_s7d_data = {
 	.chip_id = CEC_CHIP_S7D,
-	.line_reg = 0xff,/*don't check*/
-	.line_bit = 0,
+	.line_reg = 2,
+	.line_bit = 3,
 	.ee_to_ao = 1,
 	.ceca_sts_reg = 0,
 	.ceca_ver = CECA_NONE,
@@ -2266,8 +2266,8 @@ static const struct cec_platform_data_s cec_s7d_data = {
 
 static const struct cec_platform_data_s cec_s6_data = {
 	.chip_id = CEC_CHIP_S6,
-	.line_reg = 0xff,/*don't check*/
-	.line_bit = 0,
+	.line_reg = 2,
+	.line_bit = 3,
 	.ee_to_ao = 1,
 	.ceca_sts_reg = 0,
 	.ceca_ver = CECA_NONE,

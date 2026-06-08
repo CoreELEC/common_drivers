@@ -9,7 +9,7 @@
 #include <linux/clk.h>
 #include "hdmi_tx_cec_20.h"
 
-#define CEC_DRIVER_VERSION     "2026/02/02: soundbar use arc logic addr first"
+#define CEC_DRIVER_VERSION     "2026/06/08: sc2 s6 s7d enable line check"
 
 #define CEC_DEV_NAME		"cec"
 
