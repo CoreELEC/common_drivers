@@ -65,6 +65,7 @@
 
 #define TSENSOR_CALIB_OFFSET	1
 #define TSENSOR_CALIB_SHIFT	4
+#define TSENSOR_HW_RESET_VALUE	110000
 
 /**
  * struct amlogic_thermal_soc_calib_data
@@ -122,10 +123,10 @@ static int amlogic_thermal_code_to_millicelsius(struct amlogic_thermal *pdata,
 			     ~(pdata->trim_info & TSENSOR_TRIM_TEMP_MASK) + 1 :
 			     (pdata->trim_info & TSENSOR_TRIM_TEMP_MASK);
 
-	factor = param->n * temp_code;
+	factor = (s64)param->n * temp_code;
 	factor = div_s64(factor, 100);
 
-	Uptat = temp_code * param->m;
+	Uptat = (s64)temp_code * param->m;
 	Uptat = div_s64(Uptat, 100);
 	Uptat = Uptat * BIT(16);
 	Uptat = div_s64(Uptat, BIT(16) + factor);
@@ -368,8 +369,11 @@ static int amlogic_thermal_probe(struct platform_device *pdev)
 		return PTR_ERR(pdata->sec_ao_map);
 	}
 
-	of_property_read_u32(pdev->dev.of_node, "reset-temp",
-			     &pdata->reset_temp);
+	if (of_property_read_u32(pdev->dev.of_node, "reset-temp",
+				 &pdata->reset_temp)) {
+		dev_err(dev, "missing reset temp and will using default.\n");
+		pdata->reset_temp = TSENSOR_HW_RESET_VALUE;
+	}
 
 	pdata->tzd = devm_thermal_of_zone_register(&pdev->dev,
 						   0,
