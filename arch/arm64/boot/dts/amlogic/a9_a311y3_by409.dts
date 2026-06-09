@@ -288,6 +288,12 @@
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
+
+		/* Dolby is not supported in the dual-display DTS configuration. */
+		amdolby_vision:amdolby_vision {
+			status = "disabled";
+			tv_mode = <0>;
+		};
 	};
 
 /* Audio Related start */
