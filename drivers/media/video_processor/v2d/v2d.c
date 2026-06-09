@@ -759,9 +759,6 @@ static void init_output_buffer_size(struct v2d_dev *dev,
 			if (dev->work_mode == V2D_MODE_ROTATE) {
 				buf_width = BUFFER_4K_HEIGHT;
 				buf_height = BUFFER_4K_WIDTH;
-			} else {
-				buf_width = BUFFER_4K_WIDTH;
-				buf_height = BUFFER_4K_HEIGHT;
 			}
 		} else {
 			if (dev->work_mode == V2D_MODE_ROTATE) {
@@ -981,7 +978,6 @@ static void set_output_buffer_area(struct v2d_dev *dev, struct frames_info_t *fr
 		frames_info->out_buffer.dst_h = received_frame->output_axis.max_bottom -
 			received_frame->output_axis.min_top + 1;
 	} else if (dev->dev_choice == COMPOSER_WITH_VICP) {
-
 		if (dev->work_mode == V2D_MODE_ROTATE) {
 			frames_info->out_buffer.crop_y = 0;
 			frames_info->out_buffer.crop_x = 0;
