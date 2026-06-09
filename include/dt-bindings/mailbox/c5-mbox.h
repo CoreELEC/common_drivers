@@ -35,20 +35,6 @@
 #define C5_REE2AO9       73
 #define C5_REE2AO10      74
 
-/* DSPA to ARMREE driver ID */
-#define C5_DSPA2REE0     129
-#define C5_DSPA2REE1     130
-#define C5_DSPA2REE2     131
-#define C5_DSPA2REE3     132
-#define C5_DSPA2REE4     133
-
-/* ARMREE to DSPA driver ID */
-#define C5_REE2DSPA0     161
-#define C5_REE2DSPA1     162
-#define C5_REE2DSPA2     163
-#define C5_REE2DSPA3     164
-#define C5_REE2DSPA4     165
-
 /* MBOX CLIENT ID */
 /* AOCPU to ARMREE client ID */
 #define C5_AO2REE_DEV       C5_AO2REE0
@@ -72,20 +58,12 @@
 #define C5_REE2AO_SPINLOCK  C5_REE2AO8
 #define C5_REE2AO_IR        C5_REE2AO9
 
-/* ARMREE to DSPA client ID */
-#define C5_REE2DSPA_DEV     C5_REE2DSPA0
-#define C5_REE2DSPA_HOST    C5_REE2DSPA1
-
-/* DSPA to ARMREE client ID */
-#define C5_DSPA2REE_DEV     C5_DSPA2REE0
-#define C5_DSPA2REE_HOST    C5_DSPA2REE1
-
 /* MBOX CHANNEL ID */
 #define C5_MBOX_AO2REE    2
 #define C5_MBOX_REE2AO    3
 #define C5_MBOX_NUMS      2
 
 /* AOCPU STATUS MBOX CHANNEL ID */
-#define C5_MBOX_AO2TEE    4
+#define C5_AOCPU_STS_CHAN 4
 
 #endif /* __C5_MBOX_H__ */

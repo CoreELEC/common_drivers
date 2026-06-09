@@ -379,9 +379,11 @@
 		mbox-nums = <C5_MBOX_NUMS>;
 		mboxids = <C5_MBOX_AO2REE>,
 			  <C5_MBOX_REE2AO>;
-		aocpu_sts_mboxid = <C5_MBOX_AO2TEE>;
-		ree2aocpu_mboxid = <C5_MBOX_REE2AO>;
 		#mbox-cells = <1>;
+		mbox-dests = <MAILBOX_ARM>,
+			     <MAILBOX_AOCPU>;
+		aocpu-hang-detect;
+		aocpu-sts-mboxid = <C5_AOCPU_STS_CHAN>;
 	};
 
 	mbox_devfs {
@@ -392,8 +394,6 @@
 			     "aocpu2ree";
 		mboxes = <&mbox_fifo C5_REE2AO_DEV>,
 			 <&mbox_fifo C5_AO2REE_DEV>;
-		mbox-dests = <MAILBOX_AOCPU>,
-			     <MAILBOX_ARM>;
 	};
 
 	dc12v: fixed@dc12v {
@@ -941,47 +941,6 @@
 		/* Trigger threshold voltage: 800 mV */
 		interrupts-extended = <&pdd 800>;
 		status = "okay";
-	};
-
-	hifidsp0: hifidsp0 {
-		compatible = "amlogic, hifidsp0";
-		status = "disabled";
-		startup-position = /bits/ 8 <PURE_DDR>; /*host dsp start mode : DDR*/
-		memory-region = <&dsp_fw_reserved>;
-		reg-names = "base-reg",
-			    "health-reg",
-			    "device-support-reg",
-			    "ddrfw-region",
-			    "shm-region";
-		reg = <0x0 0xfe380000 0x0 0x114>, /*host base address*/
-		      <0x0 0xfe010258 0x0 0x4>, /*host health reg address*/
-		      <0x0 0xfe44006c 0x0 0x4>, /*dsp support region*/
-		      <0x0 0x0 0x0 0x800000>, /*host ddrfw region [offset size]*/
-		      <0x0 0x780000 0x0 0x80000>; /*host shm region [offset size]*/
-		//assigned-clocks = <&scmi_clk CLKID_GP2_PLL>;
-		//assigned-clock-rates = <1002000000>;
-		//clocks = <&clkc CLKID_DSPA>,
-		//	 <&clkc CLKID_HIFI_PLL>;
-		//clock-names = "dspa_clk",
-		//	      "dspa_clk_hifi";
-		/* host dsp support bit
-		 * efuse reg OTP_LIC23 bit[24]
-		 * 1: disable
-		 * 0: enable
-		 */
-		dsp-support-bit = <0x1000000>;
-		/* bit0: pm_support_suspend
-		 * bit1: pm_support_always_on
-		 * bit2: pm_support_ffv
-		 */
-		pm-support = /bits/ 8 <0x5>;
-		//power-domains = <&pwrdm PDID_S6_DSPA>;
-		power-domain-names = "dspa";
-		mboxes = <&mbox_fifo C5_REE2DSPA_HOST>,
-			 <&mbox_fifo C5_DSPA2REE_HOST>;
-		//logbuff-polling-ms = <50>;
-		health-polling-ms = <1000>;
-		clkfreq-khz = <1002000>;
 	};
 
 	shmem {
