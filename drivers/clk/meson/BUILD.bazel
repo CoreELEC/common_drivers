@@ -593,3 +593,26 @@ ddk_module(
     visibility = ["//visibility:public"],
     deps = amlogic_clk_soc_deps,
 )
+
+ddk_module(
+    name = "amlogic-clk-soc-c5",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_COMMON_CLK_C5": {
+            True: [
+                "c5.c",
+                "c5-aoclk.c",
+                "c5-main.c",
+                ],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = ["pr_fmt(fmt)=\"[clk-soc-c5]: \" fmt"],
+    out = "amlogic-clk-soc-c5.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = amlogic_clk_soc_deps,
+)

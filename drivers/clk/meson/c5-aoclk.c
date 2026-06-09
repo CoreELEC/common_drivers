@@ -279,7 +279,7 @@ static struct clk_regmap ao_pwm_b = {
 };
 
 #define MESON_CLK_GATE_AO_SYS_CLK(_name, _reg, _bit)                  \
-struct clk_regmap _name = {                                           \
+static struct clk_regmap _name = {                                           \
 	.data = &(struct clk_regmap_gate_data) {                      \
 		.offset = (_reg),                                     \
 		.bit_idx = (_bit),                                    \

@@ -553,6 +553,25 @@ ddk_module(
 )
 
 ddk_module(
+    name = "amlogic-pinctrl-soc-c5",
+    srcs = glob([
+        "**/*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_AMLOGIC_PINCTRL_MESON_C5": {
+            True: ["pinctrl/pinctrl-meson-c5.c"],
+        },
+    },
+    hdrs = [
+    ],
+    local_defines = ["pr_fmt(fmt)=\"[pinctrl-soc-c5]: \" fmt"],
+    out = "amlogic-pinctrl-soc-c5.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = amlogic_pinctrl_soc_deps,
+)
+
+ddk_module(
     name = "amlogic-pinctrl-a4",
     srcs = glob([
         "**/*.h",

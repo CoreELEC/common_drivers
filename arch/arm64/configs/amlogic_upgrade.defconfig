@@ -105,6 +105,9 @@ CONFIG_AMLOGIC_COMMON_CLK_S7D=y
 # amlogic-clk-soc-a9.ko
 CONFIG_AMLOGIC_COMMON_CLK_A9=y
 
+# amlogic-clk-soc-c5.ko
+CONFIG_AMLOGIC_COMMON_CLK_C5=y
+
 # amlogic-env.ko
 CONFIG_AMLOGIC_ENV_ENCRYPT=y
 
@@ -166,6 +169,9 @@ CONFIG_AMLOGIC_PINCTRL_MESON_T6X=y
 
 # amlogic-pinctrl-soc-a9.ko
 CONFIG_AMLOGIC_PINCTRL_MESON_A9=y
+
+# amlogic-pinctrl-soc-c5.ko
+CONFIG_AMLOGIC_PINCTRL_MESON_C5=y
 
 # amlogic-pinctrl-a4.ko
 CONFIG_AMLOGIC_PINCTRL_A4=y

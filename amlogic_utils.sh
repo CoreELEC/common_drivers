@@ -1564,6 +1564,7 @@ function handle_input_parameters () {
 			;;
 		--image_type)
 			export KERNEL_IMAGE_TYPE=$2
+			VA=1
 			shift
 			;;
 		-h|--help)
