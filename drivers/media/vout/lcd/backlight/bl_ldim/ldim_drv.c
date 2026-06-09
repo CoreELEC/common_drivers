@@ -1486,7 +1486,7 @@ int aml_ldim_probe(struct platform_device *pdev)
 	struct ldim_fw_custom_s *fw_cus = aml_ldim_get_fw_cus();
 	struct aml_lcd_drv_s *pdrv = aml_lcd_get_driver(0);
 
-	if (!bdrv || !pdrv)
+	if (!bdrv || !pdrv || !fw)
 		return -1;
 
 	memset(devp, 0, (sizeof(struct ldim_dev_s)));
@@ -1555,10 +1555,6 @@ int aml_ldim_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (!fw) {
-		LDIMERR("%s: fw is null\n", __func__);
-		return -1;
-	}
 	ldim_driver.fw = fw;
 	ldim_driver.fw->chip_type = devp->data->ldc_chip_type;
 	ldim_driver.fw->param->conf->seg_row = ldim_config.seg_row;
@@ -1585,23 +1581,22 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ret = alloc_chrdev_region(&devp->aml_ldim_devno, 0, 1, AML_LDIM_DEVICE_NAME);
 	if (ret < 0) {
 		LDIMERR("failed to alloc major number\n");
-		ret = -ENODEV;
 		goto err;
 	}
 
 	devp->aml_ldim_clsp = class_create("aml_ldim");
 	if (IS_ERR(devp->aml_ldim_clsp)) {
 		ret = PTR_ERR(devp->aml_ldim_clsp);
-		return ret;
+		goto err1;
 	}
 	ret = aml_ldim_debug_probe(devp->aml_ldim_clsp);
 	if (ret)
-		goto err1;
+		goto err2;
 
 	devp->aml_ldim_cdevp = kmalloc(sizeof(*devp->aml_ldim_cdevp), GFP_KERNEL);
 	if (!devp->aml_ldim_cdevp) {
 		ret = -ENOMEM;
-		goto err2;
+		goto err3;
 	}
 
 	/* connect the file operations with cdev */
@@ -1612,14 +1607,14 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ret = cdev_add(devp->aml_ldim_cdevp, devp->aml_ldim_devno, 1);
 	if (ret) {
 		LDIMERR("failed to add device\n");
-		goto err3;
+		goto err4;
 	}
 
 	devp->dev = device_create(devp->aml_ldim_clsp, NULL,
 		devp->aml_ldim_devno, NULL, AML_LDIM_CLASS_NAME);
 	if (IS_ERR(devp->dev)) {
 		ret = PTR_ERR(devp->dev);
-		goto err4;
+		goto err5;
 	}
 
 	spin_lock_init(&ldim_isr_lock);
@@ -1628,9 +1623,8 @@ int aml_ldim_probe(struct platform_device *pdev)
 
 	ldim_driver.ldim_vsync_irq = platform_get_irq_byname(pdev, "vsync");
 	if (ldim_driver.ldim_vsync_irq == -ENXIO) {
-		ret = -ENODEV;
 		LDIMERR("ldim_vsync_irq resource error\n");
-		goto err3;
+		goto err6;
 	}
 	LDIMPR("ldim_vsync_irq: %d\n", ldim_driver.ldim_vsync_irq);
 	if (request_irq(ldim_driver.ldim_vsync_irq, ldim_isr, IRQF_SHARED,
@@ -1641,15 +1635,14 @@ int aml_ldim_probe(struct platform_device *pdev)
 
 	ldim_driver.ldim_line_n_irq = platform_get_irq_byname(pdev, "ldim_line_n");
 	if (ldim_driver.ldim_line_n_irq == -ENXIO) {
-		ret = -ENODEV;
 		LDIMERR("ldim_line_n_irq resource error\n");
-		goto err3;
-	}
-	LDIMPR("ldim_line_n_irq: %d\n", ldim_driver.ldim_line_n_irq);
-	if (request_irq(ldim_driver.ldim_line_n_irq, ldim_line_n_isr, IRQF_SHARED,
-		"ldim_line_n", (void *)&ldim_driver.ldim_line_n_irq)) {
-		LDIMERR("can't request ldim_line_n_irq(%d)\n",
-			ldim_driver.ldim_line_n_irq);
+	} else {
+		LDIMPR("ldim_line_n_irq: %d\n", ldim_driver.ldim_line_n_irq);
+		if (request_irq(ldim_driver.ldim_line_n_irq, ldim_line_n_isr, IRQF_SHARED,
+			"ldim_line_n", (void *)&ldim_driver.ldim_line_n_irq)) {
+			LDIMERR("can't request ldim_line_n_irq(%d)\n",
+				ldim_driver.ldim_line_n_irq);
+		}
 	}
 
 	ldim_driver.ldim_pwm_vs_irq = platform_get_irq_byname(pdev, "ldim_pwm_vs");
@@ -1683,17 +1676,20 @@ int aml_ldim_probe(struct platform_device *pdev)
 	ldim_pr("%s ok\n", __func__);
 	return 0;
 
-err4:
+err6:
+	device_destroy(devp->aml_ldim_clsp, devp->aml_ldim_devno);
+err5:
 	cdev_del(&devp->cdev);
-err3:
+err4:
 	kfree(devp->aml_ldim_cdevp);
-err2:
+err3:
 	aml_ldim_debug_remove(devp->aml_ldim_clsp);
+err2:
 	class_destroy(devp->aml_ldim_clsp);
 err1:
 	unregister_chrdev_region(devp->aml_ldim_devno, 1);
 err:
-	return ret;
+	return -ENODEV;
 }
 
 int aml_ldim_remove(void)
