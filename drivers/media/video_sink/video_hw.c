@@ -118,7 +118,7 @@ static u32 bypass_cm;
 bool hscaler_8tap_enable[MAX_VD_LAYER];
 struct pre_scaler_info pre_scaler[MAX_VD_LAYER];
 int aisr_demo_types[3] = {1, 1, 1};
-
+static u32 layer_alpha_save[MAX_VD_LAYER];
 static DEFINE_SPINLOCK(video_onoff_lock);
 static DEFINE_SPINLOCK(video2_onoff_lock);
 static DEFINE_SPINLOCK(video3_onoff_lock);
@@ -11254,8 +11254,23 @@ static bool vout_change_check(const struct vinfo_s *vinfo)
 }
 
 #ifndef CONFIG_AMLOGIC_C3_REMOVE
+static int video_alpha_check_t7(void)
+{
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < MAX_VD_LAYER; i++) {
+		if (layer_alpha_save[i] != vd_layer[i].layer_alpha)
+			ret++;
+		layer_alpha_save[i] = vd_layer[i].layer_alpha;
+	}
+
+	return ret;
+}
+
 static int vpp_zorder_check_t7(void)
 {
+	int i = 0;
 	int force_flush = 0;
 	u8 layer_sel[3] = {0, 1, 2};
 	u8 overlay_cnt = 0;
@@ -11327,6 +11342,14 @@ static int vpp_zorder_check_t7(void)
 		}
 	}
 #endif
+	if (cur_dev->max_vd_layers == 2 && two_layer_alpha_ctrl) {
+		for (i = 0; i < MAX_VD_LAYER; i++) {
+			if (overlay_cnt && i == max_port_id)
+				continue;
+			if (layer_sel[i] < 2)
+				layer_sel[i]++;
+		}
+	}
 	glayer_info[0].cur_sel_port = layer_sel[0];
 	glayer_info[1].cur_sel_port = layer_sel[1];
 	glayer_info[2].cur_sel_port = layer_sel[2];
@@ -11335,6 +11358,20 @@ static int vpp_zorder_check_t7(void)
 	    glayer_info[1].cur_sel_port != glayer_info[1].last_sel_port ||
 	    glayer_info[2].cur_sel_port != glayer_info[2].last_sel_port) {
 		force_flush = 1;
+		if (vd_layer[0].global_debug & DEBUG_FLAG_BASIC_INFO) {
+			pr_info("two_layer_alpha_ctrl:%d overlay_cnt:%d max_port_id:%d\n",
+				two_layer_alpha_ctrl,
+				overlay_cnt,
+				max_port_id);
+			pr_info("vd1/vd2/vd3 glayer_info.zorder: %d %d %d\n",
+				glayer_info[0].zorder,
+				glayer_info[1].zorder,
+				glayer_info[2].zorder);
+			pr_info("vd1/vd2/vd3 glayer_info.cur_sel_port: %d %d %d\n",
+				glayer_info[0].cur_sel_port,
+				glayer_info[1].cur_sel_port,
+				glayer_info[2].cur_sel_port);
+		}
 		glayer_info[0].last_sel_port = glayer_info[0].cur_sel_port;
 		glayer_info[1].last_sel_port = glayer_info[1].cur_sel_port;
 		glayer_info[2].last_sel_port = glayer_info[2].cur_sel_port;
@@ -11861,7 +11898,7 @@ void vpp_blend_update_t7(const struct vinfo_s *vinfo)
 				vinfo->field_height);
 		}
 	}
-
+	force_flush |= video_alpha_check_t7();
 	if (!legacy_vpp) {
 		u32 set_value = 0;
 
@@ -20591,6 +20628,8 @@ int video_early_init(struct amvideo_device_data_s *p_amvideo)
 	/* g12a has no alpha overflow check in hardware */
 	vd_layer[1].layer_alpha = legacy_vpp ? 0x1ff : 0x100;
 	vd_layer[2].layer_alpha = legacy_vpp ? 0x1ff : 0x100;
+	for (i = 0; i < MAX_VD_LAYER; i++)
+		layer_alpha_save[i] = vd_layer[i].layer_alpha;
 	vpp_ofifo_size = p_amvideo->ofifo_size;
 	memcpy(conv_lbuf_len, p_amvideo->afbc_conv_lbuf_len,
 	       sizeof(u32) * MAX_VD_LAYER);

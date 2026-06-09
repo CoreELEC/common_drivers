@@ -597,6 +597,7 @@ u32 new_frame_cnt;
 
 u32 new_frame_count;
 u32 vd1_vd2_mux_dts;
+u32 two_layer_alpha_ctrl;
 u32 osd_vpp_misc;
 u32 osd_vpp_misc_mask;
 bool update_osd_vpp_misc;
@@ -13392,14 +13393,14 @@ static ssize_t vpp_delay_show(const struct class *cla,
 {
 	struct vinfo_s *cur_vinfo = get_current_vinfo();
 	u64 vsync_interval;
-	u64 output_duration;
+	u64 output_duration = 60;
 	u32 tunnel_delay;
 	u32 nontunnel_delay;
 	u32 count = 0;
 
 	output_duration = div64_u64(cur_vinfo->sync_duration_num,
 		cur_vinfo->sync_duration_den);
-	vsync_interval = div_u64(1000000ULL, output_duration);
+	vsync_interval = output_duration != 0 ? div_u64(1000000ULL, output_duration) : 0;
 	tunnel_delay = div_u64(vsync_interval * 3, 1000);
 	nontunnel_delay = div_u64(vsync_interval * 7, 2000);
 
@@ -13556,6 +13557,32 @@ static ssize_t video_threshold_4k_store(const struct class *cla,
 	if (likely(parse_para(buf, 2, parsed) == 2)) {
 		vdec_out_size_threshold_4k = parsed[0];
 		vpp_in_size_threshold_4k = parsed[1];
+	}
+	return count;
+}
+
+static ssize_t video_alpha_show(const struct class *cla,
+			     const struct class_attribute *attr, char *buf)
+{
+	return snprintf(buf, 80, "vd1_alpha:0x%x vd2_alpha:0x%x vd3_alpha:0x%x\n",
+		vd_layer[0].layer_alpha,
+		vd_layer[1].layer_alpha,
+		vd_layer[2].layer_alpha);
+}
+
+static ssize_t video_alpha_store(const struct class *cla,
+			      const struct class_attribute *attr,
+			      const char *buf, size_t count)
+{
+	int parsed[3];
+
+	if (likely(parse_para(buf, 3, parsed) == 3)) {
+		vd_layer[0].layer_alpha = parsed[0];
+		vd_layer[1].layer_alpha = parsed[1];
+		vd_layer[2].layer_alpha = parsed[2];
+		vd_layer[0].property_changed = true;
+		vd_layer[1].property_changed = true;
+		vd_layer[2].property_changed = true;
 	}
 	return count;
 }
@@ -15007,6 +15034,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	    0664,
 	    video_test_pattern_show,
 	    video_test_pattern_store),
+	__ATTR(video_alpha,
+	    0664,
+	    video_alpha_show,
+	    video_alpha_store),
 	__ATTR(postblend_test_pattern,
 	    0664,
 	    postblend_test_pattern_show,
@@ -17668,6 +17699,10 @@ static int amvideom_probe(struct platform_device *pdev)
 				      &vd1_vd2_mux_dts);
 	if (vdtemp < 0)
 		vd1_vd2_mux_dts = 0;
+	vdtemp = of_property_read_u32(pdev->dev.of_node, "two_layer_alpha_ctrl",
+				      &two_layer_alpha_ctrl);
+	if (vdtemp < 0)
+		two_layer_alpha_ctrl = 0;
 	set_rdma_func_handler();
 
 	prop = of_get_property(pdev->dev.of_node, "display_device_cnt", NULL);

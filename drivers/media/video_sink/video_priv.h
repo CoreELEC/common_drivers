@@ -1044,6 +1044,7 @@ extern bool force_vpp_blend_update;
 extern bool video_mute_on[MAX_VD_LAYER];
 extern u32 vsync_counts;
 extern u32 smallwindow_link_enable, smallwindow_link_h;
+extern u32 two_layer_alpha_ctrl;
 bool is_dovi_tv_on(void);
 
 struct video_dev_s *get_video_cur_dev(void);
