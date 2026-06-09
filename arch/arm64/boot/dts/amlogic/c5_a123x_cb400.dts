@@ -43,15 +43,6 @@
 		tsensor2 = &pll_tsensor;
 	};
 
-	chosen {
-		linux,initrd-start = <0x0 0x0 0x0 0xc000000>;
-		linux,initrd-end = <0x0  0x0 0x0  0xe000000>;
-		bootargs = "console=ttyS0,921600 no_console_suspend earlycon=aml_uart,0xffa1e000
-			initcall_debug=0 loglevel=7
-			connector0_type=MIPI-A lcd0=0x0,,mipi_0 outputmode=1024x600p60hz,enabled
-			lcd_debug=0x1";
-	};
-
 	memory@0 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x000000 0x0 0xe0000000
