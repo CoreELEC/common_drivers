@@ -74,8 +74,8 @@ u8 default_rx_cds[] = {
 	0x32,
 	/* L-PCM: 32k, 44.1k, 48k, 8 channel, 16 20 24 bit */
 	/* 0x0f, 0x07, 0x07,*/
-	/* L-PCM: 32k, 44.1k, 48k, 88.2k, 96k, 176.4k, 192k, 2 channel, 16 20 24 bit */
-	0x09, 0x7f, 0x07,/* not support multi pcm */
+	/* L-PCM: 32k, 44.1k, 48k, 88.2k, 96k, 176.4k, 192k, 8 channel, 16 20 24 bit */
+	0x0f, 0x7f, 0x07,/* support 8 channel pcm */
 	0x67, 0x04, 0x03,/* MAT */
 	0x57, 0x04, 0x01,/* EAC3 */
 	0x15, 0x07, 0x50,/* AC3 */
