@@ -466,13 +466,13 @@
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
 		status = "okay";
-		key_name = "standby", "vol+", "vol-";
+		key_name = "vol-", "vol+", "power";
 		key_num = <3>;
 		io-channels = <&saradc 0>;
 		io-channel-names = "key-chan-0";
 		key_chan = <0 0 0>;
-		key_code = <116 115 114>;
-		key_val = <35 1601 1109>; // Unit: millivolt
+		key_code = <114 115 116>;
+		key_val = <1109 1601 35>; // Unit: millivolt
 		key_tolerance = <70 70 70>; // Unit: millivolt
 	};
 
