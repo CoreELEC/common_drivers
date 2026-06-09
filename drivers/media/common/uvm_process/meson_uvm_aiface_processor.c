@@ -169,8 +169,7 @@ static int get_canvas(u32 index)
 
 static int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 {
-	struct config_para_ex_s ge2d_config_s;
-	struct config_para_ex_s *ge2d_config = &ge2d_config_s;
+	struct config_para_ex_s *ge2d_config = NULL;
 	struct canvas_s cs0, cs1, cs2, cd;
 	int interlace_mode, src_format;
 	int input_width, input_height;
@@ -184,7 +183,9 @@ static int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 		}
 	}
 
-	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
+	ge2d_config = kzalloc(sizeof(*ge2d_config), GFP_KERNEL);
+	if (!ge2d_config)
+		return -ENOMEM;
 
 	input_width = vf->width;
 	input_height = vf->height;
@@ -313,13 +314,14 @@ static int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 	ge2d_config->dst_xy_swap = 0;
 
 	if (ge2d_context_config_ex(context, ge2d_config) < 0) {
-		aiface_print(PRINT_ERROR,
-			      "++ge2d configing error.\n");
+		aiface_print(PRINT_ERROR, "++ge2d configing error.\n");
+		kfree(ge2d_config);
 		return -1;
 	}
 
 	stretchblt_noalpha(context, 0, 0, input_width, input_height,
 			   0, 0, output->width, output->height);
+	kfree(ge2d_config);
 
 	return 0;
 }

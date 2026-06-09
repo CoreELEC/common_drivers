@@ -307,8 +307,7 @@ static int get_canvas(u32 index)
 
 int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 {
-	struct config_para_ex_s ge2d_config_s;
-	struct config_para_ex_s *ge2d_config = &ge2d_config_s;
+	struct config_para_ex_s *ge2d_config = NULL;
 	struct canvas_s cs0, cs1, cs2, cd;
 	int interlace_mode, src_format;
 	int input_width, input_height;
@@ -322,7 +321,9 @@ int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 		}
 	}
 
-	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
+	ge2d_config = kzalloc(sizeof(*ge2d_config), GFP_KERNEL);
+	if (!ge2d_config)
+		return -ENOMEM;
 
 	input_width = vf->width;
 	input_height = vf->height;
@@ -440,13 +441,14 @@ int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 	ge2d_config->dst_xy_swap = 0;
 
 	if (ge2d_context_config_ex(context, ge2d_config) < 0) {
-		aipq_print(PRINT_ERROR,
-			      "++ge2d configing error.\n");
+		aipq_print(PRINT_ERROR, "++ge2d configing error.\n");
+		kfree(ge2d_config);
 		return -1;
 	}
 
 	stretchblt_noalpha(context, 0, 0, input_width, input_height,
 			   0, 0, output->width, output->height);
+	kfree(ge2d_config);
 
 	return 0;
 }
@@ -454,8 +456,7 @@ int ge2d_vf_process(struct vframe_s *vf, struct ge2d_output_t *output)
 static int convert_rgb24_to_y8_process(struct ge2d_output_t *output,
 	struct uvm_aipq_info *aipq_info)
 {
-	struct config_para_ex_s ge2d_config_s;
-	struct config_para_ex_s *ge2d_config = &ge2d_config_s;
+	struct config_para_ex_s *ge2d_config = NULL;
 	struct canvas_s cs, cd;
 	int input_width, input_height;
 	u32 input_canvas = get_canvas(3);
@@ -468,6 +469,10 @@ static int convert_rgb24_to_y8_process(struct ge2d_output_t *output,
 			return -1;
 		}
 	}
+
+	ge2d_config = kzalloc(sizeof(*ge2d_config), GFP_KERNEL);
+	if (!ge2d_config)
+		return -ENOMEM;
 
 	canvas_read(input_canvas & 0xff, &cs);
 	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
@@ -522,13 +527,14 @@ static int convert_rgb24_to_y8_process(struct ge2d_output_t *output,
 	ge2d_config->dst_xy_swap = 0;
 
 	if (ge2d_context_config_ex(context, ge2d_config) < 0) {
-		aipq_print(PRINT_ERROR,
-				  "++ge2d configing error.\n");
+		aipq_print(PRINT_ERROR, "++ge2d configing error.\n");
+		kfree(ge2d_config);
 		return -1;
 	}
 
 	stretchblt_noalpha(context, 0, 0, input_width, input_height,
 			   0, 0, output->width, output->height);
+	kfree(ge2d_config);
 
 	return 0;
 }
