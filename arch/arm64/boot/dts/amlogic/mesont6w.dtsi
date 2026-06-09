@@ -2267,7 +2267,7 @@
 	};
 
 	chosen: chosen {
-		bootargs = "usbcore.autosuspend=-1";
+		bootargs = "usbcore.autosuspend=-1 swiotlb=noforce";
 	};
 
 	aml_mkl {

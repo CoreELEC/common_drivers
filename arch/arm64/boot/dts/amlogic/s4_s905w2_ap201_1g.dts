@@ -1360,3 +1360,7 @@
 	/*0: 709/601  1: bt2020*/
 	tx_op_color_primary = <0>;
 };
+
+&chosen {
+	bootargs = "usbcore.autosuspend=-1 swiotlb=noforce dm_mod.reserved_bio_based_ios=8";
+};
