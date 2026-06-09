@@ -70,7 +70,8 @@
 /* 2026.01.16 fix hdcp 1.4 err */
 /* 2026.01.20 add edid intr to clear segment when edid do not read done*/
 /* 2026.04.08 open vga tune for 8g4l and modify vga tune*/
-#define RX_HW_VER "ver.2026/04/08"
+/* 2026.06.15 modify a9 4k30 phy setting*/
+#define RX_HW_VER "ver.2026/06/15"
 
 #define K_TEST_CHK_ERR_CNT
 
