@@ -28,7 +28,6 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/semaphore.h>
-#include <linux/amlogic/media/registers/cpu_version.h>
 
 #include "gdc_config.h"
 #include "gdc_dmabuf.h"
@@ -292,12 +291,6 @@ EXPORT_SYMBOL(is_gdc_supported);
 
 bool is_aml_gdc_supported(void)
 {
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_A9) {
-		/*while ready ,need remove*/
-		gdc_log(LOG_DEBUG, "A9 dewarp not ready.\n");
-		return false;
-	}
-
 	if (gdc_manager.aml_gdc_dev && gdc_manager.aml_gdc_dev->probed)
 		return true;
 
