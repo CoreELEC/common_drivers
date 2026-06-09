@@ -4480,7 +4480,7 @@
 			bias-disable;
 		};
 
-		i2c3_pins4_sleep:i2c4_pins4_sleep {
+		i2c3_pins4_sleep:group-i2c3-pins4-sleep {
 			pinmux = <AML_PINMUX(AMLOGIC_GPIO_A, 14, 0)>,
 				 <AML_PINMUX(AMLOGIC_GPIO_A, 15, 0)>;
 			input-enable;
@@ -4506,7 +4506,7 @@
 			bias-disable;
 		};
 
-		i2c4_pins3_sleep:i2c4_pins3_sleep {
+		i2c4_pins3_sleep:group-i2c4-pins3-sleep {
 			pinmux = <AML_PINMUX(AMLOGIC_GPIO_Y, 5, 0)>,
 				 <AML_PINMUX(AMLOGIC_GPIO_Y, 6, 0)>;
 			input-enable;
