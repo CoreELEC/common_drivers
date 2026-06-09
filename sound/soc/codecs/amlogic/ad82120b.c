@@ -1944,6 +1944,7 @@ static const struct i2c_device_id ad82120b_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ad82120b_id);
 
+#define MAX_TOTAL_PROBE 10
 static int ad82120b_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -1991,11 +1992,19 @@ static int ad82120b_probe(struct i2c_client *client)
 	ad82120b_parse_dt(data, &client->dev);
 	ad82120b_power_on(dev, true);
 
-	ret = regmap_read(data->regmap, 0x00, &dummy);
-	if (ret != 0) {
-		pr_err("%s device not exit ret:%d\n", __func__, ret);
-		ret = -ENODEV;
-		return ret;
+	for (i = 0; i < MAX_TOTAL_PROBE; i++) {
+		ret = regmap_read(data->regmap, 0x00, &dummy);
+		if (ret) {
+			if (i >= (MAX_TOTAL_PROBE - 1)) {
+				dev_err(dev, "ad82120b pd pin status = %d, ret = %d\n",
+						gpiod_get_value(data->reset_pin_desc), ret);
+				return -EPROBE_DEFER;
+			}
+			usleep_range(5000, 6000);
+		} else {
+			pr_info("ad82120b device read okay\n");
+			break;
+		}
 	}
 
 	ret = devm_snd_soc_register_component(&client->dev,
