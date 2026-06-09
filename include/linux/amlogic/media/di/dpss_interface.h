@@ -129,7 +129,8 @@ enum DPSS_BUF_STATE {
 #define DPSS_FLG_ROTATE_DONE      (0x01000) //dpss_process do rotation
 #define DPSS_FLG_NEW_TRIG         (0x10000) //trig re-setting by input
 #define DPSS_FLG_FORCE_DPSS_DONE  (0x20000) //not do dpss but dpss done flag
-#define DPSS_FLG_HIGH_BANDWIDTH    (0x40000)
+#define DPSS_FLG_HIGH_BANDWIDTH   (0x40000)
+#define DPSS_FLG_OUTPUT           (0x80000)
 /************************************************/
 
 struct dpss_in_vf_info {
