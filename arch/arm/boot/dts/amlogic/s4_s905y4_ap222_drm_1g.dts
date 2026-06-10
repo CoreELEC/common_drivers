@@ -540,16 +540,6 @@
 	};
 };
 
-&amlvideo2_0 {
-	/*1:720P_NV21 2:1080P_NV21 3:4K_NV21*/
-	codec_mm_alloc = <1>;
-};
-
-&amlvideo2_1 {
-	/*1:720P_NV21 2:1080P_NV21 3:4K_NV21*/
-	codec_mm_alloc = <1>;
-};
-
 &pwm_ij {
 	status = "okay";
 };

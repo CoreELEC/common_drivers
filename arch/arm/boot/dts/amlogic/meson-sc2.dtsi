@@ -2080,6 +2080,8 @@
 		status = "okay";
 		amlvideo2_id = <0>;
 		cma_mode = <1>;
+		/*720P_NV21:1, 1080P_NV21:2, 4K_NV21:3, default:4*/
+		codec_mm_alloc = <1>;
 	};
 
 	amlvideo2_1: amlvideo2_1 {

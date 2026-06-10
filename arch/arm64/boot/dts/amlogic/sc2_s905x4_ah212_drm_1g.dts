@@ -616,10 +616,6 @@
 	};/* Audio Related end */
 };
 
-&amlvideo2_1 {
-	/delete-property/ codec_mm_alloc;
-};
-
 &i2c2 {
 	status = "okay";
 	pinctrl-names="default";
