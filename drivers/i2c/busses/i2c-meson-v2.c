@@ -335,6 +335,9 @@ static int wait_tx_done(struct meson_i2c *i2c, u32 des_count)
 			return -ETIMEDOUT;
 		udelay(1);
 		time_cnt++;
+		ret = controller_is_error(i2c);
+		if (ret)
+			return ret;
 	}
 
 	return ret;
