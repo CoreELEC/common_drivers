@@ -45,6 +45,7 @@
 #include <linux/amlogic/media/di/dpss_interface.h>
 
 #include <linux/amlogic/media/frame_provider/tvin/tvin.h>
+#include <linux/amlogic/media/di/dpss_interface.h>
 #include "video_priv.h"
 #include "vpp_pq.h"
 #include "vpp_post_s5.h"
@@ -2416,9 +2417,10 @@ static int vpp_set_filters_internal
 					}
 					/* need use src right/bottom crop for dpss chips */
 					if (mif_input &&
-					    cur_dev->display_module == T6W_DISPLAY_MODULE) {
+					    cur_dev->display_module == T6W_DISPLAY_MODULE &&
+					    vf->dpss_flg & DPSS_FLG_OUTPUT) {
 						src_crop_right = vf->src_crop.right;
-						src_crop_bottom = vf->src_crop.bottom;
+						//src_crop_bottom = vf->src_crop.bottom;
 					}
 				}
 				video_source_crop_top += src_crop_top;
