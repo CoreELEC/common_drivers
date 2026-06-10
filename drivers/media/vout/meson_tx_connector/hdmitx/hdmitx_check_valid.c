@@ -24,8 +24,15 @@ int hdmitx_common_validate_vic(struct hdmitx_common *tx_comm, u32 vic)
 		 */
 		if (vic == HDMI_0_UNKNOWN || vic >= HDMITX_VESA_OFFSET)
 			return -ERANGE;
-		/* check the resolution is over 1920x1080 or not */
-		if (timing->h_active > 1920 || timing->v_active > 1080)
+		/*
+		 * check the resolution is over 1920x1080 or not
+		 * On chips restricted to 1080p via efuse, the venc stops
+		 * timing output if h_total exceeds 3400. Therefore, hdmitx
+		 * must filter out any modes where h_total >= 3400 for these
+		 * 1080p-limited chips.
+		 */
+		if (timing->h_active > 1920 || timing->v_active > 1080 ||
+			timing->h_total >= 3400)
 			return -ERANGE;
 
 		/* check the fresh rate is over 60hz or not */
