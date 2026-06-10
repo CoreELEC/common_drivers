@@ -511,6 +511,11 @@ static void vf_free(struct file_private_data *file_private_data)
 
 	vf = &file_private_data->vf;
 	vf_p = file_private_data->vf_p;
+	if (!vf || !vf_p) {
+		v4l_print(inst_id, PRINT_OTHER, "free: NULL vf param.\n");
+		return;
+	}
+
 	flag = file_private_data->flag;
 	v4l_print(inst_id, PRINT_OTHER, "%s: type=%x, flag=%d, frame_index=%d\n",
 		__func__, vf->type, flag, vf->frame_index);
@@ -1919,7 +1924,8 @@ static void push_to_display_q(struct v4lvideo_dev *dev,
 	dev->v4lvideo_file[i].vf_p = file_private_data->vf_p;
 	dev->v4lvideo_file[i].vf_ext_p = file_private_data->vf_ext_p;
 	dev->v4lvideo_file[i].flag = file_private_data->flag;
-	dev->v4lvideo_file[i].vf_type = file_private_data->vf_p->type;
+	if (file_private_data->vf_p)
+		dev->v4lvideo_file[i].vf_type = file_private_data->vf_p->type;
 	dev->v4lvideo_file[i].inst_id = file_private_data->v4l_inst_id;
 	dev->v4lvideo_file[i].dev = dev;
 

@@ -91,19 +91,21 @@ static long video_pipe_adapter_ioctl(struct file *file, unsigned int cmd, ulong 
 {
 	long ret = 0;
 	void __user *argp = (void __user *)arg;
-	struct video_delay_arg_t video_delay_arg;
+	struct video_delay_arg_t video_delay_arg = {0};
 
 	switch (cmd) {
 	case VIDEO_PIPE_ADAPTER_GET_VIDEO_DELAY:
-		memset(&video_delay_arg, 0, sizeof(struct video_delay_arg_t));
-		if (copy_from_user(&video_delay_arg, argp, sizeof(struct video_delay_arg_t)))
+		if (copy_from_user(&video_delay_arg, argp, sizeof(video_delay_arg)))
+			return -EFAULT;
+
+		if (video_delay_arg.input_fps <= 0 || video_delay_arg.output_fps <= 0)
 			return -EINVAL;
 #ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 		video_delay_arg.video_delay =
 			dpss_frc_get_video_latency_new(video_delay_arg.input_fps,
 						video_delay_arg.output_fps);
 #endif
-		if (copy_to_user(argp, &video_delay_arg, sizeof(struct video_delay_arg_t)))
+		if (copy_to_user(argp, &video_delay_arg, sizeof(video_delay_arg)))
 			ret = -EFAULT;
 		break;
 	default:

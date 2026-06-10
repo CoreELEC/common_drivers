@@ -664,12 +664,12 @@ static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file 
 	int ret = 0;
 	struct vframe_s *dst_vf = NULL;
 	struct rotate_buf_t *dst_buf = NULL;
-	struct src_data_para src_data;
+	struct src_data_para src_data = {0};
 	bool is_tvp = false;
 	u32 transform_tmp;
 
 	if (!dev || !file_vf)
-		goto exit;
+		return NULL;
 
 	src_vf = get_vf_from_file(dev, file_vf);
 	if (!src_vf)
@@ -680,6 +680,9 @@ static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file 
 	if (src_vf->flag & VFRAME_FLAG_VIDEO_SECURE)
 		is_tvp = true;
 #ifdef CONFIG_AMLOGIC_UVM_CORE
+	if (!file_vf->private_data)
+		goto exit;
+
 	if (dmabuf_is_uvm(file_vf->private_data) &&
 		meson_uvm_get_usage(file_vf->private_data, &usage) < 0)
 		dp_print(dev->index, PRINT_ERROR, "rotate: meson_uvm_get_usage fail.\n");
@@ -703,12 +706,9 @@ static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file 
 	}
 
 	dst_vf = &dst_buf->frame;
-	if (!dst_buf)
-		goto exit;
-
 	dst_buf->src_file = file_vf;
 	memset(dst_vf, 0, sizeof(struct vframe_s));
-	dp_print(dev->index, PRINT_ROTATE, "rotate: dst_buf[%d]: file:%px, addr:0x%x, w*h:%d*%d.\n",
+	dp_print(dev->index, PRINT_ROTATE, "rotate:dst_buf[%d]:file:%px, addr:0x%lx, w*h:%d*%d.\n",
 		dst_buf->index,
 		dst_buf->src_file,
 		dst_buf->phy_addr,
@@ -726,27 +726,18 @@ static struct vframe_s *vframe_rotate(struct dpss_process_dev *dev, struct file 
 		dst_buf->dirty = false;
 	}
 
-	memset(&src_data, 0, sizeof(struct src_data_para));
 	src_data.buf_format = NV21;
 	ret = config_ge2d(dev->index, src_vf, 0, 0, 0, 0, 0, 0, 0, src_vf->width, src_vf->height,
 		&src_data);
 	if (ret < 0)
-		return NULL;
+		goto exit;
 
 	transform_tmp = transform;
-	if (src_vf && src_vf->flag & VFRAME_FLAG_MIRROR_H) {
-		if (transform_tmp & DPSS_TRANSFORM_FLIP_H)
-			transform_tmp &= ~DPSS_TRANSFORM_FLIP_H;
-		else
-			transform_tmp |= DPSS_TRANSFORM_FLIP_H;
-	}
+	if (src_vf->flag & VFRAME_FLAG_MIRROR_H)
+		transform_tmp ^= DPSS_TRANSFORM_FLIP_H;
 
-	if (src_vf && src_vf->flag & VFRAME_FLAG_MIRROR_V) {
-		if (transform_tmp & DPSS_TRANSFORM_FLIP_V)
-			transform_tmp &= ~DPSS_TRANSFORM_FLIP_V;
-		else
-			transform_tmp |= DPSS_TRANSFORM_FLIP_V;
-	}
+	if (src_vf->flag & VFRAME_FLAG_MIRROR_V)
+		transform_tmp ^= DPSS_TRANSFORM_FLIP_V;
 
 	dev->ge2d_para.angle = transform_tmp;
 	dev->ge2d_para.position_left = 0;
@@ -3442,6 +3433,9 @@ static int dpss_process_release(struct inode *inode, struct file *file)
 	pr_info("%s iminor(inode) =%d\n", __func__, index);
 	if (index < 0 || index >= ARRAY_SIZE(ports))
 		return -ENODEV;
+
+	if (!dev)
+		return -ENOMEM;
 
 	port = &ports[index];
 
