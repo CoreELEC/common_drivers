@@ -318,5 +318,7 @@ u8 get_dd_align_count(void);
 int amdv_notifier_call_chain(unsigned long val, void *v);
 int register_osd_func(int (*get_osd_enable_status)(u32 index));
 void amdv_mem_alloc_control(enum vd_module_type_e type, int enable);
-
+int get_target_pic_mode(void);
+int get_pic_mode(void);
+void update_target_pic_mode(void);
 #endif

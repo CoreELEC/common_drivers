@@ -56,6 +56,7 @@ static struct dv_pq_range_s pq_range[AMDV_BASIC_PQ_ITEM_NUM];
 static int num_picture_mode;
 static int default_pic_mode = 1;/*bright(standard) mode as default*/
 int cur_pic_mode = 1;/*current picture mode id*/
+int delay_update_mode = 1;/*bit31: delay update; bit0-4: target pic mode*/
 bool pic_mode_changed;
 
 bool load_bin_config;
@@ -1415,10 +1416,10 @@ void update_cp_cfg(void)
 
 	if (is_aml_hw5()) {
 		if (check_cfg_enabled_top1() == 0) {
-			/*cfg pd off: top2 cfg update with top1*/
+			/*cfg pd off: update top2 cfg immediately*/
 			update_cp_cfg_hw5(false, false, false);
 		} else {/*cfg pd on:delay update top2 cfg after top1_enable*/
-			update_cp_cfg_hw5(false, true, false);/*only update for top1*/
+			update_cp_cfg_hw5(false, true, false);/*update cfg for top1 first*/
 			update_top2_cfg = true;
 		}
 		return;
@@ -1534,8 +1535,10 @@ void restore_dv_pq_setting(enum pq_reset_e pq_reset)
 {
 	int mode = 0;
 
-	if (pq_reset == RESET_ALL)
+	if (pq_reset == RESET_ALL) {
 		cur_pic_mode = default_pic_mode;
+		delay_update_mode = cur_pic_mode;
+	}
 
 	if (is_aml_hw5()) {
 		for (mode = 0; mode < num_picture_mode; mode++) {
@@ -2511,10 +2514,11 @@ static bool is_valid_pq_inter_value(s16 exter_value)
 	return false;
 }
 
-void set_pic_mode(int mode)
+void set_pic_mode_inter(int mode)
 {
 	if (debug_dolby & 1)
-		pr_dv_dbg("update mode %d -> %d\n", cur_pic_mode, mode);
+		pr_dv_dbg("update mode inter %d -> %d\n", cur_pic_mode, mode);
+
 	if (cur_pic_mode != mode) {
 		cur_pic_mode = mode;
 		if (dv_user_cfg_flag)
@@ -2524,6 +2528,51 @@ void set_pic_mode(int mode)
 		update_pwm_control();
 		pic_mode_changed = true;
 	}
+}
+
+static DEFINE_MUTEX(mode_lock);
+
+void set_pic_mode(int mode)
+{
+	if (debug_dolby & 1)
+		pr_dv_dbg("update mode %d -> %d\n", cur_pic_mode, mode);
+
+	if (is_amdv_dpss_path()) {
+		mutex_lock(&mode_lock);
+		delay_update_mode = 0x80000000 | (mode & 0x1F);
+		mutex_unlock(&mode_lock);
+		pr_dv_dbg("delay update mode to sync with dpss,0x%x\n",
+			delay_update_mode);
+	} else {
+		set_pic_mode_inter(mode);
+	}
+}
+
+void update_target_pic_mode(void)
+{
+	int target_mode;
+
+	mutex_lock(&mode_lock);
+	if (delay_update_mode & 0x80000000) {
+		target_mode = delay_update_mode & 0x1F;
+		set_pic_mode_inter(target_mode);
+		delay_update_mode = target_mode;
+	}
+	mutex_unlock(&mode_lock);
+}
+
+int get_target_pic_mode(void)
+{
+	int mode;
+
+	mutex_lock(&mode_lock);
+	if (delay_update_mode & 0x80000000)
+		mode = delay_update_mode & 0x1F;
+	else
+		mode = cur_pic_mode;
+	mutex_unlock(&mode_lock);
+
+	return mode;
 }
 
 int get_pic_mode_num(void)

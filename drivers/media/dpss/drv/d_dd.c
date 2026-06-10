@@ -68,9 +68,13 @@ unsigned int dpss_sub_chg_ddd(struct dpss_ch_s *pch, struct vframe_s *vfm)
 
 		if (support != last_support) {
 			chg = true;
-			pr_info("dpss dd support change %d=>%d\n", last_support, support);
+			dbg_h2("dpss dd support change %d=>%d\n", last_support, support);
 		}
 		last_support = support;
+	}
+	if (get_pic_mode() != get_target_pic_mode()) {
+		chg = true;
+		dbg_h2("dpss dd pic mode change %d=>%d\n", get_pic_mode(), get_target_pic_mode());
 	}
 #endif
 #endif
@@ -113,7 +117,11 @@ void dpss_dd_init(struct vframe_s *vfm, struct dpss_info_s *dpss_info) //
 			dpss_inf.real_v = 2160;
 		}
 		dbg_h0("r_h=%d,r_v=%d\n", dpss_inf.real_h, dpss_inf.real_v);
+		update_target_pic_mode();
+		amdv_wait_metadata(vfm, 0);/*update_top1_onoff*/
 		init_prm_dolby(&dpss_inf);
+		if (!get_top1_onoff())
+			force_top1_done();
 	}
 #endif
 #endif /* FUNC_EN_DD */
