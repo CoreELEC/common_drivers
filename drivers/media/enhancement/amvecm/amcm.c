@@ -502,7 +502,8 @@ void am_set_regmap(struct am_regs_s *p, int vpp_index)
 				if (chip_type_id == chip_s6 ||
 					chip_type_id == chip_s7d ||
 					chip_type_id == chip_t6w ||
-					chip_type_id == chip_t6x)
+					chip_type_id == chip_t6x ||
+					chip_type_id == chip_a9)
 					aipq_base_peaking_param(addr, mask, val);
 #endif
 			} else {
