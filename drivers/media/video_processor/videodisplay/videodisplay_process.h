@@ -66,6 +66,13 @@ enum video_refresh_pattern {
 	MAX_NUM_PATTERNS
 };
 
+struct vframe_param_t {
+	u32 frame_index;
+	ulong compHeadAddr;
+	ulong phy_addr;
+	u64 total_cost;
+};
+
 enum videodisplay_debug_class_type {
 	VD_DEBUG_CLASS_AXIX_PIP = 0,
 	VD_DEBUG_CLASS_CROP_PIP,
@@ -184,6 +191,7 @@ struct output_axis {
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 extern struct mediaproxy_info_t vd_mediaproxy_display_info[];
 #endif
+extern u32 vd_print_flag;
 
 int vd_set_enable(int index, u32 val);
 int vd_set_frames(int index, struct frames_info_t *frames_info);
@@ -199,4 +207,5 @@ int notify_msg_to_mediaproxy(void *handle, int num, void *data);
 int is_video_process_in_thread(void);
 void vpp_lowlatency_wakeup(void);
 int vd_set_mediasync_callback(struct mediasync_cb *func);
+void vd_vpp_toggle_cur_vf(struct vframe_s *vf, int layer_index);
 #endif

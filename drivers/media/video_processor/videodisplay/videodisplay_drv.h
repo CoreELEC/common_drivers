@@ -113,6 +113,7 @@ struct received_frames_t {
 	struct file *file_vf[MAX_COMPOSER_COUNT];
 	unsigned long phy_addr[MAX_COMPOSER_COUNT];
 	u64 time_us64;
+	u64 display_recv_times;
 	bool is_tvp;
 	struct file *fence_file[MAX_COMPOSER_COUNT];
 	bool is_drm;

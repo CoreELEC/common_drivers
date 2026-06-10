@@ -35,4 +35,10 @@ u32 get_probe_pos_a4(u8 probe_id);
 void set_probe_pos_a4(u32 val_x, u32 val_y);
 u32 get_probe_data_a4(void);
 
+#ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
+void vd_vpp_toggle_cur_vf(struct vframe_s *vf, int layer_index);
+#elif defined(CONFIG_AMLOGIC_VIDEO_COMPOSER)
+void vc_vpp_toggle_cur_vf(struct vframe_s *vf, int layer_index);
+#endif
+
 #endif

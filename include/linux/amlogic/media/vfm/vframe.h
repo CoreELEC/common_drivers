@@ -957,6 +957,7 @@ struct vframe_s {
 	u32 dpss_pps_dsx;	//ary:double write x ratio?
 	u32 dpss_pps_dsy;
 	u32 syncid;
+	u64 display_recv_times;
 } /*vframe_t */;
 
 #define VC_FLAG_AI_SR		0x1

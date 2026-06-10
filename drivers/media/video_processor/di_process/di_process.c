@@ -1532,6 +1532,7 @@ static int di_process_set_frame(struct di_process_dev *dev, struct frame_info_t 
 	bool ip_switch = false, tvp_switch = false;
 	bool need_do_dummy = false;
 	struct dp_buf_mgr_t *cur_buf_mgr;
+	struct timeval time1;
 	int ret = 0;
 
 	if (!dev || !frame_info) {
@@ -1559,6 +1560,9 @@ static int di_process_set_frame(struct di_process_dev *dev, struct frame_info_t 
 		dp_put_file(dev, file_vf);
 		return -EINVAL;
 	}
+
+	do_gettimeofday(&time1);
+	vf->display_recv_times = (u64)time1.tv_sec * 1000 + time1.tv_usec / 1000;
 
 	if (di_force_rotate)
 		frame_info->transform = di_force_rotate;

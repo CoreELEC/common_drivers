@@ -131,6 +131,7 @@ static struct timeval vsync_time[MAX_VD_LAYERS];
 static int patten_trace[MAX_VIDEODISPLAY_INSTANCE_NUM];
 static int vsync_count[MAX_VIDEODISPLAY_INSTANCE_NUM];
 static struct videodisplay_dev *mdev[MAX_VIDEODISPLAY_INSTANCE_NUM];
+static struct vframe_param_t last_vframe_param[MAX_VD_LAYERS];
 static bool vd_composer_en;
 static u32 vd_drop_max_time = 200;
 static u32 vd_drop_hdmi_count = 3;
@@ -3799,6 +3800,8 @@ static void vframe_display(struct videodisplay_dev *dev,
 				dev->last_file = NULL;
 				return;
 			}
+			if (!vf->display_recv_times)
+				vf->display_recv_times = received_frames->display_recv_times;
 			vd_prepare->src_frame = vf;
 			vd_prepare->dst_frame = *vf;
 		} else {/*dma buf*/
@@ -4277,6 +4280,82 @@ static void dev_get_vinfo(struct videodisplay_dev *dev)
 	dev->vinfo_h = video_composer_vinfo->height;
 	dev->output_duration = output_duration;
 }
+
+static bool is_repeat_vf(struct vframe_s *vf, int layer_index)
+{
+	if (!vf || layer_index > 2) {
+		vd_print(layer_index, PRINT_ERROR, "error:layer_index=%d\n", layer_index);
+		return false;
+	}
+
+	if (last_vframe_param[layer_index].frame_index == vf->frame_index &&
+		last_vframe_param[layer_index].phy_addr == vf->canvas0_config[0].phy_addr &&
+		last_vframe_param[layer_index].compHeadAddr == vf->compHeadAddr)
+		return true;
+	else
+		return false;
+}
+
+void vd_vpp_toggle_cur_vf(struct vframe_s *vf, int layer_index)
+{
+	struct timeval time2;
+	u64 vpp_toggle_time = 0;
+	bool is_dpss_hardware = false;
+	u64 vsync;
+	u32 frc_delay = 0;
+	u64 total_cost;
+
+	if (vd_print_flag) {
+		if (!vf || layer_index > 2) {
+			vd_print(layer_index, PRINT_OTHER, "err: layer_index=%d\n", layer_index);
+			return;
+		}
+
+#ifdef CONFIG_AMLOGIC_MEDIA_DPSS
+		is_dpss_hardware = true;
+#endif
+
+		if (is_repeat_vf(vf, layer_index)) {
+			if (is_dpss_hardware)
+				vd_print(layer_index, PRINT_OTHER,
+					"display module: frame_index=%d, total_cost:%lld",
+					vf->frame_index, last_vframe_param[layer_index].total_cost);
+			else
+				vd_print(layer_index, PRINT_OTHER,
+					"display module: frame_index=%d, total_cost:%lld, frc_delay=%d",
+					vf->frame_index,
+					last_vframe_param[layer_index].total_cost, frc_delay);
+			return;
+		}
+
+#ifdef CONFIG_AMLOGIC_MEDIA_FRC
+		frc_delay = frc_get_video_latency();
+#endif
+
+		vsync = 1000 * vsync_pts_inc_scale[layer_index] /
+			vsync_pts_inc_scale_base[layer_index];
+		do_gettimeofday(&time2);
+		vpp_toggle_time = (u64)time2.tv_sec * 1000 + time2.tv_usec / 1000;
+
+		if (is_dpss_hardware) {
+			total_cost = vpp_toggle_time - vf->display_recv_times + vsync;
+			vd_print(layer_index, PRINT_OTHER,
+				"display module: frame_index=%d, total_cost:%lld",
+				vf->frame_index, total_cost);
+		} else {
+			total_cost = vpp_toggle_time - vf->display_recv_times + vsync + frc_delay;
+			vd_print(layer_index, PRINT_OTHER,
+				"display module: frame_index=%d, total_cost:%lld, frc_delay=%d",
+				vf->frame_index, total_cost, frc_delay);
+		}
+		vf->display_recv_times = 0;
+		last_vframe_param[layer_index].frame_index = vf->frame_index;
+		last_vframe_param[layer_index].compHeadAddr = vf->compHeadAddr;
+		last_vframe_param[layer_index].phy_addr = vf->canvas0_config[0].phy_addr;
+		last_vframe_param[layer_index].total_cost = total_cost;
+	}
+}
+EXPORT_SYMBOL(vd_vpp_toggle_cur_vf);
 
 /* -----------------------------------------------------------------
  *           provider operations
@@ -5321,6 +5400,8 @@ int vd_set_frames(int index, struct frames_info_t *frames_info)
 	do_gettimeofday(&time2);
 	time_us64 = (u64)1000000 * (time2.tv_sec - time1.tv_sec) + time2.tv_usec - time1.tv_usec;
 
+	dev->received_frames[num].display_recv_times =
+		(u64)time2.tv_sec * 1000 + time2.tv_usec / 1000;
 	dev->received_frames[num].is_drm = true;
 	dev->received_frames[num].frames_num = frames_info->frame_count;
 	dev->received_frames[num].time_us64 = time_us64;

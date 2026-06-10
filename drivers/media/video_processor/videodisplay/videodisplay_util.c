@@ -5,6 +5,8 @@
 
 #include "videodisplay_util.h"
 
+u32 vd_print_flag;
+
 static u32 print_flag[MAX_VIDEODISPLAY_INSTANCE_NUM];
 int set_print_flag(int index, u32 value)
 {
@@ -15,6 +17,7 @@ int set_print_flag(int index, u32 value)
 
 	pr_info("%s: set vd[%d] print_flag to %d.\n", __func__, index, value);
 	print_flag[index] = value;
+	vd_print_flag = value;
 	return 0;
 }
 

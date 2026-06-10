@@ -2762,6 +2762,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	struct dpss_status dpss_state;
 	bool is_dtv_src = false;
 	bool is_pp_swtch = false;
+	struct timeval time1;
 	int ret = 0;
 	bool nr_switch = false, is_special_i = false;
 
@@ -2791,6 +2792,9 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		dp_put_file(dev, file_vf);
 		return -EINVAL;
 	}
+
+	do_gettimeofday(&time1);
+	vf->display_recv_times = (u64)time1.tv_sec * 1000 + time1.tv_usec / 1000;
 
 	if (vf->flag_ext & VFRAME_FLAG_EXT_DTV_CASE)
 		is_dtv_src = true;
