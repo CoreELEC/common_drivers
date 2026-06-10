@@ -215,7 +215,11 @@ static int erofs_fill_inode(struct inode *inode)
 		if (erofs_inode_is_data_compressed(vi->datalayout))
 			inode->i_fop = &generic_ro_fops;
 		else {
+		#ifdef CONFIG_TRANSPARENT_HUGEPAGE
 			erofs_file_fops.get_unmapped_area = f_thp_get_unmapped_area,
+		#else
+			erofs_file_fops.get_unmapped_area = NULL;
+		#endif
 			erofs_file_fops.splice_read = f_filemap_splice_read,
 			inode->i_fop = (const struct file_operations *)&erofs_file_fops;
 		}

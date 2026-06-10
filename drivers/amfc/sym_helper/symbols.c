@@ -65,7 +65,9 @@ FUN_TYPE1(iomap_read_folio);
 FUN_TYPE1(flush_dcache_folio);
 FUN_TYPE1(iomap_invalidate_folio);
 FUN_TYPE1(iomap_release_folio);
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
 FUN_TYPE1(thp_get_unmapped_area);
+#endif
 FUN_TYPE1(__seq_puts);
 FUN_TYPE1(file_bdev);
 FUN_TYPE1(generic_encode_ino32_fh);
@@ -93,6 +95,7 @@ OBJ_TYPE(struct qstr, dotdot_name);
 OBJ_TYPE(struct xattr_handler, nop_posix_acl_access);
 OBJ_TYPE(struct xattr_handler, nop_posix_acl_default);
 
+#ifdef CONFIG_ARM64
 #ifndef CONFIG_KALLSYMS_ALL
 static struct qstr _dotdot_name = QSTR_INIT("..", 2);
 
@@ -127,7 +130,6 @@ static struct xattr_handler _nop_posix_acl_default = {
 };
 #endif
 
-#ifdef CONFIG_ARM64
 static struct ksymbol module_symbols[] = {
 	/* MUST keep sorted */
 	KSYM_FUN(__bio_advance),
@@ -175,20 +177,15 @@ static struct ksymbol module_symbols[] = {
 	KSYM_FUN(psi_memstall_leave),
 	KSYM_FUN(read_cache_folio),
 	KSYM_FUN(super_setup_bdi),
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	KSYM_FUN(thp_get_unmapped_area),
+#endif
 	KSYM_FUN(vfs_iocb_iter_read),
 	KSYM_FUN(wait_for_completion_io),
 	KSYM_FUN(xxh32),
 	KSYM_FUN(zero_fill_bio_iter),
 	{}
 };
-#else
-/* for arm32 */
-static struct ksymbol module_symbols[] = {
-	/* these functions are not exported by f2fs */
-	{}
-};
-#endif
 
 /* see struct proc_dir_entry in fs/proc/internal.h */
 struct proc_node {
@@ -475,8 +472,13 @@ static int fill_module_symbols(struct proc_node *node, struct ksymbol *sym)
 		return -ENOSYS;
 	return 0;
 }
+#else
+/* for arm32 */
+static struct ksymbol module_symbols[] = {
+	/* these functions are not exported by f2fs */
+	{}
+};
 
-#ifdef CONFIG_ARM
 static void direct_symbol_assign(void)
 {
 	/*--------- erofs symbols ----------*/
@@ -501,7 +503,9 @@ static void direct_symbol_assign(void)
 	FUN_ASSIGN(bio_init);
 	FUN_ASSIGN(bio_add_folio);
 	FUN_ASSIGN(folio_unlock);
+#ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	FUN_ASSIGN(thp_get_unmapped_area);
+#endif
 	FUN_ASSIGN(filemap_splice_read);
 	FUN_ASSIGN(iomap_invalidate_folio);
 	FUN_ASSIGN(iomap_release_folio);
@@ -529,6 +533,11 @@ static void direct_symbol_assign(void)
 
 int symbol_fix(void)
 {
+#ifdef CONFIG_ARM
+	direct_symbol_assign();
+	__symbol_fixed = 1;
+	return 0;
+#else
 	struct proc_dir_entry *entry;
 	struct proc_node *parent, *tmp;
 	const struct proc_ops temp = {};
@@ -573,14 +582,12 @@ int symbol_fix(void)
 	nop_posix_acl_default_t = &_nop_posix_acl_default;
 #endif
 
-#ifdef CONFIG_ARM
-	direct_symbol_assign();
-#endif
 	if (!ret)
 		__symbol_fixed = 1;
 	pr_info("%s, prio:%d, ret:%d, time:%lld\n",
 		__func__, current->prio, ret, sched_clock() - te);
 	return ret;
+#endif
 }
 
 int symbol_fixed(void)
