@@ -9597,6 +9597,7 @@ s32 config_vd_pps_internal(struct video_layer_s *layer,
 	struct vppfilter_mode_s *vpp_filter;
 	struct vpp_frame_par_s *cur_frame_par;
 	s32 src_w, src_h, dst_w, dst_h;
+	s32 pre_w, pre_h;
 
 	if (!layer || !layer->cur_frame_par || !setting || !info)
 		return -1;
@@ -9639,7 +9640,7 @@ s32 config_vd_pps_internal(struct video_layer_s *layer,
 			cur_frame_par->supsc1_vert_ratio;
 	}
 	if (setting->vsr_safa_support) {
-		bool postsc_en;
+		bool postsc_en = true;
 
 		/* nr_pps_scaler, pps will do force postscaler, input size /2 */
 		if (layer->nr_pps_h_scaler_rate)
@@ -9653,8 +9654,23 @@ s32 config_vd_pps_internal(struct video_layer_s *layer,
 			!vpp_filter->vpp_pre_vsc_en &&
 			!vpp_filter->vpp_pre_hsc_en) || layer->bypass_pps)
 			setting->sc_top_enable = false;
-		postsc_en = !(vpp_filter->vpp_hsc_start_phase_step == 0x1000000 &&
-			vpp_filter->vpp_vsc_start_phase_step == 0x1000000);
+
+		pre_w = vpp_filter->vpp_pre_hsc_en ? vpp_filter->vpp_pre_hsc_ratio == 0 ?
+			src_w : (vpp_filter->vpp_pre_hsc_ratio == 1) ? ((src_w + 1) >> 1) :
+			vpp_filter->vpp_pre_hsc_ratio == 2 ? ((src_w + 3) >> 2) :
+			((src_w + 7) >> 3) : src_w;
+		/*prev en limited by pre_hsize*/
+		if (pre_w > (glayer_info[0].src_width_max / 2))
+			vpp_filter->vpp_pre_vsc_en = 0;
+		pre_h  = vpp_filter->vpp_pre_vsc_en ? (vpp_filter->vpp_pre_vsc_ratio == 0) ?
+			src_h : (vpp_filter->vpp_pre_vsc_ratio == 1) ? ((src_h + 1) >> 1) :
+			(vpp_filter->vpp_pre_vsc_ratio == 2) ? ((src_h + 3) >> 2) :
+			((src_h + 7) >> 3) : src_h;
+		if (vpp_filter->vpp_hsc_start_phase_step == 0x1000000 &&
+			vpp_filter->vpp_vsc_start_phase_step == 0x1000000 &&
+			pre_w == dst_w &&
+			pre_h == dst_h)
+			postsc_en = false;
 		setting->vsr.layer_id = layer->layer_id;
 		setting->vsr.vpp_index = layer->vpp_index;
 		setting->vsr.vsr_top.hsize_in = src_w;
