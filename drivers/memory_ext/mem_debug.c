@@ -39,15 +39,17 @@
 #endif
 #if IS_MODULE(CONFIG_AMLOGIC_MEM_DEBUG)
 #include <linux/module.h>
-#endif
-#include <linux/page_owner.h>
-#include <linux/cma.h>
-#include <cma.h>
 #ifdef CONFIG_ANDROID_VENDOR_HOOKS
 #include <linux/swap.h>
 #include <linux/mmzone.h>
 #include <trace/hooks/vmscan.h>
+#include <trace/hooks/mm.h>
+#include <linux/vmstat.h>
 #endif
+#endif
+#include <linux/page_owner.h>
+#include <linux/cma.h>
+#include <cma.h>
 
 static int pagemap_en;
 unsigned long mlock_fault_size;
@@ -507,7 +509,31 @@ static const struct proc_ops cma_stat_ops = {
 	.proc_release	= single_release,
 };
 
+static int __init memory_debug_init(void)
+{
+	struct proc_dir_entry *d_mdebug;
+
+	d_mdebug = proc_create("mem_debug", 0444, NULL, &mdebug_ops);
+	if (IS_ERR_OR_NULL(d_mdebug)) {
+		pr_err("%s, create proc failed\n", __func__);
+		return -1;
+	}
+
+	d_mdebug = proc_create("cma_stat", 0444, NULL, &cma_stat_ops);
+	if (IS_ERR_OR_NULL(d_mdebug)) {
+		pr_err("create /proc/cma_stat failed\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+#if IS_MODULE(CONFIG_AMLOGIC_MEM_DEBUG)
+/* SWAPD_OPT and MEM_DEBUG in nogki */
 #ifdef CONFIG_ANDROID_VENDOR_HOOKS
+void (*aml_wakeup_kswapd)(struct zone *zone, gfp_t gfp_flags, int order,
+		enum zone_type highest_zoneidx);
+
 static int can_unmap_files(struct scan_control *sc, struct folio *folio)
 {
 	if (!current_is_kswapd())
@@ -523,42 +549,92 @@ static void __maybe_unused unmap_folio_hook(void *data,
 	if (!is_active_lru(lru) && !can_unmap_files(sc, folio))
 		*bypass = 1;
 }
-#endif
 
-static int __init memory_debug_init(void)
+static void *get_symbol_addr(const char *symbol_name)
 {
-#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+	struct kprobe kp = {
+		.symbol_name = symbol_name,
+	};
 	int ret;
-#endif
-	struct proc_dir_entry *d_mdebug;
 
-	d_mdebug = proc_create("mem_debug", 0444, NULL, &mdebug_ops);
-	if (IS_ERR_OR_NULL(d_mdebug)) {
-		pr_err("%s, create proc failed\n", __func__);
-		return -1;
+	ret = register_kprobe(&kp);
+	if (ret < 0) {
+		pr_err("register_kprobe:%s failed, returned %d\n", symbol_name, ret);
+		return NULL;
 	}
+	pr_debug("symbol_name:%s addr=%px\n", symbol_name, kp.addr);
+	unregister_kprobe(&kp);
 
-	d_mdebug = proc_create("cma_stat", 0444, NULL, &cma_stat_ops);
-	if (IS_ERR_OR_NULL(d_mdebug)) {
-		pr_err("create /proc/cma_stat failed\n");
-		return -1;
+	return kp.addr;
+}
+
+static void __maybe_unused wakeup_kswapd_hook(void *data, gfp_t gfp, unsigned int order,
+		struct zonelist **zonelist, struct zoneref **preferred_zoneref,
+		enum zone_type *highest_zoneidx, unsigned int *alloc_flags)
+{
+	unsigned long free_pages;
+	struct zone *zone;
+	struct zoneref *z = *preferred_zoneref;
+	unsigned long high_wm;
+
+	/*
+	 * 1, if flag not allow reclaim
+	 * 2, if with aotimic, we still need enable pre-wake up of
+	 *    kswap to avoid large amount memory request fail in very
+	 *    short time
+	 */
+	if (!(gfp & __GFP_RECLAIM) && !(gfp & GFP_ATOMIC))
+		return;
+
+	zone = zonelist_zone(z);
+	if (zone) {
+		free_pages = zone_page_state(zone, NR_FREE_PAGES);
+		free_pages -= zone_page_state(zone, NR_FREE_CMA_PAGES);
+		/*
+		 * wake up kswapd before get pages from buddy, this help to
+		 * fast reclaim process and can avoid memory become too low
+		 * some times
+		 */
+		high_wm = high_wmark_pages(zone);
+		if (gfp & __GFP_HIGH) /* 1.5x if __GFP_HIGH */
+			high_wm = ((high_wm * 3) / 2);
+		if (free_pages <= high_wm)
+			aml_wakeup_kswapd(zone, gfp, order, *highest_zoneidx);
 	}
+}
 
-#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+static int __init memory_vendor_init(void)
+{
+	int ret;
+
 	ret = register_trace_android_vh_may_unmap_folio(unmap_folio_hook, NULL);
 	if (ret < 0)
 		pr_err("register trace isolate file failed.\n");
 	else
 		pr_info("register trace isolate file success.\n");
-#endif
+
+	aml_wakeup_kswapd = (void (*)(struct zone *zone, gfp_t gfp_flags, int order,
+		enum zone_type highest_zoneidx))get_symbol_addr("wakeup_kswapd");
+
+	if (!aml_wakeup_kswapd)
+		return 0;
+
+	ret = register_trace_android_vh_mm_customize_ac(wakeup_kswapd_hook, NULL);
+	if (ret < 0)
+		pr_err("register mm customize ac failed.\n");
+	else
+		pr_info("register mm customize ac success.\n");
 
 	return 0;
 }
+#endif
 
-#if IS_MODULE(CONFIG_AMLOGIC_MEM_DEBUG)
 static int __init mem_debug_module_init(void)
 {
 	memory_debug_init();
+#ifdef CONFIG_ANDROID_VENDOR_HOOKS
+	memory_vendor_init();
+#endif
 	dump_mem_layout_boot_phase();
 
 	return 0;
