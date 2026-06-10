@@ -3514,9 +3514,6 @@ void amvecm_video_latch(int vpp_index)
 	pre_saturation_gain_update();
 	gamut_mapping_wrapper_process(vpp_index);
 #endif
-
-	if (chip_type_id == chip_a9)
-		osd_sharpness_size_update();
 }
 
 static void amvecm_overscan_process(struct vframe_s *vf,

@@ -6525,33 +6525,6 @@ void osd_sharpness_size_ctrl(void)
 	WRITE_VPP_REG_BITS(OSD_SR_SIZE - addr_offset, vsize_in, 16, 16);//vsize
 }
 
-static int bak_osd_size_h;
-static int bak_osd_size_v;
-
-void osd_sharpness_size_update(void)
-{
-	unsigned int addr_offset = 0;
-	int size_h = 0;
-	int size_v = 0;
-	struct vinfo_s *vinfo;
-
-	if (chip_type_id == chip_a9)
-		addr_offset = 0x1a00;
-
-	vinfo = get_current_vinfo();
-	if (vinfo && vinfo->width && vinfo->height) {
-		size_h = vinfo->width;
-		size_v = vinfo->height;
-		if (size_h != bak_osd_size_h ||
-			size_v != bak_osd_size_v) {
-			VSYNC_WRITE_VPP_REG(OSD_SR_SIZE - addr_offset,
-				((size_v & 0xffff) << 16) | (size_h & 0xffff));
-			bak_osd_size_h = size_h;
-			bak_osd_size_v = size_v;
-		}
-	}
-}
-
 void osd_sharpness_demo_ctrl(void)
 {
 	unsigned int addr_offset = 0;
