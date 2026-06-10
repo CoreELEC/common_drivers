@@ -23,7 +23,7 @@
 #include "di_prc.h"
 
 #ifdef DIM_DCT_BORDER_DETECT
-#include <linux/amlogic/media/vout/lcd/aml_ldim.h>
+#include <linux/amlogic/media/vout/backlight/aml_ldim.h>
 #endif
 /************************************************
  * dbg_dct

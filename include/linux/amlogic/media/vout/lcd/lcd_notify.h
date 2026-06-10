@@ -64,8 +64,8 @@
 /* lcd bist pattern test occurred */
 #define LCD_EVENT_TEST_PATTERN         BIT(13)
 /* backlight power ctrl with POWER_ON bl_state, without LCD_ON bl_state */
-#define LCD_EVENT_BL_POWER_ON          BIT(14)
-#define LCD_EVENT_BL_POWER_OFF         BIT(15)
+// #define LCD_EVENT_BL_POWER_ON          BIT(14)
+// #define LCD_EVENT_BL_POWER_OFF         BIT(15)
 
 #define LCD_EVENT_ENCL_DUMMY           BIT(16)
 #define LCD_EVENT_ENCL_ACTIVE          BIT(17)

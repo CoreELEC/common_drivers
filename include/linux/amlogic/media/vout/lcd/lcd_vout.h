@@ -48,52 +48,86 @@ extern unsigned char lcd_pxp_mode;
 #define LCD_DBG_PR_TEST         BIT(14)
 #define LCD_DBG_PR_REG          BIT(15)
 
-#define LCDPR(fmt, args...)     pr_info("lcd: " fmt "", ## args)
-#define LCDERR(fmt, args...)    pr_err("lcd: error: " fmt "", ## args)
+#define LCDPR(fmt, args...)     pr_info("[lcd:-] " fmt "", ## args)
+#define LCDERR(fmt, args...)     pr_err("[lcd:-](err) " fmt "", ## args)
 
-#define PR_TYPE_INFO     0
-#define PR_TYPE_DBG      1
-#define PR_TYPE_DBG_ADV  2
-#define PR_TYPE_DBG_ADV2 3
-#define PR_TYPE_DBG_CLK  4
-#define PR_TYPE_DBG_ISR  5
-#define PR_TYPE_ERR      8
 
-#define LCD_ERR(drv, fmt, ...)     \
-		lcd_debug_print_helper(drv, PR_TYPE_ERR, fmt, ##__VA_ARGS__)
-#define LCD_PR(drv, fmt, ...)     \
-		lcd_debug_print_helper(drv, PR_TYPE_INFO, fmt, ##__VA_ARGS__)
-#define LCD_DBG(drv, fmt, ...)     \
-		lcd_debug_print_helper(drv, PR_TYPE_DBG, fmt, ##__VA_ARGS__)
+struct aml_lcd_drv_s;
 
-#define ADV_DEBUG_PR_ENABLED 1
+#define LCD_ERR(drv, fmt, args...) \
+	do { \
+		const struct aml_lcd_drv_s *_drv = (drv); \
+		pr_err("[lcd:%c](err) " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+	} while (0)
 
-#if ADV_DEBUG_PR_ENABLED
-	#define LCD_DBG_ADV(drv, fmt, ...)  \
-		lcd_debug_print_helper(drv, PR_TYPE_DBG_ADV, fmt, ##__VA_ARGS__)
-	#define LCD_DBG_ADV2(drv, fmt, ...)  \
-		lcd_debug_print_helper(drv, PR_TYPE_DBG_ADV2, fmt, ##__VA_ARGS__)
-	#define LCD_DBG_CLK(drv, fmt, ...)  \
-		lcd_debug_print_helper(drv, PR_TYPE_DBG_CLK, fmt, ##__VA_ARGS__)
-	#define LCD_DBG_ISR(drv, fmt, ...)  \
-		lcd_debug_print_helper(drv, PR_TYPE_DBG_ISR, fmt, ##__VA_ARGS__)
-#else
-	#define LCD_DBG_ADV(drv, fmt, ...)  \
-		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
-	#define LCD_DBG_ADV2(drv, fmt, ...)  \
-		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
-	#define LCD_DBG_CLK(drv, fmt, ...)  \
-		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
-	#define LCD_DBG_ISR(drv, fmt, ...)  \
-		do { if (0) no_printk(fmt, ##__VA_ARGS__); } while (0)
-#endif
+#define LCD_PR(drv, fmt, args...)     \
+	do { \
+		const struct aml_lcd_drv_s *_drv = (drv); \
+		pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+	} while (0)
 
-#define LCD_DEV_DBG(drv, dev_idx, fmt, ...)     \
-		lcd_dev_debug_print_helper(drv, dev_idx, PR_TYPE_DBG, fmt, ##__VA_ARGS__)
-#define LCD_DEV_PR(drv, dev_idx, fmt, ...)     \
-		lcd_dev_debug_print_helper(drv, dev_idx, PR_TYPE_INFO, fmt, ##__VA_ARGS__)
-#define LCD_DEV_ERR(drv, dev_idx, fmt, ...)     \
-		lcd_dev_debug_print_helper(drv, dev_idx, PR_TYPE_ERR, fmt, ##__VA_ARGS__)
+#define LCD_DBG(drv, fmt, args...)     \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define LCD_DBG_ADV(drv, fmt, args...)  \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_ADV) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define LCD_DBG_ADV2(drv, fmt, args...)  \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_ADV2) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define LCD_DBG_CLK(drv, fmt, args...)  \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_CLK) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define LCD_DBG_ISR(drv, fmt, args...)  \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_ISR) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c] " fmt "\n", _drv ? _drv->index + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define LCD_DEV_ERR(drv, dev_idx, fmt, args...)     \
+	do { \
+		const struct aml_lcd_drv_s *_drv = (drv); \
+		pr_err("[lcd:%c:%u](err) " fmt "\n", \
+			_drv ? _drv->index + '0' : '-', dev_idx, ## args); \
+	} while (0)
+
+#define LCD_DEV_PR(drv, dev_idx, fmt, args...)     \
+	do { \
+		const struct aml_lcd_drv_s *_drv = (drv); \
+		pr_info("[lcd:%c:%u] " fmt "\n", \
+			_drv ? _drv->index + '0' : '-', dev_idx, ## args); \
+	} while (0)
+
+#define LCD_DEV_DBG(drv, dev_idx, fmt, args...)     \
+	do { \
+		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) { \
+			const struct aml_lcd_drv_s *_drv = (drv); \
+			pr_info("[lcd:%c:%u] " fmt "\n", \
+				_drv ? _drv->index + '0' : '-', dev_idx, ## args); \
+		} \
+	} while (0)
 
 /*device attribute buf max size 4k*/
 #define PR_BUF_MAX              (4 * 1024)
@@ -679,12 +713,6 @@ struct lcd_power_ctrl_s {
 
 #define LCD_ENABLE_RETRY_MAX    3
 
-#define LCD_INIT_LEVEL_NORMAL         0
-#define LCD_INIT_LEVEL_PWR_OFF        1
-#define LCD_INIT_LEVEL_KERNEL_ON      2
-#define LCD_INIT_LEVEL_KERNEL_OFF     3
-#define LCD_INIT_LEVEL_PREBOOT        4  // lcd on, bl off
-
 #define LCD_VENC_1PPC                 0
 #define LCD_VENC_2PPC                 1
 #define LCD_VENC_4PPC                 2
@@ -936,15 +964,6 @@ struct lcd_cursor_attr_s {
 	unsigned short blue;
 };
 
-#define LCD_CONFIG_NONE 0
-#define LCD_CONFIG_DTS  1
-#define LCD_CONFIG_FILE 2
-#define LCD_CONFIG_BSP  3
-#define LCD_CONFIG_ERR  0xff
-
-#define PANEL_FILE_INVALID  0
-#define PANEL_FILE_INI      1
-#define PANEL_FILE_JSON     2
 
 #define CUS_PINMUX_NAME_MAX           44
 #define CUS_PINMUX_MODE_MODEL_NAME    1
@@ -1118,9 +1137,6 @@ struct aml_lcd_drv_s {
 #endif
 };
 
-void lcd_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 pr_type, const char *fmt, ...);
-void lcd_dev_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 dev_idx,
-				u8 pr_type, const char *fmt, ...);
 int lcd_get_dbg_source(void);
 struct aml_lcd_drv_s *aml_lcd_get_driver(int index);
 void lcd_resource_ready(int drv_index, unsigned int res_type, unsigned int res_index);
@@ -1129,8 +1145,8 @@ unsigned long long lcd_pll_freq_get(int index);
 void lcd_vlock_m_update(int index, unsigned int vlock_m);
 void lcd_vlock_frac_update(int index, unsigned int vlock_farc);
 int lcd_ss_enable(int index, unsigned int flag);
-void bl_lcd_on_ctrl(struct aml_lcd_drv_s *pdrv);
-void bl_lcd_off_ctrl(struct aml_lcd_drv_s *pdrv);
+// void bl_lcd_on_ctrl(struct aml_lcd_drv_s *pdrv);
+// void bl_lcd_off_ctrl(struct aml_lcd_drv_s *pdrv);
 
 struct lcd_scanning_time_s {
 	unsigned int pixel_time_ps;
@@ -1175,5 +1191,9 @@ static inline bool vlock_is_working(int enc_mux)
 	return false;
 }
 #endif
+
+u32 aml_lcd_get_encl_line_cnt(u8 idx);
+u32 aml_lcd_get_encl_frm_cnt(u8 idx);
+u32 aml_lcd_get_max_line_cnt(u8 idx);
 
 #endif

@@ -21,7 +21,6 @@ static void lcd_lane_map_chip_init(struct aml_lcd_drv_s *pdrv, struct phy_config
 	switch (pdrv->data->chip_type) {
 	case LCD_CHIP_TXHD2:
 	case LCD_CHIP_T6D:
-	case LCD_CHIP_A9:
 		phy_cfg->lane_offset = 0;
 		phy_cfg->lane_mask = 0x3ff;
 		break;
@@ -49,6 +48,15 @@ static void lcd_lane_map_chip_init(struct aml_lcd_drv_s *pdrv, struct phy_config
 	case LCD_CHIP_T6X:
 		phy_cfg->lane_offset = 0;
 		phy_cfg->lane_mask = 0xffff;
+		break;
+	case LCD_CHIP_A9:
+		if (pdrv->index == 0) {
+			phy_cfg->lane_offset = 0;
+			phy_cfg->lane_mask = 0x1ff;
+		} else if (pdrv->index == 1) {
+			phy_cfg->lane_offset = 5;
+			phy_cfg->lane_mask = 0x3e0;
+		}
 		break;
 	default: //common 12lane
 		phy_cfg->lane_offset = 0;
@@ -290,7 +298,7 @@ static void lcd_lvds_lane_init(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device
 	unsigned char temp, i, n;
 	int ret;
 
-	LCD_DBG(pdrv, "%s: [0x%8x][0x%8x]", __func__, map0, map1);
+	LCD_DBG(pdrv, "%s: [%p][%p]", __func__, map0, map1);
 
 	// 12-12 channel:
 	// d0_a:0 d1_a:1 d2_a:2 clk_a:3 d3_a:4 d4_a:5 d0_b:6 d1_b:7 d2_b:8 clk_b:9 d3_b:a d4_b:b
@@ -753,41 +761,39 @@ void lcd_mipi_dphy_set(struct aml_lcd_drv_s *pdrv, unsigned char on_off)
 		mipi_cfg = &pdrv->curr_dev->dev_cfg.control.mipi_cfg;
 		if (on_off) {
 			if (pdrv->index) {
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 1, 5, 1);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 6, 2);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 3, 2, 2);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2, 0, 10, 10);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 1, 5, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 0, 6, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9, 3, 2, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
+								0, 10, 10);
 			} else {
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 1, 2, 1);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 3, 0, 2);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2, 0, 0, 10);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 1, 2, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9, 3, 0, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
+								0, 0, 10);
 				if (mipi_cfg->multi_port_cfg & BIT(0)) {
-					lcd_vx1_lvds_ctrl_setb(pdrv,
-								ANACTRL_LVDS_TX_PHY_CNTL0,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
 								1, 5, 1);
-					lcd_vx1_lvds_ctrl_setb(pdrv,
-								ANACTRL_LVDS_TX_PHY_CNTL0,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
 								0, 6, 2);
-					lcd_vx1_lvds_ctrl_setb(pdrv,
-								ANACTRL_LVDS_TX_PHY_CNTL1,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9,
 								3, 2, 2);
-					lcd_vx1_lvds_ctrl_setb(pdrv,
-								ANACTRL_LVDS_TX_PHY_CNTL2,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL2_A9,
 								0, 10, 10);
 				}
 			}
 			lcd_lane_map_set(pdrv);
 		} else {
 			if (pdrv->index) {
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 5, 1);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 2, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 0, 5, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9, 0, 2, 2);
 			} else {
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0, 0, 2, 1);
-				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1, 0, 0, 2);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9, 0, 2, 1);
+				lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9, 0, 0, 2);
 				if (mipi_cfg->multi_port_cfg & BIT(0)) {
-					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL0_A9,
 								0, 5, 1);
-					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1,
+					lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_LVDS_TX_PHY_CNTL1_A9,
 								0, 2, 2);
 				}
 			}

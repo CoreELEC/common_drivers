@@ -435,7 +435,7 @@ static void set_mipi_dsi_host(struct aml_lcd_drv_s *pdrv, u8 port, u8 vcid, u8 o
 		dsi_host_write(pdrv, port, MIPI_DSI_DWC_VID_MODE_CFG_OS,
 			(1 << BIT_LP_CMD_EN) | /* command transmission only in low power mode */
 			(0 << BIT_FRAME_BTA_ACK_EN) | /* enable BTA after one frame, need check */
-			(1 << BIT_LP_HFP_EN)  | /* enable lp */
+			(0 << BIT_LP_HFP_EN)  | /* enable lp */
 			(0 << BIT_LP_HBP_EN)  | /* enable lp */
 			(1 << BIT_LP_VACT_EN) | /* enable lp */
 			(1 << BIT_LP_VFP_EN)  | /* enable lp */
@@ -1243,7 +1243,7 @@ static void dsi_host_off_post(struct aml_lcd_drv_s *pdrv)
 		/* dsi_host_write(pdrv, MIPI_DSI_DWC_PHY_RSTZ_OS, 0xc); */
 
 		dsi_phy_write(pdrv, i, MIPI_DSI_CHAN_CTRL, 0x1f);
-		//LCDPR("MIPI_DSI_PHY_CTRL=0x%x\n", dsi_phy_read(index, MIPI_DSI_PHY_CTRL));
+		//LCD_PR(NULL, "MIPI_DSI_PHY_CTRL=0x%x\n", dsi_phy_read(index, MIPI_DSI_PHY_CTRL));
 		dsi_phy_setb(pdrv, i, MIPI_DSI_PHY_CTRL, 0, 7, 1);
 	}
 }

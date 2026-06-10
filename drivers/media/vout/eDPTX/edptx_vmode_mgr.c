@@ -9,9 +9,9 @@
 u16 dptx_fr_int[]  = {144, 120, 100, 96, 75, 60, 50, 48, 30, 25, 24};
 //u16 dptx_fr_frac[] = {120, 96, 60, 30, 24};
 
-void dptx_vmode_apply_to_act_timing(struct edptx_drv_s *edp, struct dptx_vmode_s *vmd)
+void edptx_vmode_apply_to_act_timing(struct edptx_drv_s *edp, struct dptx_vmode_s *vmd)
 {
-	struct dptx_detail_timing_s *vmd_dtd;
+	struct edptx_detail_timing_s *vmd_dtd;
 	unsigned long long pclk;
 
 	if (vmd->base_dtd_idx >= DPTX_DRV_TIMING_MAX) // overflow or safemode
@@ -82,7 +82,7 @@ void dptx_vmode_apply_to_act_timing(struct edptx_drv_s *edp, struct dptx_vmode_s
 		edp->act_timing.pclk / 1000000, (edp->act_timing.pclk / 1000) % 1000);
 }
 
-void dptx_act_timing_apply(struct edptx_drv_s *edp)
+void edptx_act_timing_apply(struct edptx_drv_s *edp)
 {
 	dptx_clk_set_vid_clk(edp, edp->act_timing.pclk);
 
@@ -157,7 +157,7 @@ static u8 dtd_add_vmode_list(struct edptx_drv_s *edp, u8 dtd_idx, u32 fr_int, u8
 	u64 temp_fr;
 	u32 pixel_cnt;
 	struct dptx_vmode_s *tmp_vmode;
-	struct dptx_detail_timing_s *tmp_dtd;
+	struct edptx_detail_timing_s *tmp_dtd;
 
 	if (dtd_idx >= DPTX_DRV_TIMING_MAX)
 		return 0;
@@ -228,7 +228,7 @@ static u8 dtd_add_vmode_list(struct edptx_drv_s *edp, u8 dtd_idx, u32 fr_int, u8
 	if (edptx_print_level >= LOG_V) {
 		temp_fr = fr_frac ? (fr_int * 1000) / 1001 : edp->vmode_mgr.vmodes[idx].fr100_int;
 		pixel_cnt = temp_fr;
-		pr_info(" - add[%2u]: %4u * %4u @%3u.%-2uHz (h_blank:%3u, v_blank:%3u)\n",
+		pr_info(" - add[%u]: %4u*%4u@%3u.%02uHz (h_b:%3u, v_b:%3u)\n",
 			idx, tmp_dtd->h_act, tmp_dtd->v_act, pixel_cnt / 100, pixel_cnt % 100,
 			tmp_dtd->h_blank, tmp_dtd->v_blank);
 	}
@@ -300,9 +300,9 @@ static void dptx_vmodes_reorder(struct edptx_drv_s *edp)
 	}
 }
 
-void dptx_vmode_manage(struct edptx_drv_s *edp)
+void edptx_vmode_manage(struct edptx_drv_s *edp)
 {
-	struct dptx_detail_timing_s *temp_dt_p;
+	struct edptx_detail_timing_s *temp_dt_p;
 	//unsigned int act_pix_cnt, total_pix_cnt, dtd_idx, fr100;
 	unsigned int act_pix_cnt, total_pix_cnt, fr100;
 	unsigned char i, j;

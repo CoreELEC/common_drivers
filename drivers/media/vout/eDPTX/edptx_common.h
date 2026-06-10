@@ -44,19 +44,19 @@ static inline unsigned long long dptx_div_around(unsigned long long num, u32 den
 
 #define CAP_COMP(X, Y) ({typeof(X) x_ = (X); typeof(Y) y_ = (Y); (x_ < y_) ? x_ : y_; })
 
-enum DP_link_rate_e {
-	DP_LINK_RATE_RBR    = 0x06,
-	DP_LINK_RATE_2P16G  = 0x08,
-	DP_LINK_RATE_HBR    = 0x0a,
-	DP_LINK_RATE_3P24G  = 0x0c,
-	DP_LINK_RATE_4P32G  = 0x0f,
-	DP_LINK_RATE_HBR2   = 0x14,
-	DP_LINK_RATE_HBR3   = 0x1e,
+enum eDP_link_rate_e {
+	eDP_LINK_RATE_RBR    = 0x06,
+	eDP_LINK_RATE_2P16G  = 0x08,
+	eDP_LINK_RATE_HBR    = 0x0a,
+	eDP_LINK_RATE_3P24G  = 0x0c,
+	eDP_LINK_RATE_4P32G  = 0x0f,
+	eDP_LINK_RATE_HBR2   = 0x14,
+	eDP_LINK_RATE_HBR3   = 0x1e,
 
-	DP_LINK_RATE_UBR10  = 0x1,
-	DP_LINK_RATE_UBR135 = 0x2,
-	DP_LINK_RATE_UBR20  = 0x3,
-	DP_LINK_RATE_INVALID = 0,
+	eDP_LINK_RATE_UBR10  = 0x1,
+	eDP_LINK_RATE_UBR135 = 0x2,
+	eDP_LINK_RATE_UBR20  = 0x3,
+	eDP_LINK_RATE_INVALID = 0,
 };
 
 #define eDPTX_AUX_CMD_WRITE            0x8
@@ -69,7 +69,7 @@ enum DP_link_rate_e {
 
 extern struct edptx_boot_ctrl_s dptx_uboot_configs[eDPTX_MAX_DRV];
 
-struct dptx_aux_req_s {
+struct edptx_aux_req_s {
 	u32 address; //20bit for DPCD and 8 bit for I2C
 	u8 cmd_code;
 	u8 byte_cnt; //up to 16 word
@@ -82,8 +82,8 @@ unsigned int dptx_get_max_line_cnt(struct edptx_drv_s *edp);
 void dptx_debug_test(struct edptx_drv_s *edp, u8 num);
 void dptx_set_venc_timing(struct edptx_drv_s *edp);
 void dptx_set_venc(struct edptx_drv_s *edp);
-void dptx_venc_enable(struct edptx_drv_s *edp, u8 flag);
-void dptx_mute_set(struct edptx_drv_s *edp, u8 flag);
+void edptx_venc_enable(struct edptx_drv_s *edp, u8 flag);
+void edptx_mute_set(struct edptx_drv_s *edp, u8 flag);
 int edptx_venc_probe(struct edptx_drv_s *edp);
 
 /* ANALOG PHY */
@@ -97,7 +97,7 @@ void dptx_clk_config_print(struct edptx_drv_s *edp);
 void edptx_clk_set_link_clk(struct edptx_drv_s *edp, u8 port, u8 dptx_link_rate);
 void dptx_clk_set_vid_clk(struct edptx_drv_s *edp, u32 pixel_clk);
 void dptx_clk_set_ssc(struct edptx_drv_s *edp, u8 status);
-void dptx_clk_config_probe(struct edptx_drv_s *edp);
+void edptx_clk_config_probe(struct edptx_drv_s *edp);
 void dptx_clk_init(void);
 
 /* IP-interface */
@@ -171,13 +171,13 @@ int edptx_EDID_probe(struct edptx_drv_s *edp, u8 check_crc);
 
 /* dptx_vmode_mgr.c */
 u32 edptx_print_vmode(struct edptx_drv_s *edp, char *c_buf, u8 print_flag);
-void dptx_vmode_manage(struct edptx_drv_s *edp);
+void edptx_vmode_manage(struct edptx_drv_s *edp);
 
 /* dptx_utils.c */
 extern u16 dptx_train_rd_intv[5];
 extern u16 dptx_PSR_setup_time[8];
-void dptx_delay_us(int us);
-void dptx_delay_ms(int ms);
+void edptx_delay_us(int us);
+void edptx_delay_ms(int ms);
 u8 dptx_vswing_ds_to_phy(struct edptx_drv_s *edp, u8 ds_level);
 u8 dptx_preem_ds_to_phy(struct edptx_drv_s *edp, u8 ds_level);
 u8 ds_to_DPCD_LANESET(u8 ds_level);
@@ -185,7 +185,7 @@ u8 dptx_ds_to_vswing(u8 ds);
 u8 dptx_ds_to_preem(u8 ds);
 u8 dptx_v_p_to_ds(u8 vsw, u8 preem);
 void dptx_link_cfg_dft(struct edptx_drv_s *edp, u8 port);
-u8 dptx_DPCD_capability_to_link_cfg(struct edptx_drv_s *edp, u8 port);
+u8 edptx_DPCD_capability_to_link_cfg(struct edptx_drv_s *edp, u8 port);
 void dptx_link_policy_maker(struct edptx_drv_s *edp, u8 port);
 u8 dptx_vid_band_width_check(struct edptx_drv_s *edp, u32 pclk, u8 bpp);
 
@@ -200,20 +200,20 @@ void edptx_setup_PSR2(struct edptx_drv_s *edp, u8 port, u8 flag);
 /* ************* DPTX VMODE related ************/
 struct dptx_vmode_s *dptx_get_vmode(struct edptx_drv_s *edp, u8 th);
 struct dptx_vmode_s *dptx_get_optimum_vmode(struct edptx_drv_s *edp);
-void dptx_vmode_apply_to_act_timing(struct edptx_drv_s *edp, struct dptx_vmode_s *vmd);
-void dptx_act_timing_apply(struct edptx_drv_s *edp);
+void edptx_vmode_apply_to_act_timing(struct edptx_drv_s *edp, struct dptx_vmode_s *vmd);
+void edptx_act_timing_apply(struct edptx_drv_s *edp);
 void edptx_list_support_vmode(struct edptx_drv_s *edp);
 void edptx_user_set_vmode(struct edptx_drv_s *edp, u8 vmd_idx);
 u8 edptx_vmode_str_check(struct edptx_drv_s *edp, char *vmd_str);
 
-int dptx_timing_config_restore(struct edptx_drv_s *edp);
+int edptx_timing_config_restore(struct edptx_drv_s *edp);
 
-extern struct dptx_detail_timing_s DPTX_SafeMode_640x480_timing;
+extern struct edptx_detail_timing_s DPTX_SafeMode_640x480_timing;
 extern struct dptx_vmode_s DPTX_SafeMode_640x480_vmode;
 
 void edptx_pinmux_set(struct edptx_drv_s *edp, u8 status);
 void edptx_gpios_get(struct edptx_drv_s *edp, u8 status);
-void dptx_HPD_trigger_set(struct edptx_drv_s *edp, u8 en);
+void edptx_HPD_trigger_set(struct edptx_drv_s *edp, u8 en);
 
 void edptx_act_timing_to_venc_config(struct edptx_drv_s *edp);
 
@@ -244,15 +244,15 @@ void edptx_drv_start(struct edptx_drv_s *edp);
 void edptx_drv_disp_on(struct edptx_drv_s *edp);
 void edptx_drv_disp_off(struct edptx_drv_s *edp);
 void edptx_driver_close(struct edptx_drv_s *edp);
-void dptx_drv_eDP_PSR1_en(struct edptx_drv_s *edp, u8 port_mask, u8 en);
-void dptx_drv_eDP_PSR2_en(struct edptx_drv_s *edp, u8 port_mask, u8 en);
+void edptx_drv_PSR1_en(struct edptx_drv_s *edp, u8 port_mask, u8 en);
+void edptx_drv_PSR2_en(struct edptx_drv_s *edp, u8 port_mask, u8 en);
 
 //void dptx_info_print(struct edptx_drv_s *edp);
 //void dptx_reg_print(struct edptx_drv_s *edp);
 
 //dptx_debug.c
-int dptx_debug_probe(struct edptx_drv_s *edp);
-int dptx_debug_remove(struct edptx_drv_s *edp);
+int edptx_debug_probe(struct edptx_drv_s *edp);
+int edptx_debug_remove(struct edptx_drv_s *edp);
 void edptx_debug_reset(struct edptx_drv_s *edp, u8 port_mask, u8 reset_part);
 
 //dptx_notify.c
@@ -274,8 +274,8 @@ void edptx_vout_server_init(struct edptx_drv_s *edp);
 void edptx_vout_server_deinit(struct edptx_drv_s *edp);
 
 //dptx_drm.c
-int dptx_drm_add(struct device *dev);
-void dptx_drm_remove(struct device *dev);
+int edptx_drm_add(struct device *dev);
+void edptx_drm_remove(struct device *dev);
 
 void edptx_bl_wrapper_regist(struct edptx_drv_s *edp);
 

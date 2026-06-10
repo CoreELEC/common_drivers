@@ -89,7 +89,7 @@ static void lcd_set_vclk_crt_a4(struct aml_lcd_drv_s *pdrv)  /* from c3 */
 	struct lcd_clk_config_s *cconf;
 	unsigned int clk_phase;
 
-	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -179,7 +179,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_a4(struct aml_lcd_drv_s *pdrv)
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -187,12 +187,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_a4(struct aml_lcd_drv_s *pdrv)
 		memset(cconf, 0, sizeof(struct lcd_clk_config_s));
 	}
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kzalloc(sizeof(*cconf->pll_config), GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
 	cconf->data = &lcd_clk_data_a4;
 
 	return cconf;

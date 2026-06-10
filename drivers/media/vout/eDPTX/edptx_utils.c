@@ -24,7 +24,7 @@ u16 std_level_to_phy_dft_lut[10][3] = {
 /* 3 */  {0xf, 0x5, 0x0}
 };
 
-void dptx_delay_us(int us)
+void edptx_delay_us(int us)
 {
 	if (!us)
 		return;
@@ -38,7 +38,7 @@ void dptx_delay_us(int us)
 		msleep(us / 1000);
 }
 
-void dptx_delay_ms(int ms)
+void edptx_delay_ms(int ms)
 {
 	if (!ms)
 		return;
@@ -160,7 +160,7 @@ void dptx_link_cfg_dft(struct edptx_drv_s *edp, u8 port)
 	// edp->sink.link[port]->enhanced_framing_en   = 1;
 }
 
-u8 dptx_DPCD_capability_to_link_cfg(struct edptx_drv_s *edp, u8 port)
+u8 edptx_DPCD_capability_to_link_cfg(struct edptx_drv_s *edp, u8 port)
 {
 	u8 ad[16];
 
@@ -431,11 +431,11 @@ u8 dptx_vid_band_width_check(struct edptx_drv_s *edp, u32 pclk, u8 bpp)
 	for (port = 0; port < eDPTX_MAX_PORT; port++) {
 		if (!(edp->sink.port_mask & BIT(port)))
 			continue;
-		//if (edp->sink.link[port].link_rate == DP_LINK_RATE_UBR10)
+		//if (edp->sink.link[port].link_rate == eDP_LINK_RATE_UBR10)
 		//	bw_cal = 10000;
-		//else if (edp->sink.link[port].link_rate == DP_LINK_RATE_UBR135)
+		//else if (edp->sink.link[port].link_rate == eDP_LINK_RATE_UBR135)
 		//	bw_cal = 13500;
-		//else if (edp->sink.link[port].link_rate == DP_LINK_RATE_UBR20)
+		//else if (edp->sink.link[port].link_rate == eDP_LINK_RATE_UBR20)
 		//	bw_cal = 20000;
 		//else
 		bw_cal = edp->sink.link[port].link_rate * 270;
@@ -483,7 +483,7 @@ struct dptx_color_format_s edp_cfmt_tb[DPTX_COLOR_TYPE_MAX] = {
 	{DPTX_CFMT_invalid,          1, "invalid"},
 };
 
-struct dptx_detail_timing_s DPTX_SafeMode_640x480_timing = {
+struct edptx_detail_timing_s DPTX_SafeMode_640x480_timing = {
 	.name = "SafeMode_480P",
 
 	.h_size = 400,
@@ -534,7 +534,7 @@ u8 __str_add_vmode(struct edptx_drv_s *edp, char *buf, struct dptx_vmode_s *vmd_
 	u8 i, use_short = 0;
 	u16 vmd_h, vmd_v, vmd_fr;
 	// struct dptx_vmode_s *vmd;
-	struct dptx_detail_timing_s *vmd_timing;
+	struct edptx_detail_timing_s *vmd_timing;
 	struct V_name_s { u16 h, v; u8 fr[5]; } V_name_table[] = {
 		{3840, 2160, {0xff,}},
 		{1920, 1080, {0xff,}},

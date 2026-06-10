@@ -153,10 +153,10 @@ void edptx_user_set_vmode(struct edptx_drv_s *edp, u8 vmd_idx)
 		eDP_ERR(edp, "vmode[%u] not available", vmd_idx);
 		return;
 	}
-	dptx_venc_enable(edp, 0);
+	edptx_venc_enable(edp, 0);
 
-	dptx_vmode_apply_to_act_timing(edp, dp_vmode);
-	dptx_act_timing_apply(edp);
+	edptx_vmode_apply_to_act_timing(edp, dp_vmode);
+	edptx_act_timing_apply(edp);
 
 	for (port = 0; port < eDPTX_MAX_PORT; port++) {
 		if (!(edp->sink.port_mask & BIT(port)))
@@ -167,9 +167,9 @@ void edptx_user_set_vmode(struct edptx_drv_s *edp, u8 vmd_idx)
 		// edptx_if_path_reset(edp, port, DPTX_RESET_eDP_PIPE);
 	}
 
-	dptx_venc_enable(edp, 1);
+	edptx_venc_enable(edp, 1);
 
-	dptx_delay_ms(10);
+	edptx_delay_ms(10);
 
 	for (port = 0; port < eDPTX_MAX_PORT; port++) {
 		if (!(edp->sink.port_mask & BIT(port)))
@@ -177,9 +177,9 @@ void edptx_user_set_vmode(struct edptx_drv_s *edp, u8 vmd_idx)
 		edptx_if_transmitter_output(edp, port, 1);
 	}
 	////????????????????????????uboooooooot
-	// dptx_venc_enable(edp, 1);
+	// edptx_venc_enable(edp, 1);
 
-	// dptx_delay_ms(10);
+	// edptx_delay_ms(10);
 }
 
 void edptx_setup_PSR1(struct edptx_drv_s *edp, u8 port, u8 flag)
@@ -196,7 +196,7 @@ void edptx_setup_PSR1(struct edptx_drv_s *edp, u8 port, u8 flag)
 	edptx_if_PSR1_ctrl(edp, port, 1);
 
 	// // error, should check vbp time
-	dptx_delay_us(dptx_PSR_setup_time[edp->sink.link[port].cap.eDP.PSR_setup_time] + 20);
+	edptx_delay_us(dptx_PSR_setup_time[edp->sink.link[port].cap.eDP.PSR_setup_time] + 20);
 	edptx_if_aux_write_single(edp, port, DPCD_eDP_PSR_ENABLE_AND_CONF, BIT(0) | BIT(3));
 
 	edptx_if_aux_read(edp, port, DPCD_PSR_ERROR_STATUS, 4, auxdata);
@@ -218,8 +218,8 @@ void edptx_setup_PSR2(struct edptx_drv_s *edp, u8 port, u8 flag)
 	edptx_if_PSR1_ctrl(edp, port, 1);
 
 	// // error, should check vbp time
-	dptx_delay_us(dptx_PSR_setup_time[edp->sink.link[port].cap.eDP.PSR_setup_time] + 20);
-	dptx_delay_ms(100);
+	edptx_delay_us(dptx_PSR_setup_time[edp->sink.link[port].cap.eDP.PSR_setup_time] + 20);
+	edptx_delay_ms(100);
 	//edptx_if_aux_write_single(edp, port, DPCD_eDP_PSR_ENABLE_AND_CONF, BIT(0) | BIT(3));
 
 	edptx_if_aux_read(edp, port, DPCD_PSR_ERROR_STATUS, 4, auxdata);

@@ -72,9 +72,9 @@ static void dptx_set_msa(struct edptx_drv_s *edp, u8 port)
 	vbp     = edp->act_timing.v_bp;
 
 	m_vid = dptx_div_around(edp->act_timing.pclk / port_cnt, 1000);
-	if (edp->sink.link[port].link_rate == DP_LINK_RATE_HBR2)
+	if (edp->sink.link[port].link_rate == eDP_LINK_RATE_HBR2)
 		n_vid = 540000;
-	else if (edp->sink.link[port].link_rate == DP_LINK_RATE_HBR)
+	else if (edp->sink.link[port].link_rate == eDP_LINK_RATE_HBR)
 		n_vid = 270000;
 	else
 		n_vid = 162000;

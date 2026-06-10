@@ -171,7 +171,7 @@ static void lcd_lvds_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 	unsigned int com_data = 0;
 
 	if (pdrv->index) {
-		LCD_ERR(NULL, "invalid drv_index %d for lvds");
+		LCD_ERR(NULL, "invalid drv_index %d for lvds", pdrv->index);
 		return;
 	}
 

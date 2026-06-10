@@ -145,7 +145,7 @@ ssize_t lcd_tcon_rdma_dbg_show(struct device *dev, struct device_attribute *attr
 	ssize_t size = 0;
 
 	if (!tcon_rdma || !tcon_rdma->chip) {
-		LCDERR("Invalid tcon rdma\n");
+		LCD_ERR(NULL, "Invalid tcon rdma\n");
 		goto __rdma_dbg_show_exit;
 	}
 
@@ -195,7 +195,7 @@ ssize_t lcd_tcon_rdma_dbg_store(struct device *dev, struct device_attribute *att
 	int ret = -1;
 
 	if (!tcon_rdma || !tcon_rdma->chip) {
-		LCDERR("Invalid tcon rdma\n");
+		LCD_ERR(NULL, "Invalid tcon rdma\n");
 		return count;
 	}
 
@@ -208,34 +208,34 @@ ssize_t lcd_tcon_rdma_dbg_store(struct device *dev, struct device_attribute *att
 			!strcmp(parm[0], "write")) {
 		ret = kstrtouint(parm[1], 16, &reg);
 		if (ret) {
-			LCDERR("Invalid reg\n");
+			LCD_ERR(NULL, "Invalid reg\n");
 			goto __tcon_rdma_store_exit;
 		}
 		ret = kstrtouint(parm[2], 16, &val);
 		if (ret) {
-			LCDERR("Invalid val\n");
+			LCD_ERR(NULL, "Invalid val\n");
 			goto __tcon_rdma_store_exit;
 		}
 		lcd_tcon_rdma_wr(pdrv, reg, val);
 	} else if (!strcmp(parm[0], "wb")) {  //write bit
 		ret = kstrtouint(parm[1], 16, &reg);
 		if (ret) {
-			LCDERR("Invalid reg\n");
+			LCD_ERR(NULL, "Invalid reg\n");
 			goto __tcon_rdma_store_exit;
 		}
 		ret = kstrtouint(parm[2], 10, &sbit);
 		if (ret) {
-			LCDERR("Invalid sbit\n");
+			LCD_ERR(NULL, "Invalid sbit\n");
 			goto __tcon_rdma_store_exit;
 		}
 		ret = kstrtouint(parm[3], 10, &len);
 		if (ret) {
-			LCDERR("Invalid len\n");
+			LCD_ERR(NULL, "Invalid len\n");
 			goto __tcon_rdma_store_exit;
 		}
 		ret = kstrtouint(parm[4], 16, &val);
 		if (ret) {
-			LCDERR("Invalid val\n");
+			LCD_ERR(NULL, "Invalid val\n");
 			goto __tcon_rdma_store_exit;
 		}
 		lcd_tcon_rdma_wr_bits(pdrv, reg, val, sbit, len);
@@ -243,7 +243,7 @@ ssize_t lcd_tcon_rdma_dbg_store(struct device *dev, struct device_attribute *att
 			!strcmp(parm[0], "read")) {
 		ret = kstrtouint(parm[1], 16, &reg);
 		if (ret) {
-			LCDERR("Invalid reg\n");
+			LCD_ERR(NULL, "Invalid reg\n");
 			goto __tcon_rdma_store_exit;
 		}
 		LCDPR("RD[%#x]=%#x\n", reg, lcd_tcon_read(pdrv, reg));
@@ -264,7 +264,7 @@ ssize_t lcd_tcon_rdma_dbg_store(struct device *dev, struct device_attribute *att
 		spin_unlock_irqrestore(&tcon_rdma->lock, flags);
 		LCDPR("Clear fifo and counter\n");
 	} else {
-		LCDERR("Not support cmd: %s\n", parm[0]);
+		LCD_ERR(NULL, "Not support cmd: %s\n", parm[0]);
 		lcd_tcon_rdma_cmd_help();
 	}
 
@@ -285,7 +285,7 @@ int lcd_tcon_rdma_wr(struct aml_lcd_drv_s *pdrv, u32 reg, const u32 val)
 		return -1;
 
 	if (!is_valid_tcon_reg(tcon_rdma, reg)) {
-		LCDERR("Invalid reg: %#x\n", reg);
+		LCD_ERR(NULL, "Invalid reg: %#x\n", reg);
 		return -1;
 	}
 
@@ -296,7 +296,7 @@ int lcd_tcon_rdma_wr(struct aml_lcd_drv_s *pdrv, u32 reg, const u32 val)
 	tcon_reg.val = val;
 	spin_lock_irqsave(&tcon_rdma->lock, flags);
 	if (!kfifo_put(&tcon_rdma->reg_fifo, tcon_reg))
-		LCDERR("Tcon fifo full\n");
+		LCD_ERR(NULL, "Tcon fifo full\n");
 	else
 		tcon_rdma->in_cnt++;
 	spin_unlock_irqrestore(&tcon_rdma->lock, flags);
@@ -320,7 +320,7 @@ int lcd_tcon_rdma_wr_bits(struct aml_lcd_drv_s *pdrv, u32 reg, const u32 val,
 		return -1;
 
 	if (!is_valid_tcon_reg(tcon_rdma, reg)) {
-		LCDERR("Invalid reg: %#x\n", reg);
+		LCD_ERR(NULL, "Invalid reg: %#x\n", reg);
 		return -1;
 	}
 
@@ -333,7 +333,7 @@ int lcd_tcon_rdma_wr_bits(struct aml_lcd_drv_s *pdrv, u32 reg, const u32 val,
 	tcon_reg.val = val;
 	spin_lock_irqsave(&tcon_rdma->lock, flags);
 	if (!kfifo_put(&tcon_rdma->reg_fifo, tcon_reg))
-		LCDERR("Tcon fifo full\n");
+		LCD_ERR(NULL, "Tcon fifo full\n");
 	else
 		tcon_rdma->in_cnt++;
 	spin_unlock_irqrestore(&tcon_rdma->lock, flags);
@@ -378,7 +378,7 @@ int lcd_tcon_rdma_init(struct aml_lcd_drv_s *pdrv)
 		TCON_RDMA_FIFO_ELEMENT_LEN,
 		GFP_KERNEL);
 	if (ret) {
-		LCDERR("rdma fifo buffer alloc fail\n");
+		LCD_ERR(NULL, "rdma fifo buffer alloc fail\n");
 		goto __tcon_rdma_init_exit;
 	}
 	spin_lock_init(&tcon_rdma->lock);

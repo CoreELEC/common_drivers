@@ -9,7 +9,7 @@
 #include "../edptx_reg_op.h"
 #include "../edptx_common.h"
 
-static void edptx_aux_request(struct edptx_drv_s *edp, u8 port, struct dptx_aux_req_s *req)
+static void edptx_aux_request(struct edptx_drv_s *edp, u8 port, struct edptx_aux_req_s *req)
 {
 	unsigned int state, timeout = 0;
 	int i = 0;
@@ -19,7 +19,7 @@ static void edptx_aux_request(struct edptx_drv_s *edp, u8 port, struct dptx_aux_
 		state = edp_reg_getb(edp, port, EDP_TX_AUX_STATE, 1, 1);
 		if (state == 0)
 			break;
-		dptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
+		edptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
 	};
 
 	//20-bit address for native AUX requests or 8-bit address for I2C over AUX requests.
@@ -39,14 +39,14 @@ static void edptx_aux_request(struct edptx_drv_s *edp, u8 port, struct dptx_aux_
 		((req->byte_cnt - 1) & 0xf))); //number of bytes
 }
 
-static u8 edptx_aux_submit_cmd(struct edptx_drv_s *edp, u8 port, struct dptx_aux_req_s *req)
+static u8 edptx_aux_submit_cmd(struct edptx_drv_s *edp, u8 port, struct edptx_aux_req_s *req)
 {
 	unsigned int status = 0, reply = 0, dc;
 	unsigned int retry_cnt = 0, timeout = 0;
 	char str[48];
 
 	if (!edp_reg_read(edp, port, EDP_TX_TRANSMITTER_OUTPUT_ENABLE)) {
-		eDP_P_ERR(edp, port, LOG_E, "%s: is not enabled", __func__);
+		eDP_P_ERR(edp, port, "%s: is not enabled", __func__);
 		return 1;
 	}
 
@@ -86,7 +86,7 @@ edptx_aux_submit_cmd_retry:
 
 	timeout = 0;
 	while (timeout++ < DPTX_AUX_REPLY_WAIT_TIMEOUT) {
-		dptx_delay_us(DPTX_AUX_REPLY_WAIT_TIMER);
+		edptx_delay_us(DPTX_AUX_REPLY_WAIT_TIMER);
 
 		// irq_status = dptx_reg_read(edp, EDP_TX_AUX_INTERRUPT_STATUS);
 		//REPLY_RECEIVED: AUX ACK, may not finished
@@ -126,7 +126,7 @@ edptx_aux_submit_cmd_retry:
 					eDP_P_DBG(edp, port, "%s Defer", str);
 
 					if (retry_cnt++ < DPTX_AUX_NO_REPLY_RETRY) {
-						dptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
+						edptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
 						goto edptx_aux_submit_cmd_retry;
 					}
 					break;
@@ -159,7 +159,7 @@ edptx_aux_submit_cmd_retry:
 						return 1;
 
 					if (retry_cnt++ < DPTX_AUX_NO_REPLY_RETRY) {
-						dptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
+						edptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
 						goto edptx_aux_submit_cmd_retry;
 					}
 					break;
@@ -183,7 +183,7 @@ edptx_aux_submit_cmd_retry:
 
 	if (retry_cnt++ < DPTX_AUX_NO_REPLY_RETRY) {
 		eDP_P_DBG(edp, port, "%s timeout, retry %d", str, retry_cnt);
-		dptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
+		edptx_delay_ms(DPTX_AUX_NO_REPLY_TIMEOUT);
 		goto edptx_aux_submit_cmd_retry;
 	}
 
@@ -193,7 +193,7 @@ edptx_aux_submit_cmd_retry:
 
 static u8 _aux_write(struct edptx_drv_s *edp, u8 port, u32 addr, int len, u8 *buf)
 {
-	struct dptx_aux_req_s aux_req;
+	struct edptx_aux_req_s aux_req;
 
 	if (!buf)
 		return 1;
@@ -209,7 +209,7 @@ static u8 _aux_write(struct edptx_drv_s *edp, u8 port, u32 addr, int len, u8 *bu
 
 static u8 _aux_write_single(struct edptx_drv_s *edp, u8 port, u32 addr, u8 val)
 {
-	struct dptx_aux_req_s aux_req;
+	struct edptx_aux_req_s aux_req;
 	u8 auxdata = val;
 	u8 ret;
 
@@ -225,7 +225,7 @@ static u8 _aux_write_single(struct edptx_drv_s *edp, u8 port, u32 addr, u8 val)
 
 static u8 _aux_read(struct edptx_drv_s *edp, u8 port, u32 addr, int len, u8 *buf)
 {
-	struct dptx_aux_req_s aux_req;
+	struct edptx_aux_req_s aux_req;
 	int i;//, reply_count;
 
 	if (!buf)
@@ -250,7 +250,7 @@ static u8 _aux_read(struct edptx_drv_s *edp, u8 port, u32 addr, int len, u8 *buf
 
 static u8 _aux_i2c_op(struct edptx_drv_s *edp, u8 port, u8 cmd_type, u32 dev_addr, u8 len, u8 *data)
 {
-	struct dptx_aux_req_s aux_req;
+	struct edptx_aux_req_s aux_req;
 	//unsigned char aux_data[4];
 	u8 n = 0, reply_count = 0;
 	u8 i, ret = 0;
@@ -266,12 +266,12 @@ static u8 _aux_i2c_op(struct edptx_drv_s *edp, u8 port, u8 cmd_type, u32 dev_add
 	case eDPTX_AUX_CMD_I2C_WRITE_STATUS:
 		aux_req.data = data;
 		ret = edptx_aux_submit_cmd(edp, port, &aux_req);
-		dptx_delay_us(100);
+		edptx_delay_us(100);
 		break;
 	case eDPTX_AUX_CMD_I2C_READ:
 	case eDPTX_AUX_CMD_I2C_READ_MOT:
 		ret = edptx_aux_submit_cmd(edp, port, &aux_req);
-		dptx_delay_us(100);
+		edptx_delay_us(100);
 		reply_count = edp_reg_read(edp, port, EDP_TX_AUX_REPLY_DATA_COUNT);
 		if (reply_count != len) {
 			eDP_P_ERR(edp, port, "Aux I2C cmd reply %d", reply_count);
@@ -356,9 +356,9 @@ static void dptx_set_MSA(struct edptx_drv_s *edp, u8 port)
 	// m_vid = edp->act_timing.pclk / 1000;
 	m_vid = dptx_div_around(edp->vid_clk.fout, port_cnt);
 	m_vid = m_vid / 1000;
-	if (edp->sink.link[port].link_rate == DP_LINK_RATE_HBR2)
+	if (edp->sink.link[port].link_rate == eDP_LINK_RATE_HBR2)
 		n_vid = 540000;
-	else if (edp->sink.link[port].link_rate == DP_LINK_RATE_HBR)
+	else if (edp->sink.link[port].link_rate == eDP_LINK_RATE_HBR)
 		n_vid = 270000;
 	else
 		n_vid = 162000;
@@ -419,16 +419,16 @@ static void dptx_reset_t7(struct edptx_drv_s *edp, u8 port, u8 mask)
 
 	if (mask & DPTX_RESET_PHY) {
 		edp_reg_write(edp, port, EDP_TX_PHY_RESET, 0xf); //reset the PHY
-		dptx_delay_ms(1);
+		edptx_delay_ms(1);
 	}
 
 	if (mask & DPTX_RESET_COMBO_DPHY) {
 		bit = (edp->idx == 0 && port == 0) ? 19 : 20; //combo dphy
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 0, bit, 1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 0, bit, 1);
-		dptx_delay_us(1);
+		edptx_delay_us(1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 1, bit, 1);
-		dptx_delay_us(5);
+		edptx_delay_us(5);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 1, bit, 1);
 	}
 
@@ -436,9 +436,9 @@ static void dptx_reset_t7(struct edptx_drv_s *edp, u8 port, u8 mask)
 		bit = (edp->idx == 0 && port == 0) ? 27 : 26; //eDP pipeline
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 0, bit, 1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 0, bit, 1);
-		dptx_delay_us(1);
+		edptx_delay_us(1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 1, bit, 1);
-		dptx_delay_us(5);
+		edptx_delay_us(5);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 1, bit, 1);
 	}
 
@@ -446,14 +446,14 @@ static void dptx_reset_t7(struct edptx_drv_s *edp, u8 port, u8 mask)
 		bit = (edp->idx == 0 && port == 0) ? 17 : 18; //eDP ctrl
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 0, bit, 1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 0, bit, 1);
-		dptx_delay_us(1);
+		edptx_delay_us(1);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 1, bit, 1);
-		dptx_delay_us(5);
+		edptx_delay_us(5);
 		dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 1, bit, 1);
 	}
 
 	if (mask & (DPTX_RESET_eDP_CTRL | DPTX_RESET_eDP_PIPE | DPTX_RESET_COMBO_DPHY))
-		dptx_delay_ms(1);
+		edptx_delay_ms(1);
 
 	if (mask & DPTX_RESET_AUX_CLK_DIVIDER) {
 		//Set Aux channel clk-div: 24MHz
@@ -470,9 +470,9 @@ static void dptx_reset_t7(struct edptx_drv_s *edp, u8 port, u8 mask)
 		bit = (edp->idx == 0) ? 24 : 27; //eDP ctrl
 		dptx_reset_setb(edp, RESETCTRL_RESET0_MASK, 0, bit, 1);
 		dptx_reset_setb(edp, RESETCTRL_RESET0_LEVEL, 0, bit, 1);
-		dptx_delay_us(1);
+		edptx_delay_us(1);
 		dptx_reset_setb(edp, RESETCTRL_RESET0_LEVEL, 1, bit, 1);
-		dptx_delay_us(5);
+		edptx_delay_us(5);
 		dptx_reset_setb(edp, RESETCTRL_RESET0_MASK, 1, bit, 1);
 	}
 }
@@ -518,7 +518,7 @@ static int dptx_wait_phy_ready(struct edptx_drv_s *edp, u8 port)
 		if (done > 20)
 			eDP_P_DBG(edp, port, "wait phy ready: val=0x%x, cnt=%u", data, done);
 		done++;
-		dptx_delay_us(100);
+		edptx_delay_us(100);
 	} while (((data & 0x7f) != 0x7f) && (done < 100));
 
 	if ((data & 0x7f) == 0x7f)
@@ -532,7 +532,7 @@ static void dptx_transmitter_init(struct edptx_drv_s *edp, u8 port)
 {
 	dptx_reset_t7(edp, port, DPTX_RESET_AUX_CLK_DIVIDER | DPTX_RESET_PHY);
 	dptx_wait_phy_ready(edp, port);
-	dptx_delay_ms(1);
+	edptx_delay_ms(1);
 
 	edp_reg_write(edp, port, EDP_TX_TRANSMITTER_OUTPUT_ENABLE, 0x1);
 	//edp_reg_write(edp, EDP_TX_AUX_INTERRUPT_MASK, 0);	//turn off interrupt

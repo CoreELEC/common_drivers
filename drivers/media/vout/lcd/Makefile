@@ -39,8 +39,6 @@ $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_frame_lock.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_mode.o
 $(MEDIA_MODULE_NAME)-$(CONFIG_AMLOGIC_LCD) += vout/lcd/lcd_device_mgr.o
 
-include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_resman/Makefile
-
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_venc/Makefile
 
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_clk/Makefile
@@ -48,8 +46,6 @@ include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_clk/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_phy/Makefile
 
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_extern/Makefile
-
-include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/backlight/Makefile
 
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/ambilight/Makefile
 

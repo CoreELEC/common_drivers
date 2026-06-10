@@ -1063,7 +1063,7 @@
 };
 
 &i2c4 {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names="default", "sleep";
 	pinctrl-0=<&i2c4_pins3>;
 	pinctrl-1=<&i2c4_pins3_sleep>;

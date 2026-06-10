@@ -23,9 +23,9 @@
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_extern.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
 #include <linux/amlogic/media/vout/vinfo.h>
-#include <linux/amlogic/media/vout/lcd/lcd_resman.h>
+#include <linux/amlogic/media/vout/panel_utils/lcd_resman.h>
 #include <linux/page-flags.h>
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
@@ -121,259 +121,9 @@ void pxp_clk_div_gen(unsigned int pclk, unsigned int *xd, unsigned int *clk_sel)
 	*clk_sel = pxp_fclk_div_clk[(prox_id << 1) | 0];
 	*xd = prox_xd;
 
-	LCDPR("pxp: pclk:%d, xd:%d, clk_sel:%d, src_clk:%d real_clk:%d\n",
+	LCD_PR(NULL, "pxp: pclk:%d, xd:%d, clk_sel:%d, src_clk:%d real_clk:%d",
 		pclk, *xd, *clk_sel, pxp_fclk_div_clk[(prox_id << 1) | 1],
 		pxp_fclk_div_clk[(prox_id << 1) | 1] / *xd);
-}
-
-void lcd_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 pr_type, const char *fmt, ...)
-{
-	va_list args;
-	struct va_format vaf;
-
-	switch (pr_type) {
-	case PR_TYPE_DBG:
-		if (!(lcd_debug_print_flag & LCD_DBG_PR_NORMAL))
-			return;
-		break;
-	case PR_TYPE_DBG_ADV:
-		if (!(lcd_debug_print_flag & LCD_DBG_PR_ADV))
-			return;
-		break;
-	case PR_TYPE_DBG_ADV2:
-		if (!(lcd_debug_print_flag & LCD_DBG_PR_ADV2))
-			return;
-		break;
-	case PR_TYPE_DBG_CLK:
-		if (!(lcd_debug_print_flag & LCD_DBG_PR_CLK))
-			return;
-		break;
-	case PR_TYPE_DBG_ISR:
-		if (!(lcd_debug_print_flag & LCD_DBG_PR_ISR))
-			return;
-		break;
-	case PR_TYPE_INFO:
-	case PR_TYPE_ERR:
-	default:
-		break;
-	}
-
-	va_start(args, fmt);
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	if (pr_type == PR_TYPE_ERR) {
-		if (!pdrv)
-			pr_err("[lcd:-](err): %pV\n", &vaf);
-		else if (pdrv->device_mgr.dev_cnt > 1 && pdrv->curr_dev)
-			pr_err("[lcd:%u:%u](err): %pV\n", pdrv->index, pdrv->curr_dev->idx, &vaf);
-		else
-			pr_err("[lcd:%u](err): %pV\n", pdrv->index, &vaf);
-	} else {
-		if (!pdrv)
-			pr_info("[lcd:-]: %pV\n", &vaf);
-		else if (pdrv->device_mgr.dev_cnt > 1 && pdrv->curr_dev)
-			pr_info("[lcd:%u:%u]: %pV\n", pdrv->index, pdrv->curr_dev->idx, &vaf);
-		else
-			pr_info("[lcd:%u]: %pV", pdrv->index, &vaf);
-	}
-
-	va_end(args);
-}
-
-void lcd_dev_debug_print_helper(struct aml_lcd_drv_s *pdrv, u8 dev_idx,
-				u8 pr_type, const char *fmt, ...)
-{
-	va_list args;
-	struct va_format vaf;
-	char buffer[20];
-
-	va_start(args, fmt);
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	if (pr_type == PR_TYPE_DBG && (!(lcd_debug_print_flag & LCD_DBG_PR_NORMAL))) {
-		va_end(args);
-		return;
-	}
-
-	if (pr_type == PR_TYPE_ERR) {
-		snprintf(buffer, sizeof(buffer), "[lcd:%u:%u](err) ", pdrv->index, dev_idx);
-
-		pr_err("%s%pV\n", buffer, &vaf);
-	} else {
-		snprintf(buffer, sizeof(buffer), "[lcd:%u:%u] ", pdrv->index, dev_idx);
-
-		pr_info("%s%pV\n", buffer, &vaf);
-	}
-
-	va_end(args);
-}
-
-unsigned char *lcd_init_table_dynamic_load_array(char *name, unsigned int *buf, int buf_len,
-						 int tbl_max, int *tbl_cnt)
-{
-	unsigned char *table, type, size;
-	int data_cnt, step = 0, i = 0;
-
-	if (!buf || buf_len == 0 || tbl_max == 0 || !tbl_cnt)
-		return NULL;
-
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s: %s: buf_len=%d, tbl_max=%d\n", __func__, name, buf_len, tbl_max);
-
-	while (1) {
-		if ((i + 2) > buf_len) {
-			LCDERR("%s: %s: step[%d]: no ending error\n", __func__, name, step);
-			return NULL;
-		}
-		if ((i + 2) > tbl_max) {
-			LCDERR("%s: %s: step[%d]: size out of support (max %d)\n",
-			       __func__, name, step, tbl_max);
-			return NULL;
-		}
-		type = buf[i];
-		size = buf[i + 1];
-		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
-			LCDPR("%s: %s: step[%d]: type=0x%x, size=%d, i=%d\n",
-			      __func__, name, step, type, size, i);
-		}
-		i += 2;
-
-		if (type == LCD_EXT_CMD_TYPE_END)
-			break;
-		if (size == 0)
-			goto init_dynamic_array_next;
-		if ((i + size) > buf_len) {
-			LCDERR("%s: %s: step[%d]: size out of support (buf_len %d)\n",
-			       __func__, name, step, buf_len);
-			return NULL;
-		}
-		if ((i + size) > tbl_max) {
-			LCDERR("%s: %s: step[%d]: size out of support (max %d)\n",
-				__func__, name, step, tbl_max);
-			return NULL;
-		}
-
-		i += size;
-
-init_dynamic_array_next:
-		step++;
-	}
-	data_cnt = i;
-
-	table = kzalloc(data_cnt, GFP_KERNEL);
-	if (!table)
-		return NULL;
-	for (i = 0; i < data_cnt; i++)
-		table[i] = buf[i];
-	*tbl_cnt = data_cnt;
-
-	return table;
-}
-
-unsigned char *lcd_init_table_fixed_load_array(char *name, unsigned char cmd_size,
-					       unsigned int *buf, int buf_len,
-					       int tbl_max, int *tbl_cnt)
-{
-	unsigned char *table, type;
-	int data_cnt, step = 0, i = 0;
-
-	if (cmd_size == 0 || !buf || buf_len == 0 || tbl_max == 0 || !tbl_cnt)
-		return NULL;
-
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s: %s: buf_len=%d, tbl_max=%d\n", __func__, name, buf_len, tbl_max);
-
-	while (1) {
-		if ((i + cmd_size) > buf_len) {
-			LCDERR("%s: %s: step[%d]: no ending error\n", __func__, name, step);
-			return NULL;
-		}
-		if ((i + cmd_size) > tbl_max) {
-			LCDERR("%s: %s: step[%d]: size out of support (max %d)\n",
-			       __func__, name, step, tbl_max);
-			return NULL;
-		}
-		type = buf[i];
-		i += cmd_size;
-
-		if (type == LCD_EXT_CMD_TYPE_END)
-			break;
-		step++;
-	}
-	data_cnt = i;
-
-	table = kzalloc(data_cnt, GFP_KERNEL);
-	if (!table)
-		return NULL;
-	for (i = 0; i < data_cnt; i++)
-		table[i] = buf[i];
-	*tbl_cnt = data_cnt;
-
-	return table;
-}
-
-unsigned char *lcd_init_table_load_array(char *name, unsigned char cmd_size,
-					 unsigned int *buf, int buf_len,
-					 int tbl_max, int *tbl_cnt)
-{
-	if (cmd_size == LCD_EXT_CMD_SIZE_DYNAMIC)
-		return lcd_init_table_dynamic_load_array(name, buf, buf_len, tbl_max, tbl_cnt);
-
-	return lcd_init_table_fixed_load_array(name, cmd_size, buf, buf_len, tbl_max, tbl_cnt);
-}
-
-u8 *lcd_vmap(ulong addr, u32 size)
-{
-	u8 *vaddr = NULL;
-	struct page **pages = NULL;
-	u32 i, npages, offset = 0;
-	ulong phys, page_start;
-	/*pgprot_t pgprot = pgprot_noncached(PAGE_KERNEL);*/
-	pgprot_t pgprot = PAGE_KERNEL;
-
-	if (!PageHighMem(phys_to_page(addr)))
-		return phys_to_virt(addr);
-
-	offset = offset_in_page(addr);
-	page_start = addr - offset;
-	npages = DIV_ROUND_UP(size + offset, PAGE_SIZE);
-
-	pages = kmalloc_array(npages, sizeof(struct page *), GFP_KERNEL);
-	if (!pages)
-		return NULL;
-	for (i = 0; i < npages; i++) {
-		phys = page_start + i * PAGE_SIZE;
-		pages[i] = pfn_to_page(phys >> PAGE_SHIFT);
-	}
-
-	vaddr = vmap(pages, npages, VM_MAP, pgprot);
-	if (!vaddr) {
-		LCDERR("the phy(%lx) vmaped fail, size: %d\n",
-		       page_start, npages << PAGE_SHIFT);
-		kfree(pages);
-		return NULL;
-	}
-	kfree(pages);
-
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
-		LCDPR("[lcd HIGH-MEM-MAP] %s, pa(%lx) to va(%p), size: %d\n",
-		      __func__, page_start, vaddr, npages << PAGE_SHIFT);
-	}
-
-	return vaddr + offset;
-}
-
-void lcd_unmap_phyaddr(u8 *vaddr)
-{
-	void *addr = (void *)(PAGE_MASK & (ulong)vaddr);
-
-	if (is_vmalloc_or_module_addr(vaddr)) {
-		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-			LCDPR("lcd unmap v: %p\n", addr);
-		vunmap(addr);
-	}
 }
 
 /* ************************************************** *
@@ -1524,8 +1274,8 @@ void lcd_frame_rate_change(struct aml_lcd_drv_s *pdrv)
 	pconf = &pdrv->curr_dev->dev_cfg;
 	if (pconf->timing.frame_rate > pconf->timing.act_timing.frame_rate_max ||
 	    pconf->timing.frame_rate < pconf->timing.act_timing.frame_rate_min) {
-		LCDERR("[%d]: fr_change: %d out of fr range [%d~%d]\n",
-			pdrv->index, pconf->timing.frame_rate,
+		LCD_ERR(pdrv, "fr_change: %d out of fr range [%d~%d]",
+			pconf->timing.frame_rate,
 			pconf->timing.act_timing.frame_rate_min,
 			pconf->timing.act_timing.frame_rate_max);
 		return;
@@ -1640,7 +1390,7 @@ static unsigned int lcd_vrr_lfc_switch(void *dev_data, int fps)
 
 	pdrv = (struct aml_lcd_drv_s *)dev_data;
 	if (!pdrv) {
-		LCD_ERR(pdrv, "%s: vrr dev_data is null");
+		LCD_ERR(pdrv, "%s: vrr dev_data is null", __func__);
 		return 0;
 	}
 	h_period = pdrv->curr_dev->dev_cfg.timing.act_timing.h_period;
@@ -1661,7 +1411,7 @@ static int lcd_vrr_disable_cb(void *dev_data)
 
 	pdrv = (struct aml_lcd_drv_s *)dev_data;
 	if (!pdrv) {
-		LCD_ERR(pdrv, "%s: vrr dev_data is null");
+		LCD_ERR(pdrv, "%s: vrr dev_data is null", __func__);
 		return -1;
 	}
 	lcd_venc_vrr_recovery(pdrv);

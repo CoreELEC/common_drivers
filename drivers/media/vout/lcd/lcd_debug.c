@@ -18,12 +18,12 @@
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
 #endif
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_tcon_data.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include "./lcd_clk/lcd_clk_config.h"
 #include "lcd_reg.h"
@@ -1084,7 +1084,7 @@ static ssize_t lcd_debug_prbs_store(struct device *dev, struct device_attribute 
 		if (ret) {
 			prbs_mode_flag = LCD_PRBS_MODE_VX1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(pdrv, "invalid data");
 			return -EINVAL;
 		}
 		break;
@@ -1093,7 +1093,7 @@ static ssize_t lcd_debug_prbs_store(struct device *dev, struct device_attribute 
 		if (ret) {
 			prbs_mode_flag = LCD_PRBS_MODE_LVDS;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(pdrv, "invalid data");
 			return -EINVAL;
 		}
 		break;
@@ -1102,7 +1102,7 @@ static ssize_t lcd_debug_prbs_store(struct device *dev, struct device_attribute 
 		if (ret == 2) {
 			prbs_mode_flag = LCD_PRBS_MODE_FREQ;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(pdrv, "invalid data");
 			return -EINVAL;
 		}
 		break;
@@ -1110,7 +1110,7 @@ static ssize_t lcd_debug_prbs_store(struct device *dev, struct device_attribute 
 		prbs_mode_flag = LCD_PRBS_MODE_LVDS | LCD_PRBS_MODE_VX1;
 		ret = kstrtouint(buf, 10, &test_ms);
 		if (ret) {
-			LCDERR("invalid data\n");
+			LCD_ERR(pdrv, "invalid data");
 			return -EINVAL;
 		}
 		break;
@@ -1118,14 +1118,14 @@ static ssize_t lcd_debug_prbs_store(struct device *dev, struct device_attribute 
 
 	if (test_ms) {
 		if (lcd_prbs_flag) {
-			LCDPR("lcd prbs check is already running\n");
+			LCD_PR(pdrv, "lcd prbs check is already running");
 			return count;
 		}
 		lcd_prbs_flag = 1;
 		aml_lcd_prbs_test(pdrv, test_ms, prbs_mode_flag);
 	} else {
 		if (lcd_prbs_flag == 0) {
-			LCDPR("lcd prbs check is already stopped\n");
+			LCD_PR(pdrv, "lcd prbs check is already stopped");
 			return count;
 		}
 		lcd_prbs_flag = 0;
@@ -1216,7 +1216,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 				}
 				lcd_debug_clk_change(pdrv, temp);
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		} else if (buf[1] == 'h') { /* check */
@@ -1268,7 +1268,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 				lcd_enc_timing_init_config(pdrv);
 				lcd_debug_config_update(pdrv);
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		} else if (buf[1] == 'i') { /* bit */
@@ -1278,7 +1278,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 				pr_info("set lcd_bits=%d\n", val[0]);
 				lcd_debug_config_update(pdrv);
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		}
@@ -1302,7 +1302,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 			lcd_enc_timing_init_config(pdrv);
 			lcd_debug_config_update(pdrv);
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
@@ -1312,7 +1312,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 			spin_lock_irqsave(&pdrv->isr_lock, flags);
 			pdrv->test_flag = (unsigned char)temp;
 			spin_unlock_irqrestore(&pdrv->isr_lock, flags);
-			LCDPR("%s: test %d\n", __func__, temp);
+			LCD_PR(NULL, "%s: test %d", __func__, temp);
 			i = 0;
 			while (i++ < 5000) {
 				if (pdrv->test_state == temp)
@@ -1320,14 +1320,14 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 				usleep_range(20, 30);
 			}
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
 	case 'i': /* info */
 		print_buf = kcalloc(PR_BUF_MAX, sizeof(char), GFP_KERNEL);
 		if (!print_buf) {
-			LCDERR("%s: buf malloc error\n", __func__);
+			LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 			return -EINVAL;
 		}
 		lcd_info_basic_print(pdrv, print_buf, 0);
@@ -1352,7 +1352,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 		if (buf[2] == 'g') { /* reg */
 			print_buf = kcalloc(PR_BUF_MAX, sizeof(char), GFP_KERNEL);
 			if (!print_buf) {
-				LCDERR("%s: buf malloc error\n", __func__);
+				LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 				return -EINVAL;
 			}
 			lcd_clk_reg_print(pdrv, print_buf, 0);
@@ -1393,7 +1393,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 					ptiming->pclk_max);
 				lcd_enc_timing_init_config(pdrv);
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		}
@@ -1401,7 +1401,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 	case 'd': /* dump */
 		print_buf = kcalloc(PR_BUF_MAX, sizeof(char), GFP_KERNEL);
 		if (!print_buf) {
-			LCDERR("%s: buf malloc error\n", __func__);
+			LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 			return -EINVAL;
 		}
 		lcd_info_basic_print(pdrv, print_buf, 0);
@@ -1449,7 +1449,7 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 	case 'h': /* hdr */
 		print_buf = kcalloc(PR_BUF_MAX, sizeof(char), GFP_KERNEL);
 		if (!print_buf) {
-			LCDERR("%s: buf malloc error\n", __func__);
+			LCD_ERR(NULL, "%s: buf malloc error", __func__);
 			return -EINVAL;
 		}
 		lcd_optical_info_print(pdrv, print_buf, 0);
@@ -1459,25 +1459,25 @@ static ssize_t lcd_debug_store(struct device *dev, struct device_attribute *attr
 	case 'v':
 		ret = sscanf(buf, "vout %d", &temp);
 		if (ret == 1) {
-			LCDPR("vout_serve bypass: %d\n", temp);
+			LCD_PR(pdrv, "vout_serve bypass: %d", temp);
 			lcd_vout_serve_bypass = temp;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(pdrv, "invalid data=");
 			return -EINVAL;
 		}
 		break;
 	case 'g':
 		ret = sscanf(buf, "gamma %d", &temp);
 		if (ret == 1) {
-			LCDPR("gamma en: %d\n", temp);
+			LCD_PR(NULL, "gamma en: %d", temp);
 			lcd_gamma_debug_test_en(pdrv, temp);
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
 	default:
-		LCDERR("wrong command\n");
+		LCD_ERR(NULL, "wrong command\n");
 		break;
 	}
 	return count;
@@ -1504,7 +1504,7 @@ static void lcd_debug_change_clk_change(struct aml_lcd_drv_s *pdrv, unsigned int
 	pconf->timing.act_timing.sync_duration_den = 100;
 	pconf->timing.enc_clk = pconf->timing.act_timing.pixel_clk / pconf->timing.ppc;
 	if (pdrv->curr_dev->dev_cfg.timing.ppc > 1) {
-		LCDPR("ppc=%d, pixel_clk=%d, enc_clk=%d\n",
+		LCD_PR(NULL, "ppc=%d, pixel_clk=%d, enc_clk=%d",
 		      pdrv->curr_dev->dev_cfg.timing.ppc, pconf->timing.act_timing.pixel_clk,
 		      pconf->timing.enc_clk);
 	}
@@ -1546,7 +1546,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 			lcd_debug_change_clk_change(pdrv, temp);
 			pconf->change_flag = 1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
@@ -1576,7 +1576,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 				lcd_enc_timing_init_config(pdrv);
 				pconf->change_flag = 1;
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		} else if (buf[1] == 'i') { /* bit */
@@ -1586,7 +1586,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 				pr_info("change lcd_bits=%d\n", val[4]);
 				pconf->change_flag = 1;
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		}
@@ -1594,10 +1594,10 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 	case 's':
 		if (buf[1] == 'e') { /* set */
 			if (pconf->change_flag) {
-				LCDPR("apply config changing\n");
+				LCD_PR(NULL, "apply config changing");
 				lcd_debug_config_update(pdrv);
 			} else {
-				LCDPR("config is no changing\n");
+				LCD_PR(NULL, "config is no changing");
 			}
 		} else if (buf[1] == 'y') { /* sync */
 			ret = sscanf(buf, "sync %d %d %d %d %d %d",
@@ -1621,7 +1621,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 				lcd_enc_timing_init_config(pdrv);
 				pconf->change_flag = 1;
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		}
@@ -1643,7 +1643,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 			lcd_debug_change_clk_change(pdrv, ptiming->pixel_clk);
 			pconf->change_flag = 1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
@@ -1681,7 +1681,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 			lcd_debug_change_clk_change(pdrv, ptiming->pixel_clk);
 			pconf->change_flag = 1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
@@ -1701,7 +1701,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 			lcd_debug_change_clk_change(pdrv, ptiming->pixel_clk);
 			pconf->change_flag = 1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
@@ -1732,7 +1732,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 
 				pconf->change_flag = 1;
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		} else if (buf[1] == 'l') {
@@ -1767,7 +1767,7 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 
 				pconf->change_flag = 1;
 			} else {
-				LCDERR("invalid data\n");
+				LCD_ERR(NULL, "invalid data\n");
 				return -EINVAL;
 			}
 		}
@@ -1797,20 +1797,20 @@ static ssize_t lcd_debug_change_store(struct device *dev, struct device_attribut
 
 			pconf->change_flag = 1;
 		} else {
-			LCDERR("invalid data\n");
+			LCD_ERR(NULL, "invalid data\n");
 			return -EINVAL;
 		}
 		break;
 	case 'u': /* update */
 		if (pconf->change_flag) {
-			LCDPR("apply config changing\n");
+			LCD_PR(NULL, "apply config changing");
 			lcd_debug_config_update(pdrv);
 		} else {
-			LCDPR("config is no changing\n");
+			LCD_PR(NULL, "config is no changing");
 		}
 		break;
 	default:
-		LCDERR("wrong command\n");
+		LCD_ERR(NULL, "wrong command\n");
 		break;
 	}
 
@@ -1891,7 +1891,7 @@ static ssize_t lcd_debug_enable_store(struct device *dev, struct device_attribut
 
 	ret = kstrtouint(buf, 10, &temp);
 	if (ret) {
-		LCDERR("invalid data\n");
+		LCD_ERR(NULL, "invalid data\n");
 		return -EINVAL;
 	}
 	if (temp) {
@@ -1930,7 +1930,7 @@ static ssize_t lcd_debug_resume_store(struct device *dev, struct device_attribut
 
 	ret = kstrtouint(buf, 16, &temp);
 	if (ret) {
-		LCDERR("invalid data\n");
+		LCD_ERR(NULL, "invalid data\n");
 		return -EINVAL;
 	}
 	if (temp & LCD_RESUME_WORKQUEUE)
@@ -1997,7 +1997,7 @@ static ssize_t lcd_debug_power_store(struct device *dev, struct device_attribute
 	lcd_debug_power_type = 0;
 	ret = kstrtouint(buf, 10, &temp);
 	if (ret) {
-		LCDERR("invalid data\n");
+		LCD_ERR(NULL, "invalid data\n");
 		return -EINVAL;
 	}
 
@@ -2007,7 +2007,8 @@ lcd_debug_power_store_next:
 	if (temp) {
 		if (pdrv->status & LCD_STATUS_ENCL_ON) {
 			if (pdrv->status & LCD_CTRL_DUMMY) {
-				LCDERR("%s: exit for dummy_state: 0x%x\n", __func__, pdrv->status);
+				LCD_ERR(NULL, "%s: exit for dummy_state: 0x%x",
+					__func__, pdrv->status);
 				mutex_unlock(&lcd_power_mutex);
 				return -EINVAL;
 			}
@@ -2015,7 +2016,7 @@ lcd_debug_power_store_next:
 			aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, (void *)pdrv);
 			lcd_if_enable_retry(pdrv);
 		} else {
-			LCDERR("%s: can't power on when driver disable\n", __func__);
+			LCD_ERR(NULL, "%s: can't power on when driver disable\n", __func__);
 		}
 	} else {
 		pdrv->status &= ~LCD_CTRL_POWER;
@@ -2136,7 +2137,7 @@ static ssize_t lcd_debug_frame_rate_store(struct device *dev, struct device_attr
 	unsigned long flags = 0;
 
 	if (!pdrv->curr_dev) {
-		LCDERR("[%d]: %s: curr_dev is null\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: curr_dev is null", __func__);
 		return -EINVAL;
 	}
 	str = kzalloc(128 * sizeof(char), GFP_KERNEL);
@@ -2424,7 +2425,7 @@ lcd_ss_debug_store_end:
 	return count;
 
 lcd_ss_debug_store_err:
-	LCDERR("%s: 0x%x fail\n", __func__, ssc_debug_type);
+	LCD_ERR(NULL, "%s: 0x%x fail\n", __func__, ssc_debug_type);
 	ssc_debug_type = SSC_DEBUG_ERR;
 	kfree(buf_orig);
 	kfree(parm);
@@ -2465,7 +2466,7 @@ static ssize_t lcd_debug_clk_store(struct device *dev, struct device_attribute *
 
 	if (strcmp(parm[0], "path") == 0) {
 		if (!parm[1] || kstrtou32(parm[1], 10, &set_val)) {
-			LCDERR("clk path set error\n");
+			LCD_ERR(NULL, "clk path set error\n");
 			goto lcd_clk_debug_store_end;
 		}
 
@@ -2606,7 +2607,7 @@ static ssize_t lcd_debug_test_store(struct device *dev, struct device_attribute 
 		if (parm[1]) {
 			if (strcmp(parm[1], "reset") == 0) {
 				lcd_venc_vrr_recovery(pdrv);
-				LCDPR("[%d]: %s: vrr test recovery\n", pdrv->index, __func__);
+				LCD_PR(pdrv, "%s: vrr test recovery", __func__);
 				goto lcd_debug_test_store_end;
 			}
 			if (kstrtou32(parm[1], 10, &step))
@@ -2732,7 +2733,7 @@ static ssize_t lcd_debug_window_attr_store(struct device *dev, struct device_att
 
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (!buf_orig) {
-		LCDERR("%s: buf malloc error\n", __func__);
+		LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 		return count;
 	}
 	lcd_debug_parse_param(buf_orig, (char **)&parm, 7);
@@ -2907,7 +2908,7 @@ static void lcd_debug_reg_op(struct aml_lcd_drv_s *pdrv, unsigned int reg,
 		break;
 
 	default:
-		LCDERR("[%d]: unknown bus %d\n", pdrv->index, bus);
+		LCD_ERR(pdrv, "unknown bus %d", bus);
 		kfree(reg_log);
 		return;
 	}
@@ -3268,7 +3269,7 @@ static ssize_t lcd_debug_dump_store(struct device *dev, struct device_attribute 
 		return count;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (!buf_orig) {
-		LCDERR("%s: buf malloc error\n", __func__);
+		LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 		return count;
 	}
 	lcd_debug_parse_param(buf_orig, (char **)&parm, __MAX_PARAM);
@@ -3294,7 +3295,7 @@ static ssize_t lcd_debug_dump_store(struct device *dev, struct device_attribute 
 	} else if (strcmp(parm[0], "phy") == 0) {
 		lcd_debug_dump_state = LCD_DEBUG_DUMP_INFO_PHY;
 	} else {
-		LCDERR("invalid command\n");
+		LCD_ERR(NULL, "invalid command\n");
 		kfree(buf_orig);
 		return -EINVAL;
 	}
@@ -3321,7 +3322,7 @@ static ssize_t lcd_debug_print_store(struct device *dev, struct device_attribute
 		return -EINVAL;
 	}
 	lcd_debug_print_flag = temp;
-	LCDPR("set debug print flag: 0x%x\n", lcd_debug_print_flag);
+	LCD_PR(NULL, "set debug print flag: 0x%x", lcd_debug_print_flag);
 
 	return count;
 }
@@ -3349,14 +3350,14 @@ static ssize_t lcd_debug_unmute_cnt_store(struct device *dev, struct device_attr
 			goto lcd_debug_unmute_cnt_store_err;
 		/*unmute_cnt_added take effect only once, will auto clean in next unmute*/
 		pdrv->unmute_cnt_added = (unsigned short)temp;
-		LCDPR("set unmute_cnt_added: %d\n", pdrv->unmute_cnt_added);
+		LCD_PR(pdrv, "set unmute_cnt_added: %d", pdrv->unmute_cnt_added);
 		break;
 	default:
 		ret = kstrtouint(buf, 10, &temp);
 		if (ret)
 			goto lcd_debug_unmute_cnt_store_err;
 		pdrv->unmute_cnt_test = (unsigned short)temp;
-		LCDPR("set unmute_cnt_test: %d\n", pdrv->unmute_cnt_test);
+		LCD_PR(pdrv, "set unmute_cnt_test: %d", pdrv->unmute_cnt_test);
 		break;
 	}
 
@@ -3389,7 +3390,7 @@ static ssize_t lcd_debug_mute_cnt_store(struct device *dev, struct device_attrib
 		return -EINVAL;
 	}
 	pdrv->mute_cnt_test = (unsigned short)temp;
-	LCDPR("set mute_cnt_test: %d\n", pdrv->mute_cnt_test);
+	LCD_PR(pdrv, "set mute_cnt_test: %d", pdrv->mute_cnt_test);
 
 	return count;
 }
@@ -3407,7 +3408,7 @@ static ssize_t lcd_debug_cus_ctrl_store(struct device *dev, struct device_attrib
 		if (ret != 1)
 			goto lcd_debug_cus_ctrl_store_err;
 		pdrv->curr_dev->dev_cfg.timing.switch_type_dbg = (unsigned char)temp;
-		LCDPR("set timing_switch_flag_dbg: %d\n",
+		LCD_PR(pdrv, "set timing_switch_flag_dbg: %d",
 			pdrv->curr_dev->dev_cfg.timing.switch_type_dbg);
 		break;
 	default:
@@ -3491,7 +3492,7 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (!buf_orig) {
-		LCDERR("%s: buf malloc error\n", __func__);
+		LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 		return count;
 	}
 	lcd_debug_parse_param(buf_orig, (char **)&parm, __MAX_PARAM);
@@ -3511,7 +3512,7 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 		fr_lock->base_dura_num = 0;
 		fr_lock->base_dura_den = 0;
 		fr_lock->rst = 1;
-		LCDPR("sw_vlock init mode:%d\n", mode);
+		LCD_PR(NULL, "sw_vlock init mode:%d", mode);
 	} else if (strcmp(parm[0], "en") == 0) {
 		if (!parm[1]) {
 			pr_err("invalid data\n");
@@ -3527,18 +3528,18 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 			fr_lock->base_dura_den = 0;
 			fr_lock->rst = 1;
 			fr_lock->en = 1;
-			LCDPR("sw_vlock enable\n");
+			LCD_PR(NULL, "sw_vlock enable");
 		} else if (!en && fr_lock->en) {
 			fr_lock->rst = 1;
 			fr_lock->en = 0;
 			fr_lock_recovery_freq(pdrv);
-			LCDPR("sw_vlock disable\n");
+			LCD_PR(NULL, "sw_vlock disable");
 		}
 	} else if (strcmp(parm[0], "rst") == 0) {
 		fr_lock->rst = 1;
 		fr_lock->base_dura_num = 0;
 		fr_lock->base_dura_den = 0;
-		LCDPR("sw_vlock reset\n");
+		LCD_PR(NULL, "sw_vlock reset");
 	} else if (strcmp(parm[0], "show") == 0) {
 		if (!parm[1]) {
 			pr_err("invalid data\n");
@@ -3551,7 +3552,7 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 			goto lcd_debug_sw_vlock_store_next;
 		}
 		fr_lock->show = mode;
-		LCDPR("sw_vlock show %d\n", mode);
+		LCD_PR(NULL, "sw_vlock show %d", mode);
 	} else if (strcmp(parm[0], "pid") == 0) {
 		if (!parm[1] || !parm[2] || !parm[3]) {
 			pr_err("invalid data\n");
@@ -3568,7 +3569,7 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 		fr_lock->kp = kp;
 		fr_lock->ki = ki;
 		fr_lock->kd = kd;
-		LCDPR("sw_vlock pid %d %d, %d\n", kp, ki, kd);
+		LCD_PR(NULL, "sw_vlock pid %d %d, %d", kp, ki, kd);
 	} else if (strcmp(parm[0], "dbg") == 0) {
 		if (!parm[1]) {
 			pr_err("invalid data\n");
@@ -3581,7 +3582,7 @@ static ssize_t lcd_debug_sw_vlock_store(struct device *dev, struct device_attrib
 			goto lcd_debug_sw_vlock_store_next;
 		}
 		fr_lock->dbg = mode;
-		LCDPR("sw_vlock dbg %d\n", mode);
+		LCD_PR(NULL, "sw_vlock dbg %d", mode);
 	}
 lcd_debug_sw_vlock_store_next:
 	kfree(buf_orig);
@@ -3663,7 +3664,7 @@ static ssize_t lcd_debug_sw_vrr_store(struct device *dev, struct device_attribut
 
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (!buf_orig) {
-		LCDERR("%s: buf malloc error\n", __func__);
+		LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 		return count;
 	}
 	lcd_debug_parse_param(buf_orig, (char **)&parm, __MAX_PARAM);
@@ -3689,7 +3690,7 @@ static ssize_t lcd_debug_sw_vrr_store(struct device *dev, struct device_attribut
 			sw_vrr->en = 0;
 		}
 		if (lcd_debug_print_flag)
-			LCDPR("sw_vrr en:%d, fr:%d\n", sw_vrr->en, sw_vrr->tg_fr);
+			LCD_PR(NULL, "sw_vrr en:%d, fr:%d", sw_vrr->en, sw_vrr->tg_fr);
 	} else if (strcmp(parm[0], "set") == 0) {
 		if (!parm[1]) {
 			pr_err("invalid data\n");
@@ -3702,7 +3703,7 @@ static ssize_t lcd_debug_sw_vrr_store(struct device *dev, struct device_attribut
 		}
 		sw_vrr->tg_fr = temp;
 		if (lcd_debug_print_flag)
-			LCDPR("sw_vrr fr:%d\n", sw_vrr->tg_fr);
+			LCD_PR(NULL, "sw_vrr fr:%d", sw_vrr->tg_fr);
 	} else if (strcmp(parm[0], "dma_delay") == 0) {
 		if (!parm[1]) {
 			pr_err("invalid data\n");
@@ -3715,7 +3716,7 @@ static ssize_t lcd_debug_sw_vrr_store(struct device *dev, struct device_attribut
 		}
 		sw_vrr->dma_dly_tg = temp;
 		if (lcd_debug_print_flag)
-			LCDPR("sw_vrr dma delay:%d\n", sw_vrr->dma_dly_tg);
+			LCD_PR(NULL, "sw_vrr dma delay:%d", sw_vrr->dma_dly_tg);
 	}
 
 lcd_debug_sw_vrr_store_next:
@@ -3840,7 +3841,7 @@ static ssize_t lcd_debug_vs_msr_store(struct device *dev, struct device_attribut
 		return count;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
 	if (!buf_orig) {
-		LCDERR("%s: buf malloc error\n", __func__);
+		LCD_ERR(NULL, "%s: buf malloc error\n", __func__);
 		return count;
 	}
 	lcd_debug_parse_param(buf_orig, (char **)&parm, __MAX_PARAM);
@@ -3924,7 +3925,7 @@ static ssize_t lcd_debug_vs_msr_store(struct device *dev, struct device_attribut
 	} else if (strcmp(parm[0], "snapshot") == 0) {
 		lcd_vs_msr_sel = LCD_VS_MSR_SNAPSHOT;
 	} else {
-		LCDERR("invalid command\n");
+		LCD_ERR(NULL, "invalid command\n");
 		kfree(buf_orig);
 		return -EINVAL;
 	}
@@ -4217,7 +4218,7 @@ lcd_mlvds_debug_store_end:
 	return count;
 
 lcd_mlvds_debug_store_err:
-	LCDERR("%s: 0x%x parameter fail\n", __func__, lcd_mlvds_debug_type);
+	LCD_ERR(NULL, "%s: 0x%x parameter fail\n", __func__, lcd_mlvds_debug_type);
 	lcd_mlvds_debug_type = MLVDS_DEBUG_ERR;
 	kfree(buf_orig);
 	kfree(parm);
@@ -4598,7 +4599,7 @@ static ssize_t lcd_mipi_mode_debug_store(struct device *dev, struct device_attri
 	int ret = 0;
 
 	if ((pdrv->status & LCD_STATUS_IF_ON) == 0) {
-		LCDERR("panel is disabled\n");
+		LCD_ERR(NULL, "panel is disabled\n");
 		return count;
 	}
 
@@ -4620,7 +4621,7 @@ static ssize_t lcd_mipi_dphy_debug_store(struct device *dev, struct device_attri
 	unsigned int temp;
 
 	if ((pdrv->status & LCD_STATUS_IF_ON) == 0) {
-		LCDERR("lcd is disabled\n");
+		LCD_ERR(NULL, "lcd is disabled\n");
 		return count;
 	}
 
@@ -4857,13 +4858,13 @@ static ssize_t lcd_phy_debug_store(struct device *dev, struct device_attribute *
 			if (kstrtou32(parm[3], 16, &set_val))
 				goto lcd_phy_debug_store_err;
 			if (!lcd_phy_support_lane_phase(pdrv)) {
-				LCDERR("not support lane phase select\n");
+				LCD_ERR(NULL, "not support lane phase select\n");
 				goto lcd_phy_debug_store_err;
 			}
 			if (set_val != PHY_PHASE_0 &&
 					set_val != PHY_PHASE_A &&
 					set_val != PHY_PHASE_B) {
-				LCDERR("Invalid phase sel=%d\n", set_val);
+				LCD_ERR(NULL, "Invalid phase sel=%d\n", set_val);
 				goto lcd_phy_debug_store_err;
 			}
 			if (op_lane == 0xff) { //write all lane
@@ -5053,7 +5054,7 @@ lcd_phy_debug_store_end:
 	return count;
 
 lcd_phy_debug_store_err:
-	LCDERR("%s: 0x%x fail\n", __func__, phy_debug_type);
+	LCD_ERR(NULL, "%s: 0x%x fail\n", __func__, phy_debug_type);
 	phy_debug_type = PHY_DEBUG_ERR;
 	kfree(parm);
 	kfree(buf_orig);

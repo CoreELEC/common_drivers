@@ -20,6 +20,8 @@
 #include <linux/amlogic/media/vout/vout_notify.h>
 #include <linux/amlogic/media/vpu/vpu.h>
 
+struct edptx_drv_s;
+
 //#define LCD_DEBUG_INFO
 extern u8 edptx_print_level;
 //bit[15:0]
@@ -28,22 +30,69 @@ extern u8 edptx_print_level;
 #define LOG_V      2 // log level Verbose
 #define LOG_A      3 // log level All
 
-#define eDP_ERR(drv, fmt, ...)     \
-		edptx_print_helper(drv, 0xff, LOG_E, fmt, ##__VA_ARGS__)
-#define eDP_PR(drv, fmt, ...)      \
-		edptx_print_helper(drv, 0xff, LOG_I, fmt, ##__VA_ARGS__)
-#define eDP_DBG(drv, fmt, ...)     \
-		edptx_print_helper(drv, 0xff, LOG_V, fmt, ##__VA_ARGS__)
-#define eDP_DBG_ADV(drv, fmt, ...) \
-		edptx_print_helper(drv, 0xff, LOG_A, fmt, ##__VA_ARGS__)
-#define eDP_P_ERR(drv, port, fmt, ...)   \
-		edptx_print_helper(drv, port, LOG_E, fmt, ##__VA_ARGS__)
-#define eDP_P_PR(drv, port, fmt, ...)    \
-		edptx_print_helper(drv, port, LOG_I, fmt, ##__VA_ARGS__)
-#define eDP_P_DBG(drv, port, fmt, ...)   \
-		edptx_print_helper(drv, port, LOG_V, fmt, ##__VA_ARGS__)
-#define eDP_P_DBG2(drv, port, fmt, ...)   \
-		edptx_print_helper(drv, port, LOG_A, fmt, ##__VA_ARGS__)
+#define eDP_ERR(drv, fmt, args...) \
+	do { \
+		const struct edptx_drv_s *_drv = (drv); \
+		pr_err("[eDP:%c](err) " fmt "\n", _drv ? _drv->idx + '0' : '-', ## args); \
+	} while (0)
+
+#define eDP_PR(drv, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_I) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c] " fmt "\n", _drv ? _drv->idx + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define eDP_DBG(drv, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_V) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c] " fmt "\n", _drv ? _drv->idx + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define eDP_DBG_ADV(drv, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_A) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c] " fmt "\n", _drv ? _drv->idx + '0' : '-', ## args); \
+		} \
+	} while (0)
+
+#define eDP_P_ERR(drv, port, fmt, args...) \
+	do { \
+		const struct edptx_drv_s *_drv = (drv); \
+		pr_err("[eDP:%c]-%u(err) " fmt "\n", \
+			_drv ? _drv->idx + '0' : '-', (port), ## args); \
+	} while (0)
+
+#define eDP_P_PR(drv, port, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_I) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c]-%u " fmt "\n", \
+				_drv ? _drv->idx + '0' : '-', (port), ## args); \
+		} \
+	} while (0)
+
+#define eDP_P_DBG(drv, port, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_V) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c]-%u " fmt "\n", \
+				_drv ? _drv->idx + '0' : '-', (port), ## args); \
+		} \
+	} while (0)
+
+#define eDP_P_DBG2(drv, port, fmt, args...) \
+	do { \
+		if (edptx_print_level >= LOG_A) { \
+			const struct edptx_drv_s *_drv = (drv); \
+			pr_info("[eDP:%c]-%u " fmt "\n", \
+				_drv ? _drv->idx + '0' : '-', (port), ## args); \
+		} \
+	} while (0)
 
 #define PR_BUF_MAX              (4 * 1024)
 
@@ -154,7 +203,7 @@ struct edptx_reg_map_s {
 	char flag;
 };
 
-#define MOD_LEN_MAX        30
+// #define MOD_LEN_MAX        30
 
 struct edptx_venc_cfg_s {
 	u8 pll_flag;
@@ -400,12 +449,12 @@ struct edptx_vmode_mgr_s {
 	u8 vmode_cfmt_sel;
 };
 
-#define DPTX_STA_PROBE_DONE   BIT(0)
-#define DPTX_STA_DRV_READY    BIT(1)
-#define DPTX_STA_HPD_TRI_EN   BIT(2)
-#define DPTX_STA_HPD_HIGH     BIT(3)
-#define DPTX_STA_LINK_ON      BIT(4)
-#define DPTX_STA_DISP_ON      BIT(5)
+#define eDPTX_STA_PROBE_DONE   BIT(0)
+#define eDPTX_STA_DRV_READY    BIT(1)
+#define eDPTX_STA_HPD_TRI_EN   BIT(2)
+#define eDPTX_STA_HPD_HIGH     BIT(3)
+#define eDPTX_STA_LINK_ON      BIT(4)
+#define eDPTX_STA_DISP_ON      BIT(5)
 
 // #define DPTX_GPIO_NAME_MAX    12
 
@@ -415,7 +464,7 @@ struct edptx_panel_data_s {
 	char sink_name[32];
 	u16 size[2];
 	u8 timing_cnt;
-	struct dptx_detail_timing_s timing[DPTX_DRV_TIMING_MAX];
+	struct edptx_detail_timing_s timing[DPTX_DRV_TIMING_MAX];
 	struct signal_eDP_cfg_s {
 		u8 port_count;  //dft: 1
 		bool link_from_DPCD;
@@ -436,7 +485,7 @@ struct edptx_panel_data_s {
 	// struct backlight_cfg_s backlight;
 
 	u8 ch_ctrl_use_default;
-	struct phy_ch_ctrl_s {
+	struct edptx_phy_ch_ctrl_s {
 		u8 en;
 		u8 sel;
 		u8 pn_swap;
@@ -454,7 +503,6 @@ struct edptx_drv_s {
 	struct edptx_chip_data_s *data;
 	struct edptx_board_info_s board_data;
 	struct edptx_panel_data_s panel_data;
-
 	struct edptx_user_set_s {
 		char dev_name[32];
 		u8 use_aux_bl_as_possible;  //dft: 0
@@ -465,6 +513,7 @@ struct edptx_drv_s {
 		u8 user_panel_config;
 		u8 user_color_format;
 		u8 user_preset_timing;
+		u8 backlight_index;
 		u16 user_hpd_ignore;
 		u16 user_vmode_sel;
 		u16 user_disable_PSR;
@@ -491,14 +540,14 @@ struct edptx_drv_s {
 	struct edptx_vmode_mgr_s vmode_mgr;
 	u8 next_vmd_idx;
 
-	struct dptx_detail_timing_s act_timing;
+	struct edptx_detail_timing_s act_timing;
 	struct edptx_sink_dev_s {
 		// char sink_name[32];
 		u8 port_mask;
 		u8 hpd_mask;
 		// u8 pwr_gpio_mask;
 		// u8 dt_cnt;
-		// struct dptx_detail_timing_s timing[DPTX_DRV_TIMING_MAX];
+		// struct edptx_detail_timing_s timing[DPTX_DRV_TIMING_MAX];
 		struct edptx_edid_info_s edid;
 		struct edptx_link_cfg_s link[eDPTX_MAX_PORT];
 	} sink;
@@ -521,6 +570,6 @@ struct edptx_drv_s {
 	struct drm_panel *panel;
 };
 
-void edptx_print_helper(struct edptx_drv_s *edp, u8 port, u8 pr_type, const char *fmt, ...);
+// void edptx_print_helper(struct edptx_drv_s *edp, u8 port, u8 pr_type, const char *fmt, ...);
 
 #endif

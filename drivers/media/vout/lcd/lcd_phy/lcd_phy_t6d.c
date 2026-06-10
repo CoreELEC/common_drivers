@@ -36,10 +36,10 @@ static unsigned int lcd_phy_get_def_odt(void)
 
 	efuse_odt = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_VINLP);
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse odt=%#x\n", efuse_odt);
+		LCD_PR(NULL, "efuse odt=%#x", efuse_odt);
 	if (efuse_odt < 0) {
 		efuse_odt = PHY_DEF_ODT;
-		LCDERR("odt uncalibrated, use odt=%#x\n", efuse_odt);
+		LCD_ERR(NULL, "odt uncalibrated, use odt=%#x\n", efuse_odt);
 	}
 	return (unsigned int)efuse_odt;
 }
@@ -50,10 +50,10 @@ static unsigned int lcd_phy_get_def_bias(void)
 
 	efuse_bias = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_COMMON);
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse bias=%#x\n", efuse_bias);
+		LCD_PR(NULL, "efuse bias=%#x", efuse_bias);
 	if (efuse_bias < 0) {
 		efuse_bias = PHY_DEF_BIAS;
-		LCDERR("bias uncalibrated, use bias=%#x\n", efuse_bias);
+		LCD_ERR(NULL, "bias uncalibrated, use bias=%#x\n", efuse_bias);
 	}
 	return (unsigned int)efuse_bias;
 }
@@ -128,7 +128,7 @@ static inline unsigned int lcd_phy_get_display_odt(struct phy_attr_s *phy)
 	disp_odt = disp_odt > 0x1f ? 0x1f : disp_odt;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("cali odt=0x%x, display odt=0x%x\n", cali_odt, disp_odt);
+		LCD_PR(NULL, "cali odt=0x%x, display odt=0x%x", cali_odt, disp_odt);
 	return disp_odt;
 }
 
@@ -144,7 +144,7 @@ static inline unsigned int lcd_phy_get_write_odt(struct phy_attr_s *phy)
 	odt = odt > 0x1f ? 0x1f : odt;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("cali odt=0x%x, write odt=0x%x\n", cali_odt, odt);
+		LCD_PR(NULL, "cali odt=0x%x, write odt=0x%x", cali_odt, odt);
 	return odt;
 }
 
@@ -225,7 +225,7 @@ static void lcd_phy_ch_set(struct aml_lcd_drv_s *pdrv)
 	struct phy_config_s *phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s: ckdi:0x%x\n", __func__, phy_cfg->ckdi);
+		LCD_PR(NULL, "%s: ckdi:0x%x", __func__, phy_cfg->ckdi);
 
 	for (i = 0; i < phy_cfg->lane_num; i++) {
 		if ((phy_cfg->lane_valid & (1 << i)) == 0)
@@ -246,8 +246,8 @@ static void lcd_phy_ch_set(struct aml_lcd_drv_s *pdrv)
 				sel = lcd_phy_get_phase(phy_cfg, PHY_GET_PHASE_REG_BY_SEL,
 							phy_cfg->ch_ctrl[i].phase_sel);
 				if (sel < 0) {
-					LCDERR("[%d]: err ch[%d].phase_sel=%#x\n",
-					       pdrv->index, i, phy_cfg->ch_ctrl[i].phase_sel);
+					LCD_ERR(pdrv, "err ch[%d].phase_sel=%#x",
+					       i, phy_cfg->ch_ctrl[i].phase_sel);
 				} else {
 					chreg |= ((unsigned char)sel) << 1;
 				}

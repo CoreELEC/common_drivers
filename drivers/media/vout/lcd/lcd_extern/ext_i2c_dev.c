@@ -42,7 +42,7 @@ unsigned char aml_lcd_i2c_bus_get_str(const char *str)
 	}
 
 	if (i2c_bus == LCD_EXT_I2C_BUS_MAX)
-		LCDERR("%s: invalid i2c_bus: %s\n", __func__, str);
+		LCD_ERR(NULL, "%s: invalid i2c_bus: %s", __func__, str);
 
 	return i2c_bus;
 }
@@ -70,8 +70,8 @@ int lcd_extern_i2c_write(struct i2c_client *i2client,
 	struct i2c_msg msg;
 	int ret = 0;
 
-	if (!i2client) {
-		EXTERR("i2client is null\n");
+	if (!i2client || !i2client->adapter) {
+		EXTERR("i2client/adapter is null\n");
 		return -1;
 	}
 
@@ -96,8 +96,8 @@ int lcd_extern_i2c_read(struct i2c_client *i2client,
 	struct i2c_msg msgs[2];
 	int ret = 0;
 
-	if (!i2client) {
-		EXTERR("i2client is null\n");
+	if (!i2client || !i2client->adapter) {
+		EXTERR("i2client/adapter is null\n");
 		return -1;
 	}
 
@@ -143,6 +143,11 @@ static int lcd_extern_i2c_dev_probe(struct i2c_client *client)
 	if (i2c_dev_cnt >= LCD_EXT_I2C_DEV_MAX) {
 		EXTERR("i2c_dev_cnt reach max\n");
 		return -ENODEV;
+	}
+
+	if (!client || !client->adapter) {
+		EXTERR("i2c_dev probe failed: client or adapter is NULL\n");
+		return -EINVAL;
 	}
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {

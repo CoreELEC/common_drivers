@@ -778,7 +778,7 @@ void lcd_vbyone_wait_hpd(struct aml_lcd_drv_s *pdrv)
 	if (val) {
 		LCD_PR(pdrv, "%s: hpd=%d", __func__, val);
 	} else {
-		LCD_PR(pdrv, "%s: hpd=%d, wait time=%dms", pdrv->index, __func__, val, i);
+		LCD_PR(pdrv, "%s: hpd=%d, wait time=%dms", __func__, val, i);
 		/* force low only activated for actual hpd is low */
 		lcd_vcbus_setb(vx1_reg->reg_insig_ctrl + offset, 1, 2, 2);
 	}
@@ -1065,7 +1065,7 @@ static void lcd_vx1_timeout_reset_work(struct work_struct *work)
 	if (pdrv->curr_dev->dev_cfg.control.vbyone_cfg.timeout_reset_flag == 0)
 		return;
 
-	LCD_PR(pdrv, "%s", __func__);
+	LCD_PR(pdrv, "%s ent", __func__);
 	lcd_module_reset(pdrv);
 	pdrv->curr_dev->dev_cfg.control.vbyone_cfg.timeout_reset_flag = 0;
 }

@@ -34,7 +34,7 @@
  * vout server api
  * **************************************************
  */
-static struct vinfo_s *dptx_get_current_info(void *data)
+static struct vinfo_s *edptx_get_current_info(void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -82,8 +82,8 @@ static int dptx_set_current_vmode(enum vmode_e mode, void *data)
 	if (mode & VMODE_INIT_BIT_MASK) { //first boot: set clktree
 		//lcd_clk_gate_switch(pdrv, 1);
 		//bypass
-		edp->status |= DPTX_STA_DISP_ON;
-	} else if (edp->status & DPTX_STA_LINK_ON) { //mode change by vout
+		edp->status |= eDPTX_STA_DISP_ON;
+	} else if (edp->status & eDPTX_STA_LINK_ON) { //mode change by vout
 		if (edp->next_vmd_idx == 0xff) {
 			eDP_ERR(edp, "next vmode to 640x480p60hz");
 			edptx_user_set_vmode(edp, edp->next_vmd_idx);
@@ -92,10 +92,10 @@ static int dptx_set_current_vmode(enum vmode_e mode, void *data)
 		} else {
 			edptx_user_set_vmode(edp, edp->next_vmd_idx);
 		}
-	} else if (!(edp->status & DPTX_STA_LINK_ON)) {
+	} else if (!(edp->status & eDPTX_STA_LINK_ON)) {
 		//mode change by drm (disable + mode_change)
-		if ((edp->status & DPTX_STA_DRV_READY) == 0)
-			edptx_notifier_call_chain(DPTX_EVENT_PREPARE, (void *)edp);
+		if ((edp->status & eDPTX_STA_DRV_READY) == 0)
+			edptx_notifier_call_chain(eDPTX_EVENT_PREPARE, (void *)edp);
 		edptx_notifier_call_chain(DPTX_PRIORITY_HPD_CHECK, (void *)edp);
 		// aml_lcd_notifier_call_chain(LCD_EVENT_ENABLE, (void *)pdrv);
 		// pdrv->status |= LCD_EVENT_ENABLE;
@@ -104,7 +104,7 @@ static int dptx_set_current_vmode(enum vmode_e mode, void *data)
 	return ret;
 }
 
-static int dptx_vout_disable(enum vmode_e cur_vmod, void *data)
+static int edptx_vout_disable(enum vmode_e cur_vmod, void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -113,12 +113,12 @@ static int dptx_vout_disable(enum vmode_e cur_vmod, void *data)
 
 	//lcd_vrr_dev_unregister(pdrv);
 
-	edptx_notifier_call_chain(DPTX_EVENT_DISABLE, (void *)edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_DISABLE, (void *)edp);
 
 	return 0;
 }
 
-static int dptx_vout_set_state(int index, void *data)
+static int edptx_vout_set_state(int index, void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -131,7 +131,7 @@ static int dptx_vout_set_state(int index, void *data)
 	return 0;
 }
 
-static int dptx_vout_clr_state(int index, void *data)
+static int edptx_vout_clr_state(int index, void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -145,7 +145,7 @@ static int dptx_vout_clr_state(int index, void *data)
 	return 0;
 }
 
-static int dptx_vout_get_state(void *data)
+static int edptx_vout_get_state(void *data)
 {
 	//struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -153,7 +153,7 @@ static int dptx_vout_get_state(void *data)
 	return 0;
 }
 
-static int dptx_vout_get_disp_cap(char *buf, void *data)
+static int edptx_vout_get_disp_cap(char *buf, void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 	u8 idx;
@@ -213,7 +213,7 @@ static int dptx_get_vframe_rate_hint(void *data)
 	return 0;
 }
 
-static void dptx_vout_debug_test(unsigned int num, void *data)
+static void edptx_vout_debug_test(unsigned int num, void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
@@ -231,54 +231,54 @@ static void edptx_vout_set_bl_brightness(int brightness, void *data)
 		return;
 }
 
-static int dptx_vout_get_bl_brightness(void *data)
+static int edptx_vout_get_bl_brightness(void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
 	if (!edp)
 		return 0;
 
-	if ((edp->status & DPTX_STA_DISP_ON) == 0)
+	if ((edp->status & eDPTX_STA_DISP_ON) == 0)
 		return 1;
 
 	return 1;
 }
 
-static int dptx_early_suspend(void *data)
+static int edptx_early_suspend(void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
 	if (!edp)
 		return -1;
 
-	if ((edp->status & DPTX_STA_PROBE_DONE) == 0)
+	if ((edp->status & eDPTX_STA_PROBE_DONE) == 0)
 		return 0;
 
-	edptx_notifier_call_chain(DPTX_EVENT_DISP_OFF, (void *)edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_DISP_OFF, (void *)edp);
 	eDP_PR(edp, "%s finished (0x%x)", __func__, edp->status);
 
 	return 0;
 }
 
-static int dptx_late_resume(void *data)
+static int edptx_late_resume(void *data)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
 	if (!edp)
 		return -1;
 
-	if ((edp->status & DPTX_STA_PROBE_DONE) == 0)
+	if ((edp->status & eDPTX_STA_PROBE_DONE) == 0)
 		return 0;
 
-	if ((edp->status & DPTX_STA_DRV_READY) == 0)
-		edptx_notifier_call_chain(DPTX_EVENT_TX_READY, (void *)edp);
-		// edptx_notifier_call_chain(DPTX_EVENT_PREPARE, (void *)edp);
+	if ((edp->status & eDPTX_STA_DRV_READY) == 0)
+		edptx_notifier_call_chain(eDPTX_EVENT_TX_READY, (void *)edp);
+		// edptx_notifier_call_chain(eDPTX_EVENT_PREPARE, (void *)edp);
 
-	edptx_notifier_call_chain(DPTX_EVENT_HPD_CHECK, edp);
-	if (edp->status & DPTX_STA_HPD_HIGH)
-		edptx_notifier_call_chain(DPTX_EVENT_PLUG_IN, edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_HPD_CHECK, edp);
+	if (edp->status & eDPTX_STA_HPD_HIGH)
+		edptx_notifier_call_chain(eDPTX_EVENT_PLUG_IN, edp);
 	else
-		edptx_notifier_call_chain(DPTX_EVENT_HPD_RESTORE, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_HPD_RESTORE, edp);
 
 	eDP_PR(edp, "%s finished (0x%x)", __func__, edp->status);
 
@@ -316,23 +316,23 @@ void edptx_vout_server_init(struct edptx_drv_s *edp)
 
 	edp->vout_server.connector_type = DRM_MODE_CONNECTOR_MESON_EDP_A + edp->idx;
 
-	edp->vout_server.op.get_vinfo = dptx_get_current_info;
+	edp->vout_server.op.get_vinfo = edptx_get_current_info;
 	edp->vout_server.op.set_vmode = dptx_set_current_vmode;
 	edp->vout_server.op.validate_vmode = dptx_validate_vmode;
 	edp->vout_server.op.check_same_vmodeattr = dptx_check_same_vmodeattr;
 	edp->vout_server.op.vmode_is_supported = dptx_vmode_is_supported;
-	edp->vout_server.op.disable = dptx_vout_disable;
-	edp->vout_server.op.set_state = dptx_vout_set_state;
-	edp->vout_server.op.clr_state = dptx_vout_clr_state;
-	edp->vout_server.op.get_state = dptx_vout_get_state;
-	edp->vout_server.op.get_disp_cap = dptx_vout_get_disp_cap;
+	edp->vout_server.op.disable = edptx_vout_disable;
+	edp->vout_server.op.set_state = edptx_vout_set_state;
+	edp->vout_server.op.clr_state = edptx_vout_clr_state;
+	edp->vout_server.op.get_state = edptx_vout_get_state;
+	edp->vout_server.op.get_disp_cap = edptx_vout_get_disp_cap;
 	edp->vout_server.op.set_vframe_rate_hint = dptx_set_vframe_rate_hint;
 	edp->vout_server.op.get_vframe_rate_hint = dptx_get_vframe_rate_hint;
-	edp->vout_server.op.set_bist = dptx_vout_debug_test;
+	edp->vout_server.op.set_bist = edptx_vout_debug_test;
 	edp->vout_server.op.set_bl_brightness = edptx_vout_set_bl_brightness;
-	edp->vout_server.op.get_bl_brightness = dptx_vout_get_bl_brightness;
-	edp->vout_server.op.vout_suspend = dptx_early_suspend;
-	edp->vout_server.op.vout_resume = dptx_late_resume;
+	edp->vout_server.op.get_bl_brightness = edptx_vout_get_bl_brightness;
+	edp->vout_server.op.vout_suspend = edptx_early_suspend;
+	edp->vout_server.op.vout_resume = edptx_late_resume;
 	edp->vout_server.data = (void *)edp;
 	edp->vout_server.name = kzalloc(32, GFP_KERNEL);
 	if (edp->vout_server.name)

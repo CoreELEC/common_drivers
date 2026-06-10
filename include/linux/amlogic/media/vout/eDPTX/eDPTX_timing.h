@@ -38,7 +38,7 @@ extern struct dptx_color_format_s edp_cfmt_tb[DPTX_COLOR_TYPE_MAX];
 #define CTRL_PREFERRED_TIMING   BIT(2)
 #define CTRL_DUPLICATED_TIMING  BIT(7)
 
-struct dptx_detail_timing_s {
+struct edptx_detail_timing_s {
 	char name[32];
 
 	u16 h_size;

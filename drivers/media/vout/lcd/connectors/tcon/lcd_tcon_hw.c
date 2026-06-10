@@ -14,7 +14,7 @@
 #include <linux/io.h>
 #include <linux/reset.h>
 #include <linux/sched/clock.h>
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include "../../lcd_common.h"
 #include "../../lcd_reg.h"
 #include "lcd_tcon.h"
@@ -169,7 +169,7 @@ void tcon_lut_dma_mif_set_t6w(struct aml_lcd_drv_s *pdrv, phys_addr_t paddr, uns
 	unsigned int stride;
 
 	if (paddr % 16 || size % 16) {
-		LCDERR("%s: paddr or size should be 16 byte aligned\n", __func__);
+		LCD_ERR(NULL, "%s: paddr or size should be 16 byte aligned\n", __func__);
 		return;
 	}
 	stride = size / 16;
@@ -185,7 +185,7 @@ void tcon_vrr_dma_mif_set(struct aml_lcd_drv_s *pdrv, phys_addr_t paddr, unsigne
 	unsigned int stride;
 
 	if (paddr % 16 || size % 16) {
-		LCDERR("%s: paddr or size should be 16 byte aligned\n", __func__);
+		LCD_ERR(NULL, "%s: paddr or size should be 16 byte aligned\n", __func__);
 		return;
 	}
 	stride = size >> 4;
@@ -201,7 +201,7 @@ void tcon_sw_dma_mif_set(struct aml_lcd_drv_s *pdrv, phys_addr_t paddr, unsigned
 	unsigned int stride;
 
 	if (paddr % 16 || size % 16) {
-		LCDERR("%s: paddr or size should be 16 byte aligned\n", __func__);
+		LCD_ERR(NULL, "%s: paddr or size should be 16 byte aligned\n", __func__);
 		return;
 	}
 	stride = size >> 4;
@@ -476,7 +476,7 @@ void lcd_tcon_core_reg_set(struct aml_lcd_drv_s *pdrv,
 		return;
 
 	if (!tcon_conf || !mm_table || !core_reg_info) {
-		LCDERR("%s: table is NULL\n", __func__);
+		LCD_ERR(NULL, "%s: table is NULL\n", __func__);
 		return;
 	}
 
@@ -487,7 +487,7 @@ void lcd_tcon_core_reg_set(struct aml_lcd_drv_s *pdrv,
 		ret = lcd_tcon_init_setting_check(pdrv, &pdrv->curr_dev->dev_cfg.timing.act_timing,
 				core_reg_info);
 		if (ret & 0x1) {
-			LCDERR("tcon: %s: tcon setting check fatal error!\n", __func__);
+			LCD_ERR(NULL, "tcon: %s: tcon setting check fatal error!\n", __func__);
 			return;
 		}
 	}
@@ -599,15 +599,15 @@ void lcd_tcon_axi_rmem_lut_load(struct aml_lcd_drv_s *pdrv,
 	unsigned long sec_paddr_min = 0, sec_paddr_max = 0;
 
 	if (!tcon_rmem || !tcon_rmem->axi_rmem) {
-		LCDERR("axi_rmem is NULL\n");
+		LCD_ERR(NULL, "axi_rmem is NULL\n");
 		return;
 	}
 	if (index >= tcon_rmem->axi_bank) {
-		LCDERR("axi_rmem index %d invalid\n", index);
+		LCD_ERR(NULL, "axi_rmem index %d invalid\n", index);
 		return;
 	}
 	if (tcon_rmem->axi_rmem[index].mem_size < size) {
-		LCDERR("axi_mem[%d] size 0x%x is not enough, need 0x%x\n",
+		LCD_ERR(NULL, "axi_mem[%d] size 0x%x is not enough, need 0x%x\n",
 		       index, tcon_rmem->axi_rmem[index].mem_size, size);
 		return;
 	}
@@ -620,7 +620,7 @@ void lcd_tcon_axi_rmem_lut_load(struct aml_lcd_drv_s *pdrv,
 		tcon_rmem->secure_axi_rmem.mem_size - 1;
 	if (tcon_rmem->secure_axi_rmem.sec_protect &&
 		!(mem_paddr_max < sec_paddr_min || sec_paddr_max < mem_paddr_min)) {
-		LCDERR("%s: axi_mem[%d] can't use secure memory\n", __func__, index);
+		LCD_ERR(NULL, "%s: axi_mem[%d] can't use secure memory\n", __func__, index);
 		return;
 	}
 
@@ -628,7 +628,7 @@ void lcd_tcon_axi_rmem_lut_load(struct aml_lcd_drv_s *pdrv,
 	if (!tcon_rmem->axi_rmem[index].mem_vaddr) {
 		vaddr = lcd_tcon_paddrtovaddr(paddr, size);
 		if (!vaddr) {
-			LCDERR("tcon axi_rmem[%d] mapping failed: 0x%lx\n", index, paddr);
+			LCD_ERR(NULL, "tcon axi_rmem[%d] mapping failed: 0x%lx\n", index, paddr);
 			return;
 		}
 
@@ -770,7 +770,8 @@ int lcd_tcon_data_common_parse_set(struct aml_lcd_drv_s *pdrv, unsigned char *da
 				      data_part.ctrl->ctrl_method);
 			}
 			if (block_header->block_ctrl != data_part.ctrl->ctrl_data_flag) {
-				LCDERR("%s: block %s: block_ctrl %x mismatch ctrl_data_flag %x\n",
+				LCD_ERR(NULL,
+					"%s: block %s: block_ctrl %x mismatch ctrl_data_flag %x",
 					__func__, block_header->name, block_header->block_ctrl,
 					data_part.ctrl->ctrl_data_flag);
 				return -1;
@@ -1242,7 +1243,7 @@ int lcd_tcon_data_common_parse_set(struct aml_lcd_drv_s *pdrv, unsigned char *da
 		default:
 			if (block_ctrl_flag)
 				goto lcd_tcon_data_common_parse_set_ctrl_err;
-			LCDERR("%s: unsupport data part type 0x%02x\n",
+			LCD_ERR(NULL, "%s: unsupport data part type 0x%02x\n",
 			       __func__, part_type);
 			break;
 		}
@@ -1263,16 +1264,16 @@ int lcd_tcon_data_common_parse_set(struct aml_lcd_drv_s *pdrv, unsigned char *da
 	return 0;
 
 lcd_tcon_data_common_parse_set_ctrl_err:
-	LCDERR("%s: block %s: need control part\n", __func__, block_header->name);
+	LCD_ERR(NULL, "%s: block %s: need control part\n", __func__, block_header->name);
 	return -1;
 
 lcd_tcon_data_common_parse_set_err_reg:
-	LCDERR("%s: block %s part[%d]: reg 0x%04x error\n",
+	LCD_ERR(NULL, "%s: block %s part[%d]: reg 0x%04x error\n",
 	       __func__, block_header->name, step, reg);
 	return -1;
 
 lcd_tcon_data_common_parse_set_err_size:
-	LCDERR("%s: block %s part[%d]: size error\n",
+	LCD_ERR(NULL, "%s: block %s part[%d]: size error\n",
 	       __func__, block_header->name, step);
 	return -1;
 }
@@ -1288,7 +1289,7 @@ int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *m
 	int ret;
 
 	if (!mm_table->data_mem_vaddr) {
-		LCDERR("%s: data_mem error\n", __func__);
+		LCD_ERR(NULL, "%s: data_mem error\n", __func__);
 		return -1;
 	}
 
@@ -1296,21 +1297,21 @@ int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *m
 		if (mm_table->effect_id < mm_table->block_cnt && mm_table->effect_id != i)
 			continue;
 		if (!mm_table->data_mem_vaddr[i]) {
-			LCDERR("%s: data_mem_vaddr[%d] is null\n", __func__, i);
+			LCD_ERR(NULL, "%s: data_mem_vaddr[%d] is null\n", __func__, i);
 			continue;
 		}
 		data_buf = mm_table->data_mem_vaddr[i];
 		paddr = mm_table->data_mem_paddr[i];
 		block_header = (struct lcd_tcon_data_block_header_s *)data_buf;
 		if (block_header->block_size < sizeof(struct lcd_tcon_data_block_header_s)) {
-			LCDERR("%s: block[%d] size 0x%x is invalid\n",
+			LCD_ERR(NULL, "%s: block[%d] size 0x%x is invalid\n",
 			       __func__, i, block_header->block_size);
 			continue;
 		}
 		chk_size = block_header->block_size - 4;
 		temp_crc32 = cal_CRC32(0, &data_buf[4], chk_size);
 		if (temp_crc32 != block_header->crc32) {
-			LCDERR("%s: block[%d] %s: data crc error\n",
+			LCD_ERR(NULL, "%s: block[%d] %s: data crc error\n",
 				__func__, i, block_header->name);
 			continue;
 		}
@@ -1336,7 +1337,7 @@ int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *m
 			// skip od stage when memory is not ready
 			if (!lcd_tcon_mem_od_is_valid()) {
 				if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-					LCDERR("%s: bypass block[%d]: type 0x%x\n",
+					LCD_ERR(NULL, "%s: bypass block[%d]: type 0x%x\n",
 						__func__, i, block_header->block_type);
 				continue;
 			}
@@ -1346,7 +1347,7 @@ int lcd_tcon_data_set(struct aml_lcd_drv_s *pdrv, struct tcon_mem_map_table_s *m
 			// skip demura stage when memory is not ready
 			if (!lcd_tcon_mem_demura_is_valid()) {
 				if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-					LCDERR("%s: bypass block[%d]: type 0x%x\n",
+					LCD_ERR(NULL, "%s: bypass block[%d]: type 0x%x\n",
 						__func__, i, block_header->block_type);
 				continue;
 			}

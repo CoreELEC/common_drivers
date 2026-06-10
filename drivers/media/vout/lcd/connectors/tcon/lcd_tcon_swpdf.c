@@ -387,13 +387,13 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 	unsigned int x, y, w, h, reg, mask, val, bus, *mat;
 
 	if (!pdrv->dev->of_node) {
-		LCDERR("dev of_node is null\n");
+		LCD_ERR(pdrv, "dev of_node is null\n");
 		return;
 	}
 
 	child = of_get_child_by_name(pdrv->dev->of_node, "swpdf");
 	if (!child) {
-		LCDERR("[%d]: failed to get swpdf\n", pdrv->index);
+		LCD_ERR(pdrv, "failed to get swpdf");
 		return;
 	}
 	pat_mask = pdrv->curr_dev->dev_cfg.customer_sw_pdf;
@@ -404,12 +404,12 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 		sprintf(name, "pattern_%d", i);
 		np = of_get_child_by_name(child, name);
 		if (!np) {
-			LCDPR("[%d]: failed to get %s\n", pdrv->index, name);
+			LCD_PR(pdrv, "failed to get %s", name);
 			continue;
 		}
 		ret = of_property_read_u32_array(np, "th", th, 2);
 		if (ret) {
-			LCDPR("[%d]: failed to get threshold\n", pdrv->index);
+			LCD_PR(pdrv, "failed to get threshold");
 			continue;
 		}
 
@@ -417,7 +417,7 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 
 		ret = of_property_read_u32_array(np, "block", blk_arr, blk_cnt);
 		if (ret) {
-			LCDPR("[%d]: failed to get block\n", pdrv->index);
+			LCD_PR(pdrv, "failed to get block");
 			continue;
 		}
 
@@ -425,7 +425,7 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 
 		ret = of_property_read_u32_array(np, "act", act_arr, act_cnt);
 		if (ret) {
-			LCDPR("[%d]: failed to get act\n", pdrv->index);
+			LCD_PR(pdrv, "failed to get act");
 			continue;
 		}
 		pat = swpdf_pat_create_add(pdf, th[0], th[1]);
@@ -439,7 +439,8 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 			h = blk_arr[k * 8 + 3];
 			mat = blk_arr + 4;
 			if (!swpdf_block_create_add(pat, x, y, w, h, mat))
-				LCDERR("add blk:[%d, %d, %d, %d] mat:[%08x, %08x, %08x, %08x]\n",
+				LCD_ERR(pdrv,
+					"add blk:[%d, %d, %d, %d] mat:[%08x, %08x, %08x, %08x]",
 					x, y, w, h, mat[0], mat[1], mat[2], mat[3]);
 		}
 
@@ -449,7 +450,8 @@ __maybe_unused void lcd_swpdf_parse_pat(struct aml_lcd_drv_s *pdrv)
 			val = act_arr[k * 4 + 2];
 			bus = act_arr[k * 4 + 3];
 			if (!swpdf_act_create_add(pat, reg, mask, val, bus))
-				LCDERR("add act: reg=0x%x, mask=0x%x, val=0x%x\n", reg, mask, val);
+				LCD_ERR(pdrv,
+					"add act: reg=0x%x, mask=0x%x, val=0x%x", reg, mask, val);
 		}
 		swpdf_act_pat(pat, SWPDF_ACT_RD_DFT);
 	}
@@ -678,19 +680,19 @@ void swpdf_param_restore(struct aml_lcd_drv_s *pdrv, char **parm)
 				thb = 0;
 			}
 			if (!swpdf_pat_create_add(pdf, thw, thb))
-				LCDERR("pdf new pat create failed\n");
+				LCD_ERR(NULL, "pdf new pat create failed\n");
 			goto  __pdf_store_exit;
 		}
 
 		ret = kstrtouint(parm[1], 10, &idp);
 		if (ret) {
-			LCDERR("error find idp\n");
+			LCD_ERR(NULL, "error find idp\n");
 			goto  __pdf_store_exit;
 		}
 
 		pat = find_pat_from_list(&pdf->pat_list, idp);
 			if (!pat) {
-				LCDERR("error find pat\n");
+				LCD_ERR(NULL, "error find pat\n");
 				goto  __pdf_store_exit;
 			}
 
@@ -725,7 +727,7 @@ void swpdf_param_restore(struct aml_lcd_drv_s *pdrv, char **parm)
 				goto  __pdf_store_exit;
 
 			if (!swpdf_block_create_add(pat, x, y, w, h, mat)) {
-				LCDERR("blk add failed\n");
+				LCD_ERR(NULL, "blk add failed\n");
 				goto  __pdf_store_exit;
 			}
 			swpdf_reset();
@@ -770,7 +772,8 @@ void swpdf_param_restore(struct aml_lcd_drv_s *pdrv, char **parm)
 
 			swpdf_reset();
 			if (!swpdf_act_create_add(pat, reg, mask, val, bus))
-				LCDERR("pat %d failed to add act: reg=0x%x, mask=0x%x, val=0x%x\n",
+				LCD_ERR(NULL,
+					"pat %d failed to add act: reg=0x%x, mask=0x%x, val=0x%x",
 					idp, reg, mask, val);
 			swpdf_act_pat(pat, SWPDF_ACT_RD_DFT);
 			LCDPR("pat %d add act:reg=0x%x mask=0x%x val=0x%x\n",

@@ -28,7 +28,8 @@
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #include <drm/amlogic/meson_connector_dev.h>
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+// #include <linux/amlogic/media/vout/backlight/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #endif
 #include "./lcd_reg.h"
 #include "./lcd_common.h"
@@ -58,33 +59,25 @@ static void lcd_mode_vout_debug_test(unsigned int num, void *data)
 static void lcd_mode_vout_set_bl_brightness(int brightness, void *data)
 {
 	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
-#ifdef CONFIG_AMLOGIC_BACKLIGHT
-	struct aml_bl_drv_s *bdrv;
-#endif
 
 	if (!pdrv)
 		return;
 
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-	bdrv = aml_bl_get_driver(pdrv->index);
-	aml_bl_set_level_brightness(bdrv, brightness);
+	aml_bl_set_level_brightness(pdrv->index, brightness);
 #endif
 }
 
 static int lcd_mode_vout_get_bl_brightness(void *data)
 {
 	struct aml_lcd_drv_s *pdrv = (struct aml_lcd_drv_s *)data;
-#ifdef CONFIG_AMLOGIC_BACKLIGHT
-	struct aml_bl_drv_s *bdrv;
-#endif
 	int ret = 0;
 
 	if (!pdrv)
 		return 0;
 
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-	bdrv = aml_bl_get_driver(pdrv->index);
-	ret = aml_bl_get_level_brightness(bdrv);
+	ret = aml_bl_get_level_brightness(pdrv->index);
 #endif
 	return ret;
 }

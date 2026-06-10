@@ -76,6 +76,13 @@ enum clktree_type {
 
 struct lcd_clk_config_s;
 // reference to: https://confluence.amlogic.com/display/SW/LCD+CLK+porting+note
+
+#define LCD_OD_MODEL_NONE             0
+#define LCD_OD_MODEL_1DIV_2P5         1
+
+#define LCD_OD_MODEL_3DIV_2P5_2P5_2P5 3
+#define LCD_OD_MODEL_3DIV_2P5_1517_2P5 4
+
 struct lcd_pll_data_s {
 	/*pll para limit*/
 	unsigned int pll_od_fb;
@@ -89,7 +96,7 @@ struct lcd_pll_data_s {
 	unsigned int pll_offset;
 
 	/*od and tcon_div*/
-	unsigned int od_cnt;
+	unsigned char od_model;
 	unsigned int pll_od_sel_max;
 	unsigned int have_tcon_div;
 	unsigned int pll_od_div_5_7;
@@ -186,7 +193,7 @@ struct lcd_clk_config_s { /* unit: Hz */
 	unsigned int pll_mode;
 
 	unsigned char pll_conf_num;
-	struct lcd_pll_config_s *pll_config;
+	struct lcd_pll_config_s pll_config[2];
 
 	unsigned int pll_tcon_div_sel;
 	unsigned long long phy_clk;

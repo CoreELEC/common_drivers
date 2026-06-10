@@ -116,8 +116,8 @@ void dptx_edid_print_parsed(struct edptx_drv_s *edp, u8 port)
 	}
 	for (i = 0; i < edp->panel_data.timing_cnt; i++) {
 		pr_info("Detail Timing Descriptor[%d]:  * Pixel Clock: %u.%u MHz\n"
-			"  H: Active:%4u Blank:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n"
-			"  V: Active:%4u Blank:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n",
+			"  H: Act:%4u Blk:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n"
+			"  V: Act:%4u Blk:%4u FP:%3u PW:%2u %s Size:%4umm Border:%u\n",
 			i, edp->panel_data.timing[i].pclk / 1000000,
 			(edp->panel_data.timing[i].pclk % 1000000) / 1000,
 			edp->panel_data.timing[i].h_act, edp->panel_data.timing[i].h_blank,
@@ -137,7 +137,7 @@ void dptx_edid_print_parsed(struct edptx_drv_s *edp, u8 port)
 
 // need fill bp, total
 // return 0=good. 1=warn. 2=severe-fix. 3=error
-static u8 dptx_edid_dtd_complete(struct edptx_drv_s *edp, struct dptx_detail_timing_s *timing)
+static u8 dptx_edid_dtd_complete(struct edptx_drv_s *edp, struct edptx_detail_timing_s *timing)
 {
 	u32 fp, blank, pw, ret = 0;
 
@@ -227,7 +227,7 @@ static u8 dptx_edid_dtd_complete(struct edptx_drv_s *edp, struct dptx_detail_tim
 	return ret;
 }
 
-void temp_timing_add_to_timing_list(struct edptx_drv_s *edp, struct dptx_detail_timing_s *timing)
+void temp_timing_add_to_timing_list(struct edptx_drv_s *edp, struct edptx_detail_timing_s *timing)
 {
 	u16 h_period, h_active, hsync_width, hsync_bp;//, hsync_fp;//, h_blank;//, hsync_pol;
 	u16 v_period, v_active, vsync_width, vsync_bp;//, vsync_fp;//, v_blank;//, vsync_pol;
@@ -290,7 +290,7 @@ void temp_timing_add_to_timing_list(struct edptx_drv_s *edp, struct dptx_detail_
 		return;
 	}
 
-	memcpy(&edp->panel_data.timing[i], timing, sizeof(struct dptx_detail_timing_s));
+	memcpy(&edp->panel_data.timing[i], timing, sizeof(struct edptx_detail_timing_s));
 	eDP_DBG(edp, "%s: EDID add timing[%u]", __func__, edp->panel_data.timing_cnt);
 	edp->panel_data.timing_cnt++;
 }
@@ -299,13 +299,13 @@ static char dptx_edid_base_block_parse(struct edptx_drv_s *edp, u8 port, unsigne
 {
 	// struct edptx_link_cfg_s *link = edp->sink.link[port];
 	struct dptx_edid_range_limit_s *range = &edp->sink.edid.range;
-	// struct dptx_detail_timing_s *timing;
+	// struct edptx_detail_timing_s *timing;
 	u64 temp1;
 	unsigned int temp;
 	unsigned int checksum = 0;
 	unsigned short i, j;
 	char *ret;
-	struct dptx_detail_timing_s tmg_t;
+	struct edptx_detail_timing_s tmg_t;
 
 	if (memcmp(_buf, base_block_header, 8)) {
 		eDP_P_ERR(edp, port, "%s: invalid EDID header", __func__);
@@ -366,7 +366,7 @@ static char dptx_edid_base_block_parse(struct edptx_drv_s *edp, u8 port, unsigne
 	for (i = 0; i < 4; i++) {
 		j = 54 + i * 18;
 		if (_buf[j] || _buf[j + 1]) {//detail timing
-			memset(&tmg_t, 0, sizeof(struct dptx_detail_timing_s));
+			memset(&tmg_t, 0, sizeof(struct edptx_detail_timing_s));
 
 			tmg_t.pclk    = ((_buf[j + 1] << 8) | (_buf[j])) * 10000;
 			tmg_t.h_act   = (((_buf[j + 4] >> 4) & 0xf) << 8) | _buf[j + 2];
@@ -441,7 +441,7 @@ static char dptx_edid_base_block_parse(struct edptx_drv_s *edp, u8 port, unsigne
 
 static char dptx_edid_DisplayID_parse(struct edptx_drv_s *edp, u8 port, unsigned char *_buf)
 {
-	struct dptx_detail_timing_s tmg_t;
+	struct edptx_detail_timing_s tmg_t;
 	unsigned int checksum = 0, temp;
 	// struct edptx_link_cfg_s *link = edp->sink.link[port];
 	u64 temp1;
@@ -463,7 +463,7 @@ static char dptx_edid_DisplayID_parse(struct edptx_drv_s *edp, u8 port, unsigned
 
 			for (i = 0; i < dtd_cnt; i++) { //Type I Detailed Timing Descriptor
 				d_pos = tag_ofst + 3 + 20 * i;
-				memset(&tmg_t, 0, sizeof(struct dptx_detail_timing_s));
+				memset(&tmg_t, 0, sizeof(struct edptx_detail_timing_s));
 
 				tmg_t.pclk = ((_buf[d_pos + 2] << 16) | (_buf[d_pos + 1] << 8)  |
 						(_buf[d_pos + 0] << 0)) * 10000;
@@ -545,7 +545,7 @@ static char dptx_edid_CEA_861_parse(struct edptx_drv_s *edp, u8 port, unsigned c
 	u64 temp1;
 	u8 i, j;
 	unsigned char dtd_ofst, tag, count;//, native_dtd_cnt;
-	struct dptx_detail_timing_s tmg_t;
+	struct edptx_detail_timing_s tmg_t;
 
 	for (i = 0; i < 128; i++)
 		checksum += _buf[i];
@@ -580,7 +580,7 @@ static char dptx_edid_CEA_861_parse(struct edptx_drv_s *edp, u8 port, unsigned c
 		if (j > 128 || !_buf[j])
 			break;
 
-		memset(&tmg_t, 0, sizeof(struct dptx_detail_timing_s));
+		memset(&tmg_t, 0, sizeof(struct edptx_detail_timing_s));
 
 		tmg_t.pclk    =                ((_buf[j + 1] << 8) | _buf[j]) * 10000;
 		tmg_t.h_act   =  (((_buf[j + 4] >> 4) & 0xf) << 8) | _buf[j + 2];

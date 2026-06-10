@@ -1422,6 +1422,8 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_I>;
 				clock-names = "clkin0";
+				assigned-clocks = <&clkc CLKID_PWM_I>;
+				assigned-clock-rates = <8000000>;
 				tee_id = <8>;
 				status = "disabled";
 			};
@@ -1432,6 +1434,8 @@
 				#pwm-cells = <3>;
 				clocks = <&clkc CLKID_PWM_J>;
 				clock-names = "clkin0";
+				assigned-clocks = <&clkc CLKID_PWM_J>;
+				assigned-clock-rates = <8000000>;
 				tee_id = <9>;
 				status = "disabled";
 			};

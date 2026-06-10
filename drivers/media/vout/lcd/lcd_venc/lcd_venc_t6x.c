@@ -65,7 +65,7 @@ static unsigned int lcd_venc_get_max_lint_cnt(struct aml_lcd_drv_s *pdrv)
 	unsigned int line_cnt;
 
 	line_cnt = lcd_vcbus_getb(ENCL_VIDEO_MAX_CNT_T6X, 0, 16) + 1;
-	/*LCDPR("[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
+	/*LCD_PR(NULL, "[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
 
 	return line_cnt;
 }
@@ -79,12 +79,12 @@ static void lcd_venc_gamma_debug_test_en(struct aml_lcd_drv_s *pdrv, int flag)
 	if (flag) {
 		if (lcd_vcbus_getb(reg, 0, 1) == 0) {
 			lcd_vcbus_setb(reg, 1, 0, 1);
-			LCDPR("[%d]: %s: %d\n", pdrv->index, __func__, flag);
+			LCD_PR(pdrv, "%s: %d", __func__, flag);
 		}
 	} else {
 		if (lcd_vcbus_getb(reg, 0, 1)) {
 			lcd_vcbus_setb(reg, 0, 0, 1);
-			LCDPR("[%d]: %s: %d\n", pdrv->index, __func__, flag);
+			LCD_PR(pdrv, "%s: %d", __func__, flag);
 		}
 	}
 }
@@ -169,7 +169,7 @@ static int lcd_venc_bist_set(struct aml_lcd_drv_s *pdrv, unsigned int num)
 	lcd_vcbus_setb(ENCL_VIDEO_MODE_T6X, lcd_enc_tst[num].rgb_in, 16,  1);
 
 	if (num > 0)
-		LCDPR("[%d]: show test pattern: %s\n", pdrv->index, lcd_enc_tst[num].name);
+		LCD_PR(pdrv, "show test pattern: %s", lcd_enc_tst[num].name);
 
 	return 0;
 }
@@ -690,8 +690,7 @@ int lcd_venc_op_init_t6x(struct lcd_data_s *pdata, struct lcd_venc_op_s *venc_op
 	if (!venc_op)
 		return -1;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s %d\n", __func__, __LINE__);
+	LCD_DBG(NULL, "%s %d", __func__, __LINE__);
 
 	venc_op->wait_vsync = lcd_venc_wait_vsync;
 	venc_op->get_max_lcnt = lcd_venc_get_max_lint_cnt;

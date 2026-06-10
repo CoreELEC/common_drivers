@@ -47,7 +47,7 @@ static int spd2010_qspi_flush_frame(unsigned char *addr)
 	kfree(cbuf);
 
 	if (ret)
-		LCDERR("%s\n", __func__);
+		LCD_ERR(NULL, "%s spi err %d", __func__, ret);
 
 	return ret;
 }
@@ -58,7 +58,7 @@ static int spd2010_qspi_post_frame(unsigned char *addr, unsigned short x0, unsig
 	int ret;
 
 	if (x0 || y0 || x1 != plcd_drv->pcfg->h || y1 != plcd_drv->pcfg->v) {
-		LCDERR("Only support full frame post currently\n");
+		LCD_ERR(NULL, "Only support full frame post currently");
 		return -1;
 	}
 	ret = spd2010_qspi_flush_frame(addr);
@@ -71,7 +71,7 @@ int plcd_spd2010_probe(void)
 	int ret;
 
 	if (!plcd_drv->pcfg->spi_cfg.spi_dev) {
-		LCDERR("spi_dev is null\n");
+		LCD_ERR(NULL, "spi_dev is null");
 		return -1;
 	}
 

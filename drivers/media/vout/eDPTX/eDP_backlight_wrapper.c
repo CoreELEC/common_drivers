@@ -9,12 +9,13 @@
 #include "edptx_common.h"
 #include <linux/delay.h>
 #include <linux/backlight.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 
 static int aml_eDP_bl_wrapper_get_brightness(struct backlight_device *bd)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)bl_get_data(bd);
 
-	eDP_PR(edp, "%s: get brightness=%d", edp->bl_wrapper_dev->props.brightness);
+	eDP_PR(edp, "%s: get brightness=%d", __func__, edp->bl_wrapper_dev->props.brightness);
 
 	return 60;
 }
@@ -23,7 +24,7 @@ static int aml_eDP_bl_wrapper_update_status(struct backlight_device *bd)
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)bl_get_data(bd);
 
-	eDP_PR(edp, "%s: update brightness=%d", edp->bl_wrapper_dev->props.brightness);
+	eDP_PR(edp, "%s: update brightness=%d", __func__, edp->bl_wrapper_dev->props.brightness);
 
 	return 0;
 }
@@ -58,4 +59,13 @@ void edptx_bl_wrapper_regist(struct edptx_drv_s *edp)
 	}
 
 	edp->bl_wrapper_dev = bldev;
+
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+	if (edp->viu_sel && edp->setting.backlight_index < 0xff) {
+		//lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, pconf->backlight_index);
+		//aml_bl_index_add(edp->idx,
+		//	edp->vout_server.connector_type, edp->setting.backlight_index);
+		aml_bl_index_add(edp->idx, 0x10 | edp->idx, edp->setting.backlight_index);
+	}
+#endif
 }

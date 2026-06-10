@@ -48,13 +48,14 @@ void plcd_gpio_probe(unsigned int index)
 	int ret;
 
 	if (index >= PER_GPIO_NUM_MAX) {
-		LCDERR("gpio index %d, exit\n", index);
+		LCD_ERR(NULL, "gpio index %d, exit\n", index);
 		return;
 	}
 
 	if (plcd_gpio[index].probe_flag) {
 		if (per_lcd_debug_flag)
-			LCDPR("gpio %s[%d] is already registered\n", plcd_gpio[index].name, index);
+			LCD_PR(NULL, "gpio %s[%d] is already registered",
+				plcd_gpio[index].name, index);
 		return;
 	}
 
@@ -62,7 +63,7 @@ void plcd_gpio_probe(unsigned int index)
 	ret = of_property_read_string_index(plcd_drv->dev->of_node,
 					    "per_lcd_gpio_names", index, &str);
 	if (ret) {
-		LCDERR("failed to get lcd_per_gpio_names: %d\n", index);
+		LCD_ERR(NULL, "failed to get lcd_per_gpio_names: %d\n", index);
 		str = "unknown";
 	}
 	strcpy(plcd_gpio[index].name, str);
@@ -77,16 +78,16 @@ int plcd_gpio_regist(int index, int init_value)
 	int value;
 
 	if (index >= PER_GPIO_NUM_MAX) {
-		LCDERR("%s: gpio index %d, exit\n", __func__, index);
+		LCD_ERR(NULL, "%s: gpio index %d, exit\n", __func__, index);
 		return -1;
 	}
 	if (plcd_gpio[index].probe_flag == 0) {
-		LCDERR("%s: gpio [%d] is not probed, exit\n", __func__, index);
+		LCD_ERR(NULL, "%s: gpio [%d] is not probed, exit\n", __func__, index);
 		return -1;
 	}
 	if (plcd_gpio[index].register_flag) {
 		if (per_lcd_debug_flag) {
-			LCDPR("%s: gpio %s[%d] is already registered\n",
+			LCD_PR(NULL, "%s: gpio %s[%d] is already registered\n",
 			      __func__, plcd_gpio[index].name, index);
 		}
 		return 0;
@@ -107,13 +108,13 @@ int plcd_gpio_regist(int index, int init_value)
 	/* request gpio */
 	plcd_gpio[index].gpio = devm_gpiod_get_index(plcd_drv->dev, "per_lcd", index, value);
 	if (IS_ERR(plcd_gpio[index].gpio)) {
-		LCDERR("register gpio %s[%d]: %p, err: %d\n", plcd_gpio[index].name, index,
+		LCD_ERR(NULL, "register gpio %s[%d]: %p, err: %d\n", plcd_gpio[index].name, index,
 			plcd_gpio[index].gpio, IS_ERR(plcd_gpio[index].gpio));
 		return -1;
 	}
 	plcd_gpio[index].register_flag = 1;
 	if (per_lcd_debug_flag) {
-		LCDPR("register gpio %s[%d]: %p, init value: %d\n",
+		LCD_PR(NULL, "register gpio %s[%d]: %p, init value: %d\n",
 		      plcd_gpio[index].name, index, plcd_gpio[index].gpio, init_value);
 	}
 
@@ -123,25 +124,25 @@ int plcd_gpio_regist(int index, int init_value)
 void plcd_gpio_set(int index, int value)
 {
 	if (per_lcd_debug_flag)
-		LCDPR("%s: idx:val= [%d, %d]\n", __func__, index, value);
+		LCD_PR(NULL, "%s: idx:val= [%d, %d]\n", __func__, index, value);
 	if (index >= PER_GPIO_NUM_MAX) {
-		LCDERR("gpio index %d, exit\n", index);
+		LCD_ERR(NULL, "gpio index %d, exit\n", index);
 		return;
 	}
 	if (plcd_gpio[index].probe_flag == 0) {
-		LCDERR("%s: gpio [%d] is not probed\n", __func__, index);
+		LCD_ERR(NULL, "%s: gpio [%d] is not probed\n", __func__, index);
 		return;
 	}
 	if (plcd_gpio[index].register_flag == 1) {
 		if (per_lcd_debug_flag)
-			LCDPR("no need regist\n");
+			LCD_PR(NULL, "no need regist\n");
 	} else {
 		plcd_gpio_regist(index, value);
 		return;
 	}
 
 	if (IS_ERR_OR_NULL(plcd_gpio[index].gpio)) {
-		LCDERR("gpio %s[%d]: %p, err: %ld\n", plcd_gpio[index].name, index,
+		LCD_ERR(NULL, "gpio %s[%d]: %p, err: %ld\n", plcd_gpio[index].name, index,
 			plcd_gpio[index].gpio, PTR_ERR(plcd_gpio[index].gpio));
 		return;
 	}
@@ -157,7 +158,7 @@ void plcd_gpio_set(int index, int value)
 		break;
 	}
 	if (per_lcd_debug_flag)
-		LCDPR("set gpio %s[%d] value: %d\n", plcd_gpio[index].name, index, value);
+		LCD_PR(NULL, "set gpio %s[%d] value: %d\n", plcd_gpio[index].name, index, value);
 }
 
 int plcd_gpio_set_irq(int index)
@@ -165,7 +166,7 @@ int plcd_gpio_set_irq(int index)
 	int irq_pin;
 
 	if (index >= PER_GPIO_NUM_MAX) {
-		LCDERR("gpio index %d, exit\n", index);
+		LCD_ERR(NULL, "gpio index %d, exit\n", index);
 		return -1;
 	}
 
@@ -173,7 +174,7 @@ int plcd_gpio_set_irq(int index)
 	irq_pin = desc_to_gpio(plcd_gpio[index].gpio);
 	plcd_drv->irq_num = gpio_to_irq(irq_pin);
 	if (!plcd_drv->irq_num) {
-		LCDERR("gpio to irq failed\n");
+		LCD_ERR(NULL, "gpio to irq failed\n");
 		return -1;
 	}
 
@@ -183,20 +184,21 @@ int plcd_gpio_set_irq(int index)
 int plcd_gpio_get(int index)
 {
 	if (index >= PER_GPIO_NUM_MAX) {
-		LCDERR("gpio index %d, exit\n", index);
+		LCD_ERR(NULL, "gpio index %d, exit\n", index);
 		return -1;
 	}
 
 	if (plcd_gpio[index].probe_flag == 0) {
-		LCDERR("%s: gpio [%d] not probed, exit\n", __func__, index);
+		LCD_ERR(NULL, "%s: gpio [%d] not probed, exit\n", __func__, index);
 		return -1;
 	}
 	if (plcd_gpio[index].register_flag == 0) {
-		LCDERR("%s: gpio %s[%d] not registered\n", __func__, plcd_gpio[index].name, index);
+		LCD_ERR(NULL, "%s: gpio %s[%d] not registered",
+			__func__, plcd_gpio[index].name, index);
 		return -1;
 	}
 	if (IS_ERR_OR_NULL(plcd_gpio[index].gpio)) {
-		LCDERR("gpio %s[%d]: %p, err: %ld\n", plcd_gpio[index].name, index,
+		LCD_ERR(NULL, "gpio %s[%d]: %p, err: %ld\n", plcd_gpio[index].name, index,
 			plcd_gpio[index].gpio, PTR_ERR(plcd_gpio[index].gpio));
 		return -1;
 	}
@@ -222,7 +224,7 @@ static int plcd_init_table_dynamic_load(struct device_node *of_node,
 		sprintf(propname, "init_off");
 	}
 	if (!table) {
-		LCDERR("%s: init_table is null\n", __func__);
+		LCD_ERR(NULL, "%s: init_table is null\n", __func__);
 		return -1;
 	}
 
@@ -230,7 +232,8 @@ static int plcd_init_table_dynamic_load(struct device_node *of_node,
 		/* type */
 		ret = of_property_read_u32_index(of_node, propname, i, &val);
 		if (ret) {
-			LCDERR("%s: get %s type failed, step %d\n", pconf->name, propname, step);
+			LCD_ERR(NULL, "%s: get %s type failed, step %d",
+				pconf->name, propname, step);
 			table[i] = PER_LCD_CMD_TYPE_END;
 			table[i + 1] = 0;
 			return -1;
@@ -240,7 +243,8 @@ static int plcd_init_table_dynamic_load(struct device_node *of_node,
 		/* cmd_size */
 		ret = of_property_read_u32_index(of_node, propname, (i + 1), &val);
 		if (ret) {
-			LCDERR("%s:get %s cmd_size fail, step %d\n", pconf->name, propname, step);
+			LCD_ERR(NULL, "%s:get %s cmd_size fail, step %d",
+				pconf->name, propname, step);
 			table[i] = PER_LCD_CMD_TYPE_END;
 			table[i + 1] = 0;
 			return -1;
@@ -253,7 +257,8 @@ static int plcd_init_table_dynamic_load(struct device_node *of_node,
 		if (cmd_size == 0)
 			goto init_table_dynamic_dts_next;
 		if ((i + 2 + cmd_size) > max_len) {
-			LCDERR("%s: %s cmd_size too much, step %d\n", pconf->name, propname, step);
+			LCD_ERR(NULL, "%s: %s cmd_size too much, step %d",
+				pconf->name, propname, step);
 			table[i] = PER_LCD_CMD_TYPE_END;
 			table[i + 1] = 0;
 			return -1;
@@ -262,7 +267,8 @@ static int plcd_init_table_dynamic_load(struct device_node *of_node,
 		for (j = 0; j < cmd_size; j++) {
 			ret = of_property_read_u32_index(of_node, propname, (i + 2 + j), &val);
 			if (ret) {
-				LCDERR("%s: get %s failed, step %d\n", pconf->name, propname, step);
+				LCD_ERR(NULL, "%s: get %s failed, step %d",
+					pconf->name, propname, step);
 				table[i] = PER_LCD_CMD_TYPE_END;
 				table[i + 1] = 0;
 				return -1;
@@ -299,21 +305,23 @@ static int plcd_init_table_fixed_load(struct device_node *of_node,
 		sprintf(propname, "init_off");
 	}
 	if (!table) {
-		LCDERR("%s: init_table is null\n", __func__);
+		LCD_ERR(NULL, "%s: init_table is null\n", __func__);
 		return -1;
 	}
 	cmd_size = pconf->cmd_size;
 	while (i < max_len) {
 		/* group detect */
 		if ((i + cmd_size) > max_len) {
-			LCDERR("%s: %s cmd_size too much, step %d\n", pconf->name, propname, step);
+			LCD_ERR(NULL, "%s: %s cmd_size too much, step %d",
+				pconf->name, propname, step);
 			table[i] = PER_LCD_CMD_TYPE_END;
 			return -1;
 		}
 		for (j = 0; j < cmd_size; j++) {
 			ret = of_property_read_u32_index(of_node, propname, (i + j), &val);
 			if (ret) {
-				LCDERR("%s: get %s failed, step %d\n", pconf->name, propname, step);
+				LCD_ERR(NULL, "%s: get %s failed, step %d",
+					pconf->name, propname, step);
 				table[i] = PER_LCD_CMD_TYPE_END;
 				return -1;
 			}
@@ -338,12 +346,12 @@ static int plcd_init_table_dft_malloc(void)
 {
 	table_init_on_dft = kcalloc(PER_INIT_ON_MAX, sizeof(unsigned char), GFP_KERNEL);
 	if (!table_init_on_dft) {
-		LCDERR("failed to alloc init_on table\n");
+		LCD_ERR(NULL, "failed to alloc init_on table");
 		return -1;
 	}
 	table_init_off_dft = kcalloc(PER_INIT_OFF_MAX, sizeof(unsigned char), GFP_KERNEL);
 	if (!table_init_off_dft) {
-		LCDERR("failed to alloc init_off table\n");
+		LCD_ERR(NULL, "failed to alloc init_off table");
 		kfree(table_init_on_dft);
 		return -1;
 	}
@@ -360,7 +368,7 @@ int plcd_init_table_save(struct per_lcd_config_s *pconf)
 	if (pconf->init_on_cnt > 0) {
 		pconf->init_on = kcalloc(pconf->init_on_cnt, sizeof(unsigned char), GFP_KERNEL);
 		if (!pconf->init_on) {
-			LCDERR("failed to alloc init_on table\n");
+			LCD_ERR(NULL, "failed to alloc init_on table\n");
 			return -1;
 		}
 		memcpy(pconf->init_on, table_init_on_dft,
@@ -369,7 +377,7 @@ int plcd_init_table_save(struct per_lcd_config_s *pconf)
 	if (pconf->init_off_cnt > 0) {
 		pconf->init_off = kcalloc(pconf->init_off_cnt, sizeof(unsigned char), GFP_KERNEL);
 		if (!pconf->init_off) {
-			LCDERR("failed to alloc init_off table\n");
+			LCD_ERR(NULL, "failed to alloc init_off table\n");
 			kfree(pconf->init_on);
 			return -1;
 		}
@@ -394,16 +402,16 @@ int plcd_get_detail_config_dts(void)
 	struct per_lcd_config_s *pcfg = plcd_drv->pcfg;
 
 	sprintf(per_lcd_propname, "per_lcd_%d", index);
-	LCDPR("load: %s\n", per_lcd_propname);
+	LCD_PR(NULL, "load: %s\n", per_lcd_propname);
 	child = of_get_child_by_name(np, per_lcd_propname);
 	if (!child) {
-		LCDERR("child device_node is null\n");
+		LCD_ERR(NULL, "child device_node is null\n");
 		return -1;
 	}
 
 	ret = of_property_read_string(child, "peripheral_lcd_dev_name", &str);
 	if (ret) {
-		LCDERR("failed to get peripheral_lcd_dev_name\n");
+		LCD_ERR(NULL, "failed to get peripheral_lcd_dev_name\n");
 		return -1;
 	}
 	strncpy(pcfg->name, str, sizeof(pcfg->name));
@@ -411,29 +419,29 @@ int plcd_get_detail_config_dts(void)
 
 	ret = of_property_read_u32_array(child, "resolution", para, 2);
 	if (ret) {
-		LCDERR("failed to get peripheral_lcd resolution\n");
+		LCD_ERR(NULL, "failed to get peripheral_lcd resolution\n");
 		return -1;
 	}
 	pcfg->h = (unsigned short)para[0];
 	pcfg->v = (unsigned short)para[1];
-	LCDPR("get peripheral_lcd h = %d, v = %d\n", pcfg->h, pcfg->v);
+	LCD_PR(NULL, "get peripheral_lcd h = %d, v = %d\n", pcfg->h, pcfg->v);
 
 	ret = of_property_read_u32_array(child, "per_lcd_attr", para, 6);
 	if (ret)
-		LCDERR("failed to get per_lcd_attr\n");
+		LCD_ERR(NULL, "failed to get per_lcd_attr\n");
 	pcfg->cfmt = ret ? CFMT_RGB888 : (unsigned char)para[0];
-	LCDPR("get peripheral_lcd color_format = %d\n", pcfg->cfmt);
+	LCD_PR(NULL, "get peripheral_lcd color_format = %d\n", pcfg->cfmt);
 
 	ret = of_property_read_u32(child, "type", para);
 	if (ret) {
-		LCDERR("failed to get type\n");
+		LCD_ERR(NULL, "failed to get type\n");
 		return -1;
 	}
 	pcfg->type = (unsigned char)para[0];
-	LCDPR("type: %d\n", pcfg->type);
+	LCD_PR(NULL, "type: %d\n", pcfg->type);
 
 	if (pcfg->type >= PLCD_TYPE_MAX) {
-		LCDERR("type num is out of support\n");
+		LCD_ERR(NULL, "type num is out of support\n");
 		return -1;
 	}
 	ret = plcd_init_table_dft_malloc();
@@ -443,7 +451,7 @@ int plcd_get_detail_config_dts(void)
 	case PLCD_TYPE_SPI:
 	case PLCD_TYPE_QSPI:
 		if (!plcd_spi_dev) {
-			LCDERR("plcd_spi_dev is null\n");
+			LCD_ERR(NULL, "plcd_spi_dev is null\n");
 			return -1;
 		}
 		pcfg->spi_cfg.spi_dev = plcd_spi_dev;
@@ -452,14 +460,14 @@ int plcd_get_detail_config_dts(void)
 	case PLCD_TYPE_MCU_8080:
 		ret = of_property_read_u32(child, "max_gpio_num", para);
 		if (ret) {
-			LCDERR("failed to get max_gpio_num\n");
+			LCD_ERR(NULL, "failed to get max_gpio_num\n");
 			return -1;
 		}
 		pcfg->i8080_cfg.max_gpio_num = para[0];
 		for (i = 0; i < pcfg->i8080_cfg.max_gpio_num; i++)
 			plcd_gpio_probe(i);
 		if (per_lcd_debug_flag)
-			LCDPR("max_gpio_num: %d\n", pcfg->i8080_cfg.max_gpio_num);
+			LCD_PR(NULL, "max_gpio_num: %d\n", pcfg->i8080_cfg.max_gpio_num);
 
 		ret = of_property_read_u32_array(child, "mcu_attr", para, 13);
 		pcfg->i8080_cfg.reset_index = ret ? 0 : para[0];
@@ -483,14 +491,14 @@ int plcd_get_detail_config_dts(void)
 	/* get init_cmd */
 	ret = of_property_read_u32(child, "cmd_size", &val);
 	if (ret) {
-		LCDPR("no cmd_size\n");
+		LCD_PR(NULL, "no cmd_size\n");
 		pcfg->cmd_size = 0;
 		goto per_lcd_get_config_init_table_err;
 	} else {
 		pcfg->cmd_size = (unsigned char)val;
 	}
 	if (per_lcd_debug_flag)
-		LCDPR("%s: cmd_size = %d\n", pcfg->name, pcfg->cmd_size);
+		LCD_PR(NULL, "%s: cmd_size = %d\n", pcfg->name, pcfg->cmd_size);
 
 	if (pcfg->cmd_size == PER_LCD_CMD_SIZE_DYNAMIC) {
 		ret = plcd_init_table_dynamic_load(child, pcfg, 1);

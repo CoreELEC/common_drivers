@@ -9,7 +9,7 @@
 #include <linux/platform_device.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/cpu_version.h>
-#include <linux/amlogic/media/vout/lcd/lcd_resman.h>
+#include <linux/amlogic/media/vout/panel_utils/lcd_resman.h>
 // #include "lcd_reg.h"
 
 /* 20250121: initial version*/
@@ -76,16 +76,14 @@ int strnum_get_num(const char *str, struct num_str_s *arr, int size_arr, int dft
 void lcd_delay_us(int us);
 void lcd_delay_ms(int ms);
 void pxp_clk_div_gen(unsigned int pclk, unsigned int *xd, unsigned int *clk_sel);
-unsigned char *lcd_init_table_load_array(char *name, unsigned char cmd_size,
-					 unsigned int *buf, int buf_len,
-					 int tbl_max, int *tbl_cnt);
+
 unsigned char aml_lcd_i2c_bus_get_str(const char *str);
 int lcd_type_str_to_type(const char *str);
 char *lcd_type_type_to_str(int type);
 unsigned char lcd_mode_str_to_mode(const char *str);
 char *lcd_mode_mode_to_str(int mode);
 void *lcd_alloc_dma_buffer(struct aml_lcd_drv_s *pdrv, unsigned int size, dma_addr_t *paddr);
-u8 *lcd_vmap(ulong addr, u32 size);
+// u8 *lcd_vmap(ulong addr, u32 size);
 void lcd_unmap_phyaddr(u8 *vaddr);
 int  lcd_debug_parse_param(char *buf_orig, char **parm, int max_parm);
 void lcd_debug_info_print(char *print_buf);
@@ -103,7 +101,6 @@ unsigned int lcd_config_timing_check(struct aml_lcd_drv_s *pdrv, struct aml_lcd_
 				     struct lcd_detail_timing_s *ptiming);
 int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv);
 void lcd_mlvds_phy_ckdi_config(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *dev_p);
-unsigned char lcd_panel_config_load_detect(int index, const char *func_name);
 int lcd_check_config_load(struct aml_lcd_drv_s *drv);
 // int lcd_config_load(struct aml_lcd_drv_s *pdrv);
 

@@ -459,7 +459,7 @@ void lcd_fr_lock(struct aml_lcd_drv_s *pdrv)
 			fr_lock_update_freq(pdrv);
 
 		if (fr_lock->show == 2)
-			LCDPR("%d, e_cnt-ft:%07d %07d freq:%lld adj:%06d e_us-ft:%06d %06d\n",
+			LCD_PR(pdrv, "%d, e_cnt-ft:%07d %07d freq:%lld adj:%06d e_us-ft:%06d %06d",
 				fr_lock->frame_cnt, fr_lock->err_sum_cnt, fr_lock->err_sum_cnt_ft,
 				fr_lock->pll_adj_hz, fr_lock->out, fr_lock->err_sum_us,
 				fr_lock->err_sum_us_ft);

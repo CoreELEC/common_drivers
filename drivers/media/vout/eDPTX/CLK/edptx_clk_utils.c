@@ -23,7 +23,7 @@
 #include "../edptx_common.h"
 #include "../edptx_reg_op.h"
 
-struct dptx_clk_div_table_s dptx_clk_div_table[CLK_DIV_SEL_MAX] = {
+struct edptx_clk_div_table_s dptx_clk_div_table[CLK_DIV_SEL_MAX] = {
 	/* name,    divider,         num, den, shift_sel, shift_val*/
 	{"1",       CLK_DIV_SEL_1,    1,   1,    0,       0xffff},
 	{"2",       CLK_DIV_SEL_2,    1,   2,    0,       0x0aaa},
@@ -51,7 +51,7 @@ struct dptx_clk_div_table_s dptx_clk_div_table[CLK_DIV_SEL_MAX] = {
 /* **********************************
  * lcd controller operation
  * **********************************/
-u8 dptx_clk_msr_check(u32 msr_id, u32 freq)
+u8 edptx_clk_msr_check(u32 msr_id, u32 freq)
 {
 	unsigned int clk_msrd;
 
@@ -67,13 +67,13 @@ u8 dptx_clk_msr_check(u32 msr_id, u32 freq)
 	return 0;
 }
 
-u8 dptx_pll_wait_lock(u32 reg, u8 lock_bit)
+u8 edptx_pll_wait_lock(struct edptx_drv_s *edp, u32 reg, u8 lock_bit)
 {
 	u16 pll_lock, wait_loop = PLL_WAIT_LOCK_CNT; /* 200 */
 
 	do {
-		dptx_delay_us(50);
-		pll_lock = edp_ana_getb(reg, lock_bit, 1);
+		edptx_delay_us(50);
+		pll_lock = edp_ana_getb(edp, reg, lock_bit, 1);
 		wait_loop--;
 	} while ((pll_lock == 0) && (wait_loop > 0));
 	if (pll_lock == 0)
@@ -86,7 +86,7 @@ u8 dptx_pll_wait_lock(u32 reg, u8 lock_bit)
  * lcd clk parameters calculate
  * ****************************************************
  */
-unsigned long long dptx_clk_pll_div_calc(unsigned long long clk, u8 div_sel, u8 dir)
+unsigned long long edptx_clk_pll_div_calc(unsigned long long clk, u8 div_sel, u8 dir)
 {
 	unsigned long long clk_ret, num, den;
 
@@ -109,7 +109,7 @@ unsigned long long dptx_clk_pll_div_calc(unsigned long long clk, u8 div_sel, u8 
 
 static inline unsigned long long edptx_pll_fvco_calc(unsigned long long pll_fvco,
 							struct edptx_clk_cfg_s *pll_config,
-							struct dptx_pll_data_s *pll_data)
+							struct edptx_pll_data_s *pll_data)
 {
 	static const u8 od_fb_table[2] = {1, 2};
 
@@ -121,7 +121,7 @@ static inline unsigned long long edptx_pll_fvco_calc(unsigned long long pll_fvco
 
 void edptx_check_vco(struct edptx_clk_cfg_s *cconf, unsigned long long pll_fvco)
 {
-	struct dptx_pll_data_s *pll_data = (struct dptx_pll_data_s *)cconf->pll_data;
+	struct edptx_pll_data_s *pll_data = (struct edptx_pll_data_s *)cconf->pll_data;
 	unsigned int m, n;
 	unsigned int pll_frac;
 	unsigned long long temp;
@@ -130,7 +130,7 @@ void edptx_check_vco(struct edptx_clk_cfg_s *cconf, unsigned long long pll_fvco)
 		return;
 
 	if (pll_fvco < pll_data->pll_vco_range[0] || pll_fvco > pll_data->pll_vco_range[1]) {
-		eDP_PR(0, LOG_E, "pll_fvco %lld is out of range\n", pll_fvco);
+		eDP_PR(NULL, "pll_fvco %lld is out of range", pll_fvco);
 		return;
 	}
 
@@ -155,5 +155,5 @@ void edptx_check_vco(struct edptx_clk_cfg_s *cconf, unsigned long long pll_fvco)
 			cconf->pll_frac_half_shift = 0;
 		}
 	}
-	pr_info("m=%d, n=%d, frac=0x%x, pll_fvco=%lld", m, n, pll_frac, pll_fvco);
+	eDP_PR(NULL, "m=%d, n=%d, frac=0x%x, pll_fvco=%lld", m, n, pll_frac, pll_fvco);
 }

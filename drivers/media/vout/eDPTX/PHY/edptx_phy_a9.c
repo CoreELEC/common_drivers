@@ -53,16 +53,30 @@ static void dptx0_ana_phy_cntl_set(struct edptx_drv_s *edp, u8 status)
 {
 	//struct edptx_phy_cfg_s *phy = &edp->phy_cfg;
 
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL6_A9, 0x0027, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL7_A9, 0x4fb0, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL8_A9, 0xc026, 0, 16);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL9_A9, 0x03dde450);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL6_A9, 0x0027, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL7_A9, 0x4fb0, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL8_A9, 0xc026, 0, 16);
+	// edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL9_A9, 0x03dde450);
 
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL1_A9, 0x3208, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL2_A9, 0x3208, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL3_A9, 0x3208, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL4_A9, 0x3208, 0, 16);
-	edp_ana_setb(ANACTRL_DIF_PHY_CNTL5_A9, 0x3208, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL1_A9, 0x3208, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL2_A9, 0x3208, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL3_A9, 0x3208, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL4_A9, 0x3208, 0, 16);
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL5_A9, 0x3208, 0, 16);
+
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0, 26, 1); //prbs_en
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0, 25, 1); //reset_en
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 3, 18, 2); //a_mode set eDP
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 1, 16, 1); //a clktree en
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 1, 15, 1); //clk_tree ldo for clk
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 1, 14, 1); //clk tree ldo en for clk
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0x4, 11, 3); //clktree ldo sel
+	// edp_ana_setb(ANACTRL_DIF_PHY_CNTL9, 0x4, 8, 3); //dsi LP Vref
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0, 7, 1); //bg vol sel:0:bg_vol,1:res div od advv18
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 1, 6, 1); //bg en
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0, 5, 1); //bg en
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 0x10, 0, 5); //current trim mode
+	edp_ana_setb(edp, ANACTRL_DIF_PHY_CNTL9, 1, 25, 1); //data_en
 }
 
 static void dptx_ana_phy_set(struct edptx_drv_s *edp, u8 port, u8 status)

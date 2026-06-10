@@ -15,7 +15,7 @@
 #include "./dsi_common.h"
 #include "./dsi_ctrl/dsi_ctrl.h"
 #include "../lcd_connector.h"
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 
 char *dsi_op_mode_table[] = {"Video", "Command"};
 

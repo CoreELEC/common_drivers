@@ -60,34 +60,34 @@ static void dptx_set_link_pll_t7(struct edptx_drv_s *edp, u8 port)
 	}
 
 set_pll_retry_t7:
-	edp_ana_write(pll_ctrl0_reg, pll_ctrl);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl0_reg, 1, 29, 1);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl0_reg, 1, 28, 1);
-	dptx_delay_us(10);
-	edp_ana_write(pll_ctrl1_reg, pll_ctrl1);
-	dptx_delay_us(10);
-	edp_ana_write(pll_ctrl2_reg, 0x0000110c);
-	dptx_delay_us(10);
+	edp_ana_write(edp, pll_ctrl0_reg, pll_ctrl);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl0_reg, 1, 29, 1);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl0_reg, 1, 28, 1);
+	edptx_delay_us(10);
+	edp_ana_write(edp, pll_ctrl1_reg, pll_ctrl1);
+	edptx_delay_us(10);
+	edp_ana_write(edp, pll_ctrl2_reg, 0x0000110c);
+	edptx_delay_us(10);
 	if (link_cconf->pll_fvco < 3800000000ULL)
-		edp_ana_write(pll_ctrl3_reg, 0x10051100);
+		edp_ana_write(edp, pll_ctrl3_reg, 0x10051100);
 	else
-		edp_ana_write(pll_ctrl3_reg, 0x10051400);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl4_reg, 0x0100c0, 0, 24);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl4_reg, 0x8300c0, 0, 24);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl0_reg, 1, 26, 1);
-	dptx_delay_us(10);
-	edp_ana_setb(pll_ctrl0_reg, 0, 29, 1);
-	dptx_delay_us(10);
-	edp_ana_write(pll_ctrl2_reg, 0x0000300c);
+		edp_ana_write(edp, pll_ctrl3_reg, 0x10051400);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl4_reg, 0x0100c0, 0, 24);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl4_reg, 0x8300c0, 0, 24);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl0_reg, 1, 26, 1);
+	edptx_delay_us(10);
+	edp_ana_setb(edp, pll_ctrl0_reg, 0, 29, 1);
+	edptx_delay_us(10);
+	edp_ana_write(edp, pll_ctrl2_reg, 0x0000300c);
 
-	if (dptx_pll_wait_lock(pll_stts_reg, 31)) {
-		dptx_delay_us(100);
-		edp_ana_setb(pll_ctrl2_reg, 1, 5, 1);
+	if (edptx_pll_wait_lock(edp, pll_stts_reg, 31)) {
+		edptx_delay_us(100);
+		edp_ana_setb(edp, pll_ctrl2_reg, 1, 5, 1);
 	} else {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_pll_retry_t7;
@@ -100,7 +100,7 @@ set_pll_retry_t7:
 	//}
 }
 
-static void dptx_set_phy_dig_div(struct edptx_drv_s *edp, u8 port_to_pll)
+static void edptx_set_phy_dig_div(struct edptx_drv_s *edp, u8 port_to_pll)
 {
 	struct edptx_clk_cfg_s *vid_cconf = &edp->vid_clk;
 	u32 reg_dphy_tx_ctrl1;
@@ -124,9 +124,9 @@ static void dptx_set_phy_dig_div(struct edptx_drv_s *edp, u8 port_to_pll)
 
 	dptx_reset_setb(edp, RESETCTRL_RESET1_MASK, 0, bit_rst, 1);
 	dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 0, bit_rst, 1);
-	dptx_delay_us(1);
+	edptx_delay_us(1);
 	dptx_reset_setb(edp, RESETCTRL_RESET1_LEVEL, 1, bit_rst, 1);
-	dptx_delay_us(10);
+	edptx_delay_us(10);
 
 	dptx_combo_dphy_setb(edp, reg_dphy_tx_ctrl1, 1, 0, 1); //Enable dphy clock
 	dptx_combo_dphy_setb(edp, COMBO_DPHY_EDP_PIXEL_CLK_DIV, 0, bit_div_en, 1); //Disable div
@@ -140,7 +140,7 @@ static void dptx_set_phy_dig_div(struct edptx_drv_s *edp, u8 port_to_pll)
 static void dptx_set_vid_pll_div_t7(struct edptx_drv_s *edp, u8 port_to_pll)
 {
 	struct edptx_clk_cfg_s *vid_cconf = &edp->vid_clk;
-	struct dptx_pll_data_s *pll_data = (struct dptx_pll_data_s *)edp->vid_clk.pll_data;
+	struct edptx_pll_data_s *pll_data = (struct edptx_pll_data_s *)edp->vid_clk.pll_data;
 	u32 reg_vid_pll_div, reg_vid2_clk_ctrl, shift_val, shift_sel;
 	u8 i;
 
@@ -153,7 +153,7 @@ static void dptx_set_vid_pll_div_t7(struct edptx_drv_s *edp, u8 port_to_pll)
 	}
 
 	edp_clk_setb(reg_vid2_clk_ctrl, 0, VCLK2_EN, 1);
-	dptx_delay_us(5);
+	edptx_delay_us(5);
 
 	/* Disable the div output clock */
 	dptx_combo_dphy_setb(edp, reg_vid_pll_div, 0, 19, 1);
@@ -209,7 +209,7 @@ static void dptx_set_vclk_crt_by_path(struct edptx_drv_s *edp, u8 path)
 	edp_clk_write(reg_vid_clk_ctrl2, 0);
 	edp_clk_write(reg_vid2_clk_ctrl, 0);
 	edp_clk_write(reg_vid2_clk_div, 0);
-	dptx_delay_us(5);
+	edptx_delay_us(5);
 
 	if (edp->idx == 0 && path == 0)
 		edp_clk_setb(CLKCTRL_HDMI_VID_PLL_CLK_DIV, 0, 24, 1);
@@ -221,24 +221,24 @@ static void dptx_set_vclk_crt_by_path(struct edptx_drv_s *edp, u8 path)
 		edp_clk_setb(reg_vid2_clk_div, (vid_cconf->xd * 2 - 1), VCLK2_XD, 8);
 	else
 		edp_clk_setb(reg_vid2_clk_div, (vid_cconf->xd - 1), VCLK2_XD, 8);
-	dptx_delay_us(5);
+	edptx_delay_us(5);
 	/* select vid_pll_clk */
 	edp_clk_setb(reg_vid2_clk_ctrl, vid_cconf->vclk_sel, VCLK2_CLK_IN_SEL, 3);
 
 	edp_clk_setb(reg_vid2_clk_ctrl, 1, VCLK2_EN, 1);
-	dptx_delay_us(2);
+	edptx_delay_us(2);
 
 	/* [15:12] encl_clk_sel, select vclk2_div1 */
 	edp_clk_setb(reg_vid2_clk_div, 8, ENCL_CLK_SEL, 4);
 	/* release vclk2_div_reset and enable vclk2_div */
 	edp_clk_setb(reg_vid2_clk_div, 1, VCLK2_XD_EN, 2);
-	dptx_delay_us(5);
+	edptx_delay_us(5);
 
 	edp_clk_setb(reg_vid2_clk_ctrl, 1, VCLK2_DIV1_EN, 1);
 	edp_clk_setb(reg_vid2_clk_ctrl, 1, VCLK2_SOFT_RST, 1);
-	dptx_delay_us(10);
+	edptx_delay_us(10);
 	edp_clk_setb(reg_vid2_clk_ctrl, 0, VCLK2_SOFT_RST, 1);
-	dptx_delay_us(5);
+	edptx_delay_us(5);
 
 	/* enable CTS_ENCL clk gate */
 	edp_clk_setb(reg_vid_clk_ctrl2, 1, ENCL_GATE_VCLK, 1);
@@ -267,21 +267,21 @@ static void dptx_link_clk_config_t7(struct edptx_drv_s *edp, u8 port, u8 dptx_li
 	struct edptx_clk_cfg_s *link_cconf = &edp->link_clk;
 
 	switch (dptx_link_rate) {
-	case DP_LINK_RATE_HBR2:
+	case eDP_LINK_RATE_HBR2:
 		link_cconf->pll_m    = 225;
 		link_cconf->pll_fvco = 5400000000ULL;
 		link_cconf->pll_fout = 5400000000ULL;
 		link_cconf->pll_od_sel[0] = 0;
 		link_cconf->pll_od_sel[1] = 0; link_cconf->pll_od_sel[2] = 0;
 		break;
-	case DP_LINK_RATE_HBR:
+	case eDP_LINK_RATE_HBR:
 		link_cconf->pll_m    = 225;
 		link_cconf->pll_fvco = 5400000000ULL;
 		link_cconf->pll_fout = 2700000000ULL;
 		link_cconf->pll_od_sel[0] = 1;
 		link_cconf->pll_od_sel[1] = 0; link_cconf->pll_od_sel[2] = 0;
 		break;
-	case DP_LINK_RATE_RBR:
+	case eDP_LINK_RATE_RBR:
 	default:
 		link_cconf->pll_m    = 135;
 		link_cconf->pll_fvco = 3240000000ULL;
@@ -340,7 +340,7 @@ static void dptx_vid_clk_config_t7(struct edptx_drv_s *edp, u32 pixel_clk)
 				(dptx_div0_table[dptx_div0] * dptx_div1_table[dptx_div1]));
 
 			for (tmp_div = CLK_DIV_SEL_1; tmp_div < CLK_DIV_SEL_MAX; tmp_div++) {
-				tmp_fout2 = dptx_clk_pll_div_calc(tmp_fout, tmp_div, CLK_DIV_I2O);
+				tmp_fout2 = edptx_clk_pll_div_calc(tmp_fout, tmp_div, CLK_DIV_I2O);
 				error = dptx_diff(tmp_fout2, pixel_clk);
 				if (error >= min_err)
 					continue;
@@ -389,12 +389,12 @@ static void dptx_link_clk_set_t7(struct edptx_drv_s *edp, u8 port)
 
 static void dptx_vid_clk_set_t7(struct edptx_drv_s *edp)
 {
-	dptx_set_phy_dig_div(edp, 0);
+	edptx_set_phy_dig_div(edp, 0);
 	dptx_set_vid_pll_div_t7(edp, 0);
 	dptx_set_vclk_crt_by_path(edp, 0);
 
 	if (edp->sink.port_mask == 0x3) {
-		dptx_set_phy_dig_div(edp, 1);
+		edptx_set_phy_dig_div(edp, 1);
 		dptx_set_vid_pll_div_t7(edp, 1);
 		dptx_set_vclk_crt_by_path(edp, 1);
 
@@ -406,7 +406,7 @@ static void dptx_clk_ssc_switch_t7(struct edptx_drv_s *edp, u8 port, u8 status)
 {
 }
 
-static struct dptx_pll_data_s dptx_t7_vid_pll0_data = {
+static struct edptx_pll_data_s dptx_t7_vid_pll0_data = {
 	.pll_od_fb = 0,
 	.pll_m_range = {2, 511},
 	.pll_frac_range = (1 << 17),
@@ -431,7 +431,7 @@ static struct dptx_pll_data_s dptx_t7_vid_pll0_data = {
 	.ss_str_m_max = 10,
 };
 
-static struct dptx_pll_data_s dptx_t7_vid_pll1_data = {
+static struct edptx_pll_data_s dptx_t7_vid_pll1_data = {
 	.pll_od_fb = 0,
 	.pll_m_range = {2, 511},
 	.pll_frac_range = (1 << 17),
@@ -456,7 +456,7 @@ static struct dptx_pll_data_s dptx_t7_vid_pll1_data = {
 	.ss_str_m_max = 10,
 };
 
-struct dptx_clk_op_s dptx_clk_op_t7 = {
+struct edptx_clk_op_s dptx_clk_op_t7 = {
 	.clk_config_print = dptx_clk_cfg_print_t7,
 	.clktree_set      = dptx_clktree_set_t7,
 	.link_clk_config  = dptx_link_clk_config_t7,
@@ -467,7 +467,7 @@ struct dptx_clk_op_s dptx_clk_op_t7 = {
 	//void (*prbs)(struct edptx_drv_s *edp);
 };
 
-struct dptx_clk_op_s *dptx_clk_op_init_t7(struct edptx_drv_s *edp)
+struct edptx_clk_op_s *edptx_clk_op_init_t7(struct edptx_drv_s *edp)
 {
 	if (edp->idx == 0) {
 		edp->vid_clk.pll_data = &dptx_t7_vid_pll0_data;

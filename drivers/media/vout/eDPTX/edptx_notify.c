@@ -33,18 +33,18 @@ static int edptx_backlight_off_notifier(struct notifier_block *nb, unsigned long
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_BACKLIGHT_OFF))
+	if (!(event & eDPTX_EVENT_BACKLIGHT_OFF))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
 
-	edptx_notify_set_backlight(edp, (event & DPTX_EVENT_BACKLIGHT_OFF) ? 0 : 1);
+	edptx_notify_set_backlight(edp, (event & eDPTX_EVENT_BACKLIGHT_OFF) ? 0 : 1);
 
 	return NOTIFY_OK;
 }
@@ -58,18 +58,18 @@ static int edptx_backlight_on_notifier(struct notifier_block *nb, unsigned long 
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_BACKLIGHT_ON))
+	if (!(event & eDPTX_EVENT_BACKLIGHT_ON))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_OK;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_OK;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
 
-	edptx_notify_set_backlight(edp, (event & DPTX_EVENT_BACKLIGHT_OFF) ? 0 : 1);
+	edptx_notify_set_backlight(edp, (event & eDPTX_EVENT_BACKLIGHT_OFF) ? 0 : 1);
 
 	return NOTIFY_OK;
 }
@@ -83,13 +83,13 @@ static int edptx_mute_event_notifier(struct notifier_block *nb, unsigned long ev
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_SCREEN_BLACK))
+	if (!(event & eDPTX_EVENT_SCREEN_BLACK))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -108,13 +108,13 @@ static int edptx_unmute_event_notifier(struct notifier_block *nb, unsigned long 
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_SCREEN_RESTORE))
+	if (!(event & eDPTX_EVENT_SCREEN_RESTORE))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -133,13 +133,13 @@ static int edptx_link_on_notifier(struct notifier_block *nb, unsigned long event
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_LINK_ON))
+	if (!(event & eDPTX_EVENT_LINK_ON))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -158,13 +158,13 @@ static int edptx_link_off_notifier(struct notifier_block *nb, unsigned long even
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_LINK_OFF))
+	if (!(event & eDPTX_EVENT_LINK_OFF))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -183,13 +183,13 @@ static int edptx_driver_ready_notifier(struct notifier_block *nb, unsigned long 
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_TX_READY))
+	if (!(event & eDPTX_EVENT_TX_READY))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & DPTX_STA_PROBE_DONE))
+	if (!(edp->status & eDPTX_STA_PROBE_DONE))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -209,13 +209,13 @@ static int edptx_driver_close_notifier(struct notifier_block *nb, unsigned long 
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_TX_CLOSE))
+	if (!(event & eDPTX_EVENT_TX_CLOSE))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -236,13 +236,13 @@ static int edptx_HPD_check_event_notifier(struct notifier_block *nb,
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_HPD_CHECK))
+	if (!(event & eDPTX_EVENT_HPD_CHECK))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -261,13 +261,13 @@ static int edptx_HPD_trigger_en_notifier(struct notifier_block *nb, unsigned lon
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_HPD_RESTORE))
+	if (!(event & eDPTX_EVENT_HPD_RESTORE))
 		return NOTIFY_DONE;
 	if (!edp) {
 		eDP_ERR(NULL, "%s: data is null", __func__);
 		return NOTIFY_OK;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_OK;
 
 	eDP_DBG(edp, "%s: 0x%lx", __func__, event);
@@ -287,13 +287,13 @@ static int edptx_HPD_trigger_ignore_notifier(struct notifier_block *nb,
 {
 	struct edptx_drv_s *edp = (struct edptx_drv_s *)data;
 
-	if (!(event & DPTX_EVENT_HPD_IGNORE))
+	if (!(event & eDPTX_EVENT_HPD_IGNORE))
 		return NOTIFY_DONE;
 	if (!edp) {
-		eDP_ERR(0, LOG_E, "%s: data is null", __func__);
+		eDP_ERR(0, "%s: data is null", __func__);
 		return NOTIFY_DONE;
 	}
-	if (!(edp->status & (DPTX_STA_PROBE_DONE | DPTX_STA_DRV_READY)))
+	if (!(edp->status & (eDPTX_STA_PROBE_DONE | eDPTX_STA_DRV_READY)))
 		return NOTIFY_DONE;
 
 	eDP_PR(edp, "%s: 0x%lx", __func__, event);

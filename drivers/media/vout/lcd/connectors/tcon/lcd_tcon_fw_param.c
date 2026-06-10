@@ -360,7 +360,7 @@ static int lcd_tcon_fw_alloc_core_reg(struct lcd_tcon_fw_s *fw,
 		tcon_local->def_core_info.header = kzalloc(core_header->header_size,
 			GFP_KERNEL);
 		if (!tcon_local->def_core_info.header) {
-			LCDERR("%s: mm_table alloc core header fail\n", __func__);
+			LCD_ERR(NULL, "%s: mm_table alloc core header fail\n", __func__);
 			goto __alloc_mem_by_reg_exit;
 		}
 		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
@@ -371,7 +371,7 @@ static int lcd_tcon_fw_alloc_core_reg(struct lcd_tcon_fw_s *fw,
 		tcon_local->def_core_info.table =
 			kzalloc(tcon_local->def_core_info.table_size, GFP_KERNEL);
 		if (!tcon_local->def_core_info.table) {
-			LCDERR("%s: mm_table alloc core reg table fail\n", __func__);
+			LCD_ERR(NULL, "%s: mm_table alloc core reg table fail\n", __func__);
 			goto __alloc_mem_by_reg_exit;
 		}
 		if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)

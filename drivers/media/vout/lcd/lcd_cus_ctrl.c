@@ -17,7 +17,7 @@
 #include <linux/amlogic/media/vout/lcd/aml_lcd.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include "lcd_common.h"
 #include "./connectors/lcd_connector.h"
 

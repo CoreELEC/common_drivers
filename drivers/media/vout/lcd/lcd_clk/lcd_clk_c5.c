@@ -28,7 +28,7 @@ static void lcd_set_pll(struct aml_lcd_drv_s *pdrv)
 	unsigned int pll_ctrl0;
 	int ret, cnt = 0;
 
-	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -70,7 +70,7 @@ static void lcd_set_vid_pll_div_c5(struct aml_lcd_drv_s *pdrv)
 	struct lcd_clk_config_s *cconf;
 	unsigned int shift_val, shift_sel;
 
-	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -103,7 +103,7 @@ static void lcd_set_vclk_crt_c5(struct aml_lcd_drv_s *pdrv)  /* from c3 */
 	struct lcd_clk_config_s *cconf;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("lcd clk: set_vclk_crt_c3\n");
+		LCD_PR(pdrv, "lcd clk: set_vclk_crt");
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -213,7 +213,7 @@ static struct lcd_pll_data_s lcd_pll_data_c5 = {
 	.pll_vco_fmin = 1400000000ULL,
 	.pll_out_fmax = 2800000000ULL,
 	.pll_out_fmin = 1400000000ULL,
-	.od_cnt = 0,
+	.od_model = LCD_OD_MODEL_NONE,
 	.have_tcon_div = 0,
 	.div_in_fmax = 2800000000ULL,
 	.div_out_fmax = 2800000000U,
@@ -278,7 +278,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_c5(struct aml_lcd_drv_s *pdrv)
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -287,14 +287,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_c5(struct aml_lcd_drv_s *pdrv)
 	}
 
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-						GFP_KERNEL);
-
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	cconf->data = &lcd_clk_data_c5;
 	cconf->pll_config[0].pll_id = 0;

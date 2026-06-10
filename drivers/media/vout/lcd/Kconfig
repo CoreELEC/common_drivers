@@ -60,7 +60,7 @@ config AMLOGIC_LCD_CLK_SOC
 	        Control lcd_clk_xxx file to build with AMLOGIC_C3_REMOVE
 
 if AMLOGIC_LCD
-source "$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/backlight/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/media/vout/backlight/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/lcd_extern/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/media/vout/lcd/ambilight/Kconfig"
 endif

@@ -70,7 +70,7 @@ static void lcd_pll_frac_set_t6w(struct aml_lcd_drv_s *pdrv, unsigned int frac)
 	val = lcd_vx1_lvds_ctrl_read(pdrv, reg);
 	if ((val & 0x1ff) != cconf->pll_config[0].pll_m) {
 		lcd_vx1_lvds_ctrl_setb(pdrv, reg, cconf->pll_config[0].pll_m, 0, 9);
-		LCD_DBG(pdrv, "tcon pll m reg %s: 0x%x: 0x%08x->0x%08x\n",
+		LCD_DBG(pdrv, "tcon pll m reg: 0x%x: 0x%08x->0x%08x",
 				reg, val, lcd_vx1_lvds_ctrl_read(pdrv, reg));
 	}
 	lcd_delay_us(10);
@@ -218,7 +218,7 @@ static int lcd_vx_pll_wait_lock(struct aml_lcd_drv_s *pdrv, int id,
 	} while ((pll_lock == 0) && (wait_loop > 0));
 	if (pll_lock == 0)
 		ret = -1;
-	LCD_PR(pdrv, "pll[%d]: lock=%d, wait_loop=%d\n",
+	LCD_PR(pdrv, "pll[%d]: lock=%d, wait_loop=%d",
 	      id, pll_lock, (PLL_WAIT_LOCK_CNT - wait_loop));
 
 	return ret;
@@ -251,7 +251,7 @@ static void lcd_set_pll_t6w(struct aml_lcd_drv_s *pdrv)
 	int ret, cnt = 0;
 	struct lcd_config_s *pconf = &pdrv->curr_dev->dev_cfg;
 
-	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	if (lcd_pxp_mode)
 		return;
@@ -382,8 +382,7 @@ static void lcd_set_vid_pll_div_t6w(struct aml_lcd_drv_s *pdrv)
 	if (!cconf)
 		return;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	lcd_clk_setb(CLKCTRL_VIID_CLK0_CTRL, 0, VCLK2_EN, 1);
 	usleep_range(5, 10);
@@ -439,7 +438,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	unsigned int xd = 1, clk_sel = 7;
 	unsigned int encl_clk_sel = 8;
 
-	LCD_DBG_ADV2(pdrv, "%s", __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
@@ -851,7 +850,7 @@ static struct lcd_pll_data_s lcd_pll_data_tcon_t6w = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 4250000000ULL,
 	.pll_out_fmin = 5859375,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 1,
 	.div_in_fmax = 4250000000ULL,
 	.div_out_fmax = 820000000,
@@ -874,7 +873,7 @@ static struct lcd_pll_data_s lcd_pll_data_gp2_t6w = {
 	.pll_vco_fmin = 1600000000ULL,
 	.pll_out_fmax = 3200000000ULL,
 	.pll_out_fmin = 200000000,
-	.od_cnt = 1,
+	.od_model = LCD_OD_MODEL_1DIV_2P5,
 	.have_tcon_div = 1,
 	.div_in_fmax = 3200000000ULL,
 	.div_out_fmax = 820000000,
@@ -954,13 +953,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_t6w(struct aml_lcd_drv_s *pdrv
 		cconf->pll_conf_num = 2;
 	else
 		cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCD_ERR(pdrv, "%s: Not enough memory for pll config", __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	cconf->data = &lcd_clk_data_t6w;
 	cconf->pll_config[0].pll_id = 0;

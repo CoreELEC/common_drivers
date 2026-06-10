@@ -32,10 +32,10 @@ static unsigned int lcd_phy_get_def_odt(void)
 
 	efuse_odt = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_VINLP);
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse odt_cm=%#x\n", efuse_odt);
+		LCD_PR(NULL, "efuse odt_cm=%#x", efuse_odt);
 	if (efuse_odt <= 0) {
 		efuse_odt = PHY_DEF_ODT;
-		LCDERR("odt_cm uncalibrated, use odt=%#x\n", efuse_odt);
+		LCD_ERR(NULL, "odt_cm uncalibrated, use odt=%#x", efuse_odt);
 	}
 	return (unsigned int)efuse_odt;
 }
@@ -46,10 +46,10 @@ static unsigned int lcd_phy_get_def_bias(void)
 
 	efuse_bias = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_COMMON);
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse bias=%#x\n", efuse_bias);
+		LCD_PR(NULL, "efuse bias=%#x", efuse_bias);
 	if (efuse_bias <= 0) {
 		efuse_bias = PHY_DEF_BIAS;
-		LCDERR("bias uncalibrated, use bias=%#x\n", efuse_bias);
+		LCD_ERR(NULL, "bias uncalibrated, use bias=%#x", efuse_bias);
 	}
 	return (unsigned int)efuse_bias;
 }
@@ -86,7 +86,7 @@ static unsigned int lcd_phy_get_write_odt(struct phy_attr_s *phy)
 	odt = odt > 0xf ? 0xf : odt;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("cali odt=0x%x, write odt=0x%x\n", cali_odt, odt);
+		LCD_PR(NULL, "cali odt=0x%x, write odt=0x%x", cali_odt, odt);
 	return odt;
 }
 
@@ -246,18 +246,84 @@ static void lcd_vx1_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 	lcd_phy_ch_set(pdrv);
 }
 
+#define DSI_VCM_SETTING 0x4
+#define DSI_PREEM_SETTING 0x0
+#define DSI_CURRENT_SETTING 0xf
+
 static void lcd_mipi_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 {
-	unsigned int common0 = 0x27;
-	unsigned int common1 = 0x6000;
-	unsigned int common2 = 0x59;
+	struct phy_attr_s *phy =  pdrv->curr_dev->dev_cfg.phy_cfg.act_phy;
+
+	unsigned int common0 =
+		((0x0 & 0x1f) << 8) | // serilizer output data inv
+		((0x0 &  0x1) << 7) | // lvds rterm  trim enable signal, enable for rterm trim
+		((0x0 &  0x1) << 6) | // prbs check enable signal
+		((0x1 &  0x1) << 5) | // ccp enable signal;
+		((0x0 &  0x1) << 4) | // input data select 0:digital 1:analog prbs
+		((0x7 &  0xf) << 0);  // vml resistance trim
+	unsigned int common1 =
+		((0x0 &  0x1) << 15) | // voltage lp_vref
+		((0x6 &  0x7) << 12) | // lptx slew setting
+		((0x8 &  0x1f) << 7) | // vml iboost control signal;
+		((0x1 & 0x1) << 6) | // ch1~ch4 vml boost enable signal;
+		((0x0 & 0x1) << 5) | // ch1~ch4 vml ldo power
+		((0x0 & 0x1) << 4) | // channel ldo for clk, 1:on; 0:0ff;
+		((phy->odt & 0xf) << 4);  // lvds rterm  resistance control bite;
+	unsigned int common2 =
+		((0x1 & 0x1) << 15) | //ch0 vml iboost enable signal;
+		((0x0 & 0x1) << 14) | //ch0 vml ldo power
+		((0x0 & 0x3) << 12) | //dsi hs slew control bite;
+		((0x0 & 0x1) << 11) | //auxrx/mipi_lp output data inverse,1b'1 is inversed;
+		((0x0 & 0x1) << 10) | //lprx refh voltagesetting;    1: 0.74V ;  0: 0.88V;
+		((0x0 & 0x1) << 9) | // lpcd reference low voltage select
+		((0x0 & 0x1) << 8) | // lpcd/lprx reference voltage select;   0: vbg   1: avdd18
+		((0x1 & 0x3) << 6) | //lprx high 00: 0.82v 01:0.86v 10: 0.89v 11: 0.93v
+		((0x1 & 0x3) << 4) | //lprx low 00: 0.52v 01:0.56v 10: 0.60v 11: 0.64v
+		((0x2 & 0x3) << 2) | //lpcd high 00: 0.37v 01:0.41v 10: 0.45v 11: 0.49v
+		((0x1 & 0x3) << 0);  //lpcd low 00: 0.17v 01:0.20v 10: 0.24v 11: 0.27v
 	unsigned int bias_common = 0xe050;
+	unsigned int chctrl;
+	unsigned char i;
+	unsigned char dsi_2p;
 
-	lcd_phy_common_update(pdrv, common0, common1, common2);
-	lcd_phy_bias_common_update(pdrv, bias_common);
-	lcd_phy_serializer_common_update(pdrv);
+	dsi_2p = pdrv->curr_dev->dev_cfg.control.mipi_cfg.multi_port_cfg & BIT(0) ? 1 : 0;
+	chctrl = (1 << 13) | // channel enable signal
+		((0x4 & 0x7) << 10) | // vml adjust the number of Slicers manually;
+		((DSI_VCM_SETTING & 0x7) << 7) | //vcm
+		((DSI_PREEM_SETTING & 0x7) << 4) | //lvds pre_emphasis control bite;
+		(DSI_CURRENT_SETTING & 0xf << 0); //lvds main &post current control bite;
 
-	lcd_phy_ch_set(pdrv);
+	if (pdrv->index == 0) {
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL6_A9, common0, 0, 16);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL7_A9, common1, 0, 16);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL8_A9, common2, 0, 16);
+
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 0x1, 16, 1);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1, 18, 2);
+
+		for (i = 0; i < 5; i++)
+			lcd_vx1_lvds_ctrl_setb(pdrv, chctrl_reg[i],
+						chctrl | (((i == 2) ? 1 : 0) << 14), 0, 16);
+	}
+	if (pdrv->index == 1 || dsi_2p) {
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL6_A9, common0, 16, 16);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL7_A9, common1, 16, 16);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL8_A9, common2, 16, 16);
+
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 0x1, 20, 1);
+		lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 1, 22, 2); // mode set
+
+		if (pdrv->index == 1)
+			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 3, 24, 2);
+		else // dsi_2p
+			lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, 2, 24, 2);
+
+		for (i = 0; i < 5; i++)
+			lcd_vx1_lvds_ctrl_setb(pdrv, chctrl_reg[i],
+						chctrl | (((i == 2) ? 1 : 0) << 14), 16, 16);
+	}
+
+	lcd_vx1_lvds_ctrl_setb(pdrv, ANACTRL_DIF_PHY_CNTL9_A9, bias_common, 0, 16);
 }
 
 static unsigned int lcd_phy_preem_level_to_val_a9(struct aml_lcd_drv_s *pdrv,

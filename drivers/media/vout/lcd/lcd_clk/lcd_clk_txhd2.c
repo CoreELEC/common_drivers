@@ -177,7 +177,7 @@ set_pll_retry_txhd2:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_pll_retry_txhd2;
-		LCDERR("hpll lock failed\n");
+		LCD_ERR(NULL, "hpll lock failed\n");
 	}
 
 	if (cconf->ss_level > 0)
@@ -205,7 +205,7 @@ static void lcd_set_vid_pll_div_txhd2(struct aml_lcd_drv_s *pdrv)
 	if (cconf->data->pll_data[0]->div_sel_max == CLK_DIV_SEL_1 ||
 	    cconf->pll_config->div_sel > cconf->data->pll_data[0]->div_sel_max ||
 	    cconf->pll_config->div_sel >= ARRAY_SIZE(lcd_clk_div_table)) {
-		LCDERR("[%d]: invalid clk divider\n", pdrv->index);
+		LCD_ERR(pdrv, "invalid clk divider");
 		return;
 	}
 
@@ -444,7 +444,7 @@ static void lcd_clk_prbs_test_txhd2(struct aml_lcd_drv_s *pdrv,
 	if (!cconf)
 		return;
 	if (!(mode_flag & LCD_PRBS_MODE_LVDS)) {
-		LCD_ERR(pdrv, "not support", __func__);
+		LCD_ERR(pdrv, "%s not support", __func__);
 		goto lcd_prbs_test_err_txhd2;
 	}
 
@@ -553,7 +553,7 @@ static struct lcd_pll_data_s lcd_pll_data_txhd2 = {
 	.pll_out_fmin = 187500000,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1500000000U,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 1,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1800000000U,
@@ -622,7 +622,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_txhd2(struct aml_lcd_drv_s *pd
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -631,13 +631,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_txhd2(struct aml_lcd_drv_s *pd
 	}
 
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
+
 	cconf->data = &lcd_clk_data_txhd2;
 	cconf->pll_config[0].pll_id = 0;
 	return cconf;

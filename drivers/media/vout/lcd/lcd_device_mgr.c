@@ -23,7 +23,7 @@
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #ifdef CONFIG_AMLOGIC_BACKLIGHT
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
 #endif
 #include "./lcd_common.h"
 

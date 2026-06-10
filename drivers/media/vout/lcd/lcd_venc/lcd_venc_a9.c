@@ -15,6 +15,8 @@
 #include <linux/reset.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#include <linux/amlogic/media/vout/panel_utils/panel_common.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #include "../lcd_reg.h"
 #include "../lcd_common.h"
 #include "lcd_venc.h"
@@ -40,7 +42,7 @@ static void lcd_venc_wait_vsync(struct aml_lcd_drv_s *pdrv)
 		line_cnt_previous = line_cnt;
 		udelay(2);
 	}
-	/*LCDPR("line_cnt=%d, line_cnt_previous=%d, i=%d\n",
+	/*LCD_PR(NULL, "line_cnt=%d, line_cnt_previous=%d, i=%d\n",
 	 *	line_cnt, line_cnt_previous, i);
 	 */
 }
@@ -53,7 +55,7 @@ static unsigned int lcd_venc_get_max_lint_cnt(struct aml_lcd_drv_s *pdrv)
 	reg = ENCL_VIDEO_MAX_LNCNT + offset;
 
 	line_cnt = lcd_vcbus_read(reg) + 1;
-	/*LCDPR("[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
+	/*LCD_PR(NULL, "[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
 
 	return line_cnt;
 }
@@ -142,7 +144,7 @@ static int lcd_venc_bist_set(struct aml_lcd_drv_s *pdrv, unsigned int num)
 		lcd_vcbus_write(ENCL_TST_Y + offset, pdrv->window_attr.color_in.red);
 		lcd_vcbus_write(ENCL_TST_CB + offset, pdrv->window_attr.color_in.green);
 		lcd_vcbus_write(ENCL_TST_CR + offset, pdrv->window_attr.color_in.blue);
-		LCDPR("start point x=%d y=%d\n",
+		LCD_PR(pdrv, "start point x=%d y=%d",
 			pdrv->window_attr.pos.start_x, pdrv->window_attr.pos.start_y);
 
 		pdrv->window_attr.pos.end_x =
@@ -158,7 +160,7 @@ static int lcd_venc_bist_set(struct aml_lcd_drv_s *pdrv, unsigned int num)
 		lcd_vcbus_write(ENCL_TST_Y + offset, pdrv->window_attr.color_out.red);
 		lcd_vcbus_write(ENCL_TST_CB + offset, pdrv->window_attr.color_out.green);
 		lcd_vcbus_write(ENCL_TST_CR + offset, pdrv->window_attr.color_out.blue);
-		LCDPR("end point x=%d y=%d\n",
+		LCD_PR(pdrv, "end point x=%d y=%d",
 			pdrv->window_attr.pos.end_x, pdrv->window_attr.pos.end_y);
 
 		width = pdrv->curr_dev->dev_cfg.timing.act_timing.h_active;
@@ -176,8 +178,7 @@ static int lcd_venc_bist_set(struct aml_lcd_drv_s *pdrv, unsigned int num)
 	lcd_vcbus_setb(ENCL_TST_EN + offset, lcd_enc_tst_a9[num].en, 0, 1);
 	lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV + offset, lcd_enc_tst_a9[num].vfifo_en, 3, 1);
 	if (num > 0) {
-		LCDPR("[%d]: show test pattern: %s\n",
-		      pdrv->index, lcd_enc_tst_a9[num].name);
+		LCD_PR(pdrv, "show test pattern: %s", lcd_enc_tst_a9[num].name);
 	}
 
 	return 0;
@@ -189,7 +190,7 @@ static int lcd_venc_window_attr_change(struct aml_lcd_drv_s *pdrv)
 
 	offset = pdrv->data->offset_venc[pdrv->index];
 	if (lcd_vcbus_getb(ENCL_TST_MDSEL + offset, 0, 3) != 6) {
-		LCDPR("not in window pattern mode\n");
+		LCD_PR(NULL, "not in window pattern mode");
 		return -1;
 	}
 	lcd_vcbus_write(ENCL_TST_VDCNT_STSET + offset, 1); /* clear line and row cnt */
@@ -199,9 +200,8 @@ static int lcd_venc_window_attr_change(struct aml_lcd_drv_s *pdrv)
 	lcd_vcbus_write(ENCL_TST_Y + offset, pdrv->window_attr.color_in.red);
 	lcd_vcbus_write(ENCL_TST_CB + offset, pdrv->window_attr.color_in.green);
 	lcd_vcbus_write(ENCL_TST_CR + offset, pdrv->window_attr.color_in.blue);
-	LCDPR("start point x=%d y=%d\n",
-		pdrv->window_attr.pos.start_x,
-		pdrv->window_attr.pos.start_y);
+	LCD_PR(pdrv, "start point x=%d y=%d",
+		pdrv->window_attr.pos.start_x, pdrv->window_attr.pos.start_y);
 
 	lcd_vcbus_write(ENCL_TST_VDCNT_STSET + offset, 3); /* window out */
 	lcd_vcbus_write(ENCL_TST_CLRBAR_STRT + offset, pdrv->window_attr.pos.end_x);
@@ -209,9 +209,8 @@ static int lcd_venc_window_attr_change(struct aml_lcd_drv_s *pdrv)
 	lcd_vcbus_write(ENCL_TST_Y + offset, pdrv->window_attr.color_out.red);
 	lcd_vcbus_write(ENCL_TST_CB + offset, pdrv->window_attr.color_out.green);
 	lcd_vcbus_write(ENCL_TST_CR + offset, pdrv->window_attr.color_out.blue);
-	LCDPR("end point x=%d y=%d\n",
-		pdrv->window_attr.pos.end_x,
-		pdrv->window_attr.pos.end_y);
+	LCD_PR(pdrv, "end point x=%d y=%d",
+		pdrv->window_attr.pos.end_x, pdrv->window_attr.pos.end_y);
 	return 0;
 }
 
@@ -443,7 +442,7 @@ static void lcd_venc_set(struct aml_lcd_drv_s *pdrv)
 		reg_disp_viu_ctrl = VPU_DISP_VIU1_CTRL;
 		break;
 	default:
-		LCDERR("[%d]: %s: invalid drv_index\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: invalid drv_index", __func__);
 		return;
 	}
 
@@ -529,7 +528,7 @@ static void lcd_venc_mute_set(struct aml_lcd_drv_s *pdrv, unsigned char flag)
 		lcd_vcbus_write(ENCL_TST_Y + offset, 0);
 		lcd_vcbus_write(ENCL_TST_CB + offset, 0);
 		lcd_vcbus_write(ENCL_TST_CR + offset, 0);
-		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL9, 0, 24, 2);
+		// lcd_vx1_lvds_ctrl_setb(ANACTRL_DIF_PHY_CNTL9_A9, 0, 24, 2);
 		lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV + offset, 0, 3, 1);
 	} else {
 		lcd_vcbus_setb(ENCL_VIDEO_MODE_ADV + offset, 1, 3, 1);
@@ -544,6 +543,7 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 	unsigned int val = 0;
 	struct lcd_boot_ctrl_s *boot_ctrl = pdrv->boot_ctrl;
 	unsigned char valid;
+	u8 panel_init_level;
 
 	offset = pdrv->data->offset_venc[pdrv->index];
 
@@ -559,7 +559,8 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 	val = lcd_vcbus_read(L_STH1_HS_ADDR_T7 + offset);
 	valid = (val >> 9) & 0xf;
 	if (boot_ctrl && valid == 0xa) {
-		boot_ctrl->init_level = val & 0xf;
+		panel_init_level = val & 0xf;
+		set_panel_init_level(pdrv->index, panel_init_level);
 		boot_ctrl->if_state = (val >> 4) & 0x1;
 		boot_ctrl->dccd_flag = (val >> 5) & 0x1;
 		boot_ctrl->mute_flag = (val >> 6) & 0x1;
@@ -571,8 +572,8 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 		boot_ctrl->lcd_type = val & 0xf;
 		boot_ctrl->clk_mode = (val >> 4) & 0xf;
 		boot_ctrl->ppc = (val >> 8) & 0x3;
-		boot_ctrl->bl_state = (val >> 11) & 0x1;
-
+		// boot_ctrl->bl_state = (val >> 11) & 0x1;
+		aml_bl_set_bl_state(pdrv->index, (val >> 11) & 0x1);
 		val = lcd_vcbus_read(L_STH1_VE_ADDR_T7 + offset);
 		boot_ctrl->advanced_flag = val & 0xff;
 

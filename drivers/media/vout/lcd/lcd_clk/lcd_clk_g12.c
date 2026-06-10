@@ -95,13 +95,13 @@ static int lcd_pll_wait_lock_g12a(int path)
 	if (!ret)
 		return 0;
 
-	LCDPR("path: %d, pll try lock (1)\n", path);
+	LCDPR("path: %d, pll try lock (1)", path);
 	lcd_hiu_setb(pll_ctrl3, 1, 31, 1);
 	ret = lcd_pll_wait_lock_hiu(pll_ctrl, 31);
 	if (!ret)
 		return 0;
 
-	LCDPR("path: %d, pll try lock (2)\n", path);
+	LCDPR("path: %d, pll try lock (2)", path);
 	lcd_hiu_write(pll_ctrl6, 0x55540000);
 	ret = lcd_pll_wait_lock_hiu(pll_ctrl, 31);
 
@@ -115,7 +115,7 @@ static void lcd_set_gp0_pll_g12a(struct aml_lcd_drv_s *pdrv)
 	int ret, cnt = 0;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("lcd clk: set_gp0_pll_g12a\n");
+		LCD_PR(pdrv, "lcd clk: set_gp0_pll_g12a");
 
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
@@ -153,7 +153,7 @@ set_gp0_pll_retry_g12a:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_gp0_pll_retry_g12a;
-		LCDERR("gp0_pll lock failed\n");
+		LCD_ERR(NULL, "gp0_pll lock failed\n");
 	}
 }
 
@@ -205,7 +205,7 @@ set_hpll_pll_retry_g12a:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_hpll_pll_retry_g12a;
-		LCDERR("hpll lock failed\n");
+		LCD_ERR(NULL, "hpll lock failed\n");
 	}
 }
 
@@ -274,7 +274,7 @@ set_gp0_pll_retry_g12b:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_gp0_pll_retry_g12b;
-		LCDERR("gp0_pll lock failed\n");
+		LCD_ERR(NULL, "gp0_pll lock failed\n");
 	}
 }
 
@@ -326,7 +326,7 @@ set_hpll_pll_retry_g12b:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_hpll_pll_retry_g12b;
-		LCDERR("hpll lock failed\n");
+		LCD_ERR(NULL, "hpll lock failed\n");
 	}
 }
 
@@ -349,7 +349,7 @@ static void lcd_set_vid_pll_div_g12b(struct aml_lcd_drv_s *pdrv)
 	if (cconf->data->pll_data[0]->div_sel_max == CLK_DIV_SEL_1 ||
 	    cconf->pll_config->div_sel > cconf->data->pll_data[0]->div_sel_max ||
 	    cconf->pll_config->div_sel >= ARRAY_SIZE(lcd_clk_div_table)) {
-		LCDERR("[%d]: invalid clk divider\n", pdrv->index);
+		LCD_ERR(pdrv, "invalid clk divider");
 		return;
 	}
 
@@ -517,7 +517,7 @@ static void lcd_pll_frac_generate_g12a(struct aml_lcd_drv_s *pdrv)
 			cconf->pll_config[0].pll_od1_sel, cconf->xd);
 	}
 	if (enc_clk > cconf->data->xd_out_fmax) {
-		LCDERR("%s: wrong enc_clk value %dHz\n", __func__, enc_clk);
+		LCD_ERR(NULL, "%s: wrong enc_clk value %dHz\n", __func__, enc_clk);
 		return;
 	}
 	if (lcd_debug_print_flag & LCD_DBG_PR_CLK)
@@ -527,7 +527,7 @@ static void lcd_pll_frac_generate_g12a(struct aml_lcd_drv_s *pdrv)
 	pll_fout *= cconf->xd;
 	if (pll_fout > cconf->data->pll_data[0]->pll_out_fmax ||
 	    pll_fout < cconf->data->pll_data[0]->pll_out_fmin) {
-		LCDERR("%s: wrong pll_fout value %lldHz\n", __func__, pll_fout);
+		LCD_ERR(NULL, "%s: wrong pll_fout value %lldHz\n", __func__, pll_fout);
 		return;
 	}
 	if (lcd_debug_print_flag & LCD_DBG_PR_CLK)
@@ -536,7 +536,7 @@ static void lcd_pll_frac_generate_g12a(struct aml_lcd_drv_s *pdrv)
 	pll_fvco = pll_fout * od;
 	if (pll_fvco < cconf->data->pll_data[0]->pll_vco_fmin ||
 	    pll_fvco > cconf->data->pll_data[0]->pll_vco_fmax) {
-		LCDERR("%s: wrong pll_fvco value %lldHz\n", __func__, pll_fvco);
+		LCD_ERR(NULL, "%s: wrong pll_fvco value %lldHz\n", __func__, pll_fvco);
 		return;
 	}
 	if (lcd_debug_print_flag & LCD_DBG_PR_CLK)
@@ -701,7 +701,7 @@ static struct lcd_pll_data_s lcd_pll_data_g12a_path0 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 1500000000,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1500000000ULL,
@@ -768,7 +768,7 @@ static struct lcd_pll_data_s lcd_pll_data_g12a_path1 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 1000000000,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 1,
+	.od_model = LCD_OD_MODEL_1DIV_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1500000000ULL,
@@ -835,7 +835,7 @@ static struct lcd_pll_data_s lcd_pll_data_g12b_path0 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 1500000000,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1500000000ULL,
@@ -902,7 +902,7 @@ static struct lcd_pll_data_s lcd_pll_data_g12b_path1 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 1000000000,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 1,
+	.od_model = LCD_OD_MODEL_1DIV_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 1500000000ULL,
@@ -996,7 +996,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_g12a(struct aml_lcd_drv_s *pdr
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -1005,13 +1005,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_g12a(struct aml_lcd_drv_s *pdr
 	}
 
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	if (pdrv->clk_path) {
 		cconf->data = &lcd_clk_data_g12a_path1;
@@ -1037,7 +1030,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_g12b(struct aml_lcd_drv_s *pdr
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -1046,13 +1039,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_g12b(struct aml_lcd_drv_s *pdr
 	}
 
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	if (pdrv->clk_path) {
 		cconf->data = &lcd_clk_data_g12b_path1;

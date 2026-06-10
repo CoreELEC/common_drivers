@@ -1183,7 +1183,7 @@
  * register access api
  */
 
-int dptx_ioremap(struct edptx_drv_s *edp, struct platform_device *pdev);
+int edptx_ioremap(struct edptx_drv_s *edp, struct platform_device *pdev);
 
 u32 edp_vcbus_read(u32 reg);
 void edp_vcbus_write(u32 reg, u32 value);
@@ -1195,10 +1195,10 @@ void edp_clk_write(u32 reg, u32 value);
 void edp_clk_setb(u32 reg, u32 value, u32 start, u32 len);
 u32 edp_clk_getb(u32 reg, u32 start, u32 len);
 
-u32 edp_ana_read(u32 reg);
-void edp_ana_write(u32 reg, u32 value);
-void edp_ana_setb(u32 reg, u32 value, u32 start, u32 len);
-u32 edp_ana_getb(u32 reg, u32 start, u32 len);
+u32 edp_ana_read(struct edptx_drv_s *edp, u32 reg);
+void edp_ana_write(struct edptx_drv_s *edp, u32 reg, u32 value);
+void edp_ana_setb(struct edptx_drv_s *edp, u32 reg, u32 value, u32 start, u32 len);
+u32 edp_ana_getb(struct edptx_drv_s *edp, u32 reg, u32 start, u32 len);
 
 u32 dptx_periphs_read(struct edptx_drv_s *edp, u32 reg);
 void dptx_periphs_write(struct edptx_drv_s *edp, u32 reg, u32 value);

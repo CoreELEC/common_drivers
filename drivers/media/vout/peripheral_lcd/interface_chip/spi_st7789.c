@@ -38,7 +38,7 @@ static int endian64bit_convert(void *src_data, int size)
 	unsigned char *src = (unsigned char *)src_data;
 
 	if (size % 8) {
-		LCDERR("%s: size error: %d\n", __func__, size);
+		LCD_ERR(NULL, "%s: size error: %d\n", __func__, size);
 		return -1;
 	}
 	while (size > 0) {
@@ -95,7 +95,7 @@ static int st7789_write_frame(unsigned char *addr, unsigned short x0,
 
 	ret = plcd_spi_write_dft(addr, size, 8);
 	if (ret)
-		LCDERR("%s: fail\n", __func__);
+		LCD_ERR(NULL, "%s: fail\n", __func__);
 	return ret;
 }
 
@@ -110,7 +110,7 @@ int plcd_st7789_probe(void)
 	int ret;
 
 	if (!plcd_drv->pcfg->spi_cfg.spi_dev) {
-		LCDERR("spi_dev is null\n");
+		LCD_ERR(NULL, "spi_dev is null\n");
 		return -1;
 	}
 

@@ -212,7 +212,7 @@ static inline void parallel_data_direction(uint8_t dir)
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data2_index, dir);
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data3_index, dir);
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data4_index, dir);
-	LCDPR("%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
+	LCD_PR(NULL, "%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data5_index, dir);
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data6_index, dir);
 	plcd_gpio_set(plcd_drv->pcfg->i8080_cfg.data7_index, dir);
@@ -457,7 +457,7 @@ void per_lcd_write_color(unsigned int *addr, unsigned short x0,
 	unsigned int i, j;
 
 	if (!addr) {
-		LCDERR("buff is null\n");
+		LCD_ERR(NULL, "buff is null\n");
 		return;
 	}
 
@@ -472,7 +472,7 @@ void per_lcd_write_color(unsigned int *addr, unsigned short x0,
 	test_t[1] = sched_clock();
 	test_t[2] = test_t[1] - test_t[0];
 	if (per_lcd_debug_flag)
-		LCDPR("%s: cast time: %lld\n", __func__, test_t[2]);
+		LCD_PR(NULL, "%s: cast time: %lld\n", __func__, test_t[2]);
 }
 
 static void per_lcd_write_frame(unsigned char *addr, unsigned short x0,
@@ -484,7 +484,7 @@ static void per_lcd_write_frame(unsigned char *addr, unsigned short x0,
 	unsigned int j = 0;
 
 	if (!addr) {
-		LCDERR("buff is null\n");
+		LCD_ERR(NULL, "buff is null\n");
 		return;
 	}
 
@@ -495,7 +495,7 @@ static void per_lcd_write_frame(unsigned char *addr, unsigned short x0,
 	write_size = (x1 - x0) * (y1 - y0);
 	buf = kmalloc((sizeof(unsigned int) * write_size), GFP_KERNEL);
 	if (!buf) {
-		LCDERR("%s: failed to alloc buf\n", __func__);
+		LCD_ERR(NULL, "%s: failed to alloc buf\n", __func__);
 		return;
 	}
 
@@ -523,9 +523,9 @@ static void per_lcd_write_frame(unsigned char *addr, unsigned short x0,
 			write_color(buf[j]);
 			j++;
 		}
-		LCDPR("buf data: %x\n", buf[0]);
+		LCD_PR(NULL, "buf data: %x\n", buf[0]);
 	} else {
-		LCDERR("unsupport data_format: %d\n", plcd_drv->pcfg->cfmt);
+		LCD_ERR(NULL, "unsupport data_format: %d\n", plcd_drv->pcfg->cfmt);
 	}
 	kfree(buf);
 	buf = NULL;
@@ -535,7 +535,7 @@ static int frame_post(unsigned char *addr, unsigned short x0,
 	       unsigned short x1, unsigned short y0, unsigned short y1)
 {
 	if (!addr) {
-		LCDERR("buff is null\n");
+		LCD_ERR(NULL, "buff is null\n");
 		return -1;
 	}
 
@@ -557,12 +557,12 @@ static void intel_8080_fill_screen_color(unsigned int index)
 	else if (plcd_drv->pcfg->cfmt == CFMT_RGB565)
 		c = rgb565_color_data[i];
 	else
-		LCDERR("unsupport data_format\n");
+		LCD_ERR(NULL, "unsupport data_format\n");
 
 	size = plcd_drv->pcfg->h * plcd_drv->pcfg->v;
 	buf = kmalloc((sizeof(unsigned short) * size), GFP_KERNEL);
 	if (!buf) {
-		LCDERR("%s: failed to alloc buf\n", __func__);
+		LCD_ERR(NULL, "%s: failed to alloc buf\n", __func__);
 		return;
 	}
 	for (i = 0; i < size; i++)
@@ -582,7 +582,7 @@ void read_ID(void)
 	for (x = 0; x < 4; x++)
 		id[x] = read_data();
 
-	LCDPR("ID: 0x%02x %02x %02x %02x\n", id[0], id[1], id[2], id[3]);
+	LCD_PR(NULL, "ID: 0x%02x %02x %02x %02x\n", id[0], id[1], id[2], id[3]);
 }
 
 void intel_8080_write_color_bars(void)
@@ -624,7 +624,7 @@ void intel_8080_write_color_bars(void)
 		c6 = rgb565_color_data[6];
 		c7 = rgb565_color_data[7];
 	} else {
-		LCDERR("unsupport data_format\n");
+		LCD_ERR(NULL, "unsupport data_format\n");
 	}
 
 	for (i = 0; i < plcd_drv->pcfg->h; i++) {
@@ -669,7 +669,7 @@ static int intel_8080_power_cmd_dynamic_size(int flag)
 		if (type == PER_LCD_CMD_TYPE_END)
 			break;
 		if (per_lcd_debug_flag) {
-			LCDPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+			LCD_PR(NULL, "%s: step %d: type=0x%02x, cmd_size=%d\n",
 			      __func__, step, type, table[i + 1]);
 		}
 
@@ -683,7 +683,8 @@ static int intel_8080_power_cmd_dynamic_size(int flag)
 			/* do nothing */
 		} else if (type == PER_LCD_CMD_TYPE_GPIO) {
 			if (cmd_size < 2) {
-				LCDERR("step %d: invalid cmd_size %d for GPIO\n", step, cmd_size);
+				LCD_ERR(NULL, "step %d: invalid cmd_size %d for GPIO",
+					step, cmd_size);
 				goto power_cmd_dynamic_next;
 			}
 			if (table[i + 2] < PER_GPIO_MAX) {
@@ -712,7 +713,7 @@ static int intel_8080_power_cmd_dynamic_size(int flag)
 			plcd_usleep(1);
 			plcd_usleep(table[i + cmd_size + 1] * 1000);
 		} else {
-			LCDERR("%s: type 0x%02x invalid\n", __func__, type);
+			LCD_ERR(NULL, "%s: type 0x%02x invalid\n", __func__, type);
 		}
 power_cmd_dynamic_next:
 		i += (cmd_size + 2);
@@ -731,7 +732,7 @@ static int intel_8080_power_cmd_fixed_size(int flag)
 
 	cmd_size = plcd_drv->pcfg->cmd_size;
 	if (cmd_size < 2) {
-		LCDERR("%s: invalid cmd_size %d\n", __func__, cmd_size);
+		LCD_ERR(NULL, "%s: invalid cmd_size %d\n", __func__, cmd_size);
 		return -1;
 	}
 
@@ -748,7 +749,7 @@ static int intel_8080_power_cmd_fixed_size(int flag)
 		if (type == PER_LCD_CMD_TYPE_END)
 			break;
 		if (per_lcd_debug_flag) {
-			LCDPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+			LCD_PR(NULL, "%s: step %d: type=0x%02x, cmd_size=%d\n",
 			      __func__, step, type, cmd_size);
 		}
 
@@ -780,7 +781,7 @@ static int intel_8080_power_cmd_fixed_size(int flag)
 			intel_8080_wreg_buf(&table[i + 1], cmd_size);
 			plcd_usleep(table[i + cmd_size - 1] * 1000);
 		} else {
-			LCDERR("%s: type 0x%02x invalid\n", __func__, type);
+			LCD_ERR(NULL, "%s: type 0x%02x invalid\n", __func__, type);
 		}
 		i += cmd_size;
 		step++;
@@ -797,11 +798,11 @@ static void intel_8080_interface_init(void)
 	for (i = 0; i < plcd_drv->pcfg->i8080_cfg.max_gpio_num; i++)
 		plcd_gpio_set(i, 2);
 	vir_reg_pad_gpio0_o = readl(vir_io_base);
-	LCDPR("%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
+	LCD_PR(NULL, "%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
 	/* set all pins output*/
 	for (i = 0; i < plcd_drv->pcfg->i8080_cfg.max_gpio_num; i++)
 		plcd_gpio_set(i, 0);
-	LCDPR("%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
+	LCD_PR(NULL, "%s: read gpio_reg:0x%x\n", __func__, vir_reg_pad_gpio0_o);
 #endif
 }
 
@@ -810,11 +811,11 @@ static int intel_8080_power_on_init(void)
 	int ret = 0;
 
 	if (plcd_drv->pcfg->cmd_size < 1) {
-		LCDERR("%s: cmd_size %d is invalid\n", __func__, plcd_drv->pcfg->cmd_size);
+		LCD_ERR(NULL, "%s: cmd_size %d is invalid\n", __func__, plcd_drv->pcfg->cmd_size);
 		return -1;
 	}
 	if (!plcd_drv->pcfg->init_on) {
-		LCDERR("%s: init_data is null\n", __func__);
+		LCD_ERR(NULL, "%s: init_data is null\n", __func__);
 		return -1;
 	}
 	intel_8080_interface_init();
@@ -852,7 +853,7 @@ int intel_8080_test(const char *buf)
 		reset_display();
 		break;
 	default:
-		LCDPR("unsupported test\n");
+		LCD_PR(NULL, "unsupported test\n");
 		break;
 	}
 	return 0;
@@ -869,7 +870,7 @@ int intel_8080_clk_test(char *buf)
 			setRS();
 		else
 			clrRS();
-		LCDPR("set RS value: %d, read_gpio_reg:0x%x\n", value,
+		LCD_PR(NULL, "set RS value: %d, read_gpio_reg:0x%x\n", value,
 		      vir_reg_pad_gpio0_o);
 	break;
 	case 'w': /*WR*/
@@ -878,7 +879,7 @@ int intel_8080_clk_test(char *buf)
 			setWR();
 		else
 			clrWR();
-		LCDPR("set WR value: %d, read_gpio_reg:0x%x\n", value,
+		LCD_PR(NULL, "set WR value: %d, read_gpio_reg:0x%x\n", value,
 		      vir_reg_pad_gpio0_o);
 	break;
 	case 'd': /*RD*/
@@ -887,7 +888,7 @@ int intel_8080_clk_test(char *buf)
 			setRD();
 		else
 			clrRD();
-		LCDPR("set RD value: %d, read_gpio_reg:0x%x\n", value,
+		LCD_PR(NULL, "set RD value: %d, read_gpio_reg:0x%x\n", value,
 		      vir_reg_pad_gpio0_o);
 	break;
 	case 'c': /*CS*/
@@ -896,7 +897,7 @@ int intel_8080_clk_test(char *buf)
 			setCS();
 		else
 			clrCS();
-		LCDPR("set CS value: %d, read_gpio_reg:0x%x\n", value,
+		LCD_PR(NULL, "set CS value: %d, read_gpio_reg:0x%x\n", value,
 		      vir_reg_pad_gpio0_o);
 	break;
 	case 's': /*reset*/
@@ -905,7 +906,7 @@ int intel_8080_clk_test(char *buf)
 			setRESET();
 		else
 			clrRESET();
-		LCDPR("set CS value: %d, read_gpio_reg:0x%x\n", value,
+		LCD_PR(NULL, "set CS value: %d, read_gpio_reg:0x%x\n", value,
 		      vir_reg_pad_gpio0_o);
 	break;
 	case 'i': /*index*/
@@ -916,11 +917,11 @@ int intel_8080_clk_test(char *buf)
 			vir_reg_pad_gpio0_o &= ~(1 << index);
 
 		writel(vir_reg_pad_gpio0_o, vir_io_base);
-		LCDPR("set index: %d value: %d, read_gpio_reg:0x%x\n",
+		LCD_PR(NULL, "set index: %d value: %d, read_gpio_reg:0x%x\n",
 		      index, value, vir_reg_pad_gpio0_o);
 	break;
 	default:
-		LCDPR("no support\n");
+		LCD_PR(NULL, "no support\n");
 	break;
 	}
 	return 0;
@@ -936,10 +937,10 @@ int plcd_i8080_probe(void)
 
 	vir_io_base = plcd_drv->plcd_reg_map->p;
 	if (!vir_io_base) {
-		LCDERR("io base err, check reg\n");
+		LCD_ERR(NULL, "io base err, check reg\n");
 		return -1;
 	}
-	LCDPR("%s: io_base:0x%px", __func__, vir_io_base);
+	LCD_PR(NULL, "%s: io_base:0x%px", __func__, vir_io_base);
 
 	ret = intel_8080_power_on_init();
 	if (!ret)

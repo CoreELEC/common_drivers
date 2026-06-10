@@ -417,7 +417,7 @@ static int pdf_fill_by_data_config(struct list_head *data_list, struct tcon_pdf_
 
 	pdf_listhead = data_list;
 	if (list_empty(pdf_listhead)) {
-		LCDERR("pdf data empty\n");
+		LCD_ERR(NULL, "pdf data empty\n");
 		return -1;
 	}
 
@@ -623,7 +623,7 @@ static int tcon_pdf_new_group(struct tcon_pdf_s *pdf, unsigned char group)
 
 	list_for_each_entry(item, &pdf->action_list, list) {
 		if (item->group == group) {
-			LCDERR("Group %d exist!\n", group);
+			LCD_ERR(NULL, "Group %d exist!\n", group);
 			goto __new_group_fail;
 		}
 	}
@@ -818,7 +818,7 @@ int lcd_tcon_pdf_init(struct aml_lcd_drv_s *pdrv)
 		cur_plat = &pdf_t3x_info;
 		break;
 	default:
-		LCDERR("%s: not support pdf\n", __func__);
+		LCD_ERR(NULL, "%s: not support pdf\n", __func__);
 		goto __pdf_init_fail;
 	}
 
@@ -843,7 +843,7 @@ int lcd_tcon_pdf_init(struct aml_lcd_drv_s *pdrv)
 			cur_plat->p2p_cmd_get_val = cmpi_get_val;
 			break;
 		default:
-			LCDERR("%s: pdf not support protocol:%d\n", __func__,
+			LCD_ERR(NULL, "%s: pdf not support protocol:%d\n", __func__,
 				p2p_type);
 			goto __pdf_init_fail;
 		}
@@ -886,7 +886,7 @@ int lcd_tcon_pdf_get_config(struct list_head *data_list)
 		}
 
 		if (pdf_fill_by_data_config(data_list, pdf) < 0) {
-			LCDERR("PDF get config fail\n");
+			LCD_ERR(NULL, "PDF get config fail\n");
 			return -1;
 		}
 		pdf->enable = 1;

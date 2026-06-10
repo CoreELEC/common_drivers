@@ -16,8 +16,8 @@
 #include "reg_helper.h"
 #include "frame_lock_policy.h"
 #include "vlock.h"
-#include <linux/amlogic/media/vout/lcd/aml_ldim.h>
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/aml_ldim.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
 #include <linux/amlogic/media/dpss/frc_common_x.h>
 #include "../../vrr/vrr_drv.h"
 #ifdef CONFIG_AMLOGIC_LCD

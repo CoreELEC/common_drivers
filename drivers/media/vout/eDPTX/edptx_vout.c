@@ -34,6 +34,7 @@
 #include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/eDPTX_export.h>
 #include <linux/amlogic/media/vout/eDPTX/eDPTX_notify.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #ifdef CONFIG_AMLOGIC_VPU
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
@@ -75,39 +76,6 @@ struct edptx_boot_ctrl_s dptx_uboot_configs[eDPTX_MAX_DRV] = {
 		.user_debug_port_count = 0,
 	},
 };
-
-void edptx_print_helper(struct edptx_drv_s *edp, u8 port, u8 pr_type, const char *fmt, ...)
-{
-	va_list args;
-	struct va_format vaf;
-	char buffer[24];
-
-	if (pr_type > edptx_print_level)
-		return;
-
-	va_start(args, fmt);
-	vaf.fmt = fmt;
-	vaf.va = &args;
-
-	if (edp) {
-		if (port == 0xff)
-			snprintf(buffer, sizeof(buffer), "%u]", edp->idx);
-		else
-			snprintf(buffer, sizeof(buffer), "%u]-%u", edp->idx, port);
-	} else {
-		if (port == 0xff)
-			snprintf(buffer, sizeof(buffer), "-]");
-		else
-			snprintf(buffer, sizeof(buffer), "-]-%u", port);
-	}
-
-	if (pr_type == LOG_E)
-		pr_err("[eDP:%s(err): %pV\n", buffer, &vaf);
-	else
-		pr_info("[eDP:%s: %pV\n", buffer, &vaf);
-
-	va_end(args);
-}
 
 static struct edptx_drv_s *edptx_driver_add(u8 index)
 {
@@ -156,7 +124,7 @@ static irqreturn_t edptx_vsync1_isr(int irq, void *data)
 	if (!edp)
 		return IRQ_HANDLED;
 
-	if (!(edp->status & DPTX_STA_DRV_READY))
+	if (!(edp->status & eDPTX_STA_DRV_READY))
 		return IRQ_HANDLED;
 
 	if (edp->viu_sel == 1) {
@@ -174,7 +142,7 @@ static irqreturn_t edptx_vsync2_isr(int irq, void *data)
 	if (!edp)
 		return IRQ_HANDLED;
 
-	if (!(edp->status & DPTX_STA_DRV_READY))
+	if (!(edp->status & eDPTX_STA_DRV_READY))
 		return IRQ_HANDLED;
 
 	if (edp->viu_sel == 2) {
@@ -192,7 +160,7 @@ static irqreturn_t edptx_vsync3_isr(int irq, void *data)
 	if (!edp)
 		return IRQ_HANDLED;
 
-	if (!(edp->status & DPTX_STA_DRV_READY))
+	if (!(edp->status & eDPTX_STA_DRV_READY))
 		return IRQ_HANDLED;
 
 	if (edp->viu_sel == 3) {
@@ -213,17 +181,17 @@ static irqreturn_t edptx_HPD_isr(int irq, void *data)
 
 	eDP_DBG(edp, "HPD[%d] triggered. sta=0x%02x", irq, edp->status);
 
-	if (!(edp->status & DPTX_STA_HPD_TRI_EN))
+	if (!(edp->status & eDPTX_STA_HPD_TRI_EN))
 		return IRQ_HANDLED;
 
 	curr_HPD_level = edptx_if_get_hpd_level(edp, 0);
 	curr_irq = edptx_if_get_hpd_irq(edp, 0);
 
 	eDP_DBG(edp, "HPD[%d] triggered. ignore=%d level=%u irq=0x%x", irq,
-		edp->status & DPTX_STA_HPD_TRI_EN ? 0 : 1, curr_HPD_level, curr_irq);
+		edp->status & eDPTX_STA_HPD_TRI_EN ? 0 : 1, curr_HPD_level, curr_irq);
 
-	if ((edp->status & DPTX_STA_HPD_TRI_EN) && curr_irq == 0x1 &&
-		((edp->status & DPTX_STA_HPD_HIGH) ^ (curr_HPD_level << 3))) {
+	if ((edp->status & eDPTX_STA_HPD_TRI_EN) && curr_irq == 0x1 &&
+		((edp->status & eDPTX_STA_HPD_HIGH) ^ (curr_HPD_level << 3))) {
 		return IRQ_WAKE_THREAD;
 	}
 
@@ -236,12 +204,12 @@ static irqreturn_t edptx_HPD_post_handler(int irq, void *data)
 
 	eDP_PR(edp, "%s-0x%x", __func__, edp->status);
 
-	edptx_notifier_call_chain(DPTX_EVENT_HPD_CHECK, edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_HPD_CHECK, edp);
 
-	if (edp->status & DPTX_STA_HPD_HIGH)
-		edptx_notifier_call_chain(DPTX_EVENT_PLUG_IN, edp);
+	if (edp->status & eDPTX_STA_HPD_HIGH)
+		edptx_notifier_call_chain(eDPTX_EVENT_PLUG_IN, edp);
 	else
-		edptx_notifier_call_chain(DPTX_EVENT_PLUG_OUT, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_PLUG_OUT, edp);
 
 	return IRQ_HANDLED;
 }
@@ -336,7 +304,7 @@ lcd_cdev_add_failed1:
 	return -1;
 }
 
-static void dptx_cdev_remove(struct edptx_drv_s *edp)
+static void edptx_cdev_remove(struct edptx_drv_s *edp)
 {
 	dev_t devno;
 
@@ -387,7 +355,7 @@ lcd_cdev_init_once_err:
 	return -1;
 }
 
-static void dptx_global_remove_once(void)
+static void edptx_global_remove_once(void)
 {
 	if (dptx_global_init_flag > 1) {
 		dptx_global_init_flag--;
@@ -456,7 +424,7 @@ static int edptx_irq_init(struct edptx_drv_s *edp)
 	///* pdrv->vs_none_timer.data = NULL; */
 	//pdrv->vs_none_timer.expires = jiffies + LCD_VSYNC_NONE_INTERVAL;
 	///*add_timer(&pdrv->vs_none_timer);*/
-	///*LCDPR("add vs_none_timer handler\n"); */
+	///*LCD_PR(NULL, "add vs_none_timer handler\n"); */
 
 	return 0;
 }
@@ -482,7 +450,7 @@ static int edptx_config_remove(struct edptx_drv_s *edp)
 {
 	edptx_vout_server_deinit(edp);
 
-	dptx_debug_remove(edp);
+	edptx_debug_remove(edp);
 
 	return 0;
 }
@@ -496,9 +464,9 @@ static void edptx_bootup_config_init(struct edptx_drv_s *edp)
 	edptx_if_link_get(edp, 0, &link_rate, &lane);
 	edptx_if_reg_store_get(edp, 0, &temp, NULL);
 
-	edp->status |= edp->viu_sel  ? DPTX_STA_DRV_READY : 0;
-	edp->status |= temp & BIT(12) ? DPTX_STA_DISP_ON   : 0;
-	edp->status |= link_rate      ? DPTX_STA_LINK_ON   : 0;
+	edp->status |= edp->viu_sel  ? eDPTX_STA_DRV_READY : 0;
+	edp->status |= temp & BIT(12) ? eDPTX_STA_DISP_ON   : 0;
+	edp->status |= link_rate      ? eDPTX_STA_LINK_ON   : 0;
 
 	if (dptx_uboot_configs[edp->idx].user_debug_port_count == 3)
 		edp->sink.port_mask = 0xf;
@@ -767,12 +735,21 @@ static u8 edptx_panel_config_load_from_dts(struct edptx_drv_s *edp)
 	} else {
 		edp->setting.user_preset_timing = 0;
 	}
+
+	ret = of_property_read_u16(child, "assigned-backlight-index", &val);
+	if (!ret) {
+		edp->setting.backlight_index = (unsigned char)val;
+		if (edp->setting.backlight_index < 0xff)
+			eDP_PR(edp, "assigned backlight: %u", edp->setting.backlight_index);
+	} else {
+		edp->setting.backlight_index = 0xff;
+	}
 	edptx_panel_config_load_timing(edp, child);
 
 	return 0;
 }
 
-int dptx_config_load_from_dts(struct edptx_drv_s *edp)
+int edptx_config_load_from_dts(struct edptx_drv_s *edp)
 {
 	const struct device_node *np;
 	unsigned short para[30];
@@ -824,11 +801,11 @@ int dptx_config_load_from_dts(struct edptx_drv_s *edp)
 	return 0;
 }
 
-static int dptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pdev)
+static int edptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pdev)
 {
 	int ret = 0;
 
-	ret = dptx_config_load_from_dts(edp);
+	ret = edptx_config_load_from_dts(edp);
 	if (ret)
 		return -1;
 
@@ -837,18 +814,20 @@ static int dptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pd
 	edp->vsync_irq[2] = platform_get_irq_byname(pdev, "vsync3");
 	edp->HPD_irq      = platform_get_irq_byname(pdev, "edptx_0_hpd");
 
-	dptx_clk_config_probe(edp);
+	edptx_clk_config_probe(edp);
 	edptx_phy_probe(edp);
 	edptx_venc_probe(edp);
-	dptx_debug_probe(edp);
+	edptx_debug_probe(edp);
 	edptx_if_IP_probe(edp);
 
 	edptx_vout_server_init(edp); // get viu sel here
 
 	edptx_bootup_config_init(edp);
 
-	/* lock pinmux as when dptx is used ?? or link on */
-	if (edp->viu_sel || edp->status & DPTX_STA_LINK_ON) {
+	edptx_bl_wrapper_regist(edp);
+
+	/* lock pinmux as when edptx is used ?? or link on */
+	if (edp->viu_sel || edp->status & eDPTX_STA_LINK_ON) {
 		edptx_gpios_get(edp, 1);
 
 		edptx_driver_panel_power_ctrl(edp, 1);
@@ -857,7 +836,9 @@ static int dptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pd
 
 		edptx_drv_check_HPD(edp);
 
-		dptx_timing_config_restore(edp);
+		edptx_timing_config_restore(edp);
+
+		aml_bl_set_bl_state(edp->idx, 1);
 	}
 
 	//lcd_vrr_dev_register(edp);
@@ -867,13 +848,11 @@ static int dptx_config_probe(struct edptx_drv_s *edp, struct platform_device *pd
 	/* add notifier for video sync_duration info refresh */
 	edptx_vout_notify_mode_change(edp);
 
-	edptx_bl_wrapper_regist(edp);
-
-	dptx_drm_add(edp->dev);
+	edptx_drm_add(edp->dev);
 
 	edptx_drv_check_HPD(edp);
 	// if (edp->viu_sel & 0xf)
-	dptx_HPD_trigger_set(edp, 1);
+	edptx_HPD_trigger_set(edp, 1);
 
 	return 0;
 }
@@ -889,14 +868,14 @@ static struct edptx_chip_data_s edptx_data_t7 = {
 	.offset_venc_data = {0x0, 0x100},
 	.venc_clk_msr_id  = {222, 221},
 
-	.link_rate    = {{DP_LINK_RATE_HBR, DP_LINK_RATE_HBR}, {DP_LINK_RATE_HBR, 0}},
+	.link_rate    = {{eDP_LINK_RATE_HBR, eDP_LINK_RATE_HBR}, {eDP_LINK_RATE_HBR, 0}},
 	.lane_count   = {{4, 4}, {4, 0}},
 	.TPS_support  = BIT(0),
 	.DACP_support = BIT(2),
 	.pixel_clk_limit = 667,
 };
 
-static struct edptx_chip_data_s edptx_data_a9 = {
+static struct edptx_chip_data_s edptx_data_a9_edp = {
 	.chip_type = eDPTX_CHIP_A9,
 	.chip_name = "A9",
 	//.reg_map_table = &lcd_reg_t7[0],
@@ -905,8 +884,24 @@ static struct edptx_chip_data_s edptx_data_a9 = {
 	.offset_venc_if   = {0x0},
 	.offset_venc_data = {0x0},
 	.venc_clk_msr_id  = {53},
-	.link_rate        = {{DP_LINK_RATE_HBR2, 0}},
+	.link_rate        = {{eDP_LINK_RATE_HBR2, 0}},
 	.lane_count       = {{4, 0}},
+	.TPS_support      = BIT(0) | BIT(1),
+	.DACP_support     = BIT(2),
+	.pixel_clk_limit  = 667,
+};
+
+static struct edptx_chip_data_s edptx_data_a9_dp = {
+	.chip_type = eDPTX_CHIP_A9,
+	.chip_name = "A9",
+	//.reg_map_table = &lcd_reg_t7[0],
+	.drv_max = 1,
+	.offset_venc      = {0x0},
+	.offset_venc_if   = {0x0},
+	.offset_venc_data = {0x0},
+	.venc_clk_msr_id  = {53},
+	.link_rate        = {{eDP_LINK_RATE_HBR2, 0}},
+	.lane_count       = {{2, 0}},
 	.TPS_support      = BIT(0) | BIT(1),
 	.DACP_support     = BIT(2),
 	.pixel_clk_limit  = 667,
@@ -919,7 +914,11 @@ static const struct of_device_id edptx_dt_match_table[] = {
 	},
 	{
 		.compatible = "amlogic, eDPTX-A9",
-		.data = &edptx_data_a9,
+		.data = &edptx_data_a9_edp,
+	},
+	{
+		.compatible = "amlogic, ePDTX-A9-dp",
+		.data = &edptx_data_a9_dp,
 	},
 	{}
 };
@@ -973,7 +972,7 @@ static int edptx_probe(struct platform_device *pdev)
 	/*vpu dev register for lcd*/
 	edp->vpu_dev = vpu_dev_register(VPU_VENCL, eDPTX_CDEV_NAME);
 #endif
-	ret = dptx_ioremap(edp, pdev);
+	ret = edptx_ioremap(edp, pdev);
 	if (ret)
 		goto lcd_probe_err_1;
 
@@ -983,18 +982,18 @@ static int edptx_probe(struct platform_device *pdev)
 	if (ret)
 		goto lcd_probe_err_2;
 
-	ret = dptx_config_probe(edp, pdev);
+	ret = edptx_config_probe(edp, pdev);
 	if (ret)
 		goto lcd_probe_err_2;
 
-	edp->status |= DPTX_STA_PROBE_DONE;
+	edp->status |= eDPTX_STA_PROBE_DONE;
 
 	eDP_PR(edp, "%s ok, status:0x%02x", __func__, edp->status);
 
 	return 0;
 
 lcd_probe_err_2:
-	dptx_cdev_remove(edp);
+	edptx_cdev_remove(edp);
 lcd_probe_err_1:
 	platform_set_drvdata(pdev, NULL);
 	edp_driver[index] = NULL;
@@ -1011,15 +1010,15 @@ static void edptx_remove(struct platform_device *pdev)
 	if (!edp)
 		return;
 
-	edp->status &= ~DPTX_STA_PROBE_DONE;
+	edp->status &= ~eDPTX_STA_PROBE_DONE;
 
-	dptx_drm_remove(edp->dev);
+	edptx_drm_remove(edp->dev);
 
 	index = edp->idx;
 
 	edptx_irq_serve_remove(edp);
-	dptx_cdev_remove(edp);
-	dptx_debug_remove(edp);
+	edptx_cdev_remove(edp);
+	edptx_debug_remove(edp);
 	edptx_config_remove(edp);
 
 	/* free drvdata */
@@ -1028,7 +1027,7 @@ static void edptx_remove(struct platform_device *pdev)
 	kfree(edp->reg_map);
 	kfree(edp);
 	edp_driver[index] = NULL;
-	dptx_global_remove_once();
+	edptx_global_remove_once();
 
 	pr_info("[eDP:%u]: %s done", index, __func__);
 }
@@ -1040,7 +1039,7 @@ static int edptx_resume(struct platform_device *pdev)
 	if (!edp)
 		return 0;
 
-	edptx_notifier_call_chain(DPTX_EVENT_PREPARE, (void *)edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_PREPARE, (void *)edp);
 
 	eDP_PR(edp, "%s finished (0x%x)", __func__, edp->status);
 
@@ -1055,10 +1054,10 @@ static int edptx_suspend(struct platform_device *pdev, pm_message_t state)
 	if (!edp)
 		return 0;
 
-	if (edp->status & DPTX_STA_LINK_ON)
-		edptx_notifier_call_chain(DPTX_EVENT_DISP_OFF, (void *)edp);
+	if (edp->status & eDPTX_STA_LINK_ON)
+		edptx_notifier_call_chain(eDPTX_EVENT_DISP_OFF, (void *)edp);
 
-	edptx_notifier_call_chain(DPTX_EVENT_UNPREPARE, (void *)edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_UNPREPARE, (void *)edp);
 
 	eDP_PR(edp, "%s finished (0x%x)", __func__, edp->status);
 
@@ -1075,7 +1074,7 @@ static void edptx_shutdown(struct platform_device *pdev)
 
 	eDP_PR(edp, "%s (0x%x)", __func__, edp->status);
 
-	edptx_notifier_call_chain(DPTX_EVENT_DISABLE, (void *)edp);
+	edptx_notifier_call_chain(eDPTX_EVENT_DISABLE, (void *)edp);
 }
 
 static struct platform_driver eDP_platform_driver = {
@@ -1177,7 +1176,7 @@ int aml_edptx_get_hpd_state(u8 drv_idx)
 
 	if (!edp)
 		return 0;
-	return edp->status & DPTX_STA_HPD_HIGH ? 1 : 0;
+	return edp->status & eDPTX_STA_HPD_HIGH ? 1 : 0;
 }
 EXPORT_SYMBOL(aml_edptx_get_hpd_state);
 

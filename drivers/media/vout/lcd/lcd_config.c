@@ -24,10 +24,11 @@
 #include <linux/amlogic/media/vout/lcd/lcd_extern.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 
-#include <linux/amlogic/media/vout/lcd/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #include <linux/amlogic/media/vout/vinfo.h>
-#include <linux/amlogic/media/vout/lcd/lcd_resman.h>
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/lcd_resman.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include <linux/page-flags.h>
 #include <linux/mm.h>
 #include "lcd_common.h"
@@ -198,7 +199,7 @@ static void lcd_freq_vrr_min_max_update(struct aml_lcd_drv_s *pdrv)
 			timing->vfreq_panel_max = timing->timings[i]->vfreq_vrr_max;
 	}
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s min:%d-max:%d\n", __func__,
+		LCD_PR(pdrv, "%s min:%d-max:%d", __func__,
 		      timing->vfreq_panel_min, timing->vfreq_panel_max);
 }
 
@@ -276,76 +277,76 @@ void lcd_config_load_print(struct aml_lcd_drv_s *pdrv, struct aml_lcd_device_s *
 	switch (pconf->basic.lcd_type) {
 #if defined(CONFIG_AMLOGIC_LCD_DPI)
 	case LCD_RGB:
-		LCDPR("type = %d\n", pctrl->rgb_cfg.type);
-		LCDPR("clk_pol = %d\n", pctrl->rgb_cfg.clk_pol);
-		LCDPR("de_valid = %d\n", pctrl->rgb_cfg.de_valid);
-		LCDPR("sync_valid = %d\n", pctrl->rgb_cfg.sync_valid);
-		LCDPR("rb_swap = %d\n", pctrl->rgb_cfg.rb_swap);
-		LCDPR("bit_swap = %d\n", pctrl->rgb_cfg.bit_swap);
+		LCD_PR(pdrv, "type = %d", pctrl->rgb_cfg.type);
+		LCD_PR(pdrv, "clk_pol = %d", pctrl->rgb_cfg.clk_pol);
+		LCD_PR(pdrv, "de_valid = %d", pctrl->rgb_cfg.de_valid);
+		LCD_PR(pdrv, "sync_valid = %d", pctrl->rgb_cfg.sync_valid);
+		LCD_PR(pdrv, "rb_swap = %d", pctrl->rgb_cfg.rb_swap);
+		LCD_PR(pdrv, "bit_swap = %d", pctrl->rgb_cfg.bit_swap);
 		break;
 	case LCD_BT656:
 	case LCD_BT1120:
-		LCDPR("clk_phase = 0x%x\n", pctrl->bt_cfg.clk_phase);
-		LCDPR("field_type = %d\n", pctrl->bt_cfg.field_type);
-		LCDPR("mode_422 = %d\n", pctrl->bt_cfg.mode_422);
-		LCDPR("yc_swap = %d\n", pctrl->bt_cfg.yc_swap);
-		LCDPR("cbcr_swap = %d\n", pctrl->bt_cfg.cbcr_swap);
+		LCD_PR(pdrv, "clk_phase = 0x%x", pctrl->bt_cfg.clk_phase);
+		LCD_PR(pdrv, "field_type = %", pctrl->bt_cfg.field_type);
+		LCD_PR(pdrv, "mode_422 = %d", pctrl->bt_cfg.mode_422);
+		LCD_PR(pdrv, "yc_swap = %d", pctrl->bt_cfg.yc_swap);
+		LCD_PR(pdrv, "cbcr_swap = %d", pctrl->bt_cfg.cbcr_swap);
 		break;
 #endif
 #if defined(CONFIG_AMLOGIC_LCD_LVDS)
 	case LCD_LVDS:
-		LCDPR("lvds_repack = %d\n", pctrl->lvds_cfg.lvds_repack);
-		LCDPR("pn_swap = %d\n", pctrl->lvds_cfg.pn_swap);
-		LCDPR("dual_port = %d\n", pctrl->lvds_cfg.dual_port);
-		LCDPR("port_swap = %d\n", pctrl->lvds_cfg.port_swap);
-		LCDPR("lane_reverse = %d\n", pctrl->lvds_cfg.lane_reverse);
-		LCDPR("phy_vswing = 0x%x\n", pctrl->lvds_cfg.phy_vswing);
-		LCDPR("phy_preem = 0x%x\n", pctrl->lvds_cfg.phy_preem);
+		LCD_PR(pdrv, "lvds_repack = %d", pctrl->lvds_cfg.lvds_repack);
+		LCD_PR(pdrv, "pn_swap = %d", pctrl->lvds_cfg.pn_swap);
+		LCD_PR(pdrv, "dual_port = %d", pctrl->lvds_cfg.dual_port);
+		LCD_PR(pdrv, "port_swap = %d", pctrl->lvds_cfg.port_swap);
+		LCD_PR(pdrv, "lane_reverse = %d", pctrl->lvds_cfg.lane_reverse);
+		LCD_PR(pdrv, "phy_vswing = 0x%x", pctrl->lvds_cfg.phy_vswing);
+		LCD_PR(pdrv, "phy_preem = 0x%x", pctrl->lvds_cfg.phy_preem);
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_VBYONE
 	case LCD_VBYONE:
-		LCDPR("lane_count = %d\n", pctrl->vbyone_cfg.lane_count);
-		LCDPR("byte_mode = %d\n", pctrl->vbyone_cfg.byte_mode);
-		LCDPR("region_num = %d\n", pctrl->vbyone_cfg.region_num);
-		LCDPR("color_fmt = %d\n", pctrl->vbyone_cfg.color_fmt);
-		LCDPR("phy_vswing = 0x%x\n", pctrl->vbyone_cfg.phy_vswing);
-		LCDPR("phy_preem = 0x%x\n", pctrl->vbyone_cfg.phy_preem);
+		LCD_PR(pdrv, "lane_count = %d", pctrl->vbyone_cfg.lane_count);
+		LCD_PR(pdrv, "byte_mode = %d", pctrl->vbyone_cfg.byte_mode);
+		LCD_PR(pdrv, "region_num = %d", pctrl->vbyone_cfg.region_num);
+		LCD_PR(pdrv, "color_fmt = %d", pctrl->vbyone_cfg.color_fmt);
+		LCD_PR(pdrv, "phy_vswing = 0x%x", pctrl->vbyone_cfg.phy_vswing);
+		LCD_PR(pdrv, "phy_preem = 0x%x", pctrl->vbyone_cfg.phy_preem);
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_TCON
 	case LCD_MLVDS:
-		LCDPR("channel_num = %d\n", pctrl->mlvds_cfg.channel_num);
-		LCDPR("channel_sel0 = 0x%x\n", pctrl->mlvds_cfg.channel_sel0);
-		LCDPR("channel_sel1 = 0x%x\n", pctrl->mlvds_cfg.channel_sel1);
-		LCDPR("clk_phase = 0x%x\n", pctrl->mlvds_cfg.clk_phase);
-		LCDPR("phy_vswing = 0x%x\n", pctrl->mlvds_cfg.phy_vswing);
-		LCDPR("phy_preem = 0x%x\n", pctrl->mlvds_cfg.phy_preem);
+		LCD_PR(pdrv, "channel_num = %d", pctrl->mlvds_cfg.channel_num);
+		LCD_PR(pdrv, "channel_sel0 = 0x%x", pctrl->mlvds_cfg.channel_sel0);
+		LCD_PR(pdrv, "channel_sel1 = 0x%x", pctrl->mlvds_cfg.channel_sel1);
+		LCD_PR(pdrv, "clk_phase = 0x%x", pctrl->mlvds_cfg.clk_phase);
+		LCD_PR(pdrv, "phy_vswing = 0x%x", pctrl->mlvds_cfg.phy_vswing);
+		LCD_PR(pdrv, "phy_preem = 0x%x", pctrl->mlvds_cfg.phy_preem);
 		break;
 	case LCD_P2P:
-		LCDPR("p2p_type = 0x%x\n", pctrl->p2p_cfg.p2p_type);
-		LCDPR("lane_num = %d\n", pctrl->p2p_cfg.lane_num);
-		LCDPR("channel_sel0 = 0x%x\n", pctrl->p2p_cfg.channel_sel0);
-		LCDPR("channel_sel1 = 0x%x\n", pctrl->p2p_cfg.channel_sel1);
-		LCDPR("phy_vswing = 0x%x\n", pctrl->p2p_cfg.phy_vswing);
-		LCDPR("phy_preem = 0x%x\n", pctrl->p2p_cfg.phy_preem);
+		LCD_PR(pdrv, "p2p_type = 0x%x", pctrl->p2p_cfg.p2p_type);
+		LCD_PR(pdrv, "lane_num = %d", pctrl->p2p_cfg.lane_num);
+		LCD_PR(pdrv, "channel_sel0 = 0x%x", pctrl->p2p_cfg.channel_sel0);
+		LCD_PR(pdrv, "channel_sel1 = 0x%x", pctrl->p2p_cfg.channel_sel1);
+		LCD_PR(pdrv, "phy_vswing = 0x%x", pctrl->p2p_cfg.phy_vswing);
+		LCD_PR(pdrv, "phy_preem = 0x%x", pctrl->p2p_cfg.phy_preem);
 		break;
 #endif
 #ifdef CONFIG_AMLOGIC_LCD_MIPI_DSI
 	case LCD_MIPI:
 		if (pctrl->mipi_cfg.check_en) {
-			LCDPR("check_reg = 0x%02x\n", pctrl->mipi_cfg.check_reg);
-			LCDPR("check_cnt = %d\n", pctrl->mipi_cfg.check_cnt);
+			LCD_PR(pdrv, "check_reg = 0x%02x", pctrl->mipi_cfg.check_reg);
+			LCD_PR(pdrv, "check_cnt = %d", pctrl->mipi_cfg.check_cnt);
 		}
-		LCDPR("lane_num = %d\n", pctrl->mipi_cfg.lane_num);
-		LCDPR("bit_rate_target = %d\n", pctrl->mipi_cfg.bit_rate_target);
-		LCDPR("operation_mode: init=%d, disp=%d\n",
+		LCD_PR(pdrv, "lane_num = %d", pctrl->mipi_cfg.lane_num);
+		LCD_PR(pdrv, "bit_rate_target = %d", pctrl->mipi_cfg.bit_rate_target);
+		LCD_PR(pdrv, "operation_mode: init=%d, disp=%d",
 			pctrl->mipi_cfg.operation_mode_init,
 			pctrl->mipi_cfg.operation_mode_display);
-		LCDPR("video_mode_type = %d\n", pctrl->mipi_cfg.video_mode_type);
-		LCDPR("clk_always_hs = %d\n", pctrl->mipi_cfg.clk_always_hs);
+		LCD_PR(pdrv, "video_mode_type = %d", pctrl->mipi_cfg.video_mode_type);
+		LCD_PR(pdrv, "clk_always_hs = %d", pctrl->mipi_cfg.clk_always_hs);
 #ifdef TRY_TO_REMOVE_DSI_EXTERN
-		LCDPR("extern_init = %d\n", pctrl->mipi_cfg.extern_init);
+		LCD_PR(pdrv, "extern_init = %d", pctrl->mipi_cfg.extern_init);
 #endif
 		break;
 #endif
@@ -387,7 +388,7 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 	default:
 		ret = of_property_read_string(np, "mode", &mode_str);
 		if (ret) {
-			LCD_ERR(pdrv, "failed to get mode", pdrv->index);
+			LCD_ERR(pdrv, "failed to get mode");
 			return -1;
 		}
 		pdrv->mode = lcd_mode_str_to_mode(mode_str);
@@ -464,8 +465,7 @@ int lcd_base_config_load_from_dts(struct aml_lcd_drv_s *pdrv)
 	ret = of_property_read_string(np, "lcd_propname_sel", &str);
 	if (ret == 0) {
 		strscpy(pdrv->curr_dev->dev_propname, str, 24);
-		LCDPR("[%d]: find lcd_propname_sel: %s\n",
-			pdrv->index, pdrv->curr_dev->dev_propname);
+		LCD_PR(pdrv, "find lcd_propname_sel: %s", pdrv->curr_dev->dev_propname);
 	}
 
 	ret = of_property_read_u32_array(np, "sw_vlock", &para[0], 7);
@@ -1318,12 +1318,12 @@ config_phy_adv_attr_done:
 		pconf->backlight_index = 0xff;
 	} else {
 		pconf->backlight_index = para[0];
-#ifdef CONFIG_AMLOGIC_BACKLIGHT
-		if (pconf->backlight_index < 0xff) {
-			lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, pconf->backlight_index);
-			aml_bl_index_add(pdrv->index, pconf->backlight_index);
-		}
-#endif
+//#ifdef CONFIG_AMLOGIC_BACKLIGHT
+//		if (pconf->backlight_index < 0xff) {
+//			lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, pconf->backlight_index);
+//			aml_bl_index_add(pdrv->index, pconf->backlight_index);
+//		}
+//#endif
 	}
 
 	return ret;
@@ -1435,7 +1435,7 @@ static int lcd_panel_parse_timing(struct json_parse_s *jsp,
 			break;
 		child = json_get_array_child(jsp, parent, i);
 		if (!child) {
-			LCDPR("fail find timing[%d]\n", i);
+			LCD_PR(pdrv, "fail find timing[%d]", i);
 			break;
 		}
 		dt = lcd_timing_alloc(pdrv, dev_p);
@@ -1549,7 +1549,7 @@ static int lcd_panel_parse_phy(struct json_parse_s *jsp,
 	phy_cfg = &dev_p->dev_cfg.phy_cfg;
 	phy = lcd_phy_alloc(pdrv, dev_p);
 	if (!phy) { //phy_cfg->phys[0] default phy
-		LCDERR("%s dft phy alloc failed\n", __func__);
+		LCD_ERR(NULL, "%s dft phy alloc failed\n", __func__);
 		return -1;
 	}
 	memset(phy, 0, sizeof(*phy));
@@ -2014,14 +2014,14 @@ static int lcd_panel_parse_swpdf(struct json_parse_s *jsp,
 
 	parent = json_get_object_child(jsp, jsp->root, "sw_pdf");
 	if (!parent || !json_get_obj_u32(jsp, parent, "en", 0)) {
-		LCDPR("no sw_pdf find\n");
+		LCD_PR(pdrv, "no sw_pdf find");
 		return 0;
 	}
 
 	parent = json_get_object_child(jsp, parent, "pattern");
 	pat_cnt = json_get_array_size(jsp, parent);
 	if (!parent || pat_cnt <= 0) {
-		LCDPR("error pattern\n");
+		LCD_PR(pdrv, "error pattern");
 		return 0;
 	}
 
@@ -2049,7 +2049,7 @@ static int lcd_panel_parse_swpdf(struct json_parse_s *jsp,
 		th[1] = json_get_arr_u32(jsp, thres_node, 0, 0);
 		pat = swpdf_pat_create_add(pdf, th[0], th[1]);
 		if (!pat) {
-			LCDPR("swpdf pat_%d fail: blk_cnt:%d, act_cnt:%d thres: %d-%d",
+			LCD_PR(pdrv, "swpdf pat_%d fail: blk_cnt:%d, act_cnt:%d thres: %d-%d",
 				i, blk_cnt, act_cnt, th[0], th[1]);
 			continue;
 		}
@@ -2068,7 +2068,7 @@ static int lcd_panel_parse_swpdf(struct json_parse_s *jsp,
 			mat[3] = json_get_arr_u32(jsp, blk_node, 7, 0);
 
 			if (!swpdf_block_create_add(pat, x, y, w, h, mat))
-				LCDPR("blk:[%d, %d, %d, %d] mat:[%08x, %08x, %08x, %08x]\n",
+				LCD_PR(pdrv, "blk:[%d, %d, %d, %d] mat:[%08x, %08x, %08x, %08x]",
 					x, y, w, h, mat[0], mat[1], mat[2], mat[3]);
 		}
 
@@ -2083,7 +2083,7 @@ static int lcd_panel_parse_swpdf(struct json_parse_s *jsp,
 			bus = json_get_arr_u32(jsp, act_node, 3, 0);
 
 			if (!swpdf_act_create_add(pat, reg, mask, val, bus))
-				LCDPR("add act: reg=0x%x, mask=0x%x, val=0x%x\n",
+				LCD_PR(pdrv, "add act: reg=0x%x, mask=0x%x, val=0x%x",
 					reg, mask, val);
 		}
 		if (pdrv->status & LCD_STATUS_IF_ON)
@@ -2155,10 +2155,11 @@ int lcd_config_load_from_json(struct aml_lcd_drv_s *pdrv,
 
 	//lcd_panel_parse_data(jsp, pdrv);
 
-#ifdef CONFIG_AMLOGIC_BACKLIGHT
-	lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, 0);
-	aml_bl_index_add(pdrv->index, 0);
-#endif
+	dev_p->dev_cfg.backlight_index = 0;
+//#ifdef CONFIG_AMLOGIC_BACKLIGHT
+//	lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, 0);
+//	aml_bl_index_add(pdrv->index, 0);
+//#endif
 
 parse_end:
 	return ret;
@@ -2477,13 +2478,13 @@ static int lcd_config_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 
 	inip = get_lcd_ini_parse_mem(pdrv->index);
 	if (!inip) {
-		LCDERR("[%d]: %s: parse_mem not ready\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: parse_mem not ready", __func__);
 		return -1;
 	}
 
 	psec = lcd_ini_get_section(inip, "lcd_Attr");
 	if (!psec) {
-		LCDERR("[%d]: %s: not find lcd_Attr\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: not find lcd_Attr", __func__);
 		return -1;
 	}
 	version = lcd_ini_get_val(inip, psec, "version", 0);
@@ -2711,54 +2712,18 @@ static int lcd_config_load_from_ini(struct aml_lcd_drv_s *pdrv, struct aml_lcd_d
 
 	lcd_optical_load_from_ini(pdrv, dev_p, inip);
 
-#ifdef CONFIG_AMLOGIC_BACKLIGHT
-	lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, 0);
-	aml_bl_index_add(pdrv->index, 0);
-#endif
+	pconf->backlight_index = 0;
+//#ifdef CONFIG_AMLOGIC_BACKLIGHT
+//	lcd_resource_add(pdrv, LCD_RES_BACKLIGHT, 0);
+//	aml_bl_index_add(pdrv->index, 0);
+//#endif
 
 	return 0;
 }
 
-unsigned char lcd_panel_config_load_detect(int index, const char *func_name)
-{
-	unsigned char load = LCD_CONFIG_NONE;
-	unsigned char file_type = PANEL_FILE_INVALID;
-
-	file_type = get_lcd_panel_file_type(index);
-	load = lcd_get_dbg_source();
-	if (load != LCD_CONFIG_NONE) {
-		switch (load) {
-		case LCD_CONFIG_DTS:
-			break;
-		case LCD_CONFIG_FILE:
-			if (file_type != PANEL_FILE_JSON && file_type != PANEL_FILE_INI)
-				load = LCD_CONFIG_ERR;
-			break;
-		default:
-			load = LCD_CONFIG_NONE;
-		}
-		goto lcd_panel_config_load_detect_done;
-	}
-
-	if (file_type == PANEL_FILE_INI || file_type == PANEL_FILE_JSON)
-		load = LCD_CONFIG_FILE;
-	else
-		load = LCD_CONFIG_DTS;
-
-lcd_panel_config_load_detect_done:
-	if (load == LCD_CONFIG_ERR)
-		LCDERR("[%d]: %s: ERROR\n", index, func_name);
-	else if (load == LCD_CONFIG_NONE)
-		LCDPR("[%d]: %s: NONE\n", index, func_name);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("[%d]: %s: %d\n", index, func_name, load);
-
-	return load;
-}
-
 int lcd_check_config_load(struct aml_lcd_drv_s *drv)
 {
-	drv->config_load = lcd_panel_config_load_detect(drv->index, __func__);
+	drv->config_load = panel_config_load_detect(drv->index, __func__);
 	if (drv->config_load == LCD_CONFIG_NONE || drv->config_load == LCD_CONFIG_ERR)
 		return -1;
 

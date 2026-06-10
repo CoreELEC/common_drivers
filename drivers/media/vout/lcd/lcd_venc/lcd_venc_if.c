@@ -17,6 +17,11 @@
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #include "../lcd_common.h"
 #include "lcd_venc.h"
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+#include <linux/amlogic/media/vout/backlight/backlight.h>
+#include <linux/amlogic/media/vout/backlight/aml_bl.h>
+#endif
+#include <linux/amlogic/media/vout/panel_utils/panel_common.h>
 
 static struct lcd_venc_op_s lcd_venc_op = {
 	.init_flag = 0,
@@ -111,13 +116,13 @@ void lcd_window_attr_change(struct aml_lcd_drv_s *pdrv)
 	int ret;
 
 	if (!lcd_venc_op.window_attr_change) {
-		LCDERR("[%d]: %s: invalid\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: invalid", __func__);
 		return;
 	}
 
 	ret = lcd_venc_op.window_attr_change(pdrv);
 	if (ret) {
-		LCDERR("[%d]: %s: window attr change failed\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: window attr change failed", __func__);
 		return;
 	}
 }
@@ -127,13 +132,13 @@ void lcd_debug_cursor(struct aml_lcd_drv_s *pdrv, struct lcd_cursor_attr_s *curs
 	int ret;
 
 	if (!lcd_venc_op.venc_probe_cursor) {
-		LCDERR("[%d]: %s: invalid\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: invalid", __func__);
 		return;
 	}
 
 	ret = lcd_venc_op.venc_probe_cursor(pdrv, cursor_attr);
 	if (ret) {
-		LCDERR("[%d]: %s: cursor set failed\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: cursor set failed", __func__);
 		return;
 	}
 }
@@ -230,6 +235,8 @@ void lcd_set_venc(struct aml_lcd_drv_s *pdrv)
 
 void lcd_set_venc_timing(struct aml_lcd_drv_s *pdrv)
 {
+	u32 index = pdrv->index;
+
 	if (!lcd_venc_op.venc_set_timing)
 		return;
 
@@ -237,7 +244,9 @@ void lcd_set_venc_timing(struct aml_lcd_drv_s *pdrv)
 	lcd_venc_op.venc_set_timing(pdrv);
 	lcd_act_timing_dbg_print(pdrv);
 
-	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+	aml_bl_notifier_call_chain(BACKLIGHT_EVENT_UPDATE, (void *)(&index));
+#endif
 }
 
 void lcd_set_venc_dummy(struct aml_lcd_drv_s *pdrv, int flag)
@@ -258,6 +267,8 @@ void lcd_set_venc_dummy(struct aml_lcd_drv_s *pdrv, int flag)
 
 void lcd_venc_fr_change(struct aml_lcd_drv_s *pdrv)
 {
+	u32 index = pdrv->index;
+
 	if (!lcd_venc_op.venc_fr_change) {
 		LCD_ERR(pdrv, "venc_fr_change: invalid");
 		return;
@@ -270,7 +281,9 @@ void lcd_venc_fr_change(struct aml_lcd_drv_s *pdrv)
 		pdrv->curr_dev->dev_cfg.timing.act_timing.h_period,
 		pdrv->curr_dev->dev_cfg.timing.act_timing.v_period);
 
-	aml_lcd_notifier_call_chain(LCD_EVENT_BACKLIGHT_UPDATE, (void *)pdrv);
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+	aml_bl_notifier_call_chain(BACKLIGHT_EVENT_UPDATE, (void *)(&index));
+#endif
 }
 
 void lcd_venc_enable(struct aml_lcd_drv_s *pdrv, int flag)
@@ -328,7 +341,7 @@ int lcd_get_venc_init_config(struct aml_lcd_drv_s *pdrv)
 			boot_ctrl->ppc,
 			boot_ctrl->clk_mode,
 			boot_ctrl->frame_rate,
-			boot_ctrl->init_level,
+			get_panel_init_level(pdrv->index),
 			boot_ctrl->if_state,
 			boot_ctrl->bl_state);
 	}

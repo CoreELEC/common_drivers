@@ -15,6 +15,8 @@
 #include <linux/reset.h>
 #include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#include <linux/amlogic/media/vout/panel_utils/panel_common.h>
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #include "../lcd_reg.h"
 #include "../lcd_common.h"
 #include "lcd_venc.h"
@@ -36,7 +38,7 @@ static void lcd_venc_wait_vsync(struct aml_lcd_drv_s *pdrv)
 		line_cnt_previous = line_cnt;
 		udelay(2);
 	}
-	/*LCDPR("line_cnt=%d, line_cnt_previous=%d, i=%d\n",
+	/*LCD_PR(NULL, "line_cnt=%d, line_cnt_previous=%d, i=%d\n",
 	 *	line_cnt, line_cnt_previous, i);
 	 */
 }
@@ -46,7 +48,7 @@ static unsigned int lcd_venc_get_max_lint_cnt(struct aml_lcd_drv_s *pdrv)
 	unsigned int line_cnt;
 
 	line_cnt = lcd_vcbus_read(ENCL_VIDEO_MAX_LNCNT) + 1;
-	/*LCDPR("[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
+	/*LCD_PR(NULL, "[%d]: %s: line_cnt=%d", pdrv->index, __func__, line_cnt); */
 
 	return line_cnt;
 }
@@ -324,6 +326,7 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 	struct lcd_boot_ctrl_s *boot_ctrl = pdrv->boot_ctrl;
 	unsigned int val = 0;
 	unsigned char valid;
+	u8 panel_init_level;
 
 	pconf->timing.act_timing.h_active = lcd_vcbus_read(ENCL_VIDEO_HAVON_END)
 		- lcd_vcbus_read(ENCL_VIDEO_HAVON_BEGIN) + 1;
@@ -337,7 +340,8 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 	val = lcd_vcbus_read(L_STH1_HS_ADDR);
 	valid = (val >> 9) & 0xf;
 	if (boot_ctrl && valid == 0xa) {
-		boot_ctrl->init_level = val & 0xf;
+		panel_init_level = val & 0xf;
+		set_panel_init_level(pdrv->index, panel_init_level);
 		boot_ctrl->if_state = (val >> 4) & 0x1;
 		boot_ctrl->dccd_flag = (val >> 5) & 0x1;
 		boot_ctrl->mute_flag = (val >> 6) & 0x1;
@@ -349,7 +353,8 @@ static int lcd_venc_get_init_config(struct aml_lcd_drv_s *pdrv)
 		boot_ctrl->lcd_type = val & 0xf;
 		boot_ctrl->clk_mode = (val >> 4) & 0xf;
 		boot_ctrl->ppc = (val >> 8) & 0x3;
-		boot_ctrl->bl_state = (val >> 11) & 0x1;
+		// boot_ctrl->bl_state = (val >> 11) & 0x1;
+		aml_bl_set_bl_state(pdrv->index, (val >> 11) & 0x1);
 
 		val = lcd_vcbus_read(L_STH1_VE_ADDR);
 		boot_ctrl->advanced_flag = val & 0xff;

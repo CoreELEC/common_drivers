@@ -10,8 +10,8 @@
 #include <linux/workqueue.h>
 #include <linux/amlogic/media/amvecm/cabc_addc_alg.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
-#ifdef CONFIG_AMLOGIC_LCD
-#include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+#include <linux/amlogic/media/vout/backlight/backlight.h>
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
@@ -230,7 +230,7 @@ static struct aad_debug_param_s aad_dbg_parm = {
 
 static char aad_ver[32] = "aad_v1_20210621";
 int cur_o_gain[3] = {4096, 4096, 4096};
-#ifdef CONFIG_AMLOGIC_LCD
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
 static u32 pre_backlight;
 #endif
 struct aad_fw_param_s fw_aad_parm = {
@@ -324,9 +324,8 @@ void backlight_update_ctrl(u32 en)
 	if (is_amdv_on())
 		return;
 #endif
-#ifdef CONFIG_AMLOGIC_LCD
-		aml_lcd_atomic_notifier_call_chain(LCD_EVENT_BACKLIGHT_GD_SEL,
-			&en);
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+		aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_SEL, &en);
 #endif
 }
 
@@ -336,10 +335,9 @@ static void backlight_setting_update(u32 backlight)
 	if (is_amdv_on())
 		return;
 #endif
-#ifdef CONFIG_AMLOGIC_LCD
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
 	if (pre_backlight != backlight) {
-		aml_lcd_atomic_notifier_call_chain(LCD_EVENT_BACKLIGHT_GD_DIM,
-			&backlight);
+		aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_DIM, &backlight);
 		pre_backlight = backlight;
 	}
 #endif

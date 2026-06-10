@@ -26,7 +26,7 @@ static void dptx_venc_wait_vsync(struct edptx_drv_s *edp)
 		if (line_cnt < line_cnt_previous)
 			break;
 		line_cnt_previous = line_cnt;
-		dptx_delay_us(1);
+		edptx_delay_us(1);
 	}
 	/*eDP_PR(edp, "line_cnt=%d, line_cnt_previous=%d, i=%d\n",
 	 *	line_cnt, line_cnt_previous, i);
@@ -262,7 +262,7 @@ static void edptx_venc_set(struct edptx_drv_s *edp)
 		dptx_dual_set_t7(edp, 1, 1, edp->setting.dual_port_type);
 }
 
-static void dptx_venc_enable_ctrl(struct edptx_drv_s *edp, unsigned char flag)
+static void edptx_venc_enable_ctrl(struct edptx_drv_s *edp, unsigned char flag)
 {
 	edp_vcbus_write(ENCL_VIDEO_EN + edp->data->offset_venc[edp->idx], flag ? 1 : 0);
 }
@@ -306,7 +306,7 @@ void edptx_venc_op_init_a9(struct edptx_venc_op_s *venc_op)
 	venc_op->venc_debug_test   = dptx_venc_debug_test;
 	venc_op->venc_set_timing   = edptx_venc_set_timing;
 	venc_op->venc_set          = edptx_venc_set;
-	venc_op->venc_switch       = dptx_venc_enable_ctrl;
+	venc_op->venc_switch       = edptx_venc_enable_ctrl;
 	venc_op->mute_set          = dptx_venc_mute_set;
 	venc_op->get_encl_line_cnt = dptx_venc_get_encl_line_cnt;
 };

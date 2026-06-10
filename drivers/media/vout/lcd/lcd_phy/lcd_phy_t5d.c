@@ -123,7 +123,7 @@ static void lcd_phy_cntl_set(struct aml_lcd_drv_s *pdrv, int status, int bypass)
 	struct phy_config_s *phy_cfg = &pdrv->curr_dev->dev_cfg.phy_cfg;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("%s: %d, bypass:%d\n", __func__, status, bypass);
+		LCD_PR(NULL, "%s: %d, bypass:%d", __func__, status, bypass);
 
 	if (status) {
 		reg_data = 1; //bit[0]=1

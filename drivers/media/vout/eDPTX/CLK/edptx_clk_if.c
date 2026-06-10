@@ -19,20 +19,20 @@
 #include "../edptx_common.h"
 #include "./edptx_clk_ctrl.h"
 
-struct dptx_clk_op_s *dptx_clk_op_s;
+struct edptx_clk_op_s *edptx_clk_op_s;
 
 void dptx_clk_set_vid_clk(struct edptx_drv_s *edp, u32 pixel_clk)
 {
 	u8 cnt = 0;
 
-	if (dptx_clk_op_s->vid_clk_config)
-		dptx_clk_op_s->vid_clk_config(edp, pixel_clk);
-	if (dptx_clk_op_s->link_clk_set)
-		dptx_clk_op_s->vid_clk_set(edp);
+	if (edptx_clk_op_s->vid_clk_config)
+		edptx_clk_op_s->vid_clk_config(edp, pixel_clk);
+	if (edptx_clk_op_s->link_clk_set)
+		edptx_clk_op_s->vid_clk_set(edp);
 
-	dptx_delay_ms(1);
+	edptx_delay_ms(1);
 
-	while (dptx_clk_msr_check(edp->data->venc_clk_msr_id[edp->idx], pixel_clk)) {
+	while (edptx_clk_msr_check(edp->data->venc_clk_msr_id[edp->idx], pixel_clk)) {
 		if (cnt++ >= 10) {
 			eDP_ERR(edp, "%s timeout", __func__);
 			break;
@@ -42,34 +42,34 @@ void dptx_clk_set_vid_clk(struct edptx_drv_s *edp, u32 pixel_clk)
 
 void edptx_clk_set_link_clk(struct edptx_drv_s *edp, u8 port, u8 dptx_link_rate)
 {
-	if (dptx_clk_op_s->link_clk_config)
-		dptx_clk_op_s->link_clk_config(edp, port, dptx_link_rate);
+	if (edptx_clk_op_s->link_clk_config)
+		edptx_clk_op_s->link_clk_config(edp, port, dptx_link_rate);
 
-	if (dptx_clk_op_s->clktree_set)
-		dptx_clk_op_s->clktree_set(edp);
+	if (edptx_clk_op_s->clktree_set)
+		edptx_clk_op_s->clktree_set(edp);
 
-	if (dptx_clk_op_s->link_clk_set)
-		dptx_clk_op_s->link_clk_set(edp, port);
+	if (edptx_clk_op_s->link_clk_set)
+		edptx_clk_op_s->link_clk_set(edp, port);
 }
 
 void dptx_clk_config_print(struct edptx_drv_s *edp)
 {
-	if (dptx_clk_op_s->clk_config_print)
-		dptx_clk_op_s->clk_config_print(edp);
+	if (edptx_clk_op_s->clk_config_print)
+		edptx_clk_op_s->clk_config_print(edp);
 }
 
 void dptx_clk_set_ssc(struct edptx_drv_s *edp, u8 status)
 {
 }
 
-void dptx_clk_config_probe(struct edptx_drv_s *edp)
+void edptx_clk_config_probe(struct edptx_drv_s *edp)
 {
 	switch (edp->data->chip_type) {
 	case eDPTX_CHIP_T7:
-		dptx_clk_op_s = dptx_clk_op_init_t7(edp);
+		edptx_clk_op_s = edptx_clk_op_init_t7(edp);
 		break;
 	case eDPTX_CHIP_A9:
-		dptx_clk_op_s = dptx_clk_op_init_a9(edp);
+		edptx_clk_op_s = edptx_clk_op_init_a9(edp);
 		break;
 	default:
 		eDP_ERR(edp, "%s: invalid chip type", __func__);

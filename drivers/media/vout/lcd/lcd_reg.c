@@ -209,8 +209,7 @@ static inline void __iomem *check_lcd_tcon_i2c_reg(struct aml_lcd_drv_s *pdrv,
 	reg_offset = LCD_REG_OFFSET_BYTE(reg);
 
 	if (reg_offset >= pdrv->drv_res.reg_map[reg_bus].size) {
-		LCDERR("[%d]: invalid i2c reg offset: 0x%04x\n",
-		       pdrv->index, reg);
+		LCD_ERR(pdrv, "invalid i2c reg offset: 0x%04x", reg);
 		return NULL;
 	}
 	p = pdrv->drv_res.reg_map[reg_bus].p + reg_offset;
@@ -465,7 +464,7 @@ unsigned int lcd_hiu_read(unsigned int reg)
 	temp =  vclk_hiu_reg_read(reg);
 	spin_unlock_irqrestore(&lcd_reg_spinlock, flags);
 	if (lcd_debug_print_flag & LCD_DBG_PR_REG)
-		LCDPR("%s: 0x%02x = 0x%08x\n", __func__, reg, temp);
+		LCD_PR(NULL, "%s: 0x%02x = 0x%08x", __func__, reg, temp);
 
 	return temp;
 };
@@ -475,7 +474,7 @@ void lcd_hiu_write(unsigned int reg, unsigned int val)
 	unsigned long flags = 0;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_REG)
-		LCDPR("%s: 0x%02x = 0x%08x\n", __func__, reg, val);
+		LCD_PR(NULL, "%s: 0x%02x = 0x%08x", __func__, reg, val);
 	spin_lock_irqsave(&lcd_reg_spinlock, flags);
 	vclk_hiu_reg_write(reg, val);
 	spin_unlock_irqrestore(&lcd_reg_spinlock, flags);
@@ -487,7 +486,7 @@ void lcd_hiu_setb(unsigned int reg, unsigned int val,
 	unsigned long flags = 0;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_REG) {
-		LCDPR("%s: 0x%02x[%d:%d] = 0x%x\n",
+		LCD_PR(NULL, "%s: 0x%02x[%d:%d] = 0x%x\n",
 			__func__, reg, (start + len - 1), start, val);
 	}
 	spin_lock_irqsave(&lcd_reg_spinlock, flags);
@@ -507,7 +506,7 @@ unsigned int lcd_hiu_getb(unsigned int reg,
 	temp =  (vclk_hiu_reg_read(reg) >> (start)) & ((1L << (len)) - 1);
 	spin_unlock_irqrestore(&lcd_reg_spinlock, flags);
 	if (lcd_debug_print_flag & LCD_DBG_PR_REG) {
-		LCDPR("%s: 0x%02x[%d:%d] = 0x%x\n",
+		LCD_PR(NULL, "%s: 0x%02x[%d:%d] = 0x%x\n",
 			__func__, reg, (start + len - 1), start, temp);
 	}
 

@@ -41,7 +41,12 @@
 #include <linux/string.h>
 #include <linux/vmalloc.h>
 #include <linux/amlogic/arm-smccc.h>
+#ifdef CONFIG_AMLOGIC_LCD
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#endif
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+#include <linux/amlogic/media/vout/backlight/backlight.h>
+#endif
 #include <linux/amlogic/media/rdma/reg_shadow.h>
 
 static unsigned int dv_ll_output_mode = AMDV_OUTPUT_MODE_HDR10;
@@ -5726,9 +5731,8 @@ void enable_amdv_v1(int enable)
 		/*dv release control of pwm*/
 		if (is_aml_tvmode()) {
 			gd_en = 0;
-#ifdef CONFIG_AMLOGIC_LCD
-			aml_lcd_atomic_notifier_call_chain
-			(LCD_EVENT_BACKLIGHT_GD_SEL, &gd_en);
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+			aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_SEL, &gd_en);
 			set_dv_control_backlight_status(false);
 #endif
 		}

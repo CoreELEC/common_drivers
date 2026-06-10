@@ -14,7 +14,7 @@
 #include <linux/io.h>
 #include <linux/reset.h>
 #include <linux/sched/clock.h>
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include "../../lcd_common.h"
 #include "../../lcd_reg.h"
 #include "lcd_tcon.h"

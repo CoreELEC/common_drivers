@@ -64,7 +64,7 @@ int plcd_spi_write_dft(void *tbuf, int tlen, int word_bits)
 	spi_message_add_tail(&xfer, &msg);
 	ret = spi_sync(spi_cfg->spi_dev, &msg);
 	if (ret)
-		LCDERR("%s\n", __func__);
+		LCD_ERR(NULL, "%s spi err %d", __func__, ret);
 
 	return ret;
 }
@@ -78,7 +78,7 @@ int plcd_spi_write_cmd1_data4(void *cbuf, int clen, void *dbuf, int dlen, int wo
 	int ret;
 
 	if (!spi_cfg->spi_dev) {
-		LCDERR("spi_cfg->spi_dev is NULL\n");
+		LCD_ERR(NULL, "spi_cfg->spi_dev is NULL\n");
 		return -ENODEV;
 	}
 
@@ -106,7 +106,7 @@ int plcd_spi_write_cmd1_data4(void *cbuf, int clen, void *dbuf, int dlen, int wo
 	ret = spi_sync(spi_cfg->spi_dev, &msg);
 
 	if (ret)
-		LCDERR("%s\n", __func__);
+		LCD_ERR(NULL, "%s spi err %d", __func__, ret);
 
 	return ret;
 }
@@ -132,7 +132,7 @@ int plcd_spi_read(void *tbuf, int tlen, void *rbuf, int rlen)
 	spi_message_add_tail(&xfer[1], &msg);
 	ret = spi_sync(spi_cfg->spi_dev, &msg);
 	if (ret)
-		LCDERR("%s\n", __func__);
+		LCD_ERR(NULL, "%s spi err %d", __func__, ret);
 
 	return ret;
 }
@@ -147,7 +147,7 @@ static int plcd_spi_dev_probe(struct spi_device *spi)
 
 	ret = spi_setup(spi);
 	if (ret)
-		LCDERR("spi setup failed\n");
+		LCD_ERR(NULL, "spi setup failed\n");
 
 	return ret;
 }
@@ -191,7 +191,7 @@ int plcd_spi_driver_remove(void)
 	if (plcd_drv->pcfg->spi_cfg.spi_dev)
 		spi_unregister_driver(&plcd_spi_dev_driver);
 
-	LCDPR("%s ok\n", __func__);
+	LCD_PR(NULL, "%s ok\n", __func__);
 
 	return 0;
 }
@@ -215,18 +215,18 @@ int plcd_spi_vsync_irq_init(void)
 	int ret;
 
 	if (plcd_drv->vs_irq < 0) {
-		LCDERR("%s: no spi vsync_irq\n", __func__);
+		LCD_ERR(NULL, "%s: no spi vsync_irq\n", __func__);
 		return -1;
 	}
 	spi_vs_irq = plcd_drv->vs_irq;
 	ret = request_irq(spi_vs_irq, spi_vsync_isr, IRQF_TRIGGER_RISING,
 			"per_lcd_spi_vsync_irq", (void *)"per_lcd");
 	if (ret) {
-		LCDERR("can't request spi_vs_irq\n");
+		LCD_ERR(NULL, "can't request spi_vs_irq\n");
 		return -1;
 	}
 	if (per_lcd_debug_flag)
-		LCDPR("request spi_vs_irq successful\n");
+		LCD_PR(NULL, "request spi_vs_irq successful\n");
 	return 0;
 }
 
@@ -237,7 +237,7 @@ void spi_test_pure_color(unsigned int index)
 	unsigned int i = 0;
 
 	if (plcd_set_mem()) {
-		LCDERR("set mem failed\n");
+		LCD_ERR(NULL, "set mem failed\n");
 		return;
 	}
 
@@ -251,7 +251,7 @@ void spi_test_pure_color(unsigned int index)
 		block_s = 2;
 		break;
 	default:
-		LCDERR("unsupported color format\n");
+		LCD_ERR(NULL, "unsupported color format\n");
 		return;
 	}
 
@@ -270,7 +270,7 @@ void spi_test_pure_color(unsigned int index)
 		plcd_drv->frame_post(plcd_drv->frame_addr,
 			0, plcd_drv->pcfg->h, 0, plcd_drv->pcfg->v);
 	else
-		LCDERR("device not support frame_flush or frame_post\n");
+		LCD_ERR(NULL, "device not support frame_flush or frame_post\n");
 
 	plcd_unset_mem();
 }
@@ -283,7 +283,7 @@ void spi_test_color_bars(unsigned int index)
 	unsigned int *c;
 
 	if (plcd_set_mem()) {
-		LCDERR("set mem failed\n");
+		LCD_ERR(NULL, "set mem failed\n");
 		return;
 	}
 
@@ -297,7 +297,7 @@ void spi_test_color_bars(unsigned int index)
 		block_s = 2;
 		break;
 	default:
-		LCDERR("unsupported color format\n");
+		LCD_ERR(NULL, "unsupported color format\n");
 		return;
 	}
 
@@ -326,7 +326,7 @@ void spi_test_color_bars(unsigned int index)
 		plcd_drv->frame_post(plcd_drv->frame_addr,
 			0, plcd_drv->pcfg->h, 0, plcd_drv->pcfg->v);
 	else
-		LCDERR("device not support frame_flush or frame_post\n");
+		LCD_ERR(NULL, "device not support frame_flush or frame_post");
 
 	plcd_unset_mem();
 }
@@ -349,7 +349,7 @@ int spi_test_dft(const char *buf)
 		spi_test_color_bars(index);
 		break;
 	default:
-		LCDPR("unsupported command\n");
+		LCD_PR(NULL, "unsupported command\n");
 		break;
 	}
 	return 0;
@@ -375,7 +375,7 @@ int spi_power_cmd_dynamic_size(int flag)
 		if (type == PER_LCD_CMD_TYPE_END)
 			break;
 		if (per_lcd_debug_flag) {
-			LCDPR("%s: step %d: type=0x%02x, cmd_size=%d\n",
+			LCD_PR(NULL, "%s: step %d: type=0x%02x, cmd_size=%d",
 			      __func__, step, type, table[i + 1]);
 		}
 
@@ -389,7 +389,7 @@ int spi_power_cmd_dynamic_size(int flag)
 			/* do nothing */
 		} else if (type == PER_LCD_CMD_TYPE_GPIO) {
 			if (cmd_size < 2) {
-				LCDERR("step %d: invalid cmd_size %d for GPIO\n",
+				LCD_ERR(NULL, "step %d: invalid cmd_size %d for GPIO\n",
 				       step, cmd_size);
 				goto power_cmd_dynamic_next;
 			}
@@ -414,7 +414,7 @@ int spi_power_cmd_dynamic_size(int flag)
 			if (table[i + cmd_size + 1] > 0)
 				plcd_usleep(table[i + cmd_size + 1] * 1000);
 		} else {
-			LCDERR("%s: type 0x%02x invalid\n", __func__, type);
+			LCD_ERR(NULL, "%s: type 0x%02x invalid\n", __func__, type);
 		}
 power_cmd_dynamic_next:
 		i += (cmd_size + 2);
@@ -433,7 +433,7 @@ int spi_power_cmd_fixed_size(int flag)
 
 	cmd_size = plcd_drv->pcfg->cmd_size;
 	if (cmd_size < 2) {
-		LCDERR("%s: invalid cmd_size %d\n", __func__, cmd_size);
+		LCD_ERR(NULL, "%s: invalid cmd_size %d\n", __func__, cmd_size);
 		return -1;
 	}
 
@@ -450,7 +450,8 @@ int spi_power_cmd_fixed_size(int flag)
 		if (type == PER_LCD_CMD_TYPE_END)
 			break;
 		if (per_lcd_debug_flag)
-			LCDPR("%s: step %d type=0x%02x size=%d\n", __func__, step, type, cmd_size);
+			LCD_PR(NULL, "%s: step %d type=0x%02x size=%d",
+				__func__, step, type, cmd_size);
 
 		if (type == PER_LCD_CMD_TYPE_NONE) {
 			/* do nothing */
@@ -473,7 +474,7 @@ int spi_power_cmd_fixed_size(int flag)
 			plcd_spi_write_dft(&table[i + 1], cmd_size, 8);
 			plcd_usleep(table[i + cmd_size - 1] * 1000);
 		} else {
-			LCDERR("%s: type 0x%02x invalid\n", __func__, type);
+			LCD_ERR(NULL, "%s: type 0x%02x invalid", __func__, type);
 		}
 		i += cmd_size;
 		step++;
@@ -487,11 +488,11 @@ int spi_power_on_init_dft(void)
 	int ret = 0;
 
 	if (plcd_drv->pcfg->init_on_cnt < 1) {
-		LCDERR("%s: init_on_cnt %d is invalid\n", __func__, plcd_drv->pcfg->cmd_size);
+		LCD_ERR(NULL, "%s: init_on_cnt %d is invalid", __func__, plcd_drv->pcfg->cmd_size);
 		return -1;
 	}
 	if (!plcd_drv->pcfg->init_on) {
-		LCDERR("%s: init_data is null\n", __func__);
+		LCD_ERR(NULL, "%s: init_data is null\n", __func__);
 		return -1;
 	}
 
@@ -508,11 +509,11 @@ int spi_power_off_dft(void)
 	int ret = 0;
 
 	if (plcd_drv->pcfg->init_off_cnt < 1) {
-		LCDERR("%s: init_off_cnt %d is invalid\n", __func__, plcd_drv->pcfg->cmd_size);
+		LCD_ERR(NULL, "%s: init_off_cnt %d is invalid", __func__, plcd_drv->pcfg->cmd_size);
 		return -1;
 	}
 	if (!plcd_drv->pcfg->init_off) {
-		LCDERR("%s: init_data is null\n", __func__);
+		LCD_ERR(NULL, "%s: init_data is null", __func__);
 		return -1;
 	}
 
@@ -526,9 +527,9 @@ int spi_power_off_dft(void)
 
 int __init plcd_spi_device_init(void)
 {
-	LCDPR("plcd spi device init\n");
+	LCD_PR(NULL, "plcd spi device init");
 	if (spi_register_driver(&plcd_spi_dev_driver)) {
-		LCDPR("plcd spi driver registration failed\n");
+		LCD_PR(NULL, "plcd spi driver registration failed");
 		return -ENODEV;
 	}
 	return 0;

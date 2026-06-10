@@ -53,39 +53,39 @@ static void dptx0_ana_phy_cntl_set(struct edptx_drv_s *edp, u8 status)
 {
 	struct edptx_phy_cfg_s *phy = &edp->phy_cfg;
 
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL1, status ? 0x46770038 : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL2, status ? 0x0000ffff : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL3,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL1, status ? 0x46770038 : 0);
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL2, status ? 0x0000ffff : 0);
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL3,
 		status ? (0x16530028 | (phy->lane[0].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL4,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL4,
 		status ? (0x16530028 | (phy->lane[1].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL5,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL5,
 		status ? (0x16530028 | (phy->lane[2].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL6,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL6,
 		status ? (0x16530028 | (phy->lane[3].preem << 28)) : 0);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL7, data_lane);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL8, data_lane);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL9, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL7, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL8, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL9, data_lane);
 }
 
 static void dptx1_ana_phy_cntl_set(struct edptx_drv_s *edp, u8 status)
 {
 	struct edptx_phy_cfg_s *phy = &edp->phy_cfg;
 
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL10, status ? 0x46770038 : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL11, status ? 0x0000ffff : 0);
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL10, status ? 0x46770038 : 0);
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL11, status ? 0x0000ffff : 0);
 
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL12,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL12,
 		status ? (0x16530028 | (phy->lane[0].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL13,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL13,
 		status ? (0x16530028 | (phy->lane[1].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL14,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL14,
 		status ? (0x16530028 | (phy->lane[2].preem << 28)) : 0);
-	edp_ana_write(ANACTRL_DIF_PHY_CNTL15,
+	edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL15,
 		status ? (0x16530028 | (phy->lane[3].preem << 28)) : 0);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL16, data_lane);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL17, data_lane);
-	//edp_ana_write(ANACTRL_DIF_PHY_CNTL18, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL16, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL17, data_lane);
+	//edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL18, data_lane);
 }
 
 static void dptx_ana_phy_set(struct edptx_drv_s *edp, u8 port, u8 status)
@@ -103,7 +103,7 @@ static void dptx_ana_phy_set(struct edptx_drv_s *edp, u8 port, u8 status)
 
 	if (status) {
 		vswing = phy->vswing >= 0x3 ? phy->vswing : 0x3;
-		edp_ana_write(ANACTRL_DIF_PHY_CNTL19, 0x00406240 | vswing);
+		edp_ana_write(edp, ANACTRL_DIF_PHY_CNTL19, 0x00406240 | vswing);
 	}
 	//eDP_P_PR(edp, port, "phy lane_lock: 0x%x\n", phy_ctrl_p->lane_lock);
 }

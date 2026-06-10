@@ -73,12 +73,12 @@ static int dptx_link_rate_config_reduce(struct edptx_drv_s *edp)
 		link_rate = edp->sink.link[port].link_rate;
 		lane_cnt = edp->sink.link[port].lane_count;
 
-		if (link_rate > DP_LINK_RATE_HBR2) {
-			link_rate = DP_LINK_RATE_HBR2;
-		} else if (link_rate > DP_LINK_RATE_HBR) {
-			link_rate = DP_LINK_RATE_HBR;
-		} else if (link_rate > DP_LINK_RATE_RBR) {
-			link_rate = DP_LINK_RATE_RBR;
+		if (link_rate > eDP_LINK_RATE_HBR2) {
+			link_rate = eDP_LINK_RATE_HBR2;
+		} else if (link_rate > eDP_LINK_RATE_HBR) {
+			link_rate = eDP_LINK_RATE_HBR;
+		} else if (link_rate > eDP_LINK_RATE_RBR) {
+			link_rate = eDP_LINK_RATE_RBR;
 		} else {
 			eDP_ERR(edp, "%s: already lowest link rate", __func__);
 			return 1;
@@ -365,7 +365,7 @@ static int dptx_run_channel_equalization_loop(struct edptx_drv_s *edp)
 				continue;
 			dptx_training_phy_update_apply(edp, port);
 
-			dptx_delay_us(dptx_train_rd_intv[edp->sink.link[port].cap.train_rd_intv]);
+			edptx_delay_us(dptx_train_rd_intv[edp->sink.link[port].cap.train_rd_intv]);
 			ret = dptx_check_channel_equalization(edp, port);
 			if (ret < 0)
 				eDP_P_ERR(edp, port, "%s: aux error at loop[%u]", __func__, i);
@@ -440,7 +440,7 @@ static int edptx_run_clk_recovery_loop(struct edptx_drv_s *edp)
 				continue;
 			dptx_training_phy_update_apply(edp, port);
 
-			dptx_delay_ms(DP_CLOCK_REC_TIMEOUT); //wait for clock recovery
+			edptx_delay_ms(DP_CLOCK_REC_TIMEOUT); //wait for clock recovery
 			ret = edptx_check_cr(edp, port); //0=success
 			if (ret < 0)
 				eDP_P_ERR(edp, port, "%s: aux error at loop[%u]", __func__, i);
@@ -624,11 +624,11 @@ int edptx_fast_lt(struct edptx_drv_s *edp)
 
 	//set training pattern for CR
 	edptx_set_pattern_to_all_port(edp, eDPTX_TRP_CR, 0, 0, 0);
-	dptx_delay_ms(1);
+	edptx_delay_ms(1);
 
 	//set training pattern for EQ
 	edptx_set_pattern_to_all_port(edp, eDPTX_TRP_EQ, 0, 0, 0);
-	dptx_delay_ms(1);
+	edptx_delay_ms(1);
 
 	// check result
 	for (port = 0; port < eDPTX_MAX_PORT; port++) {

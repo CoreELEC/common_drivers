@@ -15,8 +15,8 @@
 #include <linux/compat.h>
 #include <linux/of.h>
 #include <linux/amlogic/media/vout/lcd/lcd_extern.h>
-
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/panel_common.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #include "lcd_extern.h"
 
@@ -61,7 +61,7 @@ static int lcd_extern_init_table_handle_dts(struct lcd_extern_driver_s *edrv,
 		EXTERR("%s: get init_on failed\n", extconf->name);
 		goto lcd_extern_init_table_handle_dts_err;
 	}
-	table = lcd_init_table_load_array("ext_init_on", extconf->cmd_size,
+	table = panel_init_table_load_array("ext_init_on", extconf->cmd_size,
 				init_buf, len_on, LCD_EXTERN_INIT_ON_MAX, &data_cnt);
 	if (!table)
 		goto lcd_extern_init_table_handle_dts_err;
@@ -74,7 +74,7 @@ static int lcd_extern_init_table_handle_dts(struct lcd_extern_driver_s *edrv,
 		EXTERR("%s: get init_off failed\n", extconf->name);
 		goto lcd_extern_init_table_handle_dts_err;
 	}
-	table = lcd_init_table_load_array("ext_ini_off", extconf->cmd_size,
+	table = panel_init_table_load_array("ext_ini_off", extconf->cmd_size,
 				init_buf, len_off, LCD_EXTERN_INIT_OFF_MAX, &data_cnt);
 	if (!table)
 		goto lcd_extern_init_table_handle_dts_err;
@@ -589,7 +589,7 @@ static int lcd_extern_get_config_ini(struct lcd_extern_driver_s *edrv,
 	if (!init_buf)
 		return -1;
 	data_cnt = lcd_ini_get_array(inip, psec, "init_on", init_buf, init_len);
-	init_data = lcd_init_table_load_array("ext_init_on", edev->config.cmd_size,
+	init_data = panel_init_table_load_array("ext_init_on", edev->config.cmd_size,
 						      init_buf, data_cnt,
 						      LCD_EXTERN_INIT_ON_MAX, &init_len);
 	if (!init_data) {
@@ -609,7 +609,7 @@ static int lcd_extern_get_config_ini(struct lcd_extern_driver_s *edrv,
 	if (!init_buf)
 		return -1;
 	data_cnt = lcd_ini_get_array(inip, psec, "init_off", init_buf, init_len);
-	init_data = lcd_init_table_load_array("ext_init_off", edev->config.cmd_size,
+	init_data = panel_init_table_load_array("ext_init_off", edev->config.cmd_size,
 					      init_buf, data_cnt,
 					      LCD_EXTERN_INIT_OFF_MAX, &init_len);
 	if (!init_data) {
@@ -631,7 +631,7 @@ lcd_extern_get_config_ini_init_err:
 
 int lcd_ext_check_config_load(struct lcd_extern_driver_s *drv)
 {
-	drv->config_load = lcd_panel_config_load_detect(drv->index, __func__);
+	drv->config_load = panel_config_load_detect(drv->index, __func__);
 	if (drv->config_load == LCD_CONFIG_NONE || drv->config_load == LCD_CONFIG_ERR)
 		return -1;
 

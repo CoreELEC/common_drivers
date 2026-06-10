@@ -44,7 +44,7 @@ static int edptx_drm_add_modes(struct meson_panel_dev *dptx_drm_dev,
 	struct drm_eDP_wrapper_s *wrapper =
 		(struct drm_eDP_wrapper_s *)to_drm_edptx_wrapper(dptx_drm_dev);
 	struct edptx_drv_s *edp = wrapper->edp_drv;
-	struct dptx_detail_timing_s *raw_timing;
+	struct edptx_detail_timing_s *raw_timing;
 	struct dptx_vmode_s *vmd_p;
 	u64 pclk;
 
@@ -156,7 +156,7 @@ u8 edptx_drm_timing_find(struct edptx_drv_s *edp, struct drm_display_mode *pmode
 	u8 idx;
 	u32 fr100;
 	struct dptx_vmode_s *vmode_p;
-	struct dptx_detail_timing_s *v_tm;
+	struct edptx_detail_timing_s *v_tm;
 	u32 pclk, htotal, vtotal, h_active, v_active;
 
 	if (!pmode)
@@ -222,8 +222,8 @@ static int edptx_set_apply_vmode(struct edptx_drv_s *edp,  enum vmode_e mode)
 	// lcd_vrr_dev_register(pdrv);
 	if (mode & VMODE_INIT_BIT_MASK) { //first boot: set clktree
 		//lcd_clk_gate_switch(pdrv, 1);
-		edp->status |= DPTX_STA_DISP_ON;
-	} else if (edp->status & DPTX_STA_LINK_ON) { //mode change
+		edp->status |= eDPTX_STA_DISP_ON;
+	} else if (edp->status & eDPTX_STA_LINK_ON) { //mode change
 		if (edp->next_vmd_idx == 0xff) {
 			eDP_ERR(edp, "next vmode to 640x480p60hz");
 			edptx_user_set_vmode(edp, edp->next_vmd_idx);
@@ -234,8 +234,8 @@ static int edptx_set_apply_vmode(struct edptx_drv_s *edp,  enum vmode_e mode)
 		}
 	} else {
 		//mode change by drm (disable + mode_change)
-		if ((edp->status & DPTX_STA_DRV_READY) == 0)
-			edptx_notifier_call_chain(DPTX_EVENT_PREPARE, (void *)edp);
+		if ((edp->status & eDPTX_STA_DRV_READY) == 0)
+			edptx_notifier_call_chain(eDPTX_EVENT_PREPARE, (void *)edp);
 		edptx_notifier_call_chain(DPTX_PRIORITY_HPD_CHECK, (void *)edp);
 		// aml_lcd_notifier_call_chain(LCD_EVENT_ENABLE, (void *)pdrv);
 		// pdrv->status |= LCD_EVENT_ENABLE;
@@ -258,7 +258,7 @@ static void edptx_drm_set_mode_timing(struct meson_panel_dev *panel,
 	edp = wrapper->edp_drv;
 
 	if (!mode || ((vmode & 0xf) != VMODE_eDP)) {
-		eDP_PR(edp, "null mode received", __func__);
+		eDP_PR(edp, "%s null mode received", __func__);
 		return;
 	}
 
@@ -329,7 +329,7 @@ static const struct component_ops meson_eDPTX_bind_ops = {
 	.unbind	= meson_eDP_unbind,
 };
 
-int dptx_drm_add(struct device *dev)
+int edptx_drm_add(struct device *dev)
 {
 	/*bind to drm*/
 	component_add(dev, &meson_eDPTX_bind_ops);
@@ -337,7 +337,7 @@ int dptx_drm_add(struct device *dev)
 	return 0;
 }
 
-void dptx_drm_remove(struct device *dev)
+void edptx_drm_remove(struct device *dev)
 {
 	component_del(dev, &meson_eDPTX_bind_ops);
 }

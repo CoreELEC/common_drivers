@@ -324,7 +324,7 @@ static int lcd_venc_debug_test(struct aml_lcd_drv_s *pdrv, unsigned int num)
 	v_start = pdrv->curr_dev->dev_cfg.timing.vstart;
 
 	if (num >= 11) {
-		LCDERR("Test %d invalid\n", num);
+		LCD_ERR(pdrv, "Test %d invalid", num);
 		return 0;
 	}
 
@@ -374,14 +374,14 @@ static int lcd_venc_debug_test(struct aml_lcd_drv_s *pdrv, unsigned int num)
 			lcd_vcbus_setb(VPU_VOUT_BLEND_DUMDATA, lcd_enc_tst[num][1], 10, 10);
 			lcd_vcbus_setb(VPU_VOUT_BLEND_DUMDATA, lcd_enc_tst[num][2], 0, 10);
 		} else {
-			LCDERR("Test %d not supported by chip\n", num);
+			LCD_ERR(pdrv, "Test %d not supported by chip", num);
 			return 0;
 		}
 		break;
 	default:
 		return 0;
 	}
-	LCDPR("[%d]: show test pattern: %s\n", pdrv->index, lcd_enc_tst_str[num]);
+	LCD_PR(pdrv, "show test pattern: %s", lcd_enc_tst_str[num]);
 	return 0;
 }
 

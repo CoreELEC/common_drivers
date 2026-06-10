@@ -109,7 +109,7 @@ void dptx_set_venc(struct edptx_drv_s *edp)
 	//lcd_gamma_init(edp);
 }
 
-void dptx_venc_enable(struct edptx_drv_s *edp, u8 flag)
+void edptx_venc_enable(struct edptx_drv_s *edp, u8 flag)
 {
 	if (!edp)
 		return;
@@ -122,7 +122,7 @@ void dptx_venc_enable(struct edptx_drv_s *edp, u8 flag)
 	edptx_venc_op.venc_switch(edp, flag);
 }
 
-void dptx_mute_set(struct edptx_drv_s *edp, u8 flag)
+void edptx_mute_set(struct edptx_drv_s *edp, u8 flag)
 {
 	if (!edp)
 		return;

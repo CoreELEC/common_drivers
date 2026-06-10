@@ -47,11 +47,10 @@ static void lcd_pll_ss_enable(struct aml_lcd_drv_s *pdrv, int status)
 	if (flag) {
 		cconf->ss_en = 1;
 		pll_ctrl2 |= ((1 << 15) | (cconf->ss_dep_sel << 28) | (cconf->ss_str_m << 16));
-		LCDPR("[%d]: pll ss enable: level %d, %dppm\n",
-			pdrv->index, cconf->ss_level, cconf->ss_ppm);
+		LCD_PR(pdrv, "pll ss enable: level %d, %dppm", cconf->ss_level, cconf->ss_ppm);
 	} else {
 		cconf->ss_en = 0;
-		LCDPR("[%d]: pll ss disable\n", pdrv->index);
+		LCD_PR(pdrv, "pll ss disable");
 	}
 	lcd_ana_write(HHI_TCON_PLL_CNTL2, pll_ctrl2);
 }
@@ -101,7 +100,7 @@ static void lcd_set_pll_ss(struct aml_lcd_drv_s *pdrv, unsigned int ss_flag)
 	}
 
 	lcd_ana_write(HHI_TCON_PLL_CNTL2, pll_ctrl2);
-	LCDPR("[%d]: set ssc: %s\n", pdrv->index, prt_str);
+	LCD_PR(pdrv, "set ssc: %s", prt_str);
 }
 
 static void lcd_pll_frac_set(struct aml_lcd_drv_s *pdrv, unsigned int frac)
@@ -110,11 +109,8 @@ static void lcd_pll_frac_set(struct aml_lcd_drv_s *pdrv, unsigned int frac)
 
 	val = lcd_ana_read(HHI_TCON_PLL_CNTL1);
 	lcd_ana_setb(HHI_TCON_PLL_CNTL1, frac, 0, 19);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
-		LCDPR("[%d]: %s: reg 0x%x: 0x%08x->0x%08x, pll_frac=0x%x\n",
-			pdrv->index, __func__, HHI_TCON_PLL_CNTL1,
-			val, lcd_ana_read(HHI_TCON_PLL_CNTL1), frac);
-	}
+	LCD_DBG(pdrv, "%s: reg 0x%x: 0x%08x->0x%08x, pll_frac=0x%x",
+		__func__, HHI_TCON_PLL_CNTL1, val, lcd_ana_read(HHI_TCON_PLL_CNTL1), frac);
 }
 
 static void lcd_pll_m_set(struct aml_lcd_drv_s *pdrv, unsigned int m)
@@ -123,11 +119,8 @@ static void lcd_pll_m_set(struct aml_lcd_drv_s *pdrv, unsigned int m)
 
 	val = lcd_ana_read(HHI_TCON_PLL_CNTL0);
 	lcd_ana_setb(HHI_TCON_PLL_CNTL0, m, 0, 8);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL) {
-		LCDPR("%s: reg 0x%x: 0x%08x->0x%08x, pll_m=0x%x\n",
-			__func__, HHI_TCON_PLL_CNTL0,
-			val, lcd_ana_read(HHI_TCON_PLL_CNTL0), m);
-	}
+	LCD_DBG(pdrv, "%s: reg 0x%x: 0x%08x->0x%08x, pll_m=0x%x",
+		__func__, HHI_TCON_PLL_CNTL0, val, lcd_ana_read(HHI_TCON_PLL_CNTL0), m);
 }
 
 static void lcd_pll_reset(struct aml_lcd_drv_s *pdrv)
@@ -191,7 +184,7 @@ set_pll_retry_tl1:
 	if (ret) {
 		if (cnt++ < PLL_RETRY_MAX)
 			goto set_pll_retry_tl1;
-		LCDERR("hpll lock failed\n");
+		LCD_ERR(NULL, "hpll lock failed\n");
 	} else {
 		udelay(100);
 		lcd_ana_setb(HHI_TCON_PLL_CNTL2, 1, 5, 1);
@@ -378,8 +371,7 @@ static void lcd_prbs_config_clk(struct aml_lcd_drv_s *pdrv, unsigned int lcd_prb
 	} else if (lcd_prbs_mode == LCD_PRBS_MODE_LVDS) {
 		bit_rate = 550000000ULL;
 	} else {
-		LCDERR("[%d]: %s: unsupport lcd_prbs_mode %d\n",
-		       pdrv->index, __func__, lcd_prbs_mode);
+		LCD_ERR(pdrv, "%s: unsupport lcd_prbs_mode %d", __func__, lcd_prbs_mode);
 		return;
 	}
 
@@ -392,8 +384,7 @@ static void lcd_prbs_config_clk(struct aml_lcd_drv_s *pdrv, unsigned int lcd_prb
 	lcd_clk_set(pdrv);
 	lcd_set_vclk_crt(pdrv);
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("[%d]: %s ok\n", pdrv->index, __func__);
+	LCD_DBG(pdrv, "%s ok", __func__);
 }
 
 static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsigned int mode_flag)
@@ -420,7 +411,7 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 		reg_phy_tx_ctrl1 = HHI_LVDS_TX_PHY_CNTL3;
 		break;
 	default:
-		LCDERR("[%d]: %s: invalid drv_index\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: invalid drv_index", __func__);
 		return;
 	}
 	encl_msr_id = cconf->data->enc_clk_msr_id;
@@ -438,7 +429,7 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 		lcd_prbs_cnt = 0;
 		clk_err_cnt = 0;
 		lcd_prbs_mode = (1 << i);
-		LCDPR("[%d]: lcd_prbs_mode: 0x%x\n", pdrv->index, lcd_prbs_mode);
+		LCD_PR(pdrv, "lcd_prbs_mode: 0x%x", lcd_prbs_mode);
 		lcd_prbs_config_clk(pdrv, lcd_prbs_mode, &lcd_encl_clk_check_std,
 				&lcd_fifo_clk_check_std);
 		usleep_range(500, 510);
@@ -472,13 +463,12 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 				}
 			}
 			if (ret) {
-				LCDERR("[%d]: prbs check error 1, val:0x%03x, cnt:%d\n",
-				       pdrv->index, val2, lcd_prbs_cnt);
+				LCD_ERR(pdrv, "prbs check error 1, val:0x%03x, cnt:%d",
+				       val2, lcd_prbs_cnt);
 				goto lcd_prbs_test_err_t5w;
 			}
 			if (lcd_ana_getb(reg_phy_tx_ctrl1, 0, 12)) {
-				LCDERR("[%d]: prbs check error 2, cnt:%d\n",
-				       pdrv->index, lcd_prbs_cnt);
+				LCD_ERR(pdrv, "prbs check error 2, cnt:%d", lcd_prbs_cnt);
 				goto lcd_prbs_test_err_t5w;
 			}
 
@@ -489,8 +479,7 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 			else
 				clk_err_cnt = 0;
 			if (clk_err_cnt >= 10) {
-				LCDERR("[%d]: prbs check error 3(clkmsr), cnt: %d\n",
-				       pdrv->index, lcd_prbs_cnt);
+				LCD_ERR(pdrv, "prbs check error 3(clkmsr), cnt: %d", lcd_prbs_cnt);
 				goto lcd_prbs_test_err_t5w;
 			}
 		}
@@ -501,13 +490,13 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 		if (lcd_prbs_mode == LCD_PRBS_MODE_LVDS) {
 			lcd_prbs_performed |= LCD_PRBS_MODE_LVDS;
 			lcd_prbs_err &= ~(LCD_PRBS_MODE_LVDS);
-			LCDPR("[%d]: lvds prbs check ok\n", pdrv->index);
+			LCD_PR(pdrv, "lvds prbs check ok");
 		} else if (lcd_prbs_mode == LCD_PRBS_MODE_VX1) {
 			lcd_prbs_performed |= LCD_PRBS_MODE_VX1;
 			lcd_prbs_err &= ~(LCD_PRBS_MODE_VX1);
-			LCDPR("[%d]: vx1 prbs check ok\n", pdrv->index);
+			LCD_PR(pdrv, "vx1 prbs check ok");
 		} else {
-			LCDPR("[%d]: prbs check: unsupport mode\n", pdrv->index);
+			LCD_PR(pdrv, "prbs check: unsupport mode");
 		}
 		continue;
 
@@ -540,7 +529,7 @@ static struct lcd_pll_data_s lcd_pll_data_t5w = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 3100000000ULL,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 1,
 	.div_in_fmax = 3100000000ULL,
 	.div_out_fmax = 750000000,
@@ -609,7 +598,7 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_t5w(struct aml_lcd_drv_s *pdrv
 	if (!pdrv->clk_conf) {
 		cconf = kcalloc(1, sizeof(struct lcd_clk_config_s), GFP_KERNEL);
 		if (!cconf) {
-			LCDERR("[%d]: %s: Not enough memory\n", pdrv->index, __func__);
+			LCD_ERR(pdrv, "%s: Not enough memory", __func__);
 			return NULL;
 		}
 	} else {
@@ -617,13 +606,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_t5w(struct aml_lcd_drv_s *pdrv
 		memset(cconf, 0, sizeof(struct lcd_clk_config_s));
 	}
 	cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCDERR("[%d]: %s: Not enough memory for pll config\n", pdrv->index, __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	cconf->data = &lcd_clk_data_t5w;
 	cconf->pll_config[0].pll_id = 0;

@@ -67,7 +67,9 @@
 #include <linux/vmalloc.h>
 #include <linux/amlogic/arm-smccc.h>
 #include <linux/spinlock.h>
-#include <linux/amlogic/media/vout/lcd/lcd_notify.h>
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
+#include <linux/amlogic/media/vout/backlight/backlight.h>
+#endif
 #include <linux/amlogic/gki_module.h>
 #include <linux/amlogic/media/vout/hdmitx_common/hdmitx.h>
 #include <linux/amlogic/media/utils/am_com.h>
@@ -4698,10 +4700,9 @@ void update_pwm_control(void)
 				     amdv_src_format, gd_en, last_backlight);
 		}
 
-#ifdef CONFIG_AMLOGIC_LCD
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
 		if (!force_disable_dv_backlight) {
-			aml_lcd_atomic_notifier_call_chain
-			(LCD_EVENT_BACKLIGHT_GD_SEL, &gd_en);
+			aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_SEL, &gd_en);
 			dv_control_backlight_status = gd_en > 0 ? true : false;
 			if (gd_en)
 				tv_backlight_force_update = true;
@@ -15657,9 +15658,7 @@ void amdv_update_backlight(void)
 					cur_bl;
 				if (debug_dolby & 1)
 					pr_dv_dbg("dv set backlight %d %d\n", cur_bl, new_bl);
-				aml_lcd_atomic_notifier_call_chain
-					(LCD_EVENT_BACKLIGHT_GD_DIM,
-					 &new_bl);
+				aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_DIM, &new_bl);
 				last_backlight = cur_bl;
 				tv_backlight_force_update = false;
 			}
@@ -15671,14 +15670,13 @@ EXPORT_SYMBOL(amdv_update_backlight);
 
 void amdv_disable_backlight(void)
 {
-#ifdef CONFIG_AMLOGIC_LCD
+#ifdef CONFIG_AMLOGIC_BACKLIGHT
 	int gd_en = 0;
 
 	pr_dv_dbg("disable dv backlight\n");
 
 	if (is_aml_tvmode()) {
-		aml_lcd_atomic_notifier_call_chain
-		(LCD_EVENT_BACKLIGHT_GD_SEL, &gd_en);
+		aml_bl_atomic_notifier_call_chain(BACKLIGHT_EVENT_GD_SEL, &gd_en);
 		dv_control_backlight_status = false;
 	}
 #endif

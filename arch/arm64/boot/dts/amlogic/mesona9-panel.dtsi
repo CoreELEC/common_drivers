@@ -25,6 +25,7 @@
 			use-aux-backlight = <0>;
 
 			assigned-preset-timing = <0>;
+			assigned-backlight-index = <0>;
 
 			///*h(period active sync bp pol) v(period active sync bp pol) dft fr*/
 			//timing-0 = <2180 1920 32 180 0 1282 1080 5 194 0 24 48>;
@@ -36,7 +37,7 @@
 			//timing-0-range = <48 60>; /* timing with fixed fr */
 
 			phy_attr=<1 2 0>; /*Fast-LT vswing, Pre-Em, Post-Cur*/
-			bl-wrapper-id = <0xff000000>;
+			bl-wrapper-id = <0x000000>;
 		};
 	};
 
@@ -45,7 +46,7 @@
 		status = "okay";
 		index = <0>;
 
-		reg = <0x0 0xfe016000 0x0 0x0f9>,    /* combo dphy */
+		reg = <0x0 0xfe016000 0x0 0x1000>,    /* ANACTRL_ phy */
 		      <0x0 0xfe074000 0x0 0x1000>;  /* edp_a host */
 		power-domains = <&pwrdm PDID_A9_EDPTX>;
 		interrupts = <0 197 1>,<0 194 1>,<0 287 4>;
@@ -65,14 +66,14 @@
 		//edptx_vcc_on_dir = <1>;
 		//edptx_vcc-off_dir = <0>;
 
-		edptx_bl_en-gpio      = <&gpioy 0 GPIO_ACTIVE_HIGH>;
-		edptx_bl_en-gpio-name = "GPIOY_0";
-		edptx_bl_en_on_dir = <1>;
-		edptx_bl_en-off_dir = <0>;
-		edptx_bl_pwm-gpio      = <&gpioy 1 GPIO_ACTIVE_HIGH>;
-		edptx_bl_pwm-gpio-name = "GPIOY_1";
-		edptx_bl_pwm_on_dir = <1>;
-		edptx_bl_pwm-off_dir = <0>;
+		//edptx_bl_en-gpio      = <&gpioy 0 GPIO_ACTIVE_HIGH>;
+		//edptx_bl_en-gpio-name = "GPIOY_0";
+		//edptx_bl_en_on_dir = <1>;
+		//edptx_bl_en-off_dir = <0>;
+		//edptx_bl_pwm-gpio      = <&gpioy 1 GPIO_ACTIVE_HIGH>;
+		//edptx_bl_pwm-gpio-name = "GPIOY_1";
+		//edptx_bl_pwm_on_dir = <1>;
+		//edptx_bl_pwm-off_dir = <0>;
 
 		edptx_bist-gpio      = <&gpioy 3 GPIO_ACTIVE_HIGH>;
 		edptx_bist-gpio-name = "GPIOY_3";
@@ -107,10 +108,10 @@
 			0x0 0xfe01c000 0x0 0x200   /* mipi_dsi0-A phy */
 			0x0 0xfe072000 0x0 0x400   /* mipi_dsi0-B host */
 			0x0 0xfe018000 0x0 0x200   /* mipi_dsi0-B phy */
-			0x0 0xfe016000 0x0 0x3e4
-			0x0 0xfe004000 0x0 0x070>;  /* vx1_lvds_ctrl */
-		interrupts = <0 197 1>, <0 194 1>, <0 208 1>;
-		interrupt-names = "vsync","vsync2","vbyone";
+			0x0 0xfe016000 0x0 0x3e4   /* vx1_lvds_ctrl */
+			0x0 0xfe004000 0x0 0x070>;  /* PADCTRL_PIN_MUX */
+		interrupts = <0 197 1>, <0 194 1>, <0 208 1>, <0 86 1>;
+		interrupt-names = "vsync","vsync2","vbyone","dsi_intr";
 		pinctrl-names = "vbyone","vbyone_off";
 		pinctrl-0 = <&lcd_vbyone_a_pins>;
 		pinctrl-1 = <&lcd_vbyone_a_off_pins>;
@@ -695,15 +696,10 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
-				0 0 1 100
-				0 1 0 10
-				0 1 1 20
 				2 0 0 0
 				0xff 0 0 0>; /*ending*/
 			power_off_step = <
 				2 0 0 50
-				0 1 0 10
-				0 0 0 100
 				0xff 0 0 0>; /*ending*/
 			backlight_index = <0x1>;
 		};
@@ -899,10 +895,10 @@
 			0x0 0xfe01c000 0x0 0x200   /* mipi_dsi0-A phy */
 			0x0 0xfe072000 0x0 0x400   /* mipi_dsi0-B host */
 			0x0 0xfe018000 0x0 0x200   /* mipi_dsi0-B phy */
-			0x0 0xfe016000 0x0 0x3e4
-			0x0 0xfe004000 0x0 0x070>;  /* vx1_lvds_ctrl */
-		interrupts = <0 197 1>, <0 194 1>, <0 208 1>;
-		interrupt-names = "vsync","vsync2","vbyone";
+			0x0 0xfe016000 0x0 0x3e4    /* vx1_lvds_ctrl */
+			0x0 0xfe004000 0x0 0x070>;
+		interrupts = <0 197 1>, <0 194 1>, <0 208 1>,<0 129 1>;
+		interrupt-names = "vsync","vsync2","vbyone","dsi_intr";
 		config_check_glb = <1>;
 		display_timing_req_min = <1  /*alert_level: 0:disable, 1:warning, 2:fatal error*/
 			45   /*hsw+hbp*/
@@ -1153,17 +1149,12 @@
 
 			/* power step: type, index, value, delay(ms) */
 			power_on_step = <
-				0 0 1 100
-				0 1 0 10
-				0 1 1 20
 				2 0 0 0
 				0xff 0 0 0>; /*ending*/
 			power_off_step = <
 				2 0 0 50
-				0 1 0 10
-				0 0 0 100
 				0xff 0 0 0>; /*ending*/
-			backlight_index = <0x1>;
+			backlight_index = <0x0>;
 		};
 
 		ports {
@@ -1183,14 +1174,13 @@
 		status = "okay";
 		index = <0>;
 		pinctrl-names = "pwm_on","pwm_off";
-		//pinctrl-0 = <&pwm_i_pins1>; /* GPIOY_1*/
-		//pinctrl-1 = <&bl0_pwm_off_pins>;
+		pinctrl-0 = <&pwm_i_pins1>; /* GPIOY_1*/
+		pinctrl-1 = <&bl0_pwm_off_pins>;
 		interrupts = <0 197 1>, <0 194 1>;
 		interrupt-names = "vsync","vsync2";
 		bl_pwm_config = <&bl_pwm_conf>;
 
-		bl-gpios = <&gpioy 0  GPIO_ACTIVE_HIGH>,
-			<&gpioy 1 GPIO_ACTIVE_HIGH>;
+		bl-gpios = <&gpioy 0 GPIO_ACTIVE_HIGH>, <&gpioy 1 GPIO_ACTIVE_HIGH>;
 		bl_gpio_names = "GPIOY_0", "GPIOY_1";
 
 		backlight_0{
@@ -1211,21 +1201,38 @@
 				10 10>; /*pwm_on_delay(ms), pwm_off_delay(ms)*/
 			en_sequence_reverse = <0>; /* 1 for reverse */
 		};
+		backlight_1{
+			index = <1>;
+			bl_name = "backlight_pwm";
+			bl_step_on_flag=<0>;
+			bl_level_in_scale = <255>;
+			bl_ctrl_method = <1>; /*1=pwm,2=pwm_combo*/
+			bl_power_attr = <0 /*en_gpio_index*/
+				1 0 /*on_value, off_value*/
+				200 200>; /*on_delay(ms), off_delay(ms)*/
+			pwm_duty_in_scale = <4095>;
+			bl_pwm_port = "PWM_I";
+			bl_pwm_attr = <0 /*pwm_method(0=negative, 1=positive)*/
+				180 /*pwm_freq(pwm:Hz, pwm_vs:multiple of vs)*/
+				4095 410>; /*duty_max(%), duty_min(%)*/
+			bl_pwm_power = <2 0 /*pwm_gpio_index, pwm_gpio_off*/
+				10 10>; /*pwm_on_delay(ms), pwm_off_delay(ms)*/
+			en_sequence_reverse = <0>; /* 1 for reverse */
+		};
 	};
 
 	backlight1:backlight1{
 		compatible = "amlogic, backlight-a9";
-		status = "disabled";
+		status = "okay";
 		index = <1>;
 		pinctrl-names = "pwm_on","pwm_off";
-		//pinctrl-0 = <&pwm_j_pins1>; /* GPIOY_5*/
-		//pinctrl-1 = <&bl1_pwm_off_pins>;
+		pinctrl-0 = <&pwm_j_pins1>; /* GPIOY_5*/
+		pinctrl-1 = <&bl1_pwm_off_pins>;
 		interrupts = <0 197 1>, <0 194 1>;
 		interrupt-names = "vsync","vsync2";
 		bl_pwm_config = <&bl_pwm_conf>;
 
-		bl-gpios = <&gpioy 4  GPIO_ACTIVE_HIGH>,
-			<&gpioy 5 GPIO_ACTIVE_HIGH>;
+		bl-gpios = <&gpioy 4 GPIO_ACTIVE_HIGH>, <&gpioy 5 GPIO_ACTIVE_HIGH>;
 		bl_gpio_names = "GPIOY_4", "GPIOY_5";
 
 		backlight_0{

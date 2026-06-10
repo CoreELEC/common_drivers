@@ -20,8 +20,8 @@
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 
 #include <linux/amlogic/media/vout/lcd/lcd_tcon_fw.h>
-#include <linux/amlogic/media/vout/lcd/lcd_resman.h>
-#include <linux/amlogic/media/vout/lcd/lcd_model.h>
+#include <linux/amlogic/media/vout/panel_utils/lcd_resman.h>
+#include <linux/amlogic/media/vout/panel_utils/aml_model.h>
 #include "../../lcd_reg.h"
 #include "../../lcd_common.h"
 #include "lcd_tcon.h"
@@ -103,13 +103,13 @@ static char *get_tcon_pmu_data_path_ini(struct aml_lcd_drv_s *pdrv)
 
 	inip = get_lcd_ini_parse_mem(pdrv->index);
 	if (!inip) {
-		LCDERR("[%d]: %s: parse_mem not ready\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: parse_mem not ready", __func__);
 		return NULL;
 	}
 
 	psec = lcd_ini_get_section(inip, "tcon_Path");
 	if (!psec) {
-		LCDERR("[%d]: %s: not find lcd_Attr\n", pdrv->index, __func__);
+		LCD_ERR(pdrv, "%s: not find lcd_Attr", __func__);
 		return NULL;
 	}
 
@@ -181,20 +181,20 @@ static char *get_tcon_pmu_data_path_json(struct aml_lcd_drv_s *pdrv)
 
 	jsp = get_panel_jsp(pdrv->index);
 	if (!json_parse_ok(jsp)) {
-		LCDERR("panel%d json not ready\n", pdrv->index);
+		LCD_ERR(NULL, "panel%d json not ready\n", pdrv->index);
 		return NULL;
 	}
 
 	parent = json_path_to_node(jsp, jsp->root, "tcon");
 	if (!parent) {
-		LCDERR("find /interface\n");
+		LCD_ERR(NULL, "find /interface\n");
 		return NULL;
 	}
 	base_path = json_get_obj_str(jsp, parent, "panel_dir_kernel", NULL);
 
 	parent = json_path_to_node(jsp, jsp->root, "tcon/pmu_data");
 	if (!parent) {
-		LCDERR("find /tcon/pmu_data\n");
+		LCD_ERR(NULL, "find /tcon/pmu_data\n");
 		return NULL;
 	}
 
@@ -246,7 +246,7 @@ static void lcd_tcon_multi_lut_print(void)
 	int i, j;
 
 	if (!mm_table || !mm_table->data_multi || mm_table->data_multi_cnt == 0) {
-		LCDERR("tcon data_multi is null\n");
+		LCD_ERR(NULL, "tcon data_multi is null\n");
 		return;
 	}
 
@@ -1393,7 +1393,7 @@ ssize_t lcd_tcon_fw_dbg_show(struct device *dev, struct device_attribute *attr, 
 	if (tcon_fw->debug_show)
 		ret = tcon_fw->debug_show(tcon_fw, buf);
 	else
-		LCDERR("%s: tcon_fw is not installed\n", __func__);
+		LCD_ERR(NULL, "%s: tcon_fw is not installed\n", __func__);
 
 	return ret;
 }
@@ -1413,7 +1413,7 @@ ssize_t lcd_tcon_fw_dbg_store(struct device *dev, struct device_attribute *attr,
 	if (tcon_fw->debug_store)
 		tcon_fw->debug_store(tcon_fw, buf, count);
 	else
-		LCDERR("%s: tcon_fw is not installed\n", __func__);
+		LCD_ERR(NULL, "%s: tcon_fw is not installed\n", __func__);
 
 	mutex_unlock(&lcd_tcon_dbg_mutex);
 	return count;
@@ -1485,7 +1485,7 @@ ssize_t lcd_tcon_pdf_dbg_store(struct device *dev, struct device_attribute *attr
 			ret = tcon_pdf->group_enable(tcon_pdf,
 				val_arr[0], val_arr[1]);
 			if (ret < 0) {
-				LCDERR("Ctrl group %d fail\n", val_arr[0]);
+				LCD_ERR(NULL, "Ctrl group %d fail\n", val_arr[0]);
 			} else {
 				LCDPR("Group %d %s\n", val_arr[0],
 					val_arr[1] ? "enable" : "disable");
@@ -1499,7 +1499,7 @@ ssize_t lcd_tcon_pdf_dbg_store(struct device *dev, struct device_attribute *attr
 					goto __lcd_tcon_pdf_dbg_store_exit;
 				ret = tcon_pdf->new_group(tcon_pdf, val_arr[0]);
 				if (ret < 0)
-					LCDERR("Add group %d fail\n", val_arr[0]);
+					LCD_ERR(NULL, "Add group %d fail\n", val_arr[0]);
 				else
 					LCDPR("Add group %d\n", ret);
 			}
@@ -1529,7 +1529,7 @@ ssize_t lcd_tcon_pdf_dbg_store(struct device *dev, struct device_attribute *attr
 				ret = tcon_pdf->group_add_src(tcon_pdf,
 					val_arr[0], &src);
 				if (ret < 0) {
-					LCDERR("Add group src fail\n");
+					LCD_ERR(NULL, "Add group src fail\n");
 				} else {
 					LCDPR("Group %d add src success\n",
 						val_arr[0]);
@@ -1561,7 +1561,7 @@ ssize_t lcd_tcon_pdf_dbg_store(struct device *dev, struct device_attribute *attr
 				ret = tcon_pdf->group_add_dst(tcon_pdf,
 					val_arr[0], &dst);
 				if (ret < 0) {
-					LCDERR("Add group dst fail\n");
+					LCD_ERR(NULL, "Add group dst fail\n");
 				} else {
 					LCDPR("Group %d add dst success\n",
 						val_arr[0]);
@@ -1576,7 +1576,7 @@ ssize_t lcd_tcon_pdf_dbg_store(struct device *dev, struct device_attribute *attr
 			if (tcon_pdf->del_group) {
 				ret = tcon_pdf->del_group(tcon_pdf, val_arr[0]);
 				if (ret < 0) {
-					LCDERR("Delete group %d fail\n",
+					LCD_ERR(NULL, "Delete group %d fail\n",
 						val_arr[0]);
 				} else {
 					LCDPR("Delete group %d success\n",
@@ -1694,7 +1694,7 @@ ssize_t lcd_tcon_demura_dbg_show(struct device *dev,
 				ret = snprintf(buf + size, lmax_size,
 					"%s%08x:", j ? "\n" : "", i);
 				if (ret < 0) {
-					LCDERR("Invalid return=%d\n", ret);
+					LCD_ERR(NULL, "Invalid return=%d\n", ret);
 					goto __tcon_demura_show_exit;
 				}
 				size += ret;
@@ -1705,7 +1705,7 @@ ssize_t lcd_tcon_demura_dbg_show(struct device *dev,
 			else
 				ret = snprintf(buf + size, lmax_size, " %02x", mem[i]);
 			if (ret < 0) {
-				LCDERR("Invalid return=%d\n", ret);
+				LCD_ERR(NULL, "Invalid return=%d\n", ret);
 				goto __tcon_demura_show_exit;
 			}
 			size += ret;
@@ -1714,7 +1714,7 @@ ssize_t lcd_tcon_demura_dbg_show(struct device *dev,
 		}
 		ret = snprintf(buf + size, lmax_size, "\n");
 		if (ret < 0) {
-			LCDERR("Invalid return=%d\n", ret);
+			LCD_ERR(NULL, "Invalid return=%d\n", ret);
 			goto __tcon_demura_show_exit;
 		}
 		size += ret;
@@ -1754,7 +1754,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 	if (!demura_reg.mem) {
 		mem = lcd_tcon_demura_mem_get(pdrv, &mem_size);
 		if (!mem) {
-			LCDERR("%s: get demura mem fail\n", __func__);
+			LCD_ERR(NULL, "%s: get demura mem fail\n", __func__);
 			goto __tcon_demura_store_err;
 		}
 		demura_reg.mem = mem;
@@ -1797,7 +1797,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 		//check param valid
 		if (demura_val.bit_width != 32 &&
 			demura_val.bit_width != 8) {
-			LCDERR("Invalid bit width=%u\n", demura_val.bit_width);
+			LCD_ERR(NULL, "Invalid bit width=%u\n", demura_val.bit_width);
 			goto __tcon_demura_store_err;
 		}
 		real_len = demura_val.len;
@@ -1807,13 +1807,13 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 			real_offset = real_offset * 4;
 		}
 		if ((real_offset + real_len) > mem_size) {
-			LCDERR("offset(%u) or len(%u) is out of mem size(%d)\n",
+			LCD_ERR(NULL, "offset(%u) or len(%u) is out of mem size(%d)\n",
 				real_offset, real_len, mem_size);
 			goto __tcon_demura_store_err;
 		}
 		val = lcd_do_div(demura_val.bit_width, 8) * demura_val.len;
 		if (val > mem_size) {
-			LCDERR("Read len(%u) is out of mem size(%d)\n",
+			LCD_ERR(NULL, "Read len(%u) is out of mem size(%d)\n",
 				demura_val.len, mem_size);
 			goto __tcon_demura_store_err;
 		}
@@ -1826,7 +1826,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 		demura_val.rw_mode = TCON_DEMURA_MODE_WRITE;
 		ret = kstrtouint(parm[1], 0, &val);  //bit_width
 		if (ret) {
-			LCDERR("Invalid bit width\n");
+			LCD_ERR(NULL, "Invalid bit width\n");
 			goto __tcon_demura_store_err;
 		}
 		demura_val.bit_width = val;
@@ -1842,7 +1842,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 		//check param valid
 		if (demura_val.bit_width != 32 &&
 			demura_val.bit_width != 8) {
-			LCDERR("Invalid bit width=%u\n", demura_val.bit_width);
+			LCD_ERR(NULL, "Invalid bit width=%u\n", demura_val.bit_width);
 			goto __tcon_demura_store_err;
 		}
 		real_len = demura_val.len;
@@ -1852,7 +1852,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 			real_offset = real_offset * 4;
 		}
 		if ((real_offset + real_len) > mem_size) {
-			LCDERR("offset(%u) or len(%u) is out of mem size(%d)\n",
+			LCD_ERR(NULL, "offset(%u) or len(%u) is out of mem size(%d)\n",
 				real_offset, real_len, mem_size);
 			goto __tcon_demura_store_err;
 		}
@@ -1862,7 +1862,7 @@ ssize_t lcd_tcon_demura_dbg_store(struct device *dev,
 		for (i = 0; i < demura_val.len; i++) {
 			ret = kstrtouint(parm[i + 4], 0, &val);  //val
 			if (ret) {
-				LCDERR("Invalid data[%d] value\n", i);
+				LCD_ERR(NULL, "Invalid data[%d] value\n", i);
 				goto __tcon_demura_store_err;
 			}
 			if (demura_val.bit_width == 32)
@@ -1991,7 +1991,7 @@ long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned lon
 
 		mem_vaddr = tcon_rmem->bin_path_rmem.mem_vaddr;
 		if (!mem_vaddr) {
-			LCDERR("%s: no tcon bin path rmem\n", __func__);
+			LCD_ERR(NULL, "%s: no tcon bin path rmem\n", __func__);
 			ret = -EFAULT;
 			break;
 		}
@@ -2027,7 +2027,7 @@ long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned lon
 
 		mem_vaddr = tcon_rmem->bin_path_rmem.mem_vaddr;
 		if (!mem_vaddr) {
-			LCDERR("%s: no tcon bin path rmem\n", __func__);
+			LCD_ERR(NULL, "%s: no tcon bin path rmem\n", __func__);
 			ret = -EFAULT;
 			break;
 		}
@@ -2038,13 +2038,13 @@ long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned lon
 			break;
 		}
 		if (lcd_tcon_buff.size == 0) {
-			LCDERR("%s: invalid data size %d\n", __func__, size);
+			LCD_ERR(NULL, "%s: invalid data size %d\n", __func__, size);
 			ret = -EFAULT;
 			break;
 		}
 		index = lcd_tcon_buff.index;
 		if (index >= mm_table->block_cnt) {
-			LCDERR("%s: invalid index %d\n", __func__, index);
+			LCD_ERR(NULL, "%s: invalid index %d\n", __func__, index);
 			ret = -EFAULT;
 			break;
 		}
@@ -2075,7 +2075,7 @@ long lcd_tcon_ioctl_handler(struct aml_lcd_drv_s *pdrv, int mcd_nr, unsigned lon
 		old_size = block_header_old.block_size;
 		size = block_header.block_size;
 		if (size > lcd_tcon_buff.size || size < header_size) {
-			LCDERR("%s: block[%d] size 0x%x error\n", __func__, index, size);
+			LCD_ERR(NULL, "%s: block[%d] size 0x%x error\n", __func__, index, size);
 			ret = -EFAULT;
 			break;
 		}
@@ -2167,12 +2167,12 @@ set_tcon_bin_error_break:
 		}
 		buf = kzalloc(dccd_config.size, GFP_KERNEL);
 		if (unlikely(!buf)) {
-			LCDERR("Alloc dccd size=%d fail\n", dccd_config.size);
+			LCD_ERR(NULL, "Alloc dccd size=%d fail\n", dccd_config.size);
 			goto __dccd_set_exit;
 		}
 
 		if (copy_from_user(buf, argp, dccd_config.size)) {
-			LCDERR("Copy ptr size=%d fail\n", dccd_config.size);
+			LCD_ERR(NULL, "Copy ptr size=%d fail\n", dccd_config.size);
 			goto __dccd_set_exit;
 		}
 		dccd_config.data.ptr = buf;
@@ -2242,7 +2242,7 @@ __dccd_set_exit:
 
 __tcon_get_calc_exit:
 		if (ret) {
-			LCDERR("DCCD get core_info[%d] fail\n", temp);
+			LCD_ERR(NULL, "DCCD get core_info[%d] fail\n", temp);
 		} else {
 			LCDPR("DCCD get tcon core_info[%d] size=%d (%#x), ptr=%p\n",
 				temp, dccd_config.size, dccd_config.size, dccd_config.data.ptr);
@@ -2347,7 +2347,7 @@ static long lcd_tcon_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 		ret = lcd_tcon_ioctl_handler(pdrv, mcd_nr, arg);
 		break;
 	default:
-		LCDERR("tcon: don't support ioctl cmd_nr: 0x%x\n", mcd_nr);
+		LCD_ERR(NULL, "tcon: don't support ioctl cmd_nr: 0x%x\n", mcd_nr);
 		ret = -EINVAL;
 		break;
 	}
@@ -2389,26 +2389,26 @@ void lcd_tcon_debug_file_add(struct aml_lcd_drv_s *pdrv, struct lcd_tcon_local_c
 
 	local_cfg->clsp = class_create(AML_TCON_CLASS_NAME);
 	if (IS_ERR(local_cfg->clsp)) {
-		LCDERR("tcon: failed to create class\n");
+		LCD_ERR(NULL, "tcon: failed to create class\n");
 		return;
 	}
 
 	ret = alloc_chrdev_region(&local_cfg->devno, 0, 1, AML_TCON_DEVICE_NAME);
 	if (ret < 0) {
-		LCDERR("tcon: failed to alloc major number\n");
+		LCD_ERR(NULL, "tcon: failed to alloc major number\n");
 		goto err1;
 	}
 
 	local_cfg->dev = device_create(local_cfg->clsp, NULL,
 		local_cfg->devno, (void *)pdrv, AML_TCON_DEVICE_NAME);
 	if (IS_ERR(local_cfg->dev)) {
-		LCDERR("tcon: failed to create device\n");
+		LCD_ERR(NULL, "tcon: failed to create device\n");
 		goto err2;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(lcd_tcon_debug_attrs); i++) {
 		if (device_create_file(local_cfg->dev, &lcd_tcon_debug_attrs[i])) {
-			LCDERR("tcon: create attribute %s fail\n",
+			LCD_ERR(NULL, "tcon: create attribute %s fail\n",
 			       lcd_tcon_debug_attrs[i].attr.name);
 			goto err3;
 		}
@@ -2421,7 +2421,7 @@ void lcd_tcon_debug_file_add(struct aml_lcd_drv_s *pdrv, struct lcd_tcon_local_c
 	/* connect the major/minor number to the cdev */
 	ret = cdev_add(&local_cfg->cdev, local_cfg->devno, 1);
 	if (ret) {
-		LCDERR("tcon: failed to add device\n");
+		LCD_ERR(NULL, "tcon: failed to add device\n");
 		goto err4;
 	}
 
@@ -2440,7 +2440,7 @@ err2:
 err1:
 	class_destroy(local_cfg->clsp);
 	local_cfg->clsp = NULL;
-	LCDERR("tcon: %s error\n", __func__);
+	LCD_ERR(NULL, "tcon: %s error\n", __func__);
 }
 
 void lcd_tcon_debug_file_remove(struct lcd_tcon_local_cfg_s *local_cfg)

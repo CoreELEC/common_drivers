@@ -270,7 +270,7 @@ void lcd_phy_reset(struct aml_lcd_drv_s *pdrv)
 
 	lcd_phy_ctrl->phy_reset(pdrv);
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("[%d]: phy reset\n", pdrv->index);
+		LCD_PR(pdrv, "phy reset");
 }
 
 int lcd_phy_probe(struct aml_lcd_drv_s *pdrv)

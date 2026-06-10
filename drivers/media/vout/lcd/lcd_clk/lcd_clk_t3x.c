@@ -49,11 +49,10 @@ static void lcd_pll_ss_enable(struct aml_lcd_drv_s *pdrv, int status)
 	if (flag) {
 		cconf->ss_en = 1;
 		pll_ctrl2 |= ((1 << 15) | (cconf->ss_dep_sel << 28) | (cconf->ss_str_m << 16));
-		LCDPR("[%d]: pll ss enable: level %d, %dppm\n",
-			pdrv->index, cconf->ss_level, cconf->ss_ppm);
+		LCD_PR(pdrv, "pll ss enable: level %d, %dppm", cconf->ss_level, cconf->ss_ppm);
 	} else {
 		cconf->ss_en = 0;
-		LCDPR("[%d]: pll ss disable\n", pdrv->index);
+		LCD_PR(pdrv, "pll ss disable");
 	}
 	lcd_ana_write(ANACTRL_TCON_PLL0_CNTL2 + offset, pll_ctrl2);
 }
@@ -104,7 +103,7 @@ static void lcd_set_pll_ss(struct aml_lcd_drv_s *pdrv, unsigned int ss_flag)
 	}
 
 	lcd_ana_write(ANACTRL_TCON_PLL0_CNTL2 + offset, pll_ctrl2);
-	LCDPR("[%d]: set ssc: %s\n", pdrv->index, prt_str);
+	LCD_PR(pdrv, "set ssc: %s", prt_str);
 }
 
 static void lcd_pll_frac_set(struct aml_lcd_drv_s *pdrv, unsigned int frac)
@@ -192,8 +191,7 @@ static int _lcd_set_pll_by_cconf(struct aml_lcd_drv_s *pdrv, int pll_sel)
 	int ret, cnt = 0;
 	int done = 0;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
@@ -270,8 +268,7 @@ static void lcd_set_pll_t3x(struct aml_lcd_drv_s *pdrv)
 {
 	struct lcd_clk_config_s *cconf;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -293,8 +290,7 @@ static void _lcd_set_vid_pll_div_by_cconf(struct aml_lcd_drv_s *pdrv, int pll_se
 	if (!cconf)
 		return;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	switch (cconf->pll_config[pll_sel].pll_id) {
 	case 1:
@@ -347,8 +343,7 @@ static void lcd_set_vid_pll_div_t3x(struct aml_lcd_drv_s *pdrv)
 	if (!cconf)
 		return;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 
 	switch (pdrv->index) {
 	case 1:
@@ -363,7 +358,7 @@ static void lcd_set_vid_pll_div_t3x(struct aml_lcd_drv_s *pdrv)
 	udelay(5);
 
 	if (cconf->prbs_mode) {
-		LCDPR("[%d]: %s prbs mode\n", pdrv->index, __func__);
+		LCD_PR(pdrv, "%s prbs mode", __func__);
 		_lcd_set_vid_pll_div_by_cconf(pdrv, 0);
 		return;
 	}
@@ -384,8 +379,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	unsigned int reg_vid2_clk_div, reg_vid2_clk_ctrl, reg_vid_clk_ctrl2;
 	unsigned int venc_clk_sel_bit = 0xff;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: %s\n", pdrv->index, __func__);
+	LCD_DBG_ADV2(pdrv, "%s ent", __func__);
 	cconf = get_lcd_clk_config(pdrv);
 	if (!cconf)
 		return;
@@ -410,8 +404,7 @@ static void lcd_set_vclk_crt(struct aml_lcd_drv_s *pdrv)
 	lcd_clk_write(reg_vid2_clk_div, 0);
 	udelay(5);
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV2)
-		LCDPR("[%d]: vclk_sel=%d, xd=%d\n", pdrv->index, cconf->data->vclk_sel, cconf->xd);
+	LCD_DBG_ADV2(pdrv, "vclk_sel=%d, xd=%d", cconf->data->vclk_sel, cconf->xd);
 
 	if (lcd_pxp_mode) {
 		/* setup the XD divider value */
@@ -741,7 +734,7 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 			continue;
 
 		lcd_prbs_mode = (1 << i);
-		LCDPR("[%d]: lcd_prbs_mode: 0x%x\n", pdrv->index, lcd_prbs_mode);
+		LCD_PR(pdrv, "lcd_prbs_mode: 0x%x", lcd_prbs_mode);
 		lcd_prbs_config_clk(pdrv, lcd_prbs_mode, &lcd_encl_clk_check_std,
 				&lcd_fifo_clk_check_std);
 		usleep_range(500, 510);
@@ -763,18 +756,17 @@ static void lcd_clk_prbs_test(struct aml_lcd_drv_s *pdrv, unsigned int ms, unsig
 			if (lcd_prbs_mode == LCD_PRBS_MODE_LVDS) {
 				lcd_prbs_performed |= LCD_PRBS_MODE_LVDS;
 				lcd_prbs_err &= ~(LCD_PRBS_MODE_LVDS);
-				LCDPR("[%d]: lvds prbs check ok\n", pdrv->index);
+				LCD_PR(pdrv, "lvds prbs check ok");
 			} else if (lcd_prbs_mode == LCD_PRBS_MODE_VX1) {
 				lcd_prbs_performed |= LCD_PRBS_MODE_VX1;
 				lcd_prbs_err &= ~(LCD_PRBS_MODE_VX1);
-				LCDPR("[%d]: vx1 prbs check ok\n", pdrv->index);
+				LCD_PR(pdrv, "vx1 prbs check ok");
 			} else if (lcd_prbs_mode == LCD_PRBS_MODE_FREQ) {
 				lcd_prbs_performed |= LCD_PRBS_MODE_FREQ;
 				lcd_prbs_err &= ~(LCD_PRBS_MODE_FREQ);
-				LCDPR("[%d]: freq %dMhz prbs check ok\n",
-					pdrv->index, lcd_prbs_freq);
+				LCD_PR(pdrv, "freq %dMhz prbs check ok", lcd_prbs_freq);
 			} else {
-				LCDPR("[%d]: prbs check: unsupport mode\n", pdrv->index);
+				LCD_PR(pdrv, "prbs check: unsupport mode");
 			}
 		}
 	}
@@ -822,7 +814,7 @@ static struct lcd_pll_data_s lcd_pll_data_t3x_0 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 4100000000ULL,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 4100000000ULL,
 	.div_out_fmax = 820000000,
@@ -845,7 +837,7 @@ static struct lcd_pll_data_s lcd_pll_data_t3x_1 = {
 	.pll_vco_fmin = 3000000000ULL,
 	.pll_out_fmax = 4100000000ULL,
 	.pll_out_fmin = 187500000,
-	.od_cnt = 3,
+	.od_model = LCD_OD_MODEL_3DIV_2P5_2P5_2P5,
 	.have_tcon_div = 0,
 	.div_in_fmax = 4100000000ULL,
 	.div_out_fmax = 820000000,
@@ -968,13 +960,6 @@ struct lcd_clk_config_s *lcd_clk_config_chip_init_t3x(struct aml_lcd_drv_s *pdrv
 		cconf->pll_conf_num = 2;
 	else
 		cconf->pll_conf_num = 1;
-	cconf->pll_config = kcalloc(cconf->pll_conf_num, sizeof(struct lcd_pll_config_s),
-					GFP_KERNEL);
-	if (!cconf->pll_config) {
-		LCD_ERR(pdrv, "%s: Not enough memory for pll config", __func__);
-		kfree(cconf);
-		return NULL;
-	}
 
 	switch (pdrv->index) {
 	case 1:

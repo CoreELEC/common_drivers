@@ -36,11 +36,10 @@ static unsigned int lcd_phy_get_dft_odt_cm(void)
 	int efuse_odt = 0;
 
 	efuse_odt = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_VINLP);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse odt_cm=%#x\n", efuse_odt);
+	LCD_DBG(NULL, "efuse odt_cm=%#x", efuse_odt);
 	if (efuse_odt < 0) {
 		efuse_odt = PHY_DFT_ODT_CM;
-		LCDERR("odt_cm uncalibrated, use odt=%#x\n", efuse_odt);
+		LCD_ERR(NULL, "odt_cm uncalibrated, use odt=%#x", efuse_odt);
 	}
 	return (unsigned int)efuse_odt;
 }
@@ -50,11 +49,10 @@ static unsigned int lcd_phy_get_dft_odt_vm(void)
 	int efuse_odt = 0;
 
 	efuse_odt = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_VINLPVML);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse odt_vm=%#x\n", efuse_odt);
+	LCD_DBG(NULL, "efuse odt_vm=%#x", efuse_odt);
 	if (efuse_odt < 0) {
 		efuse_odt = PHY_DFT_ODT_VM;
-		LCDERR("odt_vm uncalibrated, use odt=%#x\n", efuse_odt);
+		LCD_ERR(NULL, "odt_vm uncalibrated, use odt=%#x", efuse_odt);
 	}
 
 	return (unsigned int)efuse_odt;
@@ -65,11 +63,10 @@ static unsigned int lcd_phy_get_dft_bias(void)
 	int efuse_bias = 0;
 
 	efuse_bias = efuse_amlogic_cali_item_read(EFUSE_CALI_SUBITEM_P2P_COMMON);
-	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("efuse bias=%#x\n", efuse_bias);
+	LCD_DBG(NULL, "efuse bias=%#x", efuse_bias);
 	if (efuse_bias < 0) {
 		efuse_bias = PHY_DFT_BIAS;
-		LCDERR("bias uncalibrated, use bias=%#x\n", efuse_bias);
+		LCD_ERR(NULL, "bias uncalibrated, use bias=%#x", efuse_bias);
 	}
 	return (unsigned int)efuse_bias;
 }
@@ -149,8 +146,7 @@ static inline unsigned int lcd_phy_get_custom_odt_cm(struct aml_lcd_drv_s *pdrv,
 		cus_odt = 0;
 	}
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("odt cali=0x%x, custom=0x%x\n", cali_odt_cm, cus_odt);
+	LCD_DBG_ADV(NULL, "odt cali=0x%x, custom=0x%x", cali_odt_cm, cus_odt);
 	return cus_odt;
 }
 
@@ -166,8 +162,7 @@ static inline unsigned int lcd_phy_get_custom_odt_vm(struct aml_lcd_drv_s *pdrv,
 	cus_odt = cus_odt < 0 ? 0 : cus_odt;
 	cus_odt = cus_odt > 0xf ? 0xf : cus_odt;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("odt cali=0x%x, custom=0x%x\n", cali_odt_vm, cus_odt);
+	LCD_DBG_ADV(NULL, "odt cali=0x%x, custom=0x%x", cali_odt_vm, cus_odt);
 	return cus_odt;
 }
 
@@ -186,8 +181,7 @@ static inline unsigned int lcd_phy_get_final_odt_cm(struct phy_attr_s *phy)
 		odt = 0;
 	}
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("odt cali=0x%x, final=0x%x\n", cali_odt_cm, odt);
+	LCD_DBG_ADV(NULL, "odt cali=0x%x, final=0x%x", cali_odt_cm, odt);
 	return odt;
 }
 
@@ -198,8 +192,7 @@ static inline unsigned int lcd_phy_get_final_odt_vm(struct phy_attr_s *phy)
 	odt = odt < 0 ? 0 : odt;
 	odt = odt > 0xf ? 0xf : odt;
 
-	if (lcd_debug_print_flag & LCD_DBG_PR_ADV)
-		LCDPR("odt cali=0x%x, final=0x%x\n", cali_odt_vm, odt);
+	LCD_DBG_ADV(NULL, "odt cali=0x%x, final=0x%x", cali_odt_vm, odt);
 	return odt;
 }
 
@@ -315,7 +308,7 @@ static void lcd_phy_ch_set(struct aml_lcd_drv_s *pdrv)
 	struct phy_attr_s *phy = pdrv->curr_dev->dev_cfg.phy_cfg.act_phy;
 
 	if (lcd_debug_print_flag & LCD_DBG_PR_NORMAL)
-		LCDPR("%s: ckdi:0x%x\n", __func__, phy_cfg->ckdi);
+		LCD_PR(pdrv, "%s: ckdi:0x%x", __func__, phy_cfg->ckdi);
 
 	for (i = 0; i < phy_cfg->lane_num; i++) {
 		if ((phy_cfg->lane_valid & (1 << i)) == 0)
@@ -343,8 +336,8 @@ static void lcd_phy_ch_set(struct aml_lcd_drv_s *pdrv)
 				sel = lcd_phy_get_phase(phy_cfg, PHY_GET_PHASE_REG_BY_SEL,
 							phy_cfg->ch_ctrl[i].phase_sel);
 				if (sel < 0) {
-					LCDERR("[%d]: err ch[%d].phase_sel=%#x\n",
-						pdrv->index, i, phy_cfg->ch_ctrl[i].phase_sel);
+					LCD_ERR(pdrv, "err ch[%d].phase_sel=%#x",
+						i, phy_cfg->ch_ctrl[i].phase_sel);
 				} else {
 					chdig |= (sel & 0x3) << 0;
 				}
@@ -521,7 +514,7 @@ static void lcd_p2p_phy_set(struct aml_lcd_drv_s *pdrv, int status)
 			cntl14 |= (2 << 16); //div8
 			break;
 		default:
-			LCDERR("%s: invalid p2p_type 0x%x\n", __func__, p2p_type);
+			LCD_ERR(pdrv, "%s: invalid p2p_type 0x%x", __func__, p2p_type);
 			return;
 		}
 		lcd_phy_common_update(pdrv, cntl14);
@@ -547,7 +540,7 @@ static unsigned int lcd_phy_vswing_level_to_val_t6w(struct aml_lcd_drv_s *pdrv,
 	if (level < 0xf)
 		return level;
 
-	LCDERR("[%d]: %s: level %d invalid\n", pdrv->index, __func__, level);
+	LCD_ERR(pdrv, "%s: level %d invalid", __func__, level);
 	return 0;
 }
 
@@ -565,7 +558,7 @@ static unsigned int lcd_phy_preem_level_to_val_t6w(struct aml_lcd_drv_s *pdrv,
 			return phy_cmode_preem[level];
 	}
 
-	LCDERR("[%d]: %s: level %d invalid\n", pdrv->index, __func__, level);
+	LCD_ERR(pdrv, "%s: level %d invalid", __func__, level);
 	return 0;
 }
 

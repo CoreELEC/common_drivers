@@ -17,6 +17,7 @@
 #ifdef CONFIG_AMLOGIC_VPU
 #include <linux/amlogic/media/vpu/vpu.h>
 #endif
+#include <linux/amlogic/clk_measure.h>
 #include <linux/amlogic/media/vout/eDPTX/eDPTX.h>
 #include <linux/amlogic/media/vout/eDPTX/eDPTX_notify.h>
 #include "edptx_reg_op.h"
@@ -85,6 +86,40 @@ static ssize_t edptx_link_cfg_info_print(struct edptx_drv_s *edp, u8 port, char 
 	return len;
 }
 
+static ssize_t edptx_clkmsr_info_print(struct edptx_drv_s *edp, u8 port, char *buf)
+{
+	u32 len = 0, n;
+	u8 i, str_pos = 0;
+	const u16 clk_idx_a9[] = {
+		51, 52, 53, 50, 56, 86, 87, 90, 91, 130, 138, 139, 140, 141, 144, 145,
+	};
+	const char * const clk_idx_a9_name[] = {
+		"enc0_if", "enc1", "enc0", "vid_pll_div_clk_out", "vid_pll1_div_clk_out",
+		"lvds0_fifo_clk", "lvds1_fifo_clk", "a_clk_sync_dig", "b_clk_sync_dig", "dptx_apb2",
+		"pixel0_pll_clkout", "pixel1_pll_clkout", "tcon_clk_out0", "tcon_clk_out1",
+		"dptx_lnk_clk", "edptx_lnk_clk_tx",
+	};
+
+	n = edptx_debug_info_len(len);
+	switch (edp->data->chip_type) {
+	case eDPTX_CHIP_A9:
+		for (i = 0; i < ARRAY_SIZE(clk_idx_a9_name); i++) {
+			if (strlen(clk_idx_a9_name[i]) > str_pos)
+				str_pos = strlen(clk_idx_a9_name[i]);
+		}
+		str_pos++;
+		for (i = 0; i < ARRAY_SIZE(clk_idx_a9_name); i++) {
+			len += snprintf(buf + len, n, "%-*s = %lld\n", str_pos,
+				clk_idx_a9_name[i], meson_clk_measure(clk_idx_a9[i]));
+		}
+		break;
+	default:
+		break;
+	}
+
+	return len;
+}
+
 static ssize_t edptx_phy_cfg_info_print(struct edptx_drv_s *edp, char *buf)
 {
 	u32 len = 0, n;
@@ -124,6 +159,8 @@ static ssize_t dptx_debug_info_show(struct device *dev, struct device_attribute 
 
 	len += edptx_link_cfg_info_print(edp, 0, buf + len);
 
+	len += edptx_clkmsr_info_print(edp, 0, buf + len);
+
 	return len;
 }
 
@@ -157,7 +194,7 @@ static struct edptx_debug_info_reg_s dptx_debug_info_reg_t7_1 = {
 static struct edptx_debug_info_reg_s dptx_debug_info_reg_a9_0 = {
 	.reg_pll        = dptx_regs_pll_a9_0,
 	.reg_clk        = dptx_regs_clk_a9_0,
-	.reg_combo_dphy = dptx_regs_combo_dphy_a9_0,
+	.reg_combo_dphy = NULL,
 	.reg_encl       = dptx_reg_venc_a9,
 	.reg_encl_if    = dptx_reg_venc_if_a9,
 	.reg_encl_data  = dptx_reg_venc_data_a9,
@@ -202,7 +239,7 @@ static ssize_t edptx_regs_pr(struct edptx_drv_s *edp, u8 port, u8 reg_t,
 		case DPTX_REG_TYPE_PLL:
 		case DPTX_REG_TYPE_PHY:
 			reg_addr = reg_sets[idx].addr;
-			reg_val  = edp_ana_read(reg_addr);
+			reg_val  = edp_ana_read(edp, reg_addr);
 			break;
 		case DPTX_REG_TYPE_CLK:
 			reg_addr = reg_sets[idx].addr;
@@ -319,7 +356,7 @@ static ssize_t edptx_debug_DPCD_dump_show(struct device *dev,
 	u32 len = 0;
 	struct edptx_drv_s *edp = dev_get_drvdata(dev);
 
-	if (edp->status & DPTX_STA_LINK_ON) {
+	if (edp->status & eDPTX_STA_LINK_ON) {
 		len += edptx_regs_pr(edp, 0,
 			DPTX_REG_TYPE_DPCD_RECEIVER_CAP, dptx_reg_DPCD_receiver_cap, buf + len);
 		len += edptx_regs_pr(edp, 0,
@@ -331,6 +368,22 @@ static ssize_t edptx_debug_DPCD_dump_show(struct device *dev,
 	return len;
 }
 
+/************* edptx_debug_DPCD_dump_show END **************/
+
+/************* edptx_debug_DPCD_dump_show **************/
+static ssize_t edptx_debug_aux_show(struct device *dev,
+					 struct device_attribute *attr, char *buf)
+{
+	u32 len = 0;
+
+	return len;
+}
+
+static ssize_t edptx_debug_aux_store(struct device *dev, struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	return count;
+}
 /************* edptx_debug_DPCD_dump_show END **************/
 
 /* ************ dptx_debug_vmode_show/store ************* */
@@ -397,13 +450,13 @@ static ssize_t edptx_debug_plug_store(struct device *dev, struct device_attribut
 		return -EINVAL;
 	}
 	if (temp == 2) {
-		edptx_notifier_call_chain(DPTX_EVENT_PLUG_IN, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_PLUG_IN, edp);
 	} else if (temp) {
-		edptx_notifier_call_chain(DPTX_EVENT_HPD_CHECK, edp);
-		if (edp->status & DPTX_STA_HPD_HIGH)
-			edptx_notifier_call_chain(DPTX_EVENT_PLUG_IN, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_HPD_CHECK, edp);
+		if (edp->status & eDPTX_STA_HPD_HIGH)
+			edptx_notifier_call_chain(eDPTX_EVENT_PLUG_IN, edp);
 	} else {
-		edptx_notifier_call_chain(DPTX_EVENT_PLUG_OUT, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_PLUG_OUT, edp);
 	}
 
 	return count;
@@ -426,9 +479,9 @@ static ssize_t edptx_debug_enable_store(struct device *dev, struct device_attrib
 		return -EINVAL;
 	}
 	if (temp)
-		edptx_notifier_call_chain(DPTX_EVENT_ENABLE, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_ENABLE, edp);
 	else
-		edptx_notifier_call_chain(DPTX_EVENT_DISABLE, edp);
+		edptx_notifier_call_chain(eDPTX_EVENT_DISABLE, edp);
 
 	return count;
 }
@@ -494,11 +547,11 @@ static ssize_t dptx_debug_status_show(struct device *dev, struct device_attribut
 			" link-on     : %c\n"
 			" display-on  : %c\n",
 			edp->idx,
-			edp->status & DPTX_STA_DRV_READY  ? '1' : '0',
-			edp->status & DPTX_STA_HPD_TRI_EN ? '1' : '0',
-			edp->status & DPTX_STA_HPD_HIGH   ? '1' : '0',
-			edp->status & DPTX_STA_LINK_ON    ? '1' : '0',
-			edp->status & DPTX_STA_DISP_ON    ? '1' : '0');
+			edp->status & eDPTX_STA_DRV_READY  ? '1' : '0',
+			edp->status & eDPTX_STA_HPD_TRI_EN ? '1' : '0',
+			edp->status & eDPTX_STA_HPD_HIGH   ? '1' : '0',
+			edp->status & eDPTX_STA_LINK_ON    ? '1' : '0',
+			edp->status & eDPTX_STA_DISP_ON    ? '1' : '0');
 
 	return len;
 }
@@ -516,6 +569,7 @@ static struct device_attribute dptx_debug_attrs[] = {
 	__ATTR(info,     0444, dptx_debug_info_show,      NULL),
 	__ATTR(reg_dump, 0444, edptx_debug_reg_dump_show,  NULL),
 	__ATTR(DPCD,     0444, edptx_debug_DPCD_dump_show, NULL),
+	__ATTR(aux,      0644, edptx_debug_aux_show,      edptx_debug_aux_store),
 	__ATTR(vinfo,    0444, dptx_debug_vinfo_show,     NULL),
 	__ATTR(help,     0444, dptx_debug_help_show,      NULL),
 	//__ATTR(vinfo,  0444, dptx_debug_vinfo_show,     NULL),
@@ -524,7 +578,7 @@ static struct device_attribute dptx_debug_attrs[] = {
 	__ATTR(vmode,    0444, dptx_debug_vmode_show,     dptx_debug_vmode_store),
 };
 
-int dptx_debug_probe(struct edptx_drv_s *edp)
+int edptx_debug_probe(struct edptx_drv_s *edp)
 {
 	u8 i;
 
@@ -537,7 +591,7 @@ int dptx_debug_probe(struct edptx_drv_s *edp)
 	return 0;
 }
 
-int dptx_debug_remove(struct edptx_drv_s *edp)
+int edptx_debug_remove(struct edptx_drv_s *edp)
 {
 	u8 i;
 

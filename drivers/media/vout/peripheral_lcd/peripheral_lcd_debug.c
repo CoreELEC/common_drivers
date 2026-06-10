@@ -85,7 +85,7 @@ static ssize_t plcd_init_store(const struct class *class,
 	int flag = 0, ret;
 
 	if (!plcd_drv) {
-		LCDPR("peripheral_lcd_drv is NULL\n");
+		LCD_PR(NULL, "peripheral_lcd_drv is NULL\n");
 		return count;
 	}
 	ret = kstrtoint(buf, 10, &flag);
@@ -98,7 +98,7 @@ static ssize_t plcd_init_store(const struct class *class,
 		return count;
 	}
 
-	LCDPR("peripheral_lcd_drv %s is not supported\n", flag ? "enable" : "disable");
+	LCD_PR(NULL, "peripheral_lcd_drv %s is not supported\n", flag ? "enable" : "disable");
 	return count;
 }
 
@@ -107,12 +107,12 @@ static ssize_t plcd_test_store(const struct class *class,
 			const char *buf, size_t count)
 {
 	if (!plcd_drv) {
-		LCDPR("peripheral_lcd_drv is NULL\n");
+		LCD_PR(NULL, "peripheral_lcd_drv is NULL\n");
 		return 0;
 	}
 
 	if (!plcd_drv->test) {
-		LCDPR("peripheral_lcd_drv test is NULL\n");
+		LCD_PR(NULL, "peripheral_lcd_drv test is NULL\n");
 		return 0;
 	}
 
@@ -148,21 +148,21 @@ static ssize_t plcd_display_addr_store(const struct class *class,
 	int ret;
 
 	if (!plcd_drv) {
-		LCDPR("peripheral_lcd_drv is NULL\n");
+		LCD_PR(NULL, "peripheral_lcd_drv is NULL\n");
 		return count;
 	}
 	ret = kstrtoull(buf, 16, &addr);
 	if (addr == 0 || ret)
 		return count;
 
-	LCDPR("flush frame at %px", (unsigned char *)addr);
+	LCD_PR(NULL, "flush frame at %px", (unsigned char *)addr);
 	if (plcd_drv->frame_flush)
 		plcd_drv->frame_flush((unsigned char *)addr);
 	else if (plcd_drv->frame_post)
 		plcd_drv->frame_post((unsigned char *)addr,
 				     0, plcd_drv->pcfg->h, 0, plcd_drv->pcfg->v);
 	else
-		LCDERR("device not support frame_flush or frame_post\n");
+		LCD_ERR(NULL, "device not support frame_flush or frame_post\n");
 
 	return count;
 }
@@ -181,13 +181,13 @@ int plcd_class_create(void)
 
 	per_lcd_class = class_create("peripheral_lcd");
 	if (IS_ERR_OR_NULL(per_lcd_class)) {
-		LCDERR("create debug class failed\n");
+		LCD_ERR(NULL, "create debug class failed\n");
 		return -1;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(per_lcd_class_attrs); i++) {
 		if (class_create_file(per_lcd_class, &per_lcd_class_attrs[i])) {
-			LCDERR("create debug attribute %s failed\n",
+			LCD_ERR(NULL, "create debug attribute %s failed\n",
 			       per_lcd_class_attrs[i].attr.name);
 		}
 	}

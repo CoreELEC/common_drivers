@@ -347,7 +347,7 @@ int lcd_ss_enable(int index, unsigned int flag)
 
 	pdrv = aml_lcd_get_driver(index);
 	if (!pdrv) {
-		LCD_ERR(pdrv, "%s: drv[%d] is null", index, __func__);
+		LCD_ERR(NULL, "%s: drv[%d] is null", __func__, index);
 		return -1;
 	}
 	LCD_DBG(pdrv, "%s", __func__);
@@ -392,7 +392,7 @@ void lcd_clk_pll_reset(struct aml_lcd_drv_s *pdrv)
 	if (cconf->data->pll_reset)
 		cconf->data->pll_reset(pdrv);
 	mutex_unlock(&lcd_clk_mutex);
-	LCD_PR(pdrv, "%s", __func__);
+	LCD_PR(pdrv, "%s ent", __func__);
 }
 
 unsigned long long lcd_pll_freq_get(int index)
@@ -550,7 +550,7 @@ void lcd_disable_clk(struct aml_lcd_drv_s *pdrv)
 		cconf->data->clk_disable(pdrv);
 	mutex_unlock(&lcd_clk_mutex);
 
-	LCD_PR(pdrv, "%s", __func__);
+	LCD_PR(pdrv, "%s ent", __func__);
 }
 
 static void lcd_request_vpu_overclk(struct aml_lcd_drv_s *pdrv, unsigned int enc_clk)
@@ -625,7 +625,7 @@ int lcd_mlvds_clk_phase_set(struct aml_lcd_drv_s *pdrv)
 		ret = cconf->data->mlvds_clk_phase_set(pdrv);
 	mutex_unlock(&lcd_clk_mutex);
 
-	LCD_PR(pdrv, "%s", __func__);
+	LCD_PR(pdrv, "%s ent", __func__);
 	return ret;
 }
 
