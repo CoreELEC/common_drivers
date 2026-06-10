@@ -2789,7 +2789,7 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 		is_dtv_src = true;
 	vf->dpss_flg |= DPSS_FLG_SET_DPSS_PROCESS;
 	dp_print(dev->index, PRINT_OTHER,
-		"%s: len=%d,fd=%d,frame_index=%d,file=%px,file_count=%ld,transform=%d vf_ext:%d.\n",
+		"%s:len=%d,fd=%d,frame_index=%d,file=%px,file_count=%ld,transform=%d vf_ext:%d.\n",
 		__func__,
 		kfifo_len(&dev->receive_q),
 		frame_info->in_fd,
@@ -2870,19 +2870,18 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 
 	if (!check_need_do_dpss(dev, vf, frame_info->transform) || force_num_to_vd1) {
 		dev->is_start_with_dpss = false;
+		dev->should_on_vd1 = 1;
 		if (force_num_to_vd1 > 0)
 			force_num_to_vd1--;
 
 		if (!dev->last_frame_bypass && dev->last_vf.type) {
 			dp_print(dev->index, PRINT_OTHER, "no bypass to bypass.\n");
 			dev->last_vf.type = 0;
-			dev->should_on_vd1 = 1;
 			dp_put_file(dev, file_vf);
 			return 1;
 		}
 
-		if (dev->should_on_vd1)
-			dev->continue_to_vd1_num++;
+		dev->continue_to_vd1_num++;
 
 		if (dev->need_check_hdr_state) {
 			vf->dpss_flg |= DPSS_FLG_MODULE_BYPASS;
