@@ -94,9 +94,17 @@ int get_di_backend_need_mem(int width, int height, int source_type)
 	int cpu_type = get_cpu_type();
 
 	if (cpu_type == MESON_CPU_MAJOR_ID_T6W || cpu_type == MESON_CPU_MAJOR_ID_T6X)
+#ifdef CONFIG_AMLOGIC_DPSS_PROCESS
 		ret = get_dpss_process_need_mem(width, height, source_type);
+#else
+		ret = 0;
+#endif
 	else
+#ifdef CONFIG_AMLOGIC_DI_PROCESS
 		ret = get_di_process_need_mem(width, height, source_type);
+#else
+		ret = 0;
+#endif
 
 	return ret;
 }
