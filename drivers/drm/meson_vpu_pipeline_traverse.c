@@ -1203,8 +1203,9 @@ int combine_layer_path(int *path_num_array, int num_planes,
 	}
 
 	do {
-		MESON_DRM_TRAVERSE("Comb check [%d-%d-%d-%d]\n",
-			combination[0], combination[1], combination[2], combination[3]);
+		MESON_DRM_TRAVERSE("Comb check [%d-%d-%d-%d-%d]\n",
+			combination[0], combination[1], combination[2],
+			combination[3], combination[4]);
 		// sum the combination result to check osd blend block
 		ret = ops->check_pipeline_path(combination, num_planes, mvps,
 					       state);
@@ -1219,9 +1220,35 @@ int combine_layer_path(int *path_num_array, int num_planes,
 				combination[j] = 0;
 				i = 0;
 
+				/*
+				 * Carry to the previous slot which can
+				 * still select another path.
+				 *
+				 * combination[] is a multi-base counter, and path_num_array[]
+				 * is the base of each slot. A slot with path_num == 1 only
+				 * has path0, so it must stay 0 and cannot accept carry.
+				 *
+				 * Enabled slots may be non-continuous, especially
+				 * in dual display cases.
+				 * Therefore, skip disabled or different-CRTC slots
+				 * instead of stopping at them.
+				 */
 				for (k = j - 1; k >= 0; k--) {
-					if (mvps->plane_info[k].enable)
+					if (!(mvps->plane_info[k].enable &&
+						mvps->index == mvps->plane_info[k].crtc_index))
+						continue;
+
+					if (path_num_array[k] <= 0)
+						continue;
+					/* Found a slot that can be advanced
+					 * to the next valid path
+					 */
+					if (combination[k] + 1 < path_num_array[k])
 						break;
+					/* This slot is full
+					 * Clear it and carry to the previous one
+					 */
+					combination[k] = 0;
 				}
 
 				if (k >= 0)
