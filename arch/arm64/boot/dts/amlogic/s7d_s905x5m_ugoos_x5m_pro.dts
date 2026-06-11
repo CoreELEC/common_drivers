@@ -94,7 +94,6 @@
 		startup-delay-us = <70000>;
 		enable-active-high;
 		regulator-boot-on;
-		regulator-always-on;
 	};
 
 	vddio_c: sdcard-1v8_3v3 {
