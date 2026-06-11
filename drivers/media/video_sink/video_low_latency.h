@@ -35,6 +35,7 @@ extern struct ai_scenes_pq vpp_scenes[AI_SCENES_MAX];
 extern struct nn_value_t nn_scenes_value[AI_PQ_TOP];
 #endif
 extern atomic_t video_prop_change;
+extern atomic_t video_prop_wakeup;
 extern wait_queue_head_t amvideo_prop_change_wait;
 extern u32 vpp_crc_en;
 extern int vpp_crc_result;

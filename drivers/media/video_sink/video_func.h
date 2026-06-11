@@ -58,6 +58,7 @@ extern u32 vsync_counts;
 extern bool to_notify_trick_wait;
 extern atomic_t trickmode_framedone;
 extern atomic_t video_prop_change;
+extern atomic_t video_prop_wakeup;
 extern unsigned int video_drop_vf_cnt[MAX_VD_LAYER];
 
 extern int get_count_pip[MAX_VD_LAYER];

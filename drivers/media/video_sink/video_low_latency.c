@@ -1799,12 +1799,13 @@ RUN_FIRST_RDMA:
 
 	/* if prop_change not zero, event will be delayed to next vsync */
 	if (video_prop_status &&
-	    !atomic_read(&video_prop_change)) {
+	    !atomic_read(&video_prop_wakeup)) {
 		if (debug_flag & DEBUG_FLAG_TRACE_EVENT)
 			pr_info("VD1 send event, changed status: 0x%x\n",
 				video_prop_status);
 		atomic_set(&video_prop_change, video_prop_status);
 		video_prop_status = VIDEO_PROP_CHANGE_NONE;
+		atomic_set(&video_prop_wakeup, 1);
 		wake_up_interruptible(&amvideo_prop_change_wait);
 	}
 	if (video_info_change_status) {

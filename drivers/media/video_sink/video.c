@@ -686,6 +686,7 @@ EXPORT_SYMBOL(trickmode_i);
 u32 trickmode_fffb;
 atomic_t trickmode_framedone = ATOMIC_INIT(0);
 atomic_t video_prop_change = ATOMIC_INIT(0);
+atomic_t video_prop_wakeup = ATOMIC_INIT(0);
 atomic_t status_changed = ATOMIC_INIT(0);
 atomic_t fmm_changed = ATOMIC_INIT(0);
 atomic_t video_unreg_flag = ATOMIC_INIT(0);
@@ -7369,7 +7370,8 @@ static unsigned int amvideo_poll_poll(struct file *file, poll_table *wait_table)
 	val = atomic_read(&video_prop_change);
 	if (val) {
 		atomic_set(&status_changed, val);
-		atomic_set(&video_prop_change, 0);
+		//atomic_set(&video_prop_change, 0);
+		atomic_set(&video_prop_wakeup, 0);
 		return POLLIN | POLLWRNORM;
 	}
 
