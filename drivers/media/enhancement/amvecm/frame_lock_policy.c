@@ -933,6 +933,21 @@ void vrr_check_phase_error(struct vframe_s *vf)
 	}
 }
 
+bool frame_check_diplays_mode(struct vinfo_s *vinfo)
+{
+	bool ret = false;
+
+	if (!vinfo)
+		return ret;
+
+	if (vinfo->width == 3840 && vinfo->height == 1080)
+		ret = true;
+	else
+		ret = false;
+
+	return ret;
+}
+
 void vrrlock_process(struct vframe_s *vf,
 		   struct vpp_frame_par_s *cur_video_sts, u16 line)
 {
@@ -969,6 +984,12 @@ void vrrlock_process(struct vframe_s *vf,
 		if (frame_lock_debug & VRR_POLICY_LOCK_STATUS_DEBUG_FLAG)
 			framelock_pr_info("%s 50/100hz vdata.line_dly:%d\n",
 				__func__, vdata.line_dly);
+	} else if (frame_check_diplays_mode(vinfo) && ((frame_sts.vrr_frame_cur >= 288 &&
+		!vf->vf_vrr_param.vrr_signal) || vf->vf_vrr_param.vin_base_fps >= 288)) {
+		vdata.line_dly = vrr_delay_line + 100;
+	} else if (!frame_check_diplays_mode(vinfo) && ((frame_sts.vrr_frame_cur >= 165 &&
+		!vf->vf_vrr_param.vrr_signal) || vf->vf_vrr_param.vin_base_fps >= 165)) {
+		vdata.line_dly = vrr_delay_line + 100;
 	} else if ((frame_sts.vrr_frame_cur == 144 && !vf->vf_vrr_param.vrr_signal) ||
 		vf->vf_vrr_param.vin_base_fps == 144) {
 		if (vf->compWidth == 3840 && vf->compHeight == 2160)
