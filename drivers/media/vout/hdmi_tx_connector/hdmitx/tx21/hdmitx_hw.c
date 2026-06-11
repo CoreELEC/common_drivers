@@ -2230,8 +2230,19 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct hdmi_forma
 	/* dsc program step8.1: Make sure VENC timing gen is disabled. */
 	hdmitx21_venc_en(0, 0);
 	hdmitx21_venc_en(0, 1);
-	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S5)
+
+	/* turn off venc0/1 */
+	switch (hdev->tx_comm.tx_hw->chip_data->chip_type) {
+	case MESON_CPU_ID_S5:
 		hd21_set_reg_bits(VPU_HDMI_SETTING, 0, (hdev->tx_comm.enc_idx == 0) ? 0 : 1, 1);
+		break;
+	case MESON_CPU_ID_A9:
+		hd21_set_reg_bits(VPU_HDMI_SETTING_A9, 0, (hdev->tx_comm.enc_idx == 0) ? 0 : 1, 1);
+		break;
+	default:
+		break;
+	}
+
 	/* dsc program step8.3: Program VPU/HDMI setting. */
 	/* below crt_video_encp* is ENC for T7 */
 	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_T7) {
@@ -2394,8 +2405,21 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw, struct hdmi_forma
 #endif
 
 	/* enable decouple fifo and venc tmg */
-	if (hdev->tx_comm.tx_hw->chip_data->chip_type == MESON_CPU_ID_S5)
+	switch (hdev->tx_comm.tx_hw->chip_data->chip_type) {
+	case MESON_CPU_ID_S5:
 		hd21_set_reg_bits(VPU_HDMI_SETTING, 1, 0, 1);
+		break;
+	case MESON_CPU_ID_A9:
+		/* bit[1:0]: turn on venc0/venc1
+		 * 1: set enc0 to hdmi
+		 * 2: set enc1 to hdmi
+		 */
+		hd21_set_reg_bits(VPU_HDMI_SETTING_A9, 1, (hdev->tx_comm.enc_idx == 0) ? 0 : 1, 1);
+		break;
+	default:
+		break;
+	}
+
 	usleep_range(1000, 1005);
 	if (para->timing.pi_mode == 0 &&
 		(para->timing.v_active == 480 || para->timing.v_active == 576) &&
@@ -6968,14 +6992,7 @@ static void vpu_hdmi_setting_config(struct hdmitx21_dev *hdev)
 		break;
 	case MESON_CPU_ID_A9:
 		vpu_hdmi_setting_reg = VPU_HDMI_SETTING_A9;
-		/* bit[1:0]
-		 * 1: set enc0 to hdmi
-		 * 2: set enc2 to hdmi
-		 */
-		if (hdev->tx_comm.enc_idx == 1)
-			data32 |= (2 << 0);
-		else
-			data32 |= (1 << 0);
+
 		data32 |= (para->timing.h_pol << 2);
 		data32 |= (para->timing.v_pol << 3);
 		//bit[5]  = 0 output CrYCb(BRG)
