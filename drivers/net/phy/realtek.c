@@ -520,13 +520,9 @@ int rtl8211f_suspend(struct phy_device *phydev)
 	int value = 0;
 	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
-
 	/* When a wake source exists, the PHY must remain in working state. */
-	if (eth_priv->wol_ops.not_empty) {
-		if (eth_priv->wol_ops.not_empty(ethmac_dev))
-			return 0;
-	}
+	if (eth_priv->wol_ready)
+		return 0;
 #endif
 
 	if (eth_priv->support_gpio_wol) {
@@ -594,12 +590,8 @@ int rtl8211f_resume(struct phy_device *phydev)
 	int value;
 	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
-
-	if (eth_priv->wol_ops.not_empty) {
-		if (eth_priv->wol_ops.not_empty(ethmac_dev))
-			return 0;
-	}
+	if (eth_priv->wol_ready)
+		return 0;
 #endif
 
 	if (eth_priv->support_gpio_wol) {
@@ -1371,13 +1363,9 @@ static int rtl8221b_suspend(struct phy_device *phydev)
 	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
 	int ret = 0;
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
-
 	/* When a wake source exists, the PHY must remain in working state. */
-	if (eth_priv->wol_ops.not_empty) {
-		if (eth_priv->wol_ops.not_empty(ethmac_dev))
-			return 0;
-	}
+	if (eth_priv->wol_ready)
+		return 0;
 #endif
 
 	if (eth_priv->support_gpio_wol) {
@@ -1441,12 +1429,8 @@ static int rtl8221b_resume(struct phy_device *phydev)
 	struct aml_eth_priv *eth_priv = aml_get_eth_priv_by_pdev(phydev);
 	int ret = 0;
 #if IS_ENABLED(CONFIG_AMLOGIC_WOL)
-	struct device *ethmac_dev = aml_get_ethmac_dev_by_priv(eth_priv);
-
-	if (eth_priv->wol_ops.not_empty) {
-		if (eth_priv->wol_ops.not_empty(ethmac_dev))
-			return 0;
-	}
+	if (eth_priv->wol_ready)
+		return 0;
 #endif
 
 	if (eth_priv->support_gpio_wol) {

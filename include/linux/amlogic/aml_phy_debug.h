@@ -101,6 +101,7 @@ struct aml_eth_priv {
 	unsigned int mdns_switch_from_user;
 	unsigned int support_gpio_wol;
 	unsigned int exphy_mdns_wkup;
+	bool wol_ready;
 	struct aml_wol_ops wol_ops;
 #endif
 };
