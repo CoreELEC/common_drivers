@@ -2808,6 +2808,9 @@ static void v2d_do_file_task(struct v2d_dev *dev)
 
 	config_output_vf_param(dev, output_vf, is_tvp, output_buffer, vframe_info_cur);
 
+	if (input_vf && input_vf->type_ext & VIDTYPE_EXT_DPSS_DROP)
+		output_vf->type_ext |= VIDTYPE_EXT_DPSS_DROP;
+
 	if (count == 1 && input_vf) {
 		v2d_print(dev->index, PRINT_OTHER, "composer done, copy hdr info.\n");
 		output_vf->duration = input_vf->duration;
