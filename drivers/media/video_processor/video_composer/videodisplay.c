@@ -115,25 +115,24 @@ void vsync_notify_video_composer(u8 layer_id,
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
-static void vc_notify_msg_to_mediaproxy(struct vframe_s *vf, int index,
+static void vc_notify_msg_to_mediaproxy(struct vframe_s *vf, struct composer_dev *dev,
 	int event, struct timespec64 ts)
 {
 	struct aml_video_user_data *msg;
 
-	msg = kzalloc(sizeof(*msg), GFP_KERNEL);
-	if (!msg)
+	if (!dev)
 		return;
 
+	msg = &dev->user_data_msg;
+	memset(msg, 0, sizeof(*msg));
 	msg->data.frame_info.bitstreamid = div_u64(vf->timestamp, NSEC_PER_SEC);
-	msg->data.frame_info.vd_instid = index;
+	msg->data.frame_info.vd_instid = dev->index;
 	msg->data.frame_info.decoder_instid = vf->decoder_instid;
 	msg->data.frame_info.frame_index = vf->frame_index;
 	msg->data.frame_info.time = (u64)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 	msg->message_type = event;
 
-	notify_msg_to_mediaproxy(mediaproxy_display_info[index].k_producer_session, 1, msg);
-
-	kfree(msg);
+	notify_msg_to_mediaproxy(mediaproxy_display_info[dev->index].k_producer_session, 1, msg);
 }
 #endif
 
@@ -964,8 +963,7 @@ static struct vframe_s *vc_vf_get(void *op_arg)
 
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 		ktime_get_real_ts64(&ts);
-		vc_notify_msg_to_mediaproxy(vf, dev->index,
-			MEDIA_VIDEO_METRICS_FRAME_TOGGLE_INFO, ts);
+		vc_notify_msg_to_mediaproxy(vf, dev, MEDIA_VIDEO_METRICS_FRAME_TOGGLE_INFO, ts);
 #endif
 		continue_vsync_count[dev->index] = 0;
 		dev->last_vf_index = vf->frame_index;
@@ -1051,7 +1049,7 @@ static void vc_vf_put(struct vframe_s *vf, void *op_arg)
 
 #ifdef CONFIG_AMLOGIC_MEDIA_PROXY
 	ktime_get_real_ts64(&ts);
-	vc_notify_msg_to_mediaproxy(vf, dev->index, MEDIA_VIDEO_METRICS_FRAME_SIGNAFENCE_INFO, ts);
+	vc_notify_msg_to_mediaproxy(vf, dev, MEDIA_VIDEO_METRICS_FRAME_SIGNAFENCE_INFO, ts);
 #endif
 
 #if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)

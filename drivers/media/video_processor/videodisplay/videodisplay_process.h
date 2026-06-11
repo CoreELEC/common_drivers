@@ -30,6 +30,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/amlogic/media/ge2d/ge2d.h>
 #include <linux/amlogic/media/video_sink/video.h>
+#include <linux/amlogic/media/media_proxy/AmlVideoUserdata.h>
 
 #define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_VIDEO_COMPOSER
 #if IS_ENABLED(CONFIG_AMLOGIC_DEBUG_ATRACE)

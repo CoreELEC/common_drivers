@@ -1228,6 +1228,9 @@ static void display_q_uninit(struct composer_dev *dev)
 				}
 			} else if (is_mosaic_22) {
 				for (i = 0; i < 4; i++) {
+					if (!dis_vf->vc_private ||
+						!dis_vf->vc_private->mosaic_vf[i])
+						continue;
 					file_vf = dis_vf->vc_private->mosaic_vf[i]->file_vf;
 					if (file_vf) {
 						fput(file_vf);
@@ -5460,17 +5463,16 @@ static long video_composer_ioctl(struct file *file,
 
 	switch (cmd) {
 	case VIDEO_COMPOSER_IOCTL_SET_FRAMES:
-		frames_info = kzalloc(sizeof(*frames_info), GFP_KERNEL);
-		if (!frames_info)
+		if (!dev)
 			return -ENOMEM;
-
+		frames_info = &dev->frames_info;
+		memset(frames_info, 0, sizeof(*frames_info));
 		if (copy_from_user(frames_info, argp, sizeof(struct frames_info_t)) == 0) {
 			set_frames_info(dev, frames_info);
 			ret = copy_to_user(argp, frames_info, sizeof(struct frames_info_t));
 		} else {
 			ret = -EFAULT;
 		}
-		kfree(frames_info);
 		break;
 	case VIDEO_COMPOSER_IOCTL_SET_ENABLE:
 		if (copy_from_user(&val, argp, sizeof(u32)) == 0)

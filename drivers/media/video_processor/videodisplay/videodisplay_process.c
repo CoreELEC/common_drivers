@@ -1110,7 +1110,7 @@ static void display_q_uninit(struct videodisplay_dev *dev)
 			else
 				vf = dst_vf;
 			vd_prepare = container_of(vf, struct vd_prepare_s, dst_frame);
-			if (IS_ERR_OR_NULL(vd_prepare)) {
+			if (IS_ERR_OR_NULL(vd_prepare) || !vf->vc_private) {
 				vd_print(dev->index, PRINT_ERROR,
 					"%s: prepare is NULL.\n",
 					__func__);
@@ -1120,6 +1120,9 @@ static void display_q_uninit(struct videodisplay_dev *dev)
 			if (vf->type_ext & VIDTYPE_EXT_MOSAIC_22) {
 				vd_print(dev->index, PRINT_OTHER, "%s: mosaic_22 mode\n", __func__);
 				for (i = 0; i < 4; i++) {
+					if (!vf->vc_private->mosaic_vf[i])
+						continue;
+
 					file_vf = vf->vc_private->mosaic_vf[i]->file_vf;
 					if (file_vf) {
 						fput(file_vf);
@@ -2427,9 +2430,8 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 	}
 
 	msg_size = sizeof(struct aml_video_user_data) * MAX_COMPOSER_COUNT;
-	msg = kzalloc(msg_size, GFP_KERNEL);
-	if (!msg)
-		return;
+	msg = dev->user_data_msg;
+	memset(msg, 0, msg_size);
 
 	if (!(vf->flag & VFRAME_FLAG_COMPOSER_DONE)) {
 		msg[0].data.frame_info.bitstreamid = div_u64(vf->timestamp, NSEC_PER_SEC);
@@ -2446,7 +2448,6 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 		if (!vf->composer_info) {
 			vd_print(dev->index, PRINT_ERROR,
 				"%s:vc_private is null!\n", __func__);
-			kfree(msg);
 			return;
 		}
 		count = vf->composer_info->count;
@@ -2470,8 +2471,6 @@ static void vc_notify_msg_to_mediaproxy(struct videodisplay_dev *dev,
 					count,
 					msg);
 	}
-
-	kfree(msg);
 }
 #endif
 
@@ -4022,6 +4021,10 @@ static void vframe_display(struct videodisplay_dev *dev,
 
 	dev->last_file = (struct file *)frame_info->dmabuf[0];
 	vf->vc_private = vd_private_q_pop(dev);
+	if (!vf->vc_private) {
+		vd_print(dev->index, PRINT_ERROR, "vc_private is NULL.\n");
+		return;
+	}
 	vf->vc_private->present_fence = frame_info->present_fence;
 
 	if (vf->vf_ext  && (is_v4l_vf || (is_dec_vf &&
@@ -4034,8 +4037,7 @@ static void vframe_display(struct videodisplay_dev *dev,
 	vf->repeat_count = 0;
 
 	if (is_dec_vf || is_v4l_vf) {
-		if (vf->vc_private)
-			vf->vc_private->src_vf = vd_prepare->src_frame;
+		vf->vc_private->src_vf = vd_prepare->src_frame;
 
 		/*only vd0 support ai feature*/
 		if (dev->video_render_index == 0) {

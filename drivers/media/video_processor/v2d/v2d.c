@@ -3019,21 +3019,17 @@ static long v2d_ioctl(struct file *file, unsigned int cmd, ulong arg)
 			ret = -EFAULT;
 		break;
 	case V2D_IOCTL_SET_FRAMES:
-		frames_info = kzalloc(sizeof(*frames_info), GFP_KERNEL);
-		if (!frames_info)
+		if (!dev)
 			return -ENOMEM;
 
-		if (copy_from_user(frames_info, argp, sizeof(struct frames_info_t)) != 0) {
-			kfree(frames_info);
+		frames_info = &dev->frames_info;
+		memset(frames_info, 0, sizeof(*frames_info));
+		if (copy_from_user(frames_info, argp, sizeof(struct frames_info_t)) != 0)
 			return -EFAULT;
-		}
 
 		ret = v2d_set_frames(dev, frames_info);
-		if (copy_to_user(argp, frames_info, sizeof(struct frames_info_t)) != 0) {
-			kfree(frames_info);
+		if (copy_to_user(argp, frames_info, sizeof(struct frames_info_t)) != 0)
 			return -EFAULT;
-		}
-		kfree(frames_info);
 		break;
 	case V2D_IOCTL_SET_FENCE:
 		if (copy_from_user(&release_info, argp, sizeof(release_info)) == 0)

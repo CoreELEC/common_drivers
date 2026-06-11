@@ -243,6 +243,7 @@ struct videodisplay_dev {
 	struct vd_dump_info_s dump_info_yuv;
 	u32 cur_hold_count;
 	u32 hold_start_vsync;
+	struct aml_video_user_data user_data_msg[MAX_COMPOSER_COUNT];
 };
 
 struct videodisplay_port_s *videodisplay_get_port(u32 index);

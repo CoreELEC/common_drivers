@@ -25,6 +25,7 @@
 
 #include <linux/kfifo.h>
 #include <linux/amlogic/media/video_sink/v4lvideo_ext.h>
+#include <linux/amlogic/media/media_proxy/AmlVideoUserdata.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-mapping.h>
 #include "vfq.h"
@@ -299,6 +300,8 @@ struct composer_dev {
 	bool is_tv_path;
 	u32 low_latency_case;
 	bool last_vf_from_dpss;
+	struct frames_info_t frames_info;
+	struct aml_video_user_data user_data_msg;
 };
 
 struct capability_info_t {

@@ -296,6 +296,7 @@ struct v2d_dev {
 	struct v2d_dump_info_s info_output_yuv;
 	struct v2d_dump_info_s info_dewarp_src;
 	struct kref refcount;
+	struct frames_info_t frames_info;
 };
 
 struct v2d_port_s {
