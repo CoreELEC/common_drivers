@@ -8,3 +8,4 @@ obj-$(CONFIG_AMLOGIC_EXTERNAL_DRIVER) += sensor/ucs11681/
 obj-$(CONFIG_AMLOGIC_EXTERNAL_DRIVER) += sensor/ucs116e0/
 obj-$(CONFIG_AMLOGIC_EXTERNAL_DRIVER) += video/st7789v3_tft/
 obj-$(CONFIG_AMLOGIC_EXTERNAL_DRIVER) += MG24_ota_gpio_ctrl/
+obj-$(CONFIG_AMLOGIC_EXTERNAL_DRIVER) += hdmirx_switch/

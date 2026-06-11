@@ -18,6 +18,7 @@ source "$(COMMON_DRIVERS_DIR)/drivers/external/sensor/ucs11681/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/external/sensor/ucs116e0/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/external/video/st7789v3_tft/Kconfig"
 source "$(COMMON_DRIVERS_DIR)/drivers/external/MG24_ota_gpio_ctrl/Kconfig"
+source "$(COMMON_DRIVERS_DIR)/drivers/external/hdmirx_switch/Kconfig"
 endif
 
 endmenu

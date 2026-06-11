@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+config  HDMIRX_SWITCH_GSV2715
+	tristate "i2c gsv2715 driver"
+	default n

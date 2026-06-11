@@ -729,6 +729,9 @@ CONFIG_SEI_UCS116E0_LIGHT=m
 
 # sei_gpio_ctrl.ko
 CONFIG_SEI_GPIO_CTRL=m
+
+# i2c_gsv2715.ko
+CONFIG_HDMIRX_SWITCH_GSV2715=m
 # end compiled by default but are not loaded
 
 # CONFIG_CXD2880_SPI_DRV is not set
