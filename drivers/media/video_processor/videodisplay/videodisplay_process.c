@@ -3416,26 +3416,31 @@ static struct vf_nn_sr_t *vd_get_hfout_data(struct videodisplay_dev *dev,
 {
 	struct vf_nn_sr_t *srout_data;
 	struct uvm_hook_mod *uhmod;
+	int error = 0;
 
 	if (!dmabuf) {
-		vd_print(dev->index, PRINT_ERROR, "vd get hfout data fail\n");
-		return NULL;
+		error = 1;
+		goto fail;
 	}
 
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_NN);
 	if (!uhmod) {
-		vd_print(dev->index, PRINT_OTHER, "dma file file_private_data is NULL 1\n");
-		return NULL;
+		error = 2;
+		goto fail;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
-		vd_print(dev->index, PRINT_ERROR, "dma file file_private_data is NULL 2\n");
-		return NULL;
+		error = 3;
+		goto fail;
 	}
 	srout_data = uhmod->arg;
 	uvm_put_hook_mod(dmabuf, PROCESS_NN);
 
 	return srout_data;
+
+fail:
+	pr_err("get_hfout_data error=%d\n", error);
+	return NULL;
 }
 
 static struct vf_aiface_t *vd_get_aiface_info(struct videodisplay_dev *dev,
@@ -3443,27 +3448,30 @@ static struct vf_aiface_t *vd_get_aiface_info(struct videodisplay_dev *dev,
 {
 	struct vf_aiface_t *aiface_info;
 	struct uvm_hook_mod *uhmod;
+	int error = 0;
 
 	if (!dmabuf) {
-		vd_print(dev->index, PRINT_ERROR, "NULL param: frame_index=%d.\n", frame_index);
-
-		return NULL;
+		error = 1;
+		goto fail;
 	}
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AIFACE);
 	if (!uhmod) {
-		vd_print(dev->index, PRINT_OTHER, "NULL uhmod: frame_index=%d\n", frame_index);
-		return NULL;
+		error = 2;
+		goto fail;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
-		vd_print(dev->index, PRINT_ERROR, "invalid uhmod param:frame_index=%d\n",
-			frame_index);
-		return NULL;
+		error = 3;
+		goto fail;
 	}
 	aiface_info = uhmod->arg;
 	uvm_put_hook_mod(dmabuf, PROCESS_AIFACE);
 
 	return aiface_info;
+
+fail:
+	pr_err("get_aiface_info error=%d, frame_index=%d\n", error, frame_index);
+	return NULL;
 }
 
 static struct vf_aicolor_t *vd_get_aicolor_info(struct videodisplay_dev *dev,
@@ -3471,25 +3479,30 @@ static struct vf_aicolor_t *vd_get_aicolor_info(struct videodisplay_dev *dev,
 {
 	struct vf_aicolor_t *aicolor_info;
 	struct uvm_hook_mod *uhmod;
+	int error = 0;
 
 	if (!dmabuf) {
-		vd_print(dev->index, PRINT_ERROR, "vd get aicolor_info fail.\n");
-		return NULL;
+		error = 1;
+		goto fail;
 	}
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AICOLOR);
 	if (!uhmod) {
-		vd_print(dev->index, PRINT_OTHER, "dma file file_private_data is NULL 1\n");
-		return NULL;
+		error = 2;
+		goto fail;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
-		vd_print(dev->index, PRINT_ERROR, "dma file file_private_data is NULL 2\n");
-		return NULL;
+		error = 3;
+		goto fail;
 	}
 	aicolor_info = uhmod->arg;
 	uvm_put_hook_mod(dmabuf, PROCESS_AICOLOR);
 
 	return aicolor_info;
+
+fail:
+	pr_err("get_aicolor_info error=%d\n", error);
+	return NULL;
 }
 
 static void video_wait_aiface_ready(struct videodisplay_dev *dev,
@@ -3501,7 +3514,7 @@ static void video_wait_aiface_ready(struct videodisplay_dev *dev,
 		if (aiface_info->nn_status != NN_DONE &&
 			(aiface_info->nn_status == NN_WAIT_DOING ||
 			aiface_info->nn_status == NN_START_DOING)) {
-			usleep_range(2000, 2100);
+			usleep_range(2000, 3000);
 			wait_count++;
 			vd_print(dev->index, PRINT_PATTERN | PRINT_AIFACE,
 				"aiface wait count %d, frame_index=%d, nn_status=%d\n",
@@ -3583,8 +3596,8 @@ static void video_wait_sr_fence(struct videodisplay_dev *dev,
 		s32 ret = dma_fence_wait_timeout(fence, false, 2000);
 
 		vd_print(dev->index, PRINT_FENCE,
-			 "%s, sr fence %lx, state: %d, wait cost time:%lldns\n",
-			 __func__, (ulong)fence, ret,
+			 "wait_sr_fence:sr fence %lx, state: %d, wait cost time:%lldns\n",
+			 (ulong)fence, ret,
 			 local_clock() - timestamp);
 	} else {
 		vd_print(dev->index, PRINT_FENCE,
@@ -3604,7 +3617,7 @@ static int config_ai_param(struct videodisplay_dev *dev,
 	struct vf_aicolor_t *aicolor_info = NULL;
 
 	if (!dev || !received_frames || !vf || !vf->vc_private) {
-		pr_info("vc: %s: NULL param.\n", __func__);
+		pr_err("config ai_param err: NULL param.\n");
 		return -1;
 	}
 
@@ -3670,7 +3683,7 @@ static void set_frc_pattern(struct videodisplay_dev *dev, struct vframe_s *vf)
 		vf->source_type == VFRAME_SOURCE_TYPE_TUNER) {
 		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_1_1;
 		new_afr_pulldown = 0;
-		vd_print(dev->index, PRINT_OTHER, "%s:HDMI mode, FRC full function", __func__);
+		vd_print(dev->index, PRINT_OTHER, "set frc_pattern:HDMI mode, FRC full function\n");
 		return;
 	}
 
@@ -3693,8 +3706,8 @@ static void set_frc_pattern(struct videodisplay_dev *dev, struct vframe_s *vf)
 		vf->vc_private->frc_operation_mode = VC_FRC_FLAG_BYPASS;
 		break;
 	}
-	vd_print(dev->index, PRINT_OTHER, "%s: set frc mode:%d\n",
-		__func__, vf->vc_private->frc_operation_mode);
+	vd_print(dev->index, PRINT_OTHER, "set frc_pattern: set frc mode:%d\n",
+		vf->vc_private->frc_operation_mode);
 }
 
 static void vframe_display(struct videodisplay_dev *dev,
