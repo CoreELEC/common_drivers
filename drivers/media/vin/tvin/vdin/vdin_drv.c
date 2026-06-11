@@ -1849,8 +1849,10 @@ void vdin_register_rdma_read(struct vdin_dev_s *devp)
 			pr_err("vdin%d error: offset:%d,reg_addr:%#x,ret:%d\n", devp->index,
 				devp->reg_hnd.offset, devp->reg_hnd.reg_addr, ret);
 		}
+		devp->flags_isr |= VDIN_FLAG_RDMA_READ_DONE;
 	} else {
 		devp->reg_hnd.reg_addr = 0;
+		devp->flags_isr &= ~VDIN_FLAG_RDMA_READ_DONE;
 	}
 }
 
