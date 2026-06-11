@@ -207,12 +207,20 @@ static int aml_vrr_drv_update(void)
 
 		if (vrr_notify_rx_flag == 0) {
 			vdata.rx_vfreq_max = vdata.vrr_panel_max;
-			vdata.rx_vfreq_min = vdata.vrr_panel_min;
+			if (vdata.vrr_panel_min == 40 ||
+				(vdata.vrr_panel_min + 5 == 40))
+				vdata.rx_vfreq_min = 40;
+			else
+				vdata.rx_vfreq_min = 48;
 			VRRPR("%s: first notify rx max:%d, min:%d\n",
 				__func__, vdata.rx_vfreq_max, vdata.rx_vfreq_min);
 		} else {
 			vdata.rx_vfreq_max = vdata.dev_vfreq_max;
-			vdata.rx_vfreq_min = vdata.dev_vfreq_min;
+			if (vdata.vrr_panel_min == 40 ||
+				(vdata.vrr_panel_min + 5 == 40))
+				vdata.rx_vfreq_min = 40;
+			else
+				vdata.rx_vfreq_min = 48;
 		}
 
 		if (vrr_debug_print & VRR_DBG_PR_NORMAL) {
