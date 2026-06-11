@@ -10615,7 +10615,7 @@ void rx_mute_vpp(u8 port_type)
 	if (cur_dev->display_module == S5_DISPLAY_MODULE) {
 		rx_mute_vpp_s5(black_val);
 	} else {
-#ifdef AMLOGIC_MEDIA_DPSS
+#ifdef ENABLE_DPSS_FRC
 		rx_game_frc_notify(); //game memc need
 #endif
 		WRITE_VCBUS_REG(VPP_VD1_CLIP_MISC0, black_val);

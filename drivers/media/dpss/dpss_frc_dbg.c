@@ -2414,20 +2414,20 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 	venc_vrr_ctrl_1 = pchip_st->venc_vrr_ctrl_1;
 
 	len +=
-		sprintf(buf + len, "game memc ver 20260415\tchip id:%d\n", pchip_st->chip);
+		sprintf(buf + len, "game memc ver 20260428\tchip id:%d\n", pchip_st->chip);
 	len +=
-		sprintf(buf + len, "game_st->game_vrr_en\t=%d\n", game_st->game_vrr_en);
+		sprintf(buf + len, "game_st->game_vrr_en\t\t=%d\n", game_st->game_vrr_en);
 	len +=
-		sprintf(buf + len, "game_st->mc_link_en\t=%d\n", game_st->mc_link_en);
+		sprintf(buf + len, "game_st->mc_link_en\t\t=%d\n", game_st->mc_link_en);
 	len +=
 		sprintf(buf + len, "game_n2m\t=%d game_film\t=%d\n",
 			game_st->game_n2m, game_st->game_film);
 	len +=
-		sprintf(buf + len, "game_st->dly_st.vtotal\t=%d\n", game_st->dly_st.vtotal);
+		sprintf(buf + len, "game_st->dly_st.vtotal\t\t=%d\n", game_st->dly_st.vtotal);
 	len +=
-		sprintf(buf + len, "game_st->dly_st.vsp_dly\t=%d\n", game_st->dly_st.vsp_dly);
+		sprintf(buf + len, "game_st->dly_st.vsp_dly\t\t=%d\n", game_st->dly_st.vsp_dly);
 	len +=
-		sprintf(buf + len, "game_st->dly_st.pre_dly\t=%d\n", game_st->dly_st.pre_dly);
+		sprintf(buf + len, "game_st->dly_st.pre_dly\t\t=%d\n", game_st->dly_st.pre_dly);
 	len +=
 		sprintf(buf + len, "game_st->dly_st.vmin_num_adj\t=%d\n",
 			game_st->dly_st.vmin_num_adj);
@@ -2435,19 +2435,26 @@ ssize_t dpss_frc_debug_game_if_help(char *buf)
 		sprintf(buf + len, "game_st->dly_st.vmax_num_adj\t=%d\n",
 			game_st->dly_st.vmax_num_adj);
 	len +=
-		sprintf(buf + len, "game_st->vrr_drop_cnt\t=%d\n", game_st->vrr_drop_cnt);
+		sprintf(buf + len, "game_st->vrr_drop_cnt\t\t=%d\n", game_st->vrr_drop_cnt);
 	len +=
-		sprintf(buf + len, "game_st->video_mute_cnt\t=%d\n", game_st->video_mute_cnt);
+		sprintf(buf + len, "game_st->video_mute_cnt\t\t=%d\n", game_st->video_mute_cnt);
 	len +=
-		sprintf(buf + len, "game_st->vdin_buf_num\t=%d\n", game_st->vdin_buf_num);
+		sprintf(buf + len, "game_st->vdin_buf_num\t\t=%d\n", game_st->vdin_buf_num);
 	len +=
-		sprintf(buf + len, "game_st->inp_ctrl\t=%d\n", game_st->inp_ctrl);
+		sprintf(buf + len, "game_st->inp_ctrl\t\t=%d\n", game_st->inp_ctrl);
 	len +=
-		sprintf(buf + len, "game_st->game_deblur\t=%d\n", game_st->game_deblur);
+		sprintf(buf + len, "game_st->game_deblur\t\t=%d\n", game_st->game_deblur);
 	len +=
-		sprintf(buf + len, "game_st->mc_need_byp_en\t=%d\n", game_st->mc_need_byp_en);
+		sprintf(buf + len, "game_st->mc_need_byp_en\t\t=%d\n", game_st->mc_need_byp_en);
 	len +=
 		sprintf(buf + len, "game_st->game_dae_byp_en\t=%d\n", game_st->game_dae_byp_en);
+	len +=
+		sprintf(buf + len, "game_st->switch_game_cnt\t=%d\n", game_st->switch_game_cnt);
+	len +=
+		sprintf(buf + len, "game_st->vrr_enabled\t\t=%d\n", game_st->vrr_enabled);
+	len +=
+		sprintf(buf + len, "game_st->pre_frames_en\t\t=%d\n", game_st->pre_frames_en);
+
 	len +=
 		sprintf(buf + len, "ENCL_FRC_CTRL(0x%x)\t=%#X\n",
 			encl_frc_ctrl, rd_vc(encl_frc_ctrl));
@@ -2561,6 +2568,16 @@ void dpss_frc_debug_game_if(const char *buf, size_t count)
 			else
 				game_st->game_dae_byp_en = false;
 		}
+	} else if (!strcmp(parm[0], "switch_cnt")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			game_st->switch_game_cnt = val1;
+	} else if (!strcmp(parm[0], "pre_frames_en")) {
+		if (!parm[1])
+			goto exit;
+		if (kstrtoint(parm[1], 10, &val1) == 0)
+			game_st->pre_frames_en = val1 ? true : false;
 	}
 
 exit:

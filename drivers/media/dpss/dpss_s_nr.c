@@ -3610,7 +3610,7 @@ void dbg_step0_trig_input(unsigned int index)
 		return;
 	}
 
-	if (prm_top->game_mode_n2m == 1 || prm_top->game_mode_film == 1) {
+	if (is_memc_game_enabled(prm_top)) {
 		w_reg_bit_vc(VDIN_TOP_SIZE, game_st->vdin_buf_num - 1, 20, 4);
 		// w_reg_bit_vc(VDIN_TOP_SIZE, dpss_frc_vrr_index, 16, 4);
 		w_reg_bit_vc(VDIN_TOP_SIZE, index, 16, 4);

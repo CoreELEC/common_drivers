@@ -225,6 +225,12 @@ struct game_frc_s {
 	unsigned int vdin_stop_dec;
 };
 
+struct vdin_dpss_game_frc_s {
+	unsigned int duration;
+	unsigned int vf_width;
+	unsigned int vf_height;
+};
+
 void DPSS_WRITE_FRC_REG(unsigned int reg, unsigned int val);
 void DPSS_WRITE_FRC_REG_BY_CPU(unsigned int reg, unsigned int val);
 
@@ -244,5 +250,7 @@ inline void frc_config_reg_value(u32 need_val, u32 mask, u32 *reg_val);
 void vdin_game_frc_notify(struct game_frc_s *frc_data);
 bool get_dpss_game_frc_locked(void);
 void rx_game_frc_notify(void);
+bool vdin_check_need_do_game_frc(struct vdin_dpss_game_frc_s *parm);
+int vdin_get_game_frc_lock_st(void);
 
 #endif

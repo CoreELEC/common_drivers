@@ -1031,6 +1031,16 @@ static void vdin_handle_game_mode_chg(struct vdin_dev_s *devp)
 	vdin_game_mode_transfer(devp);
 	if (game_mode_pre != devp->game_mode)
 		vdin_frame_lock_check(devp, 1);
+
+#ifndef CONFIG_AMLOGIC_ZAPPER_CUT
+	if (devp->vdin_game_frc) {
+		if (vdin_get_game_frc_lock_st())
+			devp->game_mode |= VDIN_GAME_MODE_1;
+		else
+			devp->game_mode &= ~VDIN_GAME_MODE_1;
+	}
+#endif
+
 	/* game mode 1/2 changed, send vf strategy needs to be changed,recycle unused vf */
 	if ((game_mode_pre & VDIN_GAME_MODE_1_2) != (devp->game_mode & VDIN_GAME_MODE_1_2)) {
 		if (devp->game_mode & VDIN_GAME_MODE_2) {

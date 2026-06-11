@@ -2796,6 +2796,12 @@ static int dpss_process_set_frame(struct dpss_process_dev *dev, struct frame_inf
 	do_gettimeofday(&time1);
 	vf->display_recv_times = (u64)time1.tv_sec * 1000 + time1.tv_usec / 1000;
 
+	// for game frc
+	vf->axis[0] = frame_info->dst_x;
+	vf->axis[1] = frame_info->dst_y;
+	vf->axis[2] = frame_info->dst_w + frame_info->dst_x - 1;
+	vf->axis[3] = frame_info->dst_h + frame_info->dst_y - 1;
+
 	if (vf->flag_ext & VFRAME_FLAG_EXT_DTV_CASE)
 		is_dtv_src = true;
 	vf->dpss_flg |= DPSS_FLG_SET_DPSS_PROCESS;

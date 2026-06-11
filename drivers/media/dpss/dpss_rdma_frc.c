@@ -517,8 +517,31 @@ void post_vsync_signal_to_dpss_rdma(void)
 	u32 read_cnt;
 	struct dpss_rdma_info *rdma_info_p;
 	struct rdma_regadr_s *rdma_regadr;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	struct dpss_game_state_s *game_st;
+	bool mc_undone_flag = 0;
+	u32 tmpreg_value, mc_uncnt;
 
 	vsync_signal_to_game_frc(); // for game frc
+
+	// mc_undone_check();
+	if (dpss_dae_frm_cnt_src0) {
+		tmpreg_value = rd(FRC_RO_MC_STAT);
+		mc_undone_flag = (tmpreg_value >> 12) & 0x1;
+		mc_uncnt = (tmpreg_value >> 16) & 0x1fff;
+		if (mc_undone_flag) {
+			dbg_h2("stats:%#x, mc_udo_cnt:%d,  total:%d\n",
+				tmpreg_value, mc_uncnt, mc_undone_cnt);
+		}
+	}
+
+	if (!pchip_st)
+		return;
+	game_st = &pchip_st->game_st;
+	if (game_st->switch_game_en) {
+		venc_vrr_vdin();
+		game_st->switch_game_en = false;
+	}
 
 	if (!rdma_enable())
 		return;

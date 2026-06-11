@@ -1947,12 +1947,13 @@ void pre_vs_game(void)
 
 	//don't add  logic after triggle function,add by fxj
 	// hw_cfg_dpss_mc_pre_triggle();
-	w_reg_bit(DPSS_DPE_MC_START_CTRL, 1, 30, 1); //mc pre trig
-
 	if (game_st->mc_need_byp_en) {
-		frc_set_mc_bypass(3);
-		dbg_f2("game mode mc bypass set 3\n");
+		frc_set_mc_bypass(1);
+		game_st->mc_need_byp_en = false;
+		dbg_f2("game mode mc bypass set 1\n");
 	}
+
+	w_reg_bit(DPSS_DPE_MC_START_CTRL, 1, 30, 1); //mc pre trig
 
 #ifdef USE_FRC_PRE_VS_RDMA
 	// dpss_rdma_auto_wr_reg(reg, val + idx);
@@ -1997,7 +1998,7 @@ void irq_pre_vs(void)
 		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
 		return;
 	}
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+	if (is_memc_game_enabled(prm_top)) {
 		pre_vs_game();
 		return;
 	}
@@ -2284,7 +2285,7 @@ void irq_display(void)
 		DBG_ERR("irq_pre_vsync  dpss_frc fw_data is null\n");
 		return;
 	}
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+	if (is_memc_game_enabled(prm_top)) {
 		display_game();
 		return;
 	}
@@ -2400,7 +2401,7 @@ void irq_inp(void)
 	if (!pchip_st)
 		return;
 
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+	if (is_memc_game_enabled(prm_top)) {
 		w_reg_bit(FRC_REG_INP_FRM_RST_CTRL, 1, 4, 1); //rst auto W1T
 		dbg_h2("auto irq inp: yline_sync: %#X, cline_sync:%#X\r\n",
 			rd(FRC_INP_RD_YLINE_CNT), rd(FRC_INP_RD_CLINE_CNT));
@@ -2584,7 +2585,7 @@ void irq_inp(void)
 		}
 		if (inp_start_sel != 1)
 			dpss_input_q_update_status(prm_top->in_q, inp_ofrm_vld, prm_top->is_i);
-	} else if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+	} else if (is_memc_game_enabled(prm_top)) {
 		if (game_st->inp_ctrl)
 			w_reg_bit(FRC_INP_HOLD_CTRL, 1, 31, 1);
 	}
@@ -2767,7 +2768,7 @@ void irq_dae0(void)
 
 	frc_int_st->dae0_int_cnt++;
 
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
+	if (is_memc_game_enabled(prm_top)) {
 		dae0_game();
 		return;
 	}
@@ -4712,7 +4713,7 @@ void hw_config_top_post(struct PRM_DPSS_TOP *prm_top)
 
 void venc_vrr_vdin(void)
 {
-	static u32 enable;
+	// static u32 enable;
 	u32 vtotal, vmin_num, vmax_num, out_frm_rate;
 	u32 encl_frc_ctrl, venc_vrr_ctrl, venc_vrr_adj_lmt, venc_vrr_ctrl_1;
 	struct dpss_frc_fw_data_s *pfw_data;
@@ -4750,25 +4751,27 @@ void venc_vrr_vdin(void)
 
 	dbg_h2("frc game_mode:%d->%d\n",
 		frc_top->game_mode, (prm_top->game_mode_n2m | prm_top->game_mode_film));
-	if (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1) {
-		if (enable == 1)
+	if (is_memc_game_enabled(prm_top)) {
+		if (game_st->vrr_enabled == 1)
 			return;
 		if (aml_vrr_state()) { // vrr enable, delay enable game frc
 			game_st->delay_enable_game_frc = true;
 			game_st->delay_enable_cnt = dpss_dbg_delay_cnt;
 			return;
 		}
-		enable = 1;
+		game_st->vrr_enabled = 1;
 		vtotal = vinfo->vtotal;
 		dly_st->vtotal = vtotal;
 		vmin_num = vtotal - dly_st->pre_dly - dly_st->vmin_num_adj;
 		vmax_num = vtotal - dly_st->pre_dly + dly_st->vmax_num_adj;
 
-		wr_vc(venc_vrr_ctrl, (1 & 0xf) << 24 |  //cfg_vrr_frm_num
+		wr_vc(venc_vrr_ctrl,
+			(1 & 0xf) << 30 |  // pls_vrr_clr
+			(1 & 0xf) << 24 |  //cfg_vrr_frm_num
 			(dly_st->vsp_dly & 0xffff) << 8 |  //cfg_vsp_dly_num
 			(0 & 0xf) << 4 |        //cfg_vrr_frm_ths
 			1 << 2 |                //cfg_vrr_vsp_en  vdin en
-			(enable & 0x1) << 1 |   //cfg_vrr_mode
+			(game_st->vrr_enabled & 0x1) << 1 |   //cfg_vrr_mode
 			1                       //sel vdin
 		);
 
@@ -4780,18 +4783,19 @@ void venc_vrr_vdin(void)
 			w_reg_bit_vc(venc_vrr_ctrl_1, 0x10, 4, 8); //cfg_iofrm_num 1:2
 
 		w_reg_bit_vc(venc_vrr_ctrl_1, dly_st->pre_dly, 12, 16); //cfg_iofrm_num
+		w_reg_bit_vc(venc_vrr_ctrl, 0, 30, 1);
 		game_st->mc_need_byp_en = false;
-		dbg_h2("game_frc enable : %d\n", enable);
+		dbg_h2("game_frc enable : %d\n", game_st->vrr_enabled);
 	} else if (prm_top->game_mode_film == 0 &&
 		   prm_top->game_mode_n2m == 0) {
-		if (enable == 0)
+		if (game_st->vrr_enabled == 0)
 			return;
-		enable = 0;
+		game_st->vrr_enabled = 0;
 		wr_vc(venc_vrr_ctrl, (0 & 0xf) << 24 | //cfg_vrr_frm_num
 			(0 & 0xffff) << 8 |     //cfg_vsp_dly_num
 			(0 & 0xf) << 4 |        //cfg_vrr_frm_ths
 			0 << 2 |                //cfg_vrr_vsp_en  vdin en
-			(enable & 0x1) << 1 |   //cfg_vrr_mode
+			(game_st->vrr_enabled & 0x1) << 1 |   //cfg_vrr_mode
 			0                       //sel vdin
 		);
 
@@ -4802,7 +4806,7 @@ void venc_vrr_vdin(void)
 		w_reg_bit_vc(venc_vrr_ctrl_1, 0x0, 12, 16);     //cfg_iofrm_num
 		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 16, 4);
 		w_reg_bit_vc(VDIN_TOP_SIZE, 0, 20, 4);
-		dbg_h2("game_frc enable : %d\n", enable);
+		dbg_h2("game_frc enable : %d\n", game_st->vrr_enabled);
 		//frc_top->game_mode = 0;
 	}
 }

@@ -501,11 +501,16 @@ struct dpss_game_state_s {
 	bool delay_enable_game_frc;
 	bool mc_need_byp_en;
 	bool game_dae_byp_en;
+	bool need_switch_game_en;
+	bool switch_game_en;
+	bool pre_frames_en;
+	u32 switch_game_cnt;
 	u32 vrr_drop_cnt;
 	u32 video_mute_cnt;
 	u32 vdin_buf_num;
 	u32 game_deblur;
 	u32 delay_enable_cnt;
+	bool vrr_enabled;
 
 	struct dpss_game_dly_s dly_st;
 };
@@ -790,6 +795,11 @@ static inline struct dpss_hw_s *dpss_get_hw(void)
 static inline struct frc_chip_st *dpss_get_frc_st(void)
 {
 	return dpss_get_devp() ? dpss_get_devp()->pchip_st : NULL;
+}
+
+static inline bool is_memc_game_enabled(const struct PRM_DPSS_TOP *prm_top)
+{
+	return (prm_top->game_mode_film == 1 || prm_top->game_mode_n2m == 1);
 }
 
 void *dpss_get_fw_data(void);

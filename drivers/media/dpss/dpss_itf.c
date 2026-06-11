@@ -18,6 +18,7 @@
 #include <linux/amlogic/media/dpss/dpss_frc.h>
 #include <linux/amlogic/media/codec_mm/codec_mm_prealloc.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
+#include <linux/amlogic/media/dpss/frc_common_x.h>
 
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
@@ -34,7 +35,8 @@ module_param_named(dpss_bypass_all, dpss_bypass_all, bool, 0664);
 
 /*game frc*/
 #define GAME_RES_LIST_MAX 3
-#define GAME_N2M_LIST_MAX 4
+#define GAME_N2M_LIST_MAX_T6W 4
+#define GAME_N2M_LIST_MAX_T6X 4
 #define DPSS_FRC_RATIO_1_1  0
 #define DPSS_FRC_RATIO_1_2  1
 // #define DPSS_FRC_RATIO_1_4  2
@@ -46,10 +48,14 @@ static struct dpss_frc_game_res_t frc_res_list[GAME_RES_LIST_MAX] = {
 	{3840, 2160},
 };
 
-static struct dpss_game_n2m_t frc_n2m_list[GAME_N2M_LIST_MAX] = {
-	// {25,  50},
-	// {30,  60},
-	// {60,  60},
+static struct dpss_game_n2m_t frc_n2m_list_t6w[GAME_N2M_LIST_MAX_T6W] = {
+	{25,  50},
+	{50,  50},
+	{30,  60},
+	{60,  60},
+};
+
+static struct dpss_game_n2m_t frc_n2m_list_t6x[GAME_N2M_LIST_MAX_T6X] = {
 	{50,  100},
 	{60,  120},
 	{100, 100},
@@ -2047,31 +2053,36 @@ EXPORT_SYMBOL(dpss_cmd_asy);
 bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
 {
 	int i;
-	u32 in_frm_rate, in_frm_frac, out_frm_rate, out_frm_frac;
+	u32 in_frm_rate, in_frm_frac, out_frm_rate, out_frm_frac, frc_n2m_list_max;
 	struct vinfo_s *vinfo;
 	bool need_do_game_frc = true;
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct dpss_game_state_s *game_st;
+	struct dpss_game_n2m_t *frc_n2m_list;
 	struct dpss_init_parm *dpss_parm = parm;
 
 	vinfo = get_current_vinfo();
 
-	if (!pchip_st) {
-		dbg_h0("pchip_st or vfs is null\n");
-		return need_do_game_frc;
+	if (!pchip_st || !vinfo || !vf) {
+		dbg_h0("pchip_st or vinfo is null\n");
+		return false;
 	}
-
-	if (!vinfo)
-		return need_do_game_frc;
-
-	//INTERLACE
+	//INTERLACE not support , quick return
 	if (vf->type & VIDTYPE_INTERLACE)
-		need_do_game_frc = false;
+		return false;
 
-	// game flag
+	// no game flag,quick return
 	if (!(vf->flag & VFRAME_FLAG_GAME_MODE) ||
 		!(vf->flag_ext & VDIN_GAME_FRC_FLAG_EN))
 		need_do_game_frc = false;
+
+	if (pchip_st->chip == ID_T6X) {
+		frc_n2m_list = frc_n2m_list_t6x;
+		frc_n2m_list_max = GAME_N2M_LIST_MAX_T6X;
+	} else {
+		frc_n2m_list = frc_n2m_list_t6w;
+		frc_n2m_list_max = GAME_N2M_LIST_MAX_T6W;
+	}
 
 	//Resolution
 	for (i = 0; i < GAME_RES_LIST_MAX; i++)
@@ -2090,12 +2101,15 @@ bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
 	out_frm_frac = (vinfo->sync_duration_num * 1000 /
 			vinfo->sync_duration_den) % 1000;
 	out_frm_rate = out_frm_rate + (out_frm_frac + 500) / 1000;
-	for (i = 0; i < GAME_N2M_LIST_MAX; i++)
+	for (i = 0; i < frc_n2m_list_max; i++)
 		if (in_frm_rate == frc_n2m_list[i].input_framerate &&
 			out_frm_rate == frc_n2m_list[i].output_framerate)
 			break;
 
-	if (i == GAME_N2M_LIST_MAX)
+	if (i == frc_n2m_list_max)
+		need_do_game_frc = false;
+
+	if (vf->axis[0] != 0 || vf->axis[1] != 0) // window
 		need_do_game_frc = false;
 
 	game_st = &pchip_st->game_st;
@@ -2107,9 +2121,67 @@ bool check_need_do_game_frc(struct dpss_init_parm *parm, struct vframe_s *vf)
 	dpss_parm->frc_parm.out_frm_rate = out_frm_rate;
 	game_st->do_game_frc = need_do_game_frc;
 
-	dbg_h2("game ret:%d, res:(%d,%d), in/out:(%d/%d), frac:%d\n",
+	dbg_h2("game ret:%d, res:(%d,%d),in/out:(%d/%d),vf_ext:%d,axis[%d,%d,%d,%d]\n",
 		need_do_game_frc, vf->compWidth, vf->compHeight,
-		in_frm_rate, out_frm_rate, in_frm_frac);
+		in_frm_rate, out_frm_rate, vf->flag_ext,
+		vf->axis[0], vf->axis[1], vf->axis[2], vf->axis[3]);
+
+	return need_do_game_frc;
+}
+
+bool vdin_check_need_do_game_frc(struct vdin_dpss_game_frc_s *parm)
+{
+	int i;
+	u32 in_frm_rate, in_frm_frac, out_frm_rate, out_frm_frac, frc_n2m_list_max;
+	struct vinfo_s *vinfo;
+	bool need_do_game_frc = true;
+	struct frc_chip_st *pchip_st = dpss_get_frc_st();
+	// struct dpss_game_state_s *game_st;
+	struct dpss_game_n2m_t *frc_n2m_list;
+
+	vinfo = get_current_vinfo();
+
+	if (!pchip_st || !vinfo || !parm) {
+		dbg_h0("pchip_st is null\n");
+		return false;
+	}
+
+	if (pchip_st->chip == ID_T6X) {
+		frc_n2m_list = frc_n2m_list_t6x;
+		frc_n2m_list_max = GAME_N2M_LIST_MAX_T6X;
+	} else {
+		frc_n2m_list = frc_n2m_list_t6w;
+		frc_n2m_list_max = GAME_N2M_LIST_MAX_T6W;
+	}
+
+	//Resolution
+	for (i = 0; i < GAME_RES_LIST_MAX; i++)
+		if (parm->vf_width == frc_res_list[i].width &&
+			parm->vf_height == frc_res_list[i].height)
+			break;
+
+	if (i == GAME_RES_LIST_MAX)
+		need_do_game_frc = false;
+
+	//N2M
+	in_frm_rate = 96000 / parm->duration;
+	in_frm_frac = 96000 * 1000 / parm->duration % 1000;
+	in_frm_rate = in_frm_rate + (in_frm_frac + 500) / 1000;
+	out_frm_rate = vinfo->sync_duration_num / vinfo->sync_duration_den;
+	out_frm_frac = (vinfo->sync_duration_num * 1000 /
+			vinfo->sync_duration_den) % 1000;
+	out_frm_rate = out_frm_rate + (out_frm_frac + 500) / 1000;
+	for (i = 0; i < frc_n2m_list_max; i++)
+		if (in_frm_rate == frc_n2m_list[i].input_framerate &&
+			out_frm_rate == frc_n2m_list[i].output_framerate)
+			break;
+
+	if (i == frc_n2m_list_max)
+		need_do_game_frc = false;
+
+	dbg_h2("vdin game ret:%d, res:(%d,%d),in/out:(%d/%d)\n",
+		need_do_game_frc, parm->vf_width, parm->vf_height,
+		in_frm_rate, out_frm_rate);
 
 	return need_do_game_frc;
 }
@@ -2120,7 +2192,7 @@ unsigned char dpss_is_bypass(struct dpss_init_parm *parm, struct vframe_s *vf)
 	unsigned int reason = 0;
 
 	/*need bypass*/
-	if (!vf) {
+	if (!vf || !parm) {
 		pr_err("dpss param is invalid.\n");
 		return reason;
 	}
@@ -2189,7 +2261,7 @@ void dpss_game_frc_lock(struct dpss_init_parm *parm)
 	struct frc_chip_st *pchip_st = dpss_get_frc_st();
 	struct dpss_game_state_s *game_st;
 
-	if (!pchip_st)
+	if (!pchip_st || !parm)
 		return;
 
 	if (!parm->frc_parm.do_game_frc)
@@ -2198,19 +2270,24 @@ void dpss_game_frc_lock(struct dpss_init_parm *parm)
 	game_st = &pchip_st->game_st;
 	in_frm_rate = parm->frc_parm.in_frm_rate;
 	out_frm_rate = parm->frc_parm.out_frm_rate;
-	if (out_frm_rate / in_frm_rate > 1)
+	if (out_frm_rate > in_frm_rate) {
 		game_st->game_n2m = 1;
-	else
+		game_st->game_film = 0;
+	} else {
+		game_st->game_n2m = 0;
 		game_st->game_film = 1;
+	}
 
 	if (game_st->game_vrr_en) {
-		venc_vrr_vdin();
+		// venc_vrr_vdin();
+		game_st->need_switch_game_en = true;
 		dbg_h0("do frc game mdoe:[film:%d, n2m:%d]\n",
 			game_st->game_film, game_st->game_n2m);
 	} else {
 		game_st->game_n2m = 0;
 		game_st->game_film = 0;
-		venc_vrr_vdin();
+		// venc_vrr_vdin();
+		game_st->need_switch_game_en = true;
 		dbg_h0("frc only mdoe:[film:%d, n2m:%d]\n",
 			game_st->game_film, game_st->game_n2m);
 	}
