@@ -1,4 +1,4 @@
-From 8a200fd1cec54be28505dacf525300ffab2d6ba9 Mon Sep 17 00:00:00 2001
+From c9649609bb0c7c496737433a22771ec2d52b7f34 Mon Sep 17 00:00:00 2001
 From: Tao Zeng <tao.zeng@amlogic.com>
 Date: Thu, 20 Jan 2022 15:09:43 +0800
 Subject: [PATCH] mm: add pagetrace support [1/2]
@@ -21,14 +21,15 @@ Change-Id: I69cc8b4f4fa4c323204f86e5c76613cd3d6087df
  include/linux/mmzone.h   | 16 ++++++++++++++++
  mm/compaction.c          |  7 +++++++
  mm/mm_init.c             | 13 +++++++++++++
+ mm/oom_kill.c            |  6 ++++++
  mm/page_alloc.c          | 13 +++++++++++++
- 5 files changed, 59 insertions(+)
+ 6 files changed, 65 insertions(+)
 
 diff --git a/include/linux/mm_types.h b/include/linux/mm_types.h
-index 83e58745e855..d38754429f0e 100644
+index 21a3ec058e14..a89f7209c38a 100644
 --- a/include/linux/mm_types.h
 +++ b/include/linux/mm_types.h
-@@ -71,8 +71,18 @@ struct mem_cgroup;
+@@ -72,8 +72,18 @@ struct mem_cgroup;
  #endif
  
  struct page {
@@ -48,10 +49,10 @@ index 83e58745e855..d38754429f0e 100644
  	 * Five words (20/40 bytes) are available in this union.
  	 * WARNING: bit 0 of the first word is used for PageTail(). That
 diff --git a/include/linux/mmzone.h b/include/linux/mmzone.h
-index a9896d9b9bf2..00823bd13e51 100644
+index 37cd759cf225..149c33b14807 100644
 --- a/include/linux/mmzone.h
 +++ b/include/linux/mmzone.h
-@@ -1083,7 +1083,23 @@ static inline bool zone_is_empty(struct zone *zone)
+@@ -1132,7 +1132,23 @@ static inline bool zone_is_empty(struct zone *zone)
   */
  
  /* Page flags: | [SECTION] | [NODE] | ZONE | [LAST_CPUPID] | ... | FLAGS | */
@@ -76,7 +77,7 @@ index a9896d9b9bf2..00823bd13e51 100644
  #define ZONES_PGOFF		(NODES_PGOFF - ZONES_WIDTH)
  #define LAST_CPUPID_PGOFF	(ZONES_PGOFF - LAST_CPUPID_WIDTH)
 diff --git a/mm/compaction.c b/mm/compaction.c
-index fe80a076c9cb..4bcd4703434e 100644
+index 2f89476a56e9..282ac17336f8 100644
 --- a/mm/compaction.c
 +++ b/mm/compaction.c
 @@ -26,6 +26,10 @@
@@ -90,7 +91,7 @@ index fe80a076c9cb..4bcd4703434e 100644
  #ifdef CONFIG_COMPACTION
  /*
   * Fragmentation score check interval for proactive compaction purposes.
-@@ -1889,6 +1893,9 @@ static struct folio *compaction_alloc_noprof(struct folio *src, unsigned long da
+@@ -1895,6 +1899,9 @@ static struct folio *compaction_alloc_noprof(struct folio *src, unsigned long da
  	}
  	dst = (struct folio *)freepage;
  
@@ -101,7 +102,7 @@ index fe80a076c9cb..4bcd4703434e 100644
  	if (order)
  		prep_compound_page(&dst->page, order);
 diff --git a/mm/mm_init.c b/mm/mm_init.c
-index 29f2a3e73b21..88e55176d173 100644
+index e13dce5369ee..67cd4d174b3c 100644
 --- a/mm/mm_init.c
 +++ b/mm/mm_init.c
 @@ -36,6 +36,10 @@
@@ -139,8 +140,32 @@ index 29f2a3e73b21..88e55176d173 100644
  	mem_init();
  	kmem_cache_init();
  	/*
+diff --git a/mm/oom_kill.c b/mm/oom_kill.c
+index bfbffeb91346..47c309fcf2a1 100644
+--- a/mm/oom_kill.c
++++ b/mm/oom_kill.c
+@@ -50,6 +50,9 @@
+ #include <asm/tlb.h>
+ #include "internal.h"
+ #include "slab.h"
++#ifdef CONFIG_AMLOGIC_PAGE_TRACE
++#include <linux/amlogic/page_trace.h>
++#endif
+ 
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/oom.h>
+@@ -478,6 +481,9 @@ static void dump_header(struct oom_control *oc)
+ 	if (!IS_ENABLED(CONFIG_COMPACTION) && oc->order)
+ 		pr_warn("COMPACTION is disabled!!!\n");
+ 
++#ifdef CONFIG_AMLOGIC_PAGE_TRACE
++	show_pagetrace();
++#endif
+ 	dump_stack();
+ 	if (is_memcg_oom(oc))
+ 		mem_cgroup_print_oom_meminfo(oc->memcg);
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 6f85a1b2801e..9d4b2f218cb7 100644
+index 691898e785be..94c587e3a0a3 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -65,6 +65,10 @@
@@ -154,7 +179,7 @@ index 6f85a1b2801e..9d4b2f218cb7 100644
  EXPORT_TRACEPOINT_SYMBOL_GPL(mm_page_alloc);
  EXPORT_TRACEPOINT_SYMBOL_GPL(mm_page_free);
  
-@@ -1312,6 +1316,9 @@ __always_inline bool free_pages_prepare(struct page *page,
+@@ -1431,6 +1435,9 @@ __always_inline bool free_pages_prepare(struct page *page,
  
  	debug_pagealloc_unmap_pages(page, 1 << order);
  
@@ -164,7 +189,7 @@ index 6f85a1b2801e..9d4b2f218cb7 100644
  	return true;
  }
  
-@@ -4963,6 +4970,9 @@ unsigned long alloc_pages_bulk_noprof(gfp_t gfp, int preferred_nid,
+@@ -5221,6 +5228,9 @@ unsigned long alloc_pages_bulk_noprof(gfp_t gfp, int preferred_nid,
  		else
  			page_array[nr_populated] = page;
  		nr_populated++;
@@ -174,7 +199,7 @@ index 6f85a1b2801e..9d4b2f218cb7 100644
  	}
  
  	pcp_spin_unlock(pcp);
-@@ -5058,6 +5068,9 @@ struct page *__alloc_pages_noprof(gfp_t gfp, unsigned int order,
+@@ -5320,6 +5330,9 @@ struct page *__alloc_pages_noprof(gfp_t gfp, unsigned int order,
  
  	trace_mm_page_alloc(page, order, alloc_gfp, ac.migratetype);
  	kmsan_alloc_page(page, order, alloc_gfp);
@@ -185,5 +210,5 @@ index 6f85a1b2801e..9d4b2f218cb7 100644
  	return page;
  }
 -- 
-2.46.0
+2.50.1
 

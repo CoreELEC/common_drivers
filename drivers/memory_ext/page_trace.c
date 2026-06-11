@@ -1980,14 +1980,7 @@ static const struct proc_ops large_slab_proc_ops = {
 	.proc_release	= single_release,
 };
 
-#if IS_MODULE(CONFIG_AMLOGIC_PAGE_TRACE)
 struct page_summary *dump_sum;
-
-static char sym_show_mem[32] = "__show_mem";
-
-static struct kprobe kp_oom = {
-		.symbol_name	= sym_show_mem,
-};
 
 static void show_page_trace2(struct zone *zone,
 		struct pagetrace_summary *pt_sum)
@@ -2043,11 +2036,7 @@ static void show_page_trace2(struct zone *zone,
 	pr_info("------------------------------\n");
 }
 
-/*
- * static void __maybe_unused oom_panic_callback(void *data, struct oom_control *oc, int *retc)
- */
-static void __kprobes oom_panic_callback(struct kprobe *p,
-				struct pt_regs *regs, unsigned long flags)
+void show_pagetrace(void)
 {
 	struct zone *zone;
 	int ret, size = sizeof(struct page_summary) * SHOW_CNT;
@@ -2100,6 +2089,22 @@ static void __kprobes oom_panic_callback(struct kprobe *p,
 	 */
 }
 
+#if IS_MODULE(CONFIG_AMLOGIC_PAGE_TRACE)
+static char sym_show_mem[32] = "__show_mem";
+
+static struct kprobe kp_oom = {
+		.symbol_name	= sym_show_mem,
+};
+
+/*
+ * static void __maybe_unused oom_panic_callback(void *data, struct oom_control *oc, int *retc)
+ */
+static void __kprobes oom_panic_callback(struct kprobe *p,
+				struct pt_regs *regs, unsigned long flags)
+{
+	show_pagetrace();
+}
+
 static void *get_symbol_addr(const char *symbol_name)
 {
 	struct kprobe kp = {
@@ -2123,8 +2128,8 @@ static int __init page_trace_module_init(void)
 {
 #if IS_MODULE(CONFIG_AMLOGIC_PAGE_TRACE)
 	int ret;
-	int size = sizeof(struct page_summary) * SHOW_CNT;
 #endif
+	int size = sizeof(struct page_summary) * SHOW_CNT;
 
 	if (!page_trace_disable) {
 		d_pagetrace = proc_create("pagetrace", 0444,
@@ -2141,6 +2146,8 @@ static int __init page_trace_module_init(void)
 
 	d_pagetrace = proc_create("mem_large_slab", 0444,
 				NULL, &large_slab_proc_ops);
+
+	dump_sum = vzalloc(size);
 
 #if IS_MODULE(CONFIG_AMLOGIC_PAGE_TRACE)
 	ret = register_kprobe(&kp_lookup_off);
@@ -2173,8 +2180,6 @@ static int __init page_trace_module_init(void)
 #endif
 
 	page_trace_mem_init();
-
-	dump_sum = vzalloc(size);
 
 	kp_oom.post_handler = oom_panic_callback;
 	ret = register_kprobe(&kp_oom);
@@ -2220,10 +2225,10 @@ static void __exit page_trace_module_exit(void)
 
 	unregister_kprobe(&kp_lookup_name);
 	pr_debug("kprobe at %p unregistered\n", kp_lookup_name.addr);
+#endif
 
 	if (!dump_sum)
 		vfree(dump_sum);
-#endif
 
 	if (aml_trace_buffer)
 		vfree(aml_trace_buffer);

@@ -90,6 +90,7 @@ void page_trace_mem_init(void);
 struct page_trace *find_page_base(struct page *page);
 unsigned long find_back_trace(void *arg);
 unsigned long get_page_trace(struct page *page);
+void show_pagetrace(void);
 #else
 static inline u64 get_iow_time(u64 *cpu)
 {
@@ -125,6 +126,10 @@ static inline unsigned long find_back_trace(void)
 static inline unsigned long get_page_trace(struct page *page)
 {
 	return 0;
+}
+
+static inline void show_pagetrace(void)
+{
 }
 #endif
 
