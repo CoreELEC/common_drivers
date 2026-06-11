@@ -5442,7 +5442,7 @@ MESON_CLK_GATE_SYS_CLK(sys_i3c, CLKCTRL_SYS_CLK_EN0_REG2, 1);
 MESON_CLK_GATE_SYS_CLK(sys_i2c_m_e, CLKCTRL_SYS_CLK_EN0_REG2, 2);
 
 #define MESON_CLK_GATE_HW(_name, _reg, _bit, _parent_hw)              \
-struct clk_regmap _name = {                                           \
+static struct clk_regmap _name = {                                    \
 	.data = &(struct clk_regmap_gate_data) {                      \
 		.offset = (_reg),                                     \
 		.bit_idx = (_bit),                                    \
@@ -5473,14 +5473,14 @@ MESON_CLK_GATE_SYS_CLK(sys_vpu_intr, CLKCTRL_SYS_CLK_EN0_REG2, 25);
 MESON_CLK_GATE_SYS_CLK(sys_csi2_phy0, CLKCTRL_SYS_CLK_EN0_REG2, 27);
 MESON_CLK_GATE_SYS_CLK(sys_sar_adc, CLKCTRL_SYS_CLK_EN0_REG2, 28);
 
-struct clk_regmap sys_pwm_i;
-MESON_CLK_GATE_HW(sys_pwm_j, CLKCTRL_SYS_CLK_EN0_REG2, 30, sys_pwm_i.hw);
-MESON_CLK_GATE_HW(sys_pwm_i, CLKCTRL_SYS_CLK_EN0_REG2, 31, sys_pwm_i.hw);
+static struct clk_regmap sys_pwm_h;
+MESON_CLK_GATE_HW(sys_pwm_j, CLKCTRL_SYS_CLK_EN0_REG2, 30, sys_pwm_h.hw);
+MESON_CLK_GATE_HW(sys_pwm_i, CLKCTRL_SYS_CLK_EN0_REG2, 31, sys_pwm_h.hw);
 MESON_CLK_GATE_SYS_CLK(sys_pwm_h, CLKCTRL_SYS_CLK_EN0_REG3, 0);
-MESON_CLK_GATE_HW(sys_pwm_n, CLKCTRL_SYS_CLK_EN0_REG3, 8, sys_pwm_i.hw);
-MESON_CLK_GATE_HW(sys_pwm_m, CLKCTRL_SYS_CLK_EN0_REG3, 9, sys_pwm_i.hw);
-MESON_CLK_GATE_HW(sys_pwm_l, CLKCTRL_SYS_CLK_EN0_REG3, 10, sys_pwm_i.hw);
-MESON_CLK_GATE_HW(sys_pwm_k, CLKCTRL_SYS_CLK_EN0_REG3, 11, sys_pwm_i.hw);
+MESON_CLK_GATE_HW(sys_pwm_n, CLKCTRL_SYS_CLK_EN0_REG3, 8, sys_pwm_h.hw);
+MESON_CLK_GATE_HW(sys_pwm_m, CLKCTRL_SYS_CLK_EN0_REG3, 9, sys_pwm_h.hw);
+MESON_CLK_GATE_HW(sys_pwm_l, CLKCTRL_SYS_CLK_EN0_REG3, 10, sys_pwm_h.hw);
+MESON_CLK_GATE_HW(sys_pwm_k, CLKCTRL_SYS_CLK_EN0_REG3, 11, sys_pwm_h.hw);
 
 static struct clk_regmap *const pll_regmaps[] = {
 	&gp0_pll,
