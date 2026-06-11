@@ -724,7 +724,8 @@ static int a9_osdblend_check_state(struct meson_vpu_block *vblk,
 	num_plane_port0 = 0;
 	num_plane_port1 = 0;
 	MESON_DRM_BLOCK("%s check_state called.\n", vblk->name);
-	for (i = 0; i < MESON_MAX_OSDS; i++) {
+	// sort osds for din except osd4 and osd5 in A9
+	for (i = 0; i < MESON_MAX_OSDS - 2; i++) {
 		if (!mvps->plane_info[i].enable ||
 		    mvps->plane_info[i].crtc_index != 0) {
 			mvobs->input_osd_mask &= ~BIT(i);
