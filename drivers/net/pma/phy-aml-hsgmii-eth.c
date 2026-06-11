@@ -7,6 +7,7 @@
 #include <linux/ethtool.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/phy.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
@@ -109,6 +110,33 @@ static inline int amlogic_hsgmii_phy_reset(struct phy *phy)
 	return 0;
 }
 
+static int amlogic_hsgmii_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
+{
+	struct amlogic_hsgmii_phy_data *data = phy_get_drvdata(phy);
+	struct device *dev = phy->dev.parent;
+	u32 val;
+
+	/* As of now only PHY_MODE_ETHERNET is supported */
+	if (mode != PHY_MODE_ETHERNET)
+		return -EOPNOTSUPP;
+
+	if (submode != PHY_INTERFACE_MODE_2500BASEX &&
+	    submode != PHY_INTERFACE_MODE_SGMII)
+		return -EOPNOTSUPP;
+
+	/* Switch u3hsg combo to select HSGMII mode */
+	if (data->u3hsg_combo_reg) {
+		val = readl(data->u3hsg_combo_reg);
+		if (val != data->combo_hsg_sel_val) {
+			dev_dbg(dev, "Switch combo PHY to select HSGMII, 0x%x -> 0x%x\n",
+				val, data->combo_hsg_sel_val);
+			writel(data->combo_hsg_sel_val, data->u3hsg_combo_reg);
+		}
+	}
+
+	return 0;
+}
+
 static int amlogic_hsgmii_phy_calibrate(struct phy *phy)
 {
 	struct amlogic_hsgmii_phy_data *data = phy_get_drvdata(phy);
@@ -149,12 +177,12 @@ static int amlogic_hsgmii_phy_calibrate(struct phy *phy)
 		return -ETIMEDOUT;
 	}
 
-	// if (amlogic_hsgmii_phy_poll_status(data->regmap,
-	//				   AML_PHY_HSG_RX_CTRL_DEBUG,
-	//				   HSG_RX_CTRL_DEBUG_PCS_SYNC_CDC)) {
-	//	dev_err(dev, "HSGMII_PCS_SYNC_CDC timed-out");
-	//	return -ETIMEDOUT;
-	// }
+	if (amlogic_hsgmii_phy_poll_status(data->regmap,
+					   AML_PHY_HSG_RX_CTRL_DEBUG,
+					   HSG_RX_CTRL_DEBUG_PCS_SYNC_CDC)) {
+		dev_err(dev, "HSGMII_PCS_SYNC_CDC timed-out");
+		return -ETIMEDOUT;
+	}
 
 	return 0;
 }
@@ -274,10 +302,6 @@ static int amlogic_hsgmii_phy_power_on(struct phy *phy)
 	if (ret)
 		dev_err(dev, "failed to trim HSGMII PHY: %d\n", ret);
 
-	/* Switch u3hsg combo to select HSGMII mode */
-	if (data->u3hsg_combo_reg)
-		writel(data->combo_hsg_sel_val, data->u3hsg_combo_reg);
-
 	return 0;
 }
 
@@ -352,6 +376,7 @@ static const struct phy_ops amlogic_hsgmii_phy_ops = {
 	.power_off	= amlogic_hsgmii_phy_power_off,
 	.set_speed	= amlogic_hsgmii_phy_set_speed,
 	.calibrate	= amlogic_hsgmii_phy_calibrate,
+	.set_mode	= amlogic_hsgmii_phy_set_mode,
 	.owner		= THIS_MODULE,
 };
 
@@ -491,6 +516,7 @@ static ssize_t status_show(struct device *dev,
 	struct amlogic_hsgmii_phy_data *data = dev_get_drvdata(dev);
 	struct hsg_phy_stats *stats = &data->hsg_stats;
 	ssize_t len = 0;
+	u32 val;
 
 	hsg_update_debug_stats(data);
 
@@ -502,6 +528,11 @@ static ssize_t status_show(struct device *dev,
 			data->rx_fsm_restart ? "Y" : "N");
 	len += snprintf(buf + len, PAGE_SIZE - len, "PLL Fsm Restart Mode: %s\n",
 			data->pll_fsm_restart ? "Y" : "N");
+	if (data->u3hsg_combo_reg) {
+		val = readl(data->u3hsg_combo_reg);
+		len += snprintf(buf + len, PAGE_SIZE - len, "Combo Select HSG: %s\n",
+				(val == data->combo_hsg_sel_val) ? "Y" : "N <- error");
+	}
 
 	/* MAC Status */
 	HSG_PRINT_REG(mac_status, MAC_STATUS);

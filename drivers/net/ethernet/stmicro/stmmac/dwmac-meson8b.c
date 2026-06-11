@@ -141,6 +141,7 @@ struct meson8b_dwmac {
 #endif
 	struct clk			*sys_apb_clk;		/* sys periph apb bus clk */
 	bool				ignore_pcs_stats;
+	bool				serdes_is_powered;
 	struct phy			*serdes_phy;
 	unsigned int			speed;			/* Update by .fix_mac_speed */
 	unsigned int			serdes_speed;		/* Current SerDes speed */
@@ -582,6 +583,16 @@ static int aml_custom_setting(struct platform_device *pdev, struct meson8b_dwmac
 	return 0;
 }
 
+static void amlogic_set_serdes_mode(struct meson8b_dwmac *dwmac)
+{
+	struct phy *phy = dwmac->serdes_phy;
+	int ret;
+
+	ret = phy_set_mode_ext(phy, PHY_MODE_ETHERNET, dwmac->phy_mode);
+	if (ret)
+		dev_err(dwmac->dev, "phy_set_mode_ext failed, ret = %d\n", ret);
+}
+
 static void amlogic_set_serdes_speed(struct meson8b_dwmac *dwmac, int speed)
 {
 	if (dwmac->serdes_speed != speed)
@@ -628,33 +639,68 @@ static void amlogic_fix_mac_speed(void *priv, unsigned int speed, unsigned int m
 static int amlogic_serdes_powerup(struct net_device *ndev, void *priv)
 {
 	struct meson8b_dwmac *dwmac = (struct meson8b_dwmac *)priv;
+	struct phy *phy = dwmac->serdes_phy;
 	int ret;
 
-	ret = phy_init(dwmac->serdes_phy);
+	if (dwmac->serdes_is_powered)
+		return 0;
+
+	dev_dbg(dwmac->dev, "SerDes power up\n");
+
+	ret = phy_init(phy);
 	if (ret)
 		return ret;
 
-	ret = phy_power_on(dwmac->serdes_phy);
+	ret = phy_power_on(phy);
 	if (ret) {
-		phy_exit(dwmac->serdes_phy);
+		phy_exit(phy);
 		return ret;
 	}
 
-	ret = phy_set_speed(dwmac->serdes_phy, dwmac->serdes_speed);
-	if (ret) {
-		phy_power_off(dwmac->serdes_phy);
-		phy_exit(dwmac->serdes_phy);
-	}
+	amlogic_set_serdes_mode(dwmac);
 
-	return ret;
+	dwmac->serdes_is_powered = true;
+
+	return 0;
 }
 
 static void amlogic_serdes_powerdown(struct net_device *ndev, void *priv)
 {
 	struct meson8b_dwmac *dwmac = (struct meson8b_dwmac *)priv;
+	struct phy *phy = dwmac->serdes_phy;
 
-	phy_power_off(dwmac->serdes_phy);
-	phy_exit(dwmac->serdes_phy);
+	if (!dwmac->serdes_is_powered)
+		return;
+
+	dev_dbg(dwmac->dev, "SerDes power down\n");
+
+	phy_power_off(phy);
+	phy_exit(phy);
+
+	dwmac->serdes_is_powered = false;
+}
+
+static int amlogic_serdes_resume(struct stmmac_priv *priv)
+{
+	struct meson8b_dwmac *dwmac = priv->plat->bsp_priv;
+	int ret;
+
+	if (!priv->plat->serdes_powerup)
+		return 0;
+
+	ret = priv->plat->serdes_powerup(priv->dev, dwmac);
+	if (ret < 0)
+		dev_err(dwmac->dev, "SerDes powerup failed\n");
+
+	return ret;
+}
+
+static void amlogic_serdes_suspend(struct stmmac_priv *priv)
+{
+	struct meson8b_dwmac *dwmac = priv->plat->bsp_priv;
+
+	if (priv->plat->serdes_powerdown)
+		priv->plat->serdes_powerdown(priv->dev, dwmac);
 }
 #endif
 
@@ -857,6 +903,8 @@ static void meson8b_dwmac_shutdown(struct platform_device *pdev)
 		if (dwmac->data->suspend)
 			ret = dwmac->data->suspend(dwmac);
 	}
+	/* Power down SerDes if persist */
+	amlogic_serdes_suspend(priv);
 }
 
 static int dwmac_suspend(struct meson8b_dwmac *dwmac)
@@ -986,7 +1034,12 @@ static int meson8b_suspend(struct device *dev)
 			if (priv->eth_priv.internal_phy != 2 && dwmac->data->suspend)
 				dwmac->data->suspend(dwmac);
 		}
-		return stmmac_suspend(dev);
+		ret = stmmac_suspend(dev);
+		/* For the WOL disabled, SerDes should be powered down. */
+		if (!priv->eth_priv.wol_ready)
+			amlogic_serdes_suspend(priv);
+
+		return ret;
 	}
 #endif
 
@@ -1019,6 +1072,9 @@ static int meson8b_suspend(struct device *dev)
 		}
 		dwmac->without_reset = 0;
 	}
+	/* old WOL mode do not need SerDes, power down it */
+	amlogic_serdes_suspend(priv);
+
 	return ret;
 }
 
@@ -1042,6 +1098,12 @@ static int meson8b_restore(struct device *dev)
 	/*our phy not support wol by now*/
 	if (phydev)
 		phydev->irq_suspended = 0;
+
+	/* Power up SerDes if persist */
+	ret = amlogic_serdes_resume(priv);
+	if (ret < 0)
+		return ret;
+
 	ret = stmmac_resume(dev);
 	if (phydev)
 		gxl_resume_internal_registers(phydev);
@@ -1073,10 +1135,16 @@ static int meson8b_resume(struct device *dev)
 			set_wol_notify_bl31(dwmac, false);
 			if (phydev)
 				phydev->irq_suspended = 0;
+			/* Restore combo phy select before stmmac_resume */
+			amlogic_set_serdes_mode(dwmac);
 		} else {
 			/* if it is not an external phy */
 			if (priv->eth_priv.internal_phy != 2 && dwmac->data->resume)
 				dwmac->data->resume(dwmac);
+			/* Power up SerDes if persist */
+			ret = amlogic_serdes_resume(priv);
+			if (ret < 0)
+				return ret;
 		}
 		ret = stmmac_resume(dev);
 		/* The following code fixes the tx exception issue after resume */
@@ -1091,6 +1159,11 @@ static int meson8b_resume(struct device *dev)
 		return meson8b_restore(dev);
 	}
 	priv->wolopts = 0;
+
+	ret = amlogic_serdes_resume(priv);
+	if (ret < 0)
+		return ret;
+
 	if (priv->eth_priv.wol_switch_from_user && dwmac->without_reset) {
 		ret = stmmac_resume(dev);
 
@@ -1189,12 +1262,17 @@ static void meson8b_dwmac_remove(struct platform_device *pdev)
 static int meson8b_freeze(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
+	struct stmmac_priv *priv = netdev_priv(ndev);
 	struct phy_device *phydev = ndev->phydev;
 	int ret;
 
 	if (phydev)
 		phydev->irq_suspended = 0;
 	ret = stmmac_suspend(dev);
+
+	/* Power down SerDes if persist */
+	amlogic_serdes_suspend(priv);
+
 	return ret;
 }
 

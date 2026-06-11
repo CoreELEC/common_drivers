@@ -4091,7 +4091,11 @@ static int __stmmac_open(struct net_device *dev,
 	ret = stmmac_hw_setup(dev, true);
 	if (ret < 0) {
 		netdev_err(priv->dev, "%s: Hw setup failed\n", __func__);
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+		goto serdes_error;
+#else
 		goto init_error;
+#endif
 	}
 
 	stmmac_init_coalesce(priv);
@@ -4124,6 +4128,12 @@ irq_error:
 		hrtimer_cancel(&priv->dma_conf.tx_queue[chan].txtimer);
 
 	stmmac_hw_teardown(dev);
+#if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+serdes_error:
+	if (!(priv->plat->flags & STMMAC_FLAG_SERDES_UP_AFTER_PHY_LINKUP) &&
+	    priv->plat->serdes_powerdown)
+		priv->plat->serdes_powerdown(dev, priv->plat->bsp_priv);
+#endif
 init_error:
 	phylink_disconnect_phy(priv->phylink);
 init_phy_error:
@@ -8080,8 +8090,11 @@ int stmmac_suspend(struct device *dev)
 	/* Stop TX/RX DMA */
 	stmmac_stop_all_dma(priv);
 
+	/* Move to platform suspend interface */
+#if !IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 	if (priv->plat->serdes_powerdown)
 		priv->plat->serdes_powerdown(ndev, priv->plat->bsp_priv);
+#endif
 
 	/* Enable Power down mode by programming the PMT regs */
 #if IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
@@ -8227,6 +8240,8 @@ int stmmac_resume(struct device *dev)
 			stmmac_mdio_reset(priv->mii);
 	}
 
+#if !IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
+	/* Move to platform resume interface */
 	if (!(priv->plat->flags & STMMAC_FLAG_SERDES_UP_AFTER_PHY_LINKUP) &&
 	    priv->plat->serdes_powerup) {
 		ret = priv->plat->serdes_powerup(ndev,
@@ -8236,7 +8251,6 @@ int stmmac_resume(struct device *dev)
 			return ret;
 	}
 
-#if !IS_ENABLED(CONFIG_AMLOGIC_ETH_PRIVE)
 	rtnl_lock();
 	if (device_may_wakeup(priv->device) && priv->plat->pmt) {
 		phylink_resume(priv->phylink);
