@@ -185,6 +185,7 @@ struct lockup_info {
 static struct lockup_info __percpu *infos;
 static void __iomem *irq_latch_mode_reg;
 static void __iomem *irq_latch_clr_reg;
+static unsigned int irq_latch_reg_size;
 static spinlock_t irq_latch_lock;
 
 void irq_latch_clr(int irq)
@@ -208,11 +209,14 @@ void irq_latch_clr(int irq)
 		hwirq = desc->irq_data.parent_data->hwirq;
 	else
 		hwirq = desc->irq_data.hwirq;
-	if (hwirq < 32 || hwirq >= IRQ_CNT)
+	if (hwirq < 32)
 		return;
 
 	offset = (((hwirq - 32) / 32) << 2);
 	bit = (hwirq - 32) % 32;
+
+	if (offset >= irq_latch_reg_size)
+		return;
 
 	val = readl_relaxed(irq_latch_mode_reg + offset);
 	if (val & (1 << bit)) {
@@ -1179,17 +1183,36 @@ static void __maybe_unused schedule_hook(void *data, struct task_struct *prev,
 static void irq_latch_init(void)
 {
 	struct device_node *node;
+	struct resource res1, res2;
+	int ret1, ret2;
 
 	node = of_find_node_by_path("/irq_latch");
 	if (!node)
 		return;
 
-	irq_latch_mode_reg = of_iomap(node, 0);
-	irq_latch_clr_reg = of_iomap(node, 1);
+	if (!of_device_is_available(node)) {
+		pr_info("irq latch is disabled\n");
+		of_node_put(node);
+		return;
+	}
+
+	ret1 = of_address_to_resource(node, 0, &res1);
+	ret2 = of_address_to_resource(node, 1, &res2);
+	if (ret1 || ret2)
+		return;
+
+	irq_latch_mode_reg = ioremap(res1.start, resource_size(&res1));
+	irq_latch_clr_reg = ioremap(res2.start, resource_size(&res2));
+	irq_latch_reg_size = resource_size(&res1);
 
 	if (!irq_latch_mode_reg || !irq_latch_clr_reg) {
 		return;
 	}
+
+	pr_info("irq_latch_mode_reg:%lx, irq_latch_clr_reg:%lx, size:%x",
+			(unsigned long)irq_latch_mode_reg,
+			(unsigned long)irq_latch_clr_reg,
+			irq_latch_reg_size);
 
 	spin_lock_init(&irq_latch_lock);
 }
