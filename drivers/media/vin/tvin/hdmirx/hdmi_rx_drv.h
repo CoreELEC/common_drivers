@@ -434,6 +434,7 @@ struct rx_var_param {
 	u32 avi_rcv_cnt;
 	bool force_pattern;
 	int frl_rate;
+	int frl_rate_pre;
 	int fpll_stable_cnt;
 	int flt_update;
 	int lock;

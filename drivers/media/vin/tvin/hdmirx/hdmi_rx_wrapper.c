@@ -3183,8 +3183,12 @@ int rx_get_hpd_wait(u8 port)
 
 	if (rx[port].sup_frl)
 		ret += HPD_WAIT_21;
-	else if (rx[port].edid_size == 256)
-		ret += HPD_WAIT_NORMAL;
+	else if (rx[port].edid_size == 256) {
+		if (rx[port].var.frl_rate_pre)
+			ret += HPD_WAIT_21;
+		else
+			ret += HPD_WAIT_NORMAL;
+	}
 	else if (rx[port].edid_size == 512)
 		ret += HPD_WAIT_512;
 	else
@@ -6480,6 +6484,7 @@ void rx_port2_main_state_machine(void)
 		rx[port].var.downstream_hpd_flag = 0;
 		rx[port].var.edid_update_flag = 0;
 		rx[port].hdcp.hdcp_pre_ver = HDCP_VER_NONE;
+		rx[port].var.frl_rate_pre = FRL_OFF;
 		pre_port = port;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
@@ -6762,6 +6767,7 @@ void rx_port2_main_state_machine(void)
 			rx_clr_f_det(false, port);
 		memcpy(&rx[port].pre, &rx[port].cur, sizeof(struct rx_video_info));
 		rx_get_video_info(port);
+		rx[port].var.frl_rate_pre = rx[port].var.frl_rate;
 		if (rx_is_timing_stable(port)) {
 			if (++rx[port].var.sig_stable_cnt >= sig_stable_max) {
 				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
@@ -7210,6 +7216,7 @@ void rx_port3_main_state_machine(void)
 		rx[port].var.downstream_hpd_flag = 0;
 		rx[port].var.edid_update_flag = 0;
 		rx[port].hdcp.hdcp_pre_ver = HDCP_VER_NONE;
+		rx[port].var.frl_rate_pre = FRL_OFF;
 		pre_port = port;
 		rx[port].pre_5v_sts = 1;
 		rx_irq_en(IRQ_EN_EDID, port);
@@ -7493,6 +7500,7 @@ void rx_port3_main_state_machine(void)
 			rx_clr_f_det(false, port);
 		memcpy(&rx[port].pre, &rx[port].cur, sizeof(struct rx_video_info));
 		rx_get_video_info(port);
+		rx[port].var.frl_rate_pre = rx[port].var.frl_rate;
 		if (rx_is_timing_stable(port)) {
 			if (++rx[port].var.sig_stable_cnt >= sig_stable_max) {
 				if ((port != rx_info.main_port || !rx_info.main_port_open) &&
