@@ -1113,6 +1113,7 @@
 			ignore_desc_busy;
 			tx_delay = <15>;
 			cap-mmc-crypto;
+			cap-mmc-64bit-dma;
 			no-sd;
 			no-sdio;
 			resets = <&reset RESET_SD_EMMC_C>;
