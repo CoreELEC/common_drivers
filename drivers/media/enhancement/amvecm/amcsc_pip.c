@@ -1298,10 +1298,13 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 			/* *->sdr */
 			sdr_process_mode[vd_path] = PROC_BYPASS;
 			if (source_format[vd_path] == HDRTYPE_SDR &&
-			    get_hdr_module_status(vd_path, vpp_index) == HDR_MODULE_ON &&
-			    (gamut_conv_enable &&
-			    (vpp_color_pri_sel || !gamut_mapping1_en)))
-				sdr_process_mode[vd_path] = PROC_SDR_TO_TRG;
+				get_hdr_module_status(vd_path, vpp_index) == HDR_MODULE_ON &&
+				gamut_conv_enable) {
+				if (chip_type_id != chip_t6x)
+					sdr_process_mode[vd_path] = PROC_SDR_TO_TRG;
+				else if (vpp_color_pri_sel || !gamut_mapping1_en)
+					sdr_process_mode[vd_path] = PROC_SDR_TO_TRG;
+			}
 			if (ai_color_enable)
 				sdr_process_mode[vd_path] = PROC_SDR_AC_SDR;
 			hdr_process_mode[vd_path] = PROC_HDR_TO_SDR;
@@ -1523,6 +1526,10 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 						/* sdr *->cuva */
 						sdr_process_mode[vd_path] = PROC_SDR_TO_CUVA;
 						target_format[vd_path] = BT2020YUV_BT2020RGB_CUVA;
+					} else if (gamut_conv_enable &&
+						chip_type_id == chip_a9) {
+						sdr_process_mode[vd_path] = PROC_SDR_TO_TRG;
+						target_format[vd_path] = BT709;
 					} else {
 						/* sdr->sdr */
 						sdr_process_mode[vd_path] = PROC_BYPASS;
@@ -1533,6 +1540,8 @@ int hdr_policy_process(struct vinfo_s *vinfo,
 				} else {
 					/* sdr->sdr */
 					sdr_process_mode[vd_path] = PROC_BYPASS;
+					if (gamut_conv_enable && chip_type_id == chip_a9)
+						sdr_process_mode[vd_path] = PROC_SDR_TO_TRG;
 					if (ai_color_enable)
 						sdr_process_mode[vd_path] = PROC_SDR_AC_SDR;
 					if (source_format[vd_path] == HDRTYPE_SDR2020 &&

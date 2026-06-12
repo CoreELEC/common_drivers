@@ -6071,8 +6071,9 @@ void backup_422_config(void)
 		8, 3);
 	bak_dnlp_input_422 = READ_VPP_REG_BITS(VPP_DNLP_EN_MODE,
 		12, 1);
-	bak_lc_sr_in = READ_VPP_REG_BITS(VPP_LC_MODE,
-		8, 1);
+	if (chip_type_id != chip_a9)
+		bak_lc_sr_in = READ_VPP_REG_BITS(VPP_LC_MODE,
+			8, 1);
 	bak_safa_input_422 = READ_VPP_REG_BITS(SAFA_PPS_SR_422_EN,
 		0, 1);
 	if (chip_type_id == chip_t6x)
@@ -6162,8 +6163,9 @@ void update_444_config(int input_444_mode,
 			ti_dir_alp_sel, 8, 3);
 		WRITE_VPP_REG_BITS(VPP_DNLP_EN_MODE,
 			dnlp_input_422, 12, 1);
-		WRITE_VPP_REG_BITS(VPP_LC_MODE,
-			lc_sr_in, 8, 1);
+		if (chip_type_id != chip_a9)
+			WRITE_VPP_REG_BITS(VPP_LC_MODE,
+				lc_sr_in, 8, 1);
 		WRITE_VPP_REG_BITS(SAFA_PPS_SR_422_EN,
 			safa_input_422, 0, 1);
 		if (chip_type_id == chip_t6x)
@@ -6195,8 +6197,9 @@ void update_444_config(int input_444_mode,
 			ti_dir_alp_sel, 8, 3, vpp_index);
 		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_DNLP_EN_MODE,
 			dnlp_input_422, 12, 1, vpp_index);
-		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_LC_MODE,
-			lc_sr_in, 8, 1, vpp_index);
+		if (chip_type_id != chip_a9)
+			VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(VPP_LC_MODE,
+				lc_sr_in, 8, 1, vpp_index);
 		VSYNC_WRITE_VPP_REG_BITS_VPP_SEL(SAFA_PPS_SR_422_EN,
 			safa_input_422, 0, 1, vpp_index);
 		if (chip_type_id == chip_t6x)
