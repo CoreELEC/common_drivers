@@ -185,15 +185,26 @@ static int meson_u2phy_a9_exit(void *phy)
 	int ret;
 
 	ret = meson_u2phy_exit((struct amlogic_usb_v2 *)phy);
-	meson_u2phy_set_vbus_power(phy, 0);
 
 	return ret;
+}
+
+static int meson_u2phy_a9_power_on(void *phy)
+{
+	return meson_u2phy_power_on((struct amlogic_usb_v2 *)phy);
+}
+
+static int meson_u2phy_a9_power_off(void *phy)
+{
+	return meson_u2phy_power_off((struct amlogic_usb_v2 *)phy);
 }
 
 static struct meson_uphy_ops meson_u2phy_a9_ops = {
 	.init = meson_u2phy_a9_init,
 	.exit = meson_u2phy_a9_exit,
 	.set_mode = meson_u2phy_a9_set_mode,
+	.power_on = meson_u2phy_a9_power_on,
+	.power_off = meson_u2phy_a9_power_off
 };
 
 /* A9 dwc3 controller 2t clk is from doubled phy PLL. When using phy PLL hs_clk for

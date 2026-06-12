@@ -377,7 +377,6 @@ int meson_u2phy_exit(struct amlogic_usb_v2 *phy)
 	return ret;
 }
 
-/* FIXME: phy power on don't need to control vbus power. */
 int meson_u2phy_power_on(struct amlogic_usb_v2 *phy)
 {
 	meson_u2phy_set_vbus_power(phy, 1);
