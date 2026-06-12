@@ -1138,7 +1138,12 @@ static int usb_to_dptx_notifier(struct notifier_block *nb,
 		default:
 			meson_tx_dp_phy_set_aux_gpio(tx_phy, 2, 2);
 			dptx_aux_phy_output_enable(tx_phy, 0, 0);
-			dptx_phy_notify_hpd_plugout(tx_phy);
+			dp_data = &tx_phy->usb_dp_state.dp_state_data;
+			/* when the last config is DP sink, then notify plugout */
+			if (DP_CONF_CURRENTLY(dp_data->conf) == DP_CONF_UFP_U_AS_UFP_D) {
+				dptx_phy_notify_hpd_plugout(tx_phy);
+				dp_data->conf = 0;
+			}
 			break;
 		}
 		break;
