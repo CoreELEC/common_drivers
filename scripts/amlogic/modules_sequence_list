@@ -116,4 +116,5 @@ DEFAULT_DELETE_TYPE_LIST=(
 	sei_ucs116e0_light.ko
 	sei_gpio_ctrl.ko
 	i2c_gsv2715.ko
+	gt9xx_driver.ko
 )

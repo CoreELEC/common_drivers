@@ -1,0 +1,8 @@
+#
+# Goodix GT9xx Touchscreen driver
+#
+config TOUCHSCREEN_GT9XX
+	tristate "Goodix touchpanel GT9xx series"
+	depends on I2C
+	default n
+

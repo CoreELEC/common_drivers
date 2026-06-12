@@ -732,6 +732,9 @@ CONFIG_SEI_GPIO_CTRL=m
 
 # i2c_gsv2715.ko
 CONFIG_HDMIRX_SWITCH_GSV2715=m
+
+# gt9xx_driver.ko
+CONFIG_TOUCHSCREEN_GT9XX=m
 # end compiled by default but are not loaded
 
 # CONFIG_CXD2880_SPI_DRV is not set

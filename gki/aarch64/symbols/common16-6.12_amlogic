@@ -210,3 +210,9 @@
 
 #amlogic-thermal.ko
   thermal_zone_device_priv
+
+#gt9xx_driver.ko
+  input_mt_init_slots
+  input_mt_report_slot_state
+  regulator_get
+  sysfs_notify

@@ -1,0 +1,27 @@
+load("//build/kernel/kleaf:kernel.bzl", "ddk_headers", "ddk_module")
+load("//common_drivers:amlogic_utils.bzl", "m_k_files", "kernel_select")
+
+m_k_files()
+ddk_module(
+    name = "gt9xx",
+    srcs = glob([
+        "*.h",
+    ]),
+    conditional_srcs = {
+        "CONFIG_TOUCHSCREEN_GT9XX": {
+            True: [
+                "gt9xx.c",
+                "gt9xx_update.c",
+                "goodix_tool.c",
+            ],
+        },
+    },
+    out = "gt9xx_driver.ko",
+    kernel_build = kernel_select(),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//common_drivers/drivers/gki_tool:amlogic-gkitool",
+        "//common_drivers/drivers/debug:amlogic-debug-iotrace",
+        "//common_drivers/drivers/debug:amlogic-debug",
+    ],
+)

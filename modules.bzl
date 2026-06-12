@@ -324,6 +324,8 @@ AMLOGIC_COMMON_MODULES = [
     "//common_drivers/drivers/external/MG24_ota_gpio_ctrl:sei_gpio_ctrl",
     "common_drivers/drivers/external/hdmirx_switch/i2c_gsv2715.ko",
     "//common_drivers/drivers/external/hdmirx_switch:i2c_gsv2715",
+    "common_drivers/drivers/external/touch/gt9xx/gt9xx_driver.ko",
+    "//common_drivers/drivers/external/touch/gt9xx:gt9xx",
 ]
 
 AMLOGOC_COMMON_MODULES_REMOVE = (
@@ -487,6 +489,8 @@ AMLOGIC_UPGRADE_COMMON_MODULES = [
     "//common_drivers/drivers/external/MG24_ota_gpio_ctrl:sei_gpio_ctrl",
     "common_drivers/drivers/external/hdmirx_switch/i2c_gsv2715.ko",
     "//common_drivers/drivers/external/hdmirx_switch:i2c_gsv2715",
+    "common_drivers/drivers/external/touch/gt9xx/gt9xx_driver.ko",
+    "//common_drivers/drivers/external/touch/gt9xx:gt9xx",
 ]
 
 AMLOGIC_UPGRADE_P_MODULES = [
