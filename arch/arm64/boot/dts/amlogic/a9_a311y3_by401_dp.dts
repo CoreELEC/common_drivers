@@ -1619,7 +1619,7 @@
 };
 
 &hdmirx {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&hdmirx_a_mux>;
 	en_4k_2_2k = <0>;
 	hpd_low_cec_off = <1>;
