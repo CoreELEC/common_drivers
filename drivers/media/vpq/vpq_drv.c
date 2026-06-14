@@ -164,11 +164,14 @@ static int vpq_dts_parse(struct vpq_dev_s *vpq_devp)
 	//vpq_pr_info("start\n");
 
 	of_id = of_match_device(vpq_dts_match, &pdev->dev);
-	if (of_id) {
-		vpq_pr_info("%s compatible\n", of_id->compatible);
-
-		vpq_devp->pm_data = (struct vpq_match_data_s *)of_id->data;
+	if (!of_id) {
+		vpq_pr_err("no matching compatible string found for device\n");
+		return -ENODEV;
 	}
+
+	vpq_pr_info("%s compatible\n", of_id->compatible);
+	vpq_devp->pm_data = (struct vpq_match_data_s *)of_id->data;
+
 	return ret;
 }
 
@@ -215,7 +218,6 @@ static int vpq_probe(struct platform_device *pdev)
 	vpq_dev = kzalloc(sizeof(*vpq_dev), GFP_KERNEL);
 	if (!vpq_dev) {
 		//vpq_pr_info("dev kzalloc error\n");
-
 		ret = -1;
 		goto fail_alloc_dev;
 	}
@@ -225,14 +227,12 @@ static int vpq_probe(struct platform_device *pdev)
 	ret = alloc_chrdev_region(&vpq_devp->devno, 0, VPQ_DEVNO, VPQ_NAME);
 	if (ret < 0) {
 		vpq_pr_err("devno alloc failed\n");
-
 		goto fail_alloc_region;
 	}
 
 	vpq_devp->clsp = class_create(/*THIS_MODULE, */VPQ_CLS_NAME);
 	if (IS_ERR(vpq_devp->clsp)) {
 		vpq_pr_err("class create failed\n");
-
 		ret = -1;
 		goto fail_create_class;
 	}
@@ -241,7 +241,6 @@ static int vpq_probe(struct platform_device *pdev)
 		ret = class_create_file(vpq_devp->clsp, &vpq_class_attr[i]);
 		if (ret < 0) {
 			vpq_pr_err("class create file failed\n");
-
 			goto fail_create_class_file;
 		}
 	}
@@ -253,14 +252,12 @@ static int vpq_probe(struct platform_device *pdev)
 	ret = cdev_add(&vpq_devp->vpq_cdev, vpq_devp->devno, VPQ_DEVNO);
 	if (ret < 0) {
 		vpq_pr_err("add cdev failed\n");
-
 		goto fail_add_cdev;
 	}
 
 	vpq_devp->dev = device_create(vpq_devp->clsp, NULL, vpq_devp->devno, vpq_devp, VPQ_NAME);
 	if (!vpq_devp->dev) {
 		vpq_pr_err("device_create failed\n");
-
 		ret = -1;
 		goto fail_create_dev;
 	}
@@ -269,7 +266,11 @@ static int vpq_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, vpq_devp);
 	vpq_devp->pdev = pdev;
 
-	vpq_dts_parse(vpq_devp);
+	ret = vpq_dts_parse(vpq_devp);
+	if (ret < 0) {
+		vpq_pr_err("failed to parse device tree data\n");
+		goto fail_create_dev;
+	}
 
 	vpq_vfm_init();
 	vpq_table_init(vpq_devp);
