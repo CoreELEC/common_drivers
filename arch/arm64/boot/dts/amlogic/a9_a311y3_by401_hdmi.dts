@@ -246,10 +246,13 @@
 		amlvideo2_1_cma_reserved:linux,amlvideo2_1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 3840x2160 yuv420 8bit and 4 buffers
+			/* screenrecord 3840x2160 yuv420 8bit and 4 buffers
 			 * 3840x2160x1.5x4 = 48 M
+			 * screencap 3840x2160 rgba 8 bit and 2 buffers
+			 * 3840x2160x4x2 = 64 M
+			 * 64M > 48M, so reserved 64M
 			 */
-			size = <0x0 0x3000000>;
+			size = <0x0 0x4000000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x0 0x0 0xe0000000>;
 		};
