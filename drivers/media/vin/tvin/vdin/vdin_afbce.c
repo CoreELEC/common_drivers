@@ -517,7 +517,7 @@ void vdin_afbce_maptable_init(struct vdin_dev_s *devp)
 	unsigned int highmem_flag = 0;
 	unsigned long phys_addr = 0;
 	unsigned int *virt_addr = NULL;
-	unsigned int body;
+	unsigned long body;
 	unsigned int size;
 	void *p = NULL;
 
@@ -570,9 +570,9 @@ void vdin_afbce_maptable_init(struct vdin_dev_s *devp)
 		}
 
 		p = virt_addr;
-		body = devp->afbce_info->fm_body_paddr[i] & 0xffffffff;
+		body = devp->afbce_info->fm_body_paddr[i];
 		for (j = 0; j < size; j += 4096) {
-			*virt_addr = ((j + body) >> 12) & 0x000fffff;
+			*virt_addr = (unsigned int)((j + body) >> 12);
 			virt_addr++;
 		}
 
@@ -593,7 +593,7 @@ static void vdin_afbce_addr_check(struct vdin_dev_s *devp, unsigned long fm_tabl
 {
 	unsigned int i = 0, j, cnt = 0;
 	unsigned int *virt_addr = NULL;
-	unsigned int body;
+	unsigned long body;
 	unsigned int size;
 
 	if (!devp->afbce_info)
@@ -618,12 +618,12 @@ static void vdin_afbce_addr_check(struct vdin_dev_s *devp, unsigned long fm_tabl
 
 	virt_addr = phys_to_virt(fm_table_paddr);
 
-	body = devp->afbce_info->fm_body_paddr[i] & 0xffffffff;
+	body = devp->afbce_info->fm_body_paddr[i];
 	for (j = 0; j < size; j += 4096) {
-		if ((*virt_addr != (((j + body) >> 12) & 0x000fffff)) ||
+		if ((*virt_addr != (unsigned int)((j + body) >> 12)) ||
 			(devp->debug.dbg_print_cntl & VDIN_AFBC_RD_DBG)) {
 			pr_err("offset[%#x] should be:(%#x),readback:(%#x)\n",
-				cnt, (((j + body) >> 12) & 0x000fffff), *virt_addr);
+				cnt, (unsigned int)((j + body) >> 12), *virt_addr);
 		}
 		cnt++;
 		virt_addr++;

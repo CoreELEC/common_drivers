@@ -607,6 +607,7 @@ struct vdin_v4l2_param_s {
 	int dst_height;	/* v scaling down */
 	unsigned int wr_endian;	/* 0:big endian, 1:little endian */
 	unsigned int input_swap; /* 0:no swap, 1:swap */
+	unsigned int sel_afbce; /* 0: mif; 1:afbce */
 	enum port_mode mode;	/*0:osd + video 1:video only*/
 	int bit_dep;
 	__u8 secure_memory_en; /* 0:not secure memory 1:secure memory */
@@ -626,10 +627,12 @@ struct tvin_latency_s {
 	__u8 fmm_flag;
 };
 
+#define VDIN_CANVAS_MAX_CNT_CP	16
 /* only for keystone use begin */
 struct vdin_set_canvas_s {
-	int fd;
-	int index;
+	int fd[VDIN_CANVAS_MAX_CNT_CP];
+	int index[VDIN_CANVAS_MAX_CNT_CP];
+	int sel_afbce;
 };
 
 struct vdin_pip_s {
@@ -752,7 +755,7 @@ struct vdin_dump_afbc_buf_arg {
 #define TVIN_IOC_S_AFE_SNOW_OFF     _IO(_TM_T, 0x23)
 #define TVIN_IOC_G_VDIN_START_HIST       _IO(_TM_T, 0x24)
 #define TVIN_IOC_S_VDIN_V4L2START  _IOW(_TM_T, 0x25, struct vdin_v4l2_param_s)
-#define TVIN_IOC_S_VDIN_V4L2STOP   _IO(_TM_T, 0x26)
+#define TVIN_IOC_S_VDIN_V4L2STOP   _IOW(_TM_T, 0x26, unsigned int)
 #define TVIN_IOC_S_AFE_SNOW_CFG     _IOW(_TM_T, 0x27, unsigned int)
 #define TVIN_IOC_S_DV_DESCRAMBLE	_IOW(_TM_T, 0x28, unsigned int)
 #define TVIN_IOC_S_AFE_ATV_SEARCH  _IOW(_TM_T, 0x29, unsigned int)
@@ -760,6 +763,6 @@ struct vdin_dump_afbc_buf_arg {
 #define TVIN_IOC_G_VDIN_STOP_HIST       _IO(_TM_T, 0x31)
 #define TVIN_IOC_S_AFE_IMG_POS  _IOW(_TM_T, 0x32, struct tvafe_image_position_s)
 #define TVIN_IOC_S_AFE_DUMP  _IO(_TM_T, 0x33)
-
+#define TVIN_IOC_S_VDIN1_AFBCE_PAUSE   _IOW(_TM_T, 0x61, unsigned int)
 #endif
 

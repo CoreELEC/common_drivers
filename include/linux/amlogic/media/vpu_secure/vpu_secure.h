@@ -29,6 +29,7 @@ enum module_port_e {
 	OSD1_VPP_OUT,
 	OSD2_VPP_OUT,
 	POST_BLEND_OUT,
+	VPP_OUT,
 	MAX_SECURE_OUT
 };
 

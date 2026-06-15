@@ -922,10 +922,10 @@ void vdin_mem_memset(struct vdin_dev_s *devp)
 /* need to be static for pointer use in codec_mm */
 static char vdin_name[6];
 
-int vdin_alloc_table_mem(struct vdin_dev_s *devp)
+int vdin_alloc_table_mem(struct vdin_dev_s *devp, int i)
 {
 	bool task_pending = false;
-	int i, j;
+	int j;
 	int flags = CODEC_MM_FLAGS_CMA_FIRST | CODEC_MM_FLAGS_CMA_CLEAR |
 		CODEC_MM_FLAGS_DMA;
 	unsigned int table_size;
@@ -933,39 +933,38 @@ int vdin_alloc_table_mem(struct vdin_dev_s *devp)
 
 	table_size = devp->afbce_info->frame_table_size;
 
-	if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
-		for (i = 0; i < devp->vf_mem_max_cnt; i++) {
-			/*add for 1g config, codec can't release mem in time*/
-			for (j = 0; j < 20; j++) {
-				if (fatal_signal_pending(current)) {
-					task_pending = true;
-					break;
-				}
-				mem = codec_mm_alloc(devp->vdin_name,
-					table_size, 16, flags, -1);
-				if (mem) {
-					devp->afbce_info->fm_table_paddr[i] = mem->phy_addr;
-				} else {
-					devp->afbce_info->fm_table_paddr[i] = 0;
-					//devp->afbce_info->fm_head_paddr[i] = 0;
-				}
+	/*add for 1g config, codec can't release mem in time*/
+	for (j = 0; j < 20; j++) {
+		if (fatal_signal_pending(current)) {
+			task_pending = true;
+			break;
+		}
+		mem = codec_mm_alloc(devp->vdin_name,
+			table_size, 16, flags, -1);
+		if (mem) {
+			devp->afbce_info->fm_table_paddr[i] = mem->phy_addr;
+		} else {
+			devp->afbce_info->fm_table_paddr[i] = 0;
+			//devp->afbce_info->fm_head_paddr[i] = 0;
+		}
+		if (devp->debug.vdin_dbg_en)
+			pr_info("vdin%d fm_table_paddr[%d]=0x%lx\n",
+				devp->index, i,
+				devp->afbce_info->fm_table_paddr[i]);
 
-				if (!devp->afbce_info->fm_table_paddr[i]) {
-					msleep(50);
-					pr_err("alloc mem[%d] fail:50*%dms\n", i, j);
-				} else {
-					devp->vf_codec_mem_table[i] = mem;
-					break;
-				}
-			}
-			if (j >= 20 || task_pending) {
-				pr_err("vdin%d buf[%d]codec alloc fail!!!\n",
-					devp->index, i);
-				//todo ;release the already alloced buffers
-				break;
-			}
+		if (!devp->afbce_info->fm_table_paddr[i]) {
+			msleep(50);
+			pr_err("alloc mem[%d] fail:50*%dms\n", i, j);
+		} else {
+			devp->vf_codec_mem_table[i] = mem;
+			break;
 		}
 	}
+	if (j >= 20 || task_pending)
+		pr_err("vdin%d buf[%d]codec alloc fail!!!\n",
+			devp->index, i);
+		//todo ;release the already alloced buffers
+		//break;
 
 	return 0;
 }
@@ -1016,6 +1015,29 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 					devp->index, i,
 					devp->vf_mem_start[i],
 					vdin_set_canvas_addr[i].size);
+			//-------
+			if (devp->vd1_sts_afbce) {
+				devp->afbce_info->fm_body_paddr[i] = devp->vf_mem_start[i];
+				devp->afbce_info->fm_head_paddr[i] =
+					devp->afbce_info->fm_body_paddr[i] +
+					devp->afbce_info->frame_body_size;
+				devp->afbce_info->fm_table_paddr[i] =
+					devp->afbce_info->fm_head_paddr[i] +
+					devp->afbce_info->frame_head_size;
+				if (devp->cma_config_flag & MEM_ALLOC_FROM_CODEC)
+					vdin_alloc_table_mem(devp, i);
+				if (devp->debug.vdin_dbg_en) {
+					pr_info("vdin%d fm_head_paddr[%d] = 0x%lx\n",
+						devp->index, i,
+						devp->afbce_info->fm_head_paddr[i]);
+					pr_info("vdin%d fm_table_paddr[%d]=0x%lx\n",
+						devp->index, i,
+						devp->afbce_info->fm_table_paddr[i]);
+					pr_info("vdin%d fm_body_paddr[%d]=0x%lx\n",
+						devp->index, i,
+						devp->afbce_info->fm_body_paddr[i]);
+				}
+			}
 		}
 		/*real buffer number*/
 		max_buffer_num = i;
@@ -1065,8 +1087,10 @@ unsigned int vdin_cma_alloc(struct vdin_dev_s *devp)
 
 	if (devp->secure_en == VDIN_SECURE_FLAGS) {
 		devp->mem_protected = 1;
-		if (devp->afbce_valid)
-			vdin_alloc_table_mem(devp);
+		if (devp->afbce_valid && devp->cma_config_flag & MEM_ALLOC_FROM_CODEC) {
+			for (i = 0; i < VDIN_CANVAS_MAX_CNT; i++)
+				vdin_alloc_table_mem(devp, i);
+		}
 
 		flags = CODEC_MM_FLAGS_TVP | CODEC_MM_FLAGS_CMA_CLEAR |
 			CODEC_MM_FLAGS_DMA;
@@ -1289,6 +1313,13 @@ void vdin_cma_release(struct vdin_dev_s *devp)
 	char vdin_name[6];
 	vdin_name[0] = '\0';
 	unsigned int i;
+
+	for (i = 0; i < devp->vf_mem_max_cnt; i++) {
+		if (devp->vf_codec_mem_table[i]) {
+			codec_mm_release(devp->vf_codec_mem_table[i], vdin_name);
+			devp->vf_codec_mem_table[i] = NULL;
+		}
+	}
 
 	if (devp->cma_config_en == 0 || devp->cma_mem_alloc == 0) {
 		if (devp->work_mode == VDIN_WORK_MD_V4L) {

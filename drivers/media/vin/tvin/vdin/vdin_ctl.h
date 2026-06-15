@@ -393,4 +393,8 @@ bool vdin_select_hdr_matrix(struct vdin_dev_s *devp);
 void vdin_manual_matrix_csc(struct vdin_dev_s *devp, enum vdin_matrix_csc_e *matrix_csc);
 bool vdin_force_format_for_decontour(struct vdin_dev_s *devp);
 void vdin_secure_reg0_cfg(void);
+void vdin_sub_mif_mem_free(struct vdin_dev_s *devp);
+void vdin_sub_mif_stop(struct vdin_dev_s *devp);
+void vdin_sub_mif_vf(struct vdin_dev_s *devp);
+bool vdin_sub_mif_on(struct vdin_dev_s *devp);
 #endif

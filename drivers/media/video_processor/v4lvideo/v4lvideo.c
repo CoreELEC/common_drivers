@@ -1511,6 +1511,7 @@ struct file_private_data *v4lvideo_get_file_private_data(struct file *file_vf,
 
 	return file_private_data;
 }
+EXPORT_SYMBOL(v4lvideo_get_file_private_data);
 
 struct file_private_data *v4lvideo_get_vf(int fd)
 {

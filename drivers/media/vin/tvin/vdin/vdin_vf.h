@@ -8,6 +8,7 @@
 
 /* Standard Linux Headers */
 #include <linux/kernel.h>
+#include <linux/types.h>
 #include <linux/spinlock.h>
 #include <uapi/linux/time.h>
 
@@ -126,6 +127,9 @@ struct vf_entry {
 	/* for one buffer mode,backup the initial mif phy address */
 	unsigned long phy_y_addr_bak;
 	unsigned long phy_c_addr_bak;
+	__u8 mif_frame_valid;
+	__u8 afbce_frame_valid;
+	__u8 mif_secure;	/* a9 vdin1 mif only */
 };
 
 struct vf_pool {

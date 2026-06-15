@@ -269,6 +269,10 @@ bool get_secure_state(enum module_port_e port)
 		if (secure_cfg)
 			secure_enable = true;
 		break;
+	case VPP_OUT:
+		if (secure_cfg & VPP_OUTPUT_SECURE)
+			secure_enable = true;
+		break;
 	default:
 		break;
 	}

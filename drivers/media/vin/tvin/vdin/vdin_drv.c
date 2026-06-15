@@ -112,6 +112,7 @@ static unsigned long mem_start, mem_end;
 static unsigned int use_reserved_mem;
 
 struct vdin_set_canvas_addr_s vdin_set_canvas_addr[VDIN_CANVAS_MAX_CNT];
+struct vdin_set_canvas_addr_s vdin_set_canvas_addr_sub[VDIN_CANVAS_MAX_CNT];
 static DECLARE_WAIT_QUEUE_HEAD(vframe_waitq);
 
 static int phase_lock_flag;
@@ -414,6 +415,37 @@ bool tvin_get_game_mode_status(u8 port_type)
 		return false;
 }
 EXPORT_SYMBOL(tvin_get_game_mode_status);
+
+/* vdin1 only: mark per-path validity when one frame period ends.*/
+static void vdin_frame_valid(struct vdin_dev_s *devp, struct vf_entry *vfe)
+{
+	if (!vfe || devp->hw_core != VDIN_HW_CORE_LITE)
+		return;
+
+	vfe->mif_frame_valid = 0;
+	vfe->afbce_frame_valid = 0;
+
+	if (devp->vdin_irq_flag)
+		return;
+
+	if (devp->vd1_sts_afbce && !devp->vd1_afbce_pause)
+		vfe->afbce_frame_valid = 1;
+
+	if (vdin_sub_mif_on(devp))
+		vfe->mif_frame_valid = 1;
+}
+
+/* A9 vdin1 mif path requires notifying the HWC of the current frame's security status. */
+static void vdin_mif_secure(struct vdin_dev_s *devp, struct vf_entry *vfe)
+{
+	if (!vfe || devp->hw_core != VDIN_HW_CORE_LITE ||
+	    devp->dtdata->hw_ver != VDIN_HW_A9)
+		return;
+#ifdef CONFIG_AMLOGIC_MEDIA_SECURITY
+	vdin_get_secure_state(devp);
+	vfe->mif_secure = devp->secure_video ? 1 : 0;
+#endif
+}
 
 static void vdin_timer_func(struct timer_list *t)
 {
@@ -1074,6 +1106,51 @@ static void vdin_handle_game_mode_chg(struct vdin_dev_s *devp)
 			devp->vinfo_std_duration);
 }
 
+static int vdin_dmabuf_attach_vf(struct vdin_dev_s *devp, struct vframe_s *vf)
+{
+	bool alloc_if_null = NULL;
+	int ret = 0;
+	struct file_private_data *private_data = NULL;
+	struct dma_buf *dmabuf = NULL;
+	struct vdin_set_canvas_addr_s *cvs;
+
+	if (devp->dtdata->hw_ver != VDIN_HW_A9 || devp->hw_core != VDIN_HW_CORE_LITE ||
+		vf->index >= VDIN_CANVAS_MAX_CNT || !devp->vd1_sts_afbce ||
+		(vdin_sub_mif_on(devp) && !(devp->debug.a9_debug_onoff & BIT(0))))
+		return 0;
+
+	alloc_if_null = !(devp->flags & VDIN_FLAG_DEC_STARTED);
+	cvs = &vdin_set_canvas_addr[vf->index];
+	dmabuf = cvs->dma_buffer;
+	if (!dmabuf) {
+		ret = -1;
+		goto error;
+	}
+
+	if (!dmabuf_is_uvm(dmabuf)) {
+		ret = -2;
+		goto error;
+	}
+	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_BUFFER)
+		pr_info("uvm_attch_vf%d,irq:%d,s_type:%#x %#x,depth:%#x,alloc_if_null:%d\n",
+			vf->index, vf->frame_irq_cnt, vf->source_type,
+			vf->type, vf->bitdepth, alloc_if_null);
+
+	private_data = v4lvideo_get_file_private_data(dmabuf->file, alloc_if_null);
+	if (!private_data) {
+		ret = -3;
+		goto error;
+	}
+
+	private_data->vf = *vf;
+	private_data->vf_p = vf;
+
+	return 0;
+error:
+	pr_info("dma buffer attach vf failed,ret=%d\n", ret);
+	return ret;
+}
+
 /*
  *based on the bellow parameters:
  *	a.h_active	(vf->width = devp->h_active)
@@ -1186,12 +1263,13 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 			vf->canvas0_config[0].width = devp->canvas_w;
 			vf->canvas0_config[0].height = devp->canvas_h;
 			vf->canvas0_config[0].block_mode = 0;
-			/*if (vdin_dbg_en)*/
-			/*	pr_info("vf canvas0 addr:%d paddr:0x%x w:%d v:%d\n",*/
-			/*		addr,*/
-			/*		vf->canvas0_config[0].phy_addr,*/
-			/*		vf->canvas0_config[0].width,*/
-			/*		vf->canvas0_config[0].height);*/
+
+			if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+				pr_info("vf canvas0 addr:%d paddr:0x%lx w:%d v:%d\n",
+					addr,
+					vf->canvas0_config[0].phy_addr,
+					vf->canvas0_config[0].width,
+					vf->canvas0_config[0].height);
 
 			if (vf->plane_num == 2) {
 				if (devp->work_mode == VDIN_WORK_MD_V4L &&
@@ -1248,6 +1326,7 @@ static void vdin_vf_init(struct vdin_dev_s *devp)
 			vdin_set_hdmi_channel_id(devp, vf);
 		vdin_set_source_bitdepth(devp, vf);
 		vdin_set_lossy_param(devp, vf);
+		vdin_dmabuf_attach_vf(devp, vf);
 		/* init slave vframe */
 		slave	= vf_get_slave(p, i);
 		if (!slave)
@@ -1742,6 +1821,9 @@ static void vdin_start_param_init(struct vdin_dev_s *devp)
 	if (devp->afbce_info)
 		memset(devp->afbce_info, 0, sizeof(struct vdin_afbce_s));
 	devp->vf_mem_size = 0;
+	if (devp->en_vd1_afbce && !devp->vd1_sts_main && devp->vd1_sts_mif)
+		devp->afbce_flag = 0;
+	//todo:more parameter initializations will be move here
 	//TBC
 }
 
@@ -1807,7 +1889,11 @@ void vdin_get_secure_state(struct vdin_dev_s *devp)
 	case TVIN_PORT_VIU2_ENCL:
 	case TVIN_PORT_VIU2_ENCI:
 	case TVIN_PORT_VIU2_ENCP:
-		devp->secure_video = get_secure_state(POST_BLEND_OUT);
+		if (devp->dtdata->hw_ver == VDIN_HW_A9)
+			/* Obtain the security status from vpp0 and set it for vdin1 mif */
+			devp->secure_video = get_secure_state(VPP_OUT);
+		else
+			devp->secure_video = get_secure_state(POST_BLEND_OUT);
 		break;
 
 	default:
@@ -1819,8 +1905,8 @@ void vdin_get_secure_state(struct vdin_dev_s *devp)
 		devp->secure_video = devp->secure_video ^ devp->debug.invert_secure;
 
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_SECURE)
-		pr_info("%s() secure:%d invert:%d\n",
-			__func__, devp->secure_video, devp->debug.invert_secure);
+		pr_info("secure:%d invert:%d\n",
+			devp->secure_video, devp->debug.invert_secure);
 }
 
 static void vdin_set_pc_mode(struct vdin_dev_s *devp)
@@ -1926,7 +2012,6 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 			devp->index, __func__);
 		return -1;
 	}
-
 	vdin_start_param_init(devp);
 	if (devp->frontend && devp->frontend->sm_ops) {
 		sm_ops = devp->frontend->sm_ops;
@@ -2144,6 +2229,7 @@ int vdin_start_dec(struct vdin_dev_s *devp)
 	memset(&devp->parm.histgram[0], 0, sizeof(unsigned short) * 64);
 
 	vdin_get_curr_field_type(devp);
+
 	devp->curr_dv_flag = devp->dv.dv_flag;
 	/* configure regs and enable hw */
 	vdin_vpu_clk_mem_pd(devp, 1);
@@ -3533,6 +3619,7 @@ int vdin_vframe_put_and_recycle(struct vdin_dev_s *devp, struct vf_entry *vfe,
 	vdin_vf_disp_mode_update(vfe, devp->vfp);
 	vdin_update_vf_flag(devp, vfe);
 	vfe->vf.duration = devp->cur_duration;
+	vdin_dmabuf_attach_vf(devp, &vfe->vf);
 
 	/*force recycle one frame*/
 	if (devp->frame_cnt < devp->vdin_drop_num || devp->vdin_irq_flag ||
@@ -4802,7 +4889,10 @@ static void vdin_set_vfe_type(struct vdin_dev_s *devp, struct vf_entry *vfe)
 	else
 		vfe->vf.type_ext &= ~VIDTYPE_EXT_VDIN_HDCP;
 
-	if (devp->secure_video)
+	/* vdin1 afbce main buffer is secure uvm; vf keep secure flag */
+	if (devp->secure_video ||
+	    (devp->dtdata->hw_ver == VDIN_HW_A9 && devp->hw_core == VDIN_HW_CORE_LITE &&
+	    devp->vd1_sts_afbce && devp->afbce_valid))
 		vfe->vf.flag |= VFRAME_FLAG_VIDEO_SECURE;
 	else
 		vfe->vf.flag &= ~VFRAME_FLAG_VIDEO_SECURE;
@@ -4981,7 +5071,6 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	}
 
 	next_wr_vfe = provider_vf_peek(devp->vfp);
-
 	if (devp->last_wr_vfe) {
 		/*add for force vdin buffer recycle*/
 		if (!next_wr_vfe &&
@@ -5022,6 +5111,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	curr_wr_vf->type = last_field_type;
 	curr_wr_vf->type_original = curr_wr_vf->type;
 
+	vdin_mif_secure(devp, curr_wr_vfe);
 	vdin_set_vfe_type(devp, curr_wr_vfe);
 	vdin_set_vframe_prop_info(curr_wr_vf, devp);
 	vdin_backup_histgram(curr_wr_vf, devp);
@@ -5070,7 +5160,7 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 	/* no buffer */
 	if (!next_wr_vfe && !devp->is_one_buffer) {
 		devp->vdin_irq_flag = VDIN_IRQ_FLG_NO_NEXT_FE;
-		vdin_drop_frame_info(devp, "no next fe");
+		vdin_drop_frame_info(devp, "1-no next fe");
 		goto irq_handled;
 	}
 
@@ -5101,8 +5191,8 @@ irqreturn_t vdin_v4l2_isr(int irq, void *dev_id)
 
 	vdin_frame_write_ctrl_set(devp, next_wr_vfe,
 				  devp->flags & VDIN_FLAG_RDMA_ENABLE);
-
 	devp->curr_wr_vfe = next_wr_vfe;
+	vdin_frame_valid(devp, next_wr_vfe);
 
 	if (devp->set_canvas_manual != 1 &&
 	    devp->work_mode != VDIN_WORK_MD_V4L)
@@ -5475,7 +5565,12 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct vdin_parm_s param;
 	struct vdin_hist_s vdin1_hist_temp;
 	struct page *page;
-	struct vdin_set_canvas_s vdin_set_canvas[VDIN_CANVAS_MAX_CNT];
+	//struct vdin_set_canvas_s vdin_set_canvas[VDIN_CANVAS_MAX_CNT];
+	struct vdin_set_canvas_s vdin_set_canvas;
+	unsigned int sel_afbce = 0;
+	struct vdin_set_canvas_addr_s *p_cvs = NULL;
+	bool set_main = true;
+	bool vd1_need_free = false; //free sub
 	unsigned int idx = 0;
 	unsigned int recovery_idx = 0;
 	struct vdin_vrr_freesync_param_s vdin_vrr_status;
@@ -5483,6 +5578,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	unsigned int tmp = 0;
 	unsigned int vdin_need_mem_size = 0;
 	u32 next_tfr = 0;
+	struct dma_heap *heap = NULL;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	struct vdin_dump_buf_arg dump_arg;
 	struct vdin_dump_afbc_buf_arg dump_afbc_arg;
@@ -6230,12 +6326,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_S_VDIN_V4L2START can't be used at vdin0\n");
 			break;
 		}
-		//if (devp->flags & VDIN_FLAG_ISR_REQ) {
-		//	free_irq(devp->irq, (void *)devp);
-		//	if (vdin_dbg_en)
-		//		pr_info("%s vdin.%d free_irq\n", __func__,
-		//			devp->index);
-		//}
 
 		if (copy_from_user(&vdin_v4l2_param, argp,
 				   sizeof(struct vdin_v4l2_param_s))) {
@@ -6247,16 +6337,66 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_err("TVIN_IOC_S_VDIN_V4L2START,fps should not be zero\n");
 			break;
 		}
-
+		sel_afbce = vdin_v4l2_param.sel_afbce;
 		if (devp->debug.vdin_dbg_en) {
-			pr_info("width:%d height:%d dst_width:%d dst_height:%d\n",
+			pr_info("width:%d height:%d dst_width:%d dst_height:%d sel_afbce:%d\n",
 				vdin_v4l2_param.width, vdin_v4l2_param.height,
-				vdin_v4l2_param.dst_width, vdin_v4l2_param.dst_height);
+				vdin_v4l2_param.dst_width, vdin_v4l2_param.dst_height, sel_afbce);
 			pr_info("fps:%d dst_fmt:%d endian:%d, swap:%d, mode:%d bit_dep:%d secure:%d\n",
 				vdin_v4l2_param.fps, vdin_v4l2_param.dst_fmt,
 				vdin_v4l2_param.wr_endian, vdin_v4l2_param.input_swap,
 				vdin_v4l2_param.mode,
 				vdin_v4l2_param.bit_dep, vdin_v4l2_param.secure_memory_en);
+		}
+		if (!devp->en_vd1_afbce ||
+		    (sel_afbce == 0 && !devp->vd1_sts_afbce)) {
+			//enable only mif
+			devp->afbce_flag = 0x0;
+			devp->vd1_sts_mif = true;
+			devp->vd1_sts_main = false;
+
+			if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+				pr_info("start:enable mif as main\n");
+		} else {
+			if (sel_afbce == 1 && !devp->vd1_sts_mif) {
+				memset(&devp->vd1_para_io, 0, sizeof(devp->vd1_para_io));
+				devp->vd1_sts_afbce = true;
+				devp->vd1_sts_main = true;
+				devp->vd1_afbce_pause = false;
+				devp->vd1_afbce_pause_io = false;
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("start:enable afbce as main\n");
+
+			} else if (sel_afbce == 0 && devp->vd1_sts_afbce) {
+				//set mif info only, do not start
+				devp->vd1_para_io.x = vdin_v4l2_param.dst_width;
+				devp->vd1_para_io.y = vdin_v4l2_param.dst_height;
+				devp->vd1_para_io.bits = vdin_v4l2_param.bit_dep;
+				devp->vd1_para_io.dst_fmt = vdin_v4l2_param.dst_fmt;
+				devp->vd1_para_io.sw = true;
+				devp->vd1_para_io.type =
+					devp->curr_field_type &
+					(~(VIDTYPE_COMPRESS | VIDTYPE_SCATTER));
+
+				devp->canvas_h = devp->vd1_para_io.y;
+				devp->canvas_active_w = devp->vd1_para_io.x *
+					VDIN_YUV444_8BIT_PER_PIXEL_BYTE;
+				devp->canvas_w = roundup(devp->canvas_active_w,
+							 devp->canvas_align);
+				devp->vd1_sts_sub_mem_act = true;
+				devp->vd1_para_s_update = true;
+				devp->vd1_sts_mif = true;
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("start:sub mif %dx%d canvas_w=%d canvas_h=%d\n",
+					  devp->vd1_para_io.x, devp->vd1_para_io.y,
+					  devp->canvas_w, devp->canvas_h);
+				break;
+			} else if (sel_afbce == 1 && devp->vd1_sts_mif) {
+				//do nothing:
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("have set mif, afbce can not act\n");
+				break;
+			}
 		}
 
 		memset(&param, 0, sizeof(struct vdin_parm_s));
@@ -6297,7 +6437,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		param.frame_rate = vdin_v4l2_param.fps;
 		param.cfmt = TVIN_YUV422;
 		devp->prop.colordepth = vdin_v4l2_param.bit_dep;
-
 		if (devp->set_canvas_manual == 1)
 			param.dfmt = vdin_v4l2_param.dst_fmt;
 		else
@@ -6306,7 +6445,7 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (devp->set_canvas_manual == 1) {
 			if (!devp->debug.conversion) {
 				devp->flags |= VDIN_FLAG_MANUAL_CONVERSION;
-				devp->debug.dest_cfmt = vdin_v4l2_param.dst_fmt;
+				devp->debug.dest_cfmt = param.dfmt;
 				devp->debug.scaling4w = vdin_v4l2_param.dst_width;
 				devp->debug.scaling4h = vdin_v4l2_param.dst_height;
 			}
@@ -6329,7 +6468,6 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (vdin_v4l2_param.secure_memory_en)
 			devp->mem_protected = 1;
 		devp->wr_endian = vdin_v4l2_param.wr_endian;
-		devp->input_swap = vdin_v4l2_param.input_swap;
 		start_tvin_service(devp->index, &param);
 		break;
 	}
@@ -6338,6 +6476,39 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			pr_info("TVIN_IOC_S_VDIN_V4L2STOP can't be used at vdin0\n");
 			break;
 		}
+		if (copy_from_user(&sel_afbce, argp, sizeof(unsigned int)))
+			return -EFAULT;
+
+		if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+			pr_info("io-VDIN_V4L2STOP sel_afbce:%d\n", sel_afbce);
+
+		if (devp->en_vd1_afbce) {
+			if (devp->vd1_sts_main && !sel_afbce && devp->vd1_sts_mif) {
+				//sub mif stop;
+				//step 1: pause mif write:
+				//step 2: wait last mif write end;
+				//step 3: clear memory;
+
+				//clear vfm addr:
+				vdin_sub_mif_stop(devp);
+				vdin_sub_mif_mem_free(devp);
+
+				devp->vd1_sts_mif = false;
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("STOP sub mif\n");
+				break;
+			} else if (devp->vd1_sts_main && sel_afbce && devp->vd1_sts_mif) {
+				//stop mif when mif exit, need stop mif first
+				vd1_need_free = true;
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("STOP sub mif fist then STOP afbce\n");
+			} else {
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("stop: ? %d,%d,%d\n",
+						devp->vd1_sts_main, sel_afbce, devp->vd1_sts_mif);
+			}
+		}
+
 		devp->parm.reserved &= ~PARAM_STATE_HISTGRAM;
 		devp->flags &= (~VDIN_FLAG_ISR_REQ);
 		devp->flags &= (~VDIN_FLAG_FS_OPENED);
@@ -6366,9 +6537,18 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			memset(devp->keystone_entry, 0,
 			       sizeof(struct vf_entry *) * VDIN_CANVAS_MAX_CNT);
 			devp->set_canvas_manual = 0;
-			devp->cma_config_flag = devp->cma_config_flag_bak;
 			devp->hv_reverse_en = 0;
 		}
+		if (vd1_need_free)
+			vdin_sub_mif_mem_free(devp);
+		devp->vd1_sts_mif = false;
+		devp->vd1_sts_afbce = false;
+		devp->vd1_sts_main = false;
+		devp->vd1_sts_sub_mem_act = false;
+		devp->vd1_afbce_pause = 0;
+		devp->vd1_afbce_pause_io = 0;
+		memset(&devp->vd1_para_io, 0, sizeof(devp->vd1_para_io));
+		devp->vd1_para_s_update = 0;
 		break;
 	case TVIN_IOC_G_VDIN_MEM_SIZE:
 		mutex_lock(&devp->fe_lock);
@@ -6402,70 +6582,116 @@ static long vdin_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			break;
 		}
 		mutex_lock(&devp->fe_lock);
-		if (copy_from_user(vdin_set_canvas, argp,
-				   sizeof(struct vdin_set_canvas_s) *
-					  VDIN_CANVAS_MAX_CNT)) {
-			pr_info("TVIN_IOC_S_CANVAS_ADDR copy fail\n");
+		if (copy_from_user(&vdin_set_canvas, argp, sizeof(struct vdin_set_canvas_s))) {
 			mutex_unlock(&devp->fe_lock);
 			return -EFAULT;
 		}
 
-		memset(vdin_set_canvas_addr, 0,
-		       sizeof(struct vdin_set_canvas_addr_s) *
-		       VDIN_CANVAS_MAX_CNT);
-		memset(devp->keystone_entry, 0,
-		       sizeof(struct vf_entry *) * VDIN_CANVAS_MAX_CNT);
+		if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+			pr_info("io-CANVAS_ADDR:%d-%d-%d %d\n", vdin_set_canvas.sel_afbce,
+			devp->en_vd1_afbce, devp->vd1_sts_afbce, devp->vd1_sts_mif);
+
+		if (!devp->en_vd1_afbce ||
+		    (!devp->vd1_sts_afbce && !devp->vd1_sts_mif)) {
+			// main mem:
+			p_cvs = &vdin_set_canvas_addr[0];
+			set_main = true;
+		} else {
+			// sub mem:
+			p_cvs = &vdin_set_canvas_addr_sub[0];
+			set_main = false;
+		}
+		memset(p_cvs, 0,
+			sizeof(struct vdin_set_canvas_addr_s) * VDIN_CANVAS_MAX_CNT);
+		if (set_main) {
+			memset(devp->keystone_entry, 0,
+				sizeof(struct vf_entry *) * VDIN_CANVAS_MAX_CNT);
+		}
 
 		for (i = 0; i < VDIN_CANVAS_MAX_CNT; i++) {
 			/*when fd means, the canvas list reaches end*/
-			if (vdin_set_canvas[i].fd < 0)
+			if (vdin_set_canvas.fd[i] < 0)
 				break;
 
-			if (vdin_set_canvas[i].index >= VDIN_CANVAS_MAX_CNT) {
+			if (vdin_set_canvas.index[i] >= VDIN_CANVAS_MAX_CNT) {
 				pr_err("vdin buf idx range (0 ~ %d), current idx is too big.\n ",
 				       VDIN_CANVAS_MAX_CNT - 1);
 				continue;
 			}
 
-			idx = vdin_set_canvas[i].index;
+			idx = vdin_set_canvas.index[i];
 			if (idx < VDIN_CANVAS_MAX_CNT) {
-				vdin_set_canvas_addr[idx].dma_buffer =
-					dma_buf_get(vdin_set_canvas[i].fd);
+				p_cvs[idx].fd = vdin_set_canvas.fd[i];
+				p_cvs[idx].dma_buffer =
+					dma_buf_get(vdin_set_canvas.fd[i]);
+				if (dmabuf_is_uvm(p_cvs[idx].dma_buffer)) {
+					heap = dma_heap_find(CODECMM_HEAP_NAME);
+					if (!heap) {
+						dma_buf_put(p_cvs[idx].dma_buffer);
+						pr_err("heap-%d is NULL\n", idx);
+						break;
+					}
+					p_cvs[idx].dmabuf_attach =
+						dma_buf_attach(p_cvs[idx].dma_buffer,
+						dma_heap_get_dev(heap));
+				} else {
+					p_cvs[idx].dmabuf_attach =
+					dma_buf_attach(p_cvs[idx].dma_buffer, devp->dev);
+				}
 
-				vdin_set_canvas_addr[idx].dmabuf_attach =
-				dma_buf_attach(vdin_set_canvas_addr[idx]
-					       .dma_buffer,
-					       devp->dev);
-				vdin_set_canvas_addr[idx].sg_table =
-				dma_buf_map_attachment(vdin_set_canvas_addr[idx]
-						       .dmabuf_attach,
-						       DMA_BIDIRECTIONAL);
+				p_cvs[idx].sg_table =
+				dma_buf_map_attachment(p_cvs[idx].dmabuf_attach,
+					DMA_BIDIRECTIONAL);
 
 				page =
-				sg_page(vdin_set_canvas_addr[idx].sg_table->sgl);
-				vdin_set_canvas_addr[idx].paddr =
+				sg_page(p_cvs[idx].sg_table->sgl);
+				p_cvs[idx].paddr =
 					PFN_PHYS(page_to_pfn(page));
-				vdin_set_canvas_addr[idx].size =
-					vdin_set_canvas_addr[idx].dma_buffer->size;
-
-				pr_info("TVIN_IOC_S_CANVAS_ADDR[%d] addr=0x%lx, len=0x%x.\n",
-					i,
-					vdin_set_canvas_addr[idx].paddr,
-					vdin_set_canvas_addr[idx].size);
+				p_cvs[idx].size =
+					p_cvs[idx].dma_buffer->size;
+				if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+					pr_info("vdin%d CVS_ADDR[%d] addr=0x%lx len=0x%x fd=%d\n",
+						devp->index, i,
+						p_cvs[idx].paddr,
+						p_cvs[idx].size, p_cvs[idx].fd);
 			} else {
 				pr_info("VDIN err canvas idx:%d\n", idx);
 			}
 #ifdef CONFIG_AMLOGIC_ENABLE_MEDIA_FILE
-			__close_fd(current->files, vdinsetcanvas[i].fd);
+			__close_fd(current->files, vdinsetcanvas.fd[i]);
 #endif
 		}
-		devp->set_canvas_manual = 1;
-		devp->cma_config_flag = 0x100;
-		devp->hv_reverse_en = 1;
+		if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+			pr_info("set_main=%d,sts_main:%d,%d,%d\n",
+				set_main,
+				devp->vd1_sts_main,
+				devp->vd1_sts_afbce,
+				devp->vd1_sts_mif);
+		if (set_main) {
+			devp->set_canvas_manual = 1;
+			devp->hv_reverse_en = 1;
+		} else {
+			if (devp->vd1_sts_main)
+				vdin_sub_mif_vf(devp);
+		}
 		mutex_unlock(&devp->fe_lock);
 		break;
+	case TVIN_IOC_S_VDIN1_AFBCE_PAUSE:
+		if (devp->index == 0) {
+			pr_info("AFBCE_PAUSE can't be used at vdin0\n");
+			break;
+		}
+		if (copy_from_user(&sel_afbce, argp, sizeof(unsigned int)))
+			return -EFAULT;
 
-	case TVIN_IOC_S_CANVAS_RECOVERY:
+		if (devp->vd1_sts_afbce)
+			devp->vd1_afbce_pause_io = sel_afbce;
+
+		if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+			pr_info("io-AFBCE_PAUSE: sw = %d %d\n",
+				sel_afbce, devp->vd1_afbce_pause_io);
+		break;
+	case TVIN_IOC_S_CANVAS_RECOVERY:	// keystone
 		if (devp->index == 0) {
 			pr_info("TVIN_IOC_S_CANVAS_RECOVERY can't be used at vdin0\n");
 			break;
@@ -6817,7 +7043,9 @@ static ssize_t vdin_read(struct file *file, char __user *buf,
 	/*index = report_canvas_index;*/
 	vf_info.index = vfe->vf.index;
 	vf_info.crc = vfe->vf.crc;
-
+	if (devp->debug.vdin_dbg_en & VDIN_DBG_VDIN1_DUAL_DISPLAY)
+		pr_info("%s:ch[%d] idx[%d] %d, 0x%lx\n", "vf__rd",
+			devp->index, vfe->vf.index, vf_info.index, vfe->vf.compHeadAddr);
 	/* vdin get frame time */
 	vf_info.ready_clock[0] = vfe->vf.ready_clock[0];
 
@@ -6826,6 +7054,9 @@ static ssize_t vdin_read(struct file *file, char __user *buf,
 
 	/* receiver get frame time */
 	vf_info.ready_clock[2] = sched_clock();
+	vf_info.vdin1_mif_secure_flag = vfe->mif_secure;
+	vf_info.mif_frame_valid = vfe->mif_frame_valid;
+	vf_info.afbce_frame_valid = vfe->afbce_frame_valid;
 	devp->keystone_entry[vf_info.index] = vfe;
 	ret = copy_to_user(buf, (void *)(&vf_info),
 			   sizeof(struct vdin_vf_info));
@@ -8085,8 +8316,17 @@ static int vdin_drv_probe(struct platform_device *pdev)
 				devm_kzalloc(devp->dev, sizeof(struct vdin_afbce_s), GFP_KERNEL);
 			if (!devp->afbce_info)
 				goto fail_kzalloc_vdev;
+			if (devp->dtdata->hw_ver == VDIN_HW_A9 && devp->index == 1)
+				devp->en_vd1_afbce = true;
 		}
 		devp->afbce_flag = devp->dts_config.afbce_flag_cfg;
+
+	/* config a9 dual 4k display debug */
+		ret = of_property_read_u32(pdev->dev.of_node,
+				   "vdin_dbg_mode", &devp->debug.vdin_dbg_en);
+
+		if (ret)
+			devp->debug.vdin_dbg_en = 0;
 	}
 
 	vdin_get_dts_config(devp, pdev);

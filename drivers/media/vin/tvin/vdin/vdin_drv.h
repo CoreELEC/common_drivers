@@ -16,6 +16,7 @@
 #include <linux/device.h>
 #include <linux/clk.h>
 #include <linux/workqueue.h>
+#include <linux/types.h>
 #include <linux/amlogic/gki_module.h>
 
 /* Amlogic Headers */
@@ -26,8 +27,11 @@
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #include <linux/amlogic/media/frame_provider/tvin/tvin_v4l2.h>
 #include <linux/amlogic/media/video_sink/video_signal_notify.h>
+#include <linux/amlogic/media/dmabuf_heaps/amlogic_dmabuf_heap.h>
 #include <linux/amlogic/media/amvecm/amvecm.h>
 #include <linux/amlogic/media/video_sink/video.h>
+#include <linux/amlogic/media/video_sink/v4lvideo_ext.h>
+#include <linux/amlogic/meson_uvm_core.h>
 #ifdef CONFIG_AMLOGIC_MEDIA_RDMA
 #include <linux/amlogic/media/rdma/rdma_mgr.h>
 #include "../common/rdma/rdma.h"
@@ -605,6 +609,7 @@ struct vdin_set_canvas_addr_s {
 	int index;
 };
 extern struct vdin_set_canvas_addr_s vdin_set_canvas_addr[VDIN_CANVAS_MAX_CNT];
+extern struct vdin_set_canvas_addr_s vdin_set_canvas_addr_sub[VDIN_CANVAS_MAX_CNT];
 
 struct vdin_vf_info {
 	int index;
@@ -615,6 +620,9 @@ struct vdin_vf_info {
 	 * [2]: receiver get frame time
 	 */
 	long long ready_clock[3];/* ns */
+	__u8 vdin1_mif_secure_flag;	/* per-frame mif source secure states, vdin1 only */
+	__u8 mif_frame_valid;		/* sub mif path active this frame, vdin1 only */
+	__u8 afbce_frame_valid;		/* afbce path active this frame, vdin1 only */
 };
 
 /* debug control bits for scatter memory */
@@ -640,6 +648,7 @@ struct vdin_vf_info {
 #define DBG_VDIN_DUMP		(BIT(4)) /*print vdin dump (close to avoid watchdog timeout) */
 #define VDIN_DBG_CNTL_IOCTL	(BIT(10))
 #define VDIN_DBG_CNTL_FLUSH	(BIT(11))
+#define VDIN_DBG_VDIN1_DUAL_DISPLAY	(BIT(12))
 
 struct vdin_slt_test_s {
 	bool en;
@@ -770,10 +779,15 @@ struct vdin_debug_s {
 	unsigned int force_disp_mode;
 	unsigned int reg_addr;
 	unsigned int dbg_force_duration;
+	unsigned int dbg_dump_idx;
+	unsigned int dbg_vf_idx;
 	bool bypass_game_dyn_fmt;
 	bool force_pause_en;
 	bool force_tvstop;
 	unsigned int vdin_manual_req_mem_size;
+	bool open_a9_vdin1_shrink;//todo dbg_set
+	bool a9_debug_onoff;//todo dbg_set
+	unsigned int vdin_stop_mif_cnt;
 };
 
 struct vdin_dv_s {
@@ -1035,6 +1049,16 @@ struct vdin_local_variable_s {
 	unsigned int base_fr_chg_cnt;
 	unsigned int cur_hdcp_sts;
 	unsigned char hdcp_chg_cnt;
+};
+
+struct vdin_sub_para_s { //ary add
+	unsigned int x;
+	unsigned int y;
+	enum tvin_color_fmt_e dst_fmt;
+	unsigned int type; //vfm
+	unsigned int cvs_w;
+	unsigned char bits; // 8 bit 10 bit
+	bool sw; // 0: off; 1: on;
 };
 
 struct vdin_dev_s {
@@ -1323,6 +1347,21 @@ struct vdin_dev_s {
 	bool is_need_re_cfg; /* signal status changed during start_dec */
 	bool re_cfg; /* hdr/dv status changed */
 	unsigned int cur_ufr_mode; /* ufr_mode = 1 means DLG on */
+	bool en_vd1_afbce; //ary -------------
+	bool force_dis_afbce;
+	bool vd1_sts_afbce;
+	bool vd1_sts_mif;
+	bool vd1_sts_sub_mem_act;
+	bool vd1_sts_main;
+	bool vd1_para_s_update; //flg for need update;
+	bool vd1_sub_wait_isr;
+	bool vd1_afbce_pause_io;
+	bool vd1_afbce_pause;
+	unsigned int vd1_state; //0xff: for afbce  bit 0 : active
+	bool vd1_mif_path_en;
+	bool vd1_afbce_path_en;
+	unsigned long mif_mem_start[VDIN_CANVAS_MAX_CNT];
+	struct vdin_sub_para_s vd1_para_io;
 	unsigned int mute_cnt;
 	unsigned int ignore_frames;
 	/*use frame rate to cal duration*/

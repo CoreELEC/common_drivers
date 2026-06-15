@@ -3625,7 +3625,7 @@
 		dev_name = "vdin1";
 		status = "okay";
 		reserve-iomap = "true";
-		/* flag_cma = <0x30101>;1:share with codec_mm;0:cma alone;bit16:scatter*/
+		flag_cma = <0x101>;/*1:share with codec_mm;0:cma alone;bit16:scatter*/
 		interrupts = <0 212 1>;
 		interrupt-names = "vsync_int";
 		rdma-irq = <4>;
@@ -3633,9 +3633,10 @@
 		clock-names = "fclk_div5", "cts_vdin_meas_clk";
 		vdin_id = <1>;
 		tv_bit_mode = <0x215>;
-		afbce_bit_mode = <0x0>;
+		afbce_bit_mode = <0xf1>;
 		chk_wr_done_en;
 		double_write_en;
+		/* vdin_dbg_mode = <0x1000>;*/
 		/* vdin v4l2 */
 		v4l_support_en = <0>;
 		v4l_vd_num = <71>;

@@ -189,6 +189,7 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	int enc_win_bgn_v;//input scope
 	int enc_win_end_v;//input scope
 	int reg_fmt444_rgb_en = 0;
+	int work_mode = 0;//0-auto trigger,1-manual trigger
 	enum vdin_format_convert_e vdin_out_fmt;
 	//unsigned int bit_mode_shift = 0;
 	unsigned int offset = devp->addr_offset;
@@ -205,6 +206,7 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	if (devp->dtdata->hw_ver == VDIN_HW_A9) {
 		offset = devp->addr_offset_afbc_a9 + VDIN_A9_AFBCE_REG_DELTA;
 		offset1 = offset + 0x3; /*a9 mmu are differences for the offset */
+		work_mode = 1;
 	}
 	enc_win_bgn_h = 0;
 	enc_win_end_h = devp->h_active - 1;
@@ -378,7 +380,7 @@ void vdin_afbce_config_t3x(struct vdin_dev_s *devp)
 	//W_VCBUS_BIT(offset + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, 0x1c4f, 16, 13);
 	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_SCOPE_X, 0x1ffe, 16, 13);
 	W_VCBUS_BIT(offset1 + VDIN0_AFBCE_MMU_RMIF_CTRL3, 0x1fff, 0, 13);
-	W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, 0, AFBCE_WORK_MD_BIT, AFBCE_WORK_MD_WID);
+	W_VCBUS_BIT(offset + VDIN0_AFBCE_ENABLE, work_mode, AFBCE_WORK_MD_BIT, AFBCE_WORK_MD_WID);
 	W_VCBUS_BIT(offset + VDIN0_AFBCE_ROT_CTRL, 0, 1, 1);/* reg_rot_en */
 
 	if (devp->dtdata->hw_ver != VDIN_HW_A9 && devp->double_wr) {
@@ -485,6 +487,8 @@ void vdin_afbce_set_next_frame_t3x(struct vdin_dev_s *devp,
 		vf_idx = devp->af_num; //one buffer mode
 	else
 		vf_idx = vfe->af_num;
+	if (devp->debug.dbg_vf_idx & 0x10000)
+		vf_idx = devp->debug.dbg_vf_idx & 0xffff;
 
 	compHeadAddr	= devp->afbce_info->fm_head_paddr[vf_idx];
 	compTableAddr	= devp->afbce_info->fm_table_paddr[vf_idx];
@@ -592,8 +596,8 @@ int vdin_afbce_read_write_down_flag_t3x(struct vdin_dev_s *devp)
 
 	if (devp->debug.vdin_isr_monitor & VDIN_ISR_MONITOR_WRITE_DONE)
 		pr_info("frm_end:%#x,wr_abort:%#x;[%#x]:%#x,[%#x]:%#x\n", frm_end, wr_abort,
-			VDIN0_AFBCE_STAT1, rd(devp->addr_offset, VDIN0_AFBCE_STAT1),
-			VDIN0_AFBCE_STA_FLAGT, rd(devp->addr_offset, VDIN0_AFBCE_STA_FLAGT));
+			offset + VDIN0_AFBCE_STAT1, rd(offset, VDIN0_AFBCE_STAT1),
+			offset + VDIN0_AFBCE_STA_FLAGT, rd(offset, VDIN0_AFBCE_STA_FLAGT));
 
 	if (frm_end == 1 && wr_abort == 0)
 		return 1;
