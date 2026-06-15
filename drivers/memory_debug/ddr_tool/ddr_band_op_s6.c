@@ -39,6 +39,22 @@ static unsigned int axi_chan_sts_offset[] __initdata = {
 	(0xd4 << 2), (0xd5 << 2), (0xd6 << 2), (0xd7 << 2)
 };
 
+static unsigned int ots_regs_offset[] __initdata = {
+	(0x81 << 2), (0x85 << 2), (0x89 << 2), (0x8d << 2),
+	(0x91 << 2), (0x95 << 2), (0x99 << 2), (0x9d << 2),
+	(0xa1 << 2), (0xa5 << 2), (0xa9 << 2), (0xad << 2),
+	(0xb1 << 2), (0xb5 << 2), (0xb9 << 2), (0xbd << 2),
+	(0x61 << 2), (0x65 << 2), (0x69 << 2), (0x6d << 2),
+	(0x71 << 2), (0x75 << 2), (0x79 << 2), (0x7d << 2),
+};
+
+static unsigned int ots_levels[] __initdata = {
+	0x02010201, 0x04020402, 0x06040604, 0x08050805,
+	0x0C080C08, 0x120C120C, 0x18131813, 0x1C161C16,
+	0x20192019, 0x241C241C, 0x28202820, 0x2C232C23,
+	0x30263026, 0x34293429, 0x382C382C, 0x3C2F3C2F
+};
+
 static void s6_dmc_port_config(struct ddr_bandwidth *db, int channel, int map_id)
 {
 	unsigned int i, val;
@@ -172,6 +188,85 @@ static int s6_dump_reg(struct ddr_bandwidth *db, char *buf)
 }
 #endif
 
+static int __init outstanding_init(struct ddr_bandwidth *db)
+{
+	int i;
+	size_t count;
+
+	db->bus_num = ARRAY_SIZE(ots_regs_offset);
+	db->ost.levels.count = ARRAY_SIZE(ots_levels);
+
+	count = db->ost.levels.count * sizeof(unsigned int);
+	count += db->bus_num * sizeof(struct outstanding_reg);
+	db->ost.levels.value = kzalloc(count, GFP_KERNEL);
+	if (!db->ost.levels.value) {
+		kfree(db->ost.levels.value);
+		db->bus_num = 0;
+		db->ost.levels.count = 0;
+		return -ENOMEM;
+	}
+	db->ost.regs = (struct outstanding_reg *)(db->ost.levels.value + db->ost.levels.count);
+
+	for (i = 0; i < db->ost.levels.count; i++)
+		db->ost.levels.value[i] = ots_levels[i];
+
+	for (i = 0; i < db->bus_num; i++) {
+		db->ost.regs[i].offset = ots_regs_offset[i];
+		db->ost.regs[i].def_val = readl(db->ddr_reg[0] + db->ost.regs[i].offset);
+		if (db->ost.levels.cur_level >= 0 && db->ost.levels.count) {
+			writel(db->ost.levels.value[db->ost.levels.cur_level],
+				db->ddr_reg[0] + db->ost.regs[i].offset);
+		}
+	}
+
+	return 0;
+}
+
+static int outstanding_set(struct ddr_bandwidth *db, int bus, int value)
+{
+	if (bus > db->bus_num)
+		return -1;
+
+	if (!db->ost.regs)
+		return -1;
+
+	if (value == -1)
+		writel(db->ost.regs[bus].def_val, db->ddr_reg[0] + db->ost.regs[bus].offset);
+	else
+		writel(value, db->ddr_reg[0] + db->ost.regs[bus].offset);
+
+	return 0;
+}
+
+static int outstanding_get(struct ddr_bandwidth *db, int bus)
+{
+	if (bus > db->bus_num)
+		return -1;
+
+	if (!db->ost.regs)
+		return -1;
+
+	return readl(db->ddr_reg[0] + db->ost.regs[bus].offset);
+}
+
+static int outstanding_handle(struct ddr_bandwidth *db, int bus,
+					int value, enum outstanding_type type)
+{
+	int ret = 0;
+
+	switch (type) {
+	case OUTSTANDING_SET:
+		ret = outstanding_set(db, bus, value);
+		break;
+	case OUTSTANDING_GET:
+		ret = outstanding_get(db, bus);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
 static int dmc_buf_level_handle(struct ddr_bandwidth *db, u32 *val,
 				enum property_type type, int rw)
 {
@@ -255,6 +350,8 @@ struct ddr_bandwidth_ops s6_ddr_bw_ops = {
 	.get_freq         = s6_get_dmc_freq_quick,
 	.handle_irq       = s6_handle_irq,
 	.bandwidth_enable = s6_dmc_bandwidth_enable,
+	.outstanding_init = outstanding_init,
+	.outstanding      = outstanding_handle,
 #if DDR_BANDWIDTH_DEBUG
 	.dump_reg         = s6_dump_reg,
 #endif
