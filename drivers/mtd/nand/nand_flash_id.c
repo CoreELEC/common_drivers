@@ -395,6 +395,17 @@ struct nand_flash_dev aml_nand_flash_ids[] = {
 		{0, 0},
 		NAND_TIMING_MODE5},
 
+	{"GIGA NAND 4Gib GD9FU4G8F4D",
+		{ .id = {NAND_MFR_ESMT, 0xdc, 0x80, 0xa6, 0x63}},
+		4096,
+		512,
+		0x40000,
+		0,
+		5,
+		256,
+		{0, 0},
+		NAND_TIMING_MODE6},
+
 	{"A revision NAND 4Gib GD9FU1G8F2AMGI",
 		{ .id = {NAND_MFR_ESMT, 0xf1, 0x80, 0x1d, 0x42, 0xc8}},
 		2048,

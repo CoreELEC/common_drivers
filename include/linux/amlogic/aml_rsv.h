@@ -14,7 +14,7 @@
 #define DEFAULT_NAND_ENV_BLOCK_NUM 8
 #define DEFAULT_NAND_KEY_BLOCK_NUM 8
 #define DEFAULT_NAND_DTB_BLOCK_NUM 4
-#define DEFAULT_NAND_DDR_BLOCK_NUM 0
+#define DEFAULT_NAND_DDR_BLOCK_NUM 2
 
 #define RSV_NAND_MAGIC  "nrsv"
 #define GAP_NAND_MAGIC  "ngap"
@@ -23,6 +23,7 @@
 #define KEY_NAND_MAGIC	"nkey"
 #define SEC_NAND_MAGIC	"nsec"
 #define DTB_NAND_MAGIC	"ndtb"
+#define DDR_NAND_MAGIC	"nddr"
 
 /*define abnormal state for reserved area*/
 #define POWER_ABNORMAL_FLAG	0x01
@@ -130,4 +131,5 @@ char *aml_nand_get_rsv_cmdline(void);
 
 s32 amlnf_key_read(u8 *buf, u32 len, u32 *actual_length);
 s32 amlnf_key_write(u8 *buf, u32 len, u32 *actual_length);
+int meson_rsv_get_ddrp_page(void);
 #endif/* __MESON_RSV_H_ */

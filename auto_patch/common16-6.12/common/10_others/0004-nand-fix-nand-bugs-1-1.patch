@@ -1,4 +1,4 @@
-From 4672b7d84de0d0ec4d314638105d00472bbb6062 Mon Sep 17 00:00:00 2001
+From fb403ec096197c689cf2eb3afc703fd64defbac1 Mon Sep 17 00:00:00 2001
 From: Bichao Zheng <bichao.zheng@amlogic.com>
 Date: Thu, 20 Apr 2023 16:23:24 +0800
 Subject: [PATCH] nand: fix nand bugs [1/1]
@@ -6,17 +6,23 @@ Subject: [PATCH] nand: fix nand bugs [1/1]
 PD#SWPL-120491
 PD#SWPL-129754
 PD#SWPL-155674
+PD#SWPL-249674
+PD#TV-210454
 
 Problem:
 1.wrong select onfi mode
 2.erase flash error during OTA upgrade
 3.strncmp can't match full id 01h,DCh,00h,05h,04h(S34ML04G300BHI00)
 and 01h,DCh,00h,1Ah,00h(S34ML04G300TFI000)
+4.add GD9FU4G8F4D support
+5.I/O error after resume
 
 Solution:
 1.get onfi mode from id table
 2.change the check way of badblock
 3.use memcmp to compare ID memory instead strncmp
+4.timing support max tREA 9ns
+5.reset chip after resume
 
 Verify:
 1-2:s4
@@ -25,14 +31,14 @@ Change-Id: Ie747ceb95f1045c2acaaf2afb6862c9b05d36d8b
 Signed-off-by: Bichao Zheng <bichao.zheng@amlogic.com>
 Signed-off-by: zhikui.cui <zhikui.cui@amlogic.com>
 ---
- drivers/mtd/nand/raw/nand_base.c    | 12 +++++++++++-
- drivers/mtd/nand/raw/nand_bbt.c     | 11 +++++++++++
- drivers/mtd/nand/raw/nand_timings.c |  4 ++++
- include/linux/mtd/rawnand.h         | 17 +++++++++++++++++
- 4 files changed, 43 insertions(+), 1 deletion(-)
+ drivers/mtd/nand/raw/nand_base.c    | 15 ++++++++-
+ drivers/mtd/nand/raw/nand_bbt.c     | 11 ++++++
+ drivers/mtd/nand/raw/nand_timings.c | 52 +++++++++++++++++++++++++++++
+ include/linux/mtd/rawnand.h         | 17 ++++++++++
+ 4 files changed, 94 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/mtd/nand/raw/nand_base.c b/drivers/mtd/nand/raw/nand_base.c
-index 53e16d39af4b..b935de20e0c9 100644
+index 3e1844bfb808..3fd40973c88b 100644
 --- a/drivers/mtd/nand/raw/nand_base.c
 +++ b/drivers/mtd/nand/raw/nand_base.c
 @@ -967,6 +967,10 @@ int nand_choose_best_sdr_timings(struct nand_chip *chip,
@@ -46,10 +52,20 @@ index 53e16d39af4b..b935de20e0c9 100644
  /**
   * nand_choose_best_nvddr_timings - Pick up the best NVDDR timings that both the
   *                                  NAND controller and the NAND chip support
-@@ -5086,7 +5090,11 @@ static bool find_full_id_nand(struct nand_chip *chip,
-
+@@ -4835,6 +4839,9 @@ static void nand_resume(struct mtd_info *mtd)
+ {
+ 	struct nand_chip *chip = mtd_to_nand(mtd);
+ 
++#if IS_ENABLED(CONFIG_AMLOGIC_MTD_NAND)
++	nand_reset(chip, 0);
++#endif
+ 	mutex_lock(&chip->lock);
+ 	if (chip->suspended) {
+ 		if (chip->ops.resume)
+@@ -5086,7 +5093,11 @@ static bool find_full_id_nand(struct nand_chip *chip,
+ 
  	memorg = nanddev_get_memorg(&chip->base);
-
+ 
 +#if IS_ENABLED(CONFIG_AMLOGIC_MTD_NAND)
 +	if (!memcmp(type->id, id_data, type->id_len)) {
 +#else
@@ -58,7 +74,7 @@ index 53e16d39af4b..b935de20e0c9 100644
  		memorg->pagesize = type->pagesize;
  		mtd->writesize = memorg->pagesize;
  		memorg->pages_per_eraseblock = type->erasesize /
-@@ -5409,7 +5417,9 @@ static int nand_detect(struct nand_chip *chip, struct nand_flash_dev *type)
+@@ -5409,7 +5420,9 @@ static int nand_detect(struct nand_chip *chip, struct nand_flash_dev *type)
  		chip->options |= NAND_ROW_ADDR_3;
  
  	chip->badblockbits = 8;
@@ -109,10 +125,65 @@ index a8fba5f39f59..9dfcef0d846e 100644
  
  /**
 diff --git a/drivers/mtd/nand/raw/nand_timings.c b/drivers/mtd/nand/raw/nand_timings.c
-index 7b41afc372d2..0b8e90d3aa99 100644
+index 7b41afc372d2..033917df9917 100644
 --- a/drivers/mtd/nand/raw/nand_timings.c
 +++ b/drivers/mtd/nand/raw/nand_timings.c
-@@ -735,3 +735,7 @@ void onfi_fill_interface_config(struct nand_chip *chip,
+@@ -290,6 +290,54 @@ static const struct nand_interface_config onfi_sdr_timings[] = {
+ 			.tWW_min = 100000,
+ 		},
+ 	},
++#ifdef CONFIG_AMLOGIC_NAND
++	/**
++	 * Mode 6 for GD9FU4G8F4D
++	 * GD9FU4G8F4D tREA is 9ns, which does not comply with
++	 * ONFI TIMING MODE 5
++	 */
++	{
++		.type = NAND_SDR_IFACE,
++		.timings.sdr = {
++			.tCCS_min = 500000,
++			.tR_max = 200000000,
++			.tADL_min = 400000,
++			.tALH_min = 5000,
++			.tALS_min = 10000,
++			.tAR_min = 10000,
++			.tCEA_max = 25000,
++			.tCEH_min = 20000,
++			.tCH_min = 5000,
++			.tCHZ_max = 30000,
++			.tCLH_min = 5000,
++			.tCLR_min = 10000,
++			.tCLS_min = 10000,
++			.tCOH_min = 15000,
++			.tCS_min = 15000,
++			.tDH_min = 5000,
++			.tDS_min = 7000,
++			.tFEAT_max = 1000000,
++			.tIR_min = 0,
++			.tITC_max = 1000000,
++			.tRC_min = 20000,
++			.tREA_max = 9000,
++			.tREH_min = 7000,
++			.tRHOH_min = 15000,
++			.tRHW_min = 100000,
++			.tRHZ_max = 100000,
++			.tRLOH_min = 5000,
++			.tRP_min = 10000,
++			.tRR_min = 20000,
++			.tRST_max = 500000000,
++			.tWB_max = 100000,
++			.tWC_min = 20000,
++			.tWH_min = 7000,
++			.tWHR_min = 80000,
++			.tWP_min = 10000,
++			.tWW_min = 100000,
++		},
++	},
++#endif
+ };
+ 
+ static const struct nand_interface_config onfi_nvddr_timings[] = {
+@@ -735,3 +783,7 @@ void onfi_fill_interface_config(struct nand_chip *chip,
  	else
  		return onfi_fill_nvddr_interface_config(chip, iface, timing_mode);
  }

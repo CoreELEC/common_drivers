@@ -18,6 +18,12 @@
 #define NAND_TIMING_MODE3  0x3
 #define NAND_TIMING_MODE4  0x4
 #define NAND_TIMING_MODE5  0x5
+/*
+ * Mode 6 for GD9FU4G8F4D
+ * GD9FU4G8F4D tREA is 9ns, which does not comply with
+ * ONFI TIMING MODE 5
+ */
+#define NAND_TIMING_MODE6  0x6
 
 #define NFC_REG_CMD		0x00
 #define NFC_CMD_IDLE		(0xc << 14)

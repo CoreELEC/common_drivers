@@ -672,6 +672,26 @@ static int meson_ext_rsv_info_write(struct meson_rsv_info_t *rsv_info,
 	return ret;
 }
 
+int meson_rsv_get_ddrp_page(void)
+{
+	struct meson_rsv_info_t *rsv_info;
+	struct mtd_info *mtd;
+	int ddrp_page, index;
+
+	index = meson_rsv_name2index(DDR_NAND_MAGIC);
+	if (index < 0)
+		return -EINVAL;
+
+	rsv_info = &rsv_handler->rsv_info[index];
+	mtd = rsv_info->mtd;
+	ddrp_page = rsv_info->valid_node->phy_blk_addr <<
+		     (mtd->erasesize_shift - mtd->writesize_shift);
+	ddrp_page += rsv_info->valid_node->phy_page_addr;
+
+	return ddrp_page;
+}
+EXPORT_SYMBOL(meson_rsv_get_ddrp_page);
+
 size_t meson_rsv_get_bbt_size(void)
 {
 	return rsv_handler->rsv_info[meson_rsv_name2index(BBT_NAND_MAGIC)].size;
@@ -833,7 +853,10 @@ static int meson_rsv_info_init_from_default(struct mtd_info *mtd,
 				rsv_part.size = mtd->erasesize >> 1;
 			else
 				rsv_part.size = 0x40000;
+		} else if (!strncmp(rsv_part.name, DDR_NAND_MAGIC, 4)) {
+			rsv_part.size = 0x1000;
 		}
+
 		if (meson_rsv_info_alloc_init(mtd, handler, &rsv_part))
 			return -ENOMEM;
 	}

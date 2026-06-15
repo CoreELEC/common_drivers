@@ -731,7 +731,9 @@ static void meson_info_page0_prepare(struct nand_chip *nand, u8 *page0_buf)
 		p_nand_setup_sc2->cfg.d32 = configure_data;
 		p_nand_setup_sc2->cfg.b.page_list = 0;
 		p_nand_setup_sc2->cfg.b.new_type = 0;
-		pr_info("sc2 cfg.d32 0x%x\n", p_nand_setup_sc2->cfg.d32);
+		p_nand_page0_sc2->ddrp_start_page = meson_rsv_get_ddrp_page();
+		pr_info("sc2 cfg.d32 0x%x ddrp_start_page 0x%x\n",
+			p_nand_setup_sc2->cfg.d32, p_nand_page0_sc2->ddrp_start_page);
 	} else {
 		p_nand_page0 = (struct _nand_page0 *)page0_buf;
 		p_nand_setup = &p_nand_page0->nand_setup;
@@ -739,11 +741,13 @@ static void meson_info_page0_prepare(struct nand_chip *nand, u8 *page0_buf)
 		p_fip_info = &p_nand_page0->fip_info;
 		p_nand_setup->cfg.d32 = configure_data | (1 << 23) |
 		(1 << 22);
-		pr_info("cfg.d32 0x%x\n", p_nand_setup->cfg.d32);
 		p_nand_setup->id = 0;
 		p_nand_setup->max = 0;
+		p_nand_page0->ddrp_start_page = meson_rsv_get_ddrp_page();
 
 		memset(p_nand_page0->page_list, 0, NAND_PAGELIST_CNT);
+		pr_info("cfg.d32 0x%x ddrp_start_page 0x%x\n",
+			p_nand_setup->cfg.d32, p_nand_page0->ddrp_start_page);
 	}
 	p_ext_info->read_info = meson_chip->nsels;
 	p_ext_info->pages_per_blk = mtd->erasesize /
