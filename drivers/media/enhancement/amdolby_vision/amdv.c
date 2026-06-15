@@ -16598,8 +16598,9 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			dolby_vision_hdr10_policy |= SDR_BY_DV_F_SINK;
 			last_dolby_vision_hdr10_policy = dolby_vision_hdr10_policy;
 			dolby_vision_flags |= FLAG_RX_EMP_VSEM;
-			pr_info("enable DV HLG when stb v2.6. policy %d\n",
-				dolby_vision_hdr10_policy);
+			if (ko_info)
+				pr_info("enable DV HLG when stb v2.6. policy %d\nko_info: %s\n",
+					dolby_vision_hdr10_policy, ko_info);
 		} else if (func->tv_hw5_control_path && !p_funcs_tv && is_aml_hw5()) {
 			pr_info("*** register_dv_tv5.1_functions\n");
 			if (!ko_info) {
