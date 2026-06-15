@@ -153,6 +153,7 @@ void mtx_setting_v2(enum vpp_matrix_e mtx_sel,
 	enum vpp_slice_e slice, int vpp_index);
 int post_pre_gamma_get(enum vpp_slice_e slice, int start, int len);
 void ve_size_info_update(int vpp_index);
+void vpp_hist_shft_cfg_v2(struct vframe_s *vf);
 
 #endif
 #endif

@@ -5156,4 +5156,59 @@ void post_lut3d_section_read(int index, int section_len,
 
 	WRITE_VPP_REG(reg_ram_ctrl, 0);
 }
+
+void vpp_hist_shft_cfg_v2(struct vframe_s *vf)
+{
+	unsigned int h_rate = 0;
+	unsigned int w_rate = 0;
+	unsigned int src_h = 0;
+	unsigned int src_w = 0;
+	unsigned int val = 2;
+	unsigned int height;
+	unsigned int width;
+	static unsigned int pre_val;
+
+	if (!vf) {
+		if (pre_val != val) {
+			VSYNC_WRITE_VPP_REG_BITS(VI_HIST_CTRL, val,
+				5, 3);
+			pre_val = val;
+			pr_amve_v2("no vf, pre_val=%d, val=%d\n", pre_val, val);
+		}
+		return;
+	}
+
+	w_rate = vf->dpss_pps_dsx;
+	h_rate = vf->dpss_pps_dsy;
+
+	height = (vf->type & VIDTYPE_COMPRESS) ? vf->compHeight : vf->height;
+	width = (vf->type & VIDTYPE_COMPRESS) ? vf->compWidth : vf->width;
+
+	if (h_rate)
+		src_h = height / (h_rate + 1);
+	else
+		src_h = height;
+
+	if (w_rate)
+		src_w = width / (w_rate + 1);
+	else
+		src_w = width;
+
+	if (src_w >= 3840 && src_h >= 2160)
+		val = 4;
+	else if ((src_w >= 3840 && src_h >= 1080) ||
+		(src_w >= 2560 && src_h >= 1440))
+		val = 3;
+	else
+		val = 2;
+
+	if (pre_val != val) {
+		VSYNC_WRITE_VPP_REG_BITS(VI_HIST_CTRL, val,
+			5, 3);
+		pre_val = val;
+		pr_amve_v2("src_w=%d, src_h=%d, pre_val=%d, val=%d\n",
+			height, width, pre_val, val);
+	}
+}
+
 #endif

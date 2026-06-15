@@ -1690,6 +1690,12 @@ void vpp_hist_shft_cfg(struct vframe_s *vf)
 	unsigned int width;
 	static unsigned int pre_val;
 
+	if (chip_type_id == chip_s5 ||
+		chip_type_id == chip_t3x) {
+		vpp_hist_shft_cfg_v2(vf);
+		return;
+	}
+
 	if (!vf) {
 		if (pre_val != val) {
 			VSYNC_WRITE_VPP_REG_BITS(VI_HIST_CTRL, val,
