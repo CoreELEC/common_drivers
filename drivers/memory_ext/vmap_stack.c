@@ -780,7 +780,7 @@ void vmap_report_meminfo(struct seq_file *m)
 	tmp2 = kb * atomic_read(&vmap_fault_count);
 	tmp3 = kb * atomic_read(&vmap_pre_handle_count);
 
-	seq_printf(m, "Stack virtual:  %8ld kB\n", global_node_page_state(NR_KERNEL_STACK_KB));
+	seq_printf(m, "StackVirtual:  %8ld kB\n", global_node_page_state(NR_KERNEL_STACK_KB));
 	seq_printf(m, "VmapStack:      %8ld kB\n", tmp1);
 	seq_printf(m, "VmapFault:      %8ld kB\n", tmp2);
 	seq_printf(m, "VmapPfault:     %8ld kB\n", tmp3);
