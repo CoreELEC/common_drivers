@@ -1817,6 +1817,7 @@
 			card_type = <1>;
 			ignore_desc_busy;
 			mmc_debug_flag;
+			cap-mmc-64bit-dma;
 			src_clk_rate = <1152000000>;
 			tx_delay = <0x10>;
 			no-sd;
