@@ -2144,6 +2144,7 @@
 			reset-names = "udrd";
 			rd-outstanding-tune = <0x8>;
 			in-nak-rty = <0x5>;
+			dma-64bit-support = <1>;
 			index = <0>;
 		};
 
@@ -2160,6 +2161,7 @@
 			reset-names = "udrd";
 			version = <1>; /* forbid vbus detect */
 			suspend-scheme = <0x0>;
+			dma-64bit-support = <1>;
 			index = <0>;
 		};
 
@@ -2206,6 +2208,7 @@
 			reset-names = "udrd";
 			rd-outstanding-tune = <0x8>;
 			in-nak-rty = <0x5>;
+			dma-64bit-support = <1>;
 			index = <1>;
 		};
 
@@ -2222,6 +2225,7 @@
 			reset-names = "udrd";
 			version = <1>; /* forbid vbus detect */
 			suspend-scheme = <0x0>;
+			dma-64bit-support = <1>;
 			index = <1>;
 		};
 	};
@@ -2278,6 +2282,7 @@
 		reset-names = "udrd";
 		rd-outstanding-tune = <0x8>;
 		in-nak-rty = <0x5>;
+		dma-64bit-support = <1>;
 	};
 
 	cpu_info {

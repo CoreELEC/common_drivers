@@ -1736,6 +1736,7 @@
 		in-nak-rty = <0x5>;
 		reset-names = "udrd";
 		resets = <&reset RESET_USB0>;
+		dma-64bit-support = <1>;
 	};
 
 	crg20_udc: crgudc20@fe480000 {
@@ -1751,6 +1752,7 @@
 		version = <1>; /* forbid vbus detect */
 		reset-names = "udrd";
 		resets = <&reset RESET_USB0>;
+		dma-64bit-support = <1>;
 	};
 
 	crg21_host: crg21@fe490000 {
@@ -1766,6 +1768,7 @@
 		in-nak-rty = <0x5>;
 		reset-names = "udrd";
 		resets = <&reset RESET_USB1>;
+		dma-64bit-support = <1>;
 	};
 
 	crg22_host: crg22@fe4a0000 {
@@ -1781,6 +1784,7 @@
 		in-nak-rty = <0x5>;
 		reset-names = "udrd";
 		resets = <&reset RESET_USB2>;
+		dma-64bit-support = <1>;
 	};
 
 	cpu_info {
