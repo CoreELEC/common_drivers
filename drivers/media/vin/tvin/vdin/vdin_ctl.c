@@ -7948,7 +7948,8 @@ int vdin_package_done_check_state(struct vdin_dev_s *devp)
 	    vdin_is_vrr_state_chg(devp) ||
 	    devp->prop.color_format != devp->pre_prop.color_format ||
 	    devp->parm.info.status != TVIN_SIG_STATUS_STABLE ||
-	    devp->local_var.cur_hdcp_sts != devp->prop.hdcp_sts)
+	    (devp->local_var.cur_hdcp_sts != devp->prop.hdcp_sts &&
+	    devp->dts_config.secure_cfg))
 		ret |= BIT0;
 
 	if (devp->dv_hw5.is_auto_mute_needed) {

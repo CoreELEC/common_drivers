@@ -3095,8 +3095,6 @@ static void vdin_dump_regs(struct vdin_dev_s *devp, u32 size)
 					(reg + offset), rd(offset, reg));
 			}
 			pr_info("t6w aa ds regs end\n");
-			for (reg = VDIN0_META_DSC_CTRL0; reg <= VDIN0_META_DSC_STATUS3; reg++)
-				pr_info("0x%04x = 0x%08x\n", (reg), R_VCBUS(reg));
 		}
 		pr_info("t6w wrmif regs begin\n");
 		for (reg = VDIN0_WRMIF_FRM_EN_CTRL;
