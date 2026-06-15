@@ -116,7 +116,7 @@
 
 		rootfs_reserved:linux,rootfs_reserved {
 			compatible = "amlogic, aml_rootfs_memory";
-			reg = <0x1080000 0xA00000>;
+			reg = <0x1080000 0x700000>;
 			status = "okay";
 		};
 
