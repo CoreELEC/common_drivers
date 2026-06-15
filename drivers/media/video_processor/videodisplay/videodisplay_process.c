@@ -3432,8 +3432,8 @@ static struct vf_nn_sr_t *vd_get_hfout_data(struct videodisplay_dev *dev,
 
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_NN);
 	if (!uhmod) {
-		error = 2;
-		goto fail;
+		vd_print(dev->index, PRINT_OTHER, "hfout:dma file file_private_data is NULL\n");
+		return NULL;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
@@ -3463,8 +3463,9 @@ static struct vf_aiface_t *vd_get_aiface_info(struct videodisplay_dev *dev,
 	}
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AIFACE);
 	if (!uhmod) {
-		error = 2;
-		goto fail;
+		vd_print(dev->index, PRINT_OTHER,
+			"aiface:NULL uhmod: frame_index=%d\n", frame_index);
+		return NULL;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
@@ -3494,8 +3495,8 @@ static struct vf_aicolor_t *vd_get_aicolor_info(struct videodisplay_dev *dev,
 	}
 	uhmod = uvm_get_hook_mod(dmabuf, PROCESS_AICOLOR);
 	if (!uhmod) {
-		error = 2;
-		goto fail;
+		vd_print(dev->index, PRINT_OTHER, "aicolor:dma file file_private_data is NULL\n");
+		return NULL;
 	}
 
 	if (IS_ERR_VALUE(uhmod) || !uhmod->arg) {
