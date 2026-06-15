@@ -4012,6 +4012,10 @@ static void dwc3_gadget_disconnect_interrupt(struct aml_dwc3 *dwc)
 
 	dwc3_ep0_reset_state(dwc);
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	pm_relax(dwc->sysdev);
+#endif
+
 	/*
 	 * Request PM idle to address condition where usage count is
 	 * already decremented to zero, but waiting for the disconnect
@@ -4233,6 +4237,9 @@ static void dwc3_gadget_conndone_interrupt(struct aml_dwc3 *dwc)
 		return;
 	}
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	pm_stay_awake(dwc->sysdev);
+#endif
 	/*
 	 * Configure PHY via GUSB3PIPECTLn if required.
 	 *
@@ -4373,6 +4380,10 @@ static void dwc3_gadget_suspend_interrupt(struct aml_dwc3 *dwc,
 	if (!dwc->suspended && next == DWC3_LINK_STATE_U3) {
 		dwc->suspended = true;
 		dwc3_suspend_gadget(dwc);
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		/* AML USB2 PHY recognizes disconnect as suspend. */
+		pm_relax(dwc->sysdev);
+#endif
 	}
 
 	dwc->link_state = next;
@@ -4664,7 +4675,11 @@ int aml_dwc3_gadget_init(struct aml_dwc3 *dwc)
 		dev_info(dwc->dev, "changing max_speed on rev %08x\n",
 				dwc->revision);
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	dwc->gadget->max_speed		= min(dwc->maximum_speed, USB_SPEED_HIGH);
+#else
 	dwc->gadget->max_speed		= dwc->maximum_speed;
+#endif
 	dwc->gadget->max_ssp_rate	= dwc->max_ssp_rate;
 
 	/*
@@ -4685,10 +4700,29 @@ int aml_dwc3_gadget_init(struct aml_dwc3 *dwc)
 	if (DWC3_IP_IS(DWC32) && dwc->maximum_speed == USB_SPEED_SUPER_PLUS)
 		dwc3_gadget_set_ssp_rate(dwc->gadget, dwc->max_ssp_rate);
 	else
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+		dwc3_gadget_set_speed(dwc->gadget, min(dwc->maximum_speed, USB_SPEED_HIGH));
+#else
 		dwc3_gadget_set_speed(dwc->gadget, dwc->maximum_speed);
+#endif
 
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	dwc->sys_wakeup_cached = dwc->sys_wakeup;
+	/* Stay awake until disconnected/stopped. */
+	dwc->sys_wakeup = true;
+	if (device_init_wakeup(dwc->sysdev, true))
+		dev_err(dwc->dev, "failed to init wakeup %d\n", ret);
+ #endif
 	/* No system wakeup if no gadget driver bound */
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	/* usb_add_gadget() calls udc_start() if a compatible gadget driver had been
+	 * created and this is serialized by setting gadget_driver.driver.probe_type to
+	 *  PROBE_FORCE_SYNCHRONOUS by the udc core.
+	 */
+	if (!dwc->gadget_driver && dwc->sys_wakeup)
+#else
 	if (dwc->sys_wakeup)
+#endif
 		device_wakeup_disable(dwc->sysdev);
 
 	return 0;
@@ -4719,6 +4753,11 @@ void aml_dwc3_gadget_exit(struct aml_dwc3 *dwc)
 {
 	if (!dwc->gadget)
 		return;
+
+#if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
+	device_init_wakeup(dwc->sysdev, false);
+	dwc->sys_wakeup = dwc->sys_wakeup_cached;
+ #endif
 
 	aml_dwc3_enable_susphy(dwc, false);
 	usb_del_gadget(dwc->gadget);

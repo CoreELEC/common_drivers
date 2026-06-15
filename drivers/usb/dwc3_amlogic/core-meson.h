@@ -1404,6 +1404,7 @@ struct aml_dwc3 {
 	unsigned		suspended:1;
 #if IS_ENABLED(CONFIG_AMLOGIC_COMMON_USB)
 	unsigned		super_speed_support:1;
+	unsigned		sys_wakeup_cached:1;
 #endif
 	u16			imod_interval;
 
