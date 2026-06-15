@@ -269,9 +269,9 @@ static void lcd_phy_cntl_disable(struct aml_lcd_drv_s *pdrv)
 	if (phy->cv_mode == PHY_VMODE)
 		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL15, 0, 24, 5); //vinlp[12:8]=0
 	if (phy_ctrl_bit_on)
-		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL15, 2, 22, 2); //vinlp[7:6]=2
+		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL15, 0, 22, 2); //vinlp[7:6]=2
 	else
-		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL15, 0, 22, 2); //vinlp[7:6]=0
+		lcd_ana_setb(ANACTRL_DIF_PHY_CNTL15, 2, 22, 2); //vinlp[7:6]=0
 
 	for (i = 0; i < phy_cfg->lane_num; i++) {
 		if ((phy_cfg->lane_valid & (1 << i)) == 0)
