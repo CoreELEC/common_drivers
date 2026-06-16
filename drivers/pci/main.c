@@ -24,6 +24,7 @@ static int __init pcie_main_init(void)
 
 static void __exit pcie_main_exit(void)
 {
+	aml_pcie_phy_a9_exit();
 	aml_pcie_phy_c5_exit();
 	aml_pcie_rc_v2_exit();
 	aml_pcie_rc_v3_exit();

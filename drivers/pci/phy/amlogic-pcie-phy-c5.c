@@ -235,6 +235,23 @@ static int amlogic_pcie_phy_c5_init(struct amlogic_pcie_phy *pcie_phy)
 		}
 	}
 
+	/* set sqh */
+	ret = regmap_write(pcie_phy->regmap, 0x64, 0x7200);
+	if (ret)
+		return ret;
+
+	ret = regmap_update_bits(pcie_phy->regmap, 0x5c, BIT(20), 1);
+	if (ret)
+		return ret;
+
+	ret = regmap_update_bits(pcie_phy->regmap, 0x54, BIT(5), 1);
+	if (ret)
+		return ret;
+
+	ret = regmap_update_bits(pcie_phy->regmap, 0x5c, BIT(20), 0);
+	if (ret)
+		return ret;
+
 	ret = of_property_read_u32(node, "pll_setting_number",
 				   &pcie_phy->pll_setting_number);
 	if (ret)

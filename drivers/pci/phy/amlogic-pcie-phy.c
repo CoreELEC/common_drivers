@@ -40,7 +40,7 @@ static struct regmap *amlogic_map_resource(struct amlogic_pcie_phy *pcie_phy,
 	if (of_address_to_resource(node, i, &res))
 		return NULL;
 
-	base = devm_ioremap_resource(pcie_phy->dev, &res);
+	base = devm_ioremap(pcie_phy->dev, res.start, resource_size(&res));
 	if (IS_ERR(base))
 		return ERR_CAST(base);
 

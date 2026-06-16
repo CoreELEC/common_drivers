@@ -262,6 +262,23 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 			ret = regmap_write(pcie_phy->regmap, 0x1084, 0xFF951071);
 			if (ret)
 				return ret;
+
+			/* set sqh */
+			ret = regmap_write(pcie_phy->regmap, 0x1064, 0x7200);
+			if (ret)
+				return ret;
+
+			ret = regmap_update_bits(pcie_phy->regmap, 0x105c, BIT(20), 1);
+			if (ret)
+				return ret;
+
+			ret = regmap_update_bits(pcie_phy->regmap, 0x1054, BIT(5), 1);
+			if (ret)
+				return ret;
+
+			ret = regmap_update_bits(pcie_phy->regmap, 0x105c, BIT(20), 0);
+			if (ret)
+				return ret;
 		}
 	} else {
 		ret = regmap_write(pcie_phy->regmap, 0x84, 0xFF951071);
@@ -272,6 +289,23 @@ static int amlogic_pcie_phy_a9_init(struct amlogic_pcie_phy *pcie_phy)
 	if (pcie_phy->port_num != 1) {
 		/* phy0, 2 set eq */
 		ret = regmap_update_bits(pcie_phy->regmap, 0x50, GENMASK(9, 5), 0);
+		if (ret)
+			return ret;
+
+		/* set sqh */
+		ret = regmap_write(pcie_phy->regmap, 0x64, 0x7200);
+		if (ret)
+			return ret;
+
+		ret = regmap_update_bits(pcie_phy->regmap, 0x5c, BIT(20), 1);
+		if (ret)
+			return ret;
+
+		ret = regmap_update_bits(pcie_phy->regmap, 0x54, BIT(5), 1);
+		if (ret)
+			return ret;
+
+		ret = regmap_update_bits(pcie_phy->regmap, 0x5c, BIT(20), 0);
 		if (ret)
 			return ret;
 	}
