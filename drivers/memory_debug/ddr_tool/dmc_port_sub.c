@@ -15,6 +15,22 @@
 #include "dmc_monitor.h"
 #include "ddr_bandwidth.h"
 
+#define SUB_DEV(soc, name, port_id_rw, parent_id_rw)				\
+	static struct sub_dev name##_sub_##soc __initdata = {			\
+		.sub_r = {							\
+			.port_id = port_id_rw,					\
+			.parent_sub_id = parent_id_rw,				\
+			.num = ARRAY_SIZE(name##_sub_rw_##soc),			\
+			.list = name##_sub_rw_##soc,				\
+		},								\
+		.sub_w = {							\
+			.port_id = port_id_rw,					\
+			.parent_sub_id = parent_id_rw,				\
+			.num = ARRAY_SIZE(name##_sub_rw_##soc),			\
+			.list = name##_sub_rw_##soc,				\
+		},								\
+	}
+
 #define SUB_DEV_RW(soc, name, port_id_r, port_id_w, parent_id)			\
 	static struct sub_dev name##_sub_##soc __initdata = {			\
 		.sub_r = {							\
@@ -1401,7 +1417,6 @@ static struct sub_port_list hcodec_sub_w_c5[] __initdata = {
 	SUB_PORT(0x26, "IPRED Write"),
 	SUB_PORT(0x28, "MC MBBOT Write"),
 };
-
 static struct sub_port_list hcodec_sub_r_c5[] __initdata = {
 	SUB_PORT(0x0C, "MCRCC Read"),
 	SUB_PORT(0x0D, "DBLK Read"),
@@ -1508,8 +1523,11 @@ static int __init sub_dev_desc_alloc(struct sub_dev_desc **dst, struct sub_dev_d
 		dst_sub->sub_w.port_id = src_sub->sub_w.port_id;
 		dst_sub->sub_w.parent_sub_id = src_sub->sub_w.parent_sub_id;
 		dst_sub->sub_w.num = src_sub->sub_w.num;
-		if (sub_port_list_tree_copy(&dst_sub->sub_w.list, src_sub->sub_w.list,
-					    src_sub->sub_w.num)) {
+		if (src_sub->sub_r.list == src_sub->sub_w.list) {
+			dst_sub->sub_w.list = dst_sub->sub_r.list;
+		} else if (sub_port_list_tree_copy(&dst_sub->sub_w.list,
+						   src_sub->sub_w.list,
+						   src_sub->sub_w.num)) {
 			sub_port_list_tree_free(dst_sub->sub_r.list, dst_sub->sub_r.num);
 			kfree(dst_sub);
 			goto err;
@@ -1524,10 +1542,11 @@ static int __init sub_dev_desc_alloc(struct sub_dev_desc **dst, struct sub_dev_d
 err:
 	for (i = 0; i < desc->num; i++) {
 		if (desc->subs[i]) {
-			sub_port_list_tree_free(desc->subs[i]->sub_r.list,
-						desc->subs[i]->sub_r.num);
 			sub_port_list_tree_free(desc->subs[i]->sub_w.list,
 						desc->subs[i]->sub_w.num);
+			if (desc->subs[i]->sub_r.list != desc->subs[i]->sub_w.list)
+				sub_port_list_tree_free(desc->subs[i]->sub_r.list,
+							desc->subs[i]->sub_r.num);
 			kfree(desc->subs[i]);
 		}
 	}

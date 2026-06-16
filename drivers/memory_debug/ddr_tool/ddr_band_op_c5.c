@@ -340,15 +340,20 @@ static int set_vpu_sub_dev_priority(unsigned char axi, char rw,
 					unsigned int id, unsigned char priority)
 {
 	struct ddr_priority_node *node;
+	int is_w;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
 	node = get_dev_tree_prio_by_path(rw, 0x01, id);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
-	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+	return write_node_layer(node, 'd', (char)priority, is_w, -1, NULL);
 }
 
 static int hevc_hcodec_sub_get(unsigned int base, signed char id)
@@ -453,18 +458,23 @@ int c5_hevc_handle_set(void *node, unsigned int value, int is_w, void *data)
 static int set_hevc_level_id(char rw, unsigned char level, unsigned char i, unsigned char id)
 {
 	struct ddr_priority_node *node;
+	int is_w;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
-	node = get_dev_tree_prio_by_path(rw, 0x9, id);
+	node = get_dev_tree_prio_by_path(is_w, 0x9, id);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
 	if (!node->dev)
 		return -ENODEV;
 
-	return c5_hevc_handle_set(node->dev, level, rw == 'w', &i);
+	return c5_hevc_handle_set(node->dev, level, is_w, &i);
 }
 
 #define AW_HCODEC_MAP_LV1_H              ((0x3fb0  << 2) + 0xfe320000)
@@ -518,46 +528,61 @@ int c5_hcodec_handle_set(void *node, unsigned int value, int is_w, void *data)
 static int set_hcodec_level_id(char rw, unsigned char level, unsigned char i, unsigned char id)
 {
 	struct ddr_priority_node *node;
+	int is_w;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
-	node = get_dev_tree_prio_by_path(rw, 0x8, 0x0, id);
+	node = get_dev_tree_prio_by_path(is_w, 0x8, 0x0, id);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
 	if (!node->dev)
 		return -ENODEV;
 
-	return c5_hcodec_handle_set(node->dev, level, rw == 'w', &i);
+	return c5_hcodec_handle_set(node->dev, level, is_w, &i);
 }
 
 static int set_hevc_low_priority(char rw, unsigned char priority)
 {
 	struct ddr_priority_node *node;
+	int is_w;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
-	node = get_dev_tree_prio_by_path(rw, 0x9);
+	node = get_dev_tree_prio_by_path(is_w, 0x9);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
-	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+	return write_node_layer(node, 'd', (char)priority, is_w, -1, NULL);
 }
 
 static int set_hcodec_low_priority(char rw, unsigned char priority)
 {
 	struct ddr_priority_node *node;
+	int is_w;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
-	node = get_dev_tree_prio_by_path(rw, 0x8, 0x0);
+	node = get_dev_tree_prio_by_path(is_w, 0x8, 0x0);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
-	return write_node_layer(node, 'd', (char)priority, rw == 'w', -1, NULL);
+	return write_node_layer(node, 'd', (char)priority, is_w, -1, NULL);
 }
 
 static void show_hevc_hcodec_id_map(u32 *reg_h, u32 *reg_l,

@@ -24,19 +24,25 @@
 #include "ddr_port.h"
 #include "ddr_bandwidth.h"
 
-#define GROUP_IS_W		BIT(31)
-#define GROUP_LEVEL3		BIT(30)
-#define GROUP_LEVEL4		BIT(29)
-#define GROUP_LEVEL5		BIT(28)
+#define GROUP_WO		BIT(31)
+#define GROUP_RO		BIT(30)
+#define GROUP_RW		(BIT(31) | BIT(30))
+#define GROUP_LEVEL3		BIT(29)
+#define GROUP_LEVEL4		BIT(28)
+#define GROUP_LEVEL5		BIT(27)
 #define GROUP_LEVEL_MASK	(GROUP_LEVEL3 | GROUP_LEVEL4 | GROUP_LEVEL5)
 
-#define DEV_L3_R(port, sub, dev_id)					\
-	.port_id = (port), .sub_id = (sub),				\
-	.group_id = GROUP_LEVEL3 | (sub), .module_id = (dev_id)
+#define DEV_L3_RO(port, sub, dev_id)						\
+	.port_id = (port), .sub_id = (sub),					\
+	.group_id = GROUP_RO | GROUP_LEVEL3 | (sub), .module_id = (dev_id)
 
-#define DEV_L3_W(port, sub, dev_id)					\
-	.port_id = (port), .sub_id = (sub),				\
-	.group_id = GROUP_IS_W | GROUP_LEVEL3 | (sub), .module_id = (dev_id)
+#define DEV_L3_WO(port, sub, dev_id)						\
+	.port_id = (port), .sub_id = (sub),					\
+	.group_id = GROUP_WO | GROUP_LEVEL3 | (sub), .module_id = (dev_id)
+
+#define DEV_L3_RW(port, sub, dev_id)						\
+	.port_id = (port), .sub_id = (sub),					\
+	.group_id = GROUP_RW | GROUP_LEVEL3 | (sub), .module_id = (dev_id)
 
 #define DDR_PRIORITY_FORCE_RW(_bus, _mask, _off, _lsb, _nbits)				\
 	{										\
@@ -62,8 +68,6 @@
 			.ctrl_type = PRIO_CTRL_FIXED,					\
 			.fixed_w = (_fixed_w),						\
 			.fixed_r = (_fixed_r),						\
-			.fixed_nbits_r = 4,						\
-			.fixed_nbits_w = 4,						\
 		},									\
 	}										\
 
@@ -86,6 +90,7 @@ static struct ddr_priority_force ddr_priority_force_s4[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_s4 __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -1469,6 +1474,7 @@ static struct ddr_priority_force ddr_priority_force_txhd2[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_txhd2 __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -2274,6 +2280,7 @@ static struct ddr_priority_force ddr_priority_force_sc2[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_sc2 __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -2301,6 +2308,7 @@ static struct ddr_priority_force ddr_priority_force_t5w[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_t5w __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -2333,6 +2341,7 @@ static struct ddr_priority_force ddr_priority_force_g12b[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_g12b __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -2358,6 +2367,7 @@ static struct ddr_priority_force ddr_priority_force_gxlx3[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_gxlx3 __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -2539,12 +2549,129 @@ static struct ddr_priority_force ddr_priority_force_a9[] __initdata = {
 	}
 };
 
+static struct ddr_priority_force ddr_priority_max_a9[] __initdata = {
+	{ .bus = 0,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x80 << 2), .w_force_mask_offset = (0x80 << 2),
+	  .r_offset = (0x83 << 2),            .w_offset = (0x83 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 1,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x84 << 2), .w_force_mask_offset = (0x84 << 2),
+	  .r_offset = (0x87 << 2),            .w_offset = (0x87 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 2,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x88 << 2), .w_force_mask_offset = (0x88 << 2),
+	  .r_offset = (0x8b << 2),            .w_offset = (0x8b << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 3,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x8c << 2), .w_force_mask_offset = (0x8c << 2),
+	  .r_offset = (0x8f << 2),            .w_offset = (0x8f << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 4,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x90 << 2), .w_force_mask_offset = (0x90 << 2),
+	  .r_offset = (0x93 << 2),            .w_offset = (0x93 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 5,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x94 << 2), .w_force_mask_offset = (0x94 << 2),
+	  .r_offset = (0x97 << 2),            .w_offset = (0x97 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 6,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x98 << 2), .w_force_mask_offset = (0x98 << 2),
+	  .r_offset = (0x9b << 2),            .w_offset = (0x9b << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 7,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x9c << 2), .w_force_mask_offset = (0x9c << 2),
+	  .r_offset = (0x9f << 2),            .w_offset = (0x9f << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 8,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa0 << 2), .w_force_mask_offset = (0xa0 << 2),
+	  .r_offset = (0xa3 << 2),            .w_offset = (0xa3 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 9,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa4 << 2), .w_force_mask_offset = (0xa4 << 2),
+	  .r_offset = (0xa7 << 2),            .w_offset = (0xa7 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 10,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa8 << 2), .w_force_mask_offset = (0xa8 << 2),
+	  .r_offset = (0xab << 2),            .w_offset = (0xab << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 11,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xac << 2), .w_force_mask_offset = (0xac << 2),
+	  .r_offset = (0xaf << 2),            .w_offset = (0xaf << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 12,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xb0 << 2), .w_force_mask_offset = (0xb0 << 2),
+	  .r_offset = (0xb3 << 2),            .w_offset = (0xb3 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 13,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xb4 << 2), .w_force_mask_offset = (0xb4 << 2),
+	  .r_offset = (0xb7 << 2),            .w_offset = (0xb7 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 14,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xb8 << 2), .w_force_mask_offset = (0xb8 << 2),
+	  .r_offset = (0xbb << 2),            .w_offset = (0xbb << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 15,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xbc << 2), .w_force_mask_offset = (0xbc << 2),
+	  .r_offset = (0xbf << 2),            .w_offset = (0xbf << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+};
+
 static struct ddr_priority_info ddr_priority_info_a9 __initdata = {
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
 	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_a9),
 	.dmc_force = ddr_priority_force_a9,
+	.dmc_max_num = ARRAY_SIZE(ddr_priority_max_a9),
+	.dmc_max = ddr_priority_max_a9,
 };
 
 static struct ddr_priority_dev ddr_priority_dev_c5[] __initdata = {
@@ -2662,7 +2789,7 @@ static struct ddr_priority_dev ddr_priority_dev_c5[] __initdata = {
 
 	/* level 3 */
 	{
-	  DEV_L3_R(8, 0, MODULE_ID_MATCH_ALL),
+	  DEV_L3_RO(8, 0, MODULE_ID_MATCH_ALL),
 	  .prop_mode = PRIO_PROP_NONE,
 	  .handle_get = c5_hcodec_handle_get,
 	  .handle_set = c5_hcodec_handle_set,
@@ -2673,7 +2800,7 @@ static struct ddr_priority_dev ddr_priority_dev_c5[] __initdata = {
 	},
 
 	{
-	  DEV_L3_W(8, 0, MODULE_ID_MATCH_ALL),
+	  DEV_L3_WO(8, 0, MODULE_ID_MATCH_ALL),
 	  .prop_mode = PRIO_PROP_NONE,
 	  .handle_get = c5_hcodec_handle_get,
 	  .handle_set = c5_hcodec_handle_set,
@@ -2780,6 +2907,86 @@ static struct ddr_priority_force ddr_priority_force_c5[] __initdata = {
 	}
 };
 
+static struct ddr_priority_force ddr_priority_max_c5[] __initdata = {
+	{ .bus = 0,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x80 << 2), .w_force_mask_offset = (0x80 << 2),
+	  .r_offset = (0x83 << 2),            .w_offset = (0x83 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 1,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x84 << 2), .w_force_mask_offset = (0x84 << 2),
+	  .r_offset = (0x87 << 2),            .w_offset = (0x87 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 2,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x88 << 2), .w_force_mask_offset = (0x88 << 2),
+	  .r_offset = (0x8b << 2),            .w_offset = (0x8b << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 3,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x8c << 2), .w_force_mask_offset = (0x8c << 2),
+	  .r_offset = (0x8f << 2),            .w_offset = (0x8f << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 4,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x90 << 2), .w_force_mask_offset = (0x90 << 2),
+	  .r_offset = (0x93 << 2),            .w_offset = (0x93 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 5,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x94 << 2), .w_force_mask_offset = (0x94 << 2),
+	  .r_offset = (0x97 << 2),            .w_offset = (0x97 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 6,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x98 << 2), .w_force_mask_offset = (0x98 << 2),
+	  .r_offset = (0x9b << 2),            .w_offset = (0x9b << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 7,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0x9c << 2), .w_force_mask_offset = (0x9c << 2),
+	  .r_offset = (0x9f << 2),            .w_offset = (0x9f << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 8,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa0 << 2), .w_force_mask_offset = (0xa0 << 2),
+	  .r_offset = (0xa3 << 2),            .w_offset = (0xa3 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 9,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa4 << 2), .w_force_mask_offset = (0xa4 << 2),
+	  .r_offset = (0xa7 << 2),            .w_offset = (0xa7 << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+	{ .bus = 10,
+	  .r_force_mask = BIT(31),            .w_force_mask = BIT(30),
+	  .r_force_mask_offset = (0xa8 << 2), .w_force_mask_offset = (0xa8 << 2),
+	  .r_offset = (0xab << 2),            .w_offset = (0xab << 2),
+	  .r_lsb = 12,                        .w_lsb = 8,
+	  .r_nbits = 4,                       .w_nbits = 4,
+	},
+};
+
 static struct ddr_priority_info ddr_priority_info_c5 __initdata = {
 	.dev_num = ARRAY_SIZE(ddr_priority_dev_c5),
 	.dev = ddr_priority_dev_c5,
@@ -2788,6 +2995,8 @@ static struct ddr_priority_info ddr_priority_info_c5 __initdata = {
 	.mdc_num = 0, .mdc = NULL,
 	.dmc_force_num = ARRAY_SIZE(ddr_priority_force_c5),
 	.dmc_force = ddr_priority_force_c5,
+	.dmc_max_num = ARRAY_SIZE(ddr_priority_max_c5),
+	.dmc_max = ddr_priority_max_c5,
 };
 
 static struct dmc_priority dmc_t6x[] __initdata = {
@@ -3299,6 +3508,7 @@ static struct ddr_priority_force ddr_priority_force_s1a[] __initdata = {
 };
 
 static struct ddr_priority_info ddr_priority_info_s1a __initdata = {
+	.prio_type = PRIO_TYPE_URGENT,
 	.dev_num = 0, .dev = NULL,
 	.nic_num = 0, .nic = NULL,
 	.mdc_num = 0, .mdc = NULL,
@@ -3483,6 +3693,7 @@ static int __init ddr_priority_info_alloc(struct ddr_priority_info **dst,
 	struct ddr_priority_nic *nic = NULL;
 	struct ddr_priority_mdc *mdc = NULL;
 	struct ddr_priority_force *force = NULL;
+	struct ddr_priority_force *max = NULL;
 
 	if (!dst || !src)
 		return -EINVAL;
@@ -3492,6 +3703,7 @@ static int __init ddr_priority_info_alloc(struct ddr_priority_info **dst,
 		return -ENOMEM;
 
 	info->dmc_force = NULL;
+	info->dmc_max = NULL;
 
 	if (src->dev_num > 0 && src->dev) {
 		dev = kmemdup(src->dev, src->dev_num * sizeof(*dev), GFP_KERNEL);
@@ -3513,11 +3725,17 @@ static int __init ddr_priority_info_alloc(struct ddr_priority_info **dst,
 		if (!force)
 			goto err;
 	}
+	if (src->dmc_max_num > 0 && src->dmc_max) {
+		max = kmemdup(src->dmc_max, src->dmc_max_num * sizeof(*max), GFP_KERNEL);
+		if (!max)
+			goto err;
+	}
 
 	info->dev = dev;
 	info->nic = nic;
 	info->mdc = mdc;
 	info->dmc_force = force;
+	info->dmc_max = max;
 	*dst = info;
 	return 0;
 
@@ -3526,6 +3744,7 @@ err:
 	kfree(nic);
 	kfree(mdc);
 	kfree(info->dmc_force);
+	kfree(max);
 	kfree(info);
 	return -ENOMEM;
 }
@@ -3719,13 +3938,121 @@ static struct ddr_priority_force *find_force_by_bus(struct ddr_priority_info *in
 	return NULL;
 }
 
+static struct ddr_priority_force *find_max_by_bus(struct ddr_priority_info *info,
+						   unsigned int bus)
+{
+	int i;
+
+	if (!info || !info->dmc_max)
+		return NULL;
+	for (i = 0; i < info->dmc_max_num; i++) {
+		if (info->dmc_max[i].bus == bus)
+			return &info->dmc_max[i];
+	}
+	return NULL;
+}
+
+static enum prio_type get_prio_type(void)
+{
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return PRIO_TYPE_QOS;
+	return aml_db->priority->v1->prio_type;
+}
+
+static unsigned int force_reg_to_prio(unsigned int reg_val)
+{
+	if (get_prio_type() == PRIO_TYPE_URGENT)
+		return reg_val ? (unsigned int)(ffs(reg_val) - 1) : 0;
+	return reg_val;
+}
+
+static unsigned int force_prio_to_reg(unsigned int prio)
+{
+	if (get_prio_type() == PRIO_TYPE_URGENT)
+		return 1U << prio;
+	return prio;
+}
+
+static unsigned int force_max_prio(unsigned char nbits)
+{
+	if (!nbits)
+		return 0;
+	if (get_prio_type() == PRIO_TYPE_URGENT)
+		return nbits - 1;
+	return (1U << nbits) - 1;
+}
+
+static int write_prio_reg(struct ddr_priority_force *f, int dmc,
+			   u32 reg_val, bool disable, int is_w)
+{
+	void __iomem *base;
+	u32 reg, en_reg;
+	unsigned long offset = is_w ? f->w_offset : f->r_offset;
+	unsigned char lsb = is_w ? f->w_lsb : f->r_lsb;
+	unsigned char nbits = is_w ? f->w_nbits : f->r_nbits;
+	long force_mask = is_w ? f->w_force_mask : f->r_force_mask;
+	unsigned long mask_offset = is_w ? f->w_force_mask_offset : f->r_force_mask_offset;
+
+	if (!aml_db || dmc < 0 || dmc >= aml_db->dmc_number)
+		return -EINVAL;
+	base = aml_db->ddr_reg[dmc];
+	if (!base)
+		return -ENODEV;
+
+	reg = readl_relaxed(base + offset);
+	reg &= ~GENMASK_U32(lsb + nbits - 1, lsb);
+	reg |= (reg_val & GENMASK_U32(nbits - 1, 0)) << lsb;
+	if (force_mask > 0 && mask_offset == offset) {
+		if (disable)
+			reg &= ~force_mask;
+		else
+			reg |= force_mask;
+	}
+	writel_relaxed(reg, base + offset);
+
+	if (force_mask > 0 && mask_offset != offset) {
+		en_reg = readl_relaxed(base + mask_offset);
+		if (disable)
+			en_reg &= ~force_mask;
+		else
+			en_reg |= force_mask;
+		writel_relaxed(en_reg, base + mask_offset);
+	}
+
+	return 0;
+}
+
+static int read_prio_reg(struct ddr_priority_force *f, int dmc, int is_w)
+{
+	void __iomem *base;
+	unsigned int val;
+	unsigned char lsb, nbits;
+
+	if (!aml_db || dmc < 0 || dmc >= aml_db->dmc_number)
+		return -EINVAL;
+	base = aml_db->ddr_reg[dmc];
+	if (!base)
+		return -ENODEV;
+
+	if (is_w) {
+		lsb = f->w_lsb;
+		nbits = f->w_nbits;
+		val = readl_relaxed(base + f->w_offset);
+	} else {
+		lsb = f->r_lsb;
+		nbits = f->r_nbits;
+		val = readl_relaxed(base + f->r_offset);
+	}
+	if (!nbits)
+		return -EINVAL;
+	return (int)((val >> lsb) & ((1U << nbits) - 1));
+}
+
 static int write_force_by_bus(unsigned int bus, int value, int rw, int dmc)
 {
 	struct ddr_priority_force *f;
-	void __iomem *base;
-	u32 reg, en_reg;
 	bool disable = (value < 0);
-	unsigned int val = disable ? 0 : (unsigned int)value;
+	unsigned int reg_val;
 	int start, end, i;
 
 	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
@@ -3743,60 +4070,111 @@ static int write_force_by_bus(unsigned int bus, int value, int rw, int dmc)
 		return -EINVAL;
 	}
 
+	reg_val = disable ? 0 : force_prio_to_reg(value);
 	start = (dmc < 0) ? 0 : dmc;
 	end   = (dmc < 0) ? aml_db->dmc_number : dmc + 1;
 
+	if ((rw < 0 || rw == 0) && reg_val >= force_max_prio(f->r_nbits)) {
+		pr_info("val %x over max %x\n", reg_val, force_max_prio(f->r_nbits));
+		return -EINVAL;
+	}
+	if ((rw < 0 || rw == 1) && reg_val >= force_max_prio(f->w_nbits)) {
+		pr_info("val %x over max %x\n", reg_val, force_max_prio(f->w_nbits));
+		return -EINVAL;
+	}
+
 	for (i = start; i < end; i++) {
-		base = aml_db->ddr_reg[i];
-		if (!base)
-			continue;
-
-		if (rw < 0 || rw == 0) {
-			reg = readl_relaxed(base + f->r_offset);
-			reg &= ~GENMASK_U32(f->r_lsb + f->r_nbits - 1, f->r_lsb);
-			reg |= (val & GENMASK_U32(f->r_nbits - 1, 0)) << f->r_lsb;
-			if (f->r_force_mask > 0 && f->r_force_mask_offset == f->r_offset) {
-				if (disable)
-					reg &= ~f->r_force_mask;
-				else
-					reg |= f->r_force_mask;
-			}
-			writel_relaxed(reg, base + f->r_offset);
-
-			if (f->r_force_mask > 0 && f->r_force_mask_offset != f->r_offset) {
-				en_reg = readl_relaxed(base + f->r_force_mask_offset);
-				if (disable)
-					en_reg &= ~f->r_force_mask;
-				else
-					en_reg |= f->r_force_mask;
-				writel_relaxed(en_reg, base + f->r_force_mask_offset);
-			}
-		}
-
-		if (rw < 0 || rw == 1) {
-			reg = readl_relaxed(base + f->w_offset);
-			reg &= ~GENMASK_U32(f->w_lsb + f->w_nbits - 1, f->w_lsb);
-			reg |= (val & GENMASK_U32(f->w_nbits - 1, 0)) << f->w_lsb;
-			if (f->w_force_mask > 0 && f->w_force_mask_offset == f->w_offset) {
-				if (disable)
-					reg &= ~f->w_force_mask;
-				else
-					reg |= f->w_force_mask;
-			}
-			writel_relaxed(reg, base + f->w_offset);
-
-			if (f->w_force_mask > 0 && f->w_force_mask_offset != f->w_offset) {
-				en_reg = readl_relaxed(base + f->w_force_mask_offset);
-				if (disable)
-					en_reg &= ~f->w_force_mask;
-				else
-					en_reg |= f->w_force_mask;
-				writel_relaxed(en_reg, base + f->w_force_mask_offset);
-			}
-		}
+		if (rw < 0 || rw == 0)
+			write_prio_reg(f, i, reg_val, disable, 0);
+		if (rw < 0 || rw == 1)
+			write_prio_reg(f, i, reg_val, disable, 1);
 	}
 
 	return 0;
+}
+
+static int write_max_by_bus(unsigned int bus, int value, int rw, int dmc)
+{
+	struct ddr_priority_force *f;
+	bool disable = (value < 0);
+	unsigned int val = disable ? 0 : (unsigned int)value;
+	int start, end, i;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	if (!aml_db->priority->v1->dmc_max || !aml_db->priority->v1->dmc_max_num) {
+		pr_info("max not supported\n");
+		return -ENODEV;
+	}
+
+	f = find_max_by_bus(aml_db->priority->v1, bus);
+	if (!f) {
+		pr_info("dmc max bus=%u not found\n", bus);
+		return -ENODEV;
+	}
+
+	if (dmc >= 0 && dmc >= aml_db->dmc_number) {
+		pr_info("dmc index %d out of range (0-%d)\n",
+			dmc, aml_db->dmc_number - 1);
+		return -EINVAL;
+	}
+
+	start = (dmc < 0) ? 0 : dmc;
+	end   = (dmc < 0) ? aml_db->dmc_number : dmc + 1;
+
+	if ((rw < 0 || rw == 0) && val >= (1U << f->r_nbits)) {
+		pr_info("val %x over max %x\n", val, (u32)(1U << f->r_nbits));
+		return -EINVAL;
+	}
+	if ((rw < 0 || rw == 1) && val >= (1U << f->w_nbits)) {
+		pr_info("val %x over max %x\n", val, (u32)(1U << f->w_nbits));
+		return -EINVAL;
+	}
+
+	for (i = start; i < end; i++) {
+		if (rw < 0 || rw == 0)
+			write_prio_reg(f, i, val, disable, 0);
+		if (rw < 0 || rw == 1)
+			write_prio_reg(f, i, val, disable, 1);
+	}
+
+	return 0;
+}
+
+static int read_force_by_bus(unsigned int bus, int is_w, int dmc)
+{
+	struct ddr_priority_force *f;
+	int val;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	f = find_force_by_bus(aml_db->priority->v1, bus);
+	if (!f)
+		return -ENODEV;
+
+	val = read_prio_reg(f, dmc, is_w);
+	if (val < 0)
+		return val;
+	return force_reg_to_prio((unsigned int)val);
+}
+
+static int read_max_by_bus(unsigned int bus, int is_w, int dmc)
+{
+	struct ddr_priority_force *f;
+
+	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
+		return -EINVAL;
+
+	if (!aml_db->priority->v1->dmc_max || !aml_db->priority->v1->dmc_max_num)
+		return -ENODEV;
+
+	f = find_max_by_bus(aml_db->priority->v1, bus);
+	if (!f)
+		return -ENODEV;
+
+	return read_prio_reg(f, dmc, is_w);
 }
 
 static struct ddr_priority_node *find_root_by_port_id(struct ddr_priority_tree *tree,
@@ -3819,7 +4197,7 @@ struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
 {
 	int i, found;
 	struct ddr_priority_node *n, *match = NULL;
-	unsigned int group_id = 0, gid_r, gid_w;
+	unsigned int group_id = 0;
 	unsigned char module_id = 0;
 
 	if (depth >= 2) {
@@ -3829,8 +4207,12 @@ struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
 			if (depth >= 4)
 				group_id |= GROUP_LEVEL5 | ((unsigned int)sub_path[2] << 16);
 		}
-		if (rw == 1)
-			group_id |= GROUP_IS_W;
+		if (rw < 0)
+			group_id |= GROUP_RW;
+		else if (rw == 0)
+			group_id |= GROUP_RO;
+		else
+			group_id |= GROUP_WO;
 		module_id = sub_path[depth - 1];
 	}
 
@@ -3852,15 +4234,13 @@ struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
 	}
 
 	if (depth >= 2 && rw < 0) {
-		gid_r = group_id & ~GROUP_IS_W;
-		gid_w = group_id | GROUP_IS_W;
 		found = 0;
 
 		for (i = 0; i < tree->nr_nodes; i++) {
 			n = &tree->nodes[i];
 
 			if (n->port_id == port_id && n->module_id == module_id &&
-			    (n->group_id == gid_r || n->group_id == gid_w))
+			    (n->group_id & GROUP_RW))
 				found++;
 		}
 		if (found > 1)
@@ -3869,7 +4249,7 @@ struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
 			for (i = 0; i < tree->nr_nodes; i++) {
 				n = &tree->nodes[i];
 				if (n->port_id == port_id && n->module_id == module_id &&
-				    (n->group_id == gid_r || n->group_id == gid_w))
+				    (n->group_id & GROUP_RW))
 					return n;
 			}
 		}
@@ -3927,6 +4307,9 @@ int write_node_layer(struct ddr_priority_node *node, char type, int value,
 
 	if (!node)
 		return -EINVAL;
+
+	if (rw < 0 && node->rw >= 0)
+		rw = node->rw;
 
 	switch (type) {
 	case 'n':
@@ -4081,7 +4464,13 @@ int priority_tree_write(const char *buf, size_t count)
 		return -EINVAL;
 	}
 
-	if (!strncmp(argv[0], "dmc", 3)) {
+	if (!strncmp(argv[0], "max", 3)) {
+		type = 'm';
+		if (argv[0][3] != '\0' && kstrtoint(argv[0] + 3, 0, &dmc_idx)) {
+			pr_info("invalid dmc index: %s\n", argv[0]);
+			return -EINVAL;
+		}
+	} else if (!strncmp(argv[0], "dmc", 3)) {
 		type = 'f';
 		if (argv[0][3] != '\0' && kstrtoint(argv[0] + 3, 0, &dmc_idx)) {
 			pr_info("invalid dmc index: %s\n", argv[0]);
@@ -4180,8 +4569,6 @@ do_match:
 			pr_info("dev name '%s' multiple, need to r or w\n", name);
 			return -EEXIST;
 		}
-		if (name_rw < 0 && match->rw >= 0)
-			name_rw = match->rw;
 		return write_node_layer(match, 'd', value, name_rw, -1, data_ptr);
 	}
 
@@ -4214,7 +4601,7 @@ do_match:
 		}
 	}
 
-	if (argc >= 5 && type != 'f') {
+	if (argc >= 5 && type != 'f' && type != 'm') {
 		if (!kstrtoint(argv[4], 0, &tmp) && tmp >= 0 && tmp <= 255) {
 			data_val = tmp;
 			data_ptr = &data_val;
@@ -4223,6 +4610,9 @@ do_match:
 
 	if (type == 'f')
 		return write_force_by_bus(id, value, rw, dmc_idx);
+
+	if (type == 'm')
+		return write_max_by_bus(id, value, rw, dmc_idx);
 
 	if (type == 'n') {
 		node = find_root_by_port_id(aml_db->priority->tree, id);
@@ -4285,8 +4675,6 @@ do_match:
 			argv[1], node->prop_mode);
 		return -EOPNOTSUPP;
 	}
-	if (rw < 0 && node->rw >= 0)
-		rw = node->rw;
 	return write_node_layer(node, 'd', value, rw, -1, data_ptr);
 }
 
@@ -4306,11 +4694,14 @@ static int decode_bus_for_dmc(int bus, int dmc_idx)
 }
 
 static struct ddr_priority_nic *priority_find_nic(struct ddr_priority_info *info,
-						  unsigned char port_id, signed char sub_id)
+						  unsigned char port_id, signed char sub_id,
+						  unsigned int group_id)
 {
 	int i;
 
 	if (!info || !info->nic)
+		return NULL;
+	if (group_id & GROUP_LEVEL_MASK)
 		return NULL;
 	for (i = 0; i < info->nic_num; i++) {
 		if (info->nic[i].port_id == port_id && info->nic[i].sub_id == sub_id)
@@ -4325,6 +4716,7 @@ static struct ddr_priority_dev *priority_find_dev(struct ddr_priority_info *info
 						  int rw)
 {
 	int i;
+	unsigned int dir_mask, d_gid, d_dir, n_dir;
 	struct ddr_priority_dev *wildcard_l2 = NULL;
 	struct ddr_priority_dev *wildcard_l3 = NULL;
 
@@ -4335,14 +4727,20 @@ static struct ddr_priority_dev *priority_find_dev(struct ddr_priority_info *info
 			continue;
 
 		/* Level 3+: match by group_id + module_id */
-		if (module_id) {
-			if (info->dev[i].group_id == group_id &&
-			    info->dev[i].module_id == module_id)
-				return &info->dev[i];
+		if (group_id & GROUP_LEVEL_MASK) {
+			dir_mask = GROUP_RW;
+			d_gid = info->dev[i].group_id;
+			d_dir = d_gid & dir_mask;
+			n_dir = group_id & dir_mask;
 
-			if (info->dev[i].group_id == group_id &&
-			    info->dev[i].module_id == MODULE_ID_MATCH_ALL)
-				wildcard_l3 = &info->dev[i];
+			if (((d_gid ^ group_id) & ~dir_mask) == 0) {
+				if (d_dir == GROUP_RW || n_dir == GROUP_RW || d_dir == n_dir) {
+					if (info->dev[i].module_id == module_id)
+						return &info->dev[i];
+					if (info->dev[i].module_id == MODULE_ID_MATCH_ALL)
+						wildcard_l3 = &info->dev[i];
+				}
+			}
 			continue;
 		}
 
@@ -4353,9 +4751,9 @@ static struct ddr_priority_dev *priority_find_dev(struct ddr_priority_info *info
 
 			if (info->dev[i].sub_id == SUB_ID_MATCH_ALL)
 				wildcard_l2 = &info->dev[i];
-			else if (info->dev[i].sub_id == SUB_ID_MATCH_R && rw == 0)
+			else if (info->dev[i].sub_id == SUB_ID_MATCH_RO && (rw == 0 || rw < 0))
 				wildcard_l2 = &info->dev[i];
-			else if (info->dev[i].sub_id == SUB_ID_MATCH_W && rw == 1)
+			else if (info->dev[i].sub_id == SUB_ID_MATCH_WO && (rw == 1 || rw < 0))
 				wildcard_l2 = &info->dev[i];
 		}
 	}
@@ -4383,23 +4781,29 @@ static void populate_node_layers(struct ddr_priority_node *node, struct ddr_prio
 	struct ddr_priority_nic *nic;
 	struct ddr_priority_mdc *mdc;
 	int dmc_num = aml_db->dmc_number;
+	int d, bus;
 
 	dev = priority_find_dev(info, node->port_id, node->sub_id,
 				node->group_id, node->module_id, node->rw);
-	nic = priority_find_nic(info, node->port_id, node->sub_id);
+	nic = priority_find_nic(info, node->port_id, node->sub_id, node->group_id);
 	mdc = priority_find_mdc(info, node->port_id, node->sub_id);
 
 	if (node->bus >= 0) {
-		node->dmc_force = kcalloc(dmc_num, sizeof(*node->dmc_force),
-					  GFP_KERNEL);
+		node->dmc_force = kcalloc(dmc_num, sizeof(*node->dmc_force), GFP_KERNEL);
 		if (node->dmc_force) {
-			int d, bus;
-
 			for (d = 0; d < dmc_num; d++) {
 				bus = decode_bus_for_dmc(node->bus, d);
 				if (bus >= 0)
-					node->dmc_force[d] =
-						find_force_by_bus(info, bus);
+					node->dmc_force[d] = find_force_by_bus(info, bus);
+			}
+		}
+		node->dmc_max = kcalloc(dmc_num, sizeof(*node->dmc_max), GFP_KERNEL);
+		if (node->dmc_max) {
+			for (d = 0; d < dmc_num; d++) {
+				bus = decode_bus_for_dmc(node->bus, d);
+				if (bus >= 0)
+					node->dmc_max[d] =
+						find_max_by_bus(info, bus);
 			}
 		}
 	}
@@ -4427,8 +4831,7 @@ static int count_sub_port_children(struct sub_port_list *list, int num)
 	for (i = 0; i < num; i++) {
 		total++;
 		if (list[i].children && list[i].nr_children > 0)
-			total += count_sub_port_children(list[i].children,
-							 list[i].nr_children);
+			total += count_sub_port_children(list[i].children, list[i].nr_children);
 	}
 	return total;
 }
@@ -4511,9 +4914,8 @@ static struct ddr_priority_node *build_sub_tree(struct sub_port_list *entry,
 	node->parent = parent;
 	node->rw = rw;
 
-	/* Level 3+: set group_id and module_id for DEV matching */
 	if (parent->group_id || parent->sub_id >= 0) {
-		unsigned int callbacks = parent->group_id & ~(1U << 31) & ~GROUP_LEVEL_MASK;
+		unsigned int callbacks = parent->group_id & ~GROUP_RW & ~GROUP_LEVEL_MASK;
 		unsigned int level_mark;
 
 		if (!(parent->group_id & GROUP_LEVEL_MASK))
@@ -4525,7 +4927,7 @@ static struct ddr_priority_node *build_sub_tree(struct sub_port_list *entry,
 
 		node->group_id = callbacks | level_mark
 			       | ((unsigned int)parent->sub_id << (callbacks ? 8 : 0))
-			       | (rw ? (1U << 31) : 0);
+			       | (rw == 1 ? GROUP_WO : rw < 0 ? GROUP_RW : GROUP_RO);
 		node->module_id = entry->id;
 	}
 
@@ -4569,7 +4971,7 @@ static int build_sub_dev_children(struct ddr_priority_tree *tree,
 				  struct ddr_priority_info *info,
 				  int *node_idx)
 {
-	int j, k, rw;
+	int j, k, rw, same_rw;
 	struct sub_dev *sd;
 	struct sub_dev_port *sdp;
 	struct ddr_priority_node *parent;
@@ -4581,7 +4983,12 @@ static int build_sub_dev_children(struct ddr_priority_tree *tree,
 		if (!sd)
 			continue;
 
+		same_rw = (sd->sub_r.port_id == sd->sub_w.port_id &&
+			   sd->sub_r.list == sd->sub_w.list &&
+			   sd->sub_r.num == sd->sub_w.num);
 		for (rw = 0; rw < 2; rw++) {
+			if (same_rw && rw == 1)
+				break;
 			sdp = rw ? &sd->sub_w : &sd->sub_r;
 
 			if (sdp->port_id != port_id)
@@ -4608,7 +5015,7 @@ static int build_sub_dev_children(struct ddr_priority_tree *tree,
 				child = build_sub_tree(&sdp->list[k],
 						       parent, info,
 						       sdp->port_id,
-						       rw,
+						       same_rw ? -1 : rw,
 						       tree->nodes,
 						       node_idx);
 				if (child) {
@@ -4730,8 +5137,8 @@ static int priority_tree_build(struct ddr_priority_info *info,
 }
 
 #define PRIO_V1_BUF_SZ		(1024 * 1024)
-#define PRIO_COL_WIDTH		24
-#define BUS_COL_WIDTH		16
+#define NIC_COL_WIDTH		24
+#define BUS_COL_WIDTH		8
 
 #define MAX_BUS_PORT	32
 
@@ -5767,14 +6174,12 @@ static ssize_t priority_v2_display(char *buf, loff_t pos, size_t count)
 }
 
 static DEFINE_MUTEX(prio_v1_buf_mutex);
-static int format_layer_value(char *buf, size_t bufsz,
-			      struct ddr_priority_node *node, char type, int is_w)
+static int get_layer_val(char *buf, size_t bufsz,
+			 struct ddr_priority_node *node, char type, int is_w)
 {
 	unsigned int val;
-	unsigned char nbits;
 	unsigned long addr;
-	int ret, en;
-	char tmp[16];
+	int ret;
 	struct ddr_priority_reg *reg;
 	struct ddr_priority_dev *dev = NULL;
 
@@ -5807,71 +6212,141 @@ static int format_layer_value(char *buf, size_t bufsz,
 		return 0;
 	case PRIO_CTRL_FIXED:
 		val = is_w ? reg->fixed_w : reg->fixed_r;
-		return scnprintf(buf, bufsz, "%x:-", val);
+		return scnprintf(buf, bufsz, "%x", val);
 	case PRIO_CTRL_HANDLER:
-		nbits = is_w ? reg->w_nbits : reg->r_nbits;
 		if (dev && dev->handle_get) {
 			ret = dev->handle_get(node, is_w);
 			if (ret >= 0)
-				return scnprintf(buf, bufsz, "%x:%x", ret,
-							nbits ? (1U << nbits) - 1 : 0);
+				return scnprintf(buf, bufsz, "%x", ret);
 		}
-		return scnprintf(buf, bufsz, "h:%x", nbits ? (1U << nbits) - 1 : 0);
+		return 0;
 	case PRIO_CTRL_HW_AUTO:
-		return scnprintf(buf, bufsz, "h:-");
 	case PRIO_CTRL_SW_AUTO:
-		return scnprintf(buf, bufsz, "s:-");
+		return 0;
 	case PRIO_CTRL_POWER:
-		if (!prio_reg_power_en(reg->ctrl_type)) {
-			nbits = is_w ? reg->w_nbits : reg->r_nbits;
-			return scnprintf(buf, bufsz, "p:%x",
-					 nbits ? (1U << nbits) - 1 : 0);
-		}
+		if (!prio_reg_power_en(reg->ctrl_type))
+			return 0;
 		fallthrough;
 	case PRIO_CTRL_REG_WO:
-		if (!is_w) {
-			nbits = reg->r_nbits;
-			return scnprintf(buf, bufsz, "wo:%x",
-					 nbits ? (1U << nbits) - 1 : 0);
-		}
+		if (!is_w)
+			return 0;
 		fallthrough;
 	case PRIO_CTRL_REG_RW:
-		if (!reg->reg_base) {
-			nbits = is_w ? reg->w_nbits : reg->r_nbits;
-			return scnprintf(buf, bufsz, "*:%x",
-					 nbits ? (1U << nbits) - 1 : 0);
-		}
+		if (!reg->reg_base)
+			return 0;
 		addr = reg->reg_base + (is_w ? reg->w_offset : reg->r_offset);
+		if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+			pr_info("%s dev %s addr=0x%lx is_w=%d\n",
+				__func__, node->name ?: "unknown", addr, is_w);
 		ret = reg_access(addr, reg->reg_mode, DMC_READ, &val);
-		if (ret < 0) {
-			nbits = is_w ? reg->w_nbits : reg->r_nbits;
-			return scnprintf(buf, bufsz, "*:%x",
-					 nbits ? (1U << nbits) - 1 : 0);
-		}
-		if (is_w) {
+		if (ret < 0)
+			return 0;
+		if (is_w)
 			val = prio_get_real_val(val, reg->w_lsb, reg->w_nbits);
-			nbits = reg->w_nbits;
-		} else {
+		else
 			val = prio_get_real_val(val, reg->r_lsb, reg->r_nbits);
-			nbits = reg->r_nbits;
-		}
-		scnprintf(tmp, sizeof(tmp), "%x", val);
-		if (reg->r_force_mask || reg->w_force_mask) {
-			en = 0;
-			if (is_w && reg->w_force_mask)
-				en = (val & reg->w_force_mask) ? 1 : 0;
-			else if (!is_w && reg->r_force_mask)
-				en = (val & reg->r_force_mask) ? 1 : 0;
-			return scnprintf(buf, bufsz, "%s:%x:%u",
-					 tmp,
-					 nbits ? (1U << nbits) - 1 : 0,
-					 en);
-		}
-		return scnprintf(buf, bufsz, "%s:%x",
-				 tmp, nbits ? (1U << nbits) - 1 : 0);
+		return scnprintf(buf, bufsz, "%x", val);
 	default:
 		return 0;
 	}
+}
+
+static int format_layer_value(char *buf, size_t bufsz,
+			      struct ddr_priority_node *node, char type, int is_w)
+{
+	unsigned char nbits;
+	int len, en, ret;
+	unsigned int val;
+	unsigned long addr;
+	struct ddr_priority_reg *reg;
+	struct ddr_priority_dev *dev = NULL;
+	char val_str[16];
+
+	if (!node)
+		return 0;
+
+	switch (type) {
+	case 'd':
+		if (!node->dev)
+			return 0;
+		reg = &node->dev->reg;
+		dev = node->dev;
+		break;
+	case 'n':
+		if (!node->nic)
+			return 0;
+		reg = &node->nic->reg;
+		break;
+	case 'm':
+		if (!node->mdc)
+			return 0;
+		reg = &node->mdc->reg;
+		break;
+	default:
+		return 0;
+	}
+
+	len = get_layer_val(val_str, sizeof(val_str), node, type, is_w);
+	if (!len) {
+		switch (reg->ctrl_type) {
+		case PRIO_CTRL_HW_AUTO:
+			return scnprintf(buf, bufsz, "h:-");
+		case PRIO_CTRL_SW_AUTO:
+			return scnprintf(buf, bufsz, "s:-");
+		case PRIO_CTRL_POWER:
+			if (!prio_reg_power_en(reg->ctrl_type)) {
+				nbits = is_w ? reg->w_nbits : reg->r_nbits;
+				return scnprintf(buf, bufsz, "p:%x",
+						 nbits ? (1U << nbits) - 1 : 0);
+			}
+			fallthrough;
+		case PRIO_CTRL_REG_WO:
+			if (!is_w) {
+				nbits = reg->r_nbits;
+				return scnprintf(buf, bufsz, "wo:%x",
+						 nbits ? (1U << nbits) - 1 : 0);
+			}
+			fallthrough;
+		case PRIO_CTRL_REG_RW:
+		case PRIO_CTRL_HANDLER:
+			nbits = is_w ? reg->w_nbits : reg->r_nbits;
+			return scnprintf(buf, bufsz, "*:%x",
+					 nbits ? (1U << nbits) - 1 : 0);
+		default:
+			return 0;
+		}
+	}
+
+	if (reg->ctrl_type == PRIO_CTRL_FIXED)
+		return scnprintf(buf, bufsz, "%s:-", val_str);
+
+	nbits = is_w ? reg->w_nbits : reg->r_nbits;
+	if (reg->r_force_mask || reg->w_force_mask) {
+		val = 0;
+		if (dev && dev->handle_get) {
+			val = dev->handle_get(node, is_w);
+		} else if (reg->reg_base) {
+			addr = reg->reg_base + (is_w ? reg->w_offset : reg->r_offset);
+			if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+				pr_info("%s dev %s addr=0x%lx is_w=%d\n",
+					__func__, node->name ?: "unknown", addr, is_w);
+			ret = reg_access(addr, reg->reg_mode, DMC_READ, &val);
+			if (ret >= 0) {
+				if (is_w)
+					val = prio_get_real_val(val, reg->w_lsb, reg->w_nbits);
+				else
+					val = prio_get_real_val(val, reg->r_lsb, reg->r_nbits);
+			}
+		}
+		en = 0;
+		if (is_w && reg->w_force_mask)
+			en = (val & reg->w_force_mask) ? 1 : 0;
+		else if (!is_w && reg->r_force_mask)
+			en = (val & reg->r_force_mask) ? 1 : 0;
+		return scnprintf(buf, bufsz, "%s:%x:%u",
+				 val_str, nbits ? (1U << nbits) - 1 : 0, en);
+	}
+	return scnprintf(buf, bufsz, "%s:%x", val_str, nbits ? (1U << nbits) - 1 : 0);
 }
 
 static int format_col(char *buf, size_t bufsz, struct ddr_priority_node *node, char type)
@@ -5881,20 +6356,38 @@ static int format_col(char *buf, size_t bufsz, struct ddr_priority_node *node, c
 	r[0] = '\0';
 	w[0] = '\0';
 
-	format_layer_value(r, sizeof(r), node, type, 0);
-	format_layer_value(w, sizeof(w), node, type, 1);
+	if (node->rw == 0 || node->rw < 0)
+		format_layer_value(r, sizeof(r), node, type, 0);
+	if (node->rw == 1 || node->rw < 0)
+		format_layer_value(w, sizeof(w), node, type, 1);
+
 	if (r[0] || w[0])
 		return scnprintf(buf, bufsz, "%s %s", r, w);
 	return 0;
 }
 
-static bool is_force_enabled(struct ddr_priority_force *f, int is_w,
-			     void __iomem *base, unsigned int val)
+static bool is_force_enabled(struct ddr_priority_force *f, int dmc,
+			     int is_w, unsigned int val)
 {
+	void __iomem *base;
 	unsigned int mask_val;
 
-	if (!base || !f)
+	if (!f || !aml_db || dmc < 0 || dmc >= aml_db->dmc_number)
 		return false;
+	base = aml_db->ddr_reg[dmc];
+	if (!base)
+		return false;
+
+	if (get_prio_type() == PRIO_TYPE_URGENT) {
+		if (is_w) {
+			val = readl_relaxed(base + f->w_offset);
+			val = (val >> f->w_lsb) & ((1U << f->w_nbits) - 1);
+		} else {
+			val = readl_relaxed(base + f->r_offset);
+			val = (val >> f->r_lsb) & ((1U << f->r_nbits) - 1);
+		}
+		return !!val;
+	}
 
 	if (is_w) {
 		if (f->w_force_mask != -1) {
@@ -5911,37 +6404,35 @@ static bool is_force_enabled(struct ddr_priority_force *f, int is_w,
 	return !!val;
 }
 
-static int format_force_col(char *buf, size_t bufsz,
-			    struct ddr_priority_force *f, void __iomem *base)
+static int format_force_val(char *buf, size_t bufsz,
+			    struct ddr_priority_force *f, int dmc, int is_w)
 {
-	unsigned int val;
+	int val;
+
+	if (!f)
+		return 0;
+
+	val = read_prio_reg(f, dmc, is_w);
+	if (val < 0)
+		return 0;
+	return scnprintf(buf, bufsz, "%x", force_reg_to_prio((unsigned int)val));
+}
+
+static int format_max_val(char *buf, size_t bufsz,
+			  struct ddr_priority_force *f, int dmc, int is_w)
+{
 	unsigned char nbits;
-	char r[16], w[16];
+	int val;
 
-	r[0] = '\0';
-	w[0] = '\0';
+	if (!f)
+		return 0;
 
-	if (base && f->r_nbits) {
-		val = readl_relaxed(base + f->r_offset);
-		val = (val >> f->r_lsb) & ((1U << f->r_nbits) - 1);
-		nbits = f->r_nbits;
-		scnprintf(r, sizeof(r), "%x:%x:%u", val,
-			  nbits ? (1U << nbits) - 1 : 0,
-			  is_force_enabled(f, 0, base, val));
+	val = read_prio_reg(f, dmc, is_w);
+	if (val < 0) {
+		nbits = is_w ? f->w_nbits : f->r_nbits;
+		return scnprintf(buf, bufsz, "%x", force_max_prio(nbits));
 	}
-
-	if (base && f->w_nbits) {
-		val = readl_relaxed(base + f->w_offset);
-		val = (val >> f->w_lsb) & ((1U << f->w_nbits) - 1);
-		nbits = f->w_nbits;
-		scnprintf(w, sizeof(w), "%x:%x:%u", val,
-			  nbits ? (1U << nbits) - 1 : 0,
-			  is_force_enabled(f, 1, base, val));
-	}
-
-	if (r[0] || w[0])
-		return scnprintf(buf, bufsz, "%s %s", r, w);
-	return 0;
+	return scnprintf(buf, bufsz, "%x", val);
 }
 
 static int read_node_reg(struct ddr_priority_reg *reg, int is_w, unsigned int *val)
@@ -5978,6 +6469,9 @@ static int read_node_reg(struct ddr_priority_reg *reg, int is_w, unsigned int *v
 		return -ENODEV;
 
 	addr = reg->reg_base + (is_w ? reg->w_offset : reg->r_offset);
+	if (aml_db->priority->flag & DDR_PRIORITY_DEBUG)
+		pr_info("%s addr=0x%lx is_w=%d\n", __func__, addr, is_w);
+
 	ret = reg_access(addr, reg->reg_mode, DMC_READ, val);
 	if (ret < 0)
 		return ret;
@@ -6037,161 +6531,6 @@ static int read_node_layer(struct ddr_priority_node *node, char type,
 	return read_node_reg(reg, is_w, val);
 }
 
-int get_final_prio_val(struct ddr_priority_node *node, int is_w,
-				int dmc_idx, unsigned int *out_val);
-
-static int get_dev_layer_val(struct ddr_priority_node *node,
-			     int is_w, int dmc_idx, unsigned int *out_val)
-{
-	int ret, i, found;
-	unsigned int val, chi_nb, cur_nb, chi_lsb, cur_lsb, chi_val, first_chi_val;
-
-	if (!node->dev)
-		return -ENODEV;
-
-	switch (node->dev->prop_mode) {
-	case PRIO_PROP_NONE:
-		return read_node_layer(node, 'd', is_w, out_val);
-	case PRIO_PROP_FULL:
-	case PRIO_PROP_FIXED:
-		if (node->nr_children == 0)
-			return read_node_layer(node, 'd', is_w, out_val);
-		found = 0;
-		for (i = 0; i < node->nr_children; i++) {
-			if (node->children[i] && (node->children[i]->rw == is_w ||
-							node->children[i]->rw == -1)) {
-				ret = get_final_prio_val(node->children[i],
-							       is_w,
-							       dmc_idx, &chi_val);
-				if (ret)
-					return ret;
-				if (!found) {
-					first_chi_val = chi_val;
-					found = 1;
-				} else if (chi_val != first_chi_val) {
-					return -EINVAL;
-				}
-			}
-		}
-		if (found) {
-			*out_val = first_chi_val;
-			return 0;
-		}
-		return -ENODEV;
-	case PRIO_PROP_PARTIAL:
-		ret = read_node_layer(node, 'd', is_w, &val);
-		if (ret)
-			return ret;
-		if (node->nr_children > 0) {
-			cur_nb = is_w ? node->dev->reg.cur_nbits_w
-					 : node->dev->reg.cur_nbits_r;
-			cur_lsb = is_w ? node->dev->reg.cur_lsb_w
-				       : node->dev->reg.cur_lsb_r;
-			chi_nb = is_w ? node->dev->reg.child_nbits_w
-					   : node->dev->reg.child_nbits_r;
-			chi_lsb = is_w ? node->dev->reg.child_lsb_w
-					 : node->dev->reg.child_lsb_r;
-			found = 0;
-			for (i = 0; i < node->nr_children; i++) {
-				if (node->children[i] && (node->children[i]->rw == is_w ||
-								node->children[i]->rw == -1)) {
-					ret = get_final_prio_val(node->children[i],
-									is_w,
-									dmc_idx, &chi_val);
-					if (ret)
-						return ret;
-					if (!found) {
-						first_chi_val = chi_val;
-						found = 1;
-					} else if (chi_val != first_chi_val) {
-						return -EINVAL;
-					}
-				}
-			}
-			if (found) {
-				*out_val = ((val & ((1U << cur_nb) - 1)) << cur_lsb) |
-					   ((first_chi_val & ((1U << chi_nb) - 1)) << chi_lsb);
-				return 0;
-			}
-		}
-		*out_val = val;
-		return 0;
-	default:
-		return -EINVAL;
-	}
-}
-
-int get_final_prio_val(struct ddr_priority_node *node,
-				   int is_w, int dmc_idx, unsigned int *out_val)
-{
-	struct ddr_priority_force *f;
-	void __iomem *base;
-	unsigned int force_val;
-	int ret;
-	unsigned int val, child_nbits, cur_nbits, child_lsb, cur_lsb, chi_val;
-
-	if (!node)
-		return -EINVAL;
-
-	if (node->dmc_force && dmc_idx >= 0) {
-		f = node->dmc_force[dmc_idx];
-		if (f) {
-			base = (aml_db && dmc_idx < aml_db->dmc_number)
-			       ? aml_db->ddr_reg[dmc_idx] : NULL;
-			if (!base)
-				return -ENODEV;
-			if (is_w) {
-				force_val = readl_relaxed(base + f->w_offset);
-				val = (force_val >> f->w_lsb)
-				      & ((1U << f->w_nbits) - 1);
-			} else {
-				force_val = readl_relaxed(base + f->r_offset);
-				val = (force_val >> f->r_lsb)
-				      & ((1U << f->r_nbits) - 1);
-			}
-			if (is_force_enabled(f, is_w, base, val)) {
-				*out_val = val;
-				return 0;
-			}
-		}
-	}
-
-	if (!node->nic && !node->dev)
-		return -ENODEV;
-
-	if (node->nic) {
-		switch (node->nic->prop_mode) {
-		case PRIO_PROP_NONE:
-			return read_node_layer(node, 'n', is_w, out_val);
-		case PRIO_PROP_FIXED:
-		case PRIO_PROP_FULL:
-			return get_dev_layer_val(node, is_w, dmc_idx, out_val);
-		case PRIO_PROP_PARTIAL:
-			ret = read_node_layer(node, 'n', is_w, &val);
-			if (ret)
-				return ret;
-			cur_nbits = is_w ? node->nic->reg.cur_nbits_w
-					 : node->nic->reg.cur_nbits_r;
-			cur_lsb = is_w ? node->nic->reg.cur_lsb_w
-				       : node->nic->reg.cur_lsb_r;
-			child_nbits = is_w ? node->nic->reg.child_nbits_w
-					   : node->nic->reg.child_nbits_r;
-			child_lsb = is_w ? node->nic->reg.child_lsb_w
-					 : node->nic->reg.child_lsb_r;
-			ret = get_dev_layer_val(node, is_w, dmc_idx, &chi_val);
-			if (ret)
-				return ret;
-			*out_val = ((val & ((1U << cur_nbits) - 1)) << cur_lsb)
-				   | ((chi_val & ((1U << child_nbits) - 1)) << child_lsb);
-			return 0;
-		default:
-			return -EINVAL;
-		}
-	}
-
-	return get_dev_layer_val(node, is_w, dmc_idx, out_val);
-}
-
 static int build_id_path(struct ddr_priority_node *node, char *buf, int bufsz)
 {
 	struct ddr_priority_node *path[16];
@@ -6209,94 +6548,112 @@ static int build_id_path(struct ddr_priority_node *node, char *buf, int bufsz)
 		if (j < depth - 1)
 			buf[off++] = ':';
 		if (path[j]->sub_id >= 0)
-			off += scnprintf(buf + off, bufsz - off,
-					 "%x", path[j]->sub_id);
+			off += scnprintf(buf + off, bufsz - off, "%x", path[j]->sub_id);
 		else
-			off += scnprintf(buf + off, bufsz - off,
-					 "%x", path[j]->port_id);
+			off += scnprintf(buf + off, bufsz - off, "%x", path[j]->port_id);
 	}
 	buf[off] = '\0';
 	return off;
 }
 
-static void show_prio_summary(char *buf, ssize_t *poff, size_t bufsz,
-			   struct ddr_priority_tree *tree, int dmc,
-			   const struct prio_disp_cfg *cfg)
+static int get_rw_node_val(struct ddr_priority_node *node, int is_w)
 {
-	unsigned int r_val, w_val;
-	int ret_r, ret_w;
-	int i;
-	struct ddr_priority_node *node;
-	char id_str[64];
-	char r_str[4], w_str[4];
-	char tmp_str[72];
-	const char *suffix;
+	int i, ret, found;
+	unsigned int val, chi_val, first_chi_val;
+	unsigned int cur_nb, chi_nb, cur_lsb, chi_lsb;
 
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "version: 1\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "Usage:\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "\tdmc:\techo dmc <bus> <val> [r|w] > priority\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "\tnic:\techo nic <0xid> <val> [r|w] > priority\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "\tdev:\techo dev <0xid>[:<sub>[:<mod>]] <val> [r|w] > priority\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "\tdev:\techo <name> <val> [r|w] > priority\n");
-	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
+	if (!node || !node->dev)
+		return -ENODEV;
 
-	if (cfg->force_only)
-		return;
-
-	*poff += scnprintf(buf + *poff, bufsz - *poff,
-			   "%-2s %-2s    %-20s%s\n", "r", "w", "id_path", "name");
-	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
-
-	for (i = 0; i < tree->nr_nodes; i++) {
-		node = &tree->nodes[i];
-
-		ret_r = node->rw == 1 ? -1 : get_final_prio_val(node, 0, dmc, &r_val);
-		ret_w = node->rw == 0 ? -1 : get_final_prio_val(node, 1, dmc, &w_val);
-		if (ret_r && ret_w)
-			continue;
-
-		build_id_path(node, id_str, sizeof(id_str));
-
-		if (ret_r)
-			r_str[0] = '-', r_str[1] = '\0';
-		else
-			snprintf(r_str, sizeof(r_str), "%x", r_val);
-
-		if (ret_w)
-			w_str[0] = '-', w_str[1] = '\0';
-		else
-			snprintf(w_str, sizeof(w_str), "%x", w_val);
-
-		if (node->rw == 0)
-			suffix = ":r";
-		else if (node->rw == 1)
-			suffix = ":w";
-		else
-			suffix = "";
-
-		if (*suffix) {
-			snprintf(tmp_str, sizeof(tmp_str), "%s%s", id_str, suffix);
-			*poff += scnprintf(buf + *poff, bufsz - *poff,
-					   "%-2s %-2s    %-20s%s\n",
-					   r_str, w_str,
-					   tmp_str,
-					   node->name ?: "");
-		} else {
-			*poff += scnprintf(buf + *poff, bufsz - *poff,
-					   "%-2s %-2s    %-20s%s\n",
-					   r_str, w_str,
-					   id_str,
-					   node->name ?: "");
+	switch (node->dev->prop_mode) {
+	case PRIO_PROP_NONE:
+		ret = read_node_layer(node, 'd', is_w, &val);
+		return ret ? ret : (int)val;
+	case PRIO_PROP_FULL:
+	case PRIO_PROP_FIXED:
+		found = 0;
+		for (i = 0; i < node->nr_children; i++) {
+			if (!node->children[i])
+				continue;
+			if (node->children[i]->rw != is_w &&
+			    node->children[i]->rw != -1)
+				continue;
+			ret = get_rw_node_val(node->children[i], is_w);
+			if (ret < 0)
+				return ret;
+			chi_val = (unsigned int)ret;
+			if (!found) {
+				first_chi_val = chi_val;
+				found = 1;
+			} else if (chi_val != first_chi_val) {
+				return -EINVAL;
+			}
 		}
+		if (!found)
+			return -ENODEV;
+		return (int)first_chi_val;
+	case PRIO_PROP_PARTIAL:
+		ret = read_node_layer(node, 'd', is_w, &val);
+		if (ret)
+			return ret;
+		if (node->nr_children == 0)
+			return (int)val;
+		found = 0;
+		for (i = 0; i < node->nr_children; i++) {
+			if (!node->children[i])
+				continue;
+			if (node->children[i]->rw != is_w &&
+			    node->children[i]->rw != -1)
+				continue;
+			ret = get_rw_node_val(node->children[i], is_w);
+			if (ret < 0)
+				return ret;
+			chi_val = (unsigned int)ret;
+			if (!found) {
+				first_chi_val = chi_val;
+				found = 1;
+			} else if (chi_val != first_chi_val) {
+				return -EINVAL;
+			}
+		}
+		if (!found)
+			return (int)val;
+		cur_nb = is_w ? node->dev->reg.cur_nbits_w
+			      : node->dev->reg.cur_nbits_r;
+		cur_lsb = is_w ? node->dev->reg.cur_lsb_w
+			       : node->dev->reg.cur_lsb_r;
+		chi_nb = is_w ? node->dev->reg.child_nbits_w
+			      : node->dev->reg.child_nbits_r;
+		chi_lsb = is_w ? node->dev->reg.child_lsb_w
+				: node->dev->reg.child_lsb_r;
+		return (int)(((val & ((1U << cur_nb) - 1)) << cur_lsb)
+			     | ((first_chi_val & ((1U << chi_nb) - 1)) << chi_lsb));
+	default:
+		return -EINVAL;
 	}
+}
 
-	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
+static unsigned int handle_nic_val(struct ddr_priority_node *node, int is_w,
+				   unsigned int dev_val)
+{
+	unsigned int val;
+	unsigned int cur_nb, chi_nb, cur_lsb, chi_lsb;
+	int ret;
+
+	if (!node || !node->nic || node->nic->prop_mode != PRIO_PROP_PARTIAL)
+		return dev_val;
+
+	ret = read_node_layer(node, 'n', is_w, &val);
+	if (ret < 0)
+		return dev_val;
+
+	cur_nb = is_w ? node->nic->reg.cur_nbits_w : node->nic->reg.cur_nbits_r;
+	cur_lsb = is_w ? node->nic->reg.cur_lsb_w : node->nic->reg.cur_lsb_r;
+	chi_nb = is_w ? node->nic->reg.child_nbits_w : node->nic->reg.child_nbits_r;
+	chi_lsb = is_w ? node->nic->reg.child_lsb_w : node->nic->reg.child_lsb_r;
+
+	return ((val & ((1U << cur_nb) - 1)) << cur_lsb)
+	     | ((dev_val & ((1U << chi_nb) - 1)) << chi_lsb);
 }
 
 static struct ddr_priority_node *find_child_on_path(struct ddr_priority_node *callback,
@@ -6377,6 +6734,186 @@ static int get_callback_prio_val(struct ddr_priority_node *node,
 	}
 }
 
+static int get_rw_final_val(struct ddr_priority_node *node,
+			    int is_w, int dmc_idx)
+{
+	struct ddr_priority_node *root;
+	struct ddr_priority_node *path[16] = {};
+	struct ddr_priority_force *f;
+	struct ddr_priority_force *m;
+	unsigned int val, force_val, max_val;
+	int ret;
+
+	if (!node)
+		return -EINVAL;
+
+	if ((is_w && node->rw == 0) || (!is_w && node->rw == 1))
+		return -1;
+
+	root = node;
+	while (root->parent)
+		root = root->parent;
+
+	if (root->dmc_force && dmc_idx >= 0) {
+		f = root->dmc_force[dmc_idx];
+		if (f) {
+			ret = read_prio_reg(f, dmc_idx, is_w);
+			if (ret < 0)
+				return ret;
+			force_val = (unsigned int)ret;
+			if (is_force_enabled(f, dmc_idx, is_w, force_val)) {
+				val = force_reg_to_prio(force_val);
+				goto clamp_max;
+			}
+		}
+	}
+
+	ret = get_rw_node_val(node, is_w);
+	if (ret < 0)
+		return ret;
+	val = (unsigned int)ret;
+
+	for (root = node; root->parent; root = root->parent)
+		;
+
+	if (root != node) {
+		ret = get_callback_prio_val(node, root, is_w, path, 0);
+		if (ret < 0)
+			return ret;
+		val = (unsigned int)ret;
+	}
+
+	val = handle_nic_val(node, is_w, val);
+
+clamp_max:
+
+	if (root->dmc_max && dmc_idx >= 0) {
+		m = root->dmc_max[dmc_idx];
+		if (m && is_force_enabled(m, dmc_idx, is_w, 0)) {
+			ret = read_prio_reg(m, dmc_idx, is_w);
+			if (ret < 0)
+				return ret;
+			max_val = (unsigned int)ret;
+			if (val > max_val)
+				val = max_val;
+		}
+	}
+
+	return (int)val;
+}
+
+static void show_prio_summary(char *buf, ssize_t *poff, size_t bufsz,
+			   struct ddr_priority_tree *tree,
+			   const struct prio_disp_cfg *cfg)
+{
+	int i, d, dmc_num, ret, off_r, off_w, any_r, any_w, rw_w;
+	struct ddr_priority_node *node;
+	char id_str[64];
+	char r_str[16], w_str[16];
+	char tmp_str[72];
+	const char *suffix;
+
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "version: 1\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "Usage:\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "\tdmc:\techo dmc <bus> <val> [r|w] > priority\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "\tnic:\techo nic <0xid> <val> [r|w] > priority\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "\tmax:\techo max <bus> <val> [r|w] > priority\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "\tdev:\techo dev <0xid>[:<sub>[:<mod>]] <val> [r|w] > priority\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "\tdev:\techo <name> <val> [r|w] > priority\n");
+	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
+
+	if (cfg->force_only)
+		return;
+
+	dmc_num = aml_db ? aml_db->dmc_number : 1;
+	rw_w = dmc_num * 2 - 1;
+
+	*poff += scnprintf(buf + *poff, bufsz - *poff,
+			   "%-*s  %-*s    %-20s%s\n",
+			   rw_w, "r", rw_w, "w", "id_path", "name");
+	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
+
+	for (i = 0; i < tree->nr_nodes; i++) {
+		node = &tree->nodes[i];
+
+		off_r = 0;
+		any_r = 0;
+		for (d = 0; d < dmc_num; d++) {
+			if (d)
+				off_r += scnprintf(r_str + off_r, sizeof(r_str) - off_r, ":");
+			if (node->rw == 1) {
+				off_r += scnprintf(r_str + off_r, sizeof(r_str) - off_r, "-");
+				continue;
+			}
+			ret = get_rw_final_val(node, 0, d);
+			if (ret < 0) {
+				off_r += scnprintf(r_str + off_r, sizeof(r_str) - off_r, "-");
+			} else {
+				off_r += scnprintf(r_str + off_r,
+						   sizeof(r_str) - off_r,
+						   "%x", ret);
+				any_r = 1;
+			}
+		}
+
+		off_w = 0;
+		any_w = 0;
+		for (d = 0; d < dmc_num; d++) {
+			if (d)
+				off_w += scnprintf(w_str + off_w, sizeof(w_str) - off_w, ":");
+			if (node->rw == 0) {
+				off_w += scnprintf(w_str + off_w, sizeof(w_str) - off_w, "-");
+				continue;
+			}
+			ret = get_rw_final_val(node, 1, d);
+			if (ret < 0) {
+				off_w += scnprintf(w_str + off_w, sizeof(w_str) - off_w, "-");
+			} else {
+				off_w += scnprintf(w_str + off_w,
+						   sizeof(w_str) - off_w,
+						   "%x", ret);
+				any_w = 1;
+			}
+		}
+
+		if (!any_r && !any_w)
+			continue;
+
+		build_id_path(node, id_str, sizeof(id_str));
+
+		if (node->rw == 0)
+			suffix = ":r";
+		else if (node->rw == 1)
+			suffix = ":w";
+		else
+			suffix = "";
+
+		if (*suffix) {
+			snprintf(tmp_str, sizeof(tmp_str), "%s%s", id_str, suffix);
+			*poff += scnprintf(buf + *poff, bufsz - *poff,
+					   "%-*s  %-*s    %-20s%s\n",
+					   rw_w, r_str, rw_w, w_str,
+					   tmp_str,
+					   node->name ?: "");
+		} else {
+			*poff += scnprintf(buf + *poff, bufsz - *poff,
+					   "%-*s  %-*s    %-20s%s\n",
+					   rw_w, r_str, rw_w, w_str,
+					   id_str,
+					   node->name ?: "");
+		}
+	}
+
+	*poff += scnprintf(buf + *poff, bufsz - *poff, SPLIT_LINE);
+}
+
 static int get_callback_prio_string(char *buf, size_t bufsz,
 				      struct ddr_priority_node *node,
 				      struct ddr_priority_node *callback,
@@ -6388,6 +6925,9 @@ static int get_callback_prio_string(char *buf, size_t bufsz,
 	struct ddr_priority_node *child;
 	unsigned int val, chi_val;
 	unsigned char cur_nbits, child_nbits, cur_lsb, child_lsb, nbits;
+
+	if ((is_w && node->rw == 0) || (!is_w && node->rw == 1))
+		return scnprintf(buf, bufsz, "-:-");
 
 	for (i = 0; i < path_count; i++) {
 		if (path[i] == callback)
@@ -6463,21 +7003,23 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 			     const struct prio_disp_cfg *cfg,
 			     bool bus_header)
 {
-	void __iomem *dmc_base;
 	char tmp[32];
 	char r[16], w[16];
 	char new_prefix[256];
-	int i, d, len, pad, dmc_num, id_len, anc_count, name_w;
-	bool last;
+	int i, d, j, len, pad, dmc_num, id_len, anc_count, nic_pos;
+	int ret_r, ret_w;
+	bool last, has_max;
 	struct ddr_priority_node *anc;
+	struct ddr_priority_node *p;
+	struct ddr_priority_node *anc_node;
 	struct ddr_priority_node *anc_list[16];
 	struct ddr_priority_node *path[16];
 
 	if (node->sub_id < 0) {
 		dmc_num = aml_db ? aml_db->dmc_number : 1;
+		nic_pos = 4 * dmc_num + 19;
 
 		if (bus_header) {
-			/* Level 0: BUS + FORCE + DEV */
 			if (cfg->has_dev) {
 				if (node->bus >= 0)
 					id_len = scnprintf(buf + *poff, bufsz - *poff,
@@ -6488,19 +7030,16 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 							   "<%02u>",
 							   (unsigned int)node->port_id);
 			} else {
-				name_w = BUS_COL_WIDTH - 5;
 				if (node->bus >= 0)
-					id_len = scnprintf(buf + *poff, bufsz - *poff,
-							   "<%02u> %-*s",
-							   (unsigned int)node->bus,
-							   name_w,
-							   node->name ?: "");
+					id_len = scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "<%02u>",
+							   (unsigned int)node->bus);
 				else
-					id_len = scnprintf(buf + *poff, bufsz - *poff,
-							   "<%02u> %-*s",
-							   (unsigned int)node->port_id,
-							   name_w,
-							   node->name ?: "");
+					id_len = scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "<%02u>",
+							   (unsigned int)node->port_id);
 			}
 			*poff += id_len;
 			pad = BUS_COL_WIDTH - id_len;
@@ -6508,28 +7047,150 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 				memset(buf + *poff, ' ', pad);
 				*poff += pad;
 			}
+
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "[f] ");
 			for (d = 0; d < dmc_num; d++) {
-				dmc_base = (aml_db && d < aml_db->dmc_number)
-					   ? aml_db->ddr_reg[d] : NULL;
-				if (node->dmc_force && node->dmc_force[d]) {
-					len = format_force_col(tmp, sizeof(tmp),
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				if (node->dmc_force && node->dmc_force[d] &&
+				    is_force_enabled(node->dmc_force[d], d, 0, 0)) {
+					len = format_force_val(tmp, sizeof(tmp),
 							       node->dmc_force[d],
-							       dmc_base);
+							       d, 0);
 					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", len ? tmp : "");
+							   "%s", len ? tmp : "-");
 				} else {
-					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", "");
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
 				}
+			}
+			pad = 4 + 1;
+			if (pad > 0) {
+				memset(buf + *poff, ' ', pad);
+				*poff += pad;
+			}
+			for (d = 0; d < dmc_num; d++) {
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				if (node->dmc_force && node->dmc_force[d] &&
+				    is_force_enabled(node->dmc_force[d], d, 1, 0)) {
+					len = format_force_val(tmp, sizeof(tmp),
+							       node->dmc_force[d],
+							       d, 1);
+					*poff += scnprintf(buf + *poff, bufsz - *poff,
+							   "%s", len ? tmp : "-");
+				} else {
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
+				}
+			}
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "\n");
+
+			has_max = false;
+
+			for (d = 0; d < dmc_num; d++) {
+				if (node->dmc_max && node->dmc_max[d]) {
+					has_max = true;
+					break;
+				}
+			}
+
+			if (has_max) {
+				*poff += scnprintf(buf + *poff, bufsz - *poff,
+							"%-*s", BUS_COL_WIDTH, "");
+				*poff += scnprintf(buf + *poff, bufsz - *poff,
+							"[m] ");
+				for (d = 0; d < dmc_num; d++) {
+					if (d)
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									":");
+					if (node->dmc_max[d] &&
+						is_force_enabled(node->dmc_max[d],
+								d, 0, 0)) {
+						len = format_max_val(tmp,
+									sizeof(tmp),
+									node->dmc_max[d],
+									d, 0);
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									"%s",
+									len ? tmp : "-");
+					} else {
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									"-");
+					}
+				}
+				pad = 4 + 1;
+				if (pad > 0) {
+					memset(buf + *poff, ' ', pad);
+					*poff += pad;
+				}
+				for (d = 0; d < dmc_num; d++) {
+					if (d)
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									":");
+					if (node->dmc_max[d] &&
+						is_force_enabled(node->dmc_max[d],
+								d, 1, 0)) {
+						len = format_max_val(tmp,
+									sizeof(tmp),
+									node->dmc_max[d],
+									d, 1);
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									"%s",
+									len ? tmp : "-");
+					} else {
+						*poff += scnprintf(buf + *poff,
+									bufsz - *poff,
+									"-");
+					}
+				}
+				*poff += scnprintf(buf + *poff, bufsz - *poff, "\n");
+			}
+
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", BUS_COL_WIDTH, "");
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "[r] ");
+			for (d = 0; d < dmc_num; d++) {
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				ret_r = get_rw_final_val(node, 0, d);
+				if (ret_r < 0)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
+				else
+					*poff += scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "%x", ret_r);
+			}
+			*poff += scnprintf(buf + *poff, bufsz - *poff, " [w] ");
+			for (d = 0; d < dmc_num; d++) {
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				ret_w = get_rw_final_val(node, 1, d);
+				if (ret_w < 0)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
+				else
+					*poff += scnprintf(buf + *poff, bufsz - *poff,
+							   "%x", ret_w);
+			}
+			if (cfg->force_only) {
+				if (node->name)
+					*poff += scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   " %s", node->name);
+			} else {
+				*poff += scnprintf(buf + *poff,
+						   bufsz - *poff, "%-*s", 4, "");
 			}
 			if (cfg->has_nic) {
 				if (node->nic) {
 					len = format_col(tmp, sizeof(tmp), node, 'n');
 					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", len ? tmp : "");
+							   "%-*s", NIC_COL_WIDTH, len ? tmp : "");
 				} else {
 					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", "");
+							   "%-*s", NIC_COL_WIDTH, "");
 				}
 			}
 			if (cfg->has_dev) {
@@ -6547,20 +7208,20 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 							   node->name ?: "");
 				}
 			}
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "\n");
 		} else {
 			/* Level 1 bus group member: skip BUS + FORCE, show NIC/DEV + name */
-			*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", BUS_COL_WIDTH, "");
-			for (d = 0; d < dmc_num; d++)
-				*poff += scnprintf(buf + *poff, bufsz - *poff, "%-24s", "");
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", nic_pos, "");
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", NIC_COL_WIDTH, "");
 
 			if (cfg->has_nic) {
 				if (node->nic) {
 					len = format_col(tmp, sizeof(tmp), node, 'n');
 					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", len ? tmp : "");
+							   "%-*s", NIC_COL_WIDTH, len ? tmp : "");
 				} else {
 					*poff += scnprintf(buf + *poff, bufsz - *poff,
-							   "%-24s", "");
+							   "%-*s", NIC_COL_WIDTH, "");
 				}
 			}
 
@@ -6580,35 +7241,60 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 				}
 			}
 		}
-		*poff += scnprintf(buf + *poff, bufsz - *poff, "\n");
 	} else if (cfg->force_only) {
+		dmc_num = aml_db ? aml_db->dmc_number : 1;
+		pad = 19 + dmc_num * 4;
 		if (node->name)
 			*poff += scnprintf(buf + *poff, bufsz - *poff,
-					   "       %s", node->name);
+					   "%-*s%s", pad, "", node->name);
 		*poff += scnprintf(buf + *poff, bufsz - *poff, "\n");
 	} else {
 		anc_count = 0;
 
 		dmc_num = aml_db ? aml_db->dmc_number : 1;
-		if (cfg->has_nic && node->nic)
-			pad = BUS_COL_WIDTH + dmc_num * PRIO_COL_WIDTH;
-		else if (cfg->has_nic)
-			pad = BUS_COL_WIDTH + (1 + dmc_num) * PRIO_COL_WIDTH;
-		else
-			pad = BUS_COL_WIDTH + dmc_num * PRIO_COL_WIDTH;
-		scnprintf(buf + *poff, bufsz - *poff, "%*s", pad, "");
-		*poff += pad;
+		nic_pos = 4 * dmc_num + 19;
+		*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", BUS_COL_WIDTH, "");
+		if (node->dev) {
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "    ");
+			for (d = 0; d < dmc_num; d++) {
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				ret_r = get_rw_final_val(node, 0, d);
+				if (ret_r < 0)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
+				else
+					*poff += scnprintf(buf + *poff, bufsz - *poff,
+							   "%x", ret_r);
+			}
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "     ");
+			for (d = 0; d < dmc_num; d++) {
+				if (d)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, ":");
+				ret_w = get_rw_final_val(node, 1, d);
+				if (ret_w < 0)
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "-");
+				else
+					*poff += scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "%x", ret_w);
+			}
+			*poff += scnprintf(buf + *poff, bufsz - *poff, "%-*s", 4, "");
+		} else {
+			*poff += scnprintf(buf + *poff, bufsz - *poff,
+					   "%-*s", nic_pos - BUS_COL_WIDTH, "");
+		}
 
 		if (cfg->has_nic && node->nic) {
 			len = format_col(tmp, sizeof(tmp), node, 'n');
-			if (node->parent &&
-			    node->parent->prop_mode == PRIO_PROP_NONE &&
-			    !node->dev)
+			if (node->dev)
 				*poff += scnprintf(buf + *poff, bufsz - *poff,
-						   "%s", len ? tmp : "");
+						   "%-*s", NIC_COL_WIDTH, len ? tmp : "");
 			else
 				*poff += scnprintf(buf + *poff, bufsz - *poff,
-						   "%-24s", len ? tmp : "");
+						   "%s", len ? tmp : "");
+		} else if (cfg->has_nic && node->dev) {
+			*poff += scnprintf(buf + *poff, bufsz - *poff,
+					   "%-*s", NIC_COL_WIDTH, "");
 		}
 
 		anc = node->parent;
@@ -6619,15 +7305,24 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 		}
 
 		if (cfg->has_dev) {
-			for (i = anc_count - 1; i >= 0; i--) {
-				if (anc_list[i]->dev) {
+			for (p = node->parent; p; p = p->parent) {
+				anc_node = NULL;
+				for (j = 0; j < anc_count; j++) {
+					if (anc_list[j] == p) {
+						anc_node = anc_list[j];
+						break;
+					}
+				}
+				if (!anc_node)
+					continue;
+				if (anc_node->dev) {
 					r[0] = '\0';
 					w[0] = '\0';
 					get_callback_prio_string(r, sizeof(r),
-								node, anc_list[i],
+								node, anc_node,
 								0, path, 0);
 					get_callback_prio_string(w, sizeof(w),
-								node, anc_list[i],
+								node, anc_node,
 								1, path, 0);
 					if (node->rw == 0)
 						scnprintf(tmp, sizeof(tmp), "%s -:-", r);
@@ -6635,31 +7330,26 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 						scnprintf(tmp, sizeof(tmp), "-:- %s", w);
 					else
 						scnprintf(tmp, sizeof(tmp), "%s %s", r, w);
-					*poff += scnprintf(buf + *poff, bufsz - *poff,
-								"%-16s", tmp);
+					*poff += scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "%-16s", tmp);
 				} else {
-					*poff += scnprintf(buf + *poff, bufsz - *poff,
-								"%-16s", "-:- -:-");
+					*poff += scnprintf(buf + *poff,
+							   bufsz - *poff,
+							   "%-16s", "-:- -:-");
 				}
 			}
-		}
 
-		if (cfg->has_dev && node->dev) {
-			if (node->rw >= 0) {
-				format_layer_value(tmp, sizeof(tmp), node, 'd', node->rw);
-				*poff += scnprintf(buf + *poff, bufsz - *poff, "%s", tmp);
-			} else {
-				len = format_col(tmp, sizeof(tmp), node, 'd');
-				*poff += scnprintf(buf + *poff, bufsz - *poff, "%s",
-									len ? tmp : "");
+			if (node->dev) {
+				if (node->rw >= 0) {
+					format_layer_value(tmp, sizeof(tmp), node, 'd', node->rw);
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "%s", tmp);
+				} else {
+					len = format_col(tmp, sizeof(tmp), node, 'd');
+					*poff += scnprintf(buf + *poff, bufsz - *poff, "%s",
+								len ? tmp : "");
+				}
 			}
-		} else if (cfg->has_dev &&
-			   (!node->parent ||
-			    node->parent->prop_mode != PRIO_PROP_NONE)) {
-			if (node->rw >= 0)
-				*poff += scnprintf(buf + *poff, bufsz - *poff, "-:-");
-			else
-				*poff += scnprintf(buf + *poff, bufsz - *poff, "-:- -:-");
 		}
 
 		if (node->name) {
@@ -6677,8 +7367,7 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 							   " [%02x] %s",
 							   node->sub_id, node->name);
 			} else {
-				*poff += scnprintf(buf + *poff, bufsz - *poff,
-						   " %s", node->name);
+				*poff += scnprintf(buf + *poff, bufsz - *poff, " %s", node->name);
 			}
 		}
 
@@ -6692,8 +7381,7 @@ static void show_prio_tree(char *buf, ssize_t *poff, size_t bufsz,
 			continue;
 
 		if (node->sub_id < 0) {
-			scnprintf(new_prefix, sizeof(new_prefix), "%s",
-				  last ? "    " : "|   ");
+			scnprintf(new_prefix, sizeof(new_prefix), "%s", last ? "    " : "|   ");
 		} else {
 			scnprintf(new_prefix, sizeof(new_prefix), "%s%s",
 				  prefix,
@@ -6710,7 +7398,7 @@ static ssize_t priority_tree_show(char *buf)
 	struct ddr_priority_tree *tree;
 	struct prio_disp_cfg cfg;
 	ssize_t off = 0;
-	int i, d, dmc_num;
+	int i, dmc_num, nic_pos;
 	bool is_header;
 
 	if (!aml_db || !aml_db->priority || !aml_db->priority->tree)
@@ -6723,43 +7411,37 @@ static ssize_t priority_tree_show(char *buf)
 	prio_disp_cfg_init(&cfg, tree);
 	dmc_num = aml_db->dmc_number;
 
-	show_prio_summary(buf, &off, PRIO_V1_BUF_SZ, tree, 0, &cfg);
+	show_prio_summary(buf, &off, PRIO_V1_BUF_SZ, tree, &cfg);
+
+	nic_pos = 4 * dmc_num + 19;
 
 	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-*s", BUS_COL_WIDTH, "BUS");
-	for (d = 0; d < dmc_num; d++)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "DMC%-21d", d);
+	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-*s", nic_pos - BUS_COL_WIDTH, "DMC");
 	if (cfg.has_nic)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-24s", "NIC");
+		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-*s", NIC_COL_WIDTH, "NIC");
 	if (cfg.has_dev)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-24s", "DEV");
+		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "DEV");
 	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "\n");
 
 	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-*s", BUS_COL_WIDTH, "");
-	for (d = 0; d < dmc_num; d++)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-24s", "r:m:f w:m:f");
-	if (cfg.has_nic)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-24s", "r:m w:m");
-	if (cfg.has_dev)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-24s", "r:m w:m");
-	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "\n");
+	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "%-*s",
+			 nic_pos - BUS_COL_WIDTH,
+			 get_prio_type() == PRIO_TYPE_URGENT ? "m:2" : "m:f");
 
-	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off,
-			 "%-*s", BUS_COL_WIDTH, "-----------------------");
-	for (d = 0; d < dmc_num; d++)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off,
-				 "%-24s", "-----------------------");
 	if (cfg.has_nic)
 		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off,
-				 "%-24s", "-----------------------");
+				 "%-*s", NIC_COL_WIDTH, "r:m w:m");
 	if (cfg.has_dev)
-		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off,
-				 "%-24s", "-----------------------");
+		off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "r:m w:m");
 	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "\n");
+	off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, SPLIT_LINE);
 
 	for (i = 0; i < tree->nr_roots; i++) {
 		is_header = (i == 0) || (tree->roots[i]->bus != tree->roots[i - 1]->bus);
 		show_prio_tree(buf, &off, PRIO_V1_BUF_SZ,
 				 tree->roots[i], "", true, 0, &cfg, is_header);
+		if (i < tree->nr_roots - 1)
+			off += scnprintf(buf + off, PRIO_V1_BUF_SZ - off, "\n");
 	}
 
 	return off;
@@ -6818,40 +7500,24 @@ ssize_t priority_display(char *buf, loff_t pos, size_t count)
 
 static int get_dmc_priority_v1(unsigned int bus_id, char rw)
 {
-	struct ddr_priority_force *f;
-	void __iomem *base;
+	int is_w;
 	u32 val[MAX_DMC_NUM] = {0};
-	unsigned char lsb, nbits;
-	int i;
+	int ret, i;
 
-	if (!aml_db || !aml_db->priority || !aml_db->priority->v1)
-		return -EINVAL;
-
-	f = find_force_by_bus(aml_db->priority->v1, bus_id);
-	if (!f)
-		return -ENODEV;
-
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
 		return -EINVAL;
 
 	for (i = 0; i < aml_db->dmc_number; i++) {
-		base = aml_db->ddr_reg[i];
-		if (!base)
-			continue;
-
-		if (rw == 'r') {
-			lsb = f->r_lsb;
-			nbits = f->r_nbits;
-			val[i] = readl_relaxed(base + f->r_offset);
-		} else {
-			lsb = f->w_lsb;
-			nbits = f->w_nbits;
-			val[i] = readl_relaxed(base + f->w_offset);
-		}
-
-		val[i] = (val[i] >> lsb) & ((1U << nbits) - 1);
+		ret = read_force_by_bus(bus_id, is_w, i);
+		if (ret < 0)
+			return ret;
+		val[i] = (u32)ret;
 		if (i && val[i] != val[i - 1])
-			pr_info("dmc%d:%d not same dmc%d:%d\n", i, val[i], i - 1, val[i - 1]);
+			pr_info("f dmc%d:%d not same dmc%d:%d\n", i, val[i], i - 1, val[i - 1]);
 	}
 
 	return val[0];
@@ -6872,6 +7538,71 @@ static int set_dmc_priority_v1(unsigned int bus_id, unsigned char priority, char
 
 	return write_force_by_bus(bus_id, (char)priority, dmc_rw, -1);
 }
+
+static int set_max_priority_v1(unsigned int bus_id, unsigned char priority, char rw)
+{
+	int dmc_rw;
+
+	if (rw == 'r')
+		dmc_rw = 0;
+	else if (rw == 'w')
+		dmc_rw = 1;
+	else if (rw == 0)
+		dmc_rw = -1;
+	else
+		return -EINVAL;
+
+	return write_max_by_bus(bus_id, (char)priority, dmc_rw, -1);
+}
+
+static int get_max_priority_v1(unsigned int bus_id, char rw)
+{
+	int is_w;
+	u32 val[MAX_DMC_NUM] = {0};
+	int ret, i;
+
+	if (rw == 'r')
+		is_w = 0;
+	else if (rw == 'w')
+		is_w = 1;
+	else
+		return -EINVAL;
+
+	for (i = 0; i < aml_db->dmc_number; i++) {
+		ret = read_max_by_bus(bus_id, is_w, i);
+		if (ret < 0)
+			return ret;
+		val[i] = (u32)ret;
+		if (i && val[i] != val[i - 1])
+			pr_info("m dmc%d:%d not same dmc%d:%d\n", i, val[i], i - 1, val[i - 1]);
+	}
+
+	return val[0];
+}
+
+int get_max_priority(unsigned int bus_id, char rw)
+{
+	struct ddr_priority_v2 *v2;
+
+	v2 = aml_db->priority->v2;
+	if (!v2)
+		return get_max_priority_v1(bus_id, rw);
+
+	return -ENODEV;
+}
+EXPORT_SYMBOL(get_max_priority);
+
+int set_max_priority(unsigned int bus_id, unsigned char priority, char rw)
+{
+	struct ddr_priority_v2 *v2;
+
+	v2 = aml_db->priority->v2;
+	if (!v2)
+		return set_max_priority_v1(bus_id, priority, rw);
+
+	return -ENODEV;
+}
+EXPORT_SYMBOL(set_max_priority);
 
 int get_dmc_priority(unsigned int bus_id, char rw)
 {
@@ -6964,18 +7695,15 @@ int set_dmc_priority(unsigned int bus_id, unsigned char priority, char rw)
 }
 EXPORT_SYMBOL(set_dmc_priority);
 
-struct ddr_priority_node *__get_dev_tree_prio_by_path(char rw, unsigned int port_id, ...)
+struct ddr_priority_node *__get_dev_tree_prio_by_path(int is_w, unsigned int port_id, ...)
 {
 	struct ddr_priority_node *node;
 	int sub_path[4];
 	int depth = 0;
 	va_list ap;
-	int id, rw_int;
+	int id;
 
 	if (!aml_db || !aml_db->priority || !aml_db->priority->tree)
-		return ERR_PTR(-EINVAL);
-
-	if (rw != 0 && rw != 'r' && rw != 'w')
 		return ERR_PTR(-EINVAL);
 
 	va_start(ap, port_id);
@@ -6986,9 +7714,8 @@ struct ddr_priority_node *__get_dev_tree_prio_by_path(char rw, unsigned int port
 	if (depth == 0) {
 		node = find_root_by_port_id(aml_db->priority->tree, port_id);
 	} else {
-		rw_int = (rw == 'w') ? 1 : (rw == 'r') ? 0 : -1;
 		node = find_node_by_dev_path(aml_db->priority->tree,
-					     port_id, sub_path, depth, rw_int);
+					     port_id, sub_path, depth, is_w);
 	}
 
 	if (IS_ERR(node))
@@ -7006,16 +7733,20 @@ static int get_dev_priority_v1(unsigned int port_id, char rw)
 {
 	struct ddr_priority_node *node;
 	unsigned int val;
-	int ret;
+	int ret, dev_rw;
 
-	if (rw != 'r' && rw != 'w')
+	if (rw == 'r')
+		dev_rw = 0;
+	else if (rw == 'w')
+		dev_rw = 1;
+	else
 		return -EINVAL;
 
-	node = get_dev_tree_prio_by_path(rw, port_id);
+	node = get_dev_tree_prio_by_path(dev_rw, port_id);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
-	ret = read_node_layer(node, 'd', rw == 'w', &val);
+	ret = read_node_layer(node, 'd', dev_rw, &val);
 	if (ret)
 		return ret;
 
@@ -7025,12 +7756,22 @@ static int get_dev_priority_v1(unsigned int port_id, char rw)
 static int set_dev_priority_v1(unsigned int port_id, unsigned char priority, char rw)
 {
 	struct ddr_priority_node *node;
+	int dev_rw;
+
+	if (rw == 'r')
+		dev_rw = 0;
+	else if (rw == 'w')
+		dev_rw = 1;
+	else if (rw == 0)
+		dev_rw = -1;
+	else
+		return -EINVAL;
 
 	node = get_dev_tree_prio_by_path(rw, port_id);
 	if (IS_ERR(node))
 		return PTR_ERR(node);
 
-	return write_node_layer(node, 'd', (char)priority, rw, -1, NULL);
+	return write_node_layer(node, 'd', (char)priority, dev_rw, -1, NULL);
 }
 
 int get_dev_priority(unsigned int port_id, char rw)

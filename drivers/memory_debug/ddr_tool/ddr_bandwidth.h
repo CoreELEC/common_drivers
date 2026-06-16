@@ -476,13 +476,13 @@ static inline unsigned long ddr_ssr_access_sec(unsigned long addr, unsigned long
 }
 #endif
 
-#define get_dev_tree_prio_by_path(rw, port_id, ...) \
-	__get_dev_tree_prio_by_path(rw, port_id, ##__VA_ARGS__, -1)
+#define get_dev_tree_prio_by_path(is_w, port_id, ...) \
+	__get_dev_tree_prio_by_path(is_w, port_id, ##__VA_ARGS__, -1)
 
 int write_node_layer(struct ddr_priority_node *node, char type, int value,
 						int rw, int dmc, void *data);
 int reg_access(unsigned int reg, char sec, char rw, unsigned int *value);
-struct ddr_priority_node *__get_dev_tree_prio_by_path(char rw, unsigned int port_id, ...);
+struct ddr_priority_node *__get_dev_tree_prio_by_path(int is_w, unsigned int port_id, ...);
 struct ddr_priority_node *find_node_by_dev_path(struct ddr_priority_tree *tree,
 						unsigned int port_id,
 						int *sub_path, int depth, int rw);

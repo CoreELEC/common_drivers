@@ -64,8 +64,8 @@
 
 /* Level 2 */
 #define SUB_ID_MATCH_ALL	(-2)	/* match both read and write */
-#define SUB_ID_MATCH_R		(-3)	/* match read only */
-#define SUB_ID_MATCH_W		(-4)	/* match write only */
+#define SUB_ID_MATCH_RO		(-3)	/* match read only */
+#define SUB_ID_MATCH_WO		(-4)	/* match write only */
 
 /* Level 3 */
 #define MODULE_ID_MATCH_ALL	(-2)	/* match all module_id in group */
@@ -145,29 +145,27 @@ struct ddr_priority_ops {
 
 struct ddr_priority_reg {
 	enum ddr_priority_ctrl ctrl_type;
-	unsigned long reg_base;
-	unsigned char reg_mode;
-	unsigned long w_offset;
-	unsigned long r_offset;
-	unsigned char w_lsb;
-	unsigned char r_lsb;
-	unsigned char w_nbits;
-	unsigned char r_nbits;
-	long r_force_mask;
-	long w_force_mask;
 	union {
 		struct {
-			unsigned char fixed_w, fixed_r;
-			unsigned char fixed_lsb_r, fixed_lsb_w;
-			unsigned char fixed_nbits_r, fixed_nbits_w;
+			unsigned long reg_base;
+			unsigned char reg_mode;
+			unsigned long w_offset;
+			unsigned long r_offset;
+			unsigned char w_lsb;
+			unsigned char r_lsb;
+			unsigned char w_nbits;
+			unsigned char r_nbits;
+			long r_force_mask;
+			long w_force_mask;
 		};
 		struct {
-			unsigned char cur_lsb_r, cur_lsb_w;
-			unsigned char cur_nbits_r, cur_nbits_w;
-			unsigned char child_lsb_r, child_lsb_w;
-			unsigned char child_nbits_r, child_nbits_w;
+			unsigned char fixed_w, fixed_r;
 		};
 	};
+	unsigned char cur_lsb_r, cur_lsb_w;
+	unsigned char cur_nbits_r, cur_nbits_w;
+	unsigned char child_lsb_r, child_lsb_w;
+	unsigned char child_nbits_r, child_nbits_w;
 };
 
 struct sub_port_list {
@@ -226,6 +224,11 @@ struct ddr_priority_mdc {
 	struct ddr_priority_reg reg;
 };
 
+enum prio_type {
+	PRIO_TYPE_QOS,
+	PRIO_TYPE_URGENT,
+};
+
 struct ddr_priority_force {
 	unsigned int bus;
 	/* reg base fllow aml_ddr ddr_reg[] */
@@ -251,6 +254,7 @@ struct ddr_priority_node {
 
 	enum prio_prop_mode prop_mode;
 	struct ddr_priority_force **dmc_force;
+	struct ddr_priority_force **dmc_max;
 	struct ddr_priority_dev *dev;
 	struct ddr_priority_nic *nic;
 	struct ddr_priority_mdc *mdc;
@@ -271,14 +275,17 @@ struct ddr_priority_tree {
 };
 
 struct ddr_priority_info {
+	enum prio_type prio_type;
 	int dev_num;
 	int nic_num;
 	int mdc_num;
 	int dmc_force_num;
+	int dmc_max_num;
 	struct ddr_priority_dev *dev;
 	struct ddr_priority_nic *nic;
 	struct ddr_priority_mdc *mdc;
 	struct ddr_priority_force *dmc_force;
+	struct ddr_priority_force *dmc_max;
 };
 
 struct dmc_priority {
