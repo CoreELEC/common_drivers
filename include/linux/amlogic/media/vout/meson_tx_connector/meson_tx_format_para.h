@@ -175,6 +175,7 @@ enum venc_bist_type {
 	VENC_BIST_PTTN_CROSSING,
 	/* new adding in A9 */
 	VENC_BIST_PTTN_GRAY,
+	VENC_BIST_PTTN_MAX,
 };
 
 /*

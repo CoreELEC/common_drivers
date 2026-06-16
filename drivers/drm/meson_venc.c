@@ -78,7 +78,7 @@ static void regmap_read(struct regmap *regmap, unsigned int reg, unsigned int *v
 	*val = readl(p);
 }
 
-int meson_venc_bist_mode_set(struct regmap *regmap, enum venc_type enc_type,
+int _meson_venc_bist_mode_set(struct regmap *regmap, enum venc_type enc_type,
 	enum venc_bist_type bist_type)
 {
 	/* Both encp and encl have VIDEO_TST_EN, VIDEO_TST_MDSEL, ..., VIDEO_TST_VDCNT_STSET,
@@ -340,7 +340,8 @@ static void config_tv_encp_calc(struct regmap *regmap, struct meson_tx_format_pa
 	regmap_write(regmap, ENCP_VIDEO_MAX_PXCNT, tp->h_total - 1);
 	regmap_write(regmap, ENCP_VIDEO_MAX_LNCNT, tp->v_total - 1);
 
-	meson_venc_bist_mode_set(regmap, VENC_ENCP, bist_type);
+	_meson_venc_bist_mode_set(regmap, VENC_ENCP, bist_type);
+
 	regmap_write(regmap, ENCP_VIDEO_EN, 1);
 
 	pr_info("%s set done\n", __func__);
@@ -417,7 +418,7 @@ static void config_tv_encl_calc(struct regmap *regmap, struct meson_tx_format_pa
 	regmap_write(regmap, VSYNC_VE_ADDR, tp->v_sync - 1);
 
 	regmap_write(regmap, ENCL_VIDEO_RGBIN_CTRL, 3);
-	meson_venc_bist_mode_set(regmap, VENC_ENCL, bist_type);
+	_meson_venc_bist_mode_set(regmap, VENC_ENCL, bist_type);
 	regmap_write(regmap, ENCL_VIDEO_EN, 1);
 	regmap_write(regmap, VPU_VENC_CTRL, 2);
 }
@@ -432,6 +433,19 @@ int meson_venc_mode_set(struct meson_tx_venc *venc, u32 enc_index, u32 enc_type,
 		config_tv_encp_calc(regmap, fmt_para, bist_type);
 	else if (enc_type == VENC_ENCL)
 		config_tv_encl_calc(regmap, fmt_para, bist_type);
+
+	return 0;
+}
+
+int meson_venc_bist_mode_set(struct meson_tx_venc *venc, u32 enc_index, u32 enc_type,
+	enum venc_bist_type bist_type, void *para)
+{
+	struct regmap *regmap = venc->regmap[enc_index];
+
+	if (enc_type == VENC_ENCP)
+		_meson_venc_bist_mode_set(regmap, VENC_ENCP, bist_type);
+	else if (enc_type == VENC_ENCL)
+		_meson_venc_bist_mode_set(regmap, VENC_ENCL, bist_type);
 
 	return 0;
 }

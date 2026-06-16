@@ -504,6 +504,111 @@ static void meson_dptx_atomic_print_state(struct drm_printer *p,
 
 }
 
+static void help_bist_mode_show(struct drm_printer *p)
+{
+	int i;
+	static const char * const bist_help[] = {
+		[VENC_BIST_PTTN_OFF] = "off",
+		[VENC_BIST_PTTN_BLACK] = "black",
+		[VENC_BIST_PTTN_WHITE] = "white",
+		[VENC_BIST_PTTN_RED] = "red",
+		[VENC_BIST_PTTN_GREEN] = "green",
+		[VENC_BIST_PTTN_BLUE] = "blue",
+		[VENC_BIST_PTTN_LINE] = "line",
+		[VENC_BIST_PTTN_DOT] = "dot",
+		[VENC_BIST_PTTN_COLORBAR] = "colorbar",
+		[VENC_BIST_PTTN_CROSSING] = "crossing",
+		[VENC_BIST_PTTN_GRAY] = "gray",
+	};
+
+	if (!p)
+		return;
+
+	drm_printf(p, "###### bist_mode help ######\n");
+	for (i = 0; i < ARRAY_SIZE(bist_help); i++) {
+		if (bist_help[i])
+			drm_printf(p, "  %d: %s\n", i, bist_help[i]);
+	}
+	drm_printf(p, "\n");
+}
+
+static void help_venc_cfg_show(struct drm_printer *p)
+{
+	static const char *help_msg =
+		"  bit[3] bist type, bit[2] VENC type, bit[1]: venc_index, bit[0]: enable\n"
+		"  e.g. echo 1003 > venc_cfg for red pattern\n";
+
+	if (!p)
+		return;
+
+	drm_printf(p, "###### venc_cfg help ######\n");
+	drm_printf(p, "%s\n", help_msg);
+}
+
+static void help_debug_show(struct drm_printer *p)
+{
+	static const char *help_msg =
+		"  dptx core reg\n"
+		"    read:  echo rd ADDR > debug\n"
+		"    write: echo wr ADDR VAL > debug\n"
+		"    dump:  echo dumpd ADDR0 ADDR1 > debug\n"
+		"  clkctrl reg\n"
+		"    read:  echo rc ADDR > debug\n"
+		"    write: echo wc ADDR VAL > debug\n"
+		"  clkmsr\n"
+		"    read:  echo clkmsr > debug\n"
+		"  aux reg\n"
+		"    read:  echo aux rd ADDR SIZE > debug\n"
+		"    write: echo aux wr ADDR SIZE VALUE1 VALUE2 ... > debug\n"
+		"    dpcd:  echo aux dpcd > debug # DPCD cap and ext_cap\n"
+		"    sink_count: echo aux sink_count > debug # DPCD 0x200~0x205\n"
+		"  link train\n"
+		"    lr:  echo lt_force_lr 0x14 > debug # 0x14, 0xa or 0x6\n"
+		"    lc:  echo lt_force_lc 1 > debug # 1, 2, or 4\n"
+		"    ssc: echo lt_force_ssc 1 > debug # 0 or 1\n"
+		"  edid\n"
+		"    echo load 00FFFFFFFFFFFF00... > debug\n"
+		"  hpd\n"
+		"    echo hpd_lock 1 > debug # 0 or 1\n"
+		"    echo fake_plug 1 > debug # 0 or 1\n";
+
+	if (!p)
+		return;
+
+	drm_printf(p, "###### debug help ######\n");
+	drm_printf(p, "%s\n", help_msg);
+}
+
+static ssize_t help_show(struct file *filp, struct kobject *kobj,
+			 struct bin_attribute *attr, char *buf, loff_t off,
+			 size_t count)
+{
+	struct drm_print_iterator iter;
+	struct drm_printer printer;
+	ssize_t ret;
+
+	iter.data = buf;
+	iter.start = off;
+	iter.remain = count;
+
+	printer = drm_coredump_printer(&iter);
+
+	/* add more sysfs help here */
+	help_bist_mode_show(&printer);
+	help_debug_show(&printer);
+	help_venc_cfg_show(&printer);
+
+	ret = count - iter.remain;
+
+	return ret;
+}
+
+static struct bin_attribute help_attr = {
+	.attr.name = "help",
+	.attr.mode = 0444,
+	.read = help_show,
+};
+
 static ssize_t venc_cfg_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	return sysfs_emit(buf, "no support show\n");
@@ -552,6 +657,37 @@ static ssize_t venc_cfg_store(struct device *dev, struct device_attribute *attr,
 
 static DEVICE_ATTR_RW(venc_cfg);
 
+static ssize_t bist_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct drm_connector *connector = dev_get_drvdata(dev);
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", meson_dptx->bist_mode);
+}
+
+static ssize_t bist_mode_store(struct device *dev, struct device_attribute *attr,
+			      const char *buf, size_t count)
+{
+	struct drm_connector *connector = dev_get_drvdata(dev);
+	struct dptx_common *dptx_comm = connector_to_dptx_common(connector);
+	struct meson_dp_tx *meson_dptx = connector_to_meson_dptx(connector);
+	u32 val = 0;
+	int ret;
+
+	ret = kstrtouint(buf, 10, &val);
+	if (ret < 0 || val >= VENC_BIST_PTTN_MAX)
+		return count;
+
+	DRM_INFO("set bist_mode %d\n", val);
+	meson_dptx->bist_mode = val;
+
+	meson_venc_bist_mode_set(meson_dptx->venc, meson_dptx->enc_idx, VENC_ENCP,
+				 meson_dptx->bist_mode, &dptx_comm->base.sw_fmt_para);
+
+	return count;
+}
+static DEVICE_ATTR_RW(bist_mode);
+
 static int meson_dptx_late_register(struct drm_connector *connector)
 {
 	int ret;
@@ -559,9 +695,17 @@ static int meson_dptx_late_register(struct drm_connector *connector)
 
 	meson_tx_sysfs_create(&dptx_comm->base);
 
+	ret = sysfs_create_bin_file(&connector->kdev->kobj, &help_attr);
+	if (ret)
+		DRM_ERROR("Failed to create help node: %d\n", ret);
+
 	ret = device_create_file(connector->kdev, &dev_attr_venc_cfg);
 	if (ret)
-		DRM_ERROR("Failed to create sysfs node: %d\n", ret);
+		DRM_ERROR("Failed to create venc_cfg node: %d\n", ret);
+
+	ret = device_create_file(connector->kdev, &dev_attr_bist_mode);
+	if (ret)
+		DRM_ERROR("Failed to create bist_mode node: %d\n", ret);
 
 	return ret;
 }
@@ -570,7 +714,9 @@ static void meson_dptx_early_unregister(struct drm_connector *connector)
 {
 	struct dptx_common *dptx_comm = connector_to_dptx_common(connector);
 
+	sysfs_remove_bin_file(&connector->kdev->kobj, &help_attr);
 	device_remove_file(connector->kdev, &dev_attr_venc_cfg);
+	device_remove_file(connector->kdev, &dev_attr_bist_mode);
 	meson_tx_sysfs_remove(&dptx_comm->base);
 }
 
@@ -860,7 +1006,7 @@ static void meson_dptx_encoder_atomic_enable(struct drm_encoder *encoder,
 	meson_tx_build_clk_param(tx_dev, &dptx_conn_state->base_state.para,
 		meson_dptx->enc_idx, meson_dptx->enc_idx);
 	meson_venc_mode_set(meson_dptx->venc, meson_dptx->enc_idx, VENC_ENCP,
-			    VENC_BIST_PTTN_OFF, &dptx_conn_state->base_state.para);
+			    meson_dptx->bist_mode, &dptx_conn_state->base_state.para);
 	meson_tx_do_mode_setting(tx_dev, &dptx_conn_state->base_state,
 				 &old_dptx_conn_state->base_state);
 	meson_vout_notify_mode_change(amcrtc->vout_index,
@@ -1352,6 +1498,7 @@ int meson_dptx_dev_bind(struct drm_device *drm,
 	drm_dptx_common_register_hdcp_notify(tx_comm, &hdcp_cb);
 	meson_dptx->hdcp_mode = HDCP_NULL;
 	meson_dptx->hdcp_state = DP_HDCP_STATE_DISCONNECT;
+	meson_dptx->bist_mode = VENC_BIST_PTTN_OFF;
 
 	drm_connector_attach_content_type_property(connector);
 	drm_connector_attach_vrr_capable_property(connector);

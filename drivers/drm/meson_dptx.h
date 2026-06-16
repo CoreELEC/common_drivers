@@ -57,6 +57,7 @@ struct meson_dp_tx {
 	struct drm_encoder encoder;
 	struct meson_connector_dev *dptx_dev;
 	u32 enc_idx;
+	u32 bist_mode;
 	/*drm request content type.*/
 	int hdcp_request_content_type;
 	int hdcp_request_content_protection;
