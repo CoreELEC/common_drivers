@@ -1559,7 +1559,7 @@
 };
 
 &chosen {
-	bootargs = "usbcore.autosuspend=-1 arm64.nomte";
+	bootargs = "usbcore.autosuspend=-1 arm64.nomte swiotlb=noforce";
 };
 
 &saradc {
