@@ -343,7 +343,7 @@ static inline u32 skip_bbt_blocks(struct meson_rsv_info_t *rsv_info, u32 start)
 
 static void meson_print_rsv_block_info(struct meson_rsv_info_t *rsv_info)
 {
-	char dbg_info_buf[1024];
+	char dbg_info_buf[256];
 	int n = 0;
 	struct free_node_t *temp_node;
 
