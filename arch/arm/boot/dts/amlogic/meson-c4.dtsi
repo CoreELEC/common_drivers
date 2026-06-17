@@ -1388,7 +1388,6 @@
 		compatible = "snps,dwc3-meson";
 		maximum-speed = "high-speed";
 		dr_mode = "otg"; /*using role control mode, this must be otg*/
-		//dr_mode = "peripheral";
 		phy_type = "utmi";
 		reg = <0xf4000000 0x10000>;
 		interrupts = <GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>;
@@ -1403,22 +1402,15 @@
 		//snps,usb3_lpm_capable;
 		snps,usb2-gadget-lpm-disable;
 		snps,has-lpm-erratum;
-		/* better try */
-		//snps,rx_detect_poll_quirk;
 		snps,dis_u3_susphy_quirk;
 		snps,dis_u2_susphy_quirk;
 		snps,dis_enblslpm_quirk;
-		/* why we do this? dwc3_ref_clk_period() must enable GFLADJ_REFCLK_LPM_SEL */
-		//snps,dis-u2-freeclk-exists-quirk;
-		//snps,gfladj-refclk-lpm-sel-quirk;
-		/* need post-silicon test. */
-		//snps,quirk-frame-length-adjustment;
-		snps,rx-thr-num-pkt = <2>;
-		snps,rx-max-burst = <16>;
-		snps,tx-thr-num-pkt = <2>;
-		snps,tx-max-burst = <16>;
+		snps,rx-thr-num-pkt = /bits/ 8 <2>;
+		snps,rx-max-burst = /bits/ 8 <16>;
+		snps,tx-thr-num-pkt = /bits/ 8 <2>;
+		snps,tx-max-burst = /bits/ 8 <16>;
 		tx-fifo-resize;
-		tx-fifo-max-num = <3>;
+		tx-fifo-max-num = /bits/ 8 <3>;
 		snps,incr-burst-type-adjustment = <4>;
 		usb-role-switch;
 
