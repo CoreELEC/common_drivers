@@ -3658,6 +3658,7 @@
 		status = "okay";
 		interrupts = <GIC_SPI 197 IRQ_TYPE_EDGE_RISING
 			GIC_SPI 194 IRQ_TYPE_EDGE_RISING>;
+		vpp1_hold_line = <4>;
 		interrupt-names = "vsync", "vsync_viu2";
 	};
 
