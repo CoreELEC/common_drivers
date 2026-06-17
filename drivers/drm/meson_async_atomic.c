@@ -156,6 +156,7 @@ static struct drm_crtc_state *
 meson_drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 			  struct drm_crtc *crtc)
 {
+	int ret;
 	int index = drm_crtc_index(crtc);
 	struct drm_crtc_state *crtc_state;
 
@@ -167,6 +168,11 @@ meson_drm_atomic_get_crtc_state(struct drm_atomic_state *state,
 
 	DRM_DEBUG("legacy-%d, async-%d, osd-%d\n", state->async_update,
 		  state->legacy_cursor_update, is_am_osd_async_commit(state));
+	if (!state->async_update || is_am_osd_async_commit(state)) {
+		ret = drm_modeset_lock(&crtc->mutex, state->acquire_ctx);
+		if (ret)
+			return ERR_PTR(ret);
+	}
 
 	crtc_state = crtc->funcs->atomic_duplicate_state(crtc);
 	if (!crtc_state)
@@ -430,10 +436,6 @@ meson_atomic_helper_check_crtcs(struct drm_device *dev,
 
 		if (!funcs || !funcs->atomic_check)
 			continue;
-
-		ret = drm_modeset_lock(&crtc->mutex, state->acquire_ctx);
-		if (ret)
-			return ret;
 
 		ret = funcs->atomic_check(crtc, state);
 		if (ret) {
