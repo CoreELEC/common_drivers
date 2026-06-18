@@ -16137,9 +16137,7 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 	}
 
 #ifdef CONFIG_AMLOGIC_VIDEO_DISPLAY
-		vd_vpp_toggle_cur_vf(vf, layer_id);
-#elif defined(CONFIG_AMLOGIC_VIDEO_COMPOSER)
-		vc_vpp_toggle_cur_vf(vf, layer_id);
+	vd_vpp_toggle_cur_vf(vf, layer_id);
 #endif
 
 	return ret;
