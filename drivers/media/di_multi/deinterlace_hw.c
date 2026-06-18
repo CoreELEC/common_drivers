@@ -1132,7 +1132,8 @@ void dimh_enable_di_pre_aml(struct DI_MIF_S *di_inp_mif,
 		di_mem_mif->luma_y_start0 + 1;
 	if (chan2_hsize != nrwr_hsize || chan2_vsize != nrwr_vsize)
 		chan2_disable = true;
-
+	if (di_chan2_mif->addr0 == 0)
+		chan2_disable = true;
 	if (!di_nrwr_mif->is_dw) {
 		if (mem_hsize != nrwr_hsize || mem_vsize != nrwr_vsize)
 			mem_bypass = true;
