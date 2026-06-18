@@ -46,6 +46,7 @@ struct amlogic_hsgmii_phy_data {
 	void __iomem		*u3hsg_combo_reg; /* U3 HSGMII combo reg base */
 	u32			combo_hsg_sel_val; /* Value to select HSGMII mode */
 
+	bool			power_on;
 	/* Current speed of HSGMII PHY */
 	int			speed;
 	/* True: PHY Sync Link, False: Fast Link */
@@ -283,6 +284,13 @@ static int amlogic_hsgmii_phy_power_on(struct phy *phy)
 		aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
 				HSG_INIT_CTRL_WAIT_SPEED_EN,
 				HSG_INIT_CTRL_WAIT_SPEED_EN);
+		/* FIXME:
+		 * Software assert phy_link_up, otherwise, mac dma reset
+		 * will fail and hsgmii_mode_rst_n will not release.
+		 */
+		aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
+				HSG_INIT_CTRL_PHY_LINK_STATUS,
+				HSG_INIT_CTRL_PHY_LINK_STATUS);
 	} else { /* Fast Link mode */
 		aml_regmap_update_bits(data->regmap, AML_PHY_HSG_INIT_CTRL,
 				HSG_INIT_CTRL_INITIAL_MODE,
@@ -290,17 +298,19 @@ static int amlogic_hsgmii_phy_power_on(struct phy *phy)
 
 		if (data->rx_fsm_restart)
 			aml_regmap_update_bits(data->regmap, AML_PHY_HSG_RX_FSM_CTRL,
-					HSG_RX_FSM_CTRL_RESTART,
-					HSG_RX_FSM_CTRL_RESTART);
+					HSG_RX_FSM_CTRL_RESTART_MODE,
+					HSG_RX_FSM_CTRL_RESTART_MODE);
 		if (data->pll_fsm_restart)
 			aml_regmap_update_bits(data->regmap, AML_PHY_HSG_PLL_FSM_CTRL,
-					HSG_PLL_FSM_CTRL_RESTART,
-					HSG_PLL_FSM_CTRL_RESTART);
+					HSG_PLL_FSM_CTRL_RESTART_MODE,
+					HSG_PLL_FSM_CTRL_RESTART_MODE);
 	}
 
 	ret = amlogic_hsgmii_phy_trim(phy);
 	if (ret)
 		dev_err(dev, "failed to trim HSGMII PHY: %d\n", ret);
+
+	data->power_on = true;
 
 	return 0;
 }
@@ -337,6 +347,8 @@ static int amlogic_hsgmii_phy_power_off(struct phy *phy)
 	/* TX */
 	regmap_write(data->regmap, AML_PHY_HSG_TX_CFG0, 0x001800B0); /* 2.5G */
 	regmap_write(data->regmap, AML_PHY_HSG_TX_CFG1, 0x001800B0); /* 1G */
+
+	data->power_on = false;
 
 	return 0;
 }
@@ -466,7 +478,8 @@ static int amlogic_hsgmii_phy_probe(struct platform_device *pdev)
 	if (IS_ERR(data->regmap))
 		return PTR_ERR(data->regmap);
 
-	data->speed = SPEED_1000;
+	data->power_on = false;
+	data->speed = SPEED_UNKNOWN;
 
 	amlogic_serdes_config_dt(pdev, data);
 
@@ -492,22 +505,49 @@ static int amlogic_hsgmii_phy_probe(struct platform_device *pdev)
 	len += _ret; \
 } while (0)
 
-#define HSG_PRINT_FIELD(var, field) do { \
-	int _ret = snprintf(buf + len, PAGE_SIZE - len, \
-			"  %-24s = %x\n", \
-			#field, ((stats->var).reg).field); \
-	len += _ret; \
+#define __F(var, fld) { #fld, ((stats->var).reg).fld }
+#define __F_2(val, f1, f2) __F(val, f1), __F(val, f2)
+#define __F_3(val, f1, f2, f3) __F_2(val, f1, f2), __F(val, f3)
+#define __F_4(val, f1, f2, f3, f4) __F_3(val, f1, f2, f3), __F(val, f4)
+#define __F_5(val, f1, f2, f3, f4, f5) __F_4(val, f1, f2, f3, f4), __F(val, f5)
+#define __F_6(val, f1, f2, f3, f4, f5, f6) __F_5(val, f1, f2, f3, f4, f5), __F(val, f6)
+#define __F_7(val, f1, f2, f3, f4, f5, f6, f7) __F_6(val, f1, f2, f3, f4, f5, f6), __F(val, f7)
+
+#define HSG_PRINT_FIELDS(...) do { \
+	const struct { const char *name; u32 val; } _f[] = { __VA_ARGS__ }; \
+	int _ret; \
+	int _i; \
+	for (_i = 0; _i < ARRAY_SIZE(_f); _i++) { \
+		_ret = snprintf(buf + len, PAGE_SIZE - len, \
+				"  %-24s = %x\n", _f[_i].name, _f[_i].val); \
+		len += _ret; \
+	} \
 } while (0)
 
 static void hsg_update_debug_stats(struct amlogic_hsgmii_phy_data *data)
 {
 	struct hsg_phy_stats *stats = &data->hsg_stats;
+	const struct {
+		unsigned int reg;
+		u32 *val;
+	} hsg_regs[] = {
+		{ AML_PHY_HSG_RX_CFG1,		&stats->rx_cfg1 },
+		{ AML_PHY_HSG_TX_CFG0,		&stats->tx_cfg0 },
+		{ AML_PHY_HSG_TX_CFG1,		&stats->tx_cfg1 },
+		{ AML_PHY_HSG_BYPASS_PLL_CTRL,	&stats->bypass_pll_ctrl },
 
-	regmap_read(data->regmap, AML_PHY_HSG_MAC_STATUS, &stats->mac_status.val);
-	regmap_read(data->regmap, AML_PHY_HSG_INIT_DEBUG, &stats->init_dbg.val);
-	regmap_read(data->regmap, AML_PHY_HSG_PLL_INIT_DEBUG, &stats->pll_dbg.val);
-	regmap_read(data->regmap, AML_PHY_HSG_RX_CTRL_DEBUG, &stats->rx_ctrl_dbg.val);
-	regmap_read(data->regmap, AML_PHY_HSG_RX_DEBUG, &stats->rx_dbg.val);
+		{ AML_PHY_HSG_TX_CFG2,		&stats->tx_cfg2.val },
+		{ AML_PHY_HSG_INIT_CTRL,	&stats->init_ctrl.val },
+		{ AML_PHY_HSG_MAC_STATUS,	&stats->mac_status.val },
+		{ AML_PHY_HSG_INIT_DEBUG,	&stats->init_dbg.val },
+		{ AML_PHY_HSG_PLL_INIT_DEBUG,	&stats->pll_dbg.val },
+		{ AML_PHY_HSG_RX_CTRL_DEBUG,	&stats->rx_ctrl_dbg.val },
+		{ AML_PHY_HSG_RX_DEBUG,		&stats->rx_dbg.val },
+	};
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(hsg_regs); i++)
+		regmap_read(data->regmap, hsg_regs[i].reg, hsg_regs[i].val);
 }
 
 static ssize_t status_show(struct device *dev,
@@ -515,12 +555,15 @@ static ssize_t status_show(struct device *dev,
 {
 	struct amlogic_hsgmii_phy_data *data = dev_get_drvdata(dev);
 	struct hsg_phy_stats *stats = &data->hsg_stats;
+
 	ssize_t len = 0;
 	u32 val;
 
 	hsg_update_debug_stats(data);
 
-	len += snprintf(buf + len, PAGE_SIZE - len, "=== PHY Config ===\n");
+	len += snprintf(buf + len, PAGE_SIZE - len, "=== Global Config ===\n");
+	len += snprintf(buf + len, PAGE_SIZE - len, "Power Status: %s\n",
+			data->power_on ? "ON" : "OFF");
 	len += snprintf(buf + len, PAGE_SIZE - len, "Speed: %d Mbps\n", data->speed);
 	len += snprintf(buf + len, PAGE_SIZE - len, "PSL Mode: %s\n",
 			data->psl_mode ? "PHY Sync" : "Fast Link");
@@ -528,50 +571,67 @@ static ssize_t status_show(struct device *dev,
 			data->rx_fsm_restart ? "Y" : "N");
 	len += snprintf(buf + len, PAGE_SIZE - len, "PLL Fsm Restart Mode: %s\n",
 			data->pll_fsm_restart ? "Y" : "N");
+	len += snprintf(buf + len, PAGE_SIZE - len, "PLL Fsm Control: %s\n",
+			(stats->bypass_pll_ctrl & HSG_BYPASS_PLL_CTRL_DEBUG_MODE) ?
+			"Disable" : "Enable");
 	if (data->u3hsg_combo_reg) {
 		val = readl(data->u3hsg_combo_reg);
 		len += snprintf(buf + len, PAGE_SIZE - len, "Combo Select HSG: %s\n",
 				(val == data->combo_hsg_sel_val) ? "Y" : "N <- error");
 	}
 
+	len += snprintf(buf + len, PAGE_SIZE - len, "=== Trim Config ===\n");
+	len += snprintf(buf + len, PAGE_SIZE - len, "RX impedance: %x\n",
+			(u32)(stats->rx_cfg1 & HSG_DCHA_AFE_UPCRX_MASK) >>
+			HSG_DCHA_AFE_UPCRX_SHIFT);
+	len += snprintf(buf + len, PAGE_SIZE - len, "upctx_boost_en(1G mode): %s\n",
+			(stats->tx_cfg1 & HSG_UPCTX_BOOST_EN) ? "Y" : "N");
+	len += snprintf(buf + len, PAGE_SIZE - len, "upctx_boost_en(2.5G mode): %s\n",
+			(stats->tx_cfg0 & HSG_UPCTX_BOOST_EN) ? "Y" : "N");
+	HSG_PRINT_FIELDS(__F_3(tx_cfg2,
+			       upctx_pdio_main, upctx_puio_main, upctx_boost_ctrl),
+	);
+
+	/* INIT CTRL */
+	HSG_PRINT_REG(init_ctrl, INIT_CTRL);
+	HSG_PRINT_FIELDS(__F_7(init_ctrl,
+			       init_reset, phy_link_status, hsgmii_speed_en, hsgmii_speed,
+			       initial_mode, wait_speed_en, speed_detect_timer),
+	);
+
 	/* MAC Status */
 	HSG_PRINT_REG(mac_status, MAC_STATUS);
-	HSG_PRINT_FIELD(mac_status, rx_fsm_ready);
-	HSG_PRINT_FIELD(mac_status, pcs_acquired_sync);
-	HSG_PRINT_FIELD(mac_status, sgmii_link_spd);
-	HSG_PRINT_FIELD(mac_status, pcs_ewrap);
-	HSG_PRINT_FIELD(mac_status, pcs_en_cdet);
-	HSG_PRINT_FIELD(mac_status, pcs_lck_ref);
+	HSG_PRINT_FIELDS(__F_6(mac_status,
+			       rx_fsm_ready, pcs_acquired_sync, sgmii_link_spd,
+			       pcs_ewrap, pcs_en_cdet, pcs_lck_ref),
+	);
 
 	/* INIT Debug */
 	HSG_PRINT_REG(init_dbg, INIT_DEBUG);
-	HSG_PRINT_FIELD(init_dbg, hsgmii_mode_rst_n);
-	HSG_PRINT_FIELD(init_dbg, hsgmii_clk_en);
-	HSG_PRINT_FIELD(init_dbg, phy_link_status_final);
-	HSG_PRINT_FIELD(init_dbg, hsgmii_speed);
-	HSG_PRINT_FIELD(init_dbg, phy_speed_final);
-	HSG_PRINT_FIELD(init_dbg, hsi_cstate);
+	HSG_PRINT_FIELDS(__F_6(init_dbg,
+			       hsgmii_mode_rst_n, hsgmii_clk_en, phy_link_status_final,
+			       hsgmii_speed, phy_speed_final, hsi_cstate),
+	);
 
 	/* PLL Debug */
 	HSG_PRINT_REG(pll_dbg, PLL_INIT_DEBUG);
-	HSG_PRINT_FIELD(pll_dbg, pll0_lock);
-	HSG_PRINT_FIELD(pll_dbg, pll1_lock);
-	HSG_PRINT_FIELD(pll_dbg, pll0_fail_cnt);
-	HSG_PRINT_FIELD(pll_dbg, pll1_fail_cnt);
-	HSG_PRINT_FIELD(pll_dbg, pll_cstate);
+	HSG_PRINT_FIELDS(__F_5(pll_dbg,
+			       pll0_lock, pll1_lock, pll0_fail_cnt,
+			       pll1_fail_cnt, pll_cstate),
+	);
 
 	/* RX Ctrl Debug */
 	HSG_PRINT_REG(rx_ctrl_dbg, RX_CTRL_DEBUG);
-	HSG_PRINT_FIELD(rx_ctrl_dbg, pcs_acquired_sync_cdc);
-	HSG_PRINT_FIELD(rx_ctrl_dbg, upcrx_cdlock_sync);
-	HSG_PRINT_FIELD(rx_ctrl_dbg, rx_fsm_ready);
-	HSG_PRINT_FIELD(rx_ctrl_dbg, lock_fail_cnt);
-	HSG_PRINT_FIELD(rx_ctrl_dbg, rx_fsm_cstate);
+	HSG_PRINT_FIELDS(__F_5(rx_ctrl_dbg,
+			       pcs_acquired_sync_cdc, upcrx_cdlock_sync,
+			       rx_fsm_ready, lock_fail_cnt, rx_fsm_cstate),
+	);
 
 	/* RX Debug */
 	HSG_PRINT_REG(rx_dbg, RX_DEBUG);
-	HSG_PRINT_FIELD(rx_dbg, upcrx_state);
-	HSG_PRINT_FIELD(rx_dbg, upcrx_dbg_eq);
+	HSG_PRINT_FIELDS(__F_2(rx_dbg,
+			       upcrx_state, upcrx_dbg_eq),
+	);
 
 	return len;
 }

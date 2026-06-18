@@ -6,6 +6,32 @@
 #ifndef AML_PHY_HSGMII_H_
 #define AML_PHY_HSGMII_H_
 
+/* AML_PHY_HSG_TX_CFG2 (0x088) */
+union hsg_tx_cfg2_reg {
+	u32 val;
+	struct {
+		u32 upctx_boost_ctrl	: 5;
+		u32 upctx_puio_main	: 3;
+		u32 upctx_pdio_main	: 3;
+		u32 reserved0		: 21;
+	} reg;
+};
+
+/* AML_PHY_HSG_INIT_CTRL (0x090) */
+union hsg_init_ctrl_reg {
+	u32 val;
+	struct {
+		u32 init_reset		: 1;
+		u32 phy_link_status	: 1;
+		u32 hsgmii_speed_en	: 1;
+		u32 hsgmii_speed	: 2;
+		u32 initial_mode	: 1;
+		u32 wait_speed_en	: 1;
+		u32 reserved0		: 9;
+		u32 speed_detect_timer	: 16;
+	} reg;
+};
+
 /* AML_PHY_HSG_MAC_STATUS (0x094) */
 union hsg_mac_status_reg {
 	u32 val;
@@ -76,6 +102,13 @@ union hsg_rx_debug_reg {
 };
 
 struct hsg_phy_stats {
+	u32 rx_cfg1;
+	u32 tx_cfg0;
+	u32 tx_cfg1;
+	u32 bypass_pll_ctrl;
+
+	union hsg_tx_cfg2_reg tx_cfg2;
+	union hsg_init_ctrl_reg init_ctrl;
 	union hsg_mac_status_reg mac_status;
 	union hsg_init_debug_reg init_dbg;
 	union hsg_pll_init_debug_reg pll_dbg;
