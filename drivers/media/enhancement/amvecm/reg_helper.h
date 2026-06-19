@@ -523,10 +523,17 @@ static int index_rdma_part_ins(u32 reg)
 	if (reg == 0x1d26)
 		table_index = 0;
 
-	if (chip_type_id == chip_a9 &&
-		(reg == 0x5126 ||
-		reg == 0x5192))
-		table_index = 0;
+	if (chip_type_id == chip_a9) {
+		if (reg == 0x5126 ||
+			reg == 0x5192)
+			table_index = 0;
+		else if ((reg >= 0x3800 && reg <= 0x3860) || //osd1 hdr
+			(reg >= 0x5b00 && reg <= 0x5b60) || //osd2 hdr
+			(reg >= 0x6200 && reg <= 0x6260) || //vd1 hdr
+			(reg >= 0x6280 && reg <= 0x62e0) || //vd2 hdr
+			(reg >= 0x5930 && reg <= 0x5990))  //vd3 hdr
+			table_index = 1;
+	}
 
 	return table_index;
 }

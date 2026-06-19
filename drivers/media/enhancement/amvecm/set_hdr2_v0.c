@@ -8431,7 +8431,11 @@ void mtx_setting(enum vpp_matrix_e mtx_sel,
 		vpp_sel = VPP_TOP2;
 	else if (mtx_sel == VPP1_POST2_MTX &&
 	    (get_cpu_type() == MESON_CPU_MAJOR_ID_T7 ||
-	    get_cpu_type() == MESON_CPU_MAJOR_ID_T3))
+	    get_cpu_type() == MESON_CPU_MAJOR_ID_T3 ||
+	    chip_type_id == chip_a9))
+		vpp_sel = VPP_TOP1;
+	else if (mtx_sel == VPP_OSD3_MTX &&
+		chip_type_id == chip_a9)
 		vpp_sel = VPP_TOP1;
 	else
 		vpp_sel = VPP_TOP0;
