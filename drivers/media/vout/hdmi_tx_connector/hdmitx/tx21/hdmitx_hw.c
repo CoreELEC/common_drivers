@@ -5363,6 +5363,14 @@ static int hdmitx21_hw_cntl_platform(struct hdmitx_hw_common *tx_hw, u32 cmd,
 			/* may be executed in vsync interrupt */
 			hdmitx_fifo_flow_enable_intr(0);
 			hdev->ignore_fifo_intr5 = true;
+			/* when disable phy, there may be hdcp22 reauth request from
+			 * TV side, hdmitx will start reauth after reauth intr received,
+			 * it will cause ake_init sent on DDC, but no more any other
+			 * auth steps on DDC as hdcp22 auth will be disabled soon,
+			 * it may cause abnormal on TV.
+			 * so need to disable hdcp intr before disable phy.
+			 */
+			hdcp_enable_intr(false);
 			hdmi_phy_suspend();
 		}
 		break;
