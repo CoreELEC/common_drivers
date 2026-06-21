@@ -6,6 +6,7 @@
 	amlogic-dt-id = "s6_s905x5_umx5jyks";
 
 	led {
+		sck-gpios  = <&gpio GPIOF_3 GPIO_ACTIVE_LOW>;
 		mosi-gpios = <&gpio GPIOA_9 GPIO_ACTIVE_LOW>;
 	};
 };
