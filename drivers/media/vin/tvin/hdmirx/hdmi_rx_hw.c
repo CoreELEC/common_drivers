@@ -3647,6 +3647,9 @@ bool rx_get_dig_clk_en_sts(void)
 	case CHIP_ID_T6X:
 		ret = hdmirx_rd_bits_clk_ctl(RX_CLK_CTRL1, CFG_CLK_EN);
 		break;
+	case CHIP_ID_A9:
+		ret = hdmirx_rd_bits_clk_ctl(RX_CLK_CTRL_A9, CFG_CLK_EN);
+		break;
 	default:
 		ret = true;
 		break;
@@ -7343,6 +7346,8 @@ void aml_phy_init_no_delay(u8 port)
 		aml_phy_init_t6x(port);
 	else if (rx_info.phy_ver == PHY_VER_TXHD2)
 		aml_phy_init_txhd2();
+	else if (rx_info.phy_ver == PHY_VER_A9)
+		aml_phy_init_a9();
 	eq_sts[port] = E_EQ_FINISH;
 }
 

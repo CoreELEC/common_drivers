@@ -1499,11 +1499,11 @@ void clk_init_cor_a9(void)
 
 void rx_dig_clk_en_a9(bool en)
 {
-	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL, CLK_2M_EN, en);
-	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL, CLK_5M_EN, en);
-	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL1, HDCP2X_ECLK_EN, en);
-	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL1, CFG_CLK_EN, en);
-	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL3, METER_CLK_EN, en);
+	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL_A9, CLK_2M_EN, en);
+	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL_A9, CLK_5M_EN, en);
+	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL1_A9, HDCP2X_ECLK_EN, en);
+	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL1_A9, CFG_CLK_EN, en);
+	hdmirx_wr_bits_clk_ctl(RX_CLK_CTRL3_A9, METER_CLK_EN, en);
 }
 
 void rx_aud_pll_ctl_a9(bool en, u8 port)

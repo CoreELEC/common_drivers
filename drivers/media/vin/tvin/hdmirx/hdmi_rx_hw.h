@@ -71,7 +71,8 @@
 /* 2026.01.20 add edid intr to clear segment when edid do not read done*/
 /* 2026.04.08 open vga tune for 8g4l and modify vga tune*/
 /* 2026.06.15 modify a9 4k30 phy setting*/
-#define RX_HW_VER "ver.2026/06/15"
+/* 2026.06.22 add digital clk check when resume for a9 */
+#define RX_HW_VER "ver.2026/06/22"
 
 #define K_TEST_CHK_ERR_CNT
 
@@ -1392,6 +1393,12 @@
 #define RX_CLK_CTRL1_T5W		(0x9 << 2)
 #define RX_CLK_CTRL2_T5W		(0xa << 2)
 #define RX_CLK_CTRL3_T5W		(0xb << 2)
+
+/*A9 clk_ctrl*/
+#define RX_CLK_CTRL_A9	(0x0125  << 2)
+#define RX_CLK_CTRL1_A9	(0x0126  << 2)
+#define RX_CLK_CTRL2_A9	(0x0127  << 2)
+#define RX_CLK_CTRL3_A9	(0x0128  << 2)
 
 /* AONREG */
 #define RX_AON_SRST		0x05
