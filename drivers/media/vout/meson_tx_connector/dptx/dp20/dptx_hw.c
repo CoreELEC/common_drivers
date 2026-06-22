@@ -3629,6 +3629,9 @@ static void _dptx_audio_init(struct dptx_hw_common *hw_comm, u8 vc_id)
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SRCX_SECONDARY_STREAM_ENABLE), 1);
 	dptx20_reg_write(hw_comm, CORE_LEVEL,
 		dptx20_hw_calc_mst_reg(vc_id, DPTX20_SECX_AUDIO_ENABLE), 1); // mute
+
+	/* for dptx source0 audio  */
+	dptx20_reg_write(hw_comm, CORE_LEVEL, DPTX20_SECX_AUDIO_ENABLE, 0x7f9);
 }
 
 static void _config_spdif_for(struct dptx_hw_common *hw_comm, u8 vc_id)
