@@ -1840,6 +1840,7 @@
 			clock-names = "core", "mux0", "mux1", "clkin0", "clkin1";
 			card_type = <5>;
 			mmc_debug_flag;
+			cap-mmc-64bit-dma;
 			no-mmc;
 			no-sdio;
 			//resets = <&reset RESET_SD_EMMC_B>;
@@ -1864,6 +1865,7 @@
 			cap-sdio-irq;
 			keep-power-in-suspend;
 			use_intf3_tuning;
+			cap-mmc-64bit-dma;
 			no-mmc;
 			no-sd;
 			//resets = <&reset RESET_SD_EMMC_A>;
