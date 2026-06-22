@@ -753,6 +753,14 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	/* note that dts config will override the default config when init */
 	ret = amhdmitx_get_dt_info(pdev, tx_comm);
 
+	/*
+	 * Interfaces that rely on data in the DTS for initialization
+	 * should be placed in the post-init method, while the common
+	 * init method does not depend on the DTS and only assigns
+	 * initial values.
+	 */
+	hdmitx_common_post_init(tx_comm, hw_comm);
+
 	r = alloc_chrdev_region(&tx_comm->hdmitx_id, 0, HDMI_TX_COUNT,
 				DEVICE_NAME);
 	cdev_init(&tx_comm->cdev, &amhdmitx_fops);

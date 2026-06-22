@@ -269,12 +269,25 @@ int hdmitx_common_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *h
 	tx_comm->hdr_state = meson_tx_hdr_create(tx_comm);
 	tx_comm->hdr_state->config_csc_en = boot_param->config_csc;
 
-	hdmitx_vout_init(tx_comm, hw_comm);
 	hdmitx_ext_instance_init(tx_comm);
 	/* get efuse ctrl state */
 	get_hdmi_efuse(tx_comm);
 
 	return 0;
+}
+
+int hdmitx_common_post_init(struct hdmitx_common *tx_comm, struct hdmitx_hw_common *hw_comm)
+{
+	int ret = 0;
+
+	if (!tx_comm || !hw_comm) {
+		HDMITX_ERROR("post init faile\n");
+		return -EINVAL;
+	}
+
+	hdmitx_vout_init(tx_comm, hw_comm);
+
+	return ret;
 }
 
 int hdmitx_common_destroy(struct hdmitx_common *tx_comm)
