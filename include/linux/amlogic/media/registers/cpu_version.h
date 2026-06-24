@@ -324,6 +324,23 @@ static inline bool is_meson_s6_cpu(void)
 {
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_S6;
 }
+
+/* SoC pack versions for S6 (0x48) series */
+enum meson_cpu_pack_id_e {
+	MESON_CPU_PACK_ID_S6_S905X5	= 0x01,
+	MESON_CPU_PACK_ID_S6_S905X5L	= 0x05,
+};
+
+static inline bool is_meson_s6_package_s905x5(void)
+{
+	return is_meson_s6_cpu() && package_id_is(MESON_CPU_PACK_ID_S6_S905X5);
+}
+
+static inline bool is_meson_s6_package_s905x5l(void)
+{
+	return is_meson_s6_cpu() && package_id_is(MESON_CPU_PACK_ID_S6_S905X5L);
+}
+
 static inline bool cpu_after_eq(unsigned int id)
 {
 	return get_cpu_type() >= id;
