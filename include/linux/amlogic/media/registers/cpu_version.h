@@ -329,6 +329,8 @@ static inline bool is_meson_s6_cpu(void)
 enum meson_cpu_pack_id_e {
 	MESON_CPU_PACK_ID_S6_S905X5	= 0x01,
 	MESON_CPU_PACK_ID_S6_S905X5L	= 0x05,
+	MESON_CPU_PACK_ID_SC2_S905X4	= 0x02,
+	MESON_CPU_PACK_ID_SC2_S905C2L	= 0x05,
 };
 
 static inline bool is_meson_s6_package_s905x5(void)
@@ -339,6 +341,17 @@ static inline bool is_meson_s6_package_s905x5(void)
 static inline bool is_meson_s6_package_s905x5l(void)
 {
 	return is_meson_s6_cpu() && package_id_is(MESON_CPU_PACK_ID_S6_S905X5L);
+}
+
+/* SoC pack versions for SC2 (0x32) series */
+static inline bool is_meson_sc2_package_s905x4(void)
+{
+	return is_meson_sc2_cpu() && package_id_is(MESON_CPU_PACK_ID_SC2_S905X4);
+}
+
+static inline bool is_meson_sc2_package_s905c2l(void)
+{
+	return is_meson_sc2_cpu() && package_id_is(MESON_CPU_PACK_ID_SC2_S905C2L);
 }
 
 static inline bool cpu_after_eq(unsigned int id)
