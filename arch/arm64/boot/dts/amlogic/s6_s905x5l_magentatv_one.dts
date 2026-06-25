@@ -1,0 +1,61 @@
+#include "s6_s905x5l_bn201.dts"
+#include "coreelec_s6_common.dtsi"
+
+/ {
+	model = "MagentaTV ONE";
+	coreelec-dt-id = "s6_s905x5l_magenta_tv_one";
+
+	gpioleds {
+		sys_led {
+			gpios = <&gpio GPIOF_4 GPIO_ACTIVE_HIGH>;
+		};
+
+		red_led {
+			label = "red_led";
+			gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+			linux,default-trigger = "rc_feedback";
+		};
+	};
+
+	gpio_keypad {
+		key_name = "reset", "mute";
+		key_code = <KEY_RESTART SW_MUTE_DEVICE>;
+	};
+
+	/* amlogic_codec/t9015 is disabled by default, use dummy_codec instead */
+	auge_sound {
+		aml-audio-card,dai-link@1 {
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+	};
+};
+
+&ethmac {
+	pinctrl-0 = <&eth_pins>;
+	phy-mode = "rmii";
+	phy-handle = <&internal_ephy>;
+	internal_phy = <1>;
+	mdns_wkup = <0>;
+};
+
+&int_mdio {
+	status = "okay";
+};
+
+&uart_A {
+	interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+};
+
+&sd_emmc_b {
+	status = "disabled";
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Magenta";
+		product_desc = "TV One";
+	};
+};
