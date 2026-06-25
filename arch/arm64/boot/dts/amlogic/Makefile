@@ -52,6 +52,7 @@ dtb-y += s5_s928x_x96_x10_4g.dtb
 dtb-y += s5_s928x_x96_x10_8g.dtb
 dtb-y += s6_s905x5_ugoos_am9.dtb
 dtb-y += s6_s905x5_ugoos_am9_pro.dtb
+dtb-y += s6_s905x5l_magentatv_one.dtb
 dtb-y += s7_s905y5_2g.dtb
 dtb-y += s7_s905y5_sei_900_hdplus.dtb
 dtb-y += s7d_s905x5m_2g.dtb
