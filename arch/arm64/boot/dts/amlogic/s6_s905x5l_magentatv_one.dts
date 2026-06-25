@@ -1,0 +1,309 @@
+#include "s6_s905x5l_bn201.dts"
+#include "coreelec_s6_common.dtsi"
+
+/ {
+	model = "MagentaTV ONE";
+	coreelec-dt-id = "s6_s905x5l_magenta_tv_one";
+
+	dummy-charger {
+		status = "okay";
+		compatible = "amlogic, dummy-charger";
+	};
+
+	dummy-battery {
+		status = "okay";
+		compatible = "amlogic, dummy-battery";
+	};
+
+	ir_wakeup_key {
+		key_num = <16>;
+		wakeup_key = <0xba45bd02 0x0 0x74
+			0xef10fe01 0x0 0x74
+			0xef10fb04 0x0 0x74
+			0xf20dfe01 0x0 0x74
+			0xe51afb04 0x0 0x74
+			0x3ac5bd02 0x1 0x85
+			0xb8477788 0x0 0x66
+			0x6516 0x0 0x74
+			0x6416 0x0 0x74
+			0x19ae9 0x0 0x74
+			0x23dc80dd 0x0 0x74
+			0x23dcfd01 0x0 0x74
+			0x629dfd01 0x1 0x44
+			0x19aa2 0x1 0x44
+			0xde217788 0x0 0x74
+			0x9c637788 0x1 0x44>;
+	};
+
+	/delete-node/ gpio_leds;
+	/delete-node/ gpioleds;
+
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		red {
+			label = "red_led";
+			gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+			linux,default-trigger = "rc_feedback";
+		};
+
+		green {
+			label = "green_led";
+			gpios = <&gpio GPIOF_4 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
+
+	sk-rgbled {
+		compatible = "skyworth, rgbled";
+		status = "okay";
+	};
+};
+
+/* Drop unused bn201 nodes */
+&{/} {
+	/delete-node/ custom_maps;
+	/delete-node/ gpio_keypad;
+	/delete-node/ dvb-extern;
+	/delete-node/ dvb-demux;
+};
+
+/* Ethernet: internal RMII 100M PHY */
+&ethmac {
+	pinctrl-0 = <&eth_pins>;
+	pinctrl-names = "default";
+	phy-mode = "rmii";
+	phy-handle = <&internal_ephy>;
+	internal_phy = <1>;
+	mdns_wkup = <0>;
+	mac_wol = <0>;
+};
+
+&int_mdio {
+	status = "okay";
+};
+
+/* DVB: 3 frontends */
+&{/} {
+	dvb-extern {
+		compatible = "amlogic, dvb-extern";
+		dev_name = "dvb-extern";
+		status = "disabled";
+
+		dvb_power_gpio = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		dvb_power_value = <1>;
+		dvb_power_dir = <0>;
+
+		fe_num = <3>;
+		fe0_demod = "internal";
+		fe0_tuner0 = <0>;
+		fe1_demod = "internal";
+		fe1_tuner0 = <1>;
+		fe2_demod = "cxd2856";
+		fe2_i2c_adap_id = <&i2c4>;
+		fe2_demod_i2c_addr = <0xD8>;
+		fe2_reset_value = <0>;
+		fe2_reset_gpio = <&gpio GPIOZ_4 GPIO_ACTIVE_HIGH>;
+		fe2_reset_dir = <0>;
+		fe2_ant_poweron_value = <0>;
+		fe2_ts = <0>;
+		fe2_tuner1 = <3>;
+
+		tuner_num = <4>;
+		tuner0_name = "r836_tuner";
+		tuner0_i2c_adap = <&i2c3>;
+		tuner0_i2c_addr = <0x1a>;
+		tuner0_xtal = <0>;
+		tuner0_xtal_mode = <0>;
+		tuner0_xtal_cap = <16>;
+		tuner0_lt_out = <1>;
+
+		tuner1_name = "r836_tuner";
+		tuner1_i2c_adap = <&i2c3>;
+		tuner1_i2c_addr = <0x3a>;
+		tuner1_xtal = <0>;
+		tuner1_xtal_mode = <0>;
+		tuner1_xtal_cap = <16>;
+		tuner1_lt_out = <1>;
+
+		tuner2_name = "av2018_tuner";
+		tuner2_i2c_adap = <&i2c3>;
+		tuner2_i2c_addr = <0xC4>;
+		tuner2_lt_out = <1>;
+
+		tuner3_name = "av2018_tuner";
+		tuner3_lt_out = <1>;
+	};
+
+	dvb-demux {
+		compatible = "amlogic sc2, dvb-demux";
+		dev_name = "dvb-demux";
+		status = "disabled";
+
+		reg = <0x0 0xfe000000 0x0 0x480000>;
+
+		dmxdev_num = <0x11>;
+		tsn_from = "demod";
+
+		ts0_sid = <0x10>;
+		ts0 = "serial-4wire";
+		ts0_control = <0x0>;
+		ts0_invert = <0>;
+
+		ts1_sid = <0x11>;
+		ts1 = "parallel";
+		ts1_control = <0x0>;
+		ts1_invert = <0>;
+
+		ts2_sid = <0x12>;
+		ts2 = "parallel";
+		ts2_control = <0x0>;
+		ts2_invert = <0>;
+
+		ts3_sid = <0x7>;
+	};
+};
+
+/* GPIO keypad: reset + mute */
+&{/} {
+	gpio_keypad {
+		compatible = "amlogic, gpio_keypad";
+		status = "okay";
+		scan_period = <20>;
+		key_num = <2>;
+		key_name = "reset", "mute";
+		key_code = <KEY_RESTART SW_MUTE_DEVICE>;
+		key_type = <EV_KEY EV_SW>;
+		key-gpios = <&gpio GPIOD_2 GPIO_ACTIVE_HIGH
+			     &gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		detect_mode = <0>;
+	};
+};
+
+/* VCC5V on GPIOH_7 */
+&vcc5v_reg {
+	gpio = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+};
+
+&i2c2 {
+	/delete-node/ sy602x_54@2a;
+};
+
+&i2c5 {
+	/delete-node/ sensor0@1a;
+};
+
+/* PCIe: disabled — GPIOX_0 shared with SDIO WiFi */
+&pcie {
+	reset-gpio = <&gpio GPIOX_0 GPIO_ACTIVE_HIGH>;
+	max-link-speed = <1>;
+	iommu-map = <0x100 &smmu 0x5 0x10>;
+	status = "okay";
+};
+
+&sd_emmc_b {
+	status = "disabled";
+};
+
+/* WiFi + BT */
+&sd_emmc_a {
+	status = "disabled";
+};
+
+/* Enable PWM for WiFi power sequencing */
+&pwm_e {
+	pinctrl-0 = <&pwm_e_pins1>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+/* WiFi PWM config — must be defined before &aml_wifi references it */
+&{/} {
+	wifi_pwm_conf: wifi_pwm_conf {
+		pwm_channel1_conf {
+			pwms = <&pwm_e 0 0x774d 0>;
+			duty-cycle = <0x3ba6>;
+			times = <7>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_e 1 0x7724 0>;
+			duty-cycle = <0x3b92>;
+			times = <10>;
+		};
+	};
+};
+
+&aml_wifi {
+	status = "okay";
+	wifi_pwm_tee;
+	irq_trigger_type = "IRQF_TRIGGER_LOW";
+	wifi_static_buf = <0>;
+	pwm_config = <&wifi_pwm_conf>;
+	power_on-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+	interrupt-gpios = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
+};
+
+&aml_bt {
+	status = "okay";
+	reset-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
+	btwakeup-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
+	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
+};
+
+&pwm_e {
+	pinctrl-0 = <&pwm_e_pins1>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+/* Audio: override coreelec's auge_sound — add suffix-name + dummy_codec */
+&{/} {
+	auge_sound {
+		aml-audio-card,dai-link@0 {
+			suffix-name = "alsaPORT-spdifb";
+		};
+		aml-audio-card,dai-link@1 {
+			suffix-name = "alsaPORT-i2s";
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+		aml-audio-card,dai-link@2 {
+			suffix-name = "alsaPORT-spdif";
+		};
+		aml-audio-card,dai-link@3 {
+			suffix-name = "alsaPORT-i2s2hdmi";
+		};
+	};
+};
+
+/* UARTs */
+&uart_A {
+	status = "okay";
+	uart-has-rtscts;
+	interrupts = <GIC_SPI 168 IRQ_TYPE_EDGE_RISING>;
+};
+
+/* DRM / FB */
+&fb {
+	status = "disabled";
+};
+
+&drm_vpu {
+	status = "okay";
+	logo_addr = "0x7f800000";
+};
+
+&drm_subsystem {
+	status = "okay";
+	fbdev_sizes = <1280 720 1280 1440 32>;
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Magenta";
+		product_desc = "TV One";
+	};
+};
