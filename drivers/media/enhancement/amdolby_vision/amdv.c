@@ -5900,7 +5900,7 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 				}
 			}
 			/* prepare metadata parser */
-			if (!dv_inst[dv_id].metadata_parser) {
+			if (!rcu_access_pointer(dv_inst[dv_id].metadata_parser)) {
 				pr_dv_error
 				("[inst%d]meta(%d), pts(%lld) -> metadata parser init fail\n",
 					dv_id + 1, rpu_size, vf->pts_us64);
@@ -6112,7 +6112,7 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 				}
 			}
 			/* prepare metadata parser */
-			if (!dv_inst[dv_id].metadata_parser) {
+			if (!rcu_access_pointer(dv_inst[dv_id].metadata_parser)) {
 				pr_dv_error
 				("meta(%d), pts(%lld) -> metadata parser init fail\n",
 				size, vf->pts_us64);
