@@ -1582,6 +1582,8 @@ static bool get_one_line(char **cfg_buf, char *line_buf, bool ignore_comments)
 		} else {
 			line_len = (size_t)(line_end - *cfg_buf);
 		}
+		if (line_len > MAX_READ_SIZE - 1)
+			line_len = MAX_READ_SIZE - 1;
 		memcpy(line_buf, *cfg_buf, line_len);
 		line_buf[line_len] = '\0';
 		if (line_len > 0 && line_buf[line_len - 1] == '\r')
@@ -3652,6 +3654,8 @@ static bool read_one_line(char **text_buf, char *line_buf)
 		} else {
 			line_len = (size_t)(line_end - *text_buf);
 		}
+		if (line_len > MAX_READ_SIZE - 1)
+			line_len = MAX_READ_SIZE - 1;
 		memcpy(line_buf, *text_buf, line_len);
 		line_buf[line_len] = '\0';
 		if (line_len > 0 && line_buf[line_len - 1] == '\r')
