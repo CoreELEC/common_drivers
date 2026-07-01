@@ -2516,6 +2516,20 @@ int dv_inst_map(int *inst)
 		dv_inst[new_map_id].mapped = true;
 		*inst = new_map_id;
 
+		{
+			/* registration pre-inits inst 0/1: tear a pre-existing parser
+			 * down via RCU (never reset a reader-visible one in place) so
+			 * the init below always sees a NULL slot. */
+			void *stale = rcu_dereference_protected(
+				dv_inst[*inst].metadata_parser,
+				lockdep_is_held(&dv_inst_lock));
+			if (stale && p_funcs_stb) {
+				rcu_assign_pointer(dv_inst[*inst].metadata_parser, NULL);
+				synchronize_rcu();
+				p_funcs_stb->multi_mp_release(&stale);
+			}
+		}
+
 		if (!rcu_dereference_protected(dv_inst[*inst].metadata_parser,
 					       lockdep_is_held(&dv_inst_lock)) &&
 		    p_funcs_stb) {
@@ -2523,18 +2537,14 @@ int dv_inst_map(int *inst)
 				p_funcs_stb->multi_mp_init(dolby_vision_flags
 								& FLAG_CHANGE_SEQ_HEAD
 								? 1 : 0);
-			/* publish to vsync readers via RCU */
-			rcu_assign_pointer(dv_inst[*inst].metadata_parser,
-					   new_parser);
-		}
-		{
-			void *mp = rcu_dereference_protected
-				(dv_inst[*inst].metadata_parser,
-				 lockdep_is_held(&dv_inst_lock));
-			if (mp) {
-				p_funcs_stb->multi_mp_reset(mp, 1);
+			/* reset before publishing: never expose a half-reset parser
+			 * to a concurrent vsync multi_mp_process(). */
+			if (new_parser) {
+				p_funcs_stb->multi_mp_reset(new_parser, 1);
 				pr_dv_dbg("reset mp\n");
 			}
+			rcu_assign_pointer(dv_inst[*inst].metadata_parser,
+					   new_parser);
 		}
 		mutex_unlock(&dv_inst_lock);
 		/*clear dv_vf and framecount*/
@@ -2596,13 +2606,31 @@ EXPORT_SYMBOL(dv_inst_unmap);
 void force_unmap_all_inst(void)
 {
 	int i;
+	void *snapshots[NUM_INST] = { NULL };
 
 	if (!multi_dv_mode)
 		return;
 
+	/* two-pass RCU teardown (see dv_inst_unmap): NULL under lock, one
+	 * synchronize_rcu, then release -- also plugs a parser leak here. */
+	mutex_lock(&dv_inst_lock);
+	for (i = 0; i < NUM_INST; i++) {
+		snapshots[i] = rcu_dereference_protected
+			(dv_inst[i].metadata_parser,
+			 lockdep_is_held(&dv_inst_lock));
+		if (snapshots[i])
+			rcu_assign_pointer(dv_inst[i].metadata_parser, NULL);
+		dv_inst[i].mapped = 0;
+	}
+	synchronize_rcu();
+	for (i = 0; i < NUM_INST; i++) {
+		if (snapshots[i] && p_funcs_stb)
+			p_funcs_stb->multi_mp_release(&snapshots[i]);
+	}
+	mutex_unlock(&dv_inst_lock);
+
 	for (i = 0; i < NUM_INST; i++) {
 		amdv_clear_buf(i);
-		dv_inst[i].mapped = 0;
 		dv_inst[i].frame_count = 0;
 		dv_inst[i].last_mel_mode = 0;
 		dv_inst[i].last_total_md_size = 0;
