@@ -2556,13 +2556,15 @@ int dv_inst_map(int *inst)
 		dv_inst[*inst].layer_id = VD_PATH_MAX;
 		dv_inst[*inst].video_height = 0;
 		dv_inst[*inst].video_width = 0;
-		dv_inst[*inst].src_format = FORMAT_SDR;
 		dv_inst[*inst].valid = 0;
 		dv_inst[*inst].current_id = 0;
-		dv_inst[*inst].in_md = NULL;
-		dv_inst[*inst].in_md_size = 0;
-		dv_inst[*inst].in_comp = NULL;
-		dv_inst[*inst].in_comp_size = 0;
+		/* size-before-pointer release: in_md==NULL implies in_md_size==0 */
+		WRITE_ONCE(dv_inst[*inst].src_format, FORMAT_SDR);
+		WRITE_ONCE(dv_inst[*inst].in_md_size, 0);
+		WRITE_ONCE(dv_inst[*inst].in_comp_size, 0);
+		smp_wmb();
+		WRITE_ONCE(dv_inst[*inst].in_md, NULL);
+		WRITE_ONCE(dv_inst[*inst].in_comp, NULL);
 		dv_inst[*inst].err_parse_cnt = 0;
 		return 0;
 	}
@@ -2627,8 +2629,8 @@ void force_unmap_all_inst(void)
 		if (snapshots[i] && p_funcs_stb)
 			p_funcs_stb->multi_mp_release(&snapshots[i]);
 	}
-	mutex_unlock(&dv_inst_lock);
-
+	/* hold dv_inst_lock across the field clears too, so a concurrent
+	 * dv_inst_map() cannot re-map and have its fresh fields clobbered */
 	for (i = 0; i < NUM_INST; i++) {
 		amdv_clear_buf(i);
 		dv_inst[i].frame_count = 0;
@@ -2638,15 +2640,18 @@ void force_unmap_all_inst(void)
 		dv_inst[i].layer_id = VD_PATH_MAX;
 		dv_inst[i].video_height = 0;
 		dv_inst[i].video_width = 0;
-		dv_inst[i].src_format = FORMAT_INVALID;
 		dv_inst[i].amdv_src_format = 0;
 		dv_inst[i].valid = 0;
 		dv_inst[i].current_id = 0;
-		dv_inst[i].in_md = NULL;
-		dv_inst[i].in_md_size = 0;
-		dv_inst[i].in_comp = NULL;
-		dv_inst[i].in_comp_size = 0;
+		/* size-before-pointer release (see dv_inst_map) */
+		WRITE_ONCE(dv_inst[i].src_format, FORMAT_INVALID);
+		WRITE_ONCE(dv_inst[i].in_md_size, 0);
+		WRITE_ONCE(dv_inst[i].in_comp_size, 0);
+		smp_wmb();
+		WRITE_ONCE(dv_inst[i].in_md, NULL);
+		WRITE_ONCE(dv_inst[i].in_comp, NULL);
 	}
+	mutex_unlock(&dv_inst_lock);
 }
 
 #define MAX_FILENAME_LENGTH 64
@@ -10477,19 +10482,20 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	}
 
 	if (vf && dv_inst_valid(dv_id)) {
-		dv_inst[dv_id].in_md =
-			dv_inst[dv_id].md_buf[dv_inst[dv_id].current_id];
-		dv_inst[dv_id].in_comp =
-			dv_inst[dv_id].comp_buf[dv_inst[dv_id].current_id];
+		WRITE_ONCE(dv_inst[dv_id].in_md,
+			dv_inst[dv_id].md_buf[dv_inst[dv_id].current_id]);
+		WRITE_ONCE(dv_inst[dv_id].in_comp,
+			dv_inst[dv_id].comp_buf[dv_inst[dv_id].current_id]);
 		if (src_format == FORMAT_DOVI) {
-			dv_inst[dv_id].in_md_size = total_md_size;
-			dv_inst[dv_id].in_comp_size = total_comp_size;
+			WRITE_ONCE(dv_inst[dv_id].in_md_size, total_md_size);
+			WRITE_ONCE(dv_inst[dv_id].in_comp_size, total_comp_size);
 		} else {
-			dv_inst[dv_id].in_md_size = 0;
-			dv_inst[dv_id].in_comp_size = 0;
+			WRITE_ONCE(dv_inst[dv_id].in_md_size, 0);
+			WRITE_ONCE(dv_inst[dv_id].in_comp_size, 0);
 		}
 
-		dv_inst[dv_id].src_format = src_format;
+		smp_wmb(); /* release: publish src_format after in_md/size */
+		WRITE_ONCE(dv_inst[dv_id].src_format, src_format);
 		dv_inst[dv_id].set_chroma_format = CP_P420;
 		/*input yuv range for non-dv source*/
 		dv_inst[dv_id].set_yuv_range = is_fullrange_frame(vf) ?
@@ -10823,7 +10829,8 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 		if (dv_inst_valid(id)) {
 			dv_inst[id].valid = 1;
 			input_mode = dv_inst[id].input_mode;
-			src_format = dv_inst[id].src_format;
+			/* single snapshot, reused for the gate and the blob value */
+			src_format = READ_ONCE(dv_inst[id].src_format);
 
 			if (new_m_dovi_setting.input[i].video_width &&
 			    new_m_dovi_setting.input[i].video_height) {
@@ -10883,19 +10890,26 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 			new_m_dovi_setting.input[i].input_mode = dv_inst[id].input_mode;
 			new_m_dovi_setting.input[i].video_width = dv_inst[id].video_width;
 			new_m_dovi_setting.input[i].video_height = dv_inst[id].video_height;
+			smp_rmb(); /* acquire: pair with writer's src_format release */
 			new_m_dovi_setting.input[i].in_md =
-				dv_inst[id].in_md;
+				READ_ONCE(dv_inst[id].in_md);
 			new_m_dovi_setting.input[i].in_comp =
-				dv_inst[id].in_comp;
+				READ_ONCE(dv_inst[id].in_comp);
 
+			smp_rmb(); /* acquire: in_md before in_md_size */
 			if (src_format == FORMAT_DOVI) {
-				new_m_dovi_setting.input[i].in_md_size = dv_inst[id].in_md_size;
-				new_m_dovi_setting.input[i].in_comp_size = dv_inst[id].in_comp_size;
+				new_m_dovi_setting.input[i].in_md_size = READ_ONCE(dv_inst[id].in_md_size);
+				new_m_dovi_setting.input[i].in_comp_size = READ_ONCE(dv_inst[id].in_comp_size);
 			} else {
 				new_m_dovi_setting.input[i].in_md_size = 0;
 				new_m_dovi_setting.input[i].in_comp_size = 0;
 			}
-			new_m_dovi_setting.input[i].src_format = dv_inst[id].src_format;
+			new_m_dovi_setting.input[i].src_format = src_format;
+			/* never hand the blob NULL in_md with positive size */
+			if (!new_m_dovi_setting.input[i].in_md)
+				new_m_dovi_setting.input[i].in_md_size = 0;
+			if (!new_m_dovi_setting.input[i].in_comp)
+				new_m_dovi_setting.input[i].in_comp_size = 0;
 			new_m_dovi_setting.input[i].p_hdr10_param = &dv_inst[id].hdr10_param;
 			new_m_dovi_setting.input[i].set_chroma_format =
 				dv_inst[id].set_chroma_format;
