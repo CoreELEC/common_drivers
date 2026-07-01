@@ -12,6 +12,7 @@
 #define DRIVER_VER "20250109"
 
 #include <linux/types.h>
+#include <linux/seqlock.h>
 #include "amdv_pq_config.h"
 
 #define ENABLE_MORE_PRINT 0
@@ -671,6 +672,8 @@ struct dv_inst_s {
 	enum input_mode_enum input_mode;
 	u32 err_parse_cnt;
 	char *meta_buf;
+	/* guards the process-ctx re-init store batch vs the vsync-IRQ harvesters */
+	seqcount_t seq;
 };
 
 /*hw5 video info*/
