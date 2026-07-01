@@ -12,6 +12,7 @@
 #define DRIVER_VER "202301225"
 
 #include <linux/types.h>
+#include <linux/seqlock.h>
 #include "amdv_pq_config.h"
 
 #define DOLBY_VISION_LL_DISABLE		0
@@ -611,6 +612,8 @@ struct dv_inst_s {
 	int vsem_if_size;
 	enum input_mode_enum input_mode;
 	u32 err_parse_cnt;
+	/* guards the process-ctx re-init store batch vs the vsync-IRQ harvesters */
+	seqcount_t seq;
 };
 
 /*hw5 video info*/
