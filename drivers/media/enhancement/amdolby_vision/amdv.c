@@ -2719,7 +2719,7 @@ int amdv_update_setting(bool update_top1, bool update_top2)
 	dovi_setting_update_flag = false;
 	if (multi_dv_mode) {
 		dv_id = vd1_inst_id;
-		setting_update_count = dv_inst_valid(dv_id) ? dv_inst[dv_id].frame_count : 0;
+		setting_update_count = dv_inst_valid(dv_id) ? READ_ONCE(dv_inst[dv_id].frame_count) : 0;
 	} else if (is_aml_hw5()) {
 		setting_update_count = top2_v_info.frame_count;
 	} else {
@@ -3584,6 +3584,7 @@ int amdv_create_inst(void)
 			else
 				goto fail_create;
 			dv_inst[i].current_id = 0;
+			seqcount_init(&dv_inst[i].seq);
 			rcu_assign_pointer(dv_inst[i].metadata_parser, NULL);
 			dv_inst[i].layer_id = VD_PATH_MAX;
 			dv_inst[i].mapped = false;
@@ -3765,18 +3766,28 @@ int dv_inst_map(int *inst)
 			rcu_assign_pointer(dv_inst[*inst].metadata_parser,
 					   new_parser);
 		}
-		mutex_unlock(&dv_inst_lock);
 		/*clear dv_vf and framecount*/
 		amdv_clear_buf(*inst);
-		dv_inst[*inst].frame_count = 0;
-		dv_inst[*inst].last_mel_mode = 0;
-		dv_inst[*inst].last_total_md_size = 0;
-		dv_inst[*inst].last_total_comp_size = 0;
-		dv_inst[*inst].layer_id = VD_PATH_MAX;
-		dv_inst[*inst].video_height = 0;
-		dv_inst[*inst].video_width = 0;
-		dv_inst[*inst].valid = 0;
-		dv_inst[*inst].current_id = 0;
+		{
+			unsigned long __sf;
+
+			/* IRQs off so the vsync harvester cannot begin on this CPU
+			 * while seq is odd (livelock-free); write section is bounded
+			 * straight-line stores. amdv_clear_buf stays outside. */
+			local_irq_save(__sf);
+			write_seqcount_begin(&dv_inst[*inst].seq);
+			dv_inst[*inst].frame_count = 0;
+			dv_inst[*inst].last_mel_mode = 0;
+			dv_inst[*inst].last_total_md_size = 0;
+			dv_inst[*inst].last_total_comp_size = 0;
+			dv_inst[*inst].layer_id = VD_PATH_MAX;
+			dv_inst[*inst].video_height = 0;
+			dv_inst[*inst].video_width = 0;
+			dv_inst[*inst].valid = 0;
+			dv_inst[*inst].current_id = 0;
+			write_seqcount_end(&dv_inst[*inst].seq);
+			local_irq_restore(__sf);
+		}
 		/* size-before-pointer release: in_md==NULL implies in_md_size==0 */
 		WRITE_ONCE(dv_inst[*inst].src_format, FORMAT_SDR);
 		WRITE_ONCE(dv_inst[*inst].in_md_size, 0);
@@ -3785,6 +3796,7 @@ int dv_inst_map(int *inst)
 		WRITE_ONCE(dv_inst[*inst].in_md, NULL);
 		WRITE_ONCE(dv_inst[*inst].in_comp, NULL);
 		dv_inst[*inst].err_parse_cnt = 0;
+		mutex_unlock(&dv_inst_lock);
 		return 0;
 	}
 map_err:
@@ -3851,7 +3863,11 @@ void force_unmap_all_inst(void)
 	/* hold dv_inst_lock across the field clears too, so a concurrent
 	 * dv_inst_map() cannot re-map and have its fresh fields clobbered */
 	for (i = 0; i < NUM_INST; i++) {
+		unsigned long __sf;
+
 		amdv_clear_buf(i);
+		local_irq_save(__sf);
+		write_seqcount_begin(&dv_inst[i].seq);
 		dv_inst[i].frame_count = 0;
 		dv_inst[i].last_mel_mode = 0;
 		dv_inst[i].last_total_md_size = 0;
@@ -3862,6 +3878,8 @@ void force_unmap_all_inst(void)
 		dv_inst[i].amdv_src_format = 0;
 		dv_inst[i].valid = 0;
 		dv_inst[i].current_id = 0;
+		write_seqcount_end(&dv_inst[i].seq);
+		local_irq_restore(__sf);
 		/* size-before-pointer release (see dv_inst_map) */
 		WRITE_ONCE(dv_inst[i].src_format, FORMAT_INVALID);
 		WRITE_ONCE(dv_inst[i].in_md_size, 0);
@@ -7587,8 +7605,14 @@ int parse_sei_and_meta(struct vframe_s *vf,
 			dv_inst[inst_id].last_total_comp_size = *total_comp_size;
 			dv_inst[inst_id].last_total_md_size = *total_md_size;
 		} else { /*parser err, use backup md and comp*/
-			*total_comp_size = dv_inst[inst_id].last_total_comp_size;
-			*total_md_size = dv_inst[inst_id].last_total_md_size;
+			unsigned int __eseq;
+
+			/* harvest the backup (comp,md) pair consistently vs re-init */
+			do {
+				__eseq = read_seqcount_begin(&dv_inst[inst_id].seq);
+				*total_comp_size = dv_inst[inst_id].last_total_comp_size;
+				*total_md_size = dv_inst[inst_id].last_total_md_size;
+			} while (read_seqcount_retry(&dv_inst[inst_id].seq, __eseq));
 		}
 	} else {
 		if (ret == 0) {
@@ -11289,10 +11313,17 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 				dv_inst[dv_id].last_mel_mode = mel_flag;
 			}
 		} else if (meta_flag_bl && meta_flag_el) {
-			total_md_size =  dv_inst[dv_id].last_total_md_size;
-			total_comp_size = dv_inst[dv_id].last_total_comp_size;
+			unsigned int __pseq;
+
+			/* Harvest the re-init batch consistently (md_size==0 below
+			 * drives a FORMAT_SDR fallback -- a torn read would flash). */
+			do {
+				__pseq = read_seqcount_begin(&dv_inst[dv_id].seq);
+				total_md_size = dv_inst[dv_id].last_total_md_size;
+				total_comp_size = dv_inst[dv_id].last_total_comp_size;
+				mel_flag = dv_inst[dv_id].last_mel_mode;
+			} while (read_seqcount_retry(&dv_inst[dv_id].seq, __pseq));
 			el_flag = dv_inst[dv_id].el_flag;
-			mel_flag = dv_inst[dv_id].last_mel_mode;
 			if (debug_dolby & 2)
 				pr_dv_dbg("update el_flag %d, melFlag %d\n",
 					     el_flag, mel_flag);
@@ -12310,10 +12341,21 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 		new_m_dovi_setting.input[i].valid = 1;
 		++valid_video_num;
 		if (dv_inst_valid(id)) {
+			u32 h_vw, h_vh;
+			unsigned int __cseq;
+
 			dv_inst[id].valid = 1;
 			input_mode = dv_inst[id].input_mode;
 			/* single snapshot, reused for the gate and the blob value */
 			src_format = READ_ONCE(dv_inst[id].src_format);
+			/* Harvest (video_width,video_height) as a consistent pair vs a
+			 * concurrent re-init, so the res-change compare + populate below
+			 * never see a torn width/height. */
+			do {
+				__cseq = read_seqcount_begin(&dv_inst[id].seq);
+				h_vw = dv_inst[id].video_width;
+				h_vh = dv_inst[id].video_height;
+			} while (read_seqcount_retry(&dv_inst[id].seq, __cseq));
 
 			if (new_m_dovi_setting.input[i].video_width &&
 			    new_m_dovi_setting.input[i].video_height) {
@@ -12331,14 +12373,14 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 				cur_input_mode = m_dovi_setting.input[i].input_mode;
 			}
 
-			if (new_m_dovi_setting.input[i].video_width != dv_inst[id].video_width ||
-			    new_m_dovi_setting.input[i].video_height != dv_inst[id].video_height) {
+			if (new_m_dovi_setting.input[i].video_width != h_vw ||
+			    new_m_dovi_setting.input[i].video_height != h_vh) {
 				res_change = true;
 				pr_dv_dbg("[inst%d vd%d]res changed %dx%d=> %dx%d\n",
 					  id + 1, i + 1,
 					  new_m_dovi_setting.input[i].video_width,
 					  new_m_dovi_setting.input[i].video_height,
-					  dv_inst[id].video_width, dv_inst[id].video_height);
+					  h_vw, h_vh);
 			}
 			if (i == 0 && inst_id_1 != last_inst_id_1) {
 				input_inst_change = true;
@@ -12372,8 +12414,8 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 				p_funcs_stb->multi_control_path(&invalid_m_dovi_setting);
 			}
 			new_m_dovi_setting.input[i].input_mode = dv_inst[id].input_mode;
-			new_m_dovi_setting.input[i].video_width = dv_inst[id].video_width;
-			new_m_dovi_setting.input[i].video_height = dv_inst[id].video_height;
+			new_m_dovi_setting.input[i].video_width = h_vw;
+			new_m_dovi_setting.input[i].video_height = h_vh;
 			smp_rmb(); /* acquire: pair with writer's src_format release */
 			new_m_dovi_setting.input[i].in_md =
 				READ_ONCE(dv_inst[id].in_md);
