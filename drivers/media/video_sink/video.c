@@ -5576,6 +5576,9 @@ static char *check_media_sei(char *sei, u32 sei_size, u32 fmt_type, u32 *ret_siz
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
 		type = (type << 8) | *p++;
+		/* block body must fit the remaining buffer (untrusted SEI length) */
+		if (size > (u32)(sei + sei_size - p))
+			break;
 		if (ret_size)
 			*ret_size = size + 8;
 		if ((sei_type == DV_SEI && sei_type == type)) {/*h264/h265 dv*/
