@@ -1254,7 +1254,7 @@ unsigned int qfp_list(struct qs_cls_s *p,
 
 	while (kfifo_out(&tmp_kfifo, &index, tst_quep_ele) ==
 	       tst_quep_ele && (cnt < size)) {
-		list[i] = (void *)index;
+		list[cnt] = (void *)index;
 		cnt++;
 	}
 	kfifo_free(&tmp_kfifo);
