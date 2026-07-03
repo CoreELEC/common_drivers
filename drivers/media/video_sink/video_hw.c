@@ -8612,7 +8612,7 @@ void vpp_blend_update(const struct vinfo_s *vinfo, u8 vpp_index)
 
 	if (!vd_layer[1].enabled && is_local_vf(vd_layer[1].dispbuf)) {
 		safe_switch_videolayer(1, false, true);
-		video_keeper_new_frame_notify(vd_layer[0].keep_frame_id);
+		video_keeper_new_frame_notify(vd_layer[1].keep_frame_id);
 	}
 
 	if (force_vpp_blend_update) {
