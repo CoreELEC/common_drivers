@@ -15,6 +15,11 @@
 #include <linux/delay.h>
 #include <linux/sysfs.h>
 
+// SPI mode 0
+// the clock starts with a low-level pulse (CPOL = 0)
+// and data is sampled on the rising edge of the clock signal (CPHA = 0)
+// but because pins are inverted in dts it is actually SPI mode 3
+
 #define MAX_SPEED_HZ 1000000 /* 1 MHz */
 #define BITS_PER_WORD 8
 #define NO_RGB_COLOR 0x00000000
@@ -29,13 +34,11 @@ struct sk9822 {
 	u8 color_shutdown[4];
 };
 
-/* to use bit-banging function from spi-bitbang-txrx.h directly
-	 because we don't use linux kernel SPI the struct is not redefined here */
+// to use bit-banging function from spi-bitbang-txrx.h directly
+// because we don't use linux kernel SPI the struct is defined here
 struct spi_device {
 	struct sk9822 *sk;
 };
-
-#define SPI_CPOL _BITUL(1) /* clock polarity */
 
 #define SPI_CONTROLLER_NO_RX BIT(1) /* can't do buffer read */
 #define SPI_CONTROLLER_NO_TX BIT(2) /* can't do buffer write */
@@ -66,20 +69,20 @@ static inline void spidelay(unsigned int nsecs)
 	ndelay(nsecs);
 }
 
-/* include function bitbang_txrx_be_cpha1() */
+// include function bitbang_txrx_be_cpha0()
 #include "../../../drivers/spi/spi-bitbang-txrx.h"
 
-/* transfer function called for each spi message */
+// transfer function called for each spi message
 static void tx_spi_data(struct sk9822 *sk, u8 *tx_buf, unsigned int len)
 {
 	unsigned int nsecs = 1000000000 / (2 * MAX_SPEED_HZ); /* half period */
-	unsigned cpol = SPI_CPOL;
+	unsigned cpol = 0; /* clock polarity */
 	unsigned flags = SPI_MASTER_NO_RX;
 	struct spi_device spi = { .sk = sk };
 	int i;
 
 	for (i = 0; i < len; i++) {
-		bitbang_txrx_be_cpha1(&spi, nsecs, cpol, flags, tx_buf[i],
+		bitbang_txrx_be_cpha0(&spi, nsecs, cpol, flags, tx_buf[i],
 				      BITS_PER_WORD);
 	}
 
@@ -88,21 +91,25 @@ static void tx_spi_data(struct sk9822 *sk, u8 *tx_buf, unsigned int len)
 
 static void set_color(struct sk9822 *sk, u8 *color)
 {
-	u8 frames[9] = { 0x00 };
+	u8 frames[12] = { 0x00 };
 
-	/*
-    0x00, 0x00, 0x00, 0x00,  0xe5, 0xff, 0x00, 0x00,  0x00
-    ^                        ^       B     G     R    ^
-    start frame              3b global + brightness   end frame
-
-    using from userspace:
-      echo "5 00 00 ff" >/sys/devices/platform/led/colors/active
-  */
+	//       0     1     2     3      4     5     6     7      8     9    10    11
+	//    0x00, 0x00, 0x00, 0x00,  0xe5, 0xff, 0x00, 0x00,  0xff, 0xff, 0xff, 0xff
+	//    ^                        ^       B     G     R    ^
+	//    start frame              3b global + brightness   reset frame
+	//
+	//    using from userspace:
+	//      echo "5 00 00 ff" >/sys/devices/platform/led/colors/active
 
 	frames[4] = 0xe0 | color[0]; /* global data + brightness */
 	frames[5] = color[3]; /* B */
 	frames[6] = color[2]; /* G */
 	frames[7] = color[1]; /* R */
+
+	frames[8] = 0xff; /* reset frame */
+	frames[9] = 0xff; /* reset frame */
+	frames[10] = 0xff; /* reset frame */
+	frames[11] = 0xff; /* reset frame */
 
 	tx_spi_data(sk, frames, sizeof(frames));
 }
@@ -222,12 +229,7 @@ static void parse_dt_gpio(struct device *dev, const char *name,
 
 static int parse_dt(struct sk9822 *sk)
 {
-	/*
-    SPI mode 3
-    the clock starts with a high-level pulse (CPOL = 1)
-    and data is sampled on the trailing (rising) edge of the clock signal (CPHA = 1)
-  */
-	parse_dt_gpio(sk->dev, "sck", &(sk->gpio_sck), GPIOD_OUT_HIGH);
+	parse_dt_gpio(sk->dev, "sck", &(sk->gpio_sck), GPIOD_OUT_LOW);
 	if (IS_ERR(sk->gpio_sck))
 		return PTR_ERR(sk->gpio_sck);
 
@@ -316,16 +318,16 @@ static const struct of_device_id dt_match[] = {
 MODULE_DEVICE_TABLE(of, dt_match);
 
 static struct platform_driver sk9822_driver = {
-  .driver = {
-    .name = "sk9822-spi",
-    .owner = THIS_MODULE,
-    .of_match_table = of_match_ptr(dt_match),
-    .dev_groups = attr_groups,
-    .pm = &pm_ops,
-  },
-  .probe = probe,
-  .remove = remove,
-  .shutdown = shutdown,
+	.driver = {
+		.name = "sk9822-spi",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(dt_match),
+		.dev_groups = attr_groups,
+		.pm = &pm_ops,
+	},
+	.probe = probe,
+	.remove = remove,
+	.shutdown = shutdown,
 };
 
 module_platform_driver(sk9822_driver);
