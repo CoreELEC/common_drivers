@@ -440,6 +440,12 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev, struct hdmitx_comm
 			else
 				hw_comm->hdmi_tx_cap.tx_max_frl_rate = val;
 		}
+		ret = of_property_read_u32(pdev->dev.of_node, "vrr_type", &val);
+		tx_comm->vrr_mode = T_VRR_NONE; /* default */
+		if (!ret) {
+			if (val == T_VRR_GAME || val == T_VRR_QMS)
+				tx_comm->vrr_mode = val;
+		}
 		/* hdcp ctrl 0:sysctrl, 1: drv, 2: linux app */
 		ret = of_property_read_u32(pdev->dev.of_node,
 			   "hdcp_ctl_lvl", &tx_comm->hdcptx_comm.hdcp_ctl_lvl);
