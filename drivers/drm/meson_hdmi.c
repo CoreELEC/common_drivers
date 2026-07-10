@@ -350,7 +350,16 @@ static int meson_hdmitx_decide_color_attr
 			    strstr(common->fmt_attr, "422") == NULL &&
 			    strstr(common->fmt_attr, "444") == NULL) {
 				if (is_hdmi4k_support_420(vic & 0xff)) {
-					attr->colorformat = HDMI_COLORSPACE_YUV420;
+                       /*
+                        * Use YCbCr 4:2:2 when supported by the sink,
+                        * otherwise retain the existing YCbCr 4:2:0
+                        * behaviour.
+                        */
+                       if (common->rxcap.native_Mode & (1 << 4))
+                               attr->colorformat = HDMI_COLORSPACE_YUV422;
+                       else
+                               attr->colorformat = HDMI_COLORSPACE_YUV420;
+
 					DRM_INFO("[%s]: display colour subsampling is forced to %s because of current video information code %d\n", __func__,
 						colour_sampling[attr->colorformat], vic);
 				}
