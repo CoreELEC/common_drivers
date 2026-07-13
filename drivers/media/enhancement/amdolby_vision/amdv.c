@@ -5095,17 +5095,21 @@ void amdv_vf_put(struct vframe_s *vf)
 {
 	int i;
 	int dv_id = 0;
+	struct vframe_s *el_put[16];
+	int el_num = 0;
+	unsigned long flags;
 
 	if (!vf)
 		return;
 
+	spin_lock_irqsave(&amdv_lock, flags);
 	if (multi_dv_mode) {
 		if (vf && dv_inst_valid(vf->src_fmt.dv_id))
 			dv_id = vf->src_fmt.dv_id;
 		for (i = 0; i < 16; i++) {
 			if (dv_inst[dv_id].dv_vf[i][0] == vf) {
 				if (dv_inst[dv_id].dv_vf[i][1]) {
-					dvel_vf_put(dv_inst[dv_id].dv_vf[i][1]);
+					el_put[el_num++] = dv_inst[dv_id].dv_vf[i][1];
 				} else if (debug_dolby & 2) {
 					pr_dv_dbg("--#%d: put bl(%p-%lld) --\n",
 						     dv_id, vf, vf->pts_us64);
@@ -5123,7 +5127,7 @@ void amdv_vf_put(struct vframe_s *vf)
 							vf, vf->pts_us64,
 							top2_v_info.dv_vf[i][1],
 							top2_v_info.dv_vf[i][1]->pts_us64);
-					dvel_vf_put(top2_v_info.dv_vf[i][1]);
+					el_put[el_num++] = top2_v_info.dv_vf[i][1];
 				} else if (debug_dolby & 2) {
 					pr_dv_dbg("--- put bl(%p-%lld) ---\n",
 						vf, vf->pts_us64);
@@ -5141,7 +5145,7 @@ void amdv_vf_put(struct vframe_s *vf)
 							vf, vf->pts_us64,
 							dv_vf[i][1],
 							dv_vf[i][1]->pts_us64);
-					dvel_vf_put(dv_vf[i][1]);
+					el_put[el_num++] = dv_vf[i][1];
 				} else if (debug_dolby & 2) {
 					pr_dv_dbg("--- put bl(%p-%lld) ---\n",
 						vf, vf->pts_us64);
@@ -5151,6 +5155,11 @@ void amdv_vf_put(struct vframe_s *vf)
 			}
 		}
 	}
+
+	spin_unlock_irqrestore(&amdv_lock, flags);
+
+	for (i = 0; i < el_num; i++)
+		dvel_vf_put(el_put[i]);
 }
 EXPORT_SYMBOL(amdv_vf_put);
 
