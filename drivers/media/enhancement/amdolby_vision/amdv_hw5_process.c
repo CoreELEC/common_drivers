@@ -488,7 +488,7 @@ int parse_sei_and_meta_ext_hw5(struct vframe_s *vf,
 		if (debug_dolby & 4)
 			pr_dv_dbg("metadata type=%08x, size=%d:\n",
 				     type, size);
-		if (size == 0 || size > aux_size) {
+		if (size == 0 || size > (aux_buf + aux_size - p)) {
 			pr_dv_dbg("invalid aux size %d\n", size);
 			ret = 1;
 			goto parse_err;
