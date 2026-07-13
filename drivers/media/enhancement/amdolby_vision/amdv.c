@@ -14723,8 +14723,12 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			if (is_aml_tm2() || is_aml_t7()) {
 				tv_dovi_setting =
 				vmalloc(sizeof(struct tv_dovi_setting_s));
-				if (!tv_dovi_setting)
+				if (!tv_dovi_setting) {
+					vfree(ko_info);
+					ko_info = NULL;
+					p_funcs_stb = NULL;
 					return -ENOMEM;
+				}
 			}
 			hdmi_source_led_as_hdr10 = true;
 			enable_multi_core1 = 0;
@@ -14821,6 +14825,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			if (!new_m_dovi_setting.output_ctrl_data) {
 				vfree(ko_info);
 				ko_info = NULL;
+				p_funcs_stb = NULL;
 				pr_info("output_ctrl_data malloc error\n");
 				return -ENOMEM;
 			}
@@ -14852,6 +14857,7 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 				if (!tv_dovi_setting) {
 					vfree(ko_info);
 					ko_info = NULL;
+					p_funcs_stb = NULL;
 					pr_info("tv setting malloc error\n");
 					return -ENOMEM;
 				}
