@@ -6109,8 +6109,12 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 
 				if (nal_type == PREFIX_SEI_NUT_NAL ||
 					nal_type == SUFFIX_SEI_NUT_NAL) {
+					if (p + 4 > aux_buf + aux_size)
+						break;
 					sei_payload_type = *(p + 2);
 					sei_payload_size = *(p + 3);
+					if (p + 4 + sei_payload_size > aux_buf + aux_size)
+						break;
 					if (debug_dolby & 2)
 						pr_dv_dbg("type %d, size %d\n",
 							     sei_payload_type,
