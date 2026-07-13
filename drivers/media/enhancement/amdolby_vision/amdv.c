@@ -7539,6 +7539,7 @@ int vsem_check(unsigned char *control_data, unsigned char *vsem_payload)
 	int rv = 0;
 	u32 crc;
 	u32 data_length = 0;
+	u32 last_len;
 	bool last = false;
 
 	cur_pkt = (struct vsem_data_pkt *)(control_data);
@@ -7549,14 +7550,19 @@ int vsem_check(unsigned char *control_data, unsigned char *vsem_payload)
 		return rv;
 	}
 	data_length = get_data_len(cur_pkt);
+	if (data_length < 6 || data_length > VSEM_BUF_SIZE - 7)
+		return -1;
 	memcpy(p_buf, &cur_pkt->pb[0], VSEM_PKT_BODY_SIZE);
 	cur_len = VSEM_PKT_BODY_SIZE - 7;
 	p_buf += VSEM_PKT_BODY_SIZE;
 	while (!last) {
 		cur_pkt += 1;
 		if (get_vsem_byte(cur_pkt->hb1, HEADER_MASK_LAST)) {
-			memcpy(p_buf, &cur_pkt->pb[0],
-				data_length - cur_len);
+			last_len = (data_length > cur_len) ?
+				data_length - cur_len : 0;
+			if (last_len > VSEM_PKT_BODY_SIZE)
+				last_len = VSEM_PKT_BODY_SIZE;
+			memcpy(p_buf, &cur_pkt->pb[0], last_len);
 			last = true;
 		} else {
 			memcpy(p_buf, &cur_pkt->pb[0],
