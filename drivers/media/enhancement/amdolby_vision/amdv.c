@@ -16247,7 +16247,20 @@ static ssize_t amdolby_vision_load_reg_file_store
 		prm_dolby.fst_frm_ini_top2 = true;
 	}
 	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return count;
 	parse_param_amdv(buf_orig, (char **)&parm);
+	if (!parm[0]) {
+		kfree(buf_orig);
+		return count;
+	}
+	{
+		int k;
+
+		for (k = 1; k < MAX_PARAM; k++)
+			if (!parm[k])
+				parm[k] = "";
+	}
 	pr_info("%s: cmd: %s, %s\n", __func__, buf, parm[1]);
 
 	if (!strcmp(parm[0], "top1_reg")) {
@@ -16487,6 +16500,7 @@ static ssize_t amdolby_vision_load_reg_file_store
 		vfree(tv_reg_lut);
 	if (stb_reg_lut)
 		vfree(stb_reg_lut);
+	kfree(buf_orig);
 	return count;
 }
 
