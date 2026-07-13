@@ -16967,8 +16967,12 @@ static void parse_param(char *buf_orig, char **parm)
 			break;
 		if (*token == '\0')
 			continue;
+		if (n >= 8)
+			break;
 		parm[n++] = token;
 	}
+	while (n < 8)
+		parm[n++] = "";
 }
 
 static ssize_t amdolby_vision_reg_store
