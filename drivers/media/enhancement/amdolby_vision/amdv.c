@@ -10415,21 +10415,24 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 		if (vinfo &&  vinfo->vout_device &&
 		    vinfo->dv_info.ieeeoui == 0x00d046 &&
 		    vinfo->dv_info.block_flag == CORRECT) {
+			u32 vsvdb_n = min_t(u32,
+				vinfo->dv_info.length + 1,
+				sizeof(vinfo->dv_info.rawdata));
 			if (new_dovi_setting.vsvdb_len
-				!= vinfo->dv_info.length + 1)
+				!= vsvdb_n)
 				new_dovi_setting.vsvdb_changed = 1;
 			else if (memcmp
 				(&new_dovi_setting.vsvdb_tbl[0],
 				 &vinfo->dv_info.rawdata[0],
-				 vinfo->dv_info.length + 1))
+				 vsvdb_n))
 				new_dovi_setting.vsvdb_changed = 1;
 			memset(&new_dovi_setting.vsvdb_tbl[0],
 			       0, sizeof(new_dovi_setting.vsvdb_tbl));
 			memcpy(&new_dovi_setting.vsvdb_tbl[0],
 			       &vinfo->dv_info.rawdata[0],
-			       vinfo->dv_info.length + 1);
+			       vsvdb_n);
 			new_dovi_setting.vsvdb_len =
-				vinfo->dv_info.length + 1;
+				vsvdb_n;
 			if (new_dovi_setting.vsvdb_changed &&
 			    new_dovi_setting.vsvdb_len) {
 				int k = 0;
@@ -11926,20 +11929,23 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 		if (vinfo &&  vinfo->vout_device &&
 		    vinfo->dv_info.ieeeoui == 0x00d046 &&
 		    vinfo->dv_info.block_flag == CORRECT) {
+			u32 vsvdb_n = min_t(u32,
+				vinfo->dv_info.length  + 1,
+				sizeof(vinfo->dv_info.rawdata));
 			if (new_m_dovi_setting.vsvdb_len
-				!= vinfo->dv_info.length + 1)
+				!= vsvdb_n)
 				new_m_dovi_setting.vsvdb_changed = 1;
 			else if (memcmp(&new_m_dovi_setting.vsvdb_tbl[0],
 				&vinfo->dv_info.rawdata[0],
-				vinfo->dv_info.length + 1))
+				vsvdb_n))
 				new_m_dovi_setting.vsvdb_changed = 1;
 			memset(&new_m_dovi_setting.vsvdb_tbl[0],
 				0, sizeof(new_m_dovi_setting.vsvdb_tbl));
 			memcpy(&new_m_dovi_setting.vsvdb_tbl[0],
 				&vinfo->dv_info.rawdata[0],
-				vinfo->dv_info.length + 1);
+				vsvdb_n);
 			new_m_dovi_setting.vsvdb_len =
-				vinfo->dv_info.length + 1;
+				vsvdb_n;
 			if (new_m_dovi_setting.vsvdb_changed &&
 			    new_m_dovi_setting.vsvdb_len) {
 				int k = 0;
