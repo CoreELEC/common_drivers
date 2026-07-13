@@ -2416,14 +2416,14 @@ void amdv_create_inst(void)
 	for (i = 0; i < NUM_INST; i++) {
 		dv_inst[i].md_buf[0] = vmalloc(MD_BUF_SIZE);
 		if (dv_inst[i].md_buf[0])
-			memset(dv_inst[0].md_buf[0], 0, MD_BUF_SIZE);
+			memset(dv_inst[i].md_buf[0], 0, MD_BUF_SIZE);
 		dv_inst[i].comp_buf[0] = vmalloc(COMP_BUF_SIZE);
 		if (dv_inst[i].comp_buf[0])
 			memset(dv_inst[i].comp_buf[0], 0, COMP_BUF_SIZE);
 
 		dv_inst[i].md_buf[1] = vmalloc(MD_BUF_SIZE);
 		if (dv_inst[i].md_buf[1])
-			memset(dv_inst[0].md_buf[1], 0, MD_BUF_SIZE);
+			memset(dv_inst[i].md_buf[1], 0, MD_BUF_SIZE);
 		dv_inst[i].comp_buf[1] = vmalloc(COMP_BUF_SIZE);
 		if (dv_inst[i].comp_buf[1])
 			memset(dv_inst[i].comp_buf[1], 0, COMP_BUF_SIZE);
