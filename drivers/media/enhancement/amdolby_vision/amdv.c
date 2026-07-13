@@ -16760,19 +16760,19 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 				}
 			}
 			p_funcs_tv = func;
-			tv_hw5_setting = vmalloc(sizeof(*tv_hw5_setting));
+			tv_hw5_setting = vzalloc(sizeof(*tv_hw5_setting));
 			if (!tv_hw5_setting) {
 				p_funcs_tv = NULL;
 				return -ENOMEM;
 			}
-			invalid_hw5_setting = vmalloc(sizeof(*invalid_hw5_setting));
+			invalid_hw5_setting = vzalloc(sizeof(*invalid_hw5_setting));
 			if (!invalid_hw5_setting) {
 				vfree(tv_hw5_setting);
 				tv_hw5_setting = NULL;
 				p_funcs_tv = NULL;
 				return -ENOMEM;
 			}
-			last_tv_hw5_setting = vmalloc(sizeof(*last_tv_hw5_setting));
+			last_tv_hw5_setting = vzalloc(sizeof(*last_tv_hw5_setting));
 			if (!last_tv_hw5_setting) {
 				vfree(tv_hw5_setting);
 				tv_hw5_setting = NULL;
