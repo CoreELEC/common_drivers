@@ -3023,6 +3023,8 @@ void dv_vf_light_unreg_provider(void)
 {
 	int i;
 	unsigned long flags;
+	struct vframe_s *el_put[16];
+	int el_num = 0;
 
 	spin_lock_irqsave(&amdv_lock, flags);
 	if (vfm_path_on) {
@@ -3041,7 +3043,7 @@ void dv_vf_light_unreg_provider(void)
 			for (i = 0; i < 16; i++) {
 				if (dv_vf[i][0]) {
 					if (dv_vf[i][1])
-						dvel_vf_put(dv_vf[i][1]);
+						el_put[el_num++] = dv_vf[i][1];
 					dv_vf[i][1] = NULL;
 				}
 				dv_vf[i][0] = NULL;
@@ -3059,6 +3061,9 @@ void dv_vf_light_unreg_provider(void)
 	}
 	vfm_path_on = false;
 	spin_unlock_irqrestore(&amdv_lock, flags);
+
+	for (i = 0; i < el_num; i++)
+		dvel_vf_put(el_put[i]);
 }
 EXPORT_SYMBOL(dv_vf_light_unreg_provider);
 
