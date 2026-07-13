@@ -10808,6 +10808,9 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 		new_m_dovi_setting.input[i].el_flag = 0;
 		new_m_dovi_setting.input[i].in_md_size = 0;
 		new_m_dovi_setting.input[i].in_comp_size = 0;
+		new_m_dovi_setting.input[i].in_md = NULL;
+		new_m_dovi_setting.input[i].in_comp = NULL;
+		new_m_dovi_setting.input[i].el_halfsize_flag = 0;
 	}
 	for (i = 0; i < NUM_INST; i++)
 		dv_inst[i].valid = 0;
