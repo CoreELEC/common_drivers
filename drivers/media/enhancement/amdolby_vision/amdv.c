@@ -15840,7 +15840,20 @@ static ssize_t amdolby_vision_debug_store
 	if (!buf)
 		return count;
 	buf_orig = kstrdup(buf, GFP_KERNEL);
+	if (!buf_orig)
+		return count;
 	parse_param_amdv(buf_orig, (char **)&parm);
+	if (!parm[0]) {
+		kfree(buf_orig);
+		return count;
+	}
+	{
+		int k;
+
+		for (k = 1; k < MAX_PARAM; k++)
+			if (!parm[k])
+				parm[k] = "";
+	}
 	if (!strcmp(parm[0], "amdv_crc")) {
 		if (kstrtoul(parm[1], 10, &val) < 0)
 			return -EINVAL;
