@@ -15072,7 +15072,7 @@ int unregister_dv_functions(void)
 		if (is_aml_hw5()) {
 			if (pq_config_dvp_fake) {
 				vfree(pq_config_dvp_fake);
-				pq_config_fake = NULL;
+				pq_config_dvp_fake = NULL;
 			}
 			if (tv_hw5_setting) {
 				vfree(tv_hw5_setting);
