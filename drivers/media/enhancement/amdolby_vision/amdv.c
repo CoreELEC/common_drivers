@@ -7194,6 +7194,8 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 						pr_dv_error("rpu in obu exceed 512 bytes\n");
 						break;
 					}
+					if (p + 13 + rpu_size > aux_buf + aux_size)
+						break;
 					for (i = 0; i < rpu_size; i++) {
 						dv_inst[dv_id].meta_buf[5 + i] =
 							(p[12 + i] & 0x07) << 5;
@@ -7204,6 +7206,8 @@ int parse_sei_and_meta_ext_v2(struct vframe_s *vf,
 				} else {
 					rpu_size = (p[10] & 0x1f) << 3;
 					rpu_size |= (p[11] >> 5) & 0x07;
+					if (p + 12 + rpu_size > aux_buf + aux_size)
+						break;
 					for (i = 0; i < rpu_size; i++) {
 						dv_inst[dv_id].meta_buf[5 + i] =
 							(p[11 + i] & 0x0f) << 4;
