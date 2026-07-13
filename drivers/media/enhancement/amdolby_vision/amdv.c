@@ -2368,6 +2368,8 @@ void amdv_clear_buf(u8 dv_id)
 {
 	int i;
 	unsigned long flags;
+	struct vframe_s *el_put[16];
+	int el_num = 0;
 
 	spin_lock_irqsave(&amdv_lock, flags);
 
@@ -2381,21 +2383,30 @@ void amdv_clear_buf(u8 dv_id)
 					pr_dv_dbg("[inst%d]clear dv_vf %p\n",
 						     dv_id + 1, dv_inst[dv_id].dv_vf[i][0]);
 				dv_inst[dv_id].dv_vf[i][0] = NULL;
+				if (dv_inst[dv_id].dv_vf[i][1])
+					el_put[el_num++] = dv_inst[dv_id].dv_vf[i][1];
 				dv_inst[dv_id].dv_vf[i][1] = NULL;
 			}
 		}
 	} else if (is_aml_hw5()) {
 		for (i = 0; i < 16; i++) {
 			top2_v_info.dv_vf[i][0] = NULL;
+			if (top2_v_info.dv_vf[i][1])
+				el_put[el_num++] = top2_v_info.dv_vf[i][1];
 			top2_v_info.dv_vf[i][1] = NULL;
 		}
 	} else {
 		for (i = 0; i < 16; i++) {
 			dv_vf[i][0] = NULL;
+			if (dv_vf[i][1])
+				el_put[el_num++] = dv_vf[i][1];
 			dv_vf[i][1] = NULL;
 		}
 	}
 	spin_unlock_irqrestore(&amdv_lock, flags);
+
+	for (i = 0; i < el_num; i++)
+		dvel_vf_put(el_put[i]);
 }
 
 void amdv_create_inst(void)
