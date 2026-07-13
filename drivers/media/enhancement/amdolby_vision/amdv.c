@@ -3576,7 +3576,7 @@ int amdv_create_inst(void)
 		for (i = 0; i < NUM_INST; i++) {
 			dv_inst[i].md_buf[0] = kmalloc(MD_BUF_SIZE, GFP_KERNEL);
 			if (dv_inst[i].md_buf[0])
-				memset(dv_inst[0].md_buf[0], 0, MD_BUF_SIZE);
+				memset(dv_inst[i].md_buf[0], 0, MD_BUF_SIZE);
 			else
 				goto fail_create;
 			dv_inst[i].comp_buf[0] = kmalloc(COMP_BUF_SIZE, GFP_KERNEL);
@@ -3586,7 +3586,7 @@ int amdv_create_inst(void)
 				goto fail_create;
 			dv_inst[i].md_buf[1] = kmalloc(MD_BUF_SIZE, GFP_KERNEL);
 			if (dv_inst[i].md_buf[1])
-				memset(dv_inst[0].md_buf[1], 0, MD_BUF_SIZE);
+				memset(dv_inst[i].md_buf[1], 0, MD_BUF_SIZE);
 			else
 				goto fail_create;
 			dv_inst[i].comp_buf[1] = kmalloc(COMP_BUF_SIZE, GFP_KERNEL);
@@ -3602,7 +3602,7 @@ int amdv_create_inst(void)
 
 			dv_inst[i].meta_buf = kmalloc(MD_BUF_SIZE, GFP_KERNEL);
 			if (dv_inst[i].meta_buf)
-				memset(dv_inst[0].meta_buf, 0, MD_BUF_SIZE);
+				memset(dv_inst[i].meta_buf, 0, MD_BUF_SIZE);
 			else
 				goto fail_create;
 		}
