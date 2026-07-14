@@ -11115,6 +11115,13 @@ int amdv_control_path(struct vframe_s *vf, struct vframe_s *vf_2,
 		new_m_dovi_setting.input[0].src_format == FORMAT_DOVI) {
 		pr_dv_dbg("dv source but metadata checked as el, force as sdr source\n");
 		new_m_dovi_setting.input[0].src_format = FORMAT_SDR;
+		new_m_dovi_setting.input[0].el_flag = 0;
+		new_m_dovi_setting.input[0].el_halfsize_flag = 0;
+		new_m_dovi_setting.input[0].in_md = NULL;
+		new_m_dovi_setting.input[0].in_md_size = 0;
+		new_m_dovi_setting.input[0].in_comp = NULL;
+		new_m_dovi_setting.input[0].in_comp_size = 0;
+		p_funcs_stb->multi_control_path(&invalid_m_dovi_setting);
 		flag = p_funcs_stb->multi_control_path(&new_m_dovi_setting);
 	}
 
