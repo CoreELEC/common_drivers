@@ -532,6 +532,10 @@ bool amdv_wait_on;
 module_param(amdv_wait_on, bool, 0664);
 MODULE_PARM_DESC(amdv_wait_on, "\n amdv_wait_on\n");
 
+static unsigned int amdv_away_from_dv_debounce = 8;	/* frames to hold; 1 = disabled */
+module_param(amdv_away_from_dv_debounce, uint, 0644);
+static int amdv_away_debounce_cnt;
+
 static int amdv_uboot_on;
 static bool amdv_wait_init;
 static int amdv_wait_count;
@@ -9427,6 +9431,30 @@ bool is_dv_unique_drm(struct vframe_s *vf)
 	return false;
 }
 
+/* Hold a spurious DV->SDR output switch while the source is still Dolby Vision. */
+static bool amdv_honor_output_change(bool changed, unsigned int cur_mode,
+				     unsigned int *req_mode,
+				     enum signal_format_enum src_fmt)
+{
+	bool away = changed &&
+		(cur_mode == AMDV_OUTPUT_MODE_IPT_TUNNEL ||
+		 cur_mode == AMDV_OUTPUT_MODE_IPT) &&
+		(*req_mode == AMDV_OUTPUT_MODE_SDR8 ||
+		 *req_mode == AMDV_OUTPUT_MODE_SDR10) &&
+		(src_fmt == FORMAT_DOVI || src_fmt == FORMAT_DOVI_LL);
+
+	if (!away) {
+		amdv_away_debounce_cnt = 0;
+		return changed;
+	}
+	if (++amdv_away_debounce_cnt < amdv_away_from_dv_debounce) {
+		*req_mode = cur_mode;	/* keep DV; drop the spurious away-switch */
+		return false;
+	}
+	amdv_away_debounce_cnt = 0;
+	return true;
+}
+
 /* toggle mode: 0: not toggle; 1: toggle frame; 2: use keep frame */
 /* ret 0: parser done for v2*/
 /* ret 1: both dolby and hdr module bypass */
@@ -10154,8 +10182,9 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 			dolby_vision_request_mode = 0xff;
 		}
 		current_mode = dolby_vision_mode;
-		if (amdv_policy_process
-			(vf, &current_mode, check_format)) {
+		if (amdv_honor_output_change(
+			amdv_policy_process(vf, &current_mode, check_format),
+			dolby_vision_mode, &current_mode, check_format)) {
 			if (!dv_inst[pri_input].amdv_wait_init) {
 				amdv_set_toggle_flag(1);
 				amdv_wait_on = true;
