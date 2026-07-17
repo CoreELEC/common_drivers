@@ -28,6 +28,7 @@ struct hdmitx_boot_param *get_hdmitx_boot_params(void)
 {
 	return &tx_params;
 }
+EXPORT_SYMBOL(get_hdmitx_boot_params);
 
 /* besides characters defined in separator, '\"' are used as separator;
  * and any characters in '\"' will not act as separator
