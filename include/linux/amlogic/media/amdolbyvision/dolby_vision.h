@@ -205,6 +205,11 @@ void update_graphic_width_height(unsigned int width,
 	unsigned int height, enum OSD_INDEX index);
 int get_amdv_policy(void);
 void set_amdv_policy(int policy);
+#ifndef DOLBY_VISION_LL_DISABLE
+#define DOLBY_VISION_LL_DISABLE		0
+#define DOLBY_VISION_LL_YUV422		1
+#define DOLBY_VISION_LL_RGB444		2
+#endif
 int get_amdv_ll_policy(void);
 int get_amdv_src_format(enum vd_path_e vd_path);
 bool is_amdv_el_disable(void);

@@ -455,6 +455,22 @@ static int meson_hdmitx_decide_color_attr
 			break;
 	}
 
+	if (is_amdv_enable() &&
+	    common->hdmi_current_eotf_type != EOTF_T_DOLBYVISION &&
+	    common->hdmi_current_eotf_type != EOTF_T_LL_MODE &&
+	    common->hdmi_current_eotf_type != EOTF_T_DV_AHEAD) {
+		if (get_amdv_ll_policy() == DOLBY_VISION_LL_YUV422) {
+			attr->colorformat = HDMI_COLORSPACE_YUV422;
+			attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_36B);
+		} else {
+			attr->colorformat = HDMI_COLORSPACE_YUV444;
+			attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
+		}
+		DRM_INFO("[%s]: DV base pinned to %s %dbit (ll_policy %d) for vic %d\n",
+			__func__, colour_sampling[attr->colorformat], attr->bitdepth,
+			get_amdv_ll_policy(), vic);
+	}
+
 	DRM_INFO("[%s]:[%s,eotf:%d,vic:%d]=>attr[%s,%dbit]\n", __func__,
 		outputmode, common->hdmi_current_eotf_type, vic,
 		colour_sampling[attr->colorformat], attr->bitdepth);
