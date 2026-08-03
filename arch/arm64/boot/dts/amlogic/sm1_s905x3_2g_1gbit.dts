@@ -2,7 +2,7 @@
 
 / {
 	model = "Amlogic";
-	coreelec-dt-id = "sm1_s905x3_2g";
+	coreelec-dt-id = "sm1_s905x3_2g_1gbit";
 };
 
 &ext_mdio {
