@@ -1107,6 +1107,18 @@ void set_hdmitx_s6_htx_pll(struct hdmitx_dev *hdev)
 	base_pixel_clk = base_pixel_clk * 10; /* for tmds modes, here should multi 10 */
 	if (cs == HDMI_COLORSPACE_YUV420)
 		base_pixel_clk /= 2;
+	/*
+	 * 3D Frame Packing: config_tv_enc_calc() already doubles v_active/
+	 * v_total for the ENCP timing generator (see enc_cfg_hw.c), so the
+	 * TMDS pixel clock must be doubled here as well or the encoder scans
+	 * out twice the line count at half the intended frame rate, causing
+	 * a growing sync offset (V-Sync errors / tearing, worst towards the
+	 * end of the frame, i.e. the dependent/right-eye view).
+	 * This mirrors the dedicated setting_3dfp_enc_clk_val PLL table used
+	 * by the legacy hdmitx20 driver for the same purpose.
+	 */
+	if (hdev->tx_comm.flag_3dfp)
+		base_pixel_clk *= 2;
 	pr_info("%s[%d] calculate pixel_clk to %d\n", __func__, __LINE__, base_pixel_clk);
 	if (base_pixel_clk > MAX_HTXPLL_VCO) {
 		pr_err("%s[%d] base_pixel_clk %d over MAX_HTXPLL_VCO %d\n",
