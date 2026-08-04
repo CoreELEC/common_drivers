@@ -34,10 +34,130 @@
 /* note, venc setting will be override on dsc encoder side
  * so this function is optional when dsc_en = 1
  */
+
+/*
+ * 3D Frame Packing ENCP timing, ported verbatim from the hdmitx20 (G12B)
+ * driver's tvregstab_3dfp[] (hdmitx20/hw/enc_cfg_hw.c). The generic
+ * v_total/v_active doubling formula used below for 2D modes does not
+ * reproduce these hardware-validated values exactly (verified to be off
+ * by a few lines/pixels on the DE window for 1080p24), which is precise
+ * enough to matter for the tight 3D FP active-space timing but not for
+ * ordinary 2D video. Amlogic's 1080p24/50/60 3D FP tables are identical,
+ * so a single 1080p entry covers all three; 720p50/60 get their own.
+ */
+struct enc_cfg_3dfp_reg {
+	u32 reg;
+	u32 val;
+};
+
+static const struct enc_cfg_3dfp_reg enc_cfg_3dfp_1080p[] = {
+	{ENCP_VIDEO_MODE,		0x4040},
+	{ENCP_VIDEO_MODE_ADV,		0x18},
+	{ENCP_VIDEO_MAX_PXCNT,		0xABD},
+	{ENCP_VIDEO_MAX_LNCNT,		0x8C9},
+	{ENCP_VIDEO_HAVON_BEGIN,	0xC0},
+	{ENCP_VIDEO_HAVON_END,		0x83F},
+	{ENCP_VIDEO_VAVON_BLINE,	0x29},
+	{ENCP_VIDEO_VAVON_ELINE,	0x8C5},
+	{ENCP_VIDEO_HSO_BEGIN,		0x0},
+	{ENCP_VIDEO_HSO_END,		0x2C},
+	{ENCP_VIDEO_VSO_BEGIN,		0x1E},
+	{ENCP_VIDEO_VSO_END,		0x32},
+	{ENCP_VIDEO_VSO_BLINE,		0x0},
+	{ENCP_VIDEO_VSO_ELINE,		0x5},
+	{ENCP_DVI_HSO_BEGIN,		0x2},
+	{ENCP_DVI_HSO_END,		0x2E},
+	{ENCP_DVI_VSO_BLINE_EVN,	0x0},
+	{ENCP_DVI_VSO_BLINE_ODD,	0x0},
+	{ENCP_DVI_VSO_ELINE_EVN,	0x5},
+	{ENCP_DVI_VSO_ELINE_ODD,	0x0},
+	{ENCP_DVI_VSO_BEGIN_EVN,	0x2},
+	{ENCP_DVI_VSO_BEGIN_ODD,	0x0},
+	{ENCP_DVI_VSO_END_EVN,		0x2},
+	{ENCP_DVI_VSO_END_ODD,		0x0},
+	{ENCP_DE_H_BEGIN,		0xC2},
+	{ENCP_DE_H_END,			0x842},
+	{ENCP_DE_V_BEGIN_EVEN,		0x29},
+	{ENCP_DE_V_END_EVEN,		0x8C6},
+	{ENCP_DE_V_BEGIN_ODD,		0x0},
+	{ENCP_DE_V_END_ODD,		0x0},
+};
+
+static const struct enc_cfg_3dfp_reg enc_cfg_3dfp_720p[] = {
+	{ENCP_VIDEO_MODE,		0x4040},
+	{ENCP_VIDEO_MODE_ADV,		0x18},
+	{ENCP_VIDEO_MAX_PXCNT,		0x7BB},
+	{ENCP_VIDEO_MAX_LNCNT,		0x5DB},
+	{ENCP_VIDEO_HAVON_BEGIN,	0x104},
+	{ENCP_VIDEO_HAVON_END,		0x603},
+	{ENCP_VIDEO_VAVON_BLINE,	0x19},
+	{ENCP_VIDEO_VAVON_ELINE,	0x5D6},
+	{ENCP_VIDEO_HSO_BEGIN,		0x0},
+	{ENCP_VIDEO_HSO_END,		0x28},
+	{ENCP_VIDEO_VSO_BEGIN,		0x1E},
+	{ENCP_VIDEO_VSO_END,		0x32},
+	{ENCP_VIDEO_VSO_BLINE,		0x0},
+	{ENCP_VIDEO_VSO_ELINE,		0x5},
+	{ENCP_DVI_HSO_BEGIN,		0x2},
+	{ENCP_DVI_HSO_END,		0x2A},
+	{ENCP_DVI_VSO_BLINE_EVN,	0x0},
+	{ENCP_DVI_VSO_BLINE_ODD,	0x0},
+	{ENCP_DVI_VSO_ELINE_EVN,	0x5},
+	{ENCP_DVI_VSO_ELINE_ODD,	0x0},
+	{ENCP_DVI_VSO_BEGIN_EVN,	0x2},
+	{ENCP_DVI_VSO_BEGIN_ODD,	0x0},
+	{ENCP_DVI_VSO_END_EVN,		0x2},
+	{ENCP_DVI_VSO_END_ODD,		0x0},
+	{ENCP_DE_H_BEGIN,		0x106},
+	{ENCP_DE_H_END,			0x606},
+	{ENCP_DE_V_BEGIN_EVEN,		0x19},
+	{ENCP_DE_V_END_EVEN,		0x5D7},
+	{ENCP_DE_V_BEGIN_ODD,		0x0},
+	{ENCP_DE_V_END_ODD,		0x0},
+};
+
+static bool config_tv_enc_3dfp_fixed(struct hdmitx_dev *hdev, enum hdmi_vic vic)
+{
+	const struct enc_cfg_3dfp_reg *regs;
+	u32 count;
+	u32 i;
+
+	switch (vic) {
+	case HDMI_32_1920x1080p24_16x9:
+	case HDMI_33_1920x1080p25_16x9:
+	case HDMI_34_1920x1080p30_16x9:
+	case HDMI_16_1920x1080p60_16x9:
+	case HDMI_31_1920x1080p50_16x9:
+		regs = enc_cfg_3dfp_1080p;
+		count = ARRAY_SIZE(enc_cfg_3dfp_1080p);
+		break;
+	case HDMI_4_1280x720p60_16x9:
+	case HDMI_19_1280x720p50_16x9:
+		regs = enc_cfg_3dfp_720p;
+		count = ARRAY_SIZE(enc_cfg_3dfp_720p);
+		break;
+	default:
+		return false;
+	}
+
+	hd21_write_reg(ENCP_VIDEO_EN, 0);
+	hd21_write_reg(ENCI_VIDEO_EN, 0);
+	for (i = 0; i < count; i++)
+		hd21_write_reg(regs[i].reg, regs[i].val);
+	hd21_write_reg(ENCI_VIDEO_EN, 0);
+	hd21_write_reg(VPU_HDMI_SETTING, 0x8c);
+
+	return true;
+}
+
 static void config_tv_enc_calc(struct hdmitx_dev *hdev, enum hdmi_vic vic)
 {
 	const struct hdmi_timing *tp = NULL;
 	struct hdmi_timing timing = {0};
+
+	if (hdev->tx_comm.flag_3dfp && config_tv_enc_3dfp_fixed(hdev, vic))
+		return;
+
 	/* adjust to align upsample and video enable */
 	u32 hsync_st = 5; // hsync start pixel count
 	u32 vsync_st = 1; // vsync start line count
