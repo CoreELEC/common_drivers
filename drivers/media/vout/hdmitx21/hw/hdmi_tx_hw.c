@@ -1568,7 +1568,30 @@ static int hdmitx_set_dispmode(struct hdmitx_hw_common *tx_hw)
 		}
 	}
 
+	/* 3D Frame Packing/TAB/SBS: give ENCP/VPU time to settle into the
+	 * new timing before starting PHY training, or some displays' HDMI
+	 * receivers lock onto the still-transitioning signal and never
+	 * re-train once it stabilizes. hdmitx20 handles this by deferring
+	 * PHY enable to a separate later step triggered from userspace
+	 * (hdmitx_set_enc_hw(), "enable phy by SystemControl at last step");
+	 * here we just wait out one frame in place instead, so this stays
+	 * self-contained regardless of which caller triggered the mode set.
+	 */
+	if (hdev->tx_comm.flag_3dfp || hdev->tx_comm.flag_3dtb || hdev->tx_comm.flag_3dss)
+		usleep_range(20000, 20500);
 	hdmitx_set_phy(hdev);
+	/*
+	 * Frame Packing VSIF was sent (from config_store(), see
+	 * hdmi_tx_video.c::hdmi21_set_3d()) before this modeset ran, i.e.
+	 * against the old, now-superseded timing. Re-send it now that ENCP
+	 * has been reprogrammed for the final 2x-height FP timing, so the
+	 * packet scheduler's auto blanking-relative position (PKT_AUTO_0)
+	 * gets recomputed against the timing that is actually still active
+	 * once the sink samples it. TAB/SBS need no such re-send: they never
+	 * change v_total/pixel clock, so their original send stays valid.
+	 */
+	if (hdev->tx_comm.flag_3dfp)
+		hdmi21_set_3d(hdev, T3D_FRAME_PACKING, 0);
 	if (hdev->tx_hw.chip_data->chip_type == MESON_CPU_ID_S5) {
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 		hdmitx_dfm_cfg(0, 0);
