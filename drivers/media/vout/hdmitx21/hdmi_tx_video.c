@@ -17,6 +17,7 @@
 #include <linux/mutex.h>
 #include <linux/cdev.h>
 #include "hdmi_tx_module.h"
+#include "hdmi_tx.h"
 #include "hw/common.h"
 
 #define to_hdmitx21_dev(x)	container_of(x, struct hdmitx_dev, tx_comm)
@@ -159,28 +160,48 @@ int hdmitx21_set_display(struct hdmitx_dev *hdev, enum hdmi_vic videocode)
 	return ret;
 }
 
+/*
+ * HDMI 1.4a/1.4b 3D signaling (HDMI Vendor Specific InfoFrame, PacketType
+ * 0x81, IEEE OUI 0x000C03, HDMI_Video_Format = 3'b010) as required by
+ * "High-Definition Multimedia Interface Specification Version 1.4a,
+ * Extraction of 3D Signaling Portion", section 8.2.3 / Table 8-10..8-13.
+ *
+ * NOTE: this must NOT be routed through hdmi_vend_infoframe_rawset().
+ * That helper decides between the HDMI_INFOFRAME_TYPE_VENDOR (classic
+ * VSIF, packet buffer sel=5) and HDMI_INFOFRAME_TYPE_VENDOR2 (HF-VSIF,
+ * packet buffer sel=8, see hw/hdmi_tx_pktmgmt.c) buffers purely based on
+ * rxcap.ifdb_present / additional_vsif_num, i.e. it implements the Dolby
+ * Vision CTS coexistence rules for *simultaneous* classic-VSIF + HF-VSIF
+ * transmission (see the "dolby cts case89/92/93" comments in
+ * hdmi_tx_infoframe.c). The InfoFrame Data Block (IFDB) that
+ * ifdb_present is derived from is a CTA-861-G / HDMI 2.1 EDID data
+ * block; legacy HDMI 1.4a 3D sinks (the class of device this packet is
+ * actually for) never expose it, so rxcap.ifdb_present is always false
+ * for them and every call used to fall into the "!ifdb_present" branch,
+ * which places the packet into the HF-VSIF buffer instead of the
+ * classic VSIF buffer that 3D-only sinks actually parse. Send the
+ * legacy 3D VSIF unconditionally on the classic VSIF buffer instead,
+ * exactly as hdmitx20/hdmi_tx_video.c::hdmi_set_3d() always does.
+ */
 int hdmi21_set_3d(struct hdmitx_dev *hdev, int type, u32 param)
 {
-	u8 db[28] = {0};
-	u8 *ven_db = &db[1];
-	u8 ven_hb[3];
-	struct hdmi_vendor_infoframe *info;
+	u8 body[31] = {0};
+	u8 *ven_db = &body[4]; /* body[3] = PB0 (checksum), body[4] = PB1 */
 
-	info = &hdev->infoframes.vend.vendor.hdmi;
+	body[0] = 0x81; /* HB0: Packet Type */
+	body[1] = 0x01; /* HB1: Version */
+	body[2] = 0x6;  /* HB2: Length (Nv) */
 
-	ven_hb[0] = 0x81;
-	ven_hb[1] = 0x01;
-	ven_hb[2] = 0x6;
 	if (type == T3D_DISABLE) {
-		hdmi_vend_infoframe_rawset(ven_hb, db);
+		hdmitx_infoframe_send(HDMI_INFOFRAME_TYPE_VENDOR, NULL);
 	} else {
 		ven_db[0] = GET_OUI_BYTE0(HDMI_IEEE_OUI);
 		ven_db[1] = GET_OUI_BYTE1(HDMI_IEEE_OUI);
 		ven_db[2] = GET_OUI_BYTE2(HDMI_IEEE_OUI);
-		ven_db[3] = 0x40;
-		ven_db[4] = type << 4;
-		ven_db[5] = param << 4;
-		hdmi_vend_infoframe_rawset(ven_hb, db);
+		ven_db[3] = 0x40;        /* PB4: HDMI_Video_Format = 3'b010 */
+		ven_db[4] = type << 4;   /* PB5: 3D_Structure */
+		ven_db[5] = param << 4;  /* PB6: 3D_Ext_Data */
+		hdmitx_infoframe_send(HDMI_INFOFRAME_TYPE_VENDOR, body);
 	}
 	return 0;
 }
