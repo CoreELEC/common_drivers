@@ -1360,8 +1360,6 @@ static bool hdmitx_edid_3d_parse(struct rx_cap *prxcap, u8 *dat,
 		prxcap->HDMI_3D_LEN = dat[pos] & 0x1f;
 		pos += prxcap->hdmi_vic_LEN + 1;
 
-		prxcap->threeD_present = prxcap->HDMI_3D_LEN > 0 ? prxcap->threeD_present : 0;
-
 		if (!prxcap->threeD_present)
 			return true;
 
@@ -1378,6 +1376,9 @@ static bool hdmitx_edid_3d_parse(struct rx_cap *prxcap, u8 *dat,
 				prxcap->support_3d_format[prxcap->VIC[j]].side_by_side = 1;
 			}
 		}
+
+		if (prxcap->HDMI_3D_LEN == 0)
+			return true;
 
 		if (prxcap->threeD_Multi_present == 0x01) {
 			prxcap->threeD_Structure_ALL_15_0 =
