@@ -9232,6 +9232,15 @@ int amvecm_matrix_process(struct vframe_s *vf,
 						 get_current_vinfo(),
 						 NULL, vpp_index);
 				}
+
+				/* DV core2 does not process OSD (firmware core2_sel/OSD_DOLBY_BYPASS_EN);
+				 * route OSD through SDR_HDR (sRGB->PQ) like HDR10 here. */
+				hdr_func(OSD1_HDR, SDR_HDR | hdr_ex,
+					 get_current_vinfo(), NULL, vpp_index);
+				hdr_func(OSD2_HDR, SDR_HDR | hdr_ex,
+					 get_current_vinfo(), NULL, vpp_index);
+				hdr_func(OSD3_HDR, SDR_HDR | hdr_ex,
+					 get_current_vinfo(), NULL, vpp_index);
 			}
 			dovi_on = true;
 			if (video_process_status[vd_path]
