@@ -792,6 +792,11 @@ static uint hdr2_debug;
 module_param(hdr2_debug, uint, 0664);
 MODULE_PARM_DESC(hdr2_debug, "\n hdr2_debug\n");
 
+static bool osd_gamut_bypass;
+module_param(osd_gamut_bypass, bool, 0664);
+MODULE_PARM_DESC(osd_gamut_bypass,
+		 "\n osd_gamut_bypass: OSD content is already BT.2020, skip 709->2020 gamut\n");
+
 static uint clip_func = 0xff;
 module_param(clip_func, uint, 0664);
 MODULE_PARM_DESC(clip_func, "\n clip_func_debug\n");
@@ -4133,8 +4138,15 @@ enum hdr_process_sel hdr_func(enum hdr_module_sel module_sel,
 					pr_csc(12, "%s sbtm: SDR_HDR.  mtx_gamut[%d]= %d\n",
 						__func__, i, hdr_mtx_param.mtx_gamut[i]);
 				} else if (i < 9 && !gmt_mtx) {
-					hdr_mtx_param.mtx_gamut[i] =
-						ncl_709_2020[i];
+					if (osd_gamut_bypass &&
+					    (module_sel == OSD1_HDR ||
+					     module_sel == OSD2_HDR ||
+					     module_sel == OSD3_HDR))
+						hdr_mtx_param.mtx_gamut[i] =
+							gamut_bypass[i];
+					else
+						hdr_mtx_param.mtx_gamut[i] =
+							ncl_709_2020[i];
 				} else if (i < 9 && gmt_mtx) {
 					hdr_mtx_param.mtx_gamut[i] =
 						gamut_bypass[i];
@@ -6344,9 +6356,17 @@ static int create_hdr_full_setting(enum hdr_module_sel module_sel,
 				rgb2ycbcr_ncl2020[i];
 			mtx_param->mtx_ogain[i] = rgb2ycbcr_709[i];
 			mtx_param->mtx_out[i] = rgb2ycbcr_ncl2020[i];
-			if (i < 9)
-				mtx_param->mtx_gamut[i] =
-					ncl_709_2020[i];
+			if (i < 9) {
+				if (osd_gamut_bypass &&
+				    (module_sel == OSD1_HDR ||
+				     module_sel == OSD2_HDR ||
+				     module_sel == OSD3_HDR))
+					mtx_param->mtx_gamut[i] =
+						gamut_bypass[i];
+				else
+					mtx_param->mtx_gamut[i] =
+						ncl_709_2020[i];
+			}
 		}
 		mtx_param->mtx_on = MTX_ON;
 		mtx_param->p_sel = hdr_process_select;
