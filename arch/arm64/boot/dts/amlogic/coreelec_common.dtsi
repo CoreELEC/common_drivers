@@ -164,6 +164,7 @@
 
 &ethmac {
 	wol = <0>;
+	/delete-property/ mac_wol;
 };
 
 &drm_subsystem {
