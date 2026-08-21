@@ -15,6 +15,23 @@
 		key_code = <116 SW_MUTE_DEVICE>;
 	};
 
+	gpioleds {
+		compatible = "gpio-leds";
+		status = "okay";
+
+		/* front blue */
+		sys_led {
+			gpios = <&gpio GPIOD_6 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+
+		/* top white minix */
+		white_led {
+			gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+	};
+
 	// HDMI 5V
 	hdmi5v: fixedregulator@hdmi5v {
 		vin-supply = <&vbat>;
