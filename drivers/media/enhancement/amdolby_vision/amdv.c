@@ -15868,6 +15868,12 @@ int get_amdv_policy(void)
 }
 EXPORT_SYMBOL(get_amdv_policy);
 
+int get_amdv_status(void)
+{
+	return dolby_vision_status;
+}
+EXPORT_SYMBOL(get_amdv_status);
+
 void set_amdv_enable(bool enable)
 {
 	dolby_vision_enable = enable;
@@ -18622,6 +18628,12 @@ static ssize_t amdolby_vision_debug_store
 	kfree(buf_orig);
 	return count;
 }
+
+void amdv_debug_store(char *buf)
+{
+	amdolby_vision_debug_store(NULL, NULL, buf, 0);
+}
+EXPORT_SYMBOL(amdv_debug_store);
 
 static ssize_t	amdolby_vision_primary_show
 	(const struct class *cla,

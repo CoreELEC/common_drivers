@@ -256,6 +256,7 @@ void update_graphic_width_height(unsigned int width,
 	unsigned int height, enum OSD_INDEX index);
 int get_amdv_policy(void);
 void set_amdv_policy(int policy);
+int get_amdv_status(void);
 int get_amdv_ll_policy(void);
 int get_amdv_src_format(enum vd_path_e vd_path, struct vframe_s *vf);
 bool is_amdv_el_disable(void);
@@ -300,6 +301,7 @@ int amdv_parse_metadata_hw5_top1(struct vframe_s *vf);
 bool get_idk_need_pps(void);
 int get_amdv_apo_enable(void);
 void set_amdv_apo_enable(bool enable);
+void amdv_debug_store(char *buf);
 void amdv_set_pic_mode_id(int mode);
 void amdv_set_dark_detail(int dark_detail);
 void amdv_set_light_sense(struct light_sensor_s light_sensor);

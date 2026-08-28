@@ -264,6 +264,9 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 	struct am_meson_crtc *meson_crtc = to_am_meson_crtc(crtc);
 	int ret = 0;
 
+	/* default for properties with no get branch below, avoids returning stack garbage */
+	*val = 0;
+
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT
 	crtc_state->hdr_conversion_ctrl = get_hdr_cur_output();
 #endif
@@ -272,13 +275,28 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 		*val = crtc_state->crtc_hdr_process_policy;
 		return 0;
 	} else if (property == meson_crtc->dv_enable_property) {
-		*val = crtc_state->crtc_dv_enable;
+		*val = is_amdv_enable();
 		return 0;
 	} else if (property == meson_crtc->bgcolor_property) {
 		*val = crtc_state->crtc_bgcolor;
 		return 0;
 	} else if (property == meson_crtc->dv_mode_property) {
-		*val = crtc_state->dv_mode;
+		*val = get_amdv_mode();
+		return 0;
+	} else if (property == meson_crtc->dv_policy_property) {
+		*val = get_amdv_policy();
+		return 0;
+	} else if (property == meson_crtc->dv_ll_policy_property) {
+		*val = get_amdv_ll_policy();
+		return 0;
+	} else if (property == meson_crtc->dv_status_property) {
+		*val = get_amdv_status();
+		return 0;
+	} else if (property == meson_crtc->dv_video_on_property) {
+		*val = is_amdv_video_on();
+		return 0;
+	} else if (property == meson_crtc->hdr10plus_property) {
+		*val = is_hdr10plus_enable();
 		return 0;
 	} else if (property == meson_crtc->osd_pixelformat_property) {
 		*val = get_osd_pixelformat();
@@ -340,14 +358,43 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 		crtc_state->crtc_hdr_process_policy = val;
 		return 0;
 	} else if (property == meson_crtc->dv_enable_property) {
-		crtc_state->crtc_dv_enable = val;
+		set_amdv_enable(val);
 		return 0;
 	} else if (property == meson_crtc->bgcolor_property) {
 		crtc_state->crtc_bgcolor = val;
 		crtc_state->crtc_bgcolor_flag = true;
 		return 0;
 	} else if (property == meson_crtc->dv_mode_property) {
-		crtc_state->dv_mode = val;
+		set_amdv_mode(val);
+		return 0;
+	} else if (property == meson_crtc->dv_policy_property) {
+		set_amdv_policy(val);
+		return 0;
+	} else if (property == meson_crtc->dv_ll_policy_property) {
+		set_amdv_ll_policy(val);
+		return 0;
+	} else if (property == meson_crtc->dv_debug_property) {
+		struct drm_device *drm_dev = crtc->dev;
+		struct drm_property_blob *blob;
+		char *str = NULL;
+
+		blob = drm_property_lookup_blob(drm_dev, val);
+		if (!blob)
+			return 0;
+
+		/* blob->data is not null‑terminated */
+		str = kmalloc(blob->length + 1, GFP_KERNEL);
+		if (!str)
+			return 0;
+
+		memcpy(str, blob->data, blob->length);
+		str[blob->length] = '\0';
+		amdv_debug_store(str);
+
+		kfree(str);
+		return 0;
+	} else if (property == meson_crtc->hdr10plus_property) {
+		set_hdr10plus_enable(val);
 		return 0;
 	} else if (property == meson_crtc->hdr_conversion_ctrl_property) {
 		crtc_state->hdr_conversion_ctrl = val;
@@ -1141,12 +1188,100 @@ static void meson_crtc_init_dv_mode_property(struct drm_device *drm_dev,
 {
 	struct drm_property *prop;
 
-	prop = drm_property_create_bool(drm_dev, 0, "dv_mode");
+	prop = drm_property_create_range(drm_dev, 0, "dv_mode",
+					0, 5);
 	if (prop) {
 		amcrtc->dv_mode_property = prop;
 		drm_object_attach_property(&amcrtc->base.base, prop, 0);
 	} else {
 		DRM_ERROR("Failed to dv_mode property\n");
+	}
+}
+
+static void meson_crtc_init_dv_policy_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "dv_policy",
+					0, 2);
+	if (prop) {
+		amcrtc->dv_policy_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dv_policy property\n");
+	}
+}
+
+static void meson_crtc_init_dv_ll_policy_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "dv_ll_policy",
+					0, 2);
+	if (prop) {
+		amcrtc->dv_ll_policy_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dv_ll_policy property\n");
+	}
+}
+
+static void meson_crtc_init_dv_status_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "dv_status",
+					0, 4);
+	if (prop) {
+		amcrtc->dv_status_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dv_status property\n");
+	}
+}
+
+static void meson_crtc_init_dv_video_on_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_bool(drm_dev, 0, "dv_video_on");
+	if (prop) {
+		amcrtc->dv_video_on_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dv_video_on property\n");
+	}
+}
+
+static void meson_crtc_init_dv_debug_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create(drm_dev, DRM_MODE_PROP_BLOB, "dv_debug", 0);
+	if (prop) {
+		amcrtc->dv_debug_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to dv_debug property\n");
+	}
+}
+
+static void meson_crtc_init_hdr10plus_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_bool(drm_dev, 0, "enable_hdr10plus");
+	if (prop) {
+		amcrtc->hdr10plus_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to enable_hdr10plus property\n");
 	}
 }
 
@@ -1427,6 +1562,12 @@ struct am_meson_crtc *meson_crtc_bind(struct meson_drm *priv, int idx)
 	meson_crtc_init_dv_enable_property(priv->drm, amcrtc);
 	meson_crtc_init_brr_update_property(priv->drm, amcrtc);
 	meson_crtc_init_dv_mode_property(priv->drm, amcrtc);
+	meson_crtc_init_dv_policy_property(priv->drm, amcrtc);
+	meson_crtc_init_dv_ll_policy_property(priv->drm, amcrtc);
+	meson_crtc_init_dv_status_property(priv->drm, amcrtc);
+	meson_crtc_init_dv_video_on_property(priv->drm, amcrtc);
+	meson_crtc_init_dv_debug_property(priv->drm, amcrtc);
+	meson_crtc_init_hdr10plus_property(priv->drm, amcrtc);
 	meson_crtc_add_bgcolor_property(priv->drm, amcrtc);
 	meson_crtc_init_osd_pixelformat_property(priv->drm, amcrtc);
 	meson_crtc_init_video_pixelformat_property(priv->drm, amcrtc);
