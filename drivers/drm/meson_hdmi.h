@@ -142,6 +142,8 @@ struct am_hdmi_tx {
 	struct drm_property *sink_device_type_prop;
 
 	struct drm_property *color_force;
+	struct drm_property *edid_raw_prop;
+	struct drm_property_blob *edid_raw_blob;
 
 	struct drm_property *color_space_prop;
 	struct drm_property *color_depth_prop;
