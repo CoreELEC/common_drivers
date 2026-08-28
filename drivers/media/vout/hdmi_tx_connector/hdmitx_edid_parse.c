@@ -2772,6 +2772,7 @@ unsigned int hdmitx_edid_valid_block_num(unsigned char *edid_buf)
 		valid_blk_no = edid_buf[128 + 6] + 1;
 	return valid_blk_no;
 }
+EXPORT_SYMBOL(hdmitx_edid_valid_block_num);
 
 /*
  * print out edid_buf

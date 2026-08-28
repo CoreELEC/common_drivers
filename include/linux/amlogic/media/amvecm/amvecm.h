@@ -692,6 +692,7 @@ bool is_hdr10plus_enable(void);
 bool is_amdv_sdr2020_force_hlg(void);
 
 bool is_hdr10plus_enable(void);
+void set_hdr10plus_enable(bool enable);
 void d_convert_str(int num,
 			  int num_num, char cur_s[],
 			  int char_bit, int bit_chose);
