@@ -18922,6 +18922,12 @@ bool is_hdr10plus_enable(void)
 }
 EXPORT_SYMBOL(is_hdr10plus_enable);
 
+void set_hdr10plus_enable(bool enable)
+{
+	enable_hdr10plus = enable;
+}
+EXPORT_SYMBOL(set_hdr10plus_enable);
+
 static int aml_vecm_probe(struct platform_device *pdev)
 {
 	int ret = 0;
