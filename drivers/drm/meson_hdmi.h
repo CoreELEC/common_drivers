@@ -127,6 +127,8 @@ struct am_hdmi_tx {
 	 * 1:edid is valid
 	 */
 	struct drm_property *edid_valid_prop;
+	struct drm_property *edid_raw_prop;
+	struct drm_property_blob *edid_raw_blob;
 	/*
 	 * TV VRR Capability
 	 * Range: 0-3
