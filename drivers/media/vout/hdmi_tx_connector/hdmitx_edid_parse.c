@@ -2770,6 +2770,9 @@ unsigned int hdmitx_edid_valid_block_num(unsigned char *edid_buf)
 	if (edid_buf[128 + 4] == EXTENSION_EEODB_EXT_TAG &&
 		edid_buf[128 + 5] == EXTENSION_EEODB_EXT_CODE)
 		valid_blk_no = edid_buf[128 + 6] + 1;
+	/* limit valid_blk_no to EDID_MAX_BLOCK, edid_buf is only EDID_MAX_BLOCK blocks */
+	if (valid_blk_no > EDID_MAX_BLOCK)
+		valid_blk_no = EDID_MAX_BLOCK;
 	return valid_blk_no;
 }
 EXPORT_SYMBOL(hdmitx_edid_valid_block_num);
