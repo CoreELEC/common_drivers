@@ -68,11 +68,6 @@ AMLVIDEO_MINOR_VERSION, AMLVIDEO_RELEASE)
 
 static u32 omx_freerun_index = 0;
 
-static inline u32 dur2pts(u32 duration)
-{
-	return (duration - (duration >> 4));
-}
-
 #define DUR2PTS_RM(x) ((x) & 0xf)
 
 //MODULE_AUTHOR("amlogic-sh");
@@ -236,6 +231,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 				omx_secret_mode = false;
 		}
 		dev->first_frame = 0;
+		dev->pts_us64_rm = 0;
 		vfq_init(&dev->q_ready, AMLVIDEO_POOL_SIZE + 1,
 			 &dev->amlvideo_pool_ready[0]);
 		vfq_init(&dev->q_omx, AMLVIDEO_POOL_SIZE + 1,
@@ -248,6 +244,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 
 		dev->vf = NULL;
 		dev->first_frame = 0;
+		dev->pts_us64_rm = 0;
 		dev->frame_num = 0;
 		mutex_unlock(&dev->vf_mutex);
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_STATE) {
@@ -293,6 +290,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 				   VFRAME_EVENT_PROVIDER_FR_END_HINT, data);
 	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
 		dev->first_frame = 0;
+		dev->pts_us64_rm = 0;
 		vfq_init(&dev->q_ready, AMLVIDEO_POOL_SIZE + 1,
 			 &dev->amlvideo_pool_ready[0]);
 		vfq_init(&dev->q_omx, AMLVIDEO_POOL_SIZE + 1,
@@ -625,8 +623,8 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		dev->first_frame = 1;
 		pts_us64 = 0;
 	} else {
-		pts_tmp = dur2pts(dev->vf->duration) * 100;
-		do_div(pts_tmp, 9);
+		pts_tmp = (u64)dev->vf->duration * 1000 + dev->pts_us64_rm;
+		dev->pts_us64_rm = do_div(pts_tmp, 96);
 		pts_us64 = dev->last_pts_us64
 			+ pts_tmp;
 		pts_tmp = pts_us64 * 9;
