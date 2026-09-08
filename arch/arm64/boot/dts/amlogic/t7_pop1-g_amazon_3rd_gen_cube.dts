@@ -1,0 +1,601 @@
+#include "t7_a311d2_an400_drm_hdmitx_only_debian.dts"
+#include "coreelec_t7_common.dtsi"
+
+/ {
+	model = "Amazon Fire TV 3rd gen Cube";
+	coreelec-dt-id = "t7_pop1-g_amazon_3rd_gen_cube";
+	amlogic-dt-id = "t7_gazelle_pvt";
+
+	memory@00000000 {
+		device_type = "memory";
+		linux,usable-memory = <0x00000000 0x00000000 0x00000000 0x80000000>;
+	};
+
+	reserved-memory {
+		ramoops@0x07400000 {
+			reg = <0x00 0x8400000 0x00 0x100000>;
+		};
+
+		linux,secmon {
+			/delete-property/ size;
+			/delete-property/ clear-map;
+			/delete-property/ alloc-ranges;
+			reg = <0x00 0x5000000 0x00 0x3400000>;
+		};
+
+		linux,meson-fb {
+			reg = <0x00 0x7f800000 0x00 0x800000>;
+		};
+
+		linux,codec_mm_cma {
+			/delete-property/ clear-map;
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,isp_cma {
+			status = "disabled";
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,adapt_cma {
+			status = "disabled";
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,ion-dev {
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,ion-fb {
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,secure_vdec_reserved {
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		linux,vdin1_cma {
+			status = "disabled";
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		heap-fb {
+			size = <0x00 0x1800000>; /* 24 MB */
+			alignment = <0x00 0x400000>;
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+
+		heap-gfx {
+			size = <0x00 0x2000000>; /* 32 MB */
+			alignment = <0x00 0x400000>;
+			alloc-ranges = <0x00 0x00 0x00 0x80000000>;
+		};
+	};
+
+	/delete-node/ sdcard-regulator-consumer_3v3;
+	/delete-node/ sdcard-regulator-consumer_1v8_3v3;
+
+	pwmao_b-regulator {
+		status = "disabled";
+	};
+
+	/delete-node/ pwmao_f-regulator;
+
+	pmic_osc: clock-pmic {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "pmic_osc";
+	};
+
+	a73pwm_opp_table0 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a73pwm_opp_table1 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a73pwm_opp_table2 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a73pwm_opp_table3 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53pwm_opp_table0 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53pwm_opp_table1 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53pwm_opp_table2 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53pwm_opp_table3 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53buck_opp_table0 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53buck_opp_table1 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	a53buck_opp_table2 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+
+		opp06 {
+			opp-microvolt = <0xc3500>;
+		};
+	};
+
+	a53buck_opp_table3 {
+		opp01 {
+			opp-hz = /bits/ 64 <666000000>;
+		};
+	};
+
+	soc {
+		apb4@fe000000 {
+			pinctrl@4000 {
+				/delete-node/ dvb_s_ts0_pins;
+				/delete-node/ dvb_s_ts1_pins;
+				/delete-node/ bl_pwm_vs_off_pin;
+
+				pwm_c_pins {
+					mux {
+						drive-strength-microamp = <0x1f4>;
+					};
+				};
+			};
+
+			pwm_ab: pwm@58000 {
+				status = "disabled";
+			};
+
+			pwm_cd: pwm@5a000 {
+				pinctrl-0 = <&pwm_c_pins>;
+				pinctrl-names = "default";
+				status = "okay";
+			};
+
+			pwmao_ab: pwm@5e000 {
+				status = "disabled";
+			};
+
+			pwmao_cd: pwm@60000 {
+				pinctrl-0 = <&pwm_ao_d_pins &pwm_ao_c_pins2>;
+			};
+
+			i2c@68000 {
+				status = "okay";
+
+				is31fl3236@3c {
+					compatible = "issi,is31fl3236";
+					reg = <0x3c>;
+					channel-offset = [16];
+					rgb_shift = [02];
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					led@1 {
+						reg = <12>;
+						label = "led1";
+					};
+
+					led@2 {
+						reg = <11>;
+						label = "led2";
+					};
+
+					led@3 {
+						reg = <13>;
+						label = "led3";
+					};
+
+					led@4 {
+						reg = <15>;
+						label = "led4";
+					};
+
+					led@5 {
+						reg = <14>;
+						label = "led5";
+					};
+
+					led@6 {
+						reg = <16>;
+						label = "led6";
+					};
+
+					led@7 {
+						reg = <18>;
+						label = "led7";
+					};
+
+					led@8 {
+						reg = <17>;
+						label = "led8";
+					};
+
+					led@9 {
+						reg = <19>;
+						label = "led9";
+					};
+
+					led@10 {
+						reg = <21>;
+						label = "led10";
+					};
+
+					led@11 {
+						reg = <20>;
+						label = "led11";
+					};
+
+					led@12 {
+						reg = <22>;
+						label = "led12";
+					};
+
+					led@13 {
+						reg = <24>;
+						label = "led13";
+					};
+
+					led@14 {
+						reg = <23>;
+						label = "led14";
+					};
+
+					led@15 {
+						reg = <25>;
+						label = "led15";
+					};
+				};
+			};
+		};
+
+		mmc@fe08c000 {
+			mmc-hs400-1_8v;
+		};
+
+		sdio@fe088000 {
+			status = "okay";
+			/delete-property/ use_intf3_tuning;
+		};
+
+		sd@fe08a000 {
+			status = "disabled";
+			/delete-property/ vmmc-supply;
+			/delete-property/ vqmmc-supply;
+		};
+	};
+
+	aml_wifi {
+		interrupt-gpios = <&gpio  GPIOX_6  GPIO_ACTIVE_HIGH>;
+		power_on-gpios = <&gpio   GPIOY_14  GPIO_ACTIVE_HIGH>;
+	};
+
+	wifi_pwm_conf {
+		pwm_channel1_conf {
+			pwms = <&pwm_cd  0 30550 0>;
+		};
+
+		pwm_channel2_conf {
+			pwms = <&pwm_cd 2 30500 0>;
+		};
+	};
+
+	/delete-node/ bl_pwm_conf;
+	/delete-node/ gpio_keypad;
+	/delete-node/ bl30_manager;
+
+	meson-remote {
+		demod_enable;
+	};
+
+	ir_wakeup_key {
+		key_num = <0x0c>;
+		wakeup_key = <0xb9467d02 0x00 0x74 0xba45bd02 0x00 0x74 0xef10fe01 0x00 0x74 0xef10fb04 0x00 0x74 0xf20dfe01 0x00 0x74 0xe51afb04 0x00 0x74 0xde217788 0x00 0x74 0x3ac5bd02 0x01 0x85 0xb8477788 0x00 0x66 0x9b647788 0x00 0xbc 0x8f707788 0x00 0x1de 0x9c637788 0x00 0xbb>;
+	};
+
+	openvfd {
+		status = "disabled";
+	};
+
+	fb {
+		logo_addr = "0x7f800000";
+	};
+};
+
+&i2c_AO_A {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_ao_pins1>;
+	status = "okay";
+
+	pmic: pmic@4b {
+		compatible = "rohm,bd71837";
+		reg = <0x4b>;
+		clocks = <&pmic_osc>;
+		clock-names = "osc";
+		clock-output-names = "pmic_clk";
+		interrupt-parent = <&gpio_intc>;
+		interrupts = <GPIOD_11 GPIO_ACTIVE_LOW>;
+		interrupt-names = "irq";
+		rohm,reset-snvs-powered;
+
+		regulators {
+			VDD_NPU: BUCK1 {
+				regulator-name = "VDD_NPU";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1300000>;
+				regulator-boot-on;
+				regulator-ramp-delay = <1250>;
+				rohm,dvs-run-voltage = <830000>;
+				rohm,dvs-idle-voltage = <850000>;
+				rohm,dvs-suspend-voltage = <0xc3500>;
+				regulator-always-on;
+			};
+
+			VDD_EE: BUCK2 {
+				regulator-name = "VDD_EE";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1300000>;
+				regulator-boot-on;
+				regulator-ramp-delay = <1250>;
+				regulator-always-on;
+			};
+
+			VDD_CPU_B: BUCK3 {
+				regulator-name = "VDD_CPU_B";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1300000>;
+				regulator-boot-on;
+				rohm,dvs-run-voltage = <1000000>;
+				regulator-always-on;
+			};
+
+			VDD_DDR: BUCK4 {
+				regulator-name = "VDD_DDR";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1300000>;
+				rohm,dvs-run-voltage = <830000>;
+				regulator-always-on;
+			};
+
+			VDDQ: BUCK5 {
+				regulator-name = "VDDQ";
+				regulator-min-microvolt = <700000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			VDDIO_3V3: BUCK6 {
+				regulator-name = "VDDIO_3V3";
+				regulator-min-microvolt = <3000000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			VDDIO_1V8: BUCK7 {
+				regulator-name = "VDDIO_1V8";
+				regulator-min-microvolt = <1605000>;
+				regulator-max-microvolt = <1995000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			VDD_GPU: BUCK8 {
+				regulator-name = "VDD_GPU";
+				regulator-min-microvolt = <0xc3500>;
+				regulator-max-microvolt = <1400000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			VDD_CPU_A: LDO1 {
+				regulator-name = "VDD_CPU_A";
+				regulator-min-microvolt = <1600000>;
+				regulator-max-microvolt = <1900000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo2_reg: LDO2 {
+				regulator-name = "ldo2";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <900000>;
+			};
+
+			VDDAO_1V8: LDO3 {
+				regulator-name = "VDDAO_1V8";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			CAMERA_VDD: LDO4 {
+				regulator-name = "CAMERA_VDD";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <1800000>;
+			};
+
+			WIFI_BT_VIO: LDO5 {
+				regulator-name = "WIFI_BT_VIO";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			BUCK8_EXT: LDO6 {
+				regulator-name = "BUCK8_EXT";
+				regulator-min-microvolt = <900000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			TOUCH_AVDD: LDO7 {
+				regulator-name = "TOUCH_AVDD";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			BACKLIGHT: MUXSW_EN {
+				regulator-name = "BACKLIGHT";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+
+&ext_mdio {
+	external_phy: ethernet-phy@0 {
+		reg = <0>;
+		max-speed = <1000>;
+		reset-assert-us = <20000>;
+		reset-deassert-us = <50000>;
+		reset-gpios = <&gpio GPIOM_7 (GPIO_ACTIVE_LOW |GPIO_OPEN_DRAIN)>;
+		interrupt-parent = <&gpio_intc>;
+		interrupts = <340 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+
+&ethmac {
+	status = "okay";
+	phy-handle = <&internal_ephy>;
+	phy-mode = "rmii";
+};
+
+&aml_bt {
+	status = "disabled";
+	reset-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
+	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
+};
+
+&periphs_pinctrl {
+	i2c1_pins1:i2c1_pins1 {
+		mux {
+			drive-strength-microamp = <500>;
+		};
+	};
+
+	i2c2_pins2:i2c2_pins2 {
+		mux {
+			drive-strength-microamp = <500>;
+		};
+	};
+
+	i2c3_pins2:i2c3_pins2 {
+		mux {
+			drive-strength-microamp = <500>;
+		};
+	};
+
+	i2c2_pins3:i2c2_pins3 {
+		mux {
+			drive-strength-microamp = <500>;
+		};
+	};
+
+	i2c0_ao_pins1:i2c0_ao_pins1 {
+		mux {
+			drive-strength-microamp = <500>;
+		};
+	};
+};
+
+&CPU4 {
+	cpu-supply = <&VDD_CPU_B>;
+	cpu_reg_use_buck;
+	operating-points-v2 = <&a53buck_opp_table0>,
+		<&a53buck_opp_table1>,
+		<&a53buck_opp_table2>,
+		<&a53buck_opp_table3>;
+};
+
+&CPU5 {
+	cpu-supply = <&VDD_CPU_B>;
+	cpu_reg_use_buck;
+	operating-points-v2 = <&a53buck_opp_table0>,
+		<&a53buck_opp_table1>,
+		<&a53buck_opp_table2>,
+		<&a53buck_opp_table3>;
+};
+
+&CPU6 {
+	cpu-supply = <&VDD_CPU_B>;
+	cpu_reg_use_buck;
+	operating-points-v2 = <&a53buck_opp_table0>,
+		<&a53buck_opp_table1>,
+		<&a53buck_opp_table2>,
+		<&a53buck_opp_table3>;
+};
+
+&CPU7 {
+	cpu-supply = <&VDD_CPU_B>;
+	cpu_reg_use_buck;
+	operating-points-v2 = <&a53buck_opp_table0>,
+		<&a53buck_opp_table1>,
+		<&a53buck_opp_table2>,
+		<&a53buck_opp_table3>;
+};
+
+&crg3_drd {
+	compatible = "amlogic, crg-host-drd";
+	status = "disable";
+};
+
+&crg_phy_20 {
+	status = "disable";
+	portnum = <1>;
+	gpio-vbus-power = "GPIOM_8";
+	gpios = <&gpio GPIOM_8 GPIO_ACTIVE_HIGH>;
+};
+
+&crg3_phy_20 {
+	status = "disable";
+	portnum = <1>;
+};
+
+&pcie {
+	reset-gpio = <&gpio GPIOH_3 GPIO_ACTIVE_HIGH>;
+	status = "disable";
+};
