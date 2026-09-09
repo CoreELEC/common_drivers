@@ -105,5 +105,5 @@ dtb-y += sc2_s905x4_x96_x4_4g_1gbit.dtb
 dtb-y += t7_a311d2_beelink_gt_king_ii_4g.dtb
 dtb-y += t7_a311d2_beelink_gt_king_ii_8g.dtb
 dtb-y += t7_a311d2_khadas_vim4.dtb
-dtb-y += t7_pop1-g_amazon_3rd_gen_cube.dts
+dtb-y += t7_pop1-g_amazon_3rd_gen_cube.dtb
 dtb-y += t7c_a311d2_khadas_vim4n.dtb
