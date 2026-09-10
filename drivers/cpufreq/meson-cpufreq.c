@@ -1068,6 +1068,8 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 				__func__, cur_cluster,
 				freq_table[cur_cluster][i].frequency);
 
+			dev_pm_opp_disable(cpu_dev,
+				freq_table[cur_cluster][i].frequency * 1000);
 			freq_table[cur_cluster][i].frequency = CPUFREQ_TABLE_END;
 		}
 	}
