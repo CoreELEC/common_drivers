@@ -89,78 +89,32 @@
 	};
 
 	a73pwm_opp_table0 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
+
+		opp12 {
+			opp-hz = <0x00 0x8f0d1800>;
+			opp-microvolt = <0x1001a8>;
 		};
 	};
 
 	a73pwm_opp_table1 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
+
+		opp12 {
+			opp-hz = <0x00 0x8f0d1800>;
+			opp-microvolt = <0x1001a8>;
 		};
 	};
 
 	a73pwm_opp_table2 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
+		opp12 {
+			opp-hz = <0x00 0x8f0d1800>;
+			opp-microvolt = <0xf8c78>;
 		};
 	};
 
 	a73pwm_opp_table3 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53pwm_opp_table0 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53pwm_opp_table1 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53pwm_opp_table2 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53pwm_opp_table3 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53buck_opp_table0 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53buck_opp_table1 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-	};
-
-	a53buck_opp_table2 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
-		};
-
-		opp06 {
-			opp-microvolt = <0xc3500>;
-		};
-	};
-
-	a53buck_opp_table3 {
-		opp01 {
-			opp-hz = /bits/ 64 <666000000>;
+		opp12 {
+			opp-hz = <0x00 0x8f0d1800>;
+			opp-microvolt = <0xea218>;
 		};
 	};
 
@@ -288,16 +242,17 @@
 			mmc-hs400-1_8v;
 		};
 
-		sdio@fe088000 {
-			status = "okay";
-			/delete-property/ use_intf3_tuning;
-		};
-
 		sd@fe08a000 {
 			status = "disabled";
 			/delete-property/ vmmc-supply;
 			/delete-property/ vqmmc-supply;
 		};
+
+	};
+
+	aml_bt {
+		reset-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
+		hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 	};
 
 	aml_wifi {
@@ -314,7 +269,11 @@
 	};
 
 	/delete-node/ bl_pwm_conf;
+	/delete-node/ dvb-extern;
+	/delete-node/ dvb-demux;
+
 	/delete-node/ gpio_keypad;
+
 	/delete-node/ bl30_manager;
 
 	meson-remote {
@@ -353,6 +312,7 @@
 		rohm,reset-snvs-powered;
 
 		regulators {
+
 			VDD_NPU: BUCK1 {
 				regulator-name = "VDD_NPU";
 				regulator-min-microvolt = <700000>;
@@ -444,43 +404,9 @@
 				regulator-boot-on;
 				regulator-always-on;
 			};
-
-			CAMERA_VDD: LDO4 {
-				regulator-name = "CAMERA_VDD";
-				regulator-min-microvolt = <900000>;
-				regulator-max-microvolt = <1800000>;
-			};
-
-			WIFI_BT_VIO: LDO5 {
-				regulator-name = "WIFI_BT_VIO";
-				regulator-min-microvolt = <1800000>;
-				regulator-max-microvolt = <3300000>;
-			};
-
-			BUCK8_EXT: LDO6 {
-				regulator-name = "BUCK8_EXT";
-				regulator-min-microvolt = <900000>;
-				regulator-max-microvolt = <1800000>;
-				regulator-boot-on;
-				regulator-always-on;
-			};
-
-			TOUCH_AVDD: LDO7 {
-				regulator-name = "TOUCH_AVDD";
-				regulator-min-microvolt = <1800000>;
-				regulator-max-microvolt = <3300000>;
-			};
-
-			BACKLIGHT: MUXSW_EN {
-				regulator-name = "BACKLIGHT";
-				regulator-min-microvolt = <1800000>;
-				regulator-max-microvolt = <1800000>;
-				regulator-always-on;
-			};
 		};
 	};
 };
-
 
 &ext_mdio {
 	external_phy: ethernet-phy@0 {
@@ -499,12 +425,6 @@
 	status = "okay";
 	phy-handle = <&internal_ephy>;
 	phy-mode = "rmii";
-};
-
-&aml_bt {
-	status = "disabled";
-	reset-gpios = <&gpio    GPIOX_17 GPIO_ACTIVE_HIGH>;
-	hostwake-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_HIGH>;
 };
 
 &periphs_pinctrl {
