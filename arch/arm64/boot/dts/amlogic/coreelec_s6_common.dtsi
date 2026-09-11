@@ -117,6 +117,11 @@
 	};
 };
 
+&ion_cma_reserved {
+	/* s6_s905x5_bl201.dts defines only half of the size */
+	size = <0x0 0x0>;
+};
+
 &audiobus {
 	/delete-node/ tdm@1;
 	/delete-node/ resample@0;
