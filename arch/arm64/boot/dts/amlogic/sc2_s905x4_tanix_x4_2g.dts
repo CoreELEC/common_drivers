@@ -1,0 +1,75 @@
+#include "sc2_s905x4_2g.dts"
+
+/ {
+	model = "Tanix X4 2G";
+	amlogic-dt-id = "sc2_s905x4_ah212-2g";
+	coreelec-dt-id = "sc2_s905x4_tanix_x4_2g";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x000000 0x0 0x80000000>;
+	};
+};
+
+/*
+ * coreelec_sc2_common.dtsi tries to disable the vendor "mbox_devfs@0" node
+ * by node name, but overriding it by name creates a separate, unused node
+ * and leaves the vendor devfs enabled. It then claims the "ree2aocpu"
+ * (SC2_REE2AO0) channel, which makes bl30_manager fail with
+ * "Not find mbox channel byname" and the IR wakeup code never reaches the
+ * AO. Override it by label instead.
+ */
+&mbox_devfs {
+	status = "disabled";
+};
+
+/*
+ * coreelec_common.dtsi removes the vendor "ir@8000" node together with its
+ * "ir" label, so the IR wakeup table must be configured through the still
+ * existing ir_wakeup_key node instead of &ir.
+ * Tanix dump uses customcode 0x4040 and power scan code 0x4d for IR wake.
+ */
+&ir_wakeup_key {
+	key_num = <1>;
+	wakeup_key = <0xb24d4040 IR_NORMAL KEY_POWER>;
+};
+
+/*
+ * CoreELEC disables the AO "virtual RTC" on all SC2 SoCs. Its platform
+ * driver registers a .shutdown callback (meson_vrtc_shutdown) which sends a
+ * synchronous mailbox message to the AO (MBOX_CMD_SET_RTC) on every reboot
+ * or shutdown. On S905X4 the vendor AO/BL30 does not answer these mailbox
+ * commands, so this can hang the reboot right after the HDMI output has been
+ * switched off. Keep it disabled on SC2.
+ */
+&vrtc {
+	status = "disabled";
+};
+
+/* The Tanix X4 dump uses 200 MHz for the SD card interface */
+&sd_emmc_b {
+	max-frequency = <200000000>;
+};
+
+&periphs_pinctrl {
+	spdifout: spdifout {
+		mux {
+			groups = "spdif_out_d";
+			function = "spdif_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux {
+			groups = "GPIOD_10";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "Tanix";
+		product_desc = "X4";
+	};
+};
