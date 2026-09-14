@@ -63,6 +63,8 @@ AMLVIDEO_MINOR_VERSION, AMLVIDEO_RELEASE)
 #define RECEIVER_NAME_PIP "aml_video"
 #define PROVIDER_NAME_PIP "aml_video"
 
+#define AMLVIDEO_IOC_GET_VFQ     _IOR('V', 0x01, int)
+
 #define AMLVIDEO_POOL_SIZE 16
 /*extern bool omx_secret_mode;*/
 
@@ -797,6 +799,20 @@ static unsigned int amlvideo_poll(struct file *file,
 		return 0;
 }
 
+static long amlvideo_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+  struct vivi_fh *fh = file->private_data;
+  struct vivi_dev *dev = fh->dev;
+
+  switch (cmd) {
+    case AMLVIDEO_IOC_GET_VFQ:
+      return put_user(vfq_level(&dev->q_omx), (int __user *)arg);
+
+    default:
+      return video_ioctl2(file, cmd, arg); /* V4L2 ioctl handler */
+  }
+}
+
 static int amlvideo_close(struct file *file)
 {
 	struct vivi_fh *fh = file->private_data;
@@ -844,7 +860,7 @@ static const struct v4l2_file_operations amlvideo_fops = {
 	.release = amlvideo_close,
 	.read = amlvideo_read,
 	.poll = amlvideo_poll,
-	.unlocked_ioctl = video_ioctl2, /* V4L2 ioctl handler */
+	.unlocked_ioctl = amlvideo_ioctl,
 	.mmap = amlvideo_mmap,
 };
 
