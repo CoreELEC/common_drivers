@@ -12648,9 +12648,7 @@ void resume_ve(int vpp_index)
 
 void resume_cm(int vpp_index)
 {
-	if (chip_type_id == chip_s7 ||
-		chip_type_id == chip_s7d ||
-		chip_type_id == chip_c5)
+	if (chip_type_id != chip_s6)
 		return;
 
 	pr_amvecm_dbg("amvecm: resume cm0, pq_cfg.cm_en/cm_en=%d/%d\n",
