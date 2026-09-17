@@ -268,7 +268,7 @@ char cur_crc[32] = "invalid";
 #define FLAG_FRAME_DELAY_MASK	0xf
 #define FLAG_FRAME_DELAY_SHIFT	16
 
-unsigned int dolby_vision_flags = FLAG_BYPASS_VPP | FLAG_FORCE_CVM;
+unsigned int dolby_vision_flags = FLAG_BYPASS_VPP | FLAG_FORCE_CVM | FLAG_USE_SINK_MIN_MAX;
 module_param(dolby_vision_flags, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_flags, "\n dolby_vision_flags\n");
 
@@ -8897,6 +8897,22 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 						(vinfo->vout_device->dv_info->tmin_lum ^ 2)
 						* 10000 / (127 * 127);
 				}
+			} else if (vinfo->vout_device->dv_info->ver == 2) {
+				if (vinfo->vout_device->dv_info->tmaxPQ) {
+					/* Target max luminance = 100+50*CV, CV range 0-31 (5-bit field) */
+					graphic_max =
+					target_lumin_max =
+					(vinfo->vout_device->dv_info->tmaxPQ
+						* 50 + 100);
+					/* Target min luminance = (CV/31)^2, CV range 0-31 (5-bit field) */
+					/* Cover OLED pannels when Target Min PQ is set to 0 */
+					u16 tminPQ = vinfo->vout_device->dv_info->tminPQ ?
+						vinfo->vout_device->dv_info->tminPQ : 1;
+					graphic_min =
+					amdv_target_min =
+					(tminPQ * tminPQ) *
+					10000 / (31 * 31);
+				}
 			}
 		} else if (sink_hdr_support(vinfo) & HDR_SUPPORT) {
 			if (vinfo->hdr_info.lumi_max) {
@@ -10432,6 +10448,22 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 					amdv_target_min =
 					(vinfo->vout_device->dv_info->tmin_lum ^ 2) *
 					10000 / (127 * 127);
+				}
+			} else if (vinfo->vout_device->dv_info->ver == 2) {
+				if (vinfo->vout_device->dv_info->tmaxPQ) {
+					/* Target max luminance = 100+50*CV, CV range 0-31 (5-bit field) */
+					graphic_max =
+					target_lumin_max =
+					(vinfo->vout_device->dv_info->tmaxPQ
+						* 50 + 100);
+					/* Target min luminance = (CV/31)^2, CV range 0-31 (5-bit field) */
+					/* Cover OLED pannels when Target Min PQ is set to 0 */
+					u16 tminPQ = vinfo->vout_device->dv_info->tminPQ ?
+						vinfo->vout_device->dv_info->tminPQ : 1;
+					graphic_min =
+					amdv_target_min =
+					(tminPQ * tminPQ) *
+					10000 / (31 * 31);
 				}
 			}
 		} else if (sink_hdr_support(vinfo) & HDR_SUPPORT) {
