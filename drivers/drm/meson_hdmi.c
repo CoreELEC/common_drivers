@@ -286,6 +286,16 @@ static bool meson_hdmitx_test_color_attr(struct hdmitx_common *common,
 		return true;
 }
 
+static bool is_amdv_output_dv(void)
+{
+	int mode = get_amdv_target_mode();
+
+	return is_amdv_enable() &&
+	       mode != AMDV_OUTPUT_MODE_HDR10 &&
+	       mode != AMDV_OUTPUT_MODE_SDR10 &&
+	       mode != AMDV_OUTPUT_MODE_SDR8;
+}
+
 static int meson_hdmitx_decide_color_attr
 	(struct hdmitx_common *common, struct am_meson_crtc_state *crtc_state,
 	struct hdmitx_color_attr *attr, u64 sequence_id)
@@ -319,7 +329,7 @@ static int meson_hdmitx_decide_color_attr
 	// try autoselect
 	// check if any colour subsampling is set
 	// force colour subsampling when DV mode
-	if (is_amdv_enable()) {
+	if (is_amdv_output_dv()) {
 		int cs = attr->colorformat;
 		if (get_amdv_ll_policy() == 0 /* DOLBY_VISION_LL_DISABLE */) {
 			attr->colorformat = HDMI_COLORSPACE_YUV444;
@@ -362,7 +372,7 @@ static int meson_hdmitx_decide_color_attr
 
 	// check for bit colourdepth limit
 	// force bit colourdepth when DV mode
-	if (is_amdv_enable()) {
+	if (is_amdv_output_dv()) {
 		int cd = bitdepth_to_colordepth(attr->bitdepth);
 		if (get_amdv_ll_policy() == 0 /* DOLBY_VISION_LL_DISABLE */) {
 			attr->bitdepth = colordepth_to_bitdepth(COLORDEPTH_24B);
