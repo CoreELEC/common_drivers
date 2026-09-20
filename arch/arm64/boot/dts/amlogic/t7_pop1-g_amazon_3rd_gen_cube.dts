@@ -139,6 +139,9 @@
 						drive-strength-microamp = <0x1f4>;
 					};
 				};
+				
+				irblaster_pin2: irblaster_pin2 {
+				};
 			};
 
 			pwm_ab: pwm@58000 {
@@ -255,7 +258,6 @@
 		sd@fe08a000 {
 			status = "disabled";
 		};
-
 	};
 
 	aml_bt {
@@ -285,21 +287,36 @@
 
 	/delete-node/ dvb-demux;
 
-	/delete-node/ gpio_keypad;
+	/delete-node/ ir_wakeup_key;
 
 	/delete-node/ bl30_manager;
 
+	gpio_keypad {
+		compatible = "amlogic, gpio_keypad";
+		status = "okay";
+		detect_mode = <0>;
+		scan_period = <20>;
+		wakeup-source;
+		key_num = <1>;
+		key-gpios = <&gpio GPIOW_6 GPIO_ACTIVE_LOW>;
+		key_code = <KEY_POWER>;
+		key_type = <EV_KEY>;
+		key_name = "power";
+	};
+
+	meson-ir-tx {
+		compatible = "amlogic,meson-g12a-ir-tx", "amlogic,meson-ir-tx";
+		status = "okay";
+		reg = <0x00 0xfe08410c 0x00 0x10>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&irblaster_pin2>;
+		clocks = <&clkc CLKID_IR_CTRL>, <&xtal>;
+		clock-names = "sysclk", "xtal";
+		interrupts = <GIC_SPI 23 IRQ_TYPE_EDGE_RISING>;
+	};
+			
 	meson-remote {
 		demod_enable;
-	};
-
-	ir_wakeup_key {
-		key_num = <0x0c>;
-		wakeup_key = <0xb9467d02 0x00 0x74 0xba45bd02 0x00 0x74 0xef10fe01 0x00 0x74 0xef10fb04 0x00 0x74 0xf20dfe01 0x00 0x74 0xe51afb04 0x00 0x74 0xde217788 0x00 0x74 0x3ac5bd02 0x01 0x85 0xb8477788 0x00 0x66 0x9b647788 0x00 0xbc 0x8f707788 0x00 0x1de 0x9c637788 0x00 0xbb>;
-	};
-
-	openvfd {
-		status = "disabled";
 	};
 
 	fb {
@@ -418,57 +435,6 @@
 				regulator-boot-on;
 				regulator-always-on;
 			};
-		};
-	};
-};
-
-&ext_mdio {
-	external_phy: ethernet-phy@0 {
-		reg = <0>;
-		max-speed = <1000>;
-		reset-assert-us = <20000>;
-		reset-deassert-us = <50000>;
-		reset-gpios = <&gpio GPIOM_7 (GPIO_ACTIVE_LOW |GPIO_OPEN_DRAIN)>;
-		interrupt-parent = <&gpio_intc>;
-		interrupts = <340 IRQ_TYPE_LEVEL_LOW>;
-	};
-};
-
-
-&ethmac {
-	status = "okay";
-	phy-handle = <&internal_ephy>;
-	phy-mode = "rmii";
-};
-
-&periphs_pinctrl {
-	i2c1_pins1:i2c1_pins1 {
-		mux {
-			drive-strength-microamp = <500>;
-		};
-	};
-
-	i2c2_pins2:i2c2_pins2 {
-		mux {
-			drive-strength-microamp = <500>;
-		};
-	};
-
-	i2c3_pins2:i2c3_pins2 {
-		mux {
-			drive-strength-microamp = <500>;
-		};
-	};
-
-	i2c2_pins3:i2c2_pins3 {
-		mux {
-			drive-strength-microamp = <500>;
-		};
-	};
-
-	i2c0_ao_pins1:i2c0_ao_pins1 {
-		mux {
-			drive-strength-microamp = <500>;
 		};
 	};
 };
