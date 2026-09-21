@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+#include "sc2_s905x4_4g_1gbit.dts"
+
+/ {
+	model = "Tencent Aurora Box 6S";
+	coreelec-dt-id = "sc2_s905x4_tencent_aurora_6s";
+
+	gpioleds {
+		sys_led {
+			/* Enable the TCA6507 LED controller. */
+			gpios = <&gpio GPIOD_11 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+		};
+	};
+};
+
+&pcie {
+	status = "okay";
+	reset-gpio = <&gpio GPIOX_3 GPIO_ACTIVE_HIGH>;
+};
+
+&sd_emmc_a {
+	status = "disabled";
+};
+
+&aml_wifi {
+	/* The WLAN interface is PCIe, not SDIO. */
+	/delete-property/ interrupt-gpios;
+};
+
+&i2c3 {
+	status = "okay";
+
+	tca6507@45 {
+		compatible = "ti,tca6507";
+		reg = <0x45>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		led-red@0 {
+			label = "strip-red";
+			reg = <0>;
+			linux,default-trigger = "none";
+		};
+
+		led-green@1 {
+			label = "strip-green";
+			reg = <1>;
+			linux,default-trigger = "none";
+		};
+
+		led-blue@2 {
+			label = "strip-blue";
+			reg = <2>;
+			linux,default-trigger = "default-on";
+		};
+	};
+};
