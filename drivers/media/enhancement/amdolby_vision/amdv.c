@@ -374,6 +374,22 @@ static unsigned int amdv_default_max[3][3] = {
 	{ 600, 1000, 100 },  /* SDR =>  DV/HDR/SDR */
 };
 
+/* DV VSVDB v2 target luminance by 5-bit CV, from PQ12 code / 4095 */
+/* max: PQ 2055+65*CV in nits, min: PQ 20*CV in 0.0001 nits */
+static const u16 dv_vsvdb_v2_tmax[32] = {
+	94, 110, 129, 150, 175, 204, 237, 276,
+	320, 372, 431, 499, 578, 670, 775, 897,
+	1037, 1200, 1387, 1605, 1856, 2147, 2485, 2876,
+	3330, 3857, 4470, 5183, 6014, 6982, 8113, 9434,
+};
+
+static const u16 dv_vsvdb_v2_tmin[32] = {
+	0, 6, 22, 47, 83, 129, 188, 260,
+	347, 449, 569, 707, 865, 1044, 1247, 1475,
+	1729, 2012, 2325, 2671, 3052, 3470, 3927, 4427,
+	4972, 5564, 6206, 6902, 7655, 8468, 9345, 10289,
+};
+
 static unsigned int amdv_graphic_min = 50; /* 0.0001 */
 static unsigned int amdv_graphic_max; /* 100 */
 static unsigned int old_amdv_graphic_max;
@@ -8899,19 +8915,17 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 				}
 			} else if (vinfo->vout_device->dv_info->ver == 2) {
 				if (vinfo->vout_device->dv_info->tmaxPQ) {
-					/* Target max luminance = 100+50*CV, CV range 0-31 (5-bit field) */
+					/* Target max luminance = PQ 2055+65*CV, in nits */
 					graphic_max =
 					target_lumin_max =
-					(vinfo->vout_device->dv_info->tmaxPQ
-						* 50 + 100);
-					/* Target min luminance = (CV/31)^2, CV range 0-31 (5-bit field) */
+					dv_vsvdb_v2_tmax[vinfo->vout_device->dv_info->tmaxPQ];
+					/* Target min luminance = PQ 20*CV, in 0.0001 nits */
 					/* Cover OLED pannels when Target Min PQ is set to 0 */
 					u16 tminPQ = vinfo->vout_device->dv_info->tminPQ ?
 						vinfo->vout_device->dv_info->tminPQ : 1;
 					graphic_min =
 					amdv_target_min =
-					(tminPQ * tminPQ) *
-					10000 / (31 * 31);
+					dv_vsvdb_v2_tmin[tminPQ];
 				}
 			}
 		} else if (sink_hdr_support(vinfo) & HDR_SUPPORT) {
@@ -10451,19 +10465,17 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 				}
 			} else if (vinfo->vout_device->dv_info->ver == 2) {
 				if (vinfo->vout_device->dv_info->tmaxPQ) {
-					/* Target max luminance = 100+50*CV, CV range 0-31 (5-bit field) */
+					/* Target max luminance = PQ 2055+65*CV, in nits */
 					graphic_max =
 					target_lumin_max =
-					(vinfo->vout_device->dv_info->tmaxPQ
-						* 50 + 100);
-					/* Target min luminance = (CV/31)^2, CV range 0-31 (5-bit field) */
+					dv_vsvdb_v2_tmax[vinfo->vout_device->dv_info->tmaxPQ];
+					/* Target min luminance = PQ 20*CV, in 0.0001 nits */
 					/* Cover OLED pannels when Target Min PQ is set to 0 */
 					u16 tminPQ = vinfo->vout_device->dv_info->tminPQ ?
 						vinfo->vout_device->dv_info->tminPQ : 1;
 					graphic_min =
 					amdv_target_min =
-					(tminPQ * tminPQ) *
-					10000 / (31 * 31);
+					dv_vsvdb_v2_tmin[tminPQ];
 				}
 			}
 		} else if (sink_hdr_support(vinfo) & HDR_SUPPORT) {
