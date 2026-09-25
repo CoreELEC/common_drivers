@@ -2568,7 +2568,6 @@ static void meson_hdmitx_hpd_cb(void *data)
 	struct edid *pedid;
 #endif
 	struct drm_device *drm = connector->dev;
-	struct drm_mode_config mode_config = drm->mode_config;
 	u8 *edid_raw_buf = NULL;
 	int edid_raw_len;
 
@@ -2592,13 +2591,22 @@ static void meson_hdmitx_hpd_cb(void *data)
 		pedid = (struct edid *)hdmitx_get_raw_edid(tx_comm);
 		cec_notifier_set_phys_addr_from_edid(am_hdmi->cec_notifier,
 						     pedid);
-		if (mode_config.suspend_state)
+		if (drm->mode_config.suspend_state)
 			drm_mode_config_helper_resume(drm);
 	} else {
 		DRM_DEBUG("%s[%d]\n", __func__, __LINE__);
 		cec_notifier_set_phys_addr(am_hdmi->cec_notifier,
 					   CEC_PHYS_ADDR_INVALID);
-		drm_mode_config_helper_suspend(drm);
+		/*
+		 * A plug-out can be reported again without a plug-in in
+		 * between, e.g. by the hdmitx resume path when the system
+		 * resumes with the sink still unplugged. Saving again would
+		 * overwrite suspend_state and leak the first saved state,
+		 * together with the framebuffers its planes reference. Keep
+		 * it; the next plug-in resumes from it.
+		 */
+		if (!drm->mode_config.suspend_state)
+			drm_mode_config_helper_suspend(drm);
 	}
 #endif
 
