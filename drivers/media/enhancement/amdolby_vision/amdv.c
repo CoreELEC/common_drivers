@@ -397,6 +397,10 @@ module_param(amdv_graphic_min, uint, 0664);
 MODULE_PARM_DESC(amdv_graphic_min, "\n amdv_graphic_min\n");
 module_param(amdv_graphic_max, uint, 0664);
 MODULE_PARM_DESC(amdv_graphic_max, "\n amdv_graphic_max\n");
+static bool amdv_graphic_follow_video;
+static bool old_amdv_graphic_follow_video;
+module_param(amdv_graphic_follow_video, bool, 0664);
+MODULE_PARM_DESC(amdv_graphic_follow_video, "\n amdv_graphic_follow_video\n");
 #define DV_PQ_GRAPHIC_MIN	20000	/* 0.0001 nits */
 #define DV_PQ_GRAPHIC_MAX	3	/* nits */
 
@@ -1707,6 +1711,18 @@ static int is_graphic_changed(void)
 		if (!is_osd_off[0]) {
 			old_amdv_graphic_max =
 				amdv_graphic_max;
+			ret |= 2;
+			force_set_lut = true;
+		}
+	}
+	if (old_amdv_graphic_follow_video != amdv_graphic_follow_video) {
+		if (debug_dolby & 0x2)
+			pr_dv_dbg("graphic follow video changed %d-%d\n",
+				  old_amdv_graphic_follow_video,
+				  amdv_graphic_follow_video);
+		if (!is_osd_off[0]) {
+			old_amdv_graphic_follow_video =
+				amdv_graphic_follow_video;
 			ret |= 2;
 			force_set_lut = true;
 		}
@@ -10542,6 +10558,7 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	 * VSVDB target range, so they pass unmapped
 	 */
 	if (pri_mode == V_PRIORITY && !amdv_graphic_max &&
+	    !amdv_graphic_follow_video &&
 	    !(dolby_vision_flags & FLAG_CERTIFICATION) &&
 	    (graphic_fmt == FORMAT_HDR10 || graphic_fmt == FORMAT_HDR8)) {
 		graphic_min = DV_PQ_GRAPHIC_MIN;
