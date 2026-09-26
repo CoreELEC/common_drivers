@@ -1276,6 +1276,28 @@ static void ceca_addr_add(unsigned int l_add)
 /* --------hw related------- */
 void cec_set_clk(struct device *dev)
 {
+	/*
+	 * Before A1, CEC-A's 32 kHz gate is only poked by ao_ceca_init().
+	 * The same bits are g12a_ao_cec in CCF with no user, so
+	 * clk_disable_unused turns CEC-A off. Claim ceca_clk when a board
+	 * asks for it. Boards without the property are unchanged.
+	 */
+	if (cec_dev->plat_data->chip_id < CEC_CHIP_A1 &&
+	    of_find_property(dev->of_node, "clocks", NULL)) {
+		cec_dev->ceca_clk = devm_clk_get(dev, "ceca_clk");
+		if (IS_ERR(cec_dev->ceca_clk)) {
+			CEC_ERR("failed to get ceca_clk: %ld\n",
+				PTR_ERR(cec_dev->ceca_clk));
+			cec_dev->ceca_clk = NULL;
+			return;
+		}
+		if (clk_prepare_enable(cec_dev->ceca_clk))
+			CEC_ERR("failed to enable ceca_clk\n");
+		else
+			CEC_INFO("holding ceca_clk\n");
+		return;
+	}
+
 	if (cec_dev->plat_data->chip_id >= CEC_CHIP_A1) {
 		cec_dev->ceca_clk = devm_clk_get(dev, "ceca_clk");
 		if (IS_ERR(cec_dev->ceca_clk)) {

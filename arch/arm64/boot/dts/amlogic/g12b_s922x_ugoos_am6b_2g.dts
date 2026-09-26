@@ -34,3 +34,9 @@
 		product_desc = "AM6B+";
 	};
 };
+
+&aocec {
+	/delete-property/ ee_cec;
+	clocks = <&clkc_AO CLKID_AO_CEC>;
+	clock-names = "ceca_clk";
+};
