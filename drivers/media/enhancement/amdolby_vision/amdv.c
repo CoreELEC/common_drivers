@@ -247,7 +247,7 @@ char cur_crc[32] = "invalid";
 #define FLAG_FRAME_DELAY_MASK	0xf
 #define FLAG_FRAME_DELAY_SHIFT	16
 
-unsigned int dolby_vision_flags = FLAG_BYPASS_VPP | FLAG_FORCE_CVM | FLAG_USE_SINK_MIN_MAX;
+unsigned int dolby_vision_flags = FLAG_BYPASS_VPP | FLAG_FORCE_CVM;
 
 bool dolby_vision_use_source_meta_levels = true;
 module_param(dolby_vision_use_source_meta_levels, bool, 0664);
@@ -382,6 +382,8 @@ static const u16 dv_vsvdb_v2_tmin[32] = {
 static unsigned int amdv_graphic_min = 50; /* 0.0001 */
 static unsigned int amdv_graphic_max; /* 100 */
 static unsigned int old_amdv_graphic_max;
+#define DV_PQ_GRAPHIC_MIN	20000	/* 0.0001 nits */
+#define DV_PQ_GRAPHIC_MAX	3	/* nits */
 
 static unsigned int dv_HDR10_graphics_max = 300;
 static unsigned int dv_graphic_blend_test;
@@ -11844,6 +11846,31 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	else
 		dst_format = FORMAT_SDR;
 
+	/* cert: some graphic test also need video pri 5223,5243,5253,5263 */
+	if (dolby_vision_flags & FLAG_CERTIFICATION) {
+		if ((dolby_vision_flags & FLAG_PRIORITY_GRAPHIC))
+			pri_mode = G_PRIORITY;
+		else
+			pri_mode = V_PRIORITY;
+	} else {
+		/*auto mode: check video/graphics priority on the fly */
+		if (get_video_enabled(0)/* && is_graphics_output_off()*/)
+			pri_mode = V_PRIORITY;
+		else
+			pri_mode = G_PRIORITY;
+		/*user debug mode*/
+		if (force_priority == 1)
+			pri_mode = G_PRIORITY;
+		else if (force_priority == 2)
+			pri_mode = V_PRIORITY;
+
+		/*video priority only valid in sink-led,set to graphic pri when in other mode*/
+		if (dst_format != FORMAT_DOVI ||
+		    (dolby_vision_ll_policy >= DOLBY_VISION_LL_YUV422 ||
+		    (dolby_vision_flags & FLAG_FORCE_DV_LL)))
+			pri_mode = G_PRIORITY;
+	}
+
 	/* STB core */
 	/* check target luminance */
 	graphic_min = amdv_graphic_min;
@@ -11979,6 +12006,15 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 			       amdv_default_max,
 			       sizeof(amdv_target_max));
 		}
+	} else if (pri_mode == V_PRIORITY && !amdv_graphic_max &&
+		   !(dolby_vision_flags & FLAG_CERTIFICATION) &&
+		   (graphic_fmt == FORMAT_HDR10 ||
+		    graphic_fmt == FORMAT_HDR8)) {
+		/* PQ graphics under video priority: a range inside every
+		 * v1/v2 VSVDB target range, so they pass unmapped
+		 */
+		graphic_min = DV_PQ_GRAPHIC_MIN;
+		graphic_max = DV_PQ_GRAPHIC_MAX;
 	}
 
 	if (is_osd_off[0] && !multi_dv_mode) {
@@ -12116,31 +12152,6 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 		dv_inst[dv_id].el_halfsize_flag = el_halfsize_flag;
 		dv_inst[dv_id].video_width = w;
 		dv_inst[dv_id].video_height = h;
-	}
-
-	/* cert: some graphic test also need video pri 5223,5243,5253,5263 */
-	if (dolby_vision_flags & FLAG_CERTIFICATION) {
-		if ((dolby_vision_flags & FLAG_PRIORITY_GRAPHIC))
-			pri_mode = G_PRIORITY;
-		else
-			pri_mode = V_PRIORITY;
-	} else {
-		/*auto mode: check video/graphics priority on the fly */
-		if (get_video_enabled(0)/* && is_graphics_output_off()*/)
-			pri_mode = V_PRIORITY;
-		else
-			pri_mode = G_PRIORITY;
-		/*user debug mode*/
-		if (force_priority == 1)
-			pri_mode = G_PRIORITY;
-		else if (force_priority == 2)
-			pri_mode = V_PRIORITY;
-
-		/*video priority only valid in sink-led,set to graphic pri when in other mode*/
-		if (dst_format != FORMAT_DOVI ||
-		    (dolby_vision_ll_policy >= DOLBY_VISION_LL_YUV422 ||
-		    (dolby_vision_flags & FLAG_FORCE_DV_LL)))
-			pri_mode = G_PRIORITY;
 	}
 
 	if (dst_format == FORMAT_DOVI) {
