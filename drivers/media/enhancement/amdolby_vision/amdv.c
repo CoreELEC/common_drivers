@@ -393,6 +393,7 @@ static const u16 dv_vsvdb_v2_tmin[32] = {
 static unsigned int amdv_graphic_min = 50; /* 0.0001 */
 static unsigned int amdv_graphic_max; /* 100 */
 static unsigned int old_amdv_graphic_max;
+static unsigned int old_use_sink_min_max;
 module_param(amdv_graphic_min, uint, 0664);
 MODULE_PARM_DESC(amdv_graphic_min, "\n amdv_graphic_min\n");
 module_param(amdv_graphic_max, uint, 0664);
@@ -1707,6 +1708,19 @@ static int is_graphic_changed(void)
 		if (!is_osd_off[0]) {
 			old_amdv_graphic_max =
 				amdv_graphic_max;
+			ret |= 2;
+			force_set_lut = true;
+		}
+	}
+	if (old_use_sink_min_max !=
+	    (dolby_vision_flags & FLAG_USE_SINK_MIN_MAX)) {
+		if (debug_dolby & 0x2)
+			pr_dv_dbg("use sink min max changed %d-%d\n",
+				  old_use_sink_min_max,
+				  dolby_vision_flags & FLAG_USE_SINK_MIN_MAX);
+		if (!is_osd_off[0]) {
+			old_use_sink_min_max =
+				dolby_vision_flags & FLAG_USE_SINK_MIN_MAX;
 			ret |= 2;
 			force_set_lut = true;
 		}
