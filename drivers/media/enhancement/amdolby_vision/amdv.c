@@ -8899,7 +8899,8 @@ int amdv_parse_metadata_v1(struct vframe_s *vf,
 	}
 
 	if (dolby_vision_flags & FLAG_USE_SINK_MIN_MAX) {
-		if (vinfo->vout_device->dv_info->ieeeoui == 0x00d046) {
+		if (vinfo->vout_device && vinfo->vout_device->dv_info &&
+		    vinfo->vout_device->dv_info->ieeeoui == 0x00d046) {
 			if (vinfo->vout_device->dv_info->ver == 0) {
 				/* need lookup PQ table ... */
 			} else if (vinfo->vout_device->dv_info->ver == 1) {
@@ -10476,7 +10477,8 @@ int amdv_parse_metadata_v2_stb(struct vframe_s *vf,
 	last_dst_format = dst_format;
 
 	if (dolby_vision_flags & FLAG_USE_SINK_MIN_MAX) {
-		if (vinfo->vout_device->dv_info->ieeeoui == 0x00d046) {
+		if (vinfo->vout_device && vinfo->vout_device->dv_info &&
+		    vinfo->vout_device->dv_info->ieeeoui == 0x00d046) {
 			if (vinfo->vout_device->dv_info->ver == 0) {
 				/* need lookup PQ table ... */
 			} else if (vinfo->vout_device->dv_info->ver == 1) {
