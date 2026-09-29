@@ -532,11 +532,32 @@ static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	return videobuf_querybuf(&fh->vb_vidq, p);
 }
 
+static bool omx_index_queued(struct vfq_s *q, u32 index)
+{
+	struct vframe_s *vf;
+	int rp = q->rp;
+	int wp = q->wp;
+
+	/* pairs with smp_wmb() in vfq_push() */
+	smp_rmb();
+	while (rp != wp) {
+		vf = q->pool[rp];
+		if (vf && (u32)vf->pts_us64 == index)
+			return true;
+		rp = (rp == q->size - 1) ? 0 : rp + 1;
+	}
+	return false;
+}
+
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	u32 index;
 	struct vframe_s *vf;
 	struct vivi_dev *dev = video_drvdata(file);
+
+	/* an index that is no longer queued must not flush the queue */
+	if (!omx_index_queued(&dev->q_omx, p->index))
+		return 0;
 
 	while ((vf = vfq_pop(&dev->q_omx)))
 	{
