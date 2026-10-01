@@ -1310,6 +1310,13 @@ static void video_vf_unreg_provider(void)
 	switch_from_lcevc_to_nonlcevc(true);
 	atomic_dec(&video_unreg_flag);
 	pr_info("VD1 AFBC 0x%x.\n", is_afbc_enabled(0));
+	if (layer1_used) {
+		u32 cnt = READ_ONCE(vsync_done_count);
+
+		wait_event_timeout(video_vsync_wait,
+				   READ_ONCE(vsync_done_count) != cnt,
+				   msecs_to_jiffies(100));
+	}
 	enable_video_discontinue_report = 1;
 	show_first_picture = false;
 	show_first_frame_nosync = false;
