@@ -4958,6 +4958,9 @@ static void do_vdx_swap_frame(u8 layer_id,
 	}
 }
 
+u32 vsync_done_count;
+DECLARE_WAIT_QUEUE_HEAD(video_vsync_wait);
+
 static int misc_early_proc(void)
 {
 	u32 next_afbc_request = atomic_read(&gafbc_request);
@@ -4997,6 +5000,11 @@ static int misc_early_proc(void)
 
 	vsync_counts++;
 	timer_count++;
+	if (!over_field) {
+		vsync_done_count++;
+		if (wq_has_sleeper(&video_vsync_wait))
+			wake_up(&video_vsync_wait);
+	}
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
 	vsync_rdma_config_pre();
