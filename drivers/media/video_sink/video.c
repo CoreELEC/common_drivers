@@ -1265,6 +1265,20 @@ static void video_vf_unreg_provider(void)
 
 	atomic_dec(&video_unreg_flag);
 	pr_info("VD1 AFBC 0x%x.\n", is_afbc_enabled(0));
+	/*
+	 * With vsync RDMA the hardware keeps scanning out the frame toggled
+	 * before cur_dispbuf until the next vsync, but only cur_dispbuf is kept
+	 * and the provider frees its buffers as soon as we return. After a seek
+	 * a new decoder instance overwrites that frame while it is still on
+	 * screen (stripes over the kept frame). Wait for that vsync, max 100 ms.
+	 */
+	if (layer1_used) {
+		u32 cnt = READ_ONCE(vsync_count);
+		int n;
+
+		for (n = 0; n < 100 && READ_ONCE(vsync_count) == cnt; n++)
+			usleep_range(1000, 1100);
+	}
 	enable_video_discontinue_report = 1;
 	show_first_picture = false;
 	show_first_frame_nosync = false;
