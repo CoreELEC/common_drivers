@@ -55,6 +55,8 @@ extern int over_sync_count;
 extern u32 toggle_count;
 extern u32 timer_count;
 extern u32 vsync_counts;
+extern u32 vsync_done_count;
+extern wait_queue_head_t video_vsync_wait;
 extern bool to_notify_trick_wait;
 extern atomic_t trickmode_framedone;
 extern atomic_t video_prop_change;
