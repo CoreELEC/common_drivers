@@ -2576,6 +2576,18 @@ static void vd1_set_dcu(struct video_layer_s *layer,
 	else
 		cur_dev->rdma_func[vpp_index].rdma_wr_bits
 			(vd_mif_reg->vd_if0_gen_reg2, 0, 0, 2);
+	if (is_mvc) {
+		/* FULL3D_FP_V030RC1: restore VD2 pixel-format bits after synthetic packed playback. */
+		if (type & VIDTYPE_VIU_NV21)
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits
+				(vd2_mif_reg->vd_if0_gen_reg2, 1, 0, 2);
+		else if (type & VIDTYPE_VIU_NV12)
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits
+				(vd2_mif_reg->vd_if0_gen_reg2, 2, 0, 2);
+		else
+			cur_dev->rdma_func[vpp_index].rdma_wr_bits
+				(vd2_mif_reg->vd_if0_gen_reg2, 0, 0, 2);
+	}
 
 	/* FIXME: don't use glayer_info[0].reverse */
 	if (cur_dev->display_module != C3_DISPLAY_MODULE) {
@@ -4267,14 +4279,22 @@ static void vd1_scaler_setting(struct video_layer_s *layer, struct scaler_settin
 	}
 
 	/*vpp input size setting*/
-	cur_dev->rdma_func[vpp_index].rdma_wr
-		(VPP_IN_H_V_SIZE + misc_off,
-		((frame_par->video_input_w & 0x1fff) << 16)
-		| (frame_par->video_input_h & 0x1fff));
+	{
+		u32 full3d_vpp_h = frame_par->video_input_h;
 
-	cur_dev->rdma_func[vpp_index].rdma_wr
-		(VPP_PIC_IN_HEIGHT + misc_off,
-		frame_par->VPP_pic_in_height_);
+		if ((process_3d_type & MODE_3D_FP) && framepacking_support &&
+		    layer->dispbuf && !(layer->dispbuf->type & VIDTYPE_MVC)) {
+			/* FULL3D_FP_V030RC1: logical FP canvas = 1080 + blank + 1080. */
+			full3d_vpp_h = frame_par->VPP_vsc_endp -
+				frame_par->VPP_vsc_startp + 1;
+		}
+		cur_dev->rdma_func[vpp_index].rdma_wr
+			(VPP_IN_H_V_SIZE + misc_off,
+			((frame_par->video_input_w & 0x1fff) << 16)
+			| (full3d_vpp_h & 0x1fff));
+		cur_dev->rdma_func[vpp_index].rdma_wr
+			(VPP_PIC_IN_HEIGHT + misc_off, full3d_vpp_h);
+	}
 
 	cur_dev->rdma_func[vpp_index].rdma_wr
 		(VPP_LINE_IN_LENGTH + misc_off,
@@ -5368,6 +5388,35 @@ static void get_3d_vert_pos(struct video_layer_s *layer,
 	else
 		height = frame_height;
 
+	/* FULL3D_FP_V030RC1: synthetic FP reads eye coordinates from the decoded SBS/TB source. */
+	if ((process_3d_type & MODE_3D_FP) &&
+	    !(vf->type & VIDTYPE_MVC)) {
+		u32 visible_height = vf->height;
+
+		if (vpp_3d_mode == VPP_3D_MODE_LR) {
+			*ls = crop_sy;
+			*le = visible_height - crop_ey - 1;
+			*rs = *ls;
+			*re = *le;
+		} else if (vpp_3d_mode == VPP_3D_MODE_TB) {
+			u32 eye_height = visible_height >> 1;
+
+			*ls = crop_sy;
+			*le = eye_height - crop_ey - 1;
+			*rs = eye_height + crop_sy;
+			*re = visible_height - crop_ey - 1;
+		} else {
+			*ls = *rs = layer->start_y_lines;
+			*le = *re = layer->end_y_lines;
+		}
+		if (vf->type & VIDTYPE_INTERLACE) {
+			*ls >>= 1;
+			*le >>= 1;
+			*rs >>= 1;
+			*re >>= 1;
+		}
+		return;
+	}
 	if (vpp_3d_mode == VPP_3D_MODE_TB) {
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN
 		if (vf->trans_fmt == TVIN_TFMT_3D_FP) {
@@ -5500,7 +5549,27 @@ void config_3d_vd2_position(struct video_layer_s *layer,
 	/* not framepacking mode, need process vert position more */
 	/* framepacking mode, need use right eye position */
 	/* to set vd2 Y0 not vd1 Y1*/
-	if ((dispbuf->type & VIDTYPE_MVC) && framepacking_support) {
+	/* FULL3D_FP_V030RC1: feed synthetic VD2 from the calculated right-eye MIF rectangle.
+	 * The proven Full3D path is ordinary uncompressed MIF. */
+	if ((process_3d_type & MODE_3D_FP) &&
+	    !(dispbuf->type & VIDTYPE_MVC)) {
+		setting->l_hs_chrm = setting->r_hs_chrm;
+		setting->l_he_chrm = setting->r_he_chrm;
+		setting->l_hs_luma = setting->r_hs_luma;
+		setting->l_he_luma = setting->r_he_luma;
+		setting->l_vs_chrm = setting->r_vs_chrm;
+		setting->l_ve_chrm = setting->r_ve_chrm;
+		setting->l_vs_luma = setting->r_vs_luma;
+		setting->l_ve_luma = setting->r_ve_luma;
+		setting->r_hs_luma = 0;
+		setting->r_he_luma = 0;
+		setting->r_hs_chrm = 0;
+		setting->r_he_chrm = 0;
+		setting->r_vs_luma = 0;
+		setting->r_ve_luma = 0;
+		setting->r_vs_chrm = 0;
+		setting->r_ve_chrm = 0;
+	} else if ((dispbuf->type & VIDTYPE_MVC) && framepacking_support) {
 		setting->l_vs_chrm =
 			setting->r_vs_chrm;
 		setting->l_ve_chrm =
@@ -5572,6 +5641,25 @@ s32 config_3d_vd2_blend(struct video_layer_s *layer,
 			layer->start_y_lines;
 		setting->postblend_v_end =
 			layer->end_y_lines;
+	} else if ((process_3d_type & MODE_3D_FP) &&
+		   dispbuf && !(dispbuf->type & VIDTYPE_MVC)) {
+		u32 blank;
+
+		/* FULL3D_FP_V030RC1: synthetic packed sources keep VPP_vd_* at the
+		 * 2160-line virtual source canvas, while VPP_vsc_* describes
+		 * the actual 2205-line frame-packed output window.  Place VD2
+		 * from the OUTPUT window, matching real MVC exactly. */
+		if (framepacking_support)
+			blank = framepacking_blank;
+		else
+			blank = 0;
+		setting->postblend_v_start =
+			cur_frame_par->VPP_vsc_startp +
+			(((cur_frame_par->VPP_vsc_endp -
+			   cur_frame_par->VPP_vsc_startp + 1 - blank) >> 1) + blank);
+		setting->postblend_v_end = cur_frame_par->VPP_vsc_endp;
+		setting->postblend_h_start = cur_frame_par->VPP_hsc_startp;
+		setting->postblend_h_end = cur_frame_par->VPP_hsc_endp;
 	} else if (dispbuf && (dispbuf->type & VIDTYPE_MVC)) {
 		u32 blank;
 
@@ -5867,7 +5955,11 @@ s32 config_vd_position_internal(struct video_layer_s *layer,
 	setting->src_h =
 		(dispbuf->type & VIDTYPE_COMPRESS) ?
 		dispbuf->compHeight : dispbuf->height;
-	if (framepacking_support)
+	/* FULL3D_FP_V030RC1: the 45-line FP blank is output timing, not part of an SBS/TB decode buffer. */
+	if ((process_3d_type & MODE_3D_FP) &&
+	    !(dispbuf->type & VIDTYPE_MVC))
+		blank = 0;
+	else if (framepacking_support)
 		blank = framepacking_blank;
 	else
 		blank = 0;
@@ -5973,6 +6065,12 @@ static void config_vd_param_internal(struct video_layer_s *layer,
 	if ((dispbuf->type & VIDTYPE_INTERLACE) &&
 		(dispbuf->type & VIDTYPE_VIU_FIELD)) {
 		/* vdin interlace non afbc frame case height/2 */
+		zoom_start_y /= 2;
+		zoom_end_y = ((zoom_end_y + 1) >> 1) - 1;
+	} else if ((process_3d_type & MODE_3D_FP) &&
+		   !(dispbuf->type & VIDTYPE_MVC) &&
+		   !is_enable_3d_to_2d()) {
+		/* FULL3D_FP_V030RC1: split the virtual 2160-line VPP canvas evenly: 1080 + 1080. */
 		zoom_start_y /= 2;
 		zoom_end_y = ((zoom_end_y + 1) >> 1) - 1;
 	} else if ((dispbuf->type & VIDTYPE_MVC) &&
@@ -6311,6 +6409,12 @@ s32 config_vd_blend(struct video_layer_s *layer,
 
 	if (!legacy_vpp) {
 		u32 temp_h = cur_frame_par->video_input_h;
+		if ((process_3d_type & MODE_3D_FP) && framepacking_support &&
+		    dispbuf && !(dispbuf->type & VIDTYPE_MVC)) {
+			/* FULL3D_FP_V030RC1: preblend must span the full 2205-line FP canvas. */
+			temp_h = cur_frame_par->VPP_vsc_endp -
+				cur_frame_par->VPP_vsc_startp + 1;
+		}
 
 		temp_h <<= 16;
 		setting->preblend_h_size |= temp_h;
@@ -8297,8 +8401,13 @@ void vpp_blend_update(const struct vinfo_s *vinfo, u8 vpp_index)
 	}
 #endif
 
-	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable)
+	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable ||
+	    ((process_3d_type & MODE_3D_FP) &&
+	     vd_layer[0].dispbuf &&
+	     !(vd_layer[0].dispbuf->type & VIDTYPE_MVC))) {
+		/* FULL3D_FP_V030RC1: only synthetic FP borrows MVC's companion-eye compose state. */
 		mode |= COMPOSE_MODE_3D;
+	}
 	else if (is_amdv_on() && last_el_status)
 		mode |= COMPOSE_MODE_DV;
 	if (bypass_cm)
@@ -10093,6 +10202,7 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 	u32 *cur_canvas_tbl;
 	u8 cur_canvas_id;
 	bool is_mvc = false;
+	bool synthetic_fp = false;
 	bool update_mif = true;
 	u8 vpp_index;
 	u8 layer_id;
@@ -10154,6 +10264,8 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 
 	if ((vf->type & VIDTYPE_MVC) && layer_id == 0)
 		is_mvc = true;
+	synthetic_fp = (layer_id == 0) &&
+		(process_3d_type & MODE_3D_FP) && !is_mvc;
 
 	cur_canvas_id = layer->cur_canvas_id;
 	cur_canvas_tbl =
@@ -10230,6 +10342,12 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 			cur_dev->rdma_func[vpp_index].rdma_wr
 				(vd_mif_reg_mvc->vd_if0_canvas0,
 				layer->disp_canvas[cur_canvas_id][1]);
+		else if (synthetic_fp) {
+			/* FULL3D_FP_V030RC1: both synthetic eyes live in one packed surface. */
+			cur_dev->rdma_func[vpp_index].rdma_wr
+				(vd_mif_reg_mvc->vd_if0_canvas0,
+				layer->disp_canvas[cur_canvas_id][0]);
+		}
 		if (cur_frame_par &&
 		    cur_frame_par->vpp_2pic_mode == 1) {
 			cur_dev->rdma_func[vpp_index].rdma_wr
@@ -10645,7 +10763,12 @@ static void is_framepacking_support(struct vframe_s *vf)
 	if (!vf)
 		return;
 
-	if (vf->type & VIDTYPE_MVC) {
+	if ((process_3d_type & MODE_3D_FP) &&
+	    !(vf->type & VIDTYPE_MVC)) {
+		/* FULL3D_FP_V030RC1: synthetic SBS/TB frame packing must not depend on the
+		 * MVC module parameter, which CoreELEC resets to 0 on stop. */
+		framepacking_support = 1;
+	} else if (vf->type & VIDTYPE_MVC) {
 		framepacking_support = g_framepacking_support;
 	} else {
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN
@@ -10687,6 +10810,7 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 	struct disp_info_s *layer_info = NULL;
 	int ret = vppfilter_success;
 	bool is_mvc = false;
+	bool synthetic_fp = false;
 	u8 layer_id;
 	bool aisr_update = false;
 	struct vframe_s *vf_ext = NULL;
@@ -10702,6 +10826,10 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 	}
 	layer_id = layer->layer_id;
 	layer_info = &glayer_info[layer_id];
+	synthetic_fp = (layer_id == 0) &&
+		(process_3d_type & MODE_3D_FP) &&
+		!(vf->type & VIDTYPE_MVC) &&
+		!is_enable_3d_to_2d();
 
 	if ((vf->type & VIDTYPE_MVC) &&
 	    !is_enable_3d_to_2d() &&
@@ -11065,7 +11193,7 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 		}
 	}
 	if (vd_layer[0].enabled && !vd_layer[1].enabled &&
-		(is_mvc || video_lcevc.vd2_vd1_shared_vf))
+		(is_mvc || synthetic_fp || video_lcevc.vd2_vd1_shared_vf))
 		enable_video_layer2();
 	if (first_picture || sr_phase_changed)
 		layer->new_vpp_setting = true;

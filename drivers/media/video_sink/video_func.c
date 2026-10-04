@@ -1619,6 +1619,7 @@ void primary_swap_frame(struct video_layer_s *layer,
 	ATRACE_COUNTER(__func__,  0);
 }
 
+/* FULL3D_FP_V030RC1: synthetic FP drives VD2 from the VD1 decode surface. */
 s32 primary_render_frame(struct video_layer_s *layer,
 					const struct vinfo_s *vinfo)
 {
@@ -1628,6 +1629,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 	struct blend_setting_s local_vd2_blend = {0};
 	struct mif_pos_s local_vd2_mif = {0};
 	bool update_vd2 = false;
+	bool synthetic_fp = false;
 	struct vframe_s *dispbuf = NULL;
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 	int pq_process_debug[4];
@@ -1676,6 +1678,9 @@ s32 primary_render_frame(struct video_layer_s *layer,
 		dispbuf = layer->vf_ext;
 	else
 		dispbuf = layer->dispbuf;
+	synthetic_fp = dispbuf &&
+		(process_3d_type & MODE_3D_FP) &&
+		!(dispbuf->type & VIDTYPE_MVC);
 
 #ifdef ENABLE_PRE_LINK
 	if (is_pre_link_on(layer) &&
@@ -1758,7 +1763,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 #endif
 
 #ifdef TV_3D_FUNCTION_OPEN
-		if (last_mode_3d &&
+		if ((last_mode_3d || synthetic_fp) &&
 		    (layer->new_vpp_setting ||
 		     afbc_need_reset))
 			vd_set_dcu
@@ -1813,7 +1818,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 #endif
 #ifdef TV_3D_FUNCTION_OPEN
 		if ((dispbuf->type & VIDTYPE_MVC) ||
-		    last_mode_3d) {
+		    last_mode_3d || synthetic_fp) {
 			config_3d_vd2_position
 				(layer, &local_vd2_mif);
 			update_vd2 = true;
@@ -1873,7 +1878,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 	/*turn off vertical scaler when 3d display */
 	if ((dispbuf &&
 	     (dispbuf->type & VIDTYPE_MVC)) ||
-	    last_mode_3d) {
+	    last_mode_3d || synthetic_fp) {
 		layer->sc_setting.sc_v_enable = is_enable_3d_to_2d() ||
 			(dispbuf && (dispbuf->type & VIDTYPE_INTERLACE));
 		config_3d_vd2_pps
