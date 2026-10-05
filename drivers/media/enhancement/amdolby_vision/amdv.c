@@ -13912,6 +13912,34 @@ static int amdolby_vision_process_v2_stb
 	return 0;
 }
 
+/* written on vsync only; -1 so the first vsync reports */
+static int amdv_output_mode_last = -1;
+
+static void amdv_output_mode_work_fn(struct work_struct *work)
+{
+	struct device *dev = get_amdv_device();
+	char env[32];
+	char *envp[] = { env, NULL };
+
+	if (!dev || !module_installed)
+		return;
+	snprintf(env, sizeof(env), "AMDV_OUTPUT_MODE=%d",
+		 READ_ONCE(amdv_output_mode_last));
+	kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, envp);
+}
+
+static DECLARE_WORK(amdv_output_mode_work, amdv_output_mode_work_fn);
+
+static void amdv_check_output_mode(void)
+{
+	int mode = is_amdv_on() ? get_amdv_mode() : AMDV_OUTPUT_MODE_BYPASS;
+
+	if (mode == amdv_output_mode_last)
+		return;
+	WRITE_ONCE(amdv_output_mode_last, mode);
+	schedule_work(&amdv_output_mode_work);
+}
+
 /* toggle mode: 0: not toggle; 1: toggle frame; 2: use keep frame */
 /* pps_state 0: no change, 1: pps enable, 2: pps disable */
 int amdolby_vision_process(struct vframe_s *vf, u32 display_size,
@@ -13927,14 +13955,17 @@ int amdolby_vision_process(struct vframe_s *vf, u32 display_size,
 
 	/* disabled while still on: run one bypass pass to tear down */
 	if (!dolby_vision_enable) {
-		if (is_aml_tvmode())
+		if (is_aml_tvmode()) {
+			amdv_check_output_mode();
 			return -1;
+		}
 		/* keep the last setting until dv video stops */
 		if ((toggle_mode_1 != 2 && is_amdv_frame(vf)) ||
 		    (toggle_mode_2 != 2 && is_amdv_frame(vf_2)))
 			return -1;
 		if (dolby_vision_status == BYPASS_PROCESS) {
 			enable_amdv(0);
+			amdv_check_output_mode();
 			return 0;
 		}
 		amdv_target_mode = AMDV_OUTPUT_MODE_BYPASS;
@@ -13961,6 +13992,7 @@ int amdolby_vision_process(struct vframe_s *vf, u32 display_size,
 		else
 			amdolby_vision_process_v1(vf, display_size, toggle_mode, pps_state);
 	}
+	amdv_check_output_mode();
 	return 0;
 }
 EXPORT_SYMBOL(amdolby_vision_process);
@@ -18356,6 +18388,9 @@ static int __exit amdolby_vision_remove(struct platform_device *pdev)
 	if (is_aml_hw5())
 		dma_lut_uninit();
 
+	/* stop the vsync producer before the work goes */
+	module_installed = false;
+	cancel_work_sync(&amdv_output_mode_work);
 	device_destroy(devp->clsp, devp->devno);
 	cdev_del(&devp->cdev);
 	class_destroy(devp->clsp);
