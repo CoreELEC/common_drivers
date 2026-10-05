@@ -13925,6 +13925,23 @@ int amdolby_vision_process(struct vframe_s *vf, u32 display_size,
 	if (!module_installed)
 		return -1;
 
+	/* disabled while still on: run one bypass pass to tear down */
+	if (!dolby_vision_enable) {
+		if (is_aml_tvmode())
+			return -1;
+		/* keep the last setting until dv video stops */
+		if ((toggle_mode_1 != 2 && is_amdv_frame(vf)) ||
+		    (toggle_mode_2 != 2 && is_amdv_frame(vf_2)))
+			return -1;
+		if (dolby_vision_status == BYPASS_PROCESS) {
+			enable_amdv(0);
+			return 0;
+		}
+		amdv_target_mode = AMDV_OUTPUT_MODE_BYPASS;
+		dolby_vision_mode = AMDV_OUTPUT_MODE_BYPASS;
+		clear_dolby_vision_wait();
+	}
+
 	/* vd1 toggle_mode priority is high than vd2*/
 	toggle_mode = toggle_mode_1 ? toggle_mode_1 : toggle_mode_2;
 

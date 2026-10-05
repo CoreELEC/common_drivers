@@ -619,7 +619,7 @@ static void amdolby_vision_proc
 	u8 toggle_mode_2 = 0;
 	u8 toggle_mode = 0;
 
-	if (is_amdv_enable()) {
+	if (is_amdv_enable() || (!is_aml_hw5() && is_amdv_on())) {
 		u32 frame_size_1 = 0, h_size, v_size;
 		u32 frame_size_2 = 0;
 		u8 pps_state = 0; /* pps no change */
