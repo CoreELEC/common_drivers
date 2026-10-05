@@ -1222,6 +1222,7 @@ struct drm_connector_state *meson_hdmitx_atomic_duplicate_state
 	new_state->hdr_priority = cur_state->hdr_priority;
 	new_state->pref_hdr_policy = cur_state->pref_hdr_policy;
 	new_state->allm_mode = cur_state->allm_mode;
+	new_state->dv_attr = cur_state->dv_attr;
 	cur_state->hcs.state_sequence_id = am_hdmi_info.sequence_id;
 	new_state->frac_rate_policy = cur_state->frac_rate_policy;
 	memcpy(&new_state->hcs, &cur_state->hcs, sizeof(struct hdmitx_common_state));
@@ -1902,6 +1903,7 @@ void meson_hdmitx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 		build_hdmitx_attr_str(attr_str, attr->colorformat, attr->bitdepth);
 		if (hdmitx_common_chk_mode_attr_sup(modename, attr_str)) {
 			DRM_INFO("color property setting successfully\n");
+			hdmitx_state->dv_attr = false;
 		} else {
 			hdmitx_state->color_force = false;
 			DRM_INFO("color property setting failed\n");
@@ -1925,6 +1927,7 @@ void meson_hdmitx_encoder_atomic_mode_set(struct drm_encoder *encoder,
 		if (update_attr) {
 			meson_hdmitx_decide_color_attr(tx_comm, meson_crtc_state,
 				attr, sequence_id);
+			hdmitx_state->dv_attr = is_amdv_output_dv();
 			hdmitx_state->update = true;
 		}
 	}
@@ -2161,13 +2164,17 @@ static int meson_hdmitx_encoder_atomic_check(struct drm_encoder *encoder,
 		attr->bitdepth = colordepth_to_bitdepth(hdmitx_state->hcs.para.cd);
 		hdmitx_state->hdr_priority = hdmitx_state->hcs.hdr_priority;
 		hdmitx_state->frac_rate_policy = common->frac_rate_policy;
+		hdmitx_state->dv_attr = is_amdv_output_dv();
 	}
 
 	/*The recovery mode not have composer to set attr*/
 	if ((!meson_crtc_state->uboot_mode_init && am_hdmi_info.recovery_mode) ||
-	    (get_hdr_policy() == 1) || (get_amdv_policy() == AMDV_FORCE_OUTPUT_MODE))
+	    (get_hdr_policy() == 1) || (get_amdv_policy() == AMDV_FORCE_OUTPUT_MODE) ||
+	    (!hdmitx_state->color_force && hdmitx_state->dv_attr && !is_amdv_output_dv())) {
 		meson_hdmitx_decide_color_attr(common, meson_crtc_state,
 						 attr, sequence_id);
+		hdmitx_state->dv_attr = is_amdv_output_dv();
+	}
 
 	build_hdmitx_attr_str(attr_str, attr->colorformat, attr->bitdepth);
 

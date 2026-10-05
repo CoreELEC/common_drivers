@@ -135,6 +135,7 @@ struct am_hdmitx_connector_state {
 	bool avmute : 1;
 	bool ready : 1;
 	bool frac_rate_policy : 1;
+	bool dv_attr : 1;
 	int allm_mode;
 };
 
