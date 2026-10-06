@@ -106,7 +106,7 @@ unsigned int cur_signal_type_dpss = 0xffffffff;
 
 static unsigned int pre_flag_lc_evc;
 #endif
-bool limit_8bit_hdr10 = true;
+bool limit_8bit_hdr10 = false;
 struct hdr_cap_info_s hdr_cap_info;
 int cur_vinfo_out_range = 0xff;
 int cur_vinfo_out_cs = 0xff;
