@@ -87,7 +87,7 @@ static uint pre_gamut_conv_en;
 signed int vd1_contrast_offset;
 
 signed int saturation_offset;
-bool limit_8bit_hdr10 = true;
+bool limit_8bit_hdr10 = false;
 
 #ifndef CONFIG_AMLOGIC_ZAPPER_CUT
 static bool cur_hdmi_out_fmt;
