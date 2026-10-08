@@ -355,6 +355,12 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 	} else if (property == meson_crtc->dv_mode_property) {
 		*val = get_amdv_mode();
 		return 0;
+	} else if (property == meson_crtc->hdr_policy_property) {
+		*val = get_hdr_policy();
+		return 0;
+	} else if (property == meson_crtc->force_output_property) {
+		*val = get_force_output();
+		return 0;
 	} else if (property == meson_crtc->dv_policy_property) {
 		*val = get_amdv_policy();
 		return 0;
@@ -419,6 +425,12 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 		return 0;
 	} else if (property == meson_crtc->dv_mode_property) {
 		set_amdv_mode(val);
+		return 0;
+	} else if (property == meson_crtc->hdr_policy_property) {
+		set_hdr_policy(val);
+		return 0;
+	} else if (property == meson_crtc->force_output_property) {
+		set_force_output(val);
 		return 0;
 	} else if (property == meson_crtc->dv_policy_property) {
 		set_amdv_policy(val);
@@ -1133,6 +1145,36 @@ static void meson_crtc_init_dv_mode_property(struct drm_device *drm_dev,
 	}
 }
 
+static void meson_crtc_init_hdr_policy_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "hdr_policy",
+					0, 255);
+	if (prop) {
+		amcrtc->hdr_policy_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to hdr_policy property\n");
+	}
+}
+
+static void meson_crtc_init_force_output_property(struct drm_device *drm_dev,
+						  struct am_meson_crtc *amcrtc)
+{
+	struct drm_property *prop;
+
+	prop = drm_property_create_range(drm_dev, 0, "force_output",
+					0, 7);
+	if (prop) {
+		amcrtc->force_output_property = prop;
+		drm_object_attach_property(&amcrtc->base.base, prop, 0);
+	} else {
+		DRM_ERROR("Failed to force_output property\n");
+	}
+}
+
 static void meson_crtc_init_dv_policy_property(struct drm_device *drm_dev,
 						  struct am_meson_crtc *amcrtc)
 {
@@ -1379,6 +1421,8 @@ struct am_meson_crtc *meson_crtc_bind(struct meson_drm *priv, int idx)
 	meson_crtc_init_dv_enable_property(priv->drm, amcrtc);
 	meson_crtc_init_brr_update_property(priv->drm, amcrtc);
 	meson_crtc_init_dv_mode_property(priv->drm, amcrtc);
+	meson_crtc_init_hdr_policy_property(priv->drm, amcrtc);
+	meson_crtc_init_force_output_property(priv->drm, amcrtc);
 	meson_crtc_init_dv_policy_property(priv->drm, amcrtc);
 	meson_crtc_init_dv_ll_policy_property(priv->drm, amcrtc);
 	meson_crtc_init_dv_status_property(priv->drm, amcrtc);

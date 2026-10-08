@@ -105,6 +105,8 @@ struct am_meson_crtc {
 	struct drm_property *dv_enable_property;
 	struct drm_property *brr_update_property;
 	struct drm_property *dv_mode_property;
+	struct drm_property *hdr_policy_property;
+	struct drm_property *force_output_property;
 	struct drm_property *dv_policy_property;
 	struct drm_property *dv_ll_policy_property;
 	struct drm_property *dv_status_property;
