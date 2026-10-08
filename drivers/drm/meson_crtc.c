@@ -272,7 +272,7 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 #endif
 
 	if (property == meson_crtc->hdr_policy) {
-		*val = crtc_state->crtc_hdr_process_policy;
+		*val = get_hdr_policy();
 		return 0;
 	} else if (property == meson_crtc->dv_enable_property) {
 		*val = is_amdv_enable();
@@ -313,7 +313,7 @@ static int meson_crtc_atomic_get_property(struct drm_crtc *crtc,
 #endif
 		return 0;
 	} else if (property == meson_crtc->force_output) {
-		*val = crtc_state->force_output_type;
+		*val = get_force_output();
 		return 0;
 	} else if (property == meson_crtc->brr_update_property) {
 		*val = crtc_state->brr_update;
@@ -355,7 +355,7 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 	int ret = 0;
 
 	if (property == meson_crtc->hdr_policy) {
-		crtc_state->crtc_hdr_process_policy = val;
+		set_hdr_policy(val);
 		return 0;
 	} else if (property == meson_crtc->dv_enable_property) {
 		set_amdv_enable(val);
@@ -400,7 +400,7 @@ static int meson_crtc_atomic_set_property(struct drm_crtc *crtc,
 		crtc_state->hdr_conversion_ctrl = val;
 		return 0;
 	} else if (property == meson_crtc->force_output) {
-		crtc_state->force_output_type = val;
+		set_force_output(val);
 		return 0;
 	} else if (property == meson_crtc->brr_update_property) {
 		crtc_state->brr_update = val;
