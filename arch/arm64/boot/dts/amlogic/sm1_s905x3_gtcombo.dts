@@ -24,6 +24,7 @@
 		dvb_power_value = <0x00>;
 		dvb_power_gpio = <&gpio GPIOA_15 GPIO_ACTIVE_HIGH>;
 		fe_num = <2>;
+		tuner_num = <1>;
 
 		fe0_demod = "cxd2878";
 		fe0_i2c_adap_id = <&i2c2>;
@@ -33,6 +34,13 @@
 		fe0_reset_value = <0>;
 		fe0_reset_gpio = <&gpio GPIOZ_6 GPIO_ACTIVE_HIGH>;
 		fe0_ts = <0>;
+		fe0_tuner0 = <0>;
+
+		tuner0_name = "m88tc6k";
+		tuner0_i2c_adap = <&i2c2>;
+		tuner0_i2c_addr = <0x64>;
+		tuner0_xtal = <1>;
+		tuner0_xtal_cap = <24>;
 
 		fe1_demod = "m88dm6k";
 		fe1_i2c_adap_id = <&i2c2>;
