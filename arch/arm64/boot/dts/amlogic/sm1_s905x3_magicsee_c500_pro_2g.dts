@@ -13,12 +13,20 @@
 		fe0_demod = "avl6762";
 		fe0_i2c_adap_id = <&i2c3>;
 		fe0_demod_i2c_addr = <0x14>;
+		fe0_reset_value = <0>;
+		fe0_reset_gpio = <&gpio GPIOH_7 GPIO_ACTIVE_LOW>;
+		fe0_power_value = <0>;
+		fe0_power_gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
 		fe0_ts_out_mode = <0>;
 		fe0_ts  = <0>;
 		fe0_tuner0 = <0>;
 		fe1_demod = "avl6221c";
 		fe1_i2c_adap_id = <&i2c2>;
 		fe1_demod_i2c_addr = <0x14>;
+		fe1_reset_value = <0>;
+		fe1_reset_gpio = <&gpio GPIOZ_1 GPIO_ACTIVE_HIGH>;
+		fe1_power_value = <0>;
+		fe1_power_gpios = <&gpio GPIOZ_0 GPIO_ACTIVE_HIGH>;
 		fe1_ts  = <1>;
 		fe1_tuner0 = <1>;
 
@@ -37,7 +45,6 @@
 		tuner1_name = "av2018";
 		tuner1_i2c_adap = <&i2c2>;
 		tuner1_i2c_addr = <0x62>;
-		tuner1_xtal = <27000>;
 	};
 
 	dvb-demux {

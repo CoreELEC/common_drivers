@@ -30,7 +30,7 @@
 		tuner0_name = "r848";
 		tuner0_i2c_adap = <&i2c3>;
 		tuner0_i2c_addr = <0x7a>;
-		tuner0_xtal = <16000000>;
+		tuner0_xtal = <0>;
 	};
 
 	dvb-demux {
