@@ -199,6 +199,7 @@ static struct clk_regmap g12a_aoclk_cec_pre = {
 			&g12a_aoclk_cts_oscin.hw
 		},
 		.num_parents = 1,
+		.flags = CLK_IGNORE_UNUSED,
 	},
 };
 
@@ -272,7 +273,7 @@ static struct clk_regmap g12a_aoclk_cec = {
 			&g12a_aoclk_cec_sel.hw
 		},
 		.num_parents = 1,
-		.flags = CLK_SET_RATE_PARENT,
+		.flags = CLK_SET_RATE_PARENT | CLK_IGNORE_UNUSED,
 	},
 };
 
