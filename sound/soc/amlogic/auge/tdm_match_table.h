@@ -58,6 +58,9 @@ struct tdm_chipinfo {
 	/* only for A113D */
 	bool reset_tdmin;
 
+	/* T7 FRDDR buffer must be a multiple of 128 bytes, else LPCM clicks on wrap */
+	bool buf_align_128;
+
 	struct src_table *tdmin_srcs;
 	bool slot_num_en;
 	bool chnum_en;
@@ -471,6 +474,7 @@ struct tdm_chipinfo t7_tdma_chipinfo = {
 	.gain_ver = GAIN_VER3,
 	.use_arb = true,
 	.need_mute_tdm = true,
+	.buf_align_128 = true,
 };
 
 struct tdm_chipinfo t7_tdmb_chipinfo = {
@@ -490,6 +494,7 @@ struct tdm_chipinfo t7_tdmb_chipinfo = {
 	.gain_ver = GAIN_VER3,
 	.use_arb = true,
 	.need_mute_tdm = true,
+	.buf_align_128 = true,
 };
 
 struct tdm_chipinfo t7_tdmc_chipinfo = {
@@ -509,6 +514,7 @@ struct tdm_chipinfo t7_tdmc_chipinfo = {
 	.gain_ver = GAIN_VER3,
 	.use_arb = true,
 	.need_mute_tdm = true,
+	.buf_align_128 = true,
 };
 
 struct tdm_chipinfo t7_tdmd_chipinfo = {
@@ -528,6 +534,7 @@ struct tdm_chipinfo t7_tdmd_chipinfo = {
 	.gain_ver = GAIN_VER3,
 	.use_arb = true,
 	.need_mute_tdm = true,
+	.buf_align_128 = true,
 };
 
 struct tdm_chipinfo p1_tdma_chipinfo = {
