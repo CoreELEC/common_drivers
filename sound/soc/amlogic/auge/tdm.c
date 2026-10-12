@@ -1427,6 +1427,12 @@ static int aml_tdm_open(struct snd_soc_component *component, struct snd_pcm_subs
 	int ret = 0;
 
 	snd_soc_set_runtime_hwparams(substream, &aml_tdm_hardware);
+
+	/* T7: FRDDR buffer must be a multiple of 128 bytes or multich LPCM clicks on buffer wrap */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK &&
+		p_tdm->chipinfo->buf_align_128)
+		snd_pcm_hw_constraint_step(runtime, 0, SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 128);
+				   	
 	snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
 		dev, TDM_BUFFER_BYTES / 2, TDM_BUFFER_BYTES);
 
