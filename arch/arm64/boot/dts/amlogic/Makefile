@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
+DTC_FLAGS += -Wno-unit_address_format
+
 dtb-y += g12a_s905x2_2g.dtb
 dtb-y += g12a_s905x2_2g_1gbit.dtb
 dtb-y += g12a_s905x2_4g.dtb
