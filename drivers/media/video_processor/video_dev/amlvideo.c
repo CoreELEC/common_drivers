@@ -25,7 +25,6 @@
 #include <linux/highmem.h>
 #include <linux/freezer.h>
 #include <linux/platform_device.h>
-#include <linux/amlogic/media/v4l_util/videobuf-res.h>
 #include <media/videobuf2-core.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -56,7 +55,6 @@
 #define AMLVIDEO_VERSION \
 	KERNEL_VERSION(AMLVIDEO_MAJOR_VERSION, \
 AMLVIDEO_MINOR_VERSION, AMLVIDEO_RELEASE)
-#define MAGIC_RE_MEM 0x123039dc
 
 #define RECEIVER_NAME "amlvideo"
 #define PROVIDER_NAME "amlvideo"
@@ -90,9 +88,6 @@ static unsigned int debug;
 /* module_param(debug, uint, 0644); */
 /* MODULE_PARM_DESC(debug, "activates debug info"); */
 
-static unsigned int vid_limit = 16;
-module_param(vid_limit, uint, 0644);
-MODULE_PARM_DESC(vid_limit, "capture memory limit in megabytes");
 
 static int video_receiver_event_fun(int type, void *data, void*);
 
@@ -329,114 +324,6 @@ static int vidioc_g_parm(struct file *file, void *priv,
 	return 0;
 }
 
-static int buffer_setup(struct videobuf_queue *vq, unsigned int *count,
-			unsigned int *size)
-{
-	struct videobuf_res_privdata *res = (struct videobuf_res_privdata *)vq
-		->priv_data;
-	struct vivi_fh *fh = (struct vivi_fh *)res->priv;
-	struct vivi_dev *dev = fh->dev;
-	*size = (fh->width * fh->height * fh->fmt->depth) >> 3;
-	if (*count == 0)
-		*count = 32;
-
-	while (*size * *count > vid_limit * 1024 * 1024)
-		(*count)--;
-
-	dprintk(dev, 1, "%s, count=%d, size=%d\n", __func__, *count, *size);
-
-	return 0;
-}
-
-static void free_buffer(struct videobuf_queue *vq, struct vivi_buffer *buf)
-{
-	struct videobuf_res_privdata *res = (struct videobuf_res_privdata *)vq
-		->priv_data;
-	struct vivi_fh *fh = (struct vivi_fh *)res->priv;
-	struct vivi_dev *dev = fh->dev;
-
-	dprintk(dev, 1, "%s, state: %i\n", __func__, buf->vb.state);
-	videobuf_waiton(vq, &buf->vb, 0, 0);
-	if (in_interrupt())
-		WARN_ON(1);
-	videobuf_res_free(vq, &buf->vb);
-	dprintk(dev, 1, "%s: freed\n", __func__);
-	buf->vb.state = VIDEOBUF_NEEDS_INIT;
-}
-
-#define NORM_MAXW 2000
-#define NORM_MAXH 1600
-static int buffer_prepare(struct videobuf_queue *vq, struct videobuf_buffer *vb,
-			  enum v4l2_field field)
-{
-	struct videobuf_res_privdata *res = (struct videobuf_res_privdata *)vq
-		->priv_data;
-	struct vivi_fh *fh = (struct vivi_fh *)res->priv;
-	struct vivi_dev *dev = fh->dev;
-	struct vivi_buffer
-	*buf = container_of(vb, struct vivi_buffer, vb);
-	int rc;
-
-	dprintk(dev, 1, "%s, field=%d\n", __func__, field);
-
-	WARN_ON(!fh->fmt);
-
-	if (fh->width < 48 ||
-	    fh->width > NORM_MAXW ||
-	    fh->height < 32 ||
-	    fh->height > NORM_MAXH)
-		return -EINVAL;
-
-	buf->vb.size = (fh->width * fh->height * fh->fmt->depth) >> 3;
-	if (buf->vb.baddr != 0 && buf->vb.bsize < buf->vb.size)
-		return -EINVAL;
-	/* These properties only change when queue is idle, see s_fmt */
-	buf->fmt = fh->fmt;
-	buf->vb.width = fh->width;
-	buf->vb.height = fh->height;
-	buf->vb.field = field;
-	if (buf->vb.state == VIDEOBUF_NEEDS_INIT) {
-		rc = videobuf_iolock(vq, &buf->vb, NULL);
-		if (rc < 0)
-			goto fail;
-	}
-	buf->vb.state = VIDEOBUF_PREPARED;
-	return 0;
-
-fail: free_buffer(vq, buf);
-	return rc;
-}
-
-static void buffer_queue(struct videobuf_queue *vq, struct videobuf_buffer *vb)
-{
-	struct vivi_buffer
-	*buf = container_of(vb, struct vivi_buffer, vb);
-	struct videobuf_res_privdata *res = (struct videobuf_res_privdata *)vq
-		->priv_data;
-	struct vivi_fh *fh = (struct vivi_fh *)res->priv;
-	struct vivi_dev *dev = fh->dev;
-	struct vivi_dmaqueue *vidq = &dev->vidq;
-
-	dprintk(dev, 1, "%s\n", __func__);
-	buf->vb.state = VIDEOBUF_QUEUED;
-	list_add_tail(&buf->vb.queue, &vidq->active);
-}
-
-static void buffer_release(struct videobuf_queue *vq,
-			   struct videobuf_buffer *vb)
-{
-	struct vivi_buffer
-	*buf = container_of(vb, struct vivi_buffer, vb);
-	free_buffer(vq, buf);
-}
-
-static struct videobuf_queue_ops vivi_video_qops = {
-	.buf_setup = buffer_setup,
-	.buf_prepare = buffer_prepare,
-	.buf_queue = buffer_queue,
-	.buf_release = buffer_release,
-};
-
 /* ------------------------------------------------------------------
  * IOCTL vidioc handling
  * ------------------------------------------------------------------
@@ -479,7 +366,7 @@ static int vidioc_g_fmt_vid_cap(struct file *file, void *priv,
 
 	f->fmt.pix.width = fh->width;
 	f->fmt.pix.height = fh->height;
-	f->fmt.pix.field = fh->vb_vidq.field;
+	f->fmt.pix.field = fh->field;
 	f->fmt.pix.pixelformat = fh->fmt->fourcc;
 	f->fmt.pix.bytesperline = (f->fmt.pix.width * fh->fmt->depth) >> 3;
 	f->fmt.pix.sizeimage = f->fmt.pix.height * f->fmt.pix.bytesperline;
@@ -496,7 +383,7 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	fh->fmt = get_format(f);
 	fh->width = f->fmt.pix.width;
 	fh->height = f->fmt.pix.height;
-	fh->vb_vidq.field = f->fmt.pix.field;
+	fh->field = f->fmt.pix.field;
 	fh->type = f->type;
 
 	return ret;
@@ -512,7 +399,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	fh->fmt = get_format(f);
 	fh->width = f->fmt.pix.width;
 	fh->height = f->fmt.pix.height;
-	fh->vb_vidq.field = f->fmt.pix.field;
+	fh->field = f->fmt.pix.field;
 	fh->type = f->type;
 	return ret;
 }
@@ -522,14 +409,16 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 {
 	struct vivi_fh *fh = priv;
 
-	return videobuf_reqbufs(&fh->vb_vidq, p);
-}
-
-static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
-{
-	struct vivi_fh *fh = priv;
-
-	return videobuf_querybuf(&fh->vb_vidq, p);
+	/*
+	 * Frames are passed as vframes by QBUF/DQBUF, there is no buffer
+	 * memory behind this device (videobuf v1 is gone since 6.x).
+	 */
+	if (p->type != fh->type)
+		return -EINVAL;
+	if (p->count > AMLVIDEO_POOL_SIZE)
+		p->count = AMLVIDEO_POOL_SIZE;
+	p->capabilities = 0;
+	return 0;
 }
 
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
@@ -662,15 +551,6 @@ dqbuf_done:
 	return ret;
 }
 
-#ifdef CONFIG_VIDEO_V4L1_COMPAT
-static int vidiocgmbuf(struct file *file, void *priv, struct video_mbuf *mbuf)
-{
-	struct vivi_fh *fh = priv;
-
-	return videobuf_cgmbuf(&fh->vb_vidq, mbuf, 8);
-}
-#endif
-
 static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
 	struct vivi_fh *fh = priv;
@@ -678,9 +558,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 
 	if (fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE || i != fh->type)
 		return -EINVAL;
-	ret = videobuf_streamon(&fh->vb_vidq);
-	if (ret == 0)
-		fh->is_streamed_on = 1;
+	ret = 0;
+	fh->is_streamed_on = 1;
 	return ret;
 }
 
@@ -691,9 +570,8 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 
 	if (fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE || i != fh->type)
 		return -EINVAL;
-	ret = videobuf_streamoff(&fh->vb_vidq);
-	if (ret == 0)
-		fh->is_streamed_on = 0;
+	ret = 0;
+	fh->is_streamed_on = 0;
 	return ret;
 }
 
@@ -706,14 +584,10 @@ static int vidioc_s_std(struct file *file, void *priv, v4l2_std_id i)
  * File operations for the device
  * ------------------------------------------------------------------
  */
-/*extern void get_ppmgr_buf_info(char **start, unsigned int *size);*/
 static int amlvideo_open(struct file *file)
 {
 	struct vivi_dev *dev = video_drvdata(file);
 	struct vivi_fh *fh = NULL;
-	struct videobuf_res_privdata *res = NULL;
-	char *bstart = NULL;
-	unsigned int bsize = 0;
 
 	dev->vf = NULL;
 	dev->index = 0;
@@ -724,16 +598,8 @@ static int amlvideo_open(struct file *file)
 		mutex_unlock(&dev->mutex);
 		return -EBUSY;
 	}
-	res = kzalloc(sizeof(*res), GFP_KERNEL);
-	if (!res || dev->res) {
-		kfree(res);
-		dev->users--;
-		mutex_unlock(&dev->mutex);
-		return -ENOMEM;
-	}
 	fh = kzalloc(sizeof(*fh), GFP_KERNEL);
 	if (!fh) {
-		kfree(res);
 		dev->users--;
 		mutex_unlock(&dev->mutex);
 		return -ENOMEM;
@@ -748,32 +614,8 @@ static int amlvideo_open(struct file *file)
 	fh->fmt = &formats[0];
 	fh->width = 1920;
 	fh->height = 1080;
-
-	res->priv = (void *)fh;
-	dev->res = res;
-
-	get_ppmgr_buf_info(&bstart, &bsize);
-	res->start = (resource_size_t)bstart;
-	res->end = (resource_size_t)(bstart + bsize - 1);
-
-	res->magic = MAGIC_RE_MEM;
-	videobuf_queue_res_init(&fh->vb_vidq, &vivi_video_qops, NULL,
-				&dev->slock, fh->type, V4L2_FIELD_INTERLACED,
-				sizeof(struct vivi_buffer), (void *)res, NULL);
+	fh->field = V4L2_FIELD_INTERLACED;
 	AMLVIDEO_DBG("amlvideo open");
-	return 0;
-}
-
-static ssize_t amlvideo_read(struct file *file,
-			     char __user *data, size_t count, loff_t *ppos)
-{
-	struct vivi_fh *fh = file->private_data;
-
-	if (fh->type == V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return videobuf_read_stream(&fh->vb_vidq, data, count,
-					    ppos, 0,
-					    file->f_flags & O_NONBLOCK);
-
 	return 0;
 }
 
@@ -818,14 +660,8 @@ static int amlvideo_close(struct file *file)
 	struct vivi_fh *fh = file->private_data;
 	struct vivi_dev *dev = fh->dev;
 
-	videobuf_stop(&fh->vb_vidq);
-	videobuf_mmap_free(&fh->vb_vidq);
 	kfree(fh);
 	dev->index = 8;
-/* if (dev->res) { */
-	kfree(dev->res);
-	dev->res = NULL;
-/* } */
 	mutex_lock(&dev->mutex);
 	dev->users--;
 	mutex_unlock(&dev->mutex);
@@ -835,33 +671,12 @@ static int amlvideo_close(struct file *file)
 	return 0;
 }
 
-static int amlvideo_mmap(struct file *file, struct vm_area_struct *vma)
-{
-	struct vivi_fh *fh = file->private_data;
-
-	struct vivi_dev *dev = fh->dev;
-	int ret;
-
-	dprintk(dev, 1, "mmap called, vma=0x%08lx\n", (unsigned long)vma);
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-	ret = videobuf_mmap_mapper(&fh->vb_vidq, vma);
-
-	dprintk(dev, 1, "vma start=0x%08lx, size=%ld, ret=%d\n",
-		(unsigned long)vma->vm_start,
-		(unsigned long)vma->vm_end - (unsigned long)vma->vm_start,
-		ret);
-
-	return ret;
-}
-
 static const struct v4l2_file_operations amlvideo_fops = {
 	.owner = THIS_MODULE,
 	.open = amlvideo_open,
 	.release = amlvideo_close,
-	.read = amlvideo_read,
 	.poll = amlvideo_poll,
 	.unlocked_ioctl = amlvideo_ioctl,
-	.mmap = amlvideo_mmap,
 };
 
 static const struct v4l2_ioctl_ops amlvideo_ioctl_ops = {
@@ -871,7 +686,6 @@ static const struct v4l2_ioctl_ops amlvideo_ioctl_ops = {
 	.vidioc_try_fmt_vid_cap = vidioc_try_fmt_vid_cap,
 	.vidioc_s_fmt_vid_cap = vidioc_s_fmt_vid_cap,
 	.vidioc_reqbufs = vidioc_reqbufs,
-	.vidioc_querybuf = vidioc_querybuf,
 	.vidioc_qbuf = vidioc_qbuf,
 	.vidioc_dqbuf = vidioc_dqbuf,
 	.vidioc_s_std = vidioc_s_std,
@@ -881,9 +695,6 @@ static const struct v4l2_ioctl_ops amlvideo_ioctl_ops = {
 	 */
 	.vidioc_streamon = vidioc_streamon,
 	.vidioc_streamoff = vidioc_streamoff,
-#ifdef CONFIG_VIDEO_V4L1_COMPAT
-	.vidiocgmbuf = vidiocgmbuf,
-#endif
 	.vidioc_g_parm = vidioc_g_parm,
 
 };
@@ -1014,13 +825,10 @@ static int __init amlvideo_create_instance(int inst)
 rel_vdev: video_device_release(vfd);
 unreg_dev: v4l2_device_unregister(&dev->v4l2_dev);
 free_dev:
-	dev->res = NULL;
 	kfree(dev);
 	return ret;
 }
 
-#undef NORM_MAXW
-#undef NORM_MAXH
 /* #define __init */
 /* This routine allocates from 1 to n_devs virtual drivers.*/
 /*
