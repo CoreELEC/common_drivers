@@ -10,7 +10,6 @@ include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/rdma/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/codec_mm/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/uvm_process/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/vfm/Makefile
-include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/v4l_util/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/lut_dma/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/vpu_security/Makefile
 include $(srctree)/$(COMMON_DRIVERS_DIR)/drivers/media/common/resource_mgr/Makefile
