@@ -30,14 +30,6 @@ struct sg_to_addr {
 	struct scatterlist *sg;
 };
 
-/* buffer for one video frame */
-struct vivi_buffer {
-	/* common v4l buffer stuff -- must be first */
-	struct videobuf_buffer vb;
-
-	struct vivi_fmt *fmt;
-};
-
 struct vivi_dmaqueue {
 	struct list_head active;
 
@@ -63,7 +55,6 @@ struct vivi_dev {
 
 	struct vivi_dmaqueue vidq;
 
-	struct videobuf_res_privdata *res;
 	struct vfq_s q_ready;
 	struct vfq_s q_omx;
 	u8 first_frame;
@@ -91,7 +82,7 @@ struct vivi_fh {
 	/* video capture */
 	struct vivi_fmt *fmt;
 	unsigned int width, height;
-	struct videobuf_queue vb_vidq;
+	enum v4l2_field field;
 	unsigned int is_streamed_on;
 
 	enum v4l2_buf_type type;
@@ -99,6 +90,5 @@ struct vivi_fh {
 
 extern bool video_inuse;
 extern bool omx_secret_mode;
-void get_ppmgr_buf_info(char **start, unsigned int *size);
 
 #endif /* AMLVIDEO_H_ */
