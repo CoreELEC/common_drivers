@@ -54,10 +54,6 @@
 	};
 };
 
-&vrtc {
-	status = "disabled";
-};
-
 &pwm_ef {
 	status = "okay";
 	pinctrl-names = "default";
@@ -69,16 +65,6 @@
 
 	vmmc-supply = <&sd_3v3>;
 	vqmmc-supply = <&vddio_c>;
-};
-
-&crg_phy_20 {
-	gpio-vbus-power = "GPIOY_5";
-	gpios = <&gpio GPIOY_5 GPIO_ACTIVE_HIGH>;
-};
-
-&crg_phy_21 {
-	/delete-property/ gpio-vbus-power;
-	/delete-property/ gpios;
 };
 
 &amhdmitx {

@@ -8,6 +8,20 @@
 	amlogic-dt-id = "t7_a311d2_an400-8g";
 };
 
+&crg_phy_20 {
+	gpio-vbus-power = "GPIOY_5";
+	gpios = <&gpio GPIOY_5 GPIO_ACTIVE_HIGH>;
+};
+
+&crg_phy_21 {
+	/delete-property/ gpio-vbus-power;
+	/delete-property/ gpios;
+};
+
+&vrtc {
+	status = "disabled";
+};
+
 &amhdmitx {
 	vend_data {
 		product_desc = "VIM4";

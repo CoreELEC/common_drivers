@@ -249,10 +249,6 @@
 	};
 };
 
-&crg21_otg {
-	controller-type = <1>;
-};
-
 &nna_tsensor {
 	status = "disabled";
 };
