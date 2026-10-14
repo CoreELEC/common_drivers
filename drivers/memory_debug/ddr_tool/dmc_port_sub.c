@@ -1654,7 +1654,15 @@ char *sub_dev_to_port(unsigned char port_id, int sid, char rw)
 	struct sub_dev_port *port;
 	int i, j;
 
-	desc = dmc_mon ? dmc_mon->sub_dev : (aml_db ? aml_db->sub_dev : NULL);
+	desc = NULL;
+#if IS_ENABLED(CONFIG_AMLOGIC_DMC_MONITOR)
+	if (dmc_mon)
+		desc = dmc_mon->sub_dev;
+#endif
+#if IS_ENABLED(CONFIG_AMLOGIC_DDR_BANDWIDTH)
+	if (!desc && aml_db)
+		desc = aml_db->sub_dev;
+#endif
 	if (!desc)
 		return NULL;
 

@@ -28,7 +28,11 @@ $(MODULE_NAME)-$(CONFIG_AMLOGIC_DDR_BANDWIDTH_C4)	+= ddr_tool/ddr_band_op_c4.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DDR_BANDWIDTH_A9)	+= ddr_tool/ddr_band_op_a9.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DDR_BANDWIDTH_C5)	+= ddr_tool/ddr_band_op_c5.o
 
-$(MODULE_NAME)-$(CONFIG_AMLOGIC_DMC_MONITOR)		+= ddr_tool/dmc_monitor.o ddr_tool/dmc_port_sub.o
+$(MODULE_NAME)-$(CONFIG_AMLOGIC_DMC_MONITOR)		+= ddr_tool/dmc_monitor.o
+# vpu sub port tables are used by dmc_monitor and ddr_bandwidth/ddr_priority
+ifneq ($(CONFIG_AMLOGIC_DMC_MONITOR)$(CONFIG_AMLOGIC_DDR_BANDWIDTH),)
+$(MODULE_NAME)-y					+= ddr_tool/dmc_port_sub.o
+endif
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DMC_DEV_ACCESS)		+= ddr_tool/dmc_dev_access.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DMC_MONITOR_G12)	+= ddr_tool/dmc_g12.o
 $(MODULE_NAME)-$(CONFIG_AMLOGIC_DMC_MONITOR_TM2)	+= ddr_tool/dmc_tm2.o
