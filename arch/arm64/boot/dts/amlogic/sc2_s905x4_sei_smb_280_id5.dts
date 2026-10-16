@@ -14,10 +14,6 @@
 	internal_phy = <0>;
 };
 
-&usb3_phy_v2 {
-	otg = <0>;
-};
-
 &i2c3 {
 	status = "okay";
 

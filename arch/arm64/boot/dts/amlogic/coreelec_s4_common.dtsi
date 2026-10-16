@@ -157,10 +157,6 @@
 	/delete-node/ aw9523_led@5b;
 };
 
-&usb3_phy_v2 {
-	otg = <0>;
-};
-
 &sd_emmc_a {
 	/delete-property/ use_intf3_tuning;
 };

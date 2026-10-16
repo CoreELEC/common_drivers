@@ -206,7 +206,7 @@
 	};
 };
 
-&vrtc {
+&rtc {
 	status = "disabled";
 };
 

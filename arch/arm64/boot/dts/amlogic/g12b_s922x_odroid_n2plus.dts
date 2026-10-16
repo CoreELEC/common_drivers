@@ -70,20 +70,6 @@
 		};
 	};
 
-	gpio-reset {
-		compatible = "linux,gpio-reset";
-		usb_hub_en {
-			gpios = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
-			asserted-state = <0>;
-			duration-ms = <100>;
-		};
-		usb_hub {
-			gpios = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH>;
-			asserted-state = <0>;
-			duration-ms = <100>;
-		};
-	};
-
 	unifykey {
 		unifykey-num = <1>;
 		unifykey-index-0 = <&keysn_0>;

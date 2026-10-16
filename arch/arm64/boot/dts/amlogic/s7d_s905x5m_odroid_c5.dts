@@ -46,16 +46,6 @@
 	/delete-node/ aml_wifi;
 	/delete-node/ wifi_pwm_conf;
 
-  gpio-reset {
-		compatible = "linux,gpio-reset";
-
-		usb_hub {
-			gpios = <&gpio GPIOX_19 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
-			asserted-state = <0>;
-			duration-ms = <100>;
-		};
-	};
-
   auge_sound {
 		/delete-property/ avout_mute-gpios;
   };

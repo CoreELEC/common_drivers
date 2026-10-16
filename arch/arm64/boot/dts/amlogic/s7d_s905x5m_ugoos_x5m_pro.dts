@@ -134,20 +134,9 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
-
-	usb_otg_connector {
-		compatible = "sw-usb-connector", "usb-a-connector";
-		label = "OTG-USB";
-		vbus-supply = <&usb_otg_5v_reg>;
-		port {
-			sw_dr_sw: endpoint {
-				remote-endpoint = <&usb_dr_sw>;
-			};
-		};
-	};
 };
 
-&vrtc {
+&rtc {
 	status = "disabled";
 };
 
@@ -164,19 +153,6 @@
 		clock-frequency = <32768>;
 		clock-output-names = "xin32k";
 	};
-};
-
-&crg_otg {
-	port {
-		usb_dr_sw: endpoint {
-			remote-endpoint = <&sw_dr_sw>;
-		};
-	};
-};
-
-&usb_phy21 {
-	/delete-property/ gpio-vbus-power;
-	/delete-property/ gpios;
 };
 
 &crg {

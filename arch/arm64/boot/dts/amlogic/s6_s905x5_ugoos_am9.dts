@@ -97,19 +97,6 @@
 		regulator-always-on;
 	};
 
-	typec_usb_mux: usb-mux {
-		compatible = "gpio-typec-switch";
-		sel-gpios = <&gpio GPIOF_4 GPIO_ACTIVE_LOW>;
-		oe-gpios = <&gpio GPIOX_2 GPIO_ACTIVE_LOW>;
-
-		orientation-switch;
-		port {
-			usb_mux_ss: endpoint {
-				remote-endpoint = <&typec_ss>;
-			};
-		};
-	};
-
 	dc_in {
 		compatible = "adc-power";
 		name = "dc_in";
@@ -145,47 +132,6 @@
 
 &i2c5 {
 	clock-frequency = <300000>;
-
-	// usbc
-	fusb302@22 {
-		compatible = "fcs,fusb302";
-		reg = <0x22>;
-		// hw irq doesn't work
-		//interrupt-parent = <&gpio_intc>;
-		//interrupts = <GPIOA_8 IRQ_TYPE_LEVEL_LOW>;
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&fusb302_int>;
-		fcs,int_n-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
-		vbus-supply = <&usbc5v_reg>;
-		port {
-			typec_dr_sw: endpoint {
-				remote-endpoint = <&usb_dr_sw>;
-			};
-		};
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			data-role = "dual";
-			power-role = "dual";
-			try-power-role = "source";
-			source-pdos = <PDO_FIXED(5000, 1000,
-				PDO_FIXED_USB_COMM |
-				PDO_FIXED_DUAL_ROLE |
-				PDO_FIXED_DATA_SWAP |
-				PDO_FIXED_EXTPOWER)>;
-			sink-pdos = <PDO_FIXED(5000, 100,
-				PDO_FIXED_USB_COMM |
-				PDO_FIXED_DUAL_ROLE |
-				PDO_FIXED_DATA_SWAP |
-				PDO_FIXED_EXTPOWER)>;
-			op-sink-microwatt = <1000000>;
-			port {
-				typec_ss: endpoint {
-					remote-endpoint = <&usb_mux_ss>;
-				};
-			};
-		};
-	};
 
 	// rtc
 	hym8563: hym8563@51 {
@@ -260,25 +206,12 @@
 	};
 };
 
-&crg_otg {
-	port {
-		usb_dr_sw: endpoint {
-			remote-endpoint = <&typec_dr_sw>;
-		};
-	};
-};
-
-&usb_phy21 {
-	/delete-property/ gpio-vbus-power;
-	/delete-property/ gpios;
-};
-
 &crg {
 	vbus-supply = <&usb5v_reg>;
 	early-suspend;
 };
 
-&vrtc {
+&rtc {
 	status = "disabled";
 };
 

@@ -34,7 +34,8 @@
 		/* SCK:GPIOA_15 / SDA:GPIOA_14 / INT:GPIOAO_2 */
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
-		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-parent = <&gpio_intc>;
+		interrupts = <2 IRQ_TYPE_EDGE_FALLING>; /* IRQID_GPIOAO_2 */
 		//i2c_bus = "i2c_bus_c";
 		#clock-cells = <0>;
 		status = "okay";

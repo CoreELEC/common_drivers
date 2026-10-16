@@ -46,14 +46,6 @@
 		earphone_ctl_gpio = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
 	};
 
-	gpio-reset {
-		compatible = "linux,gpio-reset";
-		usb_hub_reset {
-			gpios = <&gpio GPIOH_4 GPIO_ACTIVE_LOW>;
-			asserted-state = <0>;
-			duration-ms = <1000>;
-		};
-	};
 };
 
 &pinctrl_periphs {

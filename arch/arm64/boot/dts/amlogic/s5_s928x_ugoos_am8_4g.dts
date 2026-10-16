@@ -121,42 +121,6 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
-
-	// usbc
-	fusb302@22 {
-		compatible = "fcs,fusb302";
-		reg = <0x22>;
-		// hw irq doesn't work
-		//interrupt-parent = <&gpio_intc>;
-		//interrupts = <GPIOT_2 IRQ_TYPE_LEVEL_LOW>;
-		//pinctrl-names = "default";
-		//pinctrl-0 = <&fusb302_int>;
-		fcs,int_n = <&gpio GPIOT_2 GPIO_ACTIVE_HIGH>;
-		vbus-supply = <&usbc5v_reg>;
-		port {
-			typec_dr_sw: endpoint {
-				remote-endpoint = <&usb_dr_sw>;
-			};
-		};
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			data-role = "dual";
-			power-role = "dual";
-			try-power-role = "source";
-			source-pdos = <PDO_FIXED(5000, 1000,
-				PDO_FIXED_USB_COMM |
-				PDO_FIXED_DUAL_ROLE |
-				PDO_FIXED_DATA_SWAP |
-				PDO_FIXED_EXTPOWER)>;
-			sink-pdos = <PDO_FIXED(5000, 100,
-				PDO_FIXED_USB_COMM |
-				PDO_FIXED_DUAL_ROLE |
-				PDO_FIXED_DATA_SWAP |
-				PDO_FIXED_EXTPOWER)>;
-			op-sink-microwatt = <1000000>;
-		};
-	};
 };
 
 /* rtc, eeprom */
@@ -171,20 +135,6 @@
 		#clock-cells = <0>;
 		clock-frequency = <32768>;
 		clock-output-names = "xin32k";
-	};
-};
-
-// otg (port B)
-&crg21_otg {
-	dr_mode = "host";
-	role-switch-default-mode = "host";
-	controller-type = <1>;  /* host only */
-	/delete-property/ gpio-vbus-power;
-	/delete-property/ gpios;
-	port {
-		usb_dr_sw: endpoint {
-			remote-endpoint = <&typec_dr_sw>;
-		};
 	};
 };
 

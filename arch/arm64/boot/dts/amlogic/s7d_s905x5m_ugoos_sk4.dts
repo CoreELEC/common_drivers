@@ -73,17 +73,6 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
-
-	usb_otg_connector {
-		compatible = "sw-usb-connector", "usb-a-connector";
-		label = "OTG-USB";
-		vbus-supply = <&usb_otg_5v_reg>;
-		port {
-			sw_dr_sw: endpoint {
-				remote-endpoint = <&usb_dr_sw>;
-			};
-		};
-	};
 };
 
 // not ethernet related but sets GPIO to enable USB-C port
@@ -95,7 +84,7 @@
 	};
 };
 
-&vrtc {
+&rtc {
 	status = "disabled";
 };
 
@@ -135,19 +124,6 @@
       6    17  18  16
 */
 	};
-};
-
-&crg_otg {
-	port {
-		usb_dr_sw: endpoint {
-			remote-endpoint = <&sw_dr_sw>;
-		};
-	};
-};
-
-&usb_phy21 {
-	/delete-property/ gpio-vbus-power;
-	/delete-property/ gpios;
 };
 
 &crg {
