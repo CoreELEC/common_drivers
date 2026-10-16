@@ -5,7 +5,7 @@
 	model = "Radxa Zero 2";
 	coreelec-dt-id = "g12b_a311d_radxa_zero2";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 
 	reserved-memory {
 		secmon_reserved:linux,secmon {

@@ -5,7 +5,7 @@
 	model = "Ugoos AM7";
 	coreelec-dt-id = "sc2_s905x4_ugoos_am7";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 	/delete-node/ vrtc;
 
 	gpioleds {

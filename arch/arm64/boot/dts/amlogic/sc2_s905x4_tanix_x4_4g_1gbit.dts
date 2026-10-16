@@ -5,7 +5,7 @@
 	amlogic-dt-id = "sc2_s905x4_ah212-4g-1000M";
 	coreelec-dt-id = "sc2_s905x4_tanix_x4_4g_1gbit";
 
-	memory@00000000 {
+	memory@0 {
 		linux,usable-memory = <0x0 0x000000 0x0 0xf0000000>;
 	};
 };

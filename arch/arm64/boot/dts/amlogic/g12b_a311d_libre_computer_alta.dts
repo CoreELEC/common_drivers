@@ -5,7 +5,7 @@
 	model = "Libre-Computer Alta";
 	coreelec-dt-id = "g12b_a311d_libre_computer_alta";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 
 	bt-dev {
 		status = "disabled";

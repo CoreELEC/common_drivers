@@ -5,7 +5,7 @@
 	model = "Khadas VIM3";
 	coreelec-dt-id = "g12b_a311d_khadas_vim3";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 	/delete-node/ rtc;
 
 	reserved-memory {

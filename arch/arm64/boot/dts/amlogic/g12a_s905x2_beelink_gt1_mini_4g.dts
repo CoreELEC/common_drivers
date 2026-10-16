@@ -4,7 +4,7 @@
 	coreelec-dt-id = "g12a_s905x2_beelink_gt1_mini_4g";
 	amlogic-dt-id = "g12a_u212_4g";
 
-	memory@00000000 {
+	memory@0 {
 		linux,usable-memory = <0x0 0x0 0x0 0xf5700000>;
 	};
 };

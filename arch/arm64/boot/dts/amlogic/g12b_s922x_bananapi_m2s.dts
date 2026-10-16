@@ -6,7 +6,7 @@
 	coreelec-dt-id = "g12b_s922x_bananapi_m2s";
 	amlogic-dt-id = "bananapi_m2s_922x";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 	/delete-node/ rtc;
 
 	reserved-memory {

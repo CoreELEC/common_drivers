@@ -5,7 +5,7 @@
 	model = "Libre-Computer Solitude";
 	coreelec-dt-id = "sm1_s905d3_libre_computer_solitude";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 
 	bt-dev {
 		status = "disabled";

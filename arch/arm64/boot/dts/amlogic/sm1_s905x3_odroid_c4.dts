@@ -4,7 +4,7 @@
 	model = "Hardkernel ODROID-C4";
 	coreelec-dt-id = "sm1_s905x3_odroid_c4";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 	/delete-node/ rtc;
 	/delete-node/ aml_bt;
 	/delete-node/ aml_wifi;

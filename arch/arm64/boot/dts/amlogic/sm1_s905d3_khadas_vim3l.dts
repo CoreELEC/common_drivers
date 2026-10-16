@@ -5,7 +5,7 @@
 	amlogic-dt-id = "sm1_kvim3l";
 	coreelec-dt-id = "sm1_s905d3_khadas_vim3l";
 
-	/delete-node/ memory@00000000;
+	/delete-node/ memory@0;
 	/delete-node/ rtc;
 
 	reserved-memory {

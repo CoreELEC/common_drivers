@@ -8,7 +8,7 @@
 	amlogic-dt-id = "s6_s905x5_umx5yks";
 
 	// 4gb
-	memory@00000000 {
+	memory@0 {
 		device_type = "memory";
 		linux,usable-memory = <0x0 0x000000 0x0 0xe0000000
 					0x1 0x000000 0x0 0x20000000>;
