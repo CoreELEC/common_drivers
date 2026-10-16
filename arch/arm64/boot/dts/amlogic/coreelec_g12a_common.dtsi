@@ -4,6 +4,7 @@
 	/delete-node/ optee;
 
 	amhdmitx: amhdmitx{
+		status = "okay";
 		hdmitx-gpios-hpd = <&gpio GPIOH_2 0>;
 		hdmitx-gpios-scl = <&gpio GPIOH_1 0>;
 		hdmitx-gpios-sda = <&gpio GPIOH_0 0>;
