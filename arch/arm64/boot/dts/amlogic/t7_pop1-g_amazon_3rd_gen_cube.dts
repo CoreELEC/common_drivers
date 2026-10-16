@@ -260,9 +260,7 @@
 	aml_wifi {
 		interrupt-gpios = <&gpio  GPIOX_6  GPIO_ACTIVE_HIGH>;
 		power_on-gpios = <&gpio   GPIOY_14  GPIO_ACTIVE_HIGH>;
-	};
 
-	wifi_pwm_conf {
 		pwm_channel1_conf {
 			pwms = <&pwm_cd  0 30550 0>;
 		};

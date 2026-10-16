@@ -49,6 +49,22 @@
 		};
 	};
 
+	aml_wifi {
+		status = "okay";
+		/delete-property/ pwm_config;
+
+		pwm_channel1_conf {
+			pwms = <&pwm_ef MESON_PWM_0 30541 0>;
+			duty-cycle = <15270>;
+			times = <10>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_ef MESON_PWM_2 30500 0>;
+			duty-cycle = <15250>;
+			times = <12>;
+		};
+	};
+
 	amhdmitx: amhdmitx{
 		status = "okay";
 		hdmitx-gpios-hpd = <&gpio GPIOH_2 0>;

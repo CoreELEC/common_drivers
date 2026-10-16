@@ -194,7 +194,20 @@
 };
 
 &aml_wifi {
+	status = "okay";
 	wifi_static_buf = <1>;
+	/delete-property/ pwm_config;
+
+	pwm_channel1_conf {
+		pwms = <&pwm_ab 0 30550 0>;
+		duty-cycle = <15270>;
+		times = <8>;
+	};
+	pwm_channel2_conf {
+		pwms = <&pwm_ab 2 30500 0>;
+		duty-cycle = <15250>;
+		times = <12>;
+	};
 };
 
 &vdin0 {

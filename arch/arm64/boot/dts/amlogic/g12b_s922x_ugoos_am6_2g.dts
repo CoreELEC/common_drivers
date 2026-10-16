@@ -27,7 +27,7 @@
 		};
 	};
 
-	wifi{
+	aml_wifi {
 		power_on-gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
 	};
 

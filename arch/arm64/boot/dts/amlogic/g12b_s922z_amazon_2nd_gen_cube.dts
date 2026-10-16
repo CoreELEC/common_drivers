@@ -283,17 +283,14 @@
 		mt76x8_pmu_en_gpio = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
 	};
 
-	bt-dev {
+	aml_bt {
 		bt_en-gpios = <&gpio GPIOX_14 GPIO_ACTIVE_HIGH>;
 		/delete-property/ reset-gpios;
 		/delete-property/ hostwake-gpios;
 	};
 
-	wifi {
+	aml_wifi {
 		power_on-gpios = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
-	};
-
-	wifi_pwm_conf {
 
 		pwm_channel1_conf {
 			pwms = <&pwm_ef 0x00 0x7558 0x00>;

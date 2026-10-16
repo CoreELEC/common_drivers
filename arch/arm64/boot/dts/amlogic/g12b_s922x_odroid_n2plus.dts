@@ -15,11 +15,11 @@
 		};
 	};
 
-	bt-dev {
+	aml_bt {
 		status = "disabled";
 	};
 
-	wifi {
+	aml_wifi {
 		status = "disabled";
 	};
 
