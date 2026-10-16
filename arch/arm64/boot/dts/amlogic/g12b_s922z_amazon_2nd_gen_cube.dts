@@ -210,7 +210,7 @@
 			/delete-node/ meson-irblaster@14c;
 		};
 
-		audiobus@0xff642000 {
+		audiobus@ff642000 {
 
 			aml_tdma: tdma {
 				compatible = "amlogic, g12a-snd-tdma";

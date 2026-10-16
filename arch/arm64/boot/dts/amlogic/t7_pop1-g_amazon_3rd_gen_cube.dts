@@ -12,7 +12,7 @@
 	};
 
 	reserved-memory {
-		ramoops@0x07400000 {
+		ramoops@7400000 {
 			reg = <0x00 0x8400000 0x00 0x100000>;
 		};
 
