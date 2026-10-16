@@ -107,6 +107,23 @@
 		      <0x0 0xfe084000 0x0 0x58>; /*Legacy IR controller*/
 		interrupts = <GIC_SPI 148 IRQ_TYPE_EDGE_RISING>;
 	};
+
+	/* u-boot fails to reserve all fdt regions with these and stops booting */
+	uboot_log {
+		status = "disabled";
+		/delete-property/ memory-region;
+	};
+
+	dmc_monitor {
+		status = "disabled";
+		/delete-property/ memory-region;
+	};
+
+	reserved-memory {
+		/delete-node/ linux,dmc_monitor;
+		/delete-node/ linux,log;
+		/delete-node/ linux,bl30log;
+	};
 };
 
 &audiobus {
