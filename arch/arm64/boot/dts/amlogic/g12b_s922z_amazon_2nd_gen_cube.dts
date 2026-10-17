@@ -105,6 +105,32 @@
 				function = "spdif_in";
 			};
 		};
+
+		sdio_m_pins: sdio_m_pins {
+			mux {
+				groups = "sdio_d0",
+					"sdio_d1",
+					"sdio_d2",
+					"sdio_d3",
+					"sdio_clk",
+					"sdio_cmd";
+				function = "sdio";
+				input-enable;
+				bias-pull-up;
+				/delete-property/ drive-strength;
+				drive-strength-microamp = <4000>;
+			};
+		};
+
+		sdio_m_clk_gate_pins: sdio_m_clk_gate_pins {
+			mux {
+				groups = "GPIOX_4";
+				function = "gpio_periphs";
+				bias-pull-down;
+				/delete-property/ drive-strength;
+				drive-strength-microamp = <4000>;
+			};
+		};
 	};	
 
 	usb2phy@ffe09000 {
@@ -279,10 +305,17 @@
 	};
 
 	sdio@ffe03000 {	//wifi
-			
-		cap-mmc-highspeed;
+		clocks = <&clkc CLKID_SD_EMMC_A>,
+			<&clkc CLKID_SD_EMMC_A_CLK0_SEL>,
+			<&clkc CLKID_SD_EMMC_A_CLK0>,
+			<&xtal>,
+			<&clkc CLKID_FCLK_DIV2>,
+			<&clkc CLKID_FCLK_DIV2P5>;
+		clock-names = "core", "mux0", "mux1", "clkin0", "clkin1", "clkin2";
+		use_intf3_tuning;
 		sd-uhs-sdr50;
-		max-frequency = <60000000>;	 
+		sd-uhs-sdr104;
+		max-frequency = <200000000>;
 		no-sd;
 		mt76x8_pmu_en_gpio = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
 	};		
