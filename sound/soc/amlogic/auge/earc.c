@@ -3417,7 +3417,7 @@ static void send_uevent_work_func(struct work_struct *p_work)
 }
 
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
-void earc_hdmirx_hpdst(int earc_port, int st)
+static void earc_hdmirx_hpdst(int earc_port, int st)
 {
 	struct earc *p_earc = s_earc;
 
