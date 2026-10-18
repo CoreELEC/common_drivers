@@ -1,0 +1,5 @@
+include $(src)/build_profile.mk
+obj-m := $(DOVI_MODULE_NAME).o
+$(DOVI_MODULE_NAME)-y := module.o host_adapter.o callback_registration.o runtime_bridge.o
+include $(src)/core_objects.mk
+ccflags-y += -I$(src)/core -fstack-usage -Wframe-larger-than=2048

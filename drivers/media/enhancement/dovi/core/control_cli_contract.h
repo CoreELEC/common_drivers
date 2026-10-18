@@ -1,0 +1,7 @@
+#ifndef DOVI_CONTROL_CLI_CONTRACT_H
+#define DOVI_CONTROL_CLI_CONTRACT_H
+enum dovi_cli_offset {
+    DOVI_CLI_PRIORITY = 52,
+    DOVI_CLI_PRIORITY_OVERRIDE_RESERVED = 92,
+};
+#endif
