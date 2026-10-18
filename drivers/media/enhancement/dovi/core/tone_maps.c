@@ -1,114 +1,192 @@
 /* Generate auxiliary tone and saturation LUTs around the primary curve. */
-/* Integer widths, wrapping and shifts follow the native arithmetic. */
-#include "fixed_access.h"
 #include "tone_maps.h"
+#include "tone_curve_lut.h"
+#include "numeric_tone.h"
+#include "tone_mapping_math.h"
 #include "fixed_arithmetic.h"
 #include "fixed_transcendentals.h"
-#include "pq_conversion.h"
-#include "pq_conversion_tables.h"
+#include "dm_types.h"
 
-static int vector_map(int weight, int ratio, unsigned short mode, short *output, short count)
+void dovi_curve_build_luts(void *control, void *output, void *parameters)
 {
-    unsigned int norm, shift, accumulator = 0;
-    int step, sign = mode == 0 ? 1 : -1, i;
-    dovi_fx_assert(1, " QFTMS must be <= 15");
-    norm = dovi_unorm_s(weight);
-    step = dovi_sshr_sss(weight, fixed_signed32(9u - norm));
-    if (mode > 1) {
-        for (i = 0; i < count; ++i)
-            output[i] = 4095;
-        return 0;
-    }
-    shift = norm + 33u;
-    if (shift > 63u)
-        shift = 63u;
-    for (i = 0; i < count; ++i) {
-        long long scaled = ((long long)fixed_signed32(accumulator) * ratio) >> (shift & 63u);
-        int half = -0x40000000, value;
-        accumulator += (unsigned int)step;
-        dovi_fx_assert((int)(~(norm + 33u) >> 31), "sshr_slu() called with negative shift value");
-        if (scaled <= 2147483647ll && scaled >= (-2147483647ll - 1))
-            half = fixed_signed32((unsigned int)scaled + 1u) >> 1;
-        value = fixed_signed32(4095u - (unsigned int)sign * (unsigned int)half);
-        if (value > 8191)
-            value = 8191;
-        if (value < 0)
-            value = 0;
-        output[i] = (short)value;
-    }
-    return 0;
-}
+    unsigned short clamped_sample;
+    unsigned short scaled_sample;
+    unsigned int rounded_sample;
+    int sample_work;
+    int square_root;
+    int curve_sample;
+    unsigned long root_sample;
+    long root_cursor;
+    int *root_output;
+    long lut_cursor;
+    long sample_cursor;
+    int *root_input;
 
-int tone_map_s(int weight, int ratio, unsigned short mode, short *output, short count)
-{
-    return vector_map(weight, ratio, mode, output, count);
-}
-
-int saturation_map_s(int weight, int ratio, unsigned short mode, short *output, short count)
-{
-    return vector_map(weight, ratio, mode, output, count);
-}
-
-int saturation_map_i(int minimum, int maximum, int source_minimum, int gain, short *tone,
-                     unsigned short mode, short *output, short count)
-{
-    int shift = count == 256 ? 4 : 3, i;
-    if (!mode) {
-        int low = minimum >> 19, high = maximum >> 19;
-        int delta = low - (source_minimum >> 19);
-        unsigned int reciprocal =
-            low < high ? 0x20000000u / (unsigned int)(high - low) : 0x20000000u;
-        for (i = 0; i < count; ++i) {
-            int tone_value = tone[i], grid = fixed_signed16((unsigned int)i << shift);
-            long long value = ((long long)(tone_value - grid + 4096) * gain) >> 28;
-            short result = 0;
-            if (delta > 0) {
-                long long distance = high - tone_value, correction;
-                unsigned long long lookup, corrected;
-                unsigned int index, linear;
-                if (distance < 0)
-                    distance = 0;
-                lookup = (unsigned long long)(((long long)fixed_signed32(reciprocal) * distance +
-                                               8192) >>
-                                              14);
-                index = (unsigned int)(lookup >> 6) & 1023u;
-                linear = pq_depq1024Lut[index];
-                if (index != 1023u) {
-                    unsigned int difference = pq_depq1024Lut[index + 1u] - linear;
-                    linear += (unsigned int)(fixed_signed64((unsigned long long)difference *
-                                                            (lookup & 63u)) >>
-                                             6);
+    if (*(unsigned int *)((long)control + 0xe4) < 2) {
+        if (*(unsigned int *)((long)control + 0xe4) == 1) {
+            dovi_curve_sample_primary_lut(control, parameters);
+            root_input = (int *)((long)control + 0x1778);
+            curve_sample = 0;
+            sample_work = 0;
+            sample_cursor = 0;
+            *(unsigned int *)((long)control + 0x1778) = 0;
+            root_output = root_input;
+            do {
+                if (curve_sample < 1) {
+                    root_sample = 0;
+                } else {
+                    square_root = dovi_ssqrt_s(sample_work);
+                    root_sample = (unsigned long)(unsigned int)(square_root >> 1);
                 }
-                corrected = (unsigned long long)((long long)delta * 3) * linear;
-                correction = fixed_signed64(corrected * 0x2c6734cull + 0x2000000000000ull) >> 50;
-                if (correction > 4095) {
-                    output[i] = 0;
-                    continue;
+                if (root_output != (int *)0x0) {
+                    *root_output = (int)root_sample;
                 }
-                value = fixed_signed64(
-                    ((unsigned long long)value * (4096ull - (unsigned long long)correction) +
-                     2048ull) >>
-                    12);
-            }
-            result = fixed_signed32((unsigned int)value) <= 8191
-                         ? fixed_signed16((unsigned int)value)
-                         : 8191;
-            output[i] = result;
-        }
-    } else if (mode == 1) {
-        for (i = 0; i < count; ++i) {
-            int denominator = (int)fixed_signed16((unsigned int)i << shift) - tone[i] + 4096;
-            int reciprocal = denominator ? 0x1000000 / denominator : 0;
-            int value = fixed_signed32((unsigned int)(((long long)reciprocal * gain) >> 28));
-            if (value < 0)
-                value = 0;
-            if (value > 8191)
-                value = 8191;
-            output[i] = (short)value;
+                dovi_sdiv((-(root_sample >> 0x1f) & 0xff80000000000000) | root_sample << 0x17,
+                          *(unsigned int *)((long)control + 0x1764));
+                sample_work = sample_work + 0x200000;
+                curve_sample = curve_sample + 0x40000;
+                root_output = root_output + 1;
+                rounded_sample = (int)((unsigned long)((long)*(int *)((long)control + 0x16cc) *
+                                              (long)(int)root_sample) >>
+                              0x1b) +
+                        0x4000800;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor + 0x404) = clamped_sample;
+                sample_cursor = sample_cursor + 2;
+            } while (sample_cursor != 0x400);
+            sample_work = 0;
+            sample_cursor = 0;
+            lut_cursor = *(long *)((long)control + 6000);
+            do {
+                curve_sample =
+                    dovi_SMIcore(parameters, *(unsigned int *)(lut_cursor + sample_cursor * 4), sample_work, 0);
+                rounded_sample = curve_sample + 2;
+                sample_work = sample_work + 0x20000;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor * 2 + 0x808) = clamped_sample;
+                sample_cursor = sample_cursor + 1;
+            } while (sample_cursor != 0x200);
+            sample_cursor = 0;
+            do {
+                sample_work = dovi_SMScore(parameters, root_input, 0, 1, 1);
+                rounded_sample = sample_work + 0x800;
+                root_input = root_input + 1;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor + 0xc08) = clamped_sample;
+                sample_cursor = sample_cursor + 2;
+            } while (sample_cursor != 0x400);
+        } else {
+            dovi_curve_sample_primary_lut(control, parameters);
+            sample_work = 0;
+            root_cursor = (long)control + 0x1778;
+            lut_cursor = 0;
+            *(unsigned int *)((long)control + 0x1778) = 0;
+            sample_cursor = root_cursor;
+            do {
+                curve_sample = dovi_TMScore(parameters, sample_work, (void *)sample_cursor, 1);
+                sample_work = sample_work + 0x40000;
+                sample_cursor = sample_cursor + 4;
+                *(short *)((long)output + lut_cursor + 0x404) = (short)((curve_sample + 0x800U) >> 0xe);
+                lut_cursor = lut_cursor + 2;
+            } while (lut_cursor != 0x400);
+            sample_work = 0;
+            sample_cursor = 0;
+            lut_cursor = *(long *)((long)control + 6000);
+            do {
+                curve_sample =
+                    dovi_SMIcore(parameters, *(unsigned int *)(lut_cursor + sample_cursor * 4), sample_work, 0);
+                rounded_sample = curve_sample + 2;
+                sample_work = sample_work + 0x20000;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor * 2 + 0x808) = clamped_sample;
+                sample_cursor = sample_cursor + 1;
+            } while (sample_cursor != 0x200);
+            sample_cursor = 0;
+            do {
+                sample_work = dovi_SMScore(parameters, (void *)root_cursor, 0, 0, 1);
+                rounded_sample = sample_work + 0x800;
+                root_cursor = root_cursor + 4;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor + 0xc08) = clamped_sample;
+                sample_cursor = sample_cursor + 2;
+            } while (sample_cursor != 0x400);
         }
     } else {
-        for (i = 0; i < count; ++i)
-            output[i] = 4095;
+        dovi_curve_sample_identity_lut(control, parameters);
+        sample_cursor = 0;
+        do {
+            lut_cursor = sample_cursor + 4;
+            *(unsigned int *)((long)output + sample_cursor + 0x404) = 0x10001000;
+            sample_cursor = lut_cursor;
+        } while (lut_cursor != 0x400);
+        if (*(int *)(*(long *)((long)control + 0x1b0) + 0x20) == 0) {
+            sample_cursor = 0;
+            do {
+                lut_cursor = sample_cursor + 4;
+                *(unsigned int *)((long)output + sample_cursor + 0x808) = 0x10001000;
+                sample_cursor = lut_cursor;
+            } while (lut_cursor != 0x400);
+        } else {
+            sample_work = 0;
+            sample_cursor = 0;
+            lut_cursor = *(long *)((long)control + 6000);
+            do {
+                curve_sample =
+                    dovi_SMIcore(parameters, *(unsigned int *)(lut_cursor + sample_cursor * 4), sample_work, 0);
+                rounded_sample = curve_sample + 2;
+                sample_work = sample_work + 0x20000;
+                scaled_sample = (unsigned short)(rounded_sample >> 0xe);
+                if (0x8003fff < (int)rounded_sample) {
+                    scaled_sample = 0x2000;
+                }
+                clamped_sample = 0;
+                if (-1 < (int)rounded_sample) {
+                    clamped_sample = scaled_sample;
+                }
+                *(unsigned short *)((long)output + sample_cursor * 2 + 0x808) = clamped_sample;
+                sample_cursor = sample_cursor + 1;
+            } while (sample_cursor != 0x200);
+        }
+        sample_cursor = 0;
+        do {
+            lut_cursor = sample_cursor + 4;
+            *(unsigned int *)((long)output + sample_cursor + 0xc08) = 0x10001000;
+            sample_cursor = lut_cursor;
+        } while (lut_cursor != 0x400);
     }
-    return 0;
 }

@@ -242,3 +242,83 @@ signed component/direction address arithmetic in STB 2.4 versus unsigned
 arithmetic in STB 2.6. Diagnostic capture timing, prediction flag/delta
 reloads and cached/reloaded payload owners remain distinct. Only STB 2.4
 exposes the spatial phase/filter reader in this API family.
+
+## Tone mapping and trim
+
+### Tone controls, curves and LUTs
+
+STB 2.4 maps source/target displays and level-2 trims into its 168-byte
+tone control. STB 2.6 prepares indexed source/target color state,
+metadata overrides, adaptive backlight, PQ bounds, secondary-signal
+propagation and tone-LUT sizes from different context/configuration
+records. HLG, luminance/chroma defaults, repeated reads after packed
+stores, per-signal update order and LUT bounds traps remain explicit.
+
+STB 2.4 compares 160 bytes of tone control and builds two/three-point
+parameters, ratio maps and auxiliary maps. A two-point mode-3 call can
+leave every output untouched; ratio-pointer selection can leave three
+auxiliary maps untouched. STB 2.6 compares 0x1a0 control bytes and 0xf8
+parameter bytes at 0x1650, prepares/builds/packs its curve pipeline,
+copies the first sample into four control slots and returns its change
+flags. Mode/context slots remain part of its interface.
+
+The STB 2.4 parameter builder derives mapped points and curve segments
+from source/display records with ordered output aliases. STB 2.6 copies
+its control block into a different parameter record, derives low/mid/high
+points and applies HLG, native-luminance, white-point and trim scaling.
+The shifts, clamps, denominator handling and destination stores differ.
+
+STB 2.4 samples a 4096-step log-coordinate table with floor/ceiling
+strides and optional interpolation from a padded 515-word work buffer
+into 4096 outputs, retaining finite-size and untouched-cell behavior.
+STB 2.6 samples 512 primary/identity values, applies HLG where selected
+and packs register LUTs and control state with the required source reloads.
+It builds a primary and three auxiliary tone/saturation maps using
+different parameter blocks, square-root scratch, rounding/clamping and
+511/512 endpoint rules.
+
+STB 2.6 adds local-saturation patching, HLG inverse-OETF parameter
+generation, Hermite tone/saturation cores and cutoff scoring with signed
+128-bit product reduction. HLG writes 256 words at output +0x30 and can
+trap after partial writes. `TMScore` may publish its square-root output
+before later configuration reads. Forward/backward tone/saturation
+wrappers use the parameter block at 0x1650 and Q11 conversion, retaining
+32/full-64 result widths, cached square roots and ratio behavior. HLG
+OOTF composition uses extended PQ/power helpers and preserves repeated
+loads and zero/negative-ratio behavior.
+
+### Trim records and interpolation
+
+STB 2.4 reduces packed big-endian level 2/8/10/254 records, sorts keys,
+selects display brackets and commits clamped/interpolated level-2 values
+with default/configuration adjustments. Its fixed work arrays hold 16
+records; equal keys swap and can reverse duplicate order.
+
+STB 2.6 selects up to four retained luminance/chroma indices, constructs
+level-2/8 defaults and resolves target maxima from display/level-10
+records. The 14/42-byte record strides, duplicate ordering, native array
+limits, default injection and partial writes follow these new APIs.
+New interpolation operations select brackets, sort coordinates with
+their associated indices and return Q12 weights/default-use flags.
+
+Luminance coordinates use display/level-10 fallback or level-2 target PQ,
+scale into the working domain, suppress rounded/upper duplicates and
+inject/exclude defaults before publishing target PQ. Chroma coordinates
+use display/level-10/metadata primaries and suppress duplicates/defaults.
+Both retain 17-entry workspaces, index/count store order, diagnostics
+and bounds traps after earlier writes.
+
+The final chroma-distance absolute sum is shared, including `INT32_MIN`
+saturation and unsigned 32-bit addition. STB 2.4 computes its own primary,
+XYZ/LMS/cross-talk path and writes 116 bytes of persistent state.
+STB 2.6 calls XYZ/ICtCp helpers and returns zero for null primaries.
+Luminance arithmetic consumes only the low 32 input bits.
+
+Inverse-LUT uniqueness publishes the end of each run and reloads the
+mutable last index after writes. Primary backward-map concatenation
+copies tone parameters before checking the signed last index, iterates
+inclusively through that mutable index, and traps at entry 512 after
+earlier outputs. Its inverse-luma plane narrows to short without clamping;
+the other three planes use tone/saturation and signed-ratio calculations
+with separate rounding and 0..0x2000 clamps. A negative initial last index
+skips map writes after the parameter copy. The entry returns 1.

@@ -72,7 +72,7 @@ according to source format; matching level-6 extensions are processed in order.
 
 Trim reduction uses at most sixteen level-2 and sixteen level-8 records in
 local arrays. Its target argument addresses the stored 64-bit target pointer.
-See [trim_reduction.h](../core/trim_reduction.h) for sorting and storage
+See `trim_reduction.h` for sorting and storage
 requirements.
 
 ## Utility interfaces

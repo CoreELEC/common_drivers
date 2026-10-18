@@ -1,448 +1,491 @@
+/* Derive fixed-point parameters before sampling the tone/saturation LUTs. */
+#include "tone_curve.h"
 #include "tone_parameters.h"
+#include "numeric_tone.h"
+#include "tone_mapping_math.h"
 #include "fixed_arithmetic.h"
 #include "fixed_transcendentals.h"
 #include "pq_conversion.h"
-#include "fixed_access.h"
 
-/* Use explicit 64-bit intermediates, wrapping and masked AArch64 shifts. */
-static int add32(int a, int b)
+void dovi_CopyDataFromTcCtrlToTC(unsigned int *parameters, long control)
 {
-    return (int)((unsigned int)a + (unsigned int)b);
+    int value_at_0080;
+    unsigned int value_at_0024;
+
+    *parameters = *(unsigned int *)(control + 0x68);
+    parameters[1] = (unsigned int)*(unsigned short *)(control + 0x28) << 0xe;
+    parameters[2] = (unsigned int)*(unsigned short *)(control + 0x2c) << 0xe;
+    parameters[3] = (unsigned int)*(unsigned short *)(control + 0x2a) << 0xe;
+    parameters[4] = *(int *)(control + 0x10) << 0xe;
+    parameters[5] = *(int *)(control + 0x14) << 0xe;
+    parameters[0x10] = *(int *)(control + 0x7c) << 0xe;
+    value_at_0080 = *(int *)(control + 0x80);
+    parameters[0x3c] = 0;
+    parameters[0x11] = value_at_0080 << 0xe;
+    parameters[0x15] = *(int *)(control + 0xf4) << 0xe;
+    parameters[0x16] = *(int *)(control + 0xf8) << 0xe;
+    parameters[0x17] = *(int *)(control + 0xfc) << 0xe;
+    parameters[0x1e] = *(int *)(control + 0x10c) << 0xe;
+    parameters[0x1f] = *(int *)(control + 0x100) << 0xe;
+    parameters[0x20] = *(int *)(control + 0x104) << 0xe;
+    parameters[0x21] = (int)*(short *)(control + 0x2e)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x22] = (int)*(short *)(control + 0x30)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x23] = (int)*(short *)(control + 0x32)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x24] = (int)*(short *)(control + 0x34)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x25] = (int)*(short *)(control + 0x36)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x26] = (int)*(short *)(control + 0x38)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x27] = (int)*(short *)(control + 0x3a)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x28] = (int)*(short *)(control + 0x3c)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x29] = (int)*(short *)(control + 0x3e)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x40) & 0x1f);
+    parameters[0x2a] = (int)*(short *)(control + 0x9a)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x2b] = (int)*(short *)(control + 0x9c)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x2c] = (int)*(short *)(control + 0x9e)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x2d] = (int)*(short *)(control + 0xa0)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x2e] = (int)*(short *)(control + 0xa2)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x2f] = (int)*(short *)(control + 0xa4)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x30] = (int)*(short *)(control + 0xa6)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x31] = (int)*(short *)(control + 0xa8)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x32] = (int)*(short *)(control + 0xaa)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0xac) & 0x1f);
+    parameters[0x33] = (int)**(short **)(control + 0x210)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x34] = (int)*(short *)(*(long *)(control + 0x210) + 2)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x35] = (int)*(short *)(*(long *)(control + 0x210) + 4)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x36] = (int)*(short *)(*(long *)(control + 0x210) + 6)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x37] = (int)*(short *)(*(long *)(control + 0x210) + 8)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x38] = (int)*(short *)(*(long *)(control + 0x210) + 10)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x39] = (int)*(short *)(*(long *)(control + 0x210) + 0xc)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x3a] = (int)*(short *)(*(long *)(control + 0x210) + 0xe)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[0x3b] = (int)*(short *)(*(long *)(control + 0x210) + 0x10)
+                       << (unsigned long)(0x1aU - *(int *)(control + 0x218) & 0x1f);
+    parameters[6] = *(unsigned int *)(*(long *)(control + 0x1b0) + 0x20);
+    parameters[7] = *(unsigned int *)(*(long *)(control + 0x1b0) + 8);
+    parameters[8] = *(unsigned int *)(*(long *)(control + 0x1b0) + 0xc);
+    value_at_0024 = *(unsigned int *)(*(long *)(control + 0x1b0) + 0x24);
+    *(long *)(parameters + 0x48) = control + 0x220;
+    parameters[10] = value_at_0024;
+    return;
 }
 
-static int sub32(int a, int b)
+void dovi_curve_prepare_parameters(void *control, void *parameters)
 {
-    return (int)((unsigned int)a - (unsigned int)b);
-}
+    int source_low;
+    unsigned int upper_interval;
+    int lower_branch_work;
+    int target_mid_work;
+    int mapped_upper_bound;
+    unsigned int tone_denominator;
+    int cutoff_work;
+    int upper_branch_work;
+    int target_component_work;
+    int tone_value;
+    unsigned int target_cp;
+    int mode_at_00d8;
+    int curve_mode;
+    unsigned long fixed_result;
+    unsigned int target_intensity;
+    unsigned int target_ct;
+    unsigned long l_component_work;
+    unsigned int source_upper_interval;
+    int curve_delta_work;
+    unsigned long m_linear_product;
+    unsigned int denominator;
+    unsigned long s_linear_product;
+    unsigned int mapped_lower_interval;
+    unsigned long linear_luminance;
+    int mapped_low, mapped_mid, mapped_high;
 
-static int neg32(int a)
-{
-    return (int)(0U - (unsigned int)a);
-}
-
-static int shl32(int a, unsigned int n)
-{
-    return (int)((unsigned int)a << (n & 31U));
-}
-
-static long long shl64(long long a, unsigned int n)
-{
-    return (long long)((unsigned long long)a << (n & 63U));
-}
-
-static long long add64(long long a, long long b)
-{
-    return (long long)((unsigned long long)a + (unsigned long long)b);
-}
-
-static long long sub64(long long a, long long b)
-{
-    return (long long)((unsigned long long)a - (unsigned long long)b);
-}
-
-static long long mul64(long long a, long long b)
-{
-    return (long long)((unsigned long long)a * (unsigned long long)b);
-}
-
-static int sat32(long long value)
-{
-    if (value > 2147483647LL)
-        return 2147483647;
-    if (value < (-2147483647LL - 1))
-        return (-2147483647 - 1);
-    return (int)value;
-}
-
-static int high32(long long value, unsigned int shift)
-{
-    return (int)((unsigned long long)shl64(value, shift) >> 32);
-}
-
-static long long product_shift(int a, int b, unsigned int shift)
-{
-    return ((long long)a * b) >> (shift & 63U);
-}
-
-void dovi_CalcMappedParams2pxx(int crush, int mid, int clip, struct tone_curve_display *display,
-                               int source_min_pq, int source_max_pq, int source_diagonal,
-                               int *target_min, int *target_mid, int *target_max, int *source_mid,
-                               int *slope)
-{
-    int input_min, input_max, input_diagonal, output_min, output_max;
-    int value, inverse, contrast, offset, upper, lower;
-    int screen_ratio;
-    unsigned int ratio, norm, shift, root;
-    long long wide, screen;
-    unsigned long long product;
-
-    if (display->mode == 1) {
-        input_min = display->min_pq;
-        input_diagonal = display->diagonal_inches;
-        input_max = display->max_pq;
-        display->min_pq = source_min_pq;
-        display->diagonal_inches = source_diagonal;
-        display->max_pq = source_max_pq;
-        output_max = source_max_pq;
-        output_min = source_min_pq;
-    } else {
-        output_max = display->max_pq;
-        output_min = display->min_pq;
-        input_min = source_min_pq;
-        input_diagonal = source_diagonal;
-        input_max = source_max_pq;
+    dovi_CopyDataFromTcCtrlToTC(parameters, (long)control);
+    tone_value = *(int *)((long)control + 0x1658);
+    curve_mode = *(int *)((long)control + 0xe4);
+    mode_at_00d8 = *(int *)((long)control + 0xd8);
+    if (0x3ffbfff < tone_value) {
+        tone_value = 0x3ffc000;
     }
-    value = (int)(((long long)input_min + input_max + 1) >> 1);
-    norm = dovi_unorm_s(value);
-    inverse = dovi_sdiv_sls(0x2000000000000000ll, shl32(value, norm));
-    shift = 30u - norm;
-    if (fixed_signed32(shift) > 63)
-        shift = 63;
-    wide = product_shift((int)(((long long)output_min + output_max + 1) >> 1), inverse, shift);
-    ratio = dovi_ssqrt_s((unsigned int)sat32(wide));
-    if (display->diagonal_inches == input_diagonal) {
-        screen = 0x8000000;
-        screen_ratio = 0x8000000;
-    } else {
-        value = dovi_fxLOG2Taylor(display->diagonal_inches, 26);
-        inverse = dovi_fxLOG2Taylor(input_diagonal, 26);
-        norm = dovi_unorm_s(inverse);
-        inverse = dovi_sdiv_sls(0x2000000000000000ll, shl32(inverse, norm));
-        shift = 34u - norm;
-        if (fixed_signed32(shift) > 63)
-            shift = 63;
-        wide = product_shift(inverse, value, shift);
-        root = dovi_ssqrt_s((unsigned int)sat32(wide));
-        screen_ratio = dovi_sshr_sss(fixed_signed32(root), 2);
-        screen = screen_ratio;
+    curve_delta_work = *(int *)((long)control + 0x1654);
+    lower_branch_work = *(int *)((long)control + 0x1694);
+    if (tone_value < 0x4001) {
+        tone_value = 0x4000;
     }
-    norm = dovi_unorm_s(fixed_signed32(ratio));
-    inverse = dovi_sdiv_sls(0x2000000000000000ll, shl32(fixed_signed32(ratio), norm));
-    shift = 7u - norm;
-    if (fixed_signed32(shift) > 31)
-        shift = 31;
-    root = dovi_ssqrt_s((unsigned int)(inverse >> (shift & 31u)));
-    wide = mul64(fixed_signed32(root) >> 4, screen) >> 20;
-    value = sat32(wide);
-    contrast = dovi_smpy_ss(value, display->contrast);
-    *slope = dovi_sadd_sss(value, contrast);
-    value = dovi_smpy_ss(sub32(0x7fffffff, fixed_signed32(ratio)), screen_ratio);
-    norm = dovi_unorm_s(sub32(input_max, input_min));
-    inverse = dovi_sdiv_sls(0x2000000000000000ll, shl32(sub32(input_max, input_min), norm));
-    product = (unsigned long long)((long long)inverse * sub32(mid, input_min));
-    root = dovi_unorm_ul(product);
-    shift = root - norm + 24u;
-    if (fixed_signed32(shift) > 63)
-        shift = 63;
-    wide = mul64(high32(fixed_signed64(product), root), value) >> (shift & 63u);
-    offset = dovi_smpy_ss(sat32(wide), mid);
-    offset = dovi_sadd_sss(offset, display->brightness);
-
-    value = dovi_ssub_sss(crush, offset);
-    lower = display->min_pq;
-    if (lower < value)
-        lower = dovi_ssub_sss(crush, offset);
-    *target_min = dovi_sadd_sss(lower, display->min_bias);
-    value = dovi_ssub_sss(clip, offset);
-    upper = display->max_pq;
-    if (value < upper)
-        upper = dovi_ssub_sss(clip, offset);
-    value = dovi_sadd_sss(upper, display->max_bias);
-    *target_max = value;
-    upper = dovi_sadd_sss(sub32(mid, offset), display->mid_bias);
-    if (value < upper)
-        value = *target_max;
-    else
-        value = dovi_sadd_sss(sub32(mid, offset), display->mid_bias);
-    if (value < *target_min)
-        value = *target_min;
-    *source_mid = dovi_sadd_sss(value, sub32(offset, display->mid_bias));
-    value = dovi_smpy_ss(sub32(clip, crush), 0x6ccccccc);
-    upper = dovi_sadd_sss(value, crush);
-    value = dovi_smpy_ss(sub32(clip, crush), 0x13333333);
-    lower = dovi_sadd_sss(value, crush);
-    if (*source_mid < upper)
-        upper = *source_mid;
-    if (upper < lower)
-        upper = lower;
-    *source_mid = upper;
-    upper = dovi_sadd_sss(dovi_smpy_ss(sub32(*target_max, *target_min), 0x6ccccccc), *target_min);
-    lower = dovi_sadd_sss(dovi_smpy_ss(sub32(*target_max, *target_min), 0x13333333), *target_min);
-    value = dovi_sadd_sss(sub32(*source_mid, offset), display->mid_bias);
-    if (upper < value)
-        value = upper;
-    if (value < lower)
-        value = lower;
-    *target_mid = value;
-}
-
-void calc_mapped_params(int source_max, struct tone_curve_source *source,
-                        struct tone_curve_display *display, int *target_min, int *target_mid,
-                        int *target_max, int *source_mid, int *slope, int *source_target_ratio,
-                        int *screen_ratio)
-{
-    int key_weight = source->key_weight, crush = source->crush, mid = source->mid;
-    int input_min, input_max, output_min, output_max, input_diagonal, output_diagonal;
-    int preserve = display->bright_preserve;
-    int input_middle, output_middle, difference, value, other, offset, upper, lower;
-    unsigned int norm, shift;
-    long long wide, ease, square;
-    if (display->mode == 1) {
-        input_min = source->min_pq;
-        input_max = source->max_pq;
-        output_min = display->min_pq;
-        output_max = display->max_pq;
-        input_diagonal = source->diagonal_inches;
-        output_diagonal = display->diagonal_inches;
-    } else {
-        output_min = source->min_pq;
-        output_max = source->max_pq;
-        output_diagonal = source->diagonal_inches;
-        input_min = display->min_pq;
-        input_max = display->max_pq;
-        input_diagonal = display->diagonal_inches;
+    target_mid_work = *(int *)((long)control + 0x165c);
+    target_component_work = *(int *)((long)control + 0x1690);
+    upper_branch_work = curve_delta_work;
+    if (tone_value + -0x4000 <= curve_delta_work) {
+        upper_branch_work = tone_value + -0x4000;
     }
-    output_middle = add32(output_min >> 1, output_max >> 1);
-    input_middle = add32(input_min >> 1, input_max >> 1);
-    difference = sub32(output_middle, input_middle);
-    if (preserve != 0) {
-        value = add32(crush >> 1, source_max >> 1);
-        if (value < input_middle)
-            wide = 0;
-        else if (difference < 1 || output_middle < value)
-            wide = (long long)difference * preserve;
-        else {
-            norm = dovi_unorm_s(difference);
-            other = dovi_sshl_ssu(difference, norm);
-            value = other ? (int)(shl64((long long)sub32(value, input_middle), 30) / other) : 0;
-            ease = 0;
-            if (shl32(1, 29U - norm) <= value) {
-                ease = 0x100000;
-                value = sub32(value, shl32(1, 30U - norm));
-            }
-            square = product_shift(value, value, 31);
-            preserve = display->bright_preserve;
-            square = mul64(square, square) >> 31;
-            square = mul64(value, square) >> (((30U - norm) * 5U - 117U) & 63U);
-            wide = mul64(difference, add64(square, ease)) >> 20;
-            wide = (long long)sat32(wide) * preserve;
+    source_low = 0;
+    if (-1 < curve_delta_work) {
+        source_low = upper_branch_work;
+    }
+    curve_delta_work = target_mid_work;
+    if (0x3ffffff < target_mid_work) {
+        curve_delta_work = 0x4000000;
+    }
+    upper_branch_work = tone_value + 0x4000;
+    if (tone_value + 0x4000 <= target_mid_work) {
+        upper_branch_work = curve_delta_work;
+    }
+    if (curve_mode == 1) {
+        target_mid_work = *(int *)((long)control + 0x1660);
+        mapped_upper_bound = *(int *)((long)control + 0x1664);
+        cutoff_work = dovi_CalcCuttoff(source_low, tone_value, upper_branch_work, target_mid_work, mapped_upper_bound);
+        source_upper_interval = upper_branch_work - tone_value;
+        tone_denominator = tone_value - source_low;
+        mapped_lower_interval = source_upper_interval;
+        if (mapped_upper_bound - cutoff_work <= (int)source_upper_interval) {
+            mapped_lower_interval = mapped_upper_bound - cutoff_work;
         }
-        wide = add64(wide, (long long)sub32(0x1000, preserve) * difference);
-        difference = (int)((unsigned long long)wide >> 12);
-    }
-    *source_target_ratio = difference;
-    if (input_diagonal == output_diagonal) {
-        value = 0x8000000;
-        *screen_ratio = value;
+        curve_delta_work = source_low - tone_value;
+        mapped_mid = tone_value;
+        if ((int)(mapped_upper_bound - mapped_lower_interval) <= tone_value) {
+            mapped_mid = mapped_upper_bound - mapped_lower_interval;
+        }
+        mapped_lower_interval = tone_denominator;
+        if (cutoff_work - target_mid_work <= (int)tone_denominator) {
+            mapped_lower_interval = cutoff_work - target_mid_work;
+        }
+        cutoff_work = tone_value;
+        if (tone_value <= (int)(mapped_lower_interval + target_mid_work)) {
+            cutoff_work = mapped_lower_interval + target_mid_work;
+        }
+        mapped_mid = (cutoff_work - tone_value) + mapped_mid;
+        if (mapped_mid <= target_mid_work + 0x4000) {
+            mapped_mid = target_mid_work + 0x4000;
+        }
+        if (mapped_upper_bound + -0x4000 <= mapped_mid) {
+            mapped_mid = mapped_upper_bound + -0x4000;
+        }
+        mapped_low = mapped_mid + curve_delta_work;
+        if (mapped_mid + curve_delta_work <= target_mid_work) {
+            mapped_low = target_mid_work;
+        }
+        mapped_high = mapped_mid + source_upper_interval;
+        if (mapped_upper_bound <= (int)(mapped_mid + source_upper_interval)) {
+            mapped_high = mapped_upper_bound;
+        }
+        mapped_lower_interval = mapped_mid - mapped_low;
+        denominator = mapped_high - mapped_mid;
     } else {
-        value = dovi_fxLOG2Taylor(input_diagonal, 26);
-        other = dovi_fxLOG2Taylor(output_diagonal, 26);
-        norm = dovi_unorm_s(other);
-        dovi_fx_assert((int)(~norm >> 31), "sshl_su() called with negative shift value");
-        other = dovi_sdiv_sls(0x2000000000000000LL, shl32(other, norm));
-        shift = 34U - norm;
-        dovi_fx_assert((int)(~shift >> 31), "sshr_slu() called with negative shift value");
-        if ((int)shift > 63)
-            shift = 63;
-        wide = product_shift(other, value, shift);
-        value = dovi_sshr_sss((int)dovi_ssqrt_s((unsigned int)sat32(wide)), 2);
-        *screen_ratio = value;
+        source_upper_interval = upper_branch_work - tone_value;
+        tone_denominator = tone_value - source_low;
+        curve_delta_work = source_low - tone_value;
+        mapped_lower_interval = tone_denominator;
+        denominator = source_upper_interval;
+        mapped_low = source_low;
+        mapped_mid = tone_value;
+        mapped_high = upper_branch_work;
     }
-    value = dovi_smpy_ss(value, *source_target_ratio);
-    value = dovi_sadd_sss(*screen_ratio, value);
-    value = dovi_sshl_ssu(value, 3);
-    other = dovi_smpy_ss(value, display->contrast);
-    value = dovi_sadd_sss(value, other);
-    *slope = value;
-    wide = product_shift(sub32(mid, output_middle), key_weight, 17);
-    dovi_fx_assert(1, "sshr_slu() called with negative shift value");
-    value = dovi_sadd_sss(sat32(wide), 0x40000000);
-    other = *source_target_ratio;
-    wide = (long long)other * value;
-    norm = dovi_unorm_sl(wide);
-    shift = norm + 26U;
-    value = *screen_ratio;
-    dovi_fx_assert((int)(~shift >> 31), "sshr_slu() called with negative shift value");
-    if ((int)shift > 63)
-        shift = 63;
-    wide = product_shift(high32(wide, norm), value, shift);
-    offset = dovi_sadd_sss(sat32(wide), display->brightness);
-    value = dovi_ssub_sss(crush, offset);
-    if (input_min < value)
-        input_min = dovi_ssub_sss(crush, offset);
-    *target_min = dovi_sadd_sss(input_min, display->min_bias);
-    value = dovi_ssub_sss(source_max, offset);
-    if (value < input_max)
-        input_max = dovi_ssub_sss(source_max, offset);
-    *target_max = dovi_sadd_sss(input_max, display->max_bias);
-    value = dovi_smpy_ss(sub32(source_max, crush), 0x6ccccccc);
-    upper = dovi_sadd_sss(value, crush);
-    value = dovi_smpy_ss(sub32(source_max, crush), 0x13333333);
-    lower = dovi_sadd_sss(value, crush);
-    if (mid < upper)
-        upper = mid;
-    if (upper < lower)
-        upper = lower;
-    *source_mid = upper;
-    value = dovi_smpy_ss(sub32(*target_max, *target_min), 0x6ccccccc);
-    upper = dovi_sadd_sss(value, *target_min);
-    value = dovi_smpy_ss(sub32(*target_max, *target_min), 0x13333333);
-    lower = dovi_sadd_sss(value, *target_min);
-    value = dovi_sadd_sss(sub32(*source_mid, offset), display->mid_bias);
-    if (upper < value)
-        value = upper;
-    if (value < lower)
-        value = lower;
-    *target_mid = value;
-}
-
-static void limit_pair(struct tone_curve_pair *pair)
-{
-    unsigned int shift = pair->norm;
-    if (shift > 31U) {
-        int value = pair->value;
-        shift -= 31U;
-        if (shift > 31U)
-            shift = 31U;
-        pair->norm = 31;
-        pair->value = value >> shift;
+    upper_branch_work = dovi_CalcCuttoff(source_low, tone_value, upper_branch_work, target_component_work, lower_branch_work);
+    upper_interval = source_upper_interval;
+    if (lower_branch_work - upper_branch_work <= (int)source_upper_interval) {
+        upper_interval = lower_branch_work - upper_branch_work;
     }
-}
-
-void calc_curve_params(int source_min, int source_mid, int source_max, int target_min,
-                       int target_mid, int target_max, int slope,
-                       struct tone_curve_display *display, struct tone_curve_pair *param1,
-                       struct tone_curve_pair *param2, struct tone_curve_pair *param3,
-                       int *slope_over_rolloff)
-{
-    int x1, x2, x3, y1, y2, y3, nx1, nx2, nx3, ny1, ny2, ny3;
-    int xy12, xy13, xy23, numerator1, numerator2, numerator3, inverse, sor;
-    int sign1 = 1, sign2 = 1, sign3 = 1;
-    unsigned int xn1, xn2, xn3, yn1, yn2, yn3, xn12, xn13, xn23;
-    unsigned int denom_norm, numerator_norm, product_norm, common;
-    unsigned char ynx1, ynx3;
-    long long wide, temp, denom;
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    dovi_fx_assert(1, "sshr_slu() called with negative shift value");
-    wide = product_shift(slope, shl32(display->rolloff_inverse, 29), 31);
-    sor = wide == 0x80000000LL ? 0x7fffffff : (int)wide;
-    x1 = dovi_fxLOG2Taylor(source_min, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    x1 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(x1, -0x7c000000), sor), 23, 31);
-    xn1 = dovi_unorm_s(x1);
-    nx1 = shl32(x1, xn1);
-    dovi_fx_assert((int)(~xn1 >> 31), "sshl_su() called with negative shift value");
-    x2 = dovi_fxLOG2Taylor(source_mid, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    x2 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(x2, -0x7c000000), sor), 23, 31);
-    xn2 = dovi_unorm_s(x2);
-    nx2 = shl32(x2, xn2);
-    dovi_fx_assert((int)(~xn2 >> 31), "sshl_su() called with negative shift value");
-    x3 = dovi_fxLOG2Taylor(source_max, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    x3 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(x3, -0x7c000000), sor), 23, 31);
-    xn3 = dovi_unorm_s(x3);
-    nx3 = shl32(x3, xn3);
-    dovi_fx_assert((int)(~xn3 >> 31), "sshl_su() called with negative shift value");
-    if (target_min < 0) {
-        target_min = neg32(target_min);
-        sign1 = -1;
+    target_mid_work = tone_value;
+    if ((int)(lower_branch_work - upper_interval) <= tone_value) {
+        target_mid_work = lower_branch_work - upper_interval;
     }
-    y1 = dovi_fxLOG2Taylor(target_min, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    inverse = display->rolloff_inverse;
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    y1 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(y1, -0x7c000000), shl32(inverse, 29)), 24, 31);
-    if (sign1 < 0)
-        y1 = neg32(y1);
-    yn1 = dovi_unorm_s(y1);
-    ny1 = shl32(y1, yn1);
-    dovi_fx_assert((int)(~yn1 >> 31), "sshl_su() called with negative shift value");
-    if (target_mid < 0) {
-        target_mid = neg32(target_mid);
-        sign2 = -1;
+    if (upper_branch_work - target_component_work <= (int)tone_denominator) {
+        tone_denominator = upper_branch_work - target_component_work;
     }
-    y2 = dovi_fxLOG2Taylor(target_mid, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    inverse = display->rolloff_inverse;
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    y2 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(y2, -0x7c000000), shl32(inverse, 29)), 24, 31);
-    if (sign2 < 0)
-        y2 = neg32(y2);
-    yn2 = dovi_unorm_s(y2);
-    ny2 = shl32(y2, yn2);
-    dovi_fx_assert((int)(~yn2 >> 31), "sshl_su() called with negative shift value");
-    if (target_max < 0) {
-        target_max = neg32(target_max);
-        sign3 = -1;
+    upper_branch_work = tone_value;
+    if (tone_value <= (int)(tone_denominator + target_component_work)) {
+        upper_branch_work = tone_denominator + target_component_work;
     }
-    xn13 = xn1 + xn3;
-    xn23 = xn2 + xn3;
-    xn12 = xn1 + xn2;
-    ynx1 = (unsigned char)(xn1 + yn1);
-    y3 = dovi_fxLOG2Taylor(target_max, 26);
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    inverse = display->rolloff_inverse;
-    dovi_fx_assert(1, "sshl_su() called with negative shift value");
-    y3 = dovi_fxPOW2Taylor(dovi_smpy_ss(add32(y3, -0x7c000000), shl32(inverse, 29)), 24, 31);
-    if (sign3 < 0)
-        y3 = neg32(y3);
-    yn3 = dovi_unorm_s(y3);
-    ynx3 = (unsigned char)(xn3 + yn3);
-    ny3 = shl32(y3, yn3);
-    dovi_fx_assert((int)(~yn3 >> 31), "sshl_su() called with negative shift value");
-    xy12 = dovi_smpy_ss(nx1, nx2);
-    xy13 = dovi_smpy_ss(nx1, nx3);
-    xy23 = dovi_smpy_ss(nx2, nx3);
-    wide = add64(product_shift(xy23, y2, xn23), product_shift(xy13, y3, xn13));
-    wide = sub64(wide, product_shift(y3, xy23, xn23));
-    wide = sub64(wide, product_shift(y2, xy12, xn12));
-    wide = add64(product_shift(xy12, y1, xn12), wide);
-    denom = sub64(wide, product_shift(xy13, y1, xn13));
-    denom_norm = dovi_unorm_sl(denom);
-    inverse = dovi_sdiv_sls(0x2000000000000000LL, high32(denom, denom_norm));
-    numerator1 = dovi_smpy_ss(xy23, ny1);
-    numerator2 = dovi_ssub_sss(y2, y3);
-    numerator3 = dovi_smpy_ss(xy13, ny2);
-    temp = dovi_ssub_sss(y1, y3);
-    xy12 = dovi_smpy_ss(xy12, ny3);
-    xy23 = dovi_ssub_sss(y1, y2);
-    wide = sub64(product_shift(numerator1, numerator2, yn1 + xn23),
-                 product_shift(numerator3, (int)temp, yn2 + xn13));
-    wide = add64(product_shift(xy12, xy23, yn3 + xn12), wide);
-    numerator_norm = dovi_unorm_sl(wide);
-    dovi_fx_assert(1, "sshr_slu() called with negative shift value");
-    wide = mul64(inverse, shl64(wide, numerator_norm) >> 32);
-    product_norm = dovi_unorm_sl(wide);
-    param1->value = high32(wide, product_norm);
-    param1->norm = (unsigned short)(numerator_norm + 29U - denom_norm + product_norm);
-    numerator1 = dovi_smpy_ss(nx3, ny3);
-    numerator2 = dovi_smpy_ss(nx2, ny2);
-    numerator3 = dovi_smpy_ss(nx1, ny1);
-    wide = sub64(product_shift(y1, numerator1, ynx3), product_shift(y1, numerator2, xn2 + yn2));
-    wide = add64(wide, product_shift(y2, numerator3, ynx1));
-    numerator1 = dovi_smpy_ss(nx3, ny3);
-    wide = sub64(wide, product_shift(y2, numerator1, ynx3));
-    numerator3 = dovi_smpy_ss(nx1, ny1);
-    wide = sub64(wide, product_shift(y3, numerator3, ynx1));
-    numerator2 = dovi_smpy_ss(nx2, ny2);
-    wide = add64(wide, product_shift(y3, numerator2, xn2 + yn2));
-    numerator_norm = dovi_unorm_sl(wide);
-    wide = mul64(inverse, shl64(wide, numerator_norm) >> 32);
-    dovi_fx_assert(1, "sshr_slu() called with negative shift value");
-    product_norm = dovi_unorm_sl(wide);
-    common = (unsigned short)(29U - denom_norm);
-    param2->value = high32(wide, product_norm);
-    wide = sub64((long long)y1 * sub32(x3, x2), (long long)y2 * sub32(x3, x1));
-    wide = add64(wide, (long long)y3 * sub32(x2, x1));
-    param2->norm = (unsigned short)(common + numerator_norm + product_norm);
-    numerator_norm = dovi_unorm_sl(wide);
-    wide = (long long)inverse * high32(wide, numerator_norm);
-    product_norm = dovi_unorm_sl(wide);
-    param3->value = high32(wide, product_norm);
-    param3->norm = (unsigned short)(common + numerator_norm + product_norm);
-    limit_pair(param1);
-    limit_pair(param2);
-    limit_pair(param3);
-    *slope_over_rolloff = sor;
+    target_mid_work = (upper_branch_work - tone_value) + target_mid_work;
+    if (target_mid_work <= target_component_work + 0x4000) {
+        target_mid_work = target_component_work + 0x4000;
+    }
+    if (lower_branch_work + -0x4000 <= target_mid_work) {
+        target_mid_work = lower_branch_work + -0x4000;
+    }
+    tone_value = target_mid_work + curve_delta_work;
+    if (target_mid_work + curve_delta_work <= target_component_work) {
+        tone_value = target_component_work;
+    }
+    curve_delta_work = target_mid_work + source_upper_interval;
+    if (lower_branch_work <= (int)(target_mid_work + source_upper_interval)) {
+        curve_delta_work = lower_branch_work;
+    }
+    fixed_result = dovi_sdiv(((long)target_mid_work - (long)tone_value) * 0xc000000, mapped_lower_interval);
+    lower_branch_work = (int)fixed_result;
+    fixed_result = dovi_sdiv(((long)curve_delta_work - (long)target_mid_work) * 0xc000000, denominator);
+    upper_branch_work = (int)fixed_result;
+    fixed_result =
+        dovi_sdiv((-(unsigned long)((unsigned int)(target_mid_work - tone_value) >> 0x1f) & 0xfc00000000000000) |
+                      (unsigned long)(unsigned int)(target_mid_work - tone_value) << 0x1a,
+                  mapped_lower_interval);
+    fixed_result = (unsigned long)((long)(int)fixed_result * (long)(int)fixed_result) >> 0x1a;
+    if ((long)lower_branch_work <= (long)fixed_result) {
+        fixed_result = (long)lower_branch_work;
+    }
+    target_component_work = (*(int *)((long)control + 0x16c8) - mapped_mid) + 0x4000000 + target_mid_work;
+    if (upper_branch_work <= lower_branch_work) {
+        lower_branch_work = upper_branch_work;
+    }
+    *(int *)((long)control + 0x1698) = (int)fixed_result;
+    if (target_component_work < 1) {
+        target_component_work = 0;
+    }
+    if (target_component_work <= lower_branch_work) {
+        lower_branch_work = target_component_work;
+    }
+    *(int *)((long)control + 0x169c) = lower_branch_work;
+    if ((curve_mode != 1) && (0x3ffffff < upper_branch_work)) {
+        upper_branch_work = 0x4000000;
+    }
+    fixed_result =
+        dovi_sdiv((-(unsigned long)((unsigned int)(curve_delta_work - target_mid_work) >> 0x1f) & 0xfc00000000000000) |
+                      (unsigned long)(unsigned int)(curve_delta_work - target_mid_work) << 0x1a,
+                  denominator);
+    fixed_result = (unsigned long)((long)(int)fixed_result * (long)(int)fixed_result) >> 0x1a;
+    if ((long)upper_branch_work <= (long)fixed_result) {
+        fixed_result = (long)upper_branch_work;
+    }
+    *(int *)((long)control + 0x16a0) = (int)fixed_result;
+    lower_branch_work = mapped_high;
+    if (0x3ffffff < mapped_high) {
+        lower_branch_work = 0x4000000;
+    }
+    fixed_result = dovi_Pq2LX(lower_branch_work >> 8);
+    linear_luminance = fixed_result >> 6;
+    if ((long)fixed_result < 0x5000000) {
+        linear_luminance = DOVI_CURVE_MIN_LINEAR_LUMINANCE;
+    }
+    l_component_work = (long)linear_luminance * (long)*(int *)((long)control + 0x16d4);
+    m_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x16e0);
+    s_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x16ec);
+    fixed_result = 0;
+    if (-1 < (long)l_component_work) {
+        fixed_result = l_component_work >> 0x14 & 0xfffffffffc0;
+    }
+    fixed_result = dovi_L2PqX(fixed_result);
+    lower_branch_work = (int)fixed_result;
+    fixed_result = 0;
+    if (-1 < (long)m_linear_product) {
+        fixed_result = m_linear_product >> 0x14 & 0xfffffffffc0;
+    }
+    fixed_result = dovi_L2PqX(fixed_result);
+    upper_branch_work = (int)fixed_result;
+    fixed_result = 0;
+    if (-1 < (long)s_linear_product) {
+        fixed_result = s_linear_product >> 0x14 & 0xfffffffffc0;
+    }
+    fixed_result = dovi_L2PqX(fixed_result);
+    target_component_work = (int)fixed_result;
+    *(int *)((long)control + 0x16b0) =
+        (int)((unsigned long)((long)*(int *)((long)control + 0x171c) * (long)lower_branch_work +
+                              (long)*(int *)((long)control + 0x1720) * (long)upper_branch_work +
+                              (long)*(int *)((long)control + 0x1724) * (long)target_component_work) >>
+              0x12);
+    *(int *)((long)control + 0x16b4) =
+        (int)((unsigned long)((long)*(int *)((long)control + 0x1728) * (long)lower_branch_work +
+                              (long)*(int *)((long)control + 0x172c) * (long)upper_branch_work +
+                              (long)*(int *)((long)control + 0x1730) * (long)target_component_work) >>
+              0x12);
+    *(int *)((long)control + 0x16b8) =
+        (int)((unsigned long)((long)*(int *)((long)control + 0x1734) * (long)lower_branch_work +
+                              (long)*(int *)((long)control + 0x1738) * (long)upper_branch_work +
+                              (long)*(int *)((long)control + 0x173c) * (long)target_component_work) >>
+              0x12);
+    if (curve_mode == 1) {
+        lower_branch_work = curve_delta_work;
+        if (0x3ffffff < curve_delta_work) {
+            lower_branch_work = 0x4000000;
+        }
+        fixed_result = dovi_Pq2LX(lower_branch_work >> 8);
+        linear_luminance = fixed_result >> 6;
+        if ((long)fixed_result < 0x5000000) {
+            linear_luminance = DOVI_CURVE_MIN_LINEAR_LUMINANCE;
+        }
+        l_component_work = (long)linear_luminance * (long)*(int *)((long)control + 0x16f8);
+        m_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x1704);
+        s_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x1710);
+        fixed_result = 0;
+        if (-1 < (long)l_component_work) {
+            fixed_result = l_component_work >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        lower_branch_work = (int)fixed_result;
+        fixed_result = 0;
+        if (-1 < (long)m_linear_product) {
+            fixed_result = m_linear_product >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        upper_branch_work = (int)fixed_result;
+        fixed_result = 0;
+        if (-1 < (long)s_linear_product) {
+            fixed_result = s_linear_product >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        target_component_work = (int)fixed_result;
+        target_intensity = (unsigned int)(((long)*(int *)((long)control + 0x171c) * (long)lower_branch_work +
+                                 (long)*(int *)((long)control + 0x1720) * (long)upper_branch_work +
+                                 (long)*(int *)((long)control + 0x1724) * (long)target_component_work) >>
+                                0x12);
+        target_ct = (unsigned int)(((long)*(int *)((long)control + 0x1728) * (long)lower_branch_work +
+                                 (long)*(int *)((long)control + 0x172c) * (long)upper_branch_work +
+                                 (long)*(int *)((long)control + 0x1730) * (long)target_component_work) >>
+                                0x12);
+        target_cp = (unsigned int)(((long)*(int *)((long)control + 0x1734) * (long)lower_branch_work +
+                                 (long)*(int *)((long)control + 0x1738) * (long)upper_branch_work +
+                                 (long)*(int *)((long)control + 0x173c) * (long)target_component_work) >>
+                                0x12);
+    } else {
+        fixed_result = dovi_Pq2LX(*(int *)((long)control + 0x1694) >> 8);
+        linear_luminance = fixed_result >> 6;
+        if ((long)fixed_result < 0x5000000) {
+            linear_luminance = DOVI_CURVE_MIN_LINEAR_LUMINANCE;
+        }
+        l_component_work = (long)linear_luminance * (long)*(int *)((long)control + 0x16f8);
+        m_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x1704);
+        s_linear_product = (long)linear_luminance * (long)*(int *)((long)control + 0x1710);
+        fixed_result = 0;
+        if (-1 < (long)l_component_work) {
+            fixed_result = l_component_work >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        lower_branch_work = (int)fixed_result;
+        fixed_result = 0;
+        if (-1 < (long)m_linear_product) {
+            fixed_result = m_linear_product >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        upper_branch_work = (int)fixed_result;
+        fixed_result = 0;
+        if (-1 < (long)s_linear_product) {
+            fixed_result = s_linear_product >> 0x14 & 0xfffffffffc0;
+        }
+        fixed_result = dovi_L2PqX(fixed_result);
+        target_component_work = (int)fixed_result;
+        target_intensity =
+            (unsigned int)((unsigned long)((long)*(int *)((long)control + 0x171c) * (long)lower_branch_work +
+                                           (long)*(int *)((long)control + 0x1720) * (long)upper_branch_work +
+                                           (long)*(int *)((long)control + 0x1724) * (long)target_component_work) >>
+                           0x12);
+        target_ct =
+            (unsigned int)((unsigned long)((long)*(int *)((long)control + 0x1728) * (long)lower_branch_work +
+                                           (long)*(int *)((long)control + 0x172c) * (long)upper_branch_work +
+                                           (long)*(int *)((long)control + 0x1730) * (long)target_component_work) >>
+                           0x12);
+        target_cp =
+            (unsigned int)((unsigned long)((long)*(int *)((long)control + 0x1734) * (long)lower_branch_work +
+                                           (long)*(int *)((long)control + 0x1738) * (long)upper_branch_work +
+                                           (long)*(int *)((long)control + 0x173c) * (long)target_component_work) >>
+                           0x12);
+    }
+    *(unsigned int *)((long)control + 0x16bc) = target_intensity;
+    *(unsigned int *)((long)control + 0x16c4) = target_cp;
+    *(unsigned int *)((long)control + 0x16c0) = target_ct;
+    *(int *)((long)control + 0x167c) = tone_value;
+    *(int *)((long)control + 0x1658) = mapped_mid;
+    tone_denominator = (unsigned int)((unsigned long)((long)*(int *)((long)control + 0x16b4) *
+                                               (long)*(int *)((long)control + 0x16b4) +
+                                           (long)*(int *)((long)control + 0x16b8) *
+                                               (long)*(int *)((long)control + 0x16b8)) >>
+                           0x1a);
+    *(int *)((long)control + 0x1654) = mapped_low;
+    *(int *)((long)control + 0x165c) = mapped_high;
+    *(int *)((long)control + 0x1680) = target_mid_work;
+    *(int *)((long)control + 0x1684) = curve_delta_work;
+    *(unsigned int *)((long)control + 0x1764) = tone_denominator;
+    if ((int)tone_denominator < 1) {
+        tone_value = 0;
+    } else {
+        tone_value = dovi_ssqrt_s(tone_denominator >> 1);
+        tone_value = tone_value >> 2;
+    }
+    *(int *)((long)control + 0x1764) = tone_value;
+    if (mode_at_00d8 == 1) {
+        tone_denominator = *(unsigned int *)((long)control + 0x16b0);
+        if (*(int *)((long)control + 0x1668) != 0) {
+            tone_value = dovi_HlgOotf_I((int)tone_denominator >> 10, parameters);
+            tone_denominator = tone_value << 10;
+        }
+    } else {
+        tone_denominator = *(unsigned int *)((long)control + 0x16b0);
+        if (mode_at_00d8 != 2) {
+            tone_value = dovi_HlgOotf_I((int)tone_denominator >> 10, parameters);
+            tone_denominator = dovi_TMIcore(parameters, tone_value << 10);
+        }
+    }
+    if ((int)tone_denominator < 0x4001) {
+        tone_denominator = 0x4000;
+    }
+    fixed_result = dovi_sdiv((long)*(int *)((long)control + 0x16bc) << 0x1a, tone_denominator);
+    tone_value = (int)fixed_result;
+    if (curve_mode == 1) {
+        curve_delta_work = (tone_value + -0x4000000) >> 1;
+    } else {
+        curve_delta_work = 0;
+        if (tone_value < 0x4000000) {
+            curve_delta_work = tone_value + -0x4000000;
+        }
+    }
+    *(int *)((long)control + 0x1768) = curve_delta_work;
+    if ((mode_at_00d8 == 2) || ((mode_at_00d8 == 1 && (*(int *)((long)control + 0x1668) == 0)))) {
+        tone_value = 0x4000000;
+    } else {
+        tone_value = dovi_SMIcore(parameters, tone_denominator, *(unsigned int *)((long)control + 0x16b0), 0);
+    }
+    tone_denominator = (unsigned int)((unsigned long)((long)tone_value * (long)*(int *)((long)control + 0x1764)) >>
+                           0x1a);
+    fixed_result = (long)*(int *)((long)control + 0x16c0) * (long)*(int *)((long)control + 0x16c0) +
+             (long)*(int *)((long)control + 0x16c4) * (long)*(int *)((long)control + 0x16c4);
+    if ((int)tone_denominator < 0x4001) {
+        tone_denominator = 0x4000;
+    }
+    if ((long)fixed_result < 0x10000000000000) {
+        if ((long)fixed_result < 1) {
+            fixed_result = (unsigned long)*(unsigned int *)((long)control + 0x176c);
+        } else {
+            fixed_result = dovi_ssqrt_s(fixed_result >> 0x15);
+            *(int *)((long)control + 0x176c) = (int)fixed_result;
+        }
+        fixed_result = (-(fixed_result >> 0x1f & 1) & 0xffe0000000000000) | (fixed_result & 0xffffffff) << 0x15;
+    } else {
+        fixed_result = dovi_ssqrt_s(fixed_result >> 0x1b);
+        l_component_work = fixed_result >> 2 & 0x3fffffff;
+        fixed_result = l_component_work << 0x1a;
+        *(int *)((long)control + 0x176c) = (int)l_component_work;
+    }
+    fixed_result = dovi_sdiv(fixed_result, tone_denominator);
+    tone_value = (int)fixed_result;
+    if (curve_mode == 1) {
+        curve_mode = (tone_value + -0x4000000) >> 1;
+    } else {
+        curve_mode = tone_value + -0x4000000;
+        if (0x4000000 < tone_value) {
+            curve_mode = 0;
+        }
+    }
+    tone_value = *(int *)((long)control + 0x1764);
+    *(int *)((long)control + 0x176c) = curve_mode;
+    if (tone_value < 0x4001) {
+        tone_value = 0x4000;
+    }
+    *(int *)((long)control + 0x1764) = tone_value;
 }
