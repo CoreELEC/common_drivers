@@ -1,89 +1,75 @@
 /* Frame-format layout and parameters. */
-#include "dm_frame_format.h"
-#include "fixed_access.h"
+#include "dm_bindings.h"
+#include "dm_layout.h"
 
-unsigned int dovi_GetCompactFrmMemLayout(int height, int width, unsigned int color,
-                                         unsigned int chroma, unsigned int weave,
-                                         unsigned int data_type, int *row_pitch,
-                                         int *chroma_row_pitch)
+void dovi_dm_CommitCdm2KsFrmFmt(long signal, unsigned int flags, unsigned int *frame_words)
 {
-    unsigned int bytes = dm_frame_sample_bytes(data_type);
-    unsigned int luma_pitch, luma_size, chroma_size;
-    if (weave != CWeavPlnr) {
-        luma_pitch = dm_frame_interleaved_components(color, chroma) * bytes * (unsigned int)width;
-        *row_pitch = fixed_signed32(luma_pitch);
-        *chroma_row_pitch = 0;
-        return luma_pitch * (unsigned int)height;
+    const struct dm_signal_environment *environment = (const void *)signal;
+    struct dm_frame_format *format = (void *)frame_words;
+    unsigned int data_type;
+    unsigned int weave;
+    unsigned int components;
+
+    format->height = (unsigned int)environment->height;
+    format->width = (unsigned int)environment->width;
+    format->location = environment->location != 0;
+    format->row_pitch = (unsigned int)environment->row_pitch;
+    format->chroma_row_pitch = (unsigned int)environment->chroma_row_pitch;
+    if ((flags & 2u) != 0) {
+        return;
     }
-    luma_pitch = bytes * (unsigned int)width;
-    *row_pitch = fixed_signed32(luma_pitch);
-    luma_size = luma_pitch * (unsigned int)height;
-    if (chroma == CChrm420) {
-        unsigned int chroma_pitch = bytes * (unsigned int)(width >> 1);
-        *chroma_row_pitch = fixed_signed32(chroma_pitch);
-        chroma_size = chroma_pitch * (unsigned int)(height >> 1);
-    } else {
-        *chroma_row_pitch = fixed_signed32(luma_pitch);
-        chroma_size = luma_size;
+    data_type = (unsigned int)environment->data_type;
+    format->data_type = data_type == 0u ? 0 : data_type == 1u ? 1 : 2;
+    weave = (unsigned int)environment->weave;
+    format->weave = weave == 0u ? 0 : weave == 1u ? 1 : 2;
+    format->bit_depth = (char)(unsigned int)environment->bit_depth;
+    components = 1u;
+    if (environment->weave != 0) {
+        if (environment->color_space == DM_FRAME_COLOR_RGBA)
+            components = 4u;
+        else if (environment->color_space != DM_FRAME_COLOR_GRAY)
+            components = environment->chroma_format == DM_FRAME_CHROMA_422 ? 2u : 3u;
     }
-    return color == CClrRgba ? (chroma_size + luma_size) * 2u : chroma_size * 2u + luma_size;
+    /* Reload after the preceding writes: overlapping views remain observable. */
+    data_type = (unsigned int)environment->data_type;
+    format->column_pitch = dm_frame_sample_bytes(data_type) * components;
 }
 
-int dovi_dm_UpdateSrcEnvFrameMemLayout(DmCtxtFxp_t *context)
+void dovi_dm_CommitMds2KsFrmFmt(unsigned char *metadata, long frame)
 {
-    SrcSigEnvFxp_t *source;
-    if (context == 0 || context->dmCfgActValid == 0)
-        return -1;
-    source = &context->pDmCfgAct->srcSigEnv;
-    dovi_GetCompactFrmMemLayout(source->RowNum, source->ColNum, source->Clr, source->Chrm,
-                                source->Weav, source->Dtp, &source->RowPitch, &source->RowPitchC);
-    return 0;
-}
+    const struct dm_metadata_format *source = (const void *)metadata;
+    struct dm_frame_format *format = (void *)frame;
+    char weave;
+    unsigned char bit_depth;
+    int bytes_per_sample;
+    int column_pitch;
 
-int dovi_dm_UpdateKsInFrameMemLayout(int row_pitch, int chroma_row_pitch, DmCtxtFxp_t *context)
-{
-    if (context == 0 || context->hDmKs == 0)
-        return -1;
-    context->hDmKs->ksFrmFmtI.rowPitch = row_pitch;
-    context->hDmKs->ksFrmFmtI.rowPitchC = chroma_row_pitch;
-    return 0;
-}
-
-void dovi_dm_CommitSecIn(int secondary_input, DmCtxtFxp_t *context)
-{
-    if (context != 0) {
-        if (context->dmCfgToBeValid != 0)
-            context->pDmCfgToBe->dmCtrl.SecIn = 0;
-        context->hDmKs->ksDmCtrl.secIn = secondary_input != 0;
+    if ((metadata != 0) && ((source->flags & 1) != 0)) {
+        bit_depth = source->bit_depth;
+        format->data_type = bit_depth < 9;
+        weave = '\0';
+        if (source->chroma_format != 0) {
+            weave = (source->chroma_format == 1) << 1;
+        }
+        format->weave = weave;
+        format->bit_depth = source->bit_depth;
+        if (weave == '\0') {
+            column_pitch = 1;
+            if (8 < bit_depth) {
+                column_pitch = 2;
+            }
+        } else {
+            column_pitch = 2;
+            if (source->chroma_format != 1) {
+                column_pitch = 3;
+            }
+            bytes_per_sample = 1;
+            if (8 < bit_depth) {
+                bytes_per_sample = 2;
+            }
+            column_pitch = column_pitch * bytes_per_sample;
+        }
+        format->column_pitch = column_pitch;
     }
-}
-
-void dovi_dm_CommitCdm2KsFrmFmt(const void *signal, void *format)
-{
-    unsigned int dtype, weave, channels, size;
-    fixed_store_le32((unsigned char *)format + (0u),
-                     fixed_load_le32((const unsigned char *)signal + (0u)));
-    fixed_store_le32((unsigned char *)format + (4u),
-                     fixed_load_le32((const unsigned char *)signal + (4u)));
-    dtype = fixed_load_le32((const unsigned char *)signal + (28u));
-    ((unsigned char *)format)[8] = dtype == 0u ? 0 : dtype == 1u ? 1 : 2;
-    weave = fixed_load_le32((const unsigned char *)signal + (24u));
-    ((unsigned char *)format)[9] = weave == 0u ? 0 : weave == 1u ? 1 : 2;
-    ((unsigned char *)format)[10] =
-        (unsigned char)(fixed_load_le32((const unsigned char *)signal + (32u)) != 0u);
-    ((unsigned char *)format)[11] =
-        (unsigned char)fixed_load_le32((const unsigned char *)signal + (36u));
-    fixed_store_le32((unsigned char *)format + (16u),
-                     fixed_load_le32((const unsigned char *)signal + (8u)));
-    fixed_store_le32((unsigned char *)format + (24u),
-                     fixed_load_le32((const unsigned char *)signal + (12u)));
-    weave = fixed_load_le32((const unsigned char *)signal + (24u));
-    channels = weave == 0u                                                    ? 1u
-               : fixed_load_le32((const unsigned char *)signal + (16u)) == 2u ? 4u
-               : fixed_load_le32((const unsigned char *)signal + (16u)) == 4u ? 1u
-               : fixed_load_le32((const unsigned char *)signal + (20u)) == 1u ? 2u
-                                                                              : 3u;
-    dtype = fixed_load_le32((const unsigned char *)signal + (28u));
-    size = dtype == 1u ? 1u : dtype == 2u ? 4u : 2u;
-    fixed_store_le32((unsigned char *)format + (20u), channels * size);
+    return;
 }

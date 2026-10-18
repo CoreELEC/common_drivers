@@ -3,7 +3,7 @@
 
 enum dm_frame_values {
     DM_FRAME_COLOR_RGBA = 2,
-    DM_FRAME_COLOR_GRAY = 4,
+    DM_FRAME_COLOR_GRAY = 5,
     DM_FRAME_CHROMA_422 = 1,
     DM_FRAME_SAMPLE_U8 = 1,
     DM_FRAME_SAMPLE_F32 = 2
@@ -25,14 +25,7 @@ static inline unsigned int dm_frame_interleaved_components(unsigned int color, u
     return chroma == DM_FRAME_CHROMA_422 ? 2 : 3;
 }
 
-#include "dm_layout.h"
-
-unsigned int dovi_GetCompactFrmMemLayout(int height, int width, unsigned int color,
-                                         unsigned int chroma, unsigned int weave,
-                                         unsigned int data_type, int *row_pitch,
-                                         int *chroma_row_pitch);
-int dovi_dm_UpdateSrcEnvFrameMemLayout(DmCtxtFxp_t *context);
-int dovi_dm_UpdateKsInFrameMemLayout(int row_pitch, int chroma_row_pitch, DmCtxtFxp_t *context);
-void dovi_dm_CommitSecIn(int secondary_input, DmCtxtFxp_t *context);
-void dovi_dm_CommitCdm2KsFrmFmt(const void *signal, void *format);
+/* Frame-format parameters from configuration and metadata (dm_frame_format.c). */
+void dovi_dm_CommitCdm2KsFrmFmt(long signal, unsigned int flags, unsigned int *frame_words);
+void dovi_dm_CommitMds2KsFrmFmt(unsigned char *metadata, long frame);
 #endif

@@ -322,3 +322,150 @@ earlier outputs. Its inverse-luma plane narrows to short without clamping;
 the other three planes use tone/saturation and signed-ratio calculations
 with separate rounding and 0..0x2000 clamps. A negative initial last index
 skips map writes after the parameter copy. The entry returns 1.
+
+## Display management and metadata
+
+### Configuration, frames and state
+
+STB 2.4 initializes separate source/graphics/target records, pending and
+active configuration pointers, tone controls and trim arrays with sparse
+stores, retained pitches/Chrm fields and self-pointers. STB 2.6 initializes
+indexed 0x120-byte signals, 0x34-byte alpha records, 0x64-byte control and
+0x1b0-byte tone control in a 0x8e4-byte configuration prefix. Five full
+signals plus alpha storage remain distinct from the legacy index-5 byte
+view. Clearing, primary/transfer defaults, primaries calls, manager stores,
+repeated assignments and untouched fields preserve their order.
+
+STB 2.4 getters select pending before active state, including a null pending
+pointer. STB 2.6 configuration initialization ignores its first LP64
+argument and returns its word-backed storage pointer. Direct/indexed
+getters retain null-context failure, nonnull out-of-range traps and
+zero-extended `0xffffffff` status. `GetTmCtrl`/`GetDmCtrl` expose signed
+32-bit status in both versions. STB 2.6 extension initialization ignores
+configuration; STB 2.4 reads it. STB 2.6 also appends fixed 0x108-byte
+extension records after the current byte count, then wraps the count,
+without added capacity checking.
+
+Gray encoding changes from 4 to 5. STB 2.6 omits chroma for planar gray;
+STB 2.4 includes it. Minimum-frame sizing uses wrapped 32-bit products
+and signed quarter division. Compact row-pitch sizing instead halves
+each signed dimension before multiplying and uses the component count
+for packed pitch. Other common component/sample encodings remain equal.
+STB 2.6 configuration-to-frame conversion writes geometry, location and
+pitches before its flags-bit-1 early return, then updates sample type,
+weave, bit depth and column pitch. Metadata conversion gates on validity,
+uses 8-bit/wider sample sizes and retains reload-after-write aliasing.
+STB 2.4 keeps its compact/singleton/secondary-input frame updates.
+
+Kernel-state initialization changes allocation from 0x32a0000 to
+0xca80000 and row pitch from 0x1000 to 0x2000, with different manager,
+configuration, context and maxima fields. Metadata classification compares
+520/514 bytes and returns 0/1/2 in STB 2.4 versus 700/120 bytes and 0/4/1
+in STB 2.6. The STB 2.6 0x78-byte metadata base view sits within the
+700-byte storage; it does not encompass every extension.
+
+STB 2.4 configuration commit reads the pending pointer before its nominal
+null check, copies 984 bytes and updates singleton frame addresses.
+STB 2.6 selects indexed kernel/metadata state, initializes dimming/filter
+timing and square-root state, uses frame planes at +0x4380000/+0x8700000,
+and commits input/alpha/target frames and the output-map pointer.
+Finalization publishes first/primary/last input bits, marks initialization,
+copies 0x8f8 configuration bytes, stores the mode and may disable dimming.
+
+### Metadata decoding and output
+
+STB 2.4 decodes the 71-byte base into 520-byte metadata using caller-owned
+trim arrays, signed remaining lengths and levels 1/2/3/5/255. STB 2.6
+resets flags/scales and primary-input unknown-record cursors before
+decoding its indexed 700-byte format. It adds levels 4/6/8/9/10/11/254,
+per-level capacities and fatal trim-array bounds. Level-8 optional fields
+depend on declared lengths and local-saturation defaults; level-9/10
+custom primaries and unknown tails have separate pointer/length arrays.
+Both retain count and pointer reloads, duplicate/order behavior, skipped
+bytes, signed/wrapped size predicates, diagnostics and partial updates.
+`ParseMds` changes from signed length without context to unsigned declared
+size with explicit context.
+
+STB 2.6 `GetMdsOutput` requires initialized context, applies configured
+mode/capacity fallback and can measure before writing. `GenerateOutputMd`
+selects indexed/primary state, exclusions and target/signal versions.
+Header matrix, EOTF, primaries and min/max derivation can update context
+before capacity failure. Identity-prefix initialization traps beyond 16
+entries after the first 16 writes.
+
+Output supports levels 1/2/3/4 with target-version constraints and trim
+filtering; level 8 with its 13-byte core, optional 16-bit/byte fields and
+unknown tails; indexed/custom level-9 primaries; 6/22-byte level-10 records
+with unknown fields; source/override level 11; level 254; and aggregate
+unknown records. Gates, payload lengths, duplicate selection, extension
+count timing, signed capacity checkpoints, staged endian stores and
+trap-after-prior-write behavior remain ordered. Null-output measurement
+is supported. Level 255 is decoded but has no dedicated output emitter.
+
+### Indexed input consolidation and maps
+
+STB 2.4 commits singleton default/external LMS/IPT matrices, video/graphics
+tone targets, output maps and active metadata. STB 2.6 consolidates indexed
+or primary signals, crops exclusive active-area endpoints with dimension
+reloads, clamps user contrast/chroma/saturation/luminance and signed
+white-point adjustments, and selects/builds primaries and color-temperature
+transforms. Level 9/11 primaries, intended CCT, source/target scaling and
+per-signal white-point state feed tone preparation and two-pass level-2/8
+luma/chroma interpolation with configuration/default fallbacks.
+
+Level-254 mode/version comes from metadata +0x6f/+0x70; version clamps
+value +2 to 4. Selector +0xd8 comes from metadata +0x71, configuration or
+primary state. Selector 2 returns after active-area consolidation.
+Signed control word +0xdc >127 clears flags 0x210. Tone preparation
+precedes trim consolidation; Q12 weights, anchor order and partial stores
+remain observable.
+
+STB 2.6 separates metadata, signal and indexed IPT/ICtCp input-map stages,
+with independent color/range decisions, HLG and DM3 bypass. Output maps
+select indexed owners and mode-dependent target ranges, add ICtCp and
+cross-talk reapplication, `UpdateKsOMapTmm` and DM3 output bypass.
+STB 2.4 uses singleton configuration/target-update arguments and separate
+graphics/video commits. Both preserve matrix/offset calls, gamma presets,
+packed store widths, cached/reloaded owners and partial-write order.
+STB 2.6 overlapping consolidation/output workspaces occupy 384/288 bytes;
+their reserved spans and 16/32/64-bit views preserve intermediate stores.
+
+### Commit coordination and adaptive backlight
+
+STB 2.4 `CommitMds` selects forced/current metadata, commits pending
+color/graphics/video/tone/chroma state, swaps active/pending configuration
+and dispatches dynamic metadata. STB 2.6 `Commit2DmKs` distinguishes null
+from all-ones metadata, classifies full records/prefixes, maintains per-input
+flags and primary-mode timing, consolidates input, chooses bypass or maps
+and tone curves, compacts inverse maps and conditionally publishes
+700-byte metadata. Diagnostics, temporal transitions, return bits and
+partial updates retain their sequencing.
+
+STB 2.6 adds adaptive-backlight filtering: `ApplyAblu` selects indexed or
+primary state, restores target windows when inactive, derives PQ/linear
+anchors, clamps model inputs, applies asymmetric temporal weights and
+frame thresholds, and publishes target/output ranges. Getters require
+active state, tolerate null output pointers, return zero or zero-extended
+`0xffffffff`, and expose filtered anchors/means, target windows and model
+input/output. No STB 2.4 standalone equivalents exist.
+
+### Kernel-map streams
+
+STB 2.4 serializes control/resampling/primary records, optional secondary,
+graphics and color-selected alpha records, then output map/frame data.
+It requires a 10928-byte kernel object and produces up to 10872 stream
+bytes or 10850 hardware-interface bytes. STB 2.6 uses a 0x1608-byte kernel
+object, a fixed 0x15d0-byte stream and a 112-byte map reached through
+kernel +0x15f8. Only STB 2.4 exposes `dovi_SetHardwareInterface`.
+
+Loading STB 2.4 restores four geometry/pitch sets and chooses optional
+alpha storage from the existing graphics-map color. STB 2.6 preserves
+primary/secondary geometry and pitches, secondary type/depth and output
+pitches, clears the existing indirect map, restores map bytes at +0x1568
+and retargets +0x15f8 to that internal map. Both restore output dimensions
+from the primary input. Copy/store and sparse-restore order remain
+version-specific. Dump requires the old map readable; load requires it
+writable. Neither API accepts a capacity or validates generic backing.
+Unaligned little-endian storage is supported; source/destination must be
+distinct and every accessed region complete. Byte counts are unsigned
+32-bit values.

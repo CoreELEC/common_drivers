@@ -1,122 +1,267 @@
 /* Pack and unpack the kernel-map binary buffer. */
 #include "kernel_map_serialization.h"
-#include "control_abi_recovered.h"
-#include "byte_utils.h"
+#include "control_memory.h"
 #include "fixed_access.h"
-
-static void clear_bytes(unsigned char *destination, unsigned int length)
-{
-    while (length-- != 0)
-        *destination++ = 0;
-}
+extern void *memcpy(void *, const void *, unsigned long);
+#define memset dovi_control_os.memset
 
 unsigned int dovi_DumpKsBinBuf(const void *source, void *output)
 {
     const unsigned char *kernel = source;
-    unsigned char *stream = output, *tail;
+    unsigned char *stream = output;
+    unsigned long copied_word_0;
+    unsigned long copied_word_1;
+    const unsigned char *output_map;
+    unsigned long copied_word_2;
+
     fixed_store_le16(stream, fixed_load_le16(kernel));
-    dovi_MemCpyByte(stream + 2, kernel + DM_KERNEL_KSDMCTRL_OFFSET, 12);
-    dovi_MemCpyByte(stream + 0x0e, kernel + DM_KERNEL_KSUS_OFFSET, 62);
-    dovi_MemCpyByte(stream + 0x4c, kernel + DM_KERNEL_KSDS_OFFSET, 42);
-    dovi_MemCpyByte(stream + 0x76, kernel + DM_KERNEL_KSFRMFMTI_OFFSET, 28);
-    dovi_MemCpyByte(stream + 0x92, kernel + DM_KERNEL_KSIMAP_OFFSET, 0x468);
-    dovi_MemCpyByte(stream + 0x4fa, kernel + DM_KERNEL_KSTMAP_OFFSET, 0x1008);
-    tail = stream + 0x1502;
-    if (fixed_load_le32(kernel + DM_KERNEL_KSDMCTRL_OFFSET + 4) != 0) {
-        dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSUSG_OFFSET, 62);
-        tail += 62;
-        if (kernel[DM_KERNEL_KSIMAPG_OFFSET] != 2) {
-            dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSFRMFMTA_OFFSET, 28);
-            dovi_MemCpyByte(tail + 28, kernel + DM_KERNEL_RANGEINVA_OFFSET, 4);
-            tail += 32;
-        }
-        dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSFRMFMTG_OFFSET, 28);
-        dovi_MemCpyByte(tail + 28, kernel + DM_KERNEL_KSIMAPG_OFFSET, 0x468);
-        dovi_MemCpyByte(tail + 0x484, kernel + DM_KERNEL_KSTMAPG_OFFSET, 0x1008);
-        tail += 0x148c;
-    }
-    dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSOMAP_OFFSET, 112);
-    dovi_MemCpyByte(tail + 112, kernel + DM_KERNEL_KSFRMFMTO_OFFSET, 28);
-    return (unsigned int)(tail + 140 - stream);
+    fixed_store_le64(stream + 0x2, fixed_load_le64(kernel + 0xb4));
+    copied_word_0 = fixed_load_le64(kernel + 0x40);
+    copied_word_1 = fixed_load_le64(kernel + 0x28);
+    copied_word_2 = fixed_load_le64(kernel + 0x30);
+    fixed_store_le64(stream + 0x1a, fixed_load_le64(kernel + 0x38));
+    fixed_store_le64(stream + 0x22, copied_word_0);
+    fixed_store_le64(stream + 0xa, copied_word_1);
+    fixed_store_le64(stream + 0x12, copied_word_2);
+    copied_word_1 = fixed_load_le64(kernel + 0x58);
+    copied_word_0 = fixed_load_le64(kernel + 0x5e);
+    copied_word_2 = fixed_load_le64(kernel + 0x48);
+    fixed_store_le64(stream + 0x32, fixed_load_le64(kernel + 0x50));
+    fixed_store_le64(stream + 0x40, copied_word_0);
+    fixed_store_le64(stream + 0x3a, copied_word_1);
+    fixed_store_le64(stream + 0x2a, copied_word_2);
+    copied_word_1 = fixed_load_le64(kernel + 0x8e);
+    copied_word_0 = fixed_load_le64(kernel + 0x76);
+    copied_word_2 = fixed_load_le64(kernel + 0x7e);
+    fixed_store_le64(stream + 0x68, fixed_load_le64(kernel + 0x86));
+    fixed_store_le64(stream + 0x70, copied_word_1);
+    fixed_store_le64(stream + 0x58, copied_word_0);
+    fixed_store_le64(stream + 0x60, copied_word_2);
+    copied_word_1 = fixed_load_le64(kernel + 0xa6);
+    copied_word_0 = fixed_load_le64(kernel + 0x96);
+    copied_word_2 = fixed_load_le64(kernel + 0x9e);
+    fixed_store_le64(stream + 0x8e, fixed_load_le64(kernel + 0xac));
+    fixed_store_le64(stream + 0x78, copied_word_0);
+    fixed_store_le64(stream + 0x80, copied_word_2);
+    fixed_store_le64(stream + 0x88, copied_word_1);
+    copied_word_1 = fixed_load_le64(kernel + 0x6e);
+    fixed_store_le64(stream + 0x48, fixed_load_le64(kernel + 0x66));
+    fixed_store_le64(stream + 0x50, copied_word_1);
+    copied_word_1 = fixed_load_le64(kernel + 0xcc);
+    copied_word_0 = fixed_load_le64(kernel + 0xc4);
+    copied_word_2 = fixed_load_le64(kernel + 0xbc);
+    fixed_store_le32(stream + 0xae, fixed_load_le32(kernel + 0xd4));
+    fixed_store_le64(stream + 0xa6, copied_word_1);
+    fixed_store_le64(stream + 0x9e, copied_word_0);
+    fixed_store_le64(stream + 0x96, copied_word_2);
+    memcpy(stream + 0xb2, kernel + 0xd8, 0x468);
+    memcpy(stream + 0x51a, kernel + 0x540, 0x1008);
+    copied_word_1 = fixed_load_le64(kernel + 0x1558);
+    copied_word_0 = fixed_load_le64(kernel + 0x1548);
+    copied_word_2 = fixed_load_le64(kernel + 0x1550);
+    fixed_store_le32(stream + 0x153a, fixed_load_le32(kernel + 0x1560));
+    fixed_store_le64(stream + 0x1522, copied_word_0);
+    fixed_store_le64(stream + 0x152a, copied_word_2);
+    fixed_store_le64(stream + 0x1532, copied_word_1);
+    fixed_store_le32(stream + 0x153e, fixed_load_le32(kernel + 0x1564));
+    output_map = (const unsigned char *)fixed_load_le64(kernel + 0x15f8);
+    copied_word_1 = fixed_load_le64(output_map + 0x8);
+    fixed_store_le64(stream + 0x1542, fixed_load_le64(output_map));
+    fixed_store_le64(stream + 0x154a, copied_word_1);
+    copied_word_0 = fixed_load_le64(output_map + 0x28);
+    copied_word_1 = fixed_load_le64(output_map + 0x10);
+    copied_word_2 = fixed_load_le64(output_map + 0x18);
+    fixed_store_le64(stream + 0x1562, fixed_load_le64(output_map + 0x20));
+    fixed_store_le64(stream + 0x156a, copied_word_0);
+    fixed_store_le64(stream + 0x1552, copied_word_1);
+    fixed_store_le64(stream + 0x155a, copied_word_2);
+    copied_word_0 = fixed_load_le64(output_map + 0x48);
+    copied_word_1 = fixed_load_le64(output_map + 0x30);
+    copied_word_2 = fixed_load_le64(output_map + 0x38);
+    fixed_store_le64(stream + 0x1582, fixed_load_le64(output_map + 0x40));
+    fixed_store_le64(stream + 0x158a, copied_word_0);
+    fixed_store_le64(stream + 0x1572, copied_word_1);
+    fixed_store_le64(stream + 0x157a, copied_word_2);
+    copied_word_0 = fixed_load_le64(output_map + 0x58);
+    copied_word_1 = fixed_load_le64(output_map + 0x60);
+    copied_word_2 = fixed_load_le64(output_map + 0x68);
+    fixed_store_le64(stream + 0x1592, fixed_load_le64(output_map + 0x50));
+    fixed_store_le64(stream + 0x159a, copied_word_0);
+    fixed_store_le64(stream + 0x15a2, copied_word_1);
+    fixed_store_le64(stream + 0x15aa, copied_word_2);
+    copied_word_1 = fixed_load_le64(kernel + 0x15e8);
+    copied_word_0 = fixed_load_le64(kernel + 0x15d8);
+    copied_word_2 = fixed_load_le64(kernel + 0x15e0);
+    fixed_store_le32(stream + 0x15ca, fixed_load_le32(kernel + 0x15f0));
+    fixed_store_le64(stream + 0x15b2, copied_word_0);
+    fixed_store_le64(stream + 0x15ba, copied_word_2);
+    fixed_store_le64(stream + 0x15c2, copied_word_1);
+    fixed_store_le16(stream + 0x15ce, fixed_load_le16(kernel + 0x1600));
+    return 0x15d0;
 }
 
 unsigned int dovi_LoadKsBinBuf(void *output, const void *source)
 {
     unsigned char *kernel = output;
-    const unsigned char *stream = source, *tail;
-    unsigned char geometry[4][20];
-    static const unsigned int frames[4] = {
-        DM_KERNEL_KSFRMFMTI_OFFSET, DM_KERNEL_KSFRMFMTG_OFFSET,
-        DM_KERNEL_KSFRMFMTA_OFFSET, DM_KERNEL_KSFRMFMTO_OFFSET
-    };
-    unsigned int i;
-    for (i = 0; i < 4; ++i) {
-        dovi_MemCpyByte(geometry[i], kernel + frames[i], 8);
-        dovi_MemCpyByte(geometry[i] + 8, kernel + frames[i] + 16, 12);
-    }
-    fixed_store_le16(kernel, 0);
-    clear_bytes(kernel + DM_KERNEL_KSDMCTRL_OFFSET, 12);
-    clear_bytes(kernel + DM_KERNEL_KSFRMFMTI_OFFSET, 28);
-    clear_bytes(kernel + DM_KERNEL_KSUS_OFFSET, 62);
-    clear_bytes(kernel + DM_KERNEL_KSIMAP_OFFSET, 0x468);
-    clear_bytes(kernel + DM_KERNEL_KSTMAP_OFFSET, 0x1008);
-    clear_bytes(kernel + DM_KERNEL_KSOMAP_OFFSET, 112);
-    clear_bytes(kernel + DM_KERNEL_KSFRMFMTO_OFFSET, 28);
-    fixed_store_le16(kernel, fixed_load_le16(stream));
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSDMCTRL_OFFSET, stream + 2, 12);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSUS_OFFSET, stream + 0x0e, 62);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSDS_OFFSET, stream + 0x4c, 42);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSFRMFMTI_OFFSET, stream + 0x76, 28);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSIMAP_OFFSET, stream + 0x92, 0x468);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSTMAP_OFFSET, stream + 0x4fa, 0x1008);
-    tail = stream + 0x1502;
-    if (fixed_load_le32(kernel + DM_KERNEL_KSDMCTRL_OFFSET + 4) != 0) {
-        dovi_MemCpyByte(kernel + DM_KERNEL_KSUSG_OFFSET, tail, 62);
-        tail += 62;
-        if (kernel[DM_KERNEL_KSIMAPG_OFFSET] != 2) {
-            dovi_MemCpyByte(kernel + DM_KERNEL_KSFRMFMTA_OFFSET, tail, 28);
-            dovi_MemCpyByte(kernel + DM_KERNEL_RANGEINVA_OFFSET, tail + 28, 4);
-            tail += 32;
-        }
-        dovi_MemCpyByte(kernel + DM_KERNEL_KSFRMFMTG_OFFSET, tail, 28);
-        dovi_MemCpyByte(kernel + DM_KERNEL_KSIMAPG_OFFSET, tail + 28, 0x468);
-        dovi_MemCpyByte(kernel + DM_KERNEL_KSTMAPG_OFFSET, tail + 0x484, 0x1008);
-        tail += 0x148c;
-    }
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSOMAP_OFFSET, tail, 112);
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSFRMFMTO_OFFSET, tail + 112, 28);
-    for (i = 0; i < 4; ++i) {
-        dovi_MemCpyByte(kernel + frames[i], geometry[i], 8);
-        dovi_MemCpyByte(kernel + frames[i] + 16, geometry[i] + 8, 12);
-    }
-    /* Output dimensions follow the retained primary-input dimensions. */
-    dovi_MemCpyByte(kernel + DM_KERNEL_KSFRMFMTO_OFFSET, geometry[0], 8);
-    return (unsigned int)(tail + 140 - stream);
-}
+    const unsigned char *stream = source;
+    unsigned int primary_height;
+    unsigned int primary_width;
+    unsigned int primary_chroma_pitch;
+    unsigned int secondary_height;
+    unsigned int secondary_chroma_pitch;
+    unsigned int secondary_width;
+    unsigned int output_chroma_pitch;
+    unsigned int copied_word_32;
+    unsigned char secondary_data_type;
+    unsigned char secondary_bit_depth;
+    unsigned short copied_halfword;
+    unsigned long primary_pitch_pair;
+    unsigned long secondary_pitch_pair;
+    unsigned long output_pitch_pair;
+    unsigned char *output_map;
+    unsigned long copied_word_0;
+    unsigned long copied_word_1;
+    unsigned long copied_word_2;
 
-void dovi_SetHardwareInterface(const void *source, void *output)
-{
-    const unsigned char *kernel = source;
-    unsigned char *registers = output, *tail = registers + 0x14ec;
-    dovi_MemCpyByte(registers, kernel + DM_KERNEL_KSDMCTRL_OFFSET, 12);
-    dovi_MemCpyByte(registers + 12, kernel + DM_KERNEL_KSUS_OFFSET, 62);
-    dovi_MemCpyByte(registers + 0x4a, kernel + DM_KERNEL_KSDS_OFFSET, 42);
-    dovi_MemCpyByte(registers + 0x74, kernel + DM_KERNEL_KSFRMFMTI_OFFSET, 28);
-    dovi_MemCpyByte(registers + 0x7c, kernel + DM_KERNEL_KSIMAP_OFFSET, 0x468);
-    dovi_MemCpyByte(registers + 0x4e4, kernel + DM_KERNEL_KSTMAP_OFFSET, 0x1008);
-    if (fixed_load_le32(kernel + DM_KERNEL_KSDMCTRL_OFFSET + 4) != 0) {
-        dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSUSG_OFFSET, 62);
-        tail += 62;
-        if (kernel[DM_KERNEL_KSIMAPG_OFFSET] != 2) {
-            dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSFRMFMTA_OFFSET, 28);
-            dovi_MemCpyByte(tail + 28, kernel + DM_KERNEL_RANGEINVA_OFFSET, 4);
-            tail += 32;
-        }
-        dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSFRMFMTG_OFFSET, 28);
-        dovi_MemCpyByte(tail + 28, kernel + DM_KERNEL_KSIMAPG_OFFSET, 0x468);
-        dovi_MemCpyByte(tail + 0x484, kernel + DM_KERNEL_KSTMAPG_OFFSET, 0x1008);
-        tail += 0x148c;
-    }
-    dovi_MemCpyByte(tail, kernel + DM_KERNEL_KSOMAP_OFFSET, 112);
-    dovi_MemCpyByte(tail + 112, kernel + DM_KERNEL_KSFRMFMTO_OFFSET, 28);
+    primary_pitch_pair = fixed_load_le64(kernel + 0xcc);
+    primary_chroma_pitch = fixed_load_le32(kernel + 0xd4);
+    primary_height = fixed_load_le32(kernel + 0xbc);
+    primary_width = fixed_load_le32(kernel + 0xc0);
+    secondary_height = fixed_load_le32(kernel + 0x1548);
+    fixed_store_le16(kernel, 0);
+    secondary_chroma_pitch = fixed_load_le32(kernel + 0x1560);
+    secondary_pitch_pair = fixed_load_le64(kernel + 0x1558);
+    secondary_width = fixed_load_le32(kernel + 0x154c);
+    secondary_data_type = kernel[0x1550];
+    fixed_store_le64(kernel + 0x28, 0);
+    fixed_store_le64(kernel + 0x30, 0);
+    output_pitch_pair = fixed_load_le64(kernel + 0x15e8);
+    secondary_bit_depth = kernel[0x1553];
+    fixed_store_le64(kernel + 0x38, 0);
+    fixed_store_le64(kernel + 0x40, 0);
+    fixed_store_le64(kernel + 0x48, 0);
+    fixed_store_le64(kernel + 0x50, 0);
+    output_chroma_pitch = fixed_load_le32(kernel + 0x15f0);
+    fixed_store_le64(kernel + 0x58, 0);
+    fixed_store_le64(kernel + 0x5e, 0);
+    memset(kernel + 0xb4, 0, 0x1494);
+    output_map = (unsigned char *)fixed_load_le64(kernel + 0x15f8);
+    fixed_store_le64(output_map, 0);
+    fixed_store_le64(output_map + 0x8, 0);
+    fixed_store_le64(output_map + 0x10, 0);
+    fixed_store_le64(output_map + 0x18, 0);
+    fixed_store_le64(output_map + 0x20, 0);
+    fixed_store_le64(output_map + 0x28, 0);
+    fixed_store_le64(output_map + 0x30, 0);
+    fixed_store_le64(output_map + 0x38, 0);
+    fixed_store_le64(output_map + 0x40, 0);
+    fixed_store_le64(output_map + 0x48, 0);
+    fixed_store_le64(output_map + 0x50, 0);
+    fixed_store_le64(output_map + 0x58, 0);
+    fixed_store_le64(output_map + 0x60, 0);
+    fixed_store_le64(output_map + 0x68, 0);
+    fixed_store_le32(kernel + 0x15f0, 0);
+    fixed_store_le64(kernel + 0x15e8, 0);
+    fixed_store_le64(kernel + 0x15e0, 0);
+    fixed_store_le64(kernel + 0x15d8, 0);
+    fixed_store_le16(kernel, fixed_load_le16(stream));
+    fixed_store_le64(kernel + 0xb4, fixed_load_le64(stream + 0x2));
+    copied_word_0 = fixed_load_le64(stream + 0x3a);
+    copied_word_1 = fixed_load_le64(stream + 0x32);
+    copied_word_2 = fixed_load_le64(stream + 0x2a);
+    fixed_store_le64(kernel + 0x5e, fixed_load_le64(stream + 0x40));
+    fixed_store_le64(kernel + 0x50, copied_word_1);
+    fixed_store_le64(kernel + 0x58, copied_word_0);
+    fixed_store_le64(kernel + 0x48, copied_word_2);
+    copied_word_0 = fixed_load_le64(stream + 0x22);
+    copied_word_1 = fixed_load_le64(stream + 0x12);
+    copied_word_2 = fixed_load_le64(stream + 0xa);
+    fixed_store_le64(kernel + 0x38, fixed_load_le64(stream + 0x1a));
+    fixed_store_le64(kernel + 0x40, copied_word_0);
+    fixed_store_le64(kernel + 0x28, copied_word_2);
+    fixed_store_le64(kernel + 0x30, copied_word_1);
+    copied_word_0 = fixed_load_le64(stream + 0x50);
+    fixed_store_le64(kernel + 0x66, fixed_load_le64(stream + 0x48));
+    fixed_store_le64(kernel + 0x6e, copied_word_0);
+    copied_word_1 = fixed_load_le64(stream + 0x60);
+    copied_word_0 = fixed_load_le64(stream + 0x68);
+    copied_word_2 = fixed_load_le64(stream + 0x70);
+    fixed_store_le64(kernel + 0x76, fixed_load_le64(stream + 0x58));
+    fixed_store_le64(kernel + 0x7e, copied_word_1);
+    fixed_store_le64(kernel + 0x86, copied_word_0);
+    fixed_store_le64(kernel + 0x8e, copied_word_2);
+    copied_word_0 = fixed_load_le64(stream + 0x80);
+    copied_word_1 = fixed_load_le64(stream + 0x8e);
+    copied_word_2 = fixed_load_le64(stream + 0x88);
+    fixed_store_le64(kernel + 0x96, fixed_load_le64(stream + 0x78));
+    fixed_store_le64(kernel + 0xac, copied_word_1);
+    fixed_store_le64(kernel + 0xa6, copied_word_2);
+    fixed_store_le64(kernel + 0x9e, copied_word_0);
+    copied_word_32 = fixed_load_le32(stream + 0xae);
+    copied_word_0 = fixed_load_le64(stream + 0xa6);
+    copied_word_1 = fixed_load_le64(stream + 0x9e);
+    fixed_store_le64(kernel + 0xbc, fixed_load_le64(stream + 0x96));
+    fixed_store_le32(kernel + 0xd4, copied_word_32);
+    fixed_store_le64(kernel + 0xcc, copied_word_0);
+    fixed_store_le64(kernel + 0xc4, copied_word_1);
+    memcpy(kernel + 0xd8, stream + 0xb2, 0x468);
+    memcpy(kernel + 0x540, stream + 0x51a, 0x1008);
+    copied_word_2 = fixed_load_le64(stream + 0x1532);
+    copied_word_0 = fixed_load_le64(stream + 0x1522);
+    copied_word_1 = fixed_load_le64(stream + 0x152a);
+    fixed_store_le32(kernel + 0x1560, fixed_load_le32(stream + 0x153a));
+    fixed_store_le64(kernel + 0x1558, copied_word_2);
+    fixed_store_le64(kernel + 0x1548, copied_word_0);
+    fixed_store_le64(kernel + 0x1550, copied_word_1);
+    fixed_store_le32(kernel + 0x1564, fixed_load_le32(stream + 0x153e));
+    copied_word_1 = fixed_load_le64(stream + 0x15aa);
+    copied_word_0 = fixed_load_le64(stream + 0x1592);
+    copied_word_2 = fixed_load_le64(stream + 0x159a);
+    fixed_store_le64(kernel + 0x15c8, fixed_load_le64(stream + 0x15a2));
+    fixed_store_le64(kernel + 0x15d0, copied_word_1);
+    fixed_store_le64(kernel + 0x15b8, copied_word_0);
+    fixed_store_le64(kernel + 0x15c0, copied_word_2);
+    copied_word_1 = fixed_load_le64(stream + 0x158a);
+    copied_word_0 = fixed_load_le64(stream + 0x1572);
+    copied_word_2 = fixed_load_le64(stream + 0x157a);
+    fixed_store_le64(kernel + 0x15a8, fixed_load_le64(stream + 0x1582));
+    fixed_store_le64(kernel + 0x15b0, copied_word_1);
+    fixed_store_le64(kernel + 0x1598, copied_word_0);
+    fixed_store_le64(kernel + 0x15a0, copied_word_2);
+    copied_word_1 = fixed_load_le64(stream + 0x156a);
+    copied_word_0 = fixed_load_le64(stream + 0x1552);
+    copied_word_2 = fixed_load_le64(stream + 0x155a);
+    fixed_store_le64(kernel + 0x1588, fixed_load_le64(stream + 0x1562));
+    fixed_store_le64(kernel + 0x1590, copied_word_1);
+    fixed_store_le64(kernel + 0x1578, copied_word_0);
+    fixed_store_le64(kernel + 0x1580, copied_word_2);
+    copied_word_0 = fixed_load_le64(stream + 0x1542);
+    copied_word_1 = fixed_load_le64(stream + 0x154a);
+    fixed_store_le64(kernel + 0x15f8, (unsigned long)(kernel + 0x1568));
+    fixed_store_le64(kernel + 0x1568, copied_word_0);
+    fixed_store_le64(kernel + 0x1570, copied_word_1);
+    copied_word_2 = fixed_load_le64(stream + 0x15c2);
+    copied_word_0 = fixed_load_le64(stream + 0x15b2);
+    copied_word_1 = fixed_load_le64(stream + 0x15ba);
+    fixed_store_le32(kernel + 0x15f0, fixed_load_le32(stream + 0x15ca));
+    fixed_store_le64(kernel + 0x15e8, copied_word_2);
+    fixed_store_le64(kernel + 0x15d8, copied_word_0);
+    fixed_store_le64(kernel + 0x15e0, copied_word_1);
+    copied_halfword = fixed_load_le16(stream + 0x15ce);
+    fixed_store_le32(kernel + 0xbc, primary_height);
+    fixed_store_le32(kernel + 0xc0, primary_width);
+    fixed_store_le64(kernel + 0xcc, primary_pitch_pair);
+    fixed_store_le32(kernel + 0x1560, secondary_chroma_pitch);
+    fixed_store_le16(kernel + 0x1600, copied_halfword);
+    fixed_store_le32(kernel + 0xd4, primary_chroma_pitch);
+    kernel[0x1550] = secondary_data_type;
+    fixed_store_le64(kernel + 0x15e8, output_pitch_pair);
+    fixed_store_le32(kernel + 0x1548, secondary_height);
+    kernel[0x1553] = secondary_bit_depth;
+    fixed_store_le32(kernel + 0x15d8, primary_height);
+    fixed_store_le32(kernel + 0x154c, secondary_width);
+    fixed_store_le32(kernel + 0x15dc, primary_width);
+    fixed_store_le64(kernel + 0x1558, secondary_pitch_pair);
+    fixed_store_le32(kernel + 0x15f0, output_chroma_pitch);
+    return 0x15d0;
 }

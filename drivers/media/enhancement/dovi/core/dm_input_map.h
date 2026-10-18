@@ -1,12 +1,14 @@
 /* Input color-space and transfer maps. */
 #ifndef DOVI_DM_INPUT_MAP_H
 #define DOVI_DM_INPUT_MAP_H
-#include "dm_layout.h"
 
-void dovi_dm_CommitIpt2KsIMap(unsigned int bits, unsigned int range, void *map);
-
-void dovi_dm_CommitMdsCsc(MdsExt_t *metadata, DmCfgFxp_t *configuration, CscCtrlFxp_t *color,
-                          DmKsIMapFxp_t *input_map);
-void commit_graphics_input(DmCtxtFxp_t *context, DmCfgFxp_t *configuration, DmKsFxp_t *kernel);
-void commit_video_input(DmCtxtFxp_t *context, DmCfgFxp_t *configuration, DmKsFxp_t *kernel);
+_Bool dovi_dm_CanCclrBypassCsc(int color_space, int range, int bypass);
+void dovi_dm_CommitMds2KsIMap(int signal_index, unsigned char *metadata, long runtime_signal,
+                              long csc_control, unsigned char *input_map);
+int dovi_dm_CommitIptRgb2LmsM33(int signal_index, int color_space, long csc_control, short *matrix);
+void dovi_dm_CommitIpt2KsIMap(int signal_index, long csc_control, int color_space,
+                              unsigned int bit_depth, int range, int bypass,
+                              unsigned char *input_map);
+unsigned long dovi_dm_CommitSigEnv2KsIMap(int *signal, long csc_control, unsigned char *input_map);
+unsigned long dovi_dm_Commit2Dm3KsIMapBypass(unsigned int bit_depth, unsigned char *input_map);
 #endif
