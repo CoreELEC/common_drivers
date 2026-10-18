@@ -37,7 +37,7 @@ static inline void parser_store_pointer(void *destination, const void *value)
     parser_copy8(destination, &value);
 }
 
-/* The host adapter discards five prefix bytes and scans at most 63 trailing
+/* Both host adapters discard five prefix bytes and scan at most 63 trailing
  * zeros. Short inputs retain the native readable-prefix requirement.
  */
 static inline unsigned int parser_trimmed_payload_size(const unsigned char *input,

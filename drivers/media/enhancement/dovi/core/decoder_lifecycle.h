@@ -18,8 +18,8 @@
  * Reads LE u32 level (+4), disable_crc_check (+8), payload_only (+0xc), and
  * disable_MEL_detection (+0x14). Supported level indices are 0..15.
  * decoder must be writable for the arena described in ../docs/parser.md.
- * Initialization requires a valid level index and returns zero after
- * installing the native decoder state.
+ * STB 2.4 requires a valid level; STB 2.6 traps for level >=16 after
+ * partial initialization. Otherwise the function returns zero.
  * Levels 3..15 retain the fixed 0xe070-byte payload clear beyond the
  * memory query; their callers must provide that additional backing.
  */

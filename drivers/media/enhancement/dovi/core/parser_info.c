@@ -3,19 +3,19 @@
 #include "error_strings.h"
 #include "parser_access.h"
 
-/* The algorithm version follows the API version at byte offset eight. */
-static const char version_strings[] = "0.4.1\0\0\0" "1.1.2";
+static const char api_version[] = "0.4.3\0";
+static const char algorithm_version[] = "1.1.2\0";
 static const char build_info[] =
     "Build configuration flags:\n" "\tENABLE_FLOAT\t\t0\n" "\tNUM_RPU_BUFFERS\t\t64\n";
 
 const char *dovi_vdr_rpu_get_api_ver(void)
 {
-    return version_strings;
+    return api_version;
 }
 
 const char *dovi_vdr_rpu_get_algo_ver(void)
 {
-    return version_strings + 8;
+    return algorithm_version;
 }
 
 const char *dovi_vdr_rpu_get_build_info(void)

@@ -149,3 +149,96 @@ product. STB 2.4 returns its low 32 bits; STB 2.6 returns all 64 bits.
 STB 2.4 selects singleton tone direction and separate graphics state;
 STB 2.6 selects primary/indexed state by current and committed mode,
 normalizes index zero, retains reachable bounds traps and propagates EOTF.
+
+## Metadata parser
+
+### Instance ownership and callback interface
+
+STB 2.4 has a static 0x780-byte application context, contiguous payload
+backing, a singleton parser and persistent external counters. STB 2.6
+allocates a 0x770-byte application context, a 0x10442-byte sequence and a
+queried parser arena. Output sizes and callback context belong to each
+instance; the frame counter remains global. Composer storage moves from
+application offset 0x30 to 0x18, and sequence/configuration/parser/counter
+offsets change. Allocation failure and release preserve the required
+free/null order. STB 2.4 keeps its header/RPU/DM payloads, counters and
+logger outside the application; STB 2.6 owns its arenas separately.
+
+STB 2.4 initialization accepts the logger and historical flag, rebinds the
+singleton and clears static payloads. Reset ignores flags and release is
+empty. Processing passes the full end-of-stream byte, publishes lengths
+on success and then resets the parser. STB 2.6 initialization accepts
+instance state without the parser logger. Its nine-argument process
+interface adds explicit context, flags and input kind; kinds 1/2 ingest
+VUI/ST2086/T.35 data, flag bit 0 flushes raw processing, and success
+retains parser state. Error paths retain their partial length publication.
+Release accepts a pointer to the instance pointer and frees/nulls sequence,
+parser and application storage in order.
+
+STB 2.6 explicit reset resets the global frame counter after success and
+adds flags to both reset APIs. In direct mode, flags equal to 1 clear the
+0x136-byte current header, 0x10744-byte DM payload and two payload records
+occupying 0xe070 bytes. STB 2.4 resets indices/state/MEL without those deep clears.
+Buffered STB 2.6 reset traps for an excessive slot count after writing the
+first fifteen payload handles; STB 2.4 retains unchecked copying.
+
+### Queue handling and bounds
+
+Both parsers stop at queue results -20/-21. STB 2.4 reports the first
+other nonpositive result once and stops; any nonzero decoder MEL byte
+sets flag bit 0. STB 2.6 continues draining under its unsigned loop
+condition, retains the last error and ORs the raw MEL byte into flags.
+
+STB 2.6 preserves fatal decoder/query checks at level >=16. Validation
+level 16 uses `BRK #1`, larger levels use `BRK #0x5512`, and profile >16
+is fatal; profile 16 uses its separate 38-word row. Mapping pivot 15,
+payload IDs >=15 and spatial modes >=8 are fatal. Sentinel searches keep
+their full row/table bounds. Buffered append increments the length before
+trapping when its previous value exceeds 0xfff. STB 2.4 retains validator
+results -4/-5 and unchecked pointer/array access, including its
+write-before-post-check buffering behavior.
+
+Fallback NLQ initialization changes from complete 28-byte records in
+STB 2.4 to sparse overlapping stores over 0x6874..0x68c7 in STB 2.6.
+Untouched bytes remain significant. STB 2.6 exposes `set_default_payload`
+and the payload-level MEL predicate; the STB 2.4 MEL predicate is private.
+STB 2.6 also removes the ignored VUI pointer from decoder/parser VUI calls.
+
+### Extensions, lengths and diagnostics
+
+STB 2.4 extension reading receives configuration, event-callback slot and
+reader explicitly; STB 2.6 obtains them from its decoder. Both only read
+the byte index. Non-first payload diagnostics test kind ==2 in STB 2.4
+versus kind !=1 in STB 2.6. Unknown extension copy has no 256-byte union
+limit in STB 2.4; STB 2.6 stops after byte 255.
+
+STB 2.4 adds both initial extension reads and second incremental-update
+reads to the returned DM bit count; STB 2.6 omits those adjustments.
+Unknown packed DM extensions use signed 32-bit wrapping
+`position + 5 + offset` addressing in STB 2.4. STB 2.6 first selects the
+block pointer, then addresses `block[5 + offset]`.
+
+NLQ sign masks use `1u << ((width + 1) & 31)` in STB 2.4 versus
+`2u << (width & 31)` in STB 2.6. At width modulo 32 equal to 31, the
+former selects bit 0 and the latter drops the mask to zero. After the
+same signed capacity comparison, metadata copy length widens through
+unsigned 32 bits in STB 2.4 and sign-extends to 64 bits in STB 2.6;
+abnormal nonpositive lengths retain their distinct partial-output behavior.
+
+Parser API text changes from 0.4.1 to 0.4.3; algorithm text remains 1.1.2.
+STB 2.4 stores algorithm text at API text +8; STB 2.6 uses separate string
+objects. Diagnostics retain the selected logger/import behavior and
+STB 2.6 supplies the previously omitted partition-count printf argument.
+
+The common parser code shares byte alignment, residual-coefficient
+traversal, ST2094 inclusive target windows, synthetic polynomial defaults
+and byte-published extension bookkeeping. Separate policies select
+application allocation and metadata-copy sign extension.
+
+### Resampling coefficients
+
+Prediction-filter reading shares coefficient sign extension but uses
+signed component/direction address arithmetic in STB 2.4 versus unsigned
+arithmetic in STB 2.6. Diagnostic capture timing, prediction flag/delta
+reloads and cached/reloaded payload owners remain distinct. Only STB 2.4
+exposes the spatial phase/filter reader in this API family.

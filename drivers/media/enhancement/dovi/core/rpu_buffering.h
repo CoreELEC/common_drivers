@@ -22,9 +22,9 @@ enum rbsp_ingress_state {
  *
  * push returns 0, -7 for invalid arguments, -22 for a full queue, or -1 for
  * the 00 00 02 sequence inside framed payload. Buffered writes increment
- * the slot length and write the byte before checking capacity. The push
- * operation returns -22 if the resulting signed slot length exceeds 0x1000;
- * caller storage must cover every write performed before that check.
+ * the slot length before trapping if the previous length exceeded 0xfff
+ * in STB 2.6. STB 2.4 writes first, then returns -22 if the resulting
+ * signed slot length exceeds 0x1000.
  * Direct mode has no 0x1000-byte capacity check and scans trailing zeros
  * backwards without a start bound; caller-provided readable prefix/storage
  * must cover every accessed byte.

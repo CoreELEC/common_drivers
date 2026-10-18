@@ -1,4 +1,4 @@
-/* Byte offsets used by the native metadata-parser interface. */
+/* Byte offsets shared by the two native metadata-parser interfaces. */
 #ifndef DOVI_PARSER_LAYOUT_H
 #define DOVI_PARSER_LAYOUT_H
 #include "parser_context.h"

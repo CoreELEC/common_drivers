@@ -1,4 +1,4 @@
-/* Native validation table words in their original row order. */
+/* Native validation words. Common rows match both supplied binaries. */
 static const unsigned int level_limits[16][5] = {
     {1u, 1u, 9u, 2u, 0u},
     {4u, 4u, 11u, 2u, 3u},
@@ -103,7 +103,7 @@ static const unsigned int profile_limits[] = {
     0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
     ~0u, 0u, 0u, 0u, 0u, 0u,
 #if PARSER_FATAL_ARRAY_LIMITS
-    /* The optional profile-16 row is retained behind the array-limit policy. */
+    /* The STB 2.6 profile-16 row is independently retained. */
     0x00000000u, 0xffffffffu, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u,
     0x00000000u, 0xffffffffu, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u,
     0x00000000u, 0xffffffffu, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u, 0x00000000u,

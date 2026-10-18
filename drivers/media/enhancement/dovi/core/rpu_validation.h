@@ -9,10 +9,10 @@ typedef int (*dovi_validation_log_fn)(const char *format, ...);
  * Optional diagnostics use unsigned log levels >=3. Callback sequencing and
  * reloads follow each native validator; callbacks must satisfy its contract.
  */
-/* Unsupported level/profile indices return -4/-5, respectively.
- * Spatial modes must be 0..7; callers provide valid readable table indices.
- * Optional diagnostics reload header bytes after the first log callback.
- * Keep root and payload storage readable throughout callback execution. */
+/* STB 2.4 returns -4/-5 for unsupported level/profile indices. STB 2.6
+ * retains fatal level/profile/pivot and whole-row search bounds, including
+ * its separate profile-16 row. Spatial modes must be 0..7 in STB 2.4;
+ * STB 2.6 traps for invalid modes. Diagnostics reload header bytes. */
 int dovi_validate_level(const void *rpu_data, dovi_validation_log_fn log, unsigned int log_level);
 int dovi_validate_spatial_filter(const void *rpu_data, dovi_validation_log_fn log,
                                  unsigned int log_level);

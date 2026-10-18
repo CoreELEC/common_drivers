@@ -6,9 +6,9 @@
  * ranges are disjoint, callbacks are serialized, and timestamp/input lengths
  * are ignored. Frame count advances for every event, including errors. Output
  * thresholds retain native signedness and composer writes precede DM errors.
- * Counters live beside the singleton and share its lifetime.
- * Native copy-length widening is retained even for nonpositive lengths
- * outside normal serializer output.
+ * STB 2.4 counters live beside its singleton; STB 2.6 sizes live per instance
+ * while its frame count remains module-wide. Native copy-length widening is
+ * retained even for nonpositive lengths outside normal serializer output.
  */
 void dovi_md_parser_evt_handler_cb(void *context, dv_md_parser_evt_t event,
                                    const void *timestamp, const void *header,

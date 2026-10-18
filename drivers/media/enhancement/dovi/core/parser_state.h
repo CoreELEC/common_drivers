@@ -6,8 +6,8 @@
 #define DOVI_PARSER_STATE_MIN_SIZE 0x70u
 /* Objects use the shared little-endian layout and bytewise access. Referenced
  * buffers must be valid and disjoint; calls are serialized. Buffered reset
- * copies max_prev_rpu_ids+1 payload pointers. Reset retains direct-mode
- * payload state; there is no reset-flags argument.
+ * copies max_prev_rpu_ids+1 payload pointers. STB 2.6 traps after fifteen writes
+ * for a larger slot count; its flags==1 also clears direct-mode payload state.
  */
 int dovi_rpu_decoder_reset(void *decoder
 #if PARSER_RESET_FLAGS

@@ -3,27 +3,32 @@
 #define DOVI_MODULE_PARSER_H
 
 typedef int (*dovi_module_log_fn)(const char *format, ...);
-struct dovi_module_parser_context;
 
-/* One static, initially zeroed pipeline shares the parser singleton.
- * These entry points are non-reentrant; callers must serialize init, reset,
- * process and release. The logger must be nonnull, stable and non-reentrant.
- * Init returns the app-context pointer and preserves counters. Init/reset flags
- * are ignored. Release does not destroy, free or reset either singleton.
- *
- * Process retains metadata_callbacks.h's unchecked buffer requirements:
- * composer has 8192 writable bytes and metadata has 1024; input, outputs and
- * length slots are disjoint from the pipeline and each other. Supply readable
- * input/refill padding and a nonzero payload byte. Payload-only decoder ingress
- * uses one 4096-byte slot. A successful call publishes lengths and resets the
- * parser; failure returns -1 and leaves the caller's lengths unchanged.
- * No allocation, locking, ownership or source-status policy is added here.
+#define DOVI_MODULE_PARSER_CONTEXT_SIZE 0x770u
+#define DOVI_MODULE_PARSER_COMPOSER_CAPACITY 0x2000u
+#define DOVI_MODULE_PARSER_METADATA_CAPACITY 0x400u
+
+/* The kernel bridge or host adapter defines this table before any call.
+ * Allocation returns stable, writable, suitably aligned storage or NULL.
+ * Free and printk retain their original ordering. printf-style arguments
+ * contain integers and pointers only, and all supplied callbacks are valid.
  */
-struct dovi_module_parser_context *dovi_metadata_parser_init(dovi_module_log_fn logger, int flag);
-int dovi_metadata_parser_reset(int flag);
-int dovi_metadata_parser_process(const char *input, int size, char *composer_output,
-                                 int *composer_size, char *metadata_output, int *metadata_size,
-                                 unsigned char eos);
-void dovi_metadata_parser_release(void);
+struct dovi_module_imports {
+    void *(*vmalloc)(unsigned long long size);
+    void (*vfree)(void *pointer);
+    int (*printk)(const char *format, ...);
+};
+extern struct dovi_module_imports dovi_module_os;
+extern unsigned int dovi_module_frame_nr;
+
+void *dovi_metadata_parser_init(void);
+void dovi_metadata_parser_release(void **context);
+int dovi_metadata_parser_reset(void *context);
+int dovi_metadata_parser_process(void *context, const unsigned char *input, unsigned int size,
+                                 void *composer_output, unsigned int *composer_size,
+                                 void *metadata_output, unsigned int *metadata_size,
+                                 unsigned int flags, int input_kind);
+
+#include "metadata_callbacks.h"
 
 #endif

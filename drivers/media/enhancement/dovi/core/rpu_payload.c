@@ -414,8 +414,8 @@ static void nlq_filter_read(byte *decoder)
         for (coefficient = 0; coefficient < 17; ++coefficient) {
             u32 width = header[0x17];
             u32 value = dovi_read_u_v(width + 2u, bits);
-/* Sign extension wraps width+1 before selecting its one-bit sign mask.
-             * The width and mask arithmetic retain their native 32-bit behavior. */
+/* STB 2.6 drops the sign bit when width&31 is 31; STB 2.4
+             * wraps width+1 before selecting its one-bit sign mask. */
 #if PARSER_NLQ_TRUNCATING_SIGN_SHIFT
             value |= 0u - ((2u << (width & 31u)) & value);
 #else

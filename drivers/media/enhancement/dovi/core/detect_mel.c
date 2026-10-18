@@ -1,6 +1,6 @@
 #include "detect_mel.h"
 
-#define MEL_PAYLOAD_SCOPE static
+#define MEL_PAYLOAD_SCOPE
 #include "detect_mel_impl.inc"
 #undef MEL_PAYLOAD_SCOPE
 

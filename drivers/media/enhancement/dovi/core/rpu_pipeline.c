@@ -135,7 +135,7 @@ int dovi_rpu_decoder_process_buffer(void *opaque, const unsigned char *input, un
     rh = parser_load_pointer(data);
     if (fixed_signed32(fixed_load_le32(parser_load_pointer(decoder + 8) + 0x66c)) <
         (int)((unsigned int)rh[0x133] * rh[0x134])) {
-        /* The native diagnostic omits the %d argument; retain that call contract. */
+        /* STB 2.4 omits the %d argument; STB 2.6 supplies the partition count. */
         if (log != 0 && severity > 2u)
             log("ERROR: Payload buffer too small for %d partitions\n"
 #if PARSER_FATAL_ARRAY_LIMITS

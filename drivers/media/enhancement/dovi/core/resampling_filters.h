@@ -12,7 +12,5 @@
 int dovi_rpu_data_chroma_resampling_filter_1D_exp_read(void *decoder, int partition,
                                                        unsigned int raw_component,
                                                        unsigned int raw_direction);
-int rpu_data_spatial_resampling_filter_exp_read(void *decoder, int pivot, int direction,
-                                                int phases);
 
 #endif
