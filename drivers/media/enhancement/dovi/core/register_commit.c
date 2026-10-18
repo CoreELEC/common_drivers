@@ -1,567 +1,1130 @@
-/* Commit control configuration and pack composer, DM and LUT output. */
-#include "register_commit.h"
-#include "control_metadata.h"
-#include "dm_pipeline.h"
-#include "control_abi_recovered.h"
-#include "pq_conversion.h"
-#include "control_packets.h"
-#include "byte_utils.h"
-#include "control_registers.h"
+/* Commit control configuration and pack composer, DM and LUT output.
+ * Pointer offsets describe the LP64 ABI; scratch aliases preserve overlapping
+ * local structs.
+ */
+#include "control_orchestration_bindings.h"
 #include "fixed_access.h"
+#include "control_target.h"
+#include "control_registers.h"
+#include "control_publish.h"
+#include "control_workspace.h"
 
-typedef char require_pointer64[(sizeof(void *) == 8) ? 1 : -1];
-typedef char require_u32[(sizeof(unsigned int) == 4) ? 1 : -1];
-
-static unsigned int r16(const void *o, unsigned int n)
+static int prepare_commit_sources(long *control, long source_parameters, unsigned char input_count,
+                                  unsigned long primary_input, unsigned int *input_count_slot,
+                                  struct dovi_commit_workspace *work, unsigned int *status)
 {
-    return fixed_load_le16((const unsigned char *)o + n);
-}
+    unsigned short primary0_x16;
+    unsigned short primary1_x16;
+    unsigned short primary0_y16;
+    unsigned short primary2_x16;
+    unsigned short primary1_y16;
+    unsigned short primary2_y16;
+    unsigned int primary2_y_candidate;
+    unsigned int primary0_y_candidate;
+    unsigned int primary_y_candidate;
+    unsigned long blue_primary_index;
+    long green_primary_index;
+    long red_primary_index;
+    int *primary0_x_slot;
+    long hdr_source_address;
+    int primary1_x_coordinate;
+    int primary2_x_coordinate;
+    unsigned short hdr_max_luminance16;
+    unsigned int packet_identifier;
 
-static unsigned int r32(const void *o, unsigned int n)
-{
-    return fixed_load_le32((const unsigned char *)o + n);
-}
-
-static void *rp(const void *o, unsigned int n)
-{
-    return (void *)fixed_load_le64((const unsigned char *)o + n);
-}
-
-static void w16(void *o, unsigned int n, unsigned int v)
-{
-    fixed_store_le16((unsigned char *)o + n, v);
-}
-
-static void w32(void *o, unsigned int n, unsigned int v)
-{
-    fixed_store_le32((unsigned char *)o + n, v);
-}
-
-static void wp(void *o, unsigned int n, const void *v)
-{
-    fixed_store_le64((unsigned char *)o + n, (unsigned long long)v);
-}
-
-static unsigned int be16(const void *o, unsigned int n)
-{
-    const unsigned char *p = (const unsigned char *)o + n;
-    return (unsigned int)p[0] << 8 | p[1];
-}
-
-static unsigned int be32(const void *o, unsigned int n)
-{
-    const unsigned char *p = (const unsigned char *)o + n;
-    return (unsigned int)p[0] << 24 | (unsigned int)p[1] << 16 | (unsigned int)p[2] << 8 | p[3];
-}
-
-static void copy_bytes(void *dst, const void *src, unsigned int count)
-{
-    unsigned int i;
-    for (i = 0u; i < count; ++i)
-        ((unsigned char *)dst)[i] = ((const unsigned char *)src)[i];
-}
-
-static void commit_config(void *context, void *config)
-{
-    void *kernel = rp(context, 16u), *dm = rp(context, 0u);
-    (void)dovi_dm_CommitCfg(config, kernel, dm);
-}
-
-static unsigned int min_linear(unsigned int v)
-{
-    return (v << 18) / 10000u;
-}
-
-static unsigned int max_linear(unsigned int v)
-{
-    return (unsigned int)(((unsigned long long)v << 18) / 10000u);
-}
-
-static void source_signal(void *config, const void *source, int input)
-{
-    unsigned char *s = (unsigned char *)config + 372u;
-    unsigned int min, max;
-    w32(s, 0u, r32(source, 16u));
-    w32(s, 4u, r32(source, 12u));
-    w32(s, 28u, 0u);
-    if (input == 0) {
-        w32(s, 20u, 0u);
-        w32(s, 24u, 0u);
-        return;
-    }
-    if (input != 1 && input != 2)
-        return;
-    w32(s, 16u, 0u);
-    w32(s, 20u, r32(source, 4u) != 0u);
-    w32(s, 24u, r32(source, 4u) == 0u ? 0u : 2u);
-    w32(s, 36u, 12u);
-    if (input == 1) {
-        w32(s, 40u, 1u);
-        w32(s, 48u, 3u);
-        w32(s, 72u, 3u);
-        w32(s, 44u, r32(source, 8u) != 0u);
-        min = r32(source, 20u);
-        min = min ? min_linear(min) : 0x51eu;
-        max = r32(source, 24u);
-        max = max ? max_linear(max) : 0xfa00000u;
-    } else {
-        min = 0x51eu;
-        max = 0x1900000u;
-        w32(s, 40u, 0u);
-        w16(s, 196u, 0x999au);
-        w32(s, 44u, 0u);
-        w32(s, 48u, 2u);
-        w32(s, 72u, 2u);
-    }
-    w32(s, 200u, min);
-    w32(s, 204u, max);
-    w16(s, 208u, dovi_LToPQ12(min));
-    w16(s, 210u, dovi_LToPQ12(r32(s, 204u)));
-    if (input == 2) {
-        w16(s, 212u, 0x181u);
-        w32(s, 216u, 0x151cb4u);
-        w16(s, 214u, 0x433u);
-    }
-}
-
-static void graphics_signal(void *context, void *config, const void *graphics)
-{
-    unsigned char *g = (unsigned char *)config + 104u;
-    unsigned int value;
-    w32(config, 0u, r32(graphics, 0u));
-    w32(g, 0u, r32(graphics, 8u));
-    w32(g, 4u, r32(graphics, 4u));
-    w32(g, 28u, (int)r32(graphics, 32u) < 9 ? 1u : 0u);
-    w32(g, 32u, 0u);
-    w32(g, 16u, r32(graphics, 28u) == 0u ? 0u : 2u);
-    value = r32(graphics, 44u);
-    w32(g, 24u, value == 1u ? 2u : 0u);
-    w32(g, 20u, value == 0u ? 0u : value == 1u ? 1u : 2u);
-    w32(g, 36u, r32(graphics, 32u));
-    w32(g, 40u, r32(graphics, 20u) == 0u ? 0u : 1u);
-    w32(g, 44u, r32(graphics, 24u) == 0u ? 0u : 1u);
-    value = r32(graphics, 40u);
-    if (value < 6u)
-        w32(g, 48u, value);
-    w32(g, 132u, 0u);
-    w32(g, 64u, 0x7fffu);
-    w32(g, 60u, 0x7fffu);
-    w32(g, 56u, 0x7fffu);
-    w32(g, 168u, 0u);
-    w32(g, 52u, 0u);
-    w16(g, 68u, 15u);
-    value = r32(graphics, 36u);
-    if (value < 6u)
-        w32(g, 72u, value);
-    w32(g, 76u, 0u);
-    w32(g, 104u, 0u);
-    w16(g, 196u, r32(graphics, 48u));
-    w32(g, 200u, min_linear(r32(context, 4132u) + r32(graphics, 12u)));
-    w16(g, 208u, 0u);
-    w16(g, 210u, 0u);
-    w32(g, 204u, max_linear(r32(context, 4136u) + r32(graphics, 16u)));
-    w16(g, 212u, r32(graphics, 52u));
-    w16(g, 214u, r32(graphics, 56u));
-    w32(g, 216u, r32(graphics, 60u));
-    w16(g, 220u, 42u);
-    w32(g, 224u, 0x28fu);
-}
-
-static void set_target_limits(void *config, unsigned int min, unsigned int max, unsigned int min_pq,
-                              unsigned int max_pq, unsigned int mode)
-{
-    w32(config, 952u, min);
-    w32(config, 956u, max);
-    w16(config, 960u, min_pq);
-    w16(config, 962u, max_pq);
-    w32(config, 8u, mode);
-    w32(config, 12u, min);
-    w32(config, 16u, max);
-}
-
-static void metadata_extensions(void *context, void *metadata)
-{
-    unsigned char *e = (unsigned char *)rp(context, 8u);
-    unsigned char *m = (unsigned char *)metadata;
-    unsigned int i, j, level, base;
-    int number, dimension;
-    unsigned char *trim;
-    e[0] = m[0];
-    e[1] = m[1];
-    w16(e, 2u, 13u);
-    for (i = 0u; i < 9u; ++i)
-        w16(e, 4u + i * 2u, be16(m, 2u + i * 2u));
-    for (i = 0u; i < 3u; ++i)
-        w32(e, 24u + i * 4u, be32(m, 20u + i * 4u));
-    w16(e, 36u, 14u);
-    for (i = 0u; i < 9u; ++i)
-        w16(e, 38u + i * 2u, be16(m, 32u + i * 2u));
-    for (i = 0u; i < 3u; ++i)
-        w16(e, 56u + i * 2u, be16(m, 50u + i * 2u));
-    w32(e, 64u, be32(m, 56u));
-    for (i = 0u; i < 4u; ++i)
-        e[68u + i] = m[60u + i];
-    w16(e, 72u, be16(m, 64u));
-    w16(e, 74u, be16(m, 66u));
-    w16(e, 76u, be16(m, 68u));
-    e[78u] = m[70u];
-    w16(e, 514u, r16(e, 72u));
-    w16(e, 516u, r16(e, 74u));
-    w16(e, 518u, (r16(e, 72u) + r16(e, 74u)) >> 1);
-    w16(e, 80u, 0u);
-    w16(e, 94u, 0u);
-    w16(rp(e, 96u), 0u, r16(e, 74u));
-    w16(e, 110u, 0u);
-    w16(rp(e, 112u), 0u, r16(e, 74u));
-    w16(e, 496u, 0u);
-    w16(e, 498u, 0u);
-    w16(e, 500u, 0u);
-    w16(e, 502u, 0u);
-    w16(e, 504u, 0u);
-    for (i = 0u; i < e[78u]; ++i) {
-        base = 71u + i * 261u;
-        level = m[base + 4u];
-        if (level == 1u)
-            for (j = 0u; j < 3u; ++j)
-                w16(e, 514u + j * 2u, be16(m, base + 5u + j * 2u));
-        else if (level == 2u && r32((unsigned char *)context + 24u, 644u) == 0u) {
-            number = (short)r16(e, 94u);
-            dimension = (short)r16(e, 90u);
-            if (number < (short)r16(e, 92u)) {
-                number = (short)(number + 1);
-                w16(e, 94u, (unsigned int)number);
-                trim = (unsigned char *)rp(e, 96u);
-                /* The first store uses captured descriptor values;
-                 * later stores reload all three fields. Signed dimensions
-                 * address bytes before Trima through SXTW/SMADDL in ARM64. */
-                trim += (long long)number * dimension * 2;
-                w16(trim, 0u, be16(m, base + 5u));
-                for (j = 1u; j < 7u; ++j) {
-                    number = (short)r16(e, 94u);
-                    dimension = (short)r16(e, 90u);
-                    trim = (unsigned char *)rp(e, 96u) + (long long)number * dimension * 2;
-                    w16(trim, j * 2u, be16(m, base + 5u + j * 2u));
-                }
-                number = (short)r16(e, 94u);
-                dimension = (short)r16(e, 90u);
-                trim = (unsigned char *)rp(e, 96u) + (long long)number * dimension * 2;
-                if ((r16(trim, 12u) & 0x1fffu) == 0x1fffu)
-                    w16(trim, 12u, 0xfffu);
-            }
-            w16(e, 80u, r16(e, 80u) + 1u);
-        } else if (level == 5u) {
-            w16(e, 496u, 1u);
-            for (j = 0u; j < 4u; ++j)
-                w16(e, 498u + j * 2u, be16(m, base + 5u + j * 2u));
-        }
-    }
-}
-
-static void synthetic_composition(void *composition, unsigned int depth)
-{
-    unsigned char *c = (unsigned char *)composition;
-    unsigned int i;
-    w32(c, 0u, 12u);
-    w32(c, 4u, depth);
-    w32(c, 8u, 0u);
-    w32(c, 12u, 23u);
-    c[1181u] = 1u;
-    c[1182u] = 0u;
-    for (i = 0u; i < 3u; ++i) {
-        w32(c, 16u + i * 4u, 2u);
-        w32(c, 28u + i * 36u, 0u);
-        w32(c, 32u + i * 36u, (1u << (depth & 31u)) - 1u);
-        w32(c, 136u + i * 4u, 0u);
-        w32(c, 148u + i * 32u, 1u);
-        w32(c, 244u + i * 96u, 0u);
-        w32(c, 248u + i * 96u, 1u);
-        w32(c, 532u + i * 96u, 0u);
-        w32(c, 536u + i * 96u, depth == 8u ? 0x7878u : 0x1806u);
-    }
-}
-
-static void matrix_regs(void *regs, unsigned int out, const void *map, unsigned int in,
-                        unsigned int scale)
-{
-    unsigned int i;
-    for (i = 0u; i < 4u; ++i)
-        w32(regs, out + i * 4u, r32(map, in + i * 4u));
-    w32(regs, out + 16u, r16(map, in + 16u) | (r16(map, scale) << 16));
-}
-
-static void input_regs(void *regs, const void *map, int second)
-{
-    unsigned int offset = second ? 8u : 20u, i;
-    w32(regs, 0u, r16(map, 38u) | (r16(map, 36u) << 16));
-    w32(regs, 4u, r32(map, 40u));
-    if (!second) {
-        w32(regs, 8u, r32(map, 1112u));
-        w32(regs, 12u, r32(map, 1116u) | (r32(map, 1120u) << 16));
-        w32(regs, 16u, r32(map, 1124u));
-    }
-    matrix_regs(regs, offset, map, 4u, 2u);
-    for (i = 0u; i < 3u; ++i)
-        w32(regs, offset + 20u + i * 4u, r32(map, 24u + i * 4u));
-    if (second)
-        w32(regs, 40u, 0u);
-    w32(regs, second ? 44u : 52u, ((const unsigned char *)map)[46u]);
-    matrix_regs(regs, second ? 48u : 56u, map, 1074u, 1072u);
-    matrix_regs(regs, second ? 68u : 76u, map, 1094u, 1092u);
-    w32(regs, second ? 88u : 96u, 0u);
-    if (!second) {
-        w32(regs, 100u, 0u);
-        w32(regs, 104u, 0u);
-    }
-}
-
-static void output_regs(void *regs, const void *map, const void *context)
-{
-    unsigned int i;
-    w32(regs, 4u, r32(context, 4144u));
-    matrix_regs(regs, 24u, map, 2u, 0u);
-    matrix_regs(regs, 44u, map, 22u, 20u);
-    w32(regs, 64u, r32(map, 40u));
-    w32(regs, 68u, r32(map, 44u));
-    w32(regs, 72u, r32(map, 96u));
-    for (i = 0u; i < 3u; ++i)
-        w32(regs, 76u + i * 4u, r32(map, 100u + i * 4u));
-    w32(regs, 88u, r32(map, 52u));
-    w32(regs, 92u, r16(map, 48u));
-    matrix_regs(regs, 96u, map, 64u, 62u);
-    for (i = 0u; i < 3u; ++i)
-        w32(regs, 116u + i * 4u, r32(map, 84u + i * 4u));
-    w32(regs, 992u,
-        (r32(context, 4156u) & 1u) << 5 | (r32(context, 4152u) & 15u) * 2u | r32(context, 4148u));
-}
-
-static void raw_metadata(void *regs, const void *metadata)
-{
-    const unsigned char *m = (const unsigned char *)metadata;
-    unsigned char *out = (unsigned char *)regs + 148u;
-    unsigned int i, j, length, added, total = 71u;
-    for (i = 0u; i < 70u; ++i)
-        out[i] = m[i + 1u];
-    out += 70u;
-    for (i = 0u; i < m[70u]; ++i) {
-        length = be32(m, 71u + i * 261u);
-        added = length + 5u;
-        if ((int)added > 0) {
-            for (j = 0u; j < added; ++j)
-                out[j] = m[71u + i * 261u + j];
-            out += added;
-        }
-        total += added;
-    }
-    w32(regs, 144u, (total << 8) | m[0]);
-}
-
-int dovi_commit_reg(void *context, int input, int output, void *metadata, const void *composition,
-                    const void *target, const void *graphics, const void *source, int priority,
-                    void *reg1, void *reg2, void *reg3, void *lut1, void *lut2)
-{
-    unsigned char *config = (unsigned char *)context + 24u;
-    unsigned char *t = config + 768u, *m = (unsigned char *)metadata, *kernel, *temp;
-    unsigned int minpq = 0u, maxpq = 0u, min, max, version, iface, i, count, write;
-    int ret, mode = 0, use_target = 0, hdr_target = 0;
-    wp(context, 4168u, target);
-    if (input == 0 && r32(context, 4164u) == 0u &&
-        ((const unsigned char *)composition)[1181u] == 0u)
-        return -1;
-    if (input == 0) {
-        minpq = be16(m, 64u);
-        maxpq = be16(m, 66u);
-    }
-    source_signal(config, source, input);
-    graphics_signal(context, config, graphics);
-    if (input == 0) {
-        if (priority == 2) {
-            if (m[1] == 1u)
-                w32(context, 4124u, 1u);
-            else if (r32(context, 4124u) == 0u)
-                priority = 1;
-            if (priority == 2)
-                priority = 0;
-        }
-        if (priority == 1)
-            w32(context, 4124u, 0u);
-    }
-    w32(t, 0u, r32(target, 4u));
-    w32(t, 4u, r32(target, 0u));
-    w32(t, 20u, 1u);
-    w32(t, 36u, 12u);
-    w32(t, 28u, 0u);
-    w32(t, 24u, 2u);
-    w32(t, 16u, 0u);
-    if (output == 0) {
-        version = r32(target, 20u);
-        if (version == 0u) {
-            w32(context, 4184u, 0u);
-            mode = 5;
-        } else if (version == 1u && (r32(target, 16u) == 12u || r32(target, 16u) == 15u)) {
-            if (r32(target, 28u) == 0u) {
-                w32(context, 4184u, 0u);
-                mode = 5;
-            } else if (r32(target, 28u) == 1u) {
-                w32(context, 4184u, 0u);
-                mode = r32(target, 8u) ? 2 : 5;
+    unsigned int source_number;
+    unsigned char white_x_lo;
+    unsigned char white_x_hi;
+    unsigned char packet_type;
+    unsigned char white_y_lo;
+    unsigned char white_y_hi;
+    unsigned char hdr_min_luminance_hi;
+    unsigned char hdr_min_luminance_lo;
+    unsigned short vsem_length16;
+    unsigned __int128 primary0_x_product;
+    unsigned __int128 primary0_y_product;
+    unsigned __int128 primary1_x_product;
+    unsigned __int128 primary1_y_product;
+    unsigned __int128 primary2_x_product;
+    unsigned __int128 primary2_y_product;
+    unsigned __int128 white_x_product;
+    unsigned __int128 white_y_product;
+    _Bool has_metadata;
+    unsigned short matrix_last16;
+    unsigned int commit_status;
+    unsigned int configuration_result;
+    unsigned int configuration_word;
+    int configuration_value;
+    const unsigned char *packets;
+    int *primary0_y_slot;
+    char *packet_error;
+    unsigned char packet_version;
+    unsigned int *metadata_configuration;
+    int *source_status_slot;
+    unsigned int signal_word;
+    unsigned int source_index32;
+    unsigned long source_index;
+    long source_address;
+    long sink_white_x_word;
+    long sink_luminance_pair;
+    long signal_offset;
+    int *bit_depth_slot;
+    unsigned int primary_input_index;
+    unsigned long signal_number;
+    long signal_source_address;
+    unsigned int primary1_x_compare;
+    unsigned int primary_x_candidate;
+    unsigned int primary2_x_compare;
+    unsigned int primary1_y_compare;
+    unsigned int *decoded_header;
+    unsigned int *source_or_signal_words;
+    int *input_mode_slot;
+    unsigned int primary1_y_candidate;
+    unsigned char primary_input_byte;
+    primary_input_byte = (unsigned char)primary_input;
+    commit_status = 0;
+    primary_input_index = (unsigned int)primary_input_byte;
+    if ((unsigned int)primary_input_byte < (unsigned int)input_count) {
+        source_index = primary_input;
+        do {
+            source_index32 = (unsigned int)source_index;
+            source_number = source_index32 + 1;
+            source_or_signal_words = (unsigned int *)(source_parameters + source_index * 0xa0);
+            *(unsigned int *)((long)control + (unsigned long)source_number * 4 + 0x928) = 1;
+            packets = *(const unsigned char **)(source_or_signal_words + 0x14);
+            if ((packets == (unsigned char *)0x0) &&
+                (*(long *)(source_parameters + source_index * 0xa0 + 0x38) == 0)) {
+                if (3 < source_index32)
+                    dm_limit_trap();
+                has_metadata = 0;
+                input_mode_slot = (int *)(source_parameters + source_index * 0xa0 + 0xc);
+                *(unsigned int *)((long)&work->source_flags.pairs[0] + source_index * 4) =
+                    0xffffffff;
+            select_source_status:
+                source_status_slot = (int *)((long)&work->source_flags.pairs[0] + source_index * 4);
+            load_source_metadata:
+                source_address = source_parameters + source_index * 0xa0;
+                decoded_header = (unsigned int *)work->decoded_headers[source_index];
+                signal_word = *(unsigned int *)(source_address + 0x40);
+                work->metadata[source_index] = *(long *)(source_address + 0x38);
+            store_metadata_size:
+                *(unsigned int *)((long)&work->metadata_sizes.pairs[0] + source_index * 4) = signal_word;
             } else {
-                w32(context, 4184u, 0u);
-                hdr_target = 1;
-            }
-        } else if (version == 2u) {
-            iface = r32(target, 32u);
-            if (iface == 2u) {
-                w32(context, 4184u, 0u);
-                mode = r32(target, 8u) ? 2 : 5;
-            } else if (iface == 1u || (iface == 3u && r32(target, 8u) != 0u)) {
-                mode = 2;
-                if (r32(target, 12u) != 0u && r32(target, 0u) < 1921u && r32(target, 4u) < 1081u &&
-                    (r32(target, 36u) == 1u || r32(target, 36u) == 2u)) {
-                    w32(context, 4148u, 1u);
-                    w32(context, 4152u, 1u);
-                    w32(t, 16u, 1u);
-                    w32(t, 20u, 2u);
-                    w32(t, 24u, 1u);
-                    if (r32(target, 36u) == 1u)
-                        w32(t, 36u, 10u);
+                if (3 < source_index32)
+                    dm_limit_trap();
+                source_status_slot = (int *)((long)&work->source_flags.pairs[0] + source_index * 4);
+                input_mode_slot = (int *)(source_parameters + source_index * 0xa0 + 0xc);
+                configuration_value = *input_mode_slot;
+                *source_status_slot = 0;
+                if (configuration_value == 0) {
+                    has_metadata = 1;
+                    goto select_source_status;
                 }
-            } else if (iface == 0u)
-                mode = 2;
-            else {
-                w32(context, 4184u, 0u);
-                mode = 5;
+                if (configuration_value != 1) {
+                use_existing_metadata:
+                    has_metadata = 1;
+                    goto load_source_metadata;
+                }
+                if (0x7c < source_index * 0x28)
+                    goto trap_source_bounds;
+                decoded_header = (unsigned int *)(&work->metadata_configuration[0] + source_index * 5);
+                metadata_configuration = (unsigned int *)((long)&work->metadata_configuration[4] +
+                                           source_index * 0x28 + 4);
+                configuration_word = *(unsigned int *)(source_parameters + source_index * 0xa0 + 0x34);
+                *metadata_configuration = configuration_word;
+                *decoded_header = configuration_word;
+                if (configuration_word != 0)
+                    goto use_existing_metadata;
+                work->decoded_headers[source_index] = (unsigned long)decoded_header;
+                if (packets == (unsigned char *)0x0)
+                    goto finish_packet_decoding;
+                packet_type = *packets;
+                if (packet_type == '\x7f') {
+                    if ((unsigned char *)((long)control + 0x1ccc) == (unsigned char *)0x0) {
+                        packet_error = "vsem_payload buffer is NULL\n";
+                    } else {
+                        configuration_value = dovi_vsem_unpack(packets, (unsigned char *)((long)control + 0x1ccc));
+                        if (configuration_value == 0) {
+                            if (*(char *)((long)control + 0x1cd6) != '\0') {
+                                dovi_parse_vsif_from_PB4((void *)((long)control + 0x1cd9), decoded_header);
+                                goto finish_packet_decoding;
+                            }
+                            vsem_length16 = fixed_load_le16((unsigned char *)control + 0x1cd1);
+                            work->metadata[source_index] = (long)control + 0x1cd9;
+                            configuration_value = ((unsigned int)(vsem_length16 >> 8) | (vsem_length16 & 0xff00ff) << 8) - 10;
+                            *(int *)((long)&work->metadata_sizes.pairs[0] + source_index * 4) =
+                                configuration_value;
+                            goto select_decoded_metadata;
+                        }
+                        packet_error = "vsem_unpack error!\n";
+                    }
+                    _printk(packet_error);
+                    commit_status = 0xfffffffb;
+                    {
+                        *status = commit_status;
+                        return 0;
+                    }
+                }
+                if (packet_type != 0x81) {
+                    if (packet_type == 0x87) {
+                        packet_version = packets[1];
+                        if (packet_version == '\x01') {
+                            if (packets[2] == '\x1a') {
+                                primary0_x16 = fixed_load_le16(packets + 6);
+                                white_x_lo = packets[0x12];
+                                white_x_hi = packets[0x13];
+                                white_y_lo = packets[0x14];
+                                white_y_hi = packets[0x15];
+                                primary1_x16 = fixed_load_le16(packets + 10);
+                                primary0_y16 = fixed_load_le16(packets + 8);
+                                work->temporary.primaries[0] =
+                                    (unsigned long)CONCAT24(primary1_x16, (unsigned int)primary0_x16);
+                                primary1_x_compare = (unsigned int)primary1_x16;
+                                primary_x_candidate = (unsigned int)primary0_x16;
+                                primary2_x16 = fixed_load_le16(packets + 0xe);
+                                primary1_y16 = fixed_load_le16(packets + 0xc);
+                                work->temporary.primaries[1] = CONCAT44(
+                                    (*(unsigned int
+                                           *)((unsigned char *)&work->temporary.primaries[1] + 4)),
+                                    (unsigned int)primary2_x16);
+                                primary2_y16 = fixed_load_le16(packets + 0x10);
+                                work->primary_y[0] = (unsigned int)primary0_y16;
+                                work->primary_y[1] = (unsigned int)primary1_y16;
+                                work->primary_y[2] = (unsigned int)primary2_y16;
+                                primary2_x_compare = (unsigned int)primary2_x16;
+                                primary0_y_candidate = (unsigned int)primary0_y16;
+                                primary1_y_compare = (unsigned int)primary1_y16;
+                                primary2_y_candidate = (unsigned int)primary2_y16;
+                                primary_y_candidate = (unsigned int)primary0_y16;
+                                primary1_y_candidate = (unsigned int)primary1_y16;
+                                if (((unsigned int)primary0_x16 < (unsigned int)primary1_x16 ||
+                                     primary_x_candidate == primary1_x_compare) ||
+                                    (primary_x_candidate < primary2_x16 || primary_x_candidate == primary2_x_compare)) {
+                                    primary_x_candidate = (unsigned int)primary1_x16;
+                                    if ((primary0_y_candidate < primary1_y_compare || primary_y_candidate == primary1_y_candidate) ||
+                                        (primary_y_candidate < primary2_y_candidate || primary0_y_candidate == primary2_y_candidate)) {
+                                        primary_y_candidate = 0;
+                                        green_primary_index = 1;
+                                        if (primary1_y_candidate < primary2_y_candidate || primary1_y_candidate == primary2_y16) {
+                                            green_primary_index = 2;
+                                        }
+                                        primary2_y_candidate =
+                                            (unsigned int)(primary_x_candidate < primary2_x_compare || primary1_x_compare == primary2_x_compare);
+                                        red_primary_index = 1;
+                                        if (primary_x_candidate < primary2_x_compare || primary1_x_compare == primary2_x_compare) {
+                                            red_primary_index = 2;
+                                        } else if (primary1_y_candidate <= primary2_y16) {
+                                            blue_primary_index = 0;
+                                            goto validate_sorted_primaries;
+                                        }
+                                    } else {
+                                        green_primary_index = 0;
+                                        primary_y_candidate = 1;
+                                        if (primary2_x_compare <= primary1_x_compare && primary_x_candidate != primary2_x_compare) {
+                                            red_primary_index = 1;
+                                            blue_primary_index = 2;
+                                            goto validate_sorted_primaries;
+                                        }
+                                        primary2_y_candidate = 1;
+                                        red_primary_index = 2;
+                                    }
+                                select_blue_primary_index:
+                                    blue_primary_index = (unsigned long)(primary_y_candidate & primary2_y_candidate);
+                                } else {
+                                    if (((unsigned int)primary1_y16 <= (unsigned int)primary0_y16 &&
+                                         primary_y_candidate != primary1_y_candidate) &&
+                                        (primary2_y16 <= primary_y_candidate && primary0_y_candidate != primary2_y_candidate)) {
+                                        red_primary_index = 0;
+                                        primary2_y_candidate = 0;
+                                        green_primary_index = 0;
+                                        primary_y_candidate = 1;
+                                        goto select_blue_primary_index;
+                                    }
+                                    red_primary_index = 0;
+                                    green_primary_index = 1;
+                                    if (primary1_y_candidate < primary2_y_candidate || primary1_y_compare == primary2_y_candidate) {
+                                        green_primary_index = 2;
+                                    }
+                                    blue_primary_index = 1;
+                                    if (primary1_y_candidate >= primary2_y_candidate && primary1_y_compare != primary2_y_candidate) {
+                                        blue_primary_index = 2;
+                                    }
+                                }
+                            validate_sorted_primaries:
+                                hdr_max_luminance16 = fixed_load_le16(packets + 0x16);
+                                hdr_min_luminance_hi = packets[0x19];
+                                hdr_min_luminance_lo = packets[0x18];
+                                if (((((hdr_max_luminance16 == 0) ||
+                                       ((*(unsigned int *)((long)&work->temporary.primaries[0] +
+                                                           red_primary_index * 4) &
+                                         0xfffe) != 0x8a26)) ||
+                                      ((work->primary_y[red_primary_index] & 0xfffe) != 0x3976)) ||
+                                     ((((*(unsigned int *)((long)&work->temporary.primaries[0] +
+                                                           green_primary_index * 4) &
+                                         0xfffe) != 0x2108 ||
+                                        ((work->primary_y[green_primary_index] & 0xfffe) != 0x9b7e)) ||
+                                       (((*(unsigned int *)((long)&work->temporary.primaries[0] +
+                                                            blue_primary_index * 4) &
+                                          0xfffe) != 0x19fa ||
+                                         (((work->primary_y[blue_primary_index] & 0xfffe) != 0x846 ||
+                                           ((white_x_lo & 0xfe) != 0xee)))))))) ||
+                                    (((white_y_lo & 0xfe) != 0x30 || (packets[0x1a] < 0xfe)))) {
+                                    *metadata_configuration = 0;
+                                    *decoded_header = 0;
+                                } else {
+                                    has_metadata = (packets[0x1c] & 0xfe) == 0xaa;
+                                    primary2_y_candidate = (unsigned int)has_metadata;
+                                    *metadata_configuration = primary2_y_candidate;
+                                    *decoded_header = primary2_y_candidate;
+                                    if (has_metadata)
+                                        goto finish_packet_decoding;
+                                }
+                                primary0_x_slot = (int *)(source_parameters + source_index * 0xa0 + 0x14);
+                                if ((*primary0_x_slot == 0) &&
+                                    (primary0_y_slot =
+                                         (int *)(source_parameters + source_index * 0xa0 + 0x18),
+                                     *primary0_y_slot == 0)) {
+                                    hdr_source_address = source_parameters + source_index * 0xa0;
+                                    primary1_x_coordinate =
+                                        *(int *)((long)&work->temporary.primaries[0] + green_primary_index * 4);
+                                    primary2_y_candidate = work->primary_y[green_primary_index];
+                                    (*(unsigned long *)((unsigned char *)&primary0_x_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary0_x_product + 0)) =
+                                        ((long)*(int *)((long)&work->temporary.primaries[0] +
+                                                        red_primary_index * 4) &
+                                         0x3fffffffffU)
+                                        << 0x16;
+                                    (*(unsigned long *)((unsigned char *)&primary0_y_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary0_y_product + 0)) =
+                                        ((long)(int)work->primary_y[red_primary_index] & 0x3fffffffffU)
+                                        << 0x16;
+                                    primary2_x_coordinate =
+                                        *(int *)((long)&work->temporary.primaries[0] + blue_primary_index * 4);
+                                    primary_y_candidate = work->primary_y[blue_primary_index];
+                                    *primary0_x_slot = SUB164(primary0_x_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    (*(unsigned long *)((unsigned char *)&primary1_x_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary1_x_product + 0)) =
+                                        ((long)primary1_x_coordinate & 0x3fffffffffU) << 0x16;
+                                    (*(unsigned long *)((unsigned char *)&primary1_y_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary1_y_product + 0)) =
+                                        ((long)(int)primary2_y_candidate & 0x3fffffffffU) << 0x16;
+                                    *primary0_y_slot = SUB164(primary0_y_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    (*(unsigned long *)((unsigned char *)&primary2_x_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary2_x_product + 0)) =
+                                        ((long)primary2_x_coordinate & 0x3fffffffffU) << 0x16;
+                                    (*(unsigned long *)((unsigned char *)&primary2_y_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&primary2_y_product + 0)) =
+                                        ((long)(int)primary_y_candidate & 0x3fffffffffU) << 0x16;
+                                    *(int *)(hdr_source_address + 0x1c) =
+                                        SUB164(primary1_x_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    *(int *)(hdr_source_address + 0x20) =
+                                        SUB164(primary1_y_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    *(int *)(hdr_source_address + 0x24) =
+                                        SUB164(primary2_x_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    *(int *)(hdr_source_address + 0x28) =
+                                        SUB164(primary2_y_product * ZEXT816(0x14f8b588e368f085), 9);
+                                    (*(unsigned long *)((unsigned char *)&white_x_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&white_x_product + 0)) =
+                                        (unsigned long)white_x_lo << 0x1a | (unsigned long)white_x_hi << 0x22;
+                                    (*(unsigned long *)((unsigned char *)&white_y_product + 8)) = 0;
+                                    (*(unsigned long *)((unsigned char *)&white_y_product + 0)) =
+                                        (unsigned long)white_y_lo << 0x1a | (unsigned long)white_y_hi << 0x22;
+                                    *(int *)(hdr_source_address + 0x2c) =
+                                        SUB164(white_x_product * ZEXT816(0x14f8b588e3690), 8);
+                                    *(int *)(hdr_source_address + 0x30) =
+                                        SUB164(white_y_product * ZEXT816(0x14f8b588e3690), 8);
+                                    *(int *)(hdr_source_address + 100) = (int)((unsigned int)hdr_min_luminance_hi << 0x1a |
+                                                                   (unsigned int)hdr_min_luminance_lo << 0x12) /
+                                                             10000;
+                                    *(int *)(hdr_source_address + 0x68) =
+                                        SUB164(ZEXT216(hdr_max_luminance16) * (unsigned __int128)0x40000 *
+                                                   ZEXT816(0x68db8bac710cc),
+                                               8);
+                                }
+                                goto finish_packet_decoding;
+                            }
+                            packet_version = '\x01';
+                        }
+                    } else {
+                        packet_version = packets[1];
+                    }
+                reject_packet_header:
+                    _printk("error EMP: %x, %x, %x, %x, %x, %x, %x\n", packet_type, packet_version, packets[2],
+                            packets[3], packets[4], packets[5], packets[6]);
+                    commit_status = 0xfffffffb;
+                    {
+                        *status = commit_status;
+                        return 0;
+                    }
+                }
+                packet_version = packets[1];
+                if (packet_version != '\x01')
+                    goto reject_packet_header;
+                packet_identifier = (unsigned int)packets[6] << 0x10 | (unsigned int)packets[5] << 8 |
+                         (unsigned int)packets[4];
+                if (packet_identifier == 0xc03) {
+                    if (((((packets[2] != '\x18') || (packets[9] != '\0')) ||
+                          (packets[10] != '\0')) ||
+                         ((((packets[0xb] != '\0' || (packets[0xc] != '\0')) ||
+                            ((packets[0xd] != '\0' ||
+                              ((packets[0xe] != '\0' || (packets[0xf] != '\0')))))) ||
+                           (packets[0x10] != '\0')))) ||
+                        (((((((packets[0x11] != '\0' || (packets[0x12] != '\0')) ||
+                              (packets[0x13] != '\0')) ||
+                             ((packets[0x14] != '\0' || (packets[0x15] != '\0')))) ||
+                            (packets[0x16] != '\0')) ||
+                           ((packets[0x17] != '\0' || (packets[0x18] != '\0')))) ||
+                          ((packets[0x19] != '\0' ||
+                            ((packets[0x1a] != '\0' || (packets[0x1b] != '\0'))))))))
+                        goto reject_vsif_packet;
+                } else {
+                    if ((packet_identifier != 0xd046) || (packets[2] != '\x1b')) {
+                    reject_vsif_packet:
+                        commit_status = 0xfffffffb;
+                        {
+                            *status = commit_status;
+                            return 0;
+                        }
+                    }
+                    dovi_parse_vsif_from_PB4(packets + 7, decoded_header);
+                }
+            finish_packet_decoding:
+                configuration_value = *(int *)((long)&work->metadata_sizes.pairs[0] + source_index * 4);
+            select_decoded_metadata:
+                if (configuration_value == 0) {
+                    source_address = source_parameters + source_index * 0xa0;
+                    has_metadata = 1;
+                    commit_status = 0;
+                    signal_word = *(unsigned int *)(source_address + 0x40);
+                    work->metadata[source_index] = *(long *)(source_address + 0x38);
+                    goto store_metadata_size;
+                }
+                commit_status = 0;
+                has_metadata = 1;
             }
+            source_address = source_parameters + source_index * 0xa0;
+            *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xb4) =
+                *(unsigned int *)(source_address + 4);
+            *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x17) = *source_or_signal_words;
+            bit_depth_slot = (int *)(source_address + 0x58);
+            *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x1a) =
+                (unsigned int)(*bit_depth_slot == 8);
+            if (has_metadata) {
+                if ((*input_mode_slot == 1) && (*decoded_header == 1)) {
+                    source_address = source_parameters + source_index * 0xa0;
+                    configuration_word = (unsigned int)(*(int *)(source_address + 0x60) != 0);
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xc4) = configuration_word;
+                    configuration_value = (unsigned int)(*(int *)(source_address + 0x5c) != 0) << 1;
+                    if (*(int *)(source_address + 0x5c) == 1) {
+                        configuration_value = 1;
+                    }
+                    *(int *)(control + (unsigned long)source_number * 0x24 + 0x19) = configuration_value;
+                    configuration_value = *(int *)(source_address + 0x5c);
+                    configuration_result = 0;
+                    if (configuration_value != 0) {
+                        if (configuration_value == 1) {
+                            configuration_result = 2;
+                        } else {
+                            configuration_result = (unsigned int)(configuration_value != 2);
+                        }
+                    }
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xcc) = configuration_result;
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x34) = 1;
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x2a) = configuration_word;
+                    configuration_value = *bit_depth_slot;
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0x154) = 3;
+                    *(int *)((long)control + (unsigned long)source_number * 0x120 + 0xd4) = configuration_value;
+                    source_or_signal_words = (unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xe4);
+                    configuration_word = decoded_header[9];
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0x10c) = 0;
+                    if (configuration_word == 1) {
+                        *source_or_signal_words = 0;
+                        *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x1c) = 3;
+                    } else {
+                        *source_or_signal_words = 1;
+                        control[(unsigned long)source_number * 0x24 + 0x1d] = control[0x294];
+                        *(int *)(control + (unsigned long)source_number * 0x24 + 0x1e) =
+                            (int)control[0x295];
+                        fixed_store_le64((unsigned char *)control + (unsigned long)source_number * 0x120 +
+                                             0xf4,
+                                         fixed_load_le64((unsigned char *)control + 0x14ac));
+                        sink_white_x_word = control[0x297];
+                        *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xfc) =
+                            *(unsigned int *)((long)control + 0x14b4);
+                        *(int *)(control + (unsigned long)source_number * 0x24 + 0x20) = (int)sink_white_x_word;
+                        *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0x104) =
+                            *(unsigned int *)((long)control + 0x14bc);
+                    }
+                    sink_luminance_pair = fixed_signed64(fixed_load_le64((unsigned char *)control + 0x1494));
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x36) =
+                        *(unsigned int *)((long)control + 0x149c);
+                    control[(unsigned long)source_number * 0x24 + 0x35] = sink_luminance_pair;
+                    configuration_value = *input_mode_slot;
+                } else if (*(int *)(source_parameters + source_index * 0xa0 + 0x10) == 0) {
+                reload_input_mode:
+                    configuration_value = *input_mode_slot;
+                } else {
+                    source_address = source_parameters + source_index * 0xa0;
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0x10c) = 0;
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xe4) = 1;
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x1d) =
+                        *(unsigned int *)(source_address + 0x14);
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xec) =
+                        *(unsigned int *)(source_address + 0x18);
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x1e) =
+                        *(unsigned int *)(source_address + 0x1c);
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xf4) =
+                        *(unsigned int *)(source_address + 0x20);
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x1f) =
+                        *(unsigned int *)(source_address + 0x24);
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xfc) =
+                        *(unsigned int *)(source_address + 0x28);
+                    *(unsigned int *)(control + (unsigned long)source_number * 0x24 + 0x20) =
+                        *(unsigned int *)(source_address + 0x2c);
+                    *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0x104) =
+                        *(unsigned int *)(source_address + 0x30);
+                    configuration_value = *input_mode_slot;
+                }
+                if (((configuration_value != 0) && (configuration_value != 2)) && ((configuration_value != 1 || (*decoded_header != 0))))
+                    goto commit_without_metadata;
+                if (*(int *)(source_parameters + source_index * 0xa0 + 0x44) == 0) {
+                    dovi_dm_ParseMds(
+                        (unsigned char *)work->metadata[source_index],
+                        *(unsigned int *)((long)&work->metadata_sizes.pairs[0] + source_index * 4),
+                        (unsigned int *)control[source_index + 1], source_number, input_count_slot, *control);
+                    metadata_configuration = (unsigned int *)control[source_index + 1];
+                } else {
+                    metadata_configuration = (unsigned int *)0xffffffffffffffff;
+                    control[source_index + 1] = -1;
+                }
+            } else {
+                source_address = source_parameters + source_index * 0xa0;
+                *(unsigned int *)((long)control + (unsigned long)source_number * 0x120 + 0xc4) =
+                    (unsigned int)(*(int *)(source_address + 0x60) != 0);
+                configuration_value = (unsigned int)(*(int *)(source_address + 0x5c) != 0) << 1;
+                if (*(int *)(source_address + 0x5c) == 1) {
+                    configuration_value = 1;
+                }
+                *(int *)(control + (unsigned long)source_number * 0x24 + 0x19) = configuration_value;
+                configuration_value = *(int *)(source_address + 0x5c);
+                signal_word = 0;
+                if (configuration_value != 0) {
+                    if (configuration_value == 1) {
+                        signal_word = 2;
+                    } else if (configuration_value != 2) {
+                        signal_word = 1;
+                    }
+                }
+                signal_number = (unsigned long)source_number;
+                signal_offset = signal_number * 0x120;
+                signal_source_address = source_parameters + source_index * 0xa0;
+                *(unsigned int *)((long)control + signal_offset + 0xcc) = signal_word;
+                signal_word = 3;
+                if (*(int *)(signal_source_address + 0x6c) != 2) {
+                    signal_word = 0;
+                }
+                if (*(int *)(signal_source_address + 0x6c) == 1) {
+                    signal_word = 1;
+                }
+                *(unsigned int *)(control + signal_number * 0x24 + 0x34) = signal_word;
+                *(unsigned int *)((long)control + signal_offset + 0x1a4) =
+                    *(unsigned int *)(signal_source_address + 0x70);
+                configuration_value = *(int *)(signal_source_address + 0x74);
+                *(unsigned int *)((long)control + signal_offset + 0xe4) = 1;
+                control[signal_number * 0x24 + 0x21] = 0x1a;
+                *(unsigned int *)(control + signal_number * 0x24 + 0x2a) = (unsigned int)(configuration_value != 0);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x1d) =
+                    *(unsigned int *)(signal_source_address + 0x14);
+                *(unsigned int *)((long)control + signal_offset + 0xec) = *(unsigned int *)(signal_source_address + 0x18);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x1e) =
+                    *(unsigned int *)(signal_source_address + 0x1c);
+                *(unsigned int *)((long)control + signal_offset + 0xf4) = *(unsigned int *)(signal_source_address + 0x20);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x1f) =
+                    *(unsigned int *)(signal_source_address + 0x24);
+                *(unsigned int *)((long)control + signal_offset + 0xfc) = *(unsigned int *)(signal_source_address + 0x28);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x20) =
+                    *(unsigned int *)(signal_source_address + 0x2c);
+                signal_word = *(unsigned int *)(signal_source_address + 0x30);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x2b) = 1;
+                *(unsigned int *)((long)control + signal_offset + 0x104) = signal_word;
+                *(int *)(control + signal_number * 0x24 + 0x2e) = (int)*(short *)(signal_source_address + 0x98);
+                *(unsigned short *)((long)control + signal_offset + 0x15c) =
+                    *(unsigned short *)(signal_source_address + 0x78);
+                *(unsigned short *)((long)control + signal_offset + 0x15e) =
+                    *(unsigned short *)(signal_source_address + 0x7a);
+                *(unsigned short *)(control + signal_number * 0x24 + 0x2c) =
+                    *(unsigned short *)(signal_source_address + 0x7c);
+                *(unsigned short *)((long)control + signal_offset + 0x162) =
+                    *(unsigned short *)(signal_source_address + 0x7e);
+                *(unsigned short *)((long)control + signal_offset + 0x164) =
+                    *(unsigned short *)(signal_source_address + 0x80);
+                *(unsigned short *)((long)control + signal_offset + 0x166) =
+                    *(unsigned short *)(signal_source_address + 0x82);
+                *(unsigned short *)(control + signal_number * 0x24 + 0x2d) =
+                    *(unsigned short *)(signal_source_address + 0x84);
+                *(unsigned short *)((long)control + signal_offset + 0x16a) =
+                    *(unsigned short *)(signal_source_address + 0x86);
+                matrix_last16 = *(unsigned short *)(signal_source_address + 0x88);
+                *(unsigned int *)((long)control + signal_offset + 0x174) = 1;
+                *(unsigned int *)(control + signal_number * 0x24 + 0x32) = 0;
+                *(unsigned short *)((long)control + signal_offset + 0x16c) = matrix_last16;
+                *(unsigned int *)(control + signal_number * 0x24 + 0x2f) =
+                    *(unsigned int *)(signal_source_address + 0x8c);
+                *(unsigned int *)((long)control + signal_offset + 0x17c) =
+                    *(unsigned int *)(signal_source_address + 0x90);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x30) =
+                    *(unsigned int *)(signal_source_address + 0x94);
+                *(int *)((long)control + signal_offset + 0xd4) = *bit_depth_slot;
+                configuration_word = *(unsigned int *)(signal_source_address + 100);
+                *(unsigned int *)(control + signal_number * 0x24 + 0x35) = configuration_word;
+                *(unsigned int *)((long)control + signal_offset + 0x1ac) =
+                    *(unsigned int *)(signal_source_address + 0x68);
+                configuration_result = dovi_LToPQ12(configuration_word);
+                configuration_word = *(unsigned int *)((long)control + signal_offset + 0x1ac);
+                *(short *)(control + signal_number * 0x24 + 0x36) = (short)configuration_result;
+                configuration_word = dovi_LToPQ12(configuration_word);
+                *(short *)((long)control + signal_offset + 0x1b2) = (short)configuration_word;
+                *(int *)(control + (unsigned long)source_number + 0x11b) = *(int *)(signal_source_address + 0x9c) << 7;
+                if (0xc < source_index << 2) {
+                trap_source_bounds:
+                    /* WARNING: Does not return */
+                    dm_limit_trap();
+                }
+                if (*source_status_slot == 0)
+                    goto reload_input_mode;
+            commit_without_metadata:
+                metadata_configuration = (unsigned int *)0x0;
+            }
+            configuration_result = dovi_dm_Commit2DmKs(source_number, input_count_slot, metadata_configuration, (unsigned int *)*control);
+            configuration_word = 0;
+            if (source_index32 != primary_input_index) {
+                configuration_word = source_number;
+            }
+            commit_status = configuration_result | commit_status;
+            if (configuration_word == primary_input_index) {
+                configuration_word = configuration_word + 1;
+            }
+            source_index = (unsigned long)configuration_word;
+        } while ((int)configuration_word < (int)(unsigned int)input_count);
+    }
+    *status = commit_status;
+    return 1;
+}
+
+static void update_commit_source_flags(long *control, long source_parameters,
+                                       unsigned long primary_input, const unsigned char *vsvdb,
+                                       struct dovi_commit_workspace *work)
+{
+    unsigned int extension_length_pairs;
+    int input_mode;
+    int source_transfer;
+    unsigned char auxiliary_byte2;
+    unsigned int source_signal_code;
+    long metadata_address;
+    const unsigned char *last_auxiliary_extension;
+    unsigned int extensions_remaining;
+    const unsigned char *selected_auxiliary_extension;
+    const unsigned char *extension;
+    int *decoded_header;
+    if (*(int *)((long)&work->source_flags.pairs[0] + primary_input * 4) == 0) {
+        *(unsigned int *)((long)control + 0xd24) = 0;
+        if (vsvdb != (unsigned char *)0x0) {
+            *(unsigned int *)((long)control + 0x1464) = 0;
+            fixed_store_le32((unsigned char *)control + 0x1467, 0);
+            input_mode = *(int *)(source_parameters + primary_input * 0xa0 + 0xc);
+            if (input_mode == 0) {
+            scan_auxiliary_extensions:
+                metadata_address = work->metadata[primary_input];
+                if ((metadata_address != 0) && (extensions_remaining = (unsigned int)*(unsigned char *)(metadata_address + 0x46),
+                                      *(unsigned char *)(metadata_address + 0x46) != 0)) {
+                    extension = (const unsigned char *)(metadata_address + 0x47);
+                    last_auxiliary_extension = (unsigned char *)0x0;
+                    do {
+                        extension_length_pairs = (fixed_load_le32(extension) & 0xff00ff00) >> 8 |
+                                (fixed_load_le32(extension) & 0xff00ff) << 8;
+                        selected_auxiliary_extension = extension + 5;
+                        if ((signed char)fixed_load_le32(extension + 4) != -1) {
+                            selected_auxiliary_extension = last_auxiliary_extension;
+                        }
+                        extension = extension + 5 + (extension_length_pairs >> 0x10 | extension_length_pairs << 0x10);
+                        extensions_remaining = extensions_remaining - 1;
+                        last_auxiliary_extension = selected_auxiliary_extension;
+                    } while (extensions_remaining != 0);
+                    if (selected_auxiliary_extension != (unsigned char *)0x0) {
+                        *(unsigned int *)((long)control + 0x1464) = 1;
+                        *(unsigned char *)(control + 0x28d) = *selected_auxiliary_extension;
+                        *(unsigned char *)((long)control + 0x1469) = selected_auxiliary_extension[1];
+                        auxiliary_byte2 = selected_auxiliary_extension[2];
+                        goto store_auxiliary_byte2;
+                    }
+                }
+            } else if (input_mode == 1) {
+                decoded_header = (int *)work->decoded_headers[primary_input];
+                if (*decoded_header == 0)
+                    goto scan_auxiliary_extensions;
+                if (decoded_header[6] == 0)
+                    return;
+                *(unsigned int *)((long)control + 0x1464) = 1;
+                *(char *)(control + 0x28d) = (signed char)decoded_header[7];
+                *(unsigned char *)((long)control + 0x1469) =
+                    *(unsigned char *)((long)decoded_header + 0x1d);
+                auxiliary_byte2 = *(unsigned char *)((long)decoded_header + 0x1e);
+            store_auxiliary_byte2:
+                *(unsigned char *)((long)control + 0x146a) = auxiliary_byte2;
+            }
+        }
+    } else {
+        source_transfer = *(int *)(source_parameters + primary_input * 0xa0 + 0x6c);
+        if (source_transfer == 2) {
+            source_signal_code = 4;
         } else {
-            w32(context, 4184u, 0u);
-            hdr_target = 1;
-        }
-        if (!hdr_target) {
-            w32(context, 4144u, (unsigned int)mode);
-            w32(t, 40u, 1u);
-            if (mode == 5) {
-                w32(t, 16u, 3u);
-                w32(t, 48u, 0u);
-                w32(t, 72u, 2u);
-                w32(t, 44u, 1u);
-            } else {
-                w32(context, 4156u, 1u);
-                w32(context, 4184u, 1u);
-                w32(t, 120u, 1u);
-                w32(t, 156u, 0u);
-                w32(t, 44u, r32(t, 16u) == 1u);
-                for (i = 0u; i < 6u; ++i)
-                    w32(t, 124u + i * 4u, r32(target, 56u + i * 4u));
-                w32(t, 152u, 0x150e560u);
-                w32(t, 148u, 0x140346eu);
-                w32(t, 72u, 3u);
-            }
-            if (mode == 2 || input == 2 || (input == 0 && priority != 0))
-                use_target = 1;
-            else if (input == 1)
-                set_target_limits(config, r32(config, 572u), r32(config, 576u), r16(config, 580u),
-                                  r16(config, 582u), 1u);
-            else if (input == 0) {
-                min = dovi_PQ12ToL((unsigned short)minpq);
-                w32(t, 184u, min);
-                max = dovi_PQ12ToL((unsigned short)maxpq);
-                w32(t, 188u, max);
-                w16(t, 192u, minpq);
-                w16(t, 194u, maxpq);
-                w32(config, 12u, min_linear(r32(target, 40u)));
-                w32(config, 8u, 1u);
-                w32(config, 16u, max_linear(r32(target, 44u)));
-            }
-            if (use_target)
-                set_target_limits(config, min_linear(r32(target, 40u)),
-                                  max_linear(r32(target, 44u)), r32(target, 48u), r32(target, 52u),
-                                  0u);
-        }
-    }
-    if (output == 1 || hdr_target) {
-        w32(context, 4144u, 2u);
-        w32(t, 20u, 2u);
-        w32(t, 24u, 0u);
-        w32(t, 40u, 1u);
-        w32(t, 48u, 3u);
-        w32(t, 72u, 3u);
-        w32(t, 44u, 0u);
-        if (input == 2 || (input == 0 && r32(context, 4140u) == 0u)) {
-            min = min_linear(r32(target, 40u));
-            w32(t, 184u, min);
-            max = max_linear(r32(target, 44u));
-            w32(t, 188u, max);
-            minpq = dovi_LToPQ12(min);
-            w16(t, 192u, minpq);
-            maxpq = dovi_LToPQ12(r32(t, 188u));
-            set_target_limits(config, r32(t, 184u), r32(t, 188u), minpq, maxpq, 0u);
-        } else if (input == 1)
-            set_target_limits(config, r32(config, 572u), r32(config, 576u), r16(config, 580u),
-                              r16(config, 582u), 1u);
-        else if (input == 0) {
-            min = dovi_PQ12ToL((unsigned short)minpq);
-            w32(t, 184u, min);
-            max = dovi_PQ12ToL((unsigned short)maxpq);
-            set_target_limits(config, r32(t, 184u), max, minpq, maxpq, 1u);
-        }
-    } else if (output != 0 && (((unsigned int)output - 2u) & 0xfffffffdu) == 0u) {
-        w32(context, 4144u, 4u);
-        w32(t, 20u, 2u);
-        w32(t, 24u, 0u);
-        w32(t, 40u, 0u);
-        w32(t, 48u, output == 4 ? 3u : 2u);
-        w32(t, 72u, output == 4 ? 3u : 2u);
-        w16(t, 70u, 0x999au);
-        w32(t, 44u, 0u);
-        w32(t, 188u, 0x1900000u);
-        w32(t, 184u, 0x51eu);
-        minpq = dovi_LToPQ12(0x51eu);
-        w16(t, 192u, minpq);
-        maxpq = dovi_LToPQ12(r32(t, 188u));
-        set_target_limits(config, r32(t, 184u), r32(t, 188u), minpq, maxpq, input == 2);
-    }
-    w16(t, 196u, 42u);
-    commit_config(context, config);
-    if (input == 0) {
-        if (output == 1 && r32(context, 4140u) != 0u) {
-            count = m[70u];
-            write = 0u;
-            for (i = 0u; i < count; ++i)
-                if ((unsigned char)(m[71u + i * 261u + 4u] - 5u) <= 1u) {
-                    copy_bytes(m + 71u + write * 261u, m + 71u + i * 261u, 261u);
-                    ++write;
+            source_signal_code = 1;
+            if (source_transfer != 1) {
+                if (*(int *)(source_parameters + primary_input * 0xa0 + 0x58) == 8) {
+                    source_signal_code = 2;
+                } else {
+                    source_signal_code = 8;
                 }
-            m[70u] = (unsigned char)write;
+            }
         }
-        metadata_extensions(context, metadata);
-        ret = dovi_dm_CommitMds(rp(context, 8u), rp(context, 0u));
-        (void)dovi_encode_composer_registers(composition, reg1, r32(source, 12u),
-                                             r32(source, 16u));
+        *(unsigned int *)((long)control + 0xd24) = source_signal_code;
+    }
+}
+
+static void pack_commit_input_registers(long *control, long source_parameters,
+                                        unsigned char input_count, long core1_registers,
+                                        long core2_registers, long display_luts,
+                                        struct dovi_commit_workspace *work)
+{
+    long last_pivot_address;
+    unsigned short matrix_tail_high;
+    unsigned short matrix_tail_low;
+    int core1_slot;
+    unsigned int *source_words;
+    unsigned long source_index;
+    long register_address;
+    unsigned int input_mode;
+    unsigned int pivot_index;
+    unsigned int fraction_mask32;
+    unsigned int graphics_flags;
+    unsigned int packed_output_word;
+    long *composer_configuration;
+    unsigned int *input_mode_slot;
+    long channel_address;
+    unsigned long coefficient_denom;
+    long composer_address;
+    long source_address;
+    long kernel_address;
+    unsigned long nlq_coefficient;
+    unsigned long nlq_coefficient_u;
+    int pivot_value;
+    int source_flag;
+    long pivot_count_offset;
+    unsigned long integer_mask64;
+    int core2_slot;
+    if (input_count != 0) {
+        source_index = 0;
+        core2_slot = 0;
+        core1_slot = 0;
+        do {
+            source_words = (unsigned int *)(source_parameters + source_index * 0xa0);
+            register_address = core1_registers + (long)core1_slot * 0x3c8;
+            input_mode_slot = source_words + 3;
+            input_mode = *input_mode_slot;
+            if (input_mode == 1) {
+                control[0x1b7] = 0;
+                fixed_store_le64((unsigned char *)control + 0xe24, 0x100000000);
+                fixed_store_le64((unsigned char *)control + 0xd4c, 0x3ff00000000);
+                control[0x1ae] = 0x3ff00000000;
+                *(unsigned int *)((long)control + 0xde4) = 1;
+                control[0x1a6] = 0xa0000000c;
+                fixed_store_le64((unsigned char *)control + 0xf44, 0x180600000000);
+                control[0x1b8] = 0x100000000;
+                control[0x1a7] = 0x1700000000;
+                fixed_store_le64((unsigned char *)control + 0xe84, 0x100000000);
+                *(unsigned int *)((long)control + 0xe04) = 1;
+                fixed_store_le16((unsigned char *)control + 0x11cd, 1);
+                fixed_store_le64((unsigned char *)control + 0xfa4, 0x180600000000);
+                *(unsigned int *)((long)control + 0xee4) = 0;
+                control[0x1a8] = 0x200000002;
+                fixed_store_le64((unsigned char *)control + 0xd94, 0x3ff00000000);
+                *(unsigned int *)((long)control + 0x1004) = 0;
+                *(unsigned int *)(control + 0x1a9) = 2;
+            select_synthetic_composer:
+                *(unsigned int *)(control + 0x1dd) = 1;
+                *(unsigned int *)(control + 0x201) = 0x1806;
+                composer_configuration = control + 0x1a6;
+            encode_selected_composer:
+            {
+                const unsigned char *source_dimensions =
+                    (const unsigned char *)(source_parameters + source_index * 0xa0);
+                unsigned int width = fixed_load_le32(source_dimensions);
+                unsigned int height = fixed_load_le32(source_dimensions + 4);
+                (void)dovi_encode_composer_registers(composer_configuration, (void *)register_address, width, height);
+            }
+                input_mode = *input_mode_slot;
+            } else if (input_mode == 0) {
+                if (source_index < 4) {
+                    if (*(int *)((long)&work->source_flags.pairs[0] + source_index * 4) != 0) {
+                        fixed_store_le64((unsigned char *)control + 0xe24, 0x100000000);
+                        fixed_store_le64((unsigned char *)control + 0xd4c, 0x3ff00000000);
+                        control[0x1b7] = 0;
+                        control[0x1ae] = 0x3ff00000000;
+                        control[0x1a6] = 0xa0000000c;
+                        fixed_store_le64((unsigned char *)control + 0xf44, 0x180600000000);
+                        *(unsigned int *)((long)control + 0xde4) = 1;
+                        control[0x1a7] = 0x1700000000;
+                        fixed_store_le64((unsigned char *)control + 0xe84, 0x100000000);
+                        control[0x1b8] = 0x100000000;
+                        fixed_store_le16((unsigned char *)control + 0x11cd, 1);
+                        fixed_store_le64((unsigned char *)control + 0xfa4, 0x180600000000);
+                        *(unsigned int *)((long)control + 0xe04) = 1;
+                        control[0x1a8] = 0x200000002;
+                        fixed_store_le64((unsigned char *)control + 0xd94, 0x3ff00000000);
+                        *(unsigned int *)((long)control + 0xee4) = 0;
+                        *(unsigned int *)(control + 0x1a9) = 2;
+                        *(unsigned int *)((long)control + 0x1004) = 0;
+                        goto select_synthetic_composer;
+                    }
+                    if (*(int *)control[0x1a3] != 0) {
+                        composer_address = *(long *)(source_parameters + source_index * 0xa0 + 0x48);
+                        if (*(int *)(composer_address + 4) == 8) {
+                            pivot_count_offset = 0x10;
+                            *(unsigned int *)(composer_address + 4) = 10;
+                            channel_address = composer_address;
+                            do {
+                                pivot_index = *(unsigned int *)(composer_address + pivot_count_offset);
+                                if (pivot_index == 0)
+                                    dm_limit_trap();
+                                pivot_value = *(int *)(channel_address + 0x1c) << 2;
+                                *(int *)(channel_address + 0x1c) = pivot_value;
+                                if (pivot_index == 1) {
+                                    pivot_index = 0;
+                                } else {
+                                    pivot_value = *(int *)(channel_address + 0x20) << 2;
+                                    *(int *)(channel_address + 0x20) = pivot_value;
+                                    if (pivot_index < 3) {
+                                        pivot_index = 1;
+                                    } else {
+                                        pivot_value = *(int *)(channel_address + 0x24) << 2;
+                                        *(int *)(channel_address + 0x24) = pivot_value;
+                                        if (pivot_index == 3) {
+                                            pivot_index = 2;
+                                        } else {
+                                            pivot_value = *(int *)(channel_address + 0x28) << 2;
+                                            *(int *)(channel_address + 0x28) = pivot_value;
+                                            if (pivot_index < 5) {
+                                                pivot_index = 3;
+                                            } else {
+                                                pivot_value = *(int *)(channel_address + 0x2c) << 2;
+                                                *(int *)(channel_address + 0x2c) = pivot_value;
+                                                if (pivot_index == 5) {
+                                                    pivot_index = 4;
+                                                } else {
+                                                    *(int *)(channel_address + 0x30) =
+                                                        *(int *)(channel_address + 0x30) << 2;
+                                                    pivot_index = *(unsigned int *)(composer_address + pivot_count_offset);
+                                                    if (pivot_index < 7) {
+                                                        pivot_index = pivot_index - 1;
+                                                        if (8 < pivot_index)
+                                                            dm_limit_trap();
+                                                        pivot_value =
+                                                            *(int *)(channel_address +
+                                                                     (unsigned long)pivot_index * 4 +
+                                                                     0x1c);
+                                                    } else {
+                                                        pivot_value = *(int *)(channel_address + 0x34) << 2;
+                                                        *(int *)(channel_address + 0x34) = pivot_value;
+                                                        if (pivot_index == 7) {
+                                                            pivot_index = 6;
+                                                        } else {
+                                                            pivot_value = *(int *)(channel_address + 0x38) << 2;
+                                                            *(int *)(channel_address + 0x38) = pivot_value;
+                                                            if (pivot_index < 9) {
+                                                                pivot_index = 7;
+                                                            } else {
+                                                                pivot_value = *(int *)(channel_address + 0x3c)
+                                                                         << 2;
+                                                                *(int *)(channel_address + 0x3c) = pivot_value;
+                                                                if (pivot_index != 9)
+                                                                    dm_limit_trap();
+                                                                pivot_index = 8;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                last_pivot_address = channel_address + (unsigned long)pivot_index * 4;
+                                pivot_count_offset = pivot_count_offset + 4;
+                                channel_address = channel_address + 0x24;
+                                *(int *)(last_pivot_address + 0x1c) = pivot_value + 3;
+                            } while (pivot_count_offset != 0x1c);
+                        }
+                        if (*(int *)(composer_address + 8) == 8) {
+                            coefficient_denom = (unsigned long)*(unsigned int *)(composer_address + 0xc);
+                            integer_mask64 = ~0ul << (coefficient_denom & 0x3f);
+                            fraction_mask32 = ~0u << (*(unsigned int *)(composer_address + 0xc) & 0x1f);
+                            nlq_coefficient = ((long)*(int *)(composer_address + 0x4ac) << (coefficient_denom & 0x3f) |
+                                      (unsigned long)*(unsigned int *)(composer_address + 0x4d0)) >>
+                                     2;
+                            *(int *)(composer_address + 0x4a0) = *(int *)(composer_address + 0x4a0) << 2;
+                            *(unsigned int *)(composer_address + 0x4d0) =
+                                (unsigned int)nlq_coefficient & (fraction_mask32 ^ 0xffffffff);
+                            nlq_coefficient_u = ((long)*(int *)(composer_address + 0x4b8) << (coefficient_denom & 0x3f) |
+                                      (unsigned long)*(unsigned int *)(composer_address + 0x4dc)) >>
+                                     2;
+                            *(int *)(composer_address + 0x4ac) = (int)((nlq_coefficient & integer_mask64) >> (coefficient_denom & 0x3f));
+                            *(int *)(composer_address + 0x4a4) = *(int *)(composer_address + 0x4a4) << 2;
+                            *(int *)(composer_address + 0x4b8) = (int)((nlq_coefficient_u & integer_mask64) >> (coefficient_denom & 0x3f));
+                            nlq_coefficient = ((long)*(int *)(composer_address + 0x4c4) << (coefficient_denom & 0x3f) |
+                                      (unsigned long)*(unsigned int *)(composer_address + 0x4e8)) >>
+                                     2;
+                            *(unsigned int *)(composer_address + 0x4dc) =
+                                (unsigned int)nlq_coefficient_u & (fraction_mask32 ^ 0xffffffff);
+                            *(int *)(composer_address + 0x4a8) = *(int *)(composer_address + 0x4a8) << 2;
+                            *(unsigned int *)(composer_address + 8) = 10;
+                            *(int *)(composer_address + 0x4c4) = (int)((nlq_coefficient & integer_mask64) >> (coefficient_denom & 0x3f));
+                            *(unsigned int *)(composer_address + 0x4e8) =
+                                (unsigned int)nlq_coefficient & (fraction_mask32 ^ 0xffffffff);
+                        }
+                    }
+                    composer_configuration = *(long **)(source_parameters + source_index * 0xa0 + 0x48);
+                    goto encode_selected_composer;
+                }
+                dm_limit_trap();
+            }
+            if (input_mode == 2) {
+                work->temporary.primaries[2] = 0;
+                work->temporary.primaries[3] = 0;
+                work->temporary.primaries[0] = 0;
+                work->temporary.primaries[1] = 0;
+                dovi_GetPrimaries(1, &work->temporary.primaries[0]);
+                if (*(int *)(source_parameters + source_index * 0xa0 + 0x68) == 0x1900000) {
+                    if ((((*(int *)(source_parameters + source_index * 0xa0 + 0x14) ==
+                           (int)work->temporary.primaries[0]) &&
+                          (*(unsigned int *)(source_parameters + source_index * 0xa0 + 0x18) ==
+                           (*(unsigned int *)((unsigned char *)&work->temporary.primaries[0] +
+                                              4)))) &&
+                         (*(int *)(source_parameters + source_index * 0xa0 + 0x1c) ==
+                          (int)work->temporary.primaries[1])) &&
+                        (((*(unsigned int *)(source_parameters + source_index * 0xa0 + 0x20) ==
+                               (*(unsigned int *)((unsigned char *)&work->temporary.primaries[1] +
+                                                  4)) &&
+                           (*(int *)(source_parameters + source_index * 0xa0 + 0x24) ==
+                            (int)work->temporary.primaries[2])) &&
+                          ((*(unsigned int *)(source_parameters + source_index * 0xa0 + 0x28) ==
+                                (*(unsigned int *)((unsigned char *)&work->temporary.primaries[2] +
+                                                   4)) &&
+                            (*(int *)(source_parameters + source_index * 0xa0 + 0x2c) ==
+                             (int)work->temporary.primaries[3])))))) {
+                        graphics_flags = (unsigned int)(*(unsigned int *)(source_parameters +
+                                                                  source_index * 0xa0 + 0x30) ==
+                                                (*(unsigned int *)((unsigned char *)&work->temporary
+                                                                       .primaries[3] +
+                                                                   4)))
+                                 << 4;
+                    } else {
+                        graphics_flags = 0;
+                    }
+                } else {
+                    graphics_flags = 0;
+                }
+                if (3 < source_index)
+                    dm_limit_trap();
+                source_address = source_parameters + source_index * 0xa0;
+                kernel_address = control[source_index + 5];
+                register_address = core2_registers + (long)core2_slot * 0xac;
+                core2_slot = core2_slot + 1;
+                *(unsigned int *)(register_address + 4) =
+                    graphics_flags | (unsigned int)(*(int *)(source_address + 0x60) == 0) << 1 |
+                    (unsigned int)((*(unsigned int *)(source_address + 0x5c) & 0xfffffffe) != 2) << 2;
+                *(unsigned int *)(register_address + 0x18) = CONCAT22(*(unsigned short *)(kernel_address + 0xfc),
+                                                            *(unsigned short *)(kernel_address + 0xfe));
+                *(unsigned int *)(register_address + 0x1c) = *(unsigned int *)(kernel_address + 0x100);
+                *(unsigned int *)(register_address + 0x20) = *(unsigned int *)(kernel_address + 0xdc);
+                *(unsigned int *)(register_address + 0x24) = *(unsigned int *)(kernel_address + 0xe0);
+                *(unsigned int *)(register_address + 0x28) = *(unsigned int *)(kernel_address + 0xe4);
+                *(unsigned int *)(register_address + 0x2c) = *(unsigned int *)(kernel_address + 0xe8);
+                *(unsigned int *)(register_address + 0x30) = CONCAT22(*(unsigned short *)(kernel_address + 0xda),
+                                                            *(unsigned short *)(kernel_address + 0xec));
+                *(unsigned int *)(register_address + 0x34) = *(unsigned int *)(kernel_address + 0xf0);
+                *(unsigned int *)(register_address + 0x38) = *(unsigned int *)(kernel_address + 0xf4);
+                *(unsigned int *)(register_address + 0x3c) = *(unsigned int *)(kernel_address + 0xf8);
+                *(unsigned int *)(register_address + 0x40) = 0;
+                *(unsigned int *)(register_address + 0x44) = (unsigned int)*(unsigned char *)(kernel_address + 0x106);
+                *(unsigned int *)(register_address + 0x48) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x50a);
+                *(unsigned int *)(register_address + 0x4c) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x50e);
+                *(unsigned int *)(register_address + 0x50) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x512);
+                *(unsigned int *)(register_address + 0x54) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x516);
+                *(unsigned int *)(register_address + 0x58) = CONCAT22(*(unsigned short *)(kernel_address + 0x508),
+                                                            *(unsigned short *)(kernel_address + 0x51a));
+                *(unsigned int *)(register_address + 0x5c) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x51e);
+                *(unsigned int *)(register_address + 0x60) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x522);
+                *(unsigned int *)(register_address + 100) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x526);
+                *(unsigned int *)(register_address + 0x68) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x52a);
+                *(unsigned int *)(register_address + 0x6c) = CONCAT22(*(unsigned short *)(kernel_address + 0x51c),
+                                                            *(unsigned short *)(kernel_address + 0x52e));
+                *(unsigned int *)(register_address + 0x70) = 0;
+                packed_output_word = *(unsigned int *)(kernel_address + 0xc0) | *(int *)(kernel_address + 0xbc) << 0xd;
+            } else {
+                if (3 < source_index)
+                    dm_limit_trap();
+                core1_slot = core1_slot + 1;
+                source_flag = *(int *)((long)&work->source_flags.pairs[0] + source_index * 4);
+                kernel_address = control[source_index + 5];
+                *(unsigned int *)(register_address + 4) = 0;
+                *(unsigned int *)(register_address + 4) = (unsigned int)(input_mode == 1 || source_flag != 0) |
+                                                (unsigned int)(*(char *)(kernel_address + 0xd8) == '\x03')
+                                                    << 1;
+                *(unsigned int *)(register_address + 0x18) = CONCAT22(*(unsigned short *)(kernel_address + 0xfc),
+                                                            *(unsigned short *)(kernel_address + 0xfe));
+                *(unsigned int *)(register_address + 0x1c) = *(unsigned int *)(kernel_address + 0x100);
+                *(unsigned int *)(register_address + 0x20) = *(unsigned int *)(kernel_address + 0x530);
+                *(unsigned int *)(register_address + 0x24) =
+                    *(unsigned int *)(kernel_address + 0x534) | *(int *)(kernel_address + 0x538) << 0x10;
+                *(unsigned int *)(register_address + 0x28) = *(unsigned int *)(kernel_address + 0x53c);
+                *(unsigned int *)(register_address + 0x2c) = *(unsigned int *)(kernel_address + 0xdc);
+                *(unsigned int *)(register_address + 0x30) = *(unsigned int *)(kernel_address + 0xe0);
+                *(unsigned int *)(register_address + 0x34) = *(unsigned int *)(kernel_address + 0xe4);
+                *(unsigned int *)(register_address + 0x38) = *(unsigned int *)(kernel_address + 0xe8);
+                *(unsigned int *)(register_address + 0x3c) = CONCAT22(*(unsigned short *)(kernel_address + 0xda),
+                                                            *(unsigned short *)(kernel_address + 0xec));
+                *(unsigned int *)(register_address + 0x40) = *(unsigned int *)(kernel_address + 0xf0);
+                *(unsigned int *)(register_address + 0x44) = *(unsigned int *)(kernel_address + 0xf4);
+                *(unsigned int *)(register_address + 0x48) = *(unsigned int *)(kernel_address + 0xf8);
+                *(unsigned int *)(register_address + 0x4c) = (unsigned int)*(unsigned char *)(kernel_address + 0x106);
+                *(unsigned int *)(register_address + 0x50) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x50a);
+                *(unsigned int *)(register_address + 0x54) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x50e);
+                *(unsigned int *)(register_address + 0x58) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x512);
+                *(unsigned int *)(register_address + 0x5c) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x516);
+                *(unsigned int *)(register_address + 0x60) = CONCAT22(*(unsigned short *)(kernel_address + 0x508),
+                                                            *(unsigned short *)(kernel_address + 0x51a));
+                *(unsigned int *)(register_address + 100) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x51e);
+                *(unsigned int *)(register_address + 0x68) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x522);
+                *(unsigned int *)(register_address + 0x6c) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x526);
+                *(unsigned int *)(register_address + 0x70) =
+                    fixed_load_le32((const unsigned char *)kernel_address + 0x52a);
+                matrix_tail_low = *(unsigned short *)(kernel_address + 0x52e);
+                matrix_tail_high = *(unsigned short *)(kernel_address + 0x51c);
+                *(unsigned long *)(register_address + 0x78) = 0;
+                *(unsigned int *)(register_address + 0x80) = 0;
+                packed_output_word = CONCAT22(matrix_tail_high, matrix_tail_low);
+            }
+            *(unsigned int *)(register_address + 0x74) = packed_output_word;
+            dovi_encode_display_luts((void *)display_luts,
+                                     (const unsigned char *)control[source_index + 5] + 0x540,
+                                     (const unsigned char *)control[source_index + 5] + 0xd8);
+            source_index = source_index + 1;
+            display_luts = display_luts + 0x1400;
+        } while (source_index != input_count);
+    }
+}
+
+int dovi_commit_reg(void *context, const unsigned char *input_configuration, void *sources,
+               const int *target_parameters, const unsigned char *vsvdb,
+               void *register1, void *register2, void *register3, void *luts)
+
+{
+    long *control = context;
+    long source_parameters = (long)sources;
+    long core1_registers = (long)register1;
+    long core2_registers = (long)register2;
+    unsigned long core3_registers = (unsigned long)register3;
+    long display_luts = (long)luts;
+    _Alignas(16) struct dovi_commit_workspace scratch;
+    unsigned char primary_input_byte;
+    unsigned char input_count;
+    unsigned int status;
+    int metadata_size;
+    unsigned long *metadata_payload;
+    unsigned int *input_count_slot;
+    unsigned long primary_input;
+    primary_input_byte = input_configuration[1];
+    primary_input = (unsigned long)primary_input_byte;
+    scratch.metadata_sizes.pairs[0] = 0;
+    scratch.metadata_sizes.pairs[1] = 0;
+    scratch.metadata[2] = 0;
+    scratch.metadata[3] = 0;
+    scratch.source_flags.pairs[0] = 0xffffffff;
+    scratch.source_flags.pairs[1] = 0;
+    input_count = *input_configuration;
+    scratch.metadata[0] = 0;
+    scratch.metadata[1] = 0;
+    scratch.metadata_configuration[18] = 0;
+    scratch.metadata_configuration[19] = 0;
+    input_count_slot = (unsigned int *)(control + 9);
+    *input_count_slot = (unsigned int)input_count;
+    scratch.metadata_configuration[16] = 0;
+    scratch.metadata_configuration[17] = 0;
+    scratch.metadata_configuration[14] = 0;
+    scratch.metadata_configuration[15] = 0;
+    scratch.metadata_configuration[12] = 0;
+    scratch.metadata_configuration[13] = 0;
+    scratch.metadata_configuration[10] = 0;
+    scratch.metadata_configuration[11] = 0;
+    scratch.metadata_configuration[8] = 0;
+    scratch.metadata_configuration[9] = 0;
+    scratch.metadata_configuration[6] = 0;
+    scratch.metadata_configuration[7] = 0;
+    scratch.metadata_configuration[4] = 0;
+    scratch.metadata_configuration[5] = 0;
+    scratch.metadata_configuration[2] = 0;
+    scratch.metadata_configuration[3] = 0;
+    scratch.metadata_configuration[0] = 0;
+    scratch.metadata_configuration[1] = 0;
+    scratch.decoded_headers[3] = 0;
+    scratch.decoded_headers[2] = 0;
+    scratch.decoded_headers[1] = 0;
+    scratch.decoded_headers[0] = 0;
+    control[0x28e] = (long)target_parameters;
+    *(unsigned int *)((long)control + 0x4c) = primary_input_byte + 1;
+    *(unsigned int *)((long)control + 0x54) = (unsigned int)(input_count != 1);
+    status = dovi_decode_display_block(control, vsvdb);
+    if (status != 0)
+        goto return_status;
+    dovi_configure_output_target(control, input_configuration, target_parameters, vsvdb);
+    if (!prepare_commit_sources(control, source_parameters, input_count, primary_input, input_count_slot,
+                                &scratch, &status))
+        return status;
+    dovi_dm_CommitFinalized((int *)input_count_slot, *control);
+    if (3 < (unsigned int)primary_input) {
+        /* WARNING: Does not return */
+        dm_limit_trap();
+    }
+    update_commit_source_flags(control, source_parameters, primary_input, vsvdb, &scratch);
+    pack_commit_input_registers(control, source_parameters, input_count, core1_registers,
+                                core2_registers, display_luts, &scratch);
+    if (vsvdb == (unsigned char *)0x0) {
+        metadata_payload = (unsigned long *)0x0;
+        metadata_size = 0;
     } else {
-        ret = dovi_dm_CommitMds(0, rp(context, 0u));
-        if ((unsigned int)input - 1u <= 1u) {
-            temp = (unsigned char *)context + 2324u;
-            synthetic_composition(temp, r32(source, 0u));
-            composition = temp;
-        }
-        (void)dovi_encode_composer_registers(composition, reg1, r32(source, 12u),
-                                             r32(source, 16u));
+        memset(&scratch.temporary.primaries[0], 0, 0x1fd);
+        metadata_size = dovi_dm_GetMdsOutput((unsigned char *)&scratch.temporary.primaries[0], 0x1fd, 0, 0, 1,
+                              (void *)*control);
+        metadata_payload = &scratch.temporary.primaries[0];
     }
-    kernel = (unsigned char *)rp(context, 16u);
-    input_regs(reg1, kernel + 200u, 0);
-    kernel = (unsigned char *)rp(context, 16u);
-    input_regs(reg2, kernel + 5556u, 1);
-    w32(reg2, 92u, r32(kernel, 176u) | (r32(kernel, 172u) << 13));
-    if (output == 0) {
-        if (input == 0) {
-            update_md_for_hdmi(context, metadata);
-        } else
-            get_fixed_metadata(context, metadata);
-    }
-    kernel = (unsigned char *)rp(context, 16u);
-    output_regs(reg3, kernel + 10788u, context);
-    raw_metadata(reg3, metadata);
-    kernel = (unsigned char *)rp(context, 16u);
-    dovi_encode_display_luts(lut1, kernel + 1328u, kernel + 200u);
-    dovi_encode_display_luts(lut2, kernel + 6684u, kernel + 5556u);
-    return ret;
+    dmKs2dmreg_core3(control, control[primary_input + 5], core3_registers, metadata_payload, metadata_size);
+    dovi_notify_content_info(control, sources, primary_input,
+                             (int *)&scratch.source_flags.pairs[0], scratch.metadata,
+                             scratch.decoded_headers);
+return_status:
+    return status;
 }

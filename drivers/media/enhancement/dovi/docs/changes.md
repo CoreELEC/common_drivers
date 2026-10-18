@@ -469,3 +469,102 @@ writable. Neither API accepts a capacity or validates generic backing.
 Unaligned little-endian storage is supported; source/destination must be
 distinct and every accessed region complete. Byte counts are unsigned
 32-bit values.
+
+## Control and output
+
+### Multi-input state and lifetime
+
+STB 2.4 controls one source through 17 arguments, separate graphics/target
+descriptors and explicitly bound runtime storage. STB 2.6 receives three
+0x68-byte private input records in 0x4f58-byte settings, selects a primary,
+stages multiple signal/kernel contexts and publishes two Core 1 slots.
+There are two metadata/composer staging slots despite three host inputs.
+The packed metadata/primaries, packet headers, source flags/sizes and
+overlapping HDR scratch retain their phase-specific views.
+
+STB 2.4 resets at input format -1 and calls its no-op destroy helper on
+ordinary completion without clearing initialization. STB 2.6 resets at
+zero input count, clears staging and initialization/content bytes and
+keeps shared control state across ordinary calls. `Init_cp` receives
+instance/configuration inputs, rejects counts >=5 and retains zero and
+negative-count behavior. Destroy remains argument-free and returns zero.
+
+Memory requests change from 32 signed, unchecked singleton slots to 24
+slots with count reloads, an exact -1 threshold, unsigned bounds traps and
+partial stores. STB 2.6 sizes per-instance kernel/extension arenas.
+`InitMmg` returns the manager pointer in both versions; request flags
+remain 32-bit words. STB 2.6 adds OS-backed byte clearing, metadata/frame
+synchronization, run-mode indexing and display/default records.
+
+STB 2.4 configuration getters select pending/active pointers and its kernel
+getter returns the singleton. STB 2.6 returns context +8 for nonnull
+configuration, uses signed index-minus-one kernel slots and indexed
+run/signal/tone-map/context getters with their null/trap behavior.
+Kernel publication accepts an instance index and traps at index >=4.
+
+STB 2.6 owns contiguous 210856-byte control storage, signature storage and
+constant/table aggregates with asserted offsets and reserved spans.
+STB 2.4 owns separately aligned runtime and table objects. Relative aliases
+and shared initializer values preserve distinct native objects. CLI
+priority moves from byte 52 in a 112-byte record to 0x1d14 in a 7468-byte
+record. The newer tail adds selected count/primary, initialization/input
+flags and level-11 controls; unknown fields remain reserved.
+
+### Target, graphics and transport
+
+STB 2.4 VSVDB conversion writes an 88-byte target descriptor and returns
+-1 for null or invalid identification. STB 2.6 updates persistent capability
+fields, treats null as retained-state success and returns -8 for invalid
+identification/version/length. Partial capability/luminance writes remain
+ordered. Decimal versus fixed-point luminance and rounding differ; the
+STB 2.6 version-1 path squares/shifts a 32-bit word, reinterprets it as
+signed and divides toward zero. Output target, low-latency and RGB setup
+follow the newer capability state.
+
+STB 2.4 derives a separate 64-byte graphics descriptor from CLI fields and
+stored luminance offsets. STB 2.6 uses input mode 2, format/primary
+defaults, graphics luminance words and a separate Core 2 slot. Gamma,
+matrix, source/default stores and partial-state order differ.
+
+STB 2.6 adds VSEM/VSIF decoding, CRC/header/OUI validation and -5 failures,
+transport-derived signals, optional Dolby control packets and content,
+white-point and level-11 notifications. Packet/type/status writes and
+callback order are preserved. Indexed kernel dumping and multi-kernel
+Core 3 packing use the new owners. STB 2.4 instead passes packed metadata
+and separate HDR10/source arguments.
+
+### Metadata, registers and publication
+
+STB 2.4 metadata has a 71-byte prefix and fixed 261-byte extension slots
+in current/previous 66626-byte backing, optional temporal level-1 filtering,
+logger failure for lengths >256, and HDMI trim/removal/compaction.
+STB 2.6 consumes contiguous variable-length records in 0x1000-byte slots,
+retaining signed offsets, incomplete-header reuse, per-source progress and
+fatal capacity checks after partial writes.
+
+Composer packing is shared with a constant-zero unsigned-short result.
+Its base/enclosing extent changes from 176/900 bytes to 200/968 bytes.
+Mode changes from residual-flag selection to constant zero; width/height
+move from source +12/+16 to +0/+4. STB 2.6 may convert selected 8-bit
+BL/EL configuration, pivots and NLQ coefficients to 10 bits in place before
+packing. Interleaved loads/stores support its overlapping views;
+STB 2.4 requires disjoint objects. Synthetic source preparation, register
+maps and primary-ordered multi-source commit remain version-specific.
+
+LUT packing shares four paired 15-bit streams and the final 32-bit input
+map copy. Tone/input bases change from kernel +1328/+200 to +0x540/+0xd8.
+Output order and STB 2.6 overlap behavior are preserved.
+
+STB 2.4 raw HDMI publication checks size before writes, rejects >512 words,
+logs and preserves the previous payload after clearing availability.
+STB 2.6 interleaves raw/extension writes with fatal capacity checks and
+publishes transport/control/content outputs using the selected register
+and LUT banks. Host/core register offsets and extents differ.
+
+STB 2.4 builds HDR infoframes from input format/HDR10 arguments and fixed
+primaries. STB 2.6 derives primaries from fixed-point targets and selects
+primary-input HDR10 passthrough/debug output. Level-6 records are processed
+in order in STB 2.4 versus last-record-first selection in STB 2.6. Output
+format getters expand required 16-byte records into optional PQ/luminance/
+primaries records. HDR publication uses 64-bit little-endian copies at
+offsets 0, 8, 16 and 21, including the final overlapping store.

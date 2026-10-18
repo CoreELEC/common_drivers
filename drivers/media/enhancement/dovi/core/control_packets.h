@@ -1,30 +1,32 @@
-/* Packed control metadata and HDR infoframe helpers. */
 #ifndef DOVI_CONTROL_PACKETS_H
 #define DOVI_CONTROL_PACKETS_H
 
-/* Objects use control_abi_recovered.h offsets and must be distinct.
- * target has 88 bytes; hdr10 has 28. metadata is a packed 71-byte base followed by count
- * 261-byte extension records. infoframe has 29 writable bytes. Unrecognized
- * input formats change only the first five infoframe bytes. */
-int dovi_get_info_frame(const void *state, const void *target, int input_format, const void *hdr10,
-                        const void *metadata, void *infoframe);
-
-/* Requires a valid ctx->h_dm configuration: control_get_stb_tmm failure is
- * ignored and would leave the copied local PQ words uninitialized.
- * Only bytes 0..70 of the packed metadata base are changed. */
-void get_fixed_metadata(const void *ctx, void *dm);
-
-/* Outputs are optional and are written in this order:
- * min_pq, min, max_pq, max. Null or invalid dm returns -1 without output writes.
- * Valid dm requires readable pDmCfgAct/hDmKs for requested luminance outputs. */
-int control_get_stb_tmm(unsigned short *min_pq, unsigned int *min, unsigned short *max_pq,
-                        unsigned int *max, const void *dm);
-
-/* Both output-format records contain 16 bytes and are required. The selected
- * configuration must be readable: GetDmCfg failure is ignored. Unrecognized
- * values retain their fields. Output records may overlap. */
+/* Original STB 2.6 byte layouts. All storage is ordinary readable/writable
+ * memory; packet/state buffers must be disjoint unless a function says otherwise. */
+unsigned int dovi_GetByteField(unsigned int value, unsigned int mask);
+unsigned int dovi_get_data_set_length(const void *packet);
+int dovi_vsem_unpack(const void *packets, void *payload);
+int dovi_get_info_frame(const void *state, const void *target, const void *metadata,
+                        void *infoframe);
 int dovi_get_output_format(const void *state, void *hdmi_format, void *core_format);
-/* Return the byte count from the native kernel-state stream serializer. */
-unsigned int dovi_get_dm_kernel_buf(const void *state, void *output);
+int dovi_update_src_param(void *source, int format);
+int dovi_set_default_src_param(void *source, int format);
+int dovi_set_default_target_param(void *target, int format);
+long long dovi_get_dolby_control_data(void *state, void *packet, void *is_standard, void *control);
+void dovi_dmKs2dmreg_core3(const void *state, const void *kernel, void *registers,
+                           const void *metadata, unsigned int length);
+void dovi_parse_vsif_from_PB4(const void *packet, void *control);
+unsigned int dovi_get_dm_kernel_buf(const void *state, void *output, unsigned int index);
+int dovi_get_hdmi_metadata_buffer(const void *state, void *output);
+void dovi_cb_content_info(unsigned char content, unsigned char white, unsigned char extra1,
+                          unsigned char extra2);
 
+#include "kernel_map_serialization.h"
+
+#include "shared_data.h"
+#define dovi_control26_debug (dovi_retained_section_1.enable_debug)
+#define dovi_control26_content_type (dovi_retained_section_1.source_content_type[0])
+#define dovi_control26_white_point (dovi_retained_section_1.desired_white_point[0])
+#define dovi_control26_l11_byte2 (dovi_retained_section_1.level11_byte2[0])
+#define dovi_control26_l11_byte3 (dovi_retained_section_1.level11_byte3[0])
 #endif

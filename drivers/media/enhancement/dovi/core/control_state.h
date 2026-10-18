@@ -2,40 +2,33 @@
 #ifndef DOVI_CONTROL_STATE_H
 #define DOVI_CONTROL_STATE_H
 
-#include "control_memory.h"
+typedef void (*dovi_content_info_callback)(unsigned char content, unsigned char white,
+                                           unsigned char extra1, unsigned char extra2);
 
-/* The arena contains internal pointers. It must be 8-byte aligned and
- * cover 20040 bytes. dovi_init_cp does not clear it or initialize mmg.reqNum;
- * callers supply a valid memory manager before initialization. Runtime memory
- * diagnostics are required whenever reqNum > 31 can be reached. Logger/dump may
- * redirect h_dm/h_mds_ext to valid objects; dovi_init_cp reloads both fields. */
-#define CONTROL_ARENA_BYTES 20040u
-void *dovi_InitDm(const void *config, void *dm);
-int dovi_init_cp(void *arena);
-int dovi_destroy_cp(void);
-void dovi_set_dovi2hdr10_mapping(void *context);
-void dovi_set_support_el(void *context, int enabled);
-/* Return storage immediately following the 4192-byte control prefix. */
-void *dovi_get_dm_ctx_buf(const void *context);
-void dovi_set_graphics_offset(void *context, int minimum, int maximum);
+/* Optional content-information callback, initially null. */
+extern dovi_content_info_callback dovi_content_info_cb_handle;
 
-/* The cli_param buffer is supplied explicitly by the outer binding. */
-void populate_graphics_param_body(void *graphics, const void *cli);
-
-void dovi_InitTmCtrl(void *tone_control);
-/* Configuration and extensions must be distinct; initialized extensions retain
- * pointers into their own trim arrays and must remain at that address. */
+/* InitDm requires 0x1f938 bytes of control storage, and count pointer slots
+ * when signed count is positive. Negative counts skip per-instance setup;
+ * positive counts above four retain the original partial writes and trap. */
+void *dovi_InitDm(int count, const void *key_slots, void *control);
+/* The first argument to InitMdsExt is unused in the original ABI. */
 void dovi_InitMdsExt(const void *configuration, void *extensions);
-/* Copy the 984-byte to-be configuration when its validity flag is nonzero,
- * otherwise the active configuration. Invalid/null handles or selected source
- * pointers return -1 with destination unchanged. Copy runs forward bytewise,
- * including when source/destination overlap; storage must cover every access. */
-int dovi_GetDmCfg(void *config, const void *dm_handle);
+/* Initial memset covers 0x158 bytes; later stores extend through 0x1af. */
+void dovi_InitTmCtrl(void *tone_control);
+int dovi_GetStbTmmIdx(unsigned int index, void *min_pq, void *min, void *max_pq, void *max,
+                      const void *control);
+int dovi_destroy_cp(void);
+void dovi_register_content_info_callback(dovi_content_info_callback callback);
+void dovi_set_dovi2hdr10_mapping(void *context);
+void dovi_set_force_maxCLL_FALL_to_0(void *state, unsigned int value);
+int dovi_set_L11_hdmi_tx(void *state, unsigned int enabled, unsigned int content_type,
+                         unsigned int intended_white, unsigned int additional_1,
+                         unsigned int additional_2);
+int dovi_set_i_dm_peak_stretch(void *state, unsigned int value);
+void *dovi_get_dm_ks_buf(const void *state, unsigned int index);
+void *dovi_get_dm_ctx_buf(const void *context);
 
-/* Optional outputs are written in min_pq, min_linear, max_pq, max_linear
- * order. Invalid/null active handles return -1 with all outputs unchanged.
- * Linear values use the clamped PQ lookup/interpolation. */
-int dovi_GetStbCc(unsigned short *min_pq, unsigned int *min_linear, unsigned short *max_pq,
-                  unsigned int *max_linear, const void *dm_handle);
+int dovi_init_cp(void *arena, int instances, void *configuration);
 
 #endif

@@ -37,7 +37,7 @@ table in persistent storage. Compile-time assertions in [host_abi.h](host_abi.h)
 check its offsets and the control and metadata layouts against the host headers.
 [runtime_bridge.c](runtime_bridge.c) connects kernel services to the core.
 
-[host_control.c](core/host_control.c) translates host signal formats before
+`host_control.c` translates host signal formats before
 calling the control runtime. SDR BT.2020 is host value `6` and core value `4`.
 The core writes the 13,468-byte output prefix; the trailing host fields
 `vsvdb_len`, `vsvdb_changed` and `mode_changed` remain host-owned, as do the
