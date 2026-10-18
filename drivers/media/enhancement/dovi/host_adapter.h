@@ -5,7 +5,7 @@
 int dovi_host_init(void);
 
 #define DOVI_MODULE_LICENSE "GPL"
-#define DOVI_MODULE_DESCRIPTION "STB 2.4 Dolby Vision core reconstructed in C"
-#define DOVI_MODULE_VERSION "0.1"
+#define DOVI_MODULE_DESCRIPTION "STB 2.6 Dolby Vision core reconstructed in C"
+#define DOVI_MODULE_VERSION "0.2"
 
 #endif

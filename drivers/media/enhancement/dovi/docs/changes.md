@@ -568,3 +568,61 @@ in order in STB 2.4 versus last-record-first selection in STB 2.6. Output
 format getters expand required 16-byte records into optional PQ/luminance/
 primaries records. HDR publication uses 64-bit little-endian copies at
 offsets 0, 8, 16 and 21, including the final overlapping store.
+
+## Host interface and build
+
+### Callback and output ABI
+
+The Linux 4.9 adapter publishes a constant 48-byte version/init/reset/
+process/release/control table. Linux 5.15 publishes a mutable 112-byte host
+object with a 96-byte STB multi-instance prefix, multi-control/parser
+callbacks and unsupported TV/HW5 slots left null. Version storage and the
+complete callback object remain resident after registration.
+
+The legacy 13468-byte processing prefix within a 13480-byte host output
+is replaced by 0x4f58-byte multi-input settings, three 0x68-byte inputs,
+two Core 1 outputs and 0x1720-byte Core 1 result banks. Compile-time
+assertions cover callback sizes, enums, input kinds, register/LUT/HDR/
+extension fields and offsets against the actual host headers.
+
+Linux 4.9 supplies vprintk logging, copied runtime services and format
+translation: host SDR2020 value 6 maps to core value 4, values -1..3 pass
+through, and reset bypasses ordinary format validation. Linux 5.15 passes
+explicit parser context/input kind and multi settings, formats version/chip
+storage and statically binds vmalloc/vfree parser ownership, OS memset
+and `_printk` through module/control service objects.
+
+The 4.9 adapter propagates configuration/registration failure. The 5.15
+adapter records registration status in a read-only parameter, logs the
+result and returns successful insertion so callbacks possibly retained
+by the host remain resident. Replacing an attempted registration requires
+reboot. Module metadata remains GPL, with the corresponding descriptions
+and module versions 0.1/0.2.
+
+### Source build and compatibility
+
+The 4.9 profile uses AArch64 GCC, GNU11, `-fno-builtin` and in-tree host
+declarations. The 5.15 profile uses Clang/LLVM, the integrated assembler,
+common-drivers includes, `-fwrapv` and `-fno-strict-aliasing`. Direct 5.15
+callbacks require `CONFIG_CFI_CLANG=n`. Generated headers, symbol CRCs,
+instrumentation and stack protection come from the selected kernel.
+The 5.15.170 and 5.15.196 builds share module source and algorithm/data
+content; release metadata and symbol CRCs differ.
+
+The source list replaces singleton runtime/graphics/metadata integration
+with multi-input control and bound services, adds adaptive backlight,
+metadata output, luminance/interpolated trim, primary backward mapping
+and tone mathematics, and removes the superseded trim-reduction and
+many-argument host adapter objects. All processing implementations compile
+from source; no processing binary is linked. Shared tables keep native
+owners, and reserved spans/LP64 assertions preserve the required storage
+model. Common byte alignment, endian loads and arithmetic helpers replace
+equivalent expressions without changing native bounds, traps, aliasing
+or partial-write order.
+
+Verification includes matching-kernel builds, ABI/symbol checks and
+original-versus-C execution across numerical boundaries, parser lifetimes,
+streams, overlapping views, traps and partial outputs. STB 2.4 also has
+physical playback and captured-callback replay coverage. Those finite
+tests retain their input/lifecycle limits; STB 2.6 matching-device playback,
+sustained transitions and broader error coverage remain separate work.

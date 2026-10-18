@@ -1,57 +1,82 @@
 /* Module lifecycle and host callback adapters. */
-#include <linux/module.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/string.h>
 
 #include "host_abi.h"
 #include "host_adapter.h"
-#include "runtime_bridge.h"
 #include "core/module_parser.h"
+#include "core/shared_data.h"
+#include "core/control_path.h"
 
-static int metadata_log(const char *format, ...)
+static int registration_status = -EINPROGRESS;
+module_param(registration_status, int, 0444);
+MODULE_PARM_DESC(registration_status, "Host registration result; a failure requires reboot");
+
+int dovi_host_control_path(struct m_dovi_setting_s *setting)
 {
-    va_list arguments;
-    int result;
-    va_start(arguments, format);
-    result = vprintk(format, arguments);
-    va_end(arguments);
-    return result;
+    return dovi_multi_control_path((int *)setting);
 }
 
 void *dovi_host_parser_init(int flags)
 {
-    return dovi_metadata_parser_init(metadata_log, flags);
+    (void)flags; /* STB 2.6 ignores this host argument. */
+    return dovi_metadata_parser_init();
 }
 
-int dovi_host_parser_reset(int flags)
+int dovi_host_parser_reset(void *context, int flags)
 {
-    return dovi_metadata_parser_reset(flags);
+    (void)flags;
+    return dovi_metadata_parser_reset(context);
 }
 
-int dovi_host_parser_process(char *rpu, int rpu_size, char *composer, int *composer_size,
-                             char *metadata, int *metadata_size, bool end_of_stream)
+int dovi_host_parser_process(void *context, char *rpu, int rpu_size, char *composer,
+                             int *composer_size, char *metadata, int *metadata_size,
+                             bool end_of_stream, enum dv_type_enum input_kind)
 {
-    return dovi_metadata_parser_process(rpu, rpu_size, composer, composer_size, metadata,
-                                        metadata_size, (unsigned char)end_of_stream);
+    return dovi_metadata_parser_process(context, (unsigned char *)rpu, (unsigned int)rpu_size,
+                                        composer, (unsigned int *)composer_size, metadata,
+                                        (unsigned int *)metadata_size, (unsigned int)end_of_stream,
+                                        (int)input_kind);
 }
 
-int dovi_host_control_path(enum signal_format_enum input_format,
-                           enum signal_format_enum output_format, char *composition,
-                           int composition_size, char *metadata, int metadata_size,
-                           enum priority_mode_enum priority, int bit_depth, int chroma_format,
-                           int yuv_range, int graphics_min, int graphics_max, int target_min,
-                           int target_max, int no_el, struct hdr10_parameter *hdr10,
-                           struct dovi_setting_s *output)
+/* Extend the embedded version strings before publishing the host callbacks. */
+int dovi_source_init(void)
 {
-    return host_control_process((int)input_format, (int)output_format, composition,
-                                composition_size, metadata, metadata_size, (int)priority, bit_depth,
-                                chroma_format, yuv_range, graphics_min, graphics_max, target_min,
-                                target_max, no_el, hdr10, output);
+    char *sign = dovi_retained_section_2.version_signature;
+    char *chip = dovi_retained_section_2.chip_name;
+    unsigned long sign_length = strlen(sign), chip_length = strlen(chip);
+
+    if (((unsigned int)chip_length + 3u) >> 2 < 5u) {
+        if ((unsigned int)chip_length > 20u)
+            __builtin_trap();
+        snprintf(chip + (int)chip_length, 511ul - (long)(int)chip_length,
+                 dovi_retained_section_3.diagnostics.string_format,
+                 dovi_retained_section_3.diagnostics.default_chip_name);
+    }
+    if (((unsigned int)sign_length + 79u) >> 9 == 0) {
+        if ((unsigned int)sign_length > 512u)
+            __builtin_trap();
+        snprintf(sign + (int)sign_length, 511ul - (long)(int)sign_length,
+                 dovi_retained_section_3.diagnostics.version_signature_format, chip,
+                 dovi_retained_section_3.version,
+                 dovi_retained_section_3.diagnostics.build_description);
+    }
+    _printk(dovi_retained_section_3.diagnostics.module_init_message,
+            dovi_retained_section_3.diagnostics.default_chip_name);
+    /* The host version omits the AML_DV_INFO1: storage marker. */
+    return dovi_register_callbacks(sign + sizeof("AML_DV_INFO1:") - 1);
 }
 
 int __init dovi_host_init(void)
 {
-    int result = dovi_runtime_configure();
-    if (result != 0)
-        return result;
-    return dovi_register_callbacks();
+    registration_status = dovi_source_init();
+    if (registration_status)
+        pr_err(
+            "dovi: host registration failed (%d); keeping module resident because the host may retain callbacks; reboot required\n",
+            registration_status);
+    else
+        pr_info("dovi: STB 2.6 C implementation registered\n");
+    return 0;
 }

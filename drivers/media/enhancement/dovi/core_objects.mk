@@ -7,19 +7,17 @@ $(DOVI_MODULE_NAME)-y += \
 	core/color_primaries.o \
 	core/composer_conversion.o \
 	core/composer_validation.o \
-	core/control_graphics.o \
 	core/control_memory.o \
-	core/control_metadata.o \
 	core/control_packets.o \
 	core/control_path.o \
 	core/control_publish.o \
 	core/control_registers.o \
-	core/control_runtime.o \
 	core/control_state.o \
 	core/control_target.o \
 	core/crc32.o \
 	core/decoder_lifecycle.o \
 	core/detect_mel.o \
+	core/dm_backlight.o \
 	core/dm_commit_pipeline.o \
 	core/dm_configuration.o \
 	core/dm_extensions.o \
@@ -28,6 +26,7 @@ $(DOVI_MODULE_NAME)-y += \
 	core/dm_input_map.o \
 	core/dm_kernel_maps.o \
 	core/dm_metadata.o \
+	core/dm_metadata_output.o \
 	core/dm_output_map.o \
 	core/dm_payload.o \
 	core/dm_serialization.o \
@@ -35,11 +34,13 @@ $(DOVI_MODULE_NAME)-y += \
 	core/dm_transfer.o \
 	core/dm_trim.o \
 	core/dm_trim_chroma.o \
+	core/dm_trim_interpolation.o \
+	core/dm_trim_luminance.o \
 	core/error_strings.o \
 	core/ext_blocks.o \
 	core/fixed_arithmetic.o \
 	core/fixed_transcendentals.o \
-	core/host_control.o \
+	core/kernel_map_composition.o \
 	core/kernel_map_serialization.o \
 	core/luminance_pq.o \
 	core/matrix_arithmetic.o \
@@ -49,7 +50,9 @@ $(DOVI_MODULE_NAME)-y += \
 	core/metadata_runtime.o \
 	core/numeric_color_matrix.o \
 	core/numeric_helpers.o \
+	core/numeric_tone.o \
 	core/numeric_transfer.o \
+	core/original_data.o \
 	core/parser_info.o \
 	core/parser_lifecycle.o \
 	core/parser_process.o \
@@ -69,6 +72,6 @@ $(DOVI_MODULE_NAME)-y += \
 	core/tone_controls.o \
 	core/tone_curve.o \
 	core/tone_curve_lut.o \
+	core/tone_mapping_math.o \
 	core/tone_maps.o \
-	core/tone_parameters.o \
-	core/trim_reduction.o
+	core/tone_parameters.o

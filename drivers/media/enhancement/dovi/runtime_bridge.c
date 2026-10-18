@@ -1,37 +1,35 @@
 /* Kernel services for control and metadata processing. */
 #include <linux/kernel.h>
-#include <linux/amlogic/cpu_version.h>
+#include <linux/printk.h>
+#include <linux/string.h>
+#include <linux/vmalloc.h>
 
-#include "runtime_bridge.h"
-#include "core/control_runtime.h"
+#include "core/control_memory.h"
+#include "core/module_parser.h"
 
-static int control_log(const char *format, unsigned int length)
+static void *dovi_kernel_vmalloc(unsigned long long size)
 {
-    return printk(format, length);
+    return vmalloc((unsigned long)size);
 }
 
-static int memory_log(const char *format, const char *file, const char *function, unsigned int line,
-                      const char *expression)
+static void *dovi_kernel_memset(void *destination, int value, unsigned long long size)
 {
-    return printk(format, file, function, line, expression);
+    return memset(destination, value, (unsigned long)size);
 }
 
-static void trim_assertion(const char *file, const char *function, int line, const char *expression)
+static void dovi_kernel_vfree(void *pointer)
 {
-    pr_err("dovi reconstructed: %s:%d %s: %s\n", file, line, function, expression);
+    vfree(pointer);
 }
 
-static int cpu_version(int level)
-{
-    return get_meson_cpu_version(level);
-}
+struct dovi_module_imports dovi_module_os = {
+    .vmalloc = dovi_kernel_vmalloc,
+    .vfree = dovi_kernel_vfree,
+    .printk = _printk,
+};
 
-int dovi_runtime_configure(void)
-{
-    const struct control_runtime_services services = {
-        .cpu_version = cpu_version,
-        .logger = control_log,
-        .memory = {.logger = memory_log, .dump_stack = dump_stack},
-        .trim = {.assertion = trim_assertion, .dump_stack = dump_stack}};
-    return control_runtime_init(&services);
-}
+struct dovi_control_os_services dovi_control_os = {
+    .memset = dovi_kernel_memset,
+    .printk = _printk,
+    .dump_stack = dump_stack,
+};

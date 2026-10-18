@@ -1,4 +1,4 @@
-# Dolby Vision STB 2.4 C module
+# Dolby Vision STB 2.6 C module
 
 This directory implements the Dolby Vision metadata parser and control path.
 The core parses RPU metadata and produces composer registers, display-mapping
@@ -11,23 +11,37 @@ module `dovi.ko`.
 
 ## Library interface
 
-The module implements the STB 2.4 library interface, with a 48-byte host callback
-table, singleton parser storage and single-input control. STB 2.4 is the Dolby
-library version, separate from the Linux kernel version and Dolby Vision content
-profiles. The implementation uses fixed-point arithmetic and the host's packed
-control and output layouts.
+The module implements the STB 2.6 library interface, with allocated parser
+instances and multi-input control settings. STB 2.6 is the Dolby library version,
+separate from the Linux kernel version and Dolby Vision content profiles.
+The [STB 2.4 to STB 2.6 changelog](docs/changes.md) describes the parser,
+arithmetic, display-management, control and host-interface changes.
+
+Control luminance-to-PQ now caps at 4095 rather than allowing 4096, and signed
+16-bit matrix narrowing saturates rather than truncating. Parser bounds,
+extension handling, partial writes and control sequencing retain the supplied
+STB 2.6 behavior. The host adapter retains the module after registration errors
+and exposes their result through `registration_status`.
+
+The external build switches from GCC to Clang/LLVM, using `LLVM=1` and the
+integrated assembler (`LLVM_IAS=1`). The build uses the selected kernel's stack
+protection and instrumentation; the direct STB 2.6 callback interface requires
+`CONFIG_CFI_CLANG=n`. The Clang profile also enables wrapping signed arithmetic
+and disables strict-aliasing optimizations.
 
 ## Validation
 
-Validation includes matching-kernel builds, differential checks against the
-reference implementation, and physical FEL playback and seeking on the Ugoos
-AM6B+ running Linux 4.9.269. Replayed device callbacks match return values and
-output buffers for identical inputs and parser-chained processing.
+STB 2.6 has differential checks against the reference implementation and
+warning-free builds against CoreELEC Linux 5.15.170 and 5.15.196. Hardware
+playback with the matching STB 2.6 host has not been validated.
 
-A seek run with recording disabled logged a missing-EL warning; its cause and
-repeatability remain unestablished, with no demonstrated output discrepancy.
-The tests cover the exercised inputs and lifecycle sequences. Panel luminance
-was not measured.
+STB 2.4 was separately tested with matching-kernel builds, differential checks,
+and physical FEL playback and seeking on the Ugoos AM6B+ running Linux 4.9.269.
+Replayed device callbacks match return values and output buffers for identical
+inputs and parser-chained processing. A seek run with recording disabled logged
+a missing-EL warning; its cause and repeatability remain unestablished.
+These tests cover the exercised inputs and lifecycle sequences; they do not
+establish STB 2.6 playback equivalence. Panel luminance was not measured.
 
 ## Module boundary
 
@@ -37,14 +51,14 @@ table in persistent storage. Compile-time assertions in [host_abi.h](host_abi.h)
 check its offsets and the control and metadata layouts against the host headers.
 [runtime_bridge.c](runtime_bridge.c) connects kernel services to the core.
 
-`host_control.c` translates host signal formats before
-calling the control runtime. SDR BT.2020 is host value `6` and core value `4`.
-The core writes the 13,468-byte output prefix; the trailing host fields
-`vsvdb_len`, `vsvdb_changed` and `mode_changed` remain host-owned, as do the
-source and destination format fields.
+The settings record contains three private input records and two
+Core 1 result slots. The callback table has a 96-byte STB 2.6 prefix and two trailing
+HW5 pointers; unsupported callbacks remain null.
 
-Parser and control state use static singleton storage. Metadata release is a
-no-op. Configuration or registration failure is returned directly to the kernel.
+Each parser instance owns vmalloc-backed state, which release frees. Control
+state remains shared. The module stays resident after a registration attempt;
+the read-only `registration_status` parameter reports the result. A failed
+registration requires reboot.
 
 Calls must be serialized across initialization, reset and processing, and
 callbacks must not reenter shared state. The module adds no locking and has no
@@ -54,8 +68,13 @@ ownership contract.
 
 ## Build
 
-This source has been build-tested without warnings against an AArch64 Linux
-4.9.269 configuration, using the in-tree `amdolby_vision` host headers.
+This source has been build-tested without warnings against CoreELEC AArch64
+configurations for Linux 5.15.170 and 5.15.196, using matching common-drivers
+headers.
+
+No module source changes are required between these configurations. The public
+host layouts and compiled processing code match; rebuild for the selected
+kernel because its release metadata and symbol versions differ.
 
 Build on Linux with an AArch64 compiler and a completed kernel build for the
 device configuration. Its generated headers, configuration and `Module.symvers`
@@ -79,9 +98,11 @@ compiler interface. The build emits stack-usage records and warns about
 frames exceeding 2,048 bytes. Kbuild supplies the target kernel's symbol
 versions and instrumentation.
 
-The profile defaults to `CROSS_COMPILE=aarch64-linux-gnu-` and produces
-`dovi.ko`. It selects the 4.9 host declarations from the kernel tree
-and enables GNU11 and `-fno-builtin` for the vendor 4.9 compiler interface.
+The profile defaults to `LLVM=1` with the integrated assembler and produces
+`dovi.ko`. Host declarations default to this common-drivers checkout; for a
+standalone copy, also pass `COMMON_DRIVERS=/path/to/common_drivers`. The STB 2.6
+callback interface requires a non-CFI kernel (`CONFIG_CFI_CLANG=n`). The C
+module supplies direct callback addresses.
 
 ## Code guide
 

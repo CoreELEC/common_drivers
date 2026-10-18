@@ -9,7 +9,7 @@ static int __init dovi_init(void)
 }
 
 module_init(dovi_init);
-/* The host retains callbacks; this adapter does not support module removal. */
+/* Both hosts retain callbacks; neither adapter supports module removal. */
 MODULE_LICENSE(DOVI_MODULE_LICENSE);
 MODULE_DESCRIPTION(DOVI_MODULE_DESCRIPTION);
 MODULE_VERSION(DOVI_MODULE_VERSION);
