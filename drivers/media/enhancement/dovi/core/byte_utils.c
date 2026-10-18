@@ -8,9 +8,9 @@ void dovi_MemCpyByte(void *destination, const void *source, int count)
 {
     unsigned char *dst = (unsigned char *)destination;
     const unsigned char *src = (const unsigned char *)source;
-    int remaining = count;
+    unsigned long long remaining = fixed_sign32((unsigned int)count);
 
-    while (remaining > 0) {
+    while (remaining != 0) {
         *dst++ = *src++;
         --remaining;
     }
@@ -20,9 +20,9 @@ int dovi_MemEqByte(const void *left, const void *right, int count)
 {
     const unsigned char *left_bytes = (const unsigned char *)left;
     const unsigned char *right_bytes = (const unsigned char *)right;
-    int remaining = count;
+    unsigned long long remaining = fixed_sign32((unsigned int)count);
 
-    while (remaining > 0) {
+    while (remaining != 0) {
         unsigned char left_byte = *left_bytes++;
         unsigned char right_byte = *right_bytes++;
         --remaining;

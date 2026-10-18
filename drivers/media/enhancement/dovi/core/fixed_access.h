@@ -3,7 +3,7 @@
 #define DOVI_FIXED_ACCESS_H
 #include "fixed_bits.h"
 
-/* Raw register views require 32-bit int and 64-bit long long scalar widths. */
+/* Raw register views require the same scalar widths in both library versions. */
 typedef char fixed_require_scalar_widths[
     (sizeof(unsigned int) == 4 && sizeof(unsigned long long) == 8) ? 1 : -1];
 
