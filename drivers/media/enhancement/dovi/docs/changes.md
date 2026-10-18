@@ -65,3 +65,87 @@ unaligned and overlapping use. A singular matrix returns signed -1 in
 STB 2.4 versus raw 65535 in STB 2.6; final coefficient packing also
 differs. Only STB 2.4 exposes `M33TimesM33`, with 32-bit operand reads and
 16-bit stores.
+
+## Color and transfer functions
+
+### Matrices, primaries and narrowing
+
+YUV offsets, scalar Kr/Kg/Kb conversion matrices, element copies,
+white-vector row sums, and the fixed LMS/IPT scale getters share their
+unchanged calculations. Bytewise access supports unaligned buffers;
+row-by-row pointer reloads preserve overlapping output behavior. The
+Kr/Kg/Kb calculation retains coefficients four and five when `kg` is zero.
+
+LMS/IPT narrowing changes from 219 luma and 224 chroma factors in STB 2.4
+to uniform 219 factors in STB 2.6. Final matrix packing also changes from
+truncation to saturation. The factor change is observable at 10-bit depth
+independently of saturation. General full/narrow RGB/YUV helpers retain
+their respective signed scale/depth interpretation and unusual-depth
+branches; STB 2.6 adds narrow ICtCp input/output matrices.
+
+Full RGB/YUV matrices retain different coefficient sources and signed or
+unsigned division. STB 2.4 uses seven RGB-to-XYZ definitions; STB 2.6 uses
+separate Kr/Kg/Kb constants, whose low coefficients can differ, and 19
+primary records. STB 2.6 adds descending sorting, xy/CCT and xyY/XYZ
+conversion, primary lookup and custom-primary matrix construction, with
+the required determinant masks, result widths and bounds traps.
+
+STB 2.6 adds cross-talk and inverse-cross-talk matrices, XYZ-to-LMS
+constants, and forward/inverse ICtCp input/output and display-management
+bases. Arbitrary-scale inverse construction preserves AArch64
+zero-divisor behavior. Its color-temperature helpers add cross-talk
+removal/reapplication, primary wrappers and diagonal getters; their
+coefficient data includes 64-bit XYZ definitions and white-point/CCT
+tables.
+
+Custom-primary XYZ/LMS construction retains each version's determinant
+truncation, operand selection, division order, intermediate rounding,
+row/column scaling and saturation. `GetLms2RgbByDefM33Fxp(7)` illustrates
+the distinct inverse result domains: signed 16-bit 32 in STB 2.4 versus
+raw 32-bit `0xffff0020` in STB 2.6. Forward matrix scale results remain
+bounded positive values. `GetRgb2LmsWpByDefV3Fxp` returns its scale in both
+versions. STB 2.6 `Lms2RgbCtWp` retains a reserved 64-bit argument slot
+before its white-point pointer.
+
+White-point matrix construction shares the once-per-row signed division
+core, including explicit zero-divisor handling. Its scale/result domain
+and truncate-versus-saturate finish remain version-specific.
+
+### Ranges, gamma and PQ
+
+Range fallback and exceptional-depth handling change:
+`GetRange(10, 3)` returns minimum/extent 0/1023 in STB 2.4 versus 64/959
+in STB 2.6. Minimum/extent alias reloads remain ordered. Bypass maps
+retain their own divisors, signed-depth handling and zero/full-range
+rules. `CommitKsUs` uses different inputs and packed-store sequences.
+STB 2.6 adds level-bit operations, stable ascending sorting, downscale
+and filter setup, inverse/interpolated LUTs, and display/primary lookups,
+with signed comparisons and inclusive last-index behavior preserved.
+
+`GenerateL2GLut` shares its sampling and store sequence and consumes a
+32-bit gamma value. The slope denominator is zero-extended in STB 2.4
+and sign-extended in STB 2.6. STB 2.4 additionally supplies 97-point
+target-EOTF LUTs, interpolation and gamma alpha/beta calculation. STB 2.6
+uses its CCT/xy/XYZ/ICtCp conversion, intended white-point CCT and gamma
+parameter preparation, with their state writes. Common gamma breakpoint,
+Pulsar and SDR table values remain unchanged.
+
+The 12/16-bit inverse PQ interpolation shares its calculation and explicit
+low-16 input masking. Control-path `LToPQ12` permits rounded 4096 in
+STB 2.4 and caps at 4095 in STB 2.6; both decoder conversions cap at 4095.
+Signed/extended `L2PqX` retains different range branches, rounding and
+result widths: raw input `0xffffffffffffffff` produces signed 32-bit -108
+in STB 2.4 versus full 64-bit `0x7ffffffffff94` in STB 2.6. STB 2.6 adds
+16/18-bit LUT conversions, signed forward/inverse extended PQ and
+table-interpolated extended conversions, including their fatal bounds.
+Common inverse table values remain shared; extended tables support the
+additional operations.
+
+`DeGamma` shares its calculation and table values. Gain, offset, exponent
+and sample consume their low 16 bits; overflow scale consumes all 32 bits.
+The calculation preserves unsigned log interpolation/wrap, conditional
+64-bit overflow scaling with 32-bit truncation, and the final 64-bit
+product. STB 2.4 returns its low 32 bits; STB 2.6 returns all 64 bits.
+STB 2.4 selects singleton tone direction and separate graphics state;
+STB 2.6 selects primary/indexed state by current and committed mode,
+normalizes index zero, retains reachable bounds traps and propagates EOTF.

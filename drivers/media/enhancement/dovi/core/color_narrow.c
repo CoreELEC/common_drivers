@@ -1,8 +1,25 @@
 /* Fixed-point conversion between full and narrow color ranges. */
+#include "fixed_access.h"
 #include "color_narrow.h"
 #include "color_basis_impl.h"
-#include "numeric_common.h"
 #include "matrix_arithmetic.h"
+
+static unsigned int sdiv32(unsigned int a, unsigned int b)
+{
+    return fixed_raw_divide32(a, b);
+}
+
+static unsigned long long product(unsigned int value, int coefficient)
+{
+    return fixed_sign32(value) * (unsigned long long)(long long)coefficient;
+}
+
+static unsigned int ratio(unsigned int depth, unsigned int width, unsigned int inverse)
+{
+    unsigned int mask = ~(0xffffffffu << (depth & 31));
+    unsigned int shift = (depth - 8u) & 31;
+    return inverse ? sdiv32(mask << 16, width << shift) : sdiv32((width << 16) << shift, mask);
+}
 
 void dovi_GetYuvRgbOffFxp(unsigned int range, unsigned int bits, void *output)
 {
@@ -15,12 +32,20 @@ void dovi_GetYuvRgbOffFxp(unsigned int range, unsigned int bits, void *output)
 
 unsigned int dovi_GetLms2IptM33NarrowFxp(unsigned int bits, void *output)
 {
-    return rgb2_yuv_m33_full2_narrow(color_lms2_ipt, 12, fixed_signed16(bits), output);
+    unsigned int factor = ratio(fixed_sign16(bits), 219, 0), i;
+    unsigned long long temporary[9];
+    for (i = 0; i < 9; ++i)
+        temporary[i] = product(factor, color_lms2_ipt[i]);
+    return dovi_Adjust64M33ScaleTo16M33(temporary, 28, output);
 }
 
 unsigned int dovi_GetIpt2LmsM33NarrowFxp(unsigned int bits, void *output)
 {
-    return yuv2_rgb_m33_narrow2_full(color_ipt2_lms, 15, fixed_signed16(bits), output);
+    unsigned int factor = ratio(fixed_sign16(bits), 219, 1), i;
+    unsigned long long temporary[9];
+    for (i = 0; i < 9; ++i)
+        temporary[i] = product(factor, color_ipt2_lms[i]);
+    return dovi_Adjust64M33ScaleTo16M33(temporary, 31, output);
 }
 
 void dovi_GetYuv2RgbFromKrKgKbM33(unsigned int kr, unsigned int kg, unsigned int kb, void *output)
@@ -43,33 +68,43 @@ void dovi_GetYuv2RgbFromKrKgKbM33(unsigned int kr, unsigned int kg, unsigned int
     fixed_store_le64(out + 64u, 0);
 }
 
-short rgb2_yuv_m33_full2_narrow(const void *input, short scale, int bits, void *output)
+unsigned int dovi_GetLms2IctcpIoM33Narrow(unsigned int depth, void *matrix)
 {
-    int y = 0xdbdb, uv = 0xe0e0;
-    unsigned int i;
-    long long temporary[9];
-    if (bits >= 8) {
-        int denominator = fixed_signed32((1u << ((unsigned int)bits & 31u)) - 1u);
-        y = numeric_divide32(fixed_signed32(0xdb0000u << (((unsigned int)bits - 8u) & 31u)),
-                             denominator);
-        uv = numeric_divide32(fixed_signed32(0xe00000u << (((unsigned int)bits - 8u) & 31u)),
-                              denominator);
-    }
-    for (i = 0; i < 9; ++i)
-        temporary[i] = (long long)numeric_load_signed16_at(input, i) * (i < 3 ? y : uv);
-    return dovi_Adjust64M33ScaleTo16M33(temporary, fixed_signed16((unsigned int)scale + 16u),
-                                        output);
+    unsigned int y, c;
+    unsigned long long values[9];
+    if ((depth >> 31) || depth < 9)
+        depth = 8;
+    y = ratio(depth, 219, 0);
+    c = ratio(depth, 224, 0);
+    values[0] = product(y, 2048);
+    values[1] = values[0];
+    values[2] = 0;
+    values[3] = product(c, 6610);
+    values[4] = product(c, -13613);
+    values[5] = product(c, 7003);
+    values[6] = product(c, 17933);
+    values[7] = product(c, -17390);
+    values[8] = product(c, -543);
+    return dovi_Adjust64M33ScaleTo16M33(values, 28, matrix);
 }
 
-short yuv2_rgb_m33_narrow2_full(const void *input, short scale, short bits, void *output)
+unsigned int dovi_GetIctcpIo2LmsM33Narrow(unsigned int depth, void *matrix)
 {
-    unsigned int i, shift = ((unsigned int)(int)bits - 8u) & 31u;
-    int numerator = fixed_signed32(((1u << ((unsigned int)(int)bits & 31u)) - 1u) * 0x10000u);
-    int y = numeric_divide32(numerator, fixed_signed32(0xdbu << shift));
-    int uv = numeric_divide32(numerator, fixed_signed32(0xe0u << shift));
-    long long temporary[9];
-    for (i = 0; i < 9; ++i)
-        temporary[i] = (long long)numeric_load_signed16_at(input, i) * (i % 3 ? uv : y);
-    return dovi_Adjust64M33ScaleTo16M33(temporary, fixed_signed16((unsigned int)scale + 16u),
-                                        output);
+    unsigned int y, c;
+    unsigned long long values[9];
+    depth = fixed_sign16(depth);
+    if ((depth >> 31) || depth < 9)
+        depth = 8;
+    y = ratio(depth, 219, 1);
+    c = ratio(depth, 224, 1);
+    values[0] = product(y, 32767);
+    values[1] = product(c, 282);
+    values[2] = product(c, 3638);
+    values[3] = values[0];
+    values[4] = product(c, -282);
+    values[5] = product(c, -3638);
+    values[6] = values[0];
+    values[7] = product(c, 18351);
+    values[8] = product(c, -10506);
+    return dovi_Adjust64M33ScaleTo16M33(values, 31, matrix);
 }

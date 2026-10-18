@@ -1,14 +1,21 @@
 #ifndef DOVI_NUMERIC_TRANSFER_H
 #define DOVI_NUMERIC_TRANSFER_H
 
-void calc_ta_tb(int gamma, unsigned int maximum, unsigned int minimum, int *ta, int *tb);
-int dovi_applyGamma(int linear, int inverse_gamma);
-int dovi_computeTgtEotfLut(void *lut, unsigned int maximum, unsigned int minimum,
-                           unsigned int gamma, unsigned int eotf);
-unsigned int dovi_L2PQ_loglut(unsigned int linear);
-int dovi_l2eotf_lerp(unsigned int linear, const void *lut, unsigned int minimum,
-                     unsigned int maximum);
+#include "numeric_common.h"
+
+void dovi_Cct2Xy(unsigned long long cct, void *out);
+void dovi_Xy2Xyz(const void *input, void *output);
+void dovi_Xyz2IctcpDm(const void *input, void *output);
+void dovi_RgbLn2Ictcp(unsigned int red, unsigned int green, unsigned int blue, const void *matrix,
+                      unsigned long long scale, const void *matrix2, unsigned int scale2,
+                      void *output);
+unsigned long long dovi_GetIntendedWpCct(unsigned int source, unsigned int target,
+                                         unsigned int index);
+void dovi_GetGammaABG(unsigned int gamma, unsigned long long maximum, unsigned long long minimum,
+                      void *alpha, void *beta, void *outgamma);
 void dovi_GenerateL2GLut(unsigned int gamma, void *slopes, void *lut16, void *positions,
                          void *scratchx, void *scratchy);
+
+extern unsigned int dovi_Xyz2IctcpDm_m33Xyz2Lms[9], dovi_Xyz2IctcpDm_v3_0, dovi_Xyz2IctcpDm_v3_1;
 
 #endif

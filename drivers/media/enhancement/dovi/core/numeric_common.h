@@ -1,4 +1,4 @@
-/* Fixed-width numeric views for the reconstructed module. */
+/* Fixed-width numeric views shared by both reconstructed module versions. */
 #ifndef DOVI_NUMERIC_COMMON_H
 #define DOVI_NUMERIC_COMMON_H
 #include "fixed_access.h"
