@@ -1326,6 +1326,96 @@ static ssize_t stereo_mode_show(struct device *dev,
 
 static DEVICE_ATTR_RO(stereo_mode);
 
+/* the output state as sent on the wire, in the format of the 5.15 config node */
+static ssize_t config_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	static const int colour_depths[] = {8, 10, 12, 16};
+	static const char * const pix_fmt[] = {"RGB", "YUV422", "YUV444", "YUV420"};
+	static const char * const tx20_colourimetry[] = {"default", "BT.601", "BT.709"};
+	static const char * const tx20_ext_colourimetry[] = {"xvYCC601", "xvYCC709",
+		"sYCC601", "Adobe_YCC601", "Adobe_RGB", "BT.2020c", "BT.2020nc", "reserved"};
+	static const char * const tx21_colourimetry[] = {"unknown", "BT.601", "BT.709"};
+	static const char * const tx21_ext_colourimetry[] = {"xvYCC 601", "xvYCC 709",
+		"sYCC 601", "opYCC 601", "opRGB", "BT.2020 CL", "BT.2020", "reserved"};
+	struct hdmitx_common *tx_comm = dev_get_drvdata(dev);
+	bool tx21 = tx_comm->hdmi_init == HDMITX21;
+	struct hdmitx_hw_common *tx_hw = tx_comm->tx_hw;
+	struct hdmi_format_para *para = &tx_comm->fmt_para;
+	const char *eotf = "SDR";
+	int pos = 0;
+	int cs;
+	int cd;
+	int cm;
+
+	pos += snprintf(buf + pos, PAGE_SIZE - pos, "VIC: %d %s\n", para->vic,
+		para->name ? (const char *)para->name : "invalid");
+	if (!tx_comm->hpd_state)
+		return pos;
+
+	cs = hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_AVI_CS, NULL, NULL);
+	if (cs > HDMI_COLORSPACE_YUV420)
+		return pos;
+	cd = hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_GCP_CD, NULL, NULL);
+	/* the tx21 getter reports the 12-bit container for 422, show the set depth */
+	if (tx21 && cs == HDMI_COLORSPACE_YUV422)
+		cd = para->cd;
+
+	if (hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_HDR10P_ST, NULL, NULL) == HDMI_HDR10P_DV_VSIF) {
+		eotf = "HDR10+";
+	} else {
+		switch (hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_AMDV_ST, NULL, NULL)) {
+		case HDMI_DV_VSIF_STD:
+			eotf = "DV-Std";
+			cs = HDMI_COLORSPACE_RGB;
+			break;
+		case HDMI_DV_VSIF_LL:
+			eotf = "DV-LL";
+			break;
+		default:
+			switch (hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_HDR_ST, NULL, NULL)) {
+			case HDMI_HDR_SMPTE_2084:
+				eotf = "HDR10";
+				break;
+			case HDMI_HDR_HLG:
+				eotf = "HLG";
+				break;
+			case HDMI_HDR_HDR:
+				eotf = "HDR";
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+	}
+
+	if (cd >= COLORDEPTH_24B && cd <= COLORDEPTH_48B)
+		pos += snprintf(buf + pos, PAGE_SIZE - pos, "Colour depth: %d-bit\n",
+			colour_depths[cd - COLORDEPTH_24B]);
+	else
+		pos += snprintf(buf + pos, PAGE_SIZE - pos, "Colour depth: unknown\n");
+	pos += snprintf(buf + pos, PAGE_SIZE - pos, "Colourspace: %s\n", pix_fmt[cs]);
+	pos += snprintf(buf + pos, PAGE_SIZE - pos, "EOTF: %s\n", eotf);
+
+	cm = hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_AVI_COLORIMETRY, NULL, NULL);
+	if (cm == HDMI_COLORIMETRY_EXTENDED) {
+		cm = hdmitx_hw_cntl(tx_hw, AUX_PKT_GET_AVI_EXTENDED_COLORIMETRY, NULL, NULL);
+		cm &= 0x7;
+		pos += snprintf(buf + pos, PAGE_SIZE - pos, "Colourimetry: %s\n",
+			tx21 ? tx21_ext_colourimetry[cm] : tx20_ext_colourimetry[cm]);
+	} else {
+		if (cm < 0 || cm > HDMI_COLORIMETRY_ITU_709)
+			cm = 0;
+		pos += snprintf(buf + pos, PAGE_SIZE - pos, "Colourimetry: %s\n",
+			tx21 ? tx21_colourimetry[cm] : tx20_colourimetry[cm]);
+	}
+
+	return pos;
+}
+
+static DEVICE_ATTR_RO(config);
+
 static ssize_t preferred_mode_show(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
@@ -2468,6 +2558,7 @@ int hdmitx_sysfs_common_create(struct device *dev,
 	ret = device_create_file(dev, &dev_attr_edid);
 	ret = device_create_file(dev, &dev_attr_disp_cap_3d);
 	ret = device_create_file(dev, &dev_attr_stereo_mode);
+	ret = device_create_file(dev, &dev_attr_config);
 	ret = device_create_file(dev, &dev_attr_preferred_mode);
 	ret = device_create_file(dev, &dev_attr_vesa_cap);
 	ret = device_create_file(dev, &dev_attr_aud_cap);
@@ -2531,6 +2622,7 @@ int hdmitx_sysfs_common_destroy(struct device *dev)
 	device_remove_file(dev, &dev_attr_edid);
 	device_remove_file(dev, &dev_attr_disp_cap_3d);
 	device_remove_file(dev, &dev_attr_stereo_mode);
+	device_remove_file(dev, &dev_attr_config);
 	device_remove_file(dev, &dev_attr_preferred_mode);
 	device_remove_file(dev, &dev_attr_vesa_cap);
 	device_remove_file(dev, &dev_attr_aud_cap);
