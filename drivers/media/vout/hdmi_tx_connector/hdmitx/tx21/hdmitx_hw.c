@@ -377,8 +377,8 @@ static int hdmitx_get_scan_info_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -396,8 +396,8 @@ static int hdmitx_get_colorimetry_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -415,8 +415,8 @@ static int hdmitx_get_extended_colorimetry_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -438,8 +438,8 @@ static int hdmitx_get_picture_aspect_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -457,8 +457,8 @@ static int hdmitx_get_active_aspect_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -476,8 +476,8 @@ static int hdmitx_get_quantization_range_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -495,8 +495,8 @@ static int hdmitx_get_nups_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -514,8 +514,8 @@ static int hdmitx_get_ycc_quantization_range_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -533,8 +533,8 @@ static bool hdmitx_get_itc_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -552,8 +552,8 @@ static int hdmitx_get_content_type_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -571,8 +571,8 @@ static int hdmitx_get_pixel_repeat_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -590,8 +590,8 @@ static int hdmitx_get_top_bar_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -609,8 +609,8 @@ static int hdmitx_get_bottom_bar_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -628,8 +628,8 @@ static int hdmitx_get_left_bar_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -647,8 +647,8 @@ static int hdmitx_get_right_bar_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -666,8 +666,8 @@ static int hdmitx_get_vic_from_avi(struct hdmitx21_dev *hdev)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &hdev->tx_comm.infoframe.avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 
 	ret = hdmi_avi_infoframe_get(body);
 	if (ret == -1 || ret == 0)
@@ -4357,8 +4357,8 @@ static enum hdmi_colorspace get_cs_from_pkt(void)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &global_tx_hw->infoframe->avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 	enum hdmi_colorspace cs = HDMI_COLORSPACE_RESERVED6;
 
 	ret = hdmitx_infoframe_raw_get(HDMI_INFOFRAME_TYPE_AVI, body);
@@ -4380,8 +4380,8 @@ static enum hdmi_color_depth get_cd_from_pkt(void)
 {
 	int ret;
 	u8 body[32] = {0};
-	union hdmi_infoframe *infoframe = &global_tx_hw->infoframe->avi;
-	struct hdmi_avi_infoframe *avi = &infoframe->avi;
+	struct hdmi_avi_infoframe avi_frame;
+	struct hdmi_avi_infoframe *avi = &avi_frame;
 	enum hdmi_color_depth cd = COLORDEPTH_RESERVED;
 	enum hdmi_colorspace cs = HDMI_COLORSPACE_RESERVED6;
 
