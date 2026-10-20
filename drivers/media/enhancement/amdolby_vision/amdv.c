@@ -8804,11 +8804,7 @@ static int is_video_output_off(struct vframe_s *vf)
 
 bool is_dv_standard_es(int dvel, int mflag, int width)
 {
-	if (dvel == 1 && mflag == 0 &&
-	    width >= 3840)
-		return false;
-	else
-		return true;
+	return true;
 }
 
 static int prepare_dv_meta
