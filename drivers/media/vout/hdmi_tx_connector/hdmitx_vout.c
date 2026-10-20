@@ -348,18 +348,6 @@ static void hdmitx_set_bist(u32 num, void *data)
 	HDMITX_ERROR("Not Support: try debug sysfs node in amhdmitx\n");
 }
 
-static int hdmitx_vout_set_vframe_rate_hint(int duration, void *data)
-{
-	HDMITX_ERROR("not support %s\n", __func__);
-	return 0;
-}
-
-static int hdmitx_vout_get_vframe_rate_hint(void *data)
-{
-	HDMITX_ERROR("not support %s\n", __func__);
-	return 0;
-}
-
 static struct vout_server_s hdmitx_vout_server = {
 	.name = "hdmitx_vout_server",
 	.op = {
@@ -373,8 +361,8 @@ static struct vout_server_s hdmitx_vout_server = {
 		.clr_state = hdmitx_vout_clr_state,
 		.get_state = hdmitx_vout_get_state,
 		.get_disp_cap = hdmitx_vout_get_disp_cap,
-		.set_vframe_rate_hint = hdmitx_vout_set_vframe_rate_hint,
-		.get_vframe_rate_hint = hdmitx_vout_get_vframe_rate_hint,
+		.set_vframe_rate_hint = NULL,
+		.get_vframe_rate_hint = NULL,
 		.set_bist = hdmitx_set_bist,
 		.get_viu_mux = hdmitx_get_viu_mux,
 #ifdef CONFIG_PM
