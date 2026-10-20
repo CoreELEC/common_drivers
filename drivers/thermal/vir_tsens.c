@@ -26,7 +26,8 @@ static int vir_get_temp(struct thermal_zone_device *p, int *temp)
 
 	ret = thermal_zone_get_temp(vir_tsens->soc_tzd, temp);
 	if (ret) {
-		dev_err(vir_tsens->dev, "fail to read temperature %d\n", ret);
+		if (ret != -EAGAIN)
+			dev_err(vir_tsens->dev, "fail to read temperature %d\n", ret);
 		return ret;
 	}
 
