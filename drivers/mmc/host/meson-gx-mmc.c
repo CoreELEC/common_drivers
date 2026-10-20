@@ -2629,8 +2629,6 @@ void mmc_pattern_check(struct mmc_host *mmc)
 			if (check_pass == 1) {
 				host->reserved_out = 1;
 				pr_info("reserved partition out\n");
-			} else {
-				dump_stack();
 			}
 		}
 	}
