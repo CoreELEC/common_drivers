@@ -281,8 +281,10 @@
 	sdio@ffe03000 {	//wifi
 			
 		cap-mmc-highspeed;
+		use_intf3_tuning;
 		sd-uhs-sdr50;
-		max-frequency = <60000000>;	 
+		sd-uhs-sdr104;
+		max-frequency = <200000000>;
 		no-sd;
 		mt76x8_pmu_en_gpio = <&gpio GPIOX_15 GPIO_ACTIVE_HIGH>;
 	};		
