@@ -70,7 +70,8 @@ static int ddr_get_thermal_step(struct control_device *cdev)
 
 	ret = thermal_zone_get_temp(thermal->tzd, &temp);
 	if (ret) {
-		dev_err(cdev->dev, "fail to read temperature %d\n", ret);
+		if (ret != -EAGAIN)
+			dev_err(cdev->dev, "fail to read temperature %d\n", ret);
 		return ret;
 	}
 
