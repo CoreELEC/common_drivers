@@ -558,8 +558,10 @@ static int meson_get_temp(struct thermal_zone_device *p, int *temp)
 {
 	struct meson_tsensor_data *data = p->devdata;
 
-	if (!data->tsensor_read || !data->ready)
+	if (!data->tsensor_read)
 		return -EINVAL;
+	if (!data->ready)
+		return -EAGAIN;
 
 	mutex_lock(&data->lock);
 	*temp = code_to_temp(data, data->tsensor_read(data));
