@@ -359,12 +359,11 @@ static int meson_pinconf_enable_bias(struct meson_pinctrl *pc, unsigned int pin,
 	return 0;
 }
 
-static int meson_pinconf_set_drive_strength(struct meson_pinctrl *pc,
-					    unsigned int pin,
-					    u16 drive_strength_ua)
+static int meson_pinconf_write_ds(struct meson_pinctrl *pc,
+					    unsigned int pin, unsigned int ds_val)
 {
 	struct meson_bank *bank;
-	unsigned int reg, bit, ds_val;
+	unsigned int reg, bit;
 	int ret;
 
 	if (!pc->reg_ds) {
@@ -377,6 +376,20 @@ static int meson_pinconf_set_drive_strength(struct meson_pinctrl *pc,
 		return ret;
 
 	meson_calc_reg_and_bit(bank, pin, REG_DS, &reg, &bit);
+
+	if (BIT(ds_val) & pc->data->ds_mask) {
+		dev_err(pc->dev, "unsupported drive strength: ds%u\n", ds_val);
+		return -EOPNOTSUPP;
+	}
+
+	return regmap_update_bits(pc->reg_ds, reg, 0x3 << bit, ds_val << bit);
+}
+
+static int meson_pinconf_set_drive_strength(struct meson_pinctrl *pc,
+					    unsigned int pin,
+					    u16 drive_strength_ua)
+{
+	unsigned int ds_val;
 
 	if (drive_strength_ua <= 500) {
 		ds_val = MESON_PINCONF_DRV_500UA;
@@ -393,17 +406,37 @@ static int meson_pinconf_set_drive_strength(struct meson_pinctrl *pc,
 		ds_val = MESON_PINCONF_DRV_4000UA;
 	}
 
-	if (BIT(ds_val) & pc->data->ds_mask) {
-		dev_err(pc->dev, "unsupported drive strength: ds%u\n", ds_val);
-		return -EOPNOTSUPP;
-	}
-
-	ret = regmap_update_bits(pc->reg_ds, reg, 0x3 << bit, ds_val << bit);
-	if (ret)
-		return ret;
-
-	return 0;
+	return meson_pinconf_write_ds(pc, pin, ds_val);
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+/*
+ * Legacy "drive-strength" property.
+ *
+ * The Amlogic vendor device trees (g12a/g12b/sm1 and others) still describe
+ * pin drive strength with "drive-strength = <N>", where N is the raw DS
+ * register index (0..3 = 0.5/2.5/3/4 mA) used by the older vendor kernels.
+ * The upstream driver only understands "drive-strength-microamp", so these
+ * entries used to be rejected with -ENOTSUPP. Because meson_pinconf_set()
+ * stops at the first failing config and the error is dropped by
+ * meson_pinconf_group_set(), every config parsed after it (input-enable,
+ * output-high, ...) was silently skipped as well.
+ *
+ * Accept the legacy property again: values 0..3 are treated as the register
+ * index; larger values follow the generic binding (mA) and are converted.
+ */
+static int meson_pinconf_set_drive_strength_legacy(struct meson_pinctrl *pc,
+					    unsigned int pin,
+					    unsigned int arg)
+{
+	if (arg <= MESON_PINCONF_DRV_4000UA)
+		return meson_pinconf_write_ds(pc, pin, arg);
+
+	return meson_pinconf_set_drive_strength(pc, pin,
+	       min_t(unsigned int, arg * 1000,
+	       U16_MAX));
+}
+#endif
 
 #ifdef CONFIG_AMLOGIC_MODIFY
 static int  meson_pinconf_set_vthx(struct meson_pinctrl *pc, unsigned int pin,
@@ -468,6 +501,7 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 		switch (param) {
 		case PIN_CONFIG_DRIVE_STRENGTH_UA:
 #ifdef CONFIG_AMLOGIC_MODIFY
+		case PIN_CONFIG_DRIVE_STRENGTH:
 		case PIN_CONFIG_INPUT_ENABLE:
 		case PIN_CONFIG_VIN_THRESHOLD:
 #endif
@@ -500,6 +534,9 @@ static int meson_pinconf_set(struct pinctrl_dev *pcdev, unsigned int pin,
 			ret = meson_pinconf_set_output_drive(pc, pin, arg);
 			break;
 #ifdef CONFIG_AMLOGIC_MODIFY
+		case PIN_CONFIG_DRIVE_STRENGTH:
+			ret = meson_pinconf_set_drive_strength_legacy(pc, pin, arg);
+			break;
 		case PIN_CONFIG_INPUT_ENABLE:
 			ret = meson_pinconf_set_output(pc, pin, !arg);
 			break;
