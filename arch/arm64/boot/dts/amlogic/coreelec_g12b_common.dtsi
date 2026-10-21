@@ -432,6 +432,7 @@
 	/delete-property/ sd-uhs-sdr25;
 	/delete-property/ sd-uhs-sdr50;
 	/delete-property/ sd-uhs-sdr104;
+	/delete-property/ vqmmc-supply;
 };
 
 &sd_emmc_a {
@@ -440,4 +441,5 @@
 
 &vddio_c {
 	/delete-property/ gpio;
+	status = "disabled";
 };
