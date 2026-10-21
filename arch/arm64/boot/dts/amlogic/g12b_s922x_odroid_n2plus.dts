@@ -94,7 +94,7 @@
 		cooling-min-state = <0>;
 		cooling-max-state = <3>;
 		#cooling-cells = <2>;
-		cooling-levels = <0 120 170 220>;
+		cooling-levels = <0 120 170 255>;
 	};
 
 	onewire {
@@ -102,6 +102,29 @@
 		pinctrl-names = "default";
 		gpios = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
 		status = "disabled";
+	};
+
+	thermal-zones {
+		fan_thermal: fan_thermal {
+			polling-delay = <1000>;
+			polling-delay-passive = <100>;
+			thermal-sensors = <&vir_tsensor 1>;
+
+			trips {
+				fan_trip0: fan-trip0 {
+					temperature = <60000>;
+					hysteresis = <5000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				fan_cooling_map {
+					trip = <&fan_trip0>;
+					cooling-device = <&pwmfan 3 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
 	};
 };
 
@@ -175,4 +198,8 @@
 		vendor_name = "HK";
 		product_desc = "ODROID-N2Plus";
 	};
+};
+
+&vir_tsensor {
+	num-vtsens = <2>;
 };
