@@ -94,7 +94,7 @@
 		cooling-min-state = <0>;
 		cooling-max-state = <3>;
 		#cooling-cells = <2>;
-		cooling-levels = <0 120 170 220>;
+		cooling-levels = <0 120 170 255>;
 	};
 
 	onewire {
@@ -102,6 +102,17 @@
 		pinctrl-names = "default";
 		gpios = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
 		status = "disabled";
+	};
+
+	thermal-zones {
+		soc_thermal: soc_thermal {
+			cooling-maps {
+				fan_cooling_map {
+					trip = <&pswitch_on>;
+					cooling-device = <&pwmfan 3 THERMAL_NO_LIMIT>;
+				};
+			};
+		};
 	};
 };
 
