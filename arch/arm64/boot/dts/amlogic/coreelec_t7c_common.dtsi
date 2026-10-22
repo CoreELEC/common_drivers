@@ -189,6 +189,13 @@
 	};
 };
 
+/* base clocks read from the registers for a BL31 without SCMI clocks */
+&scmi_clk {
+	compatible = "amlogic,t7-scmi-fixed-clkc";
+	clocks = <&xtal>;
+	clock-names = "xtal";
+};
+
 &aml_wifi {
 	status = "okay";
 	wifi_static_buf = <1>;
