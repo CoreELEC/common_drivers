@@ -287,6 +287,14 @@ static void free_reserved_mem(unsigned long start, unsigned long size)
 	struct page *page, *epage;
 
 	pr_info("%s %d logo start_addr=%lx, end=%lx\n", __func__, __LINE__, start, end);
+	/* U-Boot can draw the logo in memory it hides from Linux */
+#ifdef CONFIG_ARM64
+	if (!pfn_is_map_memory(__phys_to_pfn(start)))
+#else
+	if (!pfn_valid(__phys_to_pfn(start)))
+#endif
+		return;
+
 	page = phys_to_page(start);
 	if (PageHighMem(page)) {
 		free_reserved_highmem(start, end);
