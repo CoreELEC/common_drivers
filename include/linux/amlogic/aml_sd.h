@@ -207,6 +207,7 @@ struct meson_host {
 	int run_low_mem;
 	int reserved_out;
 	u32 reg_bak[20];
+	struct mmc_card *tuning_card;
 };
 
 struct wifi_clk_table {

@@ -1337,7 +1337,11 @@ tuning:
 
 static void sdio_get_card(struct mmc_host *host, struct mmc_card *card)
 {
-	if (!host->card)
+	struct meson_host *priv = mmc_priv(host);
+
+	/* the tuning reads the size of a card that is not added yet */
+	priv->tuning_card = card;
+	if (!host->card && (mmc_card_sdio(card) || mmc_card_sd_combo(card)))
 		host->card = card;
 }
 
@@ -2187,10 +2191,11 @@ static int aml_sd_emmc_cali_v3(struct mmc_host *mmc,
 	struct mmc_data data = {0};
 	struct scatterlist sg;
 	struct meson_host *host = mmc_priv(mmc);
+	struct mmc_card *card = mmc->card ? mmc->card : host->tuning_card;
 	u64 capacity = 0;
 
-	if (mmc->card)
-		capacity = mmc->card->ext_csd.sectors - 4096;
+	if (card)
+		capacity = card->ext_csd.sectors - 4096;
 
 	cmd.opcode = opcode;
 	if (host->reserved_out == 1 && capacity != 0) {
@@ -2592,6 +2597,7 @@ static unsigned int tl1_emmc_line_timing(struct mmc_host *mmc)
 void mmc_pattern_check(struct mmc_host *mmc)
 {
 	struct meson_host *host = mmc_priv(mmc);
+	struct mmc_card *card = mmc->card ? mmc->card : host->tuning_card;
 	int check_pass = 1;
 	u64 capacity = 0;
 	u64 offset = 0;
@@ -2612,8 +2618,8 @@ void mmc_pattern_check(struct mmc_host *mmc)
 	if (check_pass == 1)
 		return;
 
-	if (mmc->card) {
-		capacity = mmc->card->ext_csd.sectors;
+	if (card) {
+		capacity = card->ext_csd.sectors;
 		check_pass = 1;
 		if (capacity != 0) {
 			offset = capacity - ((2 * SZ_1M) >> 9);
