@@ -47,6 +47,10 @@
 	};
 };
 
+&internal_ephy {
+	status = "disabled";
+};
+
 &ethmac {
 	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
 	pinctrl-names = "default";

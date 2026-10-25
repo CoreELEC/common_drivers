@@ -156,3 +156,7 @@
 &drm_vpu {
 	logo_addr = "0x3d800000";
 };
+
+&internal_ephy {
+	status = "disabled";
+};

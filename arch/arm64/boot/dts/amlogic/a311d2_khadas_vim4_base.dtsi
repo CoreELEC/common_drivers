@@ -83,3 +83,7 @@
 		vendor_name = "Khadas";
 	};
 };
+
+&internal_ephy {
+	status = "disabled";
+};
