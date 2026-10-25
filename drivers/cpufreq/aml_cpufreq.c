@@ -63,6 +63,57 @@ static int freqmax1_param_v2(char *buff)
 __setup("freqmax0=", freqmax0_param_v2);
 __setup("freqmax1=", freqmax1_param_v2);
 
+static unsigned long max_freq[CLUSTER_MAX] = {
+		0, /* freq for A53 */
+		0  /* freq for A73 */
+};
+
+static int __init get_max_freq_a53(char *str)
+{
+	int ret;
+
+	if (!str) {
+		pr_info("[%s] no data\n", __func__);
+		return -EINVAL;
+	}
+	ret = kstrtoul(str, 0, &max_freq[0]);
+	if (ret != 0) {
+		pr_info("[%s] invalid data - err %d, str %s\n",
+			__func__, ret, str);
+		return -EINVAL;
+	}
+
+	/* in unit kHz */
+	max_freq[0] *= 1000;
+	pr_info("[%s] - max_freq : %lu\n", __func__, max_freq[0]);
+
+	return 0;
+}
+__setup("max_freq_a53=", get_max_freq_a53);
+
+static int __init get_max_freq_a73(char *str)
+{
+	int ret;
+
+	if (!str) {
+		pr_info("[%s] no data\n", __func__);
+		return -EINVAL;
+	}
+	ret = kstrtoul(str, 0, &max_freq[1]);
+	if (ret != 0) {
+		pr_info("[%s] invalid data - err %d, str %s\n",
+			__func__, ret, str);
+		return -EINVAL;
+	}
+
+	/* in unit kHz */
+	max_freq[1] *= 1000;
+	pr_info("[%s] - max_freq : %lu\n", __func__, max_freq[1]);
+
+	return 0;
+}
+__setup("max_freq_a73=", get_max_freq_a73);
+
 static struct cluster_data *find_cluster_data_by_cpu(int cpu)
 {
 	struct cluster_data *pos, *ret = NULL;
@@ -535,7 +586,7 @@ static bool aml_setup_opptable(struct cluster_data *data)
 	struct opp_table *opptable;
 	struct dev_pm_opp *opp;
 	bool ret = false;
-	int table_index = 0, i = 0, cpu;
+	int table_index = 0, i = 0, j, cpu;
 	u32 rate, rate1, volt, nums;
 	char dsutable_name[20] = {0};
 	int dsuopp_len;
@@ -561,6 +612,17 @@ static bool aml_setup_opptable(struct cluster_data *data)
 	if (dev_pm_opp_init_cpufreq_table(cpudev, &data->freq_table)) {
 		pr_err("%s:failed to init cpufreq table,cluster:%d\n", __func__, data->clusterid);
 		goto out;
+	}
+
+	for (j = 0; data->freq_table[j].frequency != CPUFREQ_TABLE_END &&
+	     max_freq[data->clusterid]; j++) {
+		if (data->freq_table[j].frequency > max_freq[data->clusterid]) {
+			pr_info("dvfs [%s] - cluster %d freq %d\n",
+				__func__, data->clusterid,
+				data->freq_table[j].frequency);
+
+			data->freq_table[j].frequency = CPUFREQ_TABLE_END;
+		}
 	}
 	data->opp_cnt = dev_pm_opp_get_opp_count(cpudev);
 	data->opp_table = kmalloc_array(data->opp_cnt, sizeof(*data->opp_table), GFP_KERNEL);
