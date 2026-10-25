@@ -606,6 +606,22 @@ static bool aml_setup_opptable(struct cluster_data *data)
 		goto out;
 	}
 
+	if (!max_freq[data->clusterid]) {
+		char clname[24];
+		struct device_node *cln;
+		u32 stock_freq = 0;
+
+		snprintf(clname, sizeof(clname), "/cpus/cpu-map/cluster%d", data->clusterid);
+		cln = of_find_node_by_path(clname);
+		if (!of_property_read_u32(cln, "stock_freq", &stock_freq) && stock_freq) {
+			/* in unit kHz */
+			max_freq[data->clusterid] = stock_freq * 1000;
+			pr_info("cluster%d stock freq set to: %u\n", data->clusterid,
+				stock_freq * 1000);
+		}
+		of_node_put(cln);
+	}
+
 	for (j = 0; data->freq_table[j].frequency != CPUFREQ_TABLE_END &&
 	     max_freq[data->clusterid]; j++) {
 		if (data->freq_table[j].frequency > max_freq[data->clusterid]) {
