@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#include "s7d_s905x5m_4g_1gbit.dts"
+
+/ {
+	model = "HK1 RBOX X50";
+	coreelec-dt-id = "s7d_s905x5m_hk1_rbox_x50";
+};
+
+&gpio {
+	fan-enable-hog {
+		gpio-hog;
+		gpios = <GPIODV_3 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "fan-enable";
+	};
+};
