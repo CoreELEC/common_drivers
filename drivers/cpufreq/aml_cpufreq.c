@@ -64,55 +64,47 @@ __setup("freqmax0=", freqmax0_param_v2);
 __setup("freqmax1=", freqmax1_param_v2);
 
 static unsigned long max_freq[CLUSTER_MAX] = {
-		0, /* freq for A53 */
-		0  /* freq for A73 */
+		0, /* freq for cluster 0 */
+		0  /* freq for cluster 1 */
 };
 
-static int __init get_max_freq_a53(char *str)
+static int __init get_max_freq_cluster(char *str)
 {
+	char *cluster_option;
+	char *cluster_index;
+	int cluster;
 	int ret;
 
 	if (!str) {
 		pr_info("[%s] no data\n", __func__);
 		return -EINVAL;
 	}
-	ret = kstrtoul(str, 0, &max_freq[0]);
-	if (ret != 0) {
-		pr_info("[%s] invalid data - err %d, str %s\n",
-			__func__, ret, str);
-		return -EINVAL;
-	}
 
-	/* in unit kHz */
-	max_freq[0] *= 1000;
-	pr_info("[%s] - max_freq : %lu\n", __func__, max_freq[0]);
+	while ((cluster_option = strsep(&str, ",")) != NULL) {
+		cluster_index = strsep(&cluster_option, ":");
+
+		ret = kstrtoint(cluster_index, 10, &cluster);
+		if (ret != 0 || cluster < 0 || cluster >= CLUSTER_MAX || !cluster_option) {
+			pr_info("[%s] invalid data - err %d, str %s\n",
+				__func__, ret, cluster_index);
+			return -EINVAL;
+		}
+
+		ret = kstrtoul(cluster_option, 10, &max_freq[cluster]);
+		if (ret != 0) {
+			pr_info("[%s] invalid data - err %d, str %s\n",
+				__func__, ret, cluster_option);
+			return -EINVAL;
+		}
+
+		/* in unit kHz */
+		max_freq[cluster] *= 1000;
+		pr_info("[%s] - max_freq[%d] : %lu\n", __func__, cluster, max_freq[cluster]);
+	}
 
 	return 0;
 }
-__setup("max_freq_a53=", get_max_freq_a53);
-
-static int __init get_max_freq_a73(char *str)
-{
-	int ret;
-
-	if (!str) {
-		pr_info("[%s] no data\n", __func__);
-		return -EINVAL;
-	}
-	ret = kstrtoul(str, 0, &max_freq[1]);
-	if (ret != 0) {
-		pr_info("[%s] invalid data - err %d, str %s\n",
-			__func__, ret, str);
-		return -EINVAL;
-	}
-
-	/* in unit kHz */
-	max_freq[1] *= 1000;
-	pr_info("[%s] - max_freq : %lu\n", __func__, max_freq[1]);
-
-	return 0;
-}
-__setup("max_freq_a73=", get_max_freq_a73);
+__setup("max_freq_cluster=", get_max_freq_cluster);
 
 static struct cluster_data *find_cluster_data_by_cpu(int cpu)
 {
