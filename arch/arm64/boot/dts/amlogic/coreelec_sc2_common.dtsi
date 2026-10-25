@@ -237,3 +237,10 @@
 &{/reserved-memory/ramoops@7300000} {
 	reg = <0x0 0x08400000 0x0 0x00100000>;
 };
+
+/* base clocks read from the registers for a BL31 without SCMI clocks */
+&scmi_clk {
+	compatible = "amlogic,sc2-scmi-fixed-clkc";
+	clocks = <&xtal>;
+	clock-names = "xtal";
+};
