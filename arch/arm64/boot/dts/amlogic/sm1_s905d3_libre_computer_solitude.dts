@@ -161,6 +161,10 @@
 	logo_addr = "0x3d800000";
 };
 
+&internal_ephy {
+	status = "disabled";
+};
+
 &vir_tsensor {
 	num-vtsens = <2>;
 };
