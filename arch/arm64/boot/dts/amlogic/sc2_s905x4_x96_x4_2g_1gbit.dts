@@ -56,3 +56,7 @@
 	amlogic,tx-delay-ns = <2>;
 	/delete-property/ mc_val;
 };
+
+&internal_ephy {
+	status = "disabled";
+};

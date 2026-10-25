@@ -87,6 +87,10 @@
 	};
 };
 
+&internal_ephy {
+	status = "disabled";
+};
+
 &{/thermal-zones} {
 	fan_thermal: fan_thermal {
 		polling-delay = <1000>;

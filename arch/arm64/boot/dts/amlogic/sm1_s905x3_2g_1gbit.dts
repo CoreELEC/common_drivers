@@ -20,3 +20,7 @@
 	internal_phy = <0>;
 	amlogic,tx-delay-ns = <2>;
 };
+
+&internal_ephy {
+	status = "disabled";
+};

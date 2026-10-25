@@ -39,3 +39,7 @@
 		product_desc = "GT-King II";
 	};
 };
+
+&internal_ephy {
+	status = "disabled";
+};

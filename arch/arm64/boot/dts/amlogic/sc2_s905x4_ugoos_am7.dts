@@ -238,3 +238,7 @@
 		product_desc = "AM7";
 	};
 };
+
+&internal_ephy {
+	status = "disabled";
+};
