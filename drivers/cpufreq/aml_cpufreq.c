@@ -856,10 +856,21 @@ static int aml_cpufreq_suspend(struct cpufreq_policy *policy)
 static int aml_cpufreq_resume(struct cpufreq_policy *policy)
 {
 	struct cluster_data *data = policy->driver_data;
+	struct cpufreq_frequency_table *pos;
+	unsigned int original_freq = policy->suspend_freq;
 
 	data->suspended = false;
 	if (policy->cdev)
 		dev_set_uevent_suppress(&policy->cdev->device, false);
+
+	/* a step through the entry one below restores the full speed */
+	cpufreq_for_each_entry(pos, policy->freq_table) {
+		if (pos->frequency == original_freq)
+			break;
+		policy->suspend_freq = pos->frequency;
+	}
+	cpufreq_generic_suspend(policy);
+	policy->suspend_freq = original_freq;
 
 	return cpufreq_generic_suspend(policy);
 }
@@ -887,7 +898,8 @@ static struct cpufreq_driver aml_cpufreq_driver = {
 	.name			= "aml-cpufreq",
 	.flags			= CPUFREQ_IS_COOLING_DEV |
 					CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
-					CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+					CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+					CPUFREQ_NEED_UPDATE_LIMITS,
 	.verify			= aml_cpufreq_verify,
 	.target_index	= aml_cpufreq_set_target,
 	.get			= aml_cpufreq_get_rate,
