@@ -622,13 +622,16 @@ static bool aml_setup_opptable(struct cluster_data *data)
 		of_node_put(cln);
 	}
 
-	for (j = 0; data->freq_table[j].frequency != CPUFREQ_TABLE_END &&
+	/* keep the lowest entry, an empty OPP table breaks the whole probe */
+	for (j = 1; data->freq_table[j].frequency != CPUFREQ_TABLE_END &&
 	     max_freq[data->clusterid]; j++) {
 		if (data->freq_table[j].frequency > max_freq[data->clusterid]) {
 			pr_info("dvfs [%s] - cluster %d freq %d\n",
 				__func__, data->clusterid,
 				data->freq_table[j].frequency);
 
+			dev_pm_opp_disable(cpudev,
+				data->freq_table[j].frequency * 1000);
 			data->freq_table[j].frequency = CPUFREQ_TABLE_END;
 		}
 	}
