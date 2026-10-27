@@ -12,13 +12,13 @@
 };
 
 &logo_reserved {
-	alloc-ranges = <0x0 0xdf800000 0x0 0x800000>;
+	reg = <0x0 0x7f800000 0x0 0x800000>;
 };
 
 &meson_fb {
-	logo_addr = "0xdf800000";
+	logo_addr = "0x7f800000";
 };
 
 &drm_vpu {
-	logo_addr = "0xdf800000";
+	logo_addr = "0x7f800000";
 };

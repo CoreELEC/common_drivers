@@ -7,6 +7,12 @@
 
 	/delete-node/ memory@00000000;
 
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x0 0x3d800000 0x0 0x800000>;
+		};
+	};
+
 	bt-dev {
 		status = "disabled";
 	};
@@ -141,4 +147,12 @@
 		vendor_name = "LCP";
 		product_desc = "Solitude";
 	};
+};
+
+&meson_fb {
+	logo_addr = "0x3d800000";
+};
+
+&drm_vpu {
+	logo_addr = "0x3d800000";
 };

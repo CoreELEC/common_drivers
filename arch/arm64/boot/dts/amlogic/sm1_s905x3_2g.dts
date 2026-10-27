@@ -4,4 +4,18 @@
 / {
 	model = "Amlogic";
 	coreelec-dt-id = "sm1_s905x3_2g";
+
+	reserved-memory {
+		logo_reserved:linux,meson-fb {
+			reg = <0x0 0x3d800000 0x0 0x800000>;
+		};
+	};
+};
+
+&meson_fb {
+	logo_addr = "0x3d800000";
+};
+
+&drm_vpu {
+	logo_addr = "0x3d800000";
 };

@@ -316,3 +316,7 @@
 &vddio_c {
 	/delete-property/ gpio;
 };
+
+&logo_reserved {
+	reg = <0x0 0x3e800000 0x0 0x800000>;
+};
