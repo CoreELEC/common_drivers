@@ -12984,7 +12984,7 @@ void resume_recovery_process(int vpp_index)
 			cm_top_ctl(WR_DMA, 1, vpp_index);
 		}
 
-//		resume_cm(vpp_index);
+		resume_cm(vpp_index);
 		resume_ve(vpp_index);
 		resume_dnlp();
 		resume_vadj1(vpp_index);
@@ -19216,7 +19216,6 @@ static int amvecm_drv_resume(struct device *dev)
 		chip_type_id == chip_c5 ||
 		is_meson_g12b_cpu()) {
 		if (suspend_drv_status_get()) {
-			resume_cm(0);
 			vecm_latch_flag2 |= FLAG_RESUME_RECOVERY;
 			resume_mtx_flag_set(true);
 		}
