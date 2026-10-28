@@ -1122,8 +1122,7 @@ static int am_hdmitx_connector_atomic_get_property
 		to_am_hdmitx_connector_state(state);
 	struct hdmitx_color_attr *attr = &hdmitx_state->color_attr_para;
 	struct meson_hdr_static_metadata mHdrMetaDataValue;
-	struct drm_property_blob *new_metadata, *old_metadata;
-	bool replaced;
+	struct drm_property_blob *new_metadata;
 
 	if (property == am_hdmi->update_attr_prop) {
 		*val = 0;
@@ -1196,20 +1195,14 @@ static int am_hdmitx_connector_atomic_get_property
 		return 0;
 	} else if (property == am_hdmi->static_meta_prop) {
 		get_metadata(tx_comm, &mHdrMetaDataValue);
-		old_metadata = hdmitx_state->metadata;
 		new_metadata = drm_property_create_blob(connector->dev,
 			sizeof(mHdrMetaDataValue), &mHdrMetaDataValue);
 		if (IS_ERR(new_metadata)) {
 			DRM_ERROR("create metadata blob fail.\n");
 			return 0;
 		}
-		replaced = drm_property_replace_blob(&hdmitx_state->metadata,
-			new_metadata);
-		if (replaced && old_metadata)
-			drm_property_blob_put(old_metadata);
-
-		if (!replaced && new_metadata)
-			drm_property_blob_put(new_metadata);
+		drm_property_replace_blob(&hdmitx_state->metadata, new_metadata);
+		drm_property_blob_put(new_metadata);
 
 		*val = (hdmitx_state->metadata) ? hdmitx_state->metadata->base.id : 0;
 		return 0;
@@ -1348,6 +1341,8 @@ struct drm_connector_state *meson_hdmitx_atomic_duplicate_state
 	new_state->allm_mode = cur_state->allm_mode;
 	cur_state->hcs.state_sequence_id = am_hdmi->sequence_id;
 	new_state->metadata = cur_state->metadata;
+	if (new_state->metadata)
+		drm_property_blob_get(new_state->metadata);
 	memcpy(&new_state->hcs, &cur_state->hcs, sizeof(struct hdmitx_common_state));
 
 	return &new_state->base;
@@ -1359,6 +1354,7 @@ void meson_hdmitx_atomic_destroy_state(struct drm_connector *connector,
 	struct am_hdmitx_connector_state *hdmitx_state;
 
 	hdmitx_state = to_am_hdmitx_connector_state(state);
+	drm_property_blob_put(hdmitx_state->metadata);
 	__drm_atomic_helper_connector_destroy_state(&hdmitx_state->base);
 	kfree(hdmitx_state);
 }
@@ -1375,8 +1371,10 @@ void meson_hdmitx_reset(struct drm_connector *connector)
 	if (!hdmitx_state)
 		return;
 
-	if (connector->state)
+	if (connector->state) {
+		drm_property_blob_put(to_am_hdmitx_connector_state(connector->state)->metadata);
 		__drm_atomic_helper_connector_destroy_state(connector->state);
+	}
 	kfree(connector->state);
 
 	__drm_atomic_helper_connector_reset(connector, &hdmitx_state->base);
