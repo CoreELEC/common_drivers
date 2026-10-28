@@ -322,6 +322,38 @@
 	fb {
 		logo_addr = "0x7f800000";
 	};
+	
+	usb5v_reg: fixed@usb5v {
+		compatible = "regulator-fixed";
+		regulator-name = "USB5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio GPIOX_16 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-off-on-shutdown;
+		
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};		
+	};
+	
+	hdmi5v_reg: fixed@hdmi5v {
+		compatible = "regulator-fixed";
+		regulator-name = "HDMI5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-off-on-shutdown;
+		
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};		
+	};	
 };
 
 
