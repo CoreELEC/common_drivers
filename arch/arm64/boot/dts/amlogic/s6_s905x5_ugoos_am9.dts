@@ -40,6 +40,7 @@
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
 	};
 
 	sdcard_3v3: sdcard-3v3 {
@@ -80,6 +81,11 @@
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
 	};
 
 	// usbc
@@ -95,6 +101,11 @@
 		early-suspend;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
 	};
 
 	typec_usb_mux: usb-mux {
