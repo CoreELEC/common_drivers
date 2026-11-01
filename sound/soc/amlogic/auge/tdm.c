@@ -1574,14 +1574,16 @@ static snd_pcm_uframes_t aml_tdm_pointer(struct snd_soc_component *component,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct aml_tdm *p_tdm = runtime->private_data;
-	unsigned int addr, start_addr;
+	unsigned int addr, start_addr, fill;
 	snd_pcm_uframes_t frames;
 
 	start_addr = runtime->dma_addr;
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		addr = aml_frddr_get_position(p_tdm->fddr);
-	else
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		addr = aml_frddr_get_position_fill(p_tdm->fddr, &fill);
+		runtime->delay = bytes_to_frames(runtime, fill);
+	} else {
 		addr = aml_toddr_get_position(p_tdm->tddr);
+	}
 
 	frames = bytes_to_frames(runtime, addr - start_addr);
 	if (frames > runtime->buffer_size)
@@ -2320,6 +2322,7 @@ static int aml_soc_tdm_trigger(struct snd_soc_component *component,
 				aml_frddr_check(p_tdm->fddr);
 
 			aml_frddr_enable(p_tdm->fddr, false);
+			runtime->delay = 0;
 
 			for (i = 0; i < 2; i++) {
 				if (substream->pcm->card && substream->pcm->streams[i].chmap_kctl)
