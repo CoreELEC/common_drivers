@@ -713,6 +713,22 @@ static int am_meson_drm_pm_suspend(struct device *dev)
 	return 0;
 }
 
+static void am_meson_drm_resume_locked(struct drm_device *drm,
+				       struct drm_atomic_state *state)
+{
+	struct drm_modeset_acquire_ctx ctx;
+	int err;
+
+	DRM_MODESET_LOCK_ALL_BEGIN(drm, ctx, 0, err);
+	drm_mode_config_reset(drm);
+	err = drm_atomic_helper_commit_duplicated_state(state, &ctx);
+	DRM_MODESET_LOCK_ALL_END(drm, ctx, err);
+	drm_atomic_state_put(state);
+
+	if (err)
+		DRM_ERROR("%s: resume commit failed: %d\n", __func__, err);
+}
+
 static int am_meson_drm_pm_resume(struct device *dev)
 {
 	struct drm_device *drm;
@@ -735,7 +751,7 @@ static int am_meson_drm_pm_resume(struct device *dev)
 	 */
 	vpu_pipeline_register_init(priv->pipeline);
 
-	drm_atomic_helper_resume(drm, priv->state);
+	am_meson_drm_resume_locked(drm, priv->state);
 	am_meson_drm_fb_resume(drm);
 	drm_kms_helper_poll_enable(drm);
 
