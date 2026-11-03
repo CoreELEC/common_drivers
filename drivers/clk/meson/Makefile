@@ -48,6 +48,7 @@ PR_FMT_SC2 = $(subst amlogic-,,$(SC2_MODULE_NAME))
 PR_FMT_DEFINE_SC2="-Dpr_fmt(fmt)= \"[$(PR_FMT_SC2)]: \" fmt"
 CFLAGS_sc2.o += $(PR_FMT_DEFINE_SC2)
 obj-$(subst m,,$(CONFIG_AMLOGIC_COMMON_CLK_SC2)) += sc2-scmi-fixed.o
+obj-$(subst m,,$(CONFIG_AMLOGIC_COMMON_CLK_S4)) += sc2-scmi-fixed.o
 
 C2_MODULE_NAME = amlogic-clk-soc-c2
 obj-$(CONFIG_AMLOGIC_COMMON_CLK_C2) += $(C2_MODULE_NAME).o
