@@ -338,8 +338,7 @@ static struct clk_regmap hifi_pll = {
 		.init_regs = hifi_pll_init_regs,
 		.init_count = ARRAY_SIZE(hifi_pll_init_regs),
 		.flags = CLK_MESON_PLL_ROUND_CLOSEST |
-			 CLK_MESON_PLL_FIXED_FRAC_WEIGHT_PRECISION |
-			 CLK_MESON_PLL_NOINIT_ENABLED,
+			 CLK_MESON_PLL_FIXED_FRAC_WEIGHT_PRECISION,
 	},
 	.hw.init = &(struct clk_init_data) {
 		.name = "hifi_pll",
