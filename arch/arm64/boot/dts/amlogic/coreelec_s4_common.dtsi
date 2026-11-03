@@ -175,6 +175,13 @@
 	/delete-property/ tdmout_index;
 };
 
+/* base clocks read from the registers for a BL31 without SCMI clocks */
+&scmi_clk {
+	compatible = "amlogic,s4-scmi-fixed-clkc";
+	clocks = <&xtal>;
+	clock-names = "xtal";
+};
+
 &u2p0port1 {
 	controller-type = <1>; /* 0~3: normal, host, device, otg */
 };
