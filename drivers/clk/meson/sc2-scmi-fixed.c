@@ -3,14 +3,14 @@
  * Copyright (c) 2019 Amlogic, Inc. All rights reserved.
  * Copyright (c) 2026 Team CoreELEC
  *
- * Read-only SC2 base clocks on the SCMI clock node, for a BL31 without the
- * SCMI clock protocol. sys_clk carries the name the audio clocks use as
- * parent name.
+ * Read-only SC2 and S4 base clocks on the SCMI clock node, for a BL31
+ * without the SCMI clock protocol. sys_clk carries the name the audio clocks
+ * use as parent name.
  *
  * Such a BL31 still serves the cpu clock registers through the legacy
  * CPUCLK_SECURE_RW call. The cpu clock then switches between the fclk
  * based dyn path and sys_pll, which keeps the rate of the bootloader.
- * The dsu clock is read only.
+ * The dsu clock is read only. S4 registers no cpu clock.
  */
 
 #include <linux/arm-smccc.h>
@@ -37,6 +37,15 @@
 #define CLK_CPU_DSU_REG_RW		6
 #define SET_CPU0_MUX_PARENT		7
 #define CPU_DIVIDER_SET_RATE		11
+
+/* amlogic,s4-scmi-clkc.h numbers its IDs under the same names */
+enum {
+	S4_CLKID_SYS_CLK = 0,
+	S4_CLKID_FIXED_PLL_DCO = 3,
+	S4_CLKID_FIXED_PLL = 4,
+	S4_CLKID_FCLK_50M_DIV = 9,
+	S4_CLKID_FCLK_50M = 10,
+};
 
 static struct clk_regmap sc2_fw_fixed_pll_dco = {
 	.data = &(struct meson_clk_pll_data){
@@ -692,12 +701,26 @@ static struct clk_hw *const sc2_fw_order[] = {
 	&sc2_fw_fclk_50m.hw,
 };
 
-static struct clk_hw *sc2_fw_hws[] = {
-	[CLKID_SYS_CLK]			= &sc2_fw_sys_clk.hw,
-	[CLKID_FIXED_PLL_DCO]		= &sc2_fw_fixed_pll_dco.hw,
-	[CLKID_FIXED_PLL]		= &sc2_fw_fixed_pll.hw,
-	[CLKID_FCLK_50M_DIV]		= &sc2_fw_fclk_50m_div.hw,
-	[CLKID_FCLK_50M]		= &sc2_fw_fclk_50m.hw,
+static struct clk_hw_onecell_data sc2_fw_hw_data = {
+	.hws = {
+		[CLKID_SYS_CLK]			= &sc2_fw_sys_clk.hw,
+		[CLKID_FIXED_PLL_DCO]		= &sc2_fw_fixed_pll_dco.hw,
+		[CLKID_FIXED_PLL]		= &sc2_fw_fixed_pll.hw,
+		[CLKID_FCLK_50M_DIV]		= &sc2_fw_fclk_50m_div.hw,
+		[CLKID_FCLK_50M]		= &sc2_fw_fclk_50m.hw,
+	},
+	.num = CLKID_FCLK_50M + 1,
+};
+
+static struct clk_hw_onecell_data s4_fw_hw_data = {
+	.hws = {
+		[S4_CLKID_SYS_CLK]		= &sc2_fw_sys_clk.hw,
+		[S4_CLKID_FIXED_PLL_DCO]	= &sc2_fw_fixed_pll_dco.hw,
+		[S4_CLKID_FIXED_PLL]		= &sc2_fw_fixed_pll.hw,
+		[S4_CLKID_FCLK_50M_DIV]		= &sc2_fw_fclk_50m_div.hw,
+		[S4_CLKID_FCLK_50M]		= &sc2_fw_fclk_50m.hw,
+	},
+	.num = S4_CLKID_FCLK_50M + 1,
 };
 
 /*
@@ -707,12 +730,13 @@ static struct clk_hw *sc2_fw_hws[] = {
 static struct clk_hw *sc2_fw_clk_get(struct of_phandle_args *clkspec,
 				     void *data)
 {
+	struct clk_hw_onecell_data *hw_data = data;
 	unsigned int idx = clkspec->args[0];
 
-	if (idx >= ARRAY_SIZE(sc2_fw_hws) || !sc2_fw_hws[idx])
+	if (idx >= hw_data->num || !hw_data->hws[idx])
 		return ERR_PTR(-EPROBE_DEFER);
 
-	return sc2_fw_hws[idx];
+	return hw_data->hws[idx];
 }
 
 static const struct regmap_config sc2_fw_regmap_config = {
@@ -732,23 +756,28 @@ static struct regmap *__init sc2_fw_regmap(struct device_node *clkc,
 	return regmap_init_mmio(NULL, base, &sc2_fw_regmap_config);
 }
 
-static void __init sc2_fw_clk_init(struct device_node *np)
+/*
+ * Map the registers of the clock controller `compat` and register the base
+ * clocks. Returns the pll regmap.
+ */
+static struct regmap *__init sc2_fw_base_init(struct device_node *np,
+					      const char *compat)
 {
 	struct device_node *clkc;
 	struct regmap *pll_map, *sys_map;
 	unsigned int i;
 	int ret;
 
-	clkc = of_find_compatible_node(NULL, NULL, "amlogic,sc2-clkc");
+	clkc = of_find_compatible_node(NULL, NULL, compat);
 	if (!clkc)
-		return;
+		return ERR_PTR(-ENODEV);
 
 	sys_map = sc2_fw_regmap(clkc, 0);
 	pll_map = sc2_fw_regmap(clkc, 1);
 	of_node_put(clkc);
 	if (IS_ERR(sys_map) || IS_ERR(pll_map)) {
 		pr_err("%pOF: cannot map clock registers\n", np);
-		return;
+		return ERR_PTR(-ENOMEM);
 	}
 
 	for (i = 0; i < ARRAY_SIZE(sc2_fw_pll_regmaps); i++)
@@ -758,9 +787,24 @@ static void __init sc2_fw_clk_init(struct device_node *np)
 
 	for (i = 0; i < ARRAY_SIZE(sc2_fw_order); i++) {
 		ret = of_clk_hw_register(np, sc2_fw_order[i]);
-		if (ret)
-			goto err;
+		if (ret) {
+			pr_err("%pOF: failed to register clocks: %d\n", np, ret);
+			return ERR_PTR(ret);
+		}
 	}
+
+	return pll_map;
+}
+
+static void __init sc2_fw_clk_init(struct device_node *np)
+{
+	struct regmap *pll_map;
+	unsigned int i;
+	int ret = 0;
+
+	pll_map = sc2_fw_base_init(np, "amlogic,sc2-clkc");
+	if (IS_ERR(pll_map))
+		return;
 
 	if (sc2_fw_cpu_clk_usable(pll_map)) {
 		for (i = 0; i < ARRAY_SIZE(sc2_fw_cpu_order); i++) {
@@ -773,18 +817,30 @@ static void __init sc2_fw_clk_init(struct device_node *np)
 			ret = clk_notifier_register(sc2_fw_cpu_clk_postmux0.hw.clk,
 						    &sc2_fw_cpu_clk_postmux0_nb);
 		if (!ret) {
-			sc2_fw_hws[CLKID_CPU_CLK] = &sc2_fw_cpu_clk.hw;
-			sc2_fw_hws[CLKID_DSU_CLK] = &sc2_fw_dsu_clk.hw;
+			sc2_fw_hw_data.hws[CLKID_CPU_CLK] = &sc2_fw_cpu_clk.hw;
+			sc2_fw_hw_data.hws[CLKID_DSU_CLK] = &sc2_fw_dsu_clk.hw;
 		} else {
 			pr_err("%pOF: failed to register cpu clocks: %d\n", np, ret);
 		}
 	}
 
-	ret = of_clk_add_hw_provider(np, sc2_fw_clk_get, NULL);
-	if (!ret)
-		return;
-err:
-	pr_err("%pOF: failed to register clocks: %d\n", np, ret);
+	ret = of_clk_add_hw_provider(np, sc2_fw_clk_get, &sc2_fw_hw_data);
+	if (ret)
+		pr_err("%pOF: failed to register clocks: %d\n", np, ret);
 }
 
 CLK_OF_DECLARE(sc2_scmi_fixed, "amlogic,sc2-scmi-fixed-clkc", sc2_fw_clk_init);
+
+static void __init s4_fw_clk_init(struct device_node *np)
+{
+	int ret;
+
+	if (IS_ERR(sc2_fw_base_init(np, "amlogic,s4-clkc")))
+		return;
+
+	ret = of_clk_add_hw_provider(np, sc2_fw_clk_get, &s4_fw_hw_data);
+	if (ret)
+		pr_err("%pOF: failed to register clocks: %d\n", np, ret);
+}
+
+CLK_OF_DECLARE(s4_scmi_fixed, "amlogic,s4-scmi-fixed-clkc", s4_fw_clk_init);
