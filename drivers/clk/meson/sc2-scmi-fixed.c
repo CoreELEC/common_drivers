@@ -10,7 +10,8 @@
  * Such a BL31 still serves the cpu clock registers through the legacy
  * CPUCLK_SECURE_RW call. The cpu clock then switches between the fclk
  * based dyn path and sys_pll, which keeps the rate of the bootloader.
- * The dsu clock is read only. S4 registers no cpu clock.
+ * The dsu clock is read only. S4 sets sys_pll and the cpu clock through
+ * its own legacy calls, as the 5.15 S4 driver did.
  */
 
 #include <linux/arm-smccc.h>
@@ -19,6 +20,7 @@
 #include <linux/of_address.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include "clk-cpu-dyndiv.h"
 #include "clk-pll.h"
 #include "clk-regmap.h"
 #include <dt-bindings/clock/amlogic,sc2-scmi-clkc.h>
@@ -38,9 +40,23 @@
 #define SET_CPU0_MUX_PARENT		7
 #define CPU_DIVIDER_SET_RATE		11
 
+#define SECURE_PLL_CLK			0x82000098
+#define SECURE_CPU_CLK			0x82000099
+
+/* S4 sec ids of the legacy calls, from the 5.15 s4.h */
+enum {
+	S4_SECID_SYS0_DCO_PLL = 0,
+	S4_SECID_SYS0_DCO_PLL_DIS = 1,
+	S4_SECID_SYS0_PLL_OD = 2,
+	S4_SECID_CPU_CLK_SEL = 6,
+	S4_SECID_CPU_CLK_RD = 7,
+	S4_SECID_CPU_CLK_DYN = 8,
+};
+
 /* amlogic,s4-scmi-clkc.h numbers its IDs under the same names */
 enum {
 	S4_CLKID_SYS_CLK = 0,
+	S4_CLKID_CPU_CLK = 2,
 	S4_CLKID_FIXED_PLL_DCO = 3,
 	S4_CLKID_FIXED_PLL = 4,
 	S4_CLKID_FCLK_50M_DIV = 9,
@@ -661,6 +677,170 @@ static bool __init sc2_fw_cpu_clk_usable(struct regmap *pll_map)
 	return gp1 <= SC2_FW_DSU_MAX_RATE;
 }
 
+static const struct pll_params_table s4_fw_sys_pll_params_table[] = {
+	PLL_PARAMS(168, 1), /* DCO=4032M OD=1008M */
+	PLL_PARAMS(184, 1), /* DCO=4416M OD=1104M */
+	PLL_PARAMS(200, 1), /* DCO=4800M OD=1200M */
+	PLL_PARAMS(216, 1), /* DCO=5184M OD=1296M */
+	PLL_PARAMS(233, 1), /* DCO=5592M OD=1398M */
+	PLL_PARAMS(234, 1), /* DCO=5616M OD=1404M */
+	PLL_PARAMS(249, 1), /* DCO=5976M OD=1494M */
+	PLL_PARAMS(125, 1), /* DCO=3000M OD=1500M */
+	PLL_PARAMS(126, 1), /* DCO=3024M OD=1512M */
+	PLL_PARAMS(134, 1), /* DCO=3216M OD=1608M */
+	PLL_PARAMS(142, 1), /* DCO=3408M OD=1704M */
+	PLL_PARAMS(150, 1), /* DCO=3600M OD=1800M */
+	PLL_PARAMS(158, 1), /* DCO=3792M OD=1896M */
+	PLL_PARAMS(159, 1), /* DCO=3816M OD=1908M */
+	PLL_PARAMS(160, 1), /* DCO=3840M OD=1920M */
+	PLL_PARAMS(167, 1), /* DCO=4008M OD=2004M */
+	{ /* sentinel */ }
+};
+
+static struct clk_regmap s4_fw_sys_pll_dco = {
+	.data = &(struct meson_clk_pll_data){
+		.en = {
+			.reg_off = ANACTRL_SYSPLL_CTRL0,
+			.shift   = 28,
+			.width   = 1,
+		},
+		.m = {
+			.reg_off = ANACTRL_SYSPLL_CTRL0,
+			.shift   = 0,
+			.width   = 8,
+		},
+		.n = {
+			.reg_off = ANACTRL_SYSPLL_CTRL0,
+			.shift   = 10,
+			.width   = 5,
+		},
+		.table = s4_fw_sys_pll_params_table,
+		.l = {
+			.reg_off = ANACTRL_SYSPLL_CTRL0,
+			.shift   = 31,
+			.width   = 1,
+		},
+		.rst = {
+			.reg_off = ANACTRL_SYSPLL_CTRL0,
+			.shift   = 29,
+			.width   = 1,
+		},
+		.smc_id = SECURE_PLL_CLK,
+		.secid_disable = S4_SECID_SYS0_DCO_PLL_DIS,
+		.secid = S4_SECID_SYS0_DCO_PLL,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "s4_fw_sys_pll_dco",
+		.ops = &meson_secure_pll_v2_ops,
+		.parent_data = &(const struct clk_parent_data) {
+			.fw_name = "xtal",
+		},
+		.num_parents = 1,
+		.flags = CLK_IS_CRITICAL,
+	},
+};
+
+static struct clk_regmap s4_fw_sys_pll = {
+	.data = &(struct clk_regmap_div_data){
+		.offset = ANACTRL_SYSPLL_CTRL0,
+		.shift = 16,
+		.width = 3,
+		.flags = CLK_DIVIDER_POWER_OF_TWO,
+		.smc_id = SECURE_PLL_CLK,
+		.secid = S4_SECID_SYS0_PLL_OD,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "s4_fw_sys_pll",
+		.ops = &clk_regmap_secure_v2_divider_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+			&s4_fw_sys_pll_dco.hw
+		},
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static const struct cpu_dyn_table s4_fw_cpu_dyn_table[] = {
+	CPU_LOW_PARAMS(24000000, 0, 0, 0),
+	CPU_LOW_PARAMS(100000000, 1, 1, 9),
+	CPU_LOW_PARAMS(250000000, 1, 1, 3),
+	CPU_LOW_PARAMS(333333333, 2, 1, 1),
+	CPU_LOW_PARAMS(500000000, 1, 1, 1),
+	CPU_LOW_PARAMS(666666666, 2, 0, 0),
+	CPU_LOW_PARAMS(1000000000, 1, 0, 0)
+};
+
+static struct clk_regmap s4_fw_cpu_dyn_clk = {
+	.data = &(struct meson_clk_cpu_dyn_data){
+		.table = s4_fw_cpu_dyn_table,
+		.table_cnt = ARRAY_SIZE(s4_fw_cpu_dyn_table),
+		.smc_id = SECURE_CPU_CLK,
+		.secid_dyn_rd = S4_SECID_CPU_CLK_RD,
+		.secid_dyn = S4_SECID_CPU_CLK_DYN,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "s4_fw_cpu_dyn_clk",
+		.ops = &meson_clk_cpu_dyn_ops,
+		.parent_data = (const struct clk_parent_data []) {
+			{ .fw_name = "xtal", },
+			{ .hw = &sc2_fw_fclk_div2.hw },
+			{ .hw = &sc2_fw_fclk_div3.hw },
+		},
+		.num_parents = 3,
+	},
+};
+
+static struct clk_regmap s4_fw_cpu_clk = {
+	.data = &(struct clk_regmap_mux_data){
+		.mask = 0x1,
+		.shift = 11,
+		.flags = CLK_MUX_ROUND_CLOSEST,
+		.smc_id = SECURE_CPU_CLK,
+		.secid = S4_SECID_CPU_CLK_SEL,
+		.secid_rd = S4_SECID_CPU_CLK_RD,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "s4_fw_cpu_clk",
+		.ops = &clk_regmap_mux_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+			&s4_fw_cpu_dyn_clk.hw,
+			&s4_fw_sys_pll.hw,
+		},
+		.num_parents = 2,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+/* run the cpu from the 1 GHz dyn path while sys_pll changes */
+static int s4_fw_sys_pll_cb(struct notifier_block *nb, unsigned long event,
+			    void *data)
+{
+	switch (event) {
+	case PRE_RATE_CHANGE:
+		if (clk_set_rate(s4_fw_cpu_dyn_clk.hw.clk, 1000000000))
+			pr_err("s4_fw: cannot set cpu_dyn_clk to 1 GHz\n");
+		clk_hw_set_parent(&s4_fw_cpu_clk.hw, &s4_fw_cpu_dyn_clk.hw);
+		return NOTIFY_OK;
+	case POST_RATE_CHANGE:
+		clk_hw_set_parent(&s4_fw_cpu_clk.hw, &s4_fw_sys_pll.hw);
+		return NOTIFY_OK;
+	default:
+		return NOTIFY_DONE;
+	}
+}
+
+static struct notifier_block s4_fw_sys_pll_nb = {
+	.notifier_call = s4_fw_sys_pll_cb,
+};
+
+/* registration order keeps every parent ahead of its children */
+static struct clk_hw *const s4_fw_cpu_order[] = {
+	&s4_fw_sys_pll_dco.hw,
+	&s4_fw_sys_pll.hw,
+	&s4_fw_cpu_dyn_clk.hw,
+	&s4_fw_cpu_clk.hw,
+};
+
 static struct clk_regmap *const sc2_fw_pll_regmaps[] = {
 	&sc2_fw_fixed_pll_dco,
 	&sc2_fw_fixed_pll,
@@ -833,10 +1013,37 @@ CLK_OF_DECLARE(sc2_scmi_fixed, "amlogic,sc2-scmi-fixed-clkc", sc2_fw_clk_init);
 
 static void __init s4_fw_clk_init(struct device_node *np)
 {
+	struct arm_smccc_res res;
+	struct regmap *pll_map;
+	unsigned int i;
+	u32 ctrl;
 	int ret;
 
-	if (IS_ERR(sc2_fw_base_init(np, "amlogic,s4-clkc")))
+	pll_map = sc2_fw_base_init(np, "amlogic,s4-clkc");
+	if (IS_ERR(pll_map))
 		return;
+
+	/*
+	 * The cpu tree needs the legacy calls the 5.15 S4 driver used. A real
+	 * read of the cpu clock control is never 0 and selects no premux
+	 * input 3, which also rejects a 32 bit SMCCC_RET_NOT_SUPPORTED.
+	 */
+	arm_smccc_smc(SECURE_CPU_CLK, S4_SECID_CPU_CLK_RD, 0, 0, 0, 0, 0, 0, &res);
+	ctrl = res.a0;
+	if (ctrl && (ctrl & 0x3) != 0x3 && ((ctrl >> 16) & 0x3) != 0x3) {
+		s4_fw_sys_pll_dco.map = pll_map;
+		s4_fw_sys_pll.map = pll_map;
+
+		ret = 0;
+		for (i = 0; !ret && i < ARRAY_SIZE(s4_fw_cpu_order); i++)
+			ret = of_clk_hw_register(np, s4_fw_cpu_order[i]);
+		if (!ret)
+			ret = clk_notifier_register(s4_fw_sys_pll.hw.clk, &s4_fw_sys_pll_nb);
+		if (!ret)
+			s4_fw_hw_data.hws[S4_CLKID_CPU_CLK] = &s4_fw_cpu_clk.hw;
+		else
+			pr_err("%pOF: failed to register cpu clocks: %d\n", np, ret);
+	}
 
 	ret = of_clk_add_hw_provider(np, sc2_fw_clk_get, &s4_fw_hw_data);
 	if (ret)
