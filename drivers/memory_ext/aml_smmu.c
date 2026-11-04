@@ -129,7 +129,8 @@ static int aml_smmu_of_xlate(struct device *dev, const struct of_phandle_args *a
 {
 	dev->iommu_group = (struct iommu_group *)aml_global_group;
 #ifdef CONFIG_ARCH_HAS_DMA_OPS
-	dev->dma_ops = &aml_pcie_dma_ops;
+	if (aml_global_group)
+		dev->dma_ops = &aml_pcie_dma_ops;
 #endif
 
 	return 0;
