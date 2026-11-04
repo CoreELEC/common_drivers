@@ -211,6 +211,13 @@
 	/delete-property/ gpio;
 };
 
+/* base clocks read from the registers for a BL31 without SCMI clocks */
+&scmi_clk {
+	compatible = "amlogic,s5-scmi-fixed-clkc";
+	clocks = <&xtal>;
+	clock-names = "xtal";
+};
+
 &aml_wifi {
 	wifi_static_buf = <2>;  /* dhd wifi for android */
 };
