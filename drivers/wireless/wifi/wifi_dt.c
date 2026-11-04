@@ -605,9 +605,6 @@ static int wifi_setup_dt(void)
 		ret = gpio_request(wifi_info.power_on_pin, OWNER_NAME);
 		if (ret)
 			WIFI_INFO("power_on_pin request failed(%d)\n", ret);
-#if IS_ENABLED(CONFIG_AMLOGIC_RFKILL_INIT_SW_UNBLOCK)
-		WIFI_INFO("%s wifi power_on down need by bt_drv in linux platform\n", __func__);
-#else
 		if (wifi_info.power_init_off) {
 			if (wifi_info.power_on_pin_level)
 				ret = set_power(1);
@@ -621,7 +618,6 @@ static int wifi_setup_dt(void)
 		}
 		if (ret)
 			WIFI_INFO("power_on_pin output failed(%d)\n", ret);
-#endif
 		SHOW_PIN_OWN("power_on_pin", wifi_info.power_on_pin);
 	}
 
