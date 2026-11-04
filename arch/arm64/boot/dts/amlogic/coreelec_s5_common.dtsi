@@ -221,3 +221,7 @@
 &aml_wifi {
 	wifi_static_buf = <2>;  /* dhd wifi for android */
 };
+
+&pwm_ef {
+	status = "okay";
+};
