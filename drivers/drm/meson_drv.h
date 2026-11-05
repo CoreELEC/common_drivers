@@ -136,6 +136,9 @@ struct meson_drm {
 	u8 remove_get_vblank_timestamp;
 
 	u32 pxp_mode;
+	struct mutex hpd_pm_lock;
+	bool pm_suspended;
+	bool hpd_connected;
 };
 
 /*component bind functions*/

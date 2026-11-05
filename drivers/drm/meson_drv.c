@@ -298,6 +298,8 @@ static int am_meson_drm_bind(struct device *dev)
 	dev_set_drvdata(dev, priv);
 	init_waitqueue_head(&priv->wq_shut_ctrl);
 	priv->shutdown_on = false;
+	mutex_init(&priv->hpd_pm_lock);
+	priv->hpd_connected = true;
 
 #ifdef CONFIG_AMLOGIC_DRM_USE_ION
 	ret = am_meson_gem_create(priv);
@@ -699,15 +701,19 @@ static int am_meson_drm_pm_suspend(struct device *dev)
 		DRM_ERROR("%s: Failed to get drm device!\n", __func__);
 		return 0;
 	}
+	mutex_lock(&priv->hpd_pm_lock);
 	drm_kms_helper_poll_disable(drm);
 	am_meson_drm_fb_suspend(drm);
 	priv->state = drm_atomic_helper_suspend(drm);
 	if (IS_ERR(priv->state)) {
 		am_meson_drm_fb_resume(drm);
 		drm_kms_helper_poll_enable(drm);
+		mutex_unlock(&priv->hpd_pm_lock);
 		DRM_INFO("%s: drm_atomic_helper_suspend fail\n", __func__);
 		return PTR_ERR(priv->state);
 	}
+	priv->pm_suspended = true;
+	mutex_unlock(&priv->hpd_pm_lock);
 
 	DRM_INFO("%s: done\n", __func__);
 	return 0;
@@ -745,15 +751,36 @@ static int am_meson_drm_pm_resume(struct device *dev)
 		return 0;
 	}
 
+	mutex_lock(&priv->hpd_pm_lock);
+	if (!priv->pm_suspended) {
+		mutex_unlock(&priv->hpd_pm_lock);
+		return 0;
+	}
+
 	/*
          *for save power consumption, suspend will turn off vpu power, we need to
 	 *do block register init again.
 	 */
 	vpu_pipeline_register_init(priv->pipeline);
 
-	am_meson_drm_resume_locked(drm, priv->state);
+	/* a state parked by an hpd low is restored by the next hpd high */
+	if (priv->hpd_connected) {
+		if (drm->mode_config.suspend_state) {
+			drm_atomic_state_put(priv->state);
+			priv->state = drm->mode_config.suspend_state;
+			drm->mode_config.suspend_state = NULL;
+		}
+		am_meson_drm_resume_locked(drm, priv->state);
+		drm_kms_helper_poll_enable(drm);
+	} else if (drm->mode_config.suspend_state) {
+		drm_atomic_state_put(priv->state);
+	} else {
+		drm->mode_config.suspend_state = priv->state;
+	}
 	am_meson_drm_fb_resume(drm);
-	drm_kms_helper_poll_enable(drm);
+	priv->state = NULL;
+	priv->pm_suspended = false;
+	mutex_unlock(&priv->hpd_pm_lock);
 
 	DRM_INFO("%s: done\n", __func__);
 	return 0;
