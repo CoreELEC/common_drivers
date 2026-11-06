@@ -60,6 +60,7 @@ dtb-y += s7d_s905x5m_2g.dtb
 dtb-y += s7d_s905x5m_2g_1gbit.dtb
 dtb-y += s7d_s905x5m_4g.dtb
 dtb-y += s7d_s905x5m_4g_1gbit.dtb
+dtb-y += s7d_s905x5m_hk1_rbox_x50.dtb
 dtb-y += s7d_s905x5m_odroid_c5.dtb
 dtb-y += s7d_s905x5m_ugoos_x5m_pro.dtb
 dtb-y += s7d_s905x5m_ugoos_sk4.dtb
