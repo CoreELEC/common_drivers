@@ -423,6 +423,10 @@
 	};
 };
 
+&t7_cpufreq {
+	cluster0-cpu-supply = <&VDD_CPU_B>;
+};
+
 &CPU4 {
 	cpu-supply = <&VDD_CPU_B>;
 	cpu_reg_use_buck;

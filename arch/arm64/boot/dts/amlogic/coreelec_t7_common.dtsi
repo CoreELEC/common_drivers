@@ -37,6 +37,32 @@
 		};
 	};
 
+	t7_cpufreq: meson-cpufreq {
+		compatible = "amlogic, aml-cpufreq";
+		status = "okay";
+
+		cluster0-cpu-supply = <&vddcpub>;
+		cluster1-cpu-supply = <&vddcpua>;
+
+		cluster0 {
+			clocks = <&scmi_clk CLKID_CPU_CLK>;
+			clock-names = "cpuclk";
+			voltage-tolerance = <0>;
+			transition_delay_us = <10000>;
+			cluster_cores = <4 5 6 7>;
+			pdvfs_enabled;
+		};
+
+		cluster1 {
+			clocks = <&scmi_clk CLKID_A73_CLK>;
+			clock-names = "cpuclk";
+			voltage-tolerance = <0>;
+			transition_delay_us = <10000>;
+			cluster_cores = <0 1 2 3>;
+			pdvfs_enabled;
+		};
+	};
+
 	amhdmitx: amhdmitx{
 		vend_data: vend_data{ /* Should modified by Customer */
 			product_desc = "T7"; /* Max Chars: 16 */
