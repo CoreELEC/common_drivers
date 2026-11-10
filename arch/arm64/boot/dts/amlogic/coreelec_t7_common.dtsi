@@ -287,6 +287,8 @@
 };
 
 &logo_reserved {
+	compatible = "amlogic, meson-fb";
+	/delete-property/ reusable;
 	/delete-property/ alloc-ranges;
 	reg = <0x0 0x7f800000 0x0 0x800000>;
 };
