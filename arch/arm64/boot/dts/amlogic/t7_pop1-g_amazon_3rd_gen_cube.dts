@@ -291,6 +291,19 @@
 
 	/delete-node/ bl30_manager;
 
+	pwmleds {
+		compatible = "pwm-leds";
+		status = "okay";
+
+		sys {
+			active-low;
+			label = "muteled";
+			max-brightness = <0xff>;
+			pwms = <&pwmao_cd 0x00 0x7558 0x00>;
+			default-state = "off";
+		};
+	};
+	
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
 		status = "okay";
