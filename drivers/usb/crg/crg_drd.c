@@ -30,6 +30,7 @@
 #include <linux/amlogic/usb-v2.h>
 
 #include <linux/kthread.h>
+#include <linux/mutex.h>
 #include <linux/amlogic/cpu_version.h>
 
 #include "../xhci_amlogic/xhci-meson.h"
@@ -549,6 +550,19 @@ err0:
 	return ret;
 }
 
+static DEFINE_MUTEX(crg_probe_lock);
+
+static int crg_probe_serialized(struct platform_device *pdev)
+{
+	int ret;
+
+	mutex_lock(&crg_probe_lock);
+	ret = crg_probe(pdev);
+	mutex_unlock(&crg_probe_lock);
+
+	return ret;
+}
+
 static void crg_shutdown(struct platform_device *pdev)
 {
 	struct crg_drd     *crg = platform_get_drvdata(pdev);
@@ -752,7 +766,7 @@ MODULE_DEVICE_TABLE(of, of_crg_drd_match);
 #endif
 
 static struct platform_driver crg_driver = {
-	.probe		= crg_probe,
+	.probe		= crg_probe_serialized,
 	.remove		= crg_remove,
 	.shutdown	= crg_shutdown,
 	.driver		= {
@@ -773,10 +787,12 @@ MODULE_DEVICE_TABLE(of, of_crg_host_match);
 #endif
 
 static struct platform_driver crg_host_driver = {
+	.probe		= crg_probe_serialized,
 	.remove		= crg_remove,
 	.shutdown	= crg_shutdown,
 	.driver		= {
 		.name	= "crg_drd",
+		.suppress_bind_attrs = true,
 		.of_match_table	= of_match_ptr(of_crg_host_match),
 		.pm	= &crg_dev_pm_ops,
 	},
@@ -817,9 +833,7 @@ EXPORT_SYMBOL_GPL(crg_init);
 /* AMLOGIC corigine driver does not allow module unload */
 int __init amlogic_crg_host_driver_init(void)
 {
-	platform_driver_probe(&crg_host_driver, crg_probe);
-
-	return 0;
+	return platform_driver_register(&crg_host_driver);
 }
 
 #if 0
