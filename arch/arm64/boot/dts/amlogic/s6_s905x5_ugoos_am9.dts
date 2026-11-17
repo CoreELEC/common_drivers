@@ -29,7 +29,7 @@
 	/delete-node/ fixed@vcc5v_reg;
 	/delete-node/ fixed@vcc3v3_reg;
 
-	hub_5v_reg: fixed@hub_5v_reg {
+	usbhub5v_reg: fixedregulator@usbhub5v {
 		vin-supply = <&vddao_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "HUB_5V";
@@ -70,7 +70,7 @@
 	};
 
 	// usb
-	usb5v_reg: fixed@usb5v {
+	usb5v_reg: fixedregulator@usb5v {
 		vin-supply = <&vddao_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "USB5V";
@@ -89,7 +89,7 @@
 	};
 
 	// usbc
-	usbc5v_reg: fixed@usbc5v {
+	usb5v_2_reg: fixedregulator@usb5v_2 {
 		vin-supply = <&vddao_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "USBC5V";
@@ -167,7 +167,7 @@
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&fusb302_int>;
 		fcs,int_n-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
-		vbus-supply = <&usbc5v_reg>;
+		vbus-supply = <&usb5v_2_reg>;
 		port {
 			typec_dr_sw: endpoint {
 				remote-endpoint = <&usb_dr_sw>;

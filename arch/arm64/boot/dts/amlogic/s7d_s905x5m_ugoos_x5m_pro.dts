@@ -110,7 +110,7 @@
 			  3300000 1>;
 	};
 
-	usb_5v_reg: fixedregulator@usb_5v {
+	usb5v_reg: fixedregulator@usb5v {
 		vin-supply = <&vin_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "USB_5V";
@@ -122,10 +122,15 @@
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
 	};
 
 	// dummy
-	usb_otg_5v_reg: fixedregulator@usb_otg_5v {
+	usb5v_2_reg: fixedregulator@usb5v_2 {
 		vin-supply = <&vin_5v_reg>;
 		compatible = "regulator-fixed";
 		regulator-name = "USB_OTG_5V";
@@ -138,7 +143,7 @@
 	usb_otg_connector {
 		compatible = "sw-usb-connector", "usb-a-connector";
 		label = "OTG-USB";
-		vbus-supply = <&usb_otg_5v_reg>;
+		vbus-supply = <&usb5v_2_reg>;
 		port {
 			sw_dr_sw: endpoint {
 				remote-endpoint = <&usb_dr_sw>;
@@ -180,7 +185,7 @@
 };
 
 &crg {
-	vbus-supply = <&usb_5v_reg>;
+	vbus-supply = <&usb5v_reg>;
 };
 
 &sd_emmc_b {

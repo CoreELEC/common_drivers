@@ -54,13 +54,14 @@
 		early-suspend;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
 		regulator-state-mem {
-			regulator-on-in-suspend;
+			regulator-off-in-suspend;
 		};
 	};
 
 	// usbc
-	usbc5v_reg: fixedregulator@usbc5v {
+	usb5v_2_reg: fixedregulator@usb5v_2 {
 		vin-supply = <&vbat>;
 		compatible = "regulator-fixed";
 		regulator-name = "USBC5V";
@@ -73,8 +74,9 @@
 		early-suspend;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
 		regulator-state-mem {
-			regulator-on-in-suspend;
+			regulator-off-in-suspend;
 		};
 	};
 
@@ -132,7 +134,7 @@
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&fusb302_int>;
 		fcs,int_n = <&gpio GPIOT_2 GPIO_ACTIVE_HIGH>;
-		vbus-supply = <&usbc5v_reg>;
+		vbus-supply = <&usb5v_2_reg>;
 		port {
 			typec_dr_sw: endpoint {
 				remote-endpoint = <&usb_dr_sw>;

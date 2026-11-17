@@ -336,7 +336,7 @@
 		logo_addr = "0x7f800000";
 	};
 	
-	usb5v_reg: fixed@usb5v {
+	usb5v_reg: fixedregulator@usb5v {
 		compatible = "regulator-fixed";
 		regulator-name = "USB5V";
 		regulator-min-microvolt = <5000000>;

@@ -51,7 +51,7 @@
 
 	/delete-node/ gpio_keypad;
 
-	regulator-vbus_usb {
+	fixedregulator@usb5v {
 		gpio = <&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
 	};
 };
