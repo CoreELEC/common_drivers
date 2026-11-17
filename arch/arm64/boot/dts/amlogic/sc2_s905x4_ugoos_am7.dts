@@ -53,7 +53,7 @@
 	/delete-node/ cpu_opp_table2;
 	/delete-node/ cpu_opp_table3;
 
-	regulator-vbus_usb {
+	usb5v_reg: fixedregulator@usb5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vbus_usb";
 		regulator-min-microvolt = <5000000>;
@@ -62,6 +62,11 @@
 		enable-active-high;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
+
+		regulator-state-mem {
+			regulator-off-in-suspend;
+		};
 	};
 };
 

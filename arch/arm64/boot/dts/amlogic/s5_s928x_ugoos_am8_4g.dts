@@ -54,13 +54,14 @@
 		early-suspend;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
 		regulator-state-mem {
-			regulator-on-in-suspend;
+			regulator-off-in-suspend;
 		};
 	};
 
 	// usbc
-	usbc5v_reg: fixedregulator@usbc5v {
+	usb5v_2_reg: fixedregulator@usb5v_2 {
 		vin-supply = <&vbat>;
 		compatible = "regulator-fixed";
 		regulator-name = "USBC5V";
@@ -73,8 +74,9 @@
 		early-suspend;
 		regulator-boot-on;
 		regulator-always-on;
+		regulator-off-on-shutdown;
 		regulator-state-mem {
-			regulator-on-in-suspend;
+			regulator-off-in-suspend;
 		};
 	};
 
