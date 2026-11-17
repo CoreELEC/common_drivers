@@ -8,7 +8,7 @@
 	/delete-node/ meson-ir;
 	/delete-node/ meson-remote;
 
-	typec2_vbus: regulator-typec2_vbus {
+	usb5v_reg: fixedregulator@usb5v {
 		compatible = "regulator-fixed";
 		regulator-name = "TYPEC2_VBUS";
 		regulator-min-microvolt = <5000000>;
@@ -52,7 +52,7 @@
 		interrupt-parent = <&gpio_intc>;
 		interrupts = <5 IRQ_TYPE_LEVEL_LOW>;
 
-		vbus-supply = <&typec2_vbus>;
+		vbus-supply = <&usb5v_reg>;
 
 		status = "okay";
 

@@ -3,7 +3,7 @@
 /{
 	coreelec-dt-id = "sm1_s905x3_ugoos_x3_pro_4g_1gbit";
 
-	regulator-vbus_usb {
+	usb5v_reg: fixedregulator@usb5v {
 		compatible = "regulator-fixed";
 								regulator-name = "vbus_usb";
 								regulator-min-microvolt = <5000000>;
@@ -12,6 +12,11 @@
 								enable-active-high;
 								regulator-boot-on;
 								regulator-always-on;
+								regulator-off-on-shutdown;
+
+								regulator-state-mem {
+									regulator-off-in-suspend;
+								};
 	};
 
 	gpioleds {
