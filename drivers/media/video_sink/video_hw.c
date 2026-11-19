@@ -5585,6 +5585,20 @@ s32 config_3d_vd2_blend(struct video_layer_s *layer,
 		setting->postblend_v_start += blank;
 		setting->postblend_v_end =
 			cur_frame_par->VPP_vd_end_lines_;
+		if (framepacking_support) {
+			const struct vinfo_s *vinfo = get_current_vinfo();
+			u32 eye_h = (dispbuf->height - blank) >> 1;
+
+			setting->postblend_v_start =
+				cur_frame_par->VPP_vsc_startp + eye_h + blank;
+			setting->postblend_v_end =
+				min(setting->postblend_v_start +
+				    layer->end_y_lines - layer->start_y_lines,
+				    vinfo->height - 1);
+			if (setting->postblend_v_start > setting->postblend_v_end)
+				setting->postblend_v_start =
+					setting->postblend_v_end;
+		}
 		setting->postblend_h_start =
 			cur_frame_par->VPP_hd_start_lines_;
 		setting->postblend_h_end =
@@ -5984,6 +5998,10 @@ static void config_vd_param_internal(struct video_layer_s *layer,
 			blank = 0;
 		zoom_start_y /= 2;
 		zoom_end_y = ((zoom_end_y - blank + 1) >> 1) - 1;
+		if (framepacking_support &&
+		    cur_dev->display_module != S5_DISPLAY_MODULE)
+			zoom_start_y = min(frame_par->VPP_vd_start_lines_,
+					   zoom_end_y);
 	}
 
 	layer->start_x_lines = frame_par->VPP_hd_start_lines_;
@@ -6306,6 +6324,17 @@ s32 config_vd_blend(struct video_layer_s *layer,
 				cur_frame_par->VPP_vsc_startp;
 			setting->postblend_v_end =
 				cur_frame_par->VPP_vsc_endp;
+		}
+		if (dispbuf && (dispbuf->type & VIDTYPE_MVC) &&
+		    framepacking_support) {
+			setting->postblend_v_end =
+				min3(setting->postblend_v_end,
+				     setting->postblend_v_start +
+				     layer->end_y_lines - layer->start_y_lines,
+				     ((vinfo->height - framepacking_blank) >> 1) - 1);
+			if (setting->postblend_v_start > setting->postblend_v_end)
+				setting->postblend_v_start =
+					setting->postblend_v_end;
 		}
 	}
 
