@@ -18,6 +18,7 @@
 #include <linux/amlogic/aml_phy_debug.h>
 #include <linux/amlogic/media/registers/cpu_version.h>
 #include "gpio_data.h"
+#include <linux/amlogic/bl30_manager.h>
 
 static u32 remotewakeup = 0xffffffff;
 static u32 remotewakeupmask = 0xffffffff;
@@ -116,6 +117,12 @@ static int __init set_gpio_power(char *str)
 	return 0;
 }
 __setup("gpiopower=", set_gpio_power);
+
+const char *bl30_manager_get_gpiopower(void)
+{
+	return strlen(gpio) > 0 ? gpio : NULL;
+}
+EXPORT_SYMBOL_GPL(bl30_manager_get_gpiopower);
 
 static ssize_t setup_bl30_store(const struct class *cla,
 			     const struct class_attribute *attr,

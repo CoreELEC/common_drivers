@@ -12,16 +12,27 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/gpio/consumer.h>
+#include <linux/gpio/driver.h>
+#include <linux/gpio/machine.h>
+#include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/amlogic/pm.h>
 #include <linux/irq.h>
 #include <linux/amlogic/power_domain.h>
 #include <linux/amlogic/gpiolib.h>
+#include <linux/amlogic/bl30_manager.h>
 
 #define DEFAULT_SCAN_PERION	20
 #define	DEFAULT_POLL_MODE	0
 #define KEY_JITTER_COUNT	1
+#define AO_DEBUG_REG0		(0x28 << 2)
+
+/* wake-up bank ids expected by bl301 in AO_DEBUG_REG0 bits 28-30 */
+enum wakeup_bank {
+	WAKEUP_BANK_PERIPHS,
+	WAKEUP_BANK_AOBUS,
+};
 
 struct pin_desc {
 	int current_status;
@@ -295,9 +306,21 @@ static struct attribute *meson_gpiokey_attrs[] = {
 
 ATTRIBUTE_GROUPS(meson_gpiokey);
 
+static void meson_gpio_kp_remove_lookup(void *data)
+{
+	gpiod_remove_lookup_table(data);
+}
+
 static int meson_gpio_kp_probe(struct platform_device *pdev)
 {
+	const char *gpiopower = bl30_manager_get_gpiopower();
+	struct gpiod_lookup_table *lookup;
+	void __iomem *ao_reg = NULL;
+	struct gpio_device *gdev;
+	struct resource *res;
 	struct gpio_desc *desc;
+	const char *label;
+	u32 val;
 	int ret, i;
 	struct input_dev *input_dev;
 	struct gpio_keypad *keypad;
@@ -341,9 +364,29 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 				   GFP_KERNEL);
 	if (!(keypad->key))
 		return -EINVAL;
+	if (gpiopower) {
+		lookup = devm_kzalloc(&pdev->dev, struct_size(lookup, table, 2),
+				      GFP_KERNEL);
+		if (!lookup)
+			return -ENOMEM;
+		lookup->dev_id = dev_name(&pdev->dev);
+		lookup->table[0] = GPIO_LOOKUP(gpiopower, U16_MAX, "key",
+					       GPIO_ACTIVE_HIGH);
+		gpiod_add_lookup_table(lookup);
+		ret = devm_add_action_or_reset(&pdev->dev,
+					       meson_gpio_kp_remove_lookup, lookup);
+		if (ret)
+			return ret;
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (res)
+			ao_reg = devm_ioremap(&pdev->dev, res->start,
+					      resource_size(res));
+	}
 	for (i = 0; i < keypad->key_size; i++) {
 		/* get all gpio desc. */
 		desc = devm_gpiod_get_index(&pdev->dev, "key", i, GPIOD_IN);
+		if (i == 0 && PTR_ERR(desc) == -ENOENT)
+			return -ENODEV;
 		if (IS_ERR_OR_NULL(desc))
 			return -EINVAL;
 		keypad->key[i].desc = desc;
@@ -379,6 +422,19 @@ static int meson_gpio_kp_probe(struct platform_device *pdev)
 				       GPIOD_PULL_UP : GPIOD_PULL_DOWN);
 		} else {
 			gpiod_set_pull(keypad->key[i].desc, GPIOD_PULL_UP);
+		}
+	}
+
+	if (ao_reg) {
+		gdev = gpiod_to_gpio_device(keypad->key[0].desc);
+		label = gpio_device_get_label(gdev);
+		if (!strcmp(label, "periphs-banks") || !strcmp(label, "aobus-banks")) {
+			val = readl(ao_reg + AO_DEBUG_REG0) & 0x8000ffff;
+			val |= ((desc_to_gpio(keypad->key[0].desc) -
+				 gpio_device_get_base(gdev)) & 0xfff) << 16;
+			if (!strcmp(label, "aobus-banks"))
+				val |= WAKEUP_BANK_AOBUS << 28;
+			writel(val, ao_reg + AO_DEBUG_REG0);
 		}
 	}
 
