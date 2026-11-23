@@ -427,6 +427,7 @@ u32 get_slice_num(u32 layer_id);
 u32 get_pi_enabled(u32 layer_id);
 int fgrain_init_s5(u8 layer_id, u32 table_size);
 void fgrain_uninit_s5(u8 layer_id);
+void fgrain_stop_s5(struct video_layer_s *layer, u8 vpp_index);
 void fgrain_update_table_s5(struct video_layer_s *layer,
 			 struct vframe_s *vf);
 void vd_set_alpha_s5(struct video_layer_s *layer,
