@@ -12093,6 +12093,10 @@ static void fgrain_stop(struct video_layer_s *layer, u8 vpp_index)
 	u8 layer_id = layer->layer_id;
 	u32 channel = FILM_GRAIN0_CHAN;
 
+	if (cur_dev->display_module == S5_DISPLAY_MODULE) {
+		fgrain_stop_s5(layer, vpp_index);
+		return;
+	}
 	if (!glayer_info[layer_id].fgrain_support)
 		return;
 	if (!glayer_info[layer_id].fgrain_start)

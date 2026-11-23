@@ -11301,13 +11301,14 @@ static void fgrain_slice_start_s5(struct video_layer_s *layer, u8 vpp_index, u8 
 	glayer_info[layer_id].fgrain_force_update = true;
 }
 
-static void fgrain_stop_s5(struct video_layer_s *layer, u8 vpp_index)
+void fgrain_stop_s5(struct video_layer_s *layer, u8 vpp_index)
 {
 	u32 reg_fgrain_glb_en = 1 << 0;
 	u32 reg_fgrain_loc_en = 0 << 1;
 	struct vd_fg_reg_s *fg_reg;
 	u8 layer_id = layer->layer_id;
 	u8 layer_index = 0;
+	int i;
 
 	if (!glayer_info[layer_id].fgrain_support)
 		return;
@@ -11329,6 +11330,15 @@ static void fgrain_stop_s5(struct video_layer_s *layer, u8 vpp_index)
 		   reg_fgrain_loc_en,
 		   0, 2);
 	glayer_info[layer_id].fgrain_start = false;
+	if (layer_id == 0) {
+		for (i = 0; i < SLICE_NUM; i++)
+			lut_dma_disable(LUT_DMA_WR,
+					FILM_GRAIN1_VD1S0_CHAN_S5 + i,
+					layer->vpp_index);
+	} else {
+		lut_dma_disable(LUT_DMA_WR, FILM_GRAIN2_CHAN_S5,
+				layer->vpp_index);
+	}
 }
 
 static void fgrain_slice_stop_s5(struct video_layer_s *layer,
