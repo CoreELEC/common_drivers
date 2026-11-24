@@ -1,0 +1,59 @@
+/*
+ * BuzzTV XRS 4900 (Amlogic S922X rev. B, 4 GB)
+ *
+ * Ported from the vendor Android 9 / 4.9 DTS (g12b_xrs4900b_4g.dts)
+ * to CoreELEC 5.15 (common_drivers 5.15.196_20260225).
+ */
+
+#include "g12b_a311d_w400_linux.dts"
+#include "coreelec_g12b_common.dtsi"
+
+/ {
+	model = "BuzzTV XRS4900";
+	coreelec-dt-id = "g12b_s922x_buzztv_xrs4900";
+	/* must match aml_dt set by the vendor bootloader */
+	amlogic-dt-id = "g12b_xrs4900b_4g";
+
+	memory@00000000 {
+		linux,usable-memory = <0x0 0x0 0x0 0xf0800000>;
+	};
+
+	/* board has a real RTC (HYM8563 on AO I2C) */
+	/delete-node/ rtc;
+
+	wifi {
+		interrupt-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
+		irq_trigger_type = "IRQF_TRIGGER_HIGH";
+		power_on-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+	};
+
+	gpio_keypad {
+		/* power key; GPIOAO_3 is used as I2C_AO SDA on this board */
+		key-gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
+	};
+
+	auge_sound {
+		/* GPIOAO_2 is used as I2C_AO SCK on this board */
+		/delete-property/ avout_mute-gpios;
+	};
+};
+
+&i2c_AO {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&ao_i2c_master_pins1>;	/* GPIOAO_2 SCK / GPIOAO_3 SDA */
+	clock-frequency = <100000>;
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		#clock-cells = <0>;
+	};
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "BuzzTV";
+		product_desc = "XRS4900";
+	};
+};
