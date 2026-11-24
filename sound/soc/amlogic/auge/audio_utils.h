@@ -6,6 +6,8 @@
 #include <sound/soc.h>
 #include <sound/control.h>
 
+struct clk;
+
 int snd_card_add_kcontrols(struct snd_soc_card *card);
 void audio_locker_set(int enable);
 int audio_locker_get(void);
@@ -13,4 +15,7 @@ void fratv_enable(bool enable);
 void cec_arc_enable(int src, bool enable);
 void aml_audio_reset(int reg, int shift, bool use_vadtop);
 bool is_force_mpll_clk(void);
+struct clk *aml_audio_clk_claim(struct clk **held, struct clk *pll,
+				struct clk *spare, unsigned long rate, bool claim);
+void aml_audio_clk_release(struct clk **held, struct clk *spare);
 #endif

@@ -222,13 +222,21 @@
 		compatible = "amlogic, t7-snd-tdmc";
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_C
 				&clkc CLKID_HIFI_PLL
+				&clkc CLKID_HIFI_PLL
 				&clkc CLKID_MPLL2>;
-		clock-names = "mclk", "clk_srcpll", "clk_src_cd";
+		clock-names = "mclk", "clk_srcpll", "clk_src_cd", "clk_src_mpll";
 		src-clk-freq = <491520000>;
 		i2s2hdmi = <1>;
 	};
 
 	tdm@1 {
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&clkaudio CLKID_AUDIO_MCLK_PAD1
+				&clkc CLKID_HIFI_PLL
+				&clkc CLKID_HIFI_PLL
+				&clkc CLKID_MPLL1>;
+		clock-names = "mclk", "mclk_pad", "clk_srcpll", "clk_src_cd",
+				"clk_src_mpll";
 		/delete-property/ tdmin-src-name;
 		/delete-property/ ctrl_gain;
 		/delete-node/ Channel_Mask;
@@ -245,7 +253,28 @@
 	};
 
 	spdif@0 {
+		clocks = <&clkc CLKID_HIFI_PLL
+				&clkc CLKID_HIFI_PLL
+				&clkc CLKID_FCLK_DIV4
+				&clkaudio CLKID_AUDIO_GATE_SPDIFIN
+				&clkaudio CLKID_AUDIO_GATE_SPDIFOUT_A
+				&clkaudio CLKID_AUDIO_SPDIFIN
+				&clkaudio CLKID_AUDIO_SPDIFOUT_A
+				&clkc CLKID_MPLL0>;
+		clock-names = "sysclk", "clk_src_cd", "fixed_clk", "gate_spdifin",
+				"gate_spdifout", "clk_spdifin", "clk_spdifout",
+				"clk_src_mpll";
 		/delete-property/ samesource_sel;
+	};
+
+	spdif@1 {
+		clocks = <&clkc CLKID_HIFI_PLL
+				&clkc CLKID_HIFI_PLL
+				&clkaudio CLKID_AUDIO_GATE_SPDIFOUT_B
+				&clkaudio CLKID_AUDIO_SPDIFOUT_B
+				&clkc CLKID_MPLL3>;
+		clock-names = "sysclk", "clk_src_cd",
+				"gate_spdifout", "clk_spdifout", "clk_src_mpll";
 	};
 };
 

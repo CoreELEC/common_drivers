@@ -15,6 +15,7 @@
 #include "vad.h"
 #include "ddr_mngr.h"
 
+#include <linux/clk.h>
 #include <linux/amlogic/iomap.h>
 #include <linux/amlogic/media/sound/auge_utils.h>
 #include <linux/amlogic/cpu_version.h>
@@ -661,4 +662,41 @@ void aml_audio_reset(int reg, int shift, bool use_vadtop)
 bool is_force_mpll_clk(void)
 {
 	return force_mpll_clk;
+}
+
+void aml_audio_clk_release(struct clk **held, struct clk *spare)
+{
+	if (*held && *held != spare)
+		clk_rate_exclusive_put(*held);
+	*held = NULL;
+}
+
+/*
+ * Set @rate on @pll, a source both rate families share. With @claim the
+ * output holds @pll at @rate until aml_audio_clk_release(), or runs from
+ * @spare while another output holds @pll at the other family. Later sets
+ * go to the source held. Without @spare this is a plain set. Returns the
+ * source to parent the output clock to.
+ */
+struct clk *aml_audio_clk_claim(struct clk **held, struct clk *pll,
+				struct clk *spare, unsigned long rate, bool claim)
+{
+	struct clk *cur = *held;
+
+	if (cur) {
+		if (!clk_set_rate(cur, rate) || !claim)
+			return cur;
+		aml_audio_clk_release(held, spare);
+	}
+	if (!claim || IS_ERR_OR_NULL(spare)) {
+		clk_set_rate(pll, rate);
+		return pll;
+	}
+	if (clk_set_rate_exclusive(pll, rate)) {
+		clk_set_rate(spare, rate);
+		*held = spare;
+	} else {
+		*held = pll;
+	}
+	return *held;
 }
