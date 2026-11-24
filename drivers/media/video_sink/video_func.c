@@ -1592,7 +1592,7 @@ void primary_swap_frame(struct video_layer_s *layer,
 	    !(process_3d_type & MODE_3D_ENABLE)) |
 	   (!(last_process_3d_type & MODE_3D_TO_2D_MASK) &&
 	     (process_3d_type & MODE_3D_TO_2D_MASK))) {
-		need_disable_vd[2] = true;
+		need_disable_vd[1] = true;
 	}
 
 	last_process_3d_type = process_3d_type;
