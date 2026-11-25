@@ -1,10 +1,3 @@
-/*
- * BuzzTV XRS 4900 (Amlogic S922X rev. A, 4 GB)
- *
- * Ported from the vendor Android 9 / 4.9 DTS (g12b_xrs4900a_4g.dts)
- * to CoreELEC 5.15 (common_drivers 5.15.196_20260225).
- */
-
 #include "g12b_s922x_buzztv_xrs4900.dts"
 #include "coreelec_g12b_a_common.dtsi"
 
@@ -12,13 +5,4 @@
 	coreelec-dt-id = "g12b_s922x_buzztv_xrs4900_rev_a";
 	/* must match aml_dt set by the vendor bootloader */
 	amlogic-dt-id = "g12b_xrs4900a_4g";
-
-	/*
-	 * The vendor rev. A table limits the A73 cluster to 1.704 GHz.
-	 * coreelec_g12b_a_common.dtsi allows 1.8 GHz; remove this override
-	 * to use the CoreELEC default.
-	 */
-	cpu_opp_table1: cpu_opp_table1 {
-		/delete-node/ opp08;
-	};
 };

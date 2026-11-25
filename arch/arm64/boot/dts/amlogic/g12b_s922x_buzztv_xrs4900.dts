@@ -1,10 +1,3 @@
-/*
- * BuzzTV XRS 4900 (Amlogic S922X rev. B, 4 GB)
- *
- * Ported from the vendor Android 9 / 4.9 DTS (g12b_xrs4900b_4g.dts)
- * to CoreELEC 5.15 (common_drivers 5.15.196_20260225).
- */
-
 #include "g12b_a311d_w400_linux.dts"
 #include "coreelec_g12b_common.dtsi"
 
