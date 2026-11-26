@@ -1758,7 +1758,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 #endif
 
 #ifdef TV_3D_FUNCTION_OPEN
-		if (last_mode_3d &&
+		if ((last_mode_3d || is_3d_fp_output(process_3d_type)) &&
 		    (layer->new_vpp_setting ||
 		     afbc_need_reset))
 			vd_set_dcu
@@ -1813,7 +1813,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 #endif
 #ifdef TV_3D_FUNCTION_OPEN
 		if ((dispbuf->type & VIDTYPE_MVC) ||
-		    last_mode_3d) {
+		    last_mode_3d || is_3d_fp_output(process_3d_type)) {
 			config_3d_vd2_position
 				(layer, &local_vd2_mif);
 			update_vd2 = true;
@@ -1873,7 +1873,7 @@ s32 primary_render_frame(struct video_layer_s *layer,
 	/*turn off vertical scaler when 3d display */
 	if ((dispbuf &&
 	     (dispbuf->type & VIDTYPE_MVC)) ||
-	    last_mode_3d) {
+	    last_mode_3d || is_3d_fp_output(process_3d_type)) {
 		layer->sc_setting.sc_v_enable = is_enable_3d_to_2d() ||
 			(dispbuf && (dispbuf->type & VIDTYPE_INTERLACE));
 		config_3d_vd2_pps

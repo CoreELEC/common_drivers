@@ -1885,7 +1885,8 @@ RESTART_ALL:
 	}
 	if (w_in > src_width_max)
 		next_frame_par->hscale_skip_count++;
-	if (!(vf->type & VIDTYPE_MVC) && h_in > src_height_max &&
+	if (!(vf->type & VIDTYPE_MVC) && !is_3d_fp_output(process_3d_type) &&
+	    h_in > src_height_max &&
 		(w_in * h_in > src_width_max * src_height_max))
 		next_frame_par->vscale_skip_count++;
 
@@ -4663,6 +4664,9 @@ void get_vpp_3d_mode(u32 process_3d_type,
 		     u32 trans_fmt,
 		     u32 *vpp_3d_mode)
 {
+	if (is_3d_fp_output(process_3d_type))
+		return;
+
 	switch (trans_fmt) {
 	case TVIN_TFMT_3D_LRH_OLOR:
 	case TVIN_TFMT_3D_LRH_OLER:
@@ -4765,6 +4769,10 @@ static void vpp_get_video_source_size
 			*src_width = frame_width;
 			*src_height = frame_height;
 			next_frame_par->vpp_2pic_mode = 1;
+		} else if (is_3d_fp_output(process_3d_type)) {
+			*src_width = frame_width >> 1;
+			*src_height = (frame_height << 1) + framepacking_blank;
+			next_frame_par->vpp_2pic_mode = 1;
 		} else {
 			*src_width = frame_width >> 1;
 			*src_height = frame_height << 1;
@@ -4780,6 +4788,10 @@ static void vpp_get_video_source_size
 		} else if (process_3d_type & MODE_3D_OUT_LR) {
 			*src_width = frame_width << 1;
 			*src_height = frame_height >> 1;
+			next_frame_par->vpp_2pic_mode = 1;
+		} else if (is_3d_fp_output(process_3d_type)) {
+			*src_width = frame_width;
+			*src_height = frame_height + framepacking_blank;
 			next_frame_par->vpp_2pic_mode = 1;
 		} else {
 			*src_width = frame_width;
