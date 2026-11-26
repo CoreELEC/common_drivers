@@ -1,0 +1,15 @@
+#include "g12a_s905x2_buzztv_xr4000_4g.dts"
+
+/ {
+	model = "BuzzTV XRS4000";
+	coreelec-dt-id = "g12a_s905x2_buzztv_xrs4000_4g";
+	/* must match aml_dt set by the vendor bootloader */
+	amlogic-dt-id = "g12a_xrs-4000_4g";
+};
+
+&amhdmitx {
+	vend_data {
+	    vendor_name = "BuzzTV";
+		product_desc = "XRS4000";
+	};
+};
