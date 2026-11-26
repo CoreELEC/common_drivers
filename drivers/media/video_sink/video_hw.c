@@ -5211,7 +5211,8 @@ static void vd1_set_dcu(struct video_layer_s *layer,
 	}
 #endif
 
-	if ((type & VIDTYPE_MVC) || is_enable_3d_to_2d())
+	if ((type & VIDTYPE_MVC) || is_enable_3d_to_2d() ||
+	    is_3d_fp_output(process_3d_type))
 		is_mvc = true;
 
 	pr_debug("%s for vd%d %p, type:0x%x, flag:%x\n",
@@ -5880,7 +5881,8 @@ static void vdx_set_dcu(struct video_layer_s *layer,
 		return;
 
 	type = vf->type;
-	if ((type & VIDTYPE_MVC) || is_enable_3d_to_2d())
+	if ((type & VIDTYPE_MVC) || is_enable_3d_to_2d() ||
+	    is_3d_fp_output(process_3d_type))
 		is_mvc = true;
 	pr_debug("%s for vd%d %p, type:0x%x, flag:%x\n",
 		 __func__, layer->layer_id, vf, type, vf->flag);
@@ -8904,6 +8906,11 @@ static void get_3d_vert_pos(struct video_layer_s *layer,
 			}
 			*le = *le - 1;
 			*re = *re - 1;
+		} else if (is_3d_fp_output(process_3d_type)) {
+			*ls = 0;
+			*le = (frame_height >> 1) - 1;
+			*rs = frame_height >> 1;
+			*re = frame_height - 1;
 		} else {
 			*ls = layer->start_y_lines >> 1;
 			*le = layer->end_y_lines >> 1;
@@ -8947,6 +8954,11 @@ static void get_3d_vert_pos(struct video_layer_s *layer,
 			*le = layer->end_y_lines;
 			*rs = layer->start_y_lines;
 			*re = layer->end_y_lines;
+		} else if (is_3d_fp_output(process_3d_type)) {
+			*ls = layer->start_y_lines;
+			*le = height - 1;
+			*rs = layer->start_y_lines;
+			*re = height - 1;
 		} else {
 			/* half width,double height */
 			*ls = layer->start_y_lines >> 1;
@@ -9088,7 +9100,8 @@ s32 config_3d_vd2_blend(struct video_layer_s *layer,
 			layer->start_y_lines;
 		setting->postblend_v_end =
 			layer->end_y_lines;
-	} else if (dispbuf && (dispbuf->type & VIDTYPE_MVC)) {
+	} else if (dispbuf &&
+		   ((dispbuf->type & VIDTYPE_MVC) || is_3d_fp_output(process_3d_type))) {
 		u32 blank;
 
 		if (framepacking_support)
@@ -9104,6 +9117,10 @@ s32 config_3d_vd2_blend(struct video_layer_s *layer,
 		if (framepacking_support) {
 			const struct vinfo_s *vinfo = get_current_vinfo();
 			u32 eye_h = (dispbuf->height - blank) >> 1;
+
+			if (is_3d_fp_output(process_3d_type))
+				eye_h = (process_3d_type & MODE_3D_TB) ?
+					dispbuf->height >> 1 : dispbuf->height;
 
 			setting->postblend_v_start =
 				eye_h + blank;
@@ -9164,7 +9181,7 @@ void switch_3d_view_per_vsync(struct video_layer_s *layer)
 	src_end_y_lines =
 		(dispbuf->type & VIDTYPE_COMPRESS) ?
 		dispbuf->compHeight : dispbuf->height;
-	if (framepacking_support)
+	if (framepacking_support && !is_3d_fp_output(process_3d_type))
 		blank = framepacking_blank;
 	else
 		blank = 0;
@@ -9337,7 +9354,8 @@ void switch_3d_view_per_vsync(struct video_layer_s *layer)
 	}
 
 	if ((process_3d_type & MODE_3D_OUT_TB) ||
-	    (process_3d_type & MODE_3D_OUT_LR)) {
+	    (process_3d_type & MODE_3D_OUT_LR) ||
+	    is_3d_fp_output(process_3d_type)) {
 		if (cur_frame_par->vpp_2pic_mode & VPP_PIC1_FIRST) {
 			cur_dev->rdma_func[vpp_index].rdma_wr
 				(vd_mif_reg->vd_if0_luma_psel,
@@ -9419,7 +9437,7 @@ s32 config_vd_position_internal(struct video_layer_s *layer,
 	setting->src_h =
 		(dispbuf->type & VIDTYPE_COMPRESS) ?
 		dispbuf->compHeight : dispbuf->height;
-	if (framepacking_support)
+	if (framepacking_support && !is_3d_fp_output(process_3d_type))
 		blank = framepacking_blank;
 	else
 		blank = 0;
@@ -9998,7 +10016,8 @@ s32 config_vd_blend(struct video_layer_s *layer,
 		setting->preblend_h_start = 0;
 		setting->preblend_h_end = preblend_hsize - 1;
 	}
-	if (dispbuf && (dispbuf->type & VIDTYPE_MVC)) {
+	if (dispbuf &&
+	    ((dispbuf->type & VIDTYPE_MVC) || is_3d_fp_output(process_3d_type))) {
 		setting->preblend_v_start =
 			cur_frame_par->VPP_vd_start_lines_;
 		setting->preblend_v_end = y_lines;
@@ -11533,7 +11552,8 @@ void vpp_blend_update_t7(const struct vinfo_s *vinfo)
 	int i;
 	u8 vpp_index = VPP0;
 
-	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable)
+	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable ||
+	    is_3d_fp_output(process_3d_type))
 		mode |= COMPOSE_MODE_3D;
 	else if (is_amdv_on() && last_el_status)
 		mode |= COMPOSE_MODE_DV;
@@ -12585,7 +12605,8 @@ void vpp_blend_update(const struct vinfo_s *vinfo, u8 vpp_index)
 	}
 #endif
 
-	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable)
+	if (vd_layer[0].enable_3d_mode == mode_3d_mvc_enable ||
+	    is_3d_fp_output(process_3d_type))
 		mode |= COMPOSE_MODE_3D;
 	else if (is_amdv_on() && last_el_status)
 		mode |= COMPOSE_MODE_DV;
@@ -14110,6 +14131,9 @@ static void canvas_update_for_3d(struct video_layer_s *layer,
 		canvas_copy
 			((vf->canvas1Addr >> 16) & 0xff,
 			cur_canvas_tbl[5]);
+		canvas_read(cur_canvas_tbl[0], &cs0[0]);
+		canvas_read(cur_canvas_tbl[1], &cs1[0]);
+		canvas_read(cur_canvas_tbl[2], &cs2[0]);
 		canvas_read(cur_canvas_tbl[3], &cs0[1]);
 		canvas_read(cur_canvas_tbl[4], &cs1[1]);
 		canvas_read(cur_canvas_tbl[5], &cs2[1]);
@@ -14812,7 +14836,8 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 	layer_id = layer->layer_id;
 	vpp_index = layer->vpp_index;
 
-	if ((vf->type & VIDTYPE_MVC) && layer_id == 0)
+	if (((vf->type & VIDTYPE_MVC) || is_3d_fp_output(process_3d_type)) &&
+	    layer_id == 0)
 		is_mvc = true;
 
 	cur_canvas_id = layer->cur_canvas_id;
@@ -14900,7 +14925,8 @@ int set_layer_display_canvas(struct video_layer_s *layer,
 		if (is_mvc)
 			cur_dev->rdma_func[vpp_index].rdma_wr
 				(vd_mif_reg_mvc->vd_if0_canvas0,
-				layer->disp_canvas[cur_canvas_id][1]);
+				layer->disp_canvas[cur_canvas_id]
+				[is_3d_fp_output(process_3d_type) ? 0 : 1]);
 		if (cur_frame_par &&
 		    cur_frame_par->vpp_2pic_mode == 1) {
 			cur_dev->rdma_func[vpp_index].rdma_wr
@@ -15679,7 +15705,7 @@ static void is_framepacking_support(struct vframe_s *vf)
 	if (!vf)
 		return;
 
-	if (vf->type & VIDTYPE_MVC) {
+	if ((vf->type & VIDTYPE_MVC) || is_3d_fp_output(process_3d_type)) {
 		framepacking_support = g_framepacking_support;
 	} else {
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN
@@ -15730,7 +15756,7 @@ s32 layer_swap_frame(struct vframe_s *vf, struct video_layer_s *layer,
 	layer_id = layer->layer_id;
 	layer_info = &glayer_info[layer_id];
 
-	if ((vf->type & VIDTYPE_MVC) &&
+	if (((vf->type & VIDTYPE_MVC) || is_3d_fp_output(process_3d_type)) &&
 	    !is_enable_3d_to_2d() &&
 	    (layer_id == 0))
 		is_mvc = true;

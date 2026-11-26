@@ -346,6 +346,7 @@ struct sr_info_s {
 #define MODE_3D_TB          0x00000008
 #define MODE_3D_LA          0x00000010
 #define MODE_3D_FA          0x00000020
+#define MODE_3D_FULL_LRTB   0x00000040
 #define MODE_3D_LR_SWITCH   0x00000100
 #define MODE_3D_TO_2D_L     0x00000200
 #define MODE_3D_TO_2D_R     0x00000400

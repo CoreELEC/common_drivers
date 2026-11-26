@@ -1232,6 +1232,16 @@ extern u32 framepacking_support;
 extern u32 g_framepacking_support;
 extern unsigned int framepacking_blank;
 extern unsigned int process_3d_type;
+
+/* a full side-by-side or top-and-bottom picture sent as frame packing */
+static inline bool is_3d_fp_output(u32 type)
+{
+	return (type & MODE_3D_ENABLE) &&
+		(type & MODE_3D_FP) &&
+		(type & MODE_3D_FULL_LRTB) &&
+		!(type & MODE_3D_MVC);
+}
+
 #ifdef TV_3D_FUNCTION_OPEN
 extern unsigned int force_3d_scaler;
 extern int toggle_3d_fa_frame;
