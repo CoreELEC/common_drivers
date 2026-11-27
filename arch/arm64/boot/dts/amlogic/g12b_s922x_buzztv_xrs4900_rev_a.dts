@@ -1,0 +1,8 @@
+#include "g12b_s922x_buzztv_xrs4900.dts"
+#include "coreelec_g12b_a_common.dtsi"
+
+/ {
+	coreelec-dt-id = "g12b_s922x_buzztv_xrs4900_rev_a";
+	/* must match aml_dt set by the vendor bootloader */
+	amlogic-dt-id = "g12b_xrs4900a_4g";
+};

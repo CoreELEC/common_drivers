@@ -1,0 +1,31 @@
+#include "g12a_s905x2_2g.dts"
+
+/ {
+	model = "BuzzTV XR4000";
+	coreelec-dt-id = "g12a_s905x2_buzztv_xr4000_2g";
+	/* must match aml_dt set by the vendor bootloader */
+	amlogic-dt-id = "g12a_xr-4000_2g";
+
+	memory@0 {
+		linux,usable-memory = <0x0 0x0 0x0 0x80000000>;
+	};
+
+	/*
+	 * The front LED is an RGB LED driven by PWM in Android
+	 * (red = GPIOAO_11, green = GPIOAO_4, blue = GPIOH_7).
+	 * CoreELEC's default sys_led (GPIOAO_11, active low) lights red.
+	 */
+};
+
+&aml_wifi {
+	interrupt-gpios = <&gpio GPIOX_18 GPIO_ACTIVE_HIGH>;
+	irq_trigger_type = "IRQF_TRIGGER_HIGH";
+	power_on-gpios = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+};
+
+&amhdmitx {
+	vend_data {
+		vendor_name = "BuzzTV";
+		product_desc = "XR4000";
+	};
+};
