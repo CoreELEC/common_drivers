@@ -127,6 +127,11 @@ struct aml_tdm {
 	struct notifier_block clk_nb;
 	/* for 44100hz samplerate */
 	struct clk *clk_src_cd;
+	/* spare while another output holds the pll at the other rate family */
+	struct clk *clk_src_mpll;
+	/* source held for the streams set up in clk_streams */
+	struct clk *clk_held;
+	unsigned int clk_streams;
 	struct clk *clk_gate;
 	struct clk *mclk;
 	/* mclk mux out to pad */
@@ -535,6 +540,8 @@ static int aml_set_tdm_mclk_2(struct aml_tdm *p_tdm,
 	int ret = -1;
 	char *clk_name = (char *)__clk_get_name(p_tdm->clk);
 	int ratio = 0;
+	bool claim = p_tdm->clk_streams && !tune;
+	struct clk *src;
 
 	if (freq == 0) {
 		dev_err(p_tdm->dev, "%s(), clk 0 err\n", __func__);
@@ -550,8 +557,9 @@ static int aml_set_tdm_mclk_2(struct aml_tdm *p_tdm,
 		if ((aml_return_chip_id() != CLK_NOTIFY_CHIP_ID)  &&
 			(aml_return_chip_id() != CLK_NOTIFY_CHIP_ID_T3X)) {
 			ratio = MPLL_HBR_FIXED_FREQ / p_tdm->setting.standard_sysclk;
-			clk_set_rate(p_tdm->clk, freq * ratio);
-			ret = clk_set_parent(p_tdm->mclk, p_tdm->clk);
+			src = aml_audio_clk_claim(&p_tdm->clk_held, p_tdm->clk,
+						  p_tdm->clk_src_mpll, freq * ratio, claim);
+			ret = clk_set_parent(p_tdm->mclk, src);
 			if (ret)
 				dev_warn(p_tdm->dev, "can't set tdm parent clock\n");
 
@@ -574,8 +582,9 @@ static int aml_set_tdm_mclk_2(struct aml_tdm *p_tdm,
 		if ((aml_return_chip_id() != CLK_NOTIFY_CHIP_ID)  &&
 			(aml_return_chip_id() != CLK_NOTIFY_CHIP_ID_T3X)) {
 			ratio = MPLL_CD_FIXED_FREQ / p_tdm->setting.standard_sysclk;
-			clk_set_rate(p_tdm->clk_src_cd, freq * ratio);
-			ret = clk_set_parent(p_tdm->mclk, p_tdm->clk_src_cd);
+			src = aml_audio_clk_claim(&p_tdm->clk_held, p_tdm->clk_src_cd,
+						  p_tdm->clk_src_mpll, freq * ratio, claim);
+			ret = clk_set_parent(p_tdm->mclk, src);
 			if (ret)
 				dev_warn(p_tdm->dev, "can't set tdm parent cd clock\n");
 		} else {
@@ -1317,14 +1326,8 @@ static void tdm_sharebuffer_prepare(struct snd_pcm_substream *substream,
 			p_tdm->chipinfo->separate_tohdmitx_en);
 		if ((aml_return_chip_id() != CLK_NOTIFY_CHIP_ID)  &&
 			(aml_return_chip_id() != CLK_NOTIFY_CHIP_ID_T3X)) {
-			struct clk *clk = p_tdm->clk;
-
-			if ((p_tdm->setting.standard_sysclk % 11025 == 0) &&
-				!IS_ERR(p_tdm->clk_src_cd)) {
-				clk = p_tdm->clk_src_cd;
-			}
 			ops->set_clks(p_tdm->samesource_sel,
-				clk,
+				clk_get_parent(p_tdm->mclk),
 				(p_tdm->last_mclk_freq >> 1), 1);
 		} else {
 			if (p_tdm->setting.standard_sysclk % 8000 == 0) {
@@ -2360,6 +2363,9 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	unsigned int rate = params_rate(params);
 	unsigned int channels = params_channels(params);
 
+	if (!p_tdm->symmetric_rate_disable || substream->stream != SNDRV_PCM_STREAM_CAPTURE)
+		p_tdm->clk_streams |= BIT(substream->stream);
+
 	return aml_tdm_hw_setting_init(p_tdm, rate, channels, substream->stream);
 }
 
@@ -2383,6 +2389,10 @@ static int aml_dai_tdm_hw_free(struct snd_pcm_substream *substream,
 	}
 
 	aml_tdm_hw_setting_free(p_tdm, substream->stream);
+
+	p_tdm->clk_streams &= ~BIT(substream->stream);
+	if (!p_tdm->clk_streams)
+		aml_audio_clk_release(&p_tdm->clk_held, p_tdm->clk_src_mpll);
 
 	return 0;
 }
@@ -3039,6 +3049,12 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	p_tdm->clk_src_cd = devm_clk_get(&pdev->dev, "clk_src_cd");
 	if (IS_ERR(p_tdm->clk_src_cd))
 		dev_err(&pdev->dev, "Can't get clk_src_cd\n");
+
+	p_tdm->clk_src_mpll = devm_clk_get_optional(&pdev->dev, "clk_src_mpll");
+	if (IS_ERR(p_tdm->clk_src_mpll)) {
+		dev_warn(&pdev->dev, "can't get clk_src_mpll, no spare clock\n");
+		p_tdm->clk_src_mpll = NULL;
+	}
 
 	if ((!IS_ERR(p_tdm->clk)) && ((aml_return_chip_id() == CLK_NOTIFY_CHIP_ID) ||
 		(aml_return_chip_id() == CLK_NOTIFY_CHIP_ID_T3X))) {

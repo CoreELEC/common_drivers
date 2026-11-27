@@ -1012,9 +1012,9 @@ static const struct pll_params_table t7_hifi_pll_table[] = {
 	{ /* sentinel */  }
 };
 #else
-static const struct pll_params_table t7_hifi_pll_table[] = {
-	PLL_PARAMS(163, 1), /* DCO = 3932.16M */
-	{ /* sentinel */  }
+static const struct pll_mult_range t7_hifi_pll_m = {
+	.min = 125,
+	.max = 250,
 };
 #endif
 
@@ -1062,7 +1062,11 @@ static struct clk_regmap t7_hifi_pll_dco = {
 			.shift   = 29,
 			.width   = 1,
 		},
+#ifdef CONFIG_ARM
 		.table = t7_hifi_pll_table,
+#else
+		.range = &t7_hifi_pll_m,
+#endif
 		.init_regs = t7_hifi_init_regs,
 		.init_count = ARRAY_SIZE(t7_hifi_init_regs),
 		.flags = CLK_MESON_PLL_ROUND_CLOSEST
