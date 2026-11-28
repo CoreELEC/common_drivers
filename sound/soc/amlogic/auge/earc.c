@@ -1197,12 +1197,13 @@ static snd_pcm_uframes_t earc_pointer(struct snd_soc_component *component,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct earc *p_earc = runtime->private_data;
-	unsigned int addr, start_addr;
+	unsigned int addr, start_addr, fill;
 	snd_pcm_uframes_t frames;
 
 	start_addr = runtime->dma_addr;
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		addr = aml_frddr_get_position(p_earc->fddr);
+		addr = aml_frddr_get_position_fill(p_earc->fddr, &fill);
+		runtime->delay = bytes_to_frames(runtime, fill);
 	} else {
 		addr = aml_toddr_get_position(p_earc->tddr);
 		p_earc->rx_pointer = 1;
@@ -1626,6 +1627,7 @@ static int earc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 					      p_earc->chipinfo->rterm_on);
 			}
 			aml_frddr_enable(p_earc->fddr, false);
+			substream->runtime->delay = 0;
 			p_earc->tx_stream_state = SNDRV_PCM_STATE_DISCONNECTED;
 		} else {
 			p_earc->rx_cs_ready = false;

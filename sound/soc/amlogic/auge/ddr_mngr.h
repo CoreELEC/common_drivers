@@ -20,7 +20,7 @@
 #define MEMIF_INT_MASK              GENMASK(7, 0)
 
 #define TODDR_FIFO_CNT              GENMASK(19, 8)
-#define FRDDR_FIFO_CNT              GENMASK(17, 8)
+#define FRDDR_FIFO_CNT              GENMASK(16, 8)
 
 #define FIFO_BURST                  8
 #define FIFO_DEPTH_32K              0x8000
@@ -337,6 +337,7 @@ int aml_frddr_set_buf(struct frddr *fr, unsigned int start,
 			unsigned int end);
 int aml_frddr_set_intrpt(struct frddr *fr, unsigned int intrpt);
 unsigned int aml_frddr_get_position(struct frddr *fr);
+unsigned int aml_frddr_get_position_fill(struct frddr *fr, unsigned int *fill);
 void aml_frddr_enable(struct frddr *fr, bool enable);
 void aml_frddr_select_dst(struct frddr *fr, enum frddr_dest);
 void aml_frddr_select_dst_ss(struct frddr *fr,

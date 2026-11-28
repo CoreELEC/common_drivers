@@ -386,14 +386,16 @@ static snd_pcm_uframes_t extn_pointer(struct snd_soc_component *component,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct extn *p_extn = runtime->private_data;
-	unsigned int addr, start_addr;
+	unsigned int addr, start_addr, fill;
 	snd_pcm_uframes_t frames;
 
 	start_addr = runtime->dma_addr;
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		addr = aml_frddr_get_position(p_extn->fddr);
-	else
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		addr = aml_frddr_get_position_fill(p_extn->fddr, &fill);
+		runtime->delay = bytes_to_frames(runtime, fill);
+	} else {
 		addr = aml_toddr_get_position(p_extn->tddr);
+	}
 
 	frames = bytes_to_frames(runtime, addr - start_addr);
 	if (frames > runtime->buffer_size)
@@ -662,6 +664,7 @@ static int extn_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			dev_info(substream->pcm->card->dev, "External Playback disable\n");
 
 			aml_frddr_enable(p_extn->fddr, false);
+			substream->runtime->delay = 0;
 		} else {
 			bool toddr_stopped = false;
 
